@@ -144,6 +144,7 @@ mod test_config_options {
 #[cfg(test)]
 mod test_editor_ops {
     use r3bl_core::{assert_eq2, ch, position, size, UnicodeString};
+    use unicode_width::UnicodeWidthStr;
 
     use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::{assert, mock_real_objects_for_editor},
@@ -1155,14 +1156,14 @@ mod test_editor_ops {
             position!(col_index: 3, row_index: 3)
         );
 
-        // Insert "🙏🏽" (unicode width = 4).
+        // Insert "🙏🏽" (unicode width = 2).
         // `this` should look like:
         // R ┌──────────┐
         // 0 │a         │
         // 1 │b         │
         // 2 │          │
-        // 3 ▸😀d🙏🏽  ░  │
-        //   └───────▴──┘
+        // 3 ▸😀d🙏🏽░    │
+        //   └─────▴────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1170,6 +1171,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertString("🙏🏽".into())],
             &mut TestClipboard::default(),
         );
+        assert_eq2!(2, UnicodeWidthStr::width("🙏🏽"));
         assert_eq2!(
             *buffer.get_lines(),
             vec![
@@ -1181,7 +1183,7 @@ mod test_editor_ops {
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
-            position!(col_index: 7, row_index: 3)
+            position!(col_index: 5, row_index: 3)
         );
     }
 
@@ -1483,6 +1485,7 @@ mod test_editor_ops {
 
         // Setup assertions.
         {
+            assert_eq2!(2, UnicodeWidthStr::width("🙏🏽"));
             assert_eq2!(buffer.len(), ch!(1));
             assert_eq2!(buffer.get_lines()[0].string, long_line);
             assert_eq2!(
@@ -1513,7 +1516,7 @@ mod test_editor_ops {
             }
             assert_eq2!(
                 buffer.get_scroll_offset(),
-                position!(col_index: 6, row_index: 0)
+                position!(col_index: 4, row_index: 0)
             );
             assert_eq2!(
                 buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1527,8 +1530,8 @@ mod test_editor_ops {
                 );
             assert_eq2!(result.unwrap().unicode_string_seg.string, "🙏🏽");
 
-            // Press right 1 more time. The caret should correctly jump the width of "😀" from 70 to
-            // 72.
+            // Press right 1 more time. The caret should correctly jump the width of "😀" from 68 to
+            // 70.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
@@ -1537,7 +1540,7 @@ mod test_editor_ops {
             );
             assert_eq2!(
                 buffer.get_caret(CaretKind::ScrollAdjusted),
-                position!(col_index: 70, row_index: 0)
+                position!(col_index: 68, row_index: 0)
             );
             // Right of viewport.
             let result = buffer.get_lines()[0]
@@ -1565,17 +1568,17 @@ mod test_editor_ops {
             );
             assert_eq2!(
                 buffer.get_caret(CaretKind::ScrollAdjusted),
-                position!(col_index: 130, row_index: 0)
+                position!(col_index: 128, row_index: 0)
             );
             assert_eq2!(
                 buffer.get_scroll_offset(),
-                position!(col_index: 66, row_index: 0)
+                position!(col_index: 64, row_index: 0)
             );
             // Start of viewport.
             let result = buffer.get_lines()[0]
                 .clone()
                 .get_string_at_display_col_index(buffer.get_scroll_offset().col_index);
-            assert_eq2!(result.unwrap().unicode_string_seg.string, "🙏🏽");
+            assert_eq2!(result.unwrap().unicode_string_seg.string, "r");
         }
 
         // Press right 1 more time. It should jump the jumbo emoji at the start of the line (and not
@@ -1590,21 +1593,21 @@ mod test_editor_ops {
             );
             assert_eq2!(
                 buffer.get_caret(CaretKind::Raw),
-                position!(col_index: 61, row_index: 0)
+                position!(col_index: 64, row_index: 0)
             );
             assert_eq2!(
                 buffer.get_caret(CaretKind::ScrollAdjusted),
-                position!(col_index: 131, row_index: 0)
+                position!(col_index: 129, row_index: 0)
             );
             assert_eq2!(
                 buffer.get_scroll_offset(),
-                position!(col_index: 70, row_index: 0)
+                position!(col_index: 65, row_index: 0)
             );
             // Start of viewport.
             let result = buffer.get_lines()[0]
                 .clone()
                 .get_string_at_display_col_index(buffer.get_scroll_offset().col_index);
-            assert_eq2!(result.unwrap().unicode_string_seg.string, "😀");
+            assert_eq2!(result.unwrap().unicode_string_seg.string, ".");
         }
 
         // Press right 4 times. It should jump the emoji at the start of the line (and not

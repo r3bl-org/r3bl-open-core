@@ -73,6 +73,7 @@
   - [v0.3.1 2024-04-17](#v031-2024-04-17)
   - [v0.3.0 2024-04-15](#v030-2024-04-15)
 - [r3bl_ansi_color](#r3bl_ansi_color)
+  - [v0.7.0 2024-10-18](#v070-2024-10-18)
   - [v0.6.10 2024-09-12](#v0610-2024-09-12)
   - [v0.6.9 2023-10-21](#v069-2023-10-21)
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
@@ -404,6 +405,9 @@ which can carry state around between "applets".
 - Changed:
   - Refactor lots of styling related code in preparation for the move to `core`. This will
     make it easier to maintain and test the codebase, and clean up the dependencies.
+  - The latest version of `unicode-width` crate `v2.0.0` changes the widths of many of the
+    emoji. This requires lots of tests to be changed in order to work w/ the new constant
+    width values.
 
 - Removed:
   - Move the `color_wheel` module into `r3bl_core` crate. This is to ensure that it is
@@ -738,6 +742,9 @@ in the real world.
     `console_log_impl.rs` file.
   - Reorganize the `src` folder to make sure that there aren't any top level files, and that
     everything is in a module. This is to make it easier to add new modules in the future.
+  - The latest version of `unicode-width` crate `v2.0.0` changes the widths of many of the
+    emoji. This requires lots of tests to be changed in order to work w/ the new constant
+    width values.
 
 - Added:
   - Simplify the actual logging API into a single function, and allow use of tokio
@@ -1088,7 +1095,10 @@ This is the first release of this crate.
 
 ## `r3bl_ansi_color`
 
-### next-release-ansi-color
+### v0.7.0 (2024-10-18)
+
+This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
+change for almost every crate in the repo.
 
 - Added:
   - Move code from `r3bl_core`'s `term.rs` to detect whether `stdin`, `stdout`, `stderr`

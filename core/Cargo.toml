@@ -27,15 +27,15 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" } # Convert between ansi and rgb.
+r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" } # Convert between ansi and rgb.
 
 # https://github.com/serde-rs/serde.
 serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.128"
+serde_json = "1.0.131"
 
 # Unicode, grapheme clusters.
-unicode-width = "0.1.13"
-unicode-segmentation = "1.11.0"
+unicode-width = "0.2.0"
+unicode-segmentation = "1.12.0"
 
 # Time
 chrono = "0.4.38"
@@ -63,15 +63,15 @@ tracing-core = "0.1.32"
 
 # Terminal output.
 crossterm = { version = "0.28.1", features = ["event-stream"] } # EventStream
-futures-util = "0.3.30"                                         # Needed for crossterm EventStream
+futures-util = "0.3.31"                                         # Needed for crossterm EventStream
 
 # Color gradients.
 colorgrad = "0.7.0"
 
 # Error handling.
-thiserror = "1.0.63"
+thiserror = "1.0.64"
 miette = { version = "7.2.0", features = ["fancy"] }
-pretty_assertions = "1.4.0"
+pretty_assertions = "1.4.1"
 
 # Enum to string generation.
 strum = "0.26.3"
@@ -85,16 +85,16 @@ bincode = { version = "1.3.3" }
 kv = { version = "0.24.0", features = ["json-value", "bincode-value"] }
 
 # Async stream for DI and testing.
-futures-core = "0.3.30"
-async-stream = "0.3.5"
+futures-core = "0.3.31"
+async-stream = "0.3.6"
 
 [dev-dependencies]
 # for assert_eq! macro
-pretty_assertions = "1.4.0"
+pretty_assertions = "1.4.1"
 serial_test = "3.1.1"
 
 # Testing - temp files and folders.
-tempfile = "3.12.0"
+tempfile = "3.13.0"
 
 # Bin targets for testing stdout and stderr.
 assert_cmd = "2.0.16"
