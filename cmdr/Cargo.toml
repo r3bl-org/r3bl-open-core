@@ -43,7 +43,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # R3BL crates (from this mono repo).
-r3bl_ansi_color = { path = "../ansi_color", version = "0.6.10" }            # version is requried to publish to crates.io
+r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" }             # version is requried to publish to crates.io
 r3bl_core = { path = "../core", version = "0.9.16" }                        # version is requried to publish to crates.io
 r3bl_macro = { path = "../macro", version = "0.9.10" }                      # version is requried to publish to crates.io
 r3bl_tui = { path = "../tui", version = "0.5.9" }                           # version is requried to publish to crates.io
@@ -51,15 +51,15 @@ r3bl_tuify = { path = "../tuify", version = "0.1.27" }                      # ve
 r3bl_analytics_schema = { path = "../analytics_schema", version = "0.0.2" } # version is requried to publish to crates.io
 
 # Reqwest (HTTP client).
-reqwest = { version = "0.12.7", features = ["json"] }
+reqwest = { version = "0.12.8", features = ["json"] }
 
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
-clap = { version = "4.5.17", features = ["derive", "wrap_help", "help"] }
+clap = { version = "4.5.20", features = ["derive", "wrap_help", "help"] }
 
 # serde-json.
 serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.128"
+serde_json = "1.0.131"
 
 # Time.
 chrono = "0.4.38"
@@ -77,7 +77,7 @@ open = "5.3.0"
 dirs = "5.0.1"
 
 # Reedline.
-reedline = "0.34.0"
+reedline = "0.36.0"
 
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
@@ -89,10 +89,10 @@ tracing-appender = "0.2.3"
 tracing-core = "0.1.32"
 
 # Error handling.
-thiserror = "1.0.63"
+thiserror = "1.0.64"
 miette = { version = "7.2.0", features = ["fancy"] }
-pretty_assertions = "1.4.0"
+pretty_assertions = "1.4.1"
 
 [dev-dependencies]
-pretty_assertions = "1.4.0"
+pretty_assertions = "1.4.1"
 serial_test = "3.1.1"
