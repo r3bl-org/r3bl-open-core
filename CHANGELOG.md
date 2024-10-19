@@ -135,6 +135,10 @@
 
 ### next-release-cmdr
 
+This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
+change for almost every crate in the repo. This
+[PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
+
 - Updated:
   - This release just uses the latest deps from `r3bl-open-core` repo, since so many
     crates have been reorganized and renamed. The functionality has not changed at all,
@@ -261,6 +265,10 @@ in a text editor.
 
 ### next-release-tuify
 
+This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
+change for almost every crate in the repo. This
+[PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
+
 - Updated:
   - This release just uses the latest deps from `r3bl-open-core` repo, since so many
     crates have been reorganized and renamed. The functionality has not changed at all,
@@ -386,6 +394,10 @@ Another huge change is the method signature of `main_event_loop()`. This is a br
 change, and it uses dependency injection, to provide an input device, output device,
 state, and app to the function! This allows for new types of applications to be built,
 which can carry state around between "applets".
+
+This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
+change for almost every crate in the repo. This
+[PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
 
 - Added:
   - Provide a totally new interface for the `main_event_loop()` that allows for more
@@ -809,6 +821,8 @@ easier to maintain and understand, and easier to add new features to in the futu
 separation of concerns is now much clearer, and they reflect how the functionality is used
 in the real world.
 
+This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
+
 Changed:
   - The name of this repo used to be [`r3bl_rs_utils_macro`](#rename-to-r3bl_macro).
   - The modules and functions in this crate which are used (by other crates in this monorepo)
@@ -822,6 +836,10 @@ Deleted:
 ## `r3bl_test_fixtures`
 
 ### next-release-test-fixtures
+
+This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
+change for almost every crate in the repo. This
+[PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
 
 - Changed:
   - Some type aliases were defined here redundantly, since they were also defined in
@@ -882,7 +900,8 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
 ### next-release-terminal-async
 
 This is a major version upgrade and potentially a breaking change if you use the tracing
-modules in this crate.
+modules in this crate. This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/360)
+contains all the changes.
 
 - Added:
   - Add tests to ensure that the tracing module works as expected. This includes using the
@@ -1098,7 +1117,8 @@ This is the first release of this crate.
 ### v0.7.0 (2024-10-18)
 
 This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
-change for almost every crate in the repo.
+change for almost every crate in the repo. This
+[PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
 
 - Added:
   - Move code from `r3bl_core`'s `term.rs` to detect whether `stdin`, `stdout`, `stderr`

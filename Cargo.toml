@@ -1,17 +1,16 @@
 # https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html#creating-the-second-package-in-the-workspace
 [workspace]
-# Make sure to keep these in sync with `run` nushell script `workspace_folders`.
 members = [
+  "analytics_schema",
+  "ansi_color",
+  "cmdr",
   "core",
   "macro",
   "terminal_async",
+  "test_fixtures",
   "tui",
   "tuify",
-  "cmdr",
-  "test_fixtures",
-  "analytics_schema",
-  "ansi_color",
-]
+] # Make sure to keep these in sync with `run` nushell script `workspace_folders`.
 resolver = "2"
 
 # https://github.com/trailofbits/cargo-unmaintained

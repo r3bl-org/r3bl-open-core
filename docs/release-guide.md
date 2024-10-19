@@ -50,8 +50,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.6.10-ansi_color"
-git tag -a v0.6.10-ansi_color -m "v0.6.10-ansi_color"
+git commit -S -m "v0.7.0-ansi_color"
+git tag -a v0.7.0-ansi_color -m "v0.7.0-ansi_color"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
