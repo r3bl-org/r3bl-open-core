@@ -22,6 +22,7 @@ Table of contents:
 - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
 - [Building the workspace, CI/CD, and testing](#building-the-workspace-cicd-and-testing)
 - [Star History](#star-history)
+- [Archive](#archive)
 
 <!-- /TOC -->
 
@@ -173,3 +174,20 @@ crate.
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=r3bl-org/r3bl-open-core&type=Date" />
  </picture>
 </a>
+
+## Archive
+
+As this repo grows, changes, and matures, pruning is necessary. The
+[`r3bl-open-core-archive`](https://github.com/r3bl-org/r3bl-open-core-archive) is where
+all the code and artifacts that are no longer needed are moved to.
+
+This way nothing is "lost" and if you need to use some of the code that was removed, you
+can find it there.
+
+Also if you want to make changes to this code and maintain it yourself, please let us
+know.
+
+1. You can submit PRs and we can also accept them, and publish them to crates.io if that
+   makes sense.
+2. Or we can even work out and arrangements to move ownership of the code & crate to you
+   if you would like to commit to maintaining it.
