@@ -82,8 +82,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.9.10-macro"
-git tag -a v0.9.10-macro -m "v0.9.10-macro"
+git commit -S -m "v0.10.0-macro"
+git tag -a v0.10.0-macro -m "v0.10.0-macro"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
