@@ -27,10 +27,10 @@ path = "src/lib.rs"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-r3bl_core = { path = "../core", version = "0.9.16" }
+r3bl_core = { path = "../core", version = "0.10.0" }
 
 # https://github.com/dtolnay/proc-macro-workshop#debugging-tips
-syn = { version = "2.0.79", features = [
+syn = { version = "2.0.82", features = [
   "extra-traits",
   "full",
   "derive",

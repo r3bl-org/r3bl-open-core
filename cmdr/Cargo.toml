@@ -44,7 +44,7 @@ path = "src/lib.rs"
 [dependencies]
 # R3BL crates (from this mono repo).
 r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" }             # version is requried to publish to crates.io
-r3bl_core = { path = "../core", version = "0.9.16" }                        # version is requried to publish to crates.io
+r3bl_core = { path = "../core", version = "0.10.0" }                        # version is requried to publish to crates.io
 r3bl_macro = { path = "../macro", version = "0.9.10" }                      # version is requried to publish to crates.io
 r3bl_tui = { path = "../tui", version = "0.5.9" }                           # version is requried to publish to crates.io
 r3bl_tuify = { path = "../tuify", version = "0.1.27" }                      # version is requried to publish to crates.io
@@ -59,7 +59,7 @@ clap = { version = "4.5.20", features = ["derive", "wrap_help", "help"] }
 
 # serde-json.
 serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.131"
+serde_json = "1.0.132"
 
 # Time.
 chrono = "0.4.38"

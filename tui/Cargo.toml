@@ -26,7 +26,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_core = { path = "../core", version = "0.9.16" }            # version is requried to publish to crates.io
+r3bl_core = { path = "../core", version = "0.10.0" }            # version is requried to publish to crates.io
 r3bl_macro = { path = "../macro", version = "0.9.10" }          # version is requried to publish to crates.io
 r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" } # version is requried to publish to crates.io
 
@@ -42,7 +42,7 @@ futures-util = "0.3.31"
 
 # https://github.com/serde-rs/serde.
 serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.131"
+serde_json = "1.0.132"
 
 # strum.
 strum = "0.26.3"
