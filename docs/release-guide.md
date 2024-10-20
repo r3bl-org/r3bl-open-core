@@ -66,8 +66,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.9.16-core"
-git tag -a v0.9.16-core -m "v0.9.16-core"
+git commit -S -m "v0.10.0-core"
+git tag -a v0.10.0-core -m "v0.10.0-core"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..

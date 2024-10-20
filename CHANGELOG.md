@@ -48,7 +48,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_core](#r3bl_core)
-  - [next-release-core](#next-release-core)
+  - [v0.10.0 2024-10-20](#v0100-2024-10-20)
 - [r3bl_analytics_schema](#r3bl_analytics_schema)
   - [v0.0.2 2024-09-12](#v002-2024-09-12)
   - [v0.0.1 2023-12-31](#v001-2023-12-31)
@@ -724,16 +724,16 @@ exhaustively tested and is able to handle many more corner cases.
 
 ## `r3bl_core`
 
-### next-release-core
+### v0.10.0 (2024-10-20)
 
 This is a major release that does not include any new functionality, but is a radical
 reorganization & rename of the crate, it used to be
 [`r3bl_rs_utils_core`](#rename-to-r3bl_core).
 
-The `r3bl-open-core` repo was started in `2022-02-23`, about 2 years, 7 months
-ago, (which you can get using `curl https://api.github.com/repos/r3bl-org/r3bl-open-core |
-jq .created_at`). We have learned many lessons since then after writing about 125K lines
-of Rust code.
+The `r3bl-open-core` repo was started in `2022-02-23`, about 2 years, 7 months ago, (which
+you can get using `curl https://api.github.com/repos/r3bl-org/r3bl-open-core | jq
+.created_at`). We have learned many lessons since then after writing about 125K lines of
+Rust code.
 
 And it is time to pay down the accrued technical debt, to ensure that the codebase is
 easier to maintain and understand, and easier to add new features to in the future. The
