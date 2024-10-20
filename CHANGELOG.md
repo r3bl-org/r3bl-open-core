@@ -2,6 +2,16 @@
 
 <!-- TOC -->
 
+- [r3bl_ansi_color](#r3bl_ansi_color)
+  - [v0.7.0 2024-10-18](#v070-2024-10-18)
+  - [v0.6.10 2024-09-12](#v0610-2024-09-12)
+  - [v0.6.9 2023-10-21](#v069-2023-10-21)
+  - [v0.6.8 2023-10-16](#v068-2023-10-16)
+  - [v0.6.7 2023-09-12](#v067-2023-09-12)
+- [r3bl_core](#r3bl_core)
+  - [v0.10.0 2024-10-20](#v0100-2024-10-20)
+- [r3bl_macro](#r3bl_macro)
+  - [v0.0.10 2024-10-18](#v0100-2024-10-20-1)
 - [r3bl-cmdr](#r3bl-cmdr)
   - [next-release-cmdr](#next-release-cmdr)
   - [v0.0.16 2024-09-13](#v0016-2024-09-13)
@@ -47,13 +57,9 @@
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
-- [r3bl_core](#r3bl_core)
-  - [v0.10.0 2024-10-20](#v0100-2024-10-20)
 - [r3bl_analytics_schema](#r3bl_analytics_schema)
   - [v0.0.2 2024-09-12](#v002-2024-09-12)
   - [v0.0.1 2023-12-31](#v001-2023-12-31)
-- [r3bl_macro](#r3bl_macro)
-  - [next-release-macro](#next-release-macro)
 - [r3bl_test_fixtures](#r3bl_test_fixtures)
   - [next-release-test-fixtures](#next-release-test-fixtures)
   - [v0.0.3 2024-09-12](#v003-2024-09-12)
@@ -72,12 +78,6 @@
   - [v0.4.0 2024-04-21](#v040-2024-04-21)
   - [v0.3.1 2024-04-17](#v031-2024-04-17)
   - [v0.3.0 2024-04-15](#v030-2024-04-15)
-- [r3bl_ansi_color](#r3bl_ansi_color)
-  - [v0.7.0 2024-10-18](#v070-2024-10-18)
-  - [v0.6.10 2024-09-12](#v0610-2024-09-12)
-  - [v0.6.9 2023-10-21](#v069-2023-10-21)
-  - [v0.6.8 2023-10-16](#v068-2023-10-16)
-  - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
   - [Rename to r3bl_macro](#rename-to-r3bl_macro)
   - [v0.9.10 2024-09-12](#v0910-2024-09-12)
@@ -805,7 +805,7 @@ in the real world.
 
 ## `r3bl_macro`
 
-### next-release-macro
+### v0.10.0 (2024-10-20)
 
 This is a major release that does not include any new functionality, but is a radical
 reorganization & rename of the crate, it used to be

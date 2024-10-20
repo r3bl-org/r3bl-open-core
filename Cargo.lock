@@ -1749,7 +1749,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_macro"
-version = "0.9.10"
+version = "0.10.0"
 dependencies = [
  "paste",
  "pretty_assertions",
