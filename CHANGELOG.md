@@ -2,6 +2,8 @@
 
 <!-- TOC -->
 
+[ACTIVE](#changelog):
+
 - [r3bl_ansi_color](#r3bl_ansi_color)
   - [v0.7.0 2024-10-18](#v070-2024-10-18)
   - [v0.6.10 2024-09-12](#v0610-2024-09-12)
@@ -12,17 +14,11 @@
   - [v0.10.0 2024-10-20](#v0100-2024-10-20)
 - [r3bl_macro](#r3bl_macro)
   - [v0.0.10 2024-10-18](#v0100-2024-10-20-1)
-- [r3bl-cmdr](#r3bl-cmdr)
-  - [next-release-cmdr](#next-release-cmdr)
-  - [v0.0.16 2024-09-13](#v0016-2024-09-13)
-  - [v0.0.15 2024-09-12](#v0015-2024-09-12)
-  - [v0.0.14 2024-06-29](#v0014-2024-06-29)
-  - [v0.0.13 2024-05-20](#v0013-2024-05-20)
-  - [v0.0.12 2024-05-12](#v0012-2024-05-12)
-  - [v0.0.11 2024-01-14](#v0011-2024-01-14)
-  - [v0.0.10 2024-01-02](#v0010-2024-01-02)
-  - [v0.0.9 2023-12-31](#v009-2023-12-31)
-  - [v0.0.8 2023-12-22](#v008-2023-12-22)
+- [r3bl_test_fixtures](#r3bl_test_fixtures)
+  - [v0.1.0 2024-10-21](#v010-2024-10-21)
+  - [v0.0.3 2024-09-12](#v003-2024-09-12)
+  - [v0.0.2 2024-07-13](#v002-2024-07-13)
+  - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_tuify](#r3bl_tuify)
   - [next-release-tuify](#next-release-tuify)
   - [v0.1.27 2024-09-12](#v0127-2024-09-12)
@@ -57,14 +53,6 @@
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
-- [r3bl_analytics_schema](#r3bl_analytics_schema)
-  - [v0.0.2 2024-09-12](#v002-2024-09-12)
-  - [v0.0.1 2023-12-31](#v001-2023-12-31)
-- [r3bl_test_fixtures](#r3bl_test_fixtures)
-  - [next-release-test-fixtures](#next-release-test-fixtures)
-  - [v0.0.3 2024-09-12](#v003-2024-09-12)
-  - [v0.0.2 2024-07-13](#v002-2024-07-13)
-  - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
   - [next-release-terminal-async](#next-release-terminal-async)
   - [v0.5.7 2024-09-12](#v057-2024-09-12)
@@ -78,6 +66,23 @@
   - [v0.4.0 2024-04-21](#v040-2024-04-21)
   - [v0.3.1 2024-04-17](#v031-2024-04-17)
   - [v0.3.0 2024-04-15](#v030-2024-04-15)
+- [r3bl-cmdr](#r3bl-cmdr)
+  - [next-release-cmdr](#next-release-cmdr)
+  - [v0.0.16 2024-09-13](#v0016-2024-09-13)
+  - [v0.0.15 2024-09-12](#v0015-2024-09-12)
+  - [v0.0.14 2024-06-29](#v0014-2024-06-29)
+  - [v0.0.13 2024-05-20](#v0013-2024-05-20)
+  - [v0.0.12 2024-05-12](#v0012-2024-05-12)
+  - [v0.0.11 2024-01-14](#v0011-2024-01-14)
+  - [v0.0.10 2024-01-02](#v0010-2024-01-02)
+  - [v0.0.9 2023-12-31](#v009-2023-12-31)
+  - [v0.0.8 2023-12-22](#v008-2023-12-22)
+- [r3bl_analytics_schema](#r3bl_analytics_schema)
+  - [v0.0.2 2024-09-12](#v002-2024-09-12)
+  - [v0.0.1 2023-12-31](#v001-2023-12-31)
+
+[RENAMED](#renamed):
+
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
   - [Rename to r3bl_macro](#rename-to-r3bl_macro)
   - [v0.9.10 2024-09-12](#v0910-2024-09-12)
@@ -101,6 +106,9 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
+
+[ARCHIVED](#archived):
+
 - [r3bl_simple_logger](#r3bl_simple_logger)
   - [Archived 2024-09-27](#archived-2024-09-27)
   - [v0.1.4 2024-09-12](#v014-2024-09-12)
@@ -835,7 +843,7 @@ Deleted:
 
 ## `r3bl_test_fixtures`
 
-### next-release-test-fixtures
+### v0.1.0 (2024-10-21)
 
 This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
 change for almost every crate in the repo. This
@@ -1156,6 +1164,8 @@ change for almost every crate in the repo. This
 - Replaced:
   - `justfile` is now replaced with `nu` script `run.nu`.
 
+# Renamed
+
 <!-- Renamed section -->
 
 ## `r3bl_rs_utils_macro`
@@ -1324,6 +1334,8 @@ the `ok!()` macro.
   - ANSI escape sequences are no longer used internally in any intermediate format used by the TUI
     engine. It is reserved exclusively for output to stdout using (for now) crossterm. This opens
     the door for future support for GUI app (not just terminal emulators).
+
+# Archived
 
 <!-- Archived section -->
 
