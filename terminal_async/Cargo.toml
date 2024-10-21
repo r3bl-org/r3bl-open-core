@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_terminal_async"
-version = "0.5.7"
+version = "0.6.0"
 edition = "2021"
 resolver = "2"
 description = "Async non-blocking read_line implemenation with multiline editor, with concurrent display output from tasks, and colorful animated spinners"
