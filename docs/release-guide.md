@@ -130,8 +130,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "vX.Y.Z-tuify"
-git tag -a "vX.Y.Z-tuify" -m "vX.Y.Z-tuify"
+git commit -S -m "v0.2.0-tuify"
+git tag -a "v0.2.0-tuify" -m "v0.2.0-tuify"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..

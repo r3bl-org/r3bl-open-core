@@ -41,7 +41,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_tuify](#r3bl_tuify)
-  - [next-release-tuify](#next-release-tuify)
+  - [v0.2.0 2024-10-21](#v020-2024-10-21)
   - [v0.1.27 2024-09-12](#v0127-2024-09-12)
   - [v0.1.26 2024-04-15](#v0126-2024-04-15)
   - [v0.1.25 2024-01-14](#v0125-2024-01-14)
@@ -271,7 +271,7 @@ in a text editor.
 
 ## `r3bl_tuify`
 
-### next-release-tuify
+### v0.2.0 (2024-10-21)
 
 This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
 change for almost every crate in the repo. This
