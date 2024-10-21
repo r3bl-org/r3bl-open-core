@@ -88,13 +88,25 @@ cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
 
-cd tuify
+cd test_fixtures
 # Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
+git add -A
+git commit -S -m "v0.1.0-test_fixtures"
+git tag -a "v0.1.0-test_fixtures" -m "v0.1.0-test_fixtures"
+cargo publish
+git push ; git push --tags # Push tags & commits
+cd ..
+
+cd tui
+# Update version in Cargo.toml and this file
+# Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
@@ -104,6 +116,38 @@ cargo readme > README.md
 git add -A
 git commit -S -m "v0.5.9-tui"
 git tag -a v0.5.9-tui -m "v0.5.9-tui"
+cargo publish
+git push ; git push --tags # Push tags & commits
+cd ..
+
+cd tuify
+# Update version in Cargo.toml and this file
+# Update CHANGELOG.md
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
+git add -A
+git commit -S -m "vX.Y.Z-tuify"
+git tag -a "vX.Y.Z-tuify" -m "vX.Y.Z-tuify"
+cargo publish
+git push ; git push --tags # Push tags & commits
+cd ..
+
+cd terminal_async
+# Update version in Cargo.toml and this file
+# Update CHANGELOG.md
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
+git add -A
+git commit -S -m "vX.Y.Z-terminal_async"
+git tag -a vX.Y.Z-terminal_async -m "vX.Y.Z-terminal_async"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
@@ -124,38 +168,6 @@ git tag -a v0.0.16-cmdr -m "v0.0.16-cmdr"
 cargo publish
 # 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
 # You can do this using `cd cmdr && nu run build-release-in-docker`
-git push ; git push --tags # Push tags & commits
-cd ..
-
-cd test_fixtures
-# Update version in Cargo.toml and this file
-# Update CHANGELOG.md
-# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
-# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
-cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
-cargo readme > README.md
-git add -A
-git commit -S -m "v0.0.3-test_fixtures"
-git tag -a "v0.0.3-test_fixtures" -m "v0.0.3-test_fixtures"
-cargo publish
-git push ; git push --tags # Push tags & commits
-cd ..
-
-cd terminal_async
-# Update version in Cargo.toml and this file
-# Update CHANGELOG.md
-# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
-# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
-cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
-cargo readme > README.md
-git add -A
-git commit -S -m "v0.5.7-terminal_async"
-git tag -a v0.5.7-terminal_async -m "v0.5.7-terminal_async"
-cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
 
