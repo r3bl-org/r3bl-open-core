@@ -1844,7 +1844,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_tuify"
-version = "0.1.27"
+version = "0.2.0"
 dependencies = [
  "clap",
  "crossterm",

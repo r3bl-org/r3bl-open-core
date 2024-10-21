@@ -27,7 +27,7 @@ futures-util = "0.3.31"                                         # Needed for cro
 r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" } # version is required to publish to crates.io
 r3bl_core = { path = "../core", version = "0.10.0" }            # version is requried to publish to crates.io
 r3bl_tui = { path = "../tui", version = "0.6.0" }               # version is requried to publish to crates.io
-r3bl_tuify = { path = "../tuify", version = "0.1.27" }          # version is requried to publish to crates.io
+r3bl_tuify = { path = "../tuify", version = "0.2.0" }          # version is requried to publish to crates.io
 
 # Unicode support.
 unicode-segmentation = "1.12.0"
