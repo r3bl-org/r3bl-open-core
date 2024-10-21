@@ -54,7 +54,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_terminal_async](#r3bl_terminal_async)
-  - [next-release-terminal-async](#next-release-terminal-async)
+  - [v0.6.0 2024-10-21](#v060-2024-10-21)
   - [v0.5.7 2024-09-12](#v057-2024-09-12)
   - [v0.5.6 2024-08-13](#v056-2024-08-13)
   - [v0.5.5 2024-07-13](#v055-2024-07-13)
@@ -905,7 +905,7 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
 
 ## `r3bl_terminal_async`
 
-### next-release-terminal-async
+### v0.6.0 (2024-10-21)
 
 This is a major version upgrade and potentially a breaking change if you use the tracing
 modules in this crate. This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/360)
