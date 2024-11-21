@@ -196,7 +196,9 @@
 // Attach sources.
 pub mod input_device_fixtures;
 pub mod output_device_fixtures;
+pub mod tcp_stream_fixtures;
 
 // Re-export.
 pub use input_device_fixtures::*;
 pub use output_device_fixtures::*;
+pub use tcp_stream_fixtures::*;
