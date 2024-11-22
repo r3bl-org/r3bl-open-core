@@ -16,7 +16,9 @@
  */
 
 // Attach.
-pub mod mock_tcp_stream;
+pub mod mock_async_stream;
+pub mod mock_socket;
 
 // Re-export.
-pub use mock_tcp_stream::*;
+pub use mock_async_stream::*;
+pub use mock_socket::*;
