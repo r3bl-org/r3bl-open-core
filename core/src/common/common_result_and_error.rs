@@ -30,17 +30,19 @@ use std::{error::Error,
 /// - It is basically `miette::Result<T, miette::Report>`.
 /// - Works hand in hand w/ [CommonError] and any other type of error.
 ///
-/// Here's an example.
-/// ```ignore
-/// pub fn try_from_pair(pair: Pair) -> CommonResult<(Percent, Percent)> {
-///   let first = pair.first.try_into();
-///   let second = pair.second.try_into();
+/// # Example
+///
+/// ```
+/// use r3bl_core::{CommonResult, CommonError, CommonErrorType, Percent};
+/// pub fn try_from_pair(pair: (i32, i32)) -> CommonResult<(Percent, Percent)> {
+///   let first = pair.0.try_into();
+///   let second = pair.0.try_into();
 ///
 ///   match (first, second) {
 ///     (Ok(first), Ok(second)) => Ok((first, second)),
 ///     _ => {
 ///       let err_msg = format!("Invalid percentage values in tuple: {:?}", pair);
-///       CommonError::new(CommonErrorType::ValueOutOfRange, &err_msg)
+///       CommonError::new_error_result(CommonErrorType::ValueOutOfRange, &err_msg)
 ///     }
 ///   }
 /// }
@@ -50,17 +52,19 @@ pub type CommonResult<T> = miette::Result<T>;
 /// Common error struct. Read custom error docs
 /// [here](https://learning-rust.github.io/docs/e7.custom_error_types.html).
 ///
-/// Here's an example.
-/// ```ignore
-/// pub fn try_from_pair(pair: Pair) -> CommonResult<(Percent, Percent)> {
-///   let first = pair.first.try_into();
-///   let second = pair.second.try_into();
+/// # Example
+///
+/// ```
+/// use r3bl_core::{CommonResult, CommonError, CommonErrorType, Percent};
+/// pub fn try_from_pair(pair: (i32, i32)) -> CommonResult<(Percent, Percent)> {
+///   let first = pair.0.try_into();
+///   let second = pair.1.try_into();
 ///
 ///   match (first, second) {
 ///     (Ok(first), Ok(second)) => Ok((first, second)),
 ///     _ => {
 ///       let err_msg = format!("Invalid percentage values in tuple: {:?}", pair);
-///       CommonError::new(CommonErrorType::ValueOutOfRange, &err_msg)
+///       CommonError::new_error_result(CommonErrorType::ValueOutOfRange, &err_msg)
 ///     }
 ///   }
 /// }

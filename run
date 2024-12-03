@@ -165,18 +165,23 @@ def all [] {
 
 # Runs everything that all does, except for cargo-unmaintained and cargo-deny.
 def all-cicd [] {
-    # cargo install cargo-deny
-    # cargo install cargo-unmaintained
     cargo install cargo-readme
     build
     test
     clippy
     docs
-    # audit-deps
-    # unmaintained
+
+    cargo install cargo-deny
+    audit-deps
+
     rustfmt
+
+    # unmaintained
+    # cargo install cargo-unmaintained
 }
 
+# https://github.com/trailofbits/cargo-unmaintained
+# This is very slow to run.
 def unmaintained [] {
     cargo unmaintained --color always --fail-fast --tree --verbose
 }
@@ -268,6 +273,7 @@ def rustfmt [] {
 }
 
 # More info: https://github.com/EmbarkStudios/cargo-deny
+# To allow exceptions, please edit the `deny.toml` file.
 def audit-deps [] {
     cargo deny check licenses advisories
 }

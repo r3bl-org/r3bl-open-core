@@ -18,62 +18,59 @@
 /// Wrap the given block or stmt so that it returns a Result<()>. It is just
 /// syntactic sugar that helps having to write Ok(()) repeatedly.
 ///
-/// Here's an example.
-/// ```ignore
-/// use r3bl_core::CommonResult;
+/// # Example 1
 ///
-/// fn test_simple_2_col_layout() -> CommonResult<()> {
-///   throws! {
-///     match input_event {
-///       InputEvent::DisplayableKeypress(character) => {
-///         println_raw!(character);
-///       }
-///       _ => todo!()
-///     }
-///   }
-/// }
 /// ```
-///
-/// Here's another example.
-/// ```ignore
 /// use r3bl_core::{CommonResult, throws};
 ///
 /// fn test_simple_2_col_layout() -> CommonResult<()> {
-///   throws!({
-///     let mut canvas = Canvas::default();
-///     canvas.stylesheet = create_stylesheet()?;
-///     canvas.canvas_start(
-///       CanvasPropsBuilder::new()
-///         .set_pos((0, 0).into())
-///         .set_size((500, 500).into())
-///         .build(),
-///     )?;
-///     layout_container(&mut canvas)?;
-///     canvas.canvas_end()?;
-///   });
+///     let input_event = Some("a");
+///     throws! {
+///         match input_event {
+///             Some(character) => println!("{:?}", character),
+///             _ => todo!(),
+///         }
+///     }
 /// }
 /// ```
+///
+/// # Example 2
+///
+/// ```
+/// use r3bl_core::{CommonResult, throws};
+///
+/// fn test_simple_2_col_layout() -> CommonResult<()> {
+///     throws!({
+///         let result: miette::Result<&str> = Ok("foo bar");
+///         _ = result?;
+///         ()
+///     });
+/// }
 #[macro_export]
 macro_rules! throws {
-  ($it: block) => {{
-    $it
-    return Ok(())
-  }};
-  ($it: stmt) => {{
-    $it
-    return Ok(())
-  }};
+    ($it: block) => {{
+        $it
+        return Ok(())
+    }};
+    ($it: stmt) => {{
+        $it
+        return Ok(())
+    }};
 }
 
 /// Wrap the given block or stmt so that it returns a Result<$it>. It is just
 /// syntactic sugar that helps having to write Ok($it) repeatedly.
 ///
-/// Here's an example.
-/// ```ignore
-/// throws_with_return!({
-///   println!("⛵ Draw -> draw: {}\r", state);
-///   render_pipeline!()
-/// });
+/// # Example
+///
+/// ```no_run
+/// use r3bl_core::{throws_with_return, CommonResult};
+/// fn function_returns_string() -> CommonResult<&'static str> {
+///     throws_with_return!({
+///         println!("⛵ Draw -> draw: {}\r", "state");
+///         "Hello, World!"
+///     });
+/// }
 /// ```
 #[macro_export]
 macro_rules! throws_with_return {
@@ -85,17 +82,21 @@ macro_rules! throws_with_return {
     }};
 }
 
-/// Syntactic sugar to run a conditional statement. Here's an example.
-/// ```ignore
+/// Syntactic sugar to run a conditional statement.
+///
+/// # Example
+///
+/// ```
+/// use r3bl_core::call_if_true;
 /// const DEBUG: bool = true;
 /// call_if_true!(
-///   DEBUG,
-///   eprintln!(
-///     "{} {} {}\r",
-///     r3bl_core::style_error("▶"),
-///     r3bl_core::style_prompt($msg),
-///     r3bl_core::style_dimmed(&format!("{:#?}", $err))
-///   )
+///     DEBUG,
+///     eprintln!(
+///         "{} {} {}\r",
+///         "one",
+///         "two",
+///         "three"
+///     )
 /// );
 /// ```
 #[macro_export]
@@ -114,24 +115,33 @@ macro_rules! call_if_true {
 /// contains (using the [Debug] formatter). All of the output is colorized for easy
 /// readability. You can use it like this.
 ///
+/// # Example 1
+///
 /// ```rust
 /// use r3bl_core::console_log;
 ///
 /// let my_string = "Hello World!";
 /// console_log!(my_string);
+///
 /// let my_number = 42;
 /// console_log!(my_string, my_number);
 /// ```
 ///
+/// # Example 2
+///
 /// You can also use it in these other forms for terminal raw mode output. This will dump
 /// the output to stderr.
 ///
-/// ```ignore
-/// if let Err(err) = $cmd {
-///   let msg = format!("❌ Failed to {}", stringify!($cmd));
-///   console_log!(ERROR_RAW &msg, err);
+/// ```rust
+/// use r3bl_core::console_log;
+/// let result: miette::Result<String> = Ok("foo".to_string());
+/// if let Err(err) = result {
+///     let msg = format!("❌ Failed to {}", stringify!($cmd));
+///     console_log!(ERROR_RAW &msg, err);
 /// }
 /// ```
+///
+/// # Example 3
 ///
 /// This will dump the output to stdout.
 ///
@@ -145,64 +155,63 @@ macro_rules! call_if_true {
 /// <https://danielkeep.github.io/tlborm/book/mbe-macro-rules.html#repetitions>
 #[macro_export]
 macro_rules! console_log {
-  (ERROR_RAW $msg:expr, $err:expr) => {{
-    eprintln!(
-      "{} {} {}\r",
-      r3bl_core::style_error("▶"),
-      r3bl_core::style_prompt($msg),
-      r3bl_core::style_underline(&format!("{:#?}", $err))
-    );
-  }};
-
-  (OK_RAW $msg:expr) => {{
-    println!(
-      "{} {}\r",
-      r3bl_core::style_error("▶"),
-      r3bl_core::style_prompt($msg)
-    );
-  }};
-
-  (
-    $(                      /* Start a repetition. */
-      $element:expr         /* Expression. */
-    )                       /* End repetition. */
-    ,                       /* Comma separated. */
-    *                       /* Zero or more times. */
-    $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
-  ) => {
-    /* Enclose the expansion in a block so that we can use multiple statements. */
-      {
-      /* Start a repetition. */
-      $(
-        /* Each repeat will contain the following statement, with $element replaced. */
-        println!(
-          "{} {} = {}",
-          r3bl_core::style_error("▶"),
-          r3bl_core::style_prompt(stringify!($element)),
-          r3bl_core::style_underline(&format!("{:#?}", $element))
+    (ERROR_RAW $msg:expr, $err:expr) => {{
+        eprintln!(
+            "{} {} {}\r",
+            r3bl_core::style_error("▶"),
+            r3bl_core::style_prompt($msg),
+            r3bl_core::style_underline(&format!("{:#?}", $err))
         );
-      )*
-  }};
+    }};
+
+    (OK_RAW $msg:expr) => {{
+        println!(
+            "{} {}\r",
+            r3bl_core::style_error("▶"),
+            r3bl_core::style_prompt($msg)
+        );
+    }};
+
+    (
+        $(                      /* Start a repetition. */
+            $element:expr         /* Expression. */
+        )                       /* End repetition. */
+        ,                       /* Comma separated. */
+        *                       /* Zero or more times. */
+        $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) => {
+        /* Enclose the expansion in a block so that we can use multiple statements. */
+        {
+            /* Start a repetition. */
+            $(
+                /* Each repeat will contain the following statement, with $element replaced. */
+                println!(
+                    "{} {} = {}",
+                    r3bl_core::style_error("▶"),
+                    r3bl_core::style_prompt(stringify!($element)),
+                    r3bl_core::style_underline(&format!("{:#?}", $element))
+                );
+            )*
+        }
+    };
 }
 
 /// Runs the `$code` block after evaluating the `$eval` expression and assigning
 /// it to `$id`.
 ///
-/// # Examples:
-/// ```ignore
+/// # Examples
+///
+/// ```no_run
+/// use r3bl_core::with;
 /// with! {
-///   LayoutProps {
-///     id: id.to_string(),
-///     dir,
-///     req_size: RequestedSize::new(width_pc, height_pc),
-///   },
-///   as it,
-///   run {
-///     match self.is_layout_stack_empty() {
-///       true => self.add_root_layout(it),
-///       false => self.add_normal_layout(it),
-///     }?;
-///   }
+///     Some("Hello, World!"),
+///     as it,
+///     run {
+///         match it {
+///             Some(val) => println!("{}", val),
+///             _ => todo!()
+///         };
+///     }
 /// }
 /// ```
 #[macro_export]
@@ -213,22 +222,19 @@ macro_rules! with {
     };
 }
 
-/// Similar to [`with!`] except `$id` is a mutable reference to the `$eval`
-/// expression.
+/// Similar to [`with!`] except `$id` is a mutable reference to the `$eval` expression.
 ///
-/// # Examples:
-/// ```ignore
+/// # Example
+///
+/// ```rust
+/// use r3bl_core::with_mut;
 /// with_mut! {
-///   StyleFlag::BOLD_SET | StyleFlag::DIM_SET,
-///   as mask2,
-///   run {
-///     assert!(mask2.contains(StyleFlag::BOLD_SET));
-///     assert!(mask2.contains(StyleFlag::DIM_SET));
-///     assert!(!mask2.contains(StyleFlag::UNDERLINE_SET));
-///     assert!(!mask2.contains(StyleFlag::COLOR_FG_SET));
-///     assert!(!mask2.contains(StyleFlag::COLOR_BG_SET));
-///     assert!(!mask2.contains(StyleFlag::PADDING_SET));
-///   }
+///     vec!["one", "two", "three"],
+///     as it,
+///     run {
+///         it.push("four");
+///         assert_eq!(it.len(), 4);
+///     }
 /// }
 /// ```
 #[macro_export]
@@ -242,15 +248,18 @@ macro_rules! with_mut {
 /// Similar to [`with_mut!`] except that it returns the value of the `$code`
 /// block.
 ///
-/// # Examples:
-/// ```ignore
+/// # Example
+///
+/// ```rust
+/// use r3bl_core::with_mut_returns;
 /// let queue = with_mut_returns! {
-///   ColumnRenderComponent { lolcat },
-///   as it,
-///   return {
-///     let current_box = surface.current_box()?;
-///     it.render_component(current_box, state, shared_store).await?
-///   }
+///     vec![1, 2, 3],
+///     as it,
+///     return {
+///         it.push(4);
+///         assert_eq!(it.len(), 4);
+///         it[3]
+///     }
 /// };
 /// ```
 #[macro_export]
@@ -259,69 +268,6 @@ macro_rules! with_mut_returns {
         let mut $id = $eval;
         $code
     }};
-}
-
-/// Unwrap the `$option`, and if `None` then run the `$next` closure which must
-/// return an error. This macro must be called in a block that returns a
-/// `CommonResult<T>`.
-///
-/// # Example
-///
-/// ```ignore
-/// pub fn from(
-///   width_percent: u8,
-///   height_percent: u8,
-/// ) -> CommonResult<RequestedSize> {
-///   let size_tuple = (width_percent, height_percent);
-///   let (width_pc, height_pc) = unwrap_option_or_run_fn_returning_err!(
-///     convert_to_percent(size_tuple),
-///     || LayoutError::new_err(LayoutErrorType::InvalidLayoutSizePercentage)
-///   );
-///   Ok(Self::new(width_pc, height_pc))
-/// }
-/// ```
-#[macro_export]
-macro_rules! unwrap_option_or_run_fn_returning_err {
-    ($option:expr, $next:expr) => {
-        match $option {
-            Some(value) => value,
-            None => return $next(),
-        }
-    };
-}
-
-/// Basically a way to compute something lazily when it (the `Option`) is set to `None`.
-///
-/// Unwrap the `$option`, and if `None` then run the `$next` closure which must return a
-/// value that is set to `$option`.
-///
-/// # Example
-///
-/// ```ignore
-/// use r3bl_core::unwrap_option_or_compute_if_none;
-///
-/// #[test]
-/// fn test_unwrap_option_or_compute_if_none() {
-///   struct MyStruct {
-///     field: Option<i32>,
-///   }
-///   let mut my_struct = MyStruct { field: None };
-///   assert_eq!(my_struct.field, None);
-///   unwrap_option_or_compute_if_none!(my_struct.field, { || 1 });
-///   assert_eq!(my_struct.field, Some(1));
-/// }
-/// ```
-#[macro_export]
-macro_rules! unwrap_option_or_compute_if_none {
-    ($option:expr, $next:expr) => {
-        match $option {
-            Some(value) => value,
-            None => {
-                $option = Some($next());
-                $option.unwrap()
-            }
-        }
-    };
 }
 
 /// Similar to [`assert_eq!`] but automatically prints the left and right hand side
@@ -417,4 +363,119 @@ macro_rules! timed {
         let duration = start.elapsed();
         (retval, duration)
     }};
+}
+
+/// A decl macro that generates a global and mutable singleton instance of a struct that
+/// is safe. This struct must implement the [Default] trait.
+///
+/// This macro also generates Rust docs for the generated code, so you can see the
+/// documentation with `cargo doc --no-deps --open`.
+///
+/// # Arguments
+///
+/// The arguments to this macro are:
+/// 1. The struct type (which must implement [Default] trait).
+/// 2. The global variable name.
+///
+/// # Example
+///
+/// ```no_run
+/// use r3bl_core::create_global_singleton;
+///
+/// #[derive(Default)]
+/// pub struct MyStruct (i32);
+///
+/// create_global_singleton!(MyStruct, GLOBAL_MY_STRUCT);
+///
+/// let singleton = MyStruct::get_mut_singleton().unwrap();
+/// singleton.lock().unwrap().0 = 42;
+/// ```
+///
+/// More info on generating doc comments in declarative macros:
+/// - <https://stackoverflow.com/questions/33999341/generating-documentation-in-macros>
+#[macro_export]
+macro_rules! create_global_singleton {
+    ($struct_type:ty, $global_var_name:ident) => {
+        paste::paste! {
+            #[doc = concat!(
+                "A global [std::sync::Once] instance to ensure that the global
+                [", stringify!($global_var_name), "]
+                is initialized only once."
+            )]
+            pub static [<ONCE_ $global_var_name>]: std::sync::Once = std::sync::Once::new();
+
+            #[doc = concat!(
+                "A global instance of
+                [", stringify!($struct_type), "]
+                that is mutable. Even though this is globally mutable `unsafe` is not required,
+                since it is protected by a [std::sync::Mutex], wrapped in an [std::sync::Arc]."
+            )]
+            pub static mut $global_var_name: Option<std::sync::Arc<std::sync::Mutex<$struct_type>>> = None;
+
+            #[allow(dead_code)]
+            impl $struct_type {
+                /// Returns a mutable reference to the global singleton instance [$global_var_name]
+                /// of type [$struct_type].
+                #[allow(static_mut_refs)]
+                pub fn get_mut_singleton() -> miette::Result<std::sync::Arc<std::sync::Mutex<$struct_type>>> {
+                    unsafe {
+                        [<ONCE_ $global_var_name>].call_once(|| {
+                            $global_var_name = Some(std::sync::Arc::new(std::sync::Mutex::new(<$struct_type>::default())));
+                        });
+
+                        if let Some(ref global_var) = $global_var_name {
+                            Ok(global_var.clone())
+                        } else {
+                            let err_msg = concat!("Failed to initialize the global mutable variable: ", stringify!($global_var_name));
+                            miette::bail!(err_msg);
+                        }
+                    }
+                }
+            }
+
+        }
+    };
+}
+
+#[cfg(test)]
+mod tests_singleton {
+    #[test]
+    fn test_singleton_macro_once() {
+        #[derive(Default)]
+        pub struct MyStruct {
+            pub field: i32,
+        }
+
+        create_global_singleton!(MyStruct, GLOBAL_MY_STRUCT);
+
+        unsafe {
+            ONCE_GLOBAL_MY_STRUCT.call_once(|| {
+                GLOBAL_MY_STRUCT =
+                    Some(std::sync::Arc::new(std::sync::Mutex::new(MyStruct {
+                        field: 42,
+                    })));
+            });
+
+            if let Some(ref global_my_struct) = GLOBAL_MY_STRUCT {
+                assert_eq!(global_my_struct.lock().unwrap().field, 42);
+            } else {
+                panic!("Failed to initialize the global my struct");
+            }
+        }
+    }
+
+    #[test]
+    fn test_singleton_macro_get_mut() {
+        #[derive(Default)]
+        pub struct MyStruct2 {
+            pub field: i32,
+        }
+
+        create_global_singleton!(MyStruct2, GLOBAL_MY_STRUCT2);
+
+        let singleton = MyStruct2::get_mut_singleton().unwrap();
+        let mut instance = singleton.lock().unwrap();
+        instance.field = 42;
+        assert_eq!(instance.field, 42);
+    }
 }

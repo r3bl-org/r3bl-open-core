@@ -17,12 +17,9 @@
 
 use std::path::PathBuf;
 
-/// Note that if you wrap this up in a non blocking writer, as shown below, it doesn't
-/// work:
-///
-/// ```ignore
-/// tracing_appender::non_blocking(try_create_rolling_file_appender("foo")?);
-/// ```
+/// Note that if you wrap this up in a non blocking writer, it doesn't work. Here's an
+/// example of this:
+/// `tracing_appender::non_blocking(try_create_rolling_file_appender("foo")?)`
 pub fn try_create(
     path_str: &str,
 ) -> miette::Result<tracing_appender::rolling::RollingFileAppender> {

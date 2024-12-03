@@ -1,5 +1,6 @@
-# https://embarkstudios.github.io/cargo-deny/checks/cfg.html
-# https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
+# Docs:
+# - https://embarkstudios.github.io/cargo-deny/checks/cfg.html
+# - https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
 
 [licenses]
 allow = ["MIT", "Apache-2.0", "BSL-1.0", "ISC", "BSD-3-Clause", "MPL-2.0"]
@@ -13,4 +14,11 @@ name = "is_ci"
 allow = ["ISC"]
 
 [advisories]
-ignore = ["yaml-rust@0.4.5"]
+# If you add a crate in the array below, eg: `yaml-rust@0.4.5` then it will be checked to
+# see if it was yanked on or not. So to prevent warnings or failed advisory warnings, you
+# can add the `RUSTSEC...` identifier instead.
+ignore = [
+  "RUSTSEC-2024-0320", # "instant@0.1.13",
+  "RUSTSEC-2024-0384", # "hashbrown@0.15.0",
+  "RUSTSEC-2024-0402", # "yaml-rust@0.4.5",
+]

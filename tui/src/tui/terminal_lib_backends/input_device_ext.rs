@@ -15,42 +15,51 @@
  *   limitations under the License.
  */
 
-//! Using `poll()` is inefficient. The following code will generate some CPU utilization while
-//! idling.
+//! Using [crossterm::event::poll] is non-blocking, but also inefficient. The following
+//! code will generate some CPU utilization while idling.
 //!
-//! ```ignore
-//! loop {
-//!   if poll(Duration::from_millis(500))? { // This is inefficient.
-//!     let input_event: InputEvent = read()?.into();
-//!     if handle_input_event(input_event).await.is_err() {
-//!       break;
-//!     };
-//!   }
+//! ```
+//! use std::time::Duration;
+//! use std::io;
+//! use crossterm::event::{read, poll};
+//!
+//! fn print_events() -> io::Result<bool> {
+//!     loop {
+//!         if poll(Duration::from_millis(100))? {
+//!             // It's guaranteed that `read` won't block, because `poll` returned
+//!             // `Ok(true)`.
+//!             println!("{:?}", read()?);
+//!         } else {
+//!             // Timeout expired, no `Event` is available
+//!         }
+//!     }
 //! }
 //! ```
 //!
-//! The following code blocks the thread that its running on.
+//! The following code uses [crossterm::event::read] and blocks the thread that its
+//! running on.
 //!
-//! ```ignore
-//! async fn repl_blocking() -> CommonResult<()> {
-//!   throws!({
-//!     println_raw!("Type Ctrl+q to exit repl.");
+//! ```
+//! use crossterm::event::read;
+//! use std::io;
+//!
+//! fn print_events() -> io::Result<bool> {
 //!     loop {
-//!       let input_event: InputEvent = read()?.into();
-//!       let result = handle_input_event(input_event).await;
-//!       if result.is_err() {
-//!         break;
-//!       };
+//!         // Blocks until an `Event` is available
+//!         println!("{:?}", read()?);
 //!     }
-//!   });
 //! }
 //! ```
 //!
 //! - tokio crate docs:
-//!     - [Async in depth, futures, polling, efficient wakers](https://tokio.rs/tokio/tutorial/async)
-//!     - [Example of delay (setTimeout) w/out waker, inefficient](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=7a43cdf047cc17047c3c8b3f137293f0)
-//!     - [Example of delay (setTimeout) w/ waker, efficient](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=6633717db032ffe7af809e9131d7462f)
-//!     - [Per task concurrency w/ `select!`, vs parallelism w/ `tokio::spawn`](https://tokio.rs/tokio/tutorial/select#per-task-concurrency)
+//!     - [Async in depth, futures, polling, efficient
+//!       wakers](https://tokio.rs/tokio/tutorial/async)
+//!     - [Example of delay (setTimeout) w/out waker,
+//!       inefficient](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=7a43cdf047cc17047c3c8b3f137293f0)
+//!     - [Example of delay (setTimeout) w/ waker,
+//!       efficient](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=6633717db032ffe7af809e9131d7462f)
+//!     - [Per task concurrency w/ `select!`, vs parallelism w/
+//!       `tokio::spawn`](https://tokio.rs/tokio/tutorial/select#per-task-concurrency)
 //! - std docs:
 //!     - <https://doc.rust-lang.org/std/future/trait.Future.html>
 //!     - <https://doc.rust-lang.org/std/task/struct.Waker.html>
