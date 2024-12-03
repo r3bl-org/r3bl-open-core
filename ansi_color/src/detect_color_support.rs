@@ -85,8 +85,7 @@ pub mod global_color_support {
 pub fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSupport {
     if env_no_color()
         || as_str(&env::var("TERM")) == Ok("dumb")
-        || !(is_a_tty(stream)
-            || env::var("IGNORE_IS_TERMINAL").map_or(false, |v| v != "0"))
+        || !(is_a_tty(stream) || env::var("IGNORE_IS_TERMINAL").is_ok_and(|v| v != "0"))
     {
         return ColorSupport::NoColor;
     }
@@ -115,7 +114,7 @@ pub fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSuppo
 
     if env::var("COLORTERM").is_ok()
         || env::var("TERM").map(|term| check_ansi_color(&term)) == Ok(true)
-        || env::var("CLICOLOR").map_or(false, |v| v != "0")
+        || env::var("CLICOLOR").is_ok_and(|v| v != "0")
         || is_ci::uncached()
     {
         return ColorSupport::Truecolor;

@@ -1724,6 +1724,7 @@ dependencies = [
  "kv",
  "miette",
  "nom",
+ "paste",
  "pretty_assertions",
  "r3bl_ansi_color",
  "rand",

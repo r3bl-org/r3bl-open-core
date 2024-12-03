@@ -2,25 +2,34 @@
 
 <!-- TOC -->
 
-[ACTIVE](#changelog):
-
-- [r3bl_ansi_color](#r3bl_ansi_color)
-  - [v0.7.0 2024-10-18](#v070-2024-10-18)
-  - [v0.6.10 2024-09-12](#v0610-2024-09-12)
-  - [v0.6.9 2023-10-21](#v069-2023-10-21)
-  - [v0.6.8 2023-10-16](#v068-2023-10-16)
-  - [v0.6.7 2023-09-12](#v067-2023-09-12)
-- [r3bl_core](#r3bl_core)
-  - [v0.10.0 2024-10-20](#v0100-2024-10-20)
-- [r3bl_macro](#r3bl_macro)
-  - [v0.0.10 2024-10-18](#v0100-2024-10-20-1)
-- [r3bl_test_fixtures](#r3bl_test_fixtures)
-  - [v0.1.0 2024-10-21](#v010-2024-10-21)
-  - [v0.0.3 2024-09-12](#v003-2024-09-12)
-  - [v0.0.2 2024-07-13](#v002-2024-07-13)
-  - [v0.0.1 2024-07-12](#v001-2024-07-12)
+- [global-config](#global-config)
+  - [2024-12-04](#2024-12-04)
+- [r3bl-cmdr](#r3bl-cmdr)
+  - [next-release-cmdr](#next-release-cmdr)
+  - [v0.0.16 2024-09-13](#v0016-2024-09-13)
+  - [v0.0.15 2024-09-12](#v0015-2024-09-12)
+  - [v0.0.14 2024-06-29](#v0014-2024-06-29)
+  - [v0.0.13 2024-05-20](#v0013-2024-05-20)
+  - [v0.0.12 2024-05-12](#v0012-2024-05-12)
+  - [v0.0.11 2024-01-14](#v0011-2024-01-14)
+  - [v0.0.10 2024-01-02](#v0010-2024-01-02)
+  - [v0.0.9 2023-12-31](#v009-2023-12-31)
+  - [v0.0.8 2023-12-22](#v008-2023-12-22)
+- [r3bl_tuify](#r3bl_tuify)
+  - [v0.2.0 2024-10-21](#v020-2024-10-21)
+  - [v0.1.27 2024-09-12](#v0127-2024-09-12)
+  - [v0.1.26 2024-04-15](#v0126-2024-04-15)
+  - [v0.1.25 2024-01-14](#v0125-2024-01-14)
+  - [v0.1.24 2023-12-31](#v0124-2023-12-31)
+  - [v0.1.23 2023-12-22](#v0123-2023-12-22)
+  - [v0.1.22 2023-12-20](#v0122-2023-12-20)
+  - [v0.1.21 2023-10-21](#v0121-2023-10-21)
+  - [v0.1.20 2023-10-21](#v0120-2023-10-21)
+  - [v0.1.19 2023-10-17](#v0119-2023-10-17)
+  - [v0.1.18 2023-10-17](#v0118-2023-10-17)
+  - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
-  - [v0.6.0 2024-10-21](#060-2024-10-21)
+  - [v0.6.0 2024-10-21](#v060-2024-10-21)
   - [v0.5.9 2024-09-12](#v059-2024-09-12)
   - [v0.5.8 2024-09-07](#v058-2024-09-07)
   - [v0.5.7 2024-08-13](#v057-2024-08-13)
@@ -40,19 +49,19 @@
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
-- [r3bl_tuify](#r3bl_tuify)
-  - [v0.2.0 2024-10-21](#v020-2024-10-21)
-  - [v0.1.27 2024-09-12](#v0127-2024-09-12)
-  - [v0.1.26 2024-04-15](#v0126-2024-04-15)
-  - [v0.1.25 2024-01-14](#v0125-2024-01-14)
-  - [v0.1.24 2023-12-31](#v0124-2023-12-31)
-  - [v0.1.23 2023-12-22](#v0123-2023-12-22)
-  - [v0.1.22 2023-12-20](#v0122-2023-12-20)
-  - [v0.1.21 2023-10-21](#v0121-2023-10-21)
-  - [v0.1.20 2023-10-21](#v0120-2023-10-21)
-  - [v0.1.19 2023-10-17](#v0119-2023-10-17)
-  - [v0.1.18 2023-10-17](#v0118-2023-10-17)
-  - [v0.1.17 2023-10-14](#v0117-2023-10-14)
+- [r3bl_core](#r3bl_core)
+  - [next_release_r3bl_core](#next_release_r3bl_core)
+  - [v0.10.0 2024-10-20](#v0100-2024-10-20)
+- [r3bl_analytics_schema](#r3bl_analytics_schema)
+  - [v0.0.2 2024-09-12](#v002-2024-09-12)
+  - [v0.0.1 2023-12-31](#v001-2023-12-31)
+- [r3bl_macro](#r3bl_macro)
+  - [v0.10.0 2024-10-20](#v0100-2024-10-20)
+- [r3bl_test_fixtures](#r3bl_test_fixtures)
+  - [v0.1.0 2024-10-21](#v010-2024-10-21)
+  - [v0.0.3 2024-09-12](#v003-2024-09-12)
+  - [v0.0.2 2024-07-13](#v002-2024-07-13)
+  - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
   - [v0.6.0 2024-10-21](#v060-2024-10-21)
   - [v0.5.7 2024-09-12](#v057-2024-09-12)
@@ -66,23 +75,12 @@
   - [v0.4.0 2024-04-21](#v040-2024-04-21)
   - [v0.3.1 2024-04-17](#v031-2024-04-17)
   - [v0.3.0 2024-04-15](#v030-2024-04-15)
-- [r3bl-cmdr](#r3bl-cmdr)
-  - [next-release-cmdr](#next-release-cmdr)
-  - [v0.0.16 2024-09-13](#v0016-2024-09-13)
-  - [v0.0.15 2024-09-12](#v0015-2024-09-12)
-  - [v0.0.14 2024-06-29](#v0014-2024-06-29)
-  - [v0.0.13 2024-05-20](#v0013-2024-05-20)
-  - [v0.0.12 2024-05-12](#v0012-2024-05-12)
-  - [v0.0.11 2024-01-14](#v0011-2024-01-14)
-  - [v0.0.10 2024-01-02](#v0010-2024-01-02)
-  - [v0.0.9 2023-12-31](#v009-2023-12-31)
-  - [v0.0.8 2023-12-22](#v008-2023-12-22)
-- [r3bl_analytics_schema](#r3bl_analytics_schema)
-  - [v0.0.2 2024-09-12](#v002-2024-09-12)
-  - [v0.0.1 2023-12-31](#v001-2023-12-31)
-
-[RENAMED](#renamed):
-
+- [r3bl_ansi_color](#r3bl_ansi_color)
+  - [v0.7.0 2024-10-18](#v070-2024-10-18)
+  - [v0.6.10 2024-09-12](#v0610-2024-09-12)
+  - [v0.6.9 2023-10-21](#v069-2023-10-21)
+  - [v0.6.8 2023-10-16](#v068-2023-10-16)
+  - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
   - [Rename to r3bl_macro](#rename-to-r3bl_macro)
   - [v0.9.10 2024-09-12](#v0910-2024-09-12)
@@ -106,9 +104,6 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
-
-[ARCHIVED](#archived):
-
 - [r3bl_simple_logger](#r3bl_simple_logger)
   - [Archived 2024-09-27](#archived-2024-09-27)
   - [v0.1.4 2024-09-12](#v014-2024-09-12)
@@ -133,11 +128,42 @@
   - [v0.9.11 2023-10-28](#v0911-2023-10-28)
   - [v0.9.10 2023-10-21](#v0910-2023-10-21)
   - [v0.9.9](#v099)
+- [Renamed](#renamed)
+  - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
+  - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+- [Archived](#archived)
+  - [r3bl_simple_logger](#r3bl_simple_logger)
+  - [r3bl_redux](#r3bl_redux)
+  - [r3bl_rs_utils](#r3bl_rs_utils)
 - [More info on changelogs](#more-info-on-changelogs)
 
 <!-- /TOC -->
 
-<!-- Active crates -->
+<!-- Global config section -->
+
+## `global-config`
+
+This section contains all the changes that are made to global configuration to build and
+test the `r3bl-open-core` repo. This includes all the `run` scripts in each crate
+contained in the monorepo, along with the top level `run` script. Things like RUSTSEC
+advisory whitelist and which tasks are run in CICD are included here.
+
+### 2024-12-04
+
+This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/370) contains the details for
+the following:
+
+- Updated:
+  - Add a few RUSTSEC advisories to the whitelist in `deny.toml` file. These are
+    persistent warnings and errors for 3 crates that are unmaintained. The main one is
+    `syntect` which has not been updated in 10 months. I think there is some activity in
+    their repo that will allow this issue to be resolved.
+  - Run the `audit-deps` function in the `all-cicd` function, which is run in GitHub
+    Actions. With the whitelist in place, this is ok to run and won't produce errors
+    (since we already know about these 3 crates). The `unmaintained` function takes too
+    long to run so it is still not included in teh `all-cicd` function.
+
+<!-- Active crates section -->
 
 ## `r3bl-cmdr`
 
@@ -390,7 +416,7 @@ change for almost every crate in the repo. This
 
 ## `r3bl_tui`
 
-### 0.6.0 (2024-10-21)
+### v0.6.0 (2024-10-21)
 
 This is a major release that not only includes new functionality, but is a radical
 reorganization of the crates. The reason for paying down this technical debt now is to
@@ -704,12 +730,10 @@ exhaustively tested and is able to handle many more corner cases.
 
 ### v0.3.2 (2023-03-06)
 
-
 - Fixed:
   - Bug when trying to render an app that's taller than the offscreen buffer / terminal height
 
 ### v0.3.1 (2023-03-06)
-
 
 - Added:
   - First changelog entry.
@@ -731,6 +755,44 @@ exhaustively tested and is able to handle many more corner cases.
     increments the state every second and the gradient color wheel is updated accordingly.
 
 ## `r3bl_core`
+
+### next_release_r3bl_core
+
+This release does not have any major changes.
+1. Add a new declarative macro to effortlessly create global mutable thread safe
+   singletons (without using `unsafe`).
+2. Replace all the ignored doc tests with `no_run` (just compile) or compile and run. For
+   all Rust source files (in the entire monorepo, and not just this crate / folder).
+3. Here's the [PR](https://github.com/r3bl-org/r3bl-open-core/pull/370).
+
+Changed:
+  - Fix all the Rust doc tests that were marked with `ignore`. Remove the `ignore` with
+    either run and compile, or just `no_run` (compile only) in some cases where the code
+    can't be run, but needs to be compiled.
+
+- Updated:
+  - Fix all the Rust docs that are ignored (in all Rust source files in this crate), and
+    replace them with doc comments that compile successfully.
+
+- Added:
+  - A new declarative macro `create_global_singleton!` that takes a struct (which must
+    implement `Default` trait) and allows it to be simply turned into a singleton.
+    - You can still use the struct directly. Or just use the supplied generated associated
+      function on the struct called `get_mut_singleton()` and use the singleton directly.
+      It does *NOT* use `unsafe`.
+    - The code is safe and uses `Arc<Mutex<T: Default>>`, where `T` is your struct, under
+      the covers with `std::sync::Once` to make all this work.
+    - Please take a look at the code itself for more details, and the docs have usage
+      examples.
+    - Another neat thing about this declarative macro is that it generates Rust docs for
+      the generated code itself and these docs include references to the types and static
+      variables that are generated.
+
+- Removed:
+  - Remove the following declarative macros that were not being used anywhere, and there
+    are suitable candidates in the standard library that can be used instead:
+    - `unwrap_option_or_run_fn_returning_err!`
+    - `unwrap_option_or_compute_if_none!`
 
 ### v0.10.0 (2024-10-20)
 
@@ -1493,9 +1555,9 @@ archival purposes. It is no longer maintained.
   - Drop `ansi_term` dependency due to security advisory
     <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>.
 
-<!-- Info on changelogs -->
+<!-- changelog info section -->
 
-## More info on changelogs
+# More info on changelogs
 
 - https://keepachangelog.com/en/1.0.0/
 - https://co-pilot.dev/changelog

@@ -22,8 +22,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ch, ChUnit, Size};
 
-/// Here is a visual representation of how position and sizing works for the
-/// layout engine.
+/// Position is defined as: (col_index, row_index).
+///
+/// Here is a visual representation of how position and sizing works for the layout
+/// engine.
 ///
 /// ```text
 ///     0   4    9    1    2    2
@@ -38,19 +40,22 @@ use crate::{ch, ChUnit, Size};
 ///    ↓
 ///    row
 /// ```
-/// Position, defined as [col, row]. Here are some examples.
 ///
-/// ```ignore
-/// let pos: Position = (/* col: */ 0, /* row: */ 0).into();
+/// # Examples
+///
+/// ```rust
+/// use r3bl_core::{Size, Position, size, position, ch};
+/// let mut pos: Position = position!(col_index: 0, row_index: 0);
 /// pos.add_col(1);
 /// pos.add_row(1);
-/// pos += (/* col: */ 1, /* row: */ 1);
-/// let max_size: Size = (/* _max_col: */ 10, /* max_row: */ 10).into();
-/// pos.add_row_with_bounds(20, max_size);
+/// pos += position!(col_index: 1, row_index: 1);
+/// let max_size: Size = size!(col_count: 10, row_count: 10);
+/// pos.add_row_with_bounds(ch!(20), max_size.row_count);
 /// ```
 ///
-/// ```ignore
-/// let pos: Position = position!(0, 0);
+/// ```rust
+/// use r3bl_core::{Position, position};
+/// let pos: Position = position!(col_index: 0, row_index: 0);
 /// ```
 #[derive(
     Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default, Hash, size_of::SizeOf,
@@ -239,6 +244,12 @@ pub mod position_debug_formatter {
     }
 }
 
+/// # Example
+///
+/// ```rust
+/// use r3bl_core::{position, Position, ch};
+/// let pos: Position = position!(col_index: 0, row_index: 0);
+/// ```
 #[macro_export]
 macro_rules! position {
     (
