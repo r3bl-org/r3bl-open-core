@@ -23,8 +23,10 @@ use serde::{Deserialize, Serialize};
 use super::ChUnit;
 use crate::{ch, sub_unsigned};
 
-/// Here is a visual representation of how position and sizing works for the
-/// layout engine.
+/// Size is defined as: (col_count, row_count).
+///
+/// Here is a visual representation of how position and sizing works for the layout
+/// engine.
 ///
 /// ```text
 ///     0   4    9    1    2    2
@@ -40,13 +42,16 @@ use crate::{ch, sub_unsigned};
 ///    row
 /// ```
 ///
-/// Size, defined as [height, width]. Here are some examples.
-/// ```ignore
-/// let max_size: Size = (/* max_col: */ 10, /* max_row: */ 10).into();
+/// # Examples
+///
+/// ```rust
+/// use r3bl_core::{size, Size, ch};
+/// let max_size: Size = size!(col_count: 10, row_count: 10);
 /// ```
 ///
-/// ```ignore
-/// let size: Size = size!(cols: 10, rows: 10);
+/// ```rust
+/// use r3bl_core::{size, Size, ch};
+/// let size: Size = size!(col_count: 10, row_count: 10);
 /// ```
 #[derive(
     Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash, size_of::SizeOf,
@@ -117,9 +122,11 @@ pub mod size_math_ops {
     }
 }
 
-/// Example:
-/// ```ignore
-/// let size: Size = size!(col: 10, row: 10);
+/// # Example
+///
+/// ```
+/// use r3bl_core::{size, Size, ch};
+/// let size: Size = size!(col_count: 10, row_count: 10);
 /// ```
 #[macro_export]
 macro_rules! size {

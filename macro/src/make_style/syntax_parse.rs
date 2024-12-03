@@ -15,6 +15,28 @@
  *   limitations under the License.
  */
 
+//! Here's a sample syntax to parse.
+//!
+//! ```no_run
+//! use r3bl_macro::tui_style;
+//! use r3bl_core::{ch, TuiColor, ANSIBasicColor};
+//! let black = TuiColor::Basic(ANSIBasicColor::Black);
+//! let white = TuiColor::Basic(ANSIBasicColor::White);
+//! tui_style! {
+//!     id: 12              /* Optional. */
+//!     attrib: [dim, bold] /* Optional. */
+//!     padding: 10         /* Optional. */
+//!     color_fg: black     /* Optional. */
+//!     color_bg: white     /* Optional. */
+//!     lolcat: true        /* Optional. */
+//! };
+//! ```
+//!
+//! `color_fg` and `color_bg` can take any [r3bl_core::TuiColor]:
+//! 1. Color enum value.
+//! 2. Rgb value.
+//! 3. Variable holding either of the above.
+
 use quote::quote;
 use r3bl_core::{call_if_true, ch, throws, ChUnit, ChUnitPrimitiveType};
 use syn::{parse::{Parse, ParseStream},
@@ -34,23 +56,6 @@ use crate::utils::IdentExt;
 /// Type alias for [syn::Result].
 type SynResult<T> = std::result::Result<T, syn::Error>;
 
-/// Here's a sample syntax to parse.
-///
-/// ```ignore
-/// style! {
-///   id: "my_style",          /* Optional. */
-///   attrib: [dim, bold]      /* Optional. */
-///   padding: 10,             /* Optional. */
-///   color_fg: TuiColor::Blue, /* Optional. */
-///   color_bg: TuiColor::Red,  /* Optional. */
-///   lolcat: true,            /* Optional. */
-/// }
-/// ```
-///
-/// `color_fg` and `color_bg` can take any of the following:
-/// 1. Color enum value.
-/// 2. Rgb value.
-/// 3. Variable holding either of the above.
 impl Parse for StyleMetadata {
     fn parse(input: ParseStream) -> SynResult<Self> {
         let mut metadata = StyleMetadata {

@@ -50,7 +50,7 @@
 //!
 //! Here are examples of compound grapheme clusters.
 //!
-//! ```ignore
+//! ```text
 //! 🏽 + 🙏 = 🙏🏽
 //! 🏾‍ + 👨 + 🤝‍ + 👨 +  🏿 = 👨🏾‍🤝‍👨🏿
 //! ```
@@ -68,7 +68,11 @@
 //! way it would locally on Linux. However, if you run the same program in locally via
 //! Terminal.app on macOS it works differently! So there are some serious issues.
 //!
-//! ```ignore
+//! ```no_run
+//! use crossterm::{self, *, terminal::*, style::*, cursor::*, event::*};
+//! use std::io::*;
+//! use std::collections::*;
+//!
 //! pub fn test_crossterm_grapheme_cluster_width_calc() -> Result<()> {
 //!   // Enter raw mode, clear screen.
 //!   enable_raw_mode()?;

@@ -17,6 +17,3 @@
 
 // Attach sources.
 pub mod macros;
-
-// Tests.
-mod test_macros;
