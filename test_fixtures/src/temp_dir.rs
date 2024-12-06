@@ -15,11 +15,15 @@
  *   limitations under the License.
  */
 
+use std::{fmt::{Display, Formatter},
+          ops::Deref,
+          path::Path};
+
 use miette::IntoDiagnostic;
 use r3bl_core::friendly_random_id;
 
 pub struct TempDir {
-    pub path: std::path::PathBuf,
+    inner: std::path::PathBuf,
 }
 
 /// Create a temporary directory. The directory is automatically deleted when the
@@ -28,11 +32,69 @@ pub fn create_temp_dir() -> miette::Result<TempDir> {
     let root = std::env::temp_dir();
     let new_temp_dir = root.join(friendly_random_id::generate_friendly_random_id());
     std::fs::create_dir(&new_temp_dir).into_diagnostic()?;
-    Ok(TempDir { path: new_temp_dir })
+    Ok(TempDir {
+        inner: new_temp_dir,
+    })
 }
 
+/// Automatically delete the temporary directory when the [TempDir] struct is dropped.
 impl Drop for TempDir {
-    fn drop(&mut self) { std::fs::remove_dir_all(&self.path).unwrap(); }
+    fn drop(&mut self) { std::fs::remove_dir_all(&self.inner).unwrap(); }
+}
+
+/// Allow access to the inner [std::path::Path] easily when using other APIs.
+///
+/// Implementing the [Deref] trait that exposes the inner [Path] is useful when using
+/// other APIs that expect a [Path] instead of a [TempDir], such as:
+/// - [std::path::Path::join]
+///
+/// # Example
+///
+/// ```no_run
+/// use r3bl_test_fixtures::create_temp_dir;
+/// let root = create_temp_dir().unwrap();
+/// let new_dir = root.join("test_set_file_executable");
+/// ```
+impl Deref for TempDir {
+    type Target = std::path::PathBuf;
+
+    fn deref(&self) -> &Self::Target { &self.inner }
+}
+
+/// Implement the [Display] trait to allow printing the [TempDir] struct.
+/// This is useful when debugging or logging using:
+/// - [println!]
+///
+/// # Example
+///
+/// ```no_run
+/// use r3bl_test_fixtures::create_temp_dir;
+/// let root = create_temp_dir().unwrap();
+/// println!("Temp dir: {}", root);
+/// ```
+impl Display for TempDir {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner.display())
+    }
+}
+
+/// Allow access to the inner [Path] easily when using other APIs.
+///
+/// Implementing the [AsRef] trait that exposes the inner [Path] is useful when using
+/// other APIs that expect a [Path] instead of a [TempDir], such as:
+/// - [std::fs::create_dir_all]
+/// - [std::fs::remove_dir_all]
+///
+/// # Example
+///
+/// ```no_run
+/// use r3bl_test_fixtures::create_temp_dir;
+/// let root = create_temp_dir().unwrap();
+/// std::fs::create_dir_all(root.join("test_set_file_executable")).unwrap();
+/// std::fs::remove_dir_all(root).unwrap();
+/// ```
+impl AsRef<Path> for TempDir {
+    fn as_ref(&self) -> &Path { &self.inner }
 }
 
 #[cfg(test)]
@@ -46,17 +108,17 @@ mod tests {
         let temp_dir = create_temp_dir().unwrap();
         println!(
             "Temp dir: {}",
-            temp_dir.path.display().to_string().magenta()
+            temp_dir.inner.display().to_string().magenta()
         );
 
-        assert!(temp_dir.path.exists());
+        assert!(temp_dir.inner.exists());
     }
 
     #[test]
     fn test_temp_dir_drop() {
         let temp_dir = create_temp_dir().unwrap();
 
-        let copy_of_path = temp_dir.path.clone();
+        let copy_of_path = temp_dir.inner.clone();
         println!("Temp dir: {}", copy_of_path.display().to_string().magenta());
 
         drop(temp_dir);
