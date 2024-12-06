@@ -1034,7 +1034,11 @@ This release adds a new fixture to make it easy to create temporary directories 
 Added:
   - Add a new fixture `temp_dir::create_temp_dir()` to make it easy to create temporary
     directories for tests. Any temporary directories created are automatically cleaned up
-    after the test is done.
+    after the test is done. The `TempDir` struct implements many traits that make it
+    ergonomic to use with `std::fs`, `std::path` and `std::fmt`. Here are the PRs for this
+    change:
+    - [PR 1](https://github.com/r3bl-org/r3bl-open-core/pull/372)
+    - [PR 2](https://github.com/r3bl-org/r3bl-open-core/pull/373)
 
 ### v0.1.0 (2024-10-21)
 
