@@ -1792,6 +1792,7 @@ name = "r3bl_test_fixtures"
 version = "0.1.0"
 dependencies = [
  "async-stream",
+ "crossterm",
  "futures-core",
  "futures-util",
  "miette",

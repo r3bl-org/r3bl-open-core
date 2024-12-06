@@ -45,3 +45,6 @@ tracing-subscriber = "0.3.18"
 tracing-appender = "0.2.3"
 tracing-core = "0.1.32"
 tokio-test = "0.4.4"
+
+# Colorful console output (for tests).
+crossterm = { version = "0.28.1", features = ["event-stream"] } # EventStream
