@@ -1031,7 +1031,7 @@ Deleted:
 
 This release adds a new fixture to make it easy to create temporary directories for tests.
 
-Added:
+- Added:
   - Add a new fixture `temp_dir::create_temp_dir()` to make it easy to create temporary
     directories for tests. Any temporary directories created are automatically cleaned up
     after the test is done. The `TempDir` struct implements many traits that make it
