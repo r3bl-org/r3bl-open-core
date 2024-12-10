@@ -13,6 +13,8 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "qwtel.sqlite-viewer", // SQLite Viewer.
+    "dracula-theme.theme-dracula", // Dracula Theme.
     "mutantdino.resourcemonitor", // Resource Monitor.
     "compulim.vscode-clock", // Clock.
     "keksiqc.idx-monospace-theme", // IDX Monospace Theme.
@@ -31,7 +33,6 @@
     "ms-vscode.vscode-typescript-next", // Typescript Next.
     "mishkinf.goto-next-previous-member", // Go to Next/Previous Member.
     "github.copilot", // Github Copilot.
-    "huntertran.auto-markdown-toc", // Auto Markdown TOC.
     "naumovs.color-highlight", // Color Highlight.
     "perkovec.emoji", // Emoji.
     "tamasfe.even-better-toml", // Even Better TOML.
@@ -47,7 +48,6 @@
     "streetsidesoftware.code-spell-checker", // Code Spell Checker.
     "TheNuProjectContributors.vscode-nushell-lang", // Nushell.
     "fill-labs.dependi", // crates.io.
-    "eamodio.gitlens", // GitLens.
     "s-nlf-fh.glassit", // GlassIt.
     "alefragnani.separators", // Separators, Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
     "bmalehorn.vscode-fish", // Fish.
@@ -56,6 +56,8 @@
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "huntertran.auto-markdown-toc", // Auto Markdown TOC.
+    "eamodio.gitlens", // GitLens.
     "unifiedjs.vscode-mdx", // MDX.
     "Catppuccin.catppuccin-vsc", // Catppuccino Theme.
     "teabyii.ayu", // Ayu Theme.
