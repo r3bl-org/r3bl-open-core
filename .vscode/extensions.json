@@ -15,7 +15,6 @@
   "recommendations": [
     "qwtel.sqlite-viewer", // SQLite Viewer.
     "dracula-theme.theme-dracula", // Dracula Theme.
-    "mutantdino.resourcemonitor", // Resource Monitor.
     "compulim.vscode-clock", // Clock.
     "keksiqc.idx-monospace-theme", // IDX Monospace Theme.
     "devgauravjatt.github-catppuccin-dark", // GitHub + Catppuccino Dark Theme.
@@ -56,6 +55,7 @@
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "mutantdino.resourcemonitor", // Resource Monitor.
     "huntertran.auto-markdown-toc", // Auto Markdown TOC.
     "eamodio.gitlens", // GitLens.
     "unifiedjs.vscode-mdx", // MDX.
