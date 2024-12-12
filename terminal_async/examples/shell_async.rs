@@ -17,14 +17,15 @@
 
 //! This program uses the `r3bl_terminal_async` crate to provide a prompt and get user
 //! input, pass that to the `stdin` of a `bash` child process, and then display the output
-//! from the child process in the terminal. The followings steps outline what the program
-//! does:
+//! from the child process in the terminal.
 //!
 //! # YouTube video of live coding this example
 //!
 //! Please watch the following video to see how this example was created.
 //! - [Build with Naz : Create an async shell in Rust](https://youtu.be/jXzFCDIJQag)
 //! - [YouTube channel](https://www.youtube.com/@developerlifecom?sub_confirmation=1)
+//!
+//! The followings steps outline what this example program does.
 //!
 //! # Create some shared global variables
 //!
@@ -40,21 +41,21 @@
 //!
 //! # 🧵 The main event loop simply waits for the following (on the current thread)
 //!
-//! - Start a main event loop (on the current thread):
-//!   - The shutdown signal from the broadcast channel, and monitors the
-//!     [r3bl_terminal_async::TerminalAsync] for user input. It writes the user input to the
-//!     [tokio::process::ChildStdin].
-//!   - Any exit inputs (user types "exit" or "Ctrl+D") from the user are captured here and
-//!     sent to the shutdown broadcast channel. It also listens to the broadcast channel to
-//!     break out of the loop on shutdown.
+//! - Start a main event loop (on the current thread) that does the following:
+//!   - Monitor the shutdown signal from the broadcast channel
+//!   - Monitor the [r3bl_terminal_async::TerminalAsync] for user input and write any
+//!     input (the user provides interactively) to to the [tokio::process::ChildStdin].
+//!   - Any exit inputs (when the user types "exit" or "Ctrl+D") from the user are
+//!     captured here and sent to the shutdown broadcast channel. It also listens to the
+//!     broadcast channel to break out of the loop on shutdown.
 //!   - It [tokio::process::Child::kill]s the child process when it gets the exit signal.
-//!   - It does not monitor the terminal for user input or the child process for output.
+//!   - It does not monitor the child process for output.
 //!
 //! # 🚀 Spawn a new task to loop and read the output from the child process and display it
 //!
 //! - Spawn a task to loop:
 //!   - Read the [tokio::process::ChildStdout] and write it to the
-//!     [r3bl_terminal_async::SharedWriter].
+//!     [r3bl_core::SharedWriter].
 //!   - Also listen to the broadcast channel to break out of the loop on shutdown.
 //!
 //! # Run the binary
