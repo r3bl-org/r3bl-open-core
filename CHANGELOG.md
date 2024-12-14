@@ -880,12 +880,16 @@ exhaustively tested and is able to handle many more corner cases.
 
 ### v_next_release_r3bl_core
 
-This release does not have any major changes.
+This release does not have any major changes. Here are the highlights:
 1. Add a new declarative macro to effortlessly create global mutable thread safe
    singletons (without using `unsafe`).
 2. Replace all the ignored doc tests with `no_run` (just compile) or compile and run. For
    all Rust source files (in the entire monorepo, and not just this crate / folder).
 3. Here's the [PR](https://github.com/r3bl-org/r3bl-open-core/pull/370).
+4. There's a new converter `convert_to_ansi_color_styles` which converts a `TuiStyle` into
+   a `Vec` of `r3bl_ansi_term::Style`. This is for `lolcat_api` enhancements which now
+   allow for an optional default style to be passed in, that will be applied to the
+   generated lolcat output.
 
 Changed:
   - Fix all the Rust doc tests that were marked with `ignore`. Remove the `ignore` with
@@ -897,6 +901,11 @@ Changed:
     replace them with doc comments that compile successfully.
 
 - Added:
+  - `lolcat_api` enhancements that now allow for an optional default style to be passed in
+    to `ColorWheel::lolcat_into_string` and `ColorWheel::colorize_into_string`, that will
+    be applied to the generated lolcat output.
+  - `convert_to_ansi_color_styles` module that adds the ability to convert a `TuiStyle`
+    into a `Vec` of `r3bl_ansi_term::Style`.
   - A new declarative macro `create_global_singleton!` that takes a struct (which must
     implement `Default` trait) and allows it to be simply turned into a singleton.
     - You can still use the struct directly. Or just use the supplied generated associated

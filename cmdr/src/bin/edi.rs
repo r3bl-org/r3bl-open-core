@@ -130,6 +130,7 @@ pub mod edi_ui_templates {
                         &UnicodeString::from("New version of edi is available 📦."),
                         GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
                         TextColorizationPolicy::ColorEachCharacter(None),
+                        None,
                     )
                 };
 
@@ -168,7 +169,7 @@ pub mod edi_ui_templates {
 
                 let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
 
-                ColorWheel::lolcat_into_string(&plain_text_exit_msg)
+                ColorWheel::lolcat_into_string(&plain_text_exit_msg, None)
             });
         }
     }

@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use std::ops::AddAssign;
+
 use r3bl_ansi_color::AnsiStyledText;
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +26,7 @@ use super::{ColorWheelConfig,
             GradientKind,
             GradientLengthKind};
 use crate::{ch,
-            convert_tui_color_into_r3bl_ansi_color,
+            convert_to_ansi_color_styles,
             generate_random_truecolor_gradient,
             generate_truecolor_gradient,
             get_gradient_array_for,
@@ -334,11 +336,15 @@ impl ColorWheel {
     }
 
     /// Simplified version of [ColorWheel::colorize_into_string] with some defaults.
-    pub fn lolcat_into_string(text: &str) -> String {
+    pub fn lolcat_into_string(
+        text: &str,
+        maybe_default_style: Option<TuiStyle>,
+    ) -> String {
         ColorWheel::default().colorize_into_string(
             &UnicodeString::from(text),
             GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
             TextColorizationPolicy::ColorEachCharacter(None),
+            maybe_default_style,
         )
     }
 
@@ -348,6 +354,7 @@ impl ColorWheel {
         unicode_string: &UnicodeString,
         gradient_generation_policy: GradientGenerationPolicy,
         text_colorization_policy: TextColorizationPolicy,
+        maybe_default_style: Option<TuiStyle>,
     ) -> String {
         let it = self.colorize_into_styled_texts(
             unicode_string,
@@ -358,26 +365,15 @@ impl ColorWheel {
         let mut acc_vec = vec![];
 
         for TuiStyledText {
-            style,
+            mut style,
             text: unicode_string,
         } in it.inner
         {
-            let maybe_src_color_fg = style.color_fg;
-            let maybe_src_color_bg = style.color_bg;
-
-            let mut acc_style = vec![];
-
-            if let Some(src_color_fg) = maybe_src_color_fg {
-                acc_style.push(r3bl_ansi_color::Style::Foreground(
-                    convert_tui_color_into_r3bl_ansi_color(src_color_fg),
-                ));
+            if let Some(default_style) = maybe_default_style {
+                style.add_assign(default_style);
             }
 
-            if let Some(src_color_bg) = maybe_src_color_bg {
-                acc_style.push(r3bl_ansi_color::Style::Background(
-                    convert_tui_color_into_r3bl_ansi_color(src_color_bg),
-                ));
-            }
+            let acc_style = convert_to_ansi_color_styles::from_tui_style(style);
 
             let ansi_styled_text = AnsiStyledText {
                 style: &acc_style,
@@ -935,6 +931,7 @@ mod tests_color_wheel_rgb {
             &unicode_string,
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
             TextColorizationPolicy::ColorEachCharacter(None),
+            None,
         );
 
         println!("ansi_styled_string: {}", ansi_styled_string);
