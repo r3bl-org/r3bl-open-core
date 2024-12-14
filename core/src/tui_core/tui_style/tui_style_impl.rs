@@ -348,3 +348,167 @@ mod test_style {
         assert!(!style.reverse);
     }
 }
+
+pub mod convert_to_ansi_color_styles {
+    use super::*;
+    use crate::convert_tui_color_into_r3bl_ansi_color;
+
+    pub fn from_tui_style(tui_style: TuiStyle) -> Vec<r3bl_ansi_color::Style> {
+        let mut acc_style: Vec<r3bl_ansi_color::Style> = vec![];
+
+        if let Some(color_fg) = tui_style.color_fg {
+            acc_style.push(r3bl_ansi_color::Style::Foreground(
+                convert_tui_color_into_r3bl_ansi_color(color_fg),
+            ));
+        }
+
+        if let Some(color_bg) = tui_style.color_bg {
+            acc_style.push(r3bl_ansi_color::Style::Background(
+                convert_tui_color_into_r3bl_ansi_color(color_bg),
+            ));
+        }
+
+        if tui_style.bold {
+            acc_style.push(r3bl_ansi_color::Style::Bold);
+        }
+
+        if tui_style.dim {
+            acc_style.push(r3bl_ansi_color::Style::Dim);
+        }
+
+        if tui_style.italic {
+            acc_style.push(r3bl_ansi_color::Style::Italic);
+        }
+
+        if tui_style.underline {
+            acc_style.push(r3bl_ansi_color::Style::Underline);
+        }
+
+        if tui_style.reverse {
+            acc_style.push(r3bl_ansi_color::Style::Invert);
+        }
+
+        if tui_style.hidden {
+            acc_style.push(r3bl_ansi_color::Style::Hidden);
+        }
+
+        if tui_style.strikethrough {
+            acc_style.push(r3bl_ansi_color::Style::Strikethrough);
+        }
+
+        acc_style
+    }
+
+    #[cfg(test)]
+    mod tests_style {
+        use super::*;
+        use crate::{assert_eq2, color, ANSIBasicColor};
+
+        #[test]
+        fn test_all_fields_in_style() {
+            let style = TuiStyle {
+                id: 1,
+                bold: true,
+                dim: true,
+                underline: true,
+                reverse: true,
+                hidden: true,
+                strikethrough: true,
+                color_fg: color!(@red).into(),
+                color_bg: color!(0, 0, 0).into(),
+                padding: Some(ch!(10)),
+                ..TuiStyle::default()
+            };
+
+            assert!(!style.computed);
+            assert_eq2!(style.id, 1);
+            assert!(style.bold);
+            assert!(style.dim);
+            assert!(style.underline);
+            assert!(style.reverse);
+            assert!(style.hidden);
+            assert!(style.strikethrough);
+            assert_eq2!(style.color_fg, color!(@red).into());
+            assert_eq2!(style.color_bg, color!(0, 0, 0).into());
+            assert_eq2!(style.padding, Some(ch!(10)));
+        }
+
+        #[test]
+        fn test_style() {
+            let style = TuiStyle {
+                id: 1,
+                color_fg: color!(0, 0, 0).into(),
+                color_bg: color!(0, 0, 0).into(),
+                bold: true,
+                dim: true,
+                italic: true,
+                ..TuiStyle::default()
+            };
+
+            dbg!(&style);
+
+            assert!(style.bold);
+            assert!(style.dim);
+            assert!(style.italic);
+            assert!(!style.underline);
+            assert!(!style.strikethrough);
+            assert!(!style.reverse);
+        }
+
+        #[test]
+        fn test_add_styles() {
+            let style1 = TuiStyle {
+                bold: true,
+                color_fg: color!(@red).into(),
+                ..TuiStyle::default()
+            };
+
+            let style2 = TuiStyle {
+                italic: true,
+                color_bg: color!(0, 0, 0).into(),
+                ..TuiStyle::default()
+            };
+
+            let combined_style = style1 + style2;
+
+            assert!(combined_style.bold);
+            assert!(combined_style.italic);
+            assert_eq2!(combined_style.color_fg, color!(@red).into());
+            assert_eq2!(combined_style.color_bg, color!(0, 0, 0).into());
+        }
+
+        #[test]
+        fn test_add_assign_styles() {
+            let mut style1 = TuiStyle {
+                bold: true,
+                color_fg: color!(@red).into(),
+                ..TuiStyle::default()
+            };
+
+            let style2 = TuiStyle {
+                italic: true,
+                color_bg: color!(0, 0, 0).into(),
+                ..TuiStyle::default()
+            };
+
+            style1 += style2;
+
+            assert!(style1.bold);
+            assert!(style1.italic);
+            assert_eq2!(style1.color_fg, color!(@red).into());
+            assert_eq2!(style1.color_bg, color!(0, 0, 0).into());
+        }
+
+        #[test]
+        fn test_remove_bg_color() {
+            let mut style = TuiStyle {
+                color_bg: color!(0, 0, 0).into(),
+                ..TuiStyle::default()
+            };
+
+            style.remove_bg_color();
+
+            assert!(style.color_bg.is_none());
+        }
+    }
+}
