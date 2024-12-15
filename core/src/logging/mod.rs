@@ -17,12 +17,10 @@
 
 // Attach.
 pub mod color_text_default_styles;
-pub mod console_log_impl;
 pub mod logging_api;
 pub mod simple_file_logging_impl;
 
 // Re-export.
 pub use color_text_default_styles::*;
-pub use console_log_impl::*;
 pub use logging_api::*;
 pub use simple_file_logging_impl::*;
