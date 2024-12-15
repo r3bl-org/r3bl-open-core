@@ -176,7 +176,7 @@ where
 
                     call_if_true!(DEBUG_TUI_MOD, {
                         if let InputEvent::Keyboard(_)= input_event {
-                            tracing::info!("main_event_loop -> Tick: ⏰ {input_event}");
+                            tracing::info!("main_event_loop -> Tick: 🌄 {input_event}");
                         }
                     });
 
@@ -404,9 +404,9 @@ where
                     call_if_true!(DEBUG_TUI_MOD, {
                         {
                             let state = &global_data.state;
-                            tracing::info!("🎨 MySubscriber::paint() ok ✅: \n window_size: {window_size:?}\n state: {state:?}");
+                            tracing::info!("🎨 MySubscriber::paint() ok 🟢: \n window_size: {window_size:?}\n state: {state:?}");
                             tracing::info!(
-                                "🌍⏳ SPEED: {:?}",
+                                "🏁 SPEED: {:?}",
                                 telemetry_global_static::get_avg_response_time_micros(),
                             );
 
@@ -905,7 +905,7 @@ mod tests {
         pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {
             let styled_texts = tui_styled_texts! {
                 tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
-                tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit ⛔ "},
+                tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit 🖖 "},
                 tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
                 tui_styled_text!{ @style: tui_style!(attrib: [underline]) , @text: " ↑ / + : inc "},
                 tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
