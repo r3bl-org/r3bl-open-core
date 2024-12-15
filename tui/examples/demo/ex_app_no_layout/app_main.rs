@@ -320,7 +320,7 @@ mod app_main_impl_trait_app {
             throws_with_return!({
                 call_if_true!(ENABLE_TRACE_EXAMPLES, {
                     tracing::info!(
-                        "⛵ AppNoLayout::handle_event -> input_event: {input_event}"
+                        "🎹 AppNoLayout::handle_event -> input_event: {input_event}"
                     );
                 });
 
@@ -534,7 +534,7 @@ mod status_bar {
     pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {
         let styled_texts = tui_styled_texts! {
             tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
-            tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit ⛔ "},
+            tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit 🖖 "},
             tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
             tui_styled_text!{ @style: tui_style!(attrib: [underline]) , @text: " ↑ / + : inc "},
             tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},

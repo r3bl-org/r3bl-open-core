@@ -202,7 +202,7 @@ Type a number to run corresponding example:
   1. 📐 {}
   2. 📐 {}
   3. 🐒 {}
-  4. ⚾ {}
+  4. 🦜 {}
   5. 📔 {}
 
 or type Ctrl+C, Ctrl+D, 'exit', or 'x' to exit",
