@@ -18,11 +18,8 @@
 use std::{io::Result, vec};
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
-use r3bl_core::{call_if_true,
-                get_size,
-                get_terminal_width,
-                throws,
-                try_initialize_global_logging};
+use r3bl_core::{call_if_true, get_size, get_terminal_width, throws};
+use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{components::style::StyleSheet,
                  select_from_list,
                  select_from_list_with_multi_line_header,
@@ -34,7 +31,7 @@ use single_select_quiz_game::main as single_select_quiz_game;
 fn main() -> Result<()> {
     throws!({
         call_if_true!(DEVELOPMENT_MODE, {
-            try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
+            try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
             tracing::debug!("Start logging... terminal window size: {:?}", get_size()?)
         });
 

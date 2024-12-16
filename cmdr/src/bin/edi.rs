@@ -22,12 +22,12 @@ use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_cmdr::{edi::launcher, report_analytics, upgrade_check, AnalyticsAction};
 use r3bl_core::{call_if_true,
                 throws,
-                try_initialize_global_logging,
                 ColorWheel,
                 CommonResult,
                 GradientGenerationPolicy,
                 TextColorizationPolicy,
                 UnicodeString};
+use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, LIZARD_GREEN, SLATE_GRAY};
 
 use crate::clap_config::CLIArg;
@@ -42,7 +42,7 @@ async fn main() -> CommonResult<()> {
         // Start logging.
         let enable_logging = cli_arg.global_options.enable_logging;
         call_if_true!(enable_logging, {
-            try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
+            try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
             tracing::debug!("Start logging... cli_args {:?}", cli_arg);
         });
 

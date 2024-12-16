@@ -19,7 +19,7 @@ use std::borrow::Cow;
 
 use crate::UnicodeString;
 
-// Convert to UnicodeString
+/// Convert to UnicodeString.
 impl From<&str> for UnicodeString {
     fn from(s: &str) -> Self { UnicodeString::new(s) }
 }
@@ -40,12 +40,12 @@ impl From<&String> for UnicodeString {
     fn from(s: &String) -> Self { UnicodeString::new(s) }
 }
 
-// Convert to String
+/// Convert to String.
 impl From<UnicodeString> for String {
     fn from(s: UnicodeString) -> Self { s.string }
 }
 
-// UnicodeStringExt
+/// UnicodeStringExt trait.
 pub trait UnicodeStringExt {
     fn unicode_string(&self) -> UnicodeString;
 }
@@ -60,4 +60,11 @@ impl UnicodeStringExt for &str {
 
 impl UnicodeStringExt for String {
     fn unicode_string(&self) -> UnicodeString { UnicodeString::from(self) }
+}
+
+/// Implement Display trait.
+impl std::fmt::Display for UnicodeString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.string)
+    }
 }

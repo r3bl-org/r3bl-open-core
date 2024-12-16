@@ -30,8 +30,9 @@ path = "src/bin/rt.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_core = { path = "../core", version = "0.10.0" }            # version is requried to publish to crates.io
-r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" } # version is requried to publish to crates.io
+r3bl_core = { path = "../core", version = "0.10.0" }            # version is required to publish to crates.io
+r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" } # version is required to publish to crates.io
+r3bl_log = { path = "../log", version = "0.1.0" }               # version is required to publish to crates.io
 
 # serde for JSON serialization.
 serde = { version = "1.0.210", features = ["derive"] }

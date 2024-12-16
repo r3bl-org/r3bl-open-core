@@ -16,11 +16,15 @@
  */
 
 // Attach sources.
-pub mod init_tracing;
+pub mod custom_event_formatter;
+pub mod public_api;
 pub mod rolling_file_appender_impl;
 pub mod tracing_config;
+pub mod tracing_init;
 
 // Re-export.
-pub use init_tracing::*;
+pub use custom_event_formatter::*;
+pub use public_api::*;
 pub use rolling_file_appender_impl::*;
 pub use tracing_config::*;
+pub use tracing_init::*;

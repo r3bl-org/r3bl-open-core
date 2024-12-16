@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,18 +15,20 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod common_enums;
-pub mod common_math;
-pub mod common_result_and_error;
-pub mod miette_setup_global_report_handler;
-pub mod ordered_map;
-pub mod text_default_styles;
+use miette::IntoDiagnostic;
 
-// Re-export.
-pub use common_enums::*;
-pub use common_math::*;
-pub use common_result_and_error::*;
-pub use miette_setup_global_report_handler::*;
-pub use ordered_map::*;
-pub use text_default_styles::*;
+mod constants {
+    pub const USER_AGENT: &str = "scripting.rs/1.0";
+}
+
+pub fn create_client_with_user_agent(
+    user_agent: Option<&str>,
+) -> miette::Result<reqwest::Client> {
+    let it = reqwest::Client::builder()
+        .user_agent(user_agent.map_or_else(
+            || constants::USER_AGENT.to_owned(),
+            |user_agent| user_agent.to_owned(),
+        ))
+        .build();
+    it.into_diagnostic()
+}

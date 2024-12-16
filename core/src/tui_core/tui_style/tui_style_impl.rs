@@ -235,7 +235,7 @@ mod style_helpers {
     impl Debug for TuiStyle {
         fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
             let mut msg_vec: Vec<String> = vec![];
-
+            
             if self.computed {
                 msg_vec.push("computed".to_string())
             } else if self.id == u8::MAX {
@@ -274,11 +274,11 @@ mod style_helpers {
 
             write!(
                 f,
-                "Style {{ {} | fg: {:?} | bg: {:?} | padding: {:?} }}",
-                msg_vec.join(" + "),
-                self.color_fg,
-                self.color_bg,
-                *self.padding.unwrap_or_else(|| ch!(0))
+                "Style {{ {attrs} | fg: {fg:?} | bg: {bg:?} | padding: {p:?} }}",
+                attrs=msg_vec.join(" + "),
+                fg=self.color_fg,
+                bg=self.color_bg,
+                p=*self.padding.unwrap_or_else(|| ch!(0))
             )
         }
     }

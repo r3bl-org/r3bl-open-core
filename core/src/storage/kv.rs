@@ -353,18 +353,15 @@ use kv_error::*;
 
 #[cfg(test)]
 mod kv_tests {
-    use std::{collections::HashMap,
-              path::{Path, PathBuf}};
+    use std::{collections::HashMap, path::Path};
 
     use serial_test::serial;
-    use tempfile::tempdir;
     use tracing::{instrument, Level};
 
     use super::*;
+    use crate::create_temp_dir;
 
     fn check_folder_exists(path: &Path) -> bool { path.exists() && path.is_dir() }
-
-    fn join_path_with_str(path: &Path, str: &str) -> PathBuf { path.join(str) }
 
     fn setup_tracing() {
         let _ = tracing_subscriber::fmt()
@@ -378,21 +375,13 @@ mod kv_tests {
             .try_init();
     }
 
-    fn get_path(dir: &tempfile::TempDir, folder_name: &str) -> PathBuf {
-        join_path_with_str(dir.path(), folder_name)
-    }
-
-    fn create_temp_folder() -> tempfile::TempDir {
-        tempdir().expect("Failed to create temp dir")
-    }
-
     #[instrument]
     fn perform_db_operations() -> miette::Result<()> {
         let bucket_name = "bucket".to_string();
 
-        // Setup temp folder.
-        let dir = create_temp_folder();
-        let path_buf = get_path(&dir, "db_folder");
+        // Setup temp dir (this will be dropped when `dir` is out of scope).
+        let root_temp_dir = create_temp_dir()?;
+        let path_buf = root_temp_dir.join("db_folder");
 
         setup_tracing();
 
@@ -470,9 +459,9 @@ mod kv_tests {
     fn perform_db_operations_error_conditions() -> miette::Result<()> {
         let bucket_name = "bucket".to_string();
 
-        // Setup temp folder.
-        let dir = create_temp_folder();
-        let path_buf = get_path(&dir, "db_folder");
+        // Setup temp dir (this will be dropped when `dir` is out of scope).
+        let root_temp_dir = create_temp_dir()?;
+        let path_buf = root_temp_dir.join("db_folder");
 
         setup_tracing();
 

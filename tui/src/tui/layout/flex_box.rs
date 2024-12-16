@@ -21,7 +21,6 @@ use r3bl_core::{Position, RequestedSizePercent, Size, TuiStyle};
 use serde::{Deserialize, Serialize};
 
 use super::FlexBoxId;
-use crate::format_option;
 
 /// Direction of the layout of the box.
 #[non_exhaustive]
@@ -53,26 +52,50 @@ impl FlexBox {
 
 impl Debug for FlexBox {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FlexBox")
-            .field("id", &self.id)
-            .field("dir", &self.dir)
-            .field("origin_pos", &self.origin_pos)
-            .field("bounds_size", &self.bounds_size)
-            .field("style_adjusted_origin_pos", &self.style_adjusted_origin_pos)
-            .field(
-                "style_adjusted_bounds_size",
-                &self.style_adjusted_bounds_size,
-            )
-            .field("requested_size_percent", &self.requested_size_percent)
-            .field(
-                "insertion_pos_for_next_box",
-                format_option!(&self.insertion_pos_for_next_box),
-            )
-            .field(
-                "maybe_computed_style",
-                format_option!(&self.maybe_computed_style),
-            )
-            .finish()
+        let mut vec_lines = vec![];
+
+        // Require fields.
+        vec_lines.push(format!("FlexBox id: {:?}", self.id));
+        vec_lines.push(format!("dir: {:?}", self.dir));
+        vec_lines.push(format!("origin_pos: {:?}", self.origin_pos));
+        vec_lines.push(format!("bounds_size: {:?}", self.bounds_size));
+        vec_lines.push(format!(
+            "style_adjusted_origin_pos: {:?}",
+            self.style_adjusted_origin_pos
+        ));
+        vec_lines.push(format!(
+            "style_adjusted_bounds_size: {:?}",
+            self.style_adjusted_bounds_size
+        ));
+        vec_lines.push(format!(
+            "requested_size_percent: {:?}",
+            self.requested_size_percent
+        ));
+
+        // Optional fields.
+        match self.insertion_pos_for_next_box {
+            Some(pos) => {
+                vec_lines.push(format!("insertion_pos_for_next_box: {:?}", pos));
+            }
+            None => {
+                vec_lines.push("insertion_pos_for_next_box: None".to_string());
+            }
+        }
+        match self.maybe_computed_style {
+            Some(style) => {
+                vec_lines.push(format!("maybe_computed_style: {:?}", style));
+            }
+            None => {
+                vec_lines.push("maybe_computed_style: None".to_string());
+            }
+        }
+        write!(f, "{}", vec_lines.join("\n  - "))
+    }
+}
+
+impl std::fmt::Display for FlexBox {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 
