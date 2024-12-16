@@ -760,6 +760,7 @@ pub mod access_and_mutate {
     }
 }
 
+// 00: [ ] clean this up & make it compat with CustomEventFormatter
 pub mod debug_format_helpers {
     use super::*;
 

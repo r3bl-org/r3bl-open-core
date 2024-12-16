@@ -76,6 +76,12 @@ impl Debug for FlexBox {
     }
 }
 
+impl std::fmt::Display for FlexBox {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use r3bl_core::{ok, position, requested_size_percent, size, CommonResult};

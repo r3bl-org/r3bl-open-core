@@ -52,11 +52,22 @@ impl UnicodeString {
         display_width
     }
 
+    /// The `size` is a column index and row index. Not width or height.
+    /// - To convert width -> size / column index subtract 1.
+    /// - To convert size / column index to width add 1.
+    ///
+    /// Note the [Self::truncate_end_by_n_col] and [Self::truncate_start_by_n_col]
+    /// functions take a width.
     pub fn truncate_to_fit_size(&self, size: Size) -> &str {
         let display_cols: ChUnit = size.col_count;
         self.truncate_end_to_fit_width(display_cols)
     }
 
+    /// The `n_display_col` is a width, not a [Size].
+    /// - To convert width -> size / column index subtract 1.
+    /// - To convert size / column index to width add 1.
+    ///
+    /// Note the [Self::truncate_to_fit_size] function takes a size / column index.
     pub fn truncate_end_by_n_col(&self, n_display_col: ChUnit) -> &str {
         let mut countdown_col_count = n_display_col;
         let mut string_end_byte_index = 0;
