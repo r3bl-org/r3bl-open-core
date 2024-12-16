@@ -34,32 +34,75 @@ const NOT_SET_VALUE: i64 = -1;
 /// # Changing atomic ordering
 ///
 /// <https://emschwartz.me/understanding-memory-ordering-in-rust/>
+#[allow(static_mut_refs)]
 pub mod telemetry_global_static {
     use super::*;
 
-    // Time related.
+    /// Main event loop start time in microseconds.
+    pub static mut START_SESSION_TIME_MICROS: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
+    /// Main event loop end time in microseconds.
+    pub static mut END_SESSION_TIME_MICROS: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
 
-    /// Time unit is microseconds.
-    pub static mut START_TS_MICROS: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
-    /// Time unit is microseconds.
-    pub static mut END_TS_MICROS: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
-    /// Time unit is microseconds.
-    pub static mut AVG_RESPONSE_TIME_MICROS: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
-
-    /// Save the current time to the static mutable variable [START_TS_MICROS].
-    #[allow(static_mut_refs)]
-    pub fn set_start_ts() {
+    pub fn set_start_session_time() {
         let current_ts_ms = Utc::now().timestamp_micros();
         unsafe {
-            START_TS_MICROS.store(current_ts_ms, Ordering::Release);
+            START_SESSION_TIME_MICROS.store(current_ts_ms, Ordering::Release);
         };
     }
 
-    /// Get the saved time from the static mutable variable [START_TS_MICROS]. In order for this to
-    /// return [Some] value, you must have already called [set_start_ts].
-    #[allow(static_mut_refs)]
-    fn get_start_ts() -> Option<i64> {
-        let start_ts_ms = unsafe { START_TS_MICROS.load(Ordering::Acquire) };
+    pub fn set_end_session_time() {
+        let current_ts_ms = Utc::now().timestamp_micros();
+        unsafe {
+            END_SESSION_TIME_MICROS.store(current_ts_ms, Ordering::Release);
+        };
+    }
+
+    pub fn get_session_duration_sec() -> String {
+        let start_ts_ms = unsafe { START_SESSION_TIME_MICROS.load(Ordering::Acquire) };
+        let end_ts_ms = unsafe { END_SESSION_TIME_MICROS.load(Ordering::Acquire) };
+        if start_ts_ms == NOT_SET_VALUE || end_ts_ms == NOT_SET_VALUE {
+            "Not set.".to_string()
+        } else {
+            let duration_ms = end_ts_ms - start_ts_ms;
+            let duration_secs = duration_ms as f64 / 1_000_000.0;
+            if duration_secs > 3600.0 {
+                let duration_hours = duration_secs / 3600.0;
+                let duration_mins = (duration_secs % 3600.0) / 60.0;
+                format!(
+                    "Session duration: {:.2} hours {:.2} minutes",
+                    duration_hours, duration_mins
+                )
+            } else if duration_secs > 60.0 {
+                let duration_mins = duration_secs / 60.0;
+                format!("Session duration: {:.2} minutes", duration_mins)
+            } else {
+                format!("Session duration: {:.2} seconds", duration_secs)
+            }
+        }
+    }
+
+    /// Time unit is microseconds.
+    pub static mut SPAN_MEASURE_START_TS_MICROS: AtomicI64 =
+        AtomicI64::new(NOT_SET_VALUE);
+    /// Time unit is microseconds.
+    pub static mut SPAN_MEASURE_END_TS_MICROS: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
+    /// Time unit is microseconds.
+    pub static mut AVG_RESPONSE_TIME_MICROS: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
+
+    /// Save the current time to the static mutable variable
+    /// [SPAN_MEASURE_START_TS_MICROS].
+    pub fn set_span_measure_start_ts() {
+        let current_ts_ms = Utc::now().timestamp_micros();
+        unsafe {
+            SPAN_MEASURE_START_TS_MICROS.store(current_ts_ms, Ordering::Release);
+        };
+    }
+
+    /// Get the saved time from the static mutable variable
+    /// [SPAN_MEASURE_START_TS_MICROS]. In order for this to return [Some] value, you must
+    /// have already called [set_span_measure_start_ts].
+    fn get_span_measure_start_ts() -> Option<i64> {
+        let start_ts_ms = unsafe { SPAN_MEASURE_START_TS_MICROS.load(Ordering::Acquire) };
         if start_ts_ms == NOT_SET_VALUE {
             None
         } else {
@@ -67,16 +110,15 @@ pub mod telemetry_global_static {
         }
     }
 
-    /// Save the current time to the static mutable variable [END_TS_MICROS]. And update the average
-    /// response time.
-    #[allow(static_mut_refs)]
-    pub fn set_end_ts() {
+    /// Save the current time to the static mutable variable [SPAN_MEASURE_END_TS_MICROS].
+    /// And update the average response time.
+    pub fn set_span_measure_end_ts() {
         let current_ts_ms = Utc::now().timestamp_micros();
         unsafe {
-            END_TS_MICROS.store(current_ts_ms, Ordering::Release);
+            SPAN_MEASURE_END_TS_MICROS.store(current_ts_ms, Ordering::Release);
         };
 
-        if let Some(start_ts) = get_start_ts() {
+        if let Some(start_ts) = get_span_measure_start_ts() {
             let elapsed_ms = current_ts_ms - start_ts;
             let saved_avg_response_time =
                 unsafe { AVG_RESPONSE_TIME_MICROS.load(Ordering::Acquire) };
@@ -95,8 +137,8 @@ pub mod telemetry_global_static {
     }
 
     /// Get the saved average response time from the static mutable variable
-    /// [AVG_RESPONSE_TIME_MICROS]. In order for this to return [Some] value, you must have already
-    /// called [set_end_ts].
+    /// [AVG_RESPONSE_TIME_MICROS]. In order for this to return [Some] value, you must
+    /// have already called [set_span_measure_end_ts].
     #[allow(static_mut_refs)]
     pub fn get_avg_response_time_micros() -> String {
         let avg_response_time_micros =
@@ -105,8 +147,64 @@ pub mod telemetry_global_static {
             "Not set.".to_string()
         } else {
             let fps = 1_000_000 / avg_response_time_micros;
-            format!("{avg_response_time_micros} μs, {fps} fps")
+            format!("Average response time: {avg_response_time_micros} μs, FPS: {fps}")
         }
+    }
+}
+
+#[allow(static_mut_refs)]
+#[cfg(test)]
+mod tests {
+    use std::{sync::atomic::Ordering, thread, time::Duration};
+
+    use super::{telemetry_global_static::*, *};
+
+    #[test]
+    fn test_set_start_session_time() {
+        set_start_session_time();
+        let start_time = unsafe { START_SESSION_TIME_MICROS.load(Ordering::Acquire) };
+        assert_ne!(start_time, NOT_SET_VALUE);
+    }
+
+    #[test]
+    fn test_set_end_session_time() {
+        set_end_session_time();
+        let end_time = unsafe { END_SESSION_TIME_MICROS.load(Ordering::Acquire) };
+        assert_ne!(end_time, NOT_SET_VALUE);
+    }
+
+    #[test]
+    fn test_get_session_duration_sec() {
+        set_start_session_time();
+        thread::sleep(Duration::from_millis(100));
+        set_end_session_time();
+        let duration = get_session_duration_sec();
+        assert!(duration.contains("Session duration:"));
+    }
+
+    #[test]
+    fn test_set_span_measure_start_ts() {
+        set_span_measure_start_ts();
+        let start_time = unsafe { SPAN_MEASURE_START_TS_MICROS.load(Ordering::Acquire) };
+        assert_ne!(start_time, NOT_SET_VALUE);
+    }
+
+    #[test]
+    fn test_set_span_measure_end_ts() {
+        set_span_measure_start_ts();
+        thread::sleep(Duration::from_millis(100));
+        set_span_measure_end_ts();
+        let end_time = unsafe { SPAN_MEASURE_END_TS_MICROS.load(Ordering::Acquire) };
+        assert_ne!(end_time, NOT_SET_VALUE);
+    }
+
+    #[test]
+    fn test_get_avg_response_time_micros() {
+        set_span_measure_start_ts();
+        thread::sleep(Duration::from_millis(100));
+        set_span_measure_end_ts();
+        let avg_response_time = get_avg_response_time_micros();
+        assert!(avg_response_time.contains("Average response time:"));
     }
 }
 

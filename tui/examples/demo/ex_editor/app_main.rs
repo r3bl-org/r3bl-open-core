@@ -561,6 +561,7 @@ mod populate_component_registry {
         let id = FlexBoxId::from(Id::Editor);
         has_focus.set_id(id);
 
+        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
             tracing::debug!("🪙 init has_focus = {:?}", has_focus.get_id());
         });
@@ -590,6 +591,7 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
+        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
             tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
         });
@@ -673,6 +675,7 @@ mod populate_component_registry {
             boxed_dialog_component,
         );
 
+        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
             tracing::debug!("🪙 construct DialogComponent (simple) [ on_dialog_press ]");
         });
@@ -756,6 +759,7 @@ mod populate_component_registry {
             boxed_dialog_component,
         );
 
+        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
             tracing::debug!(
                 "🪙 construct DialogComponent (autocomplete) [ on_dialog_press ]"

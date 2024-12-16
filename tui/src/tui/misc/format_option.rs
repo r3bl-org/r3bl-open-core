@@ -21,7 +21,21 @@
 /// When using this, make sure to import [FormatMsg] as well, like this:
 /// ```rust
 /// use r3bl_tui::{format_option, FormatMsg};
-/// ```
+///
+/// struct FooStruct {
+///    pub insertion_pos_for_next_box: Option<r3bl_core::Position>,
+/// }
+///
+/// impl std::fmt::Debug for FooStruct {
+///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+///         f.debug_struct("FlexBox")
+///             .field(
+///                 "insertion_pos_for_next_box",
+///                 format_option!(&self.insertion_pos_for_next_box),
+///             )
+///             .finish()
+///     }
+/// }
 #[macro_export]
 macro_rules! format_option {
     ($opt:expr) => {

@@ -10,6 +10,8 @@ members = [
   "test_fixtures",
   "tui",
   "tuify",
+  "log",
+  "script", 
 ] # Make sure to keep these in sync with `run` nushell script `workspace_folders`.
 resolver = "2"
 

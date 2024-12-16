@@ -56,15 +56,15 @@ where
             let mut it = vec![];
             it.push(format!("window_size: {0:?}", self.window_size));
             it.push(match &self.maybe_saved_offscreen_buffer {
-                None => "no saved offscreen buffer".to_string(),
+                None => "no saved offscreen_buffer".to_string(),
                 Some(ref offscreen_buffer) => match DEBUG_TUI_COMPOSITOR {
-                    false => "offscreen buffer saved from previous render".to_string(),
+                    false => "offscreen_buffer saved from previous render".to_string(),
                     true => offscreen_buffer.pretty_print(),
                 },
             });
             it
         };
-        write!(f, "\nGlobalData\n  - {}", vec_lines.join("\n  - "))
+        write!(f, "GlobalData - {}", vec_lines.join("\n  - "))
     }
 }
 
@@ -97,12 +97,11 @@ where
 
     pub fn set_size(&mut self, new_size: Size) {
         self.window_size = new_size;
-        self.dump_to_log("main_event_loop -> Resize");
+        call_if_true!(
+            DEBUG_TUI_MOD,
+            tracing::info!("main_event_loop -> Resize ⇲"=?new_size)
+        );
     }
 
     pub fn get_size(&self) -> Size { self.window_size }
-
-    pub fn dump_to_log(&self, msg: &str) {
-        call_if_true!(DEBUG_TUI_MOD, tracing::info!("{msg} -> {self:?}"));
-    }
 }

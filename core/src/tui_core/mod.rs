@@ -20,7 +20,6 @@
 // Attach sources.
 pub mod color_wheel;
 pub mod color_wheel_core;
-pub mod constants;
 pub mod dimens;
 pub mod graphemes;
 pub mod tui_style;
@@ -29,7 +28,6 @@ pub mod tui_styled_text;
 // Re-export.
 pub use color_wheel::*;
 pub use color_wheel_core::*;
-pub use constants::*;
 pub use dimens::*;
 pub use graphemes::*;
 pub use tui_style::*;

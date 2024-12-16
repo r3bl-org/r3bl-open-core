@@ -17,6 +17,7 @@
 
 use r3bl_core::{call_if_true,
                 ch,
+                glyphs::SPACER_GLYPH as SPACER,
                 ChUnit,
                 CommonError,
                 CommonErrorType,
@@ -26,8 +27,7 @@ use r3bl_core::{call_if_true,
                 Size,
                 TuiStyle,
                 UnicodeString,
-                UnicodeStringExt,
-                SPACER};
+                UnicodeStringExt};
 
 use super::{sanitize_and_save_abs_position, OffscreenBuffer, RenderOp, RenderPipeline};
 use crate::{PixelChar, RenderOpsLocalData, ZOrder, DEBUG_TUI_COMPOSITOR};

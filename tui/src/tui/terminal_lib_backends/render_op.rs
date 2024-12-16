@@ -18,7 +18,12 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_core::{LockedOutputDevice, Position, Size, TuiColor, TuiStyle};
+use r3bl_core::{LockedOutputDevice,
+                Position,
+                Size,
+                TuiColor,
+                TuiStyle,
+                DEFAULT_VEC_CAPACITY};
 use serde::{Deserialize, Serialize};
 
 use super::TERMINAL_LIB_BACKEND;
@@ -150,11 +155,17 @@ macro_rules! render_ops {
 /// Due to the compositor [super::OffscreenBuffer], there is no need to optimize the
 /// individual paint operations. You don't have to manage your own whitespace or doing
 /// clear before paint! 🎉 The compositor takes care of that for you!
-#[derive(
-    Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf,
-)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct RenderOps {
     pub list: Vec<RenderOp>,
+}
+
+impl Default for RenderOps {
+    fn default() -> Self {
+        Self {
+            list: Vec::with_capacity(DEFAULT_VEC_CAPACITY),
+        }
+    }
 }
 
 #[derive(Default, Debug)]

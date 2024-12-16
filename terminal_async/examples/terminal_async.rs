@@ -25,11 +25,8 @@ use std::{fs,
 
 use crossterm::style::Stylize as _;
 use miette::{miette, IntoDiagnostic as _};
-use r3bl_core::{tracing_logging::tracing_config::TracingConfig,
-                DisplayPreference,
-                SendRawTerminal,
-                SharedWriter,
-                StdMutex};
+use r3bl_core::{SendRawTerminal, SharedWriter, StdMutex};
+use r3bl_log::{try_initialize_logging_global, DisplayPreference};
 use r3bl_terminal_async::{Readline,
                           ReadlineEvent,
                           Spinner,
@@ -157,11 +154,9 @@ async fn main() -> miette::Result<()> {
     }
 
     // Initialize tracing w/ the "async stdout" (SharedWriter), and file writer.
-    TracingConfig::new_file_and_display(
-        None,
-        DisplayPreference::SharedWriter(terminal_async.clone_shared_writer()),
-    )
-    .install_global()?;
+    try_initialize_logging_global(DisplayPreference::SharedWriter(
+        terminal_async.clone_shared_writer(),
+    ))?;
 
     // Start tasks.
     let mut state = State::default();

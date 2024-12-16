@@ -162,7 +162,7 @@ mod animator_task {
                         // Continue the animation.
 
                         // Wire into the timing telemetry.
-                        telemetry_global_static::set_start_ts();
+                        telemetry_global_static::set_span_measure_start_ts();
 
                         // Send a signal to the main thread to render.
                         send_signal!(
@@ -171,7 +171,7 @@ mod animator_task {
                         );
 
                         // Wire into the timing telemetry.
-                        telemetry_global_static::set_end_ts();
+                        telemetry_global_static::set_span_measure_end_ts();
                     }
                 }
             }
@@ -426,6 +426,7 @@ mod populate_component_registry {
 
         // Switch focus to the editor component if focus is not set.
         has_focus.set_id(id);
+        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
             {
                 tracing::debug!("🪙 init has_focus = {:?}", has_focus.get_id());
@@ -461,6 +462,7 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
+        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
             tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
         });
