@@ -15,16 +15,26 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{DisplayPreference, TracingConfig, WriterConfig};
+use r3bl_log::{DisplayPreference, TracingConfig, WriterConfig};
 use tracing_core::LevelFilter;
 
-/// `assert_cmd` : <https://docs.rs/assert_cmd/latest/assert_cmd/index.html>
+/// This test works with the binary under test, which is `tracing_stdout_test_bin`. That
+/// binary takes 1 string argument: "stdout" or "stderr". It uses the `assert_cmd` crate
+/// to verify that the [DisplayPreference::Stdout] and [DisplayPreference::Stderr] work as
+/// expected. There is no easy way to actually test `stdout` and `stderr` without spawning
+/// a new process, so this is the best way to test it.
 ///
-/// This is the binary under test, which is tested by the `test_tracing_stdout` test.
+///
+/// This is the binary under test, which is tested by the `test_tracing_bin_stdio` test
+/// module.
+///
 /// It takes 1 argument: "stdout" or "stderr". Depending on the argument, it will
 /// display the logs to stdout or stderr.
 ///
-/// See: `init_tracing.rs` and `test_tracing_bin_stdio()` test.
+/// See:
+/// 1. Test module: `test_tracing_bin_stdio` in `tracing_init.rs`
+/// 2. Binary under test: `tracing_test_bin.rs` <- you are here
+/// 3. `assert_cmd` : <https://docs.rs/assert_cmd/latest/assert_cmd/index.html>
 fn main() {
     // Get the argument passed to the binary.
     let arg = std::env::args().nth(1).unwrap_or_default();

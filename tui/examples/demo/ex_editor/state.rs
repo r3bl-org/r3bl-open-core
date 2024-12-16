@@ -16,7 +16,7 @@
  */
 
 use std::{collections::HashMap,
-          fmt::{Debug, Display, Formatter, Result}};
+          fmt::{Debug, Formatter, Result}};
 
 use r3bl_tui::{DialogBuffer,
                EditorBuffer,
@@ -160,22 +160,17 @@ mod impl_dialog_support {
 mod impl_debug_format {
     use super::*;
 
-    impl Display for State {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
-    }
-
     impl Debug for State {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
-    }
-
-    fn fmt(this: &State, f: &mut Formatter<'_>) -> Result {
-        write! { f,
-            "\nState [\n\
-            - dialog_buffers:\n{:?}\n\
-            - editor_buffers:\n{:?}\n\
-            ]",
-            this.dialog_buffers,
-            this.editor_buffers,
+        // 02: [x] clean up log
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            write! { f,
+"State [
+- dialog_buffers_map: {dialog:?}
+- editor_buffers_map: {editor:?}
+]",
+                    dialog = self.dialog_buffers,
+                    editor = self.editor_buffers,
+            }
         }
     }
 }

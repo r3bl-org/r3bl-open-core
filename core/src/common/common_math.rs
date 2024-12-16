@@ -143,6 +143,41 @@ macro_rules! dec_unsigned {
     };
 }
 
+/// Format the given number of bytes as kilobytes with commas. If the number of bytes is
+/// less than 1024, it will be formatted as bytes.
+pub fn format_as_kilobytes_with_commas(bytes_size: usize) -> String {
+    if bytes_size < 1024 {
+        format_with_commas(bytes_size) + " B"
+    } else {
+        let kilobytes = bytes_size / 1024;
+        format_with_commas(kilobytes) + " KB"
+    }
+}
+
+#[test]
+fn test_format_as_kilobytes_with_commas() {
+    // Test with a number of bytes less than 1024.
+    {
+        let bytes_size = 512;
+        let result = format_as_kilobytes_with_commas(bytes_size);
+        assert_eq!(result, "512 B");
+    }
+
+    // Test with a number of bytes equal to 1024.
+    {
+        let bytes_size = 1024;
+        let result = format_as_kilobytes_with_commas(bytes_size);
+        assert_eq!(result, "1 KB");
+    }
+
+    // Test with a number of bytes greater than 1024.
+    {
+        let bytes_size = 2048;
+        let result = format_as_kilobytes_with_commas(bytes_size);
+        assert_eq!(result, "2 KB");
+    }
+}
+
 /// Format a number with commas.
 pub fn format_with_commas(num: usize) -> String {
     let num_str = num.to_string();

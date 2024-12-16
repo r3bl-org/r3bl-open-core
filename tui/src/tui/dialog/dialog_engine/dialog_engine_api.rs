@@ -18,6 +18,7 @@
 use std::fmt::Debug;
 
 use r3bl_core::{ch,
+                glyphs::SPACER_GLYPH as SPACER,
                 percent,
                 position,
                 size,
@@ -31,8 +32,7 @@ use r3bl_core::{ch,
                 Size,
                 TextColorizationPolicy,
                 TuiStyle,
-                UnicodeString,
-                SPACER};
+                UnicodeString};
 
 use crate::{render_ops,
             render_pipeline,

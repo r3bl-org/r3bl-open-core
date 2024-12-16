@@ -16,17 +16,19 @@
  */
 
 use std::{collections::HashMap,
-          fmt::{Debug, Formatter, Result}};
+          fmt::{Debug, Formatter, Result},
+          vec::Vec};
 
-use common_math::format_with_commas;
 use r3bl_core::{call_if_true,
                 ch,
-                common_math,
+                format_as_kilobytes_with_commas,
+                glyphs,
                 position,
                 ChUnit,
                 Position,
                 Size,
-                UnicodeString};
+                UnicodeString,
+                DEFAULT_VEC_CAPACITY};
 use serde::{Deserialize, Serialize};
 use size_of::SizeOf as _;
 
@@ -208,7 +210,7 @@ pub struct EditorBufferHistory {
 impl Default for EditorBufferHistory {
     fn default() -> Self {
         Self {
-            versions: vec![],
+            versions: Vec::with_capacity(DEFAULT_VEC_CAPACITY),
             current_index: -1,
         }
     }
@@ -543,22 +545,33 @@ mod constructor {
             maybe_file_extension: &Option<String>,
             maybe_file_path: &Option<String>,
         ) -> Self {
-            // Potentially do any other initialization here.
-            call_if_true!(DEBUG_TUI_MOD, {
-                tracing::debug!(
-                    "🪙 construct EditorBuffer [ lines, caret, lolcat, file_extension ]"
-                );
-            });
-
-            Self {
+            let it = Self {
                 editor_content: EditorContent {
-                    lines: vec![UnicodeString::default()],
+                    lines: {
+                        let mut it: Vec<UnicodeString> =
+                            Vec::with_capacity(DEFAULT_VEC_CAPACITY);
+                        it.push(UnicodeString::default());
+                        it
+                    },
                     maybe_file_extension: maybe_file_extension.clone(),
                     maybe_file_path: maybe_file_path.clone(),
                     ..Default::default()
                 },
                 ..Default::default()
-            }
+            };
+
+            call_if_true!(DEBUG_TUI_MOD, {
+                let message =
+                    format!("Construct EditorBuffer {ch}", ch = glyphs::CONSTRUCT_GLYPH);
+                // % is Display, ? is Debug.
+                tracing::info!(
+                    message = message,
+                    file_extension = ?maybe_file_extension,
+                    file_path = ?maybe_file_path
+                );
+            });
+
+            it
         }
     }
 }
@@ -760,19 +773,20 @@ pub mod access_and_mutate {
     }
 }
 
-pub mod debug_format_helpers {
+// 02: [x] clean up log
+mod impl_debug_format {
     use super::*;
 
     impl Debug for EditorBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             write! {
                 f,
-                "\nEditorBuffer [                                    \n \
-                ├ content: {0:?}                                     \n \
-                └ history: {1:?}                                     \n \
-                ]",
-                /* 0 */ self.editor_content,
-                /* 1 */ self.history,
+"EditorBuffer [
+  - content: {content:?}
+  - history: {history:?}
+]",
+                content = self.editor_content,
+                history = self.history,
             }
         }
     }
@@ -781,18 +795,18 @@ pub mod debug_format_helpers {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             write! {
                 f,
-                "\n\tEditorContent [                                 \n \
-                \t├ lines: {0}, size: {1} b                          \n \
-                \t├ selection_map: {4}                               \n \
-                \t└ ext: {2:?}, path:{6:?}, caret: {3:?}, scroll_offset: {5:?}   \n \
-                \t]",
-                /* 0 */ self.lines.len(),
-                /* 1 */ format_with_commas(self.lines.size_of().total_bytes()),
-                /* 2 */ self.maybe_file_extension,
-                /* 3 */ self.caret_display_position,
-                /* 4 */ self.selection_map.to_formatted_string(),
-                /* 5 */ self.scroll_offset,
-                /* 6 */ self.maybe_file_path,
+"EditorContent [
+    - lines: {lines}, size: {size}
+    - selection_map: {map}
+    - ext: {ext:?}, path:{path:?}, caret: {caret:?}, scroll_offset: {scroll:?}
+    ]",
+                lines = self.lines.len(),
+                size = format_as_kilobytes_with_commas(self.lines.size_of().total_bytes()),
+                ext = self.maybe_file_extension,
+                caret = self.caret_display_position,
+                map = self.selection_map.to_formatted_string(),
+                scroll = self.scroll_offset,
+                path = self.maybe_file_path,
             }
         }
     }
@@ -801,13 +815,13 @@ pub mod debug_format_helpers {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             write! {
                 f,
-                "\n\tEditorBufferHistory [                           \n \
-                \t├ stack: {0}, size: {1} b                          \n \
-                \t└ index: {2}                                       \n \
-                \t]",
-                /* 0 */ self.versions.len(),
-                /* 1 */ format_with_commas(self.versions.size_of().total_bytes()),
-                /* 2 */ self.current_index
+"EditorBufferHistory [
+    - stack: {len}, size: {size}
+    - index: {index}
+    ]",
+                len = self.versions.len(),
+                size = format_as_kilobytes_with_commas(self.versions.size_of().total_bytes()),
+                index = self.current_index
             }
         }
     }

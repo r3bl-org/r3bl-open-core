@@ -16,10 +16,10 @@
  */
 
 use tracing_core::LevelFilter;
-use tracing_subscriber::{registry::LookupSpan, Layer};
+use tracing_subscriber::{Layer, registry::LookupSpan};
 
 use super::{DisplayPreference, WriterConfig};
-use crate::tracing_logging::{rolling_file_appender_impl, tracing_config::TracingConfig};
+use crate::log_support::{rolling_file_appender_impl, tracing_config::TracingConfig};
 
 /// Avoid gnarly type annotations by using a macro to create the `fmt` layer. Note that
 /// [tracing_subscriber::fmt::format::Pretty] and
@@ -27,15 +27,15 @@ use crate::tracing_logging::{rolling_file_appender_impl, tracing_config::Tracing
 #[macro_export]
 macro_rules! create_fmt {
     () => {
-        tracing_subscriber::fmt::layer()
-            .compact()
-            .without_time()
-            .with_thread_ids(false)
-            .with_thread_names(false)
-            .with_target(false)
-            .with_file(false)
-            .with_line_number(false)
-            .with_ansi(true)
+        tracing_subscriber::fmt::layer().event_format($crate::CustomEventFormatter)
+        //     .compact()
+        //     .without_time()
+        //     .with_thread_ids(false)
+        //     .with_thread_names(false)
+        //     .with_target(false)
+        //     .with_file(false)
+        //     .with_line_number(false)
+        //     .with_ansi(true)
     };
 }
 
@@ -162,7 +162,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use tempfile::tempdir;
+    use r3bl_core::create_temp_dir;
 
     use super::*;
 
@@ -178,8 +178,8 @@ mod tests {
 
     #[test]
     fn test_try_create_file_layer() {
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("my_temp_log_file.log");
+        let dir = create_temp_dir().unwrap();
+        let file_path = dir.join("my_temp_log_file.log");
         let file_path = file_path.to_str().unwrap().to_string();
 
         println!("file_path: {}", file_path);
@@ -195,8 +195,8 @@ mod tests {
 
     #[test]
     fn test_try_create_both_layers() {
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("my_temp_log_file.log");
+        let dir = create_temp_dir().unwrap();
+        let file_path = dir.join("my_temp_log_file.log");
         let file_path = file_path.to_str().unwrap().to_string();
 
         let tracing_config = TracingConfig {
@@ -213,19 +213,40 @@ mod tests {
     }
 }
 
-/// This test works with the binary under test, which is `tracing_stdout_test_bin`. That
-/// binary takes 1 string argument: "stdout" or "stderr".
+#[cfg(test)]
+mod fixtures {
+    use crate::custom_event_formatter_constants::*;
+
+    /// See [crate::CustomEventFormatter] for more details.
+    pub fn get_expected() -> Vec<String> {
+        vec![
+            format!("{ERROR_SIGIL}{LEVEL_SUFFIX}"),
+            format!("{ERROR_SIGIL}{LEVEL_SUFFIX}"),
+            format!("{ERROR_SIGIL}{LEVEL_SUFFIX}"),
+            format!("{ERROR_SIGIL}{LEVEL_SUFFIX}"),
+        ]
+    }
+}
+
+/// This test works with the binary under test, which is `tracing_test_bin`. That binary
+/// takes 1 string argument: "stdout" or "stderr". It uses the `assert_cmd` crate to
+/// verify that the [DisplayPreference::Stdout] and [DisplayPreference::Stderr] work as
+/// expected. There is no easy way to actually test `stdout` and `stderr` without spawning
+/// a new process, so this is the best way to test it.
 ///
 /// If tests in this module fail, then make sure that the binary under test has been, in
 /// fact, built. So, make sure to run `cargo build && cargo test` rather than just `cargo
 /// test`.`
 ///
-/// See: `tracing_stdout_test_bin.rs`
+/// See:
+/// 1. Test module: `test_tracing_bin_stdio` in `tracing_init.rs` <- you are here
+/// 2. Binary under test: `tracing_test_bin.rs`
+/// 3. `assert_cmd` : <https://docs.rs/assert_cmd/latest/assert_cmd/index.html>
 #[cfg(test)]
 mod test_tracing_bin_stdio {
     use assert_cmd::Command;
 
-    const EXPECTED: [&str; 4] = ["error", "warn", "info", "debug"];
+    use super::fixtures::get_expected;
 
     #[test]
     fn stdout() {
@@ -236,7 +257,7 @@ mod test_tracing_bin_stdio {
             .unwrap();
 
         let output = String::from_utf8_lossy(output.stdout.as_slice());
-        for it in EXPECTED.iter() {
+        for it in get_expected().iter() {
             assert!(output.contains(it));
         }
     }
@@ -250,7 +271,7 @@ mod test_tracing_bin_stdio {
             .unwrap();
 
         let output = String::from_utf8_lossy(output.stderr.as_slice());
-        for it in EXPECTED.iter() {
+        for it in get_expected().iter() {
             assert!(output.contains(it));
         }
     }
@@ -258,10 +279,9 @@ mod test_tracing_bin_stdio {
 
 #[cfg(test)]
 mod test_tracing_shared_writer_output {
-    use super::*;
-    use crate::{LineStateControlSignal, SharedWriter};
+    use r3bl_core::{LineStateControlSignal, SharedWriter};
 
-    const EXPECTED: [&str; 4] = ["error", "warn", "info", "debug"];
+    use super::{fixtures::get_expected, *};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
@@ -296,7 +316,7 @@ mod test_tracing_shared_writer_output {
 
         println!("output: {}", output);
 
-        for it in EXPECTED.iter() {
+        for it in get_expected().iter() {
             assert!(output.contains(it));
         }
 

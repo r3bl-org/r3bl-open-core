@@ -43,12 +43,13 @@ mod unicode_string_impl {
         pub fn new(this: &str) -> UnicodeString {
             let mut total_byte_offset = 0;
             let mut total_grapheme_cluster_count = 0;
-            let mut my_unicode_string_segments = vec![];
             let mut my_unicode_width_offset_accumulator: ChUnit = ch!(0);
 
-            for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in
-                this.grapheme_indices(true).enumerate()
-            {
+            let iter = this.grapheme_indices(true).enumerate();
+            let size = iter.clone().count();
+            let mut my_unicode_string_segments = Vec::with_capacity(size);
+
+            for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in iter {
                 let unicode_width =
                     ch!(UnicodeString::str_display_width(grapheme_cluster_str));
                 my_unicode_string_segments.push(GraphemeClusterSegment {

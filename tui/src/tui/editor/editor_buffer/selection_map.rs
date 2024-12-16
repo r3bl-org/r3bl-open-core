@@ -18,7 +18,7 @@
 use std::{collections::HashMap,
           fmt::{Debug, Display}};
 
-use crossterm::style::{StyledContent, Stylize};
+use crossterm::style::Stylize;
 use r3bl_core::{ch, position, CaretMovementDirection, ChUnit, Position, SelectionRange};
 use serde::{Deserialize, Serialize};
 
@@ -218,38 +218,62 @@ pub enum RowLocationInSelectionMap {
 }
 
 // Formatter for Debug and Display.
-mod format_debug_display {
+mod impl_debug_format {
     use super::*;
+    const PAD_LEFT: &str = "      ";
+    const EMPTY_STR: &str = "--empty--";
+
+    use r3bl_core::glyphs::{CUT_GLYPH,
+                            DIRECTION_GLYPH,
+                            ELLIPSIS_GLYPH,
+                            TIRE_MARKS_GLYPH,
+                            VERT_LINE_DASHED_GLYPH};
 
     impl SelectionMap {
-        pub fn to_formatted_string(&self) -> StyledContent<String> {
-            let selection_map_str = self.to_unformatted_string();
-            if selection_map_str.contains("None") {
-                selection_map_str.white().on_dark_grey()
-            } else {
-                selection_map_str.green().on_dark_grey()
+        pub fn to_formatted_string(&self) -> String {
+            let mut selection_map_vec_output = self.to_unformatted_string();
+
+            let is_empty = selection_map_vec_output
+                .iter()
+                .any(|line| line.contains(EMPTY_STR));
+
+            // Format the output.
+            for line in selection_map_vec_output.iter_mut() {
+                if is_empty {
+                    *line = format!("{line}").blue().on_dark_grey().to_string();
+                } else {
+                    *line = format!("{line}").green().on_dark_grey().to_string();
+                }
             }
+            for line in selection_map_vec_output.iter_mut() {
+                *line = format!("{PAD_LEFT}{line}");
+            }
+
+            let selection_map_str = selection_map_vec_output.join("\n");
+
+            let selection_map_str = format! {
+"SelectionMap: [
+{selection_map_str}
+{PAD_LEFT}]"
+            };
+
+            selection_map_str
         }
 
-        pub fn to_unformatted_string(&self) -> String {
-            let spacer = "\n    ";
-
+        pub fn to_unformatted_string(&self) -> Vec<String> {
             let mut vec_output = {
                 let mut it = vec![];
                 let sorted_indices = self.get_ordered_indices();
-                for (index, row_index) in sorted_indices.iter().enumerate() {
+                for (_index, row_index) in sorted_indices.iter().enumerate() {
                     if let Some(selected_range) = self.map.get(row_index) {
-                        let first_char = if index == 0 {
-                            format!("{spacer}✂️")
-                        } else {
-                            "✂️".to_string()
-                        };
                         it.push(format!(
-                            "{0} ┆row: {1} => start: {2}, end: {3}┆",
-                            /* 0 */ first_char,
-                            /* 1 */ row_index,
-                            /* 2 */ selected_range.start_display_col_index,
-                            /* 3 */ selected_range.end_display_col_index
+                            "{first_ch} {sep}row: {row_idx}, col: [{col_start}{dots}{col_end}]{sep}",
+                            first_ch = CUT_GLYPH,
+                            sep = VERT_LINE_DASHED_GLYPH,
+                            row_idx = row_index,
+                            dots = ELLIPSIS_GLYPH,
+                            col_start = selected_range.start_display_col_index,
+                            col_end = selected_range.end_display_col_index
                         ));
                     }
                 }
@@ -257,12 +281,18 @@ mod format_debug_display {
             };
 
             if vec_output.is_empty() {
-                vec_output.push("␩ ┆--empty--┆".to_string());
+                vec_output.push(
+                    format!("{TIRE_MARKS_GLYPH} {VERT_LINE_DASHED_GLYPH}{EMPTY_STR}{VERT_LINE_DASHED_GLYPH}")
+                );
             }
 
-            vec_output.push(format!("🧭 prev_dir: {:?}", self.maybe_previous_direction,));
+            vec_output.push(format!(
+                "{ch} prev_dir: {prev_dir:?}",
+                ch = DIRECTION_GLYPH,
+                prev_dir = self.maybe_previous_direction
+            ));
 
-            vec_output.join(spacer)
+            vec_output
         }
     }
 

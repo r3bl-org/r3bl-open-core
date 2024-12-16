@@ -276,7 +276,9 @@ mod tests_clip_styled_texts {
             }
         }
 
-        /// ```ignore
+        /// A struct containing the following pseudo HTML representation is returned.
+        ///
+        /// ```text
         /// <span style="s1">first</span>
         /// <span style="s1"> </span>
         /// <span style="s2">second</span>

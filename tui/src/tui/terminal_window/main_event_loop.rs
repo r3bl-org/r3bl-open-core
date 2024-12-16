@@ -19,6 +19,8 @@ use std::{fmt::Debug, marker::PhantomData};
 
 use r3bl_core::{call_if_true,
                 ch,
+                format_as_kilobytes_with_commas,
+                glyphs,
                 ok,
                 output_device_as_mut,
                 position,
@@ -76,6 +78,9 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
+    // Set the session start time.
+    telemetry_global_static::set_start_session_time();
+
     // mpsc channel to send signals from the app to the main event loop (eg: for exit,
     // re-render, apply action, etc).
     let (main_thread_channel_sender, mut main_thread_channel_receiver) =
@@ -117,7 +122,18 @@ where
         output_device.is_mock,
     )?;
 
-    global_data_ref.dump_to_log("main_event_loop -> Startup 🚀");
+    call_if_true!(DEBUG_TUI_MOD, {
+        // 00: [x] clean up log message
+        let message = format!(
+            "main_event_loop -> Startup complete {ch}",
+            ch = glyphs::HELLO_GLYPH
+        );
+        // % is Display, ? is Debug.
+        tracing::info!(
+            message = message,
+            global_data_ref=?global_data_ref
+        );
+    });
 
     // Main event loop.
     loop {
@@ -172,11 +188,20 @@ where
             //   pinned_input_stream isn't used and the state isn't modified.
             maybe_input_event = input_device.next_input_event() => {
                 if let Some(input_event) = maybe_input_event {
-                    telemetry_global_static::set_start_ts();
+                    telemetry_global_static::set_span_measure_start_ts();
 
                     call_if_true!(DEBUG_TUI_MOD, {
                         if let InputEvent::Keyboard(_)= input_event {
-                            tracing::info!("main_event_loop -> Tick: 🌄 {input_event}");
+                            // 00: [x] clean up log message
+                            let message = format!(
+                                "main_event_loop -> Tick {ch}",
+                                ch = glyphs::CLOCK_TICK_GLYPH
+                            );
+                            // % is Display, ? is Debug.
+                            tracing::info!(
+                                message = message,
+                                input_event = ?input_event
+                            );
                         }
                     });
 
@@ -208,8 +233,17 @@ where
         }
     } // End loop.
 
+    // Set the session end time.
+    telemetry_global_static::set_end_session_time();
+
     call_if_true!(DEBUG_TUI_MOD, {
-        tracing::info!("main_event_loop -> Shutdown 🛑");
+        // 00: [x] clean up log message
+        let message = format!("main_event_loop -> Shutdown {ch}", ch = glyphs::BYE_GLYPH);
+        // % is Display, ? is Debug.
+        tracing::info!(
+            message = message,
+            telemetry_global_static = ?telemetry_global_static::get_session_duration_sec()
+        );
     });
 
     ok!((global_data, input_device, output_device))
@@ -324,7 +358,10 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
             }
         },
         Err(error) => {
-            tracing::error!("main_event_loop -> handle_result_generated_by_app_after_handling_action. Error: {error}");
+            // % is Display, ? is Debug.
+            tracing::error!(
+                "main_event_loop -> handle_result_generated_by_app_after_handling_action ✕"=?error
+            );
         }
     }
 }
@@ -384,10 +421,19 @@ where
                 Err(error) => {
                     RenderOp::default().flush(locked_output_device);
 
-                    telemetry_global_static::set_end_ts();
+                    telemetry_global_static::set_span_measure_end_ts();
 
                     call_if_true!(DEBUG_TUI_MOD, {
-                        tracing::error!("MySubscriber::render() error ❌: {error}");
+                        // 00: [x] clean up log message
+                        let message = format!(
+                            "AppManager::render_app() error {ch}",
+                            ch = glyphs::ERROR_GLYPH
+                        );
+                        // % is Display, ? is Debug.
+                        tracing::error!(
+                            message = message,
+                            details = ?error
+                        );
                     });
                 }
                 Ok(render_pipeline) => {
@@ -398,25 +444,42 @@ where
                         is_mock,
                     );
 
-                    telemetry_global_static::set_end_ts();
+                    telemetry_global_static::set_span_measure_end_ts();
 
                     // Print debug message w/ memory utilization, etc.
                     call_if_true!(DEBUG_TUI_MOD, {
                         {
                             let state = &global_data.state;
-                            tracing::info!("🎨 MySubscriber::paint() ok 🟢: \n window_size: {window_size:?}\n state: {state:?}");
+                            // 00: [x] clean up log message
+                            let message = format!(
+                                "AppManager::render_app() ok {ch}",
+                                ch = glyphs::PAINT_GLYPH
+                            );
+                            // % is Display, ? is Debug.
                             tracing::info!(
-                                "🏁 SPEED: {:?}",
-                                telemetry_global_static::get_avg_response_time_micros(),
+                                message = message,
+                                window_size = ?window_size,
+                                state = ?state,
+                                speed = ?telemetry_global_static::get_avg_response_time_micros()
                             );
 
                             if let Some(ref offscreen_buffer) =
                                 global_data.maybe_saved_offscreen_buffer
                             {
+                                // 00: [x] clean up log message
+                                let message = format!(
+                                    "AppManager::render_app() offscreen_buffer stats {ch}",
+                                    ch = glyphs::STATS_GLYPH
+                                );
+                                // % is Display, ? is Debug.
                                 tracing::info!(
-                                    "offscreen_buffer: {0:.3} kb",
-                                    offscreen_buffer.size_of().total_bytes() as f64
-                                        / 1000_f64
+                                    message = message,
+                                    offscreen_buffer.size = format!(
+                                        "Memory used: {size}",
+                                        size = format_as_kilobytes_with_commas(
+                                            offscreen_buffer.size_of().total_bytes()
+                                        )
+                                    )
                                 );
                             }
                         }

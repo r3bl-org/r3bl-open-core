@@ -41,7 +41,7 @@ impl Deref for FlexBoxId {
 
 impl FlexBoxId {
     fn pretty_print(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "🔑┆id: {}┆", self.0)
+        write!(f, "❬{}❭", self.0)
     }
 }
 
@@ -89,13 +89,13 @@ mod tests {
     #[test]
     fn test_flex_box_id_debug() {
         let id = FlexBoxId(42);
-        assert_eq!(format!("{:?}", id), "🔑┆id: 42┆");
+        assert_eq!(format!("{:?}", id), "❬42❭");
     }
 
     #[test]
     fn test_flex_box_id_display() {
         let id = FlexBoxId(42);
-        assert_eq!(format!("{}", id), "🔑┆id: 42┆");
+        assert_eq!(format!("{}", id), "❬42❭");
     }
 
     #[test]

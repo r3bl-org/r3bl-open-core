@@ -17,13 +17,13 @@
 
 use r3bl_core::{call_if_true,
                 ch,
+                glyphs::SPACER_GLYPH as SPACER,
                 position,
                 ChUnit,
                 LockedOutputDevice,
                 Size,
                 TuiStyle,
-                UnicodeString,
-                SPACER};
+                UnicodeString};
 
 use crate::{render_ops,
             Flush as _,

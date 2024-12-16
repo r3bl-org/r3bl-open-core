@@ -43,6 +43,7 @@ pub type Text = Vec<u8>;
 /// - `manage_shared_writer_output::flush_internal()`.
 ///
 /// If you want to output data without a newline, you can call [`SharedWriter::flush()`].
+#[derive(Debug)]
 pub struct SharedWriter {
     /// Holds the data to be written to the terminal.
     pub buffer: Text,
@@ -56,6 +57,13 @@ pub struct SharedWriter {
     /// struct will report errors when [`std::io::Write::write()`] fails, due to the
     /// receiver end of the channel being closed.
     pub silent_error: bool,
+
+    /// Unique identifier for the `SharedWriter` instance.
+    pub uuid: uuid::Uuid,
+}
+
+impl PartialEq for SharedWriter {
+    fn eq(&self, other: &Self) -> bool { self.uuid == other.uuid }
 }
 
 /// Signals that can be sent to the `line` channel, which is monitored by the task.
@@ -77,6 +85,7 @@ impl SharedWriter {
             buffer: Default::default(),
             line_state_control_channel_sender: line_sender,
             silent_error: false,
+            uuid: uuid::Uuid::new_v4(),
         }
     }
 }
@@ -84,8 +93,8 @@ impl SharedWriter {
 /// Custom [Clone] implementation for [`SharedWriter`]. This ensures that each new
 /// instance gets its own buffer to write data into. And a [Clone] of the
 /// [Self::line_state_control_channel_sender], so all the [`LineStateControlSignal`]s end
-/// up in the same `line` [tokio::sync::mpsc::channel] that lives in the
-/// `Readline` instance (in the `r3bl_terminal_async` crate).
+/// up in the same `line` [tokio::sync::mpsc::channel] that lives in the `Readline`
+/// instance (in the `r3bl_terminal_async` crate).
 impl Clone for SharedWriter {
     fn clone(&self) -> Self {
         Self {
@@ -94,6 +103,7 @@ impl Clone for SharedWriter {
                 .line_state_control_channel_sender
                 .clone(),
             silent_error: true,
+            uuid: self.uuid,
         }
     }
 }

@@ -30,6 +30,7 @@ use crate::{ch,
             generate_random_truecolor_gradient,
             generate_truecolor_gradient,
             get_gradient_array_for,
+            glyphs::SPACER_GLYPH as SPACER,
             tui_styled_text,
             Ansi256GradientIndex,
             AnsiValue,
@@ -45,8 +46,7 @@ use crate::{ch,
             TuiStyledText,
             TuiStyledTexts,
             UnicodeString,
-            DEFAULT_GRADIENT_STOPS,
-            SPACER};
+            DEFAULT_GRADIENT_STOPS};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ColorWheel {

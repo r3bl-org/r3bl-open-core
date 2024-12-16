@@ -274,11 +274,11 @@ mod style_helpers {
 
             write!(
                 f,
-                "Style {{ {} | fg: {:?} | bg: {:?} | padding: {:?} }}",
-                msg_vec.join(" + "),
-                self.color_fg,
-                self.color_bg,
-                *self.padding.unwrap_or_else(|| ch!(0))
+                "Style {{ {attrs} | fg: {fg:?} | bg: {bg:?} | padding: {p:?} }}",
+                attrs = msg_vec.join(" + "),
+                fg = self.color_fg,
+                bg = self.color_bg,
+                p = *self.padding.unwrap_or_else(|| ch!(0))
             )
         }
     }

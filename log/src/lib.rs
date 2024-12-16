@@ -16,11 +16,7 @@
  */
 
 // Attach sources.
-pub mod init_tracing;
-pub mod rolling_file_appender_impl;
-pub mod tracing_config;
+pub mod log_support;
 
 // Re-export.
-pub use init_tracing::*;
-pub use rolling_file_appender_impl::*;
-pub use tracing_config::*;
+pub use log_support::*;

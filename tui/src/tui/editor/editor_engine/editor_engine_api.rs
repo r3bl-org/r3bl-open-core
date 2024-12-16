@@ -18,6 +18,7 @@
 use crossterm::style::Stylize;
 use r3bl_core::{call_if_true,
                 ch,
+                glyphs,
                 position,
                 throws,
                 throws_with_return,
@@ -240,31 +241,19 @@ impl EditorEngineApi {
 
         // BOOKM: Render using syntect first, then custom MD parser.
 
+        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
-            tracing::debug!(
-                "\n🍉🍉🍉\n\t{0}\n\t{1}\n\t{2}\n🍉🍉🍉",
-                /* 0 */
-                format!(
-                    "editor_buffer.is_file_extension_default(): {}",
-                    editor_buffer.is_file_extension_default()
-                )
-                .to_string()
-                .magenta(),
-                /* 1 */
-                format!(
-                    "editor_engine.config_options.syntax_highlight: {:?}",
-                    editor_engine.config_options.syntax_highlight
-                )
-                .to_string()
-                .blue(),
-                /* 2 */
-                format!(
-                    "editor_buffer.get_maybe_file_extension(): {:?}",
-                    editor_buffer.get_maybe_file_extension()
-                )
-                .to_string()
-                .green(),
-            )
+            let message = format!(
+                "EditorEngineApi -> render_content() {ch}",
+                ch = glyphs::RENDER_GLYPH
+            );
+            // % is Display, ? is Debug.
+            tracing::info!(
+                message = message,
+                is_default_file_ext = %editor_buffer.is_file_extension_default(),
+                syn_hi_mode = ?editor_engine.config_options.syntax_highlight,
+                maybe_file_ext = ?editor_buffer.get_maybe_file_extension()
+            );
         });
 
         match editor_buffer.is_file_extension_default() {
