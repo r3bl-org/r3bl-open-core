@@ -17,17 +17,17 @@
 
 use std::fmt::Debug;
 
+use r3bl_core::SharedWriter;
 use tracing::dispatcher;
 use tracing_core::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use super::try_create_layers;
-use crate::SharedWriter;
 
 /// - `tracing_log_file_path_and_prefix`: [String] is the file path and prefix to use for
 ///   the log file. Eg: `/tmp/tcp_api_server` or `tcp_api_server`.
 /// - `DisplayPreference`: [DisplayPreference] is the preferred display to use for logging.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum WriterConfig {
     None,
     Display(
@@ -45,6 +45,73 @@ pub enum DisplayPreference {
     Stdout,
     Stderr,
     SharedWriter(SharedWriter),
+}
+
+/// This is needed for testing.
+impl PartialEq for DisplayPreference {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (DisplayPreference::Stdout, DisplayPreference::Stdout)
+            | (DisplayPreference::Stderr, DisplayPreference::Stderr) => true,
+            (
+                DisplayPreference::SharedWriter(sw_lhs),
+                DisplayPreference::SharedWriter(sw_rhs),
+            ) => sw_lhs == sw_rhs,
+            _ => false,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_partial_eq_display_preference {
+    use super::*;
+
+    fn make_shared_writer() -> SharedWriter {
+        let (line_sender, _) = tokio::sync::mpsc::channel(1_000);
+        SharedWriter::new(line_sender)
+    }
+
+    #[test]
+    fn test_display_preference_partial_eq_stdout() {
+        assert_eq!(DisplayPreference::Stdout, DisplayPreference::Stdout);
+        assert_ne!(DisplayPreference::Stdout, DisplayPreference::Stderr);
+        assert_ne!(
+            DisplayPreference::Stdout,
+            DisplayPreference::SharedWriter(make_shared_writer())
+        );
+    }
+
+    #[test]
+    fn test_display_preference_partial_eq_stderr() {
+        assert_eq!(DisplayPreference::Stderr, DisplayPreference::Stderr);
+        assert_ne!(DisplayPreference::Stderr, DisplayPreference::Stdout);
+        assert_ne!(
+            DisplayPreference::Stderr,
+            DisplayPreference::SharedWriter(make_shared_writer())
+        );
+    }
+
+    #[test]
+    fn test_display_preference_partial_eq_shared_writer() {
+        let writer_1 = make_shared_writer();
+        let writer_2 = make_shared_writer();
+        assert_eq!(
+            DisplayPreference::SharedWriter(writer_1.clone()),
+            DisplayPreference::SharedWriter(writer_1.clone())
+        );
+        assert_ne!(
+            DisplayPreference::SharedWriter(writer_1.clone()),
+            DisplayPreference::SharedWriter(writer_2.clone())
+        );
+        assert_ne!(
+            DisplayPreference::SharedWriter(writer_1.clone()),
+            DisplayPreference::Stdout
+        );
+        assert_ne!(
+            DisplayPreference::SharedWriter(writer_1.clone()),
+            DisplayPreference::Stderr
+        );
+    }
 }
 
 impl Debug for DisplayPreference {
@@ -115,37 +182,6 @@ impl TracingConfig {
 }
 
 impl TracingConfig {
-    /// The default configuration for tracing. This will log to both the given
-    /// [DisplayPreference] and a file.
-    pub fn new_file_and_display(
-        filename: Option<String>,
-        preferred_display: DisplayPreference,
-    ) -> Self {
-        Self {
-            writer_config: WriterConfig::DisplayAndFile(
-                preferred_display,
-                filename.unwrap_or_else(|| "tracing_log_file_debug.log".to_string()),
-            ),
-            level_filter: LevelFilter::from_level(tracing::Level::DEBUG),
-        }
-    }
-
-    pub fn new_display(preferred_display: DisplayPreference) -> Self {
-        Self {
-            writer_config: WriterConfig::Display(preferred_display),
-            level_filter: LevelFilter::from_level(tracing::Level::DEBUG),
-        }
-    }
-
-    pub fn new_file(filename: Option<String>) -> Self {
-        Self {
-            writer_config: WriterConfig::File(
-                filename.unwrap_or_else(|| "tracing_log_file_debug.log".to_string()),
-            ),
-            level_filter: LevelFilter::from_level(tracing::Level::DEBUG),
-        }
-    }
-
     pub fn get_writer_config(&self) -> WriterConfig { self.writer_config.clone() }
 
     pub fn get_level_filter(&self) -> LevelFilter { self.level_filter }

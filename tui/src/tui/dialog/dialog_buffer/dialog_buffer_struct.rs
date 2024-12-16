@@ -57,18 +57,23 @@ impl DialogBuffer {
     }
 }
 
-impl Debug for DialogBuffer {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        let maybe_results: &dyn Debug = format_option!(&self.maybe_results);
-        write! { f,
-          "\nDialogBuffer [      \n\
-          ├ title: {}            \n\
-          ├ maybe_results: {:?}  \n\
-          └ editor_buffer: {}  \n\
-          ]",
-          self.title,
-          maybe_results,
-          self.editor_buffer.get_as_string_with_comma_instead_of_newlines()
+mod impl_debug_format {
+    use super::*;
+
+    impl Debug for DialogBuffer {
+        // 02: [x] clean up log
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            let maybe_results: &dyn Debug = format_option!(&self.maybe_results);
+            write! { f,
+            "DialogBuffer [
+    ├ title: {title}
+    ├ maybe_results: {results:?}
+    └ editor_buffer.content: {content}
+    ]",
+                      title = self.title,
+                      results = maybe_results,
+                      content = self.editor_buffer.get_as_string_with_comma_instead_of_newlines()
+                    }
         }
     }
 }

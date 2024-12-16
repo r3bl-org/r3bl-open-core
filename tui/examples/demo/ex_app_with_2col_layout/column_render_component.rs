@@ -17,6 +17,7 @@
 
 use r3bl_core::{call_if_true,
                 ch,
+                glyphs,
                 position,
                 send_signal,
                 throws_with_return,
@@ -262,20 +263,20 @@ mod column_render_component_impl_component_trait {
                 pipeline.push(ZOrder::Normal, render_ops);
 
                 // Log pipeline.
+                // 00: [x] clean up log
                 call_if_true!(DEBUG_TUI_MOD, {
+                    let message = format!(
+                        "ColumnComponent::render {ch}",
+                        ch = glyphs::RENDER_GLYPH
+                    );
+                    // % is Display, ? is Debug.
                     tracing::info!(
-                        "\
-                    🦜 ColumnComponent::render ->
-                      - current_box: {:?},
-                      - box_origin_pos: {:?},
-                      - box_bounds_size: {:?},
-                      - content_pos: {:?},
-                      - render_pipeline: {:?}",
-                        current_box,
-                        box_origin_pos,
-                        box_bounds_size,
-                        position!(col_index: col, row_index: row),
-                        pipeline
+                        message = message,
+                        current_box = ?current_box,
+                        box_origin_pos = ?box_origin_pos,
+                        box_bounds_size = ?box_bounds_size,
+                        content_pos = ?position!(col_index: col, row_index: row),
+                        render_pipeline = ?pipeline,
                     );
                 });
 

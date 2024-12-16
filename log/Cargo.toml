@@ -1,0 +1,63 @@
+[package]
+name = "r3bl_log"
+version = "0.1.0"
+edition = "2024"
+resolver = "2"
+description = "Tokio tracing plugins for formatted log output for R3BL TUI crates"
+# At most 5 keywords w/ no spaces, each has max length of 20 char.
+keywords = ["log", "tracing", "ANSI", "terminal", "formatted"]
+categories = ["command-line-interface", "command-line-utilities"]
+readme = "README.md"                                              # This is not included in cargo docs.
+# Email address(es) has to be verified at https://crates.io/me/
+authors = [
+  "Nazmul Idris <idris@developerlife.com>",
+  "Nadia Idris <nadia@developerlife.com>",
+]
+repository = "https://github.com/r3bl-org/r3bl-open-core/tree/main/log"
+documentation = "https://docs.rs/r3bl_log"
+homepage = "https://r3bl.com"
+license = "Apache-2.0"
+
+[dependencies]
+# Tokio / Tracing / Logging.
+# https://tokio.rs/tokio/topics/tracing
+# https://tokio.rs/tokio/topics/tracing-next-steps
+tokio = { version = "1.40.0", features = ["full", "tracing"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+tracing-appender = "0.2.3"
+tracing-core = "0.1.32"
+
+# CustomEventFormatter.
+chrono = "0.4.39"
+textwrap = { version = "0.16.1", features = ["unicode-linebreak"] }
+
+# Error handling.
+thiserror = "1.0.64"
+miette = { version = "7.2.0", features = ["fancy"] }
+pretty_assertions = "1.4.1"
+
+# r3bl-open-core.
+r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" }       # Convert between ansi and rgb.
+r3bl_core = { path = "../core", version = "0.10.0" }                  # Core functionality.
+r3bl_macro = { path = "../macro", version = "0.10.0" }                # Macros for r3bl-open-core.
+r3bl_test_fixtures = { path = "../test_fixtures", version = "0.1.0" } # Test fixtures.
+
+# Terminal color output.
+crossterm = "0.28.1"
+
+# Allow const strings to be formatted with format!.
+const_format = "0.2.34"
+
+[dev-dependencies]
+
+# for assert_eq! macro
+pretty_assertions = "1.4.1"
+serial_test = "3.1.1"
+
+# Bin targets for testing stdout and stderr.
+assert_cmd = "2.0.16"
+
+[[bin]]
+name = "tracing_test_bin"
+path = "src/bin/tracing_test_bin.rs"

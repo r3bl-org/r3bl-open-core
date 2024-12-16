@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{call_if_true,
-                ch,
+use r3bl_core::{ch,
                 get_tui_styles,
+                glyphs,
                 position,
                 requested_size_percent,
                 size,
@@ -63,8 +63,7 @@ use r3bl_tui::{box_end,
                Surface,
                SurfaceProps,
                SurfaceRender,
-               ZOrder,
-               DEBUG_TUI_MOD};
+               ZOrder};
 
 use super::{AppSignal, ColumnComponent, State};
 
@@ -303,43 +302,37 @@ mod handle_focus {
     ) -> Continuation<String> {
         let mut event_consumed = false;
 
-        fn debug_log_has_focus(src: String, has_focus: &HasFocus) {
-            call_if_true!(DEBUG_TUI_MOD, {
-                tracing::info!("👀 {src} -> focus change & rerender: {has_focus:?}");
-            });
-        }
-
         // Handle Left, Right to switch focus between columns.
-        if let InputEvent::Keyboard(keypress) = input_event {
-            match keypress {
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Left),
-                } => {
+        if let InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(key),
+        }) = input_event
+        {
+            match key {
+                SpecialKey::Left => {
                     event_consumed = true;
                     handle_key(SpecialKey::Left, has_focus);
-                    debug_log_has_focus(
-                        stringify!(AppWithLayout::app_handle_event).into(),
-                        has_focus,
-                    );
                 }
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Right),
-                } => {
+                SpecialKey::Right => {
                     event_consumed = true;
                     handle_key(SpecialKey::Right, has_focus);
-                    debug_log_has_focus(
-                        stringify!(AppWithLayout::app_handle_event).into(),
-                        has_focus,
-                    );
                 }
                 _ => {}
             }
+            // 00: [x] clean up log
+            let message = format!(
+                "AppWithLayout::app_handle_event -> switch focus {ch}",
+                ch = glyphs::FOCUS_GLYPH
+            );
+            // % is Display, ? is Debug.
+            tracing::info!(
+                message = message,
+                has_focus = ?has_focus
+            );
         }
 
-        if event_consumed {
-            Continuation::Return
-        } else {
-            Continuation::Continue
+        match event_consumed {
+            true => Continuation::Return,
+            false => Continuation::Continue,
         }
     }
 

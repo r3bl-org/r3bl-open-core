@@ -61,6 +61,10 @@
   - [v0.0.3 2024-09-12](#v003-2024-09-12)
   - [v0.0.2 2024-07-13](#v002-2024-07-13)
   - [v0.0.1 2024-07-12](#v001-2024-07-12)
+- [r3bl_log](#r3bl_log)
+  - [v_next_release_log](#v_next_release_r3bl_log)
+- [r3bl_script](#r3bl_script)
+  - [v_next_release_script](#v_next_release_r3bl_script)
 - [r3bl_terminal_async](#r3bl_terminal_async)
   - [v0.6.0 2024-10-21](#v060-2024-10-21)
   - [v0.5.7 2024-09-12](#v057-2024-09-12)
@@ -778,11 +782,20 @@ Changed:
     replace them with doc comments that compile successfully.
 
 - Added:
+  - `UnicodeString` now implements `std::fmt::Display`, so it is no longer necessary to
+    use `UnicodeString.string` to get to the underlying string. This is just more
+    ergonomic. This is added in `convert.rs`. More work needs to be done to introduce
+    different types for holding "width / height" aka "column / row counts", and "column /
+    row index". Currently there is a `Size` struct, and `Position` struct, but most of the
+    APIs don't really use one or another, they just use `ChUnit` directly.
   - `lolcat_api` enhancements that now allow for an optional default style to be passed in
     to `ColorWheel::lolcat_into_string` and `ColorWheel::colorize_into_string`, that will
     be applied to the generated lolcat output.
   - `convert_to_ansi_color_styles` module that adds the ability to convert a `TuiStyle`
     into a `Vec` of `r3bl_ansi_term::Style`.
+  - `string_helpers.rs` has new utility functions to check whether a given string contains
+    any ANSI escape codes `contains_ansi_escape_sequence`. And to remove needless escaped
+    `\"` characters from a string `remove_escaped_quotes`.
   - A new declarative macro `create_global_singleton!` that takes a struct (which must
     implement `Default` trait) and allows it to be simply turned into a singleton.
     - You can still use the struct directly. Or just use the supplied generated associated
@@ -985,6 +998,44 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
     This is to make it easier to maintain and test the fixtures and allow all the other
     crates in this monorepo to use them. These fixtures are migrated from `r3bl_terminal_async`
     crate, where they were gestated, before being graduated for use by the entire monorepo.
+
+## `r3bl_log`
+
+### v_next_release_r3bl_log
+
+This is the first release of this crate. It is a top level crate in the `r3bl-open-core`
+that is meant to hold all the logging related functionality for all the other crates in
+this monorepo. It uses `tracing` under the covers to provide structured logging. It also
+provides a custom formatter that is a `tracing-subscriber` crate plugin.
+
+Added:
+  - Moved all the tracing and logging functionality from `r3bl_core` in here.
+  - Make the public API more ergonomic and use the `options: impl Into<TracingConfig>`
+    pattern for all the functions that need to be configured. This makes it easy to define
+    simple configuration options, while allowing for easy composition of more complex
+    options. We really like this pattern and intend to refactor the entire codebase over
+    time to use this.
+
+Changed:
+  - `WriterConfig` can now be merged with other instances. This was a requirement for the
+    `TracingConfig` to be able to merge multiple `WriterConfig` instances into a single
+    `WriterConfig` instance. The code is in `src/log_support/public_api.rs` since this
+    functionality is related to making the API easier to use by callers. This is in
+    support of the `options: impl Into<TracingConfig>` pattern.
+  - Two `TracingConfig` instances can be added together to create a new `TracingConfig`
+    instance. This is needed for composability and an easy to use API for callers. Lots of
+    converts are provide to make it easy to convert from a variety of configuration types
+    into a `TracingConfig` instance. The code is in `src/log_support/public_api.rs`. This
+    is in support of the `options: impl Into<TracingConfig>` pattern.
+
+## `r3bl_script`
+
+### v_next_release_r3bl_script
+
+This is the first release of this crate. It is a top level crate in the `r3bl-open-core`
+that is meant to hold all the scripting related functionality for all the other crates in
+this monorepo. It provides a way to run scripts in a safe and secure way, that is meant to
+be a replacement for writing scripts in `fish` or `bash` or `nushell` syntax.
 
 ## `r3bl_terminal_async`
 

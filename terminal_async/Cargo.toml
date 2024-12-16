@@ -3,7 +3,7 @@ name = "r3bl_terminal_async"
 version = "0.6.0"
 edition = "2021"
 resolver = "2"
-description = "Async non-blocking read_line implemenation with multiline editor, with concurrent display output from tasks, and colorful animated spinners"
+description = "Async non-blocking read_line implementation with multiline editor, with concurrent display output from tasks, and colorful animated spinners"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["cli", "spinner", "readline", "terminal", "async"]
 categories = ["command-line-interface", "command-line-utilities"]
@@ -25,9 +25,10 @@ futures-util = "0.3.31"                                         # Needed for cro
 
 # r3bl-open-core.
 r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" } # version is required to publish to crates.io
-r3bl_core = { path = "../core", version = "0.10.0" }            # version is requried to publish to crates.io
-r3bl_tui = { path = "../tui", version = "0.6.0" }               # version is requried to publish to crates.io
-r3bl_tuify = { path = "../tuify", version = "0.2.0" }          # version is requried to publish to crates.io
+r3bl_core = { path = "../core", version = "0.10.0" }            # version is required to publish to crates.io
+r3bl_tui = { path = "../tui", version = "0.6.0" }               # version is required to publish to crates.io
+r3bl_tuify = { path = "../tuify", version = "0.2.0" }           # version is required to publish to crates.io
+r3bl_log = { path = "../log", version = "0.1.0" }               # version is required to publish to crates.io
 
 # Unicode support.
 unicode-segmentation = "1.12.0"

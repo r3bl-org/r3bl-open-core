@@ -91,17 +91,11 @@ async-stream = "0.3.6"
 # Dynamically name variables in declarative macros.
 paste = "1.0.15"
 
+# For SharedWriter ids.
+uuid = { version = "1.11.0", features = ["v4"] }
+
 [dev-dependencies]
 
 # for assert_eq! macro
 pretty_assertions = "1.4.1"
 serial_test = "3.1.1"
-
-# Testing - temp files and folders.
-tempfile = "3.13.0"
-
-# Bin targets for testing stdout and stderr.
-assert_cmd = "2.0.16"
-[[bin]]
-name = "tracing_test_bin"
-path = "src/bin/tracing_test_bin.rs"

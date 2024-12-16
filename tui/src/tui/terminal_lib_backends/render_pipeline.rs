@@ -275,7 +275,7 @@ impl Debug for RenderPipeline {
                 vec_lines.push(line);
             }
         }
-        write!(f, "  - {}", vec_lines.join("\n  - "))
+        write!(f, "{}", vec_lines.join("\n  - "))
     }
 }
 

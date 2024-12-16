@@ -27,11 +27,8 @@ use r3bl_ansi_color::{is_stdin_piped,
                       is_stdout_piped,
                       StdinIsPipedResult,
                       StdoutIsPipedResult};
-use r3bl_core::{call_if_true,
-                get_size,
-                get_terminal_width,
-                throws,
-                try_initialize_global_logging};
+use r3bl_core::{call_if_true, get_size, get_terminal_width, throws};
+use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, DEVELOPMENT_MODE};
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 use StdinIsPipedResult::{StdinIsNotPiped, StdinIsPiped};
@@ -99,7 +96,7 @@ fn main() -> Result<()> {
         let enable_logging = DEVELOPMENT_MODE | cli_args.global_opts.enable_logging;
 
         call_if_true!(enable_logging, {
-            try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
+            try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
             tracing::debug!("Start logging... terminal window size: {:?}", get_size()?);
             tracing::debug!("cli_args {cli_args:?}")
         });
