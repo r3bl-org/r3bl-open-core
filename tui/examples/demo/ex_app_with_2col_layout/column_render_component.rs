@@ -262,20 +262,15 @@ mod column_render_component_impl_component_trait {
                 pipeline.push(ZOrder::Normal, render_ops);
 
                 // Log pipeline.
+                // 00: [ ] clean up log format
                 call_if_true!(DEBUG_TUI_MOD, {
+                    // % is Display, ? is Debug.
                     tracing::info!(
-                        "\
-                    🦜 ColumnComponent::render ->
-                      - current_box: {:?},
-                      - box_origin_pos: {:?},
-                      - box_bounds_size: {:?},
-                      - content_pos: {:?},
-                      - render_pipeline: {:?}",
-                        current_box,
-                        box_origin_pos,
-                        box_bounds_size,
-                        position!(col_index: col, row_index: row),
-                        pipeline
+                        "ColumnComponent::render 🟡" = ?current_box,
+                        "box_origin_pos" = ?box_origin_pos,
+                        "box_bounds_size" = ?box_bounds_size,
+                        "content_pos" = ?position!(col_index: col, row_index: row),
+                        "render_pipeline" = ?pipeline,
                     );
                 });
 

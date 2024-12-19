@@ -294,7 +294,7 @@ mod status_bar {
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
         let styled_texts = tui_styled_texts! {
             tui_styled_text! { @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
-            tui_styled_text! { @style: tui_style!(attrib: [bold])      , @text: " x : Exit ⛔ "},
+            tui_styled_text! { @style: tui_style!(attrib: [bold])      , @text: " x : Exit 🖖 "},
             tui_styled_text! { @style: tui_style!(attrib: [dim])       , @text: " … "},
             tui_styled_text! { @style: tui_style!(attrib: [underline]) , @text: " ↑ / + : inc "},
             tui_styled_text! { @style: tui_style!(attrib: [dim])       , @text: " … "},

@@ -76,6 +76,9 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
+    // Set the session start time.
+    telemetry_global_static::set_start_session_time();
+
     // mpsc channel to send signals from the app to the main event loop (eg: for exit,
     // re-render, apply action, etc).
     let (main_thread_channel_sender, mut main_thread_channel_receiver) =
@@ -117,7 +120,10 @@ where
         output_device.is_mock,
     )?;
 
-    global_data_ref.dump_to_log("main_event_loop -> Startup 🚀");
+    call_if_true!(
+        DEBUG_TUI_MOD,
+        tracing::info!("main_event_loop -> Startup 🚀"=?global_data_ref)
+    );
 
     // Main event loop.
     loop {
@@ -172,11 +178,12 @@ where
             //   pinned_input_stream isn't used and the state isn't modified.
             maybe_input_event = input_device.next_input_event() => {
                 if let Some(input_event) = maybe_input_event {
-                    telemetry_global_static::set_start_ts();
+                    telemetry_global_static::set_span_measure_start_ts();
 
                     call_if_true!(DEBUG_TUI_MOD, {
                         if let InputEvent::Keyboard(_)= input_event {
-                            tracing::info!("main_event_loop -> Tick: ⏰ {input_event}");
+                            // % is Display, ? is Debug.
+                            tracing::info!("main_event_loop -> Tick 🌄 " = ?input_event);
                         }
                     });
 
@@ -208,8 +215,14 @@ where
         }
     } // End loop.
 
+    // Set the session end time.
+    telemetry_global_static::set_end_session_time();
+
     call_if_true!(DEBUG_TUI_MOD, {
-        tracing::info!("main_event_loop -> Shutdown 🛑");
+        // % is Display, ? is Debug.
+        tracing::info!(
+            "main_event_loop -> Shutdown 🛑" = ?telemetry_global_static::get_session_duration_sec()
+        );
     });
 
     ok!((global_data, input_device, output_device))
@@ -384,10 +397,10 @@ where
                 Err(error) => {
                     RenderOp::default().flush(locked_output_device);
 
-                    telemetry_global_static::set_end_ts();
+                    telemetry_global_static::set_span_measure_end_ts();
 
                     call_if_true!(DEBUG_TUI_MOD, {
-                        tracing::error!("MySubscriber::render() error ❌: {error}");
+                        tracing::error!("AppManager::render_app() error ❌: {error}");
                     });
                 }
                 Ok(render_pipeline) => {
@@ -398,25 +411,30 @@ where
                         is_mock,
                     );
 
-                    telemetry_global_static::set_end_ts();
+                    telemetry_global_static::set_span_measure_end_ts();
 
                     // Print debug message w/ memory utilization, etc.
                     call_if_true!(DEBUG_TUI_MOD, {
                         {
                             let state = &global_data.state;
-                            tracing::info!("🎨 MySubscriber::paint() ok ✅: \n window_size: {window_size:?}\n state: {state:?}");
+
+                            // % is Display, ? is Debug.
                             tracing::info!(
-                                "🌍⏳ SPEED: {:?}",
-                                telemetry_global_static::get_avg_response_time_micros(),
+                                "AppManager::render_app() ok 🟢"= ?window_size,
+                                "STATE" = ?state,
+                                "SPEED" = ?telemetry_global_static::get_avg_response_time_micros()
                             );
 
                             if let Some(ref offscreen_buffer) =
                                 global_data.maybe_saved_offscreen_buffer
                             {
+                                // % is Display, ? is Debug.
                                 tracing::info!(
-                                    "offscreen_buffer: {0:.3} kb",
-                                    offscreen_buffer.size_of().total_bytes() as f64
-                                        / 1000_f64
+                                    "AppManager::render_app() offscreen_buffer stats 🪟" = format!(
+                                        "Memory used: {0:.2} KB",
+                                        (offscreen_buffer.size_of().total_bytes() as f64
+                                            / 1000_f64)
+                                    )
                                 );
                             }
                         }
@@ -905,7 +923,7 @@ mod tests {
         pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {
             let styled_texts = tui_styled_texts! {
                 tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
-                tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit ⛔ "},
+                tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit 🖖 "},
                 tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
                 tui_styled_text!{ @style: tui_style!(attrib: [underline]) , @text: " ↑ / + : inc "},
                 tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},

@@ -124,21 +124,17 @@
 // Connect to source file.
 pub mod common;
 pub mod decl_macros;
-pub mod logging;
 pub mod misc;
 pub mod storage;
 pub mod term;
 pub mod terminal_io;
-pub mod tracing_logging;
 pub mod tui_core;
 
 // Re-export.
 pub use common::*;
 pub use decl_macros::*;
-pub use logging::*;
 pub use misc::*;
 pub use storage::*;
 pub use term::*;
 pub use terminal_io::*;
-pub use tracing_logging::*;
 pub use tui_core::*;

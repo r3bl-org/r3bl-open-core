@@ -170,7 +170,7 @@ pub enum Key {
     ///
     /// Here's how you can enable crossterm enhanced mode.
     ///
-    /// ```ignore
+    /// ```rust
     /// use std::io::{Write, stdout};
     /// use crossterm::execute;
     /// use crossterm::event::{

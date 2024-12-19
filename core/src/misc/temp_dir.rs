@@ -20,10 +20,18 @@ use std::{fmt::{Display, Formatter},
           path::Path};
 
 use miette::IntoDiagnostic;
-use r3bl_core::friendly_random_id;
+
+use crate::friendly_random_id;
 
 pub struct TempDir {
     inner: std::path::PathBuf,
+}
+
+impl TempDir {
+    /// Join a path to the temporary directory.
+    pub fn join<P: AsRef<Path>>(&self, path: P) -> std::path::PathBuf {
+        self.inner.join(path)
+    }
 }
 
 /// Create a temporary directory. The directory is automatically deleted when the
@@ -51,7 +59,7 @@ impl Drop for TempDir {
 /// # Example
 ///
 /// ```no_run
-/// use r3bl_test_fixtures::create_temp_dir;
+/// use r3bl_core::create_temp_dir;
 /// let root = create_temp_dir().unwrap();
 /// let new_dir = root.join("test_set_file_executable");
 /// ```
@@ -68,7 +76,7 @@ impl Deref for TempDir {
 /// # Example
 ///
 /// ```no_run
-/// use r3bl_test_fixtures::create_temp_dir;
+/// use r3bl_core::create_temp_dir;
 /// let root = create_temp_dir().unwrap();
 /// println!("Temp dir: {}", root);
 /// ```
@@ -88,7 +96,7 @@ impl Display for TempDir {
 /// # Example
 ///
 /// ```no_run
-/// use r3bl_test_fixtures::create_temp_dir;
+/// use r3bl_core::create_temp_dir;
 /// let root = create_temp_dir().unwrap();
 /// std::fs::create_dir_all(root.join("test_set_file_executable")).unwrap();
 /// std::fs::remove_dir_all(root).unwrap();
@@ -98,7 +106,7 @@ impl AsRef<Path> for TempDir {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_temp_dir {
     use crossterm::style::Stylize as _;
 
     use super::*;
@@ -112,6 +120,22 @@ mod tests {
         );
 
         assert!(temp_dir.inner.exists());
+    }
+
+    #[test]
+    fn test_temp_dir_join() {
+        let temp_dir = create_temp_dir().unwrap();
+        let expected_prefix = temp_dir.inner.display().to_string();
+
+        let new_sub_dir = temp_dir.join("test_set_file_executable");
+        let expected_postfix = new_sub_dir.display().to_string();
+
+        let expected_full_path = new_sub_dir.display().to_string();
+
+        assert!(temp_dir.exists());
+        assert!(!new_sub_dir.exists());
+        assert!(expected_full_path.starts_with(&expected_prefix));
+        assert!(expected_full_path.ends_with(&expected_postfix));
     }
 
     #[test]

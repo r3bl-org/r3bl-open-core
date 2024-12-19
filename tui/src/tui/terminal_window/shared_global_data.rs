@@ -64,7 +64,7 @@ where
             });
             it
         };
-        write!(f, "\nGlobalData\n  - {}", vec_lines.join("\n  - "))
+        write!(f, "GlobalData - {}", vec_lines.join("\n  - "))
     }
 }
 
@@ -97,12 +97,11 @@ where
 
     pub fn set_size(&mut self, new_size: Size) {
         self.window_size = new_size;
-        self.dump_to_log("main_event_loop -> Resize");
+        call_if_true!(
+            DEBUG_TUI_MOD,
+            tracing::info!("main_event_loop -> Resize ↔️"=?new_size)
+        );
     }
 
     pub fn get_size(&self) -> Size { self.window_size }
-
-    pub fn dump_to_log(&self, msg: &str) {
-        call_if_true!(DEBUG_TUI_MOD, tracing::info!("{msg} -> {self:?}"));
-    }
 }
