@@ -37,12 +37,8 @@ use std::str::FromStr as _;
 
 use crossterm::style::Stylize as _;
 use miette::IntoDiagnostic as _;
-use r3bl_core::{logging::try_initialize_global_logging,
-                ok,
-                style_prompt,
-                throws,
-                CommonError,
-                CommonResult};
+use r3bl_core::{ok, style_prompt, throws, CommonError, CommonResult};
+use r3bl_log::log_support::try_initialize_logging_global;
 use r3bl_terminal_async::{ReadlineEvent, TerminalAsync};
 use r3bl_tui::{keypress, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
 use strum::IntoEnumIterator as _;
@@ -71,9 +67,9 @@ async fn main() -> CommonResult<()> {
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
     if ENABLE_TRACE_EXAMPLES | DEBUG_TUI_MOD {
-        try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
+        try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
     } else {
-        try_initialize_global_logging(tracing_core::LevelFilter::OFF).ok();
+        try_initialize_logging_global(tracing_core::LevelFilter::OFF).ok();
     }
 
     loop {
@@ -202,7 +198,7 @@ Type a number to run corresponding example:
   1. 📐 {}
   2. 📐 {}
   3. 🐒 {}
-  4. ⚾ {}
+  4. 🦜 {}
   5. 📔 {}
 
 or type Ctrl+C, Ctrl+D, 'exit', or 'x' to exit",

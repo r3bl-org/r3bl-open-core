@@ -250,15 +250,15 @@ mod single_column_component_impl_component_trait {
                 pipeline.push(ZOrder::Normal, render_ops);
 
                 // Log pipeline.
+                // 00: [ ] clean up log format
                 call_if_true!(DEBUG_TUI_MOD, {
                     tracing::info!(
-                        "\
-                🦜 ColumnComponent::render ->
-                  - current_box: {current_box:?},
-                  - box_origin_pos: {box_origin_pos:?},
-                  - box_bounds_size: {box_bounds_size:?},
-                  - content_pos: {content_cursor_pos:?},
-                  - render_pipeline: {pipeline:?}"
+                        "🦜 ColumnComponent::render ->
+  - current_box: {current_box:?},
+  - box_origin_pos: {box_origin_pos:?},
+  - box_bounds_size: {box_bounds_size:?},
+  - content_pos: {content_cursor_pos:?},
+  - render_pipeline: {pipeline:?}"
                     );
                 });
 

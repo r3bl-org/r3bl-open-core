@@ -97,7 +97,7 @@ where
 
     pub fn set_size(&mut self, new_size: Size) {
         self.window_size = new_size;
-        self.dump_to_log("main_event_loop -> Resize");
+        self.dump_to_log("main_event_loop -> Resize ↕️");
     }
 
     pub fn get_size(&self) -> Size { self.window_size }

@@ -162,7 +162,7 @@ mod animator_task {
                         // Continue the animation.
 
                         // Wire into the timing telemetry.
-                        telemetry_global_static::set_start_ts();
+                        telemetry_global_static::set_span_measure_start_ts();
 
                         // Send a signal to the main thread to render.
                         send_signal!(
@@ -171,7 +171,7 @@ mod animator_task {
                         );
 
                         // Wire into the timing telemetry.
-                        telemetry_global_static::set_end_ts();
+                        telemetry_global_static::set_span_measure_end_ts();
                     }
                 }
             }

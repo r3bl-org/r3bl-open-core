@@ -34,7 +34,8 @@ use r3bl_cmdr::{color_constants::DefaultColors::{FrozenBlue, GuardsRed, Moonligh
                 report_analytics,
                 upgrade_check,
                 AnalyticsAction};
-use r3bl_core::{call_if_true, throws, try_initialize_global_logging, CommonResult};
+use r3bl_core::{call_if_true, throws, CommonResult};
+use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
 
 #[tokio::main]
@@ -47,7 +48,7 @@ async fn main() -> CommonResult<()> {
 
         let enable_logging = cli_arg.global_options.enable_logging;
         call_if_true!(enable_logging, {
-            try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
+            try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
             tracing::debug!("Start logging... cli_args {:?}", cli_arg);
         });
 

@@ -257,7 +257,7 @@ mod format_debug_display {
             };
 
             if vec_output.is_empty() {
-                vec_output.push("✂️ ┆--empty--┆".to_string());
+                vec_output.push("␩ ┆--empty--┆".to_string());
             }
 
             vec_output.push(format!("🧭 prev_dir: {:?}", self.maybe_previous_direction,));
