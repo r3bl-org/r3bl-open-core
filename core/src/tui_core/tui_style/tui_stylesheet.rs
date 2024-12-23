@@ -18,11 +18,15 @@
 use serde::{Deserialize, Serialize};
 
 use super::TuiStyle;
-use crate::{throws, CommonError, CommonResult};
+use crate::{CommonError,
+            CommonResult,
+            MicroVecBackingStore,
+            TinyVecBackingStore,
+            throws};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct TuiStylesheet {
-    pub styles: Vec<TuiStyle>,
+    pub styles: MicroVecBackingStore<TuiStyle>,
 }
 
 #[macro_export]
@@ -53,7 +57,7 @@ macro_rules! get_tui_styles {
         [$($args:tt)*]                               // Eg: ["style1", "style2"]
     ) => {
         if let Ok(ref it) = $arg_stylesheet_result {
-            it.find_styles_by_ids(vec![$($args)*])
+            it.find_styles_by_ids(&[$($args)*])
         } else {
             None
         }
@@ -63,7 +67,7 @@ macro_rules! get_tui_styles {
         @from: $arg_stylesheet : expr, // Eg: from: stylesheet,
         [$($args:tt)*]                 // Eg: ["style1", "style2"]
     ) => {
-        $arg_stylesheet.find_styles_by_ids(vec![$($args)*])
+        $arg_stylesheet.find_styles_by_ids(&[$($args)*])
     };
 }
 
@@ -81,7 +85,10 @@ impl TuiStylesheet {
         });
     }
 
-    pub fn add_styles(&mut self, styles: Vec<TuiStyle>) -> CommonResult<()> {
+    pub fn add_styles(
+        &mut self,
+        styles: MicroVecBackingStore<TuiStyle>,
+    ) -> CommonResult<()> {
         throws!({
             for style in styles {
                 self.add_style(style)?;
@@ -89,16 +96,20 @@ impl TuiStylesheet {
         });
     }
 
-    pub fn find_style_by_id(&self, id: u8) -> Option<TuiStyle> {
+    pub fn find_style_by_id(&self, id: impl Into<u8>) -> Option<TuiStyle> {
+        let id: u8 = id.into();
         self.styles.iter().find(|style| style.id == id).cloned()
     }
 
     /// Returns [None] if no style in `ids` [Vec] is found.
-    pub fn find_styles_by_ids(&self, ids: Vec<u8>) -> Option<Vec<TuiStyle>> {
-        let mut styles = Vec::new();
+    pub fn find_styles_by_ids(
+        &self,
+        ids: &[u8],
+    ) -> Option<TinyVecBackingStore<TuiStyle>> {
+        let mut styles = TinyVecBackingStore::<TuiStyle>::new();
 
         for id in ids {
-            if let Some(style) = self.find_style_by_id(id) {
+            if let Some(style) = self.find_style_by_id(*id) {
                 styles.push(style);
             }
         }
@@ -110,7 +121,7 @@ impl TuiStylesheet {
         }
     }
 
-    pub fn compute(styles: &Option<Vec<TuiStyle>>) -> Option<TuiStyle> {
+    pub fn compute(styles: &Option<TinyVecBackingStore<TuiStyle>>) -> Option<TuiStyle> {
         if let Some(styles) = styles {
             let mut computed = TuiStyle::default();
             styles.iter().for_each(|style| computed += style);
@@ -136,20 +147,20 @@ impl TuiStylesheet {
 ///     tui_stylesheet! {
 ///         TuiStyle {
 ///             id: 1,
-///             padding: Some(ch!(1)),
+///             padding: Some(ch(1)),
 ///             color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(55, 55, 248))),
 ///             ..Default::default()
 ///         },
-///         vec![
+///         smallvec::smallvec![
 ///             TuiStyle {
 ///                 id: 2,
-///                 padding: Some(ch!(1)),
+///                 padding: Some(ch(1)),
 ///                 color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(155, 155, 48))),
 ///                 ..Default::default()
 ///             },
 ///             TuiStyle {
 ///                 id: 3,
-///                 padding: Some(ch!(1)),
+///                 padding: Some(ch(1)),
 ///                 color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(5, 5, 48))),
 ///                 ..Default::default()
 ///             },
@@ -189,8 +200,8 @@ impl TryAdd<TuiStyle> for TuiStylesheet {
     fn try_add(&mut self, other: TuiStyle) -> CommonResult<()> { self.add_style(other) }
 }
 
-impl TryAdd<Vec<TuiStyle>> for TuiStylesheet {
-    fn try_add(&mut self, other: Vec<TuiStyle>) -> CommonResult<()> {
+impl TryAdd<MicroVecBackingStore<TuiStyle>> for TuiStylesheet {
+    fn try_add(&mut self, other: MicroVecBackingStore<TuiStyle>) -> CommonResult<()> {
         self.add_styles(other)
     }
 }

@@ -17,7 +17,7 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use r3bl_core::{ch, ChUnit};
+use r3bl_core::{ch, ChUnit, MicroVecBackingStore, TinyStringBackingStore};
 use serde::{Deserialize, Serialize};
 
 use crate::{format_option, EditorBuffer, DEFAULT_SYN_HI_FILE_EXT};
@@ -31,15 +31,15 @@ use crate::{format_option, EditorBuffer, DEFAULT_SYN_HI_FILE_EXT};
 pub struct DialogBuffer {
     pub editor_buffer: EditorBuffer,
     pub title: String,
-    pub maybe_results: Option<Vec<String>>,
+    pub maybe_results: Option<MicroVecBackingStore<TinyStringBackingStore>>,
 }
 
 impl DialogBuffer {
     pub fn get_results_count(&self) -> ChUnit {
         if let Some(ref it) = self.maybe_results {
-            ch!(it.len())
+            ch(it.len())
         } else {
-            ch!(0)
+            ch(0)
         }
     }
 }
@@ -61,19 +61,18 @@ mod impl_debug_format {
     use super::*;
 
     impl Debug for DialogBuffer {
-        // 02: [x] clean up log
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             let maybe_results: &dyn Debug = format_option!(&self.maybe_results);
             write! { f,
-            "DialogBuffer [
-    ├ title: {title}
-    ├ maybe_results: {results:?}
-    └ editor_buffer.content: {content}
-    ]",
-                      title = self.title,
-                      results = maybe_results,
-                      content = self.editor_buffer.get_as_string_with_comma_instead_of_newlines()
-                    }
+"DialogBuffer [
+  - title: {title}
+  - maybe_results: {results:?}
+  - editor_buffer.content: {content}
+]",
+              title = self.title,
+              results = maybe_results,
+              content = self.editor_buffer.get_as_string_with_comma_instead_of_newlines()
+            }
         }
     }
 }

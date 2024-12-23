@@ -98,16 +98,16 @@ mod tests_range {
     #[test]
     fn test_locate() {
         let range = {
-            let start = ch!(1);
-            let end = ch!(4);
+            let start = ch(1);
+            let end = ch(4);
             SelectionRange::new(start, end)
         };
-        assert_eq2!(range.locate_column(ch!(0)), CaretLocationInRange::Underflow);
-        assert_eq2!(range.locate_column(ch!(1)), CaretLocationInRange::Contained);
-        assert_eq2!(range.locate_column(ch!(2)), CaretLocationInRange::Contained);
-        assert_eq2!(range.locate_column(ch!(3)), CaretLocationInRange::Contained);
-        assert_eq2!(range.locate_column(ch!(4)), CaretLocationInRange::Overflow);
-        assert_eq2!(range.locate_column(ch!(5)), CaretLocationInRange::Overflow);
+        assert_eq2!(range.locate_column(ch(0)), CaretLocationInRange::Underflow);
+        assert_eq2!(range.locate_column(ch(1)), CaretLocationInRange::Contained);
+        assert_eq2!(range.locate_column(ch(2)), CaretLocationInRange::Contained);
+        assert_eq2!(range.locate_column(ch(3)), CaretLocationInRange::Contained);
+        assert_eq2!(range.locate_column(ch(4)), CaretLocationInRange::Overflow);
+        assert_eq2!(range.locate_column(ch(5)), CaretLocationInRange::Overflow);
     }
 }
 

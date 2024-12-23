@@ -18,38 +18,41 @@
 use colorgrad::Gradient;
 use rand::Rng;
 
-use crate::{RgbValue, TuiColor};
+use crate::{RgbValue, TinyStringBackingStore, TinyVecBackingStore, TuiColor};
 
 /// # Arguments
 /// * `steps` - The number of steps to take between each color stop.
 ///
 /// # Returns
 /// A vector of [TuiColor] objects representing the gradient.
-pub fn generate_random_truecolor_gradient(steps: usize) -> Vec<TuiColor> {
+pub fn generate_random_truecolor_gradient(steps: u8) -> TinyVecBackingStore<TuiColor> {
     let mut rng = rand::thread_rng();
 
-    let stops = vec![
+    let stops = [
         colorgrad::Color::new(
             rng.gen_range(0.0..1.0),
             rng.gen_range(0.0..1.0),
             rng.gen_range(0.0..1.0),
             1.0,
         )
-        .to_hex_string(),
+        .to_hex_string()
+        .into(),
         colorgrad::Color::new(
             rng.gen_range(0.0..1.0),
             rng.gen_range(0.0..1.0),
             rng.gen_range(0.0..1.0),
             1.0,
         )
-        .to_hex_string(),
+        .to_hex_string()
+        .into(),
         colorgrad::Color::new(
             rng.gen_range(0.0..1.0),
             rng.gen_range(0.0..1.0),
             rng.gen_range(0.0..1.0),
             1.0,
         )
-        .to_hex_string(),
+        .to_hex_string()
+        .into(),
     ];
 
     generate_truecolor_gradient(&stops, steps)
@@ -61,11 +64,12 @@ pub fn generate_random_truecolor_gradient(steps: usize) -> Vec<TuiColor> {
 ///
 /// # Returns
 /// A vector of [TuiColor] objects representing the gradient.
-pub fn generate_truecolor_gradient(stops: &[String], steps: usize) -> Vec<TuiColor> {
-    let colors = stops.iter().map(|s| s.as_str()).collect::<Vec<&str>>();
-
+pub fn generate_truecolor_gradient(
+    stops: &[TinyStringBackingStore],
+    steps: u8,
+) -> TinyVecBackingStore<TuiColor> {
     let result_gradient = colorgrad::GradientBuilder::new()
-        .html_colors(&colors)
+        .html_colors(stops)
         .build::<colorgrad::LinearGradient>();
 
     type Number = f32;
@@ -74,7 +78,9 @@ pub fn generate_truecolor_gradient(stops: &[String], steps: usize) -> Vec<TuiCol
         Ok(gradient) => {
             let fractional_step: Number = (1 as Number) / steps as Number;
 
-            let mut acc = vec![];
+            // Create an acc with the same capacity as the number of steps. And pre-fill
+            // it with black.
+            let mut acc = TinyVecBackingStore::new();
 
             for step_count in 0..steps {
                 let color = gradient.at(fractional_step * step_count as Number);
@@ -110,7 +116,7 @@ pub fn generate_truecolor_gradient(stops: &[String], steps: usize) -> Vec<TuiCol
                     blue: *blue,
                 })
             })
-            .collect::<Vec<TuiColor>>()
+            .collect::<TinyVecBackingStore<TuiColor>>()
         }
     }
 }
@@ -120,14 +126,14 @@ mod tests {
     use r3bl_ansi_color::{AnsiStyledText, Style};
 
     use super::*;
-    use crate::assert_eq2;
+    use crate::{assert_eq2, usize};
 
     #[test]
     fn test_generate_random_truecolor_gradient() {
         let steps = 10;
         let result = generate_random_truecolor_gradient(steps);
 
-        assert_eq2!(result.len(), steps);
+        assert_eq2!(result.len(), usize(steps));
 
         result
             .iter()
@@ -151,14 +157,11 @@ mod tests {
 
     #[test]
     fn test_generate_truecolor_gradient() {
-        let stops = ["#ff0000", "#00ff00", "#0000ff"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
+        let stops = ["#ff0000".into(), "#00ff00".into(), "#0000ff".into()];
         let steps = 10;
         let result = generate_truecolor_gradient(&stops, steps);
 
-        assert_eq2!(result.len(), steps);
+        assert_eq2!(result.len(), usize(steps));
 
         [
             (255, 0, 0),

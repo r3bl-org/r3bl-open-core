@@ -19,6 +19,7 @@ use std::fmt::Debug;
 
 use r3bl_core::{ch,
                 size,
+                u8,
                 Ansi256GradientIndex,
                 ChUnit,
                 ColorWheel,
@@ -27,6 +28,7 @@ use r3bl_core::{ch,
                 Size,
                 TuiStyle};
 use serde::{Deserialize, Serialize};
+use smallvec::smallvec;
 
 use crate::{lookup_size,
             DisplayConstants,
@@ -89,10 +91,10 @@ impl DialogEngine {
         Self {
             dialog_options,
             editor_engine: EditorEngine::new(editor_options),
-            color_wheel: ColorWheel::new(vec![
+            color_wheel: ColorWheel::new(smallvec![
                 // Truecolor gradient.
                 ColorWheelConfig::Rgb(
-                    vec![
+                    smallvec::smallvec![
                         "#00ffff".into(), /* cyan  */
                         "#ff00ff".into(), /* magenta */
                         "#0000ff".into(), /* blue */
@@ -101,7 +103,7 @@ impl DialogEngine {
                         "#ff0000".into(), /* red */
                     ],
                     ColorWheelSpeed::Fast,
-                    ch!(@to_usize col_count + 50),
+                    u8(col_count + 50),
                 ),
                 // Ansi256 gradient.
                 ColorWheelConfig::Ansi256(
@@ -115,8 +117,8 @@ impl DialogEngine {
 
     /// Clean up any state in the engine, eg: selected_row_index or scroll_offset_row_index.
     pub fn reset(&mut self) {
-        self.selected_row_index = ch!(0);
-        self.scroll_offset_row_index = ch!(0);
+        self.selected_row_index = ch(0);
+        self.scroll_offset_row_index = ch(0);
     }
 }
 
@@ -138,8 +140,8 @@ mod dialog_engine_config_options_impl {
         fn default() -> Self {
             Self {
                 mode: DialogEngineMode::ModalSimple,
-                result_panel_display_row_count: ch!(
-                    DisplayConstants::DefaultResultsPanelRowCount as u16
+                result_panel_display_row_count: ch(
+                    DisplayConstants::DefaultResultsPanelRowCount as u16,
                 ),
                 maybe_style_border: None,
                 maybe_style_editor: None,

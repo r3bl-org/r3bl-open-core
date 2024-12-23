@@ -103,7 +103,7 @@ mod tests {
           },
           as it,
           run {
-            assert_eq!(it.padding, Some(ch!(1)));
+            assert_eq!(it.padding, Some(ch(1)));
           }
         }
     }

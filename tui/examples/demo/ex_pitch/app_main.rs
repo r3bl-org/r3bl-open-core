@@ -18,7 +18,6 @@
 use std::fmt::Debug;
 
 use r3bl_core::{call_if_true,
-                ch,
                 get_tui_styles,
                 position,
                 requested_size_percent,
@@ -88,7 +87,7 @@ mod id_impl {
     }
 
     impl From<Id> for FlexBoxId {
-        fn from(id: Id) -> FlexBoxId { FlexBoxId(id as u8) }
+        fn from(id: Id) -> FlexBoxId { FlexBoxId::new(id) }
     }
 }
 
@@ -165,7 +164,9 @@ mod app_main_impl_app_trait {
                 // Spawn previous slide action.
                 send_signal!(
                     global_data.main_thread_channel_sender,
-                    TerminalWindowMainThreadSignal::ApplyAction(AppSignal::PreviousSlide)
+                    TerminalWindowMainThreadSignal::ApplyAppSignal(
+                        AppSignal::PreviousSlide
+                    )
                 );
                 return Ok(EventPropagation::ConsumedRender);
             };
@@ -263,7 +264,6 @@ mod perform_layout {
         ) -> CommonResult<()> {
             throws!({
                 let component_id = FlexBoxId::from(Id::Editor);
-                let style = Id::EditorStyleNameDefault.into();
                 // Layout editor component, and render it.
                 {
                     box_start! (
@@ -271,7 +271,7 @@ mod perform_layout {
                         id:                     component_id,
                         dir:                    LayoutDirection::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                        styles:                 [style]
+                        styles:                 [Id::EditorStyleNameDefault]
                     );
                     render_component_in_current_box!(
                         in:                 surface,
@@ -288,6 +288,8 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
+    use r3bl_core::glyphs;
+
     use super::*;
 
     pub fn create_components(
@@ -299,9 +301,14 @@ mod populate_component_registry {
 
         // Switch focus to the editor component if focus is not set.
         has_focus.set_id(id);
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
-            tracing::debug!("🪙 init has_focus = {:?}", has_focus.get_id());
+            let message =
+                format!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH);
+            // % is Display, ? is Debug.
+            tracing::info!(
+                message = message,
+                has_focus = ?has_focus.get_id()
+            );
         });
     }
 
@@ -333,9 +340,10 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
-            tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
+            tracing::debug!(
+                message = "app_main construct EditorComponent [ on_buffer_change ]"
+            );
         });
     }
 }
@@ -347,7 +355,7 @@ mod stylesheet {
         throws_with_return!({
             tui_stylesheet! {
               tui_style! {
-                id: Id::EditorStyleNameDefault.into()
+                id: Id::EditorStyleNameDefault
                 padding: 1
                 // These are ignored due to syntax highlighting.
                 // attrib: [bold]

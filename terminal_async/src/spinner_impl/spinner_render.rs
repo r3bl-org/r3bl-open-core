@@ -15,39 +15,39 @@
  *   limitations under the License.
  */
 
-use crossterm::{cursor::{MoveToColumn, MoveUp},
+use crossterm::{QueueableCommand,
+                cursor::{MoveToColumn, MoveUp},
                 style::{self, Print, Stylize},
-                terminal::{Clear, ClearType},
-                QueueableCommand};
+                terminal::{Clear, ClearType}};
 use miette::IntoDiagnostic as _;
-use r3bl_core::ch;
+use r3bl_core::{ChUnit, ch};
 use r3bl_tui::convert_from_tui_color_to_crossterm_color;
 use r3bl_tuify::clip_string_to_width_with_ellipsis;
 
-use crate::{spinner_render::style::style,
+use crate::{BLOCK_DOTS,
+            BRAILLE_DOTS,
             SendRawTerminal,
             SpinnerColor,
             SpinnerStyle,
             SpinnerTemplate,
-            BLOCK_DOTS,
-            BRAILLE_DOTS};
+            spinner_render::style::style};
 
 pub fn render_tick(
     style: &mut SpinnerStyle,
     message: &str,
     count: usize,
-    display_width: usize,
+    display_width: ChUnit,
 ) -> String {
     match style.template {
         SpinnerTemplate::Dots => {
             let padding_right = ".".repeat(count);
             let clipped_message = clip_string_to_width_with_ellipsis(
                 message.to_string(),
-                ch!(display_width) - ch!(padding_right.len()),
+                ch(display_width) - ch(padding_right.len()),
             );
             let output_message = format!("{clipped_message}{padding_right}");
             let clipped_message =
-                clip_string_to_width_with_ellipsis(output_message, ch!(display_width));
+                clip_string_to_width_with_ellipsis(output_message, ch(display_width));
             apply_color(clipped_message.as_str(), &mut style.color)
         }
         SpinnerTemplate::Braille => {
@@ -57,7 +57,7 @@ pub fn render_tick(
             let output_symbol = apply_color(output_symbol, &mut style.color);
             let clipped_message = clip_string_to_width_with_ellipsis(
                 message.to_string(),
-                ch!(display_width) - ch!(2),
+                ch(display_width) - ch(2),
             );
             let clipped_message = apply_color(&clipped_message, &mut style.color);
             format!("{output_symbol} {clipped_message}")
@@ -69,7 +69,7 @@ pub fn render_tick(
             let output_symbol = apply_color(output_symbol, &mut style.color);
             let clipped_message = clip_string_to_width_with_ellipsis(
                 message.to_string(),
-                ch!(display_width) - ch!(2),
+                ch(display_width) - ch(2),
             );
             let clipped_message = apply_color(&clipped_message, &mut style.color);
             format!("{output_symbol} {clipped_message}")
@@ -132,10 +132,10 @@ pub fn print_tick(
 pub fn render_final_tick(
     style: &SpinnerStyle,
     final_message: &str,
-    display_width: usize,
+    display_width: ChUnit,
 ) -> String {
     let clipped_final_message =
-        clip_string_to_width_with_ellipsis(final_message.to_string(), ch!(display_width));
+        clip_string_to_width_with_ellipsis(final_message.to_string(), ch(display_width));
     match style.template {
         SpinnerTemplate::Dots => clipped_final_message.to_string(),
         SpinnerTemplate::Braille => clipped_final_message.to_string(),
@@ -167,7 +167,7 @@ pub fn print_final_tick(
 
 fn apply_color(output: &str, color: &mut SpinnerColor) -> String {
     let mut return_it = output.to_string();
-    if let SpinnerColor::ColorWheel(ref mut color_wheel) = color {
+    if let SpinnerColor::ColorWheel(color_wheel) = color {
         let maybe_next_color = color_wheel.next_color();
         if let Some(next_color) = maybe_next_color {
             let color = convert_from_tui_color_to_crossterm_color(next_color);

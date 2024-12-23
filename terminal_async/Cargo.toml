@@ -1,7 +1,7 @@
 [package]
 name = "r3bl_terminal_async"
 version = "0.6.0"
-edition = "2021"
+edition = "2024"
 resolver = "2"
 description = "Async non-blocking read_line implementation with multiline editor, with concurrent display output from tasks, and colorful animated spinners"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
@@ -55,6 +55,11 @@ tracing-core = "0.1.32"
 # Async stream for DI and testing.
 futures-core = "0.3.31"
 async-stream = "0.3.6"
+
+
+# For smallstr & smallvec.
+smallstr = { version = "0.3.0", features = ["serde", "std"] }
+smallvec = { version = "1.6.1", features = ["serde"] }
 
 [dev-dependencies]
 # Testing - r3bl-open-core.

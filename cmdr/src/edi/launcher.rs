@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{throws, CommonResult};
-use r3bl_tui::{keypress, InputEvent, ModifierKeysMask, TerminalWindow};
+use r3bl_core::{CommonResult, throws};
+use r3bl_tui::{InputEvent, ModifierKeysMask, TerminalWindow, keypress};
 
-use crate::edi::{constructor, AppMain};
+use crate::edi::{AppMain, constructor};
 
 pub async fn run_app(maybe_file_path: Option<String>) -> CommonResult<()> {
     throws!({
@@ -29,7 +29,7 @@ pub async fn run_app(maybe_file_path: Option<String>) -> CommonResult<()> {
         let app = AppMain::new_boxed();
 
         // Exit if these keys are pressed.
-        let exit_keys: Vec<InputEvent> = vec![InputEvent::Keyboard(
+        let exit_keys = &[InputEvent::Keyboard(
             keypress! { @char ModifierKeysMask::new().with_ctrl(), 'q' },
         )];
 

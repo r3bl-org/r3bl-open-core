@@ -20,7 +20,7 @@ use std::io::stdout;
 use clap::ValueEnum;
 use crossterm::style::Stylize;
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_core::{call_if_true, ch, get_size, Size};
+use r3bl_core::{call_if_true, ch, get_size, usize, Size};
 
 use crate::{enter_event_loop,
             CalculateResizeHint,
@@ -61,8 +61,8 @@ pub fn select_from_list(
     };
 
     let mut state = State {
-        max_display_height: ch!(max_height_row_count),
-        max_display_width: ch!(max_width_col_count),
+        max_display_height: ch(max_height_row_count),
+        max_display_width: ch(max_width_col_count),
         items,
         header,
         selection_mode,
@@ -109,8 +109,8 @@ pub fn select_from_list_with_multi_line_header(
     let max_width_col_count = maybe_max_width_col_count.unwrap_or(0);
 
     let mut state = State {
-        max_display_height: ch!(max_height_row_count),
-        max_display_width: ch!(max_width_col_count),
+        max_display_height: ch(max_height_row_count),
+        max_display_width: ch(max_width_col_count),
         items,
         multi_line_header,
         selection_mode,
@@ -266,7 +266,7 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
                     format!("{:?}", state.get_focused_index()).green()
                 );
             });
-            let selection_index: usize = ch!(@to_usize state.get_focused_index());
+            let selection_index = usize(state.get_focused_index());
             let maybe_item: Option<&String> = state.items.get(selection_index);
             match maybe_item {
                 Some(it) => EventLoopResult::ExitWithResult(vec![it.to_string()]),
@@ -290,7 +290,7 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
                     format!("{:?}", state.get_focused_index()).magenta()
                 );
             });
-            let selection_index: usize = ch!(@to_usize state.get_focused_index());
+            let selection_index = usize(state.get_focused_index());
             let maybe_item: Option<&String> = state.items.get(selection_index);
             let maybe_index: Option<usize> = state
                 .selected_items
@@ -358,7 +358,7 @@ mod test_select_from_list {
 
     fn create_state<'a>() -> State<'a> {
         State {
-            max_display_height: ch!(10),
+            max_display_height: ch(10),
             items: ["a", "b", "c"].iter().map(|it| it.to_string()).collect(),
             ..Default::default()
         }

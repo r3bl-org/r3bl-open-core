@@ -14,7 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use crate::{convert_rgb_into_ansi256, Ansi256Color, TransformColor};
+use crate::{Ansi256Color, TransformColor, convert_rgb_into_ansi256};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RgbColor {

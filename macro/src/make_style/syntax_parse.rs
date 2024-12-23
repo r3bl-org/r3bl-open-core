@@ -60,7 +60,7 @@ impl Parse for StyleMetadata {
     fn parse(input: ParseStream) -> SynResult<Self> {
         let mut metadata = StyleMetadata {
             id: Verbatim(quote! { u8::MAX }),
-            attrib_vec: Vec::new(),
+            attrib_vec: vec![],
             padding: None,
             color_fg: None,
             color_bg: None,
@@ -194,7 +194,7 @@ fn parse_optional_padding(
 
             let lit_int = input.parse::<LitInt>()?;
             let val: ChUnitPrimitiveType = lit_int.base10_parse().unwrap();
-            let padding_int: ChUnit = ch!(val);
+            let padding_int: ChUnit = ch(val);
 
             metadata.padding = Some(padding_int);
 

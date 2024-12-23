@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{ok, CommonResult};
+use r3bl_core::{CommonResult, ok};
 
 pub async fn run_app() -> CommonResult<()> {
     println!("TODO: Implement the r3bl-cmdr shell app 🌞");

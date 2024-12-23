@@ -15,19 +15,19 @@
  *   limitations under the License.
  */
 
-use std::{io::{stderr, Write},
+use std::{io::{Write, stderr},
           sync::Arc,
           time::Duration};
 
 use r3bl_core::StdMutex;
-use r3bl_terminal_async::{Spinner,
+use r3bl_terminal_async::{ARTIFICIAL_UI_DELAY,
+                          DELAY_MS,
+                          DELAY_UNIT,
+                          Spinner,
                           SpinnerColor,
                           SpinnerStyle,
                           SpinnerTemplate,
-                          TerminalAsync,
-                          ARTIFICIAL_UI_DELAY,
-                          DELAY_MS,
-                          DELAY_UNIT};
+                          TerminalAsync};
 use tokio::{time::Instant, try_join};
 
 #[tokio::main]

@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -907,7 +907,7 @@
 //!   .build();
 //!
 //! let content = "Hello, world!";
-//! let unicode_string = UnicodeString::from(content);
+//! let unicode_string = content.unicode_string();
 //! let lolcat_mut = &mut lolcat;
 //! let st = lolcat_mut.colorize_to_styled_texts(&unicode_string);
 //!
@@ -935,6 +935,9 @@
 #![warn(clippy::all)]
 #![warn(clippy::unwrap_in_result)]
 #![warn(rust_2018_idioms)]
+#![feature(trivial_bounds)]
+#![feature(let_chains)]
+#![allow(clippy::literal_string_with_formatting_args)]
 
 // Attach.
 pub mod tui;

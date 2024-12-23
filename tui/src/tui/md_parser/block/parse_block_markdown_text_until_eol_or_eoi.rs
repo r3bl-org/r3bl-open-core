@@ -48,6 +48,7 @@ fn parse_block_markdown_text_with_new_line(
         )(input)?;
 
     let it = List::from(output);
+
     Ok((input, it))
 }
 
@@ -67,6 +68,7 @@ fn parse_block_markdown_text_without_new_line(input: &str) -> IResult<&str, MdLi
     )(input)?;
 
     let it = List::from(output);
+
     Ok((input, it))
 }
 
@@ -87,6 +89,7 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
     )(input)?;
 
     let it = List::from(output);
+
     Ok((input, it))
 }
 

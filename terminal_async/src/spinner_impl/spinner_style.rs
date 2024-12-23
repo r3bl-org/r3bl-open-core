@@ -16,6 +16,7 @@
  */
 
 use r3bl_core::{ColorWheel, ColorWheelConfig, ColorWheelSpeed};
+use smallvec::smallvec;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SpinnerTemplate {
@@ -25,6 +26,7 @@ pub enum SpinnerTemplate {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum SpinnerColor {
     None,
     ColorWheel(ColorWheel),
@@ -35,16 +37,13 @@ impl SpinnerColor {
     pub fn default_color_wheel() -> SpinnerColor {
         let color_wheel_config = ColorWheelConfig::Rgb(
             // Stops.
-            vec!["#12c2e9", "#c471ed", "#f64f59"]
-                .into_iter()
-                .map(String::from)
-                .collect(),
+            smallvec!["#12c2e9".into(), "#c471ed".into(), "#f64f59".into()],
             // Speed.
             ColorWheelSpeed::Fast,
             // Steps.
             10,
         );
-        let mut it = ColorWheel::new(vec![color_wheel_config]);
+        let mut it = ColorWheel::new(smallvec![color_wheel_config]);
         it.generate_color_wheel(None);
         SpinnerColor::ColorWheel(it)
     }

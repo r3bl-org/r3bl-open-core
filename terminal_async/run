@@ -33,6 +33,7 @@ def main [...args: string] {
         "build" => {build}
         "clean" => {clean}
         "examples" => {examples}
+        "release-examples" => {release-examples}
         "watch-examples" => {watch-examples}
         "examples-with-flamegraph-profiling" => {examples-with-flamegraph-profiling}
         "piped" => {piped}
@@ -117,6 +118,7 @@ def print-help [command: string] {
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)examples(ansi reset)'
+        print $'    (ansi green)release-examples(ansi reset)'
         print $'    (ansi green)piped(ansi reset)'
         print $'    (ansi green)log(ansi reset)'
         print $'    (ansi green)examples-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://www.youtube.com/watch?v=Sy26IMkOEiM(ansi reset)'
@@ -152,6 +154,10 @@ def clean [] {
 
 def examples [] {
     cargo run --example terminal_async -q
+}
+
+def release-examples [] {
+    cargo run --release --example terminal_async -q
 }
 
 def piped [] {

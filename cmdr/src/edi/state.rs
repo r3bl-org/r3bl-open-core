@@ -22,15 +22,15 @@ use std::{collections::HashMap,
 
 use crossterm::style::Stylize;
 use r3bl_core::call_if_true;
-use r3bl_tui::{DialogBuffer,
+use r3bl_tui::{DEBUG_TUI_MOD,
+               DEFAULT_SYN_HI_FILE_EXT,
+               DialogBuffer,
                EditorBuffer,
                FlexBoxId,
                HasDialogBuffers,
-               HasEditorBuffers,
-               DEBUG_TUI_MOD,
-               DEFAULT_SYN_HI_FILE_EXT};
+               HasEditorBuffers};
 
-use crate::{edi::Id, report_analytics, AnalyticsAction};
+use crate::{AnalyticsAction, edi::Id, report_analytics};
 
 #[derive(Clone, PartialEq)]
 pub struct State {
@@ -98,8 +98,8 @@ mod state_tests {
         let content = "This is a test.\nThis is only a test.";
         std::fs::write(filename.clone(), content).unwrap();
 
-        let content = file_utils::get_content(&Some(filename.clone()));
-        assert_eq!(content.len(), 2);
+        let expected = file_utils::get_content(&Some(filename.clone()));
+        assert_eq!(expected, content);
 
         // Delete the file.
         std::fs::remove_file(filename).unwrap();
@@ -125,9 +125,11 @@ mod state_tests {
         // Check the state.
         assert_eq!(state.editor_buffers.len(), 1);
         assert_eq!(state.dialog_buffers.len(), 0);
-        assert!(state
-            .editor_buffers
-            .contains_key(&FlexBoxId::from(Id::ComponentEditor)));
+        assert!(
+            state
+                .editor_buffers
+                .contains_key(&FlexBoxId::from(Id::ComponentEditor))
+        );
         assert_eq!(
             state
                 .editor_buffers
@@ -146,7 +148,8 @@ mod state_tests {
                 .editor_content
                 .lines
                 .iter()
-                .map(|us| us.string.clone())
+                // PERF: [ ] perf
+                .map(|us| us.string.to_string())
                 .collect::<Vec<String>>()
                 .join("\n"),
             content
@@ -187,7 +190,9 @@ pub mod constructor {
                 &Some(file_utils::get_file_extension(maybe_file_path)),
                 maybe_file_path,
             );
-            editor_buffer.set_lines(file_utils::get_content(maybe_file_path));
+            let content = file_utils::get_content(maybe_file_path);
+            let lines: Vec<&str> = content.lines().collect();
+            editor_buffer.set_lines(&lines);
             editor_buffer
         };
 
@@ -217,7 +222,7 @@ pub mod file_utils {
         DEFAULT_SYN_HI_FILE_EXT.to_owned()
     }
 
-    pub fn get_content(maybe_file_path: &Option<String>) -> Vec<String> {
+    pub fn get_content(maybe_file_path: &Option<String>) -> String {
         // Get the content if the file exists, and it can be read.
         if let Some(file_path) = maybe_file_path {
             let result_file_read = std::fs::read_to_string(file_path);
@@ -229,7 +234,7 @@ pub mod file_utils {
                             format!("{file_path:?}").green()
                         );
                     });
-                    return content.lines().map(|s| s.to_string()).collect();
+                    return content;
                 }
                 Err(error) => {
                     tracing::error!(
@@ -240,7 +245,7 @@ pub mod file_utils {
             }
         }
         // Otherwise, an empty vec is returned.
-        vec![]
+        "".to_string()
     }
 
     pub fn save_content_to_file(file_path: String, content: String) {

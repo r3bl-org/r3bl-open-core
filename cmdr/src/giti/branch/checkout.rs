@@ -21,8 +21,15 @@ use branch_checkout_formatting::{add_spaces_to_end_of_string,
                                  display_correct_message_after_user_tried_to_checkout,
                                  get_formatted_modified_files};
 use r3bl_ansi_color::{AnsiStyledText, Style};
-use r3bl_core::{ch, get_terminal_width, CommonResult, UnicodeString};
-use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
+use r3bl_core::{ChUnit,
+                CommonResult,
+                MicroVecBackingStore,
+                TinyStringBackingStore,
+                UnicodeStringExt,
+                get_terminal_width,
+                usize};
+use r3bl_tuify::{SelectionMode, StyleSheet, select_from_list_with_multi_line_header};
+use smallvec::smallvec;
 
 use super::{get_branches, try_get_current_branch};
 use crate::{color_constants::DefaultColors::{FrozenBlue,
@@ -32,7 +39,8 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                                              NightBlue,
                                              Orange,
                                              SlateGray},
-            giti::{clap_config::BranchSubcommand,
+            giti::{CommandSuccessfulResponse,
+                   clap_config::BranchSubcommand,
                    report_unknown_error_and_propagate,
                    single_select_instruction_header,
                    ui_strings::UIStrings::{AlreadyOnCurrentBranch,
@@ -43,8 +51,7 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                                            NoBranchGotCheckedOut,
                                            PleaseCommitChangesBeforeSwitchingBranches,
                                            SelectBranchToSwitchTo,
-                                           SwitchedToBranch},
-                   CommandSuccessfulResponse}};
+                                           SwitchedToBranch}}};
 
 pub fn try_checkout_branch(
     maybe_branch_name: Option<String>,
@@ -101,8 +108,7 @@ pub fn try_checkout_branch(
             if let Ok(output) = result_output_for_modified_files {
                 if output.status.success() {
                     // Format each modified file in modified_files_vec.
-                    let modified_files: Vec<String> =
-                        get_formatted_modified_files(output);
+                    let modified_files = &get_formatted_modified_files(output);
 
                     // If user has files that are modified (unstaged or staged), but not committed.
                     if !modified_files.is_empty() {
@@ -145,7 +151,7 @@ pub fn try_checkout_branch(
                             Style::Background(NightBlue.as_ansi_color()),
                         ];
 
-                        for file in &modified_files {
+                        for file in modified_files {
                             let file = add_spaces_to_end_of_string(file, terminal_width);
                             AnsiStyledText {
                                 text: &file,
@@ -299,49 +305,53 @@ pub fn try_checkout_branch(
 mod branch_checkout_formatting {
     use super::*;
 
-    pub fn add_spaces_to_end_of_string(string: &str, terminal_width: usize) -> String {
-        let string_length = UnicodeString::from(string).display_width;
-        let spaces_to_add = ch!(terminal_width) - string_length;
-        let spaces = " ".repeat(ch!(@to_usize spaces_to_add));
+    pub fn add_spaces_to_end_of_string(string: &str, terminal_width: ChUnit) -> String {
+        let string_length = string.unicode_string().display_width;
+        let spaces_to_add = terminal_width - string_length;
+        let spaces = " ".repeat(usize(spaces_to_add));
         let string = format!("{}{}", string, spaces);
         string
     }
 
-    pub fn get_formatted_modified_files(output: std::process::Output) -> Vec<String> {
-        let mut modified_files_vec: Vec<String> = Vec::new();
+    pub fn get_formatted_modified_files(
+        output: std::process::Output,
+    ) -> MicroVecBackingStore<TinyStringBackingStore> {
+        let mut return_vec: MicroVecBackingStore<TinyStringBackingStore> = smallvec![];
+
         let modified_files = String::from_utf8_lossy(&output.stdout).to_string();
+
         // Early return if there are no modified files.
         if modified_files.is_empty() {
-            return modified_files_vec;
+            return return_vec;
         }
-        let modified_files = modified_files.trim();
-        let modified_files_vector: Vec<&str> = modified_files.split('\n').collect();
+
         // Remove all the spaces from start and end of each modified file.
-        let modified_files_vector: Vec<String> = modified_files_vector
-            .iter()
-            .map(|output| output.trim().to_string())
-            .collect();
+        let modified_files = modified_files.trim();
+        let modified_files_vec = modified_files
+            .split('\n')
+            .map(|output| output.trim())
+            .collect::<MicroVecBackingStore<&str>>();
 
         // Remove all the "MM" and " M" from modified files.
         // "M" means unstaged files. "MM" means staged files.
-        for output in &modified_files_vector {
+        for output in &modified_files_vec {
             if output.starts_with("MM ") {
                 let modified_output = output.replace("MM", "");
                 let modified_output = modified_output.trim_start();
                 let modified_output = format!("    - {}", modified_output);
-                modified_files_vec.push(modified_output);
+                return_vec.push(modified_output.into());
             } else if output.starts_with("M ") {
                 let modified_output = output.replace("M ", "");
                 let modified_output = modified_output.trim_start();
                 let modified_output = format!("    - {}", modified_output);
-                modified_files_vec.push(modified_output);
+                return_vec.push(modified_output.into());
             } else {
                 let modified_output = output.trim_start();
                 let modified_output = format!("    - {}", modified_output);
-                modified_files_vec.push(modified_output);
+                return_vec.push(modified_output.into());
             }
         }
-        modified_files_vec
+        return_vec
     }
 
     pub fn display_correct_message_after_user_tried_to_checkout(

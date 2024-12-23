@@ -90,7 +90,6 @@ fn parse_date_value(input: &str) -> IResult<&str, &str> {
 
 #[cfg(test)]
 mod tests {
-    use crossterm::style::Stylize;
     use r3bl_core::assert_eq2;
 
     use super::*;
@@ -211,19 +210,21 @@ mod tests {
             "",
         ]
         .join("\n");
-        let (remainder, vec_block) = parse_markdown(&input).unwrap();
-        let expected_vec = vec![
+
+        let (remainder, list_block) = parse_markdown(&input).unwrap();
+
+        let vec_block = &[
             MdBlock::Title("Something"),
             MdBlock::Tags(list!["tag1", "tag2", "tag3"]),
             MdBlock::Heading(HeadingData {
                 heading_level: HeadingLevel { level: 1 },
                 text: "Foobar",
             }),
-            MdBlock::Text(list![]), // Empty line.
+            MdBlock::Text(list![]), /* Empty line */
             MdBlock::Text(list![MdLineFragment::Plain(
                 "Foobar is a Python library for dealing with word pluralization.",
             )]),
-            MdBlock::Text(list![]), // Empty line.
+            MdBlock::Text(list![]), /* Empty line */
             MdBlock::CodeBlock(convert_into_code_block_lines(
                 Some("bash"),
                 vec!["pip install foobar"],
@@ -234,7 +235,7 @@ mod tests {
                 heading_level: HeadingLevel { level: 2 },
                 text: "Installation",
             }),
-            MdBlock::Text(list![]), // Empty line.
+            MdBlock::Text(list![]), /* Empty line */
             MdBlock::Text(list![
                 MdLineFragment::Plain("Use the package manager "),
                 MdLineFragment::Link(HyperlinkData::from((
@@ -327,19 +328,24 @@ mod tests {
         ];
 
         // Print a few of the last items.
-        for block in vec_block.iter().skip(vec_block.len() - 7) {
-            println!(
-                "{0} {1}",
-                "█ → ".magenta().bold(),
-                format!("{:?}", block).green()
-            );
-        }
+        // for block in list_block.iter().skip(list_block.len() - 7) {
+        //     println!(
+        //         "{0} {1}",
+        //         "█ → ".magenta().bold(),
+        //         format!("{:?}", block).green()
+        //     );
+        // }
 
         assert_eq2!(remainder, "");
 
-        vec_block
+        let size_left = list_block.len();
+        let size_right = vec_block.len();
+
+        assert_eq2!(size_left, size_right);
+
+        list_block
             .iter()
-            .zip(expected_vec.iter())
+            .zip(vec_block.iter())
             .for_each(|(lhs, rhs)| assert_eq2!(lhs, rhs));
     }
 

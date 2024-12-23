@@ -16,7 +16,6 @@
  */
 
 use r3bl_core::{call_if_true,
-                ch,
                 get_tui_style,
                 get_tui_styles,
                 position,
@@ -107,7 +106,7 @@ mod id_impl {
     }
 
     impl From<Id> for FlexBoxId {
-        fn from(id: Id) -> FlexBoxId { FlexBoxId(id as u8) }
+        fn from(id: Id) -> FlexBoxId { FlexBoxId::new(id) }
     }
 }
 
@@ -237,12 +236,14 @@ mod app_main_impl_app_trait {
 }
 
 mod modal_dialogs {
+    use r3bl_core::{MicroVecBackingStore, TinyStringBackingStore};
+
     use super::*;
 
     // This runs on every keystroke, so it should be fast.
     pub fn dialog_component_update_content(state: &mut State, id: FlexBoxId) {
         // This is Some only if the content has changed (ignoring caret movements).
-        let maybe_changed_results: Option<Vec<String>> = {
+        let maybe_changed_results: Option<MicroVecBackingStore<TinyStringBackingStore>> = {
             if let Some(dialog_buffer) = state.dialog_buffers.get_mut(&id) {
                 let vec_result = generate_random_results(
                     dialog_buffer
@@ -290,16 +291,16 @@ mod modal_dialogs {
         }
     }
 
-    fn generate_random_results(content: &str) -> Vec<String> {
-        {
-            let start_rand_num = rand::random::<u8>() as usize;
-            let max = 10;
-            let mut it = Vec::with_capacity(max);
-            for index in start_rand_num..(start_rand_num + max) {
-                it.push(format!("{content}{index}"));
-            }
-            it
+    fn generate_random_results(
+        content: &str,
+    ) -> MicroVecBackingStore<TinyStringBackingStore> {
+        let start_rand_num = rand::random::<u8>() as usize;
+        let max = 10;
+        let mut it = MicroVecBackingStore::with_capacity(max);
+        for index in start_rand_num..(start_rand_num + max) {
+            it.push(format!("{content}{index}").into());
         }
+        it
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -391,7 +392,7 @@ mod modal_dialogs {
             let mut it = DialogBuffer::new_empty();
             it.title = title;
             let max_width = 100;
-            let line: String = {
+            let content: String = {
                 if text.is_empty() {
                     "".to_string()
                 } else if text.len() > max_width {
@@ -400,7 +401,8 @@ mod modal_dialogs {
                     text.clone()
                 }
             };
-            it.editor_buffer.set_lines(vec![line]);
+            let lines: Vec<&str> = content.lines().collect();
+            it.editor_buffer.set_lines(&lines);
             it
         };
         state.dialog_buffers.insert(id, dialog_buffer);
@@ -504,7 +506,7 @@ mod perform_layout {
                         id:                     FlexBoxId::from(Id::Editor),
                         dir:                    LayoutDirection::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                        styles:                 [Id::EditorStyleNameDefault.into()]
+                        styles:                 [Id::EditorStyleNameDefault]
                     );
                     render_component_in_current_box!(
                         in:                 surface,
@@ -547,6 +549,8 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
+    use r3bl_core::glyphs;
+
     use super::*;
 
     pub fn create_components(
@@ -561,9 +565,14 @@ mod populate_component_registry {
         let id = FlexBoxId::from(Id::Editor);
         has_focus.set_id(id);
 
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
-            tracing::debug!("🪙 init has_focus = {:?}", has_focus.get_id());
+            let message =
+                format!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH);
+            // % is Display, ? is Debug.
+            tracing::info!(
+                message = message,
+                has_focus = ?has_focus.get_id()
+            );
         });
     }
 
@@ -591,9 +600,10 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
-            tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
+            tracing::debug!(
+                message = "app_main construct EditorComponent [ on_buffer_change ]"
+            );
         });
     }
 
@@ -605,10 +615,10 @@ mod populate_component_registry {
 
         let dialog_options = DialogEngineConfigOptions {
             mode: DialogEngineMode::ModalSimple,
-            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder.into() },
-            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle.into() },
-            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor.into() },
-            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel.into() },
+            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder },
+            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle },
+            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor },
+            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel },
             ..Default::default()
         };
 
@@ -675,9 +685,11 @@ mod populate_component_registry {
             boxed_dialog_component,
         );
 
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
-            tracing::debug!("🪙 construct DialogComponent (simple) [ on_dialog_press ]");
+            tracing::debug!(
+                message =
+                    "app_main construct DialogComponent (simple) [ on_dialog_press ]"
+            );
         });
     }
 
@@ -689,10 +701,10 @@ mod populate_component_registry {
 
         let dialog_options = DialogEngineConfigOptions {
             mode: DialogEngineMode::ModalAutocomplete,
-            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder.into() },
-            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle.into() },
-            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor.into() },
-            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel.into() },
+            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder },
+            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle },
+            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor },
+            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel },
             ..Default::default()
         };
 
@@ -759,10 +771,9 @@ mod populate_component_registry {
             boxed_dialog_component,
         );
 
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
             tracing::debug!(
-                "🪙 construct DialogComponent (autocomplete) [ on_dialog_press ]"
+                message = "app_main construct DialogComponent (autocomplete) [ on_dialog_press ]"
             );
         });
     }
@@ -775,33 +786,33 @@ mod stylesheet {
         throws_with_return!({
             tui_stylesheet! {
               tui_style! {
-                id: Id::EditorStyleNameDefault.into()
+                id: Id::EditorStyleNameDefault
                 padding: 1
                 // These are ignored due to syntax highlighting.
                 // attrib: [bold]
                 // color_fg: TuiColor::Blue
               },
               tui_style! {
-                id: Id::DialogStyleNameTitle.into()
+                id: Id::DialogStyleNameTitle
                 lolcat: true
                 // These are ignored due to lolcat: true.
                 // attrib: [bold]
                 // color_fg: TuiColor::Yellow
               },
               tui_style! {
-                id: Id::DialogStyleNameBorder.into()
+                id: Id::DialogStyleNameBorder
                 lolcat: true
                 // These are ignored due to lolcat: true.
                 // attrib: [dim]
                 // color_fg: TuiColor::Green
               },
               tui_style! {
-                id: Id::DialogStyleNameEditor.into()
+                id: Id::DialogStyleNameEditor
                 attrib: [bold]
                 color_fg: TuiColor::Basic(ANSIBasicColor::Magenta)
               },
               tui_style! {
-                id: Id::DialogStyleNameResultsPanel.into()
+                id: Id::DialogStyleNameResultsPanel
                 // attrib: [bold]
                 color_fg: TuiColor::Basic(ANSIBasicColor::Blue)
               }

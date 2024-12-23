@@ -186,6 +186,7 @@ mod helpers {
 
     pub fn check_ansi_color(term: &str) -> bool {
         term.starts_with("screen")
+            || term.starts_with("vscode")
             || term.starts_with("xterm")
             || term.starts_with("vt100")
             || term.starts_with("vt220")

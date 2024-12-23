@@ -17,37 +17,21 @@
 
 use std::borrow::Cow;
 
-use crate::UnicodeString;
-
-/// Convert to UnicodeString.
-impl From<&str> for UnicodeString {
-    fn from(s: &str) -> Self { UnicodeString::new(s) }
-}
-
-impl From<String> for UnicodeString {
-    fn from(s: String) -> Self { UnicodeString::new(&s) }
-}
-
-impl From<Cow<'_, str>> for UnicodeString {
-    fn from(s: Cow<'_, str>) -> Self { UnicodeString::new(&s) }
-}
-
-impl From<&mut Cow<'_, str>> for UnicodeString {
-    fn from(s: &mut Cow<'_, str>) -> Self { UnicodeString::new(s) }
-}
-
-impl From<&String> for UnicodeString {
-    fn from(s: &String) -> Self { UnicodeString::new(s) }
-}
-
-/// Convert to String.
-impl From<UnicodeString> for String {
-    fn from(s: UnicodeString) -> Self { s.string }
-}
+use crate::{SmallStringBackingStore, UnicodeString};
 
 /// UnicodeStringExt trait.
 pub trait UnicodeStringExt {
     fn unicode_string(&self) -> UnicodeString;
+}
+
+// PERF: [ ] perf
+impl UnicodeStringExt for SmallStringBackingStore {
+    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_str()) }
+}
+
+// PERF: [ ] perf
+impl UnicodeStringExt for &SmallStringBackingStore {
+    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_str()) }
 }
 
 impl UnicodeStringExt for Cow<'_, str> {
@@ -58,13 +42,10 @@ impl UnicodeStringExt for &str {
     fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
 }
 
-impl UnicodeStringExt for String {
-    fn unicode_string(&self) -> UnicodeString { UnicodeString::from(self) }
+impl UnicodeStringExt for &&str {
+    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
 }
 
-/// Implement Display trait.
-impl std::fmt::Display for UnicodeString {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.string)
-    }
+impl UnicodeStringExt for String {
+    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
 }

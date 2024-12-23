@@ -26,11 +26,11 @@ use crossterm::style::Stylize as _;
 use dirs::config_dir;
 use miette::IntoDiagnostic as _;
 use r3bl_analytics_schema::AnalyticsEvent;
-use r3bl_core::{call_if_true,
-                friendly_random_id,
-                CommonError,
+use r3bl_core::{CommonError,
                 CommonErrorType,
-                CommonResult};
+                CommonResult,
+                call_if_true,
+                friendly_random_id};
 use reqwest::{Client, Response};
 
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;

@@ -143,7 +143,13 @@ mod test_config_options {
 
 #[cfg(test)]
 mod test_editor_ops {
-    use r3bl_core::{assert_eq2, ch, position, size, UnicodeString};
+    use r3bl_core::{assert_eq2,
+                    ch,
+                    position,
+                    size,
+                    TinyVecBackingStore,
+                    UnicodeStringExt};
+    use smallvec::smallvec;
     use unicode_width::UnicodeWidthStr;
 
     use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
@@ -1062,7 +1068,8 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('a')],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(*buffer.get_lines(), vec![UnicodeString::from("a")]);
+        let expected: TinyVecBackingStore<_> = smallvec!["a".unicode_string()];
+        assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 1, row_index: 0)
@@ -1085,10 +1092,9 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('b')],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(
-            *buffer.get_lines(),
-            vec![UnicodeString::from("a"), UnicodeString::from("b")]
-        );
+        let expected: TinyVecBackingStore<_> =
+            smallvec!["a".unicode_string(), "b".unicode_string()];
+        assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 1, row_index: 1)
@@ -1113,15 +1119,13 @@ mod test_editor_ops {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(
-            *buffer.get_lines(),
-            vec![
-                UnicodeString::from("a"),
-                UnicodeString::from("b"),
-                UnicodeString::from(""),
-                UnicodeString::from("😀")
-            ]
-        );
+        let expected: TinyVecBackingStore<_> = smallvec![
+            "a".unicode_string(),
+            "b".unicode_string(),
+            "".unicode_string(),
+            "😀".unicode_string(),
+        ];
+        assert_eq2!(*buffer.get_lines(), expected,);
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 2, row_index: 3)
@@ -1142,15 +1146,13 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('d')],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(
-            *buffer.get_lines(),
-            vec![
-                UnicodeString::from("a"),
-                UnicodeString::from("b"),
-                UnicodeString::from(""),
-                UnicodeString::from("😀d")
-            ]
-        );
+        let expected: TinyVecBackingStore<_> = smallvec![
+            "a".unicode_string(),
+            "b".unicode_string(),
+            "".unicode_string(),
+            "😀d".unicode_string(),
+        ];
+        assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 3, row_index: 3)
@@ -1172,15 +1174,13 @@ mod test_editor_ops {
             &mut TestClipboard::default(),
         );
         assert_eq2!(2, UnicodeWidthStr::width("🙏🏽"));
-        assert_eq2!(
-            *buffer.get_lines(),
-            vec![
-                UnicodeString::from("a"),
-                UnicodeString::from("b"),
-                UnicodeString::from(""),
-                UnicodeString::from("😀d🙏🏽")
-            ]
-        );
+        let expected: TinyVecBackingStore<_> = smallvec![
+            "a".unicode_string(),
+            "b".unicode_string(),
+            "".unicode_string(),
+            "😀d🙏🏽".unicode_string(),
+        ];
+        assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 5, row_index: 3)
@@ -1247,7 +1247,7 @@ mod test_editor_ops {
             );
             count -= 1;
         }
-        assert_eq2!(buffer.len(), ch!(max_lines + 1)); /* One empty line after content */
+        assert_eq2!(buffer.len(), ch(max_lines + 1)); /* One empty line after content */
 
         // Press page up.
         EditorEvent::apply_editor_events::<(), ()>(
@@ -1342,7 +1342,7 @@ mod test_editor_ops {
                 &mut TestClipboard::default(),
             );
         }
-        assert_eq2!(buffer.len(), ch!(max_lines + 1)); /* One empty line after content */
+        assert_eq2!(buffer.len(), ch(max_lines + 1)); /* One empty line after content */
 
         // Press up 12 times.
         for _ in 1..12 {
@@ -1405,7 +1405,7 @@ mod test_editor_ops {
                 &mut TestClipboard::default(),
             );
         }
-        assert_eq2!(buffer.len(), ch!(1));
+        assert_eq2!(buffer.len(), ch(1));
         assert_eq2!(
             buffer.get_caret(CaretKind::Raw),
             position!(col_index: 9, row_index: 0)
@@ -1472,8 +1472,8 @@ mod test_editor_ops {
     #[test]
     fn editor_scroll_right_horizontal_long_line_with_jumbo_emoji() {
         // Setup.
-        let viewport_width = ch!(65);
-        let viewport_height = ch!(2);
+        let viewport_width = ch(65);
+        let viewport_height = ch(2);
         let window_size = size!(col_count: viewport_width, row_count: viewport_height);
         let mut buffer =
             EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()), &None);
@@ -1481,12 +1481,12 @@ mod test_editor_ops {
             mock_real_objects_for_editor::make_editor_engine_with_bounds(window_size);
 
         let long_line = "# Did he take those two new droids with him? They hit accelerator.🙏🏽😀░ We will deal with your Rebel friends. Commence primary ignition.🙏🏽😀░";
-        buffer.set_lines(vec![long_line.to_string()]);
+        buffer.set_lines(&[long_line]);
 
         // Setup assertions.
         {
             assert_eq2!(2, UnicodeWidthStr::width("🙏🏽"));
-            assert_eq2!(buffer.len(), ch!(1));
+            assert_eq2!(buffer.len(), ch(1));
             assert_eq2!(buffer.get_lines()[0].string, long_line);
             assert_eq2!(
                 buffer.get_caret(CaretKind::Raw),
@@ -1528,7 +1528,7 @@ mod test_editor_ops {
                 .get_string_at_display_col_index(
                     buffer.get_caret(CaretKind::ScrollAdjusted).col_index,
                 );
-            assert_eq2!(result.unwrap().unicode_string_seg.string, "🙏🏽");
+            assert_eq2!(result.unwrap().string, "🙏🏽");
 
             // Press right 1 more time. The caret should correctly jump the width of "😀" from 68 to
             // 70.
@@ -1548,7 +1548,7 @@ mod test_editor_ops {
                 .get_string_at_display_col_index(
                     buffer.get_caret(CaretKind::ScrollAdjusted).col_index,
                 );
-            assert_eq2!(result.unwrap().unicode_string_seg.string, "😀");
+            assert_eq2!(result.unwrap().string, "😀");
         }
 
         // Press right 60 more times. The **LEFT** side of the viewport should be at the jumbo
@@ -1578,7 +1578,7 @@ mod test_editor_ops {
             let result = buffer.get_lines()[0]
                 .clone()
                 .get_string_at_display_col_index(buffer.get_scroll_offset().col_index);
-            assert_eq2!(result.unwrap().unicode_string_seg.string, "r");
+            assert_eq2!(result.unwrap().string, "r");
         }
 
         // Press right 1 more time. It should jump the jumbo emoji at the start of the line (and not
@@ -1607,7 +1607,7 @@ mod test_editor_ops {
             let result = buffer.get_lines()[0]
                 .clone()
                 .get_string_at_display_col_index(buffer.get_scroll_offset().col_index);
-            assert_eq2!(result.unwrap().unicode_string_seg.string, ".");
+            assert_eq2!(result.unwrap().string, ".");
         }
 
         // Press right 4 times. It should jump the emoji at the start of the line (and not
@@ -1626,7 +1626,7 @@ mod test_editor_ops {
             let result = buffer.get_lines()[0]
                 .clone()
                 .get_string_at_display_col_index(buffer.get_scroll_offset().col_index);
-            assert_eq2!(result.unwrap().unicode_string_seg.string, "😀");
+            assert_eq2!(result.unwrap().string, "😀");
         }
 
         // Press right 1 more time. It should jump the emoji.
@@ -1641,7 +1641,7 @@ mod test_editor_ops {
             let result = buffer.get_lines()[0]
                 .clone()
                 .get_string_at_display_col_index(buffer.get_scroll_offset().col_index);
-            assert_eq2!(result.unwrap().unicode_string_seg.string, "░");
+            assert_eq2!(result.unwrap().string, "░");
         }
     }
 }
@@ -1669,7 +1669,7 @@ mod selection_tests {
         // Buffer has two lines.
         // Row Index : 0 , Column Length : 12
         // Row Index : 1 , Column Length : 12
-        buffer.set_lines(vec!["abc r3bl xyz".to_string(), "pqr rust uvw".to_string()]);
+        buffer.set_lines(&["abc r3bl xyz", "pqr rust uvw"]);
 
         {
             // Current Caret Position : [row : 0, col : 0]
@@ -1685,7 +1685,7 @@ mod selection_tests {
 
             // Selection Map : {{0, SelectionRange {start: 0, end: 12}}}
             let mut selection_map = HashMap::new();
-            selection_map.insert(ch!(0), SelectionRange::new(ch!(0), ch!(12)));
+            selection_map.insert(ch(0), SelectionRange::new(ch(0), ch(12)));
             assert_eq2!(buffer.get_selection_map().map, selection_map);
         }
 
@@ -1711,7 +1711,7 @@ mod selection_tests {
 
             // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
             let mut selection_map = HashMap::new();
-            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(4)));
+            selection_map.insert(ch(1), SelectionRange::new(ch(0), ch(4)));
             assert_eq2!(buffer.get_selection_map().map, selection_map);
         }
 
@@ -1729,7 +1729,7 @@ mod selection_tests {
 
             // Selection Map : {{1, SelectionRange {start: 1, end: 4}}}
             let mut selection_map = HashMap::new();
-            selection_map.insert(ch!(1), SelectionRange::new(ch!(1), ch!(4)));
+            selection_map.insert(ch(1), SelectionRange::new(ch(1), ch(4)));
             assert_eq2!(buffer.get_selection_map().map, selection_map);
         }
 
@@ -1747,7 +1747,7 @@ mod selection_tests {
 
             // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
             let mut selection_map = HashMap::new();
-            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(4)));
+            selection_map.insert(ch(1), SelectionRange::new(ch(0), ch(4)));
             assert_eq2!(buffer.get_selection_map().map, selection_map);
         }
 
@@ -1765,8 +1765,8 @@ mod selection_tests {
 
             // Selection Map : {{0, SelectionRange {start: 0, end: 12}}, {1, SelectionRange {start: 0, end: 4}}}
             let mut selection_map = HashMap::new();
-            selection_map.insert(ch!(0), SelectionRange::new(ch!(0), ch!(12)));
-            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(4)));
+            selection_map.insert(ch(0), SelectionRange::new(ch(0), ch(12)));
+            selection_map.insert(ch(1), SelectionRange::new(ch(0), ch(4)));
             assert_eq2!(buffer.get_selection_map().map, selection_map);
         }
 
@@ -1784,7 +1784,7 @@ mod selection_tests {
 
             // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
             let mut selection_map = HashMap::new();
-            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(4)));
+            selection_map.insert(ch(1), SelectionRange::new(ch(0), ch(4)));
             assert_eq2!(buffer.get_selection_map().map, selection_map);
         }
 
@@ -1817,8 +1817,8 @@ mod selection_tests {
 
             // Selection Map : {{0, SelectionRange {start: 1, end: 12}}, {1, SelectionRange {start: 0, end: 1}}}
             let mut selection_map = HashMap::new();
-            selection_map.insert(ch!(0), SelectionRange::new(ch!(1), ch!(12)));
-            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(1)));
+            selection_map.insert(ch(0), SelectionRange::new(ch(1), ch(12)));
+            selection_map.insert(ch(1), SelectionRange::new(ch(0), ch(1)));
             assert_eq2!(buffer.get_selection_map().map, selection_map);
         }
 
@@ -1841,8 +1841,8 @@ mod selection_tests {
 
             // Selection Map : {{0, SelectionRange {start: 2, end: 12}},{1, SelectionRange {start: 0, end: 2}}}
             let mut selection_map = HashMap::new();
-            selection_map.insert(ch!(0), SelectionRange::new(ch!(2), ch!(12)));
-            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(2)));
+            selection_map.insert(ch(0), SelectionRange::new(ch(2), ch(12)));
+            selection_map.insert(ch(1), SelectionRange::new(ch(0), ch(2)));
             assert_eq2!(buffer.get_selection_map().map, selection_map);
         }
 
@@ -1859,8 +1859,8 @@ mod selection_tests {
 
             // Selection Map : {{0, SelectionRange {start: 0, end: 12}},{1, SelectionRange {start: 0, end: 2}}}
             let mut selection_map = HashMap::new();
-            selection_map.insert(ch!(0), SelectionRange::new(ch!(0), ch!(12)));
-            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(12)));
+            selection_map.insert(ch(0), SelectionRange::new(ch(0), ch(12)));
+            selection_map.insert(ch(1), SelectionRange::new(ch(0), ch(12)));
             assert_eq2!(buffer.get_selection_map().map, selection_map);
         }
 
@@ -1884,7 +1884,8 @@ mod selection_tests {
 
 #[cfg(test)]
 mod clipboard_tests {
-    use r3bl_core::{assert_eq2, UnicodeString};
+    use r3bl_core::{assert_eq2, TinyVecBackingStore, UnicodeStringExt};
+    use smallvec::smallvec;
 
     use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::mock_real_objects_for_editor,
@@ -1902,7 +1903,7 @@ mod clipboard_tests {
         // Buffer has two lines.
         // Row Index : 0 , Column Length : 12
         // Row Index : 1 , Column Length : 12
-        buffer.set_lines(vec!["abc r3bl xyz".to_string(), "pqr rust uvw".to_string()]);
+        buffer.set_lines(&["abc r3bl xyz", "pqr rust uvw"]);
         let mut test_clipboard = TestClipboard::default();
         // Single Line copying
         {
@@ -1946,6 +1947,7 @@ mod clipboard_tests {
             );
 
             let content = test_clipboard.content;
+            /* cspell:disable-next-line */
             assert_eq2!(content, "abc r3bl xyz\npqr rust uvw".to_string());
         }
     }
@@ -1959,7 +1961,7 @@ mod clipboard_tests {
         // Buffer has two lines.
         // Row Index : 0 , Column Length : 12
         // Row Index : 1 , Column Length : 12
-        buffer.set_lines(vec!["abc r3bl xyz".to_string(), "pqr rust uvw".to_string()]);
+        buffer.set_lines(&["abc r3bl xyz", "pqr rust uvw"]);
 
         // Single Line Pasting
         {
@@ -1983,9 +1985,9 @@ mod clipboard_tests {
                 &mut test_clipboard,
             );
 
-            let new_lines = vec![
-                UnicodeString::from("abc copied text r3bl xyz"),
-                UnicodeString::from("pqr rust uvw"),
+            let new_lines: TinyVecBackingStore<_> = smallvec![
+                "abc copied text r3bl xyz".unicode_string(),
+                "pqr rust uvw".unicode_string(),
             ];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
@@ -2004,10 +2006,10 @@ mod clipboard_tests {
                 &mut test_clipboard,
             );
 
-            let new_lines = vec![
-                UnicodeString::from("abc copied text old line"),
-                UnicodeString::from("new line r3bl xyz"),
-                UnicodeString::from("pqr rust uvw"),
+            let new_lines: TinyVecBackingStore<_> = smallvec![
+                "abc copied text old line".unicode_string(),
+                "new line r3bl xyz".unicode_string(),
+                "pqr rust uvw".unicode_string(),
             ];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
@@ -2022,7 +2024,7 @@ mod clipboard_tests {
         // Buffer has two lines.
         // Row Index : 0 , Column Length : 12
         // Row Index : 1 , Column Length : 12
-        buffer.set_lines(vec!["abc r3bl xyz".to_string(), "pqr rust uvw".to_string()]);
+        buffer.set_lines(&["abc r3bl xyz", "pqr rust uvw"]);
 
         // Single Line cutting
         {
@@ -2048,8 +2050,9 @@ mod clipboard_tests {
 
             let content = test_clipboard.content.clone();
             assert_eq2!(content, "abc r3bl xyz".to_string()); // copied to clipboard
-            let new_lines = vec![
-                UnicodeString::from("pqr rust uvw"), // First line 'abc r3bl xyz' is cut
+
+            let new_lines: TinyVecBackingStore<_> = smallvec![
+                "pqr rust uvw".unicode_string(), // First line 'abc r3bl xyz' is cut
             ];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
@@ -2058,8 +2061,7 @@ mod clipboard_tests {
         {
             let mut test_clipboard = TestClipboard::default();
 
-            buffer
-                .set_lines(vec!["abc r3bl xyz".to_string(), "pqr rust uvw".to_string()]);
+            buffer.set_lines(&["abc r3bl xyz", "pqr rust uvw"]);
             // Current Caret Position : [row : 0, col : 0]
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
@@ -2091,9 +2093,10 @@ mod clipboard_tests {
             );
 
             let content = test_clipboard.content;
+            /* cspell:disable-next-line */
             assert_eq2!(content, "r3bl xyz\npqr ".to_string()); // copied to clipboard
-            let new_lines =
-                vec![UnicodeString::from("abc "), UnicodeString::from("rust uvw")];
+            let new_lines: TinyVecBackingStore<_> =
+                smallvec!["abc ".unicode_string(), "rust uvw".unicode_string()];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
     }

@@ -15,25 +15,24 @@
  *   limitations under the License.
  */
 
-use std::io::{self};
-
 use crossterm::terminal::size;
+use miette::IntoDiagnostic;
 
-use crate::{ch, size::Size};
+use crate::{ChUnit, ch, size::Size};
 
-pub const DEFAULT_WIDTH: usize = 80;
+pub const DEFAULT_WIDTH: u16 = 80;
 
 /// Get the terminal width. If there is a problem, return the default width.
-pub fn get_terminal_width() -> usize {
+pub fn get_terminal_width() -> ChUnit {
     match get_size() {
-        Ok(size) => ch!(@to_usize size.col_count),
-        Err(_) => DEFAULT_WIDTH,
+        Ok(size) => size.col_count,
+        Err(_) => ch(DEFAULT_WIDTH),
     }
 }
 
 /// Get the terminal size.
-pub fn get_size() -> io::Result<Size> {
-    let (columns, rows) = size()?;
+pub fn get_size() -> miette::Result<Size> {
+    let (columns, rows) = size().into_diagnostic()?;
     Ok(Size {
         col_count: columns.into(),
         row_count: rows.into(),

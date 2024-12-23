@@ -19,11 +19,12 @@ use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
 use r3bl_core::{LockedOutputDevice,
+                MicroVecBackingStore,
                 Position,
                 Size,
+                TinyStringBackingStore,
                 TuiColor,
-                TuiStyle,
-                DEFAULT_VEC_CAPACITY};
+                TuiStyle};
 use serde::{Deserialize, Serialize};
 
 use super::TERMINAL_LIB_BACKEND;
@@ -157,13 +158,13 @@ macro_rules! render_ops {
 /// clear before paint! 🎉 The compositor takes care of that for you!
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct RenderOps {
-    pub list: Vec<RenderOp>,
+    pub list: MicroVecBackingStore<RenderOp>,
 }
 
 impl Default for RenderOps {
     fn default() -> Self {
         Self {
-            list: Vec::with_capacity(DEFAULT_VEC_CAPACITY),
+            list: MicroVecBackingStore::new(),
         }
     }
 }
@@ -174,6 +175,8 @@ pub struct RenderOpsLocalData {
 }
 
 pub mod render_ops_impl {
+    use smallvec::smallvec;
+
     use super::*;
 
     impl RenderOps {
@@ -222,7 +225,7 @@ pub mod render_ops_impl {
     }
 
     impl Deref for RenderOps {
-        type Target = Vec<RenderOp>;
+        type Target = MicroVecBackingStore<RenderOp>;
 
         fn deref(&self) -> &Self::Target { &self.list }
     }
@@ -237,20 +240,20 @@ pub mod render_ops_impl {
 
     impl Debug for RenderOps {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            let mut vec_lines: Vec<String> = vec![];
+            let mut acc_lines: MicroVecBackingStore<TinyStringBackingStore> = smallvec![];
 
             // First line.
-            let first_line: String = format!("RenderOps.len(): {}", self.list.len());
-            vec_lines.push(first_line);
+            let first_line = format!("RenderOps.len(): {}", self.list.len());
+            acc_lines.push(first_line.into());
 
             // Subsequent lines (optional).
             for render_op in self.iter() {
-                let line: String = format!("[{render_op:?}]");
-                vec_lines.push(line);
+                let line = format!("[{render_op:?}]");
+                acc_lines.push(line.into());
             }
 
             // Join all lines.
-            write!(f, "\n    - {}", vec_lines.join("\n      - "))
+            write!(f, "{}", acc_lines.join("\n  - "))
         }
     }
 }
@@ -293,13 +296,14 @@ pub enum RenderOp {
     /// underline, strikethrough, etc) and not colors. If you need to apply color, use
     /// [RenderOp::ApplyColors] instead.
     ///
-    /// 1. If the [String] argument is plain text (no ANSI sequences) then it will be
-    ///    clipped available width of the terminal screen).
+    /// 1. If the [TinyStringBackingStore] argument is plain text (no ANSI sequences)
+    ///    then it will be clipped available width of the terminal screen).
     ///
-    /// 2. If the [String] argument contains ANSI sequences then it will be printed as-is.
-    ///    You are responsible for handling clipping of the text to the bounds of the
-    ///    terminal screen.
-    PaintTextWithAttributes(String, Option<TuiStyle>),
+    /// 2. If the [TinyStringBackingStore] argument contains ANSI sequences then it will
+    ///    be printed as-is. You are responsible for handling clipping of the text to the
+    ///    bounds of the terminal screen.
+    // PERF: [x] remove string
+    PaintTextWithAttributes(TinyStringBackingStore, Option<TuiStyle>),
 
     /// This is **not** meant for use directly by apps. It is to be used only by the
     /// [super::OffscreenBuffer]. This operation skips the checks for content width
@@ -307,7 +311,11 @@ pub enum RenderOp {
     /// compositor is painting an offscreen buffer, since when the offscreen buffer was
     /// created the two render ops above were used which already handle the clipping and
     /// padding.
-    CompositorNoClipTruncPaintTextWithAttributes(String, Option<TuiStyle>),
+    // PERF: [x] remove string
+    CompositorNoClipTruncPaintTextWithAttributes(
+        TinyStringBackingStore,
+        Option<TuiStyle>,
+    ),
 
     /// For [Default] impl.
     Noop,

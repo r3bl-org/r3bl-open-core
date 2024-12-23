@@ -22,7 +22,7 @@ use std::{fmt::{Display, Formatter},
 use serde::{Deserialize, Serialize};
 
 use super::TuiColor;
-use crate::{ch, ChUnit};
+use crate::{ChUnit, SmallVecBackingStore, ch, convert_tui_color_into_r3bl_ansi_color};
 
 /// Please use [tui_style!](crate::tui_style) proc macro to generate code for this struct.
 ///
@@ -41,7 +41,7 @@ use crate::{ch, ChUnit};
 /// // Faded blue: TuiColor::Rgb { r: 85, g: 85, b: 255 }
 /// let mut stylesheet = TuiStylesheet::new();
 ///
-/// let _ = stylesheet.add_styles(vec![
+/// let _ = stylesheet.add_styles(smallvec::smallvec![
 ///     TuiStyle {
 ///         id: 1,
 ///         bold: true,
@@ -141,7 +141,7 @@ mod addition {
 
         // Aggregate paddings.
         let aggregate_padding: ChUnit =
-            lhs.padding.unwrap_or_else(|| ch!(0)) + rhs.padding.unwrap_or_else(|| ch!(0));
+            lhs.padding.unwrap_or_else(|| ch(0)) + rhs.padding.unwrap_or_else(|| ch(0));
         if *aggregate_padding > 0 {
             new_style.padding = aggregate_padding.into();
         } else {
@@ -176,6 +176,7 @@ mod addition {
 
 mod style_helpers {
     use super::*;
+    use crate::{TinyStringBackingStore, TinyVecBackingStore};
 
     impl Display for TuiStyle {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -186,46 +187,46 @@ mod style_helpers {
 
     impl TuiStyle {
         pub fn pretty_print(&self) -> String {
-            let mut msg_vec: Vec<String> = Default::default();
+            let mut msg_vec = TinyVecBackingStore::<TinyStringBackingStore>::new();
 
             if self.bold {
-                msg_vec.push("bld".to_string())
+                msg_vec.push("bld".into());
             }
 
             if self.italic {
-                msg_vec.push("itl".to_string())
+                msg_vec.push("itl".into());
             }
 
             if self.dim {
-                msg_vec.push("dim".to_string())
+                msg_vec.push("dim".into());
             }
 
             if self.underline {
-                msg_vec.push("und".to_string())
+                msg_vec.push("und".into());
             }
 
             if self.reverse {
-                msg_vec.push("rev".to_string())
+                msg_vec.push("rev".into());
             }
 
             if self.hidden {
-                msg_vec.push("hid".to_string())
+                msg_vec.push("hid".into());
             }
 
             if self.strikethrough {
-                msg_vec.push("str".to_string())
+                msg_vec.push("str".into());
             }
 
             if self.color_fg.is_some() {
-                msg_vec.push("fg".to_string())
+                msg_vec.push("fg".into());
             }
 
             if self.color_fg.is_some() {
-                msg_vec.push("bg".to_string())
+                msg_vec.push("bg".into());
             }
 
             if let Some(padding) = self.padding {
-                msg_vec.push(format!("pad:{padding:?}"))
+                msg_vec.push(format!("pad:{padding:?}").into());
             }
 
             msg_vec.join("‐")
@@ -234,42 +235,42 @@ mod style_helpers {
 
     impl Debug for TuiStyle {
         fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-            let mut msg_vec: Vec<String> = vec![];
+            let mut msg_vec = TinyVecBackingStore::<TinyStringBackingStore>::new();
 
             if self.computed {
-                msg_vec.push("computed".to_string())
+                msg_vec.push("computed".into());
             } else if self.id == u8::MAX {
-                msg_vec.push("id: N/A".to_string())
+                msg_vec.push("id: N/A".into());
             } else {
-                msg_vec.push(self.id.to_string());
+                msg_vec.push(self.id.to_string().into());
             }
 
             if self.bold {
-                msg_vec.push("bold".to_string())
+                msg_vec.push("bold".into());
             }
 
             if self.italic {
-                msg_vec.push("italic".to_string())
+                msg_vec.push("italic".into());
             }
 
             if self.dim {
-                msg_vec.push("dim".to_string())
+                msg_vec.push("dim".into());
             }
 
             if self.underline {
-                msg_vec.push("underline".to_string())
+                msg_vec.push("underline".into());
             }
 
             if self.reverse {
-                msg_vec.push("reverse".to_string())
+                msg_vec.push("reverse".into());
             }
 
             if self.hidden {
-                msg_vec.push("hidden".to_string())
+                msg_vec.push("hidden".into());
             }
 
             if self.strikethrough {
-                msg_vec.push("strikethrough".to_string())
+                msg_vec.push("strikethrough".into());
             }
 
             write!(
@@ -278,7 +279,7 @@ mod style_helpers {
                 attrs = msg_vec.join(" + "),
                 fg = self.color_fg,
                 bg = self.color_bg,
-                p = *self.padding.unwrap_or_else(|| ch!(0))
+                p = *self.padding.unwrap_or_else(|| ch(0))
             )
         }
     }
@@ -295,7 +296,7 @@ mod style_impl {
 #[cfg(test)]
 mod test_style {
     use super::*;
-    use crate::{assert_eq2, color, ANSIBasicColor};
+    use crate::{ANSIBasicColor, assert_eq2, color};
 
     #[test]
     fn test_all_fields_in_style() {
@@ -309,7 +310,7 @@ mod test_style {
             strikethrough: true,
             color_fg: color!(@red).into(),
             color_bg: color!(0, 0, 0).into(),
-            padding: Some(ch!(10)),
+            padding: Some(ch(10)),
             ..TuiStyle::default()
         };
 
@@ -323,7 +324,7 @@ mod test_style {
         assert!(style.strikethrough);
         assert_eq2!(style.color_fg, color!(@red).into());
         assert_eq2!(style.color_bg, color!(0, 0, 0).into());
-        assert_eq2!(style.padding, Some(ch!(10)));
+        assert_eq2!(style.padding, Some(ch(10)));
     }
 
     #[test]
@@ -351,10 +352,11 @@ mod test_style {
 
 pub mod convert_to_ansi_color_styles {
     use super::*;
-    use crate::convert_tui_color_into_r3bl_ansi_color;
 
-    pub fn from_tui_style(tui_style: TuiStyle) -> Vec<r3bl_ansi_color::Style> {
-        let mut acc_style: Vec<r3bl_ansi_color::Style> = vec![];
+    pub fn from_tui_style(
+        tui_style: TuiStyle,
+    ) -> SmallVecBackingStore<r3bl_ansi_color::Style> {
+        let mut acc_style = SmallVecBackingStore::new();
 
         if let Some(color_fg) = tui_style.color_fg {
             acc_style.push(r3bl_ansi_color::Style::Foreground(
@@ -402,7 +404,7 @@ pub mod convert_to_ansi_color_styles {
     #[cfg(test)]
     mod tests_style {
         use super::*;
-        use crate::{assert_eq2, color, ANSIBasicColor};
+        use crate::{ANSIBasicColor, assert_eq2, color};
 
         #[test]
         fn test_all_fields_in_style() {
@@ -416,7 +418,7 @@ pub mod convert_to_ansi_color_styles {
                 strikethrough: true,
                 color_fg: color!(@red).into(),
                 color_bg: color!(0, 0, 0).into(),
-                padding: Some(ch!(10)),
+                padding: Some(ch(10)),
                 ..TuiStyle::default()
             };
 
@@ -430,7 +432,7 @@ pub mod convert_to_ansi_color_styles {
             assert!(style.strikethrough);
             assert_eq2!(style.color_fg, color!(@red).into());
             assert_eq2!(style.color_bg, color!(0, 0, 0).into());
-            assert_eq2!(style.padding, Some(ch!(10)));
+            assert_eq2!(style.padding, Some(ch(10)));
         }
 
         #[test]

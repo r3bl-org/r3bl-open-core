@@ -24,8 +24,7 @@ pub async fn run_app() -> CommonResult<()> {
         let app = AppMain::new_boxed();
 
         // Exit if these keys are pressed.
-        let exit_keys: Vec<InputEvent> =
-            vec![InputEvent::Keyboard(keypress! { @char 'x' })];
+        let exit_keys = &[InputEvent::Keyboard(keypress! { @char 'x' })];
 
         // Create a window.
         _ = TerminalWindow::main_event_loop(app, exit_keys, State::default()).await?

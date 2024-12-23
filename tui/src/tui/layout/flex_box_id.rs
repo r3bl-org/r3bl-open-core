@@ -23,25 +23,31 @@ use serde::{Deserialize, Serialize};
 /// This works w/ the [int-enum](https://crates.io/crates/int-enum) crate in order to
 /// allow for the definition of enums that are represented in memory as [u8]s.
 #[derive(Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
-pub struct FlexBoxId(pub u8);
+pub struct FlexBoxId {
+    pub inner: u8,
+}
+
+impl FlexBoxId {
+    pub fn new(id: impl Into<u8>) -> Self { Self { inner: id.into() } }
+}
 
 impl From<FlexBoxId> for u8 {
-    fn from(id: FlexBoxId) -> Self { id.0 }
+    fn from(id: FlexBoxId) -> Self { id.inner }
 }
 
 impl From<u8> for FlexBoxId {
-    fn from(id: u8) -> Self { Self(id) }
+    fn from(id: u8) -> Self { Self { inner: id } }
 }
 
 impl Deref for FlexBoxId {
     type Target = u8;
 
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target { &self.inner }
 }
 
 impl FlexBoxId {
     fn pretty_print(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "❬{}❭", self.0)
+        write!(f, "❬{}❭", self.inner)
     }
 }
 
@@ -64,51 +70,52 @@ mod tests {
     #[test]
     fn test_flex_box_id_default() {
         let id = FlexBoxId::default();
-        assert_eq!(id.0, 0);
+        assert_eq!(id.inner, 0);
     }
 
     #[test]
     fn test_flex_box_id_from_u8() {
         let id = FlexBoxId::from(42u8);
-        assert_eq!(id.0, 42);
+        assert_eq!(id.inner, 42);
     }
 
     #[test]
     fn test_u8_from_flex_box_id() {
-        let id = FlexBoxId(42);
+        let id = FlexBoxId::new(42);
         let value: u8 = id.into();
         assert_eq!(value, 42);
     }
 
     #[test]
     fn test_flex_box_id_deref() {
-        let id = FlexBoxId(42);
+        let id = FlexBoxId::new(42);
         assert_eq!(*id, 42);
     }
 
     #[test]
     fn test_flex_box_id_debug() {
-        let id = FlexBoxId(42);
+        let id = FlexBoxId::new(42);
         assert_eq!(format!("{:?}", id), "❬42❭");
     }
 
     #[test]
     fn test_flex_box_id_display() {
-        let id = FlexBoxId(42);
+        let id = FlexBoxId::new(42);
         assert_eq!(format!("{}", id), "❬42❭");
     }
 
     #[test]
     fn test_flex_box_id_serialize() {
-        let id = FlexBoxId(42);
+        let id = FlexBoxId::new(42);
         let serialized = serde_json::to_string(&id).unwrap();
-        assert_eq!(serialized, "42");
+        assert_eq!(serialized, "{\"inner\":42}");
     }
 
     #[test]
     fn test_flex_box_id_deserialize() {
-        let serialized = "42";
+        let serialized = "{\"inner\":42}";
         let id: FlexBoxId = serde_json::from_str(serialized).unwrap();
-        assert_eq!(id.0, 42);
+        let expected: u8 = id.into();
+        assert_eq!(expected, 42);
     }
 }

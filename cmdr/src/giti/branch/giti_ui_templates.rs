@@ -24,7 +24,7 @@ use r3bl_core::{ColorWheel,
                 CommonResult,
                 GradientGenerationPolicy,
                 TextColorizationPolicy,
-                UnicodeString};
+                UnicodeStringExt};
 use r3bl_tuify::SLATE_GRAY;
 
 use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
@@ -106,7 +106,7 @@ pub fn show_exit_message() {
             );
 
             ColorWheel::default().colorize_into_string(
-                &UnicodeString::from(plain_text_exit_msg),
+                &plain_text_exit_msg.unicode_string(),
                 GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
                 TextColorizationPolicy::ColorEachCharacter(None),
                 None,

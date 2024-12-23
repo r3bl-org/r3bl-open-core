@@ -70,8 +70,8 @@ fn read_key_press_unix() -> KeyPress {
             match event {
                 crossterm::event::Event::Resize(width, height) => {
                     KeyPress::Resize(Size {
-                        col_count: ch!(width),
-                        row_count: ch!(height),
+                        col_count: ch(width),
+                        row_count: ch(height),
                     })
                 }
                 crossterm::event::Event::Key(KeyEvent {
@@ -163,8 +163,8 @@ fn read_key_press_windows() -> KeyPress {
 
                 // Resize.
                 Event::Resize(width, height) => KeyPress::Resize(Size {
-                    col_count: ch!(width),
-                    row_count: ch!(height),
+                    col_count: ch(width),
+                    row_count: ch(height),
                 }),
 
                 // Catchall.

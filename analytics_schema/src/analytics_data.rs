@@ -18,11 +18,14 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
+use smallvec::smallvec;
 use uuid::Uuid;
+
+use crate::TinyVecBackingStore;
 
 #[derive(Deserialize, Serialize)]
 pub struct AnalyticsRecord {
-    pub events: Vec<AnalyticsEvent>,
+    pub events: TinyVecBackingStore<AnalyticsEvent>,
 }
 
 impl Default for AnalyticsRecord {
@@ -31,7 +34,7 @@ impl Default for AnalyticsRecord {
 
 impl AnalyticsRecord {
     pub fn new() -> AnalyticsRecord {
-        let events = Vec::new();
+        let events = smallvec![];
         AnalyticsRecord { events }
     }
 }

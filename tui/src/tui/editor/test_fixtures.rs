@@ -92,10 +92,9 @@ pub mod assert {
         expected: &str,
     ) {
         match EditorEngineInternalApi::string_at_caret(editor_buffer, engine) {
-            Some(UnicodeStringSegmentSliceResult {
-                unicode_string_seg: s,
-                ..
-            }) => assert_eq2!(s.string, expected),
+            Some(UnicodeStringSegmentSliceResult { string, .. }) => {
+                assert_eq2!(string, expected)
+            }
             None => panic!("Expected string at caret, but got None."),
         }
     }

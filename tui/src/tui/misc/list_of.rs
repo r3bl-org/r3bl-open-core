@@ -17,97 +17,79 @@
 
 use std::ops::{AddAssign, Deref, DerefMut};
 
+use r3bl_core::MicroVecBackingStore;
 use serde::{Deserialize, Serialize};
 
 #[macro_export]
 macro_rules! list {
-     (
-         $($item: expr),*
-         $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
-     ) => {
-         {
-             #[allow(unused_mut)]
-             let mut it = $crate::List::new();
-             $(
-                 it.inner.push($item);
-             )*
-             it
-         }
-     };
- }
+    (
+        $($item: expr),*
+        $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) => {
+        {
+            #[allow(unused_mut)]
+            let mut it = $crate::List::new();
+            $(
+                it.inner.push($item);
+            )*
+            it
+        }
+    };
+}
 
 /// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for [List] of
 /// `T`. Where `T` is any number of types in the tui crate.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, size_of::SizeOf)]
-pub struct List<T>
-where
-    T: size_of::SizeOf,
-{
-    pub inner: Vec<T>,
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct List<T> {
+    pub inner: MicroVecBackingStore<T>,
 }
 
-impl<T> List<T>
-where
-    T: size_of::SizeOf,
-{
+impl<T> List<T> {
     pub fn with_capacity(size: usize) -> Self {
         Self {
-            inner: Vec::with_capacity(size),
+            inner: MicroVecBackingStore::with_capacity(size),
         }
     }
 
-    pub fn new() -> Self { Self { inner: Vec::new() } }
+    pub fn new() -> Self {
+        Self {
+            inner: MicroVecBackingStore::new(),
+        }
+    }
 }
 
 /// Add (other) item to list (self).
-impl<T> AddAssign<T> for List<T>
-where
-    T: size_of::SizeOf,
-{
+impl<T> AddAssign<T> for List<T> {
     fn add_assign(&mut self, other_item: T) { self.push(other_item); }
 }
 
 /// Add (other) list to list (self).
-impl<T> AddAssign<List<T>> for List<T>
-where
-    T: size_of::SizeOf,
-{
+impl<T> AddAssign<List<T>> for List<T> {
     fn add_assign(&mut self, other_list: List<T>) { self.extend(other_list.inner); }
 }
 
 /// Add (other) vec to list (self).
-impl<T> AddAssign<Vec<T>> for List<T>
-where
-    T: size_of::SizeOf,
-{
+impl<T> AddAssign<Vec<T>> for List<T> {
     fn add_assign(&mut self, other_vec: Vec<T>) { self.extend(other_vec); }
 }
 
-impl<T> From<List<T>> for Vec<T>
-where
-    T: size_of::SizeOf,
-{
-    fn from(list: List<T>) -> Self { list.inner }
+impl<T> From<MicroVecBackingStore<T>> for List<T> {
+    fn from(other: MicroVecBackingStore<T>) -> Self { Self { inner: other } }
 }
 
-impl<T> From<Vec<T>> for List<T>
-where
-    T: size_of::SizeOf,
-{
-    fn from(other: Vec<T>) -> Self { Self { inner: other } }
+impl<T> From<Vec<T>> for List<T> {
+    fn from(other: Vec<T>) -> Self {
+        let mut it = List::with_capacity(other.len());
+        it.extend(other);
+        it
+    }
 }
 
-impl<T> Deref for List<T>
-where
-    T: size_of::SizeOf,
-{
-    type Target = Vec<T>;
+impl<T> Deref for List<T> {
+    type Target = MicroVecBackingStore<T>;
     fn deref(&self) -> &Self::Target { &self.inner }
 }
 
-impl<T> DerefMut for List<T>
-where
-    T: size_of::SizeOf,
-{
+impl<T> DerefMut for List<T> {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.inner }
 }

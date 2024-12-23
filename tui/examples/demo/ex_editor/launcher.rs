@@ -26,7 +26,7 @@ pub async fn run_app() -> CommonResult<()> {
         let app = AppMain::new_boxed();
 
         // Exit if these keys are pressed.
-        let exit_keys: Vec<InputEvent> = vec![InputEvent::Keyboard(
+        let exit_keys = &[InputEvent::Keyboard(
             keypress! { @char ModifierKeysMask::new().with_ctrl(), 'q' },
         )];
 

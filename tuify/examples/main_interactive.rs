@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-use std::{io::Result, vec};
+use std::vec;
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
-use r3bl_core::{call_if_true, get_size, get_terminal_width, throws};
+use r3bl_core::{call_if_true, get_size, get_terminal_width, throws, usize};
 use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{components::style::StyleSheet,
                  select_from_list,
@@ -28,7 +28,7 @@ use r3bl_tuify::{components::style::StyleSheet,
 mod single_select_quiz_game;
 use single_select_quiz_game::main as single_select_quiz_game;
 
-fn main() -> Result<()> {
+fn main() -> miette::Result<()> {
     throws!({
         call_if_true!(DEVELOPMENT_MODE, {
             try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
@@ -36,7 +36,7 @@ fn main() -> Result<()> {
         });
 
         // Get display size.
-        let max_width_col_count: usize = get_terminal_width();
+        let max_width_col_count = usize(get_terminal_width());
         let max_height_row_count: usize = 5;
 
         // Create styles.
@@ -184,7 +184,7 @@ fn multi_line_header() {
 }
 
 fn single_line_header() {
-    let max_width_col_count: usize = get_terminal_width();
+    let max_width_col_count = usize(get_terminal_width());
     let user_input = select_from_list(
         "🦜 Please select one or more items. This is an example of a very long header text 🐧. You can pass emoji here 🐥 and text gets clipped off correctly 🐒, based on terminal size".to_string(),
         [

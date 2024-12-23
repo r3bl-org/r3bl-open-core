@@ -64,6 +64,7 @@ pub fn paint<S, AS>(
 
     let window_size = global_data.window_size;
 
+    // PERF: [ ] figure out how this affects offscreen buffer memory
     let offscreen_buffer = pipeline.convert(window_size);
 
     match maybe_saved_offscreen_buffer {

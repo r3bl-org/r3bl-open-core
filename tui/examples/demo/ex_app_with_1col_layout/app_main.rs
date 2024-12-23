@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{ch,
-                get_tui_styles,
+use r3bl_core::{get_tui_styles,
                 position,
                 requested_size_percent,
                 size,
@@ -78,7 +77,7 @@ mod id_impl {
     }
 
     impl From<Id> for FlexBoxId {
-        fn from(id: Id) -> FlexBoxId { FlexBoxId(id as u8) }
+        fn from(id: Id) -> FlexBoxId { FlexBoxId::new(id) }
     }
 }
 
@@ -229,7 +228,7 @@ mod perform_layout {
                     id:                     component_id,
                     dir:                    LayoutDirection::Vertical,
                     requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                    styles:                 [*component_id]
+                    styles:                 [component_id]
                 );
                 render_component_in_current_box!(
                     in:                 surface,
@@ -274,11 +273,11 @@ mod stylesheet {
         throws_with_return!({
             tui_stylesheet! {
               tui_style! {
-                id: Id::Container as u8
+                id: Id::Container
                 padding: 1
               },
               tui_style! {
-                id: Id::Column as u8
+                id: Id::Column
                 padding: 1
                 color_bg: TuiColor::Rgb (RgbValue { red: 55, green: 55, blue: 100 })
               }

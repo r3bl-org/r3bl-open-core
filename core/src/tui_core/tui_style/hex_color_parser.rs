@@ -20,12 +20,12 @@
 
 use std::num::ParseIntError;
 
-use nom::{bytes::complete::{tag, take_while_m_n},
+use nom::{IResult,
+          Parser,
+          bytes::complete::{tag, take_while_m_n},
           combinator::map_res,
           error::{FromExternalError, ParseError},
-          sequence::tuple,
-          IResult,
-          Parser};
+          sequence::tuple};
 
 use crate::RgbValue;
 

@@ -61,8 +61,8 @@ mod constructor {
         }
     }
 
-    pub fn get_default_content() -> Vec<String> {
-        vec![
+    pub fn get_default_content<'a>() -> &'a [&'a str] {
+        &[
 "0         1         2         3         4         5         6",
 "0123456789012345678901234567890123456789012345678901234567890",
 "@title: untitled",
@@ -121,7 +121,7 @@ mod constructor {
 "          - A far better resting place I go to than I have ever know",
 "            Something Spock was trying to tell me on my birthday",
 "",
-].iter().map(|s| s.to_string()).collect()
+        ]
     }
 }
 
@@ -161,7 +161,6 @@ mod impl_debug_format {
     use super::*;
 
     impl Debug for State {
-        // 02: [x] clean up log
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             write! { f,
 "State [

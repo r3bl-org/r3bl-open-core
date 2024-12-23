@@ -19,7 +19,12 @@ use std::{collections::HashMap,
           fmt::{Debug, Display}};
 
 use crossterm::style::Stylize;
-use r3bl_core::{ch, position, CaretMovementDirection, ChUnit, Position, SelectionRange};
+use r3bl_core::{position,
+                usize,
+                CaretMovementDirection,
+                ChUnit,
+                Position,
+                SelectionRange};
 use serde::{Deserialize, Serialize};
 
 use crate::{DeleteSelectionWith, EditorBuffer};
@@ -121,7 +126,7 @@ impl SelectionMap {
 
         for row_index in row_indices {
             if let Some(selection_range) = self.map.get(&row_index) {
-                if let Some(line) = lines.get(ch!(@to_usize row_index)) {
+                if let Some(line) = lines.get(usize(row_index)) {
                     let selected_text = line.clip_to_range(*selection_range);
                     it.insert(row_index, selected_text);
                 }
@@ -240,9 +245,9 @@ mod impl_debug_format {
             // Format the output.
             for line in selection_map_vec_output.iter_mut() {
                 if is_empty {
-                    *line = format!("{line}").blue().on_dark_grey().to_string();
+                    *line = line.to_string().blue().on_dark_grey().to_string();
                 } else {
-                    *line = format!("{line}").green().on_dark_grey().to_string();
+                    *line = line.to_string().green().on_dark_grey().to_string();
                 }
             }
             for line in selection_map_vec_output.iter_mut() {
@@ -264,7 +269,7 @@ mod impl_debug_format {
             let mut vec_output = {
                 let mut it = vec![];
                 let sorted_indices = self.get_ordered_indices();
-                for (_index, row_index) in sorted_indices.iter().enumerate() {
+                for row_index in sorted_indices.iter() {
                     if let Some(selected_range) = self.map.get(row_index) {
                         it.push(format!(
                             "{first_ch} {sep}row: {row_idx}, col: [{col_start}{dots}{col_end}]{sep}",

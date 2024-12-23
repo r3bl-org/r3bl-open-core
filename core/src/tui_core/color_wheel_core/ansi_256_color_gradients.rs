@@ -17,9 +17,10 @@
 
 use serde::{Deserialize, Serialize};
 
+#[repr(u8)]
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Ansi256GradientIndex {
-    GrayscaleMediumGrayToWhite = 0,
+    GrayscaleMediumGrayToWhite = 0, // The remaining values are in incrementing integer order.
     DarkRedToDarkMagenta,
     RedToBrightPink,
     OrangeToNeonPink,

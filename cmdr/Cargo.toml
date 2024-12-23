@@ -2,7 +2,7 @@
 name = "r3bl-cmdr"
 version = "0.0.16"
 readme = "README.md"
-edition = "2021"
+edition = "2024"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
@@ -93,6 +93,11 @@ tracing-core = "0.1.32"
 thiserror = "1.0.64"
 miette = { version = "7.2.0", features = ["fancy"] }
 pretty_assertions = "1.4.1"
+
+
+# For smallstr & smallvec.
+smallstr = { version = "0.3.0", features = ["serde", "std"] }
+smallvec = { version = "1.6.1", features = ["serde"] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"

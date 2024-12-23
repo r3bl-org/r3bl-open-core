@@ -145,7 +145,7 @@ use std::io::Result;
 
 fn main() -> Result<()> {
     // Get display size.
-    let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+    let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch(80)).into();
     let max_height_row_count: usize = 5;
 
     let user_input = select_from_list(
@@ -535,7 +535,7 @@ fn main() -> Result<()> {
     // let hot_pink_style = StyleSheet::hot_pink_style();
     let sea_foam_style = StyleSheet::sea_foam_style();
 
-    let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+    let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch(80)).into();
     let max_height_row_count: usize = 5;
 
     let user_input = select_from_list(

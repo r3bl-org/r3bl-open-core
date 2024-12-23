@@ -18,18 +18,22 @@
 use std::{fmt::{self, Debug},
           ops::{Deref, DerefMut}};
 
-use r3bl_core::{ch,
-                position,
+use r3bl_core::{position,
                 style_dim_underline,
                 style_error,
                 style_primary,
-                GraphemeClusterSegment,
+                usize,
                 LockedOutputDevice,
+                MicroVecBackingStore,
                 Position,
                 Size,
+                SmallStringBackingStore,
+                TinyStringBackingStore,
+                TinyVecBackingStore,
                 TuiColor,
                 TuiStyle};
 use serde::{Deserialize, Serialize};
+use smallvec::smallvec;
 
 use super::{FlushKind, RenderOps};
 use crate::List;
@@ -56,6 +60,7 @@ pub struct OffscreenBuffer {
     pub my_bg_color: Option<TuiColor>,
 }
 
+#[allow(clippy::large_enum_variant)]
 pub enum OffscreenBufferDiffResult {
     NotComparable,
     Comparable(PixelCharDiffChunks),
@@ -137,12 +142,29 @@ mod offscreen_buffer_impl {
 
         // Make sure each line is full of empty chars.
         pub fn clear(&mut self) {
-            self.buffer = PixelCharLines::new_with_capacity_initialized(self.window_size);
+            // PERF: [ ] make this faster by keeping allocated memory?
+            let current_height = self.buffer.len();
+            let current_width = self.buffer.lines.first().map_or(0, |line| line.len());
+
+            if current_height != usize(self.window_size.row_count)
+                || current_width != usize(self.window_size.col_count)
+            {
+                // Need to re-allocate the buffer.
+                self.buffer =
+                    PixelCharLines::new_with_capacity_initialized(self.window_size);
+            } else {
+                // Re-use the existing buffer.
+                for line in self.buffer.iter_mut() {
+                    for pixel_char in line.iter_mut() {
+                        *pixel_char = PixelChar::Spacer;
+                    }
+                }
+            }
         }
 
-        pub fn pretty_print(&self) -> String {
-            let mut lines = vec![];
-            for row_index in 0..ch!(@to_usize self.window_size.row_count) {
+        pub fn pretty_print(&self) -> TinyStringBackingStore {
+            let mut lines: MicroVecBackingStore<String> = smallvec![];
+            for row_index in 0..usize(self.window_size.row_count) {
                 if let Some(row) = self.buffer.get(row_index) {
                     lines.push({
                         let row_index_text = format!("row_index: {row_index}");
@@ -153,21 +175,22 @@ mod offscreen_buffer_impl {
                     });
                 }
             }
-            lines.join("\n")
+            lines.join("\n").into()
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct PixelCharLines {
-    pub lines: Vec<PixelCharLine>,
+    // PERF: [x] drop Vec and use SmallVec instead
+    pub lines: TinyVecBackingStore<PixelCharLine>,
 }
 
 mod pixel_char_lines_impl {
     use super::*;
 
     impl Deref for PixelCharLines {
-        type Target = Vec<PixelCharLine>;
+        type Target = TinyVecBackingStore<PixelCharLine>;
         fn deref(&self) -> &Self::Target { &self.lines }
     }
 
@@ -177,10 +200,11 @@ mod pixel_char_lines_impl {
 
     impl PixelCharLines {
         pub fn new_with_capacity_initialized(window_size: Size) -> Self {
-            let window_height = ch!(@to_usize window_size.row_count);
-            let window_width = ch!(@to_usize window_size.col_count);
+            let window_height = usize(window_size.row_count);
+            let window_width = usize(window_size.col_count);
             Self {
-                lines: vec![
+                // PERF: [x] drop Vec and use SmallVec instead
+                lines: smallvec![
                     PixelCharLine::new_with_capacity_initialized(window_width);
                     window_height
                 ],
@@ -189,9 +213,18 @@ mod pixel_char_lines_impl {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct PixelCharLine {
-    pub pixel_chars: Vec<PixelChar>,
+    // PERF: [x] drop Vec and use SmallVec instead
+    pub pixel_chars: TinyVecBackingStore<PixelChar>,
+}
+
+impl size_of::SizeOf for PixelCharLine {
+    fn size_of_children(&self, context: &mut size_of::Context) {
+        for pixel_char in self.iter() {
+            context.add(pixel_char.size_of().total_bytes());
+        }
+    }
 }
 
 mod pixel_char_line_impl {
@@ -200,11 +233,14 @@ mod pixel_char_line_impl {
     // This represents a single row on the screen (i.e. a line of text).
     impl PixelCharLine {
         pub fn pretty_print(&self) -> String {
-            let mut it = vec![];
-            let mut void_indices: Vec<usize> = vec![];
-            let mut spacer_indices: Vec<usize> = vec![];
-            let mut void_count: Vec<String> = vec![];
-            let mut spacer_count: Vec<String> = vec![];
+            // PERF: [x] drop Vec and use SmallVec instead
+            let mut line_buffer: TinyVecBackingStore<SmallStringBackingStore> =
+                smallvec![];
+            let mut void_indices: TinyVecBackingStore<usize> = smallvec![];
+            let mut spacer_indices: TinyVecBackingStore<usize> = smallvec![];
+            let mut void_count: TinyVecBackingStore<TinyStringBackingStore> = smallvec![];
+            let mut spacer_count: TinyVecBackingStore<TinyStringBackingStore> =
+                smallvec![];
 
             // Pretty print only so many chars per line (depending on the terminal width in which
             // log.fish is run).
@@ -215,11 +251,11 @@ mod pixel_char_line_impl {
             for (col_index, pixel_char) in self.iter().enumerate() {
                 match pixel_char {
                     PixelChar::Void => {
-                        void_count.push(col_index.to_string());
+                        void_count.push(col_index.to_string().into());
                         void_indices.push(col_index);
                     }
                     PixelChar::Spacer => {
-                        spacer_count.push(col_index.to_string());
+                        spacer_count.push(col_index.to_string().into());
                         spacer_indices.push(col_index);
                     }
                     _ => {}
@@ -229,48 +265,62 @@ mod pixel_char_line_impl {
                 let pixel_char_txt = pixel_char.pretty_print();
                 let index_msg =
                     format!("{}{}", style_dim_underline(&index_txt), pixel_char_txt);
-                it.push(index_msg);
+                line_buffer.push(index_msg.into());
 
                 // Add \n every MAX_CHARS_PER_LINE characters.
                 char_count += 1;
                 if char_count >= MAX_PIXEL_CHARS_PER_LINE {
                     char_count = 0;
-                    it.push("\n".to_string());
+                    line_buffer.push("\n".into());
                 }
             }
 
             // Pretty print the spacers & voids (of any of either or both).
             {
-                let mut void_spacer_output = vec![];
+                let mut void_spacer_output: TinyVecBackingStore<TinyStringBackingStore> =
+                    smallvec![];
 
                 if !void_count.is_empty() {
-                    void_spacer_output.push(format!(
-                        "void [ {} ]",
-                        PixelCharLine::pretty_print_index_values(&void_indices)
-                    ));
+                    void_spacer_output.push(
+                        format!(
+                            "void [ {} ]",
+                            PixelCharLine::pretty_print_index_values(&void_indices)
+                        )
+                        .into(),
+                    );
                 }
 
                 if !spacer_count.is_empty() {
                     match void_spacer_output.is_empty() {
                         true => {
-                            void_spacer_output.push(format!(
-                                "spacer [ {} ]",
-                                PixelCharLine::pretty_print_index_values(&spacer_indices)
-                            ));
+                            void_spacer_output.push(
+                                format!(
+                                    "spacer [ {} ]",
+                                    PixelCharLine::pretty_print_index_values(
+                                        &spacer_indices
+                                    )
+                                )
+                                .into(),
+                            );
                         }
                         false => {
-                            void_spacer_output.push(format!(
-                                ", spacer [ {} ]",
-                                PixelCharLine::pretty_print_index_values(&spacer_indices)
-                            ));
+                            void_spacer_output.push(
+                                format!(
+                                    ", spacer [ {} ]",
+                                    PixelCharLine::pretty_print_index_values(
+                                        &spacer_indices
+                                    )
+                                )
+                                .into(),
+                            );
                         }
                     }
                 }
 
-                it.push(void_spacer_output.join(" | "));
+                line_buffer.push(void_spacer_output.join(" | ").into());
             }
 
-            it.join("")
+            line_buffer.join("")
         }
 
         pub fn pretty_print_index_values(values: &[usize]) -> String {
@@ -360,12 +410,13 @@ mod pixel_char_line_impl {
         /// Create a new row with the given width and fill it with the empty chars.
         pub fn new_with_capacity_initialized(window_width: usize) -> Self {
             Self {
-                pixel_chars: vec![PixelChar::Spacer; window_width],
+                pixel_chars: smallvec![PixelChar::Spacer; window_width],
             }
         }
     }
+
     impl Deref for PixelCharLine {
-        type Target = Vec<PixelChar>;
+        type Target = TinyVecBackingStore<PixelChar>;
         fn deref(&self) -> &Self::Target { &self.pixel_chars }
     }
 
@@ -374,14 +425,33 @@ mod pixel_char_line_impl {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum PixelChar {
     Void,
     Spacer,
     PlainText {
-        content: GraphemeClusterSegment,
+        text: TinyStringBackingStore,
         maybe_style: Option<TuiStyle>,
     },
+}
+
+impl size_of::SizeOf for PixelChar {
+    /// Should be statically allocated on the stack. Handle the special case if the text
+    /// is [smallstr::SmallString::spilled] out of the backing store.
+    fn size_of_children(&self, context: &mut size_of::Context) {
+        match self {
+            // Special case: text is spilled.
+            PixelChar::PlainText { text, maybe_style } if text.spilled() => {
+                context.add(text.len());
+                context.add(std::mem::size_of_val(maybe_style));
+            }
+            // Normal case: size is static.
+            _ => {
+                context.add(std::mem::size_of::<SmallStringBackingStore>());
+                context.add(std::mem::size_of::<Option<TuiStyle>>());
+            }
+        }
+    }
 }
 
 const EMPTY_CHAR: char = '╳';
@@ -413,16 +483,15 @@ mod pixel_char_impl {
                     format!(" S {EMPTY_CHAR:░^width$}")
                 }
                 PixelChar::PlainText {
-                    content: character,
-                    maybe_style,
+                    text, maybe_style, ..
                 } => {
                     let output = match maybe_style {
                         // Content + style.
                         Some(style) => {
-                            format!("'{}'→{}", character.string, style.pretty_print())
+                            format!("'{}'→{}", text, style.pretty_print())
                         }
                         // Content, no style.
-                        _ => format!("'{}'", character.string),
+                        _ => format!("'{}'", text),
                     };
                     let trunc_output = truncate(&output, width);
                     format!(" {} {trunc_output: ^width$}", style_primary("P"))
@@ -485,14 +554,19 @@ mod tests {
         let window_size = size! { col_count: 10, row_count: 2};
         let mut my_offscreen_buffer =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        let text_1 = "a".into();
         my_offscreen_buffer.buffer[0][0] = PixelChar::PlainText {
-            content: GraphemeClusterSegment::from("a"),
+            text: text_1,
             maybe_style: Some(tui_style! {color_bg: color!(@green) }),
         };
+
+        let text_2 = "z".into();
         my_offscreen_buffer.buffer[1][9] = PixelChar::PlainText {
-            content: GraphemeClusterSegment::from("z"),
+            text: text_2,
             maybe_style: Some(tui_style! {color_bg: color!(@red) }),
         };
+
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
         my_offscreen_buffer.clear();
         for line in my_offscreen_buffer.buffer.iter() {

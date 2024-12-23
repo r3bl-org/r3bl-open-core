@@ -17,15 +17,14 @@
 
 use std::{sync::Arc, time::Duration};
 
-use crossterm::terminal;
-use r3bl_ansi_color::{is_fully_uninteractive_terminal,
-                      is_stdout_piped,
-                      StdoutIsPipedResult,
-                      TTYResult};
-use r3bl_core::{LineStateControlSignal, SharedWriter};
+use r3bl_ansi_color::{StdoutIsPipedResult,
+                      TTYResult,
+                      is_fully_uninteractive_terminal,
+                      is_stdout_piped};
+use r3bl_core::{LineStateControlSignal, SharedWriter, get_terminal_width};
 use tokio::time::interval;
 
-use crate::{spinner_render, SafeBool, SafeRawTerminal, SpinnerStyle, StdMutex};
+use crate::{SafeBool, SafeRawTerminal, SpinnerStyle, StdMutex, spinner_render};
 
 pub struct Spinner {
     pub tick_delay: Duration,
@@ -134,7 +133,7 @@ impl Spinner {
                             &mut style,
                             &message_clone,
                             count,
-                            get_terminal_display_width()
+                            get_terminal_width(),
                         );
                         let _ = spinner_render::print_tick(
                             &style,
@@ -179,7 +178,7 @@ impl Spinner {
         let final_output = spinner_render::render_final_tick(
             &self.style,
             final_message,
-            get_terminal_display_width(),
+            get_terminal_width(),
         );
         spinner_render::print_final_tick(
             &self.style,
@@ -198,26 +197,21 @@ impl Spinner {
     }
 }
 
-fn get_terminal_display_width() -> usize {
-    match terminal::size() {
-        Ok((columns, _rows)) => columns as usize,
-        Err(_) => 0,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
+    use r3bl_core::MicroVecBackingStore;
     use r3bl_test_fixtures::StdoutMock;
+    use smallvec::smallvec;
 
-    use super::{is_fully_uninteractive_terminal,
-                Duration,
+    use super::{Duration,
                 LineStateControlSignal,
                 SharedWriter,
                 Spinner,
                 SpinnerStyle,
-                TTYResult};
+                TTYResult,
+                is_fully_uninteractive_terminal};
     use crate::{SpinnerColor, StdMutex};
 
     #[tokio::test]
@@ -265,7 +259,7 @@ mod tests {
         );
 
         let line_control_signal_sink = {
-            let mut acc = vec![];
+            let mut acc: MicroVecBackingStore<LineStateControlSignal> = smallvec![];
             loop {
                 let it = line_receiver.try_recv();
                 match it {
@@ -344,12 +338,14 @@ mod tests {
         assert!(output_buffer_data.contains(
             "\u{1b}[1G\u{1b}[2K\u{1b}[38;2;18;194;233m⠁\u{1b}[39m \u{1b}[38;2;18;194;233mmessage"
         ));
-        assert!(output_buffer_data
-            .contains("\u{1b}[39m\n\u{1b}[1A\u{1b}[1G\u{1b}[2Kfinal message\n"));
+        assert!(
+            output_buffer_data
+                .contains("\u{1b}[39m\n\u{1b}[1A\u{1b}[1G\u{1b}[2Kfinal message\n")
+        );
         // spell-checker:enable
 
-        let line_control_signal_sink = {
-            let mut acc = vec![];
+        let line_control_signal_sink: MicroVecBackingStore<LineStateControlSignal> = {
+            let mut acc = smallvec![];
             loop {
                 let it = line_receiver.try_recv();
                 match it {

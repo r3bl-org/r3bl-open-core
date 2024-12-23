@@ -356,7 +356,7 @@ mod kv_tests {
     use std::{collections::HashMap, path::Path};
 
     use serial_test::serial;
-    use tracing::{instrument, Level};
+    use tracing::{Level, instrument};
 
     use super::*;
     use crate::create_temp_dir;
