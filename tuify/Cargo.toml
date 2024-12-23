@@ -55,6 +55,11 @@ tracing-subscriber = "0.3.18"
 tracing-appender = "0.2.3"
 tracing-core = "0.1.32"
 
+# Error handling.
+thiserror = "1.0.64"
+miette = { version = "7.2.0", features = ["fancy"] }
+pretty_assertions = "1.4.1"
+
 [dev-dependencies]
 pretty_assertions = "1.4.1"
 serial_test = "3.1.1"

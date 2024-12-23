@@ -27,7 +27,13 @@ use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                         Stylize},
                 terminal::{Clear, ClearType}};
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_core::{call_if_true, ch, get_terminal_width, throws, ChUnit, UnicodeString};
+use r3bl_core::{call_if_true,
+                ch,
+                get_terminal_width,
+                throws,
+                usize,
+                ChUnit,
+                UnicodeStringExt};
 
 use crate::{apply_style,
             get_crossterm_color_based_on_terminal_capabilities,
@@ -57,8 +63,8 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
     // Header can be either a single line or a multi line.
     fn calculate_header_viewport_height(&self, state: &mut State<'_>) -> ChUnit {
         match state.get_header() {
-            Header::Single => ch!(1),
-            Header::Multiple => ch!(state.multi_line_header.len()),
+            Header::Single => ch(1),
+            Header::Multiple => ch(state.multi_line_header.len()),
         }
     }
 
@@ -66,10 +72,10 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
     /// height. Otherwise we can shrink the display height to the number of items.
     /// This does NOT include the header.
     fn calculate_items_viewport_height(&self, state: &mut State<'_>) -> ChUnit {
-        if state.items.len() > ch!(@to_usize state.max_display_height) {
+        if state.items.len() > usize(state.max_display_height) {
             state.max_display_height
         } else {
-            ch!(state.items.len())
+            ch(state.items.len())
         }
     }
 
@@ -99,14 +105,14 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 // width directly.
                 let terminal_width = match state.window_size {
                     Some(size) => size.col_count,
-                    None => ch!(get_terminal_width()),
+                    None => get_terminal_width(),
                 };
 
                 // Do not exceed the max display width (if it is set).
-                if state.max_display_width == ch!(0)
-                    || state.max_display_width > ch!(terminal_width)
+                if state.max_display_width == ch(0)
+                    || state.max_display_width > ch(terminal_width)
                 {
-                    ch!(terminal_width)
+                    ch(terminal_width)
                 } else {
                     state.max_display_width
                 }
@@ -174,22 +180,22 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                     // This is the vector of vectors of AnsiStyledText we want to print to
                     // the screen.
                     let mut multi_line_header_clipped_vec: Vec<Vec<AnsiStyledText<'_>>> =
-                        Vec::new();
-                    let mut maybe_clipped_text_vec: Vec<Vec<String>> = Vec::new();
+                        vec![];
+                    let mut maybe_clipped_text_vec: Vec<Vec<String>> = vec![];
 
                     for header_line in state.multi_line_header.iter() {
                         let mut header_line_modified = vec![];
 
                         'inner: for last_span in header_line.iter() {
                             let span_text = last_span.text;
-                            let span_as_unicode_string = UnicodeString::from(span_text);
+                            let span_as_unicode_string = span_text.unicode_string();
                             let unicode_string_width =
                                 span_as_unicode_string.display_width;
 
                             if unicode_string_width > available_space_col_count {
                                 // Clip the text to available space.
                                 let clipped_text = span_as_unicode_string
-                                    .clip_to_width(ch!(0), available_space_col_count);
+                                    .clip_to_width(ch(0), available_space_col_count);
                                 let clipped_text = format!("{clipped_text}...");
                                 header_line_modified.push(clipped_text.to_owned());
                                 break 'inner;
@@ -209,7 +215,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                                         // Because text is not clipped, we add back the 3 we subtracted
                                         // earlier for the "...".
                                         let num_of_spaces: ChUnit =
-                                            available_space_col_count + ch!(3);
+                                            available_space_col_count + ch(3);
                                         let span_with_spaces = span_text.to_owned()
                                             + &" ".repeat(num_of_spaces.into());
                                         header_line_modified.push(span_with_spaces);
@@ -231,8 +237,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                         .iter()
                         .zip(state.multi_line_header.iter());
                     zipped.for_each(|(clipped_text_vec, header_span_vec)| {
-                        let mut ansi_styled_text_vec: Vec<AnsiStyledText<'_>> =
-                            Vec::new();
+                        let mut ansi_styled_text_vec: Vec<AnsiStyledText<'_>> = vec![];
                         let zipped = clipped_text_vec.iter().zip(header_span_vec.iter());
                         zipped.for_each(|(clipped_text, header_span)| {
                             ansi_styled_text_vec.push(AnsiStyledText {
@@ -278,7 +283,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 let data_row_index: usize =
                     (data_row_index_start + viewport_row_index).into();
                 let caret_row_scroll_adj =
-                    ch!(viewport_row_index) + state.scroll_offset_row_index;
+                    ch(viewport_row_index) + state.scroll_offset_row_index;
                 let data_item = &state.items[data_row_index];
 
                 // Invert colors for selected items.
@@ -290,7 +295,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 }
 
                 let is_selected = state.selected_items.contains(data_item);
-                let is_focused = ch!(caret_row_scroll_adj) == state.get_focused_index();
+                let is_focused = ch(caret_row_scroll_adj) == state.get_focused_index();
 
                 let selection_state = match (is_focused, is_selected) {
                     (true, true) => SelectionStateStyle::FocusedAndSelected,
@@ -338,9 +343,9 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 let data_item: String =
                     clip_string_to_width_with_ellipsis(data_item, viewport_width);
                 let data_item_display_width: ChUnit =
-                    UnicodeString::from(&data_item).display_width;
+                    data_item.unicode_string().display_width;
                 let padding_right = if data_item_display_width < viewport_width {
-                    " ".repeat(ch!(@to_usize (viewport_width - data_item_display_width)))
+                    " ".repeat(usize(viewport_width - data_item_display_width))
                 } else {
                     "".to_string()
                 };
@@ -390,17 +395,18 @@ pub fn clip_string_to_width_with_ellipsis(
     mut header_text: String,
     viewport_width: ChUnit,
 ) -> String {
-    let unicode_string = UnicodeString::from(header_text);
+    let unicode_string = header_text.unicode_string();
     let unicode_string_width = unicode_string.display_width;
     let available_space_col_count: ChUnit = viewport_width;
     if unicode_string_width > available_space_col_count {
         // Clip the text to available space.
         let clipped_text =
-            unicode_string.clip_to_width(ch!(0), available_space_col_count - 3);
+            unicode_string.clip_to_width(ch(0), available_space_col_count - 3);
         let clipped_text = format!("{clipped_text}...");
         header_text = clipped_text;
     } else {
-        header_text = unicode_string.string;
+        // PERF: [ ] perf
+        header_text = unicode_string.string.to_string();
     }
     header_text
 }
@@ -437,16 +443,16 @@ mod tests {
                 "Item 2".to_string(),
                 "Item 3".to_string(),
             ],
-            max_display_height: ch!(5),
-            max_display_width: ch!(40),
-            raw_caret_row_index: ch!(0),
-            scroll_offset_row_index: ch!(0),
+            max_display_height: ch(5),
+            max_display_width: ch(40),
+            raw_caret_row_index: ch(0),
+            scroll_offset_row_index: ch(0),
             selected_items: vec![],
             selection_mode: SelectionMode::Single,
             ..Default::default()
         };
 
-        state.scroll_offset_row_index = ch!(0);
+        state.scroll_offset_row_index = ch(0);
 
         let mut writer = TestStringWriter::new();
 

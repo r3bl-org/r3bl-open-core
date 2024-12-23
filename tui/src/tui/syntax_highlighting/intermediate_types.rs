@@ -30,7 +30,12 @@
 //!    the editor component (based on scroll state in viewport). And finally that is
 //!    converted to a [r3bl_core::TuiStyledTexts].
 
-use r3bl_core::{ch, tui_styled_text, ChUnit, TuiStyle, TuiStyledTexts};
+use r3bl_core::{ch,
+                tui_styled_text,
+                ChUnit,
+                TuiStyle,
+                TuiStyledTexts,
+                UnicodeStringExt};
 
 use crate::{constants::{COLON, COMMA, SPACE},
             get_foreground_dim_style,
@@ -43,8 +48,8 @@ use crate::{constants::{COLON, COMMA, SPACE},
             PatternMatcherStateMachine,
             US};
 
-/// Spans are chunks of a text that have an associated style. There are usually multiple spans in a
-/// line of text.
+/// Spans are chunks of a text that have an associated style. There are usually multiple
+/// spans in a line of text.
 #[derive(Default, Clone, PartialEq, Eq, Debug, size_of::SizeOf)]
 pub struct StyleUSSpan {
     pub style: TuiStyle,
@@ -72,25 +77,25 @@ impl StyleUSSpanLine {
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default()
                 + get_metadata_tags_marker_style(),
-            US::from(key),
+            key.unicode_string(),
         );
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default()
                 + get_foreground_dim_style(),
-            US::from(format!("{COLON}{SPACE}")),
+            format!("{COLON}{SPACE}").unicode_string(),
         );
         for (index, span) in tag_list.iter().enumerate() {
             acc_line_output += StyleUSSpan::new(
                 maybe_current_box_computed_style.unwrap_or_default()
                     + get_metadata_tags_values_style(),
-                US::from(*span),
+                span.unicode_string(),
             );
             // Not the last item in the iterator.
             if index != (tag_list.len() - 1) {
                 acc_line_output += StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_foreground_dim_style(),
-                    US::from(format!("{COMMA}{SPACE}")),
+                    format!("{COMMA}{SPACE}").unicode_string(),
                 );
             }
         }
@@ -108,17 +113,17 @@ impl StyleUSSpanLine {
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default()
                 + get_metadata_title_marker_style(),
-            US::from(key),
+            key.unicode_string(),
         );
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default()
                 + get_foreground_dim_style(),
-            US::from(format!("{COLON}{SPACE}")),
+            format!("{COLON}{SPACE}").unicode_string(),
         );
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default()
                 + get_metadata_title_value_style(),
-            US::from(text),
+            text.unicode_string(),
         );
 
         acc_line_output
@@ -161,7 +166,7 @@ impl StyleUSSpanLine {
             let mut clipped_text_fragment = String::new();
 
             for segment in formatted_text_unicode_string.iter() {
-                for character in segment.string.chars() {
+                for character in formatted_text_unicode_string.get_str(segment).chars() {
                     match matcher.match_next(character) {
                         CharacterMatchResult::Keep => {
                             clipped_text_fragment.push(character);
@@ -187,7 +192,10 @@ impl StyleUSSpanLine {
             }
 
             if !clipped_text_fragment.is_empty() {
-                list.push(StyleUSSpan::new(*style, US::from(clipped_text_fragment)));
+                list.push(StyleUSSpan::new(
+                    *style,
+                    clipped_text_fragment.unicode_string(),
+                ));
             }
         }
 
@@ -195,7 +203,7 @@ impl StyleUSSpanLine {
     }
 
     pub fn display_width(&self) -> ChUnit {
-        let mut size = ch!(0);
+        let mut size = ch(0);
         for StyleUSSpan {
             style: _,
             text: item,
@@ -224,7 +232,7 @@ impl StyleUSSpanLine {
         scroll_offset_col_index: ChUnit,
         max_display_col_count: ChUnit,
     ) -> String {
-        let line = US::from(self.get_plain_text());
+        let line = self.get_plain_text().unicode_string();
         String::from(line.clip_to_width(scroll_offset_col_index, max_display_col_count))
     }
 }
@@ -253,7 +261,7 @@ mod convert {
 /// list of styled unicode string represents a single line of text in an editor component.
 #[cfg(test)]
 mod tests_clip_styled_texts {
-    use r3bl_core::{assert_eq2, ConvertToPlainText, RgbValue, TuiColor, UnicodeString};
+    use r3bl_core::{assert_eq2, ConvertToPlainText, RgbValue, TuiColor};
     use r3bl_macro::tui_style;
 
     use super::*;
@@ -285,9 +293,9 @@ mod tests_clip_styled_texts {
         /// ```
         pub fn get_list() -> List<StyleUSSpan> {
             list! {
-                StyleUSSpan::new(get_s1(), UnicodeString::from("first")),
-                StyleUSSpan::new(get_s1(), UnicodeString::from(" ")),
-                StyleUSSpan::new(get_s2(), UnicodeString::from("second"))
+                StyleUSSpan::new(get_s1(), "first".unicode_string()),
+                StyleUSSpan::new(get_s1(), " ".unicode_string()),
+                StyleUSSpan::new(get_s2(), "second".unicode_string()),
             }
         }
     }
@@ -318,16 +326,17 @@ mod tests_clip_styled_texts {
 
         assert_eq2!(get_list().len(), 3);
 
-        let scroll_offset_col_index = ch!(2);
-        let max_display_col_count = ch!(5);
+        let scroll_offset_col_index = ch(2);
+        let max_display_col_count = ch(5);
         let expected_clipped_string = "rst s";
 
         // Equivalent no highlight version.
         {
             let line = TuiStyledTexts::from(get_list()).to_plain_text_us().string;
-            let line = UnicodeString::from(line);
+            // PERF: [ ] perf
+            let line = &line.unicode_string();
             let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
-            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line = truncated_line.unicode_string();
             let truncated_line =
                 truncated_line.truncate_end_to_fit_width(max_display_col_count);
             assert_eq2!(truncated_line, expected_clipped_string);
@@ -369,8 +378,8 @@ mod tests_clip_styled_texts {
 
         assert_eq2!(get_list().len(), 3);
 
-        let scroll_offset_col_index = ch!(0);
-        let max_display_col_count = ch!(3);
+        let scroll_offset_col_index = ch(0);
+        let max_display_col_count = ch(3);
         let expected_clipped_string = "fir";
 
         // Equivalent no highlight version.
@@ -378,9 +387,10 @@ mod tests_clip_styled_texts {
             let line = TuiStyledTexts::from(fixtures::get_list())
                 .to_plain_text_us()
                 .string;
-            let line = UnicodeString::from(line);
+            // PERF: [ ] perf
+            let line = &line.unicode_string();
             let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
-            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line = truncated_line.unicode_string();
             let truncated_line =
                 truncated_line.truncate_end_to_fit_width(max_display_col_count);
             assert_eq2!(truncated_line, expected_clipped_string);
@@ -424,8 +434,8 @@ mod tests_clip_styled_texts {
 
         assert_eq2!(get_list().len(), 3);
 
-        let scroll_offset_col_index = ch!(0);
-        let max_display_col_count = ch!(5);
+        let scroll_offset_col_index = ch(0);
+        let max_display_col_count = ch(5);
         let expected_clipped_string = "first";
 
         // Equivalent no highlight version.
@@ -433,9 +443,10 @@ mod tests_clip_styled_texts {
             let line = TuiStyledTexts::from(fixtures::get_list())
                 .to_plain_text_us()
                 .string;
-            let line = UnicodeString::from(line);
+            // PERF: [ ] perf
+            let line = &line.unicode_string();
             let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
-            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line = truncated_line.unicode_string();
             let truncated_line =
                 truncated_line.truncate_end_to_fit_width(max_display_col_count);
             assert_eq2!(truncated_line, expected_clipped_string);
@@ -479,8 +490,8 @@ mod tests_clip_styled_texts {
 
         assert_eq2!(get_list().len(), 3);
 
-        let scroll_offset_col_index = ch!(2);
-        let max_display_col_count = ch!(8);
+        let scroll_offset_col_index = ch(2);
+        let max_display_col_count = ch(8);
         let expected_clipped_string = "rst seco";
 
         // Expected no highlight version.
@@ -488,9 +499,10 @@ mod tests_clip_styled_texts {
             let line = TuiStyledTexts::from(fixtures::get_list())
                 .to_plain_text_us()
                 .string;
-            let line = UnicodeString::from(line);
+            // PERF: [ ] perf
+            let line = &line.unicode_string();
             let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
-            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line = truncated_line.unicode_string();
             let truncated_line =
                 truncated_line.truncate_end_to_fit_width(max_display_col_count);
             assert_eq2!(truncated_line, expected_clipped_string);
@@ -516,15 +528,13 @@ mod tests_clip_styled_texts {
             list! {
                 StyleUSSpan::new(
                     get_s1(),
-                    UnicodeString::from(
-                        "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234",
-                    ),
+                    "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234".unicode_string(),
                 )
             }
         }
 
-        let scroll_offset_col_index = ch!(1);
-        let max_display_col_count = ch!(77);
+        let scroll_offset_col_index = ch(1);
+        let max_display_col_count = ch(77);
         let expected_clipped_string =
                 "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234";
 
@@ -543,9 +553,10 @@ mod tests_clip_styled_texts {
         // Expected no highlight version.
         {
             let line = TuiStyledTexts::from(get_list()).to_plain_text_us().string;
-            let line = UnicodeString::from(line);
+            // PERF: [ ] perf
+            let line = &line.unicode_string();
             let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
-            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line = truncated_line.unicode_string();
             let truncated_line =
                 truncated_line.truncate_end_to_fit_width(max_display_col_count);
             assert_eq2!(truncated_line, expected_clipped_string);
@@ -570,15 +581,13 @@ mod tests_clip_styled_texts {
             list! {
                 StyleUSSpan::new(
                     get_s1(),
-                    UnicodeString::from(
-                        "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456",
-                    ),
+                    "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456".unicode_string(),
                 )
             }
         }
 
-        let scroll_offset_col_index = ch!(1);
-        let max_display_col_count = ch!(77);
+        let scroll_offset_col_index = ch(1);
+        let max_display_col_count = ch(77);
         let expected_clipped_string =
                 "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345";
 
@@ -597,9 +606,10 @@ mod tests_clip_styled_texts {
         // Expected no highlight version.
         {
             let line = TuiStyledTexts::from(get_list()).to_plain_text_us().string;
-            let line = UnicodeString::from(line);
+            // PERF: [ ] perf
+            let line = &line.unicode_string();
             let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
-            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line = truncated_line.unicode_string();
             let truncated_line =
                 truncated_line.truncate_end_to_fit_width(max_display_col_count);
             assert_eq2!(truncated_line, expected_clipped_string);

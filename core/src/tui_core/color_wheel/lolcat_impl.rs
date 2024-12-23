@@ -20,18 +20,18 @@ use std::fmt::{Debug, Formatter, Result};
 use serde::{Deserialize, Serialize};
 
 use super::LolcatBuilder;
-use crate::{tui_styled_text,
-            ColorUtils,
+use crate::{ColorUtils,
             ColorWheelControl,
             RgbValue,
             TuiColor,
             TuiStyle,
             TuiStyledTexts,
-            UnicodeString};
+            UnicodeString,
+            tui_styled_text};
 
 /// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
 /// Please do not use this struct directly.
-#[derive(Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Serialize, Deserialize, PartialEq, size_of::SizeOf)]
 pub struct Lolcat {
     pub color_wheel_control: ColorWheelControl,
     pub seed_delta: f64,
@@ -64,7 +64,7 @@ impl Lolcat {
     pub fn colorize_to_styled_texts(&mut self, input: &UnicodeString) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
 
-        for segment in &input.vec_segment {
+        for segment in input.vec_segment.iter() {
             let new_color = ColorUtils::get_color_tuple(&self.color_wheel_control);
             let derived_from_new_color = ColorUtils::calc_fg_color(new_color);
 
@@ -98,7 +98,7 @@ impl Lolcat {
 
             acc += tui_styled_text!(
                 @style: style,
-                @text: segment.string.clone(),
+                @text: segment.get_str(&input.string),
             );
 
             self.color_wheel_control.seed +=

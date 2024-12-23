@@ -62,7 +62,7 @@ pub mod state_mutator {
                 .editor_buffers
                 .entry(FlexBoxId::from(Id::Editor as u8))
                 .and_modify(|it| {
-                    it.set_lines(get_slide_content(state.current_slide_index));
+                    it.set_lines(&get_slide_content(state.current_slide_index));
                 });
         }
     }
@@ -74,16 +74,16 @@ pub mod state_mutator {
                 .editor_buffers
                 .entry(FlexBoxId::from(Id::Editor as u8))
                 .and_modify(|it| {
-                    it.set_lines(get_slide_content(state.current_slide_index));
+                    it.set_lines(&get_slide_content(state.current_slide_index));
                 });
         }
     }
 
-    pub fn get_slide_content(arg: usize) -> Vec<String> {
+    pub fn get_slide_content<'a>(arg: usize) -> Vec<&'a str> {
         let slide_content = FILE_CONTENT_ARRAY[arg];
-        let mut it = Vec::new();
+        let mut it = vec![];
         for line in slide_content.lines() {
-            it.push(line.to_string());
+            it.push(line);
         }
         it
     }
@@ -92,7 +92,7 @@ pub mod state_mutator {
         let editor_buffer = {
             let mut it =
                 EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()), &None);
-            it.set_lines(get_slide_content(0));
+            it.set_lines(&get_slide_content(0));
             it
         };
 

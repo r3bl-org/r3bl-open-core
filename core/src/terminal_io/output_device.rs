@@ -78,7 +78,7 @@ impl OutputDevice {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{output_device_as_mut, LockedOutputDevice};
+    use crate::{LockedOutputDevice, output_device_as_mut};
 
     #[test]
     fn test_stdout_output_device() {

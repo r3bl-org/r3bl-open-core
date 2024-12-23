@@ -18,11 +18,11 @@
 use r3bl_core::{call_if_true,
                 ch,
                 glyphs::SPACER_GLYPH as SPACER,
+                usize,
                 ChUnit,
                 CommonError,
                 CommonErrorType,
                 CommonResult,
-                GraphemeClusterSegment,
                 Position,
                 Size,
                 TuiStyle,
@@ -67,6 +67,7 @@ impl RenderPipeline {
     }
 }
 
+// PERF: [ ] figure out how this impacts OffscreenBuffer creation
 fn process_render_op(
     render_op: &RenderOp,
     window_size: Size,
@@ -143,8 +144,8 @@ pub fn print_plain_text(
     maybe_max_display_col_count: Option<ChUnit>,
 ) -> CommonResult<Position> {
     // Get col and row index from `my_pos`.
-    let display_col_index = ch!(@to_usize my_offscreen_buffer.my_pos.col_index);
-    let display_row_index = ch!(@to_usize my_offscreen_buffer.my_pos.row_index);
+    let display_col_index = usize(my_offscreen_buffer.my_pos.col_index);
+    let display_row_index = usize(my_offscreen_buffer.my_pos.row_index);
 
     // If `maybe_max_display_col_count` is `None`, then clip to the max bounds of the window
     // 1. take the pos into account when determining clip
@@ -154,7 +155,7 @@ pub fn print_plain_text(
     // ✂️Clip `arg_text_ref` (if needed) and make `text`.
     let mut text: UnicodeString =
         if let Some(max_display_col_count) = maybe_max_display_col_count {
-            let adj_max = max_display_col_count - (ch!(display_col_index));
+            let adj_max = max_display_col_count - (ch(display_col_index));
             let unicode_string = arg_text_ref.unicode_string();
             let trunc_unicode_str = unicode_string.truncate_end_to_fit_width(adj_max);
             trunc_unicode_str.unicode_string()
@@ -165,9 +166,9 @@ pub fn print_plain_text(
     // ✂️Clip `text` (if needed) to the max display col count of the window.
     let window_max_display_col_count = my_offscreen_buffer.window_size.col_count;
     let text_fits_in_window =
-        text.display_width <= window_max_display_col_count - (ch!(display_col_index));
+        text.display_width <= window_max_display_col_count - (ch(display_col_index));
     if !text_fits_in_window {
-        let adj_max = window_max_display_col_count - (ch!(display_col_index));
+        let adj_max = window_max_display_col_count - (ch(display_col_index));
         let trunc_unicode_str = text.truncate_end_to_fit_width(adj_max);
         text = trunc_unicode_str.unicode_string();
     }
@@ -206,7 +207,7 @@ pub fn print_plain_text(
     // Insert clipped `text_ref_us` into `line` at `insertion_col_index`. Ok to use
     // `line_copy[insertion_col_index]` syntax because we know that row and col indices are valid.
     let mut insertion_col_index = display_col_index;
-    let mut already_inserted_display_width = ch!(0);
+    let mut already_inserted_display_width = ch(0);
 
     let maybe_style: Option<TuiStyle> = {
         if let Some(maybe_style) = maybe_style_ref {
@@ -244,8 +245,8 @@ pub fn print_plain_text(
 
     // Loop over each grapheme cluster segment (the character) in `text_ref_us` (text in a line).
     // For each GraphemeClusterSegment, create a PixelChar.
-    for gc_segment in text.iter() {
-        let segment_display_width = ch!(@to_usize gc_segment.unicode_width);
+    for segment in text.iter() {
+        let segment_display_width = usize(segment.unicode_width);
         if segment_display_width == 0 {
             continue;
         }
@@ -253,12 +254,11 @@ pub fn print_plain_text(
         // Set the `PixelChar` at `insertion_col_index`.
         if line_copy.get(insertion_col_index).is_some() {
             let pixel_char = {
-                let new_gc_segment =
-                    GraphemeClusterSegment::from(gc_segment.string.as_ref());
-                match (&maybe_style, new_gc_segment.string.as_str()) {
+                let seg_text = text.get_str(segment);
+                match (&maybe_style, seg_text) {
                     (None, SPACER) => PixelChar::Spacer,
                     _ => PixelChar::PlainText {
-                        content: new_gc_segment,
+                        text: segment.get_str(&text.string).into(),
                         maybe_style,
                     },
                 }
@@ -284,7 +284,7 @@ pub fn print_plain_text(
             //    Void pixel chars.
             // 3. The insertion_col_index is calculated & updated based on the unicode_width crate
             //    values.
-            let segment_display_width = ch!(@to_usize gc_segment.unicode_width);
+            let segment_display_width = usize(segment.unicode_width);
             if segment_display_width > 1 {
                 // Deal w/ `gc_segment` display width that is > 1 => pad w/ Void.
                 let num_of_extra_display_cols_to_inject_void_into =
@@ -304,7 +304,7 @@ pub fn print_plain_text(
                 insertion_col_index += 1;
             }
 
-            already_inserted_display_width += gc_segment.unicode_width;
+            already_inserted_display_width += segment.unicode_width;
         } else {
             // Run out of space in the line of the offscreen buffer.
             break;
@@ -315,11 +315,11 @@ pub fn print_plain_text(
     // was added to display.
     let new_pos = my_offscreen_buffer
         .my_pos
-        .add_col(ch!(@to_usize already_inserted_display_width));
+        .add_col(usize(already_inserted_display_width));
 
     // 🥊Deal w/ padding SPACERs padding to end of line (if `maybe_max_display_col_count` is some).
     if let Some(max_display_col_count) = maybe_max_display_col_count {
-        let adj_max = max_display_col_count - (ch!(display_col_index));
+        let adj_max = max_display_col_count - (ch(display_col_index));
         while already_inserted_display_width < adj_max {
             if line_copy.get(insertion_col_index).is_some() {
                 line_copy[insertion_col_index] = PixelChar::Spacer;
@@ -340,8 +340,8 @@ pub fn print_plain_text(
 /// Render plain to an offscreen buffer.
 ///
 /// This will modify the `my_offscreen_buffer` argument.  For plain text it supports
-/// counting [GraphemeClusterSegment]s. The display width of each segment is taken into
-/// account when filling the offscreen buffer.
+/// counting [r3bl_core::GraphemeClusterSegment]s. The display width of each segment is
+/// taken into account when filling the offscreen buffer.
 pub fn print_text_with_attributes(
     arg_text_ref: &str,
     maybe_style_ref: &Option<TuiStyle>,
@@ -398,7 +398,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("h"),
+                    text: "h".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -407,7 +407,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("o"),
+                    text: "o".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -416,7 +416,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("1"),
+                    text: "1".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -425,7 +425,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][9],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("5"),
+                    text: "5".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -461,7 +461,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("h"),
+                    text: "h".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -470,7 +470,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("o"),
+                    text: "o".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -479,7 +479,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("1"),
+                    text: "1".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -523,7 +523,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("h"),
+                    text: "h".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -532,7 +532,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("o"),
+                    text: "o".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -541,7 +541,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("1"),
+                    text: "1".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -550,7 +550,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][9],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("5"),
+                    text: "5".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -588,7 +588,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("h"),
+                    text: "h".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -597,7 +597,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("o"),
+                    text: "o".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -606,7 +606,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("1"),
+                    text: "1".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -643,7 +643,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("h"),
+                    text: "h".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -652,7 +652,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("o"),
+                    text: "o".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -661,7 +661,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("1"),
+                    text: "1".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -670,7 +670,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][8],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("😃"),
+                    text: "😃".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -724,7 +724,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("h"),
+                    text: "h".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -733,7 +733,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("o"),
+                    text: "o".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -742,7 +742,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("1"),
+                    text: "1".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -751,7 +751,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][7],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("😃"),
+                    text: "😃".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -788,7 +788,7 @@ mod tests {
             RenderOp::SetBgColor(color!(@blue)),
             RenderOp::MoveCursorPositionAbs(position! { col_index: 0, row_index: 0 }),
             RenderOp::PaintTextWithAttributes(
-                "hello12😃".to_string(), Some(tui_style! { attrib: [dim, bold] })),
+                "hello12😃".into(), Some(tui_style! { attrib: [dim, bold] })),
             RenderOp::ResetColor
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
@@ -817,7 +817,7 @@ mod tests {
         assert_eq2!(
             my_offscreen_buffer.buffer[0][0],
             PixelChar::PlainText {
-                content: GraphemeClusterSegment::from("h"),
+                text: "h".into(),
                 maybe_style: Some(
                     tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                 ),
@@ -826,7 +826,7 @@ mod tests {
         assert_eq2!(
             my_offscreen_buffer.buffer[0][7],
             PixelChar::PlainText {
-                content: GraphemeClusterSegment::from("😃"),
+                text: "😃".into(),
                 maybe_style: Some(
                     tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                 ),
@@ -864,13 +864,13 @@ mod tests {
             RenderOp::SetBgColor(color!(@blue)),
             RenderOp::MoveCursorPositionAbs(position! { col_index: 2, row_index: 0 }),
             RenderOp::PaintTextWithAttributes(
-                "hello😃".to_string(), Some(tui_style! { attrib: [dim, bold] })),
+                "hello😃".into(), Some(tui_style! { attrib: [dim, bold] })),
             RenderOp::ResetColor,
             RenderOp::SetFgColor(color!(@green)),
             RenderOp::SetBgColor(color!(@blue)),
             RenderOp::MoveCursorPositionAbs(position! { col_index: 4, row_index: 1 }),
             RenderOp::PaintTextWithAttributes(
-                "world".to_string(), Some(tui_style! { attrib: [dim, bold] })),
+                "world".into(), Some(tui_style! { attrib: [dim, bold] })),
             RenderOp::ResetColor,
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
@@ -913,7 +913,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][2],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("h"),
+                    text: "h".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -922,7 +922,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][7],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("😃"),
+                    text: "😃".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -941,7 +941,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[1][4],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("w"),
+                    text: "w".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
@@ -950,7 +950,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[1][8],
                 PixelChar::PlainText {
-                    content: GraphemeClusterSegment::from("d"),
+                    text: "d".into(),
                     maybe_style: Some(
                         tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),

@@ -21,6 +21,7 @@ use r3bl_core::{size,
                 Position,
                 RequestedSizePercent,
                 Size,
+                TinyVecBackingStore,
                 TuiStyle,
                 TuiStylesheet};
 use serde::{Deserialize, Serialize};
@@ -220,8 +221,8 @@ impl PerformPositioningAndSizing for Surface {
             } = flex_box_props.requested_size_percent;
 
             let requested_size_allocation = size!(
-              col_count: width_pc.calc_percentage(container_bounds.col_count),
-              row_count: height_pc.calc_percentage(container_bounds.row_count)
+              col_count: width_pc.apply_to(container_bounds.col_count),
+              row_count: height_pc.apply_to(container_bounds.row_count)
             );
 
             let origin_pos = unwrap_or_err! {
@@ -249,8 +250,8 @@ impl PerformPositioningAndSizing for Surface {
             } = flex_box_props.requested_size_percent;
 
             let bounds_size = size!(
-              col_count: width_pc.calc_percentage(self.box_size.col_count),
-              row_count: height_pc.calc_percentage(self.box_size.row_count)
+              col_count: width_pc.apply_to(self.box_size.col_count),
+              row_count: height_pc.apply_to(self.box_size.row_count)
             );
 
             self.stack_of_boxes.push(make_root_box_with_style(
@@ -283,8 +284,8 @@ fn make_non_root_box_with_style(
     maybe_cascaded_style: Option<TuiStyle>,
 ) -> FlexBox {
     let bounds_size = size!(
-      col_count: width_pc.calc_percentage(container_bounds.col_count),
-      row_count: height_pc.calc_percentage(container_bounds.row_count)
+      col_count: width_pc.apply_to(container_bounds.col_count),
+      row_count: height_pc.apply_to(container_bounds.row_count)
     );
 
     // Adjust `bounds_size` & `origin` based on the style's padding.
@@ -359,7 +360,7 @@ fn cascade_styles(
     parent_box: &FlexBox,
     self_box_props: &FlexBoxProps,
 ) -> Option<TuiStyle> {
-    let mut style_vec: Vec<TuiStyle> = vec![];
+    let mut style_vec = TinyVecBackingStore::<TuiStyle>::new();
 
     if let Some(parent_style) = parent_box.get_computed_style() {
         style_vec.push(parent_style);

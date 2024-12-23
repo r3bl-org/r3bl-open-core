@@ -17,7 +17,12 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{Position, RequestedSizePercent, Size, TuiStyle};
+use r3bl_core::{Position,
+                RequestedSizePercent,
+                Size,
+                TinyStringBackingStore,
+                TinyVecBackingStore,
+                TuiStyle};
 use serde::{Deserialize, Serialize};
 
 use super::FlexBoxId;
@@ -52,44 +57,49 @@ impl FlexBox {
 
 impl Debug for FlexBox {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut vec_lines = vec![];
+        let mut line_acc = TinyVecBackingStore::<TinyStringBackingStore>::new();
 
         // Require fields.
-        vec_lines.push(format!("FlexBox id: {:?}", self.id));
-        vec_lines.push(format!("dir: {:?}", self.dir));
-        vec_lines.push(format!("origin_pos: {:?}", self.origin_pos));
-        vec_lines.push(format!("bounds_size: {:?}", self.bounds_size));
-        vec_lines.push(format!(
-            "style_adjusted_origin_pos: {:?}",
-            self.style_adjusted_origin_pos
-        ));
-        vec_lines.push(format!(
-            "style_adjusted_bounds_size: {:?}",
-            self.style_adjusted_bounds_size
-        ));
-        vec_lines.push(format!(
-            "requested_size_percent: {:?}",
-            self.requested_size_percent
-        ));
+        line_acc.push(format!("FlexBox id: {:?}", self.id).into());
+        line_acc.push(format!("dir: {:?}", self.dir).into());
+        line_acc.push(format!("origin_pos: {:?}", self.origin_pos).into());
+        line_acc.push(format!("bounds_size: {:?}", self.bounds_size).into());
+        line_acc.push(
+            format!(
+                "style_adjusted_origin_pos: {:?}",
+                self.style_adjusted_origin_pos
+            )
+            .into(),
+        );
+        line_acc.push(
+            format!(
+                "style_adjusted_bounds_size: {:?}",
+                self.style_adjusted_bounds_size
+            )
+            .into(),
+        );
+        line_acc.push(
+            format!("requested_size_percent: {:?}", self.requested_size_percent).into(),
+        );
 
         // Optional fields.
         match self.insertion_pos_for_next_box {
             Some(pos) => {
-                vec_lines.push(format!("insertion_pos_for_next_box: {:?}", pos));
+                line_acc.push(format!("insertion_pos_for_next_box: {:?}", pos).into());
             }
             None => {
-                vec_lines.push("insertion_pos_for_next_box: None".to_string());
+                line_acc.push("insertion_pos_for_next_box: None".into());
             }
         }
         match self.maybe_computed_style {
             Some(style) => {
-                vec_lines.push(format!("maybe_computed_style: {:?}", style));
+                line_acc.push(format!("maybe_computed_style: {:?}", style).into());
             }
             None => {
-                vec_lines.push("maybe_computed_style: None".to_string());
+                line_acc.push("maybe_computed_style: None".into());
             }
         }
-        write!(f, "{}", vec_lines.join("\n  - "))
+        write!(f, "{}", line_acc.join("\n  - "))
     }
 }
 

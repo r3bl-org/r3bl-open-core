@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{ch,
-                get_tui_styles,
+use r3bl_core::{get_tui_styles,
                 glyphs,
                 position,
                 requested_size_percent,
@@ -84,7 +83,7 @@ mod id_impl {
     }
 
     impl From<Id> for FlexBoxId {
-        fn from(id: Id) -> FlexBoxId { FlexBoxId(id as u8) }
+        fn from(id: Id) -> FlexBoxId { FlexBoxId::new(id) }
     }
 }
 
@@ -243,7 +242,7 @@ mod perform_layout {
                     id: id_container,
                     dir: LayoutDirection::Horizontal,
                     requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                    styles:                 [*id_container],
+                    styles:                 [id_container],
                 );
 
                 // Col1.
@@ -254,7 +253,7 @@ mod perform_layout {
                       id:                     id_column_1,
                       dir:                    LayoutDirection::Vertical,
                       requested_size_percent: requested_size_percent!(width: 50, height: 100),
-                      styles:                 [*id_column_1],
+                      styles:                 [id_column_1],
                     );
                     render_component_in_current_box!(
                     in:                 surface,
@@ -274,7 +273,7 @@ mod perform_layout {
                       id:                     id_column_2,
                       dir:                    LayoutDirection::Vertical,
                       requested_size_percent: requested_size_percent!(width: 50, height: 100),
-                      styles:                 [*id_column_2],
+                      styles:                 [id_column_2],
                     );
                     render_component_in_current_box!(
                     in:                 surface,
@@ -318,7 +317,6 @@ mod handle_focus {
                 }
                 _ => {}
             }
-            // 00: [x] clean up log
             let message = format!(
                 "AppWithLayout::app_handle_event -> switch focus {ch}",
                 ch = glyphs::FOCUS_GLYPH
@@ -391,16 +389,16 @@ mod stylesheet {
         throws_with_return!({
             tui_stylesheet! {
               tui_style! {
-                id: Id::Container as u8
+                id: Id::Container
                 padding: 1
               },
               tui_style! {
-                id: Id::Column1 as u8
+                id: Id::Column1
                 padding: 1
                 color_bg: TuiColor::Rgb (RgbValue { red: 55, green: 55, blue: 100 })
               },
               tui_style! {
-                id: Id::Column2 as u8
+                id: Id::Column2
                 padding: 1
                 color_bg: TuiColor::Rgb (RgbValue { red: 55, green: 55, blue: 248 })
               }

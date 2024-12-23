@@ -25,32 +25,38 @@ use super::{ColorWheelConfig,
             ColorWheelSpeed,
             GradientKind,
             GradientLengthKind};
-use crate::{ch,
-            convert_to_ansi_color_styles,
-            generate_random_truecolor_gradient,
-            generate_truecolor_gradient,
-            get_gradient_array_for,
-            glyphs::SPACER_GLYPH as SPACER,
-            tui_styled_text,
-            Ansi256GradientIndex,
+use crate::{Ansi256GradientIndex,
             AnsiValue,
             ChUnit,
             ColorUtils,
             Defaults,
             GradientGenerationPolicy,
-            GraphemeClusterSegment,
+            MicroVecBackingStore,
             RgbValue,
+            SmallStringBackingStore,
             TextColorizationPolicy,
+            TinyStringBackingStore,
+            TinyVecBackingStore,
             TuiColor,
             TuiStyle,
             TuiStyledText,
             TuiStyledTexts,
             UnicodeString,
-            DEFAULT_GRADIENT_STOPS};
+            UnicodeStringExt,
+            ch,
+            convert_to_ansi_color_styles,
+            generate_random_truecolor_gradient,
+            generate_truecolor_gradient,
+            get_default_gradient_stops,
+            get_gradient_array_for,
+            glyphs::SPACER_GLYPH as SPACER,
+            tui_styled_text,
+            u8,
+            usize};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ColorWheel {
-    pub configs: Vec<ColorWheelConfig>,
+    pub configs: MicroVecBackingStore<ColorWheelConfig>,
     pub gradient_kind: GradientKind,
     pub gradient_length_kind: GradientLengthKind,
     pub index: ChUnit,
@@ -60,17 +66,25 @@ pub struct ColorWheel {
 
 impl Default for ColorWheel {
     fn default() -> Self {
-        Self::new(vec![
+        let mut acc = MicroVecBackingStore::with_capacity(2);
+
+        let config_1 = {
             ColorWheelConfig::Rgb(
-                Vec::from(DEFAULT_GRADIENT_STOPS.map(String::from)),
+                get_default_gradient_stops(),
                 ColorWheelSpeed::Medium,
-                Defaults::Steps as usize,
-            ),
-            ColorWheelConfig::Ansi256(
-                Ansi256GradientIndex::MediumGreenToMediumBlue,
-                ColorWheelSpeed::Medium,
-            ),
-        ])
+                Defaults::Steps as u8,
+            )
+        };
+
+        let config_2 = ColorWheelConfig::Ansi256(
+            Ansi256GradientIndex::MediumGreenToMediumBlue,
+            ColorWheelSpeed::Medium,
+        );
+
+        acc.push(config_1);
+        acc.push(config_2);
+
+        Self::new(acc)
     }
 }
 
@@ -90,14 +104,14 @@ impl ColorWheel {
     ///    config should be provided. The fallback is always grayscale. See
     ///    [ColorWheelConfig::narrow_config_based_on_color_support],
     ///    [r3bl_ansi_color::global_color_support::detect] for more info.
-    pub fn new(configs: Vec<ColorWheelConfig>) -> Self {
+    pub fn new(configs: MicroVecBackingStore<ColorWheelConfig>) -> Self {
         Self {
             configs,
             gradient_kind: GradientKind::NotCalculatedYet,
             gradient_length_kind: GradientLengthKind::NotCalculatedYet,
-            index: ch!(0),
+            index: ch(0),
             index_direction: ColorWheelDirection::Forward,
-            counter: ch!(0),
+            counter: ch(0),
         }
     }
 }
@@ -109,9 +123,9 @@ impl ColorWheel {
             GradientKind::ColorWheel(_) => self.index,
             GradientKind::Lolcat(lolcat) => {
                 let seed = (lolcat.color_wheel_control.seed * 1000.0) as usize;
-                ch!(seed)
+                ch(seed)
             }
-            GradientKind::NotCalculatedYet => ch!(0),
+            GradientKind::NotCalculatedYet => ch(0),
         }
     }
 
@@ -120,7 +134,7 @@ impl ColorWheel {
     /// via a call to [`generate_color_wheel`](ColorWheel::generate_color_wheel).
     pub fn get_gradient_len(&self) -> GradientLengthKind { self.gradient_length_kind }
 
-    pub fn get_gradient_kind(&self) -> &GradientKind { &self.gradient_kind }
+    pub fn get_gradient_kind(&mut self) -> &mut GradientKind { &mut self.gradient_kind }
 
     /// Every time this method is called, it will generate the gradient & memoize it.
     ///
@@ -137,12 +151,12 @@ impl ColorWheel {
     /// If the RGB color is invalid, then this method will panic.
     pub fn generate_color_wheel(
         &mut self,
-        maybe_steps_override: Option<usize>,
+        maybe_steps_override: Option<u8>,
     ) -> &GradientKind {
         let my_config =
             ColorWheelConfig::narrow_config_based_on_color_support(&self.configs);
 
-        let steps = match maybe_steps_override {
+        let steps: u8 = match maybe_steps_override {
             // 1. Try use steps from `steps_override`.
             Some(steps_override) => steps_override,
             None => {
@@ -152,7 +166,7 @@ impl ColorWheel {
                 }
                 // 3. Otherwise use the default.
                 else {
-                    Defaults::Steps as usize
+                    Defaults::Steps as u8
                 }
             }
         };
@@ -162,7 +176,7 @@ impl ColorWheel {
         match &my_config {
             ColorWheelConfig::Lolcat(builder) => {
                 self.gradient_kind = GradientKind::Lolcat(builder.build());
-                self.index = ch!(0);
+                self.index = ch(0);
                 self.gradient_length_kind = GradientLengthKind::Lolcat(builder.seed);
             }
 
@@ -172,7 +186,7 @@ impl ColorWheel {
                 self.gradient_length_kind =
                     GradientLengthKind::ColorWheel(new_gradient.len());
                 self.gradient_kind = GradientKind::ColorWheel(new_gradient);
-                self.index = ch!(0);
+                self.index = ch(0);
             }
 
             ColorWheelConfig::RgbRandom(_) => {
@@ -181,18 +195,19 @@ impl ColorWheel {
                 self.gradient_length_kind =
                     GradientLengthKind::ColorWheel(new_gradient.len());
                 self.gradient_kind = GradientKind::ColorWheel(new_gradient);
-                self.index = ch!(0);
+                self.index = ch(0);
             }
 
             ColorWheelConfig::Ansi256(index, _) => {
-                let gradient: Vec<TuiColor> = get_gradient_array_for(*index)
-                    .iter()
-                    .map(|color_u8| TuiColor::Ansi(AnsiValue::new(*color_u8)))
-                    .collect();
+                let gradient: TinyVecBackingStore<TuiColor> =
+                    get_gradient_array_for(*index)
+                        .iter()
+                        .map(|color_u8| TuiColor::Ansi(AnsiValue::new(*color_u8)))
+                        .collect();
                 self.gradient_length_kind =
                     GradientLengthKind::ColorWheel(gradient.len());
                 self.gradient_kind = GradientKind::ColorWheel(gradient);
-                self.index = ch!(0);
+                self.index = ch(0);
             }
         }
 
@@ -235,9 +250,9 @@ impl ColorWheel {
                 ColorWheelConfig::Rgb(_, ColorWheelSpeed::Fast, _)
                 | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Fast)
                 | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Fast) => {
-                    if self.counter == ch!(ColorWheelSpeed::Fast as u8) {
+                    if self.counter == ch(ColorWheelSpeed::Fast as u8) {
                         // Reset counter & change index below.
-                        self.counter = ch!(1);
+                        self.counter = ch(1);
                         it = true;
                     } else {
                         // Increment counter, used for speed control.
@@ -248,9 +263,9 @@ impl ColorWheel {
                 ColorWheelConfig::Rgb(_, ColorWheelSpeed::Medium, _)
                 | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Medium)
                 | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Medium) => {
-                    if self.counter == ch!(ColorWheelSpeed::Medium as u8) {
+                    if self.counter == ch(ColorWheelSpeed::Medium as u8) {
                         // Reset counter & change index below.
-                        self.counter = ch!(1);
+                        self.counter = ch(1);
                         it = true;
                     } else {
                         // Increment counter, used for speed control.
@@ -261,9 +276,9 @@ impl ColorWheel {
                 ColorWheelConfig::Rgb(_, ColorWheelSpeed::Slow, _)
                 | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Slow)
                 | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Slow) => {
-                    if self.counter == ch!(ColorWheelSpeed::Slow as u8) {
+                    if self.counter == ch(ColorWheelSpeed::Slow as u8) {
                         // Reset counter & change index below.
-                        self.counter = ch!(1);
+                        self.counter = ch(1);
                         it = true;
                     } else {
                         // Increment counter, used for speed control.
@@ -287,7 +302,7 @@ impl ColorWheel {
                     self.index += 1;
 
                     // Hit the end of the gradient, so reverse the direction.
-                    if self.index == ch!(gradient.len())
+                    if self.index == ch(gradient.len())
                         && self.index_direction == ColorWheelDirection::Forward
                     {
                         self.index_direction = ColorWheelDirection::Reverse;
@@ -295,28 +310,28 @@ impl ColorWheel {
                     }
 
                     // Return the color for the correct index.
-                    let color = gradient.get(ch!(@to_usize self.index))?;
+                    let color = gradient.get(usize(self.index))?;
                     Some(*color)
                 }
                 ColorWheelDirection::Reverse => {
                     self.index -= 1;
 
                     // Hit the start of the gradient, so reverse the direction.
-                    if self.index == ch!(0)
+                    if self.index == ch(0)
                         && self.index_direction == ColorWheelDirection::Reverse
                     {
                         self.index_direction = ColorWheelDirection::Forward;
                     }
 
                     // Return the color for the correct index.
-                    let color = gradient.get(ch!(@to_usize self.index))?;
+                    let color = gradient.get(usize(self.index))?;
                     Some(*color)
                 }
             };
         }
 
         // Return the color for the correct index.
-        let color = gradient.get(ch!(@to_usize self.index))?;
+        let color = gradient.get(usize(self.index))?;
         Some(*color)
     }
 
@@ -324,14 +339,14 @@ impl ColorWheel {
     fn reset_index(&mut self) {
         // If this is a lolcat, reset the seed, and early return.
         if let GradientLengthKind::Lolcat(seed) = self.get_gradient_len() {
-            if let GradientKind::Lolcat(mut lolcat) = self.get_gradient_kind() {
+            if let GradientKind::Lolcat(lolcat) = self.get_gradient_kind() {
                 lolcat.color_wheel_control.seed = seed;
                 return;
             }
         }
 
         // Not a lolcat so reset the index and direction.
-        self.index = ch!(0);
+        self.index = ch(0);
         self.index_direction = ColorWheelDirection::Forward;
     }
 
@@ -339,9 +354,9 @@ impl ColorWheel {
     pub fn lolcat_into_string(
         text: &str,
         maybe_default_style: Option<TuiStyle>,
-    ) -> String {
+    ) -> SmallStringBackingStore {
         ColorWheel::default().colorize_into_string(
-            &UnicodeString::from(text),
+            &text.unicode_string(),
             GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
             TextColorizationPolicy::ColorEachCharacter(None),
             maybe_default_style,
@@ -355,19 +370,19 @@ impl ColorWheel {
         gradient_generation_policy: GradientGenerationPolicy,
         text_colorization_policy: TextColorizationPolicy,
         maybe_default_style: Option<TuiStyle>,
-    ) -> String {
-        let it = self.colorize_into_styled_texts(
+    ) -> SmallStringBackingStore {
+        let spans_in_line = self.colorize_into_styled_texts(
             unicode_string,
             gradient_generation_policy,
             text_colorization_policy,
         );
 
-        let mut acc_vec = vec![];
+        let mut acc_vec = TinyVecBackingStore::<TinyStringBackingStore>::new();
 
         for TuiStyledText {
             mut style,
             text: unicode_string,
-        } in it.inner
+        } in spans_in_line.inner
         {
             if let Some(default_style) = maybe_default_style {
                 style.add_assign(default_style);
@@ -381,10 +396,14 @@ impl ColorWheel {
             };
 
             let output = format!("{}", ansi_styled_text);
-            acc_vec.push(output);
+            acc_vec.push(output.into());
         }
 
-        acc_vec.join("")
+        let mut acc_str = SmallStringBackingStore::new();
+        for it in acc_vec.iter() {
+            acc_str.push_str(it.as_str());
+        }
+        acc_str
     }
 
     /// This method gives you fine grained control over the color wheel. It returns a
@@ -459,11 +478,8 @@ impl ColorWheel {
             };
 
             // Loop: Colorize each (next) character w/ (next) color.
-            for GraphemeClusterSegment {
-                string: next_character,
-                ..
-            } in text.iter()
-            {
+            for seg in text.iter() {
+                let next_character = seg.get_str(&text.string);
                 let maybe_next_bg_color = self.next_color();
 
                 if let Some(next_bg_color) = maybe_next_bg_color {
@@ -520,11 +536,8 @@ impl ColorWheel {
         // Handle regular case.
         match text_colorization_policy {
             TextColorizationPolicy::ColorEachCharacter(maybe_style) => {
-                for GraphemeClusterSegment {
-                    string: next_character,
-                    ..
-                } in text.iter()
-                {
+                for seg in text.iter() {
+                    let next_character = seg.get_str(&text.string);
                     // Loop: Colorize each (next) character w/ (next) color.
                     acc += tui_styled_text!(
                         @style: inner::gen_style_fg_color_for(maybe_style, self.next_color()),
@@ -561,7 +574,7 @@ impl ColorWheel {
     ) {
         match gradient_generation_policy {
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength => {
-                let steps = text.len();
+                let steps = u8(ch(text.len()));
 
                 // Generate a new gradient if one doesn't exist.
                 if let GradientLengthKind::NotCalculatedYet = self.get_gradient_len() {
@@ -571,7 +584,7 @@ impl ColorWheel {
 
                 // Re-use gradient if possible.
                 if let GradientLengthKind::ColorWheel(length) = self.get_gradient_len() {
-                    if length != steps {
+                    if u8(ch(length)) != steps {
                         self.generate_color_wheel(Some(steps));
                     }
                 }
@@ -598,21 +611,24 @@ impl ColorWheel {
 
 #[cfg(test)]
 mod tests_color_wheel_rgb {
-    use r3bl_ansi_color::{global_color_support, ColorSupport};
+    use r3bl_ansi_color::{ColorSupport, global_color_support};
     use serial_test::serial;
 
     use super::*;
     use crate::assert_eq2;
 
     mod test_helpers {
+        use smallvec::smallvec;
+
         use super::*;
 
         pub fn create_color_wheel_rgb() -> ColorWheel {
-            ColorWheel::new(vec![ColorWheelConfig::Rgb(
-                vec!["#000000".into(), "#ffffff".into()],
+            let config_1 = ColorWheelConfig::Rgb(
+                smallvec::smallvec!["#000000".into(), "#ffffff".into()],
                 ColorWheelSpeed::Fast,
                 10,
-            )])
+            );
+            ColorWheel::new(smallvec![config_1])
         }
     }
 
@@ -653,9 +669,9 @@ mod tests_color_wheel_rgb {
             assert_eq2!(
                 config,
                 ColorWheelConfig::Rgb(
-                    Vec::from(DEFAULT_GRADIENT_STOPS.map(String::from)),
+                    get_default_gradient_stops(),
                     ColorWheelSpeed::Medium,
-                    Defaults::Steps as usize,
+                    Defaults::Steps as u8,
                 ),
             );
             global_color_support::clear_override()
@@ -715,7 +731,7 @@ mod tests_color_wheel_rgb {
         ]
         .iter()
         .map(|(r, g, b)| TuiColor::Rgb(RgbValue::from_u8(*r, *g, *b)))
-        .collect::<Vec<_>>();
+        .collect::<TinyVecBackingStore<_>>();
         assert_eq2!(lhs, rhs);
 
         // Call to next() should return the start_color.
@@ -804,7 +820,7 @@ mod tests_color_wheel_rgb {
 
         global_color_support::set_override(ColorSupport::Truecolor);
 
-        let unicode_string = UnicodeString::from("HELLO WORLD");
+        let unicode_string = "HELLO WORLD".unicode_string();
 
         let styled_texts = color_wheel_rgb.colorize_into_styled_texts(
             &unicode_string,
@@ -853,7 +869,7 @@ mod tests_color_wheel_rgb {
 
         global_color_support::set_override(ColorSupport::Truecolor);
 
-        let unicode_string = UnicodeString::from("HELLO");
+        let unicode_string = "HELLO".unicode_string();
 
         let style = TuiStyle {
             dim: true,
@@ -925,7 +941,7 @@ mod tests_color_wheel_rgb {
 
         global_color_support::set_override(ColorSupport::Truecolor);
 
-        let unicode_string = UnicodeString::from("HELLO WORLD");
+        let unicode_string = "HELLO WORLD".unicode_string();
 
         let ansi_styled_string = color_wheel_rgb.colorize_into_string(
             &unicode_string,

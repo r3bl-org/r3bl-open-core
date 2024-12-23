@@ -17,7 +17,13 @@
 
 use std::fmt::{Debug, Formatter};
 
-use r3bl_core::{call_if_true, CommonResult, OutputDevice, Size};
+use r3bl_core::{call_if_true,
+                CommonResult,
+                MicroVecBackingStore,
+                OutputDevice,
+                Size,
+                TinyStringBackingStore};
+use smallvec::smallvec;
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
@@ -52,13 +58,13 @@ where
     AS: Debug + Default + Clone + Sync + Send,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let vec_lines = {
-            let mut it = vec![];
-            it.push(format!("window_size: {0:?}", self.window_size));
+        let vec_lines: MicroVecBackingStore<TinyStringBackingStore> = {
+            let mut it = smallvec![];
+            it.push(format!("window_size: {0:?}", self.window_size).into());
             it.push(match &self.maybe_saved_offscreen_buffer {
-                None => "no saved offscreen_buffer".to_string(),
+                None => "no saved offscreen_buffer".into(),
                 Some(ref offscreen_buffer) => match DEBUG_TUI_COMPOSITOR {
-                    false => "offscreen_buffer saved from previous render".to_string(),
+                    false => "offscreen_buffer saved from previous render".into(),
                     true => offscreen_buffer.pretty_print(),
                 },
             });
@@ -73,6 +79,7 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
+    /// Create a new instance of [GlobalData] with the given parameters.
     pub fn try_to_create_instance(
         main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
         state: S,

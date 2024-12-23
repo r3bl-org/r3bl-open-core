@@ -30,6 +30,7 @@ use r3bl_core::{ANSIBasicColor,
                 TuiColor,
                 TuiStyle};
 use r3bl_macro::tui_style;
+use smallvec::smallvec;
 
 use crate::HeadingData;
 
@@ -252,7 +253,7 @@ pub fn get_metadata_tags_values_style() -> TuiStyle {
 
 const SPEED: ColorWheelSpeed = ColorWheelSpeed::Medium;
 const ANSI_SPEED: ColorWheelSpeed = ColorWheelSpeed::Slow;
-const STEPS: usize = 20;
+const STEPS: u8 = 20;
 
 /// Currently unique coloring of up to 6 heading levels are supported.
 /// More info on gradients: <https://uigradients.com/>.
@@ -260,9 +261,9 @@ pub fn create_color_wheel_from_heading_data(
     heading_data: &HeadingData<'_>,
 ) -> ColorWheel {
     match heading_data.heading_level.level {
-        1 => ColorWheel::new(vec![
+        1 => ColorWheel::new(smallvec![
             ColorWheelConfig::Rgb(
-                Vec::from(["#01fa22", "#00eef2"].map(String::from)),
+                smallvec!["#01fa22".into(), "#00eef2".into()],
                 SPEED,
                 STEPS,
             ),
@@ -272,27 +273,27 @@ pub fn create_color_wheel_from_heading_data(
             ),
         ]),
 
-        2 => ColorWheel::new(vec![
+        2 => ColorWheel::new(smallvec![
             ColorWheelConfig::Rgb(
-                Vec::from(["#fff200", "#de211b"].map(String::from)),
+                smallvec!["#fff200".into(), "#de211b".into()],
                 SPEED,
                 STEPS,
             ),
             ColorWheelConfig::Ansi256(Ansi256GradientIndex::GreenToBlue, ANSI_SPEED),
         ]),
 
-        3 => ColorWheel::new(vec![
+        3 => ColorWheel::new(smallvec![
             ColorWheelConfig::Rgb(
-                Vec::from(["#00dbde", "#fc00ff"].map(String::from)),
+                smallvec!["#00dbde".into(), "#fc00ff".into()],
                 SPEED,
                 STEPS,
             ),
             ColorWheelConfig::Ansi256(Ansi256GradientIndex::OrangeToNeonPink, ANSI_SPEED),
         ]),
 
-        4 => ColorWheel::new(vec![
+        4 => ColorWheel::new(smallvec![
             ColorWheelConfig::Rgb(
-                Vec::from(["#ff28a9", "#bd60eb"].map(String::from)),
+                smallvec!["#ff28a9".into(), "#bd60eb".into()],
                 SPEED,
                 STEPS,
             ),
@@ -302,18 +303,18 @@ pub fn create_color_wheel_from_heading_data(
             ),
         ]),
 
-        5 => ColorWheel::new(vec![
+        5 => ColorWheel::new(smallvec![
             ColorWheelConfig::Rgb(
-                Vec::from(["#ff6a00", "#ee0979"].map(String::from)),
+                smallvec!["#ff6a00".into(), "#ee0979".into()],
                 SPEED,
                 STEPS,
             ),
             ColorWheelConfig::Ansi256(Ansi256GradientIndex::RustToPurple, ANSI_SPEED),
         ]),
 
-        _ => ColorWheel::new(vec![
+        _ => ColorWheel::new(smallvec![
             ColorWheelConfig::Rgb(
-                Vec::from(["#8470ba", "#12c2e9"].map(String::from)),
+                smallvec!["#8470ba".into(), "#12c2e9".into()],
                 SPEED,
                 STEPS,
             ),

@@ -23,7 +23,7 @@ use r3bl_core::{call_if_true,
                 LockedOutputDevice,
                 Size,
                 TuiStyle,
-                UnicodeString};
+                UnicodeStringExt};
 
 use crate::{render_ops,
             Flush as _,
@@ -69,8 +69,10 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
         // Debug output.
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE, {
+            // % is Display, ? is Debug.
             tracing::info!(
-                "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok 🟢: render_ops: \n{render_ops:?}",
+                message = "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok 🟢",
+                render_ops = ?render_ops
             );
         });
     }
@@ -99,8 +101,10 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
         // Debug output.
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE, {
+            // % is Display, ? is Debug.
             tracing::info!(
-                "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok 🟢: render_ops: \n{render_ops:?}"
+                message = "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok 🟢",
+                render_ops = ?render_ops
             );
         });
     }
@@ -140,15 +144,14 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                     match pixel_char {
                         PixelChar::Void => continue,
                         PixelChar::Spacer => (SPACER, None),
-                        PixelChar::PlainText {
-                            content,
-                            maybe_style,
-                        } => (&content.string, *maybe_style),
+                        PixelChar::PlainText { text, maybe_style } => {
+                            (text, *maybe_style)
+                        }
                     };
 
                 let is_style_same_as_prev =
                     render_helpers::style_eq(&pixel_char_style, &context.prev_style);
-                let is_at_end_of_line = ch!(pixel_char_index) == (ch!(line.len() - 1));
+                let is_at_end_of_line = ch(pixel_char_index) == (ch(line.len()) - ch(1));
                 let is_first_loop_iteration = row_index == 0 && pixel_char_index == 0;
 
                 // Deal w/: fg and bg colors | text attrib style | ANSI <-> PLAIN switchover.
@@ -216,12 +219,12 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                     ))
                 }
                 PixelChar::PlainText {
-                    content,
-                    maybe_style,
+                    text, maybe_style, ..
                 } => {
                     it.push(RenderOp::ApplyColors(*maybe_style));
                     it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                        content.string.clone(),
+                        // PERF: [ ] perf
+                        text.clone(),
                         *maybe_style,
                     ))
                 }
@@ -233,13 +236,16 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 }
 
 mod render_helpers {
+    use r3bl_core::TinyStringBackingStore;
+
     use super::*;
 
     #[derive(Debug, Clone)]
     pub struct Context {
         pub display_col_index_for_line: ChUnit,
         pub display_row_index: ChUnit,
-        pub buffer_plain_text: String,
+        // PERF: [ ] remove String
+        pub buffer_plain_text: TinyStringBackingStore,
         pub prev_style: Option<TuiStyle>,
         pub render_ops: RenderOps,
     }
@@ -247,18 +253,18 @@ mod render_helpers {
     impl Context {
         pub fn new() -> Self {
             Context {
-                display_col_index_for_line: ch!(0),
-                buffer_plain_text: String::new(),
+                display_col_index_for_line: ch(0),
+                buffer_plain_text: TinyStringBackingStore::new(),
                 render_ops: render_ops!(),
-                display_row_index: ch!(0),
+                display_row_index: ch(0),
                 prev_style: None,
             }
         }
 
         pub fn clear_for_new_line(&mut self, row_index: usize) {
             self.buffer_plain_text.clear();
-            self.display_col_index_for_line = ch!(0);
-            self.display_row_index = ch!(row_index);
+            self.display_col_index_for_line = ch(0);
+            self.display_row_index = ch(row_index);
         }
     }
 
@@ -309,13 +315,17 @@ mod render_helpers {
         context
             .render_ops
             .push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                context.buffer_plain_text.to_string(),
+                // PERF: [ ] remove String clone
+                context.buffer_plain_text.clone(),
                 context.prev_style,
             ));
 
         // Update `display_col_index_for_line`.
-        let plain_text_display_width =
-            UnicodeString::from(context.buffer_plain_text.as_str()).display_width;
+        let plain_text_display_width = context
+            .buffer_plain_text
+            .to_string()
+            .unicode_string()
+            .display_width;
         context.display_col_index_for_line += plain_text_display_width;
 
         // Clear the buffer!
@@ -411,7 +421,7 @@ mod tests {
         assert_eq2!(
             render_ops[4],
             RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                "hello1234".to_string(),
+                "hello1234".into(),
                 Some(
                     tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                 )
@@ -424,10 +434,7 @@ mod tests {
         );
         assert_eq2!(
             render_ops[7],
-            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                SPACER.to_string(),
-                None
-            )
+            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(SPACER.into(), None)
         );
         assert_eq2!(
             render_ops[8],
@@ -436,7 +443,7 @@ mod tests {
         assert_eq2!(
             render_ops[9],
             RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                SPACER.to_string().repeat(10),
+                (SPACER.repeat(10)).into(),
                 None
             )
         );

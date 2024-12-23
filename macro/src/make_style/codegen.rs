@@ -42,7 +42,7 @@ pub(crate) fn code_gen(
         Some(padding_int) => {
             let padding_value: ChUnitPrimitiveType = *padding_int;
             quote! {
-              padding: Some(ch!(#padding_value)),
+              padding: Some(r3bl_core::ch(#padding_value)),
             }
         }
         None => quote! {},
@@ -77,7 +77,7 @@ pub(crate) fn code_gen(
 
     quote! {
       r3bl_core::TuiStyle {
-        id: #id,
+        id: #id.into(),
         bold: #has_attrib_bold,
         italic: #has_attrib_italic,
         dim: #has_attrib_dim,

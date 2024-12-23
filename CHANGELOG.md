@@ -14,6 +14,7 @@
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
 - [r3bl_tuify](#r3bl_tuify)
+  - [v_next_release_tuify](#v_next_release_tuify)
   - [v0.2.0 2024-10-21](#v020-2024-10-21)
   - [v0.1.27 2024-09-12](#v0127-2024-09-12)
   - [v0.1.26 2024-04-15](#v0126-2024-04-15)
@@ -27,6 +28,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [v_next_release_r3bl_tui](#v_next_release_r3bl_tui)
   - [v0.6.0 2024-10-21](#v060-2024-10-21)
   - [v0.5.9 2024-09-12](#v059-2024-09-12)
   - [v0.5.8 2024-09-07](#v058-2024-09-07)
@@ -54,6 +56,7 @@
   - [v0.0.2 2024-09-12](#v002-2024-09-12)
   - [v0.0.1 2023-12-31](#v001-2023-12-31)
 - [r3bl_macro](#r3bl_macro)
+  - [v_next_release_macro](#v_next_release_r3bl_macro)
   - [v0.10.0 2024-10-20](#v0100-2024-10-20)
 - [r3bl_test_fixtures](#r3bl_test_fixtures)
   - [next](#v_next_release_r3bl_test_fixtures)
@@ -66,6 +69,7 @@
 - [r3bl_script](#r3bl_script)
   - [v_next_release_script](#v_next_release_r3bl_script)
 - [r3bl_terminal_async](#r3bl_terminal_async)
+  - [v_next_release_terminal_async](#v_next_release_r3bl_terminal_async)
   - [v0.6.0 2024-10-21](#v060-2024-10-21)
   - [v0.5.7 2024-09-12](#v057-2024-09-12)
   - [v0.5.6 2024-08-13](#v056-2024-08-13)
@@ -174,7 +178,14 @@ This is part of a total reorganization of the `r3bl-open-core` repo. This is a b
 change for almost every crate in the repo. This
 [PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
 
+This release also contains changes that are part of optimizing memory allocation to
+increase performance, and ensure that performance is stable over time. `ch_unit.rs` is
+also heavily refactored and the entire codebase updated so that a the more ergonomic
+`ChUnit` API is now used throughout the codebase. No new functionality is added in this
+release.
+
 - Updated:
+  - Use the latest Rust 2024 edition.
   - This release just uses the latest deps from `r3bl-open-core` repo, since so many
     crates have been reorganized and renamed. The functionality has not changed at all,
     just the imports.
@@ -298,6 +309,13 @@ in a text editor.
 
 ## `r3bl_tuify`
 
+### v_next_release_tuify
+
+This release contains changes that are part of optimizing memory allocation to increase
+performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
+refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
+now used throughout the codebase. No new functionality is added in this release.
+
 ### v0.2.0 (2024-10-21)
 
 This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
@@ -305,6 +323,7 @@ change for almost every crate in the repo. This
 [PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
 
 - Updated:
+  - Use the latest Rust 2024 edition.
   - This release just uses the latest deps from `r3bl-open-core` repo, since so many
     crates have been reorganized and renamed. The functionality has not changed at all,
     just the imports.
@@ -416,6 +435,36 @@ change for almost every crate in the repo. This
     `r3bl_rs_utils` repo workspace as `simple_logger`).
 
 ## `r3bl_tui`
+
+### v_next_release_r3bl_tui
+
+This release contains changes that are part of optimizing memory allocation to increase
+performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
+refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
+now used throughout the codebase. No new functionality is added in this release. The
+telemetry gathering and reporting mechanism is rewritten.
+
+These videos have been an inspiration for many of these changes:
+- [Data oriented design](https://youtu.be/WwkuAqObplU)
+- [Memory alloc](https://youtu.be/pJ-FRRB5E84)
+
+Updated:
+  - Use the latest Rust 2024 edition.
+
+Added:
+  - Add `ResponseTimesRingBuffer` to replace `telemetry_global_static` module in
+    `static_global_data.rs`. This is more accurate, performant, and space efficient. It
+    uses a fixed backing store (`RingBuffer`) and a rate limiter (`RateLimiter`) to ensure
+    that the report is not computed too frequently (since this might be an expensive
+    operation that is called in a hot loop, the main event loop).
+
+Removed:
+  - Delete `static_global_data.rs` file and `telemetry_global_static` module.
+    - Move the `vscode` terminal color detection code to `r3bl_ansi_color`, which is where
+      it belongs.
+    - Move the telemetry functions from `telemetry_global_static` to  `Telemetry` module
+      (and its dependencies `RateLimiter` and `RingBuffer`) in `r3bl_core`.
+
 
 ### v0.6.0 (2024-10-21)
 
@@ -759,7 +808,19 @@ exhaustively tested and is able to handle many more corner cases.
 
 ### v_next_release_r3bl_core
 
-This release does not have any major changes. Here are the highlights:
+This release does not have any major changes. It does have some major rewrites of existing
+functionality to be much faster and easier to use (focus on ergonomics, such as the `arg:
+impl Into<T>` where `T` is a struct pattern). It also contains changes that are part of
+optimizing memory allocation to increase performance, and ensure that performance is
+stable over time. `ch_unit.rs` is also heavily refactored and the entire codebase updated
+so that a the more ergonomic `ChUnit` API is now used throughout the codebase. No new
+functionality is added in this release.
+
+These videos have been an inspiration for many of these changes:
+- [Data oriented design](https://youtu.be/WwkuAqObplU)
+- [Memory alloc](https://youtu.be/pJ-FRRB5E84)
+
+Here are the highlights:
 - [PR](https://github.com/r3bl-org/r3bl-open-core/pull/370/commits/20fe5e730a0f592c203c85a68ee6e5b345136f44)
   1. Add a new declarative macro to effortlessly create global mutable thread safe
      singletons (without using `unsafe`).
@@ -772,16 +833,39 @@ This release does not have any major changes. Here are the highlights:
      allow for an optional default style to be passed in, that will be applied to the
      generated lolcat output.
 
+Removed:
+  - The `ch!` macro was confusing. It is now removed, and `ch_unit.rs` has clean
+    conversions to and from other types. There are easy to use, typed checked functions,
+    like `ch()`, `usize()`, `f64()`, etc.
+
 Changed:
   - Fix all the Rust doc tests that were marked with `ignore`. Remove the `ignore` with
     either run and compile, or just `no_run` (compile only) in some cases where the code
     can't be run, but needs to be compiled.
 
 - Updated:
+  - Use the latest Rust 2024 edition.
   - Fix all the Rust docs that are ignored (in all Rust source files in this crate), and
     replace them with doc comments that compile successfully.
 
 - Added:
+  - `Percent` struct now has a `as_glyph()` method which displays the percentage as a
+    Unicode glyph ranging from `STATS_25P_GLYPH` to `STATS_50P_GLYPH` to `STATS_75P_GLYPH`
+    to `STATS_100P_GLYPH` depending on its value.
+  - `Telemetry` is a struct that handles telemetry measurement & reporting. It is used in
+    the `r3bl_tui` crate to measure and report the time it takes to render the TUI, and
+    other performance metrics.
+  - `TimeDuration` is a struct that handles efficient rendering of `Duration` in a human
+    readable form, that does not allocate any memory (in the function that implements the
+    `Display` trait).
+  - `RateLimiter` is a struct that handles rate limiting for a given task. It is used to
+    limit the rate at which a task can be executed. It is used in telemetry measurement &
+    reporting for the `r3bl_tui` crate.
+  - `RingBuffer` is a struct that is used to store a fixed number of elements in a ring
+    buffer. It is used in telemetry measurement & reporting for the `r3bl_tui` crate.
+  - Since `ch!` macro is removed, add new functions to replace it: `ch()`, `usize()`,
+    `f64()`, etc. These functions provide better compiler type checking, better
+    readability, better composability,  and are much easier to use than the `ch!` macro.
   - `UnicodeString` now implements `std::fmt::Display`, so it is no longer necessary to
     use `UnicodeString.string` to get to the underlying string. This is just more
     ergonomic. This is added in `convert.rs`. More work needs to be done to introduce
@@ -886,6 +970,7 @@ in the real world.
 ### v0.0.2 (2024-09-12)
 
 - Updated:
+  - Use the latest Rust 2024 edition.
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
@@ -895,6 +980,16 @@ in the real world.
   - Initial support structs for use by `r3bl-base` and `r3bl-cmdr`.
 
 ## `r3bl_macro`
+
+### v_next_release_r3bl_macro
+
+This release contains changes that are part of optimizing memory allocation to increase
+performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
+refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
+now used throughout the codebase. No new functionality is added in this release.
+
+- Updated:
+  - Use the latest Rust 2024 edition.
 
 ### v0.10.0 (2024-10-20)
 
@@ -929,6 +1024,9 @@ Deleted:
 ### v_next_release_r3bl_test_fixtures
 
 This release adds a new fixture to make it easy to create temporary directories for tests.
+
+- Updated:
+  - Use the latest Rust 2024 edition.
 
 - Added:
   - Add a new fixture `temp_dir::create_temp_dir()` to make it easy to create temporary
@@ -1008,6 +1106,11 @@ that is meant to hold all the logging related functionality for all the other cr
 this monorepo. It uses `tracing` under the covers to provide structured logging. It also
 provides a custom formatter that is a `tracing-subscriber` crate plugin.
 
+This release contains changes that are part of optimizing memory allocation to increase
+performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
+refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
+now used throughout the codebase.
+
 Added:
   - Moved all the tracing and logging functionality from `r3bl_core` in here.
   - Make the public API more ergonomic and use the `options: impl Into<TracingConfig>`
@@ -1039,6 +1142,13 @@ be a replacement for writing scripts in `fish` or `bash` or `nushell` syntax.
 
 ## `r3bl_terminal_async`
 
+### v_next_release_r3bl_terminal_async
+
+This release contains changes that are part of optimizing memory allocation to increase
+performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
+refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
+now used throughout the codebase. No new functionality is added in this release.
+
 ### v0.6.0 (2024-10-21)
 
 This is a major version upgrade and potentially a breaking change if you use the tracing
@@ -1053,6 +1163,7 @@ contains all the changes.
     as expected.
 
 - Changed:
+  - Use the latest Rust 2024 edition.
   - Refactor the tracing and Jaeger related code into 2 separate modules. This is laying
     the groundwork for these modules to be moved into `r3bl_core` crate.
     Radically simplify the tracing configuration design and init mechanisms, so they are
@@ -1255,6 +1366,18 @@ This is the first release of this crate.
     powerful (multi) line editor and prompt.
 
 ## `r3bl_ansi_color`
+
+### v_next_release_r3bl_ansi_color
+
+This is a minor change that adds `vscode` to the list of environment variables that mean
+that `truecolor` is supported.
+
+- Updated:
+  - Use the latest Rust 2024 edition.
+
+- Added:
+  - Support for `$TERM_PROGRAM` = `vscode` to the list of environment variables that mean
+    that `truecolor` is supported. This is in `check_ansi_color.rs` file.
 
 ### v0.7.0 (2024-10-18)
 

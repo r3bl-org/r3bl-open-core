@@ -30,11 +30,15 @@
 //! 1. Convert the syntect [SyntectStyleStrSpanLine] into a [StyleUSSpanLine].
 //! 2. Then convert [StyleUSSpanLine] into a [TuiStyledTexts].
 
-use r3bl_core::{tui_styled_text, RgbValue, TuiColor, TuiStyle, TuiStyledTexts};
+use r3bl_core::{tui_styled_text,
+                RgbValue,
+                TuiColor,
+                TuiStyle,
+                TuiStyledTexts,
+                UnicodeStringExt};
 use syntect::parsing::SyntaxSet;
 
 use super::{StyleUSSpan, StyleUSSpanLine};
-use crate::aliases::US;
 
 // Type aliases for syntect types.
 
@@ -87,7 +91,7 @@ pub fn convert_highlighted_line_from_syntect_to_tui(
 
         for (style, text) in vec_styled_str {
             let my_style = convert_style_from_syntect_to_tui(*style);
-            let unicode_string = US::from(*text);
+            let unicode_string = text.unicode_string();
             it.push(StyleUSSpan::new(my_style, unicode_string));
         }
 
@@ -108,7 +112,11 @@ pub fn convert_span_line_from_syntect_to_tui_styled_texts(
 
 #[cfg(test)]
 mod tests_simple_md_highlight {
-    use r3bl_core::{assert_eq2, color, ConvertToPlainText, TuiStyledTexts};
+    use r3bl_core::{assert_eq2,
+                    color,
+                    ConvertToPlainText,
+                    TuiStyledTexts,
+                    UnicodeStringExt};
     use syntect::{easy::HighlightLines,
                   highlighting::Style,
                   parsing::SyntaxSet,
@@ -171,7 +179,7 @@ mod tests_simple_md_highlight {
         {
             let line = &vec_styled_texts[0];
             assert_eq2!(line.len(), 4);
-            assert_eq2!(line.to_plain_text_us(), "# My Heading\n".into());
+            assert_eq2!(line.to_plain_text_us(), "# My Heading\n".unicode_string());
             let col1 = &line[0];
             assert_eq2!(col1.get_style().bold, true);
             let col3 = &line[2];
@@ -182,7 +190,7 @@ mod tests_simple_md_highlight {
         {
             let line = &vec_styled_texts[41];
             assert_eq2!(line.len(), 1);
-            assert_eq2!(line.to_plain_text_us(), "--- END ---\n".into());
+            assert_eq2!(line.to_plain_text_us(), "--- END ---\n".unicode_string());
             let col1 = &line[0];
             assert_eq2!(col1.get_style().color_fg.unwrap(), color!(193, 179, 208));
         }
@@ -191,7 +199,7 @@ mod tests_simple_md_highlight {
 
 #[cfg(test)]
 mod tests_convert_span_line_and_highlighted_line {
-    use r3bl_core::{assert_eq2, RgbValue, TuiColor, TuiStyledTexts, UnicodeString};
+    use r3bl_core::{assert_eq2, RgbValue, TuiColor, TuiStyledTexts, UnicodeStringExt};
 
     use crate::convert_span_line_from_syntect_to_tui_styled_texts;
 
@@ -251,10 +259,7 @@ mod tests_convert_span_line_and_highlighted_line {
 
         // item 1.
         {
-            assert_eq2!(
-                styled_texts[0].get_text(),
-                &UnicodeString::from("st_color_1")
-            );
+            assert_eq2!(styled_texts[0].get_text(), &"st_color_1".unicode_string());
             assert_eq2!(
                 styled_texts[0].get_style().color_fg.unwrap(),
                 TuiColor::Rgb(RgbValue {
@@ -275,10 +280,7 @@ mod tests_convert_span_line_and_highlighted_line {
 
         // item 2.
         {
-            assert_eq2!(
-                styled_texts[1].get_text(),
-                &UnicodeString::from("st_color_2")
-            );
+            assert_eq2!(styled_texts[1].get_text(), &"st_color_2".unicode_string(),);
             assert_eq2!(
                 styled_texts[1].get_style().color_fg.unwrap(),
                 TuiColor::Rgb(RgbValue {
@@ -302,7 +304,7 @@ mod tests_convert_span_line_and_highlighted_line {
         {
             assert_eq2!(
                 styled_texts[2].get_text(),
-                &UnicodeString::from("st_color_1 and 2")
+                &"st_color_1 and 2".unicode_string(),
             );
             assert_eq2!(
                 styled_texts[2].get_style().color_fg.unwrap(),
@@ -339,10 +341,12 @@ mod tests_convert_style_and_color {
                     ANSIBasicColor,
                     CommonResult,
                     RgbValue,
+                    TinyVecBackingStore,
                     TuiColor,
                     TuiStyle,
                     TuiStylesheet};
     use r3bl_macro::tui_style;
+    use smallvec::smallvec;
 
     use crate::convert_style_from_syntect_to_tui;
 
@@ -418,7 +422,7 @@ mod tests_convert_style_and_color {
 
         console_log!(my_style);
 
-        assert_eq2!(my_style.padding.unwrap(), ch!(3));
+        assert_eq2!(my_style.padding.unwrap(), ch(3));
         assert_eq2!(
             my_style.color_bg.unwrap(),
             TuiColor::Basic(ANSIBasicColor::Yellow)
@@ -462,18 +466,20 @@ mod tests_convert_style_and_color {
         // Test find_styles_by_ids.
         {
             // Contains.
-            assertions_for_find_styles_by_ids(&stylesheet.find_styles_by_ids(vec![1, 2]));
+            assertions_for_find_styles_by_ids(&stylesheet.find_styles_by_ids(&[1, 2]));
             assertions_for_find_styles_by_ids(&get_tui_styles!(
                 @from: &stylesheet,
                 [1, 2]
             ));
-            fn assertions_for_find_styles_by_ids(result: &Option<Vec<TuiStyle>>) {
+            fn assertions_for_find_styles_by_ids(
+                result: &Option<TinyVecBackingStore<TuiStyle>>,
+            ) {
                 assert_eq2!(result.as_ref().unwrap().len(), 2);
                 assert_eq2!(result.as_ref().unwrap()[0].id, 1);
                 assert_eq2!(result.as_ref().unwrap()[1].id, 2);
             }
             // Does not contain.
-            assert_eq2!(stylesheet.find_styles_by_ids(vec![3, 4]), None);
+            assert_eq2!(stylesheet.find_styles_by_ids(&[3, 4]), None);
             assert_eq2!(get_tui_styles!(@from: stylesheet, [3, 4]), None);
         }
     }
@@ -484,26 +490,26 @@ mod tests_convert_style_and_color {
             let id_2 = 2;
             let style1 = make_a_style(1);
             let mut stylesheet = tui_stylesheet! {
-              style1,
-              tui_style! {
+                style1,
+                tui_style! {
                     id: id_2 /* using a variable instead of string literal */
                     padding: 1
                     color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
-              },
-              make_a_style(3),
-              vec![
-                tui_style! {
-                  id: 4
-                  padding: 1
-                  color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
                 },
-                tui_style! {
-                  id: 5
-                  padding: 1
-                  color_bg: TuiColor::Rgb (RgbValue{ red: 85, green: 85, blue: 255 })
-                },
-              ],
-              make_a_style(6)
+                make_a_style(3),
+                smallvec![
+                    tui_style! {
+                        id: 4
+                        padding: 1
+                        color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
+                    },
+                    tui_style! {
+                        id: 5
+                        padding: 1
+                        color_bg: TuiColor::Rgb (RgbValue{ red: 85, green: 85, blue: 255 })
+                    },
+                ],
+                make_a_style(6)
             };
 
             assert_eq2!(stylesheet.styles.len(), 6);
@@ -515,11 +521,11 @@ mod tests_convert_style_and_color {
             assert_eq2!(stylesheet.find_style_by_id(6).unwrap().id, 6);
             assert!(stylesheet.find_style_by_id(7).is_none());
 
-            let result = stylesheet.find_styles_by_ids(vec![1, 2]);
+            let result = stylesheet.find_styles_by_ids(&[1, 2]);
             assert_eq2!(result.as_ref().unwrap().len(), 2);
             assert_eq2!(result.as_ref().unwrap()[0].id, 1);
             assert_eq2!(result.as_ref().unwrap()[1].id, 2);
-            assert_eq2!(stylesheet.find_styles_by_ids(vec![13, 41]), None);
+            assert_eq2!(stylesheet.find_styles_by_ids(&[13, 41]), None);
             let style7 = make_a_style(7);
             let result = stylesheet.add_style(style7);
             result.unwrap();

@@ -82,7 +82,7 @@ impl Size {
 
 impl Size {
     pub fn fits_min_size(&self, min_col: u8, min_row: u8) -> TooSmallToDisplayResult {
-        match self.col_count < ch!(min_col) || self.row_count < ch!(min_row) {
+        match self.col_count < ch(min_col) || self.row_count < ch(min_row) {
             false => TooSmallToDisplayResult::IsLargeEnough,
             true => TooSmallToDisplayResult::IsTooSmall,
         }

@@ -208,7 +208,8 @@ impl Display for UIStrings {
                     format!(" Failed to create and switch to branch {branch_name}")
                 }
                 UIStrings::EnterBranchNameYouWantToCreate => {
-                    " Enter a branch name you want to create (Ctrl+C to exit) ".to_string()
+                    " Enter a branch name you want to create (Ctrl+C to exit) "
+                        .to_string()
                 }
                 UIStrings::NoNewBranchWasCreated => {
                     String::from(" No new branch was created")

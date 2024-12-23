@@ -15,19 +15,19 @@
  *   limitations under the License.
  */
 
-use std::io::{stdout, Write};
+use std::io::{Write, stdout};
 
 use crossterm::{cursor::MoveToColumn,
                 style::{Print, ResetColor, Stylize},
                 terminal::{Clear, ClearType}};
 use futures_util::FutureExt as _;
 use miette::IntoDiagnostic as _;
-use r3bl_ansi_color::{is_fully_uninteractive_terminal,
-                      is_stdin_piped,
-                      is_stdout_piped,
-                      StdinIsPipedResult,
+use r3bl_ansi_color::{StdinIsPipedResult,
                       StdoutIsPipedResult,
-                      TTYResult};
+                      TTYResult,
+                      is_fully_uninteractive_terminal,
+                      is_stdin_piped,
+                      is_stdout_piped};
 use r3bl_core::{InputDevice, LineStateControlSignal, OutputDevice, SharedWriter};
 
 use crate::{Readline, ReadlineEvent};

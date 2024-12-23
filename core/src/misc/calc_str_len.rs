@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{HashMap, hash_map::Entry};
 
 use sha2::{Digest, Sha256};
 use unicode_width::UnicodeWidthStr;

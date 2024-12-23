@@ -27,8 +27,7 @@ use r3bl_core::{call_if_true,
                 ColorWheelSpeed,
                 CommonResult,
                 GradientGenerationPolicy,
-                TextColorizationPolicy,
-                UnicodeString};
+                TextColorizationPolicy};
 use r3bl_tui::{render_ops,
                render_pipeline,
                BoxedSafeComponent,
@@ -48,6 +47,7 @@ use r3bl_tui::{render_ops,
                TerminalWindowMainThreadSignal,
                ZOrder,
                DEBUG_TUI_MOD};
+use smallvec::smallvec;
 
 use super::{AppSignal, State};
 
@@ -70,7 +70,7 @@ mod constructor {
             let it = Self {
                 data: SingleColumnComponentData {
                     id,
-                    color_wheel: ColorWheel::new(vec![
+                    color_wheel: ColorWheel::new(smallvec![
                         ColorWheelConfig::RgbRandom(ColorWheelSpeed::Fast),
                         ColorWheelConfig::Ansi256(
                             Ansi256GradientIndex::LightGreenToLightBlue,
@@ -85,6 +85,8 @@ mod constructor {
 }
 
 mod single_column_component_impl_component_trait {
+    use r3bl_core::UnicodeStringExt;
+
     use super::*;
 
     impl Component<State, AppSignal> for SingleColumnComponent {
@@ -112,7 +114,7 @@ mod single_column_component_impl_component_trait {
                                 event_consumed = true;
                                 send_signal!(
                                     global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
                                         AppSignal::AddPop(1),
                                     )
                                 );
@@ -121,7 +123,7 @@ mod single_column_component_impl_component_trait {
                                 event_consumed = true;
                                 send_signal!(
                                     global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
                                         AppSignal::SubPop(1),
                                     )
                                 );
@@ -137,7 +139,7 @@ mod single_column_component_impl_component_trait {
                                 event_consumed = true;
                                 send_signal!(
                                     global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
                                         AppSignal::AddPop(1),
                                     )
                                 );
@@ -146,7 +148,7 @@ mod single_column_component_impl_component_trait {
                                 event_consumed = true;
                                 send_signal!(
                                     global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
                                         AppSignal::SubPop(1),
                                     )
                                 );
@@ -188,7 +190,7 @@ mod single_column_component_impl_component_trait {
 
                 // Line 1.
                 {
-                    let line_1_us = UnicodeString::from(line_1);
+                    let line_1_us = line_1.unicode_string();
                     let line_1_us_trunc = line_1_us.truncate_to_fit_size(box_bounds_size);
                     render_ops! {
                       @add_to render_ops
@@ -205,14 +207,14 @@ mod single_column_component_impl_component_trait {
 
                 // Line 2.
                 {
-                    let line_2_us = UnicodeString::from(line_2);
+                    let line_2_us = line_2.unicode_string();
                     let line_2_us_trunc = line_2_us.truncate_to_fit_size(box_bounds_size);
                     render_ops! {
                       @add_to render_ops
                       =>
                         RenderOp::MoveCursorPositionRelTo(
                           box_origin_pos,
-                          content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row_count)
+                          content_cursor_pos.add_row_with_bounds(ch(1), box_bounds_size.row_count)
                         ),
                         RenderOp::ApplyColors(current_box.get_computed_style()),
                     };
@@ -221,7 +223,7 @@ mod single_column_component_impl_component_trait {
                         @render_styled_texts_into render_ops
                         =>
                         color_wheel.colorize_into_styled_texts(
-                            &UnicodeString::from(line_2_us_trunc),
+                            &line_2_us_trunc.unicode_string(),
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
                         )
@@ -236,7 +238,7 @@ mod single_column_component_impl_component_trait {
                   =>
                     RenderOp::MoveCursorPositionRelTo(
                       box_origin_pos,
-                      content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row_count)
+                      content_cursor_pos.add_row_with_bounds(ch(1), box_bounds_size.row_count)
                     ),
                     if has_focus.does_current_box_have_focus(current_box) {
                       RenderOp::PaintTextWithAttributes("👀".into(), None)
@@ -251,7 +253,6 @@ mod single_column_component_impl_component_trait {
                 pipeline.push(ZOrder::Normal, render_ops);
 
                 // Log pipeline.
-                // 00: [x] clean up log
                 call_if_true!(DEBUG_TUI_MOD, {
                     let message = format!(
                         "ColumnComponent::render {ch}",

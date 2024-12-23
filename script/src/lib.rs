@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+#![allow(clippy::literal_string_with_formatting_args)]
+
 // Attach sources.
 pub mod apt_install;
 pub mod command_runner;

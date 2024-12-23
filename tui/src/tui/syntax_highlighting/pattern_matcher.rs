@@ -54,7 +54,7 @@ impl<'a> PatternMatcherStateMachine<'a> {
 
         // Skip the first "N" characters (these are display cols, so use the unicode width).
         if let Some(scroll_offset_col_index) = self.maybe_scroll_offset_col_index {
-            if scroll_offset_col_index != ch!(0) {
+            if scroll_offset_col_index != ch(0) {
                 self.maybe_scroll_offset_col_index =
                     (scroll_offset_col_index - character_to_test_width).into();
                 return CharacterMatchResult::Skip;
@@ -141,11 +141,11 @@ mod tests {
             + UnicodeString::get_char_width('k')
             + UnicodeString::get_char_width('e')
             + UnicodeString::get_char_width('y');
-        assert_eq2!(scroll_offset_col_index, ch!(8));
+        assert_eq2!(scroll_offset_col_index, ch(8));
 
         let mut pattern_matcher = PatternMatcherStateMachine::new(
             my_pattern,
-            ch!(scroll_offset_col_index).into(),
+            ch(scroll_offset_col_index).into(),
         );
         let mut result = String::new();
 
@@ -192,7 +192,7 @@ mod tests {
         let my_pattern = "abcd";
 
         let mut pattern_matcher =
-            PatternMatcherStateMachine::new(my_pattern, ch!(4).into());
+            PatternMatcherStateMachine::new(my_pattern, Some(ch(4)));
 
         let mut result = String::new();
         let mut final_index = 0;

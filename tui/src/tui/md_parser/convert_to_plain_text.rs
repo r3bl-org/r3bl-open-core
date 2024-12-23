@@ -18,7 +18,7 @@
 //! This module is responsible for converting all the [MdLineFragment] into plain text
 //! w/out any formatting.
 
-use r3bl_core::PrettyPrintDebug;
+use r3bl_core::{PrettyPrintDebug, TinyVecBackingStore};
 
 use crate::{constants::{BACK_TICK,
                         CHECKED,
@@ -46,7 +46,7 @@ use crate::{constants::{BACK_TICK,
 
 impl PrettyPrintDebug for MdDocument<'_> {
     fn pretty_print_debug(&self) -> String {
-        let mut it = vec![];
+        let mut it = TinyVecBackingStore::new();
         for (index, block) in self.iter().enumerate() {
             it.push(format!("[{}]: {}", index, block.pretty_print_debug()));
         }

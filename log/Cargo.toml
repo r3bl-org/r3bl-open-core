@@ -49,6 +49,10 @@ crossterm = "0.28.1"
 # Allow const strings to be formatted with format!.
 const_format = "0.2.34"
 
+# For smallstr & smallvec.
+smallstr = { version = "0.3.0", features = ["serde", "std"] }
+smallvec = { version = "1.6.1", features = ["serde"] }
+
 [dev-dependencies]
 
 # for assert_eq! macro

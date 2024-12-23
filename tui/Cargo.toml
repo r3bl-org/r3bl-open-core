@@ -3,7 +3,7 @@ name = "r3bl_tui"
 version = "0.6.0"
 edition = "2021"
 resolver = "2"
-description = "TUI library to build modern apps inspired by Elm, with Flexbox, CSS, editor component, emoji support, and more"
+description = "TUI library to build modern apps inspired by React, Elm, with Flexbox, CSS, editor component, emoji support, and more"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["tui", "editor", "flexbox", "terminal", "emoji"]
 categories = ["command-line-interface", "command-line-utilities"]
@@ -82,6 +82,10 @@ pretty_assertions = "1.4.1"
 unicode-width = "0.2.0"
 unicode-segmentation = "1.12.0"
 const_format = "0.2.34"
+
+# For smallstr & smallvec.
+smallstr = { version = "0.3.0", features = ["serde", "std"] }
+smallvec = { version = "1.6.1", features = ["serde"] }
 
 [dev-dependencies]
 # - Async readline for running examples, with the source code checked out for

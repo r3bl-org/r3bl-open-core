@@ -41,14 +41,17 @@ use crossterm::style::Stylize;
 use custom_event_formatter_constants::*;
 use r3bl_ansi_color::{AnsiStyledText, Color, Style};
 use r3bl_core::{ColorWheel,
+                MicroVecBackingStore,
                 OrderedMap,
-                UnicodeString,
+                UnicodeStringExt,
                 ch,
                 get_terminal_width,
                 glyphs,
                 remove_escaped_quotes,
-                truncate_from_right};
+                truncate_from_right,
+                usize};
 use r3bl_macro::tui_style;
+use smallvec::smallvec;
 use textwrap::{Options, WordSeparator, wrap};
 use tracing::{Event,
               Subscriber,
@@ -62,7 +65,6 @@ pub struct CustomEventFormatter;
 pub mod custom_event_formatter_constants {
     use super::*;
 
-    // 01: [x] impl glyphs
     pub const FIRST_LINE_PREFIX: &str = formatcp!(
         "{sp}{ch}{sp}",
         sp = glyphs::SPACER_GLYPH,
@@ -119,10 +121,10 @@ where
     ) -> fmt::Result {
         // Get spacer.
         let spacer = r3bl_core::glyphs::SPACER_GLYPH;
-        let spacer_display_width = UnicodeString::from(spacer.to_string()).display_width;
+        let spacer_display_width = spacer.unicode_string().display_width;
 
         // Length accumulator (for line width calculations).
-        let mut line_width_used = ch!(0);
+        let mut line_width_used = ch(0);
 
         // Custom timestamp.
         let timestamp = Local::now();
@@ -131,7 +133,7 @@ where
             ts = timestamp.format("%I:%M%P"),
             sp = spacer
         );
-        line_width_used += UnicodeString::from(&timestamp_str).display_width;
+        line_width_used += timestamp_str.unicode_string().display_width;
         let timestamp_str_fmt = AnsiStyledText {
             text: &timestamp_str,
             style: &[
@@ -144,7 +146,7 @@ where
         // Custom span context.
         if let Some(scope) = ctx.lookup_current() {
             let scope_str = format!("[{}] ", scope.name());
-            line_width_used += UnicodeString::from(&scope_str).display_width;
+            line_width_used += scope_str.unicode_string().display_width;
             let scope_str_fmt = AnsiStyledText {
                 text: &scope_str,
                 style: &[
@@ -170,7 +172,7 @@ where
         //     callsite: Identifier(0x5a46fb928d40),
         //     kind: Kind(EVENT),
         // }
-        let mut style_acc: Vec<Style> = vec![];
+        let mut style_acc: MicroVecBackingStore<Style> = smallvec![];
         let level_str = match *event.metadata().level() {
             tracing::Level::ERROR => {
                 style_acc.push(Style::Foreground(ERROR_FG_COLOR));
@@ -199,7 +201,7 @@ where
             text: &level_str,
             style: &style_acc,
         };
-        let level_str_display_width = UnicodeString::from(&level_str).display_width;
+        let level_str_display_width = level_str.unicode_string().display_width;
         line_width_used += spacer_display_width;
         line_width_used += level_str_display_width;
         write!(writer, "{level_str_fmt}")?;
@@ -221,9 +223,9 @@ where
 
         // This is actually the terminal width of the process, not necessarily the
         // terminal width of the process that is viewing the log output.
-        let max_display_width = ch!(get_terminal_width());
+        let max_display_width = ch(get_terminal_width());
 
-        let text_wrap_options = Options::new(ch!(@to_usize max_display_width))
+        let text_wrap_options = Options::new(usize(max_display_width))
             .initial_indent(FIRST_LINE_PREFIX)
             .subsequent_indent(SUBSEQUENT_LINE_PREFIX)
             .word_separator(WordSeparator::UnicodeBreakProperties);
@@ -235,8 +237,7 @@ where
             let line_1_width = max_display_width - line_width_used;
             let line_1_text = format!(
                 "{spacer}{heading}",
-                heading =
-                    truncate_from_right(&heading, ch!(@to_usize line_1_width), false)
+                heading = truncate_from_right(&heading, usize(line_1_width), false)
             );
             let line_1_text_fmt = ColorWheel::lolcat_into_string(
                 &line_1_text,
@@ -264,8 +265,7 @@ where
         }
 
         // Write the terminating line separator.
-        let line_separator =
-            ENTRY_SEPARATOR_CHAR.repeat(ch!(@to_usize max_display_width));
+        let line_separator = ENTRY_SEPARATOR_CHAR.repeat(usize(max_display_width));
         let line_separator_fmt = line_separator.dark_green();
         writeln!(writer, "{line_separator_fmt}")
     }
@@ -307,7 +307,6 @@ impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         let field_name = field.name();
         let field_value = format!("{:?}", value);
-        // 01: [x] impl glyphs
         if field_name == "message" {
             self.inner.insert(field_value, "".to_string());
         } else {
@@ -328,7 +327,6 @@ mod tests_tracing_custom_event_formatter {
 
     use super::*;
 
-    // 01: [x] impl glyphs
     #[test]
     fn test_custom_formatter_with_special_message_field_handling() {
         let mock_stdout = StdoutMock::new();

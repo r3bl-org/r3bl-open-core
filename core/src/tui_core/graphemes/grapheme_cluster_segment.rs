@@ -18,41 +18,41 @@
 use serde::{Deserialize, Serialize};
 
 use super::UnicodeString;
-use crate::ChUnit;
+use crate::{ChUnit, usize};
 
 #[derive(
-    Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash, size_of::SizeOf,
+    Debug, Copy, Clone, PartialEq, Eq, Hash, size_of::SizeOf, Serialize, Deserialize,
 )]
+/// The actual grapheme cluster &[str]` is derived using `start_index`..`end_index` from
+/// the [UnicodeString::string]. Eg: "H", "📦", "🙏🏽".
 pub struct GraphemeClusterSegment {
-    /// The actual grapheme cluster `&str`. Eg: "H", "📦", "🙏🏽".
-    pub string: String,
-    /// The byte offset (in the original string) of the start of the `grapheme_cluster`.
-    pub byte_offset: usize,
-    /// Display width of the `string` via [`unicode_width::UnicodeWidthChar`].
+    // PERF: [x] perf (remove alloc)
+    /// The start index of the [UnicodeString::string]  that this grapheme cluster
+    /// represents.
+    pub start_index: ChUnit,
+    /// The end index of the [UnicodeString::string] that this grapheme cluster
+    /// represents.
+    pub end_index: ChUnit,
+    /// The byte offset (in the original string) of the start of the grapheme cluster.
+    pub byte_offset: ChUnit,
+    /// Display width of the [UnicodeString::string] via [`unicode_width::UnicodeWidthChar`].
     pub unicode_width: ChUnit,
-    /// The index of this entry in the `grapheme_cluster_segment_vec`.
-    pub logical_index: usize,
-    /// The number of bytes the `string` takes up in memory.
+    /// The index of this entry in the [UnicodeString::vec_segment].
+    pub logical_index: ChUnit,
+    /// The number of bytes the [UnicodeString::string] takes up in memory.
     pub byte_size: usize,
     /// Display col at which this grapheme cluster starts.
     pub display_col_offset: ChUnit,
 }
 
 impl GraphemeClusterSegment {
-    /// Convert [&str] to [GraphemeClusterSegment]. This is used to create a new [String] after the
-    /// [UnicodeString] is modified.
-    pub fn new(chunk: &str) -> GraphemeClusterSegment {
-        let my_string: String = chunk.to_string();
-        let unicode_string = UnicodeString::from(my_string);
-        let result = unicode_string.vec_segment.first().unwrap().clone();
-        result
+    pub fn get_str<'a>(&self, text: &'a str) -> &'a str {
+        &text[usize(self.start_index)..usize(self.end_index)]
     }
 }
 
-impl From<&str> for GraphemeClusterSegment {
-    fn from(s: &str) -> Self { GraphemeClusterSegment::new(s) }
-}
-
-impl From<String> for GraphemeClusterSegment {
-    fn from(s: String) -> Self { GraphemeClusterSegment::new(&s) }
+impl UnicodeString {
+    pub fn get_str(&self, seg: &GraphemeClusterSegment) -> &str {
+        seg.get_str(&self.string)
+    }
 }

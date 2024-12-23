@@ -25,7 +25,8 @@ pub fn render_tui_styled_texts_into(texts: &TuiStyledTexts, render_ops: &mut Ren
         let text = styled_text.get_text();
         render_ops.push(RenderOp::ApplyColors(Some(*style)));
         render_ops.push(RenderOp::PaintTextWithAttributes(
-            text.string.clone(),
+            // PERF: [ ] perf
+            text.string.to_string().into(),
             Some(*style),
         ));
         render_ops.push(RenderOp::ResetColor);
@@ -35,7 +36,6 @@ pub fn render_tui_styled_texts_into(texts: &TuiStyledTexts, render_ops: &mut Ren
 #[cfg(test)]
 mod tests {
     use r3bl_core::{assert_eq2,
-                    ch,
                     console_log,
                     throws,
                     throws_with_return,
@@ -43,6 +43,7 @@ mod tests {
                     tui_styled_texts,
                     tui_stylesheet,
                     CommonResult,
+                    MicroVecBackingStore,
                     RgbValue,
                     TuiColor,
                     TuiStylesheet};
@@ -64,7 +65,8 @@ mod tests {
             console_log!(pipeline);
             assert_eq2!(pipeline.len(), 1);
 
-            let set: &Vec<RenderOps> = pipeline.get(&ZOrder::Normal).unwrap();
+            let set: &MicroVecBackingStore<RenderOps> =
+                pipeline.get(&ZOrder::Normal).unwrap();
 
             // "Hello" and "World" together.
             assert_eq2!(set.len(), 1);

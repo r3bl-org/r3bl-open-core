@@ -15,11 +15,15 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::{global_color_support, ColorSupport};
+use r3bl_ansi_color::{ColorSupport, global_color_support};
 use serde::{Deserialize, Serialize};
 
 use super::{Lolcat, LolcatBuilder};
-use crate::{Ansi256GradientIndex, TuiColor};
+use crate::{Ansi256GradientIndex,
+            MicroVecBackingStore,
+            TinyStringBackingStore,
+            TinyVecBackingStore,
+            TuiColor};
 
 /// For RGB colors:
 /// 1. The stops are the colors that will be used to create the gradient.
@@ -29,9 +33,9 @@ use crate::{Ansi256GradientIndex, TuiColor};
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorWheelConfig {
     Rgb(
-        /* stops */ Vec<String>,
+        /* stops */ MicroVecBackingStore<TinyStringBackingStore>,
         /* speed */ ColorWheelSpeed,
-        /* steps */ usize,
+        /* steps */ u8,
     ),
     RgbRandom(/* speed */ ColorWheelSpeed),
     Ansi256(Ansi256GradientIndex, ColorWheelSpeed),
@@ -119,6 +123,7 @@ pub enum ColorWheelDirection {
     Reverse,
 }
 
+#[repr(u8)]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ColorWheelSpeed {
     Slow = 10,
@@ -126,9 +131,9 @@ pub enum ColorWheelSpeed {
     Fast = 2,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, size_of::SizeOf)]
 pub enum GradientKind {
-    ColorWheel(Vec<TuiColor>),
+    ColorWheel(TinyVecBackingStore<TuiColor>),
     Lolcat(Lolcat),
     NotCalculatedYet,
 }

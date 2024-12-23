@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{throws, CommonError, CommonResult};
+use r3bl_core::{throws, CommonError, CommonResult, MicroVecBackingStore};
 
 use crate::{FlexBox, FlexBoxId};
 
@@ -43,13 +43,13 @@ use crate::{FlexBox, FlexBoxId};
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct HasFocus {
     /// This `id` has keyboard focus. This is global.
-    id_vec: Vec<FlexBoxId>,
+    id_vec: MicroVecBackingStore<FlexBoxId>,
 }
 
 impl Default for HasFocus {
     fn default() -> Self {
         Self {
-            id_vec: Vec::with_capacity(2),
+            id_vec: MicroVecBackingStore::with_capacity(2),
         }
     }
 }

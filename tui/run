@@ -193,7 +193,9 @@ def release-examples [] {
 }
 
 def examples-with-flamegraph-profiling [] {
-    cargo flamegraph --example demo
+    sudo sysctl -w kernel.perf_event_paranoid=-1
+    CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --example demo
+    firefox-beta flamegraph.svg
 }
 
 def test [] {

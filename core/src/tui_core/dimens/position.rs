@@ -20,7 +20,7 @@ use std::{fmt::{self, Debug, Display},
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ch, ChUnit, Size};
+use crate::{ChUnit, Size, ch};
 
 /// Position is defined as: (col_index, row_index).
 ///
@@ -50,7 +50,7 @@ use crate::{ch, ChUnit, Size};
 /// pos.add_row(1);
 /// pos += position!(col_index: 1, row_index: 1);
 /// let max_size: Size = size!(col_count: 10, row_count: 10);
-/// pos.add_row_with_bounds(ch!(20), max_size.row_count);
+/// pos.add_row_with_bounds(ch(20), max_size.row_count);
 /// ```
 ///
 /// ```rust
@@ -87,7 +87,7 @@ impl Position {
 impl Position {
     /// Reset given `col` count to `0`.
     pub fn reset_col(&mut self) -> Self {
-        self.col_index = ch!(0);
+        self.col_index = ch(0);
         *self
     }
 
@@ -99,7 +99,7 @@ impl Position {
 
     /// Add given `col` count to `self`.
     pub fn add_col(&mut self, num_cols_to_add: usize) -> Self {
-        let value: ChUnit = ch!(num_cols_to_add);
+        let value: ChUnit = ch(num_cols_to_add);
         self.col_index += value;
         *self
     }
@@ -124,7 +124,7 @@ impl Position {
 
     /// Reset given `row` count to `0`.
     pub fn reset_row(&mut self) -> Self {
-        self.row_index = ch!(0);
+        self.row_index = ch(0);
         *self
     }
 
@@ -136,7 +136,7 @@ impl Position {
 
     /// Add given `row` count to `self`.
     pub fn add_row(&mut self, num_rows_to_add: usize) -> Self {
-        let value: ChUnit = ch!(num_rows_to_add);
+        let value: ChUnit = ch(num_rows_to_add);
         self.row_index += value;
         *self
     }
@@ -152,13 +152,13 @@ impl Position {
     }
 
     pub fn sub_row(&mut self, num_rows_to_sub: usize) -> Self {
-        let value: ChUnit = ch!(num_rows_to_sub);
+        let value: ChUnit = ch(num_rows_to_sub);
         self.row_index -= value;
         *self
     }
 
     pub fn sub_col(&mut self, num_cols_to_sub: usize) -> Self {
-        let value: ChUnit = ch!(num_cols_to_sub);
+        let value: ChUnit = ch(num_cols_to_sub);
         self.col_index -= value;
         *self
     }
@@ -209,8 +209,8 @@ pub mod position_math_ops {
         type Output = Position;
         fn mul(self, other: (u16, u16)) -> Self {
             Self {
-                col_index: self.col_index * ch!(other.0),
-                row_index: self.row_index * ch!(other.1),
+                col_index: self.col_index * ch(other.0),
+                row_index: self.row_index * ch(other.1),
             }
         }
     }

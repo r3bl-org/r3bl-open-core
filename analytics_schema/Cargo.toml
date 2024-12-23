@@ -2,7 +2,7 @@
 name = "r3bl_analytics_schema"
 description = "Support crate for r3bl-cmdr, r3bl-base."
 version = "0.0.2"
-edition = "2021"
+edition = "2024"
 repository = "https://github.com/r3bl-org/r3bl-open-core/tree/main/analytics_schema"
 documentation = "https://docs.rs/analytics_schema"
 homepage = "https://r3bl.com"
@@ -21,3 +21,7 @@ uuid = { version = "1.11.0", features = [
   "fast-rng",          # Use a faster (but still sufficiently random) RNG
   "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
 ] }
+
+# For smallstr & smallvec.
+smallstr = { version = "0.3.0", features = ["serde", "std"] }
+smallvec = { version = "1.6.1", features = ["serde"] }

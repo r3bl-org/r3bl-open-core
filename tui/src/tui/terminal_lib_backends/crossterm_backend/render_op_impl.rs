@@ -32,11 +32,13 @@ use crossterm::{self,
                            LeaveAlternateScreen}};
 use r3bl_core::{call_if_true,
                 LockedOutputDevice,
+                MicroVecBackingStore,
                 Position,
                 Size,
                 TuiColor,
                 TuiStyle,
-                UnicodeString};
+                UnicodeStringExt};
+use smallvec::smallvec;
 
 use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
             disable_raw_mode_now,
@@ -269,7 +271,7 @@ mod impl_self {
         }
 
         pub fn paint_text_with_attributes(
-            text_arg: &String,
+            text_arg: &str,
             maybe_style: &Option<TuiStyle>,
             window_size: Size,
             local_data: &mut RenderOpsLocalData,
@@ -346,8 +348,8 @@ mod perform_paint {
         pub window_size: Size,
     }
 
-    fn style_to_attribute(&style: &TuiStyle) -> Vec<Attribute> {
-        let mut it = vec![];
+    fn style_to_attribute(&style: &TuiStyle) -> MicroVecBackingStore<Attribute> {
+        let mut it = smallvec![];
         if style.bold {
             it.push(Attribute::Bold);
         }
@@ -417,7 +419,7 @@ mod perform_paint {
             ..
         } = paint_args;
 
-        let unicode_string: UnicodeString = text.as_ref().into();
+        let unicode_string = text.unicode_string();
         let mut cursor_position_copy = local_data.cursor_position;
 
         // Actually paint text.

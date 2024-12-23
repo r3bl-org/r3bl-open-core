@@ -22,6 +22,7 @@ use r3bl_core::{call_if_true,
                 position,
                 throws,
                 throws_with_return,
+                usize,
                 ANSIBasicColor,
                 ChUnit,
                 CommonResult,
@@ -241,7 +242,6 @@ impl EditorEngineApi {
 
         // BOOKM: Render using syntect first, then custom MD parser.
 
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
             let message = format!(
                 "EditorEngineApi -> render_content() {ch}",
@@ -292,7 +292,7 @@ impl EditorEngineApi {
 
             let scroll_offset = editor_buffer.get_scroll_offset();
 
-            if let Some(line) = lines.get(ch!(@to_usize *row_index)) {
+            if let Some(line) = lines.get(usize(row_index)) {
                 // Take the scroll_offset into account when "slicing" the selection.
                 let selection = match range_of_display_col_indices
                     .locate_scroll_offset_col(scroll_offset)
@@ -353,10 +353,8 @@ impl EditorEngineApi {
 
                 render_ops.push(RenderOp::ApplyColors(Some(get_selection_style())));
 
-                render_ops.push(RenderOp::PaintTextWithAttributes(
-                    selection.to_string(),
-                    None,
-                ));
+                render_ops
+                    .push(RenderOp::PaintTextWithAttributes(selection.into(), None));
 
                 render_ops.push(RenderOp::ResetColor);
             }
@@ -371,16 +369,15 @@ impl EditorEngineApi {
         } = render_args;
 
         if has_focus.does_id_have_focus(editor_engine.current_box.id) {
-            let str_at_caret: String = if let Some(UnicodeStringSegmentSliceResult {
-                unicode_string_seg: str_seg,
-                ..
-            }) =
-                EditorEngineInternalApi::string_at_caret(editor_buffer, editor_engine)
-            {
-                str_seg.string
-            } else {
-                DEFAULT_CURSOR_CHAR.into()
-            };
+            let str_at_caret =
+                if let Some(UnicodeStringSegmentSliceResult { string, .. }) =
+                    EditorEngineInternalApi::string_at_caret(editor_buffer, editor_engine)
+                {
+                    // PERF: [ ] perf
+                    string
+                } else {
+                    DEFAULT_CURSOR_CHAR.into()
+                };
 
             render_ops.push(RenderOp::MoveCursorPositionRelTo(
                 editor_engine.current_box.style_adjusted_origin_pos,
@@ -434,7 +431,7 @@ impl EditorEngineApi {
                 RenderOp::MoveCursorPositionRelTo(
                     editor_engine.current_box.style_adjusted_origin_pos,
                     content_cursor_pos.add_row_with_bounds(
-                        ch!(1),
+                        ch(1),
                         editor_engine.current_box.style_adjusted_bounds_size.row_count
                     )
                 ),
@@ -484,8 +481,8 @@ mod syn_hi_r3bl_path {
     }
 
     /// Path of syntax highlighting:
-    /// - Step 1: Iterate the `List<StyleUSSpanLine>` from: `ch!(@to_usize
-    ///           editor_buffer.get_scroll_offset().row_index)` to: `ch!(@to_usize
+    /// - Step 1: Iterate the `List<StyleUSSpanLine>` from: `ch(@to_usize
+    ///           editor_buffer.get_scroll_offset().row_index)` to: `ch(@to_usize
     ///           max_display_row_count)`
     /// - Step 2: For each, call `StyleUSSpanLine::clip()` which returns a `StyledTexts`
     /// - Step 3: Render the `StyledTexts` into `render_ops`
@@ -515,11 +512,11 @@ mod syn_hi_r3bl_path {
 
             for (row_index, line) in lines
                 .iter()
-                .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row_index))
+                .skip(usize(editor_buffer.get_scroll_offset().row_index))
                 .enumerate()
             {
                 // Clip the content to max rows.
-                if ch!(row_index) > max_display_row_count {
+                if ch(row_index) > max_display_row_count {
                     break;
                 }
 
@@ -545,7 +542,7 @@ mod syn_hi_r3bl_path {
     ) {
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
             editor_engine.current_box.style_adjusted_origin_pos,
-            position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
+            position! { col_index: 0 , row_index: usize(row_index) },
         ));
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
         let styled_texts: TuiStyledTexts =
@@ -570,11 +567,11 @@ mod syn_hi_syntect_path {
         for (row_index, line) in editor_buffer
             .get_lines()
             .iter()
-            .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row_index))
+            .skip(usize(editor_buffer.get_scroll_offset().row_index))
             .enumerate()
         {
             // Clip the content to max rows.
-            if ch!(row_index) > max_display_row_count {
+            if ch(row_index) > max_display_row_count {
                 break;
             }
 
@@ -599,7 +596,7 @@ mod syn_hi_syntect_path {
     ) {
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
             editor_engine.current_box.style_adjusted_origin_pos,
-            position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
+            position! { col_index: 0 , row_index: usize(row_index) },
         ));
 
         let it =
@@ -680,11 +677,11 @@ mod no_syn_hi_path {
         for (row_index, line) in editor_buffer
             .get_lines()
             .iter()
-            .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row_index))
+            .skip(usize(editor_buffer.get_scroll_offset().row_index))
             .enumerate()
         {
             // Clip the content to max rows.
-            if ch!(row_index) > max_display_row_count {
+            if ch(row_index) > max_display_row_count {
                 break;
             }
 
@@ -709,7 +706,7 @@ mod no_syn_hi_path {
     ) {
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
             editor_engine.current_box.style_adjusted_origin_pos,
-            position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
+            position! { col_index: 0 , row_index: usize(row_index) },
         ));
 
         no_syn_hi_path::render_line_no_syntax_highlight(
@@ -764,8 +761,8 @@ mod test_cache {
         let editor_buffer = &mut EditorBuffer::default();
         let editor_engine = &mut EditorEngine::default();
         let window_size = Size {
-            col_count: ch!(70),
-            row_count: ch!(15),
+            col_count: ch(70),
+            row_count: ch(15),
         };
         let has_focus = &mut HasFocus::default();
 
@@ -802,8 +799,8 @@ mod test_cache {
 
         // Change in window size should invalidate the cache and result in a cache miss.
         let window_size = Size {
-            col_count: ch!(50),
-            row_count: ch!(15),
+            col_count: ch(50),
+            row_count: ch(15),
         };
         cache::render_content(
             editor_buffer,
@@ -834,8 +831,8 @@ mod test_cache {
 
         // Change in scroll_offset should invalidate the cache and result in a cache miss.
         editor_buffer.editor_content.scroll_offset = ScrollOffset {
-            col_index: ch!(1),
-            row_index: ch!(1),
+            col_index: ch(1),
+            row_index: ch(1),
         };
         cache::render_content(
             editor_buffer,
@@ -847,7 +844,7 @@ mod test_cache {
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
         // Change in content should invalidate the cache and result in a cache miss.
-        editor_buffer.set_lines(vec!["r3bl".to_string()]);
+        editor_buffer.set_lines(&["r3bl"]);
         cache::render_content(
             editor_buffer,
             editor_engine,

@@ -71,7 +71,7 @@ pub fn lolcat_each_char_in_unicode_string(
 ///   .build();
 ///
 /// let content = "Hello, world!";
-/// let unicode_string = UnicodeString::from(content);
+/// let unicode_string = content.unicode_string();
 /// let lolcat_mut = &mut lolcat;
 /// let st = lolcat_mut.colorize_to_styled_texts(&unicode_string);
 ///

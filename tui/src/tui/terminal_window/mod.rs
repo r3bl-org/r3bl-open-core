@@ -24,7 +24,6 @@ pub mod main_event_loop;
 pub mod manage_focus;
 pub mod public_api;
 pub mod shared_global_data;
-pub mod static_global_data;
 pub mod type_aliases;
 
 // Re-export.
@@ -36,5 +35,4 @@ pub use main_event_loop::*;
 pub use manage_focus::*;
 pub use public_api::*;
 pub use shared_global_data::*;
-pub use static_global_data::*;
 pub use type_aliases::*;

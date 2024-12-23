@@ -120,3 +120,8 @@ pub mod analytics_data;
 
 // Re-export.
 pub use analytics_data::*;
+
+/// This is copied from `r3bl_core` crate's `common_type_aliases.rs` file.
+pub const DEFAULT_TINY_VEC_SIZE: usize = 16;
+/// This is copied from `r3bl_core` create's `common_type_aliases.rs` file.
+pub type TinyVecBackingStore<T> = smallvec::SmallVec<[T; DEFAULT_TINY_VEC_SIZE]>;

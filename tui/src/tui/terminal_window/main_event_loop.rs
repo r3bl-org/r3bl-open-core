@@ -24,7 +24,8 @@ use r3bl_core::{call_if_true,
                 ok,
                 output_device_as_mut,
                 position,
-                throws,
+                telemetry::{telemetry_default_constants, Telemetry},
+                telemetry_record,
                 Ansi256GradientIndex,
                 ColorWheel,
                 ColorWheelConfig,
@@ -35,16 +36,17 @@ use r3bl_core::{call_if_true,
                 LockedOutputDevice,
                 OutputDevice,
                 Size,
+                TelemetryAtomHint,
                 TextColorizationPolicy,
                 TooSmallToDisplayResult,
-                UnicodeString};
+                UnicodeStringExt};
 use r3bl_macro::tui_style;
 use size_of::SizeOf as _;
+use smallvec::smallvec;
 use tokio::sync::mpsc;
 
 use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation};
 use crate::{render_pipeline,
-            telemetry_global_static,
             ComponentRegistryMap,
             Flush as _,
             FlushKind,
@@ -58,13 +60,18 @@ use crate::{render_pipeline,
             RenderPipeline,
             TerminalWindowMainThreadSignal,
             ZOrder,
-            DEBUG_TUI_MOD};
+            DEBUG_TUI_MOD,
+            DISPLAY_LOG_TELEMETRY};
 
 pub const CHANNEL_WIDTH: usize = 1_000;
 
+/// Don't record response times that are smaller than this amount. This removes a lot of
+/// noise from the telemetry data.
+pub const FILTER_LOWEST_RESPONSE_TIME_MIN_MICROS: i64 = 100;
+
 pub async fn main_event_loop_impl<S, AS>(
     mut app: BoxedSafeApp<S, AS>,
-    exit_keys: Vec<InputEvent>,
+    exit_keys: &[InputEvent],
     state: S,
     initial_size: Size,
     mut input_device: InputDevice,
@@ -78,9 +85,6 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
-    // Set the session start time.
-    telemetry_global_static::set_start_session_time();
-
     // mpsc channel to send signals from the app to the main event loop (eg: for exit,
     // re-render, apply action, etc).
     let (main_thread_channel_sender, mut main_thread_channel_receiver) =
@@ -93,11 +97,11 @@ where
         initial_size,
         output_device.clone(),
     )?;
-    let global_data_ref = &mut global_data;
+    let global_data_mut_ref = &mut global_data;
 
     // Start raw mode.
     RawMode::start(
-        global_data_ref.window_size,
+        global_data_mut_ref.window_size,
         output_device_as_mut!(output_device),
         output_device.is_mock,
     );
@@ -111,70 +115,83 @@ where
     let component_registry_map = &mut ComponentRegistryMap::default();
     let has_focus = &mut HasFocus::default();
 
-    // Init the app, and perform first render.
-    app.app_init(component_registry_map, has_focus);
-    AppManager::render_app(
-        app,
-        global_data_ref,
-        component_registry_map,
-        has_focus,
-        output_device_as_mut!(output_device),
-        output_device.is_mock,
-    )?;
+    // Init telemetry recording explicitly (without using the simple constructor).
+    let mut telemetry_alt: Telemetry<{ telemetry_default_constants::RING_BUFFER_SIZE }> =
+        Telemetry::new((
+            telemetry_default_constants::RATE_LIMIT_TIME_THRESHOLD,
+            telemetry_default_constants::FILTER_MIN_RESPONSE_TIME,
+        ));
 
-    call_if_true!(DEBUG_TUI_MOD, {
-        // 00: [x] clean up log message
+    // Init the app, and perform first render.
+    telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Render, {
+        app.app_init(component_registry_map, has_focus);
+        AppManager::render_app(
+            app,
+            global_data_mut_ref,
+            component_registry_map,
+            has_focus,
+            output_device_as_mut!(output_device),
+            output_device.is_mock,
+        )?;
+    });
+
+    call_if_true!(DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD, {
         let message = format!(
-            "main_event_loop -> Startup complete {ch}",
-            ch = glyphs::HELLO_GLYPH
+            "main_event_loop {sp} Startup complete {ch}",
+            sp = glyphs::RIGHT_ARROW_GLYPH,
+            ch = glyphs::CELEBRATE_GLYPH
         );
         // % is Display, ? is Debug.
         tracing::info!(
             message = message,
-            global_data_ref=?global_data_ref
+            global_data_mut_ref=?global_data_mut_ref
         );
     });
 
     // Main event loop.
     loop {
         tokio::select! {
-            // Handle signals on the channel.
             // This branch is cancel safe since recv is cancel safe.
+            // Handle signals on the channel.
             maybe_signal = main_thread_channel_receiver.recv() => {
                 if let Some(ref signal) = maybe_signal {
                     match signal {
                         TerminalWindowMainThreadSignal::Exit => {
                             // 🐒 Actually exit the main loop!
                             RawMode::end(
-                                global_data_ref.window_size,
+                                global_data_mut_ref.window_size,
                                 output_device_as_mut!(output_device),
                                 output_device.is_mock,
                             );
                             break;
                         },
                         TerminalWindowMainThreadSignal::Render(_) => {
-                            AppManager::render_app(
-                                app,
-                                global_data_ref,
-                                component_registry_map,
-                                has_focus,
-                                output_device_as_mut!(output_device),
-                                output_device.is_mock,
-                            )?;
+                            telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Render, {
+                                AppManager::render_app(
+                                    app,
+                                    global_data_mut_ref,
+                                    component_registry_map,
+                                    has_focus,
+                                    output_device_as_mut!(output_device),
+                                    output_device.is_mock,
+                                )?;
+                            });
                         },
-                        TerminalWindowMainThreadSignal::ApplyAction(action) => {
-                            let result = app.app_handle_signal(action, global_data_ref, component_registry_map, has_focus);
-                            handle_result_generated_by_app_after_handling_action_or_input_event(
-                                result,
-                                None,
-                                &exit_keys,
-                                app,
-                                global_data_ref,
-                                component_registry_map,
-                                has_focus,
-                                output_device_as_mut!(output_device),
-                                output_device.is_mock,
-                            );
+                        TerminalWindowMainThreadSignal::ApplyAppSignal(action) => {
+                            telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Signal, {
+                                let result = app.app_handle_signal(action, global_data_mut_ref, component_registry_map, has_focus);
+                                handle_result_generated_by_app_after_handling_action_or_input_event(
+                                    result,
+                                    None,
+                                    exit_keys,
+                                    app,
+                                    global_data_mut_ref,
+                                    component_registry_map,
+                                    has_focus,
+                                    output_device_as_mut!(output_device),
+                                    output_device.is_mock,
+                                );
+                            });
                         },
                     }
                 }
@@ -188,13 +205,11 @@ where
             //   pinned_input_stream isn't used and the state isn't modified.
             maybe_input_event = input_device.next_input_event() => {
                 if let Some(input_event) = maybe_input_event {
-                    telemetry_global_static::set_span_measure_start_ts();
-
-                    call_if_true!(DEBUG_TUI_MOD, {
+                    call_if_true!(DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD, {
                         if let InputEvent::Keyboard(_)= input_event {
-                            // 00: [x] clean up log message
                             let message = format!(
-                                "main_event_loop -> Tick {ch}",
+                                "main_event_loop {sp} Tick {ch}",
+                                sp = glyphs::RIGHT_ARROW_GLYPH,
                                 ch = glyphs::CLOCK_TICK_GLYPH
                             );
                             // % is Display, ? is Debug.
@@ -205,53 +220,96 @@ where
                         }
                     });
 
-                    handle_resize_if_applicable(input_event,
-                        global_data_ref, app,
-                        component_registry_map,
-                        has_focus,
-                        output_device_as_mut!(output_device),
-                        output_device.is_mock,
-                    );
-
-                    actually_process_input_event(
-                        global_data_ref,
-                        app,
-                        input_event,
-                        &exit_keys,
-                        component_registry_map,
-                        has_focus,
-                        output_device_as_mut!(output_device),
-                        output_device.is_mock,
-                    );
+                    if let InputEvent::Resize(new_size) = input_event {
+                        telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Resize, {
+                            handle_resize(
+                                new_size,
+                                global_data_mut_ref, app,
+                                component_registry_map,
+                                has_focus,
+                                output_device_as_mut!(output_device),
+                                output_device.is_mock,
+                            );
+                        });
+                    } else {
+                        telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Input, {
+                            actually_process_input_event(
+                                global_data_mut_ref,
+                                app,
+                                input_event,
+                                exit_keys,
+                                component_registry_map,
+                                has_focus,
+                                output_device_as_mut!(output_device),
+                                output_device.is_mock,
+                            );
+                        });
+                    }
                 } else {
-                    // There are no events in the stream, so exit. This happens in test
                     // environments with InputDevice::new_mock_with_delay() or
+                    // There are no events in the stream, so exit. This happens in test
                     // InputDevice::new_mock().
                     break;
                 }
             }
         }
-    } // End loop.
 
-    // Set the session end time.
-    telemetry_global_static::set_end_session_time();
+        // Output telemetry report to log.
+        call_if_true!(DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD, {
+            {
+                let state = &global_data_mut_ref.state;
+                let message =
+                    format!("AppManager::render_app() ok {ch}", ch = glyphs::PAINT_GLYPH);
+                // % is Display, ? is Debug.
+                tracing::info!(
+                    message = message,
+                    window_size = ?global_data_mut_ref.window_size,
+                    state = ?state,
+                    report = %telemetry_alt.report()?,
+                );
 
-    call_if_true!(DEBUG_TUI_MOD, {
-        // 00: [x] clean up log message
-        let message = format!("main_event_loop -> Shutdown {ch}", ch = glyphs::BYE_GLYPH);
+                if let Some(ref offscreen_buffer) =
+                    global_data_mut_ref.maybe_saved_offscreen_buffer
+                {
+                    let message = format!(
+                        "AppManager::render_app() offscreen_buffer stats {ch}",
+                        ch = glyphs::SCREEN_BUFFER_GLYPH
+                    );
+                    // % is Display, ? is Debug.
+                    tracing::info!(
+                        message = message,
+                        offscreen_buffer.size = format!(
+                            "Memory used: {size}",
+                            size = format_as_kilobytes_with_commas(
+                                offscreen_buffer.size_of().total_bytes()
+                            )
+                        )
+                    );
+                }
+            }
+        });
+    } // End main event loop.
+
+    call_if_true!(DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD, {
+        let message = format!(
+            "main_event_loop {sp} Shutdown {ch}",
+            ch = glyphs::BYE_GLYPH,
+            sp = glyphs::RIGHT_ARROW_GLYPH,
+        );
         // % is Display, ? is Debug.
         tracing::info!(
             message = message,
-            telemetry_global_static = ?telemetry_global_static::get_session_duration_sec()
+            session_duration = %telemetry_alt.session_duration()
         );
     });
 
     ok!((global_data, input_device, output_device))
 }
 
+/// **Telemetry**: This function is not recorded in telemetry but its caller is.
 #[allow(clippy::too_many_arguments)]
 fn actually_process_input_event<S, AS>(
-    global_data: &mut GlobalData<S, AS>,
+    global_data_mut_ref: &mut GlobalData<S, AS>,
     app: &mut BoxedSafeApp<S, AS>,
     input_event: InputEvent,
     exit_keys: &[InputEvent],
@@ -265,7 +323,7 @@ fn actually_process_input_event<S, AS>(
 {
     let result = app.app_handle_input_event(
         input_event,
-        global_data,
+        global_data_mut_ref,
         component_registry_map,
         has_focus,
     );
@@ -275,7 +333,7 @@ fn actually_process_input_event<S, AS>(
         Some(input_event),
         exit_keys,
         app,
-        global_data,
+        global_data_mut_ref,
         component_registry_map,
         has_focus,
         locked_output_device,
@@ -283,11 +341,13 @@ fn actually_process_input_event<S, AS>(
     );
 }
 
-/// Before any app gets to process the `input_event`, perform special handling in case
-/// it is a resize event.
-pub fn handle_resize_if_applicable<S, AS>(
-    input_event: InputEvent,
-    global_data: &mut GlobalData<S, AS>,
+/// **Telemetry**: This function is not recorded in telemetry but its caller is.
+///
+/// This function gets called as a result of:
+/// 1. Terminal resize event.
+pub fn handle_resize<S, AS>(
+    new_size: Size,
+    global_data_mut_ref: &mut GlobalData<S, AS>,
     app: &mut BoxedSafeApp<S, AS>,
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
@@ -297,27 +357,30 @@ pub fn handle_resize_if_applicable<S, AS>(
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
-    if let InputEvent::Resize(new_size) = input_event {
-        global_data.set_size(new_size);
-        global_data.maybe_saved_offscreen_buffer = None;
-        let _ = AppManager::render_app(
-            app,
-            global_data,
-            component_registry_map,
-            has_focus,
-            locked_output_device,
-            is_mock,
-        );
-    }
+    global_data_mut_ref.set_size(new_size);
+    global_data_mut_ref.maybe_saved_offscreen_buffer = None;
+    let _ = AppManager::render_app(
+        app,
+        global_data_mut_ref,
+        component_registry_map,
+        has_focus,
+        locked_output_device,
+        is_mock,
+    );
 }
 
+/// **Telemetry**: This function is not recorded in telemetry but its caller is.
+///
+/// This function gets called as a result of:
+/// 1. Input event from the user.
+/// 2. Signal from the app.
 #[allow(clippy::too_many_arguments)]
 fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     result: CommonResult<EventPropagation>,
     maybe_input_event: Option<InputEvent>,
     exit_keys: &[InputEvent],
     app: &mut BoxedSafeApp<S, AS>,
-    global_data: &mut GlobalData<S, AS>,
+    global_data_mut_ref: &mut GlobalData<S, AS>,
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
     locked_output_device: LockedOutputDevice<'_>,
@@ -326,7 +389,8 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
-    let main_thread_channel_sender = global_data.main_thread_channel_sender.clone();
+    let main_thread_channel_sender =
+        global_data_mut_ref.main_thread_channel_sender.clone();
 
     match result {
         Ok(event_propagation) => match event_propagation {
@@ -343,7 +407,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
             EventPropagation::ConsumedRender => {
                 let _ = AppManager::render_app(
                     app,
-                    global_data,
+                    global_data_mut_ref,
                     component_registry_map,
                     has_focus,
                     locked_output_device,
@@ -358,9 +422,15 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
             }
         },
         Err(error) => {
+            let message = format!(
+                "main_event_loop {sp} handle_result_generated_by_app_after_handling_action {ch}",
+                ch = glyphs::SUSPICIOUS_GLYPH,
+                sp = glyphs::RIGHT_ARROW_GLYPH,
+            );
             // % is Display, ? is Debug.
             tracing::error!(
-                "main_event_loop -> handle_result_generated_by_app_after_handling_action ✕"=?error
+                message = message,
+                error =? error
             );
         }
     }
@@ -394,112 +464,73 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
+    /// **Telemetry**: This function is not recorded in telemetry but its caller(s) are.
     pub fn render_app(
         app: &mut BoxedSafeApp<S, AS>,
-        global_data: &mut GlobalData<S, AS>,
+        global_data_mut_ref: &mut GlobalData<S, AS>,
         component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) -> CommonResult<()> {
-        throws!({
-            let window_size = global_data.window_size;
+        let window_size = global_data_mut_ref.window_size;
 
-            // Check to see if the window_size is large enough to render.
-            let render_result =
-                match window_size.fits_min_size(MinSize::Col as u8, MinSize::Row as u8) {
-                    TooSmallToDisplayResult::IsLargeEnough => {
-                        app.app_render(global_data, component_registry_map, has_focus)
-                    }
-                    TooSmallToDisplayResult::IsTooSmall => {
-                        global_data.maybe_saved_offscreen_buffer = None;
-                        Ok(render_window_too_small_error(window_size))
-                    }
-                };
-
-            match render_result {
-                Err(error) => {
-                    RenderOp::default().flush(locked_output_device);
-
-                    telemetry_global_static::set_span_measure_end_ts();
-
-                    call_if_true!(DEBUG_TUI_MOD, {
-                        // 00: [x] clean up log message
-                        let message = format!(
-                            "AppManager::render_app() error {ch}",
-                            ch = glyphs::ERROR_GLYPH
-                        );
-                        // % is Display, ? is Debug.
-                        tracing::error!(
-                            message = message,
-                            details = ?error
-                        );
-                    });
+        // Check to see if the window_size is large enough to render.
+        let render_result =
+            match window_size.fits_min_size(MinSize::Col as u8, MinSize::Row as u8) {
+                TooSmallToDisplayResult::IsLargeEnough => {
+                    app.app_render(global_data_mut_ref, component_registry_map, has_focus)
                 }
-                Ok(render_pipeline) => {
-                    render_pipeline.paint(
-                        FlushKind::ClearBeforeFlush,
-                        global_data,
-                        locked_output_device,
-                        is_mock,
+                TooSmallToDisplayResult::IsTooSmall => {
+                    global_data_mut_ref.maybe_saved_offscreen_buffer = None;
+                    Ok(render_window_too_small_error(window_size))
+                }
+            };
+
+        match render_result {
+            Err(error) => {
+                RenderOp::default().flush(locked_output_device);
+
+                // Print debug message w/ error.
+                call_if_true!(DEBUG_TUI_MOD, {
+                    let message = format!(
+                        "AppManager::render_app() error {ch}",
+                        ch = glyphs::SUSPICIOUS_GLYPH
                     );
-
-                    telemetry_global_static::set_span_measure_end_ts();
-
-                    // Print debug message w/ memory utilization, etc.
-                    call_if_true!(DEBUG_TUI_MOD, {
-                        {
-                            let state = &global_data.state;
-                            // 00: [x] clean up log message
-                            let message = format!(
-                                "AppManager::render_app() ok {ch}",
-                                ch = glyphs::PAINT_GLYPH
-                            );
-                            // % is Display, ? is Debug.
-                            tracing::info!(
-                                message = message,
-                                window_size = ?window_size,
-                                state = ?state,
-                                speed = ?telemetry_global_static::get_avg_response_time_micros()
-                            );
-
-                            if let Some(ref offscreen_buffer) =
-                                global_data.maybe_saved_offscreen_buffer
-                            {
-                                // 00: [x] clean up log message
-                                let message = format!(
-                                    "AppManager::render_app() offscreen_buffer stats {ch}",
-                                    ch = glyphs::STATS_GLYPH
-                                );
-                                // % is Display, ? is Debug.
-                                tracing::info!(
-                                    message = message,
-                                    offscreen_buffer.size = format!(
-                                        "Memory used: {size}",
-                                        size = format_as_kilobytes_with_commas(
-                                            offscreen_buffer.size_of().total_bytes()
-                                        )
-                                    )
-                                );
-                            }
-                        }
-                    });
-                }
+                    // % is Display, ? is Debug.
+                    tracing::error!(
+                        message = message,
+                        details = ?error
+                    );
+                });
             }
-        });
+
+            Ok(render_pipeline) => {
+                render_pipeline.paint(
+                    FlushKind::ClearBeforeFlush,
+                    global_data_mut_ref,
+                    locked_output_device,
+                    is_mock,
+                );
+            }
+        }
+
+        ok!()
     }
 }
 
 fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
     // Show warning message that window_size is too small.
-    let display_msg = UnicodeString::from(format!(
+    let display_msg = format!(
         "Window size is too small. Minimum size is {} cols x {} rows",
         MinSize::Col as u8,
         MinSize::Row as u8
-    ));
-    let trunc_display_msg =
-        UnicodeString::from(display_msg.truncate_to_fit_size(window_size));
-    let trunc_display_msg_len = ch!(trunc_display_msg.len());
+    )
+    .unicode_string();
+    let trunc_display_msg = display_msg
+        .truncate_to_fit_size(window_size)
+        .unicode_string();
+    let trunc_display_msg_len = ch(trunc_display_msg.len());
 
     let row_pos = window_size.row_count / 2;
     let col_pos = (window_size.col_count - trunc_display_msg_len) / 2;
@@ -520,7 +551,7 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
         @push_styled_texts_into pipeline
         at ZOrder::Normal
         =>
-            ColorWheel::new(vec![
+            ColorWheel::new(smallvec![
                 ColorWheelConfig::RgbRandom(ColorWheelSpeed::Fast),
                 ColorWheelConfig::Ansi256(Ansi256GradientIndex::DarkRedToDarkMagenta, ColorWheelSpeed::Medium),
             ])
@@ -559,16 +590,15 @@ mod tests {
                     CrosstermEventResult,
                     GradientGenerationPolicy,
                     GradientLengthKind,
-                    GraphemeClusterSegment,
                     InputDevice,
+                    MicroVecBackingStore,
                     OutputDevice,
                     TextColorizationPolicy,
-                    TuiStyle,
-                    UnicodeString,
-                    DEFAULT_GRADIENT_STOPS};
+                    TuiStyle};
     use r3bl_macro::tui_style;
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, InputDeviceExt};
     use size::Size;
+    use smallvec::smallvec;
     use state::{AppSignal, State};
 
     use crate::{keypress,
@@ -607,11 +637,11 @@ mod tests {
         let app = Box::<AppMain>::default();
 
         // Exit if these keys are pressed.
-        let exit_keys: Vec<InputEvent> =
-            vec![InputEvent::Keyboard(keypress! { @char 'x' })];
+        let exit_keys: MicroVecBackingStore<InputEvent> =
+            smallvec![InputEvent::Keyboard(keypress! { @char 'x' })];
 
         // Simulated key inputs.
-        let generator_vec: Vec<CrosstermEventResult> = vec![
+        let generator_vec: MicroVecBackingStore<CrosstermEventResult> = smallvec![
             Ok(crossterm::event::Event::Key(
                 crossterm::event::KeyEvent::new(
                     crossterm::event::KeyCode::Up,
@@ -641,7 +671,7 @@ mod tests {
 
         let (global_data, _, _) = main_event_loop_impl(
             app,
-            exit_keys,
+            &exit_keys,
             state,
             initial_size,
             input_device,
@@ -668,7 +698,7 @@ mod tests {
             // Check pixel char at 4 x 7.
             {
                 let PixelChar::PlainText {
-                    content,
+                    text,
                     maybe_style: _,
                 } = my_offscreen_buffer.buffer[4][7].clone()
                 else {
@@ -677,13 +707,13 @@ mod tests {
                         my_offscreen_buffer.buffer[4][7]
                     );
                 };
-                assert_eq2!(content, GraphemeClusterSegment::from("S"));
+                assert_eq2!(text, "S");
             }
 
             // Check pixel char at 10 x 7.
             {
                 let PixelChar::PlainText {
-                    content,
+                    text,
                     maybe_style: _,
                 } = my_offscreen_buffer.buffer[10][7].clone()
                 else {
@@ -692,7 +722,7 @@ mod tests {
                         my_offscreen_buffer.buffer[10][7]
                     );
                 };
-                assert_eq2!(content, GraphemeClusterSegment::from("H"));
+                assert_eq2!(text, "H");
             }
         }
         // This is for local development environment. It supports truecolor.
@@ -701,7 +731,7 @@ mod tests {
             {
                 assert_eq2!(
                     PixelChar::PlainText {
-                        content: GraphemeClusterSegment::from("S"),
+                        text: "S".into(),
                         maybe_style: Some(TuiStyle {
                             color_fg: Some(color!(102, 0, 255)),
                             ..Default::default()
@@ -715,7 +745,7 @@ mod tests {
             {
                 assert_eq2!(
                     PixelChar::PlainText {
-                        content: GraphemeClusterSegment::from("H"),
+                        text: "H".into(),
                         maybe_style: Some(TuiStyle {
                             id: u8::MAX,
                             dim: true,
@@ -775,6 +805,9 @@ mod tests {
     }
 
     mod app_main_impl_trait_app {
+        use r3bl_core::{get_default_gradient_stops, UnicodeStringExt};
+        use smallvec::smallvec;
+
         use super::*;
 
         impl App for AppMain {
@@ -783,21 +816,21 @@ mod tests {
 
             fn app_render(
                 &mut self,
-                global_data: &mut GlobalData<State, AppSignal>,
+                global_data_mut_ref: &mut GlobalData<State, AppSignal>,
                 _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
                 _has_focus: &mut HasFocus,
             ) -> CommonResult<RenderPipeline> {
                 throws_with_return!({
-                    let state_str = format!("{}", global_data.state);
+                    let state_str = format!("{}", global_data_mut_ref.state);
                     let data = &mut self.data;
 
                     let sample_line_of_text =
                         format!("{state_str}, gradient: [index: X, len: Y]");
-                    let content_size_col = ChUnit::from(sample_line_of_text.len());
-                    let window_size = global_data.window_size;
+                    let content_size_col = ch(sample_line_of_text.len());
+                    let window_size = global_data_mut_ref.window_size;
 
                     let col = (window_size.col_count - content_size_col) / 2;
-                    let mut row = (window_size.row_count - ch!(2)) / 2;
+                    let mut row = (window_size.row_count - ch(2)) / 2;
 
                     let mut pipeline = render_pipeline!();
 
@@ -819,9 +852,8 @@ mod tests {
                                 GradientLengthKind::ColorWheel(len) => len,
                                 _ => 0,
                             };
-                            UnicodeString::from(format!(
-                                "{state_str}, gradient: [index: {index}, len: {len}]"
-                            ))
+                            format!("{state_str}, gradient: [index: {index}, len: {len}]")
+                                .unicode_string()
                         };
 
                         render_ops!(
@@ -848,7 +880,7 @@ mod tests {
             fn app_handle_input_event(
                 &mut self,
                 input_event: InputEvent,
-                global_data: &mut GlobalData<State, AppSignal>,
+                global_data_mut_ref: &mut GlobalData<State, AppSignal>,
                 _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
                 _has_focus: &mut HasFocus,
             ) -> CommonResult<EventPropagation> {
@@ -862,8 +894,8 @@ mod tests {
                                 '+' => {
                                     event_consumed = true;
                                     send_signal!(
-                                        global_data.main_thread_channel_sender,
-                                        TerminalWindowMainThreadSignal::ApplyAction(
+                                        global_data_mut_ref.main_thread_channel_sender,
+                                        TerminalWindowMainThreadSignal::ApplyAppSignal(
                                             AppSignal::Add,
                                         )
                                     );
@@ -871,8 +903,8 @@ mod tests {
                                 '-' => {
                                     event_consumed = true;
                                     send_signal!(
-                                        global_data.main_thread_channel_sender,
-                                        TerminalWindowMainThreadSignal::ApplyAction(
+                                        global_data_mut_ref.main_thread_channel_sender,
+                                        TerminalWindowMainThreadSignal::ApplyAppSignal(
                                             AppSignal::Sub,
                                         )
                                     );
@@ -887,8 +919,8 @@ mod tests {
                                 SpecialKey::Up => {
                                     event_consumed = true;
                                     send_signal!(
-                                        global_data.main_thread_channel_sender,
-                                        TerminalWindowMainThreadSignal::ApplyAction(
+                                        global_data_mut_ref.main_thread_channel_sender,
+                                        TerminalWindowMainThreadSignal::ApplyAppSignal(
                                             AppSignal::Add,
                                         )
                                     );
@@ -896,8 +928,8 @@ mod tests {
                                 SpecialKey::Down => {
                                     event_consumed = true;
                                     send_signal!(
-                                        global_data.main_thread_channel_sender,
-                                        TerminalWindowMainThreadSignal::ApplyAction(
+                                        global_data_mut_ref.main_thread_channel_sender,
+                                        TerminalWindowMainThreadSignal::ApplyAppSignal(
                                             AppSignal::Sub,
                                         )
                                     );
@@ -918,12 +950,12 @@ mod tests {
             fn app_handle_signal(
                 &mut self,
                 action: &AppSignal,
-                global_data: &mut GlobalData<State, AppSignal>,
+                global_data_mut_ref: &mut GlobalData<State, AppSignal>,
                 _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
                 _has_focus: &mut HasFocus,
             ) -> CommonResult<EventPropagation> {
                 throws_with_return!({
-                    let GlobalData { state, .. } = global_data;
+                    let GlobalData { state, .. } = global_data_mut_ref;
 
                     match action {
                         AppSignal::Add => {
@@ -952,8 +984,8 @@ mod tests {
             ) {
                 let data = &mut self.data;
 
-                data.color_wheel_rgb = ColorWheel::new(vec![ColorWheelConfig::Rgb(
-                    Vec::from(DEFAULT_GRADIENT_STOPS.map(String::from)),
+                data.color_wheel_rgb = ColorWheel::new(smallvec![ColorWheelConfig::Rgb(
+                    get_default_gradient_stops(),
                     ColorWheelSpeed::Fast,
                     25,
                 )]);
