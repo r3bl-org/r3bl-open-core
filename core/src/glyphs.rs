@@ -20,38 +20,47 @@
 //! - [Box drawing characters](https://symbl.cc/en/unicode/blocks/box-drawing/)
 //! - [Block element characters](https://symbl.cc/en/unicode/blocks/block-elements/)
 //! - [Geometric shape characters](https://symbl.cc/en/unicode/blocks/geometric-shapes/)
-//! - [Arrow characters](https://symbl.cc/en/unicode/blocks/arrows/)
+//! - [Arrow](https://symbl.cc/en/unicode/blocks/arrows/)
+//! - [Arrow symbols](https://symbl.cc/en/collections/arrow-symbols/)
+//! - [Brackets](https://symbl.cc/en/collections/brackets/)
 //! - [Supplemental arrow characters-A](https://symbl.cc/en/unicode/blocks/supplemental-arrows-a/)
 //! - [Supplemental arrow characters-B](https://symbl.cc/en/unicode/blocks/supplemental-arrows-b/)
 //! - [Dingbat characters](https://symbl.cc/en/unicode/blocks/dingbats/)
 //! - [Braille pattern characters](https://symbl.cc/en/unicode/blocks/braille-patterns/)
+//! - [Geometric shapes](https://symbl.cc/en/unicode/blocks/geometric-shapes/)
 //! - [Miscellaneous symbol and arrow characters](https://symbl.cc/en/unicode/blocks/miscellaneous-symbols-and-arrows/)
 //! - [Tifinagh characters](https://symbl.cc/en/unicode/blocks/tifinagh/)
 //! - [Ideographic characters](https://symbl.cc/en/unicode/blocks/ideographic-description-characters/)
 //! - [Emotions kaomoji](https://symbl.cc/en/kaomoji/)
-//! - [Art](https://symbl.cc/en/text-art/)
-
-// 01: [x] impl glyphs
+//! - [ASCII Art](https://symbl.cc/en/text-art/)
 
 pub const HELLO_GLYPH: &str = "ヾ(◕‿◕)ノ";
 pub const HUG_GLYPH: &str = "⊂(◕‿◕)つ";
 pub const BYE_GLYPH: &str = "٩(◕‿◕｡)۶";
-pub const CELEBRATE_GLYPH: &str = "▓▒░(°◡°)░▒▓";
+pub const CELEBRATE_GLYPH: &str = "▓▒░(◕‿◕)░▒▓"; // "▓▒░(°◡°)░▒▓";
 pub const WOW_GLYPH: &str = "ヽ(°〇°)ﾉ";
 pub const SHRUG_GLYPH: &str = "┐(シ)┌";
 pub const ERROR_GLYPH: &str = "(｡•́︿•̀｡)"; //'❌';
 pub const SUSPICIOUS_GLYPH: &str = "(↼_↼)";
 pub const SMILING_GLYPH: &str = "(◕‿◕)";
 
+pub const SCREEN_BUFFER_GLYPH: &str = "▦";
+pub const RIGHT_ARROW_GLYPH: &str = "→";
+pub const RIGHT_ARROW_DASHED_GLYPH: &str = "⇢";
 pub const CONSTRUCT_GLYPH: &str = "⣮";
-pub const STATS_GLYPH: &str = "◕";
-pub const CLOCK_TICK_GLYPH: &str = "✹"; //'❀'; //'✲';
+pub const STATS_25P_GLYPH: &str = "◔";
+pub const STATS_50P_GLYPH: &str = "◑";
+pub const STATS_75P_GLYPH: &str = "◕";
+pub const STATS_100P_GLYPH: &str = "●";
+pub const CLOCK_TICK_GLYPH: &str = "↻"; // "↺"; //"✹"; //'❀'; //'✲';
 pub const STOP_GLYPH: &str = "∎";
 pub const TOP_UNDERLINE_GLYPH: &str = "‾";
 pub const SPACER_GLYPH: &str = " ";
 pub const ELLIPSIS_GLYPH: &str = "…";
 pub const RENDER_GLYPH: &str = "◧";
 pub const PAINT_GLYPH: &str = "■";
+pub const BOX_FILL_GLYPH: &str = "▣";
+pub const BOX_EMPTY_GLYPH: &str = "□";
 pub const LIGHT_CHECK_MARK_GLYPH: &str = "🗸";
 pub const HEAVY_CHECK_MARK_GLYPH: &str = "✓";
 pub const PAREN_LEFT_GLYPH: &str = "❬";
@@ -65,6 +74,7 @@ pub const GAME_CHAR_GLYPH: &str = "𜱐";
 pub const TIRE_MARKS_GLYPH: &str = "␩";
 pub const VERT_LINE_DASHED_GLYPH: &str = "┆";
 pub const DIRECTION_GLYPH: &str = "➤";
+pub const USER_INPUT_GLYPH: &str = "↹"; //"⿻";
 
 pub const LOADING_GLYPH: &str = "░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█

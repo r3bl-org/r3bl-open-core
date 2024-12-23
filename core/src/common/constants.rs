@@ -15,6 +15,23 @@
  *   limitations under the License.
  */
 
-// Constants.
-// 00: [x] use this everywhere a vec is created (editor buffer, unicode string, etc)
-pub const DEFAULT_VEC_CAPACITY: usize = 1024;
+/// This is the default capacity for a new vector.
+pub const DEFAULT_VEC_CAPACITY: usize = 32;
+
+pub const DEFAULT_NORMAL_STRING_SIZE: usize = 96;
+
+pub const DEFAULT_LARGE_STRING_SIZE: usize = 128;
+
+pub const DEFAULT_SMALL_STRING_SIZE: usize = 32;
+
+pub const DEFAULT_TINY_STRING_SIZE: usize = 8;
+
+pub const DEFAULT_MICRO_STRING_SIZE: usize = 4;
+
+/// This is similar to [DEFAULT_VEC_CAPACITY], but for pre-allocated vectors on the stack.
+pub const DEFAULT_SMALL_VEC_SIZE: usize = 32;
+
+/// This is copied in other crates: `r3bl_analytics_schema`, `r3bl_ansi_color`.
+pub const DEFAULT_TINY_VEC_SIZE: usize = 16;
+
+pub const DEFAULT_MICRO_VEC_SIZE: usize = 8;

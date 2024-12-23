@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{TuiStyle, UnicodeString};
+use crate::{TuiStyle, UnicodeString, UnicodeStringExt};
 
 /// Macro to make building [TuiStyledText] easy.
 ///
@@ -38,17 +38,26 @@ macro_rules! tui_styled_text {
 }
 
 /// Use [tui_styled_text!] macro for easier construction.
-#[derive(Debug, Clone, Default, size_of::SizeOf)]
+#[derive(Debug, Clone, size_of::SizeOf)]
 pub struct TuiStyledText {
     pub style: TuiStyle,
     pub text: UnicodeString,
+}
+
+impl Default for TuiStyledText {
+    fn default() -> Self {
+        TuiStyledText {
+            style: TuiStyle::default(),
+            text: UnicodeString::new(""),
+        }
+    }
 }
 
 impl TuiStyledText {
     pub fn new(style: TuiStyle, text: String) -> Self {
         TuiStyledText {
             style,
-            text: UnicodeString::from(text),
+            text: text.unicode_string(),
         }
     }
 

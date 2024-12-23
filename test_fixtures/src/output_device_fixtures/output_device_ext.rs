@@ -38,7 +38,7 @@ impl OutputDeviceExt for OutputDevice {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{output_device_as_mut, LockedOutputDevice, OutputDevice};
+    use r3bl_core::{LockedOutputDevice, OutputDevice, output_device_as_mut};
 
     use super::OutputDeviceExt;
 

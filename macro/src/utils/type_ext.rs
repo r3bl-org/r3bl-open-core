@@ -131,7 +131,7 @@ impl TypeExtHasGenericArgs for syn::Type {
     fn get_angle_bracketed_generic_args_idents_result(&self) -> Result<Vec<Ident>, ()> {
         match self.get_angle_bracketed_generic_args_result() {
             Ok(generic_args) => {
-                let mut idents = Vec::new();
+                let mut idents = vec![];
                 for generic_arg in generic_args {
                     if let GenericArgument::Type(Type::Path(ref type_path)) = generic_arg
                     {

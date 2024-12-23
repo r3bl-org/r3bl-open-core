@@ -334,68 +334,47 @@ mod tests {
 
     #[test]
     fn convert_ansi265_into_rgb() {
-        assert_eq!(
-            Ansi256Color { index: 0 }.as_rgb(),
-            RgbColor {
-                red: 0,
-                green: 0,
-                blue: 0,
-            }
-        );
+        assert_eq!(Ansi256Color { index: 0 }.as_rgb(), RgbColor {
+            red: 0,
+            green: 0,
+            blue: 0,
+        });
 
-        assert_eq!(
-            Ansi256Color { index: 25 }.as_rgb(),
-            RgbColor {
-                red: 0,
-                green: 95,
-                blue: 175,
-            }
-        );
+        assert_eq!(Ansi256Color { index: 25 }.as_rgb(), RgbColor {
+            red: 0,
+            green: 95,
+            blue: 175,
+        });
 
-        assert_eq!(
-            Ansi256Color { index: 50 }.as_rgb(),
-            RgbColor {
-                red: 0,
-                green: 255,
-                blue: 215,
-            }
-        );
+        assert_eq!(Ansi256Color { index: 50 }.as_rgb(), RgbColor {
+            red: 0,
+            green: 255,
+            blue: 215,
+        });
 
-        assert_eq!(
-            Ansi256Color { index: 100 }.as_rgb(),
-            RgbColor {
-                red: 135,
-                green: 135,
-                blue: 0
-            }
-        );
+        assert_eq!(Ansi256Color { index: 100 }.as_rgb(), RgbColor {
+            red: 135,
+            green: 135,
+            blue: 0
+        });
 
-        assert_eq!(
-            Ansi256Color { index: 200 }.as_rgb(),
-            RgbColor {
-                red: 255,
-                green: 0,
-                blue: 215,
-            }
-        );
+        assert_eq!(Ansi256Color { index: 200 }.as_rgb(), RgbColor {
+            red: 255,
+            green: 0,
+            blue: 215,
+        });
 
-        assert_eq!(
-            Ansi256Color { index: 225 }.as_rgb(),
-            RgbColor {
-                red: 255,
-                green: 215,
-                blue: 255,
-            }
-        );
+        assert_eq!(Ansi256Color { index: 225 }.as_rgb(), RgbColor {
+            red: 255,
+            green: 215,
+            blue: 255,
+        });
 
-        assert_eq!(
-            Ansi256Color { index: 255 }.as_rgb(),
-            RgbColor {
-                red: 238,
-                green: 238,
-                blue: 238,
-            }
-        );
+        assert_eq!(Ansi256Color { index: 255 }.as_rgb(), RgbColor {
+            red: 238,
+            green: 238,
+            blue: 238,
+        });
     }
 
     #[test]

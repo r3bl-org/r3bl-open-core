@@ -31,7 +31,12 @@ pub type ChUnitPrimitiveType = u16;
 ///   character in a monospace font.
 /// - The terminal displaying the Rust binary build using the tui library will ultimately
 ///   determine the actual width and height of a character.
-/// - In order to create amounts of ch units, use the [crate::ch!] macro.
+/// - In order to create amounts of ch units, use [ch].
+/// - The underlying primitive type for [ChUnit] is [ChUnitPrimitiveType]. The use of the
+///   type alias allows for this to be changed in the future if needed.
+/// - This unit is unsigned and supports basic arithmetic operations, with arguments that
+///   have negative values.
+/// - It has extensive support for conversion to and from other types.
 #[derive(
     Copy,
     Clone,
@@ -53,87 +58,54 @@ impl ChUnit {
     pub fn new(value: ChUnitPrimitiveType) -> Self { Self { value } }
 }
 
-/// Creates a new [ChUnit] amount.
-///
 /// ```rust
 /// use r3bl_core::{ch, ChUnit};
-/// let width_col = ch!(10);
-/// let height_row = ch!(5, @inc);
-/// let height_row = ch!(5, @inc);
+///
+/// let it_usize: usize = 12;
+/// let it_ch: ChUnit = ch(it_usize);
 /// ```
-///
-/// You can also convert a [ChUnit] amount into a [usize] primitive.
-///
+pub fn ch(value: impl Into<ChUnit>) -> ChUnit { value.into() }
+
 /// ```rust
-/// use r3bl_core::{ch, ChUnit};
-/// let width_col = ch!(10);
-/// let width_col_usize: usize = ch!(@to_usize width_col);
-/// let width_col_usize: usize = ch!(@to_usize width_col, @inc);
-/// let width_col_usize: usize = ch!(@to_usize width_col, @dec);
+/// use r3bl_core::{ch, ChUnit, usize};
+///
+/// let it_ch: ChUnit = ch(12);
+/// let it_usize: usize = usize(it_ch);
 /// ```
-#[macro_export]
-macro_rules! ch {
-    // Returns ChUnit.
-    ($arg: expr) => {{
-        let ch_value: $crate::ChUnit = $arg.into();
-        ch_value
-    }};
-    // Returns ChUnit +=1.
-    ($arg: expr, @inc) => {{
-        let mut ch_value: $crate::ChUnit = $arg.into();
-        ch_value += 1;
-        ch_value
-    }};
-    // Returns ChUnit -=1.
-    ($arg: expr, @dec) => {{
-        let mut ch_value: $crate::ChUnit = $arg.into();
-        ch_value -= 1;
-        ch_value
-    }};
-    // Returns isize.
-    (@to_isize $arg: expr) => {{
-        let isize_value: isize = $arg.into();
-        isize_value
-    }};
-    // Returns usize.
-    (@to_usize $arg: expr) => {{
-        let usize_value: usize = $arg.into();
-        usize_value
-    }};
-    // Returns usize +=1.
-    (@to_usize $arg: expr, @inc) => {{
-        let mut ch_value_copy = $arg.clone();
-        ch_value_copy += 1;
-        let usize_value: usize = ch_value_copy.into();
-        usize_value
-    }};
-    // Returns usize -=1.
-    (@to_usize $arg: expr, @dec) => {{
-        let mut ch_value_copy = $arg.clone();
-        ch_value_copy -= 1;
-        let usize_value: usize = ch_value_copy.into();
-        usize_value
-    }};
-    // Returns u16.
-    (@to_u16 $arg: expr) => {{
-        let u16_value: u16 = *$arg;
-        u16_value
-    }};
-    // Returns u16 +=1.
-    (@to_u16 $arg: expr, @inc) => {{
-        let mut ch_value_copy = $arg.clone();
-        ch_value_copy += 1;
-        let u16_value: u16 = *ch_value_copy;
-        u16_value
-    }};
-    // Returns u16 -=1.
-    (@to_u16 $arg: expr, @dec) => {{
-        let mut ch_value_copy = $arg.clone();
-        ch_value_copy -= 1;
-        let u16_value: u16 = *ch_value_copy;
-        u16_value
-    }};
-}
+pub fn usize(value: impl Into<usize>) -> usize { value.into() }
+
+/// ```rust
+/// use r3bl_core::{ch, ChUnit, isize};
+///
+/// let it_ch: ChUnit = ch(12);
+/// let it_isize: isize = isize(it_ch);
+/// ```
+pub fn isize(value: impl Into<isize>) -> isize { value.into() }
+
+/// ```rust
+/// use r3bl_core::{ch, ChUnit, f64};
+///
+/// let it_ch: ChUnit = ch(12);
+/// let it_f64: f64 = f64(it_ch);
+/// ```
+pub fn f64(value: impl Into<f64>) -> f64 { value.into() }
+
+/// ```rust
+/// use r3bl_core::{ch, ChUnit, u8};
+///
+/// let it_usize: usize = 12;
+/// let it_ch: ChUnit = ch(it_usize);
+/// let it_u8: u8 = u8(it_ch);
+/// ```
+pub fn u8(value: impl Into<u8>) -> u8 { value.into() }
+
+/// ```rust
+/// use r3bl_core::{ch, ChUnit, u16};
+///
+/// let it_ch: ChUnit = ch(12);
+/// let it_u16: u16 = u16(it_ch);
+/// ```
+pub fn u16(value: impl Into<u16>) -> u16 { value.into() }
 
 impl Debug for ChUnit {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -160,14 +132,14 @@ pub mod ch_unit_math_ops {
         type Output = Self;
 
         fn add(self, rhs: Self) -> Self::Output {
-            ch!(add_unsigned!(self.value, rhs.value))
+            ch(add_unsigned!(self.value, rhs.value))
         }
     }
 
     impl std::ops::Add<u16> for ChUnit {
         type Output = Self;
 
-        fn add(self, rhs: u16) -> Self::Output { ch!(add_unsigned!(self.value, rhs)) }
+        fn add(self, rhs: u16) -> Self::Output { ch(add_unsigned!(self.value, rhs)) }
     }
 
     impl std::ops::AddAssign for ChUnit {
@@ -186,14 +158,14 @@ pub mod ch_unit_math_ops {
         type Output = Self;
 
         fn sub(self, rhs: Self) -> Self::Output {
-            ch!(sub_unsigned!(self.value, rhs.value))
+            ch(sub_unsigned!(self.value, rhs.value))
         }
     }
 
     impl std::ops::Sub<u16> for ChUnit {
         type Output = Self;
 
-        fn sub(self, rhs: u16) -> Self::Output { ch!(sub_unsigned!(self.value, rhs)) }
+        fn sub(self, rhs: u16) -> Self::Output { ch(sub_unsigned!(self.value, rhs)) }
     }
 
     impl std::ops::SubAssign for ChUnit {
@@ -212,25 +184,34 @@ pub mod ch_unit_math_ops {
         type Output = Self;
 
         fn mul(self, rhs: Self) -> Self::Output {
-            ch!(mul_unsigned!(self.value, rhs.value))
+            ch(mul_unsigned!(self.value, rhs.value))
         }
     }
 
     impl std::ops::Mul<u16> for ChUnit {
         type Output = Self;
 
-        fn mul(self, rhs: u16) -> Self::Output { ch!(mul_unsigned!(self.value, rhs)) }
+        fn mul(self, rhs: u16) -> Self::Output { ch(mul_unsigned!(self.value, rhs)) }
     }
 
     impl std::ops::Div<u16> for ChUnit {
         type Output = Self;
 
-        fn div(self, rhs: u16) -> Self::Output { ch!(self.value / rhs) }
+        fn div(self, rhs: u16) -> Self::Output { ch(self.value / rhs) }
     }
 }
 
-pub mod convert_to_number {
+/// Convert to other types [prim@f64], [prim@isize], [prim@usize], etc. from [ChUnit].
+pub mod convert_to_other_types_from_ch {
     use super::*;
+
+    impl From<ChUnit> for u8 {
+        fn from(arg: ChUnit) -> Self { arg.value as u8 }
+    }
+
+    impl From<ChUnit> for f64 {
+        fn from(arg: ChUnit) -> Self { arg.value as f64 }
+    }
 
     impl From<ChUnit> for isize {
         fn from(arg: ChUnit) -> Self { arg.value as isize }
@@ -245,8 +226,55 @@ pub mod convert_to_number {
     }
 }
 
-pub mod convert_from_number {
+/// Convert from other types [prim@f64], [prim@isize], [prim@usize], etc. to [ChUnit].
+pub mod convert_from_other_types_to_ch {
     use super::*;
+
+    /// Safely convert the f64 to u16 by rounding it. The conversion can fail if the value
+    /// is out of range of u16 (negative number or greater than max u16 capacity).
+    ///
+    /// This is what happens if an error occurs:
+    /// - Generate a tracing error if the conversion fails.
+    /// - Even if it fails, return `0` and consume the error.
+    fn f64_to_u16(value: f64) -> Result<u16, String> {
+        let value = value.round(); // Remove the fractional part by rounding up or down.
+        if value < 0.0 || value > u16::MAX as f64 {
+            return Err(format!("Failed to convert {} to u16: out of range", value));
+        }
+        Ok(value as u16)
+    }
+
+    impl From<f64> for ChUnit {
+        fn from(value: f64) -> Self {
+            let int_value: u16 = match f64_to_u16(value) {
+                Ok(it) => it,
+                Err(err) => {
+                    tracing::error!(message = "Problem converting f64 to u16", err = err);
+                    0
+                }
+            };
+
+            Self {
+                value: int_value as ChUnitPrimitiveType,
+            }
+        }
+    }
+
+    impl From<f32> for ChUnit {
+        fn from(value: f32) -> Self {
+            let int_value: u16 = match f64_to_u16(f64::from(value)) {
+                Ok(it) => it,
+                Err(err) => {
+                    tracing::error!(message = "Problem converting f32 to u16", err = err);
+                    0
+                }
+            };
+
+            Self {
+                value: int_value as ChUnitPrimitiveType,
+            }
+        }
+    }
 
     impl From<isize> for ChUnit {
         fn from(value: isize) -> Self {
@@ -257,7 +285,10 @@ pub mod convert_from_number {
     }
 
     impl From<u8> for ChUnit {
-        fn from(it: u8) -> Self { Self { value: it.into() } }
+        fn from(it: u8) -> Self {
+            let value = it as ChUnitPrimitiveType;
+            Self { value }
+        }
     }
 
     impl From<ChUnitPrimitiveType> for ChUnit {

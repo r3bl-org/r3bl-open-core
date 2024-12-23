@@ -33,8 +33,8 @@ where
     Exit,
     /// Render the app.
     Render(Option<FlexBoxId>),
-    /// Apply an action to the app.
-    ApplyAction(AS),
+    /// Apply an app signal to the app.
+    ApplyAppSignal(AS),
 }
 
 impl TerminalWindow {
@@ -42,10 +42,10 @@ impl TerminalWindow {
     /// handling all input events, and dispatching them to the [crate::App] for
     /// processing. It is also responsible for rendering the [crate::App] after each input
     /// event. It is also responsible for handling all signals sent from the [crate::App]
-    /// to the main event loop (eg: exit, re-render, apply action, etc).
+    /// to the main event loop (eg: exit, re-render, apply app signal, etc).
     pub async fn main_event_loop<S, AS>(
         app: BoxedSafeApp<S, AS>,
-        exit_keys: Vec<InputEvent>,
+        exit_keys: &[InputEvent],
         state: S,
     ) -> CommonResult<(
         /* global_data */ GlobalData<S, AS>,

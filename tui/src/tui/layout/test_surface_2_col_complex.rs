@@ -116,7 +116,7 @@ mod tests {
                 assert!(layout_item.get_computed_style().is_some());
                 assert_eq2!(
                     layout_item.get_computed_style().unwrap().padding,
-                    Some(ch!(1))
+                    Some(ch(1))
                 );
             });
         }
@@ -165,9 +165,7 @@ mod tests {
 
                 assert_ne!(
                     layout_item.get_computed_style(),
-                    TuiStylesheet::compute(
-                        &surface.stylesheet.find_styles_by_ids(vec![1])
-                    )
+                    TuiStylesheet::compute(&surface.stylesheet.find_styles_by_ids(&[1]))
                 );
             });
         }
@@ -216,9 +214,7 @@ mod tests {
 
                 assert_ne!(
                     current_box.get_computed_style(),
-                    TuiStylesheet::compute(
-                        &surface.stylesheet.find_styles_by_ids(vec![2])
-                    )
+                    TuiStylesheet::compute(&surface.stylesheet.find_styles_by_ids(&[2]))
                 );
             });
         }

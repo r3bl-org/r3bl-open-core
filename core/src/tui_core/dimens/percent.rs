@@ -20,12 +20,67 @@ use std::{fmt::{self, Debug},
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ch, ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType};
+use crate::{ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType, ch, glyphs};
 
-/// Represents an integer value between 0 and 100 (inclusive).
+/// Represents an integer value between 0 and 100 (inclusive). You can't directly create
+/// it, since it has to validate that the value is between 0 and 100. You can create it
+/// one of two ways (depending on how you want to handle out of range errors):
+///
+/// 1. Using the [crate::percent!] macro (which returns a [Result] type, so that you can
+///    handle the any conversion out of range errors.
+/// 2. Using the [Percent::try_and_convert] method, which returns an [Option] type, so
+///    that you can handle the any conversion out of range errors.
+///
+/// # Fields
+/// - `value`: The percentage value as an unsigned 8-bit integer.
+///
+/// # Traits Implementations
+///
+/// - [Deref]: Dereferences to [u8].
+/// - [fmt::Display]: Formats the percentage value followed by a `%` sign.
+/// - [fmt::Debug]: Formats the percentage value with a debug string.
+/// - [TryFrom]: Attempts to convert a [ChUnitPrimitiveType] to a `Percent`.
+/// - [TryFrom]: Attempts to convert an [i32] to a `Percent`.
+///
+/// # How to use it
+///
+/// - [crate::percent!]: A macro that attempts to convert a given expression to `Percent`.
+///   Returns [Err] if the value not between 0 and 100.
+/// - [Percent::try_and_convert]: Attempts to convert a given [ChUnit] value to `Percent`.
+///   Returns [None] if the value is not between 0 and 100.
+/// - [Percent::apply_to]: Returns the calculated percentage of the given value.
+///
+/// # Example
+///
+/// ```rust
+/// use r3bl_core::{Percent, percent};
+///
+/// // Get as result.
+/// let percent = percent!(50);
+/// assert_eq!(percent.is_ok(), true);
+/// assert_eq!(*percent.unwrap(), 50);
+///
+/// // Get as option.
+/// let percent = Percent::try_and_convert(50);
+/// assert_eq!(percent.is_some(), true);
+/// assert_eq!(*percent.unwrap(), 50);
+///
+/// // It implements Display.
+/// assert_eq!(percent.unwrap().to_string(), "50%");
+/// ```
 #[derive(Copy, Clone, PartialEq, Eq, Default, Serialize, Deserialize, Hash)]
 pub struct Percent {
-    pub value: u8,
+    value: u8,
+}
+
+/// Create a [crate::Percent] instance from the given value. It returns a `Result` type,
+#[macro_export]
+macro_rules! percent {
+    (
+        $arg_val: expr
+    ) => {
+        $crate::Percent::try_from($arg_val)
+    };
 }
 
 impl Deref for Percent {
@@ -77,59 +132,40 @@ impl TryFrom<i32> for Percent {
 /// Try and convert given `ChUnit` value to `Percent`. Return `None` if given value is not
 /// between 0 and 100.
 impl Percent {
-    fn try_and_convert(item: ChUnitPrimitiveType) -> Option<Percent> {
+    pub fn try_and_convert(item: impl Into<ChUnit>) -> Option<Percent> {
+        let item = *item.into();
         if !(0..=100).contains(&item) {
             return None;
         }
         Percent { value: item as u8 }.into()
     }
 
-    /// Return the calculated percentage of the given value.
-    pub fn calc_percentage(&self, value: ChUnit) -> ChUnit {
+    /// Given the value, calculate the result of the percentage.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use r3bl_core::{Percent, ChUnit, ch, percent};
+    ///
+    /// let percent = percent!(50).unwrap();
+    /// let value = ch(5000);
+    /// let result = percent.apply_to(value);
+    /// assert_eq!(result, ch(2500));
+    /// ```
+    pub fn apply_to(&self, value: ChUnit) -> ChUnit {
         let percentage_int = self.value;
         let percentage_f32 = f32::from(percentage_int) / 100.0;
         let result_f32 = percentage_f32 * f32::from(*value);
-        unsafe {
-            let converted_value: ChUnitPrimitiveType =
-                result_f32.to_int_unchecked::<ChUnitPrimitiveType>();
-            ch!(converted_value)
+        let converted_value = result_f32.trunc() as ChUnitPrimitiveType;
+        ch(converted_value)
+    }
+
+    pub fn as_glyph(&self) -> &'static str {
+        match self.value {
+            0..=25 => glyphs::STATS_25P_GLYPH,
+            26..=50 => glyphs::STATS_50P_GLYPH,
+            51..=75 => glyphs::STATS_75P_GLYPH,
+            _ => glyphs::STATS_100P_GLYPH,
         }
     }
-}
-
-/// Size, defined as [height, width].
-#[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
-pub struct RequestedSizePercent {
-    pub width_pc: Percent,
-    pub height_pc: Percent,
-}
-
-impl Debug for RequestedSizePercent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[width:{}, height:{}]", self.width_pc, self.height_pc)
-    }
-}
-
-#[macro_export]
-macro_rules! percent {
-    (
-        $arg_val: expr
-    ) => {
-        $crate::Percent::try_from($arg_val)
-    };
-}
-
-/// This must be called from a block that returns a `Result` type. Since the `?` operator
-/// is used here.
-#[macro_export]
-macro_rules! requested_size_percent {
-    (
-        width:  $arg_width: expr,
-        height: $arg_height: expr
-    ) => {
-        $crate::RequestedSizePercent {
-            width_pc: $crate::percent!($arg_width)?,
-            height_pc: $crate::percent!($arg_height)?,
-        }
-    };
 }

@@ -20,23 +20,23 @@
 
 use clap::Parser;
 use r3bl_ansi_color::{AnsiStyledText, Style};
-use r3bl_cmdr::{color_constants::DefaultColors::{FrozenBlue, GuardsRed, MoonlightBlue},
-                giti::{get_giti_command_subcommand_names,
+use r3bl_cmdr::{AnalyticsAction,
+                color_constants::DefaultColors::{FrozenBlue, GuardsRed, MoonlightBlue},
+                giti::{BranchSubcommand,
+                       CLIArg,
+                       CLICommand,
+                       CommandSuccessfulResponse,
+                       get_giti_command_subcommand_names,
                        giti_ui_templates,
                        single_select_instruction_header,
                        try_checkout_branch,
                        try_delete_branch,
-                       try_make_new_branch,
-                       BranchSubcommand,
-                       CLIArg,
-                       CLICommand,
-                       CommandSuccessfulResponse},
+                       try_make_new_branch},
                 report_analytics,
-                upgrade_check,
-                AnalyticsAction};
-use r3bl_core::{call_if_true, throws, CommonResult};
+                upgrade_check};
+use r3bl_core::{CommonResult, call_if_true, throws};
 use r3bl_log::try_initialize_logging_global;
-use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
+use r3bl_tuify::{SelectionMode, StyleSheet, select_from_list_with_multi_line_header};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]

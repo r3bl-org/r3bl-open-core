@@ -19,16 +19,15 @@ use std::env::var;
 
 use clap::Parser;
 use r3bl_ansi_color::{AnsiStyledText, Style};
-use r3bl_cmdr::{edi::launcher, report_analytics, upgrade_check, AnalyticsAction};
-use r3bl_core::{call_if_true,
-                throws,
-                ColorWheel,
+use r3bl_cmdr::{AnalyticsAction, edi::launcher, report_analytics, upgrade_check};
+use r3bl_core::{ColorWheel,
                 CommonResult,
                 GradientGenerationPolicy,
                 TextColorizationPolicy,
-                UnicodeString};
+                call_if_true,
+                throws};
 use r3bl_log::try_initialize_logging_global;
-use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, LIZARD_GREEN, SLATE_GRAY};
+use r3bl_tuify::{LIZARD_GREEN, SLATE_GRAY, SelectionMode, StyleSheet, select_from_list};
 
 use crate::clap_config::CLIArg;
 
@@ -97,6 +96,8 @@ async fn main() -> CommonResult<()> {
 }
 
 pub mod edi_ui_templates {
+    use r3bl_core::UnicodeStringExt;
+
     use super::*;
 
     pub fn handle_multiple_files_not_supported_yet(cli_arg: CLIArg) -> Option<String> {
@@ -127,7 +128,7 @@ pub mod edi_ui_templates {
             println!("{}", {
                 let msg_line_1 = {
                     ColorWheel::default().colorize_into_string(
-                        &UnicodeString::from("New version of edi is available 📦."),
+                        &"New version of edi is available 📦.".unicode_string(),
                         GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
                         TextColorizationPolicy::ColorEachCharacter(None),
                         None,

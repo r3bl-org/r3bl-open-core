@@ -18,19 +18,7 @@
 use std::fmt::{Display, Formatter, Result};
 
 use crossterm::style::Stylize;
-use r3bl_core::{call_if_true,
-                ch,
-                get_tui_style,
-                get_tui_styles,
-                position,
-                requested_size_percent,
-                send_signal,
-                size,
-                throws,
-                throws_with_return,
-                tui_styled_text,
-                tui_stylesheet,
-                ANSIBasicColor,
+use r3bl_core::{ANSIBasicColor,
                 Ansi256GradientIndex,
                 ChUnit,
                 ColorWheel,
@@ -45,20 +33,24 @@ use r3bl_core::{call_if_true,
                 TuiColor,
                 TuiStyledTexts,
                 TuiStylesheet,
-                UnicodeString};
+                UnicodeStringExt,
+                call_if_true,
+                get_tui_style,
+                get_tui_styles,
+                position,
+                requested_size_percent,
+                send_signal,
+                size,
+                throws,
+                throws_with_return,
+                tui_styled_text,
+                tui_stylesheet};
 use r3bl_macro::tui_style;
-use r3bl_tui::{box_end,
-               box_props,
-               box_start,
-               render_component_in_current_box,
-               render_component_in_given_box,
-               render_ops,
-               render_tui_styled_texts_into,
-               surface,
-               App,
+use r3bl_tui::{App,
                BoxedSafeApp,
                ComponentRegistry,
                ComponentRegistryMap,
+               DEBUG_TUI_MOD,
                DialogBuffer,
                DialogChoice,
                DialogComponent,
@@ -89,10 +81,18 @@ use r3bl_tui::{box_end,
                SyntaxHighlightMode,
                TerminalWindowMainThreadSignal,
                ZOrder,
-               DEBUG_TUI_MOD};
+               box_end,
+               box_props,
+               box_start,
+               render_component_in_current_box,
+               render_component_in_given_box,
+               render_ops,
+               render_tui_styled_texts_into,
+               surface};
+use smallvec::smallvec;
 use tokio::sync::mpsc::Sender;
 
-use crate::edi::{file_utils, State};
+use crate::edi::{State, file_utils};
 
 /// Signals that can be sent to the app.
 #[derive(Default, Clone, Debug)]
@@ -136,7 +136,7 @@ mod id_impl {
     }
 
     impl From<Id> for FlexBoxId {
-        fn from(id: Id) -> FlexBoxId { FlexBoxId(id as u8) }
+        fn from(id: Id) -> FlexBoxId { FlexBoxId::new(id) }
     }
 }
 
@@ -196,7 +196,7 @@ mod app_main_impl_app_trait {
             }) {
                 send_signal!(
                     global_data.main_thread_channel_sender,
-                    TerminalWindowMainThreadSignal::ApplyAction(AppSignal::SaveFile)
+                    TerminalWindowMainThreadSignal::ApplyAppSignal(AppSignal::SaveFile)
                 );
 
                 return Ok(EventPropagation::Consumed);
@@ -272,7 +272,7 @@ mod app_main_impl_app_trait {
                                 if !editor_buffer.is_empty() {
                                     send_signal!(
                                         global_data.main_thread_channel_sender,
-                                        TerminalWindowMainThreadSignal::ApplyAction(
+                                        TerminalWindowMainThreadSignal::ApplyAppSignal(
                                             AppSignal::AskForFilenameToSaveFile
                                         )
                                     );
@@ -371,7 +371,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
                     text.clone()
                 }
             };
-            it.editor_buffer.set_lines(vec![line]);
+            it.editor_buffer.set_lines(&[line.as_str()]);
             it
         };
         state.dialog_buffers.insert(id, new_dialog_buffer);
@@ -416,10 +416,10 @@ mod modal_dialog_ask_for_filename_to_save_file {
 
         let dialog_options = DialogEngineConfigOptions {
             mode: DialogEngineMode::ModalSimple,
-            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogBorder.into() },
-            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogTitle.into() },
-            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogEditor.into() },
-            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogResultsPanel.into() },
+            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogBorder },
+            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogTitle },
+            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogEditor },
+            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogResultsPanel },
             ..Default::default()
         };
 
@@ -459,8 +459,10 @@ mod modal_dialog_ask_for_filename_to_save_file {
                         let user_input_file_path = text.trim().to_string();
                         if !user_input_file_path.is_empty() {
                             call_if_true!(DEBUG_TUI_MOD, {
-                                tracing::debug!("\n💾💾💾 About to save the new buffer with given filename: {}",
-                                format!("{user_input_file_path:?}").magenta());
+                                tracing::debug!(
+                                    "\n💾💾💾 About to save the new buffer with given filename: {}",
+                                    format!("{user_input_file_path:?}").magenta()
+                                );
                             });
 
                             let maybe_editor_buffer = state.get_mut_editor_buffer(
@@ -481,7 +483,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
                                 // Fire a signal to save the file.
                                 send_signal!(
                                     main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
                                         AppSignal::SaveFile
                                     )
                                 );
@@ -518,9 +520,11 @@ mod modal_dialog_ask_for_filename_to_save_file {
             boxed_dialog_component,
         );
 
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
-            tracing::debug!("🪙 construct DialogComponent (simple) [ on_dialog_press ]",);
+            tracing::debug!(
+                message =
+                    "app_main construct DialogComponent (simple) [ on_dialog_press ]"
+            );
         });
     }
 }
@@ -548,7 +552,7 @@ mod perform_layout {
                         id:                     FlexBoxId::from(Id::ComponentEditor),
                         dir:                    LayoutDirection::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                        styles:                 [Id::StyleEditorDefault.into()]
+                        styles:                 [Id::StyleEditorDefault]
                     );
                     render_component_in_current_box!(
                         in:                 surface,
@@ -580,6 +584,8 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
+    use r3bl_core::glyphs;
+
     use super::*;
 
     pub fn create_components(
@@ -595,9 +601,14 @@ mod populate_component_registry {
         let id = FlexBoxId::from(Id::ComponentEditor);
         has_focus.set_id(id);
 
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
-            tracing::debug!("🪙 {} = {:?}", "init has_focus", has_focus.get_id());
+            let message =
+                format!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH);
+            // % is Display, ? is Debug.
+            tracing::info!(
+                message = message,
+                has_focus = ?has_focus.get_id()
+            );
         });
     }
 
@@ -625,9 +636,10 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
-            tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
+            tracing::debug!(
+                message = "app_main construct EditorComponent [ on_buffer_change ]"
+            );
         });
     }
 }
@@ -638,37 +650,37 @@ mod stylesheet {
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
-              tui_style! {
-                id: Id::StyleEditorDefault.into()
-                padding: 1
-                // These are ignored due to syntax highlighting.
-                // attrib: [bold]
-                // color_fg: TuiColor::Blue
-              },
-              tui_style! {
-                id: Id::StyleDialogTitle.into()
-                lolcat: true
-                // These are ignored due to lolcat: true.
-                // attrib: [bold]
-                // color_fg: TuiColor::Yellow
-              },
-              tui_style! {
-                id: Id::StyleDialogBorder.into()
-                lolcat: true
-                // These are ignored due to lolcat: true.
-                // attrib: [dim]
-                // color_fg: TuiColor::Green
-              },
-              tui_style! {
-                id: Id::StyleDialogEditor.into()
-                attrib: [bold]
-                color_fg: TuiColor::Basic(ANSIBasicColor::Magenta)
-              },
-              tui_style! {
-                id: Id::StyleDialogResultsPanel.into()
-                // attrib: [bold]
-                color_fg: TuiColor::Basic(ANSIBasicColor::Blue)
-              }
+                tui_style! {
+                    id: Id::StyleEditorDefault
+                    padding: 1
+                    // These are ignored due to syntax highlighting.
+                    // attrib: [bold]
+                    // color_fg: TuiColor::Blue
+                },
+                tui_style! {
+                    id: Id::StyleDialogTitle
+                    lolcat: true
+                    // These are ignored due to lolcat: true.
+                    // attrib: [bold]
+                    // color_fg: TuiColor::Yellow
+                },
+                tui_style! {
+                    id: Id::StyleDialogBorder
+                    lolcat: true
+                    // These are ignored due to lolcat: true.
+                    // attrib: [dim]
+                    // color_fg: TuiColor::Green
+                },
+                tui_style! {
+                    id: Id::StyleDialogEditor
+                    attrib: [bold]
+                    color_fg: TuiColor::Basic(ANSIBasicColor::Magenta)
+                },
+                tui_style! {
+                    id: Id::StyleDialogResultsPanel
+                    // attrib: [bold]
+                    color_fg: TuiColor::Basic(ANSIBasicColor::Blue)
+                }
             }
         })
     }
@@ -684,11 +696,11 @@ mod status_bar {
             color_fg: TuiColor::Basic(ANSIBasicColor::DarkGrey)
         );
 
-        let app_text = &UnicodeString::from("edi 🦜 ✶early access✶");
+        let app_text = "edi 🦜 ✶early access✶".unicode_string();
 
-        let mut color_wheel = ColorWheel::new(vec![
+        let mut color_wheel = ColorWheel::new(smallvec![
             ColorWheelConfig::Rgb(
-                Vec::from(["#3eff03", "#00e5ff"].map(String::from)),
+                smallvec!["#3eff03".into(), "#00e5ff".into()],
                 ColorWheelSpeed::Fast,
                 15,
             ),
@@ -699,7 +711,7 @@ mod status_bar {
         ]);
 
         let app_text_styled_texts = color_wheel.colorize_into_styled_texts(
-            app_text,
+            &app_text,
             GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
             TextColorizationPolicy::ColorEachCharacter(None),
         );

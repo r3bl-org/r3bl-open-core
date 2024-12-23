@@ -21,6 +21,8 @@ use nom::{branch::alt,
           multi::{many0, many1},
           sequence::{preceded, terminated, tuple},
           IResult};
+use r3bl_core::MicroVecBackingStore;
+use smallvec::smallvec;
 
 use super::{parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
             CheckboxParsePolicy};
@@ -494,7 +496,7 @@ pub struct SmartListIR<'a> {
     /// Unordered or ordered.
     pub bullet_kind: BulletKind,
     /// Does not contain any bullets.
-    pub content_lines: Vec<SmartListLine<'a>>,
+    pub content_lines: MicroVecBackingStore<SmartListLine<'a>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -643,7 +645,7 @@ pub fn parse_smart_list_content_lines<'a>(
     input: &'a str,
     indent: usize,
     bullet: &'a str,
-) -> IResult</* remainder */ &'a str, /* lines */ Vec<SmartListLine<'a>>> {
+) -> IResult</* remainder */ &'a str, /* lines */ MicroVecBackingStore<SmartListLine<'a>>> {
     let indent_padding = SPACE.repeat(indent);
     let indent_padding = indent_padding.as_str();
 
@@ -689,8 +691,8 @@ pub fn parse_smart_list_content_lines<'a>(
             )(input)?;
 
             // Convert `rest` into a Vec<&str> that contains the output lines.
-            let output_lines: Vec<SmartListLine<'_>> = {
-                let mut it = Vec::with_capacity(rest.len() + 1);
+            let output_lines: MicroVecBackingStore<SmartListLine<'_>> = {
+                let mut it = MicroVecBackingStore::with_capacity(rest.len() + 1);
 
                 it.push(SmartListLine {
                     indent,
@@ -715,7 +717,7 @@ pub fn parse_smart_list_content_lines<'a>(
         }
         None => {
             // Keep the first line. There are no more lines.
-            Ok(("", vec![SmartListLine {
+            Ok(("", smallvec![SmartListLine {
                 indent,
                 bullet_str: bullet,
                 content: input
@@ -750,7 +752,7 @@ mod tests_parse_list_item {
                     SmartListIR {
                         indent: 0,
                         bullet_kind: BulletKind::Unordered,
-                        content_lines: vec![SmartListLine::new(0, "- ", "foo")],
+                        content_lines: smallvec![SmartListLine::new(0, "- ", "foo")],
                     }
                 ))
             );
@@ -767,7 +769,7 @@ mod tests_parse_list_item {
                     SmartListIR {
                         indent: 0,
                         bullet_kind: BulletKind::Unordered,
-                        content_lines: vec![
+                        content_lines: smallvec![
                             SmartListLine::new(0, "- ", "foo"),
                             SmartListLine::new(0, "- ", "bar"),
                         ],
@@ -797,7 +799,7 @@ mod tests_parse_list_item {
                     SmartListIR {
                         indent: 0,
                         bullet_kind: BulletKind::Ordered(1),
-                        content_lines: vec![SmartListLine::new(0, "1. ", "foo")],
+                        content_lines: smallvec![SmartListLine::new(0, "1. ", "foo")],
                     }
                 ))
             );
@@ -814,7 +816,7 @@ mod tests_parse_list_item {
                     SmartListIR {
                         indent: 0,
                         bullet_kind: BulletKind::Ordered(1),
-                        content_lines: vec![
+                        content_lines: smallvec![
                             SmartListLine::new(0, "1. ", "foo"),
                             SmartListLine::new(0, "1. ", "bar"),
                         ],
@@ -842,7 +844,7 @@ mod tests_list_item_lines {
             SmartListIR {
                 indent: 0,
                 bullet_kind: BulletKind::Unordered,
-                content_lines: vec![SmartListLine::new(0, "- ", "foo")],
+                content_lines: smallvec![SmartListLine::new(0, "- ", "foo")],
             }
         );
     }
@@ -858,7 +860,7 @@ mod tests_list_item_lines {
             SmartListIR {
                 indent: 0,
                 bullet_kind: BulletKind::Unordered,
-                content_lines: vec![SmartListLine::new(0, "- ", "foo")]
+                content_lines: smallvec![SmartListLine::new(0, "- ", "foo")]
             }
         );
     }
@@ -875,7 +877,7 @@ mod tests_list_item_lines {
             SmartListIR {
                 indent: 0,
                 bullet_kind: BulletKind::Unordered,
-                content_lines: vec![SmartListLine::new(0, "- ", "foo")]
+                content_lines: smallvec![SmartListLine::new(0, "- ", "foo")]
             }
         );
     }
@@ -891,7 +893,7 @@ mod tests_list_item_lines {
             SmartListIR {
                 indent: 0,
                 bullet_kind: BulletKind::Unordered,
-                content_lines: vec![
+                content_lines: smallvec![
                     SmartListLine::new(0, "- ", "foo"),
                     SmartListLine::new(0, "- ", "bar baz"),
                 ]
@@ -910,7 +912,7 @@ mod tests_list_item_lines {
             SmartListIR {
                 indent: 0,
                 bullet_kind: BulletKind::Unordered,
-                content_lines: vec![
+                content_lines: smallvec![
                     SmartListLine::new(0, "- ", "foo"),
                     SmartListLine::new(0, "- ", "bar baz"),
                 ]
@@ -929,7 +931,7 @@ mod tests_list_item_lines {
             SmartListIR {
                 indent: 0,
                 bullet_kind: BulletKind::Unordered,
-                content_lines: vec![
+                content_lines: smallvec![
                     SmartListLine::new(0, "- ", "foo"),
                     SmartListLine::new(0, "- ", "bar baz"),
                     SmartListLine::new(0, "- ", "qux"),

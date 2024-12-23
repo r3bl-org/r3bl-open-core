@@ -19,8 +19,9 @@ use std::{collections::{hash_map::Entry, HashMap},
           fmt::Debug,
           ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_core::LockedOutputDevice;
+use r3bl_core::{LockedOutputDevice, MicroVecBackingStore, TinyStringBackingStore};
 use serde::{Deserialize, Serialize};
+use smallvec::smallvec;
 
 use super::{paint::paint, render_op::RenderOp, ZOrder};
 use crate::{tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED, FlushKind, GlobalData, RenderOps};
@@ -143,7 +144,7 @@ macro_rules! render_pipeline {
       };
 }
 
-type PipelineMap = HashMap<ZOrder, Vec<RenderOps>>;
+type PipelineMap = HashMap<ZOrder, MicroVecBackingStore<RenderOps>>;
 
 /// See [render_pipeline!] for the documentation. Also consider using it instead of this struct
 /// directly for convenience.
@@ -194,16 +195,20 @@ impl RenderPipeline {
             }
             // Create new set & insert render_ops in it.
             Entry::Vacant(new_entry) => {
-                new_entry.insert(vec![render_ops]);
+                new_entry.insert(smallvec![render_ops]);
             }
         }
     }
 
-    /// At the given [ZOrder] there can be a [Vec] of [RenderOps]. Grab all the [RenderOps] in the
-    /// set, get all their [RenderOp] and return them in a [Vec].
-    pub fn get_all_render_op_in(&self, z_order: ZOrder) -> Option<Vec<RenderOp>> {
+    /// At the given [ZOrder] there can be a [MicroVecBackingStore] of [RenderOps]. Grab
+    /// all the [RenderOps] in the set, get all their [RenderOp] and return them in a
+    /// [MicroVecBackingStore].
+    pub fn get_all_render_op_in(
+        &self,
+        z_order: ZOrder,
+    ) -> Option<MicroVecBackingStore<RenderOp>> {
         let vec_render_ops = self.pipeline_map.get(&z_order)?;
-        let mut vec_render_op: Vec<RenderOp> = vec![];
+        let mut vec_render_op: MicroVecBackingStore<RenderOp> = smallvec![];
         for render_ops in vec_render_ops {
             for render_op in render_ops.iter() {
                 vec_render_op.push(render_op.clone());
@@ -262,17 +267,16 @@ impl DerefMut for RenderPipeline {
 
 impl Debug for RenderPipeline {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut vec_lines: Vec<String> = vec![];
+        let mut vec_lines: MicroVecBackingStore<TinyStringBackingStore> = smallvec![];
         if DEBUG_TUI_SHOW_PIPELINE_EXPANDED {
             for (z_order, render_ops) in &**self {
-                let line: String = format!("[{z_order:?}] {render_ops:?}");
-                vec_lines.push(line);
+                vec_lines.push(format!("[{z_order:?}] {render_ops:?}").into());
             }
         } else {
             for (z_order, vec_render_ops) in &**self {
-                let line: String =
-                    format!("[{z_order:?}] {:?} RenderOps", vec_render_ops.len());
-                vec_lines.push(line);
+                vec_lines.push(
+                    format!("[{z_order:?}] {:?} RenderOps", vec_render_ops.len()).into(),
+                );
             }
         }
         write!(f, "{}", vec_lines.join("\n  - "))

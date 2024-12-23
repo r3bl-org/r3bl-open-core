@@ -18,26 +18,26 @@
 use std::{io::{self, Write},
           sync::Arc};
 
-use crossterm::{terminal::{self, disable_raw_mode, Clear},
-                QueueableCommand};
-use r3bl_core::{output_device_as_mut,
-                InputDevice,
+use crossterm::{QueueableCommand,
+                terminal::{self, Clear, disable_raw_mode}};
+use r3bl_core::{InputDevice,
                 LineStateControlSignal,
                 OutputDevice,
                 SendRawTerminal,
-                SharedWriter};
+                SharedWriter,
+                output_device_as_mut};
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
-use crate::{History,
+use crate::{CHANNEL_CAPACITY,
+            History,
             LineState,
             LineStateLiveness,
             PauseBuffer,
             SafeHistory,
             SafeLineState,
             SafePauseBuffer,
-            StdMutex,
-            CHANNEL_CAPACITY};
+            StdMutex};
 
 const CTRL_C: crossterm::event::Event =
     crossterm::event::Event::Key(crossterm::event::KeyEvent::new(
@@ -663,10 +663,11 @@ pub mod readline_internal {
 #[cfg(test)]
 pub mod test_fixtures {
     use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-    use r3bl_core::CrosstermEventResult;
+    use r3bl_core::{CrosstermEventResult, MicroVecBackingStore};
+    use smallvec::smallvec;
 
-    pub(super) fn get_input_vec() -> Vec<CrosstermEventResult> {
-        vec![
+    pub(super) fn get_input_vec() -> MicroVecBackingStore<CrosstermEventResult> {
+        smallvec![
             // a
             Ok(Event::Key(KeyEvent::new(
                 KeyCode::Char('a'),
@@ -693,9 +694,9 @@ pub mod test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use r3bl_ansi_color::{is_fully_uninteractive_terminal, TTYResult};
-    use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _,
-                             InputDeviceExt as _};
+    use r3bl_ansi_color::{TTYResult, is_fully_uninteractive_terminal};
+    use r3bl_test_fixtures::{InputDeviceExt as _,
+                             output_device_ext::OutputDeviceExt as _};
     use test_fixtures::get_input_vec;
 
     use super::*;

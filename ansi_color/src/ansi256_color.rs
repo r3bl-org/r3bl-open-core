@@ -15,11 +15,11 @@
  *   limitations under the License.
  */
 
-use crate::{color_utils,
-            constants::ANSI_COLOR_PALETTE,
-            Color,
+use crate::{Color,
             RgbColor,
-            TransformColor};
+            TransformColor,
+            color_utils,
+            constants::ANSI_COLOR_PALETTE};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Ansi256Color {

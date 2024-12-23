@@ -17,16 +17,20 @@
 
 use std::collections::HashMap;
 
+use smallvec::smallvec;
+
+use super::TinyVecBackingStore;
+
 #[derive(Debug, Default)]
 pub struct OrderedMap<K, V> {
-    keys: Vec<K>,
+    keys: TinyVecBackingStore<K>,
     map: HashMap<K, V>,
 }
 
 impl<K: std::hash::Hash + Eq + Clone, V> OrderedMap<K, V> {
     pub fn new() -> Self {
         OrderedMap {
-            keys: Vec::new(),
+            keys: smallvec![],
             map: HashMap::new(),
         }
     }

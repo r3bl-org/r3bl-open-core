@@ -17,6 +17,7 @@
 
 use r3bl_core::{call_if_true,
                 ch,
+                glyphs,
                 position,
                 send_signal,
                 throws_with_return,
@@ -32,16 +33,15 @@ use r3bl_core::{call_if_true,
                 GradientGenerationPolicy,
                 GradientLengthKind,
                 LolcatBuilder,
+                MicroVecBackingStore,
                 Position,
                 Size,
                 TextColorizationPolicy,
-                UnicodeString,
-                DEFAULT_GRADIENT_STOPS};
+                UnicodeStringExt};
 use r3bl_macro::tui_style;
 use r3bl_tui::{render_ops,
                render_pipeline,
                render_tui_styled_texts_into,
-               telemetry_global_static,
                Animator,
                App,
                BoxedSafeApp,
@@ -57,6 +57,7 @@ use r3bl_tui::{render_ops,
                SpecialKey,
                TerminalWindowMainThreadSignal,
                ZOrder};
+use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
 
 use super::{AppSignal, State};
@@ -70,7 +71,7 @@ pub struct AppMain {
 #[derive(Default)]
 pub struct AppData {
     pub color_wheel_rgb: ColorWheel,
-    pub color_wheel_ansi_vec: Vec<ColorWheel>,
+    pub color_wheel_ansi_vec: MicroVecBackingStore<ColorWheel>,
     pub lolcat_fg: ColorWheel,
     pub lolcat_bg: ColorWheel,
     pub animator: Animator,
@@ -121,19 +122,12 @@ mod animator_task {
                     // causes rerender).
                     // This branch is cancel safe because tick is cancel safe.
                     _ = interval.tick() => {
-                        // Continue the animation.
-
-                        // Wire into the timing telemetry.
-                        telemetry_global_static::set_span_measure_start_ts();
-
-                        // Send a signal to the main thread to render.
+                        // Continue the animation. Send a signal to the main thread to
+                        // render.
                         send_signal!(
                             main_thread_channel_sender,
-                            TerminalWindowMainThreadSignal::ApplyAction(AppSignal::Add)
+                            TerminalWindowMainThreadSignal::ApplyAppSignal(AppSignal::Add)
                         );
-
-                        // Wire into the timing telemetry.
-                        telemetry_global_static::set_span_measure_end_ts();
                     }
                 }
             }
@@ -144,6 +138,8 @@ mod animator_task {
 }
 
 mod app_main_impl_trait_app {
+    use r3bl_core::get_default_gradient_stops;
+
     use super::{animator_task::start_animator_task, *};
 
     impl App for AppMain {
@@ -166,10 +162,9 @@ mod app_main_impl_trait_app {
                 let window_size = global_data.window_size;
 
                 let col = (window_size.col_count - content_size_col) / 2;
-                let mut row = (window_size.row_count
-                    - ch!(2)
-                    - ch!(data.color_wheel_ansi_vec.len()))
-                    / 2;
+                let mut row =
+                    (window_size.row_count - ch(2) - ch(data.color_wheel_ansi_vec.len()))
+                        / 2;
 
                 let mut pipeline = render_pipeline!();
 
@@ -190,9 +185,8 @@ mod app_main_impl_trait_app {
                                 GradientLengthKind::ColorWheel(len) => len,
                                 _ => 0,
                             };
-                            UnicodeString::from(format!(
-                                "{state_str}, gradient: [index: {index}, len: {len}]"
-                            ))
+                            format!("{state_str}, gradient: [index: {index}, len: {len}]")
+                                .unicode_string()
                         };
 
                         it += RenderOp::MoveCursorPositionAbs(position!(
@@ -226,9 +220,8 @@ mod app_main_impl_trait_app {
                                 GradientLengthKind::ColorWheel(len) => len,
                                 _ => 0,
                             };
-                            UnicodeString::from(format!(
-                                "{state_str}, gradient: [index: {index}, len: {len}]"
-                            ))
+                            format!("{state_str}, gradient: [index: {index}, len: {len}]")
+                                .unicode_string()
                         };
 
                         render_ops! {
@@ -252,9 +245,8 @@ mod app_main_impl_trait_app {
                         ));
 
                         let unicode_string = {
-                            UnicodeString::from(format!(
-                                "{state_str}, gradient: [index: _, len: _]"
-                            ))
+                            format!("{state_str}, gradient: [index: _, len: _]")
+                                .unicode_string()
                         };
 
                         let texts = data.lolcat_fg.colorize_into_styled_texts(
@@ -275,9 +267,8 @@ mod app_main_impl_trait_app {
                         ));
 
                         let unicode_string = {
-                            UnicodeString::from(format!(
-                                "{state_str}, gradient: [index: _, len: _]"
-                            ))
+                            format!("{state_str}, gradient: [index: _, len: _]")
+                                .unicode_string()
                         };
 
                         let texts = data.lolcat_bg.colorize_into_styled_texts(
@@ -319,9 +310,12 @@ mod app_main_impl_trait_app {
 
             throws_with_return!({
                 call_if_true!(ENABLE_TRACE_EXAMPLES, {
-                    tracing::info!(
-                        "🎹 AppNoLayout::handle_event -> input_event: {input_event}"
+                    let message = format!(
+                        "AppNoLayout::handle_event {ch} {evt}",
+                        ch = glyphs::USER_INPUT_GLYPH,
+                        evt = input_event
                     );
+                    tracing::info!(message = message);
                 });
 
                 let mut event_consumed = false;
@@ -334,7 +328,7 @@ mod app_main_impl_trait_app {
                                 event_consumed = true;
                                 send_signal!(
                                     global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
                                         AppSignal::Add,
                                     )
                                 );
@@ -343,7 +337,7 @@ mod app_main_impl_trait_app {
                                 event_consumed = true;
                                 send_signal!(
                                     global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
                                         AppSignal::Sub,
                                     )
                                 );
@@ -364,7 +358,7 @@ mod app_main_impl_trait_app {
                                 event_consumed = true;
                                 send_signal!(
                                     global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
                                         AppSignal::Add,
                                     )
                                 );
@@ -373,7 +367,7 @@ mod app_main_impl_trait_app {
                                 event_consumed = true;
                                 send_signal!(
                                     global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
                                         AppSignal::Sub,
                                     )
                                 );
@@ -428,76 +422,76 @@ mod app_main_impl_trait_app {
         ) {
             let data = &mut self.data;
 
-            data.color_wheel_ansi_vec = vec![
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+            data.color_wheel_ansi_vec = smallvec![
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::GrayscaleMediumGrayToWhite,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::DarkRedToDarkMagenta,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::RedToBrightPink,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::OrangeToNeonPink,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::LightYellowToWhite,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::MediumGreenToMediumBlue,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::GreenToBlue,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::LightGreenToLightBlue,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::LightLimeToLightMint,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::RustToPurple,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::OrangeToPink,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::LightOrangeToLightPurple,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::DarkOliveGreenToDarkLavender,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::OliveGreenToLightLavender,
                     ColorWheelSpeed::Fast,
                 )]),
-                ColorWheel::new(vec![ColorWheelConfig::Ansi256(
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::BackgroundDarkGreenToDarkBlue,
                     ColorWheelSpeed::Fast,
                 )]),
             ];
 
-            data.color_wheel_rgb = ColorWheel::new(vec![ColorWheelConfig::Rgb(
-                Vec::from(DEFAULT_GRADIENT_STOPS.map(String::from)),
+            data.color_wheel_rgb = ColorWheel::new(smallvec![ColorWheelConfig::Rgb(
+                get_default_gradient_stops(),
                 ColorWheelSpeed::Fast,
                 25,
             )]);
 
-            data.lolcat_fg = ColorWheel::new(vec![
+            data.lolcat_fg = ColorWheel::new(smallvec![
                 ColorWheelConfig::Lolcat(
                     LolcatBuilder::new()
                         .set_color_change_speed(ColorChangeSpeed::Rapid)
@@ -510,7 +504,7 @@ mod app_main_impl_trait_app {
                 ),
             ]);
 
-            data.lolcat_bg = ColorWheel::new(vec![
+            data.lolcat_bg = ColorWheel::new(smallvec![
                 ColorWheelConfig::Lolcat(
                     LolcatBuilder::new()
                         .set_background_mode(true)

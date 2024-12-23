@@ -17,14 +17,21 @@
 
 use std::fmt::{Display, Formatter};
 
+use r3bl_core::MicroVecBackingStore;
+use smallvec::smallvec;
+
 /// State.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct State {
-    pub stack: Vec<i32>,
+    pub stack: MicroVecBackingStore<i32>,
 }
 
 impl Default for State {
-    fn default() -> Self { Self { stack: vec![0] } }
+    fn default() -> Self {
+        Self {
+            stack: smallvec![0],
+        }
+    }
 }
 
 impl Display for State {

@@ -18,12 +18,12 @@
 use std::time::Duration;
 
 use async_stream::stream;
-use r3bl_core::PinnedInputStream;
+use r3bl_core::{MicroVecBackingStore, PinnedInputStream};
 
 /// The main constructors are:
 /// - [super::InputDeviceExt::new_mock()]
 /// - [super::InputDeviceExt::new_mock_with_delay()]
-pub fn gen_input_stream<T>(generator_vec: Vec<T>) -> PinnedInputStream<T>
+pub fn gen_input_stream<T>(generator_vec: MicroVecBackingStore<T>) -> PinnedInputStream<T>
 where
     T: Send + Sync + 'static,
 {
@@ -36,7 +36,7 @@ where
 }
 
 pub fn gen_input_stream_with_delay<T>(
-    generator_vec: Vec<T>,
+    generator_vec: MicroVecBackingStore<T>,
     delay: Duration,
 ) -> PinnedInputStream<T>
 where
@@ -51,38 +51,42 @@ where
     Box::pin(it)
 }
 
-#[tokio::test]
-#[allow(clippy::needless_return)]
-async fn test_gen_input_stream() {
+#[cfg(test)]
+mod tests {
     use futures_util::StreamExt;
+    use smallvec::smallvec;
 
-    let mut input_stream = gen_input_stream(vec![1, 2, 3]);
-    for _ in 1..=3 {
-        input_stream.next().await;
-    }
-    pretty_assertions::assert_eq!(input_stream.next().await, None);
-}
+    use super::*;
 
-#[tokio::test]
-#[allow(clippy::needless_return)]
-async fn test_gen_input_stream_with_delay() {
-    use futures_util::StreamExt;
-
-    let delay = 100;
-
-    // Start timer.
-    let start_time = std::time::Instant::now();
-
-    let mut input_stream =
-        gen_input_stream_with_delay(vec![1, 2, 3], Duration::from_millis(delay));
-    for _ in 1..=3 {
-        input_stream.next().await;
+    #[tokio::test]
+    #[allow(clippy::needless_return)]
+    async fn test_gen_input_stream() {
+        let mut input_stream = gen_input_stream(smallvec![1, 2, 3]);
+        for _ in 1..=3 {
+            input_stream.next().await;
+        }
+        pretty_assertions::assert_eq!(input_stream.next().await, None);
     }
 
-    // End timer.
-    let end_time = std::time::Instant::now();
+    #[tokio::test]
+    #[allow(clippy::needless_return)]
+    async fn test_gen_input_stream_with_delay() {
+        const DELAY: u64 = 100;
 
-    pretty_assertions::assert_eq!(input_stream.next().await, None);
+        // Start timer.
+        let start_time = std::time::Instant::now();
 
-    assert!(end_time - start_time >= Duration::from_millis(delay * 3));
+        let mut input_stream =
+            gen_input_stream_with_delay(smallvec![1, 2, 3], Duration::from_millis(DELAY));
+        for _ in 1..=3 {
+            input_stream.next().await;
+        }
+
+        // End timer.
+        let end_time = std::time::Instant::now();
+
+        pretty_assertions::assert_eq!(input_stream.next().await, None);
+
+        assert!(end_time - start_time >= Duration::from_millis(DELAY * 3));
+    }
 }

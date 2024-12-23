@@ -15,6 +15,10 @@
  *   limitations under the License.
  */
 
+/// Enable or disable generating log output for telemetry data. This has higher precedence
+/// than [DEBUG_TUI_MOD]. The telemetry logs are not debug level, but info level.
+pub const DISPLAY_LOG_TELEMETRY: bool = true;
+
 /// This is the global `DEBUG` const. It is possible to create local (module scoped)
 /// `DEBUG` const. However, you would have to use that symbol explicitly in the relevant
 /// module, eg:
@@ -39,9 +43,11 @@ pub const DEBUG_TUI_COPY_PASTE: bool = false;
 /// Enable or disable compositor debug logging.
 pub const DEBUG_TUI_COMPOSITOR: bool = false;
 
-// Enable or disable debug logging for this `terminal_lib_backends` module.
+/// Enable or disable debug logging for this `terminal_lib_backends` module. Related flag:
+/// [DEBUG_TUI_SHOW_PIPELINE_EXPANDED].
 pub const DEBUG_TUI_SHOW_PIPELINE: bool = false;
 
+/// This flag has no effect unless [DEBUG_TUI_SHOW_PIPELINE] is set to `true`.
 pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
 
 /// Controls input event debugging [crate::InputDeviceExt], and execution of render ops

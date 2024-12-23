@@ -77,13 +77,13 @@ pub enum Style {
 mod style_impl {
     use std::fmt::{Display, Formatter, Result};
 
-    use crate::{global_color_support,
-                Color,
+    use crate::{Color,
                 ColorSupport,
                 RgbColor,
                 SgrCode,
                 Style,
-                TransformColor};
+                TransformColor,
+                global_color_support};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum ColorKind {
@@ -97,42 +97,30 @@ mod style_impl {
                 // ANSI 256 color mode.
                 let color = color.as_ansi256();
                 let index = color.index;
-                write!(
-                    f,
-                    "{}",
-                    match color_kind {
-                        ColorKind::Foreground => SgrCode::ForegroundAnsi256(index),
-                        ColorKind::Background => SgrCode::BackgroundAnsi256(index),
-                    }
-                )
+                write!(f, "{}", match color_kind {
+                    ColorKind::Foreground => SgrCode::ForegroundAnsi256(index),
+                    ColorKind::Background => SgrCode::BackgroundAnsi256(index),
+                })
             }
 
             ColorSupport::Grayscale => {
                 // Grayscale mode.
                 let color = color.as_grayscale();
                 let index = color.index;
-                write!(
-                    f,
-                    "{}",
-                    match color_kind {
-                        ColorKind::Foreground => SgrCode::ForegroundAnsi256(index),
-                        ColorKind::Background => SgrCode::BackgroundAnsi256(index),
-                    }
-                )
+                write!(f, "{}", match color_kind {
+                    ColorKind::Foreground => SgrCode::ForegroundAnsi256(index),
+                    ColorKind::Background => SgrCode::BackgroundAnsi256(index),
+                })
             }
 
             _ => {
                 // True color mode.
                 let color = color.as_rgb();
                 let RgbColor { red, green, blue } = color;
-                write!(
-                    f,
-                    "{}",
-                    match color_kind {
-                        ColorKind::Foreground => SgrCode::ForegroundRGB(red, green, blue),
-                        ColorKind::Background => SgrCode::BackgroundRGB(red, green, blue),
-                    }
-                )
+                write!(f, "{}", match color_kind {
+                    ColorKind::Foreground => SgrCode::ForegroundRGB(red, green, blue),
+                    ColorKind::Background => SgrCode::BackgroundRGB(red, green, blue),
+                })
             }
         }
     }
@@ -160,12 +148,12 @@ mod style_impl {
 mod display_trait_impl {
     use std::fmt::{Display, Formatter, Result};
 
-    use crate::{AnsiStyledText, SgrCode};
+    use crate::{AnsiStyledText, SgrCode, TinyVecBackingStore};
 
     // https://doc.rust-lang.org/std/fmt/trait.Display.html
     impl Display for AnsiStyledText<'_> {
         fn fmt(&self, formatter: &mut Formatter<'_>) -> Result {
-            let mut style_string_vec = vec![];
+            let mut style_string_vec = TinyVecBackingStore::new();
             for style_item in self.style {
                 style_string_vec.push(style_item.to_string());
             }
@@ -180,7 +168,7 @@ mod display_trait_impl {
         use pretty_assertions::assert_eq;
         use serial_test::serial;
 
-        use crate::{global_color_support, AnsiStyledText, Color, ColorSupport, Style};
+        use crate::{AnsiStyledText, Color, ColorSupport, Style, global_color_support};
 
         #[serial]
         #[test]

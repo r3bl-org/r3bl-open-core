@@ -17,7 +17,8 @@
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::assert_eq2;
+    use r3bl_core::{assert_eq2, MicroVecBackingStore};
+    use smallvec::smallvec;
 
     use crate::{render_ops, render_pipeline, RenderOp, RenderPipeline, ZOrder};
 
@@ -47,11 +48,13 @@ mod tests {
         assert_eq2!(render_ops_set.len(), 1);
 
         let render_op_vec = pipeline.get_all_render_op_in(ZOrder::Normal).unwrap();
+
         assert_eq2!(render_op_vec.len(), 2);
-        assert_eq2!(
-            render_op_vec,
-            vec![RenderOp::ClearScreen, RenderOp::ResetColor]
-        );
+        assert_eq2!(render_op_vec, {
+            let expected: MicroVecBackingStore<RenderOp> =
+                smallvec![RenderOp::ClearScreen, RenderOp::ResetColor];
+            expected
+        });
     }
 
     #[test]
@@ -68,14 +71,17 @@ mod tests {
               RenderOp::ResetColor
             );
 
-            assert_eq2!(
-                it.get_all_render_op_in(ZOrder::Normal).unwrap(),
-                vec![RenderOp::ClearScreen, RenderOp::ResetColor]
-            );
-            assert_eq2!(
-                it.get_all_render_op_in(ZOrder::High).unwrap(),
-                vec![RenderOp::ResetColor]
-            );
+            assert_eq2!(it.get_all_render_op_in(ZOrder::Normal).unwrap(), {
+                let expected: MicroVecBackingStore<RenderOp> =
+                    smallvec![RenderOp::ClearScreen, RenderOp::ResetColor];
+                expected
+            });
+
+            assert_eq2!(it.get_all_render_op_in(ZOrder::High).unwrap(), {
+                let expected: MicroVecBackingStore<RenderOp> =
+                    smallvec![RenderOp::ResetColor];
+                expected
+            });
 
             it
         };
@@ -88,10 +94,11 @@ mod tests {
                 RenderOp::ResetColor
             );
 
-            assert_eq2!(
-                it.get_all_render_op_in(ZOrder::Normal).unwrap(),
-                vec![RenderOp::ClearScreen, RenderOp::ResetColor]
-            );
+            assert_eq2!(it.get_all_render_op_in(ZOrder::Normal).unwrap(), {
+                let expected: MicroVecBackingStore<RenderOp> =
+                    smallvec![RenderOp::ClearScreen, RenderOp::ResetColor];
+                expected
+            });
 
             it
         };
@@ -110,16 +117,23 @@ mod tests {
                 pipeline_merged
                     .get_all_render_op_in(ZOrder::Normal)
                     .unwrap(),
-                vec![
-                    RenderOp::ClearScreen,
-                    RenderOp::ResetColor,
-                    RenderOp::ClearScreen,
-                    RenderOp::ResetColor
-                ]
+                {
+                    let expected: MicroVecBackingStore<RenderOp> = smallvec![
+                        RenderOp::ClearScreen,
+                        RenderOp::ResetColor,
+                        RenderOp::ClearScreen,
+                        RenderOp::ResetColor
+                    ];
+                    expected
+                }
             );
             assert_eq2!(
                 pipeline_merged.get_all_render_op_in(ZOrder::High).unwrap(),
-                vec![RenderOp::ResetColor]
+                {
+                    let expected: MicroVecBackingStore<RenderOp> =
+                        smallvec![RenderOp::ResetColor];
+                    expected
+                }
             );
 
             pipeline_merged

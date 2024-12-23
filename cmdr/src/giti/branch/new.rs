@@ -27,14 +27,14 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                                              SilverMetallic,
                                              SlateGray},
             giti::{self,
-                   clap_config::BranchSubcommand,
-                   report_unknown_error_and_propagate,
                    CommandSuccessfulResponse,
                    UIStrings::{BranchAlreadyExists,
                                CreatedAndSwitchedToNewBranch,
                                EnterBranchNameYouWantToCreate,
                                FailedToCreateAndSwitchToBranch,
-                               NoNewBranchWasCreated}}};
+                               NoNewBranchWasCreated},
+                   clap_config::BranchSubcommand,
+                   report_unknown_error_and_propagate}};
 
 pub fn try_make_new_branch(
     maybe_branch_name: Option<String>,

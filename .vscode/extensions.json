@@ -13,8 +13,10 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
-    "qwtel.sqlite-viewer", // SQLite Viewer.
+    "bceskavich.theme-dracula-at-night", // Dracula at Night.
+    "thiagolciobittencourt.omni-dracula-theme", // Omni Dracula Theme.
     "dracula-theme.theme-dracula", // Dracula Theme.
+    "qwtel.sqlite-viewer", // SQLite Viewer.
     "compulim.vscode-clock", // Clock.
     "keksiqc.idx-monospace-theme", // IDX Monospace Theme.
     "devgauravjatt.github-catppuccin-dark", // GitHub + Catppuccino Dark Theme.
@@ -22,7 +24,6 @@
     "jvitorfrancisco.theme-acid-purple", // Acid Purple.
     "Tr3bbe.purplehaze", // Purple Haze.
     "chrisjdavies.multi-highlight", // Multi Highlight.
-    "eamodio.gitlens", // GitLens.
     "alefragnani.bookmarks", // Bookmarks.
     "pkief.material-icon-theme", // Material Icon Theme.
     "antfu.icons-carbon", // Carbon Icons.
@@ -55,9 +56,9 @@
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "eamodio.gitlens", // GitLens by GitKraken.
     "mutantdino.resourcemonitor", // Resource Monitor.
     "huntertran.auto-markdown-toc", // Auto Markdown TOC.
-    "eamodio.gitlens", // GitLens.
     "unifiedjs.vscode-mdx", // MDX.
     "Catppuccin.catppuccin-vsc", // Catppuccino Theme.
     "teabyii.ayu", // Ayu Theme.

@@ -15,7 +15,13 @@
  *   limitations under the License.
  */
 
-use crate::{ch, glyphs::SPACER_GLYPH as SPACER, ChUnit, UnicodeString, ELLIPSIS_GLYPH};
+use crate::{ChUnit,
+            ELLIPSIS_GLYPH,
+            UnicodeStringExt,
+            ch,
+            f64,
+            glyphs::SPACER_GLYPH as SPACER,
+            usize};
 
 /// Tests whether the given text contains an ANSI escape sequence.
 pub fn contains_ansi_escape_sequence(text: &str) -> bool {
@@ -78,12 +84,12 @@ pub fn truncate_from_right(
     use crate::glyphs::SPACER_GLYPH as SPACER;
 
     let display_width = display_width.into();
-    let string = UnicodeString::from(string);
+    let string = string.unicode_string();
     let string_display_width = string.display_width;
 
     // Handle truncation.
     if string_display_width > display_width {
-        let suffix = UnicodeString::from(ELLIPSIS_GLYPH.to_string());
+        let suffix = ELLIPSIS_GLYPH.unicode_string();
         let suffix_display_width = suffix.display_width;
 
         let trunc_string = string.truncate_to_fit_size(crate::size!(
@@ -99,11 +105,10 @@ pub fn truncate_from_right(
     // Handle padding.
     else if pad {
         let mut padded_string = string.to_string();
-        let display_width_to_pad = ch!(@to_usize display_width - string_display_width);
-        let display_width_to_pad = display_width_to_pad as f64;
-        let spacer_display_width =
-            ch!(@to_usize UnicodeString::from(SPACER.to_string()).display_width);
-        let spacer_display_width = spacer_display_width as f64;
+        let display_width_to_pad = display_width - string_display_width;
+        let display_width_to_pad = f64(display_width_to_pad);
+        let spacer_display_width = SPACER.unicode_string().display_width;
+        let spacer_display_width = f64(spacer_display_width);
         let repeat_count = (display_width_to_pad / spacer_display_width).ceil() as usize;
         padded_string.push_str(&SPACER.repeat(repeat_count));
         padded_string
@@ -115,12 +120,12 @@ pub fn truncate_from_right(
 }
 
 pub fn truncate_from_left(text: &str, display_width: usize, pad: bool) -> String {
-    let display_width = ch!(display_width);
-    let text = UnicodeString::from(text);
+    let display_width = ch(display_width);
+    let text = text.unicode_string();
     let text_width = text.display_width;
 
     if text_width > display_width {
-        let suffix = UnicodeString::from(ELLIPSIS_GLYPH.to_string());
+        let suffix = ELLIPSIS_GLYPH.unicode_string();
         let suffix_width = suffix.display_width;
 
         let truncate_cols_from_left = text_width - display_width;
@@ -130,10 +135,11 @@ pub fn truncate_from_left(text: &str, display_width: usize, pad: bool) -> String
         format!("{}{}", suffix.string, truncated_text)
     } else if pad {
         let mut padded_text = text.to_string();
-        let width_to_pad = ch!(@to_usize display_width - text_width);
-        let spacer_width = ch!(@to_usize UnicodeString::from(SPACER).display_width);
-        let repeat_count = (width_to_pad as f64 / spacer_width as f64).ceil() as usize;
-        padded_text.insert_str(0, &SPACER.repeat(repeat_count));
+        let width_to_pad = display_width - text_width;
+        let spacer_width = SPACER.unicode_string().display_width;
+        let repeat_count = (f64(width_to_pad) / f64(spacer_width)).ceil();
+        let repeat_count = ch(repeat_count);
+        padded_text.insert_str(0, &SPACER.repeat(usize(repeat_count)));
         padded_text
     } else {
         text.to_string()

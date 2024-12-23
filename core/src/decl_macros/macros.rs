@@ -101,7 +101,7 @@ macro_rules! throws_with_return {
 /// ```
 #[macro_export]
 macro_rules! call_if_true {
-    ($cond:ident, $block: expr) => {{
+    ($cond:expr, $block: expr) => {{
         if $cond {
             $block
         }

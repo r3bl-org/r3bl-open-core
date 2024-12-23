@@ -23,11 +23,12 @@ use std::{io::{stdin, BufRead, Result},
 
 use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use crossterm::style::Stylize;
+use miette::IntoDiagnostic;
 use r3bl_ansi_color::{is_stdin_piped,
                       is_stdout_piped,
                       StdinIsPipedResult,
                       StdoutIsPipedResult};
-use r3bl_core::{call_if_true, get_size, get_terminal_width, throws};
+use r3bl_core::{call_if_true, get_size, get_terminal_width, throws, usize};
 use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, DEVELOPMENT_MODE};
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
@@ -87,7 +88,7 @@ fn get_bin_name() -> String {
     cmd.get_bin_name().unwrap_or("this command").to_string()
 }
 
-fn main() -> Result<()> {
+fn main() -> miette::Result<()> {
     throws!({
         // If no args are passed, the following line will fail, and help will be printed
         // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
@@ -206,7 +207,7 @@ fn show_tui(
     }
 
     // Get display size.
-    let max_width_col_count: usize = tui_width.unwrap_or(get_terminal_width());
+    let max_width_col_count = tui_width.unwrap_or_else(|| usize(get_terminal_width()));
     let max_height_row_count: usize = tui_height.unwrap_or(5);
 
     // Handle `selection-mode` is not passed in.
@@ -341,10 +342,10 @@ fn execute_command(cmd_str: &str) {
 }
 
 /// Programmatically prints out help.
-pub fn print_help() -> Result<()> {
+pub fn print_help() -> miette::Result<()> {
     throws!({
         let mut cmd = AppArgs::command();
-        cmd.print_help()?;
+        cmd.print_help().into_diagnostic()?;
     });
 }
 

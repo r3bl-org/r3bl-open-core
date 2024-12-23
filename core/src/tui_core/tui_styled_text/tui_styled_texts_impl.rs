@@ -89,7 +89,7 @@ mod impl_display {
 
     impl ConvertToPlainText for TuiStyledTexts {
         fn to_plain_text_us(&self) -> UnicodeString {
-            let mut it = UnicodeString::default();
+            let mut it = UnicodeString::new("");
             for styled_text in self.inner.iter() {
                 it = it + styled_text.get_text();
             }
@@ -104,17 +104,20 @@ mod impl_display {
 
 mod impl_debug {
     use super::*;
+    use crate::{TinyStringBackingStore, TinyVecBackingStore};
 
     impl PrettyPrintDebug for TuiStyledTexts {
         fn pretty_print_debug(&self) -> String {
-            let mut it = vec![];
+            let mut it = TinyVecBackingStore::<TinyStringBackingStore>::new();
             for (index, item) in self.inner.iter().enumerate() {
-                let string = format!(
-                    "{index}: [{}, {}]",
-                    item.get_style(),
-                    item.get_text().string
+                it.push(
+                    format!(
+                        "{index}: [{}, {}]",
+                        item.get_style(),
+                        item.get_text().string
+                    )
+                    .into(),
                 );
-                it.push(string);
             }
             it.join("\n")
         }
@@ -124,17 +127,17 @@ mod impl_debug {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2,
+    use crate::{CommonResult,
+                RgbValue,
+                TuiColor,
+                TuiStyle,
+                TuiStylesheet,
+                assert_eq2,
                 ch,
                 throws,
                 throws_with_return,
                 tui_styled_text,
-                tui_stylesheet,
-                CommonResult,
-                RgbValue,
-                TuiColor,
-                TuiStyle,
-                TuiStylesheet};
+                tui_stylesheet};
 
     #[test]
     fn test_create_styled_text_with_dsl() -> CommonResult<()> {
@@ -172,13 +175,13 @@ mod tests {
                 tui_stylesheet! {
                     TuiStyle {
                         id: 1,
-                        padding: Some(ch!(1)),
+                        padding: Some(ch(1)),
                         color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(55, 55, 100))),
                         ..Default::default()
                     },
                     TuiStyle {
                         id: 2,
-                        padding: Some(ch!(1)),
+                        padding: Some(ch(1)),
                         color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(55, 55, 248))),
                         ..Default::default()
                     }

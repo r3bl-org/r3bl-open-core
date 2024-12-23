@@ -23,6 +23,8 @@ use r3bl_core::{ch,
                 position,
                 size,
                 throws_with_return,
+                u16,
+                usize,
                 ColorWheel,
                 CommonError,
                 CommonErrorType,
@@ -31,8 +33,9 @@ use r3bl_core::{ch,
                 Position,
                 Size,
                 TextColorizationPolicy,
+                TinyStringBackingStore,
                 TuiStyle,
-                UnicodeString};
+                UnicodeStringExt};
 
 use crate::{render_ops,
             render_pipeline,
@@ -304,8 +307,8 @@ mod internal_impl {
         };
 
         // Check to ensure that the dialog box has enough space to be displayed.
-        if window_size.col_count < ch!(MinSize::Col as u8)
-            || window_size.row_count < ch!(MinSize::Row as u8)
+        if window_size.col_count < ch(MinSize::Col as u8)
+            || window_size.row_count < ch(MinSize::Row as u8)
         {
             return CommonError::new_error_result(
                 CommonErrorType::DisplaySizeTooSmall,
@@ -325,11 +328,11 @@ mod internal_impl {
                         let percent = percent!(
                             DisplayConstants::DialogComponentBorderWidthPercent as u16
                         )?;
-                        percent.calc_percentage(surface_size.col_count)
+                        percent.apply_to(surface_size.col_count)
                     };
-                    let row_count = ch!(DisplayConstants::SimpleModalRowCount as u16);
+                    let row_count = ch(DisplayConstants::SimpleModalRowCount as u16);
                     let size = size! { col_count: col_count, row_count: row_count };
-                    assert!(size.row_count < ch!(MinSize::Row as u8));
+                    assert!(size.row_count < ch(MinSize::Row as u8));
                     size
                 };
 
@@ -349,17 +352,17 @@ mod internal_impl {
             DialogEngineMode::ModalAutocomplete => {
                 let autocomplete_dialog_size = {
                     // Calc dialog bounds size based on window size.
-                    let row_count = ch!(DisplayConstants::SimpleModalRowCount as u16)
-                        + ch!(DisplayConstants::EmptyLine as u16)
+                    let row_count = ch(DisplayConstants::SimpleModalRowCount as u16)
+                        + ch(DisplayConstants::EmptyLine as u16)
                         + dialog_options.result_panel_display_row_count;
                     let col_count = {
                         let percent = percent!(
                             DisplayConstants::DialogComponentBorderWidthPercent as u16
                         )?;
-                        percent.calc_percentage(surface_size.col_count)
+                        percent.apply_to(surface_size.col_count)
                     };
                     let size = size!(col_count: col_count, row_count: row_count);
-                    assert!(size.row_count < ch!(MinSize::Row as u8));
+                    assert!(size.row_count < ch(MinSize::Row as u8));
                     size
                 };
 
@@ -458,7 +461,7 @@ mod internal_impl {
             ));
 
             ops.push(RenderOp::PaintTextWithAttributes(
-                msg,
+                msg.into(),
                 Some(if let Some(style) = maybe_style {
                     TuiStyle { dim: true, ..style }
                 } else {
@@ -507,12 +510,12 @@ mod internal_impl {
             ops: &mut RenderOps,
             origin_pos: &Position,
             bounds_size: &Size,
-            results: &[String],
+            results: &[TinyStringBackingStore],
             dialog_engine: &DialogEngine,
         ) {
-            let col_start_index = ch!(1);
+            let col_start_index = ch(1);
             let row_start_index =
-                ch!(DisplayConstants::SimpleModalRowCount as u16) - ch!(1);
+                ch(DisplayConstants::SimpleModalRowCount as u16) - ch(1);
 
             let mut rel_insertion_pos =
                 position!(col_index: col_start_index, row_index: row_start_index);
@@ -522,7 +525,7 @@ mod internal_impl {
 
             // Print results panel.
             for (row_index, item) in results.iter().enumerate() {
-                let row_index = ch!(row_index);
+                let row_index = ch(row_index);
 
                 // Skip rows that are above the scroll offset.
                 if row_index < scroll_offset_row_index {
@@ -531,13 +534,13 @@ mod internal_impl {
 
                 rel_insertion_pos.add_row(1);
 
-                let text = UnicodeString::from(item.as_str());
+                let text = item.as_str().unicode_string();
                 let max_display_col_count = bounds_size.col_count - 2;
                 let clipped_text = if text.display_width > max_display_col_count {
-                    let snip_len = ch!(2); /* `..` */
-                    let postfix_len = ch!(5); /* last 5 characters */
+                    let snip_len = ch(2); /* `..` */
+                    let postfix_len = ch(5); /* last 5 characters */
 
-                    let lhs_start_index = ch!(0);
+                    let lhs_start_index = ch(0);
                     let lhs_end_index = max_display_col_count - postfix_len - snip_len;
                     let lhs = text.clip_to_width(lhs_start_index, lhs_end_index);
 
@@ -547,7 +550,8 @@ mod internal_impl {
 
                     format!("{lhs}..{rhs}")
                 } else {
-                    text.string
+                    // PERF: [ ] perf
+                    text.string.to_string()
                 };
 
                 let max_display_row_count =
@@ -586,7 +590,7 @@ mod internal_impl {
                         // Paint the text for the row.
                         ops.push(RenderOp::ApplyColors(my_selected_style));
                         ops.push(RenderOp::PaintTextWithAttributes(
-                            clipped_text,
+                            clipped_text.into(),
                             my_selected_style,
                         ));
                     }
@@ -597,7 +601,7 @@ mod internal_impl {
                             dialog_engine.dialog_options.maybe_style_results_panel,
                         ));
                         ops.push(RenderOp::PaintTextWithAttributes(
-                            clipped_text,
+                            clipped_text.into(),
                             dialog_engine.dialog_options.maybe_style_results_panel,
                         ));
                     }
@@ -616,7 +620,7 @@ mod internal_impl {
 
         let row_pos = position!(col_index: origin_pos.col_index + 1, row_index: origin_pos.row_index + 1);
 
-        let title_us = UnicodeString::from(title);
+        let title_us = title.unicode_string();
         let text_content = title_us.truncate_to_fit_size(size! {
           col_count: bounds_size.col_count - 2, row_count: bounds_size.row_count
         });
@@ -650,7 +654,7 @@ mod internal_impl {
         if let Some(style) = maybe_style {
             if style.lolcat {
                 let texts = color_wheel.colorize_into_styled_texts(
-                    &UnicodeString::from(text),
+                    &text.unicode_string(),
                     GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
                     TextColorizationPolicy::ColorEachCharacter(*maybe_style),
                 );
@@ -669,14 +673,14 @@ mod internal_impl {
         dialog_engine: &mut DialogEngine,
     ) -> RenderOps {
         let mut ops = render_ops!();
-        let inner_spaces = SPACER.repeat(ch!(@to_usize bounds_size.col_count - 2));
+        let inner_spaces = SPACER.repeat(usize(bounds_size.col_count - ch(2)));
         let maybe_style = dialog_engine.dialog_options.maybe_style_border;
 
-        for row_idx in 0..*bounds_size.row_count {
+        for row_idx in 0..u16(bounds_size.row_count) {
             let row_pos = position!(col_index: origin_pos.col_index, row_index: origin_pos.row_index + row_idx);
 
             let is_first_line = row_idx == 0;
-            let is_last_line = row_idx == (*bounds_size.row_count - 1);
+            let is_last_line = row_idx == u16(bounds_size.row_count - ch(1));
 
             ops.push(RenderOp::ResetColor);
             ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
@@ -690,7 +694,7 @@ mod internal_impl {
                         BorderGlyphCharacter::TopLeft.as_ref(),
                         BorderGlyphCharacter::Horizontal
                             .as_ref()
-                            .repeat(ch!(@to_usize bounds_size.col_count - 2)),
+                            .repeat(usize(bounds_size.col_count - ch(2))),
                         BorderGlyphCharacter::TopRight.as_ref()
                     );
 
@@ -728,7 +732,7 @@ mod internal_impl {
                         BorderGlyphCharacter::BottomLeft.as_ref(),
                         BorderGlyphCharacter::Horizontal
                             .as_ref()
-                            .repeat(ch!(@to_usize bounds_size.col_count - 2)),
+                            .repeat(usize(bounds_size.col_count - ch(2))),
                         BorderGlyphCharacter::BottomRight.as_ref(),
                     );
                     // Apply lolcat override (if enabled) to the fg_color of text_content.
@@ -748,7 +752,7 @@ mod internal_impl {
                 DialogEngineMode::ModalAutocomplete => {
                     let inner_line = BorderGlyphCharacter::Horizontal
                         .as_ref()
-                        .repeat(ch!(@to_usize bounds_size.col_count - 2))
+                        .repeat(usize(bounds_size.col_count - ch(2)))
                         .to_string();
 
                     let text_content = format!(
@@ -758,9 +762,9 @@ mod internal_impl {
                         BorderGlyphCharacter::LineUpDownLeft.as_ref()
                     );
 
-                    let col_start_index = ch!(0);
+                    let col_start_index = ch(0);
                     let row_start_index =
-                        ch!(DisplayConstants::SimpleModalRowCount as u16) - ch!(1);
+                        ch(DisplayConstants::SimpleModalRowCount as u16) - ch(1);
                     let rel_insertion_pos =
                         position!(col_index: col_start_index, row_index: row_start_index);
 
@@ -803,10 +807,10 @@ mod internal_impl {
                 }
 
                 DialogEngineMode::ModalAutocomplete => {
-                    let selected_index = ch!(@to_usize dialog_engine.selected_row_index);
+                    let selected_index = usize(dialog_engine.selected_row_index);
                     if let Some(results) = &dialog_buffer.maybe_results {
                         if let Some(selected_result) = results.get(selected_index) {
-                            return Some(DialogChoice::Yes(selected_result.clone()));
+                            return Some(DialogChoice::Yes(selected_result.to_string()));
                         }
                     }
                     return Some(DialogChoice::No);
@@ -840,7 +844,7 @@ mod internal_impl {
         if input_event.matches(&[InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Up),
         })]) {
-            if dialog_engine.selected_row_index > ch!(0) {
+            if dialog_engine.selected_row_index > ch(0) {
                 dialog_engine.selected_row_index -= 1;
             }
 
@@ -855,7 +859,7 @@ mod internal_impl {
         if input_event.matches(&[InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Down),
         })]) {
-            let max_abs_row_index = dialog_buffer.get_results_count() - ch!(1);
+            let max_abs_row_index = dialog_buffer.get_results_count() - ch(1);
 
             let results_panel_viewport_height_row_count =
                 dialog_engine.dialog_options.result_panel_display_row_count;

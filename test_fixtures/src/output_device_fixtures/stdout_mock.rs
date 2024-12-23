@@ -18,7 +18,8 @@
 use std::{io::{Result, Write},
           sync::Arc};
 
-use r3bl_core::StdMutex;
+use r3bl_core::{MicroVecBackingStore, StdMutex};
+use smallvec::smallvec;
 use strip_ansi_escapes::strip;
 
 /// You can safely clone this struct, since it only contains an `Arc<StdMutex<Vec<u8>>>`.
@@ -30,13 +31,13 @@ use strip_ansi_escapes::strip;
 /// - [super::OutputDeviceExt::new_mock()]
 #[derive(Clone)]
 pub struct StdoutMock {
-    pub buffer: Arc<StdMutex<Vec<u8>>>,
+    pub buffer: Arc<StdMutex<MicroVecBackingStore<u8>>>,
 }
 
 impl Default for StdoutMock {
     fn default() -> Self {
         Self {
-            buffer: Arc::new(StdMutex::new(Vec::new())),
+            buffer: Arc::new(StdMutex::new(smallvec![])),
         }
     }
 }
@@ -46,7 +47,9 @@ impl StdoutMock {
 }
 
 impl StdoutMock {
-    pub fn get_copy_of_buffer(&self) -> Vec<u8> { self.buffer.lock().unwrap().clone() }
+    pub fn get_copy_of_buffer(&self) -> MicroVecBackingStore<u8> {
+        self.buffer.lock().unwrap().clone()
+    }
 
     pub fn get_copy_of_buffer_as_string(&self) -> String {
         let buffer_data = self.buffer.lock().unwrap();

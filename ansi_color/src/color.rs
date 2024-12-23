@@ -25,7 +25,7 @@
 //! - <https://en.wikipedia.org/wiki/8-bit_color>
 //! - <https://github.com/Qix-/color-convert/>
 
-use crate::{convert_rgb_into_ansi256, Ansi256Color, RgbColor, TransformColor};
+use crate::{Ansi256Color, RgbColor, TransformColor, convert_rgb_into_ansi256};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Color {

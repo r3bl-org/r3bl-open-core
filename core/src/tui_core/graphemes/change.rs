@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{ch, ChUnit, UnicodeString};
+use crate::{ChUnit, TinyVecBackingStore, UnicodeString, ch};
 
 impl UnicodeString {
     /// Returns a new ([UnicodeString], [ChUnit]) tuple. Does not modify
@@ -24,14 +24,11 @@ impl UnicodeString {
         &self,
         display_col: ChUnit,
         chunk: &str,
-    ) -> Option<(
-        /* new string */ UnicodeString,
-        /* display width of chunk */ ChUnit,
-    )> {
+    ) -> (String, ChUnit) {
         // Insert self grapheme cluster to self.vec_segment.
-        let mut acc = Vec::with_capacity(self.len() + 1);
-        for item in self.vec_segment.iter() {
-            acc.push(item.string.as_str());
+        let mut acc = TinyVecBackingStore::with_capacity(self.len() + 1);
+        for seg in self.vec_segment.iter() {
+            acc.push(self.get_str(seg));
         }
 
         let maybe_logical_index = self.logical_index_at_display_col_index(display_col);
@@ -44,19 +41,11 @@ impl UnicodeString {
 
         // Generate a new string from self.vec_segment and return it and the unicode width of the
         // character.
-        let new_string = acc.join("");
-
-        // In the caller - update the caret position based on the unicode width of the character.
-        let new_unicode_string = UnicodeString::from(new_string);
-        let chunk_display_width: ChUnit = ch!(UnicodeString::str_display_width(chunk));
-        Some((new_unicode_string, chunk_display_width))
+        (acc.join(""), ch(UnicodeString::str_display_width(chunk)))
     }
 
-    /// Returns a new [UnicodeString] option. Does not modify [self.string](UnicodeString::string).
-    pub fn delete_char_at_display_col(
-        &self,
-        display_col: ChUnit,
-    ) -> Option<UnicodeString> {
+    /// Returns a new [String] option. Does not modify [self.string](UnicodeString::string).
+    pub fn delete_char_at_display_col(&self, display_col: ChUnit) -> Option<String> {
         // There is no segment present (Deref trait makes `len()` apply to `vec_segment`).
         if self.len() == 0 {
             return None;
@@ -64,75 +53,70 @@ impl UnicodeString {
 
         // There is only one segment present.
         if self.len() == 1 {
-            return Some(UnicodeString::default());
+            return Some("".to_string());
         }
 
         // There are more than 1 segments present.
         let split_logical_index = self.logical_index_at_display_col_index(display_col)?;
         let max_logical_index = self.len();
 
-        let mut vec_left = Vec::with_capacity(self.len());
-        let mut str_left_unicode_width = ch!(0);
+        let mut vec_left = TinyVecBackingStore::with_capacity(self.len());
+        let mut str_left_unicode_width = ch(0);
         {
             for logical_idx in 0..split_logical_index {
-                let segment = self.at_logical_index(logical_idx)?;
-                vec_left.push(segment.string.as_str());
-                str_left_unicode_width += segment.unicode_width;
+                let seg_at_logical_idx = self.at_logical_index(logical_idx)?;
+                let string = self.get_str(seg_at_logical_idx);
+                vec_left.push(string);
+                str_left_unicode_width += seg_at_logical_idx.unicode_width;
             }
         }
 
         let skip_split_logical_index = split_logical_index + 1; // Drop one segment.
-        let mut vec_right = Vec::with_capacity(self.len());
-        let mut str_right_unicode_width = ch!(0);
+        let mut vec_right = TinyVecBackingStore::with_capacity(self.len());
+        let mut str_right_unicode_width = ch(0);
         {
             for logical_idx in skip_split_logical_index..max_logical_index {
                 let seg_at_logical_idx = self.at_logical_index(logical_idx)?;
-                vec_right.push(seg_at_logical_idx.string.as_str());
+                let string = self.get_str(seg_at_logical_idx);
+                vec_right.push(string);
                 str_right_unicode_width += seg_at_logical_idx.unicode_width;
             }
         }
 
         // Merge the two vectors.
         vec_left.append(&mut vec_right);
-        let new_string = vec_left.join("");
-        Some(UnicodeString::from(new_string))
+        Some(vec_left.join(""))
     }
 
     /// Does not modify [self.string](UnicodeString::string) & returns two new tuples:
-    /// 1. *left* [UnicodeString],
-    /// 2. *right* [UnicodeString].
-    pub fn split_at_display_col(
-        &self,
-        display_col: ChUnit,
-    ) -> Option<(UnicodeString, UnicodeString)> {
+    /// 1. *left* [String],
+    /// 2. *right* [String].
+    pub fn split_at_display_col(&self, display_col: ChUnit) -> Option<(String, String)> {
         let split_logical_index = self.logical_index_at_display_col_index(display_col)?;
         let max_logical_index = self.len();
 
-        let mut vec_left = Vec::with_capacity(self.len());
-        let mut str_left_unicode_width = ch!(0);
+        let mut vec_left = TinyVecBackingStore::with_capacity(self.len());
+        let mut str_left_unicode_width = ch(0);
         {
             for logical_idx in 0..split_logical_index {
                 let segment = self.at_logical_index(logical_idx)?;
-                vec_left.push(segment.string.as_ref());
+                vec_left.push(self.get_str(segment));
                 str_left_unicode_width += segment.unicode_width;
             }
         }
 
-        let mut vec_right = Vec::with_capacity(self.len());
-        let mut str_right_unicode_width = ch!(0);
+        let mut vec_right = TinyVecBackingStore::with_capacity(self.len());
+        let mut str_right_unicode_width = ch(0);
         {
             for logical_idx in split_logical_index..max_logical_index {
                 let seg_at_logical_idx = self.at_logical_index(logical_idx)?;
-                vec_right.push(seg_at_logical_idx.string.as_ref());
+                vec_right.push(self.get_str(seg_at_logical_idx));
                 str_right_unicode_width += seg_at_logical_idx.unicode_width;
             }
         }
 
-        if str_right_unicode_width > ch!(0) || str_left_unicode_width > ch!(0) {
-            Some((
-                UnicodeString::from(vec_left.join("")),
-                UnicodeString::from(vec_right.join("")),
-            ))
+        if str_right_unicode_width > ch(0) || str_left_unicode_width > ch(0) {
+            Some((vec_left.join(""), vec_right.join("")))
         } else {
             None
         }

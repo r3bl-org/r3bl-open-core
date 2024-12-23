@@ -47,6 +47,7 @@ pub struct HeadingData<'a> {
 /// - It is the intermediate representation (IR) of a single line of text.
 /// - There are some exceptions such as smart lists and code blocks which represent
 ///   multiple lines of text.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq, size_of::SizeOf)]
 pub enum MdBlock<'a> {
     Heading(HeadingData<'a>),

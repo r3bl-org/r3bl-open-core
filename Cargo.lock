@@ -1703,6 +1703,8 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
+ "smallstr",
+ "smallvec",
  "thiserror 1.0.64",
  "tokio",
  "tracing",
@@ -1717,6 +1719,8 @@ version = "0.0.2"
 dependencies = [
  "serde",
  "serde_json",
+ "smallstr",
+ "smallvec",
  "uuid",
 ]
 
@@ -1727,6 +1731,8 @@ dependencies = [
  "is_ci",
  "pretty_assertions",
  "serial_test",
+ "smallstr",
+ "smallvec",
  "test-case",
 ]
 
@@ -1753,6 +1759,8 @@ dependencies = [
  "serial_test",
  "sha2",
  "size-of",
+ "smallstr",
+ "smallvec",
  "strip-ansi",
  "strum",
  "strum_macros",
@@ -1783,6 +1791,8 @@ dependencies = [
  "r3bl_macro",
  "r3bl_test_fixtures",
  "serial_test",
+ "smallstr",
+ "smallvec",
  "textwrap",
  "thiserror 1.0.64",
  "tokio",
@@ -1844,6 +1854,8 @@ dependencies = [
  "r3bl_test_fixtures",
  "r3bl_tui",
  "r3bl_tuify",
+ "smallstr",
+ "smallvec",
  "strum",
  "strum_macros",
  "thiserror 1.0.64",
@@ -1867,6 +1879,8 @@ dependencies = [
  "miette",
  "pretty_assertions",
  "r3bl_core",
+ "smallstr",
+ "smallvec",
  "strip-ansi-escapes",
  "strum",
  "strum_macros",
@@ -1902,6 +1916,8 @@ dependencies = [
  "serde_json",
  "serial_test",
  "size-of",
+ "smallstr",
+ "smallvec",
  "strum",
  "strum_macros",
  "syntect",
@@ -1922,6 +1938,7 @@ version = "0.2.0"
 dependencies = [
  "clap",
  "crossterm",
+ "miette",
  "pretty_assertions",
  "r3bl_ansi_color",
  "r3bl_core",
@@ -1930,6 +1947,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
+ "thiserror 1.0.64",
  "tokio",
  "tracing",
  "tracing-appender",
@@ -2418,10 +2436,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "smallstr"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63b1aefdf380735ff8ded0b15f31aab05daf1f70216c01c02a12926badd1df9d"
+dependencies = [
+ "serde",
+ "smallvec",
+]
+
+[[package]]
 name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "smawk"

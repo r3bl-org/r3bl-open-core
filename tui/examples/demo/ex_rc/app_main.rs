@@ -19,7 +19,6 @@ use std::fmt::Debug;
 
 use chrono::{DateTime, Local};
 use r3bl_core::{call_if_true,
-                ch,
                 get_tui_styles,
                 position,
                 requested_size_percent,
@@ -45,7 +44,7 @@ use r3bl_core::{call_if_true,
                 TextColorizationPolicy,
                 TuiColor,
                 TuiStylesheet,
-                UnicodeString};
+                UnicodeStringExt};
 use r3bl_macro::tui_style;
 use r3bl_tui::{box_end,
                box_props,
@@ -54,7 +53,6 @@ use r3bl_tui::{box_end,
                render_ops,
                render_tui_styled_texts_into,
                surface,
-               telemetry_global_static,
                Animator,
                App,
                BoxedSafeApp,
@@ -82,6 +80,7 @@ use r3bl_tui::{box_end,
                TerminalWindowMainThreadSignal,
                ZOrder,
                DEBUG_TUI_MOD};
+use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
 
 use super::{state_mutator, AppSignal, State, FILE_CONTENT_ARRAY};
@@ -103,7 +102,7 @@ mod id_impl {
     }
 
     impl From<Id> for FlexBoxId {
-        fn from(id: Id) -> FlexBoxId { FlexBoxId(id as u8) }
+        fn from(id: Id) -> FlexBoxId { FlexBoxId::new(id) }
     }
 }
 
@@ -159,19 +158,12 @@ mod animator_task {
                     // causes rerender).
                     // This branch is cancel safe because tick is cancel safe.
                     _ = interval.tick() => {
-                        // Continue the animation.
-
-                        // Wire into the timing telemetry.
-                        telemetry_global_static::set_span_measure_start_ts();
-
-                        // Send a signal to the main thread to render.
+                        // Continue the animation. Send a signal to the main thread to
+                        // render.
                         send_signal!(
                             main_thread_channel_sender,
                             TerminalWindowMainThreadSignal::Render(None)
                         );
-
-                        // Wire into the timing telemetry.
-                        telemetry_global_static::set_span_measure_end_ts();
                     }
                 }
             }
@@ -220,7 +212,7 @@ mod app_main_impl_app_trait {
             has_focus: &mut HasFocus,
         ) {
             // Init local data.
-            self.data.lolcat_bg = ColorWheel::new(vec![
+            self.data.lolcat_bg = ColorWheel::new(smallvec![
                 ColorWheelConfig::Lolcat(
                     LolcatBuilder::new()
                         .set_background_mode(true)
@@ -274,7 +266,9 @@ mod app_main_impl_app_trait {
                 // Spawn previous slide action.
                 send_signal!(
                     global_data.main_thread_channel_sender,
-                    TerminalWindowMainThreadSignal::ApplyAction(AppSignal::PreviousSlide)
+                    TerminalWindowMainThreadSignal::ApplyAppSignal(
+                        AppSignal::PreviousSlide
+                    )
                 );
                 return Ok(EventPropagation::Consumed);
             };
@@ -389,7 +383,6 @@ mod perform_layout {
         ) -> CommonResult<()> {
             throws!({
                 let component_id = FlexBoxId::from(Id::Editor);
-                let style = Id::EditorStyleNameDefault.into();
                 // Layout editor component, and render it.
                 {
                     box_start! (
@@ -397,7 +390,7 @@ mod perform_layout {
                         id:                     component_id,
                         dir:                    LayoutDirection::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                        styles:                 [style]
+                        styles:                 [Id::EditorStyleNameDefault]
                     );
                     render_component_in_current_box!(
                         in:                 surface,
@@ -414,6 +407,8 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
+    use r3bl_core::glyphs;
+
     use super::*;
 
     pub fn create_components(
@@ -426,11 +421,14 @@ mod populate_component_registry {
 
         // Switch focus to the editor component if focus is not set.
         has_focus.set_id(id);
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
-            {
-                tracing::debug!("🪙 init has_focus = {:?}", has_focus.get_id());
-            }
+            let message =
+                format!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH);
+            // % is Display, ? is Debug.
+            tracing::info!(
+                message = message,
+                has_focus = ?has_focus.get_id()
+            );
         });
     }
 
@@ -462,9 +460,10 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        // 00: [ ] clean up log
         call_if_true!(DEBUG_TUI_MOD, {
-            tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
+            tracing::debug!(
+                message = "app_main construct EditorComponent [ on_buffer_change ]"
+            );
         });
     }
 }
@@ -474,10 +473,9 @@ mod stylesheet {
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
-            let id = Id::EditorStyleNameDefault.into();
             tui_stylesheet! {
               tui_style! {
-                id: id
+                id: Id::EditorStyleNameDefault
                 padding: 1
                 // These are ignored due to syntax highlighting.
                 // attrib: [bold]
@@ -503,7 +501,7 @@ mod status_bar {
         let lolcat_st = {
             let date_time: DateTime<Local> = Local::now();
             let time_str = date_time.format("%H:%M:%S").to_string();
-            let time_us = UnicodeString::from(format!(" 🦜 {} ", time_str));
+            let time_us = format!(" 🦜 {} ", time_str).unicode_string();
             let style = tui_style! {
                 color_fg: TuiColor::Basic(ANSIBasicColor::Black)
             };

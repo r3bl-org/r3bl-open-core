@@ -247,12 +247,17 @@ pub mod rgb_color;
 pub mod term;
 pub mod transform_color;
 
-pub use ansi256_color::*;
 pub use ansi_escape_codes::*;
 pub use ansi_styled_text::*;
+pub use ansi256_color::*;
 pub use color::*;
 pub use convert::*;
 pub use detect_color_support::*;
 pub use rgb_color::*;
 pub use term::*;
 pub use transform_color::*;
+
+/// This is copied from `r3bl_core` crate's `common_type_aliases.rs` file.
+pub const DEFAULT_TINY_VEC_SIZE: usize = 16;
+/// This is copied from `r3bl_core` create's `common_type_aliases.rs` file.
+pub type TinyVecBackingStore<T> = smallvec::SmallVec<[T; DEFAULT_TINY_VEC_SIZE]>;

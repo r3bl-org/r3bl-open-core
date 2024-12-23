@@ -15,10 +15,12 @@
  *   limitations under the License.
  */
 
+use r3bl_core::MicroVecBackingStore;
+
 use super::clap_config::BranchSubcommand;
 
 #[derive(Debug, Clone, Default)]
 pub struct CommandSuccessfulResponse {
-    pub maybe_deleted_branches: Option<Vec<String>>,
+    pub maybe_deleted_branches: Option<MicroVecBackingStore<String>>,
     pub branch_subcommand: Option<BranchSubcommand>,
 }

@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{Position, RequestedSizePercent, Size, TuiStyle};
+use r3bl_core::{Position, RequestedSizePercent, Size, TinyVecBackingStore, TuiStyle};
 
 use super::{FlexBoxId, LayoutDirection};
 
@@ -25,7 +25,7 @@ pub struct FlexBoxProps {
     pub id: FlexBoxId,
     pub dir: LayoutDirection,
     pub requested_size_percent: RequestedSizePercent,
-    pub maybe_styles: Option<Vec<TuiStyle>>,
+    pub maybe_styles: Option<TinyVecBackingStore<TuiStyle>>,
 }
 
 /// Properties that are needed to create a [crate::Surface].
@@ -38,6 +38,7 @@ pub struct SurfaceProps {
 #[cfg(test)]
 mod tests {
     use r3bl_core::{ok, position, requested_size_percent, size, CommonResult};
+    use smallvec::smallvec;
 
     use super::*;
     use crate::tui::layout::{FlexBoxId, LayoutDirection};
@@ -60,9 +61,9 @@ mod tests {
             id: FlexBoxId::from(10),
             dir: LayoutDirection::Horizontal,
             requested_size_percent: requested_size_percent!(width: 50, height: 50),
-            maybe_styles: Some(vec![TuiStyle::default()]),
+            maybe_styles: Some(smallvec![TuiStyle::default()]),
         };
-        assert_eq!(props.id.0, 10);
+        assert_eq!(props.id.inner, 10);
         assert_eq!(props.dir, LayoutDirection::Horizontal);
         assert_eq!(
             props.requested_size_percent,

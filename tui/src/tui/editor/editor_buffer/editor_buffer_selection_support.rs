@@ -21,6 +21,7 @@ use crossterm::style::Stylize;
 use r3bl_core::{call_if_true,
                 ch,
                 position,
+                usize,
                 CaretLocationInRange,
                 CaretMovementDirection,
                 ChUnit,
@@ -504,7 +505,7 @@ impl EditorBufferApi {
                 match selection_map.get(row_index) {
                     // Extend range to left (caret moved up and hit the top).
                     Some(range) => {
-                        let start = ch!(0);
+                        let start = ch(0);
                         let end = range.end_display_col_index;
                         selection_map.insert(
                             row_index,
@@ -517,7 +518,7 @@ impl EditorBufferApi {
                     }
                     // Create range to left (caret moved up and hit the top).
                     None => {
-                        let start = ch!(0);
+                        let start = ch(0);
                         let end = previous.col_index;
                         selection_map.insert(
                             row_index,
@@ -533,7 +534,7 @@ impl EditorBufferApi {
             cmp::Ordering::Greater => match selection_map.get(row_index) {
                 // Extend range to right (caret moved down and hit bottom).
                 Some(range) => {
-                    if let Some(line) = lines.get(ch!(@to_usize row_index)) {
+                    if let Some(line) = lines.get(usize(row_index)) {
                         let start = range.start_display_col_index;
                         let end = line.display_width;
                         selection_map.insert(
@@ -621,7 +622,7 @@ mod multiline_select_helpers {
         };
 
         let last_row_range = {
-            let start_col = ch!(0);
+            let start_col = ch(0);
             let end_col = last.col_index;
             SelectionRange::new(start_col, end_col)
         };
@@ -673,7 +674,7 @@ mod multiline_select_helpers {
 
         // Add the new last row range to selection map.
         let last_row_range = {
-            let start_col = ch!(0);
+            let start_col = ch(0);
             let end_col = last.col_index;
             SelectionRange::new(start_col, end_col)
         };
@@ -730,7 +731,7 @@ mod multiline_select_helpers {
         // LAST ROW.
         if let Some(last_row_range) = selection_map.get(last.row_index) {
             // Extend the existing range (in selection map) for the last row to start of line.
-            let start_col = ch!(0);
+            let start_col = ch(0);
             let end_col = last_row_range.end_display_col_index;
             let updated_last_row_range = SelectionRange {
                 start_display_col_index: start_col,
@@ -744,7 +745,7 @@ mod multiline_select_helpers {
         } else {
             // Add the new last row range to selection map.
             let new_last_row_range = {
-                let start_col = ch!(0);
+                let start_col = ch(0);
                 let end_col = last.col_index;
                 SelectionRange::new(start_col, end_col)
             };

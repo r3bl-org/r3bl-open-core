@@ -23,12 +23,15 @@ use r3bl_core::{call_if_true,
                 ch,
                 format_as_kilobytes_with_commas,
                 glyphs,
+                isize,
                 position,
+                usize,
                 ChUnit,
                 Position,
                 Size,
+                TinyVecBackingStore,
                 UnicodeString,
-                DEFAULT_VEC_CAPACITY};
+                UnicodeStringExt};
 use serde::{Deserialize, Serialize};
 use size_of::SizeOf as _;
 
@@ -191,9 +194,9 @@ pub struct EditorBuffer {
     pub render_cache: HashMap<String, RenderOps>,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Default, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct EditorContent {
-    pub lines: Vec<UnicodeString>,
+    pub lines: TinyVecBackingStore<UnicodeString>,
     pub caret_display_position: Position,
     pub scroll_offset: ScrollOffset,
     pub maybe_file_extension: Option<String>,
@@ -201,16 +204,27 @@ pub struct EditorContent {
     pub selection_map: SelectionMap,
 }
 
+impl size_of::SizeOf for EditorContent {
+    fn size_of_children(&self, context: &mut size_of::Context) {
+        context.add(self.lines.size_of().total_bytes());
+        context.add(self.caret_display_position.size_of().total_bytes());
+        context.add(self.scroll_offset.size_of().total_bytes());
+        context.add(self.maybe_file_extension.size_of().total_bytes());
+        context.add(self.maybe_file_path.size_of().total_bytes());
+        context.add(self.selection_map.size_of().total_bytes());
+    }
+}
+
 #[derive(Clone, PartialEq, Serialize, Deserialize, size_of::SizeOf)]
 pub struct EditorBufferHistory {
-    versions: Vec<EditorContent>,
+    versions: TinyVecBackingStore<EditorContent>,
     current_index: isize,
 }
 
 impl Default for EditorBufferHistory {
     fn default() -> Self {
         Self {
-            versions: Vec::with_capacity(DEFAULT_VEC_CAPACITY),
+            versions: TinyVecBackingStore::new(),
             current_index: -1,
         }
     }
@@ -287,7 +301,7 @@ pub mod history {
             if self.is_empty() {
                 None
             } else {
-                Some(ch!(self.versions.len()) - 1)
+                Some(ch(self.versions.len()) - ch(1))
             }
         }
 
@@ -303,7 +317,7 @@ pub mod history {
             // Don't do anything if is empty.
             if let Some(max_index) = self.get_last_index() {
                 // Make sure it doesn't go past the end.
-                if self.current_index == ch!(@to_isize max_index) {
+                if self.current_index == isize(max_index) {
                     return;
                 }
                 // Increment index.
@@ -355,7 +369,7 @@ pub mod history {
             } else {
                 // At end of versions.
                 if let Some(max_index) = self.get_last_index() {
-                    let max_index = ch!(@to_isize max_index);
+                    let max_index = isize(max_index);
                     if self.current_index == max_index {
                         return None;
                     }
@@ -375,7 +389,8 @@ pub mod history {
 
 #[cfg(test)]
 mod history_tests {
-    use r3bl_core::assert_eq2;
+    use r3bl_core::{assert_eq2, UnicodeStringExt};
+    use smallvec::smallvec;
 
     use super::*;
 
@@ -395,7 +410,7 @@ mod history_tests {
     #[test]
     fn test_push_with_contents() {
         let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 0);
 
@@ -408,15 +423,15 @@ mod history_tests {
     #[test]
     fn test_push_and_drop_future_redos() {
         let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 0);
 
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("def")];
+        editor_buffer.editor_content.lines = smallvec!["def".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 1);
 
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("ghi")];
+        editor_buffer.editor_content.lines = smallvec!["ghi".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 2);
 
@@ -425,7 +440,7 @@ mod history_tests {
         history::undo(&mut editor_buffer);
 
         // Push new content. Should drop future redos.
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("xyz")];
+        editor_buffer.editor_content.lines = smallvec!["xyz".unicode_string()];
         history::push(&mut editor_buffer);
 
         let history = editor_buffer.history;
@@ -442,7 +457,7 @@ mod history_tests {
     #[test]
     fn test_single_undo() {
         let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 0);
 
@@ -454,16 +469,16 @@ mod history_tests {
     #[test]
     fn test_many_undo() {
         let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 0);
 
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("def")];
+        editor_buffer.editor_content.lines = smallvec!["def".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 1);
         let copy_of_editor_content = editor_buffer.editor_content.clone();
 
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("ghi")];
+        editor_buffer.editor_content.lines = smallvec!["ghi".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 2);
 
@@ -485,11 +500,11 @@ mod history_tests {
     #[test]
     fn test_multiple_undos() {
         let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 0);
 
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("def")];
+        editor_buffer.editor_content.lines = smallvec!["def".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 1);
 
@@ -504,11 +519,11 @@ mod history_tests {
     #[test]
     fn test_undo_and_multiple_redos() {
         let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 0);
 
-        editor_buffer.editor_content.lines = vec![UnicodeString::from("def")];
+        editor_buffer.editor_content.lines = smallvec!["def".unicode_string()];
         history::push(&mut editor_buffer);
         assert_eq2!(editor_buffer.history.current_index, 1);
         let snapshot_content = editor_buffer.editor_content.clone();
@@ -537,6 +552,8 @@ mod history_tests {
 }
 
 mod constructor {
+    use smallvec::smallvec;
+
     use super::*;
 
     impl EditorBuffer {
@@ -547,12 +564,7 @@ mod constructor {
         ) -> Self {
             let it = Self {
                 editor_content: EditorContent {
-                    lines: {
-                        let mut it: Vec<UnicodeString> =
-                            Vec::with_capacity(DEFAULT_VEC_CAPACITY);
-                        it.push(UnicodeString::default());
-                        it
-                    },
+                    lines: { smallvec![UnicodeString::new("")] },
                     maybe_file_extension: maybe_file_extension.clone(),
                     maybe_file_path: maybe_file_path.clone(),
                     ..Default::default()
@@ -654,22 +666,25 @@ pub mod access_and_mutate {
 
         pub fn is_empty(&self) -> bool { self.editor_content.lines.is_empty() }
 
-        pub fn len(&self) -> ChUnit { ch!(self.editor_content.lines.len()) }
+        pub fn len(&self) -> ChUnit { ch(self.editor_content.lines.len()) }
 
         pub fn get_line_display_width(&self, row_index: ChUnit) -> ChUnit {
-            if let Some(line) = self.editor_content.lines.get(ch!(@to_usize row_index)) {
-                ch!(line.display_width)
+            if let Some(line) = self.editor_content.lines.get(usize(row_index)) {
+                ch(line.display_width)
             } else {
-                ch!(0)
+                ch(0)
             }
         }
 
-        pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.editor_content.lines }
+        pub fn get_lines(&self) -> &TinyVecBackingStore<UnicodeString> {
+            &self.editor_content.lines
+        }
 
         pub fn get_as_string_with_comma_instead_of_newlines(&self) -> String {
             self.get_lines()
                 .iter()
-                .map(|it| it.string.clone())
+                // PERF: [ ] perf
+                .map(|it| it.string.to_string())
                 .collect::<Vec<String>>()
                 .join(", ")
         }
@@ -677,15 +692,16 @@ pub mod access_and_mutate {
         pub fn get_as_string_with_newlines(&self) -> String {
             self.get_lines()
                 .iter()
-                .map(|it| it.string.clone())
+                // PERF: [ ] perf
+                .map(|it| it.string.to_string())
                 .collect::<Vec<String>>()
                 .join("\n")
         }
 
-        pub fn set_lines(&mut self, lines: Vec<String>) {
+        pub fn set_lines(&mut self, lines: &[&str]) {
             // Set lines.
             self.editor_content.lines =
-                lines.into_iter().map(UnicodeString::from).collect();
+                lines.iter().map(|line| line.unicode_string()).collect();
 
             // Reset caret.
             self.editor_content.caret_display_position = Position::default();
@@ -721,7 +737,7 @@ pub mod access_and_mutate {
             caret: &Position,
             scroll_offset: &ScrollOffset,
         ) -> usize {
-            ch!(@to_usize caret.row_index + scroll_offset.row_index)
+            usize(caret.row_index + scroll_offset.row_index)
         }
 
         /// Scroll adjusted caret col = caret.col + scroll_offset.col.
@@ -729,7 +745,7 @@ pub mod access_and_mutate {
             caret: &Position,
             scroll_offset: &ScrollOffset,
         ) -> usize {
-            ch!(@to_usize caret.col_index + scroll_offset.col_index)
+            usize(caret.col_index + scroll_offset.col_index)
         }
 
         pub fn get_scroll_offset(&self) -> ScrollOffset {
@@ -748,7 +764,7 @@ pub mod access_and_mutate {
         pub fn get_mut(
             &mut self,
         ) -> (
-            /* lines */ &mut Vec<UnicodeString>,
+            /* lines */ &mut TinyVecBackingStore<UnicodeString>,
             /* caret */ &mut Position,
             /* scroll_offset */ &mut ScrollOffset,
             /* selection_map */ &mut SelectionMap,
@@ -773,7 +789,6 @@ pub mod access_and_mutate {
     }
 }
 
-// 02: [x] clean up log
 mod impl_debug_format {
     use super::*;
 

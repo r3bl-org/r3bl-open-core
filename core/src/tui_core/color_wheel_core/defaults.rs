@@ -17,12 +17,23 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::{MicroVecBackingStore, TinyStringBackingStore};
+
+#[repr(u8)]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Defaults {
     Steps = 50,
 }
 
+pub fn get_default_gradient_stops() -> MicroVecBackingStore<TinyStringBackingStore> {
+    let mut stops_acc: MicroVecBackingStore<TinyStringBackingStore> =
+        MicroVecBackingStore::with_capacity(DEFAULT_GRADIENT_STOPS.len());
+    stops_acc.extend(DEFAULT_GRADIENT_STOPS.iter().map(|&stop| stop.into()));
+    stops_acc
+}
+
+/// Use [get_default_gradient_stops] to get the default gradient stops.
 /// More info: <https://www.colorhexa.com/>
-pub const DEFAULT_GRADIENT_STOPS: [&str; 3] = [
+const DEFAULT_GRADIENT_STOPS: [&str; 3] = [
     /* cyan */ "#00ffff", /* magenta */ "#ff00ff", /* blue */ "#0000ff",
 ];

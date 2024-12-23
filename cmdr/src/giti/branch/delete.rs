@@ -19,15 +19,18 @@ use std::process::Command;
 
 use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_core::CommonResult;
-use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
+use r3bl_tuify::{SelectionMode, StyleSheet, select_from_list_with_multi_line_header};
+use smallvec::smallvec;
 use try_delete_branch_user_choice::Selection::{self, Delete, ExitProgram};
 
-use crate::{color_constants::DefaultColors::{FrozenBlue,
+use crate::{AnalyticsAction,
+            color_constants::DefaultColors::{FrozenBlue,
                                              GuardsRed,
                                              LizardGreen,
                                              MoonlightBlue,
                                              SlateGray},
-            giti::{clap_config::BranchSubcommand,
+            giti::{CommandSuccessfulResponse,
+                   clap_config::BranchSubcommand,
                    giti_ui_templates::report_unknown_error_and_propagate,
                    multi_select_instruction_header,
                    single_select_instruction_header,
@@ -41,10 +44,8 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                                            FailedToRunCommandToDeleteBranches,
                                            PleaseSelectBranchesYouWantToDelete,
                                            YesDeleteBranch,
-                                           YesDeleteBranches},
-                   CommandSuccessfulResponse},
-            report_analytics,
-            AnalyticsAction};
+                                           YesDeleteBranches}},
+            report_analytics};
 
 pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
     report_analytics::start_task_to_generate_event(
@@ -147,9 +148,9 @@ pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
                                     // Add branches to deleted branches.
                                     try_run_command_result.maybe_deleted_branches =
                                         Some({
-                                            let mut it = vec![];
+                                            let mut it = smallvec![];
                                             for branch in &branches {
-                                                it.push(branch.clone());
+                                                it.push(branch.into());
                                             }
                                             it
                                         });

@@ -17,12 +17,12 @@
 
 use std::io::{self, Write};
 
-use crossterm::{cursor,
+use crossterm::{QueueableCommand,
+                cursor,
                 event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
                 terminal::{Clear,
-                           ClearType::{All, FromCursorDown}},
-                QueueableCommand};
-use r3bl_core::{ok, MemoizedLenMap, StringLength};
+                           ClearType::{All, FromCursorDown}}};
+use r3bl_core::{MemoizedLenMap, StringLength, ok};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{ReadlineError, ReadlineEvent, SafeHistory};

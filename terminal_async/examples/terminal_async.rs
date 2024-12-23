@@ -16,7 +16,7 @@
  */
 
 use std::{fs,
-          io::{stderr, Write},
+          io::{Write, stderr},
           ops::ControlFlow,
           path::{self, PathBuf},
           str::FromStr as _,
@@ -24,9 +24,9 @@ use std::{fs,
           time::Duration};
 
 use crossterm::style::Stylize as _;
-use miette::{miette, IntoDiagnostic as _};
+use miette::{IntoDiagnostic as _, miette};
 use r3bl_core::{SendRawTerminal, SharedWriter, StdMutex};
-use r3bl_log::{try_initialize_logging_global, DisplayPreference};
+use r3bl_log::{DisplayPreference, try_initialize_logging_global};
 use r3bl_terminal_async::{Readline,
                           ReadlineEvent,
                           Spinner,
@@ -416,7 +416,10 @@ mod long_running_task {
 
             // Don't forget to stop the spinner.
             if let Ok(Some(mut spinner)) = maybe_spinner {
-                let msg = format!("{} - Task ended. Resuming terminal and showing any output that was generated while spinner was active.", task_name);
+                let msg = format!(
+                    "{} - Task ended. Resuming terminal and showing any output that was generated while spinner was active.",
+                    task_name
+                );
                 let _ = spinner.stop(msg.as_str()).await;
             }
         });
@@ -424,6 +427,9 @@ mod long_running_task {
 }
 
 pub mod file_walker {
+    use r3bl_core::MicroVecBackingStore;
+    use smallvec::smallvec;
+
     use super::*;
 
     pub const FOLDER_DELIM: &str = std::path::MAIN_SEPARATOR_STR;
@@ -434,8 +440,8 @@ pub mod file_walker {
     ///   `/home/nazmul/github/r3bl_terminal_async`.
     /// - Returns a tuple of `(path, name)`. Eg:
     ///   (`/home/nazmul/github/r3bl_terminal_async`, `r3bl_terminal_async`).
-    pub fn get_current_working_directory(
-    ) -> miette::Result<(/*path*/ String, /*name*/ String)> {
+    pub fn get_current_working_directory()
+    -> miette::Result<(/*path*/ String, /*name*/ String)> {
         let path = std::env::current_dir().into_diagnostic()?;
 
         let name = path
@@ -544,7 +550,7 @@ pub mod file_walker {
         let root = create_root(root_path)?;
 
         // Walk the root.
-        let mut stack = vec![root.clone()];
+        let mut stack: MicroVecBackingStore<Folder> = smallvec![root.clone()];
 
         while let Some(mut current_node) = stack.pop() {
             // Print the current node.
@@ -606,11 +612,11 @@ async fn test_display_tree() -> miette::Result<()> {
     assert_eq!(shared_writer.buffer.len(), 0);
 
     // Print everything in line_receiver.
-    let mut output_lines = vec![];
+    let mut output_lines: MicroVecBackingStore<String> = smallvec![];
     loop {
         let it = line_receiver.try_recv().into_diagnostic();
         match it {
-            Ok(r3bl_terminal_async::LineStateControlSignal::Line(it)) => {
+            Ok(r3bl_core::LineStateControlSignal::Line(it)) => {
                 output_lines.push(String::from_utf8_lossy(&it).to_string());
                 print!("{}", String::from_utf8_lossy(&it));
             }
