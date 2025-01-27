@@ -17,31 +17,28 @@
 
 use std::time::Duration;
 
-use r3bl_core::{CrosstermEventResult, InputDevice, MicroVecBackingStore};
+use r3bl_core::{CrosstermEventResult, InputDevice, VecArray};
 
 use super::{gen_input_stream, gen_input_stream_with_delay};
 
 pub trait InputDeviceExt {
-    fn new_mock(generator_vec: MicroVecBackingStore<CrosstermEventResult>)
-    -> InputDevice;
+    fn new_mock(generator_vec: VecArray<CrosstermEventResult>) -> InputDevice;
 
     fn new_mock_with_delay(
-        generator_vec: MicroVecBackingStore<CrosstermEventResult>,
+        generator_vec: VecArray<CrosstermEventResult>,
         delay: Duration,
     ) -> InputDevice;
 }
 
 impl InputDeviceExt for InputDevice {
-    fn new_mock(
-        generator_vec: MicroVecBackingStore<CrosstermEventResult>,
-    ) -> InputDevice {
+    fn new_mock(generator_vec: VecArray<CrosstermEventResult>) -> InputDevice {
         InputDevice {
             resource: gen_input_stream(generator_vec),
         }
     }
 
     fn new_mock_with_delay(
-        generator_vec: MicroVecBackingStore<CrosstermEventResult>,
+        generator_vec: VecArray<CrosstermEventResult>,
         delay: Duration,
     ) -> InputDevice {
         InputDevice {

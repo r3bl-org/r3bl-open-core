@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2024 R3BL LLC
+ *   Copyright (c) 2025 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,13 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{Position, UnicodeString};
+// Attach.
+pub mod constructors;
+pub mod into_existing;
+pub mod make_new;
+pub mod sizes;
+pub mod usize_fmt;
 
-pub type ScrollOffset = Position;
-pub type US = UnicodeString;
+// Re-export.
+pub use sizes::*;
+pub use usize_fmt::*;

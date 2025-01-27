@@ -14,15 +14,11 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use std::{fmt::{Debug, Display},
-          ops::Deref};
-
-use serde::{Deserialize, Serialize};
+use std::{fmt::Debug, ops::Deref};
 
 /// This works w/ the [int-enum](https://crates.io/crates/int-enum) crate in order to
 /// allow for the definition of enums that are represented in memory as [u8]s.
-#[derive(Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Default, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct FlexBoxId {
     pub inner: u8,
 }
@@ -45,21 +41,9 @@ impl Deref for FlexBoxId {
     fn deref(&self) -> &Self::Target { &self.inner }
 }
 
-impl FlexBoxId {
-    fn pretty_print(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "❬{}❭", self.inner)
-    }
-}
-
 impl Debug for FlexBoxId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.pretty_print(f)
-    }
-}
-
-impl Display for FlexBoxId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.pretty_print(f)
+        write!(f, "❬{}❭", self.inner)
     }
 }
 
@@ -101,21 +85,6 @@ mod tests {
     #[test]
     fn test_flex_box_id_display() {
         let id = FlexBoxId::new(42);
-        assert_eq!(format!("{}", id), "❬42❭");
-    }
-
-    #[test]
-    fn test_flex_box_id_serialize() {
-        let id = FlexBoxId::new(42);
-        let serialized = serde_json::to_string(&id).unwrap();
-        assert_eq!(serialized, "{\"inner\":42}");
-    }
-
-    #[test]
-    fn test_flex_box_id_deserialize() {
-        let serialized = "{\"inner\":42}";
-        let id: FlexBoxId = serde_json::from_str(serialized).unwrap();
-        let expected: u8 = id.into();
-        assert_eq!(expected, 42);
+        assert_eq!(format!("{:?}", id), "❬42❭");
     }
 }

@@ -16,19 +16,15 @@
  */
 
 // Attach sources.
-pub mod aliases;
 pub mod args;
 pub mod cli_args;
 pub mod dialog_component_traits;
 pub mod editor_component_traits;
-pub mod format_option;
 pub mod list_of;
 
 // Re-export.
-pub use aliases::*;
 pub use args::*;
 pub use cli_args::*;
 pub use dialog_component_traits::*;
 pub use editor_component_traits::*;
-pub use format_option::*;
 pub use list_of::*;

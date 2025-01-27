@@ -18,12 +18,12 @@
 use std::{fmt::Debug, marker::PhantomData};
 
 use r3bl_core::{call_if_true,
-                ch,
                 format_as_kilobytes_with_commas,
                 glyphs,
                 ok,
                 output_device_as_mut,
                 position,
+                string_storage,
                 telemetry::{telemetry_default_constants, Telemetry},
                 telemetry_record,
                 Ansi256GradientIndex,
@@ -39,7 +39,7 @@ use r3bl_core::{call_if_true,
                 TelemetryAtomHint,
                 TextColorizationPolicy,
                 TooSmallToDisplayResult,
-                UnicodeStringExt};
+                UnicodeString};
 use r3bl_macro::tui_style;
 use size_of::SizeOf as _;
 use smallvec::smallvec;
@@ -521,19 +521,19 @@ where
 
 fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
     // Show warning message that window_size is too small.
-    let display_msg = format!(
+    let msg = string_storage!(
         "Window size is too small. Minimum size is {} cols x {} rows",
         MinSize::Col as u8,
         MinSize::Row as u8
-    )
-    .unicode_string();
-    let trunc_display_msg = display_msg
-        .truncate_to_fit_size(window_size)
-        .unicode_string();
-    let trunc_display_msg_len = ch(trunc_display_msg.len());
+    );
+    let msg_us = UnicodeString::new(&msg);
+    let trunc_msg = msg_us.truncate_to_fit_size(window_size);
+
+    let trunc_msg_us = UnicodeString::new(trunc_msg);
+    let trunc_msg_width = trunc_msg_us.display_width;
 
     let row_pos = window_size.row_count / 2;
-    let col_pos = (window_size.col_count - trunc_display_msg_len) / 2;
+    let col_pos = (window_size.col_count - trunc_msg_width) / 2;
 
     let mut pipeline = render_pipeline!();
 
@@ -556,7 +556,7 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
                 ColorWheelConfig::Ansi256(Ansi256GradientIndex::DarkRedToDarkMagenta, ColorWheelSpeed::Medium),
             ])
                 .colorize_into_styled_texts(
-                    &trunc_display_msg,
+                    &trunc_msg_us,
                     GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
                     TextColorizationPolicy::ColorEachCharacter(Some(style_bold)),
                 )
@@ -567,7 +567,7 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
 
 #[cfg(test)]
 mod tests {
-    use std::{fmt::{Display, Formatter},
+    use std::{fmt::{Debug, Formatter},
               time::Duration};
 
     use position::Position;
@@ -575,10 +575,12 @@ mod tests {
     use r3bl_core::{assert_eq2,
                     ch,
                     color,
+                    defaults::get_default_gradient_stops,
                     ok,
                     position,
                     send_signal,
                     size,
+                    string_storage,
                     throws_with_return,
                     tui_styled_text,
                     tui_styled_texts,
@@ -591,15 +593,16 @@ mod tests {
                     GradientGenerationPolicy,
                     GradientLengthKind,
                     InputDevice,
-                    MicroVecBackingStore,
                     OutputDevice,
                     TextColorizationPolicy,
-                    TuiStyle};
+                    TuiStyle,
+                    VecArray};
     use r3bl_macro::tui_style;
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, InputDeviceExt};
     use size::Size;
     use smallvec::smallvec;
-    use state::{AppSignal, State};
+    use test_fixture_app::AppMainTest;
+    use test_fixture_state::{AppSignal, State};
 
     use crate::{keypress,
                 main_event_loop_impl,
@@ -634,14 +637,14 @@ mod tests {
         // .install_thread_local()?;
 
         // Create an App (renders & responds to user input).
-        let app = Box::<AppMain>::default();
+        let app = Box::<AppMainTest>::default();
 
         // Exit if these keys are pressed.
-        let exit_keys: MicroVecBackingStore<InputEvent> =
+        let exit_keys: VecArray<InputEvent> =
             smallvec![InputEvent::Keyboard(keypress! { @char 'x' })];
 
         // Simulated key inputs.
-        let generator_vec: MicroVecBackingStore<CrosstermEventResult> = smallvec![
+        let generator_vec: VecArray<CrosstermEventResult> = smallvec![
             Ok(crossterm::event::Event::Key(
                 crossterm::event::KeyEvent::new(
                     crossterm::event::KeyCode::Up,
@@ -760,7 +763,7 @@ mod tests {
         ok!()
     }
 
-    mod state {
+    mod test_fixture_state {
         use super::*;
 
         /// Action.
@@ -775,42 +778,39 @@ mod tests {
             Noop,
         }
 
-        impl Display for AppSignal {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{self:?}")
-            }
-        }
-
         /// State.
-        #[derive(Clone, PartialEq, Eq, Debug, Default)]
+        #[derive(Clone, PartialEq, Eq, Default)]
         pub struct State {
             pub counter: isize,
         }
 
-        impl Display for State {
+        impl Debug for State {
             fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
                 write!(f, "State {{ counter: {:?} }}", self.counter)
             }
         }
     }
 
-    #[derive(Default)]
-    pub struct AppMain {
-        pub data: AppData,
+    mod test_fixture_app {
+        use super::*;
+
+        #[derive(Default)]
+        pub struct AppMainTest {
+            pub data: AppDataTest,
+        }
+
+        #[derive(Default)]
+        pub struct AppDataTest {
+            pub color_wheel_rgb: ColorWheel,
+        }
     }
 
-    #[derive(Default)]
-    pub struct AppData {
-        pub color_wheel_rgb: ColorWheel,
-    }
-
-    mod app_main_impl_trait_app {
-        use r3bl_core::{get_default_gradient_stops, UnicodeStringExt};
-        use smallvec::smallvec;
+    mod test_fixture_app_main_impl_trait_app {
+        use r3bl_core::UnicodeString;
 
         use super::*;
 
-        impl App for AppMain {
+        impl App for AppMainTest {
             type S = State;
             type AS = AppSignal;
 
@@ -821,11 +821,12 @@ mod tests {
                 _has_focus: &mut HasFocus,
             ) -> CommonResult<RenderPipeline> {
                 throws_with_return!({
-                    let state_str = format!("{}", global_data_mut_ref.state);
+                    let state_string =
+                        string_storage!("{a:?}", a = global_data_mut_ref.state);
                     let data = &mut self.data;
 
                     let sample_line_of_text =
-                        format!("{state_str}, gradient: [index: X, len: Y]");
+                        format!("{state_string}, gradient: [index: X, len: Y]");
                     let content_size_col = ch(sample_line_of_text.len());
                     let window_size = global_data_mut_ref.window_size;
 
@@ -835,32 +836,36 @@ mod tests {
                     let mut pipeline = render_pipeline!();
 
                     pipeline.push(ZOrder::Normal, {
-                        let mut it = render_ops! {
+                        let mut acc_render_op = render_ops! {
                             @new
                             RenderOp::ResetColor,
                         };
 
                         // Render using color_wheel_rgb.
-                        it += RenderOp::MoveCursorPositionAbs(position!(
+                        acc_render_op += RenderOp::MoveCursorPositionAbs(position!(
                             col_index: col,
                             row_index: row
                         ));
 
-                        let unicode_string = {
-                            let index = data.color_wheel_rgb.get_index();
-                            let len = match data.color_wheel_rgb.get_gradient_len() {
-                                GradientLengthKind::ColorWheel(len) => len,
-                                _ => 0,
-                            };
-                            format!("{state_str}, gradient: [index: {index}, len: {len}]")
-                                .unicode_string()
+                        let index = data.color_wheel_rgb.get_index();
+                        let len = match data.color_wheel_rgb.get_gradient_len() {
+                            GradientLengthKind::ColorWheel(len) => len,
+                            _ => 0,
                         };
 
+                        let string = string_storage!(
+                            "{state_string}, gradient: [index: {a:?}, len: {b}]",
+                            a = index,
+                            b = len
+                        );
+
+                        let string_us = UnicodeString::new(&string);
+
                         render_ops!(
-                            @render_styled_texts_into it
+                            @render_styled_texts_into acc_render_op
                             =>
                             data.color_wheel_rgb.colorize_into_styled_texts(
-                                &unicode_string,
+                                &string_us,
                                 GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                                 TextColorizationPolicy::ColorEachWord(None),
                             )
@@ -868,10 +873,13 @@ mod tests {
 
                         row += 1;
 
-                        it
+                        acc_render_op
                     });
 
-                    status_bar::create_status_bar_message(&mut pipeline, window_size);
+                    text_fixture_status_bar::create_status_bar_message(
+                        &mut pipeline,
+                        window_size,
+                    );
 
                     pipeline
                 });
@@ -993,7 +1001,7 @@ mod tests {
         }
     }
 
-    mod status_bar {
+    mod text_fixture_status_bar {
         use super::*;
 
         /// Shows helpful messages at the bottom row of the screen.

@@ -15,10 +15,8 @@
  *   limitations under the License.
  */
 
-use serde::{Deserialize, Serialize};
-
 #[repr(u8)]
-#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Ansi256GradientIndex {
     GrayscaleMediumGrayToWhite = 0, // The remaining values are in incrementing integer order.
     DarkRedToDarkMagenta,
@@ -37,7 +35,7 @@ pub enum Ansi256GradientIndex {
     BackgroundDarkGreenToDarkBlue,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ANSIColorArray(&'static [u8]);
 
 /// More info:

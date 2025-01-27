@@ -17,13 +17,7 @@
 
 use std::fmt::{Debug, Formatter};
 
-use r3bl_core::{call_if_true,
-                CommonResult,
-                MicroVecBackingStore,
-                OutputDevice,
-                Size,
-                TinyStringBackingStore};
-use smallvec::smallvec;
+use r3bl_core::{call_if_true, ok, CommonResult, OutputDevice, Size};
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
@@ -58,19 +52,21 @@ where
     AS: Debug + Default + Clone + Sync + Send,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let vec_lines: MicroVecBackingStore<TinyStringBackingStore> = {
-            let mut it = smallvec![];
-            it.push(format!("window_size: {0:?}", self.window_size).into());
-            it.push(match &self.maybe_saved_offscreen_buffer {
-                None => "no saved offscreen_buffer".into(),
-                Some(ref offscreen_buffer) => match DEBUG_TUI_COMPOSITOR {
-                    false => "offscreen_buffer saved from previous render".into(),
-                    true => offscreen_buffer.pretty_print(),
-                },
-            });
-            it
-        };
-        write!(f, "GlobalData - {}", vec_lines.join("\n  - "))
+        write!(f, "GlobalData")?;
+        write!(f, "\n  - window_size: {:?}", self.window_size)?;
+        write!(f, "\n  - ")?;
+        match &self.maybe_saved_offscreen_buffer {
+            None => write!(f, "no saved offscreen_buffer")?,
+            Some(ref offscreen_buffer) =>
+            // PERF: [ ] make sure this pretty_print works!
+            {
+                match DEBUG_TUI_COMPOSITOR {
+                    false => write!(f, "offscreen_buffer saved from previous render")?,
+                    true => write!(f, "{:?}", offscreen_buffer)?,
+                }
+            }
+        }
+        ok!()
     }
 }
 

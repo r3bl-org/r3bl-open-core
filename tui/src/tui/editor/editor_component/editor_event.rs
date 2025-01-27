@@ -17,9 +17,7 @@
 
 use std::fmt::Debug;
 
-use crossterm::style::Stylize;
-use r3bl_core::{call_if_true, Size};
-use serde::{Deserialize, Serialize};
+use r3bl_core::{call_if_true, string_storage, style_prompt, Size};
 
 use crate::{editor_buffer::EditorBuffer,
             editor_buffer_clipboard_support::ClipboardService,
@@ -41,7 +39,7 @@ use crate::{editor_buffer::EditorBuffer,
 ///
 /// By providing a conversion from [InputEvent] to [EditorEvent] it becomes easier to write event
 /// handlers that consume [InputEvent] and then execute [EditorEvent] on an [EditorBuffer].
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum EditorEvent {
     InsertChar(char),
     InsertString(String),
@@ -62,7 +60,7 @@ pub enum EditorEvent {
     Redo,
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum SelectionAction {
     OneCharLeft,
     OneCharRight,
@@ -76,7 +74,7 @@ pub enum SelectionAction {
     Esc,
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum CaretDirection {
     Up,
     Down,
@@ -89,10 +87,14 @@ impl TryFrom<InputEvent> for EditorEvent {
 
     fn try_from(input_event: InputEvent) -> Result<Self, Self::Error> {
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            tracing::debug!(
-                "\n🐥🐥🐥  EditorEvent::try_from: {}",
-                format!("{input_event}").red().on_white()
-            );
+            let message = "🐥🐥🐥  EditorEvent::try_from";
+            let details = string_storage!("{:?}", input_event);
+            let details_fmt = style_prompt(&details);
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = %message,
+                details = %details_fmt
+            };
         });
 
         match input_event {

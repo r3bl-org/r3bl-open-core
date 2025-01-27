@@ -15,45 +15,69 @@
  *   limitations under the License.
  */
 
+//! This module provides a custom [List] struct that wraps around a [SmallVec] to provide
+//! additional functionality and traits implementations for ease of use within the `tui`
+//! crate. Specifically so that the  [From] trait can be implemented for [List] of
+//! `T`. Where `T` is any number of types in the tui crate.
+//!
+//! The [List] struct is designed to be a more flexible and efficient alternative to a
+//! standard [Vec], with the ability to implement custom traits and macros.
+//! 1. This gets around the orphan rule for implementing standard library traits.
+//! 2. Using a [SmallVec] allows for stack allocation rather than heap allocation. Its
+//!    internal backing store is essentially an array-vec. Starts out as a stack allocated
+//!    array which can spill over into the heap if needed.
+//!
+//! # Features
+//!
+//! - Implements [AddAssign] trait for adding items, other lists, and vectors to the list.
+//! - Implements [From] trait for converting from [ListStorage] and [Vec] to [List].
+//! - Implements [Deref] and [DerefMut] traits for easy access to the inner [SmallVec].
+//! - Provides a [crate::list!] macro for convenient list creation.
+//!
+//! # Examples
+//!
+//! ```rust
+//! use r3bl_tui::{list, List};
+//!
+//! let mut list = List::new();
+//! list += 1;
+//! list += vec![2, 3, 4];
+//!
+//! let another_list = list![5, 6, 7];
+//! list += another_list;
+//! ```
+
 use std::ops::{AddAssign, Deref, DerefMut};
 
-use r3bl_core::MicroVecBackingStore;
-use serde::{Deserialize, Serialize};
+use r3bl_core::VecStrBuffer;
+use sizing_list_of::ListStorage;
+use smallvec::SmallVec;
 
-#[macro_export]
-macro_rules! list {
-    (
-        $($item: expr),*
-        $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
-    ) => {
-        {
-            #[allow(unused_mut)]
-            let mut it = $crate::List::new();
-            $(
-                it.inner.push($item);
-            )*
-            it
-        }
-    };
+/// This needs to be accessible by the rest of the crate, and anyone using the [List]
+/// struct.
+pub mod sizing_list_of {
+    use super::*;
+    pub type ListStorage<T> = SmallVec<[T; DEFAULT_LIST_STORAGE_SIZE]>;
+    const DEFAULT_LIST_STORAGE_SIZE: usize = 8;
 }
 
-/// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for [List] of
-/// `T`. Where `T` is any number of types in the tui crate.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+/// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for
+/// [List] of `T`. Where `T` is any number of types in the tui crate.
+#[derive(Clone, Default, PartialEq, Debug)]
 pub struct List<T> {
-    pub inner: MicroVecBackingStore<T>,
+    pub inner: ListStorage<T>,
 }
 
 impl<T> List<T> {
     pub fn with_capacity(size: usize) -> Self {
         Self {
-            inner: MicroVecBackingStore::with_capacity(size),
+            inner: ListStorage::with_capacity(size),
         }
     }
 
     pub fn new() -> Self {
         Self {
-            inner: MicroVecBackingStore::new(),
+            inner: ListStorage::new(),
         }
     }
 }
@@ -73,8 +97,16 @@ impl<T> AddAssign<Vec<T>> for List<T> {
     fn add_assign(&mut self, other_vec: Vec<T>) { self.extend(other_vec); }
 }
 
-impl<T> From<MicroVecBackingStore<T>> for List<T> {
-    fn from(other: MicroVecBackingStore<T>) -> Self { Self { inner: other } }
+impl<'a> From<VecStrBuffer<'a>> for List<&'a str> {
+    fn from(other: VecStrBuffer<'a>) -> Self {
+        let mut it = List::with_capacity(other.len());
+        it.extend(other);
+        it
+    }
+}
+
+impl<T> From<ListStorage<T>> for List<T> {
+    fn from(other: ListStorage<T>) -> Self { Self { inner: other } }
 }
 
 impl<T> From<Vec<T>> for List<T> {
@@ -86,10 +118,27 @@ impl<T> From<Vec<T>> for List<T> {
 }
 
 impl<T> Deref for List<T> {
-    type Target = MicroVecBackingStore<T>;
+    type Target = ListStorage<T>;
     fn deref(&self) -> &Self::Target { &self.inner }
 }
 
 impl<T> DerefMut for List<T> {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.inner }
+}
+
+#[macro_export]
+macro_rules! list {
+    (
+        $($item: expr),*
+        $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) => {
+        {
+            #[allow(unused_mut)]
+            let mut it = $crate::List::new();
+            $(
+                it.inner.push($item);
+            )*
+            it
+        }
+    };
 }

@@ -15,11 +15,9 @@
  *   limitations under the License.
  */
 
-use serde::{Deserialize, Serialize};
-
 use crate::TuiStyle;
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum GradientGenerationPolicy {
     /// The first time this method is called it will generate a gradient w/ the number
     /// of steps. Subsequent calls will use the same gradient and index **if** the
@@ -32,7 +30,7 @@ pub enum GradientGenerationPolicy {
     ReuseExistingGradientAndResetIndex,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum TextColorizationPolicy {
     ColorEachCharacter(Option<TuiStyle>),
     ColorEachWord(Option<TuiStyle>),

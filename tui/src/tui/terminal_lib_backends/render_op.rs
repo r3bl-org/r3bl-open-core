@@ -19,13 +19,12 @@ use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
 use r3bl_core::{LockedOutputDevice,
-                MicroVecBackingStore,
                 Position,
                 Size,
-                TinyStringBackingStore,
+                StringStorage,
                 TuiColor,
-                TuiStyle};
-use serde::{Deserialize, Serialize};
+                TuiStyle,
+                VecArray};
 
 use super::TERMINAL_LIB_BACKEND;
 use crate::{CrosstermDebugFormatRenderOp,
@@ -156,15 +155,15 @@ macro_rules! render_ops {
 /// Due to the compositor [super::OffscreenBuffer], there is no need to optimize the
 /// individual paint operations. You don't have to manage your own whitespace or doing
 /// clear before paint! 🎉 The compositor takes care of that for you!
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct RenderOps {
-    pub list: MicroVecBackingStore<RenderOp>,
+    pub list: VecArray<RenderOp>,
 }
 
 impl Default for RenderOps {
     fn default() -> Self {
         Self {
-            list: MicroVecBackingStore::new(),
+            list: VecArray::new(),
         }
     }
 }
@@ -175,7 +174,7 @@ pub struct RenderOpsLocalData {
 }
 
 pub mod render_ops_impl {
-    use smallvec::smallvec;
+    use r3bl_core::{ok, VecArray};
 
     use super::*;
 
@@ -225,7 +224,7 @@ pub mod render_ops_impl {
     }
 
     impl Deref for RenderOps {
-        type Target = MicroVecBackingStore<RenderOp>;
+        type Target = VecArray<RenderOp>;
 
         fn deref(&self) -> &Self::Target { &self.list }
     }
@@ -240,25 +239,28 @@ pub mod render_ops_impl {
 
     impl Debug for RenderOps {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            let mut acc_lines: MicroVecBackingStore<TinyStringBackingStore> = smallvec![];
+            let mut iter = self.iter();
+
+            _ = write!(f, "RenderOps.len(): {}", self.list.len());
+
+            const DELIM: &str = "\n  - ";
 
             // First line.
-            let first_line = format!("RenderOps.len(): {}", self.list.len());
-            acc_lines.push(first_line.into());
-
-            // Subsequent lines (optional).
-            for render_op in self.iter() {
-                let line = format!("[{render_op:?}]");
-                acc_lines.push(line.into());
+            if let Some(first) = iter.next() {
+                _ = write!(f, "[{:?}]", first);
             }
 
-            // Join all lines.
-            write!(f, "{}", acc_lines.join("\n  - "))
+            // Subsequent lines.
+            for item in iter {
+                _ = write!(f, "{DELIM}[{:?}]", item);
+            }
+
+            ok!()
         }
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub enum RenderOp {
     EnterRawMode,
 
@@ -296,14 +298,14 @@ pub enum RenderOp {
     /// underline, strikethrough, etc) and not colors. If you need to apply color, use
     /// [RenderOp::ApplyColors] instead.
     ///
-    /// 1. If the [TinyStringBackingStore] argument is plain text (no ANSI sequences)
+    /// 1. If the [StringStorage] argument is plain text (no ANSI sequences)
     ///    then it will be clipped available width of the terminal screen).
     ///
-    /// 2. If the [TinyStringBackingStore] argument contains ANSI sequences then it will
+    /// 2. If the [StringStorage] argument contains ANSI sequences then it will
     ///    be printed as-is. You are responsible for handling clipping of the text to the
     ///    bounds of the terminal screen.
     // PERF: [x] remove string
-    PaintTextWithAttributes(TinyStringBackingStore, Option<TuiStyle>),
+    PaintTextWithAttributes(StringStorage, Option<TuiStyle>),
 
     /// This is **not** meant for use directly by apps. It is to be used only by the
     /// [super::OffscreenBuffer]. This operation skips the checks for content width
@@ -312,10 +314,7 @@ pub enum RenderOp {
     /// created the two render ops above were used which already handle the clipping and
     /// padding.
     // PERF: [x] remove string
-    CompositorNoClipTruncPaintTextWithAttributes(
-        TinyStringBackingStore,
-        Option<TuiStyle>,
-    ),
+    CompositorNoClipTruncPaintTextWithAttributes(StringStorage, Option<TuiStyle>),
 
     /// For [Default] impl.
     Noop,
@@ -335,7 +334,7 @@ mod render_op_impl {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    CrosstermDebugFormatRenderOp {}.debug_format(self, f)
+                    CrosstermDebugFormatRenderOp {}.fmt_debug(self, f)
                 }
                 TerminalLibBackend::Termion => todo!(), // FUTURE: implement debug formatter for termion
             }
@@ -380,5 +379,5 @@ pub trait Flush {
 }
 
 pub trait DebugFormatRenderOp {
-    fn debug_format(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result;
+    fn fmt_debug(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result;
 }

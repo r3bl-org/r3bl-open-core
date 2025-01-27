@@ -18,7 +18,17 @@
 //! This module is responsible for converting all the [MdLineFragment] into plain text
 //! w/out any formatting.
 
-use r3bl_core::{PrettyPrintDebug, TinyVecBackingStore};
+use std::fmt::Write as _;
+
+use r3bl_core::{convert_to_string_slice,
+                join,
+                join_fmt,
+                join_with_index,
+                pad_fmt,
+                string_storage,
+                usize_to_u8_array,
+                PrettyPrintDebug,
+                StringStorage};
 
 use crate::{constants::{BACK_TICK,
                         CHECKED,
@@ -29,6 +39,7 @@ use crate::{constants::{BACK_TICK,
                         LIST_SPACE_DISPLAY,
                         LIST_SPACE_END_DISPLAY_FIRST_LINE,
                         LIST_SPACE_END_DISPLAY_REST_LINE,
+                        NEW_LINE,
                         PERIOD,
                         RIGHT_BRACKET,
                         RIGHT_IMAGE,
@@ -45,30 +56,33 @@ use crate::{constants::{BACK_TICK,
             MdLineFragment};
 
 impl PrettyPrintDebug for MdDocument<'_> {
-    fn pretty_print_debug(&self) -> String {
-        let mut it = TinyVecBackingStore::new();
-        for (index, block) in self.iter().enumerate() {
-            it.push(format!("[{}]: {}", index, block.pretty_print_debug()));
-        }
-        it.join("\n")
+    fn pretty_print_debug(&self) -> StringStorage {
+        join_with_index!(
+            from: self,
+            each: block,
+            index: index,
+            delim: NEW_LINE,
+            format: "[{a}]: {b}", a = index, b = block.pretty_print_debug()
+        )
     }
 }
 
 impl PrettyPrintDebug for List<MdLineFragment<'_>> {
-    fn pretty_print_debug(&self) -> String {
-        self.inner
-            .iter()
-            .map(|fragment| fragment.pretty_print_debug())
-            .collect::<Vec<String>>()
-            .join("")
+    fn pretty_print_debug(&self) -> StringStorage {
+        join!(
+            from: self,
+            each: fragment,
+            delim: "",
+            format: "{a}", a = fragment.pretty_print_debug()
+        )
     }
 }
 
 impl PrettyPrintDebug for MdBlock<'_> {
-    fn pretty_print_debug(&self) -> String {
+    fn pretty_print_debug(&self) -> StringStorage {
         match self {
             MdBlock::Heading(heading_data) => {
-                format!(
+                string_storage!(
                     "{}{}",
                     heading_data.heading_level.pretty_print_debug(),
                     heading_data.text,
@@ -83,45 +97,63 @@ impl PrettyPrintDebug for MdBlock<'_> {
                         .and_then(|first_line| first_line.language)
                         .unwrap_or("n/a")
                 };
-                format!("code block, line count: {line_count}, lang: {lang}")
+                string_storage!("code block, line count: {line_count}, lang: {lang}")
             }
-            MdBlock::Title(title) => format!("title: {}", title),
-            MdBlock::Tags(tags) => format!("tags: {}", tags.join(", ")),
-            MdBlock::Date(date) => format!("title: {}", date),
-            MdBlock::Authors(authors) => format!("tags: {}", authors.join(", ")),
-            MdBlock::SmartList((list_lines, _bullet_kind, _indent)) => format!(
-                "[  {}  ]",
-                list_lines
-                    .iter()
-                    .map(|fragments_in_one_line| format!(
-                        "┊{}┊",
-                        fragments_in_one_line.pretty_print_debug()
-                    ))
-                    .collect::<Vec<String>>()
-                    .join(" → ")
-            ),
+            MdBlock::Title(title) => string_storage!("title: {}", title),
+            MdBlock::Tags(tags) => {
+                join!(
+                    from: tags,
+                    each: tag,
+                    delim: ", ",
+                    format: "{a}", a = tag
+                )
+            }
+            MdBlock::Date(date) => string_storage!("title: {}", date),
+            MdBlock::Authors(authors) => {
+                join!(
+                    from: authors,
+                    each: author,
+                    delim: ", ",
+                    format: "{a}", a = author
+                )
+            }
+            MdBlock::SmartList((list_lines, _bullet_kind, _indent)) => {
+                let mut acc = StringStorage::new();
+                _ = write!(acc, "[  ");
+                join_fmt!(
+                    fmt: acc,
+                    from: list_lines,
+                    each: fragments_in_one_line,
+                    delim: " → ",
+                    format: "┊{}┊", fragments_in_one_line.pretty_print_debug()
+                );
+                _ = write!(acc, "  ]");
+                acc
+            }
         }
     }
 }
 
 impl PrettyPrintDebug for HeadingLevel {
-    fn pretty_print_debug(&self) -> String {
-        let num_of_hashes = usize::from(*self);
-        let it: String = format!(
-            "{}{}",
-            HEADING_CHAR.to_string().repeat(num_of_hashes),
-            SPACE
+    fn pretty_print_debug(&self) -> StringStorage {
+        let mut acc = StringStorage::new();
+        let num_of_hashes = self.level;
+        pad_fmt!(
+            fmt: acc,
+            pad_str: HEADING_CHAR,
+            repeat_count: num_of_hashes
         );
-        it
+        _ = write!(acc, "{}", SPACE);
+        acc
     }
 }
 
 impl PrettyPrintDebug for MdLineFragment<'_> {
-    fn pretty_print_debug(&self) -> String {
-        let it: String = match self {
-            MdLineFragment::Plain(text) => text.to_string(),
+    fn pretty_print_debug(&self) -> StringStorage {
+        match self {
+            MdLineFragment::Plain(text) => (*text).into(),
             MdLineFragment::Link(HyperlinkData { text, url }) => {
-                format!(
+                string_storage!(
                     "{LEFT_BRACKET}{text}{RIGHT_BRACKET}{LEFT_PARENTHESIS}{url}{RIGHT_PARENTHESIS}"
                 )
             }
@@ -129,15 +161,19 @@ impl PrettyPrintDebug for MdLineFragment<'_> {
                 text: alt_text,
                 url,
             }) => {
-                format!(
+                string_storage!(
                     "{LEFT_IMAGE}{alt_text}{RIGHT_IMAGE}{LEFT_PARENTHESIS}{url}{RIGHT_PARENTHESIS}"
                 )
             }
-            MdLineFragment::Bold(text) => format!("{STAR}{text}{STAR}"),
-            MdLineFragment::Italic(text) => format!("{UNDERSCORE}{text}{UNDERSCORE}"),
-            MdLineFragment::InlineCode(text) => format!("{BACK_TICK}{text}{BACK_TICK}"),
+            MdLineFragment::Bold(text) => string_storage!("{STAR}{text}{STAR}"),
+            MdLineFragment::Italic(text) => {
+                string_storage!("{UNDERSCORE}{text}{UNDERSCORE}")
+            }
+            MdLineFragment::InlineCode(text) => {
+                string_storage!("{BACK_TICK}{text}{BACK_TICK}")
+            }
             MdLineFragment::Checkbox(is_checked) => {
-                (if *is_checked { CHECKED } else { UNCHECKED }).to_string()
+                (if *is_checked { CHECKED } else { UNCHECKED }).into()
             }
             MdLineFragment::OrderedListBullet {
                 indent,
@@ -148,48 +184,77 @@ impl PrettyPrintDebug for MdLineFragment<'_> {
                 indent,
                 is_first_line,
             } => generate_unordered_list_item_bullet(indent, is_first_line),
-        };
-        it
+        }
     }
 }
 
+// REFACTOR: [x] use StringStorage here
 pub fn generate_ordered_list_item_bullet(
     indent: &usize,
     number: &usize,
     is_first_line: &bool,
-) -> String {
+) -> StringStorage {
+    let mut acc = StringStorage::new();
+
     if *is_first_line {
-        let padding_for_indent = SPACE.repeat(*indent);
-        let first_line_bullet =
-            format!("{number}{PERIOD}{LIST_SPACE_END_DISPLAY_REST_LINE}");
-        format!("{padding_for_indent}{first_line_bullet}")
+        pad_fmt!(
+            fmt: acc,
+            pad_str: SPACE,
+            repeat_count: *indent
+        );
+        _ = write!(acc, "{number}{PERIOD}{LIST_SPACE_END_DISPLAY_REST_LINE}");
     } else {
-        let padding_for_indent = SPACE.repeat(*indent);
-        let number_str = format!("{}", number);
+        // Padding for indent.
+        pad_fmt!(
+            fmt: acc,
+            pad_str: SPACE,
+            repeat_count: *indent
+        );
+
+        // Padding for number.
+        let number_ray = usize_to_u8_array(*number);
+        let number_str = convert_to_string_slice(&number_ray);
         let number_str_len = number_str.len();
-        let number_str_blanks = SPACE.repeat(number_str_len);
-        let rest_line_bullet =
-            format!("{number_str_blanks}{SPACE}{LIST_SPACE_END_DISPLAY_REST_LINE}");
-        format!("{padding_for_indent}{rest_line_bullet}")
+        pad_fmt!(
+            fmt: acc,
+            pad_str: SPACE,
+            repeat_count: number_str_len
+        );
+
+        // Write the reset rest of the line.
+        _ = write!(acc, "{SPACE}{LIST_SPACE_END_DISPLAY_REST_LINE}");
     }
+
+    acc
 }
 
 pub fn generate_unordered_list_item_bullet(
     indent: &usize,
     is_first_line: &bool,
-) -> String {
+) -> StringStorage {
+    let mut acc = StringStorage::new();
+
     if *is_first_line {
-        let padding_for_indent = LIST_SPACE_DISPLAY.repeat(*indent);
-        let first_line_bullet = format!(
-            "{}{}",
-            LIST_SPACE_DISPLAY, LIST_SPACE_END_DISPLAY_FIRST_LINE
+        pad_fmt!(
+            fmt: acc,
+            pad_str: LIST_SPACE_DISPLAY,
+            repeat_count: *indent
         );
-        format!("{padding_for_indent}{first_line_bullet}")
+
+        _ = write!(
+            acc,
+            "{LIST_SPACE_DISPLAY}{LIST_SPACE_END_DISPLAY_FIRST_LINE}",
+        );
     } else {
-        let padding_for_indent = SPACE.repeat(*indent);
-        let rest_line_bullet = format!("{}{}", SPACE, LIST_SPACE_END_DISPLAY_REST_LINE);
-        format!("{padding_for_indent}{rest_line_bullet}")
+        pad_fmt!(
+            fmt: acc,
+            pad_str: SPACE,
+            repeat_count: *indent
+        );
+        _ = write!(acc, "{SPACE}{LIST_SPACE_END_DISPLAY_REST_LINE}");
     }
+
+    acc
 }
 
 #[cfg(test)]

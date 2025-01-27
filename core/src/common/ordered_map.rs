@@ -19,11 +19,11 @@ use std::collections::HashMap;
 
 use smallvec::smallvec;
 
-use super::TinyVecBackingStore;
+use crate::VecArray;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct OrderedMap<K, V> {
-    keys: TinyVecBackingStore<K>,
+    keys: VecArray<K>,
     map: HashMap<K, V>,
 }
 
@@ -49,6 +49,10 @@ impl<K: std::hash::Hash + Eq + Clone, V> OrderedMap<K, V> {
             .iter()
             .filter_map(move |key| self.map.get(key).map(|value| (key, value)))
     }
+}
+
+impl<K: std::hash::Hash + Eq + Clone, V> Default for OrderedMap<K, V> {
+    fn default() -> Self { Self::new() }
 }
 
 #[cfg(test)]

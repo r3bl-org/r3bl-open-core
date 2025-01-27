@@ -15,10 +15,17 @@
  *   limitations under the License.
  */
 
-use std::ops::{AddAssign, Index};
+use std::{fmt::Debug,
+          ops::{AddAssign, Index}};
 
-use super::TuiStyledText;
-use crate::{ChUnit, ConvertToPlainText, PrettyPrintDebug, UnicodeString};
+use super::{TuiStyledText, sizing::VecTuiStyledText};
+use crate::{ChUnit,
+            ConvertToPlainText,
+            StringStorage,
+            UnicodeString,
+            ch,
+            join_with_index_fmt,
+            ok};
 
 /// Macro to make building [`TuiStyledTexts`] easy.
 ///
@@ -54,10 +61,11 @@ macro_rules! tui_styled_texts {
     };
 }
 
+// PERF: [ ] make sure this works
 /// Use [tui_styled_texts!] macro for easier construction.
-#[derive(Debug, Clone, Default, size_of::SizeOf)]
+#[derive(Clone, Default, size_of::SizeOf)]
 pub struct TuiStyledTexts {
-    pub inner: Vec<TuiStyledText>,
+    pub inner: VecTuiStyledText,
 }
 
 mod impl_ops {
@@ -86,40 +94,44 @@ mod impl_ops {
 
 mod impl_display {
     use super::*;
+    use crate::join;
 
     impl ConvertToPlainText for TuiStyledTexts {
-        fn to_plain_text_us(&self) -> UnicodeString {
-            let mut it = UnicodeString::new("");
-            for styled_text in self.inner.iter() {
-                it = it + styled_text.get_text();
-            }
-            it
+        fn to_plain_text(&self) -> StringStorage {
+            join!(
+                from: self.inner,
+                each: styled_text,
+                delim: "",
+                format: "{}", styled_text.get_text()
+            )
         }
     }
 
     impl TuiStyledTexts {
-        pub fn display_width(&self) -> ChUnit { self.to_plain_text_us().display_width }
+        pub fn display_width(&self) -> ChUnit {
+            let plain_text = self.to_plain_text();
+            let display_width = UnicodeString::str_display_width(plain_text.as_str());
+            ch(display_width)
+        }
     }
 }
 
 mod impl_debug {
     use super::*;
-    use crate::{TinyStringBackingStore, TinyVecBackingStore};
 
-    impl PrettyPrintDebug for TuiStyledTexts {
-        fn pretty_print_debug(&self) -> String {
-            let mut it = TinyVecBackingStore::<TinyStringBackingStore>::new();
-            for (index, item) in self.inner.iter().enumerate() {
-                it.push(
-                    format!(
-                        "{index}: [{}, {}]",
-                        item.get_style(),
-                        item.get_text().string
-                    )
-                    .into(),
-                );
-            }
-            it.join("\n")
+    impl Debug for TuiStyledTexts {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            join_with_index_fmt!(
+                fmt: f,
+                from: self.inner,
+                each: styled_text,
+                index: index,
+                delim: "\n",
+                format: "{index}: [{}, {}]",
+                styled_text.get_style(),
+                styled_text.get_text()
+            );
+            ok!()
         }
     }
 }

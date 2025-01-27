@@ -21,7 +21,6 @@ use crossterm::event::{KeyCode,
                        KeyModifiers,
                        MediaKeyCode,
                        ModifierKeyCode};
-use serde::{Deserialize, Serialize};
 
 use super::{Enhanced, ModifierKeysMask};
 use crate::{convert_key_modifiers, MediaKey, ModifierKeyEnum, SpecialKeyExt};
@@ -127,13 +126,13 @@ macro_rules! keypress {
 ///
 /// 2. Also, the [KeyEvent]'s `state` is totally ignored in the conversion to [KeyPress].
 ///    The [crossterm::event::KeyEventState] isn't even considered in the conversion code.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum KeyPress {
     Plain { key: Key },
     WithModifiers { key: Key, mask: ModifierKeysMask },
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum Key {
     /// [char] that can be printed to the console. Displayable characters are:
     /// - `a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z`
@@ -195,7 +194,7 @@ pub enum Key {
     KittyKeyboardProtocol(Enhanced),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum FunctionKey {
     F1,
     F2,
@@ -211,7 +210,7 @@ pub enum FunctionKey {
     F12,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum SpecialKey {
     Backspace,
     Enter,

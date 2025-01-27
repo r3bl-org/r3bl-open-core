@@ -15,6 +15,10 @@
  *   limitations under the License.
  */
 
+use std::fmt::Write;
+
+use crate::StringStorage;
+
 /// Safely subtracts two unsigned numbers and returns the result. Does not panic.
 ///
 /// ```rust
@@ -145,12 +149,16 @@ macro_rules! dec_unsigned {
 
 /// Format the given number of bytes as kilobytes with commas. If the number of bytes is
 /// less than 1024, it will be formatted as bytes.
-pub fn format_as_kilobytes_with_commas(bytes_size: usize) -> String {
+pub fn format_as_kilobytes_with_commas(bytes_size: usize) -> StringStorage {
     if bytes_size < 1024 {
-        format_with_commas(bytes_size) + " B"
+        let mut acc = format_with_commas(bytes_size);
+        _ = write!(acc, " B");
+        acc
     } else {
         let kilobytes = bytes_size / 1024;
-        format_with_commas(kilobytes) + " KB"
+        let mut acc = format_with_commas(kilobytes);
+        _ = write!(acc, " KB");
+        acc
     }
 }
 
@@ -179,18 +187,27 @@ fn test_format_as_kilobytes_with_commas() {
 }
 
 /// Format a number with commas.
-pub fn format_with_commas(num: usize) -> String {
+pub fn format_with_commas(num: usize) -> StringStorage {
     let num_str = num.to_string();
-    let mut result = String::new();
 
-    for (count, c) in num_str.chars().rev().enumerate() {
-        if count % 3 == 0 && count != 0 {
-            result.push(',');
+    let ir = {
+        let mut acc = StringStorage::with_capacity(num_str.len());
+        for (count, ch) in num_str.chars().rev().enumerate() {
+            if count % 3 == 0 && count != 0 {
+                acc.push(',');
+            }
+            acc.push(ch);
         }
-        result.push(c);
-    }
+        acc
+    };
 
-    result.chars().rev().collect()
+    {
+        let mut acc = StringStorage::with_capacity(ir.len());
+        for ch in ir.chars().rev() {
+            acc.push(ch);
+        }
+        acc
+    }
 }
 
 #[test]

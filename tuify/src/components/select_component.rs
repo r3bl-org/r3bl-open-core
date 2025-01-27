@@ -30,9 +30,11 @@ use r3bl_ansi_color::AnsiStyledText;
 use r3bl_core::{call_if_true,
                 ch,
                 get_terminal_width,
+                string_storage,
                 throws,
                 usize,
                 ChUnit,
+                UnicodeString,
                 UnicodeStringExt};
 
 use crate::{apply_style,
@@ -119,14 +121,20 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
             };
 
             call_if_true!(DEVELOPMENT_MODE, {
-                tracing::debug!(
-                    "🍎🍎🍎\n render()::state: \n\t[raw_caret_row_index: {}, scroll_offset_row_index: {}], \n\theader_viewport_height: {}, items_viewport_height:{}, viewport_width:{}",
-                    format!("{}", state.raw_caret_row_index).blue(),
-                    format!("{}", state.scroll_offset_row_index).blue(),
-                    format!("{}", header_viewport_height).blue(),
-                    format!("{}", items_viewport_height).blue(),
-                    format!("{}", viewport_width).blue()
+                let message = "🍎🍎🍎\n render()::state";
+                let details = string_storage!(
+                    "\t[raw_caret_row_index: {a}, scroll_offset_row_index: {b}], \n\theader_viewport_height: {c}, items_viewport_height:{d}, viewport_width:{e}",
+                    a = string_storage!("{:?}", state.raw_caret_row_index).blue(),
+                    b = string_storage!("{:?}", state.scroll_offset_row_index).blue(),
+                    c = string_storage!("{:?}", header_viewport_height).blue(),
+                    d = string_storage!("{:?}", items_viewport_height).blue(),
+                    e = string_storage!("{:?}", viewport_width).blue()
                 );
+                // % is Display, ? is Debug.
+                tracing::info! {
+                    message = %message,
+                    details = %details
+                };
             });
 
             self.allocate_viewport_height_space(state)?;
@@ -188,19 +196,18 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
 
                         'inner: for last_span in header_line.iter() {
                             let span_text = last_span.text;
-                            let span_as_unicode_string = span_text.unicode_string();
-                            let unicode_string_width =
-                                span_as_unicode_string.display_width;
+                            let span_text_us = UnicodeString::new(span_text);
+                            let span_us_display_width = span_text_us.display_width;
 
-                            if unicode_string_width > available_space_col_count {
+                            if span_us_display_width > available_space_col_count {
                                 // Clip the text to available space.
-                                let clipped_text = span_as_unicode_string
+                                let clipped_text_str = span_text_us
                                     .clip_to_width(ch(0), available_space_col_count);
-                                let clipped_text = format!("{clipped_text}...");
-                                header_line_modified.push(clipped_text.to_owned());
+                                let clipped_text = format!("{clipped_text_str}...");
+                                header_line_modified.push(clipped_text);
                                 break 'inner;
                             } else {
-                                available_space_col_count -= unicode_string_width;
+                                available_space_col_count -= span_us_display_width;
 
                                 // If last item in the header, then fill the remaining
                                 // space with spaces.
@@ -392,21 +399,18 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
 }
 
 pub fn clip_string_to_width_with_ellipsis(
-    mut header_text: String,
+    header_text: String,
     viewport_width: ChUnit,
 ) -> String {
-    let unicode_string = header_text.unicode_string();
-    let unicode_string_width = unicode_string.display_width;
+    let header_text_us = UnicodeString::new(&header_text);
+    let header_text_display_width = header_text_us.display_width;
     let available_space_col_count: ChUnit = viewport_width;
-    if unicode_string_width > available_space_col_count {
+    if header_text_display_width > available_space_col_count {
         // Clip the text to available space.
         let clipped_text =
-            unicode_string.clip_to_width(ch(0), available_space_col_count - 3);
-        let clipped_text = format!("{clipped_text}...");
-        header_text = clipped_text;
-    } else {
-        // PERF: [ ] perf
-        header_text = unicode_string.string.to_string();
+            header_text_us.clip_to_width(ch(0), available_space_col_count - 3);
+        let clipped_text = format!("{a}...", a = clipped_text);
+        return clipped_text;
     }
     header_text
 }

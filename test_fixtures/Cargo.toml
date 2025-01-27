@@ -2,7 +2,8 @@
 name = "r3bl_test_fixtures"
 version = "0.1.0"
 edition = "2024"
-resolver = "2"
+# https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+resolver = "3"
 description = "Test fixtures for the r3bl_* TUI and CLI crates"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["cli", "test", "readline", "terminal", "async"]

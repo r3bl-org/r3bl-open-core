@@ -18,14 +18,16 @@
 use colorgrad::Gradient;
 use rand::Rng;
 
-use crate::{RgbValue, TinyStringBackingStore, TinyVecBackingStore, TuiColor};
+use crate::{RgbValue,
+            TuiColor,
+            config::sizing::{StringHexColor, VecSteps}};
 
 /// # Arguments
 /// * `steps` - The number of steps to take between each color stop.
 ///
 /// # Returns
 /// A vector of [TuiColor] objects representing the gradient.
-pub fn generate_random_truecolor_gradient(steps: u8) -> TinyVecBackingStore<TuiColor> {
+pub fn generate_random_truecolor_gradient(steps: u8) -> VecSteps {
     let mut rng = rand::thread_rng();
 
     let stops = [
@@ -64,10 +66,7 @@ pub fn generate_random_truecolor_gradient(steps: u8) -> TinyVecBackingStore<TuiC
 ///
 /// # Returns
 /// A vector of [TuiColor] objects representing the gradient.
-pub fn generate_truecolor_gradient(
-    stops: &[TinyStringBackingStore],
-    steps: u8,
-) -> TinyVecBackingStore<TuiColor> {
+pub fn generate_truecolor_gradient(stops: &[StringHexColor], steps: u8) -> VecSteps {
     let result_gradient = colorgrad::GradientBuilder::new()
         .html_colors(stops)
         .build::<colorgrad::LinearGradient>();
@@ -80,7 +79,7 @@ pub fn generate_truecolor_gradient(
 
             // Create an acc with the same capacity as the number of steps. And pre-fill
             // it with black.
-            let mut acc = TinyVecBackingStore::new();
+            let mut acc = VecSteps::new();
 
             for step_count in 0..steps {
                 let color = gradient.at(fractional_step * step_count as Number);
@@ -116,7 +115,7 @@ pub fn generate_truecolor_gradient(
                     blue: *blue,
                 })
             })
-            .collect::<TinyVecBackingStore<TuiColor>>()
+            .collect::<VecSteps>()
         }
     }
 }

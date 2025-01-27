@@ -27,7 +27,6 @@ use r3bl_core::{ch,
                 ColorWheelSpeed,
                 Size,
                 TuiStyle};
-use serde::{Deserialize, Serialize};
 use smallvec::smallvec;
 
 use crate::{lookup_size,
@@ -47,7 +46,7 @@ use crate::{lookup_size,
 /// In order to change the document, you can use the
 /// [DialogEngineApi::apply_event](crate::DialogEngineApi::apply_event) method which takes
 /// [crate::InputEvent] and tries to execute it against this buffer.
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug)]
 pub struct DialogEngine {
     pub dialog_options: DialogEngineConfigOptions,
     pub editor_engine: EditorEngine,
@@ -122,7 +121,7 @@ impl DialogEngine {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub struct DialogEngineConfigOptions {
     pub mode: DialogEngineMode,
     /// Max height of the results panel.
@@ -152,7 +151,7 @@ mod dialog_engine_config_options_impl {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DialogEngineMode {
     ModalSimple,
     ModalAutocomplete,

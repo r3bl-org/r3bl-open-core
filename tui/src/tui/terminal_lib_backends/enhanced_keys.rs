@@ -15,12 +15,10 @@
  *   limitations under the License.
  */
 
-use serde::{Deserialize, Serialize};
-
 /// Crossterm docs:
 /// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
 /// - [`PushKeyboardEnhancementFlags`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum Enhanced {
     /// **Note:** this key can only be read if `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`
     /// has been enabled with `PushKeyboardEnhancementFlags`.
@@ -43,7 +41,7 @@ pub enum Enhanced {
 /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` and
 /// `KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES` have been enabled with
 /// `PushKeyboardEnhancementFlags`.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum ModifierKeyEnum {
     /// Left Shift key.
     LeftShift,
@@ -81,7 +79,7 @@ pub enum ModifierKeyEnum {
 ///
 /// **Note:** this key can only be read if `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` has
 /// been enabled with `PushKeyboardEnhancementFlags`.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum SpecialKeyExt {
     CapsLock,
     ScrollLock,
@@ -99,7 +97,7 @@ pub enum SpecialKeyExt {
 /// **Note:** this key can only be read if
 /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` has been enabled with
 /// `PushKeyboardEnhancementFlags`.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum MediaKey {
     Play,
     Pause,

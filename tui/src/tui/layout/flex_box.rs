@@ -17,19 +17,13 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{Position,
-                RequestedSizePercent,
-                Size,
-                TinyStringBackingStore,
-                TinyVecBackingStore,
-                TuiStyle};
-use serde::{Deserialize, Serialize};
+use r3bl_core::{ok, Position, RequestedSizePercent, Size, TuiStyle};
 
 use super::FlexBoxId;
 
 /// Direction of the layout of the box.
 #[non_exhaustive]
-#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum LayoutDirection {
     #[default]
     Horizontal,
@@ -38,7 +32,7 @@ pub enum LayoutDirection {
 
 /// A box is a rectangle with a position and size. The direction of the box determines how
 /// it's contained elements are positioned.
-#[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FlexBox {
     pub id: FlexBoxId,
     pub dir: LayoutDirection,
@@ -57,55 +51,54 @@ impl FlexBox {
 
 impl Debug for FlexBox {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut line_acc = TinyVecBackingStore::<TinyStringBackingStore>::new();
+        const EOL: &str = "\n  - ";
 
         // Require fields.
-        line_acc.push(format!("FlexBox id: {:?}", self.id).into());
-        line_acc.push(format!("dir: {:?}", self.dir).into());
-        line_acc.push(format!("origin_pos: {:?}", self.origin_pos).into());
-        line_acc.push(format!("bounds_size: {:?}", self.bounds_size).into());
-        line_acc.push(
-            format!(
-                "style_adjusted_origin_pos: {:?}",
-                self.style_adjusted_origin_pos
-            )
-            .into(),
-        );
-        line_acc.push(
-            format!(
-                "style_adjusted_bounds_size: {:?}",
-                self.style_adjusted_bounds_size
-            )
-            .into(),
-        );
-        line_acc.push(
-            format!("requested_size_percent: {:?}", self.requested_size_percent).into(),
-        );
+        write!(f, "FlexBox id: {:?}{EOL}", self.id)?;
+        write!(f, "dir: {:?}{EOL}", self.dir)?;
+        write!(f, "origin_pos: {:?}{EOL}", self.origin_pos)?;
+        write!(f, "bounds_size: {:?}{EOL}", self.bounds_size)?;
+        write!(
+            f,
+            "style_adjusted_origin_pos: {:?}{EOL}",
+            self.style_adjusted_origin_pos
+        )?;
+        write!(
+            f,
+            "style_adjusted_bounds_size: {:?}{EOL}",
+            self.style_adjusted_bounds_size
+        )?;
+        write!(
+            f,
+            "requested_size_percent: {:?}{EOL}",
+            self.requested_size_percent
+        )?;
 
         // Optional fields.
         match self.insertion_pos_for_next_box {
             Some(pos) => {
-                line_acc.push(format!("insertion_pos_for_next_box: {:?}", pos).into());
+                write!(f, "insertion_pos_for_next_box: {:?}{EOL}", pos)?;
             }
             None => {
-                line_acc.push("insertion_pos_for_next_box: None".into());
+                write!(f, "insertion_pos_for_next_box: None{EOL}")?;
             }
         }
         match self.maybe_computed_style {
             Some(style) => {
-                line_acc.push(format!("maybe_computed_style: {:?}", style).into());
+                write!(f, "maybe_computed_style: {:?}{EOL}", style)?;
             }
             None => {
-                line_acc.push("maybe_computed_style: None".into());
+                write!(f, "maybe_computed_style: None{EOL}")?;
             }
         }
-        write!(f, "{}", line_acc.join("\n  - "))
+
+        ok!()
     }
 }
 
 impl std::fmt::Display for FlexBox {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        Debug::fmt(self, f)
     }
 }
 

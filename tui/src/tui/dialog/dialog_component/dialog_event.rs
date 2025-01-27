@@ -15,15 +15,13 @@
  *   limitations under the License.
  */
 
-use serde::{Deserialize, Serialize};
-
 use crate::{InputEvent, Key, KeyPress, SpecialKey};
 
 /// Provide a conversion from [crate::InputEvent] to [DialogEvent].
 ///
 /// This makes it easier to write event handlers that consume [crate::InputEvent] and then
 /// process events in [crate::DialogComponent] and [crate::DialogEngine].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DialogEvent {
     EnterPressed,
     EscPressed,

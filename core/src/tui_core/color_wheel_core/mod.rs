@@ -20,7 +20,6 @@ pub mod ansi_256_color_gradients;
 pub mod color_utils;
 pub mod color_wheel_control;
 pub mod converter;
-pub mod defaults;
 pub mod policies;
 pub mod truecolor_gradient;
 
@@ -29,6 +28,5 @@ pub use ansi_256_color_gradients::*;
 pub use color_utils::*;
 pub use color_wheel_control::*;
 pub use converter::*;
-pub use defaults::*;
 pub use policies::*;
 pub use truecolor_gradient::*;

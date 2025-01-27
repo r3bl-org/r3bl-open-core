@@ -17,7 +17,9 @@
 
 use r3bl_core::{call_if_true,
                 ch,
-                glyphs::SPACER_GLYPH as SPACER,
+                glyphs::{self, SPACER_GLYPH as SPACER},
+                seg_str,
+                string_storage,
                 usize,
                 ChUnit,
                 CommonError,
@@ -26,8 +28,7 @@ use r3bl_core::{call_if_true,
                 Position,
                 Size,
                 TuiStyle,
-                UnicodeString,
-                UnicodeStringExt};
+                UnicodeString};
 
 use super::{sanitize_and_save_abs_position, OffscreenBuffer, RenderOp, RenderPipeline};
 use crate::{PixelChar, RenderOpsLocalData, ZOrder, DEBUG_TUI_COMPOSITOR};
@@ -60,7 +61,13 @@ impl RenderPipeline {
         }
 
         call_if_true!(DEBUG_TUI_COMPOSITOR, {
-            tracing::debug!("offscreen_buffer: \n🌟🌟🌟\n{my_offscreen_buffer:#?}");
+            let message =
+                format!("offscreen_buffer {ch}", ch = glyphs::SCREEN_BUFFER_GLYPH);
+            // % is Display, ? is Debug.
+            tracing::info!(
+                message = message,
+                offscreen_buffer = ?my_offscreen_buffer
+            );
         });
 
         my_offscreen_buffer
@@ -138,7 +145,7 @@ fn process_render_op(
 /// C0123456789012345678901234567890123456789012345678901234567890
 /// ```
 pub fn print_plain_text(
-    arg_text_ref: &str,
+    string: &str,
     maybe_style_ref: &Option<TuiStyle>,
     my_offscreen_buffer: &mut OffscreenBuffer,
     maybe_max_display_col_count: Option<ChUnit>,
@@ -153,54 +160,62 @@ pub fn print_plain_text(
     //    window
 
     // ✂️Clip `arg_text_ref` (if needed) and make `text`.
-    let mut text: UnicodeString =
-        if let Some(max_display_col_count) = maybe_max_display_col_count {
-            let adj_max = max_display_col_count - (ch(display_col_index));
-            let unicode_string = arg_text_ref.unicode_string();
-            let trunc_unicode_str = unicode_string.truncate_end_to_fit_width(adj_max);
-            trunc_unicode_str.unicode_string()
-        } else {
-            arg_text_ref.unicode_string()
-        };
+    let string_us = UnicodeString::new(string);
+    let clip_1_str = if let Some(max_display_col_count) = maybe_max_display_col_count {
+        let adj_max = max_display_col_count - (ch(display_col_index));
+        string_us.truncate_end_to_fit_width(adj_max)
+    } else {
+        string
+    };
+    let clip_1_us = UnicodeString::new(clip_1_str);
 
     // ✂️Clip `text` (if needed) to the max display col count of the window.
     let window_max_display_col_count = my_offscreen_buffer.window_size.col_count;
     let text_fits_in_window =
-        text.display_width <= window_max_display_col_count - (ch(display_col_index));
-    if !text_fits_in_window {
+        clip_1_us.display_width <= window_max_display_col_count - (ch(display_col_index));
+    let clip_2_str = if !text_fits_in_window {
         let adj_max = window_max_display_col_count - (ch(display_col_index));
-        let trunc_unicode_str = text.truncate_end_to_fit_width(adj_max);
-        text = trunc_unicode_str.unicode_string();
-    }
+        clip_1_us.truncate_end_to_fit_width(adj_max)
+    } else {
+        clip_1_str
+    };
+    let clip_2_us = UnicodeString::new(clip_2_str);
+
+    // This is the final text that will be printed.
+    let text_us = clip_2_us;
 
     call_if_true!(DEBUG_TUI_COMPOSITOR, {
-        tracing::debug!(
-            "\n🚀🚀🚀 print_plain_text():
-            insertion at: display_row_index: {}, display_col_index: {}, window_size: {:?},
-            text: '{}',
-            width: {}",
-            display_row_index,
-            display_col_index,
-            my_offscreen_buffer.window_size,
-            text.string,
-            text.display_width
+        let message = string_storage!(
+            "print_plain_text() {ar} {ch}",
+            ar = glyphs::RIGHT_ARROW_GLYPH,
+            ch = glyphs::PAINT_GLYPH,
         );
+        let details = string_storage!(
+            "insertion at: display_row_index: {a}, display_col_index: {b}, window_size: {c:?},
+            text: '{d}',
+            width: {e:?}",
+            a = display_row_index,
+            b = display_col_index,
+            c = my_offscreen_buffer.window_size,
+            d = text_us.string,
+            e = text_us.display_width,
+        );
+        // % is Display, ? is Debug.
+        tracing::info! {
+            message = %message,
+            details = %details
+        };
     });
 
     // Try to get the line at `row_index`.
     let mut line_copy = {
-        if my_offscreen_buffer.buffer.get(display_row_index).is_none() {
+        if let Some(line) = my_offscreen_buffer.buffer.get(display_row_index) {
+            Ok(line.clone())
+        } else {
             // Clip vertically.
             CommonError::new_error_result_with_only_type(
                 CommonErrorType::DisplaySizeTooSmall,
             )
-        } else {
-            let line_copy = my_offscreen_buffer
-                .buffer
-                .get(display_row_index)
-                .unwrap()
-                .clone();
-            Ok(line_copy)
         }
     }?;
 
@@ -230,23 +245,34 @@ pub fn print_plain_text(
         }
     };
 
-    call_if_true!(
-        DEBUG_TUI_COMPOSITOR,
-        if maybe_style.is_some() {
-            tracing::debug!(
-                "\n🔴🔴🔴\n[row: {display_row_index}, col: {display_col_index}] - style: {maybe_style:?}",
-            );
-        } else {
-            tracing::debug!(
-                "\n🟣🟣🟣\n[row: {display_row_index}, col: {display_col_index}] - style: None",
-            );
-        }
-    );
+    call_if_true!(DEBUG_TUI_COMPOSITOR, {
+        let message = match maybe_style {
+            Some(style) => {
+                format!(
+                    "{ch} [row: {row}, col: {col}] - style: {style:?}",
+                    ch = glyphs::BOX_FILL_GLYPH,
+                    row = display_row_index,
+                    col = display_col_index,
+                    style = style
+                )
+            }
+            None => {
+                format!(
+                    "{ch} [row: {row}, col: {col}] - style: None",
+                    ch = glyphs::BOX_EMPTY_GLYPH,
+                    row = display_row_index,
+                    col = display_col_index,
+                )
+            }
+        };
+        // % is Display, ? is Debug.
+        tracing::debug!(message = message);
+    });
 
     // Loop over each grapheme cluster segment (the character) in `text_ref_us` (text in a line).
     // For each GraphemeClusterSegment, create a PixelChar.
-    for segment in text.iter() {
-        let segment_display_width = usize(segment.unicode_width);
+    for seg in text_us.iter() {
+        let segment_display_width = usize(seg.unicode_width);
         if segment_display_width == 0 {
             continue;
         }
@@ -254,11 +280,11 @@ pub fn print_plain_text(
         // Set the `PixelChar` at `insertion_col_index`.
         if line_copy.get(insertion_col_index).is_some() {
             let pixel_char = {
-                let seg_text = text.get_str(segment);
+                let seg_text = seg_str!(seg, text_us);
                 match (&maybe_style, seg_text) {
                     (None, SPACER) => PixelChar::Spacer,
                     _ => PixelChar::PlainText {
-                        text: segment.get_str(&text.string).into(),
+                        text: seg_text.into(),
                         maybe_style,
                     },
                 }
@@ -284,7 +310,7 @@ pub fn print_plain_text(
             //    Void pixel chars.
             // 3. The insertion_col_index is calculated & updated based on the unicode_width crate
             //    values.
-            let segment_display_width = usize(segment.unicode_width);
+            let segment_display_width = usize(seg.unicode_width);
             if segment_display_width > 1 {
                 // Deal w/ `gc_segment` display width that is > 1 => pad w/ Void.
                 let num_of_extra_display_cols_to_inject_void_into =
@@ -304,7 +330,7 @@ pub fn print_plain_text(
                 insertion_col_index += 1;
             }
 
-            already_inserted_display_width += segment.unicode_width;
+            already_inserted_display_width += seg.unicode_width;
         } else {
             // Run out of space in the line of the offscreen buffer.
             break;

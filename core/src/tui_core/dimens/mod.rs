@@ -19,15 +19,15 @@
 pub mod ch_unit;
 pub mod percent;
 pub mod position;
-pub mod size;
 pub mod requested_size;
+pub mod size;
 
 // Re-export.
 pub use ch_unit::*;
 pub use percent::*;
 pub use position::*;
-pub use size::*;
 pub use requested_size::*;
+pub use size::*;
 
 // Tests.
 mod test_ch_unit;

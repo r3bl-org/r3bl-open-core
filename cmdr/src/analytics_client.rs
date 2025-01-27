@@ -14,10 +14,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use std::{fmt::{Display, Formatter},
-          fs,
-          fs::File,
+use std::{fmt::{Display, Formatter, Result},
+          fs::{self, File},
           io::{BufReader, Read, Write},
           path::PathBuf,
           sync::atomic::AtomicBool};
@@ -49,7 +47,7 @@ pub enum AnalyticsAction {
 }
 
 impl std::fmt::Display for AnalyticsAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         #[rustfmt::skip]
         let action = match self {
             AnalyticsAction::GitiAppStart =>          "giti app start",
@@ -75,7 +73,8 @@ pub mod config_folder {
     }
 
     impl Display for ConfigPaths {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        /// This generates a `to_string()` method used by [config_folder::get_id_file_path].
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             let path = match self {
                 ConfigPaths::R3BLTopLevelFolderName => "r3bl-cmdr",
                 ConfigPaths::ProxyMachineIdFile => "id",
@@ -86,7 +85,7 @@ pub mod config_folder {
 
     /// This is where the config file is stored.
     pub fn get_id_file_path(path: PathBuf) -> PathBuf {
-        path.join(ConfigPaths::ProxyMachineIdFile.to_string())
+        path.join(format!("{}", ConfigPaths::ProxyMachineIdFile))
     }
 
     /// This is where the config folder is.

@@ -22,16 +22,17 @@ use r3bl_core::{call_if_true,
                 ChUnit,
                 LockedOutputDevice,
                 Size,
+                StringStorage,
                 TuiStyle,
                 UnicodeStringExt};
 
-use crate::{render_ops,
+use crate::{diff_chunks::PixelCharDiffChunks,
+            render_ops,
             Flush as _,
             FlushKind,
             OffscreenBuffer,
             OffscreenBufferPaint,
             PixelChar,
-            PixelCharDiffChunks,
             RenderOp,
             RenderOps,
             DEBUG_TUI_COMPOSITOR,
@@ -103,7 +104,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE, {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok 🟢",
+                message = "🎨 offscreen_buffer_paint_impl_crossterm::paint_diff() ok 🟢",
                 render_ops = ?render_ops
             );
         });
@@ -199,9 +200,10 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
     fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps {
         call_if_true!(DEBUG_TUI_COMPOSITOR, {
+            // % is Display, ? is Debug.
             tracing::info!(
-                "🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok 🟢: \ndiff_chunks: \n{}",
-                diff_chunks.pretty_print()
+                message = "🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok 🟢",
+                diff_chunks = ?diff_chunks
             );
         });
 
@@ -224,7 +226,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                     it.push(RenderOp::ApplyColors(*maybe_style));
                     it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                         // PERF: [ ] perf
-                        text.clone(),
+                        StringStorage::from_str(text),
                         *maybe_style,
                     ))
                 }
@@ -236,8 +238,6 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 }
 
 mod render_helpers {
-    use r3bl_core::TinyStringBackingStore;
-
     use super::*;
 
     #[derive(Debug, Clone)]
@@ -245,7 +245,7 @@ mod render_helpers {
         pub display_col_index_for_line: ChUnit,
         pub display_row_index: ChUnit,
         // PERF: [ ] remove String
-        pub buffer_plain_text: TinyStringBackingStore,
+        pub buffer_plain_text: StringStorage,
         pub prev_style: Option<TuiStyle>,
         pub render_ops: RenderOps,
     }
@@ -254,7 +254,7 @@ mod render_helpers {
         pub fn new() -> Self {
             Context {
                 display_col_index_for_line: ch(0),
-                buffer_plain_text: TinyStringBackingStore::new(),
+                buffer_plain_text: StringStorage::new(),
                 render_ops: render_ops!(),
                 display_row_index: ch(0),
                 prev_style: None,

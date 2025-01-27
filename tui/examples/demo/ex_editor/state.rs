@@ -43,11 +43,10 @@ mod constructor {
     pub fn get_initial_state() -> State {
         let editor_buffers: HashMap<FlexBoxId, EditorBuffer> = {
             let editor_buffer = {
-                let mut editor_buffer = EditorBuffer::new_empty(
-                    &Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()),
-                    &None,
-                );
-                editor_buffer.set_lines(get_default_content());
+                let mut editor_buffer =
+                    EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+                let iter = get_default_content().iter().copied();
+                editor_buffer.set_lines(iter);
                 editor_buffer
             };
             let mut it = HashMap::new();

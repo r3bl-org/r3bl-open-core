@@ -14,7 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::{fs,
           io::{Write, stderr},
           ops::ControlFlow,
@@ -25,13 +24,14 @@ use std::{fs,
 
 use crossterm::style::Stylize as _;
 use miette::{IntoDiagnostic as _, miette};
-use r3bl_core::{SendRawTerminal, SharedWriter, StdMutex};
+use r3bl_core::{SendRawTerminal, SharedWriter, StdMutex, VecArray};
 use r3bl_log::{DisplayPreference, try_initialize_logging_global};
 use r3bl_terminal_async::{Readline,
                           ReadlineEvent,
                           Spinner,
                           SpinnerStyle,
                           TerminalAsync};
+use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
 use tokio::{select, time::interval};
@@ -427,9 +427,6 @@ mod long_running_task {
 }
 
 pub mod file_walker {
-    use r3bl_core::MicroVecBackingStore;
-    use smallvec::smallvec;
-
     use super::*;
 
     pub const FOLDER_DELIM: &str = std::path::MAIN_SEPARATOR_STR;
@@ -550,7 +547,7 @@ pub mod file_walker {
         let root = create_root(root_path)?;
 
         // Walk the root.
-        let mut stack: MicroVecBackingStore<Folder> = smallvec![root.clone()];
+        let mut stack: VecArray<Folder> = smallvec![root.clone()];
 
         while let Some(mut current_node) = stack.pop() {
             // Print the current node.

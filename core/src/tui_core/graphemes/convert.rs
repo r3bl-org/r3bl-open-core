@@ -17,7 +17,10 @@
 
 use std::borrow::Cow;
 
-use crate::{SmallStringBackingStore, UnicodeString};
+use smallstr::SmallString;
+use smallvec::Array;
+
+use crate::UnicodeString;
 
 /// UnicodeStringExt trait.
 pub trait UnicodeStringExt {
@@ -25,13 +28,17 @@ pub trait UnicodeStringExt {
 }
 
 // PERF: [ ] perf
-impl UnicodeStringExt for SmallStringBackingStore {
+impl<A: Array<Item = u8>> UnicodeStringExt for SmallString<A> {
     fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_str()) }
 }
 
 // PERF: [ ] perf
-impl UnicodeStringExt for &SmallStringBackingStore {
+impl<A: Array<Item = u8>> UnicodeStringExt for &SmallString<A> {
     fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_str()) }
+}
+
+impl UnicodeStringExt for dyn AsRef<str> {
+    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_ref()) }
 }
 
 impl UnicodeStringExt for Cow<'_, str> {
@@ -48,4 +55,34 @@ impl UnicodeStringExt for &&str {
 
 impl UnicodeStringExt for String {
     fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
+}
+
+// REFACTOR: [x] write test for all of the above!
+#[cfg(test)]
+mod tests_unicode_string_ext {
+    use super::*;
+
+    #[test]
+    fn test_unicode_string_for_smallstring() {
+        let small_str: SmallString<[u8; 16]> = SmallString::from("hello");
+        assert_eq!(small_str.unicode_string(), UnicodeString::new("hello"));
+    }
+
+    #[test]
+    fn test_unicode_string_for_cow() {
+        let cow_str: Cow<str> = Cow::Borrowed("hello");
+        assert_eq!(cow_str.unicode_string(), UnicodeString::new("hello"));
+    }
+
+    #[test]
+    fn test_unicode_string_for_str() {
+        let str_slice: &str = "hello";
+        assert_eq!(str_slice.unicode_string(), UnicodeString::new("hello"));
+    }
+
+    #[test]
+    fn test_unicode_string_for_string() {
+        let string: String = String::from("hello");
+        assert_eq!(string.unicode_string(), UnicodeString::new("hello"));
+    }
 }

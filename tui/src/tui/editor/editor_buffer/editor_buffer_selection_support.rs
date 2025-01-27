@@ -21,6 +21,7 @@ use crossterm::style::Stylize;
 use r3bl_core::{call_if_true,
                 ch,
                 position,
+                string_storage,
                 usize,
                 CaretLocationInRange,
                 CaretMovementDirection,
@@ -28,7 +29,7 @@ use r3bl_core::{call_if_true,
                 Position,
                 SelectionRange};
 
-use super::{selection_map::RowLocationInSelectionMap, EditorBuffer};
+use super::{selection_list::RowLocationInSelectionList, EditorBuffer};
 use crate::{DirectionChangeResult, DEBUG_TUI_COPY_PASTE};
 
 pub struct EditorBufferApi;
@@ -50,8 +51,9 @@ impl EditorBufferApi {
                     end_display_col_index: cmp::max(previous, current),
                 };
 
-                let (_, _, _, selection_map) = editor_buffer.get_mut();
-                selection_map.insert(
+                let editor_buffer_mut = editor_buffer.get_mut();
+
+                editor_buffer_mut.selection_map.insert(
                     row_index,
                     new_range,
                     SelectionRange::caret_movement_direction_left_right(
@@ -60,12 +62,12 @@ impl EditorBufferApi {
                 );
 
                 call_if_true!(DEBUG_TUI_COPY_PASTE, {
-                    tracing::debug!("\n🍕🍕🍕 new selection: \n\t{}", new_range);
+                    tracing::debug!("\n🍕🍕🍕 new selection: \n\t{it:?}", it = new_range);
                 });
 
                 return;
             };
-            *range // Copy & return it.
+            range // Copy & return it.
         };
 
         // Destructure range for easier access.
@@ -76,22 +78,22 @@ impl EditorBufferApi {
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
             tracing::debug!(
-                    "\n🍕🍕🍕 {0}:\n\t{1}: {2}, {3}: {4}\n\t{5}: {6}, {7}: {8}\n\t{9}: {10}, {11}: {12}, {13}: {14}",
-                    /* 0 */ "modify_existing_range_at_row_index",
-                    /* 1 */ "range_start",
-                    /* 2 */ range_start,
-                    /* 3 */ "range_end",
-                    /* 4 */ range_end,
-                    /* 5 */ "previous",
-                    /* 6 */ previous,
-                    /* 7 */ "current",
-                    /* 8 */ current,
-                    /* 9 */ "previous",
-                    /* 10 */ format!("{:?}", range.locate_column(previous)).black().on_dark_yellow(),
-                    /* 11 */ "current",
-                    /* 12 */ format!("{:?}", range.locate_column(current)).black().on_dark_cyan(),
-                    /* 13 */ "direction",
-                    /* 14 */
+                    "\n🍕🍕🍕 {a}:\n\t{b}: {c:?}, {d}: {e:?}\n\t{f}: {g:?}, {h}: {i:?}\n\t{j}: {k}, {l}: {m}, {n}: {o}",
+                    a = "modify_existing_range_at_row_index",
+                    b = "range_start",
+                    c = range_start,
+                    d = "range_end",
+                    e = range_end,
+                    f = "previous",
+                    g = previous,
+                    h = "current",
+                    i = current,
+                    j = "previous",
+                    k = format!("{:?}", range.locate_column(previous)).black().on_dark_yellow(),
+                    l = "current",
+                    m = format!("{:?}", range.locate_column(current)).black().on_dark_cyan(),
+                    n = "direction",
+                    o =
                     format!(
                         "{:?}",
                         SelectionRange::caret_movement_direction_left_right(previous, current)
@@ -116,8 +118,9 @@ impl EditorBufferApi {
             ) => {
                 let delta = previous - current;
                 let new_range = range.shrink_end_by(delta);
-                let (_, _, _, selection_map) = editor_buffer.get_mut();
-                selection_map.insert(
+
+                let editor_buffer_mut = editor_buffer.get_mut();
+                editor_buffer_mut.selection_map.insert(
                     row_index,
                     new_range,
                     SelectionRange::caret_movement_direction_left_right(
@@ -134,8 +137,9 @@ impl EditorBufferApi {
             ) => {
                 let delta = range_start - current;
                 let new_range = range.grow_start_by(delta);
-                let (_, _, _, selection_map) = editor_buffer.get_mut();
-                selection_map.insert(
+
+                let editor_buffer_mut = editor_buffer.get_mut();
+                editor_buffer_mut.selection_map.insert(
                     row_index,
                     new_range,
                     SelectionRange::caret_movement_direction_left_right(
@@ -152,8 +156,9 @@ impl EditorBufferApi {
             ) => {
                 let delta = current - range_end;
                 let new_range = range.grow_end_by(delta);
-                let (_, _, _, selection_map) = editor_buffer.get_mut();
-                selection_map.insert(
+
+                let editor_buffer_mut = editor_buffer.get_mut();
+                editor_buffer_mut.selection_map.insert(
                     row_index,
                     new_range,
                     SelectionRange::caret_movement_direction_left_right(
@@ -171,8 +176,9 @@ impl EditorBufferApi {
             ) => {
                 let delta = current - range_start;
                 let new_range = range.shrink_start_by(delta);
-                let (_, _, _, selection_map) = editor_buffer.get_mut();
-                selection_map.insert(
+
+                let editor_buffer_mut = editor_buffer.get_mut();
+                editor_buffer_mut.selection_map.insert(
                     row_index,
                     new_range,
                     SelectionRange::caret_movement_direction_left_right(
@@ -190,8 +196,8 @@ impl EditorBufferApi {
         // `handle_selection_multiline_caret_movement`.
         if let Some(range) = editor_buffer.get_selection_map().get(row_index) {
             if range.start_display_col_index == range.end_display_col_index {
-                let (_, _, _, selection_map) = editor_buffer.get_mut();
-                selection_map.remove(
+                let editor_buffer_mut = editor_buffer.get_mut();
+                editor_buffer_mut.selection_map.remove(
                     row_index,
                     SelectionRange::caret_movement_direction_left_right(
                         previous, current,
@@ -222,51 +228,63 @@ impl EditorBufferApi {
             return;
         }
 
-        let (_lines, _, _, selection_map) = editor_buffer.get_mut();
-        let locate_previous_row_index = selection_map.locate_row(previous.row_index);
-        let locate_current_row_index = selection_map.locate_row(current.row_index);
-        let has_caret_movement_direction_changed = selection_map
+        let locate_previous_row_index = editor_buffer
+            .get_selection_map()
+            .locate_row(previous.row_index);
+        let locate_current_row_index = editor_buffer
+            .get_selection_map()
+            .locate_row(current.row_index);
+        let has_caret_movement_direction_changed = editor_buffer
+            .get_selection_map()
             .has_caret_movement_direction_changed(caret_vertical_movement_direction);
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            tracing::debug!(
-                "\n📜📜📜 {0}\n\t{1}, {2}\n\t{3}\n\t{4}\n\t{5}\n\t{6}\n\t{7}",
-                /* 0: heading */
-                "handle multiline caret movement"
+            let message = "📜📜📜 handle_two_lines";
+            let details = string_storage!(
+                "\n📜📜📜 {a}\n\t{b}, {c}\n\t{d}\n\t{e}\n\t{f}\n\t{g}\n\t{h}",
+                /* heading */
+                a = "handle multiline caret movement"
                     .to_string()
                     .red()
                     .on_white(),
-                /* 1: previous */
-                format!("👈 previous: {}", previous).cyan().on_dark_grey(),
-                /* 2: current */
-                format!("👉 current: {}", current).magenta().on_dark_grey(),
-                /* 3: selection_map */
-                format!("{:?}", editor_buffer.get_selection_map())
+                /* previous */
+                b = format!("👈 previous: {:?}", previous).cyan().on_dark_grey(),
+                /* current */
+                c = format!("👉 current: {:?}", current)
                     .magenta()
                     .on_dark_grey(),
-                /* 4: locate_previous_row_index */
-                format!("locate_previous_row_index: {:?}", locate_previous_row_index)
+                /* selection_map */
+                d = format!("{:?}", editor_buffer.get_selection_map())
+                    .magenta()
+                    .on_dark_grey(),
+                /* locate_previous_row_index */
+                e = format!("locate_previous_row_index: {:?}", locate_previous_row_index)
                     .cyan()
                     .on_dark_grey(),
-                /* 5: locate_current_row_index, */
-                format!("locate_current_row_index: {:?}", locate_current_row_index,)
+                /* locate_current_row_index, */
+                f = format!("locate_current_row_index: {:?}", locate_current_row_index,)
                     .magenta()
                     .on_dark_grey(),
-                /* 6: caret_vertical_movement_direction, */
-                format!(
+                /* caret_vertical_movement_direction, */
+                g = format!(
                     "caret_vertical_movement_direction: {:?}",
                     caret_vertical_movement_direction,
                 )
                 .green()
                 .on_dark_grey(),
-                /* 7: has_caret_movement_direction_changed, */
-                format!(
+                /* has_caret_movement_direction_changed, */
+                h = format!(
                     "has_caret_movement_direction_changed: {:?}",
                     has_caret_movement_direction_changed,
                 )
                 .yellow()
                 .on_dark_grey(),
-            )
+            );
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = %message,
+                details = %details
+            };
         });
 
         match (
@@ -278,8 +296,8 @@ impl EditorBufferApi {
             // DirectionIsTheSame: No selection, then Shift+Down.
             // DirectionHasChanged: No selection -> Shift+Down -> Shift+Up -> Shift+Down.
             (
-                /* previous_caret */ RowLocationInSelectionMap::Overflow,
-                /* current_caret */ RowLocationInSelectionMap::Overflow,
+                /* previous_caret */ RowLocationInSelectionList::Overflow,
+                /* current_caret */ RowLocationInSelectionList::Overflow,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -291,8 +309,8 @@ impl EditorBufferApi {
             ),
             // DirectionHasChanged: No selection -> Shift+Up -> Shift+Down -> Shift+Up.
             (
-                /* previous_caret */ RowLocationInSelectionMap::Overflow,
-                /* current_caret  */ RowLocationInSelectionMap::Overflow,
+                /* previous_caret */ RowLocationInSelectionList::Overflow,
+                /* current_caret  */ RowLocationInSelectionList::Overflow,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -305,8 +323,8 @@ impl EditorBufferApi {
             // DirectionIsTheSame: Previous selection with Shift+Down, then Shift+Down.
             // DirectionHasChanged: No selection -> Shift+Left/Right -> Shift+Down.
             (
-                /* previous_caret */ RowLocationInSelectionMap::Contained,
-                /* current_caret  */ RowLocationInSelectionMap::Overflow,
+                /* previous_caret */ RowLocationInSelectionList::Contained,
+                /* current_caret  */ RowLocationInSelectionList::Overflow,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -318,8 +336,8 @@ impl EditorBufferApi {
             ),
             // Position caret below empty line, Shift+Up, Shift+Up, Shift+Up, Shift+Down.
             (
-                /* previous_caret */ RowLocationInSelectionMap::Overflow,
-                /* current_caret  */ RowLocationInSelectionMap::Contained,
+                /* previous_caret */ RowLocationInSelectionList::Overflow,
+                /* current_caret  */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame,
             ) => multiline_select_helpers::continue_select_down(
@@ -331,8 +349,8 @@ impl EditorBufferApi {
             // DirectionIsTheSame: Previous selection with Shift+Up, then Shift+Up.
             // DirectionHasChanged: // No selection -> Shift+Left/Right -> Shift+Up.
             (
-                /* previous_caret */ RowLocationInSelectionMap::Contained,
-                /* current_caret  */ RowLocationInSelectionMap::Overflow,
+                /* previous_caret */ RowLocationInSelectionList::Contained,
+                /* current_caret  */ RowLocationInSelectionList::Overflow,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -344,8 +362,8 @@ impl EditorBufferApi {
             ),
             // Position caret above empty line, Shift+Down, Shift+Down, Shift+Down, Shift+Up.
             (
-                /* previous_caret */ RowLocationInSelectionMap::Overflow,
-                /* current_caret  */ RowLocationInSelectionMap::Contained,
+                /* previous_caret */ RowLocationInSelectionList::Overflow,
+                /* current_caret  */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame,
             ) => multiline_select_helpers::continue_select_up(
@@ -357,8 +375,8 @@ impl EditorBufferApi {
             // DirectionHasChanged: Previous selection with Shift+Down, then Shift+Up.
             // DirectionIsTheSame: Previous selection with Shift+Down, then Shift+Up, then Shift+Up.
             (
-                /* previous_caret */ RowLocationInSelectionMap::Contained,
-                /* current_caret  */ RowLocationInSelectionMap::Contained,
+                /* previous_caret */ RowLocationInSelectionList::Contained,
+                /* current_caret  */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionHasChanged
                 | DirectionChangeResult::DirectionIsTheSame,
@@ -371,8 +389,8 @@ impl EditorBufferApi {
             // DirectionHasChanged: Previous selection with Shift+Up, then Shift+Up, then Shift+Down.
             // DirectionIsTheSame: Previous selection with Shift+Up, then Shift+Down, then Shift+Down.
             (
-                /* previous_caret */ RowLocationInSelectionMap::Contained,
-                /* current_caret  */ RowLocationInSelectionMap::Contained,
+                /* previous_caret */ RowLocationInSelectionList::Contained,
+                /* current_caret  */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionHasChanged
                 | DirectionChangeResult::DirectionIsTheSame,
@@ -479,35 +497,44 @@ impl EditorBufferApi {
         }
 
         let row_index = current.row_index; // Same as previous.row_index.
-        let (lines, _, _, selection_map) = editor_buffer.get_mut();
+
+        let editor_buffer_mut = editor_buffer.get_mut();
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            tracing::debug!(
-                "\n📜🔼🔽 {0}\n\t{1}, {2}, {3}, {4}",
+            let message = "📜🔼🔽 handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document";
+            let details = string_storage!(
+                "\n{a}\n\t{b}, {c}, {d}, {e}",
                 /* 0 */
-                "handle multiline caret movement hit top or bottom of document"
+                a = "handle multiline caret movement hit top or bottom of document"
                     .to_string()
                     .red()
                     .on_white(),
-                /* 1 */
-                format!("previous: {}", previous).cyan().on_dark_grey(),
-                /* 2 */
-                format!("current: {}", current).yellow().on_dark_grey(),
-                /* 3 */
-                format!("row_index: {}", row_index).green().on_dark_grey(),
-                /* 4 */
-                format!("{:?}", selection_map).magenta().on_dark_grey(),
-            )
+                /* 1: previous */
+                b = format!("previous: {:?}", previous).cyan().on_dark_grey(),
+                /* 2: current */
+                c = format!("current: {:?}", current).yellow().on_dark_grey(),
+                /* 3: row_index */
+                d = format!("row_index: {:?}", row_index).green().on_dark_grey(),
+                /* 4: selection_map */
+                e = format!("{:?}", editor_buffer_mut.selection_map)
+                    .magenta()
+                    .on_dark_grey(),
+            );
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = %message,
+                details = %details,
+            }
         });
 
         match current.col_index.cmp(&previous.col_index) {
             cmp::Ordering::Less => {
-                match selection_map.get(row_index) {
+                match editor_buffer_mut.selection_map.get(row_index) {
                     // Extend range to left (caret moved up and hit the top).
                     Some(range) => {
                         let start = ch(0);
                         let end = range.end_display_col_index;
-                        selection_map.insert(
+                        editor_buffer_mut.selection_map.insert(
                             row_index,
                             SelectionRange {
                                 start_display_col_index: start,
@@ -520,7 +547,7 @@ impl EditorBufferApi {
                     None => {
                         let start = ch(0);
                         let end = previous.col_index;
-                        selection_map.insert(
+                        editor_buffer_mut.selection_map.insert(
                             row_index,
                             SelectionRange {
                                 start_display_col_index: start,
@@ -531,13 +558,32 @@ impl EditorBufferApi {
                     }
                 }
             }
-            cmp::Ordering::Greater => match selection_map.get(row_index) {
-                // Extend range to right (caret moved down and hit bottom).
-                Some(range) => {
-                    if let Some(line) = lines.get(usize(row_index)) {
-                        let start = range.start_display_col_index;
-                        let end = line.display_width;
-                        selection_map.insert(
+            cmp::Ordering::Greater => {
+                match editor_buffer_mut.selection_map.get(row_index) {
+                    // Extend range to right (caret moved down and hit bottom).
+                    Some(range) => {
+                        if let Some(line_us) =
+                            editor_buffer_mut.lines.get(usize(row_index))
+                        {
+                            let start = range.start_display_col_index;
+                            let end = line_us.display_width;
+                            editor_buffer_mut.selection_map.insert(
+                                row_index,
+                                SelectionRange {
+                                    start_display_col_index: start,
+                                    end_display_col_index: end,
+                                },
+                                SelectionRange::caret_movement_direction(
+                                    previous, current,
+                                ),
+                            );
+                        }
+                    }
+                    // Create range to right (caret moved down and hit bottom).
+                    None => {
+                        let start = previous.col_index;
+                        let end = current.col_index;
+                        editor_buffer_mut.selection_map.insert(
                             row_index,
                             SelectionRange {
                                 start_display_col_index: start,
@@ -547,20 +593,7 @@ impl EditorBufferApi {
                         );
                     }
                 }
-                // Create range to right (caret moved down and hit bottom).
-                None => {
-                    let start = previous.col_index;
-                    let end = current.col_index;
-                    selection_map.insert(
-                        row_index,
-                        SelectionRange {
-                            start_display_col_index: start,
-                            end_display_col_index: end,
-                        },
-                        SelectionRange::caret_movement_direction(previous, current),
-                    );
-                }
-            },
+            }
             _ => {}
         }
     }
@@ -627,13 +660,13 @@ mod multiline_select_helpers {
             SelectionRange::new(start_col, end_col)
         };
 
-        let (_, _, _, selection_map) = editor_buffer.get_mut();
-        selection_map.insert(
+        let editor_buffer_mut = editor_buffer.get_mut();
+        editor_buffer_mut.selection_map.insert(
             first.row_index,
             first_row_range,
             caret_vertical_movement_direction,
         );
-        selection_map.insert(
+        editor_buffer_mut.selection_map.insert(
             last.row_index,
             last_row_range,
             caret_vertical_movement_direction,
@@ -655,17 +688,19 @@ mod multiline_select_helpers {
         let first_line_width = editor_buffer.get_line_display_width(first.row_index);
 
         // Mutably borrow the selection map.
-        let (_, _, _, selection_map) = editor_buffer.get_mut();
+        let editor_buffer_mut = editor_buffer.get_mut();
 
         // Extend the existing range (in selection map) for the first row to end of line.
-        if let Some(first_row_range) = selection_map.get(first.row_index) {
+        if let Some(first_row_range) =
+            editor_buffer_mut.selection_map.get(first.row_index)
+        {
             let start_col = first_row_range.start_display_col_index;
             let end_col = first_line_width;
             let new_first_row_range = SelectionRange {
                 start_display_col_index: start_col,
                 end_display_col_index: end_col,
             };
-            selection_map.insert(
+            editor_buffer_mut.selection_map.insert(
                 first.row_index,
                 new_first_row_range,
                 caret_vertical_movement_direction,
@@ -678,7 +713,7 @@ mod multiline_select_helpers {
             let end_col = last.col_index;
             SelectionRange::new(start_col, end_col)
         };
-        selection_map.insert(
+        editor_buffer_mut.selection_map.insert(
             last.row_index,
             last_row_range,
             caret_vertical_movement_direction,
@@ -700,16 +735,18 @@ mod multiline_select_helpers {
         let first_line_width = editor_buffer.get_line_display_width(first.row_index);
 
         // Mutably borrow the selection map.
-        let (_, _, _, selection_map) = editor_buffer.get_mut();
+        let editor_buffer_mut = editor_buffer.get_mut();
 
         // FIRST ROW.
-        if let Some(first_row_range) = selection_map.get(first.row_index) {
+        if let Some(first_row_range) =
+            editor_buffer_mut.selection_map.get(first.row_index)
+        {
             // Extend the existing range (in selection map) for the first row to end of line.
             let updated_first_row_range = SelectionRange {
                 start_display_col_index: first_row_range.start_display_col_index,
                 end_display_col_index: first_line_width,
             };
-            selection_map.insert(
+            editor_buffer_mut.selection_map.insert(
                 first.row_index,
                 updated_first_row_range,
                 caret_vertical_movement_direction,
@@ -721,7 +758,7 @@ mod multiline_select_helpers {
                 let end_col = first_line_width;
                 SelectionRange::new(start_col, end_col)
             };
-            selection_map.insert(
+            editor_buffer_mut.selection_map.insert(
                 first.row_index,
                 new_first_row_range,
                 caret_vertical_movement_direction,
@@ -729,7 +766,8 @@ mod multiline_select_helpers {
         }
 
         // LAST ROW.
-        if let Some(last_row_range) = selection_map.get(last.row_index) {
+        if let Some(last_row_range) = editor_buffer_mut.selection_map.get(last.row_index)
+        {
             // Extend the existing range (in selection map) for the last row to start of line.
             let start_col = ch(0);
             let end_col = last_row_range.end_display_col_index;
@@ -737,7 +775,7 @@ mod multiline_select_helpers {
                 start_display_col_index: start_col,
                 end_display_col_index: end_col,
             };
-            selection_map.insert(
+            editor_buffer_mut.selection_map.insert(
                 last.row_index,
                 updated_last_row_range,
                 caret_vertical_movement_direction,
@@ -749,7 +787,7 @@ mod multiline_select_helpers {
                 let end_col = last.col_index;
                 SelectionRange::new(start_col, end_col)
             };
-            selection_map.insert(
+            editor_buffer_mut.selection_map.insert(
                 last.row_index,
                 new_last_row_range,
                 caret_vertical_movement_direction,
@@ -770,24 +808,33 @@ mod multiline_select_helpers {
         let last = previous;
 
         // Mutably borrow the selection map.
-        let (_, _, _, selection_map) = editor_buffer.get_mut();
+        let editor_buffer_mut = editor_buffer.get_mut();
 
         // Drop the existing range (in selection map) for the last row.
-        if selection_map.get(last.row_index).is_some() {
-            selection_map.remove(last.row_index, caret_vertical_movement_direction);
+        if editor_buffer_mut
+            .selection_map
+            .get(last.row_index)
+            .is_some()
+        {
+            editor_buffer_mut
+                .selection_map
+                .remove(last.row_index, caret_vertical_movement_direction);
         }
 
         // Change the existing range (in selection map) for the first row.
-        if let Some(first_row_range) = selection_map.get(first.row_index) {
+        if let Some(first_row_range) =
+            editor_buffer_mut.selection_map.get(first.row_index)
+        {
             let lhs = first_row_range.start_display_col_index;
             let rhs = first.col_index;
             match lhs.cmp(&rhs) {
                 cmp::Ordering::Equal => {
-                    selection_map
+                    editor_buffer_mut
+                        .selection_map
                         .remove(first.row_index, caret_vertical_movement_direction);
                 }
                 cmp::Ordering::Less | cmp::Ordering::Greater => {
-                    selection_map.insert(
+                    editor_buffer_mut.selection_map.insert(
                         first.row_index,
                         SelectionRange {
                             start_display_col_index: lhs.min(rhs),
@@ -813,30 +860,39 @@ mod multiline_select_helpers {
         let last = current;
 
         // Mutably borrow the selection map.
-        let (_, _, _, selection_map) = editor_buffer.get_mut();
+        let editor_buffer_mut = editor_buffer.get_mut();
 
         // Drop the existing range (in selection map) for the first row.
-        if selection_map.get(first.row_index).is_some() {
-            selection_map.remove(first.row_index, caret_vertical_movement_direction);
+        if editor_buffer_mut
+            .selection_map
+            .get(first.row_index)
+            .is_some()
+        {
+            editor_buffer_mut
+                .selection_map
+                .remove(first.row_index, caret_vertical_movement_direction);
         }
 
         // Change the existing range (in selection map) for the last row.
-        if let Some(last_row_range) = selection_map.get(last.row_index) {
+        if let Some(last_row_range) = editor_buffer_mut.selection_map.get(last.row_index)
+        {
             let lhs = last.col_index;
             let rhs = last_row_range.end_display_col_index;
             let row_index = last.row_index;
             match lhs.cmp(&rhs) {
-                cmp::Ordering::Equal => {
-                    selection_map.remove(row_index, caret_vertical_movement_direction)
+                cmp::Ordering::Equal => editor_buffer_mut
+                    .selection_map
+                    .remove(row_index, caret_vertical_movement_direction),
+                cmp::Ordering::Greater | cmp::Ordering::Less => {
+                    editor_buffer_mut.selection_map.insert(
+                        row_index,
+                        SelectionRange {
+                            start_display_col_index: rhs.min(lhs),
+                            end_display_col_index: rhs.max(lhs),
+                        },
+                        caret_vertical_movement_direction,
+                    )
                 }
-                cmp::Ordering::Greater | cmp::Ordering::Less => selection_map.insert(
-                    row_index,
-                    SelectionRange {
-                        start_display_col_index: rhs.min(lhs),
-                        end_display_col_index: rhs.max(lhs),
-                    },
-                    caret_vertical_movement_direction,
-                ),
             }
         }
     }

@@ -50,7 +50,8 @@ impl<'a> PatternMatcherStateMachine<'a> {
     pub fn get_current_index(&self) -> usize { self.current_index }
 
     pub fn match_next(&mut self, character_to_test: char) -> CharacterMatchResult {
-        let character_to_test_width = UnicodeString::get_char_width(character_to_test);
+        let character_to_test_width =
+            UnicodeString::char_display_width(character_to_test);
 
         // Skip the first "N" characters (these are display cols, so use the unicode width).
         if let Some(scroll_offset_col_index) = self.maybe_scroll_offset_col_index {
@@ -127,20 +128,20 @@ mod tests {
 
         for (index, character) in my_line.chars().enumerate() {
             println!(
-                "index[{}]: '{}' -> width: {}",
-                index,
-                character,
-                UnicodeString::get_char_width(character),
+                "index[{a}]: '{b}' -> width: {c:?}",
+                a = index,
+                b = character,
+                c = UnicodeString::char_display_width(character),
             );
         }
 
-        let scroll_offset_col_index = UnicodeString::get_char_width('😃')
-            + UnicodeString::get_char_width('m')
-            + UnicodeString::get_char_width('o')
-            + UnicodeString::get_char_width('n')
-            + UnicodeString::get_char_width('k')
-            + UnicodeString::get_char_width('e')
-            + UnicodeString::get_char_width('y');
+        let scroll_offset_col_index = UnicodeString::char_display_width('😃')
+            + UnicodeString::char_display_width('m')
+            + UnicodeString::char_display_width('o')
+            + UnicodeString::char_display_width('n')
+            + UnicodeString::char_display_width('k')
+            + UnicodeString::char_display_width('e')
+            + UnicodeString::char_display_width('y');
         assert_eq2!(scroll_offset_col_index, ch(8));
 
         let mut pattern_matcher = PatternMatcherStateMachine::new(

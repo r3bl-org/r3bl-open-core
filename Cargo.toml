@@ -11,9 +11,11 @@ members = [
   "tui",
   "tuify",
   "log",
-  "script", 
+  "script",
 ] # Make sure to keep these in sync with `run` nushell script `workspace_folders`.
-resolver = "2"
+
+# https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+resolver = "3"
 
 # https://github.com/trailofbits/cargo-unmaintained
 [workspace.metadata.unmaintained]

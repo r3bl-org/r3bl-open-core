@@ -15,10 +15,8 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{Debug, Display, Formatter},
+use std::{fmt::{Debug, Formatter},
           ops::Deref};
-
-use serde::{Deserialize, Serialize};
 
 use crate::{add_unsigned, mul_unsigned, sub_unsigned};
 
@@ -37,19 +35,7 @@ pub type ChUnitPrimitiveType = u16;
 /// - This unit is unsigned and supports basic arithmetic operations, with arguments that
 ///   have negative values.
 /// - It has extensive support for conversion to and from other types.
-#[derive(
-    Copy,
-    Clone,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    Ord,
-    PartialOrd,
-    Eq,
-    Hash,
-    size_of::SizeOf,
-)]
+#[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash, size_of::SizeOf)]
 pub struct ChUnit {
     pub value: ChUnitPrimitiveType,
 }
@@ -108,12 +94,6 @@ pub fn u8(value: impl Into<u8>) -> u8 { value.into() }
 pub fn u16(value: impl Into<u16>) -> u16 { value.into() }
 
 impl Debug for ChUnit {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
-
-impl Display for ChUnit {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.value)
     }

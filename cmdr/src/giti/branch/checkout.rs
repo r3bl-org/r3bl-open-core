@@ -14,7 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::process::Command;
 
 use branch_checkout_formatting::{add_spaces_to_end_of_string,
@@ -23,9 +22,9 @@ use branch_checkout_formatting::{add_spaces_to_end_of_string,
 use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_core::{ChUnit,
                 CommonResult,
-                MicroVecBackingStore,
-                TinyStringBackingStore,
-                UnicodeStringExt,
+                StringStorage,
+                UnicodeString,
+                VecArray,
                 get_terminal_width,
                 usize};
 use r3bl_tuify::{SelectionMode, StyleSheet, select_from_list_with_multi_line_header};
@@ -306,7 +305,7 @@ mod branch_checkout_formatting {
     use super::*;
 
     pub fn add_spaces_to_end_of_string(string: &str, terminal_width: ChUnit) -> String {
-        let string_length = string.unicode_string().display_width;
+        let string_length = UnicodeString::str_display_width(string);
         let spaces_to_add = terminal_width - string_length;
         let spaces = " ".repeat(usize(spaces_to_add));
         let string = format!("{}{}", string, spaces);
@@ -315,8 +314,8 @@ mod branch_checkout_formatting {
 
     pub fn get_formatted_modified_files(
         output: std::process::Output,
-    ) -> MicroVecBackingStore<TinyStringBackingStore> {
-        let mut return_vec: MicroVecBackingStore<TinyStringBackingStore> = smallvec![];
+    ) -> VecArray<StringStorage> {
+        let mut return_vec = smallvec![];
 
         let modified_files = String::from_utf8_lossy(&output.stdout).to_string();
 
@@ -330,7 +329,7 @@ mod branch_checkout_formatting {
         let modified_files_vec = modified_files
             .split('\n')
             .map(|output| output.trim())
-            .collect::<MicroVecBackingStore<&str>>();
+            .collect::<VecArray<&str>>();
 
         // Remove all the "MM" and " M" from modified files.
         // "M" means unstaged files. "MM" means staged files.

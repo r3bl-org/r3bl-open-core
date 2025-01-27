@@ -2,7 +2,8 @@
 name = "r3bl_macro"
 version = "0.10.0"
 edition = "2021"
-resolver = "2"
+# https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+resolver = "3"
 description = """
 Internal support for a proc-macro library for reading attributes into structs when
 implementing custom derives. Used by workspace in https://crates.io/crates/r3bl_rs_utils.
