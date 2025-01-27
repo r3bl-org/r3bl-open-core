@@ -15,13 +15,14 @@
  *   limitations under the License.
  */
 
-use std::{fs::OpenOptions, io::Write, path::Path};
+use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
 
 use r3bl_core::ok;
 use tracing::dispatcher;
 
 use crate::{DisplayPreference, TracingConfig, WriterConfig};
 
+// BOOKM: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config options.
 /// This module makes it easier to configure the logging system. Instead of having lots of
 /// complex arguments to the [try_initialize_logging_global] and
 /// [try_initialize_logging_thread_local] functions, they both receive a type that
@@ -29,8 +30,11 @@ use crate::{DisplayPreference, TracingConfig, WriterConfig};
 /// can be used to convert many different types into a [TracingConfig] type while
 /// retaining a simple function signature. Here are some examples of what is possible:
 ///
-/// ```rust
-/// use r3bl_log::{TracingConfig, DisplayPreference, WriterConfig};
+/// ```no_run
+/// use r3bl_log::{
+///     TracingConfig, DisplayPreference, WriterConfig,
+///     try_initialize_logging_global, try_initialize_logging_thread_local
+/// };
 ///
 /// let level = tracing::Level::DEBUG;
 /// let config_1: TracingConfig = level.into();
@@ -45,10 +49,11 @@ use crate::{DisplayPreference, TracingConfig, WriterConfig};
 /// let config_4: TracingConfig = writer_config.into();
 ///
 /// let config_compose: TracingConfig = config_2 + config_3;
+///
+/// try_initialize_logging_global(config_compose);
+/// try_initialize_logging_thread_local(config_1 + config_4);
 /// ```
 pub mod tracing_config_options {
-    use std::ops::Add;
-
     use super::*;
 
     pub const DEFAULT_LOG_FILE_NAME: &str = "log.txt";

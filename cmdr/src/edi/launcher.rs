@@ -20,7 +20,7 @@ use r3bl_tui::{InputEvent, ModifierKeysMask, TerminalWindow, keypress};
 
 use crate::edi::{AppMain, constructor};
 
-pub async fn run_app(maybe_file_path: Option<String>) -> CommonResult<()> {
+pub async fn run_app(maybe_file_path: Option<&str>) -> CommonResult<()> {
     throws!({
         // Create a new state from the file path.
         let state = constructor::new(&maybe_file_path);

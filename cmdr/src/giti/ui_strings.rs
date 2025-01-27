@@ -89,134 +89,139 @@ pub enum UIStrings {
 
 impl Display for UIStrings {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        fn to_string(this: &UIStrings) -> String {
-            match this {
-                UIStrings::PleaseSelectBranchesYouWantToDelete => {
-                    String::from(" Please select branches you want to delete")
-                }
-                UIStrings::ConfirmDeletingOneBranch { branch_name } => {
-                    format!(" Confirm deleting 1 branch: {branch_name}")
-                }
-                UIStrings::ConfirmDeletingMultipleBranches {
-                    num_of_branches,
-                    branches_to_delete,
-                } => {
-                    format!(
-                        " Confirm deleting {} branches: {}?",
-                        num_of_branches, branches_to_delete
-                    )
-                }
-                UIStrings::YesDeleteBranch => String::from("Yes, delete branch"),
-                UIStrings::YesDeleteBranches => String::from("Yes, delete branches"),
-                UIStrings::Exit => String::from("Exit"),
-                UIStrings::FailedToDeleteBranch {
-                    branch_name,
-                    error_message,
-                } => {
-                    format!(
-                        " Failed to delete branch: {}!\n\n{}",
-                        branch_name, error_message
-                    )
-                }
-                UIStrings::FailedToDeleteBranches {
-                    branches,
-                    error_message,
-                } => {
-                    format!(
-                        " Failed to delete branches:\n ╴{}!\n\n{}",
-                        branches, error_message
-                    )
-                }
-                UIStrings::FailedToRunCommandToDeleteBranches { branches } => {
-                    format!(" Failed to run command to delete branches:\n ╴{branches}!")
-                }
-                UIStrings::Deleted => String::from("deleted"),
-                UIStrings::CurrentBranch { branch } => {
-                    format!("(current) {branch}")
-                }
-                UIStrings::SelectBranchToSwitchTo => {
-                    String::from(" Select a branch to switch to")
-                }
-                UIStrings::AlreadyOnCurrentBranch => {
-                    String::from(" You are already on branch ")
-                }
-                UIStrings::SwitchedToBranch => String::from(" Switched to branch ✅ "),
-                UIStrings::FailedToSwitchToBranch {
-                    branch,
-                    error_message,
-                } => {
-                    format!(
-                        " Failed to switch to branch '{branch}'!\n\n{}",
-                        error_message
-                    )
-                }
-                UIStrings::NoBranchGotCheckedOut { branch } => {
-                    format!(" No branch got checked out ... \n ╴{branch}!\n\n")
-                }
-                UIStrings::GoodbyeThanksForUsingGitiUsername { username } => {
-                    format!("\n Goodbye, 👋 {}. Thanks for using 😺 giti!", username)
-                }
-                UIStrings::GoodbyeThanksForUsingGiti => "\n Goodbye 👋.
-
-                     😺 giti!"
-                    .to_string(),
-                UIStrings::PleaseStarUs => {
-                    format!(
-                        "{}: {}",
-                        " Please star us and report issues on GitHub",
-                        "🌟 🐞 https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
-                    )
-                }
-                UIStrings::ErrorExecutingCommand {
-                    program_name_to_string,
-                    command_args_to_string,
-                    command_output_error,
-                } => {
-                    format!(
-                        " Error executing command: '{program_name_to_string} {command_args_to_string}'. Error: {command_output_error}"
-                    )
-                }
-                UIStrings::BranchDoesNotExist { branch_name } => {
-                    format!("Branch `{}` does not exist.", branch_name)
-                }
-                UIStrings::ModifiedFileOnCurrentBranch => {
-                    " You have a 📝 modified file on the current branch: ".to_string()
-                }
-                UIStrings::ModifiedFilesOnCurrentBranch => {
-                    " You have 📝 modified files on the current branch: ".to_string()
-                }
-                UIStrings::WouldYouLikeToSwitchToBranch { branch_name } => {
-                    format!(" Would you like to switch to branch '{branch_name}?'")
-                }
-                UIStrings::SwitchToBranchAndApplyChanges => {
-                    String::from("Switch to branch and apply changes")
-                }
-                UIStrings::StayOnCurrentBranch => String::from("Stay on current branch"),
-                UIStrings::StayingOnCurrentBranch => {
-                    String::from(" Staying on current branch ")
-                }
-                UIStrings::PleaseCommitChangesBeforeSwitchingBranches => String::from(
-                    " Please commit your changes or stash them before you switch branches.",
-                ),
-                UIStrings::BranchAlreadyExists { branch_name } => {
-                    format!(" Branch {branch_name} already exists!")
-                }
-                UIStrings::CreatedAndSwitchedToNewBranch => {
-                    " You created and switched to branch ".to_string()
-                }
-                UIStrings::FailedToCreateAndSwitchToBranch { branch_name } => {
-                    format!(" Failed to create and switch to branch {branch_name}")
-                }
-                UIStrings::EnterBranchNameYouWantToCreate => {
+        match self {
+            UIStrings::PleaseSelectBranchesYouWantToDelete => {
+                write!(f, " Please select branches you want to delete")
+            }
+            UIStrings::ConfirmDeletingOneBranch { branch_name } => {
+                write!(f, " Confirm deleting 1 branch: {branch_name}")
+            }
+            UIStrings::ConfirmDeletingMultipleBranches {
+                num_of_branches,
+                branches_to_delete,
+            } => {
+                write!(
+                    f,
+                    " Confirm deleting {} branches: {}?",
+                    num_of_branches, branches_to_delete
+                )
+            }
+            UIStrings::YesDeleteBranch => write!(f, "Yes, delete branch"),
+            UIStrings::YesDeleteBranches => write!(f, "Yes, delete branches"),
+            UIStrings::Exit => write!(f, "Exit"),
+            UIStrings::FailedToDeleteBranch {
+                branch_name,
+                error_message,
+            } => {
+                write!(
+                    f,
+                    " Failed to delete branch: {}!\n\n{}",
+                    branch_name, error_message
+                )
+            }
+            UIStrings::FailedToDeleteBranches {
+                branches,
+                error_message,
+            } => {
+                write!(
+                    f,
+                    " Failed to delete branches:\n ╴{}!\n\n{}",
+                    branches, error_message
+                )
+            }
+            UIStrings::FailedToRunCommandToDeleteBranches { branches } => {
+                write!(
+                    f,
+                    " Failed to run command to delete branches:\n ╴{branches}!"
+                )
+            }
+            UIStrings::Deleted => write!(f, "deleted"),
+            UIStrings::CurrentBranch { branch } => {
+                write!(f, "(current) {branch}")
+            }
+            UIStrings::SelectBranchToSwitchTo => {
+                write!(f, " Select a branch to switch to")
+            }
+            UIStrings::AlreadyOnCurrentBranch => {
+                write!(f, " You are already on branch ")
+            }
+            UIStrings::SwitchedToBranch => write!(f, " Switched to branch ✅ "),
+            UIStrings::FailedToSwitchToBranch {
+                branch,
+                error_message,
+            } => {
+                write!(
+                    f,
+                    " Failed to switch to branch '{branch}'!\n\n{}",
+                    error_message
+                )
+            }
+            UIStrings::NoBranchGotCheckedOut { branch } => {
+                write!(f, " No branch got checked out ... \n ╴{branch}!\n\n")
+            }
+            UIStrings::GoodbyeThanksForUsingGitiUsername { username } => {
+                write!(f, "\n Goodbye, 👋 {}. Thanks for using 😺 giti!", username)
+            }
+            UIStrings::GoodbyeThanksForUsingGiti => {
+                write!(f, "\n Goodbye 👋.\n\n 😺 giti!")
+            }
+            UIStrings::PleaseStarUs => {
+                write!(
+                    f,
+                    " Please star us and report issues on GitHub: 🌟 🐞 https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
+                )
+            }
+            UIStrings::ErrorExecutingCommand {
+                program_name_to_string,
+                command_args_to_string,
+                command_output_error,
+            } => {
+                write!(
+                    f,
+                    " Error executing command: '{program_name_to_string} {command_args_to_string}'. Error: {command_output_error}"
+                )
+            }
+            UIStrings::BranchDoesNotExist { branch_name } => {
+                write!(f, "Branch `{}` does not exist.", branch_name)
+            }
+            UIStrings::ModifiedFileOnCurrentBranch => {
+                write!(f, " You have a 📝 modified file on the current branch: ")
+            }
+            UIStrings::ModifiedFilesOnCurrentBranch => {
+                write!(f, " You have 📝 modified files on the current branch: ")
+            }
+            UIStrings::WouldYouLikeToSwitchToBranch { branch_name } => {
+                write!(f, " Would you like to switch to branch '{branch_name}?'")
+            }
+            UIStrings::SwitchToBranchAndApplyChanges => {
+                write!(f, "Switch to branch and apply changes")
+            }
+            UIStrings::StayOnCurrentBranch => write!(f, "Stay on current branch"),
+            UIStrings::StayingOnCurrentBranch => {
+                write!(f, " Staying on current branch ")
+            }
+            UIStrings::PleaseCommitChangesBeforeSwitchingBranches => write!(
+                f,
+                " Please commit your changes or stash them before you switch branches."
+            ),
+            UIStrings::BranchAlreadyExists { branch_name } => {
+                write!(f, " Branch {branch_name} already exists!")
+            }
+            UIStrings::CreatedAndSwitchedToNewBranch => {
+                write!(f, " You created and switched to branch ")
+            }
+            UIStrings::FailedToCreateAndSwitchToBranch { branch_name } => {
+                write!(f, " Failed to create and switch to branch {branch_name}")
+            }
+            UIStrings::EnterBranchNameYouWantToCreate => {
+                write!(
+                    f,
                     " Enter a branch name you want to create (Ctrl+C to exit) "
-                        .to_string()
-                }
-                UIStrings::NoNewBranchWasCreated => {
-                    String::from(" No new branch was created")
-                }
+                )
+            }
+            UIStrings::NoNewBranchWasCreated => {
+                write!(f, " No new branch was created")
             }
         }
-
-        write!(f, "{}", to_string(self))
     }
 }

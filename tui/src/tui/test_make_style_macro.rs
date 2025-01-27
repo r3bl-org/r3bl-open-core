@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_with_padding() {
-        with! {
+        _ = with! {
           tui_style! {
             id: 1
             padding: 1
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn test_with_color_fg() {
-        with! {
+        _ = with! {
           tui_style! {
             id: 1
             color_fg: color!(@red)
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn test_with_color_bg() {
-        with! {
+        _ = with! {
           tui_style! {
             id: 1
             color_bg: color!(0, 0, 0)

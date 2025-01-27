@@ -17,18 +17,17 @@
 
 use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 use r3bl_core::{position, Position};
-use serde::{Deserialize, Serialize};
 
 use super::{convert_key_modifiers, ModifierKeysMask};
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub struct MouseInput {
     pub pos: Position,
     pub kind: MouseInputKind,
     pub maybe_modifier_keys: Option<ModifierKeysMask>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum MouseInputKind {
     MouseDown(Button),
     MouseUp(Button),
@@ -40,7 +39,7 @@ pub enum MouseInputKind {
     ScrollRight,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum Button {
     Left,
     Right,

@@ -15,15 +15,11 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Display, Formatter, Result};
+use std::fmt::Debug;
 
 #[derive(Default, Clone, Debug)]
 #[non_exhaustive]
 pub enum AppSignal {
     #[default]
     Noop,
-}
-
-impl Display for AppSignal {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{self:?}") }
 }

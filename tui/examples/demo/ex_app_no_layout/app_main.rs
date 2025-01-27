@@ -14,12 +14,13 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use r3bl_core::{call_if_true,
                 ch,
+                defaults::get_default_gradient_stops,
                 glyphs,
                 position,
                 send_signal,
+                string_storage,
                 throws_with_return,
                 tui_styled_text,
                 tui_styled_texts,
@@ -33,11 +34,11 @@ use r3bl_core::{call_if_true,
                 GradientGenerationPolicy,
                 GradientLengthKind,
                 LolcatBuilder,
-                MicroVecBackingStore,
                 Position,
                 Size,
                 TextColorizationPolicy,
-                UnicodeStringExt};
+                UnicodeString,
+                VecArray};
 use r3bl_macro::tui_style;
 use r3bl_tui::{render_ops,
                render_pipeline,
@@ -71,7 +72,7 @@ pub struct AppMain {
 #[derive(Default)]
 pub struct AppData {
     pub color_wheel_rgb: ColorWheel,
-    pub color_wheel_ansi_vec: MicroVecBackingStore<ColorWheel>,
+    pub color_wheel_ansi_vec: VecArray<ColorWheel>,
     pub lolcat_fg: ColorWheel,
     pub lolcat_bg: ColorWheel,
     pub animator: Animator,
@@ -138,8 +139,6 @@ mod animator_task {
 }
 
 mod app_main_impl_trait_app {
-    use r3bl_core::get_default_gradient_stops;
-
     use super::{animator_task::start_animator_task, *};
 
     impl App for AppMain {
@@ -153,14 +152,13 @@ mod app_main_impl_trait_app {
             _has_focus: &mut HasFocus,
         ) -> CommonResult<RenderPipeline> {
             throws_with_return!({
-                let state_str = format!("{}", global_data.state);
-                let data = &mut self.data;
+                let state_string = string_storage!("{a:?}", a = global_data.state);
 
                 let sample_line_of_text =
-                    format!("{state_str}, gradient: [index: X, len: Y]");
+                    format!("{state_string}, gradient: [index: X, len: Y]");
                 let content_size_col = ChUnit::from(sample_line_of_text.len());
                 let window_size = global_data.window_size;
-
+                let data = &mut self.data;
                 let col = (window_size.col_count - content_size_col) / 2;
                 let mut row =
                     (window_size.row_count - ch(2) - ch(data.color_wheel_ansi_vec.len()))
@@ -169,7 +167,7 @@ mod app_main_impl_trait_app {
                 let mut pipeline = render_pipeline!();
 
                 pipeline.push(ZOrder::Normal, {
-                    let mut it = render_ops! {
+                    let mut acc_render_ops = render_ops! {
                         @new
                         RenderOp::ResetColor,
                     };
@@ -179,26 +177,29 @@ mod app_main_impl_trait_app {
                         let color_wheel =
                             &mut data.color_wheel_ansi_vec[color_wheel_index];
 
-                        let unicode_string = {
+                        let text = {
                             let index = color_wheel.get_index();
                             let len = match color_wheel.get_gradient_len() {
                                 GradientLengthKind::ColorWheel(len) => len,
                                 _ => 0,
                             };
-                            format!("{state_str}, gradient: [index: {index}, len: {len}]")
-                                .unicode_string()
+                            string_storage!(
+                                "{state_string}, gradient: [index: {index:?}, len: {len}]"
+                            )
                         };
 
-                        it += RenderOp::MoveCursorPositionAbs(position!(
+                        let text_us = UnicodeString::new(&text);
+
+                        acc_render_ops += RenderOp::MoveCursorPositionAbs(position!(
                             col_index: col,
                             row_index: row
                         ));
 
                         render_ops! {
-                            @render_styled_texts_into it
+                            @render_styled_texts_into acc_render_ops
                             =>
                             color_wheel.colorize_into_styled_texts(
-                                &unicode_string,
+                                &text_us,
                                 GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                                 TextColorizationPolicy::ColorEachWord(None),
                             )
@@ -209,26 +210,29 @@ mod app_main_impl_trait_app {
 
                     // Render using color_wheel_rgb.
                     {
-                        it += RenderOp::MoveCursorPositionAbs(position!(
+                        acc_render_ops += RenderOp::MoveCursorPositionAbs(position!(
                             col_index: col,
                             row_index: row
                         ));
 
-                        let unicode_string = {
+                        let text = {
                             let index = data.color_wheel_rgb.get_index();
                             let len = match data.color_wheel_rgb.get_gradient_len() {
                                 GradientLengthKind::ColorWheel(len) => len,
                                 _ => 0,
                             };
-                            format!("{state_str}, gradient: [index: {index}, len: {len}]")
-                                .unicode_string()
+                            string_storage!(
+                                "{state_string}, gradient: [index: {index:?}, len: {len}]"
+                            )
                         };
 
+                        let text_us = UnicodeString::new(&text);
+
                         render_ops! {
-                            @render_styled_texts_into it
+                            @render_styled_texts_into acc_render_ops
                             =>
                             data.color_wheel_rgb.colorize_into_styled_texts(
-                                &unicode_string,
+                                &text_us,
                                 GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                                 TextColorizationPolicy::ColorEachWord(None),
                             )
@@ -239,49 +243,55 @@ mod app_main_impl_trait_app {
 
                     // Render using lolcat_fg.
                     {
-                        it += RenderOp::MoveCursorPositionAbs(position!(
+                        acc_render_ops += RenderOp::MoveCursorPositionAbs(position!(
                             col_index: col,
                             row_index: row
                         ));
 
-                        let unicode_string = {
-                            format!("{state_str}, gradient: [index: _, len: _]")
-                                .unicode_string()
+                        let text = {
+                            string_storage!(
+                                "{state_string}, gradient: [index: _, len: _]"
+                            )
                         };
 
+                        let text_us = UnicodeString::new(&text);
+
                         let texts = data.lolcat_fg.colorize_into_styled_texts(
-                            &unicode_string,
+                            &text_us,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(None),
                         );
-                        render_tui_styled_texts_into(&texts, &mut it);
+                        render_tui_styled_texts_into(&texts, &mut acc_render_ops);
 
                         row += 1;
                     }
 
                     // Render using lolcat_bg.
                     {
-                        it += RenderOp::MoveCursorPositionAbs(position!(
+                        acc_render_ops += RenderOp::MoveCursorPositionAbs(position!(
                             col_index: col,
                             row_index: row
                         ));
 
-                        let unicode_string = {
-                            format!("{state_str}, gradient: [index: _, len: _]")
-                                .unicode_string()
+                        let text = {
+                            string_storage!(
+                                "{state_string}, gradient: [index: _, len: _]"
+                            )
                         };
 
+                        let text_us = UnicodeString::new(&text);
+
                         let texts = data.lolcat_bg.colorize_into_styled_texts(
-                            &unicode_string,
+                            &text_us,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(None),
                         );
-                        render_tui_styled_texts_into(&texts, &mut it);
+                        render_tui_styled_texts_into(&texts, &mut acc_render_ops);
 
                         row += 1;
                     }
 
-                    it
+                    acc_render_ops
                 });
 
                 status_bar::create_status_bar_message(&mut pipeline, window_size);
@@ -310,12 +320,17 @@ mod app_main_impl_trait_app {
 
             throws_with_return!({
                 call_if_true!(ENABLE_TRACE_EXAMPLES, {
-                    let message = format!(
-                        "AppNoLayout::handle_event {ch} {evt}",
-                        ch = glyphs::USER_INPUT_GLYPH,
-                        evt = input_event
+                    let message = string_storage!("AppNoLayout::handle_event");
+                    let details = string_storage!(
+                        "{a} {b:?}",
+                        a = glyphs::USER_INPUT_GLYPH,
+                        b = input_event
                     );
-                    tracing::info!(message = message);
+                    // % is Display, ? is Debug.
+                    tracing::info! {
+                        message = %message,
+                        details = %details
+                    };
                 });
 
                 let mut event_consumed = false;
@@ -520,6 +535,8 @@ mod app_main_impl_trait_app {
         }
     }
 }
+
+// REFACTOR: [ ] introduce HUD for telemetry here & copy to all other examples
 
 mod status_bar {
     use super::*;

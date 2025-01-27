@@ -450,6 +450,10 @@ These videos have been an inspiration for many of these changes:
 
 Updated:
   - Use the latest Rust 2024 edition.
+  - The `Display` and `Debug` implementations for all the structs in this crate have been
+    cleaned up. The `PrettyPrintDebug` trait is now deleted, and the `Debug` trait is used
+    instead. Wherever possible the `Debug` trait does not perform any allocations and uses
+    the `write!` macro to write to a pre-existing buffer.
 
 Added:
   - Add `ResponseTimesRingBuffer` to replace `telemetry_global_static` module in
@@ -465,6 +469,21 @@ Removed:
     - Move the telemetry functions from `telemetry_global_static` to  `Telemetry` module
       (and its dependencies `RateLimiter` and `RingBuffer`) in `r3bl_core`.
 
+Changed:
+  - Use `smallvec` and `smallstr` crates to increase memory latency performance (for
+    access, mutation, and allocation).
+  - Use `Drop` trait implementation for `EditorBufferMut` to perform validation and clean
+    up of caret location after changes to editor buffer.
+  - Improve the history handling in `EditorBufferMut` to ensure that the history is
+    limited in size.
+  - Improve the `editor_buffer_struct.rs` module to use `SelectionList` instead of
+    `HashMap` so that there's no need to perform any heap allocations for selection ranges
+    (as long as they fit within the initial stack allocation). Regardless, by
+    "scalarizing" or "flattening" the map into an array, the memory locality is improved
+    (and cache line performance), since there's no need to follow a pointer from the key
+    to get to they value. Both key and value tuple are stored side by side in an array (on
+    the stack) or moved to the heap if they spill over the stack allocation. It's not a
+    big deal in this case, but it's a good practice to follow.
 
 ### v0.6.0 (2024-10-21)
 
@@ -808,13 +827,22 @@ exhaustively tested and is able to handle many more corner cases.
 
 ### v_next_release_r3bl_core
 
-This release does not have any major changes. It does have some major rewrites of existing
-functionality to be much faster and easier to use (focus on ergonomics, such as the `arg:
-impl Into<T>` where `T` is a struct pattern). It also contains changes that are part of
-optimizing memory allocation to increase performance, and ensure that performance is
-stable over time. `ch_unit.rs` is also heavily refactored and the entire codebase updated
-so that a the more ergonomic `ChUnit` API is now used throughout the codebase. No new
-functionality is added in this release.
+This release has lots of major breaking changes.
+
+- It also contains changes that are
+  part of optimizing memory allocation to increase performance, and ensure that performance
+  is stable over time. `ch_unit.rs` is also heavily refactored and the entire codebase
+  updated so that a the more ergonomic `ChUnit` API is now used throughout the codebase.
+- A new telemetry API is also in this release, which makes it easy to measure and report
+  performance metrics in a memory access and CPU performant way. This is built for the `r3bl_tui`
+  main event loop (which is a very hot loop).
+- The `graphemes` module containing `UnicodeString` handling have been totally rewritten.
+  They are now no allocation structures! In all past versions, the `UnicodeString` was a
+  `String` under the hood. This is no longer the case. A `UnicodeStringHolder` and some
+  macros are provided to make this relatively easy to use.
+- It does have some major rewrites of
+  existing functionality to be much faster and easier to use (focus on ergonomics, such as
+  the `arg: impl Into<T>` where `T` is a struct pattern).
 
 These videos have been an inspiration for many of these changes:
 - [Data oriented design](https://youtu.be/WwkuAqObplU)
@@ -839,9 +867,37 @@ Removed:
     like `ch()`, `usize()`, `f64()`, etc.
 
 Changed:
+  - Add new declarative macros to mimic `.join(..)` method on `Vec` and `String`. This
+    makes it easier to join a collection of items into a string, or a collection of
+    strings into a string with (`join!` & `join_with_index!`) or without allocations
+    (`join_fmt!` & `join_with_index_fmt!`).
+  - Add `read_from_file` module in the `into_existing.rs` file which allows for reading
+    from a file in a memory efficient way.
+  - Clean up the `Display` and `Debug` implementations for all the structs in this crate.
+    The `PrettyPrintDebug` trait is still needed to get around the orphan rule, since type
+    aliases are used for all the data structures for the MD parser; as they can't
+    implement `Debug`, so they must implement `PrettyPrintDebug`. It is much easier to do
+    this than to rewrite all these underlying data structures without type aliases! Type
+    aliases make it easier to maintain the code and allow for easy and seamless addition
+    for operator overloading and other niceties. Wherever possible the `Debug` trait does
+    not perform any allocations and uses the `write!` macro to write to a pre-existing
+    buffer.
+  - The `graphemes` module containing `UnicodeString` handling have been totally
+    rewritten. They are now optimized for memory latency (access, mutation, and
+    allocation). For performance reasons they are not "no allocation" structures.
+    `UnicodeString` now owns a `StringStorage` under the hood. The `UnicodeStringSegment`
+    does not own anything (no heap or string allocation, and is a very "scalarized"
+    struct), and needs a `UnicodeString` to be able to do anything. All the existing code
+    that relies on this has been rewritten to accommodate this change.
   - Fix all the Rust doc tests that were marked with `ignore`. Remove the `ignore` with
     either run and compile, or just `no_run` (compile only) in some cases where the code
     can't be run, but needs to be compiled.
+  - Remove the `Serialize` and `Deserialize` derive macro from all the core data structs.
+    The only struct that needs to be serialized and deserialized, is `kv.rs`. There is
+    another struct in a different crate that needs this (in `r3bl_analytics` crate). There
+    is no reason to have these derive macros in the `r3bl_core` crate. It is also an
+    impedance to have no allocation structs, since `Deserialize` has some requirement for
+    allocation.
 
 - Updated:
   - Use the latest Rust 2024 edition.
@@ -849,6 +905,18 @@ Changed:
     replace them with doc comments that compile successfully.
 
 - Added:
+  - Add a new test fixture `temp_dir::create_temp_dir()` to make it easy to create
+    temporary directories for tests. Any temporary directories created are automatically
+    cleaned up after the test is done. The `TempDir` struct implements many traits that
+    make it ergonomic to use with `std::fs`, `std::path` and `std::fmt`. Here are the PRs
+    for this change:
+    - [PR 1](https://github.com/r3bl-org/r3bl-open-core/pull/372)
+    - [PR 2](https://github.com/r3bl-org/r3bl-open-core/pull/373)
+  - New hashmap which remembers insertion order called `OrderedMap`.
+  - New module `stack_alloc_types` that contain data structures that are allocated on the stack.
+    If they grow too big, they are then moved to the heap. Under the covers, the `small_vec` and
+    `small_str` crates are used. Lots of macros are provided to make it easy to work with these
+    data structures. And to make it easy to write into them without allocating them.
   - `Percent` struct now has a `as_glyph()` method which displays the percentage as a
     Unicode glyph ranging from `STATS_25P_GLYPH` to `STATS_50P_GLYPH` to `STATS_75P_GLYPH`
     to `STATS_100P_GLYPH` depending on its value.
@@ -991,6 +1059,10 @@ now used throughout the codebase. No new functionality is added in this release.
 - Updated:
   - Use the latest Rust 2024 edition.
 
+- Changed:
+  - Change the semantics of the `with!` macro, so that the `$id` is only contained to the `run` block and doesn't
+    get added to the caller's scope / block.
+
 ### v0.10.0 (2024-10-20)
 
 This is a major release that does not include any new functionality, but is a radical
@@ -1027,15 +1099,6 @@ This release adds a new fixture to make it easy to create temporary directories 
 
 - Updated:
   - Use the latest Rust 2024 edition.
-
-- Added:
-  - Add a new fixture `temp_dir::create_temp_dir()` to make it easy to create temporary
-    directories for tests. Any temporary directories created are automatically cleaned up
-    after the test is done. The `TempDir` struct implements many traits that make it
-    ergonomic to use with `std::fs`, `std::path` and `std::fmt`. Here are the PRs for this
-    change:
-    - [PR 1](https://github.com/r3bl-org/r3bl-open-core/pull/372)
-    - [PR 2](https://github.com/r3bl-org/r3bl-open-core/pull/373)
 
 ### v0.1.0 (2024-10-21)
 

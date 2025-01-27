@@ -15,10 +15,8 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{self, Debug, Display},
+use std::{fmt::{self, Debug},
           ops::{Add, AddAssign, Mul}};
-
-use serde::{Deserialize, Serialize};
 
 use crate::{ChUnit, Size, ch};
 
@@ -57,32 +55,13 @@ use crate::{ChUnit, Size, ch};
 /// use r3bl_core::{Position, position};
 /// let pos: Position = position!(col_index: 0, row_index: 0);
 /// ```
-#[derive(
-    Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default, Hash, size_of::SizeOf,
-)]
+#[derive(Clone, PartialEq, Eq, Copy, Default, Hash, size_of::SizeOf)]
 pub struct Position {
     pub col_index: ChUnit,
     pub row_index: ChUnit,
 }
 
-impl Position {
-    pub fn deser_from_str(ser_str: &str) -> Option<Position> {
-        if let Ok(position) = serde_json::from_str(ser_str) {
-            Some(position)
-        } else {
-            None
-        }
-    }
-
-    pub fn ser_to_string(&self) -> Option<String> {
-        let ser_str = serde_json::to_string(self);
-        if let Ok(ser_str) = ser_str {
-            Some(ser_str)
-        } else {
-            None
-        }
-    }
-}
+pub type ScrollOffset = Position;
 
 impl Position {
     /// Reset given `col` count to `0`.
@@ -225,22 +204,14 @@ pub mod convert_position_to_other_type {
 }
 
 pub mod position_debug_formatter {
+    use fmt::{Formatter, Result};
+
     use super::*;
 
-    fn fmt_position(position: &Position, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "[col:{}, row:{}]",
-            *position.col_index, *position.row_index
-        )
-    }
-
     impl Debug for Position {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt_position(self, f) }
-    }
-
-    impl Display for Position {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt_position(self, f) }
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            write!(f, "[col:{}, row:{}]", *self.col_index, *self.row_index)
+        }
     }
 }
 

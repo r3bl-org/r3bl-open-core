@@ -15,18 +15,12 @@
  *   limitations under the License.
  */
 
-use serde::{Deserialize, Serialize};
-
 use super::TuiStyle;
-use crate::{CommonError,
-            CommonResult,
-            MicroVecBackingStore,
-            TinyVecBackingStore,
-            throws};
+use crate::{CommonError, CommonResult, VecArray, throws};
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone)]
 pub struct TuiStylesheet {
-    pub styles: MicroVecBackingStore<TuiStyle>,
+    pub styles: VecArray<TuiStyle>,
 }
 
 #[macro_export]
@@ -85,10 +79,7 @@ impl TuiStylesheet {
         });
     }
 
-    pub fn add_styles(
-        &mut self,
-        styles: MicroVecBackingStore<TuiStyle>,
-    ) -> CommonResult<()> {
+    pub fn add_styles(&mut self, styles: VecArray<TuiStyle>) -> CommonResult<()> {
         throws!({
             for style in styles {
                 self.add_style(style)?;
@@ -102,11 +93,8 @@ impl TuiStylesheet {
     }
 
     /// Returns [None] if no style in `ids` [Vec] is found.
-    pub fn find_styles_by_ids(
-        &self,
-        ids: &[u8],
-    ) -> Option<TinyVecBackingStore<TuiStyle>> {
-        let mut styles = TinyVecBackingStore::<TuiStyle>::new();
+    pub fn find_styles_by_ids(&self, ids: &[u8]) -> Option<VecArray<TuiStyle>> {
+        let mut styles = VecArray::<TuiStyle>::new();
 
         for id in ids {
             if let Some(style) = self.find_style_by_id(*id) {
@@ -121,7 +109,7 @@ impl TuiStylesheet {
         }
     }
 
-    pub fn compute(styles: &Option<TinyVecBackingStore<TuiStyle>>) -> Option<TuiStyle> {
+    pub fn compute(styles: &Option<VecArray<TuiStyle>>) -> Option<TuiStyle> {
         if let Some(styles) = styles {
             let mut computed = TuiStyle::default();
             styles.iter().for_each(|style| computed += style);
@@ -200,8 +188,8 @@ impl TryAdd<TuiStyle> for TuiStylesheet {
     fn try_add(&mut self, other: TuiStyle) -> CommonResult<()> { self.add_style(other) }
 }
 
-impl TryAdd<MicroVecBackingStore<TuiStyle>> for TuiStylesheet {
-    fn try_add(&mut self, other: MicroVecBackingStore<TuiStyle>) -> CommonResult<()> {
+impl TryAdd<VecArray<TuiStyle>> for TuiStylesheet {
+    fn try_add(&mut self, other: VecArray<TuiStyle>) -> CommonResult<()> {
         self.add_styles(other)
     }
 }

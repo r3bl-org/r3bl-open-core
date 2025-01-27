@@ -15,11 +15,11 @@
  *   limitations under the License.
  */
 
+use std::fmt::Debug;
+
 use crossterm::style::Stylize;
 
-use crate::UnicodeString;
-
-type US = UnicodeString;
+use crate::string_storage;
 
 /// Marker trait to "remember" which types can be printed to the console w/ color.
 pub trait ConsoleLogInColor {
@@ -43,30 +43,14 @@ fn console_log_bg(this: &str) {
     }
 }
 
-impl<T: PrettyPrintDebug> ConsoleLogInColor for T {
-    fn console_log_fg(&self) { console_log_fg(&self.pretty_print_debug()); }
+impl<T: Debug> ConsoleLogInColor for T {
+    fn console_log_fg(&self) {
+        let it = string_storage!("{self:?}");
+        console_log_fg(it.as_str());
+    }
 
-    fn console_log_bg(&self) { console_log_bg(&self.pretty_print_debug()); }
-}
-
-impl ConsoleLogInColor for &str {
-    fn console_log_fg(&self) { console_log_fg(self); }
-
-    fn console_log_bg(&self) { console_log_bg(self); }
-}
-
-impl ConsoleLogInColor for String {
-    fn console_log_fg(&self) { console_log_fg(self); }
-
-    fn console_log_bg(&self) { console_log_bg(self); }
-}
-
-/// Marker trait to "remember" which types support pretty printing for debugging.
-pub trait PrettyPrintDebug {
-    fn pretty_print_debug(&self) -> String;
-}
-
-/// Marker trait to "remember" which types can be converted to plain text.
-pub trait ConvertToPlainText {
-    fn to_plain_text_us(&self) -> US;
+    fn console_log_bg(&self) {
+        let it = string_storage!("{self:?}");
+        console_log_bg(it.as_str());
+    }
 }

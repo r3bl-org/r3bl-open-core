@@ -17,21 +17,20 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use r3bl_core::{ch, ChUnit, MicroVecBackingStore, TinyStringBackingStore};
-use serde::{Deserialize, Serialize};
+use r3bl_core::{ch, fmt_option, ChUnit, StringStorage, VecArray};
 
-use crate::{format_option, EditorBuffer, DEFAULT_SYN_HI_FILE_EXT};
+use crate::{EditorBuffer, DEFAULT_SYN_HI_FILE_EXT};
 
 /// Please do not construct this struct directly and use [new_empty](DialogBuffer::new_empty)
 /// instead.
 ///
 /// Stores the data for a modal dialog. It contains the text content in an [EditorBuffer] and a
 /// title that is displayed.
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq)]
 pub struct DialogBuffer {
     pub editor_buffer: EditorBuffer,
-    pub title: String,
-    pub maybe_results: Option<MicroVecBackingStore<TinyStringBackingStore>>,
+    pub title: StringStorage,
+    pub maybe_results: Option<VecArray<StringStorage>>,
 }
 
 impl DialogBuffer {
@@ -47,11 +46,8 @@ impl DialogBuffer {
 impl DialogBuffer {
     pub fn new_empty() -> Self {
         DialogBuffer {
-            editor_buffer: EditorBuffer::new_empty(
-                &Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()),
-                &None,
-            ),
-            title: Default::default(),
+            editor_buffer: EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None),
+            title: StringStorage::new(),
             maybe_results: None,
         }
     }
@@ -62,7 +58,7 @@ mod impl_debug_format {
 
     impl Debug for DialogBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            let maybe_results: &dyn Debug = format_option!(&self.maybe_results);
+            let maybe_results: &dyn Debug = fmt_option!(&self.maybe_results);
             write! { f,
 "DialogBuffer [
   - title: {title}

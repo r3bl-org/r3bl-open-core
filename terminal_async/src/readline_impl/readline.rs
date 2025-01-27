@@ -258,6 +258,8 @@ pub enum ControlFlowLimited<E> {
 /// [`PauseBuffer`]. When the terminal is resumed, the buffer is drained and the output is
 /// written to the terminal.
 pub mod manage_shared_writer_output {
+    use r3bl_core::join;
+
     use super::*;
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.
@@ -323,13 +325,13 @@ pub mod manage_shared_writer_output {
                 let mut line_state = self_safe_line_state.lock().unwrap();
                 if line_state.is_paused.is_paused() {
                     let pause_buffer = &mut *self_safe_is_paused_buffer.lock().unwrap();
-                    pause_buffer.push_back(buf);
+                    pause_buffer.push(buf);
                     return ControlFlowLimited::Continue;
                 }
 
                 // Print the line to the terminal.
                 let term = output_device_as_mut!(output_device);
-                if let Err(err) = line_state.print_data_and_flush(&buf, term) {
+                if let Err(err) = line_state.print_data_and_flush(buf.as_ref(), term) {
                     return ControlFlowLimited::ReturnError(err);
                 }
                 if let Err(err) = term.flush() {
@@ -407,18 +409,19 @@ pub mod manage_shared_writer_output {
             return Ok(());
         }
 
-        // Convert is_paused_buffer to a string delimited by new line.
-        let is_paused_buffer: String = {
-            let it: Vec<Vec<u8>> = self_safe_is_paused_buffer
+        // REFACTOR: [ ] fix this!
+        let is_paused_buffer = {
+            let it: PauseBuffer = self_safe_is_paused_buffer
                 .lock()
                 .unwrap()
                 .drain(..)
-                .collect::<Vec<Vec<u8>>>();
-            let it: Vec<String> = it
-                .iter()
-                .map(|buf| String::from_utf8_lossy(buf).to_string())
                 .collect();
-            it.join("")
+            join!(
+                from: it,
+                each: buf,
+                delim: "",
+                format: "{buf}"
+            )
         };
 
         line_state.print_data_and_flush(is_paused_buffer.as_bytes(), term)?;
@@ -663,10 +666,10 @@ pub mod readline_internal {
 #[cfg(test)]
 pub mod test_fixtures {
     use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-    use r3bl_core::{CrosstermEventResult, MicroVecBackingStore};
+    use r3bl_core::{CrosstermEventResult, VecArray};
     use smallvec::smallvec;
 
-    pub(super) fn get_input_vec() -> MicroVecBackingStore<CrosstermEventResult> {
+    pub(super) fn get_input_vec() -> VecArray<CrosstermEventResult> {
         smallvec![
             // a
             Ok(Event::Key(KeyEvent::new(
@@ -869,7 +872,7 @@ mod test_readline {
 
         let pause_buffer = readline.safe_is_paused_buffer.lock().unwrap().clone();
         assert_eq!(pause_buffer.len(), 1);
-        assert_eq!(String::from_utf8_lossy(&pause_buffer[0]), "abc".to_string());
+        assert_eq!(pause_buffer[0], "abc");
 
         shared_writer
             .line_state_control_channel_sender
@@ -910,7 +913,7 @@ mod test_streams {
 
 #[cfg(test)]
 mod test_pause_and_resume_support {
-    use std::{collections::VecDeque, sync::Mutex};
+    use std::sync::Mutex;
 
     use manage_shared_writer_output::flush_internal;
     use r3bl_test_fixtures::StdoutMock;
@@ -925,9 +928,9 @@ mod test_pause_and_resume_support {
             Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
 
         // Create a mock `SafePauseBuffer` with some paused lines
-        let mut pause_buffer = VecDeque::new();
-        pause_buffer.push_back(b"Paused line 1".to_vec());
-        pause_buffer.push_back(b"Paused line 2".to_vec());
+        let mut pause_buffer = PauseBuffer::new();
+        pause_buffer.push("Paused line 1".into());
+        pause_buffer.push("Paused line 2".into());
 
         // Create a mock `SafeIsPausedBuffer` with the pause buffer
         let safe_is_paused_buffer = Arc::new(Mutex::new(pause_buffer));
@@ -958,9 +961,9 @@ mod test_pause_and_resume_support {
             Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
 
         // Create a mock `SafePauseBuffer` with some paused lines
-        let mut pause_buffer = VecDeque::new();
-        pause_buffer.push_back(b"Paused line 1".to_vec());
-        pause_buffer.push_back(b"Paused line 2".to_vec());
+        let mut pause_buffer = PauseBuffer::new();
+        pause_buffer.push("Paused line 1".into());
+        pause_buffer.push("Paused line 2".into());
 
         // Create a mock `SafeIsPausedBuffer` with the pause buffer
         let safe_is_paused_buffer = Arc::new(Mutex::new(pause_buffer));

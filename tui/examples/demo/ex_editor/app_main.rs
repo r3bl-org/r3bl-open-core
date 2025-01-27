@@ -14,10 +14,11 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use r3bl_core::{call_if_true,
+                ch,
                 get_tui_style,
                 get_tui_styles,
+                ok,
                 position,
                 requested_size_percent,
                 send_signal,
@@ -33,8 +34,11 @@ use r3bl_core::{call_if_true,
                 CommonResult,
                 Position,
                 Size,
+                StringStorage,
                 TuiColor,
-                TuiStylesheet};
+                TuiStylesheet,
+                UnicodeString,
+                VecArray};
 use r3bl_macro::tui_style;
 use r3bl_tui::{box_end,
                box_props,
@@ -236,14 +240,12 @@ mod app_main_impl_app_trait {
 }
 
 mod modal_dialogs {
-    use r3bl_core::{MicroVecBackingStore, TinyStringBackingStore};
-
     use super::*;
 
     // This runs on every keystroke, so it should be fast.
     pub fn dialog_component_update_content(state: &mut State, id: FlexBoxId) {
         // This is Some only if the content has changed (ignoring caret movements).
-        let maybe_changed_results: Option<MicroVecBackingStore<TinyStringBackingStore>> = {
+        let maybe_changed_results: Option<VecArray<StringStorage>> = {
             if let Some(dialog_buffer) = state.dialog_buffers.get_mut(&id) {
                 let vec_result = generate_random_results(
                     dialog_buffer
@@ -291,12 +293,10 @@ mod modal_dialogs {
         }
     }
 
-    fn generate_random_results(
-        content: &str,
-    ) -> MicroVecBackingStore<TinyStringBackingStore> {
+    fn generate_random_results(content: &str) -> VecArray<StringStorage> {
         let start_rand_num = rand::random::<u8>() as usize;
         let max = 10;
-        let mut it = MicroVecBackingStore::with_capacity(max);
+        let mut it = VecArray::with_capacity(max);
         for index in start_rand_num..(start_rand_num + max) {
             it.push(format!("{content}{index}").into());
         }
@@ -385,24 +385,27 @@ mod modal_dialogs {
     pub fn dialog_component_initialize_focused(
         state: &mut State,
         id: FlexBoxId,
-        title: String,
-        text: String,
+        title: StringStorage,
+        text: StringStorage,
     ) {
         let dialog_buffer = {
             let mut it = DialogBuffer::new_empty();
             it.title = title;
-            let max_width = 100;
-            let content: String = {
-                if text.is_empty() {
-                    "".to_string()
-                } else if text.len() > max_width {
-                    text.split_at(max_width).0.to_string()
+
+            let start_display_col_index = ch(0);
+            let max_display_col_count = ch(100);
+
+            let text_us = UnicodeString::new(&text);
+
+            let content = {
+                if text_us.display_width > max_display_col_count {
+                    text_us.clip_to_width(start_display_col_index, max_display_col_count)
                 } else {
-                    text.clone()
+                    text.as_str()
                 }
             };
-            let lines: Vec<&str> = content.lines().collect();
-            it.editor_buffer.set_lines(&lines);
+
+            it.editor_buffer.set_lines(content.lines());
             it
         };
         state.dialog_buffers.insert(id, dialog_buffer);
@@ -417,12 +420,11 @@ mod modal_dialogs {
             // Initialize the dialog buffer with title & text.
             let title = "Simple Modal Dialog Title";
             let text = {
-                if let Some(editor_buffer) =
-                    state.get_mut_editor_buffer(FlexBoxId::from(Id::Editor))
-                {
-                    editor_buffer.get_as_string_with_comma_instead_of_newlines()
-                } else {
-                    "".to_string()
+                match state.get_mut_editor_buffer(FlexBoxId::from(Id::Editor)) {
+                    Some(editor_buffer) => {
+                        editor_buffer.get_as_string_with_comma_instead_of_newlines()
+                    }
+                    None => "".into(),
                 }
             };
 
@@ -435,12 +437,17 @@ mod modal_dialogs {
             dialog_component_initialize_focused(
                 state,
                 FlexBoxId::from(Id::SimpleDialog),
-                title.to_owned(),
+                title.into(),
                 text,
             );
 
             call_if_true!(DEBUG_TUI_MOD, {
-                tracing::debug!("📣 activate modal simple: {:?}", has_focus);
+                let message = "📣 activate modal simple";
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = %message,
+                    has_focus = ?has_focus
+                );
             });
         });
     }
@@ -453,12 +460,11 @@ mod modal_dialogs {
         // Initialize the dialog buffer with title & text.
         let title = "Autocomplete Modal Dialog Title";
         let text = {
-            if let Some(editor_buffer) =
-                state.get_mut_editor_buffer(FlexBoxId::from(Id::Editor))
-            {
-                editor_buffer.get_as_string_with_comma_instead_of_newlines()
-            } else {
-                "".to_string()
+            match state.get_mut_editor_buffer(FlexBoxId::from(Id::Editor)) {
+                Some(editor_buffer) => {
+                    editor_buffer.get_as_string_with_comma_instead_of_newlines()
+                }
+                None => "".into(),
             }
         };
 
@@ -471,15 +477,20 @@ mod modal_dialogs {
         dialog_component_initialize_focused(
             state,
             FlexBoxId::from(Id::AutocompleteDialog),
-            title.to_owned(),
+            title.into(),
             text,
         );
 
         call_if_true!(DEBUG_TUI_MOD, {
-            tracing::debug!("📣 activate modal autocomplete: {:?}", has_focus);
+            let message = "📣 activate modal autocomplete";
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = %message,
+                has_focus = ?has_focus
+            );
         });
 
-        Ok(())
+        ok!()
     }
 }
 
@@ -649,7 +660,7 @@ mod populate_component_registry {
                         modal_dialogs::dialog_component_initialize_focused(
                             state,
                             FlexBoxId::from(Id::SimpleDialog),
-                            "Yes".to_string(),
+                            "Yes".into(),
                             text,
                         );
                     }
@@ -657,8 +668,8 @@ mod populate_component_registry {
                         modal_dialogs::dialog_component_initialize_focused(
                             state,
                             FlexBoxId::from(Id::SimpleDialog),
-                            "No".to_string(),
-                            "".to_string(),
+                            "No".into(),
+                            "".into(),
                         );
                     }
                 }
@@ -735,7 +746,7 @@ mod populate_component_registry {
                         modal_dialogs::dialog_component_initialize_focused(
                             state,
                             FlexBoxId::from(Id::AutocompleteDialog),
-                            "Yes".to_string(),
+                            "Yes".into(),
                             text,
                         );
                     }
@@ -743,8 +754,8 @@ mod populate_component_registry {
                         modal_dialogs::dialog_component_initialize_focused(
                             state,
                             FlexBoxId::from(Id::AutocompleteDialog),
-                            "No".to_string(),
-                            "".to_string(),
+                            "No".into(),
+                            "".into(),
                         );
                     }
                 }

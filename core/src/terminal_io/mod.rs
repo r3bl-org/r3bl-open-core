@@ -16,15 +16,15 @@
  */
 
 // Attach sources.
+pub mod console_log;
 pub mod input_device;
 pub mod output_device;
-pub mod pretty_print;
 pub mod shared_writer;
 pub mod type_aliases;
 
 // Re-export.
+pub use console_log::*;
 pub use input_device::*;
 pub use output_device::*;
-pub use pretty_print::*;
 pub use shared_writer::*;
 pub use type_aliases::*;

@@ -16,9 +16,7 @@
  */
 
 use std::{cmp::{self},
-          fmt::{Debug, Display}};
-
-use serde::{Deserialize, Serialize};
+          fmt::Debug};
 
 use crate::{ChUnit, Position};
 
@@ -39,13 +37,13 @@ use crate::{ChUnit, Position};
 /// ```
 /// - `▓▓` = `😃`
 /// - [clip_to_range](crate::UnicodeString::clip_to_range): "e😃"
-#[derive(Default, Clone, PartialEq, Serialize, Deserialize, Copy, size_of::SizeOf)]
+#[derive(Default, Clone, PartialEq, Copy, size_of::SizeOf)]
 pub struct SelectionRange {
     pub start_display_col_index: ChUnit,
     pub end_display_col_index: ChUnit,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Copy, Debug)]
+#[derive(Clone, PartialEq, Copy, Debug)]
 pub enum ScrollOffsetColLocationInRange {
     Overflow,
     Underflow,
@@ -64,7 +62,7 @@ impl SelectionRange {
     }
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Copy, Debug)]
+#[derive(Clone, PartialEq, Copy, Debug)]
 pub enum CaretLocationInRange {
     Overflow,
     Underflow,
@@ -72,7 +70,7 @@ pub enum CaretLocationInRange {
 }
 
 /// Note this must derive [Eq]. More info [here](https://stackoverflow.com/a/68900245/2085356).
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Copy, Debug, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Copy, Debug, size_of::SizeOf)]
 pub enum CaretMovementDirection {
     Up,
     Down,
@@ -241,27 +239,14 @@ impl SelectionRange {
 mod range_impl_debug_format {
     use super::*;
 
-    pub fn debug_format(
-        range: &SelectionRange,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        write!(
-            f,
-            "[start_display_col_index: {0}, end_display_col_index: {1}]",
-            /* 0 */ range.start_display_col_index,
-            /* 1 */ range.end_display_col_index
-        )
-    }
-
-    impl Display for SelectionRange {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            debug_format(self, f)
-        }
-    }
-
     impl Debug for SelectionRange {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            debug_format(self, f)
+            write!(
+                f,
+                "[start_display_col_index: {start:?}, end_display_col_index: {end:?}]",
+                start = self.start_display_col_index,
+                end = self.end_display_col_index
+            )
         }
     }
 }

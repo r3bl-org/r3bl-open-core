@@ -14,15 +14,18 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use crossterm::style::Stylize;
 use r3bl_core::{call_if_true,
                 ch,
+                convert_to_string_slice,
                 glyphs,
                 position,
+                string_storage,
+                style_prompt,
                 throws,
                 throws_with_return,
                 usize,
+                usize_to_u8_array,
                 ANSIBasicColor,
                 ChUnit,
                 CommonResult,
@@ -31,8 +34,8 @@ use r3bl_core::{call_if_true,
                 SelectionRange,
                 Size,
                 TuiColor,
-                TuiStyledTexts,
                 UnicodeString,
+                UnicodeStringExt as _,
                 UnicodeStringSegmentSliceResult};
 use r3bl_macro::tui_style;
 use syntect::easy::HighlightLines;
@@ -58,13 +61,13 @@ use crate::{cache,
             InputEvent,
             Key,
             KeyPress,
-            List,
             RenderArgs,
             RenderOp,
             RenderOps,
             RenderPipeline,
             SpecialKey,
-            StyleUSSpan,
+            StyleUSSpanLine,
+            StyleUSSpanLines,
             SyntaxHighlightMode,
             ZOrder,
             DEBUG_TUI_COPY_PASTE,
@@ -292,39 +295,42 @@ impl EditorEngineApi {
 
             let scroll_offset = editor_buffer.get_scroll_offset();
 
-            if let Some(line) = lines.get(usize(row_index)) {
+            if let Some(line_us) = lines.get(usize(row_index)) {
                 // Take the scroll_offset into account when "slicing" the selection.
-                let selection = match range_of_display_col_indices
+                let selection_holder = match range_of_display_col_indices
                     .locate_scroll_offset_col(scroll_offset)
                 {
                     ScrollOffsetColLocationInRange::Underflow => {
-                        let it = line.clip_to_range(*range_of_display_col_indices);
-                        if it.is_empty() {
-                            continue;
-                        };
-                        it
+                        line_us.clip_to_range(*range_of_display_col_indices)
                     }
                     ScrollOffsetColLocationInRange::Overflow => {
                         let scroll_offset_clipped_selection_range = SelectionRange {
                             start_display_col_index: scroll_offset.col_index,
                             ..*range_of_display_col_indices
                         };
-                        let it =
-                            line.clip_to_range(scroll_offset_clipped_selection_range);
-                        if it.is_empty() {
-                            continue;
-                        };
-                        it
+                        line_us.clip_to_range(scroll_offset_clipped_selection_range)
                     }
                 };
 
+                if selection_holder.is_empty() {
+                    continue;
+                }
+
                 call_if_true!(DEBUG_TUI_COPY_PASTE, {
-                    tracing::debug!(
-                            "\n🍉🍉🍉 selection_str_slice: \n\t{0}, \n\trange: {1}, \n\tscroll_offset: {2}",
-                            /* 0 */ selection.to_string().black().on_white(),
-                            /* 1 */ range_of_display_col_indices,
-                            /* 2 */ scroll_offset,
-                        )
+                    let selection_text = string_storage!("{}", selection_holder);
+                    let selection_text_fmt = style_prompt(&selection_text);
+                    let message = "🍉🍉🍉 selection_str_slice";
+                    let details = string_storage!(
+                        "\n\t{a}, \n\trange: {b:?}, \n\tscroll_offset: {c:?}",
+                        a = selection_text_fmt,
+                        b = range_of_display_col_indices,
+                        c = scroll_offset,
+                    );
+                    // % is Display, ? is Debug.
+                    tracing::debug! {
+                        message = %message,
+                        details = %details
+                    };
                 });
 
                 let position = {
@@ -353,8 +359,10 @@ impl EditorEngineApi {
 
                 render_ops.push(RenderOp::ApplyColors(Some(get_selection_style())));
 
-                render_ops
-                    .push(RenderOp::PaintTextWithAttributes(selection.into(), None));
+                render_ops.push(RenderOp::PaintTextWithAttributes(
+                    selection_holder.into(),
+                    None,
+                ));
 
                 render_ops.push(RenderOp::ResetColor);
             }
@@ -369,22 +377,24 @@ impl EditorEngineApi {
         } = render_args;
 
         if has_focus.does_id_have_focus(editor_engine.current_box.id) {
-            let str_at_caret =
-                if let Some(UnicodeStringSegmentSliceResult { string, .. }) =
-                    EditorEngineInternalApi::string_at_caret(editor_buffer, editor_engine)
-                {
-                    // PERF: [ ] perf
-                    string
-                } else {
-                    DEFAULT_CURSOR_CHAR.into()
-                };
+            let str_at_caret = if let Some(UnicodeStringSegmentSliceResult {
+                unicode_string: string,
+                ..
+            }) =
+                EditorEngineInternalApi::string_at_caret(editor_buffer, editor_engine)
+            {
+                // PERF: [ ] perf
+                string
+            } else {
+                DEFAULT_CURSOR_CHAR.unicode_string()
+            };
 
             render_ops.push(RenderOp::MoveCursorPositionRelTo(
                 editor_engine.current_box.style_adjusted_origin_pos,
                 editor_buffer.get_caret(CaretKind::Raw),
             ));
             render_ops.push(RenderOp::PaintTextWithAttributes(
-                str_at_caret,
+                str_at_caret.string,
                 tui_style! { attrib: [reverse] }.into(),
             ));
             render_ops.push(RenderOp::MoveCursorPositionRelTo(
@@ -494,17 +504,19 @@ mod syn_hi_r3bl_path {
         max_display_col_count: ChUnit,
     ) -> CommonResult<()> {
         throws!({
-            let lines = try_parse_and_highlight(
+            let lines: StyleUSSpanLines = try_parse_and_highlight(
                 editor_buffer.get_lines(),
                 &editor_engine.current_box.get_computed_style(),
                 Some((&editor_engine.syntax_set, &editor_engine.theme)),
             )?;
 
             call_if_true!(DEBUG_TUI_SYN_HI, {
+                let line_len_ray = usize_to_u8_array(lines.len());
+                let line_len_str = convert_to_string_slice(&line_len_ray);
                 tracing::debug!(
-                    "\n🎯🎯🎯\neditor_buffer.lines.len(): {} vs md_document.lines.len(): {}\n{}\n{}🎯🎯🎯",
+                    "\n🎯🎯🎯\neditor_buffer.lines.len(): {} vs md_document.lines.len(): {}\n{}\n{:?}🎯🎯🎯",
                     editor_buffer.get_lines().len().to_string().cyan(),
-                    lines.len().to_string().yellow(),
+                    line_len_str.yellow(),
                     editor_buffer.get_as_string_with_comma_instead_of_newlines().cyan(),
                     lines.pretty_print_debug().yellow(),
                 )
@@ -533,7 +545,7 @@ mod syn_hi_r3bl_path {
     }
 
     fn render_single_line(
-        line: &List<StyleUSSpan>,
+        line: &StyleUSSpanLine,
         editor_buffer: &&EditorBuffer,
         editor_engine: &&mut EditorEngine,
         row_index: usize,
@@ -545,14 +557,15 @@ mod syn_hi_r3bl_path {
             position! { col_index: 0 , row_index: usize(row_index) },
         ));
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
-        let styled_texts: TuiStyledTexts =
-            line.clip(scroll_offset_col, max_display_col_count);
+        let styled_texts = line.clip(scroll_offset_col, max_display_col_count);
         render_tui_styled_texts_into(&styled_texts, render_ops);
         render_ops.push(RenderOp::ResetColor);
     }
 }
 
 mod syn_hi_syntect_path {
+    use r3bl_core::UnicodeString;
+
     use super::*;
 
     pub fn render_content(
@@ -599,8 +612,7 @@ mod syn_hi_syntect_path {
             position! { col_index: 0 , row_index: usize(row_index) },
         ));
 
-        let it =
-            try_get_syntect_highlighted_line(editor_engine, editor_buffer, &line.string);
+        let it = try_get_syntect_highlighted_line(editor_engine, editor_buffer, line);
 
         match it {
             // If enabled, and we have a SyntaxReference then try and highlight the line.
@@ -632,12 +644,11 @@ mod syn_hi_syntect_path {
         render_ops: &mut RenderOps,
     ) {
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
-        let list: List<StyleUSSpan> =
+        let line =
             convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
                 syntect_highlighted_line,
             );
-        let styled_texts: TuiStyledTexts =
-            list.clip(scroll_offset_col, max_display_col_count);
+        let styled_texts = line.clip(scroll_offset_col, max_display_col_count);
         render_tui_styled_texts_into(&styled_texts, render_ops);
         render_ops.push(RenderOp::ResetColor);
     }
@@ -650,14 +661,14 @@ mod syn_hi_syntect_path {
     fn try_get_syntect_highlighted_line<'a>(
         editor_engine: &'a &mut EditorEngine,
         editor_buffer: &&EditorBuffer,
-        line: &'a str,
+        line: &'a UnicodeString,
     ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
         let file_ext = editor_buffer.get_maybe_file_extension()?;
         let syntax_ref = try_get_syntax_ref(&editor_engine.syntax_set, file_ext)?;
         let theme = &editor_engine.theme;
         let mut highlighter = HighlightLines::new(syntax_ref, theme);
         highlighter
-            .highlight_line(line, &editor_engine.syntax_set)
+            .highlight_line(&line.string, &editor_engine.syntax_set)
             .ok()
     }
 }
@@ -720,7 +731,7 @@ mod no_syn_hi_path {
 
     /// This is used as a fallback by other render paths.
     pub fn render_line_no_syntax_highlight(
-        line: &UnicodeString,
+        line_us: &UnicodeString,
         editor_buffer: &&EditorBuffer,
         max_display_col_count: ChUnit,
         render_ops: &mut RenderOps,
@@ -729,15 +740,15 @@ mod no_syn_hi_path {
         let scroll_offset_col_index = editor_buffer.get_scroll_offset().col_index;
 
         // Clip the content [scroll_offset.col .. max cols].
-        let truncated_line =
-            line.clip_to_width(scroll_offset_col_index, max_display_col_count);
+        let line_trunc =
+            line_us.clip_to_width(scroll_offset_col_index, max_display_col_count);
 
         render_ops.push(RenderOp::ApplyColors(
             editor_engine.current_box.get_computed_style(),
         ));
 
         render_ops.push(RenderOp::PaintTextWithAttributes(
-            truncated_line.into(),
+            line_trunc.into(),
             editor_engine.current_box.get_computed_style(),
         ));
 
@@ -749,10 +760,10 @@ mod no_syn_hi_path {
 mod test_cache {
     use std::collections::HashMap;
 
-    use r3bl_core::assert_eq2;
+    use position::ScrollOffset;
+    use r3bl_core::{assert_eq2, StringStorage};
 
     use super::*;
-    use crate::ScrollOffset;
 
     #[test]
     fn test_render_content() {
@@ -844,7 +855,7 @@ mod test_cache {
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
         // Change in content should invalidate the cache and result in a cache miss.
-        editor_buffer.set_lines(&["r3bl"]);
+        editor_buffer.set_lines(["r3bl"]);
         cache::render_content(
             editor_buffer,
             editor_engine,
@@ -859,17 +870,21 @@ mod test_cache {
         editor_buffer: &mut EditorBuffer,
         window_size: Size,
         render_ops: &mut RenderOps,
-        cache: &mut HashMap<String, RenderOps>,
+        cache: &mut HashMap<StringStorage, RenderOps>,
     ) {
         cache.clear(); // invalidating cache
-        let key = format!("{}{}", editor_buffer.get_scroll_offset(), window_size); // generating key
+        let key = string_storage!(
+            "{a:?}{b:?}",
+            a = editor_buffer.get_scroll_offset(),
+            b = window_size
+        ); // generating key
         cache.insert(key, render_ops.clone()); // enter the new entry into cache
         assert_eq2!(editor_buffer.render_cache, cache.clone());
     }
 
     fn test_cache_hit(
         editor_buffer: &mut EditorBuffer,
-        cache: &mut HashMap<String, RenderOps>,
+        cache: &mut HashMap<StringStorage, RenderOps>,
     ) {
         assert_eq2!(editor_buffer.render_cache, cache.clone());
     }

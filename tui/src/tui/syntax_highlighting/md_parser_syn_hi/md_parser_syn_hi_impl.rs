@@ -16,17 +16,20 @@
  */
 
 //! This module is responsible for converting a [MdDocument] into a [StyleUSSpanLines].
+use std::fmt::Write as _;
 
-use r3bl_core::{CommonError,
+use r3bl_core::{join,
+                CommonError,
                 CommonErrorType,
                 CommonResult,
+                DocumentStorage,
                 GradientGenerationPolicy,
                 PrettyPrintDebug,
-                SmallVecBackingStore,
+                StringStorage,
                 TextColorizationPolicy,
                 TuiStyle,
                 TuiStyledTexts,
-                UnicodeStringExt};
+                UnicodeString};
 use r3bl_macro::tui_style;
 use smallvec::smallvec;
 use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
@@ -40,6 +43,7 @@ use crate::{constants::{AUTHORS,
                         LEFT_BRACKET,
                         LEFT_IMAGE,
                         LEFT_PARENTHESIS,
+                        NEW_LINE,
                         RIGHT_BRACKET,
                         RIGHT_IMAGE,
                         RIGHT_PARENTHESIS,
@@ -77,30 +81,31 @@ use crate::{constants::{AUTHORS,
             MdLineFragment,
             StyleUSSpan,
             StyleUSSpanLine,
-            StyleUSSpanLines,
-            US};
+            StyleUSSpanLines};
 
 /// This is the main function that the [crate::editor] uses this in order to display the
 /// markdown to the user.It is responsible for converting:
-/// - from a &[Vec] of [US] which comes from the [crate::editor],
+/// - from a &[Vec] of [UnicodeString] which comes from the [crate::editor],
 /// - into a [StyleUSSpanLines], which the [crate::editor] will clip & render.
 ///
 /// # Arguments
 /// - `editor_text` - The text that the user has typed into the editor.
 /// - `current_box_computed_style` - The computed style of the box that the editor is in.
 pub fn try_parse_and_highlight(
-    editor_text_lines: &[US],
+    editor_text_lines: &[UnicodeString],
     maybe_current_box_computed_style: &Option<TuiStyle>,
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
 ) -> CommonResult<StyleUSSpanLines> {
-    // Convert the editor text into a string.
-    let mut line_to_str_acc: SmallVecBackingStore<&str> = SmallVecBackingStore::new();
+    // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
+    // Convert the editor text into a StringStorage (unfortunately requires allocating to
+    // get the new lines back, since they're stripped out when loading content into the
+    // editor buffer struct).
+    let mut acc = DocumentStorage::new();
     for line in editor_text_lines {
-        line_to_str_acc.push(line.string.as_str());
-        line_to_str_acc.push("\n");
+        _ = writeln!(acc, "{}", line.as_ref());
     }
-    let editor_text_to_string = line_to_str_acc.join("");
-    let it = parse_markdown(&editor_text_to_string);
+    let it = parse_markdown(&acc);
+
     // BOOKM: Parse markdown from editor and render it
     // Try and parse `editor_text_to_string` into a `Document`.
     match it {
@@ -118,14 +123,18 @@ pub fn try_parse_and_highlight(
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
     use crossterm::style::Stylize;
-    use r3bl_core::{assert_eq2, throws, ANSIBasicColor, TuiColor};
+    use r3bl_core::{assert_eq2,
+                    throws,
+                    ANSIBasicColor,
+                    TuiColor,
+                    UnicodeStringExt as _};
 
     use super::*;
 
     #[test]
     fn from_vec_us() -> CommonResult<()> {
         throws!({
-            let editor_text_lines = vec![US::new("Hello"), US::new("World")];
+            let editor_text_lines = ["Hello", "World"].map(UnicodeString::new);
             let current_box_computed_style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
@@ -144,8 +153,8 @@ mod tests_try_parse_and_highlight {
             assert_eq2!(editor_text_lines.len(), style_us_span_lines.len());
             let line_0 = &style_us_span_lines[0][0];
             let line_1 = &style_us_span_lines[1][0];
-            assert_eq2!(editor_text_lines[0], line_0.text);
-            assert_eq2!(editor_text_lines[1], line_1.text);
+            assert_eq2!(editor_text_lines[0], line_0.text.as_str().unicode_string());
+            assert_eq2!(editor_text_lines[1], line_1.text.as_str().unicode_string());
 
             assert_eq2!(
                 line_0.style,
@@ -160,14 +169,14 @@ mod tests_try_parse_and_highlight {
 }
 
 impl PrettyPrintDebug for StyleUSSpanLines {
-    fn pretty_print_debug(&self) -> String {
-        let mut it = vec![];
-
-        for line in &self.inner {
-            it.push(line.pretty_print_debug())
-        }
-
-        it.join("\n")
+    fn pretty_print_debug(&self) -> StringStorage {
+        join!(
+            from: self.inner,
+            each: line,
+            delim: NEW_LINE,
+            format: "{}",
+            line.pretty_print_debug()
+        )
     }
 }
 
@@ -213,8 +222,6 @@ impl StyleUSSpanLines {
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         mod inner {
-            use r3bl_core::UnicodeStringExt;
-
             use super::*;
 
             pub fn try_use_syntect(
@@ -263,13 +270,13 @@ impl StyleUSSpanLines {
                             acc_line_output += StyleUSSpan::new(
                                 maybe_current_box_computed_style.unwrap_or_default()
                                     + get_foreground_dim_style(),
-                                CODE_BLOCK_START_PARTIAL.unicode_string(),
+                                CODE_BLOCK_START_PARTIAL,
                             );
                             if let Some(language) = code_block_line.language {
                                 acc_line_output += StyleUSSpan::new(
                                     maybe_current_box_computed_style.unwrap_or_default()
                                         + get_code_block_lang_style(),
-                                    language.unicode_string(),
+                                    language,
                                 );
                             }
                         }
@@ -279,7 +286,7 @@ impl StyleUSSpanLines {
                             acc_line_output += StyleUSSpan::new(
                                 maybe_current_box_computed_style.unwrap_or_default()
                                     + get_foreground_dim_style(),
-                                CODE_BLOCK_START_PARTIAL.unicode_string(),
+                                CODE_BLOCK_START_PARTIAL,
                             );
                         }
                     }
@@ -305,13 +312,13 @@ impl StyleUSSpanLines {
                             acc_line_output += StyleUSSpan::new(
                                 maybe_current_box_computed_style.unwrap_or_default()
                                     + get_foreground_dim_style(),
-                                CODE_BLOCK_START_PARTIAL.unicode_string(),
+                                CODE_BLOCK_START_PARTIAL,
                             );
                             if let Some(language) = code_block_line.language {
                                 acc_line_output += StyleUSSpan::new(
                                     maybe_current_box_computed_style.unwrap_or_default()
                                         + get_code_block_lang_style(),
-                                    language.unicode_string(),
+                                    language,
                                 );
                             }
                         }
@@ -320,7 +327,7 @@ impl StyleUSSpanLines {
                             acc_line_output += StyleUSSpan::new(
                                 maybe_current_box_computed_style.unwrap_or_default()
                                     + get_foreground_dim_style(),
-                                CODE_BLOCK_START_PARTIAL.unicode_string(),
+                                CODE_BLOCK_START_PARTIAL,
                             );
                         }
 
@@ -328,7 +335,7 @@ impl StyleUSSpanLines {
                             acc_line_output += StyleUSSpan::new(
                                 maybe_current_box_computed_style.unwrap_or_default()
                                     + get_code_block_content_style(),
-                                content.unicode_string(),
+                                content,
                             );
                         }
                     }
@@ -454,8 +461,8 @@ impl StyleUSSpan {
         maybe_current_box_computed_style: &Option<TuiStyle>,
         hyperlink_type: HyperlinkType,
     ) -> Vec<Self> {
-        let link_text = link_data.text.to_string();
-        let link_url = link_data.url.to_string();
+        let link_text = link_data.text;
+        let link_url = link_data.url;
 
         let base_style = maybe_current_box_computed_style.unwrap_or_default()
             + get_foreground_dim_style();
@@ -470,23 +477,23 @@ impl StyleUSSpan {
             // [link_text] or ![link_text]
             StyleUSSpan::new(
                 base_style,
-                US::from(match hyperlink_type {
-                    HyperlinkType::Link => LEFT_BRACKET.unicode_string(),
-                    HyperlinkType::Image => LEFT_IMAGE.unicode_string(),
-                }),
+                match hyperlink_type {
+                    HyperlinkType::Link => LEFT_BRACKET,
+                    HyperlinkType::Image => LEFT_IMAGE,
+                },
             ),
-            StyleUSSpan::new(link_text_style, link_text.unicode_string()),
+            StyleUSSpan::new(link_text_style, link_text),
             StyleUSSpan::new(
                 base_style,
-                US::from(match hyperlink_type {
-                    HyperlinkType::Link => RIGHT_BRACKET.unicode_string(),
-                    HyperlinkType::Image => RIGHT_IMAGE.unicode_string(),
-                }),
+                match hyperlink_type {
+                    HyperlinkType::Link => RIGHT_BRACKET,
+                    HyperlinkType::Image => RIGHT_IMAGE,
+                },
             ),
             // (link_url)
-            StyleUSSpan::new(base_style, LEFT_PARENTHESIS.unicode_string()),
-            StyleUSSpan::new(link_url_style, link_url.unicode_string()),
-            StyleUSSpan::new(base_style, RIGHT_PARENTHESIS.unicode_string()),
+            StyleUSSpan::new(base_style, LEFT_PARENTHESIS),
+            StyleUSSpan::new(link_url_style, link_url),
+            StyleUSSpan::new(base_style, RIGHT_PARENTHESIS),
         ]
     }
 
@@ -512,7 +519,7 @@ impl StyleUSSpan {
                 vec![StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_list_bullet_style(),
-                    bullet.unicode_string(),
+                    &bullet,
                 )]
             }
 
@@ -524,14 +531,14 @@ impl StyleUSSpan {
                 vec![StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_list_bullet_style(),
-                    bullet.unicode_string(),
+                    &bullet,
                 )]
             }
 
             MdLineFragment::Plain(plain_text) => vec![StyleUSSpan::new(
                 maybe_current_box_computed_style.unwrap_or_default()
                     + get_foreground_style(),
-                plain_text.unicode_string(),
+                plain_text,
             )],
 
             MdLineFragment::Bold(bold_text) => {
@@ -539,17 +546,17 @@ impl StyleUSSpan {
                     StyleUSSpan::new(
                         maybe_current_box_computed_style.unwrap_or_default()
                             + get_foreground_dim_style(),
-                        STAR.unicode_string(),
+                        STAR,
                     ),
                     StyleUSSpan::new(
                         maybe_current_box_computed_style.unwrap_or_default()
                             + get_bold_style(),
-                        bold_text.unicode_string(),
+                        bold_text,
                     ),
                     StyleUSSpan::new(
                         maybe_current_box_computed_style.unwrap_or_default()
                             + get_foreground_dim_style(),
-                        STAR.unicode_string(),
+                        STAR,
                     ),
                 ]
             }
@@ -558,17 +565,17 @@ impl StyleUSSpan {
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_foreground_dim_style(),
-                    UNDERSCORE.unicode_string(),
+                    UNDERSCORE,
                 ),
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_italic_style(),
-                    italic_text.unicode_string(),
+                    italic_text,
                 ),
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_foreground_dim_style(),
-                    UNDERSCORE.unicode_string(),
+                    UNDERSCORE,
                 ),
             ],
 
@@ -576,17 +583,17 @@ impl StyleUSSpan {
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_foreground_dim_style(),
-                    BACK_TICK.unicode_string(),
+                    BACK_TICK,
                 ),
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_inline_code_style(),
-                    inline_code_text.unicode_string(),
+                    inline_code_text,
                 ),
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_foreground_dim_style(),
-                    BACK_TICK.unicode_string(),
+                    BACK_TICK,
                 ),
             ],
 
@@ -607,13 +614,13 @@ impl StyleUSSpan {
                     StyleUSSpan::new(
                         maybe_current_box_computed_style.unwrap_or_default()
                             + get_checkbox_checked_style(),
-                        CHECKED_OUTPUT.unicode_string(),
+                        CHECKED_OUTPUT,
                     )
                 } else {
                     StyleUSSpan::new(
                         maybe_current_box_computed_style.unwrap_or_default()
                             + get_checkbox_unchecked_style(),
-                        UNCHECKED_OUTPUT.unicode_string(),
+                        UNCHECKED_OUTPUT,
                     )
                 }]
             }
@@ -622,14 +629,13 @@ impl StyleUSSpan {
 }
 
 impl PrettyPrintDebug for StyleUSSpanLine {
-    fn pretty_print_debug(&self) -> String {
-        let mut it = vec![];
-        for span in &self.inner {
-            let StyleUSSpan { style, text } = span;
-            let line_text = format!("fragment[ {:?} , {:?} ]", text.string, style);
-            it.push(line_text);
-        }
-        it.join("\n")
+    fn pretty_print_debug(&self) -> StringStorage {
+        join!(
+            from: self.inner,
+            each: span,
+            delim: NEW_LINE,
+            format: "fragment[ {:?} , {:?} ]", span.text, span.style
+        )
     }
 }
 
@@ -666,26 +672,23 @@ impl StyleUSSpanLine {
         maybe_current_box_computed_style: &Option<TuiStyle>,
     ) -> Self {
         let mut color_wheel = create_color_wheel_from_heading_data(heading_data);
-        let mut line = StyleUSSpanLine::default();
-
+        let mut acc_line = StyleUSSpanLine::default();
         let heading_level_span: StyleUSSpan = {
-            let heading_level = heading_data
-                .heading_level
-                .pretty_print_debug()
-                .unicode_string();
+            let heading_level_string = heading_data.heading_level.pretty_print_debug();
             let my_style = {
                 maybe_current_box_computed_style.unwrap_or_default()
                     + tui_style! {
                         attrib: [dim]
                     }
             };
-            StyleUSSpan::new(my_style, heading_level)
+            StyleUSSpan::new(my_style, &heading_level_string)
         };
 
         let heading_text_span: StyleUSSpanLine = {
-            let heading_text = heading_data.text.unicode_string();
+            let heading_text = heading_data.text;
+            let heading_text_us = UnicodeString::new(heading_text);
             let styled_texts = color_wheel.colorize_into_styled_texts(
-                &heading_text,
+                &heading_text_us,
                 GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
                 TextColorizationPolicy::ColorEachCharacter(
                     *maybe_current_box_computed_style,
@@ -694,10 +697,10 @@ impl StyleUSSpanLine {
             StyleUSSpanLine::from(styled_texts)
         };
 
-        line.inner.push(heading_level_span);
-        line.inner.extend(heading_text_span.inner);
+        acc_line.inner.push(heading_level_span);
+        acc_line.inner.extend(heading_text_span.inner);
 
-        line
+        acc_line
     }
 }
 
@@ -707,8 +710,8 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
         // More info on `into_iter`: <https://users.rust-lang.org/t/move-value-from-an-iterator/46172>
         for styled_text in styled_texts.inner.into_iter() {
             let style = styled_text.get_style();
-            let us = styled_text.get_text();
-            it.inner.push(StyleUSSpan::new(*style, us.clone()));
+            let text = styled_text.get_text();
+            it.inner.push(StyleUSSpan::new(*style, text));
         }
         it
     }
@@ -749,7 +752,7 @@ mod tests_style_us_span_lines_from {
                 actual.first().unwrap(),
                 &StyleUSSpan::new(
                     style + get_checkbox_unchecked_style(),
-                    UNCHECKED_OUTPUT.unicode_string(),
+                    UNCHECKED_OUTPUT,
                 )
             );
 
@@ -768,10 +771,7 @@ mod tests_style_us_span_lines_from {
 
             assert_eq2!(
                 actual.first().unwrap(),
-                &StyleUSSpan::new(
-                    style + get_checkbox_checked_style(),
-                    CHECKED_OUTPUT.unicode_string(),
-                )
+                &StyleUSSpan::new(style + get_checkbox_checked_style(), CHECKED_OUTPUT,)
             );
 
             // println!("{}", List::from(actual)..pretty_print_debug());
@@ -805,7 +805,7 @@ mod tests_style_us_span_lines_from {
                             color_fg: actual_style_color_fg
                             color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                         },
-                    "![".unicode_string(),
+                    "![",
                 )
             );
 
@@ -841,7 +841,7 @@ mod tests_style_us_span_lines_from {
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                             },
-                        "[".unicode_string(),
+                        "[",
                     )
                 );
             }
@@ -861,7 +861,7 @@ mod tests_style_us_span_lines_from {
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                             },
-                        "R3BL".unicode_string(),
+                        "R3BL",
                     )
                 )
             };
@@ -882,7 +882,7 @@ mod tests_style_us_span_lines_from {
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                             },
-                        "]".unicode_string(),
+                        "]",
                     )
                 );
             }
@@ -903,7 +903,7 @@ mod tests_style_us_span_lines_from {
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                             },
-                        "(".unicode_string(),
+                        "(",
                     )
                 );
             }
@@ -924,7 +924,7 @@ mod tests_style_us_span_lines_from {
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                             },
-                        "https://r3bl.com".unicode_string(),
+                        "https://r3bl.com",
                     )
                 );
             }
@@ -945,7 +945,7 @@ mod tests_style_us_span_lines_from {
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                             },
-                        ")".unicode_string(),
+                        ")",
                     )
                 );
             }
@@ -966,24 +966,15 @@ mod tests_style_us_span_lines_from {
 
             assert_eq2!(
                 actual[0],
-                StyleUSSpan::new(
-                    style + get_foreground_dim_style(),
-                    "`".unicode_string(),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), "`",)
             );
             assert_eq2!(
                 actual[1],
-                StyleUSSpan::new(
-                    style + get_inline_code_style(),
-                    "Foobar".unicode_string(),
-                )
+                StyleUSSpan::new(style + get_inline_code_style(), "Foobar",)
             );
             assert_eq2!(
                 actual[2],
-                StyleUSSpan::new(
-                    style + get_foreground_dim_style(),
-                    "`".unicode_string(),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), "`",)
             );
         }
 
@@ -1000,21 +991,15 @@ mod tests_style_us_span_lines_from {
 
             assert_eq2!(
                 actual[0],
-                StyleUSSpan::new(
-                    style + get_foreground_dim_style(),
-                    "_".unicode_string(),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), "_",)
             );
             assert_eq2!(
                 actual[1],
-                StyleUSSpan::new(style + get_italic_style(), "Foobar".unicode_string(),)
+                StyleUSSpan::new(style + get_italic_style(), "Foobar",)
             );
             assert_eq2!(
                 actual[2],
-                StyleUSSpan::new(
-                    style + get_foreground_dim_style(),
-                    "_".unicode_string(),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), "_",)
             );
         }
 
@@ -1031,21 +1016,15 @@ mod tests_style_us_span_lines_from {
 
             assert_eq2!(
                 actual[0],
-                StyleUSSpan::new(
-                    style + get_foreground_dim_style(),
-                    "*".unicode_string(),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), "*",)
             );
             assert_eq2!(
                 actual[1],
-                StyleUSSpan::new(style + get_bold_style(), "Foobar".unicode_string(),)
+                StyleUSSpan::new(style + get_bold_style(), "Foobar",)
             );
             assert_eq2!(
                 actual[2],
-                StyleUSSpan::new(
-                    style + get_foreground_dim_style(),
-                    "*".unicode_string(),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), "*",)
             );
         }
 
@@ -1056,10 +1035,8 @@ mod tests_style_us_span_lines_from {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
-            let expected = vec![StyleUSSpan::new(
-                style + get_foreground_style(),
-                "Foobar".unicode_string(),
-            )];
+            let expected =
+                vec![StyleUSSpan::new(style + get_foreground_style(), "Foobar")];
             assert_eq2!(actual, expected);
         }
     }
@@ -1083,52 +1060,31 @@ mod tests_style_us_span_lines_from {
                 // println!("{}", line_0..pretty_print_debug());
                 assert_eq2!(
                     iter.next().ok_or(())?,
-                    &StyleUSSpan::new(
-                        style + get_metadata_tags_marker_style(),
-                        "@tags".unicode_string(),
-                    )
+                    &StyleUSSpan::new(style + get_metadata_tags_marker_style(), "@tags",)
                 );
                 assert_eq2!(
                     iter.next().ok_or(())?,
-                    &StyleUSSpan::new(
-                        style + get_foreground_dim_style(),
-                        ": ".unicode_string()
-                    )
+                    &StyleUSSpan::new(style + get_foreground_dim_style(), ": ")
                 );
                 assert_eq2!(
                     iter.next().ok_or(())?,
-                    &StyleUSSpan::new(
-                        style + get_metadata_tags_values_style(),
-                        "tag1".unicode_string(),
-                    )
+                    &StyleUSSpan::new(style + get_metadata_tags_values_style(), "tag1",)
                 );
                 assert_eq2!(
                     iter.next().ok_or(())?,
-                    &StyleUSSpan::new(
-                        style + get_foreground_dim_style(),
-                        ", ".unicode_string()
-                    )
+                    &StyleUSSpan::new(style + get_foreground_dim_style(), ", ")
                 );
                 assert_eq2!(
                     iter.next().ok_or(())?,
-                    &StyleUSSpan::new(
-                        style + get_metadata_tags_values_style(),
-                        "tag2".unicode_string(),
-                    )
+                    &StyleUSSpan::new(style + get_metadata_tags_values_style(), "tag2",)
                 );
                 assert_eq2!(
                     iter.next().ok_or(())?,
-                    &StyleUSSpan::new(
-                        style + get_foreground_dim_style(),
-                        ", ".unicode_string()
-                    )
+                    &StyleUSSpan::new(style + get_foreground_dim_style(), ", ")
                 );
                 assert_eq2!(
                     iter.next().ok_or(())?,
-                    &StyleUSSpan::new(
-                        style + get_metadata_tags_values_style(),
-                        "tag3".unicode_string(),
-                    )
+                    &StyleUSSpan::new(style + get_metadata_tags_values_style(), "tag3",)
                 );
             });
         }
@@ -1147,28 +1103,19 @@ mod tests_style_us_span_lines_from {
             let span_0 = &line_0.inner[0];
             assert_eq2!(
                 span_0,
-                &StyleUSSpan::new(
-                    style + get_metadata_title_marker_style(),
-                    "@title".unicode_string(),
-                )
+                &StyleUSSpan::new(style + get_metadata_title_marker_style(), "@title",)
             );
 
             let span_1 = &line_0.inner[1];
             assert_eq2!(
                 span_1,
-                &StyleUSSpan::new(
-                    style + get_foreground_dim_style(),
-                    ": ".unicode_string()
-                )
+                &StyleUSSpan::new(style + get_foreground_dim_style(), ": ")
             );
 
             let span_2 = &line_0.inner[2];
             assert_eq2!(
                 span_2,
-                &StyleUSSpan::new(
-                    style + get_metadata_title_value_style(),
-                    "Something".unicode_string(),
-                )
+                &StyleUSSpan::new(style + get_metadata_title_value_style(), "Something",)
             );
         }
 
@@ -1200,37 +1147,25 @@ mod tests_style_us_span_lines_from {
             // println!("{}", line_0..pretty_print_debug());
             assert_eq2!(
                 line_0.inner[0],
-                StyleUSSpan::new(
-                    style + get_foreground_dim_style(),
-                    "```".unicode_string(),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), "```",)
             );
             assert_eq2!(
                 line_0.inner[1],
-                StyleUSSpan::new(
-                    style + get_code_block_lang_style(),
-                    "ts".unicode_string(),
-                )
+                StyleUSSpan::new(style + get_code_block_lang_style(), "ts",)
             );
 
             let line_1 = &lines.inner[1];
             // println!("{}", line_1..pretty_print_debug());
             assert_eq2!(
                 line_1.inner[0],
-                StyleUSSpan::new(
-                    style + get_code_block_content_style(),
-                    "let a = 1;".unicode_string(),
-                )
+                StyleUSSpan::new(style + get_code_block_content_style(), "let a = 1;",)
             );
 
             let line_2 = &lines.inner[2];
             // println!("{}", line_2..pretty_print_debug());
             assert_eq2!(
                 line_2.inner[0],
-                StyleUSSpan::new(
-                    style + get_foreground_dim_style(),
-                    "```".unicode_string(),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), "```",)
             );
         }
 
@@ -1254,17 +1189,11 @@ mod tests_style_us_span_lines_from {
                     // println!("{}", line_0..pretty_print_debug());
                     assert_eq2!(
                         line_0.inner[0],
-                        StyleUSSpan::new(
-                            style + get_list_bullet_style(),
-                            "100.│".unicode_string(),
-                        )
+                        StyleUSSpan::new(style + get_list_bullet_style(), "100.│",)
                     );
                     assert_eq2!(
                         line_0.inner[1],
-                        StyleUSSpan::new(
-                            style + get_foreground_style(),
-                            "Foo".unicode_string(),
-                        )
+                        StyleUSSpan::new(style + get_foreground_style(), "Foo",)
                     );
                 }
 
@@ -1278,17 +1207,11 @@ mod tests_style_us_span_lines_from {
                     // println!("{}", line_0..pretty_print_debug());
                     assert_eq2!(
                         line_0.inner[0],
-                        StyleUSSpan::new(
-                            style + get_list_bullet_style(),
-                            "200.│".unicode_string(),
-                        )
+                        StyleUSSpan::new(style + get_list_bullet_style(), "200.│",)
                     );
                     assert_eq2!(
                         line_0.inner[1],
-                        StyleUSSpan::new(
-                            style + get_foreground_style(),
-                            "Bar".unicode_string(),
-                        )
+                        StyleUSSpan::new(style + get_foreground_style(), "Bar",)
                     );
                 }
             });
@@ -1311,17 +1234,11 @@ mod tests_style_us_span_lines_from {
                     let line_0 = &lines.inner[0];
                     assert_eq2!(
                         line_0.inner[0],
-                        StyleUSSpan::new(
-                            style + get_list_bullet_style(),
-                            "─┤".unicode_string(),
-                        )
+                        StyleUSSpan::new(style + get_list_bullet_style(), "─┤",)
                     );
                     assert_eq2!(
                         line_0.inner[1],
-                        StyleUSSpan::new(
-                            style + get_foreground_style(),
-                            "Foo".unicode_string(),
-                        )
+                        StyleUSSpan::new(style + get_foreground_style(), "Foo",)
                     );
                 }
 
@@ -1333,17 +1250,11 @@ mod tests_style_us_span_lines_from {
                     let line_0 = &lines.inner[0];
                     assert_eq2!(
                         line_0.inner[0],
-                        StyleUSSpan::new(
-                            style + get_list_bullet_style(),
-                            "─┤".unicode_string(),
-                        )
+                        StyleUSSpan::new(style + get_list_bullet_style(), "─┤",)
                     );
                     assert_eq2!(
                         line_0.inner[1],
-                        StyleUSSpan::new(
-                            style + get_foreground_style(),
-                            "Bar".unicode_string(),
-                        )
+                        StyleUSSpan::new(style + get_foreground_style(), "Bar",)
                     );
                 }
             });
@@ -1361,8 +1272,8 @@ mod tests_style_us_span_lines_from {
 
             let line_0 = &lines.inner[0];
             let span_0_in_line_0 = &line_0.inner[0];
-            let StyleUSSpan { style, text } = span_0_in_line_0;
-            assert_eq2!(text.string, "Foobar");
+            let StyleUSSpan { style, text, .. } = span_0_in_line_0;
+            assert_eq2!(text, "Foobar");
             assert_eq2!(style, &(*style + get_foreground_style()));
         }
 
@@ -1394,7 +1305,7 @@ mod tests_style_us_span_lines_from {
                 TuiColor::Basic(ANSIBasicColor::Red)
             );
             assert_eq2!(spans_in_line[0].style.color_fg.is_some(), false);
-            assert_eq2!(spans_in_line[0].text.string, "# ");
+            assert_eq2!(spans_in_line[0].text, "# ");
 
             // The remainder of the spans are the heading text which are colorized with a color
             // wheel.

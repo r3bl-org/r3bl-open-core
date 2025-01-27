@@ -15,10 +15,8 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{self, Debug},
+use std::{fmt::{Debug, Formatter, Result},
           ops::Deref};
-
-use serde::{Deserialize, Serialize};
 
 use crate::{ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType, ch, glyphs};
 
@@ -37,8 +35,7 @@ use crate::{ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType, ch, glyph
 /// # Traits Implementations
 ///
 /// - [Deref]: Dereferences to [u8].
-/// - [fmt::Display]: Formats the percentage value followed by a `%` sign.
-/// - [fmt::Debug]: Formats the percentage value with a debug string.
+/// - [std::fmt::Debug]: Formats the percentage value followed by a `%` sign.
 /// - [TryFrom]: Attempts to convert a [ChUnitPrimitiveType] to a `Percent`.
 /// - [TryFrom]: Attempts to convert an [i32] to a `Percent`.
 ///
@@ -65,10 +62,10 @@ use crate::{ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType, ch, glyph
 /// assert_eq!(percent.is_some(), true);
 /// assert_eq!(*percent.unwrap(), 50);
 ///
-/// // It implements Display.
-/// assert_eq!(percent.unwrap().to_string(), "50%");
+/// // It implements Debug, not Display.
+/// assert_eq!(format!("{:?}", percent.unwrap()), "50%");
 /// ```
-#[derive(Copy, Clone, PartialEq, Eq, Default, Serialize, Deserialize, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Default, Hash)]
 pub struct Percent {
     value: u8,
 }
@@ -89,16 +86,8 @@ impl Deref for Percent {
     fn deref(&self) -> &Self::Target { &self.value }
 }
 
-impl fmt::Display for Percent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}%", self.value)
-    }
-}
-
 impl Debug for Percent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "PerCent value:{}%", self.value)
-    }
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{}%", self.value) }
 }
 
 /// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>

@@ -15,10 +15,8 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{self, Debug, Display},
+use std::{fmt::{self, Debug},
           ops::SubAssign};
-
-use serde::{Deserialize, Serialize};
 
 use super::ChUnit;
 use crate::{ch, sub_unsigned};
@@ -53,31 +51,10 @@ use crate::{ch, sub_unsigned};
 /// use r3bl_core::{size, Size, ch};
 /// let size: Size = size!(col_count: 10, row_count: 10);
 /// ```
-#[derive(
-    Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash, size_of::SizeOf,
-)]
+#[derive(Copy, Clone, Default, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct Size {
     pub col_count: ChUnit, // width = number of cols (y).
     pub row_count: ChUnit, // height = number of rows (x).
-}
-
-impl Size {
-    pub fn deser_from_str(ser_str: &str) -> Option<Size> {
-        if let Ok(size) = serde_json::from_str(ser_str) {
-            Some(size)
-        } else {
-            None
-        }
-    }
-
-    pub fn ser_to_string(&self) -> Option<String> {
-        let ser_str = serde_json::to_string(self);
-        if let Ok(ser_str) = ser_str {
-            Some(ser_str)
-        } else {
-            None
-        }
-    }
 }
 
 impl Size {
@@ -98,15 +75,14 @@ pub enum TooSmallToDisplayResult {
 pub mod size_debug_formatter {
     use super::*;
 
-    impl Display for Size {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "Size: [{}, {}]", *self.row_count, *self.col_count)
-        }
-    }
-
     impl Debug for Size {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "[width:{}, height:{}]", *self.col_count, *self.row_count)
+            write!(
+                f,
+                "Size: [w: {w}, h: {h}]",
+                w = *self.row_count,
+                h = *self.col_count
+            )
         }
     }
 }

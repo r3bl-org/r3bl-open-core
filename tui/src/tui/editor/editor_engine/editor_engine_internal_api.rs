@@ -14,22 +14,25 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::{cmp::Ordering, collections::HashMap, mem::replace};
 
 use r3bl_core::{ch,
                 position,
+                string_storage,
                 usize,
                 ChUnit,
                 Position,
-                TinyVecBackingStore,
+                ScrollOffset,
+                StringStorage,
                 UnicodeString,
                 UnicodeStringExt,
-                UnicodeStringSegmentSliceResult};
-use serde::{Deserialize, Serialize};
+                UnicodeStringSegmentSliceResult,
+                VecArray};
+use validate_editor_buffer_change::ApplyChangeArgs;
 
 use crate::{editor_buffer_clipboard_support,
             editor_buffer_clipboard_support::ClipboardService,
+            editor_buffer_struct,
             CaretDirection,
             CaretKind,
             EditorArgs,
@@ -37,8 +40,7 @@ use crate::{editor_buffer_clipboard_support,
             EditorBuffer,
             EditorBufferApi,
             EditorEngine,
-            LineMode,
-            ScrollOffset};
+            LineMode};
 
 /// Functions that implement the editor engine.
 pub struct EditorEngineInternalApi;
@@ -120,17 +122,17 @@ impl EditorEngineInternalApi {
         scroll_editor_buffer::validate_scroll(args);
     }
 
-    pub fn string_at_caret(
-        buffer: &EditorBuffer,
-        engine: &EditorEngine,
+    pub fn string_at_caret<'a>(
+        buffer: &'a EditorBuffer,
+        engine: &'a EditorEngine,
     ) -> Option<UnicodeStringSegmentSliceResult> {
         content_get::string_at_caret(buffer, engine)
     }
 
-    pub fn line_at_caret_to_string(
-        buffer: &EditorBuffer,
-        engine: &EditorEngine,
-    ) -> Option<UnicodeString> {
+    pub fn line_at_caret_to_string<'a>(
+        buffer: &'a EditorBuffer,
+        engine: &'a EditorEngine,
+    ) -> Option<&'a UnicodeString> {
         content_get::line_at_caret_to_string(buffer, engine)
     }
 
@@ -245,8 +247,10 @@ mod caret_get {
     }
 
     fn col_is_at_end_of_line(buffer: &EditorBuffer, engine: &EditorEngine) -> bool {
-        if let Some(line) = content_get::line_at_caret_to_string(buffer, engine) {
-            buffer.get_caret(CaretKind::ScrollAdjusted).col_index == line.display_width
+        if content_get::line_at_caret_to_string(buffer, engine).is_some() {
+            let line_display_width =
+                content_get::line_display_width_at_caret(buffer, engine);
+            buffer.get_caret(CaretKind::ScrollAdjusted).col_index == line_display_width
         } else {
             false
         }
@@ -420,7 +424,11 @@ mod caret_mut {
                     validate_editor_buffer_change::apply_change(
                         editor_buffer,
                         editor_engine,
-                        |_, caret, scroll_offset| {
+                        |ApplyChangeArgs {
+                             caret,
+                             scroll_offset,
+                             ..
+                         }| {
                             scroll_editor_buffer::reset_caret_col(caret, scroll_offset);
                         },
                     );
@@ -431,7 +439,11 @@ mod caret_mut {
                 validate_editor_buffer_change::apply_change(
                     editor_buffer,
                     editor_engine,
-                    |_, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         caret,
+                         scroll_offset,
+                         ..
+                     }| {
                         scroll_editor_buffer::dec_caret_row(caret, scroll_offset);
                     },
                 );
@@ -510,7 +522,11 @@ mod caret_mut {
             validate_editor_buffer_change::apply_change(
                 editor_buffer,
                 editor_engine,
-                |_, caret, scroll_offset| {
+                |ApplyChangeArgs {
+                     caret,
+                     scroll_offset,
+                     ..
+                 }| {
                     scroll_editor_buffer::inc_caret_row(
                         caret,
                         scroll_offset,
@@ -598,7 +614,11 @@ mod caret_mut {
                 validate_editor_buffer_change::apply_change(
                     editor_buffer,
                     editor_engine,
-                    |_, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         caret,
+                         scroll_offset,
+                         ..
+                     }| {
                         scroll_editor_buffer::reset_caret_col(caret, scroll_offset);
                     },
                 );
@@ -639,7 +659,11 @@ mod caret_mut {
                 validate_editor_buffer_change::apply_change(
                     editor_buffer,
                     editor_engine,
-                    |_, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         caret,
+                         scroll_offset,
+                         ..
+                     }| {
                         scroll_editor_buffer::set_caret_col(
                             caret,
                             scroll_offset,
@@ -758,7 +782,7 @@ mod caret_mut {
                 editor_engine: &mut EditorEngine,
             ) -> Option<()> {
                 let UnicodeStringSegmentSliceResult {
-                    unicode_width: unicode_width_at_caret,
+                    display_width: unicode_width_at_caret,
                     ..
                 } = content_get::string_at_caret(editor_buffer, editor_engine)?;
 
@@ -774,20 +798,22 @@ mod caret_mut {
 
                 match maybe_char_to_right_of_caret {
                     Some(right_of_caret_seg_slice_result) => {
-                        let char_at_right =
-                            right_of_caret_seg_slice_result.string.to_string();
-                        let unicode_string_to_right_of_caret =
-                            char_at_right.unicode_string();
-                        if unicode_string_to_right_of_caret.contains_wide_segments() {
-                            let jump_by_col_width = unicode_string_to_right_of_caret
+                        let chunk_to_right_of_caret_us =
+                            right_of_caret_seg_slice_result.unicode_string;
+
+                        if chunk_to_right_of_caret_us.contains_wide_segments() {
+                            let jump_by_col_width = chunk_to_right_of_caret_us
                                 .display_width
                                 + unicode_width_at_caret;
-                            let move_left =
-                                unicode_string_to_right_of_caret.display_width;
+                            let move_left = chunk_to_right_of_caret_us.display_width;
                             validate_editor_buffer_change::apply_change(
                                 editor_buffer,
                                 editor_engine,
-                                |_, caret, scroll_offset| {
+                                |ApplyChangeArgs {
+                                     caret,
+                                     scroll_offset,
+                                     ..
+                                 }| {
                                     scroll_editor_buffer::inc_caret_col(
                                         caret,
                                         scroll_offset,
@@ -801,7 +827,11 @@ mod caret_mut {
                                 validate_editor_buffer_change::apply_change(
                                     editor_buffer,
                                     editor_engine,
-                                    |_, caret, scroll_offset| {
+                                    |ApplyChangeArgs {
+                                         caret,
+                                         scroll_offset,
+                                         ..
+                                     }| {
                                         scroll_editor_buffer::dec_caret_col(
                                             caret,
                                             scroll_offset,
@@ -814,7 +844,11 @@ mod caret_mut {
                             validate_editor_buffer_change::apply_change(
                                 editor_buffer,
                                 editor_engine,
-                                |_, caret, scroll_offset| {
+                                |ApplyChangeArgs {
+                                     caret,
+                                     scroll_offset,
+                                     ..
+                                 }| {
                                     scroll_editor_buffer::inc_caret_col(
                                         caret,
                                         scroll_offset,
@@ -830,7 +864,11 @@ mod caret_mut {
                         validate_editor_buffer_change::apply_change(
                             editor_buffer,
                             editor_engine,
-                            |_, caret, scroll_offset| {
+                            |ApplyChangeArgs {
+                                 caret,
+                                 scroll_offset,
+                                 ..
+                             }| {
                                 scroll_editor_buffer::inc_caret_col(
                                     caret,
                                     scroll_offset,
@@ -857,7 +895,11 @@ mod caret_mut {
                     validate_editor_buffer_change::apply_change(
                         editor_buffer,
                         editor_engine,
-                        |_, caret, scroll_offset| {
+                        |ApplyChangeArgs {
+                             caret,
+                             scroll_offset,
+                             ..
+                         }| {
                             scroll_editor_buffer::inc_caret_row(
                                 caret,
                                 scroll_offset,
@@ -895,7 +937,11 @@ mod caret_mut {
                     validate_editor_buffer_change::apply_change(
                         editor_buffer,
                         editor_engine,
-                        |_, caret, scroll_offset| {
+                        |ApplyChangeArgs {
+                             caret,
+                             scroll_offset,
+                             ..
+                         }| {
                             scroll_editor_buffer::dec_caret_row(caret, scroll_offset);
                         },
                     );
@@ -907,15 +953,21 @@ mod caret_mut {
                 }
             }
             CaretColLocationInLine::AtEnd => {
-                let UnicodeStringSegmentSliceResult { unicode_width, .. } =
-                    content_get::string_at_end_of_line_at_caret(
-                        editor_buffer,
-                        editor_engine,
-                    )?;
+                let UnicodeStringSegmentSliceResult {
+                    display_width: unicode_width,
+                    ..
+                } = content_get::string_at_end_of_line_at_caret(
+                    editor_buffer,
+                    editor_engine,
+                )?;
                 validate_editor_buffer_change::apply_change(
                     editor_buffer,
                     editor_engine,
-                    |_, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         caret,
+                         scroll_offset,
+                         ..
+                     }| {
                         scroll_editor_buffer::dec_caret_col(
                             caret,
                             scroll_offset,
@@ -925,12 +977,18 @@ mod caret_mut {
                 );
             }
             CaretColLocationInLine::InMiddle => {
-                let UnicodeStringSegmentSliceResult { unicode_width, .. } =
-                    content_get::string_to_left_of_caret(editor_buffer, editor_engine)?;
+                let UnicodeStringSegmentSliceResult {
+                    display_width: unicode_width,
+                    ..
+                } = content_get::string_to_left_of_caret(editor_buffer, editor_engine)?;
                 validate_editor_buffer_change::apply_change(
                     editor_buffer,
                     editor_engine,
-                    |_, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         caret,
+                         scroll_offset,
+                         ..
+                     }| {
                         scroll_editor_buffer::dec_caret_col(
                             caret,
                             scroll_offset,
@@ -961,23 +1019,19 @@ mod content_get {
 
     pub fn line_display_width_at_caret(
         buffer: &EditorBuffer,
-        engine: &EditorEngine,
+        _engine: &EditorEngine,
     ) -> ChUnit {
-        let line = content_get::line_at_caret_to_string(buffer, engine);
-        if let Some(line) = line {
-            line.display_width
-        } else {
-            ch(0)
-        }
+        let row_index = buffer.get_caret(CaretKind::ScrollAdjusted).row_index;
+        line_display_width_at_row_index(buffer, row_index)
     }
 
     pub fn line_display_width_at_row_index(
         buffer: &EditorBuffer,
         row_idx: ChUnit,
     ) -> ChUnit {
-        let line = buffer.get_lines().get(usize(row_idx));
-        if let Some(line) = line {
-            line.display_width
+        let maybe_line_us = buffer.get_lines().get(usize(row_idx));
+        if let Some(line_us) = maybe_line_us {
+            line_us.display_width
         } else {
             ch(0)
         }
@@ -991,24 +1045,24 @@ mod content_get {
         next_line.is_some()
     }
 
-    pub fn line_at_caret_to_string(
-        buffer: &EditorBuffer,
-        _engine: &EditorEngine,
-    ) -> Option<UnicodeString> {
+    pub fn line_at_caret_to_string<'a>(
+        buffer: &'a EditorBuffer,
+        _engine: &'a EditorEngine,
+    ) -> Option<&'a UnicodeString> {
         empty_check_early_return!(buffer, @None);
         let row_index = buffer.get_caret(CaretKind::ScrollAdjusted).row_index;
         let line = buffer.get_lines().get(usize(row_index))?;
-        Some(line.clone())
+        Some(line)
     }
 
-    pub fn next_line_below_caret_to_string(
-        buffer: &EditorBuffer,
-        _engine: &EditorEngine,
-    ) -> Option<UnicodeString> {
+    pub fn next_line_below_caret_to_string<'a>(
+        buffer: &'a EditorBuffer,
+        _engine: &'a EditorEngine,
+    ) -> Option<&'a UnicodeString> {
         empty_check_early_return!(buffer, @None);
         let row_index = buffer.get_caret(CaretKind::ScrollAdjusted).row_index;
         let line = buffer.get_lines().get(usize(row_index + ch(1)))?;
-        Some(line.clone())
+        Some(line)
     }
 
     pub fn prev_line_above_caret_exists(
@@ -1019,22 +1073,22 @@ mod content_get {
         prev_line.is_some()
     }
 
-    pub fn prev_line_above_caret_to_string(
-        buffer: &EditorBuffer,
-        _engine: &EditorEngine,
-    ) -> Option<UnicodeString> {
+    pub fn prev_line_above_caret_to_string<'a>(
+        buffer: &'a EditorBuffer,
+        _engine: &'a EditorEngine,
+    ) -> Option<&'a UnicodeString> {
         empty_check_early_return!(buffer, @None);
         let row_index = buffer.get_caret(CaretKind::ScrollAdjusted).row_index;
         if row_index == ch(0) {
             return None;
         }
         let line = buffer.get_lines().get(usize(row_index - ch(1)))?;
-        Some(line.clone())
+        Some(line)
     }
 
-    pub fn string_at_caret(
-        buffer: &EditorBuffer,
-        _engine: &EditorEngine,
+    pub fn string_at_caret<'a>(
+        buffer: &'a EditorBuffer,
+        _engine: &'a EditorEngine,
     ) -> Option<UnicodeStringSegmentSliceResult> {
         empty_check_early_return!(buffer, @None);
         let caret_adj = buffer.get_caret(CaretKind::ScrollAdjusted);
@@ -1043,9 +1097,9 @@ mod content_get {
         Some(result)
     }
 
-    pub fn string_to_right_of_caret(
-        buffer: &EditorBuffer,
-        _engine: &EditorEngine,
+    pub fn string_to_right_of_caret<'a>(
+        buffer: &'a EditorBuffer,
+        _engine: &'a EditorEngine,
     ) -> Option<UnicodeStringSegmentSliceResult> {
         empty_check_early_return!(buffer, @None);
         let caret_adj = buffer.get_caret(CaretKind::ScrollAdjusted);
@@ -1062,9 +1116,9 @@ mod content_get {
         }
     }
 
-    pub fn string_to_left_of_caret(
-        editor_buffer: &EditorBuffer,
-        editor_engine: &EditorEngine,
+    pub fn string_to_left_of_caret<'a>(
+        editor_buffer: &'a EditorBuffer,
+        editor_engine: &'a EditorEngine,
     ) -> Option<UnicodeStringSegmentSliceResult> {
         empty_check_early_return!(editor_buffer, @None);
         let caret_adj = editor_buffer.get_caret(CaretKind::ScrollAdjusted);
@@ -1081,12 +1135,13 @@ mod content_get {
         }
     }
 
-    pub fn string_at_end_of_line_at_caret(
-        editor_buffer: &EditorBuffer,
-        editor_engine: &EditorEngine,
+    pub fn string_at_end_of_line_at_caret<'a>(
+        editor_buffer: &'a EditorBuffer,
+        editor_engine: &'a EditorEngine,
     ) -> Option<UnicodeStringSegmentSliceResult> {
         empty_check_early_return!(editor_buffer, @None);
         let line = content_get::line_at_caret_to_string(editor_buffer, editor_engine)?;
+
         if let CaretColLocationInLine::AtEnd = caret_get::find_col(EditorArgs {
             editor_buffer,
             editor_engine,
@@ -1099,8 +1154,6 @@ mod content_get {
 }
 
 mod content_mut {
-    use r3bl_core::TinyVecBackingStore;
-
     use super::*;
 
     pub fn insert_str_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
@@ -1154,8 +1207,8 @@ mod content_mut {
             validate_editor_buffer_change::apply_change(
                 editor_buffer,
                 editor_engine,
-                |lines, _, _| {
-                    lines.push(UnicodeString::new(""));
+                |ApplyChangeArgs { lines, .. }| {
+                    lines.push("".unicode_string());
                 },
             );
             return;
@@ -1200,14 +1253,18 @@ mod content_mut {
                 validate_editor_buffer_change::apply_change(
                     editor_buffer,
                     editor_engine,
-                    |lines, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         lines,
+                         caret,
+                         scroll_offset,
+                     }| {
                         let new_row_idx = scroll_editor_buffer::inc_caret_row(
                             caret,
                             scroll_offset,
                             viewport_height,
                         );
                         scroll_editor_buffer::reset_caret_col(caret, scroll_offset);
-                        lines.insert(new_row_idx, UnicodeString::new(""));
+                        lines.insert(new_row_idx, "".unicode_string());
                     },
                 );
             }
@@ -1224,17 +1281,25 @@ mod content_mut {
                 validate_editor_buffer_change::apply_change(
                     editor_buffer,
                     editor_engine,
-                    |lines, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         lines,
+                         caret,
+                         scroll_offset,
+                     }| {
                         let cur_row_idx =
                             EditorBuffer::calc_scroll_adj_caret_row(caret, scroll_offset);
-                        lines.insert(cur_row_idx, UnicodeString::new(""));
+                        lines.insert(cur_row_idx, "".unicode_string());
                     },
                 );
 
                 validate_editor_buffer_change::apply_change(
                     editor_buffer,
                     editor_engine,
-                    |_, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         caret,
+                         scroll_offset,
+                         ..
+                     }| {
                         scroll_editor_buffer::inc_caret_row(
                             caret,
                             scroll_offset,
@@ -1251,26 +1316,30 @@ mod content_mut {
                     editor_engine,
                 } = args;
 
-                if let Some(line_content) =
+                if let Some(line) =
                     content_get::line_at_caret_to_string(editor_buffer, editor_engine)
                 {
                     let caret_adj = editor_buffer.get_caret(CaretKind::ScrollAdjusted);
-
                     let col_index = caret_adj.col_index;
-                    let split_result = line_content.split_at_display_col(col_index);
+                    let split_result = line.split_at_display_col(col_index);
                     if let Some((left_string, right_string)) = split_result {
                         let row_index = usize(caret_adj.row_index);
                         let viewport_height = editor_engine.viewport_height();
 
-                        let left_string = left_string.unicode_string();
-                        let right_string = right_string.unicode_string();
-
                         validate_editor_buffer_change::apply_change(
                             editor_buffer,
                             editor_engine,
-                            |lines, caret, scroll_offset| {
-                                let _ = replace(&mut lines[row_index], left_string);
-                                lines.insert(row_index + 1, right_string);
+                            |ApplyChangeArgs {
+                                 lines,
+                                 caret,
+                                 scroll_offset,
+                             }| {
+                                let _ = replace(
+                                    &mut lines[row_index],
+                                    left_string.unicode_string(),
+                                );
+                                lines
+                                    .insert(row_index + 1, right_string.unicode_string());
                                 scroll_editor_buffer::inc_caret_row(
                                     caret,
                                     scroll_offset,
@@ -1315,19 +1384,26 @@ mod content_mut {
                 buffer: &mut EditorBuffer,
                 engine: &mut EditorEngine,
             ) -> Option<()> {
-                let cur_line = content_get::line_at_caret_to_string(buffer, engine)?;
-                let new_line_string = cur_line.delete_char_at_display_col(
+                let line = content_get::line_at_caret_to_string(buffer, engine)?;
+
+                let new_line_content = line.delete_char_at_display_col(
                     buffer.get_caret(CaretKind::ScrollAdjusted).col_index,
                 )?;
-                let new_line_string = new_line_string.unicode_string();
 
                 validate_editor_buffer_change::apply_change(
                     buffer,
                     engine,
-                    |lines, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         lines,
+                         caret,
+                         scroll_offset,
+                     }| {
                         let row_idx =
                             EditorBuffer::calc_scroll_adj_caret_row(caret, scroll_offset);
-                        let _ = replace(&mut lines[row_idx], new_line_string);
+                        let _ = replace(
+                            &mut lines[row_idx],
+                            new_line_content.unicode_string(),
+                        );
                     },
                 );
 
@@ -1349,14 +1425,23 @@ mod content_mut {
                 let this_line = content_get::line_at_caret_to_string(buffer, engine)?;
                 let next_line =
                     content_get::next_line_below_caret_to_string(buffer, engine)?;
+                let new_line_content =
+                    string_storage!("{a}{b}", a = this_line.string, b = next_line.string);
 
                 validate_editor_buffer_change::apply_change(
                     buffer,
                     engine,
-                    |lines, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         lines,
+                         caret,
+                         scroll_offset,
+                     }| {
                         let row_idx =
                             EditorBuffer::calc_scroll_adj_caret_row(caret, scroll_offset);
-                        let _ = replace(&mut lines[row_idx], this_line + &next_line);
+                        let _ = replace(
+                            &mut lines[row_idx],
+                            new_line_content.unicode_string(),
+                        );
                         lines.remove(row_idx + 1);
                     },
                 );
@@ -1372,7 +1457,7 @@ mod content_mut {
         empty_check_early_return!(buffer, @None);
 
         if let Some(UnicodeStringSegmentSliceResult {
-            display_col_at_which_seg_starts,
+            display_col_at_which_this_seg_starts: display_col_at_which_seg_starts,
             ..
         }) = content_get::string_to_left_of_caret(buffer, engine)
         {
@@ -1404,23 +1489,32 @@ mod content_mut {
                 delete_at_this_display_col: ChUnit,
             ) -> Option<()> {
                 let cur_line = content_get::line_at_caret_to_string(buffer, engine)?;
-                let new_line_string =
+                let new_line_content =
                     cur_line.delete_char_at_display_col(delete_at_this_display_col)?;
-                let new_line_string = new_line_string.unicode_string();
 
                 let viewport_width = engine.viewport_width();
+
                 validate_editor_buffer_change::apply_change(
                     buffer,
                     engine,
-                    |lines, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         lines,
+                         caret,
+                         scroll_offset,
+                     }| {
                         let cur_row_idx =
                             EditorBuffer::calc_scroll_adj_caret_row(caret, scroll_offset);
-                        let _ = replace(&mut lines[cur_row_idx], new_line_string);
+                        let _ = replace(
+                            &mut lines[cur_row_idx],
+                            new_line_content.unicode_string(),
+                        );
+                        let new_line_content_display_width =
+                            lines[cur_row_idx].display_width;
                         scroll_editor_buffer::set_caret_col(
                             caret,
                             scroll_offset,
                             viewport_width,
-                            lines[cur_row_idx].display_width,
+                            new_line_content_display_width,
                             delete_at_this_display_col,
                         );
                     },
@@ -1447,18 +1541,36 @@ mod content_mut {
                 let prev_line =
                     content_get::prev_line_above_caret_to_string(buffer, engine)?;
 
-                let prev_line_eol_col = prev_line.display_width;
+                // A line above the caret exists.
+                let prev_line_display_width = {
+                    let prev_row_idx =
+                        buffer.get_caret(CaretKind::ScrollAdjusted).row_index - ch(1);
+                    content_get::line_display_width_at_row_index(buffer, prev_row_idx)
+                };
+
+                let prev_line_eol_col = prev_line_display_width;
+
+                let new_line_content =
+                    string_storage!("{a}{b}", a = prev_line.string, b = this_line.string);
+
                 validate_editor_buffer_change::apply_change(
                     buffer,
                     engine,
-                    |lines, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         lines,
+                         caret,
+                         scroll_offset,
+                     }| {
                         let prev_row_idx =
                             EditorBuffer::calc_scroll_adj_caret_row(caret, scroll_offset)
                                 - 1;
                         let cur_row_idx =
                             EditorBuffer::calc_scroll_adj_caret_row(caret, scroll_offset);
-                        let _ = replace(&mut lines[prev_row_idx], prev_line + &this_line);
-                        let new_merged_line_content_display_width =
+                        let _ = replace(
+                            &mut lines[prev_row_idx],
+                            new_line_content.unicode_string(),
+                        );
+                        let new_line_content_display_width =
                             lines[prev_row_idx].display_width;
                         lines.remove(cur_row_idx);
                         scroll_editor_buffer::dec_caret_row(caret, scroll_offset);
@@ -1466,7 +1578,7 @@ mod content_mut {
                             caret,
                             scroll_offset,
                             viewport_width,
-                            new_merged_line_content_display_width,
+                            new_line_content_display_width,
                             prev_line_eol_col,
                         );
                     },
@@ -1482,18 +1594,16 @@ mod content_mut {
         engine: &mut EditorEngine,
         with: DeleteSelectionWith,
     ) -> Option<()> {
+        // Early return if any of the following are met.
         empty_check_early_return!(buffer, @None);
         if buffer.get_selection_map().is_empty() {
             return None;
         }
 
         let my_selection_map = buffer.get_selection_map().clone();
-
         let lines = buffer.get_lines();
-
-        let selected_row_indices: Vec<ChUnit> = my_selection_map.get_ordered_indices();
-
-        let mut vec_row_indices_to_remove = TinyVecBackingStore::<ChUnit>::new();
+        let selected_row_indices = my_selection_map.get_ordered_indices();
+        let mut vec_row_indices_to_remove = VecArray::<ChUnit>::new();
         let mut map_lines_to_replace = HashMap::new();
 
         for selected_row_index in selected_row_indices {
@@ -1518,14 +1628,17 @@ mod content_mut {
                 // Remove selection range (part of the line).
                 let start_col_index = selection_range.start_display_col_index;
                 let end_col_index = selection_range.end_display_col_index;
-                let line = lines[usize(selected_row_index)].clone();
+                let line_us = lines.get(usize(selected_row_index))?.clone();
 
-                let keep_before_selected = line.clip_to_width(ch(0), start_col_index);
+                let keep_before_selected = line_us.clip_to_width(ch(0), start_col_index);
 
                 let keep_after_selected =
-                    line.clip_to_width(ch(end_col_index), line_width);
+                    line_us.clip_to_width(ch(end_col_index), line_width);
 
-                let mut remaining_text = String::new();
+                let mut remaining_text = StringStorage::with_capacity(
+                    keep_before_selected.len() + keep_after_selected.len(),
+                );
+
                 remaining_text.push_str(keep_before_selected);
                 remaining_text.push_str(keep_after_selected);
                 map_lines_to_replace.insert(selected_row_index, remaining_text);
@@ -1535,12 +1648,13 @@ mod content_mut {
         validate_editor_buffer_change::apply_change(
             buffer,
             engine,
-            |lines, caret, _scroll_offset| {
+            |ApplyChangeArgs { lines, caret, .. }| {
                 // Replace lines, before removing them (to prevent indices from being invalidated).
                 for row_index in map_lines_to_replace.keys() {
+                    let new_line_content = map_lines_to_replace[row_index].clone();
                     let _ = replace(
                         &mut lines[usize(*row_index)],
-                        map_lines_to_replace[row_index].unicode_string(),
+                        new_line_content.unicode_string(),
                     );
                 }
 
@@ -1577,27 +1691,29 @@ mod content_mut {
 
         let row_index = usize(caret_adj.row_index);
         let line = editor_buffer.get_lines().get(row_index)?;
-
-        let (new_line_string, chunk_display_width) =
-            line.insert_char_at_display_col(ch(caret_adj.col_index), chunk);
-        let new_line_string = new_line_string.unicode_string();
+        let (new_line_content, chunk_display_width) =
+            line.insert_chunk_at_display_col(ch(caret_adj.col_index), chunk);
 
         let viewport_width = editor_engine.viewport_width();
 
         validate_editor_buffer_change::apply_change(
             editor_buffer,
             editor_engine,
-            |lines, caret, scroll_offset| {
+            |ApplyChangeArgs {
+                 lines,
+                 caret,
+                 scroll_offset,
+             }| {
                 // Replace existing line w/ new line.
-                let _ = replace(&mut lines[row_index], new_line_string);
-                let line_content_display_width = lines[row_index].display_width;
+                let _ = replace(&mut lines[row_index], new_line_content.unicode_string());
+                let new_line_content_display_width = lines[row_index].display_width;
 
                 // Update caret position.
                 scroll_editor_buffer::inc_caret_col(
                     caret,
                     scroll_offset,
                     chunk_display_width,
-                    line_content_display_width,
+                    new_line_content_display_width,
                     viewport_width,
                 );
             },
@@ -1619,8 +1735,8 @@ mod content_mut {
                     validate_editor_buffer_change::apply_change(
                         editor_buffer,
                         editor_engine,
-                        |lines, _, _| {
-                            lines.push(UnicodeString::new(""));
+                        |ApplyChangeArgs { lines, .. }| {
+                            lines.push("".unicode_string());
                         },
                     );
                 }
@@ -1646,12 +1762,18 @@ mod content_mut {
         validate_editor_buffer_change::apply_change(
             editor_buffer,
             editor_engine,
-            |lines, caret, scroll_offset| {
+            |ApplyChangeArgs {
+                 lines,
+                 caret,
+                 scroll_offset,
+             }| {
                 // Actually add the character to the correct line.
-                let _ = replace(&mut lines[usize(caret_adj_row)], chunk.unicode_string());
+                let new_content = chunk.unicode_string();
+                let _ = replace(&mut lines[usize(caret_adj_row)], new_content);
 
-                let line_content_display_width = lines[caret_adj_row].display_width;
-                let col_amt = ch(UnicodeString::str_display_width(chunk));
+                let line_content = &lines[caret_adj_row];
+                let line_content_display_width = line_content.display_width;
+                let col_amt = UnicodeString::str_display_width(chunk);
 
                 // Update caret position.
                 scroll_editor_buffer::inc_caret_col(
@@ -1672,6 +1794,12 @@ mod content_mut {
 pub mod validate_editor_buffer_change {
     use super::*;
 
+    pub struct ApplyChangeArgs<'a> {
+        pub lines: &'a mut editor_buffer_struct::sizing::VecEditorContentLines,
+        pub caret: &'a mut Position,
+        pub scroll_offset: &'a mut ScrollOffset,
+    }
+
     /// In addition to mutating the buffer, this function runs the following validations on the
     /// [EditorBuffer]'s:
     /// 1. `caret`:
@@ -1683,16 +1811,17 @@ pub mod validate_editor_buffer_change {
     pub fn apply_change(
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
-        mutator: impl FnOnce(
-            /* EditorBuffer::lines */ &mut TinyVecBackingStore<UnicodeString>,
-            /* EditorBuffer::caret */ &mut Position,
-            /* EditorEngine::scroll_offset */ &mut ScrollOffset,
-        ),
+        mutator: impl FnOnce(ApplyChangeArgs<'_>),
     ) -> Option<()> {
-        let (lines, caret, scroll_offset, _) = editor_buffer.get_mut();
-
         // Run the mutator first.
-        mutator(lines, caret, scroll_offset);
+        let editor_buffer_mut = editor_buffer.get_mut();
+        mutator(ApplyChangeArgs {
+            lines: editor_buffer_mut.lines,
+            caret: editor_buffer_mut.caret,
+            scroll_offset: editor_buffer_mut.scroll_offset,
+        });
+        // Recalculate the display width of the lines by dropping.
+        drop(editor_buffer_mut);
 
         // Check caret validity.
         adjust_caret_col_if_not_in_middle_of_grapheme_cluster(EditorArgsMut {
@@ -1743,10 +1872,12 @@ pub mod validate_editor_buffer_change {
             scroll_adjusted_caret.row_index,
         ) - scroll_offset.col_index;
 
-        let (_, caret, _, _) = editor_buffer.get_mut();
-        let new_caret_col_index =
-            validate_col_index_for_row_width(caret.col_index, row_content_width);
-        caret.col_index = new_caret_col_index;
+        let editor_buffer_mut = editor_buffer.get_mut();
+        let new_caret_col_index = validate_col_index_for_row_width(
+            editor_buffer_mut.caret.col_index,
+            row_content_width,
+        );
+        editor_buffer_mut.caret.col_index = new_caret_col_index;
 
         None
     }
@@ -1775,7 +1906,7 @@ pub mod validate_editor_buffer_change {
         let unicode_width_at_caret = {
             match content_get::string_at_caret(editor_buffer, editor_engine) {
                 None => ch(0),
-                Some(string_at_caret) => string_at_caret.unicode_width,
+                Some(string_at_caret) => string_at_caret.display_width,
             }
         };
 
@@ -1796,9 +1927,10 @@ pub mod validate_editor_buffer_change {
         diff: ChUnit,
     ) -> Option<()> {
         let EditorArgsMut { editor_buffer, .. } = args;
-        let (_, caret, scroll_offset, _) = editor_buffer.get_mut();
-        scroll_offset.col_index += diff;
-        caret.col_index -= diff;
+
+        let editor_buffer_mut = editor_buffer.get_mut();
+        editor_buffer_mut.scroll_offset.col_index += diff;
+        editor_buffer_mut.caret.col_index -= diff;
         None
     }
 
@@ -1814,20 +1946,23 @@ pub mod validate_editor_buffer_change {
 
         let viewport_width = editor_engine.viewport_width();
 
-        let (lines, caret, scroll_offset, _) = editor_buffer.get_mut();
-        let row_idx = EditorBuffer::calc_scroll_adj_caret_row(caret, scroll_offset);
+        let editor_buffer_mut = editor_buffer.get_mut();
+        let row_idx = EditorBuffer::calc_scroll_adj_caret_row(
+            editor_buffer_mut.caret,
+            editor_buffer_mut.scroll_offset,
+        );
         let col_idx = ch(EditorBuffer::calc_scroll_adj_caret_col(
-            caret,
-            scroll_offset,
+            editor_buffer_mut.caret,
+            editor_buffer_mut.scroll_offset,
         ));
 
-        let line = lines.get(row_idx)?;
+        let line = editor_buffer_mut.lines.get(row_idx)?;
 
         // Caret is in the middle of a grapheme cluster, so jump it.
         let segment = line.is_display_col_index_in_middle_of_grapheme_cluster(col_idx)?;
         scroll_editor_buffer::set_caret_col(
-            caret,
-            scroll_offset,
+            editor_buffer_mut.caret,
+            editor_buffer_mut.scroll_offset,
             viewport_width,
             line.display_width,
             segment.unicode_width + segment.display_col_offset,
@@ -2056,7 +2191,11 @@ mod scroll_editor_buffer {
                 validate_editor_buffer_change::apply_change(
                     editor_buffer,
                     editor_engine,
-                    |_, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         caret,
+                         scroll_offset,
+                         ..
+                     }| {
                         while diff > ch(0) {
                             scroll_editor_buffer::inc_caret_row(
                                 caret,
@@ -2073,7 +2212,11 @@ mod scroll_editor_buffer {
                 validate_editor_buffer_change::apply_change(
                     editor_buffer,
                     editor_engine,
-                    |_, caret, scroll_offset| {
+                    |ApplyChangeArgs {
+                         caret,
+                         scroll_offset,
+                         ..
+                     }| {
                         while diff > ch(0) {
                             scroll_editor_buffer::dec_caret_row(caret, scroll_offset);
                             diff -= 1;
@@ -2201,8 +2344,9 @@ mod scroll_editor_buffer {
                     caret_row_adj > editor_buffer.len();
                 if is_caret_row_adj_overflows_buffer {
                     let diff = editor_buffer.len() - caret_row_adj;
-                    let (_, caret, _, _) = editor_buffer.get_mut();
-                    caret.row_index -= diff;
+
+                    let editor_buffer_mut = editor_buffer.get_mut();
+                    editor_buffer_mut.caret.row_index -= diff;
                 }
             }
 
@@ -2213,8 +2357,9 @@ mod scroll_editor_buffer {
                     scroll_offset_row > editor_buffer.len();
                 if is_scroll_offset_row_overflows_buffer {
                     let diff = editor_buffer.len() - scroll_offset_row;
-                    let (_, _, scroll_offset, _) = editor_buffer.get_mut();
-                    scroll_offset.row_index -= diff;
+
+                    let editor_buffer_mut = editor_buffer.get_mut();
+                    editor_buffer_mut.scroll_offset.row_index -= diff;
                 }
             }
 
@@ -2238,16 +2383,19 @@ mod scroll_editor_buffer {
                             // Caret is below viewport.
                             let row_diff =
                                 caret_row_adj - (scroll_offset_row + viewport_height);
-                            let (_, caret, scroll_offset, _) = editor_buffer.get_mut();
-                            scroll_offset.row_index += row_diff;
-                            caret.row_index -= row_diff;
+
+                            let editor_buffer_mut = editor_buffer.get_mut();
+                            editor_buffer_mut.scroll_offset.row_index += row_diff;
+
+                            editor_buffer_mut.caret.row_index -= row_diff;
                         }
                         true => {
                             // Caret is above viewport.
                             let row_diff = scroll_offset_row - caret_row_adj;
-                            let (_, caret, scroll_offset, _) = editor_buffer.get_mut();
-                            scroll_offset.row_index -= row_diff;
-                            caret.row_index += row_diff;
+
+                            let editor_buffer_mut = editor_buffer.get_mut();
+                            editor_buffer_mut.scroll_offset.row_index -= row_diff;
+                            editor_buffer_mut.caret.row_index += row_diff;
                         }
                     }
                 }
@@ -2292,16 +2440,16 @@ mod scroll_editor_buffer {
                 }
                 false => {
                     // Caret is outside viewport.
-                    let (_, caret, scroll_offset, _) = editor_buffer.get_mut();
-
+                    let editor_buffer_mut = editor_buffer.get_mut();
                     if caret_col_adj < scroll_offset_col {
                         // Caret is to the left of viewport.
-                        scroll_offset.col_index = caret_col_adj;
-                        caret.col_index = ch(0);
+                        editor_buffer_mut.scroll_offset.col_index = caret_col_adj;
+                        editor_buffer_mut.caret.col_index = ch(0);
                     } else {
                         // Caret is to the right of viewport.
-                        scroll_offset.col_index = caret_col_adj - viewport_width + ch(1);
-                        caret.col_index = viewport_width - ch(1);
+                        editor_buffer_mut.scroll_offset.col_index =
+                            caret_col_adj - viewport_width + ch(1);
+                        editor_buffer_mut.caret.col_index = viewport_width - ch(1);
                     }
                 }
             }
@@ -2310,9 +2458,7 @@ mod scroll_editor_buffer {
 }
 
 mod caret_location_enums {
-    use super::*;
-
-    #[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Eq, PartialEq)]
     pub enum CaretColLocationInLine {
         /// Also covers state where there is no col, or only 1 col.
         AtStart,
@@ -2320,7 +2466,7 @@ mod caret_location_enums {
         InMiddle,
     }
 
-    #[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Eq, PartialEq)]
     pub enum CaretRowLocationInBuffer {
         /// Also covers state where there is no row, or only 1 row.
         AtTop,
@@ -2330,7 +2476,7 @@ mod caret_location_enums {
 }
 use caret_location_enums::*;
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, PartialEq, Copy)]
 pub enum DeleteSelectionWith {
     Backspace,
     Delete,

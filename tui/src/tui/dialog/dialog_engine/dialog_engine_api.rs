@@ -14,14 +14,14 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use std::fmt::Debug;
+use std::{borrow::Cow, fmt::Debug};
 
 use r3bl_core::{ch,
                 glyphs::SPACER_GLYPH as SPACER,
                 percent,
                 position,
                 size,
+                string_storage,
                 throws_with_return,
                 u16,
                 usize,
@@ -32,9 +32,10 @@ use r3bl_core::{ch,
                 GradientGenerationPolicy,
                 Position,
                 Size,
+                StringStorage,
                 TextColorizationPolicy,
-                TinyStringBackingStore,
                 TuiStyle,
+                UnicodeString,
                 UnicodeStringExt};
 
 use crate::{render_ops,
@@ -427,8 +428,8 @@ mod internal_impl {
                     return CommonError::new_error_result(
                         CommonErrorType::NotFound,
                         &format!(
-                            "Dialog buffer does not exist for component id:{}",
-                            self_id
+                            "Dialog buffer does not exist for component id:{id:?}",
+                            id = self_id
                         ),
                     )
                 }
@@ -510,7 +511,7 @@ mod internal_impl {
             ops: &mut RenderOps,
             origin_pos: &Position,
             bounds_size: &Size,
-            results: &[TinyStringBackingStore],
+            results: &[StringStorage],
             dialog_engine: &DialogEngine,
         ) {
             let col_start_index = ch(1);
@@ -534,24 +535,28 @@ mod internal_impl {
 
                 rel_insertion_pos.add_row(1);
 
-                let text = item.as_str().unicode_string();
+                let text = item.as_str();
+                let text_us = UnicodeString::new(text);
+                let text_display_width = text_us.display_width;
+
                 let max_display_col_count = bounds_size.col_count - 2;
-                let clipped_text = if text.display_width > max_display_col_count {
+
+                // PERF: [ ] perf
+                let clipped_text = if text_display_width > max_display_col_count {
                     let snip_len = ch(2); /* `..` */
                     let postfix_len = ch(5); /* last 5 characters */
 
                     let lhs_start_index = ch(0);
                     let lhs_end_index = max_display_col_count - postfix_len - snip_len;
-                    let lhs = text.clip_to_width(lhs_start_index, lhs_end_index);
+                    let lhs = text_us.clip_to_width(lhs_start_index, lhs_end_index);
 
-                    let rhs_start_index = text.display_width - postfix_len;
-                    let rhs_end_index = text.display_width;
-                    let rhs = text.clip_to_width(rhs_start_index, rhs_end_index);
+                    let rhs_start_index = text_display_width - postfix_len;
+                    let rhs_end_index = text_display_width;
+                    let rhs = text_us.clip_to_width(rhs_start_index, rhs_end_index);
 
-                    format!("{lhs}..{rhs}")
+                    Cow::Owned(string_storage!("{lhs}..{rhs}"))
                 } else {
-                    // PERF: [ ] perf
-                    text.string.to_string()
+                    Cow::Borrowed(item)
                 };
 
                 let max_display_row_count =
@@ -590,7 +595,7 @@ mod internal_impl {
                         // Paint the text for the row.
                         ops.push(RenderOp::ApplyColors(my_selected_style));
                         ops.push(RenderOp::PaintTextWithAttributes(
-                            clipped_text.into(),
+                            clipped_text.into_owned(),
                             my_selected_style,
                         ));
                     }
@@ -601,7 +606,7 @@ mod internal_impl {
                             dialog_engine.dialog_options.maybe_style_results_panel,
                         ));
                         ops.push(RenderOp::PaintTextWithAttributes(
-                            clipped_text.into(),
+                            clipped_text.into_owned(),
                             dialog_engine.dialog_options.maybe_style_results_panel,
                         ));
                     }
@@ -621,9 +626,8 @@ mod internal_impl {
         let row_pos = position!(col_index: origin_pos.col_index + 1, row_index: origin_pos.row_index + 1);
 
         let title_us = title.unicode_string();
-        let text_content = title_us.truncate_to_fit_size(size! {
-          col_count: bounds_size.col_count - 2, row_count: bounds_size.row_count
-        });
+        let title_content_clipped =
+            title_us.truncate_end_to_fit_width(bounds_size.col_count - 2);
 
         ops.push(RenderOp::ResetColor);
         ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
@@ -636,7 +640,7 @@ mod internal_impl {
             &mut ops,
             &mut dialog_engine.color_wheel,
             &dialog_engine.dialog_options.maybe_style_title,
-            text_content,
+            title_content_clipped,
         );
 
         ops
@@ -653,8 +657,9 @@ mod internal_impl {
         // If lolcat is enabled, then colorize the text.
         if let Some(style) = maybe_style {
             if style.lolcat {
+                let text_us = UnicodeString::new(text);
                 let texts = color_wheel.colorize_into_styled_texts(
-                    &text.unicode_string(),
+                    &text_us,
                     GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
                     TextColorizationPolicy::ColorEachCharacter(*maybe_style),
                 );
@@ -810,7 +815,7 @@ mod internal_impl {
                     let selected_index = usize(dialog_engine.selected_row_index);
                     if let Some(results) = &dialog_buffer.maybe_results {
                         if let Some(selected_result) = results.get(selected_index) {
-                            return Some(DialogChoice::Yes(selected_result.to_string()));
+                            return Some(DialogChoice::Yes(selected_result.clone()));
                         }
                     }
                     return Some(DialogChoice::No);

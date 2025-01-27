@@ -14,12 +14,34 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::collections::{HashMap, hash_map::Entry};
 
 use sha2::{Digest, Sha256};
-use unicode_width::UnicodeWidthStr;
 
+use crate::{UnicodeString, u16};
+
+/// Enum representing different methods for calculating the length of a string. The
+/// [Self::calculate] function memoizes the length of the string for the
+/// [StringLength::StripAnsi] variant to speed up computations.
+///
+/// # Variants
+///
+/// - `StripAnsi`: Calculates the length of the string after stripping ANSI escape
+///   sequences.
+/// - `Unicode`: Calculates the Unicode width of the string.
+///
+/// # Example
+///
+/// ```rust
+/// use std::collections::HashMap;
+/// use r3bl_core::StringLength;
+///
+/// let input = "\u{1b}[31mfoo\u{1b}[0m";
+/// let mut memoized_len_map = HashMap::new();
+///
+/// let length = StringLength::StripAnsi.calculate(input, &mut memoized_len_map);
+/// assert_eq!(length, 3);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum StringLength {
     StripAnsi,
@@ -27,31 +49,6 @@ pub enum StringLength {
 }
 
 pub type MemoizedLenMap = HashMap<String, u16>;
-
-mod to_from_string_impl {
-    use super::*;
-
-    impl std::str::FromStr for StringLength {
-        type Err = String;
-
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            match s {
-                "strip_ansi" => Ok(Self::StripAnsi),
-                "unicode" => Ok(Self::Unicode),
-                _ => Err(format!("Invalid StringLength variant: {}", s)),
-            }
-        }
-    }
-
-    impl std::fmt::Display for StringLength {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            match self {
-                Self::StripAnsi => write!(f, "strip_ansi"),
-                Self::Unicode => write!(f, "unicode"),
-            }
-        }
-    }
-}
 
 impl StringLength {
     /// If the input can't be found in the memoized map, calculate the length and store
@@ -77,7 +74,7 @@ impl StringLength {
     pub fn calculate(&self, input: &str, memoized_len_map: &mut MemoizedLenMap) -> u16 {
         match self {
             // Do not memoize (slower to do this).
-            StringLength::Unicode => UnicodeWidthStr::width(input) as u16,
+            StringLength::Unicode => u16(UnicodeString::str_display_width(input)),
 
             // Memoize (faster to do this).
             StringLength::StripAnsi => match memoized_len_map.entry(input.to_string()) {
@@ -85,7 +82,7 @@ impl StringLength {
                 Entry::Vacant(entry) => {
                     let stripped_input = strip_ansi::strip_ansi(input);
                     let stripped_input: &str = stripped_input.as_ref();
-                    let length = UnicodeWidthStr::width(stripped_input) as u16;
+                    let length = u16(UnicodeString::str_display_width(stripped_input));
                     entry.insert(length);
                     length
                 }
@@ -106,6 +103,31 @@ impl StringLength {
         let mut bytes = [0u8; 4];
         bytes.copy_from_slice(&result.as_slice()[..4]);
         u32::from_le_bytes(bytes)
+    }
+}
+
+mod to_from_string_impl {
+    use super::*;
+
+    impl std::str::FromStr for StringLength {
+        type Err = String;
+
+        fn from_str(s: &str) -> core::result::Result<Self, Self::Err> {
+            match s {
+                "strip_ansi" => Ok(Self::StripAnsi),
+                "unicode" => Ok(Self::Unicode),
+                _ => Err(format!("Invalid StringLength variant: {}", s)),
+            }
+        }
+    }
+
+    impl std::fmt::Display for StringLength {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::StripAnsi => write!(f, "strip_ansi"),
+                Self::Unicode => write!(f, "unicode"),
+            }
+        }
     }
 }
 

@@ -18,14 +18,12 @@
 use std::fmt::Debug;
 
 use r3bl_core::{Position, Size, TuiStyle};
-use serde::{Deserialize, Serialize};
 
 use super::{FlexBox, FlexBoxId};
-use crate::format_option;
 
 /// Holds a subset of the fields in [FlexBox] that are required by the editor and dialog
 /// engines.
-#[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct PartialFlexBox {
     pub id: FlexBoxId,
     pub style_adjusted_origin_pos: Position,
@@ -41,23 +39,6 @@ impl PartialFlexBox {
             self.style_adjusted_origin_pos,
             self.style_adjusted_bounds_size,
         )
-    }
-}
-
-impl Debug for PartialFlexBox {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FlexBox")
-            .field("id", &self.id)
-            .field("style_adjusted_origin_pos", &self.style_adjusted_origin_pos)
-            .field(
-                "style_adjusted_bounds_size",
-                &self.style_adjusted_bounds_size,
-            )
-            .field(
-                "maybe_computed_style",
-                format_option!(&self.maybe_computed_style),
-            )
-            .finish()
     }
 }
 

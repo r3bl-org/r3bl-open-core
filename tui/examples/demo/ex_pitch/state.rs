@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 use std::{collections::HashMap,
-          fmt::{Debug, Display, Formatter, Result}};
+          fmt::{Debug, Formatter, Result}};
 
 use r3bl_tui::{editor_buffer::EditorBuffer,
                FlexBoxId,
@@ -56,7 +56,7 @@ pub mod state_mutator {
                 .editor_buffers
                 .entry(FlexBoxId::from(Id::Editor as u8))
                 .and_modify(|it| {
-                    it.set_lines(&get_slide_content(state.current_slide_index));
+                    it.set_lines(get_slide_content(state.current_slide_index));
                 });
         }
     }
@@ -68,7 +68,7 @@ pub mod state_mutator {
                 .editor_buffers
                 .entry(FlexBoxId::from(Id::Editor as u8))
                 .and_modify(|it| {
-                    it.set_lines(&get_slide_content(state.current_slide_index));
+                    it.set_lines(get_slide_content(state.current_slide_index));
                 });
         }
     }
@@ -84,9 +84,8 @@ pub mod state_mutator {
 
     pub fn get_initial_state() -> State {
         let editor_buffer = {
-            let mut it =
-                EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()), &None);
-            it.set_lines(&get_slide_content(0));
+            let mut it = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+            it.set_lines(get_slide_content(0));
             it
         };
 
@@ -140,33 +139,19 @@ pub enum AppSignal {
     PreviousSlide,
 }
 
-mod app_signal_impl {
-    use super::*;
-
-    impl Display for AppSignal {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{self:?}") }
-    }
-}
-
 mod debug_format_helpers {
     use super::*;
 
-    fn fmt(this: &State, f: &mut Formatter<'_>) -> Result {
-        write! {f,
-                "\nState [\n\
-            - current_slide_index:\n{:?}\n\
-            - editor_buffers:\n{:?}\n\
-            ]",
-                this.current_slide_index,
-                this.editor_buffers,
-        }
-    }
-
-    impl Display for State {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
-    }
-
     impl Debug for State {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            write! {f,
+"State [
+  - current_slide_index:\n{:?}
+  - editor_buffers:\n{:?}
+]",
+                    self.current_slide_index,
+                    self.editor_buffers,
+            }
+        }
     }
 }

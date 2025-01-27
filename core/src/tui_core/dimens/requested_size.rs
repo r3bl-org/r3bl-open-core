@@ -17,8 +17,6 @@
 
 use std::fmt::{self, Debug};
 
-use serde::{Deserialize, Serialize};
-
 use super::Percent;
 
 /// Represents a percentage value for the requested size. It is used to calculate the
@@ -36,7 +34,7 @@ use super::Percent;
 /// Note that [crate::Size], defined as:
 /// - height or [crate::Size::row_count],
 /// - width or [crate::Size::col_count].
-#[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct RequestedSizePercent {
     pub width_pc: Percent,
     pub height_pc: Percent,
@@ -59,6 +57,11 @@ macro_rules! requested_size_percent {
 
 impl Debug for RequestedSizePercent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[width:{}, height:{}]", self.width_pc, self.height_pc)
+        write!(
+            f,
+            "[width:{w:?}, height:{h:?}]",
+            w = self.width_pc,
+            h = self.height_pc
+        )
     }
 }

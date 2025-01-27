@@ -20,12 +20,11 @@ use std::fmt::Debug;
 use r3bl_core::{call_if_true, LockedOutputDevice, Position, Size};
 
 use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
-use crate::{GlobalData,
+use crate::{diff_chunks::{OffscreenBufferDiffResult, PixelCharDiffChunks},
+            GlobalData,
             OffscreenBuffer,
-            OffscreenBufferDiffResult,
             OffscreenBufferPaint,
             OffscreenBufferPaintImplCrossterm,
-            PixelCharDiffChunks,
             TerminalLibBackend,
             DEBUG_TUI_MOD,
             DEBUG_TUI_SHOW_PIPELINE_EXPANDED,

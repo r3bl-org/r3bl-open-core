@@ -17,20 +17,16 @@
 
 use std::borrow::Cow;
 
-use serde::{Deserialize, Serialize};
-
 use super::Lolcat;
 use crate::{ColorChangeSpeed, TuiStyledTexts, UnicodeString};
 
-pub fn colorize_to_styled_texts(
-    lolcat: &mut Lolcat,
-    input: &UnicodeString,
-) -> TuiStyledTexts {
-    lolcat.colorize_to_styled_texts(input)
+pub fn colorize_to_styled_texts(lolcat: &mut Lolcat, string: &str) -> TuiStyledTexts {
+    let string_us = UnicodeString::new(string);
+    lolcat.colorize_to_styled_texts(&string_us)
 }
 
 pub fn lolcat_each_char_in_unicode_string(
-    unicode_string: &UnicodeString,
+    us: &UnicodeString,
     lolcat: Option<&mut Lolcat>,
 ) -> TuiStyledTexts {
     let mut saved_orig_speed = None;
@@ -49,7 +45,7 @@ pub fn lolcat_each_char_in_unicode_string(
         }
     };
 
-    let it = my_lolcat.to_mut().colorize_to_styled_texts(unicode_string);
+    let it = my_lolcat.to_mut().colorize_to_styled_texts(us);
 
     // Restore saved_orig_speed if it was set.
     if let Some(orig_speed) = saved_orig_speed {
@@ -70,11 +66,10 @@ pub fn lolcat_each_char_in_unicode_string(
 ///   .set_seed_delta(1.0)
 ///   .build();
 ///
-/// let content = "Hello, world!";
-/// let unicode_string = content.unicode_string();
+/// let string = "Hello, world!";
+/// let string_us = UnicodeString::new(string);
 /// let lolcat_mut = &mut lolcat;
-/// let st = lolcat_mut.colorize_to_styled_texts(&unicode_string);
-///
+/// let st = lolcat_mut.colorize_to_styled_texts(&string_us);
 /// lolcat.next_color();
 /// ```
 ///
@@ -86,7 +81,7 @@ pub fn lolcat_each_char_in_unicode_string(
 ///   same generated colors over and over again.
 /// - If you want to change where the color wheel "begins", you have to change the speed, seed, and
 ///   delta of this [Lolcat] instance.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LolcatBuilder {
     /// Rate at which the color changes when
     /// [colorize_to_styled_texts](Lolcat::colorize_to_styled_texts) is called.

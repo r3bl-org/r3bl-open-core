@@ -19,6 +19,7 @@ use nom::{bytes::complete::tag,
           combinator::opt,
           sequence::{preceded, tuple},
           IResult};
+use r3bl_core::char_storage;
 
 use crate::{constants::{COLON, NEW_LINE, SPACE},
             take_text_until_new_line_or_end};
@@ -37,7 +38,7 @@ pub fn parse_unique_kv_opt_eol<'a>(
     )(input)?;
 
     // Can't nest `tag_name` in `output`. Early return in this case.
-    let tag_fragment = format!("{tag_name}{COLON}{SPACE}");
+    let tag_fragment = char_storage!("{tag_name}{COLON}{SPACE}");
     if title_text.contains(tag_fragment.as_str())
         | remainder.contains(tag_fragment.as_str())
     {
@@ -64,7 +65,7 @@ pub fn parse_unique_kv_opt_eol<'a>(
 #[cfg(test)]
 mod test_parse_title_no_eol {
     use crossterm::style::Stylize;
-    use r3bl_core::assert_eq2;
+    use r3bl_core::{assert_eq2, string_storage};
 
     use super::*;
     use crate::constants::TITLE;
@@ -108,7 +109,9 @@ mod test_parse_title_no_eol {
 
         println!(
             "err: '{}'",
-            format!("{:?}", it.err().unwrap()).black().on_yellow()
+            string_storage!("{:?}", it.err().unwrap())
+                .black()
+                .on_yellow()
         );
     }
 
@@ -125,7 +128,9 @@ mod test_parse_title_no_eol {
 
         println!(
             "err: '{}'",
-            format!("{:?}", it.err().unwrap()).black().on_yellow()
+            string_storage!("{:?}", it.err().unwrap())
+                .black()
+                .on_yellow()
         );
     }
 

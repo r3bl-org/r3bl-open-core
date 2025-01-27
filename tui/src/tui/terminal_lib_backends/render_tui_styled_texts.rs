@@ -22,11 +22,10 @@ use crate::{RenderOp, RenderOps};
 pub fn render_tui_styled_texts_into(texts: &TuiStyledTexts, render_ops: &mut RenderOps) {
     for styled_text in texts.inner.iter() {
         let style = styled_text.get_style();
-        let text = styled_text.get_text();
         render_ops.push(RenderOp::ApplyColors(Some(*style)));
         render_ops.push(RenderOp::PaintTextWithAttributes(
             // PERF: [ ] perf
-            text.string.to_string().into(),
+            styled_text.get_text().into(),
             Some(*style),
         ));
         render_ops.push(RenderOp::ResetColor);
@@ -43,10 +42,10 @@ mod tests {
                     tui_styled_texts,
                     tui_stylesheet,
                     CommonResult,
-                    MicroVecBackingStore,
                     RgbValue,
                     TuiColor,
-                    TuiStylesheet};
+                    TuiStylesheet,
+                    VecArray};
     use r3bl_macro::tui_style;
 
     use super::*;
@@ -65,8 +64,7 @@ mod tests {
             console_log!(pipeline);
             assert_eq2!(pipeline.len(), 1);
 
-            let set: &MicroVecBackingStore<RenderOps> =
-                pipeline.get(&ZOrder::Normal).unwrap();
+            let set: &VecArray<RenderOps> = pipeline.get(&ZOrder::Normal).unwrap();
 
             // "Hello" and "World" together.
             assert_eq2!(set.len(), 1);

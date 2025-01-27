@@ -14,9 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use std::fmt::{Display, Formatter, Result};
-
 use crossterm::style::Stylize;
 use r3bl_core::{ANSIBasicColor,
                 Ansi256GradientIndex,
@@ -29,14 +26,16 @@ use r3bl_core::{ANSIBasicColor,
                 GradientGenerationPolicy,
                 Position,
                 Size,
+                StringStorage,
                 TextColorizationPolicy,
                 TuiColor,
                 TuiStyledTexts,
                 TuiStylesheet,
-                UnicodeStringExt,
+                UnicodeString,
                 call_if_true,
                 get_tui_style,
                 get_tui_styles,
+                glyphs,
                 position,
                 requested_size_percent,
                 send_signal,
@@ -102,14 +101,6 @@ pub enum AppSignal {
     SaveFile,
     #[default]
     Noop,
-}
-
-mod impl_app_signal {
-    use super::*;
-
-    impl Display for AppSignal {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{self:?}") }
-    }
 }
 
 /// Constants for the ids.
@@ -259,12 +250,12 @@ mod app_main_impl_app_trait {
                     if let Some(editor_buffer) = maybe_editor_buffer {
                         let maybe_file_path =
                             editor_buffer.editor_content.maybe_file_path.clone();
-                        let content: String = editor_buffer.get_as_string_with_newlines();
+                        let content = editor_buffer.get_as_string_with_newlines();
 
                         match maybe_file_path {
                             // Found file path in the editor buffer.
                             Some(file_path) => {
-                                file_utils::save_content_to_file(file_path, content);
+                                file_utils::save_content_to_file(&file_path, &content);
                             }
                             // Could not find file path in the editor buffer. This is a
                             // new buffer. Need to ask user via dialog box.
@@ -360,18 +351,16 @@ mod app_main_impl_app_trait {
 mod modal_dialog_ask_for_filename_to_save_file {
     use super::*;
 
-    pub fn initialize(state: &mut State, id: FlexBoxId, title: String, text: String) {
+    pub fn initialize(
+        state: &mut State,
+        id: FlexBoxId,
+        title: StringStorage,
+        text: StringStorage,
+    ) {
         let new_dialog_buffer = {
             let mut it = DialogBuffer::new_empty();
             it.title = title;
-            let line: String = {
-                if text.is_empty() {
-                    "".to_string()
-                } else {
-                    text.clone()
-                }
-            };
-            it.editor_buffer.set_lines(&[line.as_str()]);
+            it.editor_buffer.set_lines(text.lines());
             it
         };
         state.dialog_buffers.insert(id, new_dialog_buffer);
@@ -385,7 +374,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
         throws!({
             // Initialize the dialog buffer with title & text.
             let title = "File name or path to save content to:";
-            let text = "".to_string();
+            let text = "";
 
             // Setting the has_focus to Id::ComponentSimpleDialogAskForFilenameToSaveFile
             // will cause the dialog to appear on the next render.
@@ -398,8 +387,8 @@ mod modal_dialog_ask_for_filename_to_save_file {
             initialize(
                 state,
                 FlexBoxId::from(Id::ComponentSimpleDialogAskForFilenameToSaveFile),
-                title.to_owned(),
-                text,
+                title.into(),
+                text.into(),
             );
 
             call_if_true!(DEBUG_TUI_MOD, {
@@ -452,11 +441,11 @@ mod modal_dialog_ask_for_filename_to_save_file {
                             FlexBoxId::from(
                                 Id::ComponentSimpleDialogAskForFilenameToSaveFile,
                             ),
-                            "Yes".to_string(),
+                            "Yes".into(),
                             text.clone(),
                         );
 
-                        let user_input_file_path = text.trim().to_string();
+                        let user_input_file_path = text.trim();
                         if !user_input_file_path.is_empty() {
                             call_if_true!(DEBUG_TUI_MOD, {
                                 tracing::debug!(
@@ -472,12 +461,12 @@ mod modal_dialog_ask_for_filename_to_save_file {
                             if let Some(editor_buffer) = maybe_editor_buffer {
                                 // Set the file path.
                                 editor_buffer.editor_content.maybe_file_path =
-                                    Some(user_input_file_path.clone());
+                                    Some(user_input_file_path.into());
 
                                 // Set the file extension.
                                 editor_buffer.editor_content.maybe_file_extension =
                                     Some(file_utils::get_file_extension(&Some(
-                                        user_input_file_path.clone(),
+                                        user_input_file_path,
                                     )));
 
                                 // Fire a signal to save the file.
@@ -496,8 +485,8 @@ mod modal_dialog_ask_for_filename_to_save_file {
                             FlexBoxId::from(
                                 Id::ComponentSimpleDialogAskForFilenameToSaveFile,
                             ),
-                            "No".to_string(),
-                            "".to_string(),
+                            "No".into(),
+                            "".into(),
                         );
                     }
                 }
@@ -584,8 +573,6 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use r3bl_core::glyphs;
-
     use super::*;
 
     pub fn create_components(
@@ -696,7 +683,7 @@ mod status_bar {
             color_fg: TuiColor::Basic(ANSIBasicColor::DarkGrey)
         );
 
-        let app_text = "edi 🦜 ✶early access✶".unicode_string();
+        let app_text = "edi 🦜 ✶early access✶";
 
         let mut color_wheel = ColorWheel::new(smallvec![
             ColorWheelConfig::Rgb(
@@ -710,8 +697,9 @@ mod status_bar {
             ),
         ]);
 
+        let app_text_us = UnicodeString::new(app_text);
         let app_text_styled_texts = color_wheel.colorize_into_styled_texts(
-            &app_text,
+            &app_text_us,
             GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
             TextColorizationPolicy::ColorEachCharacter(None),
         );

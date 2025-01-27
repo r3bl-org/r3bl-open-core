@@ -15,16 +15,15 @@
  *   limitations under the License.
  */
 
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
-
 use crate::{ChUnit,
             GraphemeClusterSegment,
             SelectionRange,
             Size,
+            StringStorage,
             UnicodeString,
-            UnicodeStringExt,
             UnicodeStringSegmentSliceResult,
             ch,
+            pad_fmt,
             usize};
 
 impl UnicodeString {
@@ -42,16 +41,6 @@ impl UnicodeString {
         }
 
         contains_wide_segments
-    }
-
-    pub fn char_display_width(character: char) -> usize {
-        let display_width: usize = UnicodeWidthChar::width(character).unwrap_or(0);
-        display_width
-    }
-
-    pub fn str_display_width(string: &str) -> usize {
-        let display_width: usize = UnicodeWidthStr::width(string);
-        display_width
     }
 
     /// The `size` is a column index and row index. Not width or height.
@@ -95,14 +84,16 @@ impl UnicodeString {
     ///
     /// let col_count:r3bl_core::ChUnit = 2.into();
     /// let display_cols:r3bl_core::ChUnit = 5.into();
+    ///
     /// let expected_clipped_string = "rst s";
+    ///
     /// let line = "first second";
-    /// let line = line.unicode_string();
+    /// let line_us = line.unicode_string();
     ///
-    /// let truncated_line = line.truncate_start_by_n_col(col_count);
-    /// let truncated_line = truncated_line.unicode_string();
+    /// let truncated_line = line_us.truncate_start_by_n_col(col_count);
+    /// let truncated_line_us = truncated_line.unicode_string();
     ///
-    /// let truncated_line = truncated_line.truncate_end_to_fit_width(display_cols);
+    /// let truncated_line = truncated_line_us.truncate_end_to_fit_width(display_cols);
     ///
     /// assert_eq!(truncated_line, expected_clipped_string);
     /// ```
@@ -144,15 +135,16 @@ impl UnicodeString {
     /// let scroll_offset_col:r3bl_core::ChUnit = 0.into();
     /// let display_cols:r3bl_core::ChUnit = 3.into();
     /// let expected_clipped_string = "fir";
+    ///
     /// let line = "first second";
-    /// let line = line.unicode_string();
+    /// let line_us = line.unicode_string();
     ///
-    /// let truncated_line = line.truncate_start_by_n_col(scroll_offset_col);
-    /// let truncated_line = truncated_line.unicode_string();
+    /// let truncated_line = line_us.truncate_start_by_n_col(scroll_offset_col);
+    /// let truncated_line_us = truncated_line.unicode_string();
     ///
-    /// let truncated_line = truncated_line.truncate_end_to_fit_width(display_cols);
+    /// let truncated_line_2 = truncated_line_us.truncate_end_to_fit_width(display_cols);
     ///
-    /// assert_eq!(truncated_line, expected_clipped_string);
+    /// assert_eq!(truncated_line_2, expected_clipped_string);
     /// ```
     pub fn truncate_end_to_fit_width(&self, display_col_count: ChUnit) -> &str {
         let mut avail_cols = display_col_count;
@@ -169,20 +161,22 @@ impl UnicodeString {
         &self.string[..string_end_byte_index]
     }
 
-    /// Returns a new [String] that is the result of padding `self.string` to fit the
-    /// given width w/ the given spacer character.
+    /// Returns a new [StringStorage] that is the result of padding `self.string` to fit
+    /// the given width w/ the given spacer character.
     pub fn pad_end_with_spaces_to_fit_width(
         &self,
-        spacer: &str,
+        chunk: &str,
+        spacer: impl AsRef<str>,
         max_display_col_count: ChUnit,
-    ) -> String {
+    ) -> StringStorage {
         let pad_len = max_display_col_count - self.display_width;
         if pad_len > ch(0) {
-            let pad_str = spacer.repeat(usize(pad_len));
-            format!("{}{}", self.string, pad_str)
+            let mut acc = StringStorage::from(chunk);
+            pad_fmt!(fmt: acc, pad_str: spacer.as_ref(), repeat_count: usize(pad_len));
+            acc
         } else {
             // PERF: [ ] perf
-            self.string.to_string()
+            chunk.into()
         }
     }
 
@@ -255,16 +249,19 @@ impl UnicodeString {
     /// returned (that is comprised of the `pad_char` repeated).
     pub fn try_get_postfix_padding_for(
         &self,
-        pad_char: char,
+        chunk: &str,
+        pad_char: impl AsRef<str>,
         max_display_col_count: ChUnit,
-    ) -> Option<String> {
+    ) -> Option<StringStorage> {
         // Pad the line to the max cols w/ spaces. This removes any "ghost" carets that
         // were painted in a previous render.
         // PERF: [ ] perf
-        let display_width = self.string.unicode_string().display_width;
+        let display_width = UnicodeString::str_display_width(chunk);
         if display_width < max_display_col_count {
-            let padding = max_display_col_count - display_width;
-            Some(pad_char.to_string().repeat(usize(padding)))
+            let pad_count = max_display_col_count - display_width;
+            let mut acc = StringStorage::new();
+            pad_fmt!(fmt: acc, pad_str: pad_char.as_ref(), repeat_count: usize(pad_count));
+            Some(acc)
         } else {
             None
         }

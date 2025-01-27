@@ -19,56 +19,63 @@ use std::fmt::{Formatter, Result};
 
 use r3bl_core::TuiStyle;
 
-use crate::{DebugFormatRenderOp, RenderOp};
+use crate::{DebugFormatRenderOp, RenderOp, RenderOp::*};
 
 pub struct CrosstermDebugFormatRenderOp;
 
-fn format_print_text(
-    op_name: &str,
-    text: &str,
-    maybe_style: &Option<TuiStyle>,
-) -> String {
-    match maybe_style {
-        Some(style) => {
-            format!("{op_name}({} bytes, {style:?})", text.len())
+impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
+    fn fmt_debug(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result {
+        match this {
+            Noop => {
+                write!(f, "Noop")
+            }
+            EnterRawMode => {
+                write!(f, "EnterRawMode")
+            }
+            ExitRawMode => {
+                write!(f, "ExitRawMode")
+            }
+            ClearScreen => {
+                write!(f, "ClearScreen")
+            }
+            ResetColor => {
+                write!(f, "ResetColor")
+            }
+            SetFgColor(fg_color) => {
+                write!(f, "SetFgColor({fg_color:?})")
+            }
+            SetBgColor(bg_color) => {
+                write!(f, "SetBgColor({bg_color:?})")
+            }
+            ApplyColors(maybe_style) => match maybe_style {
+                Some(style) => write!(f, "ApplyColors({style:?})"),
+                None => write!(f, "ApplyColors(None)"),
+            },
+            MoveCursorPositionAbs(pos) => {
+                write!(f, "MoveCursorPositionAbs({pos:?})")
+            }
+            MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => write!(
+                f,
+                "MoveCursorPositionRelTo({box_origin_pos:?}, {content_rel_pos:?})"
+            ),
+            CompositorNoClipTruncPaintTextWithAttributes(text, maybe_style) => {
+                format_print_text(f, "Compositor..PrintText...", text, maybe_style)
+            }
+            PaintTextWithAttributes(text, maybe_style) => {
+                format_print_text(f, "PrintTextWithAttributes", text, maybe_style)
+            }
         }
-        None => format!("{op_name}({} bytes, None)", text.len()),
     }
 }
 
-impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
-    fn debug_format(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result {
-        write!(
-            f,
-            "{}",
-            match this {
-                RenderOp::Noop => "Noop".into(),
-                RenderOp::EnterRawMode => "EnterRawMode".into(),
-                RenderOp::ExitRawMode => "ExitRawMode".into(),
-                RenderOp::MoveCursorPositionAbs(pos) =>
-                    format!("MoveCursorPositionAbs({pos:?})"),
-                RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) =>
-                    format!(
-                    "MoveCursorPositionRelTo({box_origin_pos:?}, {content_rel_pos:?})"
-                ),
-                RenderOp::ClearScreen => "ClearScreen".into(),
-                RenderOp::SetFgColor(fg_color) => format!("SetFgColor({fg_color:?})"),
-                RenderOp::SetBgColor(bg_color) => format!("SetBgColor({bg_color:?})"),
-                RenderOp::ResetColor => "ResetColor".into(),
-                RenderOp::ApplyColors(maybe_style) => match maybe_style {
-                    Some(style) => format!("ApplyColors({style:?})"),
-                    None => "ApplyColors(None)".into(),
-                },
-                RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                    text,
-                    maybe_style,
-                ) => {
-                    format_print_text("Compositor..PrintText...", text, maybe_style)
-                }
-                RenderOp::PaintTextWithAttributes(text, maybe_style) => {
-                    format_print_text("PrintTextWithAttributes", text, maybe_style)
-                }
-            }
-        )
+fn format_print_text(
+    f: &mut Formatter<'_>,
+    op_name: &str,
+    text: &str,
+    maybe_style: &Option<TuiStyle>,
+) -> Result {
+    match maybe_style {
+        Some(style) => write!(f, "{op_name}({} bytes, {style:?})", text.len()),
+        None => write!(f, "{op_name}({} bytes, None)", text.len()),
     }
 }

@@ -18,7 +18,7 @@
 use std::{io::{Result, Write},
           sync::Arc};
 
-use r3bl_core::{MicroVecBackingStore, StdMutex};
+use r3bl_core::{StdMutex, VecArray};
 use smallvec::smallvec;
 use strip_ansi_escapes::strip;
 
@@ -31,7 +31,7 @@ use strip_ansi_escapes::strip;
 /// - [super::OutputDeviceExt::new_mock()]
 #[derive(Clone)]
 pub struct StdoutMock {
-    pub buffer: Arc<StdMutex<MicroVecBackingStore<u8>>>,
+    pub buffer: Arc<StdMutex<VecArray<u8>>>,
 }
 
 impl Default for StdoutMock {
@@ -47,7 +47,7 @@ impl StdoutMock {
 }
 
 impl StdoutMock {
-    pub fn get_copy_of_buffer(&self) -> MicroVecBackingStore<u8> {
+    pub fn get_copy_of_buffer(&self) -> VecArray<u8> {
         self.buffer.lock().unwrap().clone()
     }
 

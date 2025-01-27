@@ -13,6 +13,8 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "antfu.icons-carbon", // Carbon Icons (Intuitive product icons for symbols: fn, mod, etc).
+    "pkief.material-icon-theme", // Material Icon Theme (Intuitive icons in file explorer).
     "bceskavich.theme-dracula-at-night", // Dracula at Night.
     "thiagolciobittencourt.omni-dracula-theme", // Omni Dracula Theme.
     "dracula-theme.theme-dracula", // Dracula Theme.
@@ -25,8 +27,6 @@
     "Tr3bbe.purplehaze", // Purple Haze.
     "chrisjdavies.multi-highlight", // Multi Highlight.
     "alefragnani.bookmarks", // Bookmarks.
-    "pkief.material-icon-theme", // Material Icon Theme.
-    "antfu.icons-carbon", // Carbon Icons.
     "GitHub.github-vscode-theme", // Github Theme.
     "vadimcn.vscode-lldb", // LLDB. Debugger.
     "ms-vscode.cpptools", // C/C++. Debugger.

@@ -18,7 +18,7 @@
 use std::error::Error;
 
 use crossterm::style::Stylize;
-use r3bl_core::{call_if_true, usize, TinyVecBackingStore};
+use r3bl_core::{call_if_true, usize, VecStrBuffer};
 
 use super::EditorBuffer;
 use crate::{EditorArgsMut, EditorEngineInternalApi, DEBUG_TUI_COPY_PASTE};
@@ -43,17 +43,17 @@ pub fn copy_to_clipboard(
     let selection_map = buffer.get_selection_map();
 
     // Initialize an empty string to store the copied text.
-    let mut vec_str = TinyVecBackingStore::<&str>::new();
+    let mut vec_str = VecStrBuffer::new();
 
     // Sort the row indices so that the copied text is in the correct order.
     let row_indices = selection_map.get_ordered_indices();
 
     // Iterate through the sorted row indices, and copy the selected text.
     for row_index in row_indices {
-        if let Some(selection_range) = selection_map.map.get(&row_index) {
+        if let Some(selection_range) = selection_map.get(row_index) {
             if let Some(line) = lines.get(usize(row_index)) {
-                let selected_text = line.clip_to_range(*selection_range);
-                vec_str.push(selected_text);
+                let selected_text_holder = line.clip_to_range(selection_range);
+                vec_str.push(selected_text_holder);
             }
         }
     }

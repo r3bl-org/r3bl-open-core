@@ -16,7 +16,7 @@
  */
 
 use std::{error::Error,
-          fmt::{Display, Result}};
+          fmt::{Debug, Display, Result}};
 
 use r3bl_core::CommonResult;
 
@@ -51,7 +51,7 @@ impl Error for LayoutError {}
 
 /// Implement [`Display`] trait (needed by [`Error`] trait).
 impl Display for LayoutError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result { Debug::fmt(self, f) }
 }
 
 /// Implement constructor that is compatible w/ [`CommonResult<T>`].

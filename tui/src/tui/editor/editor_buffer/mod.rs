@@ -19,12 +19,12 @@
 pub mod editor_buffer_clipboard_support;
 pub mod editor_buffer_selection_support;
 pub mod editor_buffer_struct;
-pub mod selection_map;
+pub mod selection_list;
 pub mod system_clipboard_service_provider;
 
 // Re-export.
 pub use editor_buffer_clipboard_support::*;
 pub use editor_buffer_selection_support::*;
 pub use editor_buffer_struct::*;
-pub use selection_map::*;
+pub use selection_list::*;
 pub use system_clipboard_service_provider::*;

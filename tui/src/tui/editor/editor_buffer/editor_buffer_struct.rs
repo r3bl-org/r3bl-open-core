@@ -16,8 +16,7 @@
  */
 
 use std::{collections::HashMap,
-          fmt::{Debug, Formatter, Result},
-          vec::Vec};
+          fmt::{Debug, Formatter, Result}};
 
 use r3bl_core::{call_if_true,
                 ch,
@@ -25,23 +24,27 @@ use r3bl_core::{call_if_true,
                 glyphs,
                 isize,
                 position,
+                string_storage,
                 usize,
+                with_mut,
                 ChUnit,
+                CharStorage,
                 Position,
+                ScrollOffset,
                 Size,
-                TinyVecBackingStore,
+                StringStorage,
                 UnicodeString,
                 UnicodeStringExt};
-use serde::{Deserialize, Serialize};
 use size_of::SizeOf as _;
+use sizing::VecEditorContentLines;
+use smallvec::{smallvec, SmallVec};
 
-use super::SelectionMap;
+use super::SelectionList;
 use crate::{EditorEngine,
             EditorEngineApi,
             HasFocus,
             RenderArgs,
             RenderOps,
-            ScrollOffset,
             DEBUG_TUI_COPY_PASTE,
             DEBUG_TUI_MOD,
             DEFAULT_SYN_HI_FILE_EXT};
@@ -100,10 +103,10 @@ use crate::{EditorEngine,
 /// ## `caret_display_position`
 ///
 /// This is the "display" (or `display_col_index`) and not "logical" (or `logical_index`)
-/// position (both are defined in [r3bl_core::tui_core::graphemes]). Please take
-/// a look at [r3bl_core::tui_core::graphemes::UnicodeString], specifically the
-/// methods in [r3bl_core::tui_core::graphemes::access] for more details on how
-/// the conversion between "display" and "logical" indices is done.
+/// position (both are defined in [r3bl_core::tui_core::graphemes]). Please take a look at
+/// [r3bl_core::tui_core::graphemes::UnicodeString], specifically the methods in
+/// [r3bl_core::tui_core::graphemes::access] for more details on how the conversion
+/// between "display" and "logical" indices is done.
 ///
 /// 1. It represents the current caret position (relative to the
 ///    [style_adjusted_origin_pos](crate::FlexBox::style_adjusted_origin_pos) of the
@@ -183,55 +186,364 @@ use crate::{EditorEngine,
 ///
 /// ## `selection_map`
 ///
-/// The [SelectionMap] is used to keep track of the selections in the buffer. Each entry
-/// in the map represents a row of text in the buffer.
-/// - The row index is the key.
+/// The [SelectionList] is used to keep track of the selections in the buffer. Each entry
+/// in the list represents a row of text in the buffer.
+/// - The row index is the key [crate::editor::RowIndex].
 /// - The value is the [r3bl_core::SelectionRange].
-#[derive(Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Default, size_of::SizeOf)]
 pub struct EditorBuffer {
     pub editor_content: EditorContent,
     pub history: EditorBufferHistory,
-    pub render_cache: HashMap<String, RenderOps>,
+    pub render_cache: HashMap<StringStorage, RenderOps>,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Default)]
-pub struct EditorContent {
-    pub lines: TinyVecBackingStore<UnicodeString>,
-    pub caret_display_position: Position,
-    pub scroll_offset: ScrollOffset,
-    pub maybe_file_extension: Option<String>,
-    pub maybe_file_path: Option<String>,
-    pub selection_map: SelectionMap,
-}
+pub(in crate::tui::editor) mod sizing {
+    use super::*;
 
-impl size_of::SizeOf for EditorContent {
-    fn size_of_children(&self, context: &mut size_of::Context) {
-        context.add(self.lines.size_of().total_bytes());
-        context.add(self.caret_display_position.size_of().total_bytes());
-        context.add(self.scroll_offset.size_of().total_bytes());
-        context.add(self.maybe_file_extension.size_of().total_bytes());
-        context.add(self.maybe_file_path.size_of().total_bytes());
-        context.add(self.selection_map.size_of().total_bytes());
+    pub type VecEditorContentLines = SmallVec<[UnicodeString; DEFAULT_EDITOR_LINES_SIZE]>;
+    const DEFAULT_EDITOR_LINES_SIZE: usize = 32;
+
+    /// The version history is stored on the heap.
+    pub type VecEditorBufferHistoryVersions = Vec<EditorContent>;
+    /// This is the absolute maximum number of undo/redo steps that will ever be stored.
+    pub const MAX_UNDO_REDO_SIZE: usize = 16;
+
+    impl size_of::SizeOf for EditorContent {
+        fn size_of_children(&self, context: &mut size_of::Context) {
+            context.add(size_of_val(&self.lines));
+            context.add(self.caret_display_position.size_of().total_bytes());
+            context.add(self.scroll_offset.size_of().total_bytes());
+            context.add(self.selection_list.size_of().total_bytes());
+            context.add(size_of_val(&self.maybe_file_extension));
+            context.add(size_of_val(&self.maybe_file_path));
+        }
+    }
+
+    impl size_of::SizeOf for EditorBufferHistory {
+        fn size_of_children(&self, context: &mut size_of::Context) {
+            context.add(size_of_val(&self.versions));
+            context.add(self.current_index.size_of().total_bytes());
+        }
     }
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, size_of::SizeOf)]
+#[derive(Clone, PartialEq)]
 pub struct EditorBufferHistory {
-    versions: TinyVecBackingStore<EditorContent>,
-    current_index: isize,
+    // REFACTOR: [ ] consider using a "heap" allocated ring buffer for `versions`
+    pub versions: sizing::VecEditorBufferHistoryVersions,
+    pub current_index: isize,
 }
 
-impl Default for EditorBufferHistory {
-    fn default() -> Self {
-        Self {
-            versions: TinyVecBackingStore::new(),
-            current_index: -1,
+#[derive(Clone, PartialEq, Default)]
+pub struct EditorContent {
+    pub lines: sizing::VecEditorContentLines,
+    pub caret_display_position: Position,
+    pub scroll_offset: ScrollOffset,
+    pub maybe_file_extension: Option<CharStorage>,
+    pub maybe_file_path: Option<StringStorage>,
+    pub selection_list: SelectionList,
+}
+
+mod constructor {
+    use super::*;
+
+    impl EditorBuffer {
+        /// Marker method to make it easy to search for where an empty instance is created.
+        pub fn new_empty(
+            maybe_file_extension: &Option<&str>,
+            maybe_file_path: &Option<&str>,
+        ) -> Self {
+            let it = Self {
+                editor_content: EditorContent {
+                    lines: { smallvec!["".unicode_string()] },
+                    maybe_file_extension: maybe_file_extension.map(|it| it.into()),
+                    maybe_file_path: maybe_file_path.map(|it| it.into()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+
+            call_if_true!(DEBUG_TUI_MOD, {
+                let message =
+                    format!("Construct EditorBuffer {ch}", ch = glyphs::CONSTRUCT_GLYPH);
+                // % is Display, ? is Debug.
+                tracing::info!(
+                    message = message,
+                    file_extension = ?maybe_file_extension,
+                    file_path = ?maybe_file_path
+                );
+            });
+
+            it
+        }
+    }
+}
+
+pub mod cache {
+    use super::*;
+
+    pub fn clear(editor_buffer: &mut EditorBuffer) { editor_buffer.render_cache.clear(); }
+
+    /// Cache key is combination of scroll_offset and window_size.
+    fn generate_key(editor_buffer: &EditorBuffer, window_size: Size) -> StringStorage {
+        string_storage!(
+            "{offset:?}{size:?}",
+            offset = editor_buffer.get_scroll_offset(),
+            size = window_size,
+        )
+    }
+
+    /// Render the content of the editor buffer to the screen from the cache if the content
+    /// has not been modified.
+    ///
+    /// The cache miss occurs if
+    /// - Scroll Offset changes
+    /// - Window size changes
+    /// - Content of the editor changes
+    pub fn render_content(
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
+        window_size: Size,
+        has_focus: &mut HasFocus,
+        render_ops: &mut RenderOps,
+    ) {
+        let key = generate_key(editor_buffer, window_size);
+        if let Some(cached_output) = editor_buffer.render_cache.get(&key) {
+            // Cache hit
+            *render_ops = cached_output.clone();
+            return;
+        }
+
+        // Cache miss, due to either:
+        // - Content has been modified.
+        // - Scroll Offset or Window size has been modified.
+        editor_buffer.render_cache.clear();
+        let render_args = RenderArgs {
+            editor_engine,
+            editor_buffer,
+            has_focus,
+        };
+
+        // Re-render content, generate & write to render_ops.
+        EditorEngineApi::render_content(&render_args, render_ops);
+
+        // Snapshot the render_ops in the cache.
+        editor_buffer.render_cache.insert(key, render_ops.clone());
+    }
+}
+
+pub enum CaretKind {
+    Raw,
+    ScrollAdjusted,
+}
+
+pub mod access_and_mutate {
+    use super::*;
+
+    impl EditorBuffer {
+        pub fn is_file_extension_default(&self) -> bool {
+            match self.editor_content.maybe_file_extension {
+                Some(ref ext) => ext == DEFAULT_SYN_HI_FILE_EXT,
+                None => false,
+            }
+        }
+
+        pub fn has_file_extension(&self) -> bool {
+            self.editor_content.maybe_file_extension.is_some()
+        }
+
+        pub fn get_maybe_file_extension(&self) -> Option<&str> {
+            match self.editor_content.maybe_file_extension {
+                Some(ref s) => Some(s.as_str()),
+                None => None,
+            }
+        }
+
+        pub fn is_empty(&self) -> bool { self.editor_content.lines.is_empty() }
+
+        pub fn len(&self) -> ChUnit { ch(self.editor_content.lines.len()) }
+
+        pub fn get_line_display_width(&self, row_index: ChUnit) -> ChUnit {
+            let index = usize(row_index);
+            if let Some(line) = self.editor_content.lines.get(index) {
+                line.display_width
+            } else {
+                ch(0)
+            }
+        }
+
+        pub fn get_lines(&self) -> &VecEditorContentLines { &self.editor_content.lines }
+
+        pub fn get_as_string_with_comma_instead_of_newlines(&self) -> StringStorage {
+            self.get_as_string_with_separator(", ")
+        }
+
+        pub fn get_as_string_with_newlines(&self) -> StringStorage {
+            self.get_as_string_with_separator("\n")
+        }
+
+        /// Helper function to format the [EditorBuffer] as a delimited string.
+        pub fn get_as_string_with_separator(&self, separator: &str) -> StringStorage {
+            with_mut!(
+                StringStorage::new(),
+                as acc,
+                run {
+                    let lines = &self.editor_content.lines;
+                    for (index, line) in lines.iter().enumerate() {
+                        // Add separator if it's not the first line.
+                        if index > 0 {
+                            acc.push_str(separator);
+                        }
+                        // Append the current line to the accumulator.
+                        acc.push_str(&line.string);
+                    }
+                }
+            )
+        }
+
+        /// You can load a file into the editor buffer using this method. Since this is a
+        /// text editor and not binary editor, it operates on UTF-8 encoded text files and
+        /// not binary files (which just contain `u8`s).
+        ///
+        /// You can convert a `&[u8]` to a `&str` using `std::str::from_utf8`.
+        /// - A `Vec<u8>` can be converted into a `&[u8]` using `&vec[..]` or
+        ///   `vec.as_slice()` or `vec.as_bytes()`.
+        /// - Then you can convert the `&[u8]` to a `&str` using `std::str::from_utf8`.
+        /// - And then call `.lines()` on the `&str` to get an iterator over the lines
+        ///   which can be passed to this method.
+        // BOOKM: Clever Rust, use of `IntoIterator` to efficiently and flexibly load data.
+        pub fn set_lines<'a, I: IntoIterator<Item = &'a str>>(&mut self, lines: I) {
+            // Clear existing lines and lines_us.
+            self.editor_content.lines.clear();
+
+            // Set lines and lines_us in a single loop.
+            for line in lines {
+                self.editor_content.lines.push(line.unicode_string());
+            }
+
+            // Reset caret.
+            self.editor_content.caret_display_position = Position::default();
+
+            // Reset scroll_offset.
+            self.editor_content.scroll_offset = ScrollOffset::default();
+
+            // Empty the content render cache.
+            cache::clear(self);
+
+            // Reset undo/redo history.
+            history::clear(self);
+        }
+
+        /// Returns the current caret position in two variants:
+        /// 1. [CaretKind::Raw] -> The raw caret position not adjusted for scrolling.
+        /// 2. [CaretKind::ScrollAdjusted] -> The caret position adjusted for scrolling using
+        ///    scroll_offset.
+        pub fn get_caret(&self, kind: CaretKind) -> Position {
+            match kind {
+                CaretKind::Raw => self.editor_content.caret_display_position,
+                CaretKind::ScrollAdjusted => {
+                    let col_index = Self::calc_scroll_adj_caret_col(
+                        &self.editor_content.caret_display_position,
+                        &self.editor_content.scroll_offset,
+                    );
+                    let row_index = Self::calc_scroll_adj_caret_row(
+                        &self.editor_content.caret_display_position,
+                        &self.editor_content.scroll_offset,
+                    );
+                    position!(col_index: col_index, row_index: row_index)
+                }
+            }
+        }
+
+        /// Scroll adjusted caret row = caret.row + scroll_offset.row.
+        pub fn calc_scroll_adj_caret_row(
+            caret: &Position,
+            scroll_offset: &ScrollOffset,
+        ) -> usize {
+            usize(caret.row_index + scroll_offset.row_index)
+        }
+
+        /// Scroll adjusted caret col = caret.col + scroll_offset.col.
+        pub fn calc_scroll_adj_caret_col(
+            caret: &Position,
+            scroll_offset: &ScrollOffset,
+        ) -> usize {
+            usize(caret.col_index + scroll_offset.col_index)
+        }
+
+        pub fn get_scroll_offset(&self) -> ScrollOffset {
+            self.editor_content.scroll_offset
+        }
+
+        // REFACTOR: [ ] return struct, not tuple, add drop impl to it, to update lines_us? or drop lines_us?
+        // REFACTOR: [ ] after mutations to lines, lines_us must be recomputed! consider remove this from the struct & computing it only when needed
+        /// Even though this struct is mutable by editor_ops.rs, this method is provided
+        /// to mark when mutable access is made to this struct. This makes it easy to
+        /// determine what code mutates this struct, since it is necessary to validate
+        /// things after mutation quite a bit in editor_ops.rs.
+        pub fn get_mut(&mut self) -> EditorBufferMut<'_> {
+            EditorBufferMut::new(
+                &mut self.editor_content.lines,
+                &mut self.editor_content.caret_display_position,
+                &mut self.editor_content.scroll_offset,
+                &mut self.editor_content.selection_list,
+            )
+        }
+
+        pub fn has_selection(&self) -> bool {
+            !self.editor_content.selection_list.is_empty()
+        }
+
+        pub fn clear_selection(&mut self) { self.editor_content.selection_list.clear(); }
+
+        pub fn get_selection_map(&self) -> &SelectionList {
+            &self.editor_content.selection_list
+        }
+    }
+
+    pub struct EditorBufferMut<'a> {
+        pub lines: &'a mut VecEditorContentLines,
+        pub caret: &'a mut Position,
+        pub scroll_offset: &'a mut ScrollOffset,
+        pub selection_map: &'a mut SelectionList,
+    }
+
+    // BOOKM: Clever Rust, use of Drop to perform transaction close / end.
+    
+    impl Drop for EditorBufferMut<'_> {
+        fn drop(&mut self) {
+            // REFACTOR: [ ] do all the validation here?
+        }
+    }
+
+    impl<'a> EditorBufferMut<'a> {
+        pub fn new(
+            lines: &'a mut VecEditorContentLines,
+            caret: &'a mut Position,
+            scroll_offset: &'a mut ScrollOffset,
+            selection_map: &'a mut SelectionList,
+        ) -> Self {
+            Self {
+                lines,
+                caret,
+                scroll_offset,
+                selection_map,
+            }
         }
     }
 }
 
 pub mod history {
     use super::*;
+
+    impl Default for EditorBufferHistory {
+        fn default() -> Self {
+            Self {
+                versions: sizing::VecEditorBufferHistoryVersions::new(),
+                current_index: -1,
+            }
+        }
+    }
 
     pub fn convert_isize_to_usize(index: isize) -> usize {
         index.try_into().unwrap_or(index as usize)
@@ -338,6 +650,15 @@ pub mod history {
         }
 
         fn push_content(&mut self, content: EditorContent) {
+            // Remove the oldest version if the limit is reached.
+            if self.versions.len() >= sizing::MAX_UNDO_REDO_SIZE {
+                self.versions.remove(0);
+                // Decrement the current_index to maintain the correct position.
+                if self.current_index > 0 {
+                    self.current_index -= 1;
+                }
+            }
+
             self.versions.push(content);
             self.increment_index();
         }
@@ -387,12 +708,67 @@ pub mod history {
     }
 }
 
+mod impl_debug_format {
+    use super::*;
+
+    impl Debug for EditorBuffer {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            write! {
+                f,
+"EditorBuffer [
+  - content: {content:?}
+  - history: {history:?}
+]",
+                content = self.editor_content,
+                history = self.history,
+            }
+        }
+    }
+
+    impl Debug for EditorContent {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            write! {
+                f,
+                "EditorContent [
+    - lines: {lines}, size: {size}
+    - selection_map: {map}
+    - ext: {ext:?}, path:{path:?}, caret: {caret:?}, scroll_offset: {scroll:?}
+    ]",
+                lines = self.lines.len(),
+                size = format_as_kilobytes_with_commas(self.size_of().total_bytes()),
+                ext = self.maybe_file_extension,
+                caret = self.caret_display_position,
+                map = self.selection_list.to_formatted_string(),
+                scroll = self.scroll_offset,
+                path = self.maybe_file_path,
+            }
+        }
+    }
+
+    impl Debug for EditorBufferHistory {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            write! {
+                f,
+"EditorBufferHistory [
+    - stack: {len}, size: {size}
+    - index: {index}
+    ]",
+                len = self.versions.len(),
+                size = format_as_kilobytes_with_commas(self.size_of().total_bytes()),
+                index = self.current_index
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod history_tests {
-    use r3bl_core::{assert_eq2, UnicodeStringExt};
+    use r3bl_core::assert_eq2;
     use smallvec::smallvec;
 
     use super::*;
+
+    // REFACTOR: [ ] add tests for sizing::MAX_UNDO_REDO_SIZE
 
     #[test]
     fn test_push_default() {
@@ -417,7 +793,7 @@ mod history_tests {
         let history_stack = editor_buffer.history.versions;
         assert_eq2!(history_stack.len(), 1);
         assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0].string, "abc");
+        assert_eq2!(history_stack[0].lines[0], "abc".unicode_string());
     }
 
     #[test]
@@ -449,9 +825,9 @@ mod history_tests {
         let history_stack = history.versions;
         assert_eq2!(history_stack.len(), 2);
         assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0].string, "abc");
+        assert_eq2!(history_stack[0].lines[0], "abc".unicode_string());
         assert_eq2!(history_stack[1].lines.len(), 1);
-        assert_eq2!(history_stack[1].lines[0].string, "xyz");
+        assert_eq2!(history_stack[1].lines[0], "xyz".unicode_string());
     }
 
     #[test]
@@ -490,11 +866,11 @@ mod history_tests {
         let history_stack = editor_buffer.history.versions;
         assert_eq2!(history_stack.len(), 3);
         assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0].string, "abc");
+        assert_eq2!(history_stack[0].lines[0], "abc".unicode_string());
         assert_eq2!(history_stack[1].lines.len(), 1);
-        assert_eq2!(history_stack[1].lines[0].string, "def");
+        assert_eq2!(history_stack[1].lines[0], "def".unicode_string());
         assert_eq2!(history_stack[2].lines.len(), 1);
-        assert_eq2!(history_stack[2].lines[0].string, "ghi");
+        assert_eq2!(history_stack[2].lines[0], "ghi".unicode_string());
     }
 
     #[test]
@@ -545,299 +921,8 @@ mod history_tests {
         let history_stack = editor_buffer.history.versions;
         assert_eq2!(history_stack.len(), 2);
         assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0].string, "abc");
+        assert_eq2!(history_stack[0].lines[0], "abc".unicode_string());
         assert_eq2!(history_stack[1].lines.len(), 1);
-        assert_eq2!(history_stack[1].lines[0].string, "def");
-    }
-}
-
-mod constructor {
-    use smallvec::smallvec;
-
-    use super::*;
-
-    impl EditorBuffer {
-        /// Marker method to make it easy to search for where an empty instance is created.
-        pub fn new_empty(
-            maybe_file_extension: &Option<String>,
-            maybe_file_path: &Option<String>,
-        ) -> Self {
-            let it = Self {
-                editor_content: EditorContent {
-                    lines: { smallvec![UnicodeString::new("")] },
-                    maybe_file_extension: maybe_file_extension.clone(),
-                    maybe_file_path: maybe_file_path.clone(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
-
-            call_if_true!(DEBUG_TUI_MOD, {
-                let message =
-                    format!("Construct EditorBuffer {ch}", ch = glyphs::CONSTRUCT_GLYPH);
-                // % is Display, ? is Debug.
-                tracing::info!(
-                    message = message,
-                    file_extension = ?maybe_file_extension,
-                    file_path = ?maybe_file_path
-                );
-            });
-
-            it
-        }
-    }
-}
-
-pub mod cache {
-    use super::*;
-
-    pub fn clear(editor_buffer: &mut EditorBuffer) { editor_buffer.render_cache.clear(); }
-
-    /// Cache key is combination of scroll_offset and window_size.
-    fn generate_key(editor_buffer: &EditorBuffer, window_size: Size) -> String {
-        format!("{}{}", editor_buffer.get_scroll_offset(), window_size,)
-    }
-
-    /// Render the content of the editor buffer to the screen from the cache if the content
-    /// has not been modified.
-    ///
-    /// The cache miss occurs if
-    /// - Scroll Offset changes
-    /// - Window size changes
-    /// - Content of the editor changes
-    pub fn render_content(
-        editor_buffer: &mut EditorBuffer,
-        editor_engine: &mut EditorEngine,
-        window_size: Size,
-        has_focus: &mut HasFocus,
-        render_ops: &mut RenderOps,
-    ) {
-        let key = generate_key(editor_buffer, window_size);
-        if let Some(cached_output) = editor_buffer.render_cache.get(&key) {
-            // Cache hit
-            *render_ops = cached_output.clone();
-            return;
-        }
-
-        // Cache miss, due to either:
-        // - Content has been modified.
-        // - Scroll Offset or Window size has been modified.
-        editor_buffer.render_cache.clear();
-        let render_args = RenderArgs {
-            editor_engine,
-            editor_buffer,
-            has_focus,
-        };
-
-        // Re-render content, generate & write to render_ops.
-        EditorEngineApi::render_content(&render_args, render_ops);
-
-        // Snapshot the render_ops in the cache.
-        editor_buffer.render_cache.insert(key, render_ops.clone());
-    }
-}
-
-pub enum CaretKind {
-    Raw,
-    ScrollAdjusted,
-}
-
-pub mod access_and_mutate {
-    use super::*;
-
-    impl EditorBuffer {
-        pub fn is_file_extension_default(&self) -> bool {
-            match self.editor_content.maybe_file_extension {
-                Some(ref ext) => ext == DEFAULT_SYN_HI_FILE_EXT,
-                None => false,
-            }
-        }
-
-        pub fn has_file_extension(&self) -> bool {
-            self.editor_content.maybe_file_extension.is_some()
-        }
-
-        pub fn get_maybe_file_extension(&self) -> Option<&str> {
-            match self.editor_content.maybe_file_extension {
-                Some(ref s) => Some(s.as_str()),
-                None => None,
-            }
-        }
-
-        pub fn is_empty(&self) -> bool { self.editor_content.lines.is_empty() }
-
-        pub fn len(&self) -> ChUnit { ch(self.editor_content.lines.len()) }
-
-        pub fn get_line_display_width(&self, row_index: ChUnit) -> ChUnit {
-            if let Some(line) = self.editor_content.lines.get(usize(row_index)) {
-                ch(line.display_width)
-            } else {
-                ch(0)
-            }
-        }
-
-        pub fn get_lines(&self) -> &TinyVecBackingStore<UnicodeString> {
-            &self.editor_content.lines
-        }
-
-        pub fn get_as_string_with_comma_instead_of_newlines(&self) -> String {
-            self.get_lines()
-                .iter()
-                // PERF: [ ] perf
-                .map(|it| it.string.to_string())
-                .collect::<Vec<String>>()
-                .join(", ")
-        }
-
-        pub fn get_as_string_with_newlines(&self) -> String {
-            self.get_lines()
-                .iter()
-                // PERF: [ ] perf
-                .map(|it| it.string.to_string())
-                .collect::<Vec<String>>()
-                .join("\n")
-        }
-
-        pub fn set_lines(&mut self, lines: &[&str]) {
-            // Set lines.
-            self.editor_content.lines =
-                lines.iter().map(|line| line.unicode_string()).collect();
-
-            // Reset caret.
-            self.editor_content.caret_display_position = Position::default();
-
-            // Reset scroll_offset.
-            self.editor_content.scroll_offset = ScrollOffset::default();
-
-            // Empty the content render cache.
-            cache::clear(self);
-
-            // Reset undo/redo history.
-            history::clear(self);
-        }
-
-        /// Returns the current caret position in two variants:
-        /// 1. [CaretKind::Raw] -> The raw caret position not adjusted for scrolling.
-        /// 2. [CaretKind::ScrollAdjusted] -> The caret position adjusted for scrolling using
-        ///    scroll_offset.
-        pub fn get_caret(&self, kind: CaretKind) -> Position {
-            match kind {
-                CaretKind::Raw => self.editor_content.caret_display_position,
-                CaretKind::ScrollAdjusted => {
-                    position! {
-                      col_index: Self::calc_scroll_adj_caret_col(&self.editor_content.caret_display_position, &self.editor_content.scroll_offset),
-                      row_index: Self::calc_scroll_adj_caret_row(&self.editor_content.caret_display_position, &self.editor_content.scroll_offset)
-                    }
-                }
-            }
-        }
-
-        /// Scroll adjusted caret row = caret.row + scroll_offset.row.
-        pub fn calc_scroll_adj_caret_row(
-            caret: &Position,
-            scroll_offset: &ScrollOffset,
-        ) -> usize {
-            usize(caret.row_index + scroll_offset.row_index)
-        }
-
-        /// Scroll adjusted caret col = caret.col + scroll_offset.col.
-        pub fn calc_scroll_adj_caret_col(
-            caret: &Position,
-            scroll_offset: &ScrollOffset,
-        ) -> usize {
-            usize(caret.col_index + scroll_offset.col_index)
-        }
-
-        pub fn get_scroll_offset(&self) -> ScrollOffset {
-            self.editor_content.scroll_offset
-        }
-
-        /// Returns:
-        /// 1. /* lines */ &mut `Vec<UnicodeString>`,
-        /// 2. /* caret */ &mut Position,
-        /// 3. /* scroll_offset */ &mut ScrollOffset,
-        ///
-        /// Even though this struct is mutable by editor_ops.rs, this method is provided
-        /// to mark when mutable access is made to this struct. This makes it easy to
-        /// determine what code mutates this struct, since it is necessary to validate
-        /// things after mutation quite a bit in editor_ops.rs.
-        pub fn get_mut(
-            &mut self,
-        ) -> (
-            /* lines */ &mut TinyVecBackingStore<UnicodeString>,
-            /* caret */ &mut Position,
-            /* scroll_offset */ &mut ScrollOffset,
-            /* selection_map */ &mut SelectionMap,
-        ) {
-            (
-                &mut self.editor_content.lines,
-                &mut self.editor_content.caret_display_position,
-                &mut self.editor_content.scroll_offset,
-                &mut self.editor_content.selection_map,
-            )
-        }
-
-        pub fn has_selection(&self) -> bool {
-            !self.editor_content.selection_map.is_empty()
-        }
-
-        pub fn clear_selection(&mut self) { self.editor_content.selection_map.clear(); }
-
-        pub fn get_selection_map(&self) -> &SelectionMap {
-            &self.editor_content.selection_map
-        }
-    }
-}
-
-mod impl_debug_format {
-    use super::*;
-
-    impl Debug for EditorBuffer {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            write! {
-                f,
-"EditorBuffer [
-  - content: {content:?}
-  - history: {history:?}
-]",
-                content = self.editor_content,
-                history = self.history,
-            }
-        }
-    }
-
-    impl Debug for EditorContent {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            write! {
-                f,
-"EditorContent [
-    - lines: {lines}, size: {size}
-    - selection_map: {map}
-    - ext: {ext:?}, path:{path:?}, caret: {caret:?}, scroll_offset: {scroll:?}
-    ]",
-                lines = self.lines.len(),
-                size = format_as_kilobytes_with_commas(self.lines.size_of().total_bytes()),
-                ext = self.maybe_file_extension,
-                caret = self.caret_display_position,
-                map = self.selection_map.to_formatted_string(),
-                scroll = self.scroll_offset,
-                path = self.maybe_file_path,
-            }
-        }
-    }
-
-    impl Debug for EditorBufferHistory {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            write! {
-                f,
-"EditorBufferHistory [
-    - stack: {len}, size: {size}
-    - index: {index}
-    ]",
-                len = self.versions.len(),
-                size = format_as_kilobytes_with_commas(self.versions.size_of().total_bytes()),
-                index = self.current_index
-            }
-        }
+        assert_eq2!(history_stack[1].lines[0], "def".unicode_string());
     }
 }
