@@ -17,9 +17,7 @@
 
 use std::fmt::Debug;
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ZOrder {
     Normal,
     High,

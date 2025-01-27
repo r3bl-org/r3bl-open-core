@@ -18,7 +18,6 @@
 use core::fmt::Debug;
 
 use r3bl_ansi_color::TransformColor;
-use serde::{Deserialize, Serialize};
 
 use super::parse_hex_color;
 use crate::common::{CommonError, CommonErrorType, CommonResult};
@@ -118,7 +117,7 @@ macro_rules! color {
 ///   and
 ///   [`ColorSupport`](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/color_wheel/detect_color_support/enum.ColorSupport.html).
 /// - If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not be downgraded.
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy, Hash, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Copy, Hash, size_of::SizeOf)]
 pub enum TuiColor {
     /// Resets the terminal color.
     Reset,
@@ -138,7 +137,7 @@ pub enum TuiColor {
     Ansi(AnsiValue),
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy, Hash, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Copy, Hash, size_of::SizeOf)]
 pub enum ANSIBasicColor {
     /// Black color.
     Black,
@@ -189,18 +188,14 @@ pub enum ANSIBasicColor {
     DarkCyan,
 }
 
-#[derive(
-    Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Copy, Debug, size_of::SizeOf,
-)]
+#[derive(Clone, PartialEq, Eq, Hash, Copy, Debug, size_of::SizeOf)]
 pub struct RgbValue {
     pub red: u8,
     pub green: u8,
     pub blue: u8,
 }
 
-#[derive(
-    Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Copy, Debug, size_of::SizeOf,
-)]
+#[derive(Clone, PartialEq, Eq, Hash, Copy, Debug, size_of::SizeOf)]
 pub struct AnsiValue {
     pub color: u8,
 }
@@ -488,33 +483,33 @@ mod debug_helpers {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
                 TuiColor::Rgb(RgbValue { red, green, blue }) => {
-                    f.write_fmt(format_args!("{red},{green},{blue}"))
+                    write!(f, "{red},{green},{blue}")
                 }
                 TuiColor::Ansi(ansi_value) => {
-                    f.write_fmt(format_args!("ansi_value({})", ansi_value.color))
+                    write!(f, "ansi_value({})", ansi_value.color)
                 }
-                TuiColor::Reset => f.write_fmt(format_args!("reset")),
+                TuiColor::Reset => write!(f, "reset"),
                 TuiColor::Basic(basic_color) => match basic_color {
-                    ANSIBasicColor::Black => f.write_fmt(format_args!("black")),
-                    ANSIBasicColor::DarkGrey => f.write_fmt(format_args!("dark_grey")),
-                    ANSIBasicColor::Red => f.write_fmt(format_args!("red")),
-                    ANSIBasicColor::DarkRed => f.write_fmt(format_args!("dark_red")),
-                    ANSIBasicColor::Green => f.write_fmt(format_args!("green")),
-                    ANSIBasicColor::DarkGreen => f.write_fmt(format_args!("dark_green")),
-                    ANSIBasicColor::Yellow => f.write_fmt(format_args!("yellow")),
+                    ANSIBasicColor::Black => write!(f, "black"),
+                    ANSIBasicColor::DarkGrey => write!(f, "dark_grey"),
+                    ANSIBasicColor::Red => write!(f, "red"),
+                    ANSIBasicColor::DarkRed => write!(f, "dark_red"),
+                    ANSIBasicColor::Green => write!(f, "green"),
+                    ANSIBasicColor::DarkGreen => write!(f, "dark_green"),
+                    ANSIBasicColor::Yellow => write!(f, "yellow"),
                     ANSIBasicColor::DarkYellow => {
-                        f.write_fmt(format_args!("dark_yellow"))
+                        write!(f, "dark_yellow")
                     }
-                    ANSIBasicColor::Blue => f.write_fmt(format_args!("blue")),
-                    ANSIBasicColor::DarkBlue => f.write_fmt(format_args!("dark_blue")),
-                    ANSIBasicColor::Magenta => f.write_fmt(format_args!("magenta")),
+                    ANSIBasicColor::Blue => write!(f, "blue"),
+                    ANSIBasicColor::DarkBlue => write!(f, "dark_blue"),
+                    ANSIBasicColor::Magenta => write!(f, "magenta"),
                     ANSIBasicColor::DarkMagenta => {
-                        f.write_fmt(format_args!("dark_magenta"))
+                        write!(f, "dark_magenta")
                     }
-                    ANSIBasicColor::Cyan => f.write_fmt(format_args!("cyan")),
-                    ANSIBasicColor::DarkCyan => f.write_fmt(format_args!("dark_cyan")),
-                    ANSIBasicColor::White => f.write_fmt(format_args!("white")),
-                    ANSIBasicColor::Grey => f.write_fmt(format_args!("grey")),
+                    ANSIBasicColor::Cyan => write!(f, "cyan"),
+                    ANSIBasicColor::DarkCyan => write!(f, "dark_cyan"),
+                    ANSIBasicColor::White => write!(f, "white"),
+                    ANSIBasicColor::Grey => write!(f, "grey"),
                 },
             }
         }

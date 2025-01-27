@@ -14,12 +14,12 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use r3bl_core::{call_if_true,
                 ch,
                 glyphs,
                 position,
                 send_signal,
+                string_storage,
                 throws_with_return,
                 Ansi256GradientIndex,
                 ColorWheel,
@@ -28,7 +28,7 @@ use r3bl_core::{call_if_true,
                 CommonResult,
                 GradientGenerationPolicy,
                 TextColorizationPolicy,
-                UnicodeStringExt};
+                UnicodeString};
 use r3bl_tui::{render_ops,
                render_pipeline,
                BoxedSafeComponent,
@@ -180,8 +180,8 @@ mod column_render_component_impl_component_trait {
                 let ColumnComponentData { color_wheel, .. } = &mut self.data;
 
                 // Fixed strings.
-                let line_1 = format!("box.id:{} - Hello", current_box.id);
-                let line_2 = format!("box.id:{} - World", current_box.id);
+                let line_1 = string_storage!("box.id:{a:?} - Hello", a = current_box.id);
+                let line_2 = string_storage!("box.id:{a:?} - World", a = current_box.id);
 
                 // Setup intermediate vars.
                 let box_origin_pos = current_box.style_adjusted_origin_pos; // Adjusted for style margin (if any).
@@ -192,11 +192,13 @@ mod column_render_component_impl_component_trait {
 
                 let mut render_ops = render_ops!();
 
-                let line_1_us = line_1.unicode_string();
-                let line_1_trunc = line_1_us.truncate_to_fit_size(box_bounds_size);
+                let line_1_us = UnicodeString::new(&line_1);
+                let line_1_trunc_str = line_1_us.truncate_to_fit_size(box_bounds_size);
+                let line_1_trunc_us = UnicodeString::new(line_1_trunc_str);
 
-                let line_2_us = line_2.unicode_string();
-                let line_2_trunc = line_2_us.truncate_to_fit_size(box_bounds_size);
+                let line_2_us = UnicodeString::new(&line_2);
+                let line_2_trunc_str = line_2_us.truncate_to_fit_size(box_bounds_size);
+                let line_2_trunc_us = UnicodeString::new(line_2_trunc_str);
 
                 // Line 1.
                 {
@@ -211,7 +213,7 @@ mod column_render_component_impl_component_trait {
                         @render_styled_texts_into render_ops
                         =>
                         color_wheel.colorize_into_styled_texts(
-                            &line_1_trunc.unicode_string(),
+                            &line_1_trunc_us,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
                         )
@@ -232,7 +234,7 @@ mod column_render_component_impl_component_trait {
                         @render_styled_texts_into render_ops
                         =>
                         color_wheel.colorize_into_styled_texts(
-                            &line_2_trunc.unicode_string(),
+                            &line_2_trunc_us,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
                         )
@@ -243,7 +245,7 @@ mod column_render_component_impl_component_trait {
                 // Paint is_focused.
                 {
                     row += 1;
-                    col = line_2_trunc.unicode_string().display_width / 2 - 1;
+                    col = line_2_trunc_us.display_width / 2 - 1;
                     render_ops! {
                       @add_to render_ops
                       =>
@@ -264,13 +266,13 @@ mod column_render_component_impl_component_trait {
 
                 // Log pipeline.
                 call_if_true!(DEBUG_TUI_MOD, {
-                    let message = format!(
+                    let message = string_storage!(
                         "ColumnComponent::render {ch}",
                         ch = glyphs::RENDER_GLYPH
                     );
                     // % is Display, ? is Debug.
                     tracing::info!(
-                        message = message,
+                        message = %message,
                         current_box = ?current_box,
                         box_origin_pos = ?box_origin_pos,
                         box_bounds_size = ?box_bounds_size,

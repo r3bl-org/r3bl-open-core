@@ -14,31 +14,51 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use std::{collections::HashMap,
-          fmt::{Debug, Display}};
+use std::fmt::Debug;
 
 use crossterm::style::Stylize;
-use r3bl_core::{position,
+use r3bl_core::{glyphs::{CUT_GLYPH,
+                         DIRECTION_GLYPH,
+                         ELLIPSIS_GLYPH,
+                         TIRE_MARKS_GLYPH,
+                         VERT_LINE_DASHED_GLYPH},
+                position,
                 usize,
                 CaretMovementDirection,
                 ChUnit,
                 Position,
-                SelectionRange};
-use serde::{Deserialize, Serialize};
+                SelectionRange,
+                StringStorage,
+                VecArray};
+use sizing::VecRowIndex;
+use smallvec::{smallvec, SmallVec};
 
 use crate::{DeleteSelectionWith, EditorBuffer};
 
+mod sizing {
+    use super::*;
+    pub(crate) type VecRowIndex = SmallVec<[RowIndex; ROW_INDEX_SIZE]>;
+    const ROW_INDEX_SIZE: usize = 32;
+}
+
 /// Key is the row index, value is the selected range in that line (display col index
-/// range).
+/// range). This list is always sorted by row index.
 ///
 /// Note that both column indices are:
 /// - [Scroll adjusted](crate::editor_buffer_struct::CaretKind::ScrollAdjusted).
 /// - And not [raw](crate::editor_buffer_struct::CaretKind::Raw).
-#[derive(Clone, PartialEq, Serialize, Deserialize, Default, size_of::SizeOf)]
-pub struct SelectionMap {
-    pub map: HashMap<RowIndex, SelectionRange>,
-    pub maybe_previous_direction: Option<CaretMovementDirection>,
+#[derive(Clone, PartialEq, Default)]
+pub struct SelectionList {
+    // REFACTOR: [x] consider making this a fixed size array (doesn't need to be a map which is heap allocated)
+    list: VecArray<(RowIndex, SelectionRange)>,
+    maybe_previous_direction: Option<CaretMovementDirection>,
+}
+
+impl size_of::SizeOf for SelectionList {
+    fn size_of_children(&self, context: &mut size_of::Context) {
+        context.add(self.maybe_previous_direction.size_of().total_bytes());
+        context.add(self.list.size_of().total_bytes());
+    }
 }
 
 pub type RowIndex = ChUnit;
@@ -51,7 +71,7 @@ fn test_selection_map_direction_change() {
 
     // Not set.
     {
-        let map = SelectionMap {
+        let map = SelectionList {
             maybe_previous_direction: None,
             ..Default::default()
         };
@@ -65,7 +85,7 @@ fn test_selection_map_direction_change() {
 
     // Different.
     {
-        let map = SelectionMap {
+        let map = SelectionList {
             maybe_previous_direction: Some(CaretMovementDirection::Up),
             ..Default::default()
         };
@@ -79,7 +99,7 @@ fn test_selection_map_direction_change() {
 
     // Same.
     {
-        let map = SelectionMap {
+        let map = SelectionList {
             maybe_previous_direction: Some(CaretMovementDirection::Down),
             ..Default::default()
         };
@@ -99,7 +119,7 @@ pub enum DirectionChangeResult {
 }
 
 // Functionality.
-impl SelectionMap {
+impl SelectionList {
     pub fn get_caret_at_start_of_range(
         &self,
         _with: DeleteSelectionWith, /* Makes no difference for now. */
@@ -110,7 +130,7 @@ impl SelectionMap {
         let first_row_index = indices.first()?;
         let last_row_index = indices.first()?;
         Some(position!(
-            col_index: self.map.get(last_row_index)?.start_display_col_index,
+            col_index: self.get(*last_row_index)?.start_display_col_index,
             row_index: *first_row_index
         ))
     }
@@ -118,50 +138,62 @@ impl SelectionMap {
     pub fn get_selected_lines<'a>(
         &self,
         buffer: &'a EditorBuffer,
-    ) -> HashMap<RowIndex, &'a str> {
-        let mut it = HashMap::new();
+    ) -> VecArray<(RowIndex, &'a str)> {
+        let mut acc = VecArray::new();
 
         let lines = buffer.get_lines();
-        let row_indices = self.get_ordered_indices();
+        let ordered_row_indices = self.get_ordered_indices();
 
-        for row_index in row_indices {
-            if let Some(selection_range) = self.map.get(&row_index) {
-                if let Some(line) = lines.get(usize(row_index)) {
-                    let selected_text = line.clip_to_range(*selection_range);
-                    it.insert(row_index, selected_text);
+        for row_index in ordered_row_indices {
+            if let Some(selection_range) = self.get(row_index) {
+                if let Some(line_us) = lines.get(usize(row_index)) {
+                    let selected_text = line_us.clip_to_range(selection_range);
+                    acc.push((row_index, selected_text));
                 }
             }
         }
 
-        it
+        acc
     }
 
-    pub fn get_ordered_indices(&self) -> Vec<RowIndex> {
-        let row_indices = {
-            let mut it: Vec<ChUnit> = self.map.keys().copied().collect();
-            it.sort();
-            it
-        };
-        row_indices
+    /// This is used by the editor to get the ordered row indices, so they can be used to
+    /// iterate through the selection map for selecting text.
+    pub fn get_ordered_indices(&self) -> VecRowIndex {
+        let mut acc = VecRowIndex::with_capacity(self.list.len());
+        for (row_index, _) in &self.list {
+            if !acc.contains(row_index) {
+                acc.push(*row_index);
+            }
+        }
+        acc
     }
 
-    pub fn is_empty(&self) -> bool { self.map.is_empty() }
+    /// Primarily for testing.
+    pub fn get_ordered_list(&self) -> &VecArray<(RowIndex, SelectionRange)> { &self.list }
+
+    pub fn is_empty(&self) -> bool { self.list.is_empty() }
 
     pub fn clear(&mut self) {
-        self.map.clear();
+        self.list.clear();
         self.maybe_previous_direction = None;
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&RowIndex, &SelectionRange)> {
-        self.map.iter()
+        self.list.iter().map(|(index, range)| (index, range))
     }
 
-    pub fn get(&self, row_index: RowIndex) -> Option<&SelectionRange> {
-        self.map.get(&row_index)
+    pub fn get(&self, row_index: RowIndex) -> Option<SelectionRange> {
+        self.list.iter().find_map(|(index, range)| {
+            if *index == row_index {
+                Some(*range)
+            } else {
+                None
+            }
+        })
     }
 
     /// Compares the given direction (`current_direction`) with the
-    /// [maybe_previous_direction](Self::maybe_previous_direction).
+    /// `maybe_previous_direction` field.
     /// - If there is no existing previous direction, it returns
     ///   [DirectionChangeResult::DirectionIsTheSame].
     /// - Otherwise it compares the two and returns [DirectionChangeResult] (whether
@@ -178,18 +210,29 @@ impl SelectionMap {
         DirectionChangeResult::DirectionIsTheSame
     }
 
+    /// The internal list is sorted once an insertion is made, so that `list` is always
+    /// sorted.
     pub fn insert(
         &mut self,
         row_index: RowIndex,
         selection_range: SelectionRange,
         direction: CaretMovementDirection,
     ) {
-        self.map.insert(row_index, selection_range);
+        if let Some(existing_position) =
+            self.list.iter().position(|(index, _)| *index == row_index)
+        {
+            self.list[existing_position] = (row_index, selection_range);
+        } else {
+            self.list.push((row_index, selection_range));
+        }
+        self.list.sort_by_key(|(row_index, _)| *row_index);
         self.update_previous_direction(direction);
     }
 
     pub fn remove(&mut self, row_index: RowIndex, direction: CaretMovementDirection) {
-        self.map.remove(&row_index);
+        if let Some(pos) = self.list.iter().position(|(index, _)| *index == row_index) {
+            self.list.remove(pos);
+        }
         self.update_previous_direction(direction);
     }
 
@@ -200,79 +243,81 @@ impl SelectionMap {
     pub fn remove_previous_direction(&mut self) { self.maybe_previous_direction = None; }
 
     /// Is there a selection range for the row_index of `row_index_arg` in the map?
-    /// - The [map](Self::map) contains key value pairs of [RowIndex] and
-    ///   [SelectionRange].
-    /// - So if the row_index can't be found in the map, it means that the row is not
-    ///   selected, aka [RowLocationInSelectionMap::Overflow].
+    /// - The `list` field contains tuples of [RowIndex] and [SelectionRange].
+    /// - So if the `row_index` can't be found in the map, it means that the row is not
+    ///   selected, aka [RowLocationInSelectionList::Overflow].
     /// - Otherwise it means that some range of columns in that row is selected, aka
-    ///   [RowLocationInSelectionMap::Contained].
-    pub fn locate_row(&self, row_index_arg: ChUnit) -> RowLocationInSelectionMap {
-        for (row_index, _range) in self.map.iter() {
+    ///   [RowLocationInSelectionList::Contained].
+    pub fn locate_row(&self, row_index_arg: ChUnit) -> RowLocationInSelectionList {
+        for (row_index, _range) in self.list.iter() {
             if &row_index_arg == row_index {
-                return RowLocationInSelectionMap::Contained;
+                return RowLocationInSelectionList::Contained;
             }
         }
-        RowLocationInSelectionMap::Overflow
+        RowLocationInSelectionList::Overflow
     }
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Copy, Debug)]
-pub enum RowLocationInSelectionMap {
+#[derive(Clone, PartialEq, Copy, Debug)]
+pub enum RowLocationInSelectionList {
     Overflow,
     Contained,
 }
 
 // Formatter for Debug and Display.
 mod impl_debug_format {
+    use r3bl_core::{join, string_storage};
+
     use super::*;
+
     const PAD_LEFT: &str = "      ";
     const EMPTY_STR: &str = "--empty--";
 
-    use r3bl_core::glyphs::{CUT_GLYPH,
-                            DIRECTION_GLYPH,
-                            ELLIPSIS_GLYPH,
-                            TIRE_MARKS_GLYPH,
-                            VERT_LINE_DASHED_GLYPH};
+    impl SelectionList {
+        /// Get the output from [Self::to_unformatted_string] and format it with colors.
+        /// And return that.
+        pub fn to_formatted_string(&self) -> StringStorage {
+            let mut selection_list_string = self.to_unformatted_string();
 
-    impl SelectionMap {
-        pub fn to_formatted_string(&self) -> String {
-            let mut selection_map_vec_output = self.to_unformatted_string();
-
-            let is_empty = selection_map_vec_output
+            let is_empty = selection_list_string
                 .iter()
                 .any(|line| line.contains(EMPTY_STR));
 
             // Format the output.
-            for line in selection_map_vec_output.iter_mut() {
+            for line in selection_list_string.iter_mut() {
                 if is_empty {
-                    *line = line.to_string().blue().on_dark_grey().to_string();
+                    *line = line.to_string().blue().on_dark_grey().to_string().into();
                 } else {
-                    *line = line.to_string().green().on_dark_grey().to_string();
+                    *line = line.to_string().green().on_dark_grey().to_string().into();
                 }
             }
-            for line in selection_map_vec_output.iter_mut() {
-                *line = format!("{PAD_LEFT}{line}");
+            for line in selection_list_string.iter_mut() {
+                *line = string_storage!("{PAD_LEFT}{line}");
             }
 
-            let selection_map_str = selection_map_vec_output.join("\n");
+            let selection_list_string = join!(
+                from: selection_list_string,
+                each: item,
+                delim: "\n",
+                format: "{item}",
+            );
 
-            let selection_map_str = format! {
-"SelectionMap: [
-{selection_map_str}
+            string_storage! {
+"SelectionList: [
+{selection_list_string}
 {PAD_LEFT}]"
-            };
-
-            selection_map_str
+            }
         }
 
-        pub fn to_unformatted_string(&self) -> Vec<String> {
+        /// Returns a [VecArray] of [StringStorage] that represent the selection map.
+        pub fn to_unformatted_string(&self) -> VecArray<StringStorage> {
             let mut vec_output = {
-                let mut it = vec![];
+                let mut acc = smallvec![];
                 let sorted_indices = self.get_ordered_indices();
                 for row_index in sorted_indices.iter() {
-                    if let Some(selected_range) = self.map.get(row_index) {
-                        it.push(format!(
-                            "{first_ch} {sep}row: {row_idx}, col: [{col_start}{dots}{col_end}]{sep}",
+                    if let Some(selected_range) = self.get(*row_index) {
+                        acc.push(string_storage!(
+                            "{first_ch} {sep}row: {row_idx:?}, col: [{col_start:?}{dots}{col_end:?}]{sep}",
                             first_ch = CUT_GLYPH,
                             sep = VERT_LINE_DASHED_GLYPH,
                             row_idx = row_index,
@@ -282,16 +327,16 @@ mod impl_debug_format {
                         ));
                     }
                 }
-                it
+                acc
             };
 
             if vec_output.is_empty() {
                 vec_output.push(
-                    format!("{TIRE_MARKS_GLYPH} {VERT_LINE_DASHED_GLYPH}{EMPTY_STR}{VERT_LINE_DASHED_GLYPH}")
+                    string_storage!("{TIRE_MARKS_GLYPH} {VERT_LINE_DASHED_GLYPH}{EMPTY_STR}{VERT_LINE_DASHED_GLYPH}")
                 );
             }
 
-            vec_output.push(format!(
+            vec_output.push(string_storage!(
                 "{ch} prev_dir: {prev_dir:?}",
                 ch = DIRECTION_GLYPH,
                 prev_dir = self.maybe_previous_direction
@@ -302,13 +347,7 @@ mod impl_debug_format {
     }
 
     // Other trait impls.
-    impl Display for SelectionMap {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.to_formatted_string())
-        }
-    }
-
-    impl Debug for SelectionMap {
+    impl Debug for SelectionList {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "{}", self.to_formatted_string())
         }

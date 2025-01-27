@@ -24,6 +24,7 @@ use r3bl_core::{call_if_true,
                 requested_size_percent,
                 send_signal,
                 size,
+                string_storage,
                 throws,
                 throws_with_return,
                 tui_styled_text,
@@ -44,7 +45,7 @@ use r3bl_core::{call_if_true,
                 TextColorizationPolicy,
                 TuiColor,
                 TuiStylesheet,
-                UnicodeStringExt};
+                UnicodeString};
 use r3bl_macro::tui_style;
 use r3bl_tui::{box_end,
                box_props,
@@ -499,14 +500,14 @@ mod status_bar {
         let mut texts = tui_styled_texts!();
 
         let lolcat_st = {
-            let date_time: DateTime<Local> = Local::now();
-            let time_str = date_time.format("%H:%M:%S").to_string();
-            let time_us = format!(" 🦜 {} ", time_str).unicode_string();
+            let now: DateTime<Local> = Local::now();
+            let time_string = string_storage!(" 🦜 {} ", now.format("%H:%M:%S"));
+            let time_string_us = UnicodeString::new(&time_string);
             let style = tui_style! {
                 color_fg: TuiColor::Basic(ANSIBasicColor::Black)
             };
             app.data.lolcat_bg.colorize_into_styled_texts(
-                &time_us,
+                &time_string_us,
                 GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                 TextColorizationPolicy::ColorEachCharacter(Some(style)),
             )

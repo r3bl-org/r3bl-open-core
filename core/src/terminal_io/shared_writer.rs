@@ -15,11 +15,15 @@
  *   limitations under the License.
  */
 
-use std::io::{self, Write};
+use std::{io::{self, Write},
+          str::from_utf8};
+
+use smallstr::SmallString;
 
 use crate::ok;
 
-pub type Text = Vec<u8>;
+pub type Text = SmallString<[u8; DEFAULT_TEXT_SIZE]>;
+pub const DEFAULT_TEXT_SIZE: usize = 128;
 
 /// Cloneable object that implements [`Write`] and allows for sending data to the terminal
 /// without messing up its associated `Readline` instance (in the `r3bl_terminal_async`
@@ -82,7 +86,7 @@ impl SharedWriter {
     /// [`tokio::sync::mpsc::Sender`] end of the channel.
     pub fn new(line_sender: tokio::sync::mpsc::Sender<LineStateControlSignal>) -> Self {
         Self {
-            buffer: Default::default(),
+            buffer: Text::new(),
             line_state_control_channel_sender: line_sender,
             silent_error: false,
             uuid: uuid::Uuid::new_v4(),
@@ -98,7 +102,7 @@ impl SharedWriter {
 impl Clone for SharedWriter {
     fn clone(&self) -> Self {
         Self {
-            buffer: Default::default(),
+            buffer: Text::new(),
             line_state_control_channel_sender: self
                 .line_state_control_channel_sender
                 .clone(),
@@ -113,10 +117,18 @@ impl Write for SharedWriter {
         let self_buffer = &mut self.buffer;
 
         // Append the payload to self_buffer.
-        self_buffer.extend_from_slice(payload);
+        match from_utf8(payload) {
+            Ok(str_payload) => self_buffer.push_str(str_payload),
+            Err(_) => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Invalid UTF-8 sequence",
+                ));
+            }
+        }
 
         // If self_buffer ends with a newline, send it to the line_sender.
-        if self_buffer.ends_with(b"\n") {
+        if self_buffer.as_str().ends_with('\n') {
             match self
                 .line_state_control_channel_sender
                 .try_send(LineStateControlSignal::Line(self_buffer.clone()))
@@ -169,7 +181,7 @@ mod tests {
         let (line_sender, _) = tokio::sync::mpsc::channel(1_000);
         let mut shared_writer = SharedWriter::new(line_sender);
         shared_writer.write_all(b"Hello, World!").unwrap();
-        assert_eq!(shared_writer.buffer, b"Hello, World!");
+        assert_eq!(shared_writer.buffer, "Hello, World!");
     }
 
     #[tokio::test]
@@ -180,11 +192,11 @@ mod tests {
 
         shared_writer.write_all(b"Hello, World!").unwrap();
         shared_writer.flush().unwrap();
-        assert_eq!(shared_writer.buffer, b"");
+        assert_eq!(shared_writer.buffer, "");
 
         let it = line_receiver.recv().await.unwrap();
         if let LineStateControlSignal::Line(bytes) = it {
-            assert_eq!(bytes, b"Hello, World!".to_vec());
+            assert_eq!(bytes, "Hello, World!");
         } else {
             panic!("Expected LineStateControlSignal::Line, got something else");
         }
@@ -201,7 +213,7 @@ mod tests {
 
         let it = line_receiver.recv().await.unwrap();
         if let LineStateControlSignal::Line(bytes) = it {
-            assert_eq!(bytes, b"Hello, World!\n".to_vec());
+            assert_eq!(bytes, "Hello, World!\n");
         } else {
             panic!("Expected LineStateControlSignal::Line, got something else");
         }

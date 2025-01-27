@@ -21,7 +21,7 @@ use nom::{branch::alt,
           multi::{many0, many1},
           sequence::{preceded, terminated, tuple},
           IResult};
-use r3bl_core::MicroVecBackingStore;
+use r3bl_core::{char_storage, VecArray};
 use smallvec::smallvec;
 
 use super::{parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
@@ -55,10 +55,10 @@ pub fn parse_block_smart_list(
         // start of the line.
         let (_, fragments_in_line) = {
             let parse_checkbox_policy = {
-                let checked = format!("{}{}", CHECKED, SPACE);
-                let unchecked = format!("{}{}", UNCHECKED, SPACE);
-                if line.content.starts_with(&checked)
-                    || line.content.starts_with(&unchecked)
+                let checked = char_storage!("{}{}", CHECKED, SPACE);
+                let unchecked = char_storage!("{}{}", UNCHECKED, SPACE);
+                if line.content.starts_with(checked.as_str())
+                    || line.content.starts_with(unchecked.as_str())
                 {
                     CheckboxParsePolicy::ParseCheckbox
                 } else {
@@ -496,7 +496,7 @@ pub struct SmartListIR<'a> {
     /// Unordered or ordered.
     pub bullet_kind: BulletKind,
     /// Does not contain any bullets.
-    pub content_lines: MicroVecBackingStore<SmartListLine<'a>>,
+    pub content_lines: VecArray<SmartListLine<'a>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -645,7 +645,7 @@ pub fn parse_smart_list_content_lines<'a>(
     input: &'a str,
     indent: usize,
     bullet: &'a str,
-) -> IResult</* remainder */ &'a str, /* lines */ MicroVecBackingStore<SmartListLine<'a>>> {
+) -> IResult</* remainder */ &'a str, /* lines */ VecArray<SmartListLine<'a>>> {
     let indent_padding = SPACE.repeat(indent);
     let indent_padding = indent_padding.as_str();
 
@@ -691,8 +691,8 @@ pub fn parse_smart_list_content_lines<'a>(
             )(input)?;
 
             // Convert `rest` into a Vec<&str> that contains the output lines.
-            let output_lines: MicroVecBackingStore<SmartListLine<'_>> = {
-                let mut it = MicroVecBackingStore::with_capacity(rest.len() + 1);
+            let output_lines: VecArray<SmartListLine<'_>> = {
+                let mut it = VecArray::with_capacity(rest.len() + 1);
 
                 it.push(SmartListLine {
                     indent,

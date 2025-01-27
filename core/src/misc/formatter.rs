@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2024 R3BL LLC
+ *   Copyright (c) 2025 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,15 @@
  *   limitations under the License.
  */
 
+use crate::StringStorage;
+
 /// This macro is used to format an option. If the option is [Some], it will return the
 /// value. It is meant for use with [std::fmt::Formatter::debug_struct].
 ///
-/// When using this, make sure to import [FormatMsg] as well, like this:
+/// When using this, make sure to import [FormatOptionMsg] as well, like this:
+///
 /// ```rust
-/// use r3bl_tui::{format_option, FormatMsg};
+/// use r3bl_core::{fmt_option, FormatOptionMsg};
 ///
 /// struct FooStruct {
 ///    pub insertion_pos_for_next_box: Option<r3bl_core::Position>,
@@ -31,22 +34,33 @@
 ///         f.debug_struct("FlexBox")
 ///             .field(
 ///                 "insertion_pos_for_next_box",
-///                 format_option!(&self.insertion_pos_for_next_box),
-///             )
+///                 fmt_option!(&self.insertion_pos_for_next_box),
+///              )
 ///             .finish()
 ///     }
 /// }
 #[macro_export]
-macro_rules! format_option {
+macro_rules! fmt_option {
     ($opt:expr) => {
         match ($opt) {
             Some(v) => v,
-            None => &$crate::FormatMsg::None,
+            None => &r3bl_core::FormatOptionMsg::None,
         }
     };
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum FormatMsg {
+pub enum FormatOptionMsg {
     None,
+}
+
+/// Marker trait to "remember" which types can be converted to plain text.
+pub trait ConvertToPlainText {
+    fn to_plain_text(&self) -> StringStorage;
+}
+
+// REFACTOR: [x] replace String with StringStorage
+/// Marker trait to "remember" which types support pretty printing for debugging.
+pub trait PrettyPrintDebug {
+    fn pretty_print_debug(&self) -> StringStorage;
 }

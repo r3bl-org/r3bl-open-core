@@ -19,23 +19,22 @@ use std::{collections::{hash_map::Entry, HashMap},
           fmt::Debug,
           ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_core::{LockedOutputDevice, MicroVecBackingStore, TinyStringBackingStore};
-use serde::{Deserialize, Serialize};
+use r3bl_core::{ok, LockedOutputDevice, VecArray};
 use smallvec::smallvec;
 
 use super::{paint::paint, render_op::RenderOp, ZOrder};
 use crate::{tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED, FlushKind, GlobalData, RenderOps};
 
-/// This macro is a convenience macro for creating a [RenderPipeline]. It works w/ [RenderOp] items.
-/// It allows them to be added in sequence, and then flushed at the end.
+/// Macro to make it easier to create a [RenderPipeline]. It works w/ [RenderOp] items. It
+/// allows them to be added in sequence, and then flushed at the end.
 /// 1. This pipeline is meant to hold a list of [RenderOp] items.
 /// 2. Once all the [RenderOp] items are added to the correct [ZOrder]s they can then be
 ///    flushed at the end in order to [paint](RenderPipeline::paint()) them to the screen.
 /// 3. [get_render_order()](ZOrder::get_render_order) contains the priority that is used
 ///    to paint the different groups of [RenderOp] items.
 ///
-/// This adds given [RenderOp]s to a [RenderOps] and adds that the the pipeline, but does not flush
-/// anything. It will return a [RenderPipeline].
+/// This adds given [RenderOp]s to a [RenderOps] and adds that the the pipeline, but does
+/// not flush anything. It will return a [RenderPipeline].
 ///
 /// Here's an example.
 ///
@@ -144,7 +143,7 @@ macro_rules! render_pipeline {
       };
 }
 
-type PipelineMap = HashMap<ZOrder, MicroVecBackingStore<RenderOps>>;
+type PipelineMap = HashMap<ZOrder, VecArray<RenderOps>>;
 
 /// See [render_pipeline!] for the documentation. Also consider using it instead of this struct
 /// directly for convenience.
@@ -160,7 +159,7 @@ type PipelineMap = HashMap<ZOrder, MicroVecBackingStore<RenderOps>>;
 /// let len = pipeline.len();
 /// let iter = pipeline.iter();
 /// ```
-#[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct RenderPipeline {
     /// [RenderOps] to paint for each [ZOrder].
     pub pipeline_map: PipelineMap,
@@ -200,15 +199,12 @@ impl RenderPipeline {
         }
     }
 
-    /// At the given [ZOrder] there can be a [MicroVecBackingStore] of [RenderOps]. Grab
+    /// At the given [ZOrder] there can be a [VecArray] of [RenderOps]. Grab
     /// all the [RenderOps] in the set, get all their [RenderOp] and return them in a
-    /// [MicroVecBackingStore].
-    pub fn get_all_render_op_in(
-        &self,
-        z_order: ZOrder,
-    ) -> Option<MicroVecBackingStore<RenderOp>> {
+    /// [VecArray].
+    pub fn get_all_render_op_in(&self, z_order: ZOrder) -> Option<VecArray<RenderOp>> {
         let vec_render_ops = self.pipeline_map.get(&z_order)?;
-        let mut vec_render_op: MicroVecBackingStore<RenderOp> = smallvec![];
+        let mut vec_render_op: VecArray<RenderOp> = smallvec![];
         for render_ops in vec_render_ops {
             for render_op in render_ops.iter() {
                 vec_render_op.push(render_op.clone());
@@ -267,19 +263,23 @@ impl DerefMut for RenderPipeline {
 
 impl Debug for RenderPipeline {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut vec_lines: MicroVecBackingStore<TinyStringBackingStore> = smallvec![];
-        if DEBUG_TUI_SHOW_PIPELINE_EXPANDED {
-            for (z_order, render_ops) in &**self {
-                vec_lines.push(format!("[{z_order:?}] {render_ops:?}").into());
+        // If count > 0, then we need to add a delimiter.
+        const DELIM: &str = "\n  - ";
+
+        let map = &**self;
+
+        for (count, (z_order, vec_render_ops)) in map.iter().enumerate() {
+            if count > 0 {
+                write!(f, "{DELIM}")?;
             }
-        } else {
-            for (z_order, vec_render_ops) in &**self {
-                vec_lines.push(
-                    format!("[{z_order:?}] {:?} RenderOps", vec_render_ops.len()).into(),
-                );
+            if DEBUG_TUI_SHOW_PIPELINE_EXPANDED {
+                write!(f, "[{z_order:?}] {vec_render_ops:?}")?;
+            } else {
+                write!(f, "[{z_order:?}] {:?} RenderOps", vec_render_ops.len())?;
             }
         }
-        write!(f, "{}", vec_lines.join("\n  - "))
+
+        ok!()
     }
 }
 

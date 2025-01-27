@@ -15,24 +15,25 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{self, Debug},
+use std::{fmt::{self, Debug, Write},
           ops::{Deref, DerefMut}};
 
-use r3bl_core::{position,
+use diff_chunks::{OffscreenBufferDiffResult, PixelCharDiffChunks};
+use r3bl_core::{ok,
+                position,
+                string_storage,
                 style_dim_underline,
-                style_error,
                 style_primary,
+                style_prompt,
                 usize,
+                CharStorage,
                 LockedOutputDevice,
-                MicroVecBackingStore,
                 Position,
                 Size,
-                SmallStringBackingStore,
-                TinyStringBackingStore,
-                TinyVecBackingStore,
+                StringStorage,
                 TuiColor,
-                TuiStyle};
-use serde::{Deserialize, Serialize};
+                TuiStyle,
+                VecArray};
 use smallvec::smallvec;
 
 use super::{FlushKind, RenderOps};
@@ -51,7 +52,7 @@ use crate::List;
 /// indices of the terminal screen. By inserting a [PixelChar::Void] pixel char in the
 /// next cell, we signal the rendering logic to skip it since it has already been painted.
 /// And this is different than a [PixelChar::Spacer] which has to be painted!
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct OffscreenBuffer {
     pub buffer: PixelCharLines,
     pub window_size: Size,
@@ -60,25 +61,44 @@ pub struct OffscreenBuffer {
     pub my_bg_color: Option<TuiColor>,
 }
 
-#[allow(clippy::large_enum_variant)]
-pub enum OffscreenBufferDiffResult {
-    NotComparable,
-    Comparable(PixelCharDiffChunks),
-}
+pub mod diff_chunks {
+    use super::*;
 
-pub type PixelCharDiffChunks = List<DiffChunk>;
-pub type DiffChunk = (Position, PixelChar);
+    #[allow(clippy::large_enum_variant)]
+    pub enum OffscreenBufferDiffResult {
+        NotComparable,
+        Comparable(PixelCharDiffChunks),
+    }
+
+    /// This is a wrapper type so the [std::fmt::Debug] can be implemented for it, that
+    /// won't conflict with [List]'s implementation of the trait.
+    #[derive(Clone, Default, PartialEq)]
+    pub struct PixelCharDiffChunks {
+        pub inner: List<DiffChunk>,
+    }
+
+    pub type DiffChunk = (Position, PixelChar);
+
+    impl Deref for PixelCharDiffChunks {
+        type Target = List<DiffChunk>;
+
+        fn deref(&self) -> &Self::Target { &self.inner }
+    }
+
+    impl From<List<DiffChunk>> for PixelCharDiffChunks {
+        fn from(list: List<DiffChunk>) -> Self { Self { inner: list } }
+    }
+}
 
 mod offscreen_buffer_impl {
     use super::*;
 
-    impl PixelCharDiffChunks {
-        pub fn pretty_print(&self) -> String {
-            let mut it = String::new();
+    impl Debug for PixelCharDiffChunks {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             for (pos, pixel_char) in self.iter() {
-                it.push_str(&format!("\t{:?}: {}\n", pos, pixel_char.pretty_print()));
+                writeln!(f, "\t{:?}: {:?}", pos, pixel_char)?;
             }
-            it
+            ok!()
         }
     }
 
@@ -93,13 +113,31 @@ mod offscreen_buffer_impl {
     }
 
     impl Debug for OffscreenBuffer {
+        // PERF: [ ] make sure this works!
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "window_size: {:?}, \n{}\n",
-                self.window_size,
-                self.pretty_print()
-            )
+            writeln!(f, "window_size: {:?}, ", self.window_size)?;
+
+            let len = usize(self.window_size.row_count);
+            for row_index in 0..len {
+                if let Some(row) = self.buffer.get(row_index) {
+                    // Print row separator if needed (not the first item).
+                    if row_index > 0 {
+                        writeln!(f)?;
+                    }
+
+                    // Print the row index (styled) in "this" line.
+                    writeln!(
+                        f,
+                        "{}",
+                        style_prompt(&string_storage!("row_index: {}", row_index))
+                    )?;
+
+                    // Print the row itself in the "next" line.
+                    write!(f, "{:?}", row)?;
+                }
+            }
+
+            writeln!(f)
         }
     }
 
@@ -126,7 +164,7 @@ mod offscreen_buffer_impl {
                     }
                 }
             }
-            OffscreenBufferDiffResult::Comparable(it)
+            OffscreenBufferDiffResult::Comparable(PixelCharDiffChunks::from(it))
         }
 
         /// Create a new buffer and fill it with empty chars.
@@ -161,36 +199,20 @@ mod offscreen_buffer_impl {
                 }
             }
         }
-
-        pub fn pretty_print(&self) -> TinyStringBackingStore {
-            let mut lines: MicroVecBackingStore<String> = smallvec![];
-            for row_index in 0..usize(self.window_size.row_count) {
-                if let Some(row) = self.buffer.get(row_index) {
-                    lines.push({
-                        let row_index_text = format!("row_index: {row_index}");
-                        let row_index_text = style_error(&row_index_text).to_string();
-                        let row_text =
-                            format!("{}\n{}", row_index_text, row.pretty_print());
-                        row_text
-                    });
-                }
-            }
-            lines.join("\n").into()
-        }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct PixelCharLines {
     // PERF: [x] drop Vec and use SmallVec instead
-    pub lines: TinyVecBackingStore<PixelCharLine>,
+    pub lines: VecArray<PixelCharLine>,
 }
 
 mod pixel_char_lines_impl {
     use super::*;
 
     impl Deref for PixelCharLines {
-        type Target = TinyVecBackingStore<PixelCharLine>;
+        type Target = VecArray<PixelCharLine>;
         fn deref(&self) -> &Self::Target { &self.lines }
     }
 
@@ -213,10 +235,10 @@ mod pixel_char_lines_impl {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct PixelCharLine {
     // PERF: [x] drop Vec and use SmallVec instead
-    pub pixel_chars: TinyVecBackingStore<PixelChar>,
+    pub pixel_chars: VecArray<PixelChar>,
 }
 
 impl size_of::SizeOf for PixelCharLine {
@@ -228,19 +250,17 @@ impl size_of::SizeOf for PixelCharLine {
 }
 
 mod pixel_char_line_impl {
+    use r3bl_core::{char_storage, ok};
+
     use super::*;
 
-    // This represents a single row on the screen (i.e. a line of text).
-    impl PixelCharLine {
-        pub fn pretty_print(&self) -> String {
-            // PERF: [x] drop Vec and use SmallVec instead
-            let mut line_buffer: TinyVecBackingStore<SmallStringBackingStore> =
-                smallvec![];
-            let mut void_indices: TinyVecBackingStore<usize> = smallvec![];
-            let mut spacer_indices: TinyVecBackingStore<usize> = smallvec![];
-            let mut void_count: TinyVecBackingStore<TinyStringBackingStore> = smallvec![];
-            let mut spacer_count: TinyVecBackingStore<TinyStringBackingStore> =
-                smallvec![];
+    impl Debug for PixelCharLine {
+        // PERF: [ ] make sure this works!
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let mut void_indices: VecArray<usize> = smallvec![];
+            let mut spacer_indices: VecArray<usize> = smallvec![];
+            let mut void_count: VecArray<CharStorage> = smallvec![];
+            let mut spacer_count: VecArray<CharStorage> = smallvec![];
 
             // Pretty print only so many chars per line (depending on the terminal width in which
             // log.fish is run).
@@ -251,162 +271,158 @@ mod pixel_char_line_impl {
             for (col_index, pixel_char) in self.iter().enumerate() {
                 match pixel_char {
                     PixelChar::Void => {
-                        void_count.push(col_index.to_string().into());
+                        void_count.push(CharStorage::from(col_index.to_string()));
                         void_indices.push(col_index);
                     }
                     PixelChar::Spacer => {
-                        spacer_count.push(col_index.to_string().into());
+                        spacer_count.push(CharStorage::from(col_index.to_string()));
                         spacer_indices.push(col_index);
                     }
                     _ => {}
                 }
 
-                let index_txt = format!("{col_index:03}");
-                let pixel_char_txt = pixel_char.pretty_print();
-                let index_msg =
-                    format!("{}{}", style_dim_underline(&index_txt), pixel_char_txt);
-                line_buffer.push(index_msg.into());
+                // Index message.
+                write!(
+                    f,
+                    "{}{:?}",
+                    style_dim_underline(&char_storage!("{col_index:03}")),
+                    pixel_char
+                )?;
 
                 // Add \n every MAX_CHARS_PER_LINE characters.
                 char_count += 1;
                 if char_count >= MAX_PIXEL_CHARS_PER_LINE {
                     char_count = 0;
-                    line_buffer.push("\n".into());
+                    writeln!(f)?;
                 }
             }
 
-            // Pretty print the spacers & voids (of any of either or both).
+            // Pretty print the spacers & voids (of any of either or both) at the end of
+            // the output.
             {
-                let mut void_spacer_output: TinyVecBackingStore<TinyStringBackingStore> =
-                    smallvec![];
-
                 if !void_count.is_empty() {
-                    void_spacer_output.push(
-                        format!(
-                            "void [ {} ]",
-                            PixelCharLine::pretty_print_index_values(&void_indices)
-                        )
-                        .into(),
-                    );
+                    write!(f, "void [ ")?;
+                    fmt_impl_index_values(&void_indices, f)?;
+                    write!(f, " ]")?;
+
+                    // Add spacer divider if spacer count exists (next).
+                    if !spacer_count.is_empty() {
+                        write!(f, " | ")?;
+                    }
                 }
 
                 if !spacer_count.is_empty() {
-                    match void_spacer_output.is_empty() {
-                        true => {
-                            void_spacer_output.push(
-                                format!(
-                                    "spacer [ {} ]",
-                                    PixelCharLine::pretty_print_index_values(
-                                        &spacer_indices
-                                    )
-                                )
-                                .into(),
-                            );
-                        }
-                        false => {
-                            void_spacer_output.push(
-                                format!(
-                                    ", spacer [ {} ]",
-                                    PixelCharLine::pretty_print_index_values(
-                                        &spacer_indices
-                                    )
-                                )
-                                .into(),
-                            );
-                        }
+                    // Add comma divider if void count exists (previous).
+                    if !void_count.is_empty() {
+                        write!(f, ", ")?;
                     }
+                    write!(f, "spacer [ ")?;
+                    fmt_impl_index_values(&spacer_indices, f)?;
+                    write!(f, " ]")?;
                 }
-
-                line_buffer.push(void_spacer_output.join(" | ").into());
             }
 
-            line_buffer.join("")
+            ok!()
+        }
+    }
+
+    fn fmt_impl_index_values(
+        values: &[usize],
+        f: &mut fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        // Track state thru loop iteration.
+        let mut acc_current_range: VecArray<usize> = smallvec![];
+
+        mod helpers {
+            use std::primitive::usize;
+
+            pub enum Peek {
+                NextItemContinuesRange,
+                NextItemDoesNotContinueRange,
+            }
+
+            pub fn peek_does_next_item_continues_range(
+                values: &[usize],
+                index: usize,
+            ) -> Peek {
+                if values.get(index + 1).is_none() {
+                    return Peek::NextItemDoesNotContinueRange;
+                }
+                if values[index + 1] == values[index] + 1 {
+                    Peek::NextItemContinuesRange
+                } else {
+                    Peek::NextItemDoesNotContinueRange
+                }
+            }
+
+            pub enum CurrentRange {
+                DoesNotExist,
+                Exists,
+            }
+
+            pub fn does_current_range_exist(current_range: &[usize]) -> CurrentRange {
+                match current_range.is_empty() {
+                    true => CurrentRange::DoesNotExist,
+                    false => CurrentRange::Exists,
+                }
+            }
         }
 
-        pub fn pretty_print_index_values(values: &[usize]) -> String {
-            // Track state thru loop iteration.
-            let mut current_range: Vec<usize> = vec![];
-            let mut it: Vec<String> = vec![];
-
-            mod helpers {
-                use std::primitive::usize;
-
-                pub enum Peek {
-                    NextItemContinuesRange,
-                    NextItemDoesNotContinueRange,
+        // Main loop.
+        for (index, value) in values.iter().enumerate() {
+            match (
+                helpers::peek_does_next_item_continues_range(values, index),
+                helpers::does_current_range_exist(&acc_current_range),
+            ) {
+                // Start new current range.
+                (
+                    helpers::Peek::NextItemContinuesRange,
+                    helpers::CurrentRange::DoesNotExist,
+                ) => {
+                    acc_current_range.push(*value);
                 }
-
-                pub fn peek_does_next_item_continues_range(
-                    values: &[usize],
-                    index: usize,
-                ) -> Peek {
-                    if values.get(index + 1).is_none() {
-                        return Peek::NextItemDoesNotContinueRange;
+                // The next value does not continue the current range & the current range does not exist.
+                (
+                    helpers::Peek::NextItemDoesNotContinueRange,
+                    helpers::CurrentRange::DoesNotExist,
+                ) => {
+                    if index > 0 {
+                        write!(f, ", ")?;
                     }
-                    if values[index + 1] == values[index] + 1 {
-                        Peek::NextItemContinuesRange
-                    } else {
-                        Peek::NextItemDoesNotContinueRange
-                    }
+                    write!(f, "{}", value)?;
                 }
-
-                pub enum CurrentRange {
-                    DoesNotExist,
-                    Exists,
+                // The next value continues the current range.
+                (
+                    helpers::Peek::NextItemContinuesRange,
+                    helpers::CurrentRange::Exists,
+                ) => {
+                    acc_current_range.push(*value);
                 }
-
-                pub fn does_current_range_exist(current_range: &[usize]) -> CurrentRange {
-                    match current_range.is_empty() {
-                        true => CurrentRange::DoesNotExist,
-                        false => CurrentRange::Exists,
+                // The next value does not continue the current range & the current range exists.
+                (
+                    helpers::Peek::NextItemDoesNotContinueRange,
+                    helpers::CurrentRange::Exists,
+                ) => {
+                    if index > 0 {
+                        write!(f, ", ")?;
                     }
-                }
-            }
-
-            // Main loop.
-            for (i, value) in values.iter().enumerate() {
-                match (
-                    helpers::peek_does_next_item_continues_range(values, i),
-                    helpers::does_current_range_exist(&current_range),
-                ) {
-                    (
-                        helpers::Peek::NextItemContinuesRange,
-                        helpers::CurrentRange::DoesNotExist,
-                    ) => {
-                        current_range.push(*value); // Start new current range.
-                    }
-                    (
-                        helpers::Peek::NextItemDoesNotContinueRange,
-                        helpers::CurrentRange::DoesNotExist,
-                    ) => {
-                        it.push(format!("{value}"));
-                    }
-                    // The next value continues the current range.
-                    (
-                        helpers::Peek::NextItemContinuesRange,
-                        helpers::CurrentRange::Exists,
-                    ) => {
-                        current_range.push(*value);
-                    }
-                    // The next value does not continue the current range.
-                    (
-                        helpers::Peek::NextItemDoesNotContinueRange,
-                        helpers::CurrentRange::Exists,
-                    ) => {
-                        current_range.push(*value);
-                        it.push(format!(
-                            "{}-{}",
-                            current_range[0],
-                            current_range[current_range.len() - 1]
-                        ));
-                        current_range.clear();
-                    }
+                    acc_current_range.push(*value);
+                    write!(
+                        f,
+                        "{}-{}",
+                        acc_current_range[0],
+                        acc_current_range[acc_current_range.len() - 1]
+                    )?;
+                    acc_current_range.clear();
                 }
             }
-
-            it.join(", ")
         }
 
+        ok!()
+    }
+
+    // This represents a single row on the screen (i.e. a line of text).
+    impl PixelCharLine {
         /// Create a new row with the given width and fill it with the empty chars.
         pub fn new_with_capacity_initialized(window_width: usize) -> Self {
             Self {
@@ -416,7 +432,7 @@ mod pixel_char_line_impl {
     }
 
     impl Deref for PixelCharLine {
-        type Target = TinyVecBackingStore<PixelChar>;
+        type Target = VecArray<PixelChar>;
         fn deref(&self) -> &Self::Target { &self.pixel_chars }
     }
 
@@ -425,12 +441,12 @@ mod pixel_char_line_impl {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum PixelChar {
     Void,
     Spacer,
     PlainText {
-        text: TinyStringBackingStore,
+        text: CharStorage,
         maybe_style: Option<TuiStyle>,
     },
 }
@@ -447,7 +463,7 @@ impl size_of::SizeOf for PixelChar {
             }
             // Normal case: size is static.
             _ => {
-                context.add(std::mem::size_of::<SmallStringBackingStore>());
+                context.add(std::mem::size_of::<CharStorage>());
                 context.add(std::mem::size_of::<Option<TuiStyle>>());
             }
         }
@@ -464,8 +480,10 @@ mod pixel_char_impl {
         fn default() -> Self { Self::Spacer }
     }
 
-    impl PixelChar {
-        pub fn pretty_print(&self) -> String {
+    impl Debug for PixelChar {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            const WIDTH: usize = 16;
+
             fn truncate(s: &str, max_chars: usize) -> &str {
                 match s.char_indices().nth(max_chars) {
                     None => s,
@@ -473,32 +491,32 @@ mod pixel_char_impl {
                 }
             }
 
-            let width = 16;
-
-            let it = match self {
+            match self {
                 PixelChar::Void => {
-                    format!(" V {VOID_CHAR:░^width$}")
+                    write!(f, " V {VOID_CHAR:░^WIDTH$}")?;
                 }
                 PixelChar::Spacer => {
-                    format!(" S {EMPTY_CHAR:░^width$}")
+                    write!(f, " S {EMPTY_CHAR:░^WIDTH$}")?;
                 }
-                PixelChar::PlainText {
-                    text, maybe_style, ..
-                } => {
-                    let output = match maybe_style {
+                PixelChar::PlainText { text, maybe_style } => {
+                    // Need `acc_tmp` to be able to truncate the text if it's too long.
+                    let mut acc_tmp = StringStorage::with_capacity(WIDTH);
+                    match maybe_style {
                         // Content + style.
                         Some(style) => {
-                            format!("'{}'→{}", text, style.pretty_print())
+                            write!(acc_tmp, "'{text}'→{style}")?;
                         }
                         // Content, no style.
-                        _ => format!("'{}'", text),
+                        _ => {
+                            write!(acc_tmp, "'{text}'")?;
+                        }
                     };
-                    let trunc_output = truncate(&output, width);
-                    format!(" {} {trunc_output: ^width$}", style_primary("P"))
+                    let trunc_output = truncate(&acc_tmp, WIDTH);
+                    write!(f, " {} {trunc_output: ^WIDTH$}", style_primary("P"))?;
                 }
             };
 
-            it
+            ok!()
         }
     }
 }

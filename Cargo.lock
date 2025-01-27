@@ -1733,6 +1733,8 @@ dependencies = [
  "serial_test",
  "smallstr",
  "smallvec",
+ "strum",
+ "strum_macros",
  "test-case",
 ]
 

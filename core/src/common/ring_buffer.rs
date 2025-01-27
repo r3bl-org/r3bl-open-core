@@ -64,6 +64,7 @@
 /// assert_eq!(ring_buffer.iter().collect::<Vec<&i32>>(), vec![&2, &3]);
 /// ```
 #[derive(Debug, PartialEq)]
+/// REFACTOR: [ ] make a variant that is stack allocated and another that is heap allocated
 pub struct RingBuffer<T, const N: usize> {
     internal_storage: [Option<T>; N],
     head: usize,
@@ -74,11 +75,13 @@ pub struct RingBuffer<T, const N: usize> {
 mod constructor {
     use super::*;
 
+    // BOOKM: Clever Rust, use of `const N: usize` for the array size in generics.
     impl<T, const N: usize> Default for RingBuffer<T, N> {
         fn default() -> Self { Self::new() }
     }
 
     impl<T, const N: usize> RingBuffer<T, N> {
+        // BOOKM: Clever Rust, use of `map` to initialize the array.
         pub fn new() -> Self {
             RingBuffer {
                 internal_storage: [(); N].map(|_| None),
@@ -185,264 +188,115 @@ mod tests {
     use smallstr::SmallString;
 
     use super::*;
-
     pub type SmallStringBackingStore = SmallString<[u8; DEFAULT_SMALL_STRING_SIZE]>;
     pub const DEFAULT_SMALL_STRING_SIZE: usize = 32;
 
     #[test]
-    fn test_iterator() {
+    fn test_empty_ring_buffer() {
+        let ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+        assert_eq!(ring_buffer.len(), 0);
+        assert_eq!(ring_buffer.head, 0);
+        assert_eq!(ring_buffer.tail, 0);
+        assert_eq!(ring_buffer.count, 0);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_normal_insert() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
-
-        {
-            assert_eq!(ring_buffer.len(), 0);
-            assert_eq!(ring_buffer.head, 0); // Empty.
-            assert_eq!(ring_buffer.tail, 0); // Empty.
-            assert_eq!(ring_buffer.count, 0); // Empty.
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next(), None);
-            assert_eq!(iter.next(), None);
-            assert_eq!(iter.next(), None);
-            assert_eq!(iter.next(), None);
-        }
-
-        // Normal insert.
         ring_buffer.add("Hello".into());
+        assert_eq!(ring_buffer.len(), 1);
+        assert_eq!(ring_buffer.head, 1);
+        assert_eq!(ring_buffer.tail, 0);
+        assert_eq!(ring_buffer.count, 1);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "Hello");
+        assert_eq!(iter.next(), None);
+    }
 
-        {
-            assert_eq!(ring_buffer.len(), 1);
-            assert_eq!(ring_buffer.head, 1); // Head moves.
-            assert_eq!(ring_buffer.tail, 0); // Tail does not move.
-            assert_eq!(ring_buffer.count, 1); // Count increments
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next().unwrap(), "Hello");
-            assert_eq!(iter.next(), None);
-            assert_eq!(iter.next(), None);
-            assert_eq!(iter.next(), None);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert_eq!(vec, vec!["Hello"]);
-        }
-
-        // Normal insert.
+    #[test]
+    fn test_multiple_inserts() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+        ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
-
-        {
-            assert_eq!(ring_buffer.len(), 2);
-            assert_eq!(ring_buffer.head, 2); // Head moves.
-            assert_eq!(ring_buffer.tail, 0); // Tail does not move.
-            assert_eq!(ring_buffer.count, 2); // Count increments
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next().unwrap(), "Hello");
-            assert_eq!(iter.next().unwrap(), "World");
-            assert_eq!(iter.next(), None);
-            assert_eq!(iter.next(), None);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert_eq!(vec, vec!["Hello", "World"]);
-        }
-
-        // Normal insert.
         ring_buffer.add("Rust".into());
+        assert_eq!(ring_buffer.len(), 3);
+        assert_eq!(ring_buffer.head, 0);
+        assert_eq!(ring_buffer.tail, 0);
+        assert_eq!(ring_buffer.count, 3);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "Hello");
+        assert_eq!(iter.next().unwrap(), "World");
+        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next(), None);
+    }
 
-        {
-            assert_eq!(ring_buffer.len(), 3);
-            assert_eq!(ring_buffer.head, 0); // Head wraps around.
-            assert_eq!(ring_buffer.tail, 0); // Tail does not move.
-            assert_eq!(ring_buffer.count, 3); // Count increments
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next().unwrap(), "Hello");
-            assert_eq!(iter.next().unwrap(), "World");
-            assert_eq!(iter.next().unwrap(), "Rust");
-            assert_eq!(iter.next(), None);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert_eq!(vec, vec!["Hello", "World", "Rust"]);
-        }
-
-        // Normal remove.
+    #[test]
+    fn test_normal_remove() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
         ring_buffer.remove();
+        assert_eq!(ring_buffer.len(), 2);
+        assert_eq!(ring_buffer.head, 0);
+        assert_eq!(ring_buffer.tail, 1);
+        assert_eq!(ring_buffer.count, 2);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "World");
+        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next(), None);
+    }
 
-        {
-            assert_eq!(ring_buffer.len(), 2);
-            assert_eq!(ring_buffer.head, 0); // Head does not move.
-            assert_eq!(ring_buffer.tail, 1); // Tail moves.
-            assert_eq!(ring_buffer.count, 2); // Count decrements.
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next().unwrap(), "World");
-            assert_eq!(iter.next().unwrap(), "Rust");
-            assert_eq!(iter.next(), None);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert_eq!(vec, vec!["World", "Rust"]);
-        }
-
-        // Wrap around! This will clobber "Hello". Head and tail move.
+    #[test]
+    fn test_wrap_around_insert() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
         ring_buffer.add("R3BL".into());
+        assert_eq!(ring_buffer.len(), 3);
+        assert_eq!(ring_buffer.head, 1);
+        assert_eq!(ring_buffer.tail, 1);
+        assert_eq!(ring_buffer.count, 3);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "World");
+        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next().unwrap(), "R3BL");
+        assert_eq!(iter.next(), None);
+    }
 
-        {
-            assert_eq!(ring_buffer.len(), 3);
-            assert_eq!(ring_buffer.head, 1); // Wrapped around.
-            assert_eq!(ring_buffer.tail, 1); // Tail does not move.
-            assert_eq!(ring_buffer.count, 3); // Count is same.
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next().unwrap(), "World");
-            assert_eq!(iter.next().unwrap(), "Rust");
-            assert_eq!(iter.next().unwrap(), "R3BL");
-            assert_eq!(iter.next(), None);
-            assert_eq!(iter.next(), None);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert_eq!(vec, vec!["World", "Rust", "R3BL"]);
-        }
-
-        for it in ring_buffer.iter() {
-            assert!(it == "R3BL" || it == "World" || it == "Rust");
-        }
-
-        let vec = ring_buffer
-            .iter()
-            .collect::<Vec<&SmallStringBackingStore>>();
-        assert_eq!(vec, vec!["World", "Rust", "R3BL"]);
-        assert_eq!(ring_buffer.head, 1); // Wrapped around.
-        assert_eq!(ring_buffer.count, 3); // Count is same.
-
-        // Wrapped around remove.
+    #[test]
+    fn test_wrap_around_remove() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
+        ring_buffer.add("R3BL".into());
         ring_buffer.remove();
+        assert_eq!(ring_buffer.len(), 2);
+        assert_eq!(ring_buffer.head, 1);
+        assert_eq!(ring_buffer.tail, 2);
+        assert_eq!(ring_buffer.count, 2);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next().unwrap(), "R3BL");
+        assert_eq!(iter.next(), None);
+    }
 
-        {
-            assert_eq!(ring_buffer.len(), 2);
-            assert_eq!(ring_buffer.head, 1); // Head does not move.
-            assert_eq!(ring_buffer.tail, 2); // Tail moves.
-            assert_eq!(ring_buffer.count, 2); // Count decrements.
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next().unwrap(), "Rust");
-            assert_eq!(iter.next().unwrap(), "R3BL");
-            assert_eq!(iter.next(), None);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert_eq!(vec, vec!["Rust", "R3BL"]);
-        }
-
-        // Wrapped around insert.
-        ring_buffer.add("Java".into());
-
-        {
-            assert_eq!(ring_buffer.len(), 3);
-            assert_eq!(ring_buffer.head, 2); // Head moves.
-            assert_eq!(ring_buffer.tail, 2); // Tail does not move.
-            assert_eq!(ring_buffer.count, 3); // Count is same.
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next().unwrap(), "Rust");
-            assert_eq!(iter.next().unwrap(), "R3BL");
-            assert_eq!(iter.next().unwrap(), "Java");
-            assert_eq!(iter.next(), None);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert_eq!(vec, vec!["Rust", "R3BL", "Java"]);
-        }
-
-        // Wrapped around remove.
-        ring_buffer.remove();
-
-        {
-            assert_eq!(ring_buffer.len(), 2);
-            assert_eq!(ring_buffer.head, 2); // Head does not move.
-            assert_eq!(ring_buffer.tail, 0); // Tail wraps around.
-            assert_eq!(ring_buffer.count, 2); // Count decrements.
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next().unwrap(), "R3BL");
-            assert_eq!(iter.next().unwrap(), "Java");
-            assert_eq!(iter.next(), None);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert_eq!(vec, vec!["R3BL", "Java"]);
-        }
-
-        // Wrapped around remove.
-        ring_buffer.remove();
-
-        {
-            assert_eq!(ring_buffer.len(), 1);
-            assert_eq!(ring_buffer.head, 2); // Head does not move.
-            assert_eq!(ring_buffer.tail, 1); // Tail moves.
-            assert_eq!(ring_buffer.count, 1); // Count decrements.
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next().unwrap(), "Java");
-            assert_eq!(iter.next(), None);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert_eq!(vec, vec!["Java"]);
-        }
-
-        // Wrapped around remove.
-        ring_buffer.remove();
-
-        {
-            assert_eq!(ring_buffer.len(), 0);
-            assert_eq!(ring_buffer.head, 2); // Head does not move.
-            assert_eq!(ring_buffer.tail, 2); // Tail does not move.
-            assert_eq!(ring_buffer.count, 0); // Count is zero.
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next(), None);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert!(vec.is_empty());
-        }
-
-        // Wrapped around insert.
-        ring_buffer.add("C++".into());
-
-        {
-            assert_eq!(ring_buffer.len(), 1);
-            assert_eq!(ring_buffer.head, 0); // Head wraps around.
-            assert_eq!(ring_buffer.tail, 2); // Tail does not move.
-            assert_eq!(ring_buffer.count, 1); // Count is one.
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next().unwrap(), "C++");
-            assert_eq!(iter.next(), None);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert_eq!(vec, vec!["C++"]);
-        }
-
-        // Clear.
+    #[test]
+    fn test_clear() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
         ring_buffer.clear();
-
-        {
-            assert_eq!(ring_buffer.len(), 0);
-            assert_eq!(ring_buffer.head, 0); // Head does not move.
-            assert_eq!(ring_buffer.tail, 0); // Tail does not move.
-            assert_eq!(ring_buffer.count, 0); // Count is zero.
-            let mut iter = ring_buffer.iter();
-            assert_eq!(iter.next(), None);
-            assert_eq!(ring_buffer.iter().count(), 0);
-
-            let vec = ring_buffer
-                .iter()
-                .collect::<Vec<&SmallStringBackingStore>>();
-            assert!(vec.is_empty());
-        }
+        assert_eq!(ring_buffer.len(), 0);
+        assert_eq!(ring_buffer.head, 0);
+        assert_eq!(ring_buffer.tail, 0);
+        assert_eq!(ring_buffer.count, 0);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next(), None);
     }
 }

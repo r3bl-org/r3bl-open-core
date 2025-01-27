@@ -41,13 +41,15 @@ use crossterm::style::Stylize;
 use custom_event_formatter_constants::*;
 use r3bl_ansi_color::{AnsiStyledText, Color, Style};
 use r3bl_core::{ColorWheel,
-                MicroVecBackingStore,
                 OrderedMap,
-                UnicodeStringExt,
+                StringStorage,
+                UnicodeString,
+                VecArray,
                 ch,
                 get_terminal_width,
                 glyphs,
                 remove_escaped_quotes,
+                string_storage,
                 truncate_from_right,
                 usize};
 use r3bl_macro::tui_style;
@@ -116,24 +118,24 @@ where
     fn format_event(
         &self,
         ctx: &tracing_subscriber::fmt::FmtContext<'_, S, N>,
-        mut writer: tracing_subscriber::fmt::format::Writer<'_>,
+        mut f: tracing_subscriber::fmt::format::Writer<'_>,
         event: &Event<'_>,
     ) -> fmt::Result {
         // Get spacer.
         let spacer = r3bl_core::glyphs::SPACER_GLYPH;
-        let spacer_display_width = spacer.unicode_string().display_width;
+        let spacer_display_width = UnicodeString::str_display_width(spacer);
 
         // Length accumulator (for line width calculations).
         let mut line_width_used = ch(0);
 
         // Custom timestamp.
         let timestamp = Local::now();
-        let timestamp_str = format!(
+        let timestamp_str = string_storage!(
             "{sp}{ts}{sp}",
             ts = timestamp.format("%I:%M%P"),
             sp = spacer
         );
-        line_width_used += timestamp_str.unicode_string().display_width;
+        line_width_used += UnicodeString::str_display_width(&timestamp_str);
         let timestamp_str_fmt = AnsiStyledText {
             text: &timestamp_str,
             style: &[
@@ -141,12 +143,12 @@ where
                 Style::Background(HEADING_BG_COLOR),
             ],
         };
-        write!(writer, "\n{timestamp_str_fmt}")?;
+        write!(f, "\n{timestamp_str_fmt}")?;
 
         // Custom span context.
         if let Some(scope) = ctx.lookup_current() {
-            let scope_str = format!("[{}] ", scope.name());
-            line_width_used += scope_str.unicode_string().display_width;
+            let scope_str = string_storage!("[{}] ", scope.name());
+            line_width_used += UnicodeString::str_display_width(&scope_str);
             let scope_str_fmt = AnsiStyledText {
                 text: &scope_str,
                 style: &[
@@ -155,7 +157,7 @@ where
                     Style::Italic,
                 ],
             };
-            write!(writer, "{scope_str_fmt}")?;
+            write!(f, "{scope_str_fmt}")?;
         }
 
         // Custom metadata formatting. For eg:
@@ -172,27 +174,29 @@ where
         //     callsite: Identifier(0x5a46fb928d40),
         //     kind: Kind(EVENT),
         // }
-        let mut style_acc: MicroVecBackingStore<Style> = smallvec![];
+        // REFACTOR: [x] replace all format! with string_storage! in this file
+        // REFACTOR: [x] replace all use of MicroVecBackingStore with VecArray
+        let mut style_acc: VecArray<Style> = smallvec![];
         let level_str = match *event.metadata().level() {
             tracing::Level::ERROR => {
                 style_acc.push(Style::Foreground(ERROR_FG_COLOR));
-                format!("{ERROR_SIGIL}{LEVEL_SUFFIX}{spacer}")
+                string_storage!("{ERROR_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::WARN => {
                 style_acc.push(Style::Foreground(WARN_FG_COLOR));
-                format!("{WARN_SIGIL}{LEVEL_SUFFIX}{spacer}")
+                string_storage!("{WARN_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::INFO => {
                 style_acc.push(Style::Foreground(INFO_FG_COLOR));
-                format!("{INFO_SIGIL}{LEVEL_SUFFIX}{spacer}")
+                string_storage!("{INFO_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::DEBUG => {
                 style_acc.push(Style::Foreground(DEBUG_FG_COLOR));
-                format!("{DEBUG_SIGIL}{LEVEL_SUFFIX}{spacer}")
+                string_storage!("{DEBUG_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::TRACE => {
                 style_acc.push(Style::Foreground(TRACE_FG_COLOR));
-                format!("{TRACE_SIGIL}{LEVEL_SUFFIX}{spacer}")
+                string_storage!("{TRACE_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
         };
         style_acc.push(Style::Background(HEADING_BG_COLOR));
@@ -201,10 +205,10 @@ where
             text: &level_str,
             style: &style_acc,
         };
-        let level_str_display_width = level_str.unicode_string().display_width;
+        let level_str_display_width = UnicodeString::str_display_width(&level_str);
         line_width_used += spacer_display_width;
         line_width_used += level_str_display_width;
-        write!(writer, "{level_str_fmt}")?;
+        write!(f, "{level_str_fmt}")?;
 
         // Custom field formatting. For eg:
         //
@@ -216,7 +220,7 @@ where
         //
         // Instead of:
         // ctx.field_format().format_fields(writer.by_ref(), event)?;
-        let mut ordered_map = OrderedMap::<String, String>::default();
+        let mut ordered_map = OrderedMap::<StringStorage, StringStorage>::default();
         event.record(&mut VisitEventAndPopulateOrderedMapWithFields {
             inner: &mut ordered_map,
         });
@@ -235,7 +239,7 @@ where
             let heading = remove_escaped_quotes(heading);
             line_width_used += spacer_display_width;
             let line_1_width = max_display_width - line_width_used;
-            let line_1_text = format!(
+            let line_1_text = string_storage!(
                 "{spacer}{heading}",
                 heading = truncate_from_right(&heading, usize(line_1_width), false)
             );
@@ -245,7 +249,7 @@ where
                     attrib: [bold]
                 )),
             );
-            writeln!(writer, "{line_1_text_fmt}")?;
+            writeln!(f, "{line_1_text_fmt}")?;
 
             // Write body line(s).
             if !body.is_empty() {
@@ -254,12 +258,11 @@ where
                 for body_line in body.iter() {
                     let body_line =
                         truncate_from_right(body_line, max_display_width, true);
-                    // let body_line_fmt = body_line.to_string().dark_green();
                     let body_line_fmt = AnsiStyledText {
                         text: &body_line,
                         style: &[Style::Foreground(BODY_FG_COLOR)],
                     };
-                    writeln!(writer, "{body_line_fmt}")?;
+                    writeln!(f, "{body_line_fmt}")?;
                 }
             }
         }
@@ -267,12 +270,12 @@ where
         // Write the terminating line separator.
         let line_separator = ENTRY_SEPARATOR_CHAR.repeat(usize(max_display_width));
         let line_separator_fmt = line_separator.dark_green();
-        writeln!(writer, "{line_separator_fmt}")
+        writeln!(f, "{line_separator_fmt}")
     }
 }
 
 pub struct VisitEventAndPopulateOrderedMapWithFields<'a> {
-    inner: &'a mut OrderedMap<String, String>,
+    pub inner: &'a mut OrderedMap<StringStorage, StringStorage>,
 }
 
 impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
@@ -306,11 +309,11 @@ impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
     /// [CustomEventFormatter::format_event] to skip writing the body line.
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         let field_name = field.name();
-        let field_value = format!("{:?}", value);
+        let field_value = string_storage!("{:?}", value);
         if field_name == "message" {
-            self.inner.insert(field_value, "".to_string());
+            self.inner.insert(field_value, "".into());
         } else {
-            self.inner.insert(field_name.to_string(), field_value);
+            self.inner.insert(field_name.into(), field_value);
         }
     }
 }

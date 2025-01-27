@@ -20,10 +20,10 @@ use std::{collections::HashMap,
           time::{Duration, Instant}};
 
 use miette::IntoDiagnostic;
+use smallstr::SmallString;
 use strum_macros::{Display, EnumString};
 
-use crate::{NormalStringBackingStore,
-            Percent,
+use crate::{Percent,
             RateLimitStatus,
             RateLimiter,
             RingBuffer,
@@ -31,6 +31,12 @@ use crate::{NormalStringBackingStore,
             ch,
             f64,
             ok};
+
+pub(in crate::common) mod sizing {
+    use super::*;
+    pub type TelemetryReportLineStorage = SmallString<[u8; TELEMETRY_REPORT_STRING_SIZE]>;
+    pub const TELEMETRY_REPORT_STRING_SIZE: usize = 128;
+}
 
 /// These are the default constants for the telemetry module. They are reasonable
 /// defaults, but you can override them to suit your needs.
@@ -90,7 +96,7 @@ pub struct Telemetry<const N: usize> {
     /// Pre-allocated buffer to store the report (after generating it). This is a cache
     /// that is used to avoid generating the report too frequently (rate limited with
     /// [Self::rate_limiter_generate_report]).
-    pub report: NormalStringBackingStore,
+    pub report: sizing::TelemetryReportLineStorage,
     pub rate_limiter_generate_report: RateLimiter,
     pub min_duration_filter: Option<Duration>,
 }
@@ -173,6 +179,7 @@ pub mod constructor {
         }
     }
 
+    // BOOKM: Clever Rust, use of `impl Into<struct>` for constructor & `const N: usize` for arrays.
     impl<const N: usize> Telemetry<N> {
         pub fn new(options: impl Into<ResponseTimesRingBufferOptions>) -> Self {
             // "Dynamically" convert the options argument into the actual options struct.
@@ -180,7 +187,7 @@ pub mod constructor {
             Self {
                 ring_buffer: RingBuffer::new(),
                 start_timestamp: Instant::now(),
-                report: NormalStringBackingStore::new(),
+                report: sizing::TelemetryReportLineStorage::new(),
                 rate_limiter_generate_report: RateLimiter::new(
                     options.rate_limit_min_time_threshold,
                 ),

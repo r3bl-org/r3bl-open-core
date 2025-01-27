@@ -279,7 +279,8 @@ mod test_tracing_bin_stdio {
 
 #[cfg(test)]
 mod test_tracing_shared_writer_output {
-    use r3bl_core::{LineStateControlSignal, SharedWriter};
+    use r3bl_core::{LineStateControlSignal, SharedWriter, Text, VecArray, join};
+    use smallvec::smallvec;
 
     use super::{fixtures::get_expected, *};
 
@@ -308,11 +309,18 @@ mod test_tracing_shared_writer_output {
         receiver.close();
 
         // Check the output.
-        let mut output = vec![];
+        let mut output: VecArray<Text> = smallvec![];
         while let Some(LineStateControlSignal::Line(line)) = receiver.recv().await {
-            output.push(String::from_utf8_lossy(&line).trim().to_string());
+            let it = line.trim();
+            output.push(it.into());
         }
-        let output = output.join("\n");
+
+        let output = join!(
+            from: output,
+            each: item,
+            delim: "\n",
+            format: "{item}",
+        );
 
         println!("output: {}", output);
 

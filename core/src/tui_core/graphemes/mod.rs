@@ -156,26 +156,29 @@
 //!      string, then call `RestorePosition` to restore the cursor to where it "should"
 //!      be.
 //!
-//! Please take a look at [crate::tui_core::graphemes::UnicodeString], specifically the
-//! methods in [crate::tui_core::graphemes::access]  for more details on how the
-//! conversion between "display" (or `display_col_index`) and "logical" (or
-//! `logical_index`) indices is done.
+//! Please take a look at [crate::tui_core::graphemes::UnicodeString] for the following
+//! items:
+//! - Methods in [crate::tui_core::graphemes::access] for more details on how the
+//!   conversion between "display" (or `display_col_index`) and "logical" (or
+//!   `logical_index`) indices is done.
+//! - The choices that were made in the design of the `UnicodeString` struct for
+//!   performance to minimize memory latency (for access and allocation). The results
+//!   might surprise you, as intuition around performance is often not reliable.
 
 // Attach sources.
 pub mod access;
 pub mod change;
-pub mod combine;
 pub mod convert;
 pub mod grapheme_cluster_segment;
+pub mod ir_types;
 pub mod range;
-pub mod result_types;
 pub mod unicode_string;
 
 // Re-export.
 pub use convert::*;
 pub use grapheme_cluster_segment::*;
+pub use ir_types::*;
 pub use range::*;
-pub use result_types::*;
 pub use unicode_string::*;
 
 // Tests.

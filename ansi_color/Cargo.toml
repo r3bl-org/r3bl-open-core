@@ -9,7 +9,8 @@ categories = ["command-line-interface", "command-line-utilities"]
 version = "0.7.0"
 
 edition = "2024"
-resolver = "2"
+# https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+resolver = "3"
 readme = "README.md" # This is not included in cargo docs.
 authors = [
   "Nazmul Idris <idris@developerlife.com>",
@@ -27,6 +28,10 @@ is_ci = "1.2.0"
 # For smallstr & smallvec.
 smallstr = { version = "0.3.0", features = ["serde", "std"] }
 smallvec = { version = "1.6.1", features = ["serde"] }
+
+# For counting enum variants.
+strum = "0.26.3"
+strum_macros = "0.26.4"
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"

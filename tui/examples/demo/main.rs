@@ -62,7 +62,7 @@ async fn main() -> CommonResult<()> {
     }
 
     terminal_async
-        .println(format!("{}", style_prompt(generate_help_msg().as_str())))
+        .println(format!("{}", style_prompt(&generate_help_msg())))
         .await;
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok

@@ -70,10 +70,11 @@ async fn main() -> CommonResult<()> {
                     "".to_string(),
                     AnalyticsAction::EdiFileOpenSingle,
                 );
-                launcher::run_app(Some(cli_arg.file_paths[0].clone())).await?;
+                let maybe_file_path = Some(cli_arg.file_paths[0].as_str());
+                launcher::run_app(maybe_file_path).await?;
             }
             _ => {
-                if let Some(file_path) =
+                if let Some(ref file_path) =
                     edi_ui_templates::handle_multiple_files_not_supported_yet(cli_arg)
                 {
                     report_analytics::start_task_to_generate_event(
@@ -96,8 +97,6 @@ async fn main() -> CommonResult<()> {
 }
 
 pub mod edi_ui_templates {
-    use r3bl_core::UnicodeStringExt;
-
     use super::*;
 
     pub fn handle_multiple_files_not_supported_yet(cli_arg: CLIArg) -> Option<String> {
@@ -128,7 +127,7 @@ pub mod edi_ui_templates {
             println!("{}", {
                 let msg_line_1 = {
                     ColorWheel::default().colorize_into_string(
-                        &"New version of edi is available 📦.".unicode_string(),
+                        "New version of edi is available 📦.",
                         GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
                         TextColorizationPolicy::ColorEachCharacter(None),
                         None,

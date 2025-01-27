@@ -30,12 +30,7 @@
 //! 1. Convert the syntect [SyntectStyleStrSpanLine] into a [StyleUSSpanLine].
 //! 2. Then convert [StyleUSSpanLine] into a [TuiStyledTexts].
 
-use r3bl_core::{tui_styled_text,
-                RgbValue,
-                TuiColor,
-                TuiStyle,
-                TuiStyledTexts,
-                UnicodeStringExt};
+use r3bl_core::{tui_styled_text, RgbValue, TuiColor, TuiStyle, TuiStyledTexts};
 use syntect::parsing::SyntaxSet;
 
 use super::{StyleUSSpan, StyleUSSpanLine};
@@ -81,8 +76,9 @@ pub fn convert_highlighted_line_from_syntect_to_tui(
     let mut it = convert(&syntect_highlighted_line);
 
     // Remove the background color from each style in the theme.
-    it.iter_mut()
-        .for_each(|StyleUSSpan { style, text: _ }| style.remove_bg_color());
+    for span in it.iter_mut() {
+        span.style.remove_bg_color();
+    }
 
     return it;
 
@@ -91,8 +87,7 @@ pub fn convert_highlighted_line_from_syntect_to_tui(
 
         for (style, text) in vec_styled_str {
             let my_style = convert_style_from_syntect_to_tui(*style);
-            let unicode_string = text.unicode_string();
-            it.push(StyleUSSpan::new(my_style, unicode_string));
+            it.push(StyleUSSpan::new(my_style, text));
         }
 
         it
@@ -112,11 +107,7 @@ pub fn convert_span_line_from_syntect_to_tui_styled_texts(
 
 #[cfg(test)]
 mod tests_simple_md_highlight {
-    use r3bl_core::{assert_eq2,
-                    color,
-                    ConvertToPlainText,
-                    TuiStyledTexts,
-                    UnicodeStringExt};
+    use r3bl_core::{assert_eq2, color, ConvertToPlainText, TuiStyledTexts};
     use syntect::{easy::HighlightLines,
                   highlighting::Style,
                   parsing::SyntaxSet,
@@ -179,7 +170,7 @@ mod tests_simple_md_highlight {
         {
             let line = &vec_styled_texts[0];
             assert_eq2!(line.len(), 4);
-            assert_eq2!(line.to_plain_text_us(), "# My Heading\n".unicode_string());
+            assert_eq2!(line.to_plain_text(), "# My Heading\n");
             let col1 = &line[0];
             assert_eq2!(col1.get_style().bold, true);
             let col3 = &line[2];
@@ -190,7 +181,7 @@ mod tests_simple_md_highlight {
         {
             let line = &vec_styled_texts[41];
             assert_eq2!(line.len(), 1);
-            assert_eq2!(line.to_plain_text_us(), "--- END ---\n".unicode_string());
+            assert_eq2!(line.to_plain_text(), "--- END ---\n");
             let col1 = &line[0];
             assert_eq2!(col1.get_style().color_fg.unwrap(), color!(193, 179, 208));
         }
@@ -199,7 +190,7 @@ mod tests_simple_md_highlight {
 
 #[cfg(test)]
 mod tests_convert_span_line_and_highlighted_line {
-    use r3bl_core::{assert_eq2, RgbValue, TuiColor, TuiStyledTexts, UnicodeStringExt};
+    use r3bl_core::{assert_eq2, RgbValue, TuiColor, TuiStyledTexts};
 
     use crate::convert_span_line_from_syntect_to_tui_styled_texts;
 
@@ -259,7 +250,7 @@ mod tests_convert_span_line_and_highlighted_line {
 
         // item 1.
         {
-            assert_eq2!(styled_texts[0].get_text(), &"st_color_1".unicode_string());
+            assert_eq2!(styled_texts[0].get_text(), "st_color_1");
             assert_eq2!(
                 styled_texts[0].get_style().color_fg.unwrap(),
                 TuiColor::Rgb(RgbValue {
@@ -280,7 +271,7 @@ mod tests_convert_span_line_and_highlighted_line {
 
         // item 2.
         {
-            assert_eq2!(styled_texts[1].get_text(), &"st_color_2".unicode_string(),);
+            assert_eq2!(styled_texts[1].get_text(), "st_color_2");
             assert_eq2!(
                 styled_texts[1].get_style().color_fg.unwrap(),
                 TuiColor::Rgb(RgbValue {
@@ -302,10 +293,7 @@ mod tests_convert_span_line_and_highlighted_line {
 
         // item 3.
         {
-            assert_eq2!(
-                styled_texts[2].get_text(),
-                &"st_color_1 and 2".unicode_string(),
-            );
+            assert_eq2!(styled_texts[2].get_text(), "st_color_1 and 2");
             assert_eq2!(
                 styled_texts[2].get_style().color_fg.unwrap(),
                 TuiColor::Rgb(RgbValue {
@@ -341,10 +329,10 @@ mod tests_convert_style_and_color {
                     ANSIBasicColor,
                     CommonResult,
                     RgbValue,
-                    TinyVecBackingStore,
                     TuiColor,
                     TuiStyle,
-                    TuiStylesheet};
+                    TuiStylesheet,
+                    VecArray};
     use r3bl_macro::tui_style;
     use smallvec::smallvec;
 
@@ -471,9 +459,7 @@ mod tests_convert_style_and_color {
                 @from: &stylesheet,
                 [1, 2]
             ));
-            fn assertions_for_find_styles_by_ids(
-                result: &Option<TinyVecBackingStore<TuiStyle>>,
-            ) {
+            fn assertions_for_find_styles_by_ids(result: &Option<VecArray<TuiStyle>>) {
                 assert_eq2!(result.as_ref().unwrap().len(), 2);
                 assert_eq2!(result.as_ref().unwrap()[0].id, 1);
                 assert_eq2!(result.as_ref().unwrap()[1].id, 2);

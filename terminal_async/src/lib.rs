@@ -462,13 +462,14 @@ pub mod spinner_impl;
 // Re-export the public API.
 pub use public_api::*;
 pub use readline_impl::*;
+use smallvec::SmallVec;
 pub use spinner_impl::*;
 
 // External crates.
-use std::{collections::VecDeque, sync::Arc};
+use std::sync::Arc;
 
 // r3bl-open-core crates.
-use r3bl_core::{StdMutex, SendRawTerminal, SafeRawTerminal};
+use r3bl_core::{SafeRawTerminal, SendRawTerminal, StdMutex, Text};
 
 // Type aliases.
 pub type SafeLineState = Arc<StdMutex<LineState>>;
@@ -476,9 +477,14 @@ pub type SafeHistory = Arc<StdMutex<History>>;
 
 pub type SafeBool = Arc<StdMutex<bool>>;
 
-pub type PauseBuffer = VecDeque<r3bl_core::Text>;
+/// This is a buffer of [DEFAULT_PAUSE_BUFFER_SIZE] 80 rows x
+/// [r3bl_core::DEFAULT_TEXT_SIZE] 128 columns (chars). This buffer collects output while
+/// the async terminal is paused.
+pub type PauseBuffer = SmallVec<[Text; DEFAULT_PAUSE_BUFFER_SIZE]>;
+pub const DEFAULT_PAUSE_BUFFER_SIZE: usize = 128;
 pub type SafePauseBuffer = Arc<StdMutex<PauseBuffer>>;
 
 // Constants.
 pub const CHANNEL_CAPACITY: usize = 1_000;
 pub const HISTORY_SIZE_MAX: usize = 1_000;
+

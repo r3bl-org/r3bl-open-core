@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Formatter};
 
-use r3bl_core::MicroVecBackingStore;
+use r3bl_core::VecArray;
 use smallvec::smallvec;
 
 /// Reducer.
@@ -36,14 +36,10 @@ pub enum AppSignal {
     Noop,
 }
 
-impl Display for AppSignal {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
-}
-
 /// State.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct State {
-    pub stack: MicroVecBackingStore<i32>,
+    pub stack: VecArray<i32>,
 }
 
 impl Default for State {
@@ -54,7 +50,7 @@ impl Default for State {
     }
 }
 
-impl Display for State {
+impl Debug for State {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "State {{ stack: {:?} }}", self.stack)
     }

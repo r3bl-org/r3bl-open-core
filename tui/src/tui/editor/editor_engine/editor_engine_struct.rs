@@ -18,7 +18,6 @@
 use std::fmt::Debug;
 
 use r3bl_core::ChUnit;
-use serde::{Deserialize, Serialize};
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
 use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox};
@@ -36,7 +35,7 @@ use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox};
 /// [EditorEngineApi::apply_event](crate::EditorEngineApi::apply_event) method which takes
 /// [crate::InputEvent] and tries to convert it to an [crate::EditorEvent] and then execute them
 /// against this buffer.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct EditorEngine {
     /// Set by [EditorEngineApi::render_engine](crate::EditorEngineApi::render_engine).
     pub current_box: PartialFlexBox,
@@ -72,7 +71,7 @@ impl EditorEngine {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EditorEngineConfig {
     pub multiline_mode: LineMode,
     pub syntax_highlight: SyntaxHighlightMode,
@@ -93,19 +92,19 @@ mod editor_engine_config_options_impl {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EditMode {
     ReadOnly,
     ReadWrite,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LineMode {
     SingleLine,
     MultiLine,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SyntaxHighlightMode {
     Disable,
     Enable,

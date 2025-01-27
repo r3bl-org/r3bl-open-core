@@ -15,7 +15,11 @@
  *   limitations under the License.
  */
 
-use crate::Color;
+use std::fmt::{Display, Formatter, Result};
+
+use strum_macros::EnumCount;
+
+use crate::{Color, SgrCode};
 
 /// The main struct that we have to consider is `AnsiStyledText`. It has two fields:
 /// - `text` - the text to print.
@@ -58,7 +62,7 @@ mod ansi_styled_text_impl {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumCount)]
 pub enum Style {
     Foreground(Color),
     Background(Color),
@@ -126,40 +130,37 @@ mod style_impl {
     }
 
     impl Display for Style {
+        #[rustfmt::skip]
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             match self {
-                Style::Foreground(color) => fmt_color(*color, ColorKind::Foreground, f),
-                Style::Background(color) => fmt_color(*color, ColorKind::Background, f),
-                Style::Bold => write!(f, "{}", SgrCode::Bold),
-                Style::Dim => write!(f, "{}", SgrCode::Dim),
-                Style::Italic => write!(f, "{}", SgrCode::Italic),
-                Style::Underline => write!(f, "{}", SgrCode::Underline),
-                Style::SlowBlink => write!(f, "{}", SgrCode::SlowBlink),
-                Style::RapidBlink => write!(f, "{}", SgrCode::RapidBlink),
-                Style::Invert => write!(f, "{}", SgrCode::Invert),
-                Style::Hidden => write!(f, "{}", SgrCode::Hidden),
-                Style::Strikethrough => write!(f, "{}", SgrCode::Strikethrough),
-                Style::Overline => write!(f, "{}", SgrCode::Overline),
+                Style::Foreground(color)  => fmt_color(*color, ColorKind::Foreground, f),
+                Style::Background(color)  => fmt_color(*color, ColorKind::Background, f),
+                Style::Bold               => write!(f, "{}", SgrCode::Bold),
+                Style::Dim                => write!(f, "{}", SgrCode::Dim),
+                Style::Italic             => write!(f, "{}", SgrCode::Italic),
+                Style::Underline          => write!(f, "{}", SgrCode::Underline),
+                Style::SlowBlink          => write!(f, "{}", SgrCode::SlowBlink),
+                Style::RapidBlink         => write!(f, "{}", SgrCode::RapidBlink),
+                Style::Invert             => write!(f, "{}", SgrCode::Invert),
+                Style::Hidden             => write!(f, "{}", SgrCode::Hidden),
+                Style::Strikethrough      => write!(f, "{}", SgrCode::Strikethrough),
+                Style::Overline           => write!(f, "{}", SgrCode::Overline),
             }
         }
     }
 }
 
 mod display_trait_impl {
-    use std::fmt::{Display, Formatter, Result};
+    use super::*;
 
-    use crate::{AnsiStyledText, SgrCode, TinyVecBackingStore};
-
-    // https://doc.rust-lang.org/std/fmt/trait.Display.html
     impl Display for AnsiStyledText<'_> {
-        fn fmt(&self, formatter: &mut Formatter<'_>) -> Result {
-            let mut style_string_vec = TinyVecBackingStore::new();
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             for style_item in self.style {
-                style_string_vec.push(style_item.to_string());
+                write!(f, "{}", style_item)?;
             }
-            style_string_vec.push(self.text.to_string());
-            style_string_vec.push(SgrCode::Reset.to_string());
-            write!(formatter, "{}", style_string_vec.join(""))
+            write!(f, "{}", self.text)?;
+            write!(f, "{}", SgrCode::Reset)?;
+            Ok(())
         }
     }
 

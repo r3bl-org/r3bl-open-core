@@ -61,7 +61,7 @@
 //! ```
 
 use crossterm::style::Stylize;
-use r3bl_core::{call_if_true, ch, ChUnit};
+use r3bl_core::{call_if_true, ch, string_storage, ChUnit};
 
 use crate::DEVELOPMENT_MODE;
 
@@ -94,14 +94,20 @@ pub fn locate_cursor_in_viewport(
         get_scroll_adjusted_row_index(raw_caret_row_index, scroll_offset_row_index);
 
     call_if_true!(DEVELOPMENT_MODE, {
-        tracing::debug!(
-            "locate_cursor_in_viewport(): raw_caret_row_index: {}, scroll_offset_row_index: {}, abs_row_index: {}, display_height: {}, items_size: {}",
-            format!("{raw_caret_row_index}").green(),
-            format!("{scroll_offset_row_index}").green(),
-            format!("{abs_row_index}").green(),
-            format!("{display_height}").green(),
-            format!("{items_size}").green()
+        let message = "locate_cursor_in_viewport()";
+        let details = string_storage!(
+            "raw_caret_row_index: {a}, scroll_offset_row_index: {b}, abs_row_index: {c}, display_height: {d}, items_size: {e}",
+            a = string_storage!("{raw_caret_row_index:?}").green(),
+            b = string_storage!("{scroll_offset_row_index:?}").green(),
+            c = string_storage!("{abs_row_index:?}").green(),
+            d = string_storage!("{display_height:?}").green(),
+            e = string_storage!("{items_size:?}").green()
         );
+        // % is Display, ? is Debug.
+        tracing::info! {
+            message = %message,
+            details = %details
+        };
     });
 
     // Note the ordering of the statements below matters.

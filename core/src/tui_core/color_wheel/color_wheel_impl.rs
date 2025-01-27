@@ -15,48 +15,56 @@
  *   limitations under the License.
  */
 
-use std::ops::AddAssign;
+use std::fmt::Write;
 
 use r3bl_ansi_color::AnsiStyledText;
-use serde::{Deserialize, Serialize};
+use sizing::VecConfigs;
+use smallvec::SmallVec;
 
 use super::{ColorWheelConfig,
             ColorWheelDirection,
             ColorWheelSpeed,
             GradientKind,
-            GradientLengthKind};
+            GradientLengthKind,
+            config::sizing::VecSteps,
+            defaults::{Defaults, get_default_gradient_stops}};
 use crate::{Ansi256GradientIndex,
             AnsiValue,
             ChUnit,
             ColorUtils,
-            Defaults,
             GradientGenerationPolicy,
-            MicroVecBackingStore,
             RgbValue,
-            SmallStringBackingStore,
+            StringStorage,
             TextColorizationPolicy,
-            TinyStringBackingStore,
-            TinyVecBackingStore,
             TuiColor,
             TuiStyle,
             TuiStyledText,
             TuiStyledTexts,
             UnicodeString,
-            UnicodeStringExt,
             ch,
             convert_to_ansi_color_styles,
             generate_random_truecolor_gradient,
             generate_truecolor_gradient,
-            get_default_gradient_stops,
             get_gradient_array_for,
             glyphs::SPACER_GLYPH as SPACER,
+            seg_str,
             tui_styled_text,
             u8,
             usize};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+/// These are sized to allow for stack allocation rather than heap allocation. If for some
+/// reason these are exceeded, then they will [smallvec::SmallVec::spilled] over into the
+/// heap.
+pub(in crate::tui_core) mod sizing {
+    use super::*;
+
+    pub type VecConfigs = SmallVec<[ColorWheelConfig; MAX_CONFIGS]>;
+    const MAX_CONFIGS: usize = 16;
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub struct ColorWheel {
-    pub configs: MicroVecBackingStore<ColorWheelConfig>,
+    pub configs: VecConfigs,
     pub gradient_kind: GradientKind,
     pub gradient_length_kind: GradientLengthKind,
     pub index: ChUnit,
@@ -66,7 +74,7 @@ pub struct ColorWheel {
 
 impl Default for ColorWheel {
     fn default() -> Self {
-        let mut acc = MicroVecBackingStore::with_capacity(2);
+        let mut acc = VecConfigs::new();
 
         let config_1 = {
             ColorWheelConfig::Rgb(
@@ -104,7 +112,7 @@ impl ColorWheel {
     ///    config should be provided. The fallback is always grayscale. See
     ///    [ColorWheelConfig::narrow_config_based_on_color_support],
     ///    [r3bl_ansi_color::global_color_support::detect] for more info.
-    pub fn new(configs: MicroVecBackingStore<ColorWheelConfig>) -> Self {
+    pub fn new(configs: VecConfigs) -> Self {
         Self {
             configs,
             gradient_kind: GradientKind::NotCalculatedYet,
@@ -199,14 +207,18 @@ impl ColorWheel {
             }
 
             ColorWheelConfig::Ansi256(index, _) => {
-                let gradient: TinyVecBackingStore<TuiColor> =
-                    get_gradient_array_for(*index)
-                        .iter()
-                        .map(|color_u8| TuiColor::Ansi(AnsiValue::new(*color_u8)))
-                        .collect();
+                let gradient_vec = {
+                    let gradient_array = get_gradient_array_for(*index);
+                    let size_hint = gradient_array.len();
+                    let mut gradient_vec: VecSteps = VecSteps::with_capacity(size_hint);
+                    for color_u8 in gradient_array {
+                        gradient_vec.push(TuiColor::Ansi(AnsiValue::new(*color_u8)));
+                    }
+                    gradient_vec
+                };
                 self.gradient_length_kind =
-                    GradientLengthKind::ColorWheel(gradient.len());
-                self.gradient_kind = GradientKind::ColorWheel(gradient);
+                    GradientLengthKind::ColorWheel(gradient_vec.len());
+                self.gradient_kind = GradientKind::ColorWheel(gradient_vec);
                 self.index = ch(0);
             }
         }
@@ -354,9 +366,9 @@ impl ColorWheel {
     pub fn lolcat_into_string(
         text: &str,
         maybe_default_style: Option<TuiStyle>,
-    ) -> SmallStringBackingStore {
+    ) -> StringStorage {
         ColorWheel::default().colorize_into_string(
-            &text.unicode_string(),
+            text,
             GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
             TextColorizationPolicy::ColorEachCharacter(None),
             maybe_default_style,
@@ -366,44 +378,36 @@ impl ColorWheel {
     /// See [ColorWheel::lolcat_into_string] for an easy to use version of this function.
     pub fn colorize_into_string(
         &mut self,
-        unicode_string: &UnicodeString,
+        string: &str,
         gradient_generation_policy: GradientGenerationPolicy,
         text_colorization_policy: TextColorizationPolicy,
         maybe_default_style: Option<TuiStyle>,
-    ) -> SmallStringBackingStore {
+    ) -> StringStorage {
+        let string_us = UnicodeString::new(string);
         let spans_in_line = self.colorize_into_styled_texts(
-            unicode_string,
+            &string_us,
             gradient_generation_policy,
             text_colorization_policy,
         );
 
-        let mut acc_vec = TinyVecBackingStore::<TinyStringBackingStore>::new();
+        let mut acc = StringStorage::new();
 
-        for TuiStyledText {
-            mut style,
-            text: unicode_string,
-        } in spans_in_line.inner
-        {
+        for TuiStyledText { mut style, text } in spans_in_line.inner {
             if let Some(default_style) = maybe_default_style {
-                style.add_assign(default_style);
+                style += default_style;
             }
 
             let acc_style = convert_to_ansi_color_styles::from_tui_style(style);
 
             let ansi_styled_text = AnsiStyledText {
                 style: &acc_style,
-                text: &(unicode_string.string),
+                text: &text,
             };
 
-            let output = format!("{}", ansi_styled_text);
-            acc_vec.push(output.into());
+            _ = write!(acc, "{}", ansi_styled_text);
         }
 
-        let mut acc_str = SmallStringBackingStore::new();
-        for it in acc_vec.iter() {
-            acc_str.push_str(it.as_str());
-        }
-        acc_str
+        acc
     }
 
     /// This method gives you fine grained control over the color wheel. It returns a
@@ -423,18 +427,18 @@ impl ColorWheel {
     ///   of steps. Subsequent calls will use the same gradient and index.
     pub fn colorize_into_styled_texts(
         &mut self,
-        text: &UnicodeString,
+        us: &UnicodeString,
         gradient_generation_policy: GradientGenerationPolicy,
         text_colorization_policy: TextColorizationPolicy,
     ) -> TuiStyledTexts {
-        self.generate_gradient(text, gradient_generation_policy);
-        self.generate_styled_texts(text_colorization_policy, text)
+        self.generate_gradient(us, gradient_generation_policy);
+        self.generate_styled_texts(text_colorization_policy, us)
     }
 
     fn generate_styled_texts(
         &mut self,
         text_colorization_policy: TextColorizationPolicy,
-        text: &UnicodeString,
+        us: &UnicodeString,
     ) -> TuiStyledTexts {
         mod inner {
             use super::*;
@@ -478,8 +482,8 @@ impl ColorWheel {
             };
 
             // Loop: Colorize each (next) character w/ (next) color.
-            for seg in text.iter() {
-                let next_character = seg.get_str(&text.string);
+            for seg in us.iter() {
+                let next_character = seg_str!(seg, us);
                 let maybe_next_bg_color = self.next_color();
 
                 if let Some(next_bg_color) = maybe_next_bg_color {
@@ -530,14 +534,15 @@ impl ColorWheel {
                     );
                 }
             }
+
             return acc;
         }
 
         // Handle regular case.
         match text_colorization_policy {
             TextColorizationPolicy::ColorEachCharacter(maybe_style) => {
-                for seg in text.iter() {
-                    let next_character = seg.get_str(&text.string);
+                for seg in us.iter() {
+                    let next_character = seg_str!(seg, us);
                     // Loop: Colorize each (next) character w/ (next) color.
                     acc += tui_styled_text!(
                         @style: inner::gen_style_fg_color_for(maybe_style, self.next_color()),
@@ -547,7 +552,7 @@ impl ColorWheel {
             }
             TextColorizationPolicy::ColorEachWord(maybe_style) => {
                 // More info on peekable: https://stackoverflow.com/a/67872822/2085356
-                let mut peekable = text.string.split_ascii_whitespace().peekable();
+                let mut peekable = us.string.split_ascii_whitespace().peekable();
                 while let Some(next_word) = peekable.next() {
                     // Loop: Colorize each (next) word w/ (next) color.
                     acc += tui_styled_text!(
@@ -569,12 +574,12 @@ impl ColorWheel {
 
     fn generate_gradient(
         &mut self,
-        text: &UnicodeString,
+        us: &UnicodeString,
         gradient_generation_policy: GradientGenerationPolicy,
     ) {
         match gradient_generation_policy {
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength => {
-                let steps = u8(ch(text.len()));
+                let steps = u8(ch(us.len()));
 
                 // Generate a new gradient if one doesn't exist.
                 if let GradientLengthKind::NotCalculatedYet = self.get_gradient_len() {
@@ -731,7 +736,7 @@ mod tests_color_wheel_rgb {
         ]
         .iter()
         .map(|(r, g, b)| TuiColor::Rgb(RgbValue::from_u8(*r, *g, *b)))
-        .collect::<TinyVecBackingStore<_>>();
+        .collect::<VecSteps>();
         assert_eq2!(lhs, rhs);
 
         // Call to next() should return the start_color.
@@ -820,17 +825,17 @@ mod tests_color_wheel_rgb {
 
         global_color_support::set_override(ColorSupport::Truecolor);
 
-        let unicode_string = "HELLO WORLD".unicode_string();
-
+        let string = "HELLO WORLD";
+        let string_us = UnicodeString::new(string);
         let styled_texts = color_wheel_rgb.colorize_into_styled_texts(
-            &unicode_string,
+            &string_us,
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
             TextColorizationPolicy::ColorEachWord(None),
         );
         assert_eq2!(styled_texts.len(), 3);
 
         // [0]: "HELLO", color_fg: Rgb(0, 0, 0)
-        assert_eq2!(styled_texts[0].get_text().string, "HELLO");
+        assert_eq2!(styled_texts[0].get_text(), "HELLO");
         assert_eq2!(
             styled_texts[0].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
@@ -839,11 +844,11 @@ mod tests_color_wheel_rgb {
         assert_eq2!(styled_texts[0].get_style().bold, false);
 
         // [1]: " ", color_fg: None
-        assert_eq2!(styled_texts[1].get_text().string, " ");
+        assert_eq2!(styled_texts[1].get_text(), " ");
         assert_eq2!(styled_texts[1].get_style().color_fg, None);
 
         // [2]: "WORLD", color_fg: Rgb(0, 0, 0)
-        assert_eq2!(styled_texts[2].get_text().string, "WORLD");
+        assert_eq2!(styled_texts[2].get_text(), "WORLD");
         assert_eq2!(
             styled_texts[2].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
@@ -869,23 +874,23 @@ mod tests_color_wheel_rgb {
 
         global_color_support::set_override(ColorSupport::Truecolor);
 
-        let unicode_string = "HELLO".unicode_string();
-
         let style = TuiStyle {
             dim: true,
             bold: true,
             ..Default::default()
         };
 
+        let string = "HELLO";
+        let string_us = UnicodeString::new(string);
         let styled_texts = color_wheel_rgb.colorize_into_styled_texts(
-            &unicode_string,
+            &string_us,
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
             TextColorizationPolicy::ColorEachCharacter(Some(style)),
         );
         assert_eq2!(styled_texts.len(), 5);
 
         // [0]: "H", color_fg: Rgb(0, 0, 0)
-        assert_eq2!(styled_texts[0].get_text().string, "H");
+        assert_eq2!(styled_texts[0].get_text(), "H");
         assert_eq2!(
             styled_texts[0].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
@@ -894,28 +899,28 @@ mod tests_color_wheel_rgb {
         assert_eq2!(styled_texts[0].get_style().bold, true);
 
         // [1]: "E", color_fg: Rgb(0, 0, 0)
-        assert_eq2!(styled_texts[1].get_text().string, "E");
+        assert_eq2!(styled_texts[1].get_text(), "E");
         assert_eq2!(
             styled_texts[1].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
         );
 
         // [2]: "L", color_fg: Rgb(51, 51, 51)
-        assert_eq2!(styled_texts[2].get_text().string, "L");
+        assert_eq2!(styled_texts[2].get_text(), "L");
         assert_eq2!(
             styled_texts[2].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(51, 51, 51)))
         );
 
         // [3]: "L", color_fg: Rgb(51, 51, 51)
-        assert_eq2!(styled_texts[3].get_text().string, "L");
+        assert_eq2!(styled_texts[3].get_text(), "L");
         assert_eq2!(
             styled_texts[3].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(51, 51, 51)))
         );
 
         // [4]: "O", color_fg: Rgb(102,102,102)
-        assert_eq2!(styled_texts[4].get_text().string, "O");
+        assert_eq2!(styled_texts[4].get_text(), "O");
         assert_eq2!(
             styled_texts[4].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(102, 102, 102)))
@@ -941,10 +946,10 @@ mod tests_color_wheel_rgb {
 
         global_color_support::set_override(ColorSupport::Truecolor);
 
-        let unicode_string = "HELLO WORLD".unicode_string();
+        let string = "HELLO WORLD";
 
         let ansi_styled_string = color_wheel_rgb.colorize_into_string(
-            &unicode_string,
+            string,
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
             TextColorizationPolicy::ColorEachCharacter(None),
             None,

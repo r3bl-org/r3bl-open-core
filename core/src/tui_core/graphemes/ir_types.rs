@@ -15,28 +15,29 @@
  *   limitations under the License.
  */
 
-use crate::{ChUnit, TinyStringBackingStore};
+use super::{UnicodeString, UnicodeStringExt as _};
+use crate::ChUnit;
 
 /// We need a [String] (since we're returning a slice of a temporary
 /// [crate::UnicodeString] that is dropped by the function that creates it, not as a
 /// result of mutation).
 #[derive(Debug, PartialEq, Eq)]
 pub struct UnicodeStringSegmentSliceResult {
-    pub string: TinyStringBackingStore,
-    pub unicode_width: ChUnit,
-    pub display_col_at_which_seg_starts: ChUnit,
+    pub unicode_string: UnicodeString,
+    pub display_width: ChUnit,
+    pub display_col_at_which_this_seg_starts: ChUnit,
 }
 
 impl UnicodeStringSegmentSliceResult {
     pub fn new(
-        string: &str,
-        unicode_width: ChUnit,
-        display_col_at_which_this_segment_starts: ChUnit,
+        text: &str,
+        display_width: ChUnit,
+        display_col_at_which_this_seg_starts: ChUnit,
     ) -> Self {
         Self {
-            string: string.into(),
-            unicode_width,
-            display_col_at_which_seg_starts: display_col_at_which_this_segment_starts,
+            unicode_string: text.unicode_string(),
+            display_width,
+            display_col_at_which_this_seg_starts,
         }
     }
 }

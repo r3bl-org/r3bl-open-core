@@ -2,7 +2,8 @@
 name = "r3bl_core"
 version = "0.10.0"
 edition = "2024"
-resolver = "2"
+# https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+resolver = "3"
 description = """
 Helper crate for r3bl_tui and r3bl_tuify crates.
 Used by workspace in https://github.com/r3bl-org/r3bl-open-core.
@@ -29,6 +30,7 @@ path = "src/lib.rs"
 # r3bl-open-core.
 r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" } # Convert between ansi and rgb.
 
+# kv.rs needs this to serialize and deserialize Bincode to/from the KV store.
 # https://github.com/serde-rs/serde.
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.132"

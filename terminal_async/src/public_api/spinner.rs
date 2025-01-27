@@ -201,9 +201,8 @@ impl Spinner {
 mod tests {
     use std::sync::Arc;
 
-    use r3bl_core::MicroVecBackingStore;
     use r3bl_test_fixtures::StdoutMock;
-    use smallvec::smallvec;
+    use smallvec::SmallVec;
 
     use super::{Duration,
                 LineStateControlSignal,
@@ -213,6 +212,10 @@ mod tests {
                 TTYResult,
                 is_fully_uninteractive_terminal};
     use crate::{SpinnerColor, StdMutex};
+
+    type ArrayVec = SmallVec<[LineStateControlSignal; FACTOR as usize]>;
+    const FACTOR: u32 = 5;
+    const QUANTUM: Duration = Duration::from_millis(100);
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
@@ -224,11 +227,9 @@ mod tests {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let shared_writer = SharedWriter::new(line_sender);
 
-        let quantum = Duration::from_millis(100);
-
         let spinner = Spinner::try_start(
             "message".to_string(),
-            quantum,
+            QUANTUM,
             SpinnerStyle {
                 template: crate::SpinnerTemplate::Braille,
                 color: SpinnerColor::None,
@@ -245,7 +246,7 @@ mod tests {
 
         let mut spinner = spinner.unwrap().unwrap();
 
-        tokio::time::sleep(quantum * 5).await;
+        tokio::time::sleep(QUANTUM * FACTOR).await;
 
         spinner.stop("final message").await.unwrap();
 
@@ -259,7 +260,7 @@ mod tests {
         );
 
         let line_control_signal_sink = {
-            let mut acc: MicroVecBackingStore<LineStateControlSignal> = smallvec![];
+            let mut acc = ArrayVec::new();
             loop {
                 let it = line_receiver.try_recv();
                 match it {
@@ -305,7 +306,7 @@ mod tests {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let shared_writer = SharedWriter::new(line_sender);
 
-        let quantum = Duration::from_millis(100);
+        let quantum = QUANTUM;
 
         let spinner = Spinner::try_start(
             "message".to_string(),
@@ -323,7 +324,7 @@ mod tests {
 
         let mut spinner = spinner.unwrap().unwrap();
 
-        tokio::time::sleep(quantum * 5).await;
+        tokio::time::sleep(quantum * FACTOR).await;
 
         spinner.stop("final message").await.unwrap();
 
@@ -344,8 +345,8 @@ mod tests {
         );
         // spell-checker:enable
 
-        let line_control_signal_sink: MicroVecBackingStore<LineStateControlSignal> = {
-            let mut acc = smallvec![];
+        let line_control_signal_sink = {
+            let mut acc = ArrayVec::new();
             loop {
                 let it = line_receiver.try_recv();
                 match it {

@@ -19,10 +19,9 @@ use std::{fmt::{Display, Formatter},
           io::IsTerminal};
 
 use rand::random;
-use serde::{Deserialize, Serialize};
 
 /// A struct to contain info we need to print with every character.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, size_of::SizeOf)]
+#[derive(Debug, Clone, Copy, size_of::SizeOf)]
 pub struct ColorWheelControl {
     pub seed: f64,
     pub spread: f64,
@@ -49,7 +48,7 @@ impl PartialEq for ColorWheelControl {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, size_of::SizeOf)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, size_of::SizeOf)]
 pub enum ColorChangeSpeed {
     Rapid,
     Slow,

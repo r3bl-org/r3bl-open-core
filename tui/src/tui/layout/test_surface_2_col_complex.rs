@@ -60,10 +60,6 @@ mod tests {
             surface.surface_end()?;
 
             println!("{:?}", &surface.render_pipeline);
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&surface.render_pipeline).unwrap()
-            );
         });
     }
 

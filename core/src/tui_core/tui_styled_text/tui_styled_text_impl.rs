@@ -15,7 +15,22 @@
  *   limitations under the License.
  */
 
-use crate::{TuiStyle, UnicodeString, UnicodeStringExt};
+use sizing::StringTuiStyledText;
+use smallstr::SmallString;
+use smallvec::SmallVec;
+
+use crate::TuiStyle;
+
+pub(in crate::tui_core::tui_styled_text) mod sizing {
+    use super::*;
+
+    /// Default internal storage for [TuiStyledText], which is very small.
+    pub(crate) type StringTuiStyledText = SmallString<[u8; MAX_CHARS_IN_SMALL_STRING]>;
+    const MAX_CHARS_IN_SMALL_STRING: usize = 8;
+
+    pub(crate) type VecTuiStyledText = SmallVec<[TuiStyledText; MAX_ITEMS_IN_SMALL_VEC]>;
+    const MAX_ITEMS_IN_SMALL_VEC: usize = 32;
+}
 
 /// Macro to make building [TuiStyledText] easy.
 ///
@@ -37,31 +52,32 @@ macro_rules! tui_styled_text {
     };
 }
 
+// PERF: [ ] own text, why? slice? in the past, Deserialize meant it had to own, not anymore..
 /// Use [tui_styled_text!] macro for easier construction.
 #[derive(Debug, Clone, size_of::SizeOf)]
 pub struct TuiStyledText {
     pub style: TuiStyle,
-    pub text: UnicodeString,
+    pub text: StringTuiStyledText,
 }
 
 impl Default for TuiStyledText {
     fn default() -> Self {
         TuiStyledText {
             style: TuiStyle::default(),
-            text: UnicodeString::new(""),
+            text: "".into(),
         }
     }
 }
 
 impl TuiStyledText {
-    pub fn new(style: TuiStyle, text: String) -> Self {
+    pub fn new(style: TuiStyle, text: impl Into<StringTuiStyledText>) -> Self {
         TuiStyledText {
             style,
-            text: text.unicode_string(),
+            text: text.into(),
         }
     }
 
-    pub fn get_text(&self) -> &UnicodeString { &self.text }
+    pub fn get_text(&self) -> &str { self.text.as_str() }
 
     pub fn get_style(&self) -> &TuiStyle { &self.style }
 }

@@ -21,7 +21,7 @@
 //! 2. [Video](https://youtu.be/TmLF7vI8lKk)
 
 use std::{error::Error,
-          fmt::{Display, Formatter, Result}};
+          fmt::{Debug, Display, Formatter, Result}};
 
 /// Type alias to make it easy to work with:
 /// 1. [`core::result::Result`]
@@ -108,7 +108,7 @@ impl Error for CommonError {}
 /// Implement [`Display`] trait (needed by [`Error`] trait). This is the same as the
 /// [`Debug`] implementation (which is derived above).
 impl Display for CommonError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result { Debug::fmt(self, f) }
 }
 
 impl CommonError {

@@ -15,19 +15,16 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Display, Formatter};
-
 use crossterm::event::{Event::{self, FocusGained, FocusLost, Key, Mouse, Resize},
                        KeyEvent,
                        MouseEvent};
 use r3bl_core::{size, Size};
-use serde::{Deserialize, Serialize};
 
 use super::{KeyPress, MouseInput};
 
 /// Please see [KeyPress] for more information about handling keyboard input.
 #[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum InputEvent {
     Keyboard(KeyPress),
     Resize(Size),
@@ -35,13 +32,14 @@ pub enum InputEvent {
     Focus(FocusEvent),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FocusEvent {
     Gained,
     Lost,
 }
 
 mod helpers {
+
     use super::*;
 
     impl InputEvent {
@@ -75,11 +73,6 @@ mod helpers {
             }
             false
         }
-    }
-
-    impl Display for InputEvent {
-        /// For [ToString].
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
     }
 }
 

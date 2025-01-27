@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Formatter};
 
 /// Action.
 #[derive(Default, Clone, Debug)]
@@ -29,17 +29,13 @@ pub enum AppSignal {
     Noop,
 }
 
-impl Display for AppSignal {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
-}
-
 /// State.
-#[derive(Clone, PartialEq, Eq, Debug, Default)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct State {
     pub counter: isize,
 }
 
-impl Display for State {
+impl Debug for State {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "State {{ counter: {:?} }}", self.counter)
     }

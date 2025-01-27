@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::time::Duration;
+use std::{fmt::{Display, Formatter, Result},
+          time::Duration};
 
 use crate::ok;
 
@@ -91,8 +92,8 @@ mod converters {
 mod display_formatter {
     use super::*;
 
-    impl std::fmt::Display for TimeDuration {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    impl Display for TimeDuration {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             let secs = self.get_only_secs();
             let millis = self.get_only_millis();
             let micros = self.get_only_micros();
@@ -124,7 +125,8 @@ mod tests {
     use std::{fmt::Write as _, time::Duration};
 
     use super::*;
-    use crate::{DEFAULT_NORMAL_STRING_SIZE, NormalStringBackingStore};
+    use crate::common::sizing::{TELEMETRY_REPORT_STRING_SIZE,
+                                TelemetryReportLineStorage};
 
     #[test]
     fn test_converters() {
@@ -154,10 +156,10 @@ mod tests {
 
     #[test]
     fn test_display_formatter() {
-        let mut backing_store = NormalStringBackingStore::new();
+        let mut backing_store = TelemetryReportLineStorage::new();
 
         assert!(!backing_store.spilled());
-        assert_eq!(backing_store.capacity(), DEFAULT_NORMAL_STRING_SIZE);
+        assert_eq!(backing_store.capacity(), TELEMETRY_REPORT_STRING_SIZE);
 
         let avg = TimeDuration::from(
             Duration::from_secs(3600)
@@ -197,9 +199,10 @@ mod tests {
             "Response time ⣼ Avg: 1h:0m:1s100ms, Min: 1m:1s:100ms, Max: 1s:100ms, Median: 1s:100ms, FPS ⵚ Median: 2000"
         );
 
+        println!("backing_store.len(): {}", backing_store.len());
         println!("backing_store.capacity(): {}", backing_store.capacity());
 
-        assert!(backing_store.spilled());
+        assert!(!backing_store.spilled());
         assert_eq!(backing_store.capacity(), 128);
     }
 }

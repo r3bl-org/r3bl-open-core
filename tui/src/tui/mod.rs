@@ -82,4 +82,3 @@ pub use terminal_window::*;
 
 // Tests.
 mod test_make_style_macro;
-mod test_tui_serde;

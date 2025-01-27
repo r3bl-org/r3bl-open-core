@@ -2,7 +2,8 @@
 name = "r3bl_terminal_async"
 version = "0.6.0"
 edition = "2024"
-resolver = "2"
+# https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+resolver = "3"
 description = "Async non-blocking read_line implementation with multiline editor, with concurrent display output from tasks, and colorful animated spinners"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["cli", "spinner", "readline", "terminal", "async"]

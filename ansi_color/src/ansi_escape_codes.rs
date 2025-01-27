@@ -19,6 +19,8 @@
 //! - <https://doc.rust-lang.org/reference/tokens.html#ascii-escapes>
 //! - <https://notes.burke.libbey.me/ansi-escape-codes/>
 
+use std::fmt::{Display, Formatter, Result};
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SgrCode {
     Reset,
@@ -39,43 +41,38 @@ pub enum SgrCode {
 }
 
 pub mod sgr_code_impl {
-    use std::fmt::{Display, Formatter, Result};
-
-    use super::SgrCode;
-
-    impl Display for SgrCode {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            write!(f, "{}", make_sgr_code(*self))
-        }
-    }
+    use super::*;
 
     pub const CSI: &str = "\x1b[";
     pub const SGR: &str = "m";
 
-    /// SGR: set graphics mode command.
-    /// More info:
-    /// - <https://notes.burke.libbey.me/ansi-escape-codes/>
-    /// - <https://www.asciitable.com/>
-    /// - <https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg>
-    /// - <https://en.wikipedia.org/wiki/ANSI_escape_code>
-    #[rustfmt::skip]
-    fn make_sgr_code(sgr_code: SgrCode) -> String {
-        match sgr_code {
-            SgrCode::Reset             => format!("{CSI}0{SGR}"),
-            SgrCode::Bold              => format!("{CSI}1{SGR}"),
-            SgrCode::Dim               => format!("{CSI}2{SGR}"),
-            SgrCode::Italic            => format!("{CSI}3{SGR}"),
-            SgrCode::Underline         => format!("{CSI}4{SGR}"),
-            SgrCode::SlowBlink         => format!("{CSI}5{SGR}"),
-            SgrCode::RapidBlink        => format!("{CSI}6{SGR}"),
-            SgrCode::Invert            => format!("{CSI}7{SGR}"),
-            SgrCode::Hidden            => format!("{CSI}8{SGR}"),
-            SgrCode::Strikethrough     => format!("{CSI}9{SGR}"),
-            SgrCode::Overline           => format!("{CSI}53{SGR}"),
-            SgrCode::ForegroundAnsi256(index) => format!("{CSI}38;5;{index}{SGR}"),
-            SgrCode::BackgroundAnsi256(index) => format!("{CSI}48;5;{index}{SGR}"),
-            SgrCode::ForegroundRGB(r, g, b) => format!("{CSI}38;2;{r};{g};{b}{SGR}"),
-            SgrCode::BackgroundRGB(r, g, b) => format!("{CSI}48;2;{r};{g};{b}{SGR}"),
+    impl Display for SgrCode {
+        /// SGR: set graphics mode command.
+        /// More info:
+        /// - <https://notes.burke.libbey.me/ansi-escape-codes/>
+        /// - <https://www.asciitable.com/>
+        /// - <https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg>
+        /// - <https://en.wikipedia.org/wiki/ANSI_escape_code>
+        #[rustfmt::skip]
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            match *self {
+                SgrCode::Reset                    => write!(f, "{CSI}0{SGR}"),
+                SgrCode::Bold                     => write!(f, "{CSI}1{SGR}"),
+                SgrCode::Dim                      => write!(f, "{CSI}2{SGR}"),
+                SgrCode::Italic                   => write!(f, "{CSI}3{SGR}"),
+                SgrCode::Underline                => write!(f, "{CSI}4{SGR}"),
+                SgrCode::SlowBlink                => write!(f, "{CSI}5{SGR}"),
+                SgrCode::RapidBlink               => write!(f, "{CSI}6{SGR}"),
+                SgrCode::Invert                   => write!(f, "{CSI}7{SGR}"),
+                SgrCode::Hidden                   => write!(f, "{CSI}8{SGR}"),
+                SgrCode::Strikethrough            => write!(f, "{CSI}9{SGR}"),
+                SgrCode::Overline                 => write!(f, "{CSI}53{SGR}"),
+                SgrCode::ForegroundAnsi256(index) => write!(f, "{CSI}38;5;{index}{SGR}"),
+                SgrCode::BackgroundAnsi256(index) => write!(f, "{CSI}48;5;{index}{SGR}"),
+                SgrCode::ForegroundRGB(r, g, b)   => write!(f, "{CSI}38;2;{r};{g};{b}{SGR}"),
+                SgrCode::BackgroundRGB(r, g, b)   => write!(f, "{CSI}48;2;{r};{g};{b}{SGR}"),
+            }
+
         }
     }
 }

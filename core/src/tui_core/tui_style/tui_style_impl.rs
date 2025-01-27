@@ -19,10 +19,12 @@ use core::fmt::Debug;
 use std::{fmt::{Display, Formatter},
           ops::{Add, AddAssign}};
 
-use serde::{Deserialize, Serialize};
+use sizing::VecStyles;
+use smallvec::SmallVec;
+use strum::EnumCount;
 
 use super::TuiColor;
-use crate::{ChUnit, SmallVecBackingStore, ch, convert_tui_color_into_r3bl_ansi_color};
+use crate::{ChUnit, VecStrBuffer, ch, convert_tui_color_into_r3bl_ansi_color};
 
 /// Please use [tui_style!](crate::tui_style) proc macro to generate code for this struct.
 ///
@@ -61,9 +63,7 @@ use crate::{ChUnit, SmallVecBackingStore, ch, convert_tui_color_into_r3bl_ansi_c
 ///
 /// Here are the [crossterm docs on
 /// attributes](https://docs.rs/crossterm/0.25.0/crossterm/style/enum.Attribute.html)
-#[derive(
-    Copy, Default, Clone, PartialEq, Eq, Serialize, Deserialize, Hash, size_of::SizeOf,
-)]
+#[derive(Copy, Default, Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct TuiStyle {
     pub id: u8,
     pub bold: bool,
@@ -176,111 +176,126 @@ mod addition {
 
 mod style_helpers {
     use super::*;
-    use crate::{TinyStringBackingStore, TinyVecBackingStore};
-
-    impl Display for TuiStyle {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            let msg = format!("{self:?}");
-            f.write_str(&msg)
-        }
-    }
-
-    impl TuiStyle {
-        pub fn pretty_print(&self) -> String {
-            let mut msg_vec = TinyVecBackingStore::<TinyStringBackingStore>::new();
-
-            if self.bold {
-                msg_vec.push("bld".into());
-            }
-
-            if self.italic {
-                msg_vec.push("itl".into());
-            }
-
-            if self.dim {
-                msg_vec.push("dim".into());
-            }
-
-            if self.underline {
-                msg_vec.push("und".into());
-            }
-
-            if self.reverse {
-                msg_vec.push("rev".into());
-            }
-
-            if self.hidden {
-                msg_vec.push("hid".into());
-            }
-
-            if self.strikethrough {
-                msg_vec.push("str".into());
-            }
-
-            if self.color_fg.is_some() {
-                msg_vec.push("fg".into());
-            }
-
-            if self.color_fg.is_some() {
-                msg_vec.push("bg".into());
-            }
-
-            if let Some(padding) = self.padding {
-                msg_vec.push(format!("pad:{padding:?}").into());
-            }
-
-            msg_vec.join("‐")
-        }
-    }
+    use crate::{CharStorage, char_storage, join, join_fmt, ok};
 
     impl Debug for TuiStyle {
         fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-            let mut msg_vec = TinyVecBackingStore::<TinyStringBackingStore>::new();
+            let id = self.id.to_string();
+
+            // This accumulator is needed in order to be able to add `+` delimiter between
+            // attributes.
+            let mut acc_attrs = VecStrBuffer::new();
 
             if self.computed {
-                msg_vec.push("computed".into());
+                acc_attrs.push("computed");
             } else if self.id == u8::MAX {
-                msg_vec.push("id: N/A".into());
+                acc_attrs.push("id: N/A");
             } else {
-                msg_vec.push(self.id.to_string().into());
+                acc_attrs.push(id.as_str());
             }
 
             if self.bold {
-                msg_vec.push("bold".into());
+                acc_attrs.push("bold");
             }
 
             if self.italic {
-                msg_vec.push("italic".into());
+                acc_attrs.push("italic");
             }
 
             if self.dim {
-                msg_vec.push("dim".into());
+                acc_attrs.push("dim");
             }
 
             if self.underline {
-                msg_vec.push("underline".into());
+                acc_attrs.push("underline");
             }
 
             if self.reverse {
-                msg_vec.push("reverse".into());
+                acc_attrs.push("reverse");
             }
 
             if self.hidden {
-                msg_vec.push("hidden".into());
+                acc_attrs.push("hidden");
             }
 
             if self.strikethrough {
-                msg_vec.push("strikethrough".into());
+                acc_attrs.push("strikethrough");
             }
+
+            let attrs_str = join!(
+                from: acc_attrs,
+                each: it,
+                delim: " + ",
+                format: "{it}",
+            );
 
             write!(
                 f,
-                "Style {{ {attrs} | fg: {fg:?} | bg: {bg:?} | padding: {p:?} }}",
-                attrs = msg_vec.join(" + "),
+                "Style {{ {attrs_str} | fg: {fg:?} | bg: {bg:?} | padding: {p:?} }}",
                 fg = self.color_fg,
                 bg = self.color_bg,
                 p = *self.padding.unwrap_or_else(|| ch(0))
             )
+        }
+    }
+
+    impl Display for TuiStyle {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            let pad_str = match self.padding {
+                Some(padding) => char_storage!("pad:{padding:?}"),
+                None => CharStorage::new(),
+            };
+
+            // Need `acc` since we don't know how many attributes are set.
+            let mut acc = VecStrBuffer::new();
+
+            if self.bold {
+                acc.push("bld");
+            }
+
+            if self.italic {
+                acc.push("itl");
+            }
+
+            if self.dim {
+                acc.push("dim");
+            }
+
+            if self.underline {
+                acc.push("und");
+            }
+
+            if self.reverse {
+                acc.push("rev");
+            }
+
+            if self.hidden {
+                acc.push("hid");
+            }
+
+            if self.strikethrough {
+                acc.push("str");
+            }
+
+            if self.color_fg.is_some() {
+                acc.push("fg");
+            }
+
+            if self.color_fg.is_some() {
+                acc.push("bg");
+            }
+
+            acc.push(pad_str.as_str());
+
+            join_fmt!(
+                fmt: f,
+                from: acc,
+                each: it,
+                delim: "‐",
+                format: "{it}",
+            );
+
+            ok!()
         }
     }
 }
@@ -350,55 +365,62 @@ mod test_style {
     }
 }
 
+mod sizing {
+    use super::*;
+
+    /// Attributes are: color_fg, color_bg, bold, dim, italic, underline, reverse, hidden,
+    /// etc. which are in [r3bl_ansi_color::Style].
+    pub type VecStyles = SmallVec<[r3bl_ansi_color::Style; MAX_STYLE_ATTRIB_SIZE]>;
+    const MAX_STYLE_ATTRIB_SIZE: usize = r3bl_ansi_color::Style::COUNT;
+}
+
 pub mod convert_to_ansi_color_styles {
     use super::*;
 
-    pub fn from_tui_style(
-        tui_style: TuiStyle,
-    ) -> SmallVecBackingStore<r3bl_ansi_color::Style> {
-        let mut acc_style = SmallVecBackingStore::new();
+    pub fn from_tui_style(tui_style: TuiStyle) -> VecStyles {
+        let mut acc = VecStyles::new();
 
         if let Some(color_fg) = tui_style.color_fg {
-            acc_style.push(r3bl_ansi_color::Style::Foreground(
+            acc.push(r3bl_ansi_color::Style::Foreground(
                 convert_tui_color_into_r3bl_ansi_color(color_fg),
             ));
         }
 
         if let Some(color_bg) = tui_style.color_bg {
-            acc_style.push(r3bl_ansi_color::Style::Background(
+            acc.push(r3bl_ansi_color::Style::Background(
                 convert_tui_color_into_r3bl_ansi_color(color_bg),
             ));
         }
 
         if tui_style.bold {
-            acc_style.push(r3bl_ansi_color::Style::Bold);
+            acc.push(r3bl_ansi_color::Style::Bold);
         }
 
         if tui_style.dim {
-            acc_style.push(r3bl_ansi_color::Style::Dim);
+            acc.push(r3bl_ansi_color::Style::Dim);
         }
 
         if tui_style.italic {
-            acc_style.push(r3bl_ansi_color::Style::Italic);
+            acc.push(r3bl_ansi_color::Style::Italic);
         }
 
         if tui_style.underline {
-            acc_style.push(r3bl_ansi_color::Style::Underline);
+            acc.push(r3bl_ansi_color::Style::Underline);
         }
 
         if tui_style.reverse {
-            acc_style.push(r3bl_ansi_color::Style::Invert);
+            acc.push(r3bl_ansi_color::Style::Invert);
         }
 
         if tui_style.hidden {
-            acc_style.push(r3bl_ansi_color::Style::Hidden);
+            acc.push(r3bl_ansi_color::Style::Hidden);
         }
 
         if tui_style.strikethrough {
-            acc_style.push(r3bl_ansi_color::Style::Strikethrough);
+            acc.push(r3bl_ansi_color::Style::Strikethrough);
         }
 
-        acc_style
+        acc
     }
 
     #[cfg(test)]

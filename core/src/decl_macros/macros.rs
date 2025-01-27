@@ -196,57 +196,65 @@ macro_rules! console_log {
     };
 }
 
-/// Runs the `$code` block after evaluating the `$eval` expression and assigning
-/// it to `$id`.
+/// Runs the `$code` block after evaluating the `$eval` expression and assigning it to
+/// `$id`.
+/// - It returns the `$id` after running the `$code` block.
+/// - Note that `$id` is not leaked into the caller's scope / block.
 ///
 /// # Examples
 ///
 /// ```no_run
 /// use r3bl_core::with;
-/// with! {
-///     Some("Hello, World!"),
-///     as it,
+/// let it = with! {
+///     Some(12),
+///     as it /* This only exists in the scope of the run block below. */,
 ///     run {
 ///         match it {
-///             Some(val) => println!("{}", val),
+///             Some(val) => assert!(val == 12),
 ///             _ => todo!()
 ///         };
 ///     }
-/// }
+/// };
+/// assert!(it == Some(12));
 /// ```
 #[macro_export]
 macro_rules! with {
-    ($eval:expr, as $id:ident, run $code:block) => {
+    ($eval:expr, as $id:ident, run $code:block) => {{
         let $id = $eval;
         $code;
-    };
+        $id
+    }};
 }
 
 /// Similar to [`with!`] except `$id` is a mutable reference to the `$eval` expression.
+/// - It returns the `$id` after running the `$code` block.
+/// - Note that `$id` is not leaked into the caller's scope / block.
 ///
 /// # Example
 ///
 /// ```rust
 /// use r3bl_core::with_mut;
-/// with_mut! {
+/// let it = with_mut! {
 ///     vec!["one", "two", "three"],
-///     as it,
+///     as it /* This only exists in the scope of the run block below. */,
 ///     run {
 ///         it.push("four");
 ///         assert_eq!(it.len(), 4);
 ///     }
-/// }
+/// };
+/// assert!(it.len() == 4);
 /// ```
 #[macro_export]
 macro_rules! with_mut {
-    ($eval:expr, as $id:ident, run $code:block) => {
+    ($eval:expr, as $id:ident, run $code:block) => {{
         let mut $id = $eval;
         $code;
-    };
+        $id
+    }};
 }
 
-/// Similar to [`with_mut!`] except that it returns the value of the `$code`
-/// block.
+/// Similar to [`with_mut!`] except that it returns the value of the `$code` block.
+/// - Note that `$id` is not leaked into the caller's scope / block.
 ///
 /// # Example
 ///

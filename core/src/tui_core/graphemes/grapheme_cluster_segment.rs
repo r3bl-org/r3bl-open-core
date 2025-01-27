@@ -15,44 +15,71 @@
  *   limitations under the License.
  */
 
-use serde::{Deserialize, Serialize};
-
 use super::UnicodeString;
 use crate::{ChUnit, usize};
 
-#[derive(
-    Debug, Copy, Clone, PartialEq, Eq, Hash, size_of::SizeOf, Serialize, Deserialize,
-)]
-/// The actual grapheme cluster &[str]` is derived using `start_index`..`end_index` from
-/// the [UnicodeString::string]. Eg: "H", "📦", "🙏🏽".
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
+/// The actual grapheme cluster string slice &[str], is derived using
+/// `start_index`..`end_index` from the original string slice used to generate the
+/// [UnicodeString]. Eg: "H", "📦", "🙏🏽".
 pub struct GraphemeClusterSegment {
     // PERF: [x] perf (remove alloc)
-    /// The start index of the [UnicodeString::string]  that this grapheme cluster
-    /// represents.
+    /// The start index, in the string slice, used to generate the [UnicodeString] that this
+    /// grapheme cluster represents.
     pub start_index: ChUnit,
-    /// The end index of the [UnicodeString::string] that this grapheme cluster
-    /// represents.
+
+    /// The end index, in the string slice, used to generate the [UnicodeString] that this
+    /// grapheme cluster represents.
     pub end_index: ChUnit,
-    /// The byte offset (in the original string) of the start of the grapheme cluster.
+
+    /// The byte offset (in the original string slice) of the start of this grapheme cluster.
     pub byte_offset: ChUnit,
-    /// Display width of the [UnicodeString::string] via [`unicode_width::UnicodeWidthChar`].
+
+    /// Display width of the grapheme cluster calculated using
+    /// [unicode_width::UnicodeWidthChar]. The display width (aka `unicode_width`)
+    /// may not the same as the byte size [Self::byte_size].
     pub unicode_width: ChUnit,
+
     /// The index of this entry in the [UnicodeString::vec_segment].
     pub logical_index: ChUnit,
-    /// The number of bytes the [UnicodeString::string] takes up in memory.
+
+    /// The number of bytes this grapheme cluster occupies in the original string slice.
+    /// The display width, aka [Self::unicode_width], may not the same as the byte size.
     pub byte_size: usize,
+
     /// Display col at which this grapheme cluster starts.
     pub display_col_offset: ChUnit,
 }
 
 impl GraphemeClusterSegment {
-    pub fn get_str<'a>(&self, text: &'a str) -> &'a str {
-        &text[usize(self.start_index)..usize(self.end_index)]
+    /// Get the string slice for the grapheme cluster segment. Closely related to
+    /// [UnicodeString::get_str].
+    pub fn get_str<'a>(&self, string: &'a str) -> &'a str {
+        let start_index = usize(self.start_index);
+        let end_index = usize(self.end_index);
+        &string[start_index..end_index]
     }
 }
 
 impl UnicodeString {
-    pub fn get_str(&self, seg: &GraphemeClusterSegment) -> &str {
-        seg.get_str(&self.string)
+    /// Get the string slice for the grapheme cluster segment. Closely related to
+    /// [GraphemeClusterSegment::get_str].
+    pub fn get_str<'a>(
+        &self, /* not actually used, but allows get_str() to be a method */
+        string: &'a str,
+        seg: &GraphemeClusterSegment,
+    ) -> &'a str {
+        let start_index = crate::usize(seg.start_index);
+        let end_index = crate::usize(seg.end_index);
+        &string[start_index..end_index]
     }
+}
+
+/// Macro to call [crate::GraphemeClusterSegment::get_str] on a
+/// [crate::GraphemeClusterSegment] and [UnicodeString].
+#[macro_export]
+macro_rules! seg_str {
+    ($seg:expr, $unicode_string:expr) => {
+        $crate::GraphemeClusterSegment::get_str(&$seg, &$unicode_string.string)
+    };
 }
