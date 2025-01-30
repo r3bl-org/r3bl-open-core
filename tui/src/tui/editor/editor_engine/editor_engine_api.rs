@@ -381,7 +381,7 @@ impl EditorEngineApi {
                 unicode_string: string,
                 ..
             }) =
-                EditorEngineInternalApi::string_at_caret(editor_buffer, editor_engine)
+                EditorEngineInternalApi::string_at_caret(editor_buffer)
             {
                 // PERF: [ ] perf
                 string

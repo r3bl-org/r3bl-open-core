@@ -133,8 +133,7 @@ mod test_config_options {
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 6, row_index: 0)
         );
-        let maybe_line_str =
-            EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine);
+        let maybe_line_str = EditorEngineInternalApi::line_at_caret_to_string(&buffer);
         assert_eq2!(maybe_line_str.unwrap(), &"abcaba".unicode_string());
     }
 }
@@ -252,7 +251,7 @@ mod test_editor_ops {
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 3, row_index: 0)
         );
-        assert::line_at_caret(&buffer, &engine, "abcab");
+        assert::line_at_caret(&buffer, "abcab");
     }
 
     #[test]
@@ -352,7 +351,7 @@ mod test_editor_ops {
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 3, row_index: 0)
         );
-        assert::line_at_caret(&buffer, &engine, "abcab");
+        assert::line_at_caret(&buffer, "abcab");
 
         // Move caret to end of line. Insert "😃". Then move caret to end of line.
         // `this` should look like:
@@ -382,7 +381,7 @@ mod test_editor_ops {
             EditorEvent::Backspace,
             &mut TestClipboard::default(),
         );
-        assert::line_at_caret(&buffer, &engine, "abcab");
+        assert::line_at_caret(&buffer, "abcab");
     }
 
     #[test]
@@ -645,7 +644,7 @@ mod test_editor_ops {
         //   └▴─────────┘
         //   C0123456789
         assert_eq2!(buffer.get_lines().len(), 1);
-        assert::none_is_at_caret(&buffer, &engine);
+        assert::none_is_at_caret(&buffer);
 
         // Insert "a".
         // `this` should look like:
@@ -659,7 +658,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('a')],
             &mut TestClipboard::default(),
         );
-        assert::none_is_at_caret(&buffer, &engine);
+        assert::none_is_at_caret(&buffer);
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 1, row_index: 0)
@@ -679,7 +678,7 @@ mod test_editor_ops {
             &mut TestClipboard::default(),
         );
         assert_eq2!(buffer.get_lines().len(), 2);
-        assert::none_is_at_caret(&buffer, &engine);
+        assert::none_is_at_caret(&buffer);
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 0, row_index: 1)
@@ -712,7 +711,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Left)],
             &mut TestClipboard::default(),
         );
-        assert::str_is_at_caret(&buffer, &engine, "a");
+        assert::str_is_at_caret(&buffer, "a");
 
         // Insert new line (at start of line).
         // `this` should look like:
@@ -729,7 +728,7 @@ mod test_editor_ops {
             &mut TestClipboard::default(),
         );
         assert_eq2!(buffer.get_lines().len(), 3);
-        assert::str_is_at_caret(&buffer, &engine, "a");
+        assert::str_is_at_caret(&buffer, "a");
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 0, row_index: 2)
@@ -753,9 +752,9 @@ mod test_editor_ops {
             &mut TestClipboard::default(),
         );
 
-        assert::none_is_at_caret(&buffer, &engine);
+        assert::none_is_at_caret(&buffer);
         assert_eq2!(
-            EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine).unwrap(),
+            EditorEngineInternalApi::line_at_caret_to_string(&buffer,).unwrap(),
             &"ab".unicode_string()
         );
 
@@ -777,7 +776,7 @@ mod test_editor_ops {
             ],
             &mut TestClipboard::default(),
         );
-        assert::str_is_at_caret(&buffer, &engine, "b");
+        assert::str_is_at_caret(&buffer, "b");
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 0, row_index: 3)
@@ -827,7 +826,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('a')],
             &mut TestClipboard::default(),
         );
-        assert::none_is_at_caret(&buffer, &engine);
+        assert::none_is_at_caret(&buffer);
 
         // Move caret left.
         // `this` should look like:
@@ -844,7 +843,7 @@ mod test_editor_ops {
             ],
             &mut TestClipboard::default(),
         );
-        assert::str_is_at_caret(&buffer, &engine, "a");
+        assert::str_is_at_caret(&buffer, "a");
 
         // Insert "1".
         // `this` should look like:
@@ -859,10 +858,10 @@ mod test_editor_ops {
             &mut TestClipboard::default(),
         );
         assert_eq2!(
-            EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine).unwrap(),
+            EditorEngineInternalApi::line_at_caret_to_string(&buffer,).unwrap(),
             &"1a".unicode_string()
         );
-        assert::str_is_at_caret(&buffer, &engine, "a");
+        assert::str_is_at_caret(&buffer, "a");
 
         // Move caret left.
         // `this` should look like:
@@ -876,7 +875,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Left)],
             &mut TestClipboard::default(),
         );
-        assert::str_is_at_caret(&buffer, &engine, "1");
+        assert::str_is_at_caret(&buffer, "1");
 
         // Move caret right.
         // `this` should look like:
@@ -890,7 +889,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Right)],
             &mut TestClipboard::default(),
         );
-        assert::str_is_at_caret(&buffer, &engine, "a");
+        assert::str_is_at_caret(&buffer, "a");
 
         // Insert "2".
         // `this` should look like:
@@ -904,9 +903,9 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('2')],
             &mut TestClipboard::default(),
         );
-        assert::str_is_at_caret(&buffer, &engine, "a");
+        assert::str_is_at_caret(&buffer, "a");
         assert_eq2!(
-            EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine).unwrap(),
+            EditorEngineInternalApi::line_at_caret_to_string(&buffer,).unwrap(),
             &"12a".unicode_string()
         );
 
@@ -925,7 +924,7 @@ mod test_editor_ops {
             ],
             &mut TestClipboard::default(),
         );
-        assert::none_is_at_caret(&buffer, &engine);
+        assert::none_is_at_caret(&buffer);
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 3, row_index: 0)

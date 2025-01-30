@@ -30,11 +30,6 @@ pub struct EditorArgsMut<'a> {
     pub editor_buffer: &'a mut EditorBuffer,
 }
 
-pub struct EditorArgs<'a> {
-    pub editor_engine: &'a EditorEngine,
-    pub editor_buffer: &'a EditorBuffer,
-}
-
 /// [DialogEngine] args struct that holds references.
 ///
 /// ![Editor component lifecycle

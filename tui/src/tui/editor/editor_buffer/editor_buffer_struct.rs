@@ -14,7 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::{collections::HashMap,
           fmt::{Debug, Formatter, Result}};
 
@@ -40,7 +39,8 @@ use sizing::VecEditorContentLines;
 use smallvec::{smallvec, SmallVec};
 
 use super::SelectionList;
-use crate::{EditorEngine,
+use crate::{validate_editor_buffer_change::EditorBufferMut,
+            EditorEngine,
             EditorEngineApi,
             HasFocus,
             RenderArgs,
@@ -69,17 +69,16 @@ use crate::{EditorEngine,
 ///
 /// These functions take any one of the following args:
 /// 1. [crate::EditorArgsMut]
-/// 2. [crate::EditorArgs]
 /// 3. [EditorBuffer] and [EditorEngine]
 ///
 /// # Accessing and mutating the fields (w/ validation)
 ///
 /// All the fields in this struct are private. In order to access them you have to use the
 /// accessor associated functions. To mutate them, you have to use the
-/// [get_mut](EditorBuffer::get_mut) method, which returns a tuple w/ mutable references
-/// to the fields. This rather strange design allows for all mutations to be tracked
-/// easily and allows for validation operations to be applied post mutation (by
-/// [crate::validate_editor_buffer_change::apply_change]).
+/// [get_mut](EditorBuffer::get_mut) method, which returns a struct of mutable references
+/// to the fields. This struct [EditorBufferMut] implements the [Drop] trait, which allows
+/// for validation [crate::validate_editor_buffer_change] operations to be applied post
+/// mutation.
 ///
 /// # Different kinds of caret positions
 ///
@@ -439,16 +438,28 @@ pub mod access_and_mutate {
         /// 2. [CaretKind::ScrollAdjusted] -> The caret position adjusted for scrolling using
         ///    scroll_offset.
         pub fn get_caret(&self, kind: CaretKind) -> Position {
+            Self::get_caret_adjusted(
+                self.editor_content.caret_display_position,
+                self.editor_content.scroll_offset,
+                kind,
+            )
+        }
+
+        pub fn get_caret_adjusted(
+            caret_display_position: Position,
+            scroll_offset: ScrollOffset,
+            kind: CaretKind,
+        ) -> Position {
             match kind {
-                CaretKind::Raw => self.editor_content.caret_display_position,
+                CaretKind::Raw => caret_display_position,
                 CaretKind::ScrollAdjusted => {
                     let col_index = Self::calc_scroll_adj_caret_col(
-                        &self.editor_content.caret_display_position,
-                        &self.editor_content.scroll_offset,
+                        &caret_display_position,
+                        &scroll_offset,
                     );
                     let row_index = Self::calc_scroll_adj_caret_row(
-                        &self.editor_content.caret_display_position,
-                        &self.editor_content.scroll_offset,
+                        &caret_display_position,
+                        &scroll_offset,
                     );
                     position!(col_index: col_index, row_index: row_index)
                 }
@@ -478,15 +489,25 @@ pub mod access_and_mutate {
         // REFACTOR: [ ] return struct, not tuple, add drop impl to it, to update lines_us? or drop lines_us?
         // REFACTOR: [ ] after mutations to lines, lines_us must be recomputed! consider remove this from the struct & computing it only when needed
         /// Even though this struct is mutable by editor_ops.rs, this method is provided
-        /// to mark when mutable access is made to this struct. This makes it easy to
-        /// determine what code mutates this struct, since it is necessary to validate
-        /// things after mutation quite a bit in editor_ops.rs.
-        pub fn get_mut(&mut self) -> EditorBufferMut<'_> {
+        /// to mark when mutable access is made to this struct.
+        ///
+        /// This makes it easy to determine what code mutates this struct, since it is
+        /// necessary to validate things after mutation quite a bit in editor_ops.rs.
+        ///
+        /// [EditorBufferMut] implements the [Drop] trait, which ensures that any
+        /// validation changes are applied after making changes to the [EditorBuffer].
+        pub fn get_mut(
+            &mut self,
+            viewport_width: ChUnit,
+            viewport_height: ChUnit,
+        ) -> EditorBufferMut<'_> {
             EditorBufferMut::new(
                 &mut self.editor_content.lines,
                 &mut self.editor_content.caret_display_position,
                 &mut self.editor_content.scroll_offset,
                 &mut self.editor_content.selection_list,
+                viewport_width,
+                viewport_height,
             )
         }
 
@@ -498,37 +519,6 @@ pub mod access_and_mutate {
 
         pub fn get_selection_map(&self) -> &SelectionList {
             &self.editor_content.selection_list
-        }
-    }
-
-    pub struct EditorBufferMut<'a> {
-        pub lines: &'a mut VecEditorContentLines,
-        pub caret: &'a mut Position,
-        pub scroll_offset: &'a mut ScrollOffset,
-        pub selection_map: &'a mut SelectionList,
-    }
-
-    // BOOKM: Clever Rust, use of Drop to perform transaction close / end.
-    
-    impl Drop for EditorBufferMut<'_> {
-        fn drop(&mut self) {
-            // REFACTOR: [ ] do all the validation here?
-        }
-    }
-
-    impl<'a> EditorBufferMut<'a> {
-        pub fn new(
-            lines: &'a mut VecEditorContentLines,
-            caret: &'a mut Position,
-            scroll_offset: &'a mut ScrollOffset,
-            selection_map: &'a mut SelectionList,
-        ) -> Self {
-            Self {
-                lines,
-                caret,
-                scroll_offset,
-                selection_map,
-            }
         }
     }
 }

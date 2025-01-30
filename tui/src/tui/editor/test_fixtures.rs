@@ -77,21 +77,14 @@ pub mod mock_real_objects_for_editor {
 pub mod assert {
     use r3bl_core::{assert_eq2, UnicodeStringExt as _, UnicodeStringSegmentSliceResult};
 
-    use crate::{EditorBuffer, EditorEngine, EditorEngineInternalApi};
+    use crate::{EditorBuffer, EditorEngineInternalApi};
 
-    pub fn none_is_at_caret(buffer: &EditorBuffer, engine: &EditorEngine) {
-        assert_eq2!(
-            EditorEngineInternalApi::string_at_caret(buffer, engine),
-            None
-        );
+    pub fn none_is_at_caret(buffer: &EditorBuffer) {
+        assert_eq2!(EditorEngineInternalApi::string_at_caret(buffer), None);
     }
 
-    pub fn str_is_at_caret(
-        editor_buffer: &EditorBuffer,
-        engine: &EditorEngine,
-        expected: &str,
-    ) {
-        match EditorEngineInternalApi::string_at_caret(editor_buffer, engine) {
+    pub fn str_is_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
+        match EditorEngineInternalApi::string_at_caret(editor_buffer) {
             Some(UnicodeStringSegmentSliceResult {
                 unicode_string: string,
                 ..
@@ -102,14 +95,9 @@ pub mod assert {
         }
     }
 
-    pub fn line_at_caret(
-        editor_buffer: &EditorBuffer,
-        engine: &EditorEngine,
-        expected: &str,
-    ) {
+    pub fn line_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
         assert_eq2!(
-            EditorEngineInternalApi::line_at_caret_to_string(editor_buffer, engine)
-                .unwrap(),
+            EditorEngineInternalApi::line_at_caret_to_string(editor_buffer).unwrap(),
             &expected.unicode_string()
         );
     }
