@@ -38,9 +38,12 @@ use crate::{ChUnit, Position};
 /// - `▓▓` = `😃`
 /// - [clip_to_range](crate::UnicodeString::clip_to_range): "e😃"
 #[derive(Default, Clone, PartialEq, Copy, size_of::SizeOf)]
+// BUG: [ ] introduce scroll adjusted type
 pub struct SelectionRange {
-    pub start_display_col_index: ChUnit,
-    pub end_display_col_index: ChUnit,
+    /// This is not "raw", this is "scroll adjusted".
+    pub start_display_col_index_scroll_adjusted: ChUnit,
+    /// This is not "raw", this is "scroll adjusted".
+    pub end_display_col_index_scroll_adjusted: ChUnit,
 }
 
 #[derive(Clone, PartialEq, Copy, Debug)]
@@ -54,7 +57,7 @@ impl SelectionRange {
         &self,
         scroll_offset: Position,
     ) -> ScrollOffsetColLocationInRange {
-        if self.start_display_col_index >= scroll_offset.col_index {
+        if self.start_display_col_index_scroll_adjusted >= scroll_offset.col_index {
             ScrollOffsetColLocationInRange::Underflow
         } else {
             ScrollOffsetColLocationInRange::Overflow
@@ -163,9 +166,9 @@ impl SelectionRange {
     /// ```
     /// - [UnicodeString::clip_to_range](crate::UnicodeString::clip_to_range): "ell"
     pub fn locate_column(&self, caret_display_col_index: ChUnit) -> CaretLocationInRange {
-        if caret_display_col_index < self.start_display_col_index {
+        if caret_display_col_index < self.start_display_col_index_scroll_adjusted {
             CaretLocationInRange::Underflow
-        } else if caret_display_col_index >= self.end_display_col_index {
+        } else if caret_display_col_index >= self.end_display_col_index_scroll_adjusted {
             CaretLocationInRange::Overflow
         } else {
             CaretLocationInRange::Contained
@@ -174,8 +177,8 @@ impl SelectionRange {
 
     pub fn new(start_display_col_index: ChUnit, end_display_col_index: ChUnit) -> Self {
         Self {
-            start_display_col_index,
-            end_display_col_index,
+            start_display_col_index_scroll_adjusted: start_display_col_index,
+            end_display_col_index_scroll_adjusted: end_display_col_index,
         }
     }
 
@@ -189,7 +192,7 @@ impl SelectionRange {
     /// ```
     pub fn grow_end_by(&self, amount: ChUnit) -> Self {
         let mut copy = *self;
-        copy.end_display_col_index += amount;
+        copy.end_display_col_index_scroll_adjusted += amount;
         copy
     }
 
@@ -203,7 +206,7 @@ impl SelectionRange {
     /// ```
     pub fn shrink_end_by(&self, amount: ChUnit) -> Self {
         let mut copy = *self;
-        copy.end_display_col_index -= amount;
+        copy.end_display_col_index_scroll_adjusted -= amount;
         copy
     }
 
@@ -217,7 +220,7 @@ impl SelectionRange {
     /// ```
     pub fn grow_start_by(&self, amount: ChUnit) -> Self {
         let mut copy = *self;
-        copy.start_display_col_index -= amount;
+        copy.start_display_col_index_scroll_adjusted -= amount;
         copy
     }
 
@@ -231,7 +234,7 @@ impl SelectionRange {
     /// ```
     pub fn shrink_start_by(&self, amount: ChUnit) -> Self {
         let mut copy = *self;
-        copy.start_display_col_index += amount;
+        copy.start_display_col_index_scroll_adjusted += amount;
         copy
     }
 }
@@ -244,8 +247,8 @@ mod range_impl_debug_format {
             write!(
                 f,
                 "[start_display_col_index: {start:?}, end_display_col_index: {end:?}]",
-                start = self.start_display_col_index,
-                end = self.end_display_col_index
+                start = self.start_display_col_index_scroll_adjusted,
+                end = self.end_display_col_index_scroll_adjusted
             )
         }
     }

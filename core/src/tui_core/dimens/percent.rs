@@ -158,3 +158,64 @@ impl Percent {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{Percent,
+                STATS_25P_GLYPH,
+                STATS_50P_GLYPH,
+                STATS_75P_GLYPH,
+                STATS_100P_GLYPH,
+                ch};
+
+    #[test]
+    fn test_percent_works_as_expected() {
+        let maybe_pc_100 = percent!(100i32);
+        if let Ok(pc_100) = maybe_pc_100 {
+            assert_eq!(*pc_100, 100);
+            let result = pc_100.apply_to(ch(500));
+            assert_eq!(*result, 500);
+        } else {
+            panic!("Failed to create Percent from 100");
+        }
+
+        let pc_50 = Percent::try_from(50i32).unwrap();
+        assert_eq!(*pc_50, 50);
+        let result = pc_50.apply_to(ch(500));
+        assert_eq!(*result, 250);
+
+        let pc_0 = Percent::try_from(0i32).unwrap();
+        assert_eq!(*pc_0, 0);
+        let result = pc_0.apply_to(ch(500));
+        assert_eq!(*result, 0);
+    }
+
+    #[test]
+    fn test_percent_parsing_fails_as_expected() {
+        Percent::try_from(-1i32).unwrap_err();
+
+        Percent::try_from(0i32).unwrap();
+        Percent::try_from(0u16).unwrap();
+
+        Percent::try_from(100i32).unwrap();
+        Percent::try_from(100u16).unwrap();
+
+        Percent::try_from(101i32).unwrap_err();
+        Percent::try_from(101u16).unwrap_err();
+    }
+
+    #[test]
+    fn test_percent_to_glyph_works_as_expected() {
+        let pc_0_to_25 = percent!(25i32).unwrap();
+        assert_eq!(pc_0_to_25.as_glyph(), STATS_25P_GLYPH);
+
+        let pc_25_to_50 = percent!(50i32).unwrap();
+        assert_eq!(pc_25_to_50.as_glyph(), STATS_50P_GLYPH);
+
+        let pc_50_to_75 = percent!(75i32).unwrap();
+        assert_eq!(pc_50_to_75.as_glyph(), STATS_75P_GLYPH);
+
+        let pc_100 = percent!(100i32).unwrap();
+        assert_eq!(pc_100.as_glyph(), STATS_100P_GLYPH);
+    }
+}

@@ -183,9 +183,10 @@ impl UnicodeString {
     /// Uses [SelectionRange] to calculate width and simply calls
     /// [clip_to_width](Self::clip_to_width).
     pub fn clip_to_range(&self, range: SelectionRange) -> &str {
+        // BUG: [ ] introduce scroll adjusted type
         let SelectionRange {
-            start_display_col_index,
-            end_display_col_index,
+            start_display_col_index_scroll_adjusted: start_display_col_index,
+            end_display_col_index_scroll_adjusted: end_display_col_index,
         } = range;
         let max_display_col_count = end_display_col_index - start_display_col_index;
         self.clip_to_width(start_display_col_index, max_display_col_count)

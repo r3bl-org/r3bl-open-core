@@ -18,7 +18,7 @@
 use std::error::Error;
 
 use crossterm::style::Stylize;
-use r3bl_core::{call_if_true, usize, VecStrBuffer};
+use r3bl_core::{call_if_true, usize, VecArrayStr};
 
 use super::EditorBuffer;
 use crate::{EditorArgsMut, EditorEngineInternalApi, DEBUG_TUI_COPY_PASTE};
@@ -43,7 +43,7 @@ pub fn copy_to_clipboard(
     let selection_map = buffer.get_selection_map();
 
     // Initialize an empty string to store the copied text.
-    let mut vec_str = VecStrBuffer::new();
+    let mut vec_str = VecArrayStr::new();
 
     // Sort the row indices so that the copied text is in the correct order.
     let row_indices = selection_map.get_ordered_indices();
