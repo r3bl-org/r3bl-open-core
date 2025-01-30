@@ -42,6 +42,8 @@ pub struct ChUnit {
 
 impl ChUnit {
     pub fn new(value: ChUnitPrimitiveType) -> Self { Self { value } }
+
+    pub fn reset(&mut self) { self.value = 0; }
 }
 
 /// ```rust
@@ -289,5 +291,55 @@ pub mod convert_from_other_types_to_ch {
                 value: value.try_into().unwrap_or(value as ChUnitPrimitiveType),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ChUnit, assert_eq2, ch, u16, usize};
+
+    #[test]
+    fn test_from_whatever_into_ch() {
+        let ch_1: ChUnit = ch(1);
+        assert_eq2!(*ch_1, 1);
+
+        let ch_2: ChUnit = ch(1) + ch(1);
+        assert_eq2!(*ch_2, 2);
+
+        let ch_3: ChUnit = ch(1) - ch(1);
+        assert_eq2!(*ch_3, 0);
+
+        let ch_4: ChUnit = ch(0) - ch(1);
+        assert_eq2!(*ch_4, 0);
+    }
+
+    #[test]
+    fn test_from_ch_into_usize() {
+        let usize_1: usize = usize(ch(1));
+        assert_eq2!(usize_1, 1);
+
+        let usize_2: usize = usize(ch(1) + ch(1));
+        assert_eq2!(usize_2, 2);
+
+        let usize_3: usize = usize(ch(1) - ch(1));
+        assert_eq2!(usize_3, 0);
+
+        let usize_4: usize = usize(ch(0) - ch(1));
+        assert_eq2!(usize_4, 0);
+    }
+
+    #[test]
+    fn test_from_ch_into_u16() {
+        let u16_1: u16 = u16(ch(1));
+        assert_eq2!(u16_1, 1);
+
+        let u16_2: u16 = u16(ch(1) + ch(1));
+        assert_eq2!(u16_2, 2);
+
+        let u16_3: u16 = u16(ch(1) - ch(1));
+        assert_eq2!(u16_3, 0);
+
+        let u16_4: u16 = u16(ch(0) - ch(1));
+        assert_eq2!(u16_4, 0);
     }
 }

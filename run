@@ -148,6 +148,7 @@ def install-cargo-tools [] {
     cargo install cargo-unmaintained
     cargo install cargo-expand
     cargo install cargo-readme
+    cargo install cargo-nextest
 }
 
 def all [] {

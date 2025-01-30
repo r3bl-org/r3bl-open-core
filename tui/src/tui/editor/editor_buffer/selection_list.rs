@@ -120,7 +120,8 @@ pub enum DirectionChangeResult {
 
 // Functionality.
 impl SelectionList {
-    pub fn get_caret_at_start_of_range(
+    // BUG: [ ] introduce scroll adjusted type
+    pub fn get_caret_at_start_of_range_scroll_adjusted(
         &self,
         _with: DeleteSelectionWith, /* Makes no difference for now. */
     ) -> Option<Position> {
@@ -130,7 +131,7 @@ impl SelectionList {
         let first_row_index = indices.first()?;
         let last_row_index = indices.last()?;
         Some(position!(
-            col_index: self.get(*last_row_index)?.start_display_col_index,
+            col_index: self.get(*last_row_index)?.start_display_col_index_scroll_adjusted,
             row_index: *first_row_index
         ))
     }
@@ -322,8 +323,8 @@ mod impl_debug_format {
                             sep = VERT_LINE_DASHED_GLYPH,
                             row_idx = row_index,
                             dots = ELLIPSIS_GLYPH,
-                            col_start = selected_range.start_display_col_index,
-                            col_end = selected_range.end_display_col_index
+                            col_start = selected_range.start_display_col_index_scroll_adjusted,
+                            col_end = selected_range.end_display_col_index_scroll_adjusted
                         ));
                     }
                 }
