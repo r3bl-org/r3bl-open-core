@@ -51,7 +51,7 @@ impl EditorBufferApi {
                     end_display_col_index: cmp::max(previous, current),
                 };
 
-                let editor_buffer_mut = editor_buffer.get_mut();
+                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
 
                 editor_buffer_mut.selection_map.insert(
                     row_index,
@@ -119,7 +119,7 @@ impl EditorBufferApi {
                 let delta = previous - current;
                 let new_range = range.shrink_end_by(delta);
 
-                let editor_buffer_mut = editor_buffer.get_mut();
+                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
                 editor_buffer_mut.selection_map.insert(
                     row_index,
                     new_range,
@@ -138,7 +138,7 @@ impl EditorBufferApi {
                 let delta = range_start - current;
                 let new_range = range.grow_start_by(delta);
 
-                let editor_buffer_mut = editor_buffer.get_mut();
+                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
                 editor_buffer_mut.selection_map.insert(
                     row_index,
                     new_range,
@@ -157,7 +157,7 @@ impl EditorBufferApi {
                 let delta = current - range_end;
                 let new_range = range.grow_end_by(delta);
 
-                let editor_buffer_mut = editor_buffer.get_mut();
+                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
                 editor_buffer_mut.selection_map.insert(
                     row_index,
                     new_range,
@@ -177,7 +177,7 @@ impl EditorBufferApi {
                 let delta = current - range_start;
                 let new_range = range.shrink_start_by(delta);
 
-                let editor_buffer_mut = editor_buffer.get_mut();
+                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
                 editor_buffer_mut.selection_map.insert(
                     row_index,
                     new_range,
@@ -196,7 +196,7 @@ impl EditorBufferApi {
         // `handle_selection_multiline_caret_movement`.
         if let Some(range) = editor_buffer.get_selection_map().get(row_index) {
             if range.start_display_col_index == range.end_display_col_index {
-                let editor_buffer_mut = editor_buffer.get_mut();
+                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
                 editor_buffer_mut.selection_map.remove(
                     row_index,
                     SelectionRange::caret_movement_direction_left_right(
@@ -498,7 +498,7 @@ impl EditorBufferApi {
 
         let row_index = current.row_index; // Same as previous.row_index.
 
-        let editor_buffer_mut = editor_buffer.get_mut();
+        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
             let message = "📜🔼🔽 handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document";
@@ -660,7 +660,7 @@ mod multiline_select_helpers {
             SelectionRange::new(start_col, end_col)
         };
 
-        let editor_buffer_mut = editor_buffer.get_mut();
+        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
         editor_buffer_mut.selection_map.insert(
             first.row_index,
             first_row_range,
@@ -688,7 +688,7 @@ mod multiline_select_helpers {
         let first_line_width = editor_buffer.get_line_display_width(first.row_index);
 
         // Mutably borrow the selection map.
-        let editor_buffer_mut = editor_buffer.get_mut();
+        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
 
         // Extend the existing range (in selection map) for the first row to end of line.
         if let Some(first_row_range) =
@@ -735,7 +735,7 @@ mod multiline_select_helpers {
         let first_line_width = editor_buffer.get_line_display_width(first.row_index);
 
         // Mutably borrow the selection map.
-        let editor_buffer_mut = editor_buffer.get_mut();
+        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
 
         // FIRST ROW.
         if let Some(first_row_range) =
@@ -808,7 +808,7 @@ mod multiline_select_helpers {
         let last = previous;
 
         // Mutably borrow the selection map.
-        let editor_buffer_mut = editor_buffer.get_mut();
+        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
 
         // Drop the existing range (in selection map) for the last row.
         if editor_buffer_mut
@@ -860,7 +860,7 @@ mod multiline_select_helpers {
         let last = current;
 
         // Mutably borrow the selection map.
-        let editor_buffer_mut = editor_buffer.get_mut();
+        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
 
         // Drop the existing range (in selection map) for the first row.
         if editor_buffer_mut

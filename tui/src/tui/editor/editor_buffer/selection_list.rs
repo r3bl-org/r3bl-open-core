@@ -128,7 +128,7 @@ impl SelectionList {
         // Column is the last row of the range.
         let indices = self.get_ordered_indices();
         let first_row_index = indices.first()?;
-        let last_row_index = indices.first()?;
+        let last_row_index = indices.last()?;
         Some(position!(
             col_index: self.get(*last_row_index)?.start_display_col_index,
             row_index: *first_row_index

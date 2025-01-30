@@ -144,6 +144,8 @@ impl Position {
 }
 
 pub mod position_math_ops {
+    use std::ops::Sub;
+
     use super::*;
 
     impl AddAssign<ChUnit> for Position {
@@ -190,6 +192,16 @@ pub mod position_math_ops {
             Self {
                 col_index: self.col_index * ch(other.0),
                 row_index: self.row_index * ch(other.1),
+            }
+        }
+    }
+
+    impl Sub<Position> for Position {
+        type Output = Position;
+        fn sub(self, other: Position) -> Self {
+            Self {
+                col_index: self.col_index - other.col_index,
+                row_index: self.row_index - other.row_index,
             }
         }
     }
