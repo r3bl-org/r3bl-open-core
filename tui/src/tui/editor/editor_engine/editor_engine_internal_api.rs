@@ -290,7 +290,8 @@ pub enum SelectMode {
 }
 
 impl SelectMode {
-    pub fn get_caret_display_position(
+    // BUG: [ ] introduce scroll adjusted type
+    pub fn get_caret_display_position_scroll_adjusted(
         &self,
         editor_buffer: &EditorBuffer,
     ) -> Option<Position> {
@@ -395,8 +396,9 @@ mod caret_mut {
         multiline_disabled_check_early_return!(editor_engine, @None);
 
         // This is only set if select_mode is enabled.
+        // BUG: [ ] introduce scroll adjusted type
         let maybe_previous_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         match caret_get::find_row(editor_buffer) {
             CaretRowLocationInBuffer::AtTop => {
@@ -443,8 +445,9 @@ mod caret_mut {
         }
 
         // This is only set if select_mode is enabled.
+        // BUG: [ ] introduce scroll adjusted type
         let maybe_current_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         // This is only runs if select_mode is enabled.
         select_mode.update_selection_based_on_caret_movement_in_multiple_lines(
@@ -466,7 +469,7 @@ mod caret_mut {
 
         // This is only set if select_mode is enabled.
         let maybe_previous_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         let viewport_height = editor_engine.viewport_height();
         scroll_editor_buffer::change_caret_row_by(
@@ -480,7 +483,7 @@ mod caret_mut {
 
         // This is only set if select_mode is enabled.
         let maybe_current_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         // This is only runs if select_mode is enabled.
         select_mode.update_selection_based_on_caret_movement_in_multiple_lines(
@@ -502,7 +505,7 @@ mod caret_mut {
 
         // This is only set if select_mode is enabled.
         let maybe_previous_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         if content_get::next_line_below_caret_exists(editor_buffer) {
             // When editor_buffer_mut goes out of scope, it will be dropped &
@@ -532,7 +535,7 @@ mod caret_mut {
 
         // This is only set if select_mode is enabled.
         let maybe_current_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         // This is only runs if select_mode is enabled.
         select_mode.update_selection_based_on_caret_movement_in_multiple_lines(
@@ -554,7 +557,7 @@ mod caret_mut {
 
         // This is only set if select_mode is enabled.
         let maybe_previous_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         let viewport_height = editor_engine.viewport_height();
         scroll_editor_buffer::change_caret_row_by(
@@ -568,7 +571,7 @@ mod caret_mut {
 
         // This is only set if select_mode is enabled.
         let maybe_current_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         // This is only runs if select_mode is enabled.
         select_mode.update_selection_based_on_caret_movement_in_multiple_lines(
@@ -726,7 +729,7 @@ mod caret_mut {
 
         // This is only set if select_mode is enabled.
         let maybe_previous_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         match caret_col_loc_in_line {
             // Special case of empty line w/ caret at start.
@@ -743,7 +746,7 @@ mod caret_mut {
 
         // This is only set if select_mode is enabled.
         let maybe_current_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         // This is only runs if select_mode is enabled.
         select_mode.handle_selection_single_line_caret_movement(
@@ -907,7 +910,7 @@ mod caret_mut {
 
         // This is only set if select_mode is enabled.
         let maybe_previous_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         match caret_get::find_col(editor_buffer) {
             CaretColLocationInLine::AtStart => {
@@ -975,7 +978,7 @@ mod caret_mut {
 
         // This is only set if select_mode is enabled.
         let maybe_current_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
+            select_mode.get_caret_display_position_scroll_adjusted(editor_buffer);
 
         // This is only runs if select_mode is enabled.
         select_mode.handle_selection_single_line_caret_movement(
@@ -1573,23 +1576,24 @@ mod content_mut {
                 let line_width = buffer.get_line_display_width(selected_row_index);
 
                 // Remove entire line.
-                if selection_range.start_display_col_index == ch(0)
-                    && selection_range.end_display_col_index == line_width
+                if selection_range.start_display_col_index_scroll_adjusted == ch(0)
+                    && selection_range.end_display_col_index_scroll_adjusted == line_width
                 {
                     vec_row_indices_to_remove.push(selected_row_index);
                     continue;
                 }
 
                 // Skip if selection range is empty.
-                if selection_range.start_display_col_index
-                    == selection_range.end_display_col_index
+                if selection_range.start_display_col_index_scroll_adjusted
+                    == selection_range.end_display_col_index_scroll_adjusted
                 {
                     continue;
                 }
 
                 // Remove selection range (part of the line).
-                let start_col_index = selection_range.start_display_col_index;
-                let end_col_index = selection_range.end_display_col_index;
+                let start_col_index =
+                    selection_range.start_display_col_index_scroll_adjusted;
+                let end_col_index = selection_range.end_display_col_index_scroll_adjusted;
                 let line_us = lines.get(usize(selected_row_index))?.clone();
 
                 let keep_before_selected = line_us.clip_to_width(ch(0), start_col_index);
@@ -1629,11 +1633,16 @@ mod content_mut {
             }
 
             // Restore caret position to start of selection range.
-            let maybe_new_position = my_selection_map.get_caret_at_start_of_range(with);
+            let maybe_new_position =
+                my_selection_map.get_caret_at_start_of_range_scroll_adjusted(with);
 
+            // BUG: [ ] introduce scroll adjusted type
             // BUG: [x] fix the cut / copy bug!
             if let Some(new_caret_position) = maybe_new_position {
-                let it = new_caret_position - *editor_buffer_mut.scroll_offset;
+                let it = EditorBuffer::convert_from_scroll_adjusted_to_raw_caret(
+                    new_caret_position,
+                    *editor_buffer_mut.scroll_offset,
+                );
                 editor_buffer_mut.caret.row_index = it.row_index;
                 editor_buffer_mut.caret.col_index = it.col_index;
             }

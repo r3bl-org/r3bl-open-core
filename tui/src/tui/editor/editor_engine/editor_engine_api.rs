@@ -305,7 +305,8 @@ impl EditorEngineApi {
                     }
                     ScrollOffsetColLocationInRange::Overflow => {
                         let scroll_offset_clipped_selection_range = SelectionRange {
-                            start_display_col_index: scroll_offset.col_index,
+                            start_display_col_index_scroll_adjusted: scroll_offset
+                                .col_index,
                             ..*range_of_display_col_indices
                         };
                         line_us.clip_to_range(scroll_offset_clipped_selection_range)
@@ -343,7 +344,8 @@ impl EditorEngineApi {
                     // Convert scroll adjusted to raw.
                     let raw_col_index = {
                         let col_scroll_offset = scroll_offset.col_index;
-                        range_of_display_col_indices.start_display_col_index
+                        range_of_display_col_indices
+                            .start_display_col_index_scroll_adjusted
                             - col_scroll_offset
                     };
 

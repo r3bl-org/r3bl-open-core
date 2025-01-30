@@ -24,7 +24,7 @@ use smallvec::SmallVec;
 use strum::EnumCount;
 
 use super::TuiColor;
-use crate::{ChUnit, VecStrBuffer, ch, convert_tui_color_into_r3bl_ansi_color};
+use crate::{ChUnit, VecArrayStr, ch, convert_tui_color_into_r3bl_ansi_color};
 
 /// Please use [tui_style!](crate::tui_style) proc macro to generate code for this struct.
 ///
@@ -184,7 +184,7 @@ mod style_helpers {
 
             // This accumulator is needed in order to be able to add `+` delimiter between
             // attributes.
-            let mut acc_attrs = VecStrBuffer::new();
+            let mut acc_attrs = VecArrayStr::new();
 
             if self.computed {
                 acc_attrs.push("computed");
@@ -247,7 +247,7 @@ mod style_helpers {
             };
 
             // Need `acc` since we don't know how many attributes are set.
-            let mut acc = VecStrBuffer::new();
+            let mut acc = VecArrayStr::new();
 
             if self.bold {
                 acc.push("bld");

@@ -21,7 +21,7 @@ use smallvec::SmallVec;
 /// Intermediate struct used to insert a grapheme cluster segment into an existing unicode
 /// string. When this gets larger than `DEFAULT_STRING_SIZE`, it will be
 /// [smallvec::SmallVec::spilled] on the heap.
-pub type VecStrBuffer<'a> = SmallVec<[&'a str; VEC_STR_BUFFER_CAPACITY]>;
+pub type VecArrayStr<'a> = SmallVec<[&'a str; VEC_STR_BUFFER_CAPACITY]>;
 const VEC_STR_BUFFER_CAPACITY: usize = 16;
 
 /// Stack allocated string storage for small strings. When this gets larger than

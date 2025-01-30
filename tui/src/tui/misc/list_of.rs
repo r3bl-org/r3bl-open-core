@@ -49,7 +49,7 @@
 
 use std::ops::{AddAssign, Deref, DerefMut};
 
-use r3bl_core::VecStrBuffer;
+use r3bl_core::VecArrayStr;
 use sizing_list_of::ListStorage;
 use smallvec::SmallVec;
 
@@ -97,8 +97,8 @@ impl<T> AddAssign<Vec<T>> for List<T> {
     fn add_assign(&mut self, other_vec: Vec<T>) { self.extend(other_vec); }
 }
 
-impl<'a> From<VecStrBuffer<'a>> for List<&'a str> {
-    fn from(other: VecStrBuffer<'a>) -> Self {
+impl<'a> From<VecArrayStr<'a>> for List<&'a str> {
+    fn from(other: VecArrayStr<'a>) -> Self {
         let mut it = List::with_capacity(other.len());
         it.extend(other);
         it

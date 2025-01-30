@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{ChUnit, StringStorage, UnicodeString, VecStrBuffer, ch, join};
+use crate::{ChUnit, StringStorage, UnicodeString, VecArrayStr, ch, join};
 
 impl UnicodeString {
     /// Inserts the given `chunk` in the correct position of the `string`, and returns a
@@ -29,7 +29,7 @@ impl UnicodeString {
         chunk: &str,
     ) -> (StringStorage, ChUnit) {
         // Create an array-vec of &str from self.vec_segment, using self.iter().
-        let mut acc = VecStrBuffer::with_capacity(self.len() + 1);
+        let mut acc = VecArrayStr::with_capacity(self.len() + 1);
         acc.extend(self.iter().map(|seg| seg.get_str(&self.string)));
 
         match self.logical_index_at_display_col_index(display_col) {
@@ -66,7 +66,7 @@ impl UnicodeString {
         let split_logical_index = self.logical_index_at_display_col_index(display_col)?;
         let max_logical_index = self.len();
 
-        let mut vec_left = VecStrBuffer::with_capacity(self.len());
+        let mut vec_left = VecArrayStr::with_capacity(self.len());
         let mut str_left_unicode_width = ch(0);
         {
             for logical_idx in 0..split_logical_index {
@@ -78,7 +78,7 @@ impl UnicodeString {
         }
 
         let skip_split_logical_index = split_logical_index + 1; // Drop one segment.
-        let mut vec_right = VecStrBuffer::with_capacity(self.len());
+        let mut vec_right = VecArrayStr::with_capacity(self.len());
         let mut str_right_unicode_width = ch(0);
         {
             for logical_idx in skip_split_logical_index..max_logical_index {
@@ -104,7 +104,7 @@ impl UnicodeString {
         let split_logical_index = self.logical_index_at_display_col_index(display_col)?;
         let max_logical_index = self.len();
 
-        let mut vec_left = VecStrBuffer::with_capacity(self.len());
+        let mut vec_left = VecArrayStr::with_capacity(self.len());
         let mut str_left_unicode_width = ch(0);
         {
             for logical_idx in 0..split_logical_index {
@@ -114,7 +114,7 @@ impl UnicodeString {
             }
         }
 
-        let mut vec_right = VecStrBuffer::with_capacity(self.len());
+        let mut vec_right = VecArrayStr::with_capacity(self.len());
         let mut str_right_unicode_width = ch(0);
         {
             for logical_idx in split_logical_index..max_logical_index {

@@ -22,7 +22,6 @@ use r3bl_core::{call_if_true,
                 format_as_kilobytes_with_commas,
                 glyphs,
                 isize,
-                position,
                 string_storage,
                 usize,
                 with_mut,
@@ -210,7 +209,7 @@ pub(in crate::tui::editor) mod sizing {
     impl size_of::SizeOf for EditorContent {
         fn size_of_children(&self, context: &mut size_of::Context) {
             context.add(size_of_val(&self.lines));
-            context.add(self.caret_display_position.size_of().total_bytes());
+            context.add(self.caret_display_position_raw.size_of().total_bytes());
             context.add(self.scroll_offset.size_of().total_bytes());
             context.add(self.selection_list.size_of().total_bytes());
             context.add(size_of_val(&self.maybe_file_extension));
@@ -236,7 +235,12 @@ pub struct EditorBufferHistory {
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorContent {
     pub lines: sizing::VecEditorContentLines,
-    pub caret_display_position: Position,
+    /// The caret is stored as a "raw" [Position].
+    /// - This is the col and row index that is relative to the viewport.
+    /// - In order to get the "scroll adjusted" caret position, use
+    ///   [EditorBuffer::get_caret] and pass it [CaretKind::ScrollAdjusted].
+    // BUG: [ ] introduce scroll adjusted type
+    pub caret_display_position_raw: Position,
     pub scroll_offset: ScrollOffset,
     pub maybe_file_extension: Option<CharStorage>,
     pub maybe_file_path: Option<StringStorage>,
@@ -421,7 +425,7 @@ pub mod access_and_mutate {
             }
 
             // Reset caret.
-            self.editor_content.caret_display_position = Position::default();
+            self.editor_content.caret_display_position_raw = Position::default();
 
             // Reset scroll_offset.
             self.editor_content.scroll_offset = ScrollOffset::default();
@@ -439,34 +443,27 @@ pub mod access_and_mutate {
         ///    scroll_offset.
         pub fn get_caret(&self, kind: CaretKind) -> Position {
             Self::get_caret_adjusted(
-                self.editor_content.caret_display_position,
+                self.editor_content.caret_display_position_raw,
                 self.editor_content.scroll_offset,
                 kind,
             )
         }
 
+        // BUG: [ ] introduce scroll adjusted type
         pub fn get_caret_adjusted(
-            caret_display_position: Position,
+            caret_display_position_raw: Position,
             scroll_offset: ScrollOffset,
             kind: CaretKind,
         ) -> Position {
             match kind {
-                CaretKind::Raw => caret_display_position,
-                CaretKind::ScrollAdjusted => {
-                    let col_index = Self::calc_scroll_adj_caret_col(
-                        &caret_display_position,
-                        &scroll_offset,
-                    );
-                    let row_index = Self::calc_scroll_adj_caret_row(
-                        &caret_display_position,
-                        &scroll_offset,
-                    );
-                    position!(col_index: col_index, row_index: row_index)
-                }
+                // No conversion needed for raw caret, since it is stored as such.
+                CaretKind::Raw => caret_display_position_raw,
+                // Scroll adjusted caret = caret (raw) + scroll_offset.
+                CaretKind::ScrollAdjusted => caret_display_position_raw + scroll_offset,
             }
         }
 
-        /// Scroll adjusted caret row = caret.row + scroll_offset.row.
+        /// Scroll adjusted caret row = caret.row (raw) + scroll_offset.row.
         pub fn calc_scroll_adj_caret_row(
             caret: &Position,
             scroll_offset: &ScrollOffset,
@@ -474,12 +471,20 @@ pub mod access_and_mutate {
             usize(caret.row_index + scroll_offset.row_index)
         }
 
-        /// Scroll adjusted caret col = caret.col + scroll_offset.col.
+        /// Scroll adjusted caret col = caret.col (raw) + scroll_offset.col.
         pub fn calc_scroll_adj_caret_col(
             caret: &Position,
             scroll_offset: &ScrollOffset,
         ) -> usize {
             usize(caret.col_index + scroll_offset.col_index)
+        }
+
+        // BUG: [ ] introduce scroll adjusted type
+        pub fn convert_from_scroll_adjusted_to_raw_caret(
+            caret: Position,
+            scroll_offset: ScrollOffset,
+        ) -> Position {
+            caret - scroll_offset
         }
 
         pub fn get_scroll_offset(&self) -> ScrollOffset {
@@ -503,7 +508,7 @@ pub mod access_and_mutate {
         ) -> EditorBufferMut<'_> {
             EditorBufferMut::new(
                 &mut self.editor_content.lines,
-                &mut self.editor_content.caret_display_position,
+                &mut self.editor_content.caret_display_position_raw,
                 &mut self.editor_content.scroll_offset,
                 &mut self.editor_content.selection_list,
                 viewport_width,
@@ -572,10 +577,12 @@ pub mod history {
         // Invalidate the content cache, since the content just changed.
         cache::clear(editor_buffer);
 
-        let retain_caret_position = editor_buffer.editor_content.caret_display_position;
+        let retain_caret_position =
+            editor_buffer.editor_content.caret_display_position_raw;
         if let Some(content) = editor_buffer.history.previous_content() {
             editor_buffer.editor_content = content;
-            editor_buffer.editor_content.caret_display_position = retain_caret_position;
+            editor_buffer.editor_content.caret_display_position_raw =
+                retain_caret_position;
         }
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
@@ -727,7 +734,7 @@ mod impl_debug_format {
                 lines = self.lines.len(),
                 size = format_as_kilobytes_with_commas(self.size_of().total_bytes()),
                 ext = self.maybe_file_extension,
-                caret = self.caret_display_position,
+                caret = self.caret_display_position_raw,
                 map = self.selection_list.to_formatted_string(),
                 scroll = self.scroll_offset,
                 path = self.maybe_file_path,
