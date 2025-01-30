@@ -14,9 +14,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use std::{fmt::{self, Debug},
-          ops::{Add, AddAssign, Mul}};
+use std::{fmt::{Debug, Formatter, Result},
+          ops::{Add, AddAssign, Mul, Sub}};
 
 use crate::{ChUnit, Size, ch};
 
@@ -144,8 +143,6 @@ impl Position {
 }
 
 pub mod position_math_ops {
-    use std::ops::Sub;
-
     use super::*;
 
     impl AddAssign<ChUnit> for Position {
@@ -216,8 +213,6 @@ pub mod convert_position_to_other_type {
 }
 
 pub mod position_debug_formatter {
-    use fmt::{Formatter, Result};
-
     use super::*;
 
     impl Debug for Position {

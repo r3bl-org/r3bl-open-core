@@ -42,6 +42,8 @@ pub struct ChUnit {
 
 impl ChUnit {
     pub fn new(value: ChUnitPrimitiveType) -> Self { Self { value } }
+
+    pub fn reset(&mut self) { self.value = 0; }
 }
 
 /// ```rust
