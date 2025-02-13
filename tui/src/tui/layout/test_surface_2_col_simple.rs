@@ -18,13 +18,15 @@
 #[cfg(test)]
 mod tests {
     use r3bl_core::{assert_eq2,
+                    col,
                     get_tui_styles,
-                    position,
+                    height,
                     requested_size_percent,
-                    size,
+                    row,
                     throws,
                     throws_with_return,
                     tui_stylesheet,
+                    width,
                     CommonResult,
                     RgbValue,
                     TuiColor,
@@ -50,8 +52,8 @@ mod tests {
             };
 
             surface.surface_start(SurfaceProps {
-                pos: position!(col_index: 0, row_index: 0),
-                size: size!(col_count:500, row_count:500),
+                pos: col(0) + row(0),
+                size: width(500) + height(500),
             })?;
 
             create_main_container(&mut surface)?;
@@ -85,18 +87,15 @@ mod tests {
                 let layout_item = surface.stack_of_boxes.first().unwrap();
                 assert_eq2!(layout_item.id, FlexBoxId::from(0));
                 assert_eq2!(layout_item.dir, LayoutDirection::Horizontal);
-                assert_eq2!(
-                    layout_item.origin_pos,
-                    position!(col_index: 0, row_index: 0)
-                );
-                assert_eq2!(layout_item.bounds_size, size!(col_count:500, row_count:500)); // due to `padding: 1`
+                assert_eq2!(layout_item.origin_pos, col(0) + row(0));
+                assert_eq2!(layout_item.bounds_size, width(500) + height(500)); // due to `padding: 1`
                 assert_eq2!(
                     layout_item.requested_size_percent,
                     requested_size_percent!(width:100, height:100)
                 );
                 assert_eq2!(
                     layout_item.insertion_pos_for_next_box,
-                    Some(position!(col_index:0, row_index:0))
+                    Some(col(0) + row(0))
                 );
                 assert_eq2!(layout_item.get_computed_style(), None);
             });
@@ -105,18 +104,19 @@ mod tests {
 
     /// Left column 1.
     fn create_left_col(surface: &mut Surface) -> CommonResult<()> {
-        throws!({
+        throws! {{
             // With macro.
             box_start! {
-              in:                     surface,
-              id:                     FlexBoxId::from(1),
-              dir:                    LayoutDirection::Vertical,
-              requested_size_percent: requested_size_percent!(width:50, height:100),
-              styles:                 [1]
+                in:                     surface,
+                id:                     FlexBoxId::from(1),
+                dir:                    LayoutDirection::Vertical,
+                requested_size_percent: requested_size_percent!(width:50, height:100),
+                styles:                 [1]
             }
             make_left_col_assertions(surface)?;
             box_end!(in: surface);
-        });
+
+        }}
 
         fn make_left_col_assertions(surface: &Surface) -> CommonResult<()> {
             throws!({
@@ -124,16 +124,13 @@ mod tests {
                 assert_eq2!(layout_item.id, FlexBoxId::from(1));
                 assert_eq2!(layout_item.dir, LayoutDirection::Vertical);
 
-                assert_eq2!(layout_item.origin_pos, position!(col_index:0, row_index:0));
-                assert_eq2!(layout_item.bounds_size, size!(col_count:250, row_count:500));
+                assert_eq2!(layout_item.origin_pos, col(0) + row(0));
+                assert_eq2!(layout_item.bounds_size, width(250) + height(500));
 
-                assert_eq2!(
-                    layout_item.style_adjusted_origin_pos,
-                    position!(col_index:2, row_index:2)
-                ); // Take padding into account.
+                assert_eq2!(layout_item.style_adjusted_origin_pos, col(2) + row(2)); // Take padding into account.
                 assert_eq2!(
                     layout_item.style_adjusted_bounds_size,
-                    size!(col_count:246, row_count:496)
+                    width(246) + height(496)
                 ); // Take padding into account.
 
                 assert_eq2!(
@@ -169,19 +166,13 @@ mod tests {
                 assert_eq2!(current_box.id, FlexBoxId::from(2));
                 assert_eq2!(current_box.dir, LayoutDirection::Vertical);
 
-                assert_eq2!(
-                    current_box.origin_pos,
-                    position!(col_index: 250, row_index: 0)
-                );
-                assert_eq2!(current_box.bounds_size, size!(col_count:250, row_count:500));
+                assert_eq2!(current_box.origin_pos, col(250) + row(0));
+                assert_eq2!(current_box.bounds_size, width(250) + height(500));
 
-                assert_eq2!(
-                    current_box.style_adjusted_origin_pos,
-                    position!(col_index: 253, row_index: 3)
-                ); // Take padding into account.
+                assert_eq2!(current_box.style_adjusted_origin_pos, col(253) + row(3)); // Take padding into account.
                 assert_eq2!(
                     current_box.style_adjusted_bounds_size,
-                    size!(col_count:244, row_count:494)
+                    width(244) + height(494)
                 ); // Take padding into account.
 
                 assert_eq2!(

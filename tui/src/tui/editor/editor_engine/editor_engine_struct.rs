@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::ChUnit;
+use r3bl_core::Dim;
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
 use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox};
@@ -62,13 +62,7 @@ impl EditorEngine {
         }
     }
 
-    pub fn viewport_width(&self) -> ChUnit {
-        self.current_box.style_adjusted_bounds_size.col_count
-    }
-
-    pub fn viewport_height(&self) -> ChUnit {
-        self.current_box.style_adjusted_bounds_size.row_count
-    }
+    pub fn viewport(&self) -> Dim { self.current_box.style_adjusted_bounds_size }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

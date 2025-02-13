@@ -101,30 +101,42 @@ mod style_impl {
                 // ANSI 256 color mode.
                 let color = color.as_ansi256();
                 let index = color.index;
-                write!(f, "{}", match color_kind {
-                    ColorKind::Foreground => SgrCode::ForegroundAnsi256(index),
-                    ColorKind::Background => SgrCode::BackgroundAnsi256(index),
-                })
+                write!(
+                    f,
+                    "{}",
+                    match color_kind {
+                        ColorKind::Foreground => SgrCode::ForegroundAnsi256(index),
+                        ColorKind::Background => SgrCode::BackgroundAnsi256(index),
+                    }
+                )
             }
 
             ColorSupport::Grayscale => {
                 // Grayscale mode.
                 let color = color.as_grayscale();
                 let index = color.index;
-                write!(f, "{}", match color_kind {
-                    ColorKind::Foreground => SgrCode::ForegroundAnsi256(index),
-                    ColorKind::Background => SgrCode::BackgroundAnsi256(index),
-                })
+                write!(
+                    f,
+                    "{}",
+                    match color_kind {
+                        ColorKind::Foreground => SgrCode::ForegroundAnsi256(index),
+                        ColorKind::Background => SgrCode::BackgroundAnsi256(index),
+                    }
+                )
             }
 
             _ => {
                 // True color mode.
                 let color = color.as_rgb();
                 let RgbColor { red, green, blue } = color;
-                write!(f, "{}", match color_kind {
-                    ColorKind::Foreground => SgrCode::ForegroundRGB(red, green, blue),
-                    ColorKind::Background => SgrCode::BackgroundRGB(red, green, blue),
-                })
+                write!(
+                    f,
+                    "{}",
+                    match color_kind {
+                        ColorKind::Foreground => SgrCode::ForegroundRGB(red, green, blue),
+                        ColorKind::Background => SgrCode::BackgroundRGB(red, green, blue),
+                    }
+                )
             }
         }
     }

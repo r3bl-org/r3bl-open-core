@@ -20,15 +20,15 @@ use std::{fmt::{self, Debug, Write},
 
 use diff_chunks::{OffscreenBufferDiffResult, PixelCharDiffChunks};
 use r3bl_core::{ok,
-                position,
                 string_storage,
                 style_dim_underline,
                 style_primary,
                 style_prompt,
                 usize,
                 CharStorage,
+                Dim,
                 LockedOutputDevice,
-                Position,
+                Pos,
                 Size,
                 StringStorage,
                 TuiColor,
@@ -55,8 +55,8 @@ use crate::List;
 #[derive(Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct OffscreenBuffer {
     pub buffer: PixelCharLines,
-    pub window_size: Size,
-    pub my_pos: Position,
+    pub window_size: Dim,
+    pub my_pos: Pos,
     pub my_fg_color: Option<TuiColor>,
     pub my_bg_color: Option<TuiColor>,
 }
@@ -77,7 +77,7 @@ pub mod diff_chunks {
         pub inner: List<DiffChunk>,
     }
 
-    pub type DiffChunk = (Position, PixelChar);
+    pub type DiffChunk = (Pos, PixelChar);
 
     impl Deref for PixelCharDiffChunks {
         type Target = List<DiffChunk>;
@@ -91,6 +91,8 @@ pub mod diff_chunks {
 }
 
 mod offscreen_buffer_impl {
+    use r3bl_core::{col, row};
+
     use super::*;
 
     impl Debug for PixelCharDiffChunks {
@@ -117,8 +119,8 @@ mod offscreen_buffer_impl {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             writeln!(f, "window_size: {:?}, ", self.window_size)?;
 
-            let len = usize(self.window_size.row_count);
-            for row_index in 0..len {
+            let height = self.window_size.row_height.as_usize();
+            for row_index in 0..height {
                 if let Some(row) = self.buffer.get(row_index) {
                     // Print row separator if needed (not the first item).
                     if row_index > 0 {
@@ -149,22 +151,21 @@ mod offscreen_buffer_impl {
                 return OffscreenBufferDiffResult::NotComparable;
             }
 
-            let mut it = List::default();
-            for (row, (self_row, other_row)) in
+            let mut acc = List::default();
+
+            for (row_idx, (self_row, other_row)) in
                 self.buffer.iter().zip(other.buffer.iter()).enumerate()
             {
-                for (col, (self_pixel_char, other_pixel_char)) in
+                for (col_idx, (self_pixel_char, other_pixel_char)) in
                     self_row.iter().zip(other_row.iter()).enumerate()
                 {
                     if self_pixel_char != other_pixel_char {
-                        it.push((
-                            position!(col_index: col, row_index: row),
-                            other_pixel_char.clone(),
-                        ));
+                        let pos = col(col_idx) + row(row_idx);
+                        acc.push((pos, other_pixel_char.clone()));
                     }
                 }
             }
-            OffscreenBufferDiffResult::Comparable(PixelCharDiffChunks::from(it))
+            OffscreenBufferDiffResult::Comparable(PixelCharDiffChunks::from(acc))
         }
 
         /// Create a new buffer and fill it with empty chars.
@@ -184,8 +185,8 @@ mod offscreen_buffer_impl {
             let current_height = self.buffer.len();
             let current_width = self.buffer.lines.first().map_or(0, |line| line.len());
 
-            if current_height != usize(self.window_size.row_count)
-                || current_width != usize(self.window_size.col_count)
+            if current_height != usize(*self.window_size.row_height)
+                || current_width != usize(*self.window_size.col_width)
             {
                 // Need to re-allocate the buffer.
                 self.buffer =
@@ -221,9 +222,9 @@ mod pixel_char_lines_impl {
     }
 
     impl PixelCharLines {
-        pub fn new_with_capacity_initialized(window_size: Size) -> Self {
-            let window_height = usize(window_size.row_count);
-            let window_width = usize(window_size.col_count);
+        pub fn new_with_capacity_initialized(window_size: Dim) -> Self {
+            let window_height = usize(*window_size.row_height);
+            let window_width = usize(*window_size.col_width);
             Self {
                 // PERF: [x] drop Vec and use SmallVec instead
                 lines: smallvec![
@@ -546,14 +547,14 @@ pub trait OffscreenBufferPaint {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, color, size, ANSIBasicColor};
+    use r3bl_core::{assert_eq2, color, height, width};
     use r3bl_macro::tui_style;
 
     use super::*;
 
     #[test]
     fn test_offscreen_buffer_construction() {
-        let window_size = size! { col_count: 10, row_count: 2};
+        let window_size = width(10) + height(2);
         let my_offscreen_buffer =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
         assert_eq2!(my_offscreen_buffer.buffer.len(), 2);
@@ -569,7 +570,7 @@ mod tests {
 
     #[test]
     fn test_offscreen_buffer_re_init() {
-        let window_size = size! { col_count: 10, row_count: 2};
+        let window_size = width(10) + height(2);
         let mut my_offscreen_buffer =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
 

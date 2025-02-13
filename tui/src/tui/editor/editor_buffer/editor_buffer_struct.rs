@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2022-2025 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,24 +21,32 @@ use r3bl_core::{call_if_true,
                 ch,
                 format_as_kilobytes_with_commas,
                 glyphs,
+                height,
                 isize,
+                row,
                 string_storage,
-                usize,
+                width,
                 with_mut,
+                CaretRaw,
+                CaretScrAdj,
                 ChUnit,
                 CharStorage,
-                Position,
-                ScrollOffset,
+                ColWidth,
+                Dim,
+                RowIndex,
+                ScrOfs,
                 Size,
                 StringStorage,
                 UnicodeString,
-                UnicodeStringExt};
+                UnicodeStringExt,
+                UnicodeStringSegmentSliceResult};
 use size_of::SizeOf as _;
 use sizing::VecEditorContentLines;
 use smallvec::{smallvec, SmallVec};
 
 use super::SelectionList;
-use crate::{validate_editor_buffer_change::EditorBufferMut,
+use crate::{caret_locate,
+            validate_editor_buffer_change::EditorBufferMut,
             EditorEngine,
             EditorEngineApi,
             HasFocus,
@@ -82,11 +90,10 @@ use crate::{validate_editor_buffer_change::EditorBufferMut,
 /// # Different kinds of caret positions
 ///
 /// There are two variants for the caret position value:
-/// 1. [CaretKind::Raw] - this is the position of the caret (unadjusted for scroll_offset)
-///    and this represents the position of the caret in the viewport.
-/// 2. [CaretKind::ScrollAdjusted] - this is the position of the caret (adjusted for
-///    scroll_offset) and represents the position of the caret in the buffer (not the
-///    viewport).
+/// 1. [CaretRaw] - this is the position of the caret (unadjusted for `scr_ofs`) and this
+///    represents the position of the caret in the viewport.
+/// 2. [CaretScrAdj] - this is the position of the caret (adjusted for `scr_ofs`) and
+///    represents the position of the caret in the buffer (not the viewport).
 ///
 /// # Fields
 ///
@@ -111,29 +118,29 @@ use crate::{validate_editor_buffer_change::EditorBufferMut,
 ///    enclosing [crate::FlexBox]).
 /// 2. It works w/ [crate::RenderOp::MoveCursorPositionRelTo] as well.
 ///
-/// > 💡 For the diagrams below, the caret is where `▴` and `▸` intersects.
+/// > 💡 For the diagrams below, the caret is where `⮬` and `❱` intersects.
 ///
 /// Start of line:
 /// ```text
 /// R ┌──────────┐
-/// 0 ▸abcab     │
-///   └▴─────────┘
+/// 0 ❱abcab     │
+///   └⮬─────────┘
 ///   C0123456789
 /// ```
 ///
 /// Middle of line:
 /// ```text
 /// R ┌──────────┐
-/// 0 ▸abcab     │
-///   └───▴──────┘
+/// 0 ❱abcab     │
+///   └───⮬──────┘
 ///   C0123456789
 /// ```
 ///
 /// End of line:
 /// ```text
 /// R ┌──────────┐
-/// 0 ▸abcab     │
-///   └─────▴────┘
+/// 0 ❱abcab     │
+///   └─────⮬────┘
 ///   C0123456789
 /// ```
 ///
@@ -152,7 +159,7 @@ use crate::{validate_editor_buffer_change::EditorBufferMut,
 ///                    +--- scroll_offset ---+
 ///              ->    |         ↑           |      ↑
 ///              |     |                     |      |
-///   caret.row  |     |      within vp      |  vp height
+///   caret.row_index  |     |      within vp      |  vp height
 ///              |     |                     |      |
 ///              ->    |         ↓           |      ↓
 ///                    +--- scroll_offset ---+
@@ -186,7 +193,7 @@ use crate::{validate_editor_buffer_change::EditorBufferMut,
 ///
 /// The [SelectionList] is used to keep track of the selections in the buffer. Each entry
 /// in the list represents a row of text in the buffer.
-/// - The row index is the key [crate::editor::RowIndex].
+/// - The row index is the key [r3bl_core::RowIndex].
 /// - The value is the [r3bl_core::SelectionRange].
 #[derive(Clone, PartialEq, Default, size_of::SizeOf)]
 pub struct EditorBuffer {
@@ -209,11 +216,11 @@ pub(in crate::tui::editor) mod sizing {
     impl size_of::SizeOf for EditorContent {
         fn size_of_children(&self, context: &mut size_of::Context) {
             context.add(size_of_val(&self.lines));
-            context.add(self.caret_display_position_raw.size_of().total_bytes());
-            context.add(self.scroll_offset.size_of().total_bytes());
-            context.add(self.selection_list.size_of().total_bytes());
             context.add(size_of_val(&self.maybe_file_extension));
             context.add(size_of_val(&self.maybe_file_path));
+            context.add(self.caret_raw.size_of().total_bytes());
+            context.add(self.scr_ofs.size_of().total_bytes());
+            context.add(self.sel_list.size_of().total_bytes());
         }
     }
 
@@ -235,16 +242,17 @@ pub struct EditorBufferHistory {
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorContent {
     pub lines: sizing::VecEditorContentLines,
-    /// The caret is stored as a "raw" [Position].
+    // BUG: [ ] introduce scroll adjusted type
+    /// The caret is stored as a "raw" [EditorContent::caret_raw].
     /// - This is the col and row index that is relative to the viewport.
     /// - In order to get the "scroll adjusted" caret position, use
-    ///   [EditorBuffer::get_caret] and pass it [CaretKind::ScrollAdjusted].
-    // BUG: [ ] introduce scroll adjusted type
-    pub caret_display_position_raw: Position,
-    pub scroll_offset: ScrollOffset,
+    ///   [EditorBuffer::get_caret_scr_adj], which incorporates the
+    ///   [EditorContent::scr_ofs].
+    pub caret_raw: CaretRaw,
+    pub scr_ofs: ScrOfs,
     pub maybe_file_extension: Option<CharStorage>,
     pub maybe_file_path: Option<StringStorage>,
-    pub selection_list: SelectionList,
+    pub sel_list: SelectionList,
 }
 
 mod constructor {
@@ -291,7 +299,7 @@ pub mod cache {
     fn generate_key(editor_buffer: &EditorBuffer, window_size: Size) -> StringStorage {
         string_storage!(
             "{offset:?}{size:?}",
-            offset = editor_buffer.get_scroll_offset(),
+            offset = editor_buffer.get_scr_ofs(),
             size = window_size,
         )
     }
@@ -322,8 +330,8 @@ pub mod cache {
         // - Scroll Offset or Window size has been modified.
         editor_buffer.render_cache.clear();
         let render_args = RenderArgs {
-            editor_engine,
-            editor_buffer,
+            engine: editor_engine,
+            buffer: editor_buffer,
             has_focus,
         };
 
@@ -335,12 +343,163 @@ pub mod cache {
     }
 }
 
-pub enum CaretKind {
-    Raw,
-    ScrollAdjusted,
+pub mod content {
+    use super::*;
+
+    // Relating to line display width at caret row or given row index (scroll adjusted).
+    impl EditorBuffer {
+        pub fn get_max_row_index(&self) -> RowIndex {
+            // Subtract 1 from the height to get the last row index.
+            height(self.get_lines().len()).convert_to_row_index()
+        }
+
+        /// Get line display with at caret's scroll adjusted row index.
+        pub fn get_line_display_width_at_caret_scr_adj(&self) -> ColWidth {
+            Self::impl_get_line_display_width_at_caret_scr_adj(
+                self.get_caret_raw(),
+                self.get_scr_ofs(),
+                self.get_lines(),
+            )
+        }
+
+        /// Get line display with at caret's scroll adjusted row index. Use this when you
+        /// don't have access to this struct. Eg: in [EditorBufferMut].
+        pub fn impl_get_line_display_width_at_caret_scr_adj(
+            caret_raw: CaretRaw,
+            scr_ofs: ScrOfs,
+            lines: &VecEditorContentLines,
+        ) -> ColWidth {
+            let caret_scr_adj = caret_raw + scr_ofs;
+            let row_index = caret_scr_adj.row_index;
+            let maybe_line_us = lines.get(row_index.as_usize());
+            if let Some(line_us) = maybe_line_us {
+                line_us.display_width
+            } else {
+                width(0)
+            }
+        }
+
+        /// Get line display with at given scroll adjusted row index.
+        pub fn get_line_display_width_at_row_index(
+            &self,
+            row_index: RowIndex,
+        ) -> ColWidth {
+            Self::impl_get_line_display_width_at_row_index(row_index, self.get_lines())
+        }
+
+        /// Get line display with at given scroll adjusted row index. Use this when you
+        /// don't have access to this struct.
+        pub fn impl_get_line_display_width_at_row_index(
+            row_index: RowIndex,
+            lines: &VecEditorContentLines,
+        ) -> ColWidth {
+            let maybe_line_us = lines.get(row_index.as_usize());
+            if let Some(line_us) = maybe_line_us {
+                line_us.display_width
+            } else {
+                width(0)
+            }
+        }
+    }
+
+    // Relating to content around the caret.
+    impl EditorBuffer {
+        pub fn line_at_caret_scr_adj(&self) -> Option<&UnicodeString> {
+            if self.is_empty() {
+                return None;
+            }
+            let row_index_scr_adj = self.get_caret_scr_adj().row_index;
+            let line = self.get_lines().get(row_index_scr_adj.as_usize())?;
+            Some(line)
+        }
+
+        pub fn string_at_end_of_line_at_caret_scr_adj(
+            &self,
+        ) -> Option<UnicodeStringSegmentSliceResult> {
+            if self.is_empty() {
+                return None;
+            }
+            let line = self.line_at_caret_scr_adj()?;
+            if let caret_locate::CaretColLocationInLine::AtEnd =
+                caret_locate::locate_col(self)
+            {
+                let maybe_last_str_seg = line.get_string_at_end();
+                return maybe_last_str_seg;
+            }
+            None
+        }
+
+        pub fn string_to_right_of_caret(
+            &self,
+        ) -> Option<UnicodeStringSegmentSliceResult> {
+            if self.is_empty() {
+                return None;
+            }
+            let line = self.line_at_caret_scr_adj()?;
+            match caret_locate::locate_col(self) {
+                // Caret is at end of line, past the last character.
+                caret_locate::CaretColLocationInLine::AtEnd => line.get_string_at_end(),
+                // Caret is not at end of line.
+                _ => line.get_string_at_right_of_display_col_index(
+                    self.get_caret_scr_adj().col_index,
+                ),
+            }
+        }
+
+        pub fn string_to_left_of_caret(&self) -> Option<UnicodeStringSegmentSliceResult> {
+            if self.is_empty() {
+                return None;
+            }
+            let line = self.line_at_caret_scr_adj()?;
+            match caret_locate::locate_col(self) {
+                // Caret is at end of line, past the last character.
+                caret_locate::CaretColLocationInLine::AtEnd => line.get_string_at_end(),
+                // Caret is not at end of line.
+                _ => line.get_string_at_left_of_display_col_index(
+                    self.get_caret_scr_adj().col_index,
+                ),
+            }
+        }
+
+        pub fn prev_line_above_caret(&self) -> Option<&UnicodeString> {
+            if self.is_empty() {
+                return None;
+            }
+            let row_index_scr_adj = self.get_caret_scr_adj().row_index;
+            if row_index_scr_adj == row(0) {
+                return None;
+            }
+            let line = self
+                .get_lines()
+                .get((row_index_scr_adj - row(1)).as_usize())?;
+            Some(line)
+        }
+
+        pub fn string_at_caret(&self) -> Option<UnicodeStringSegmentSliceResult> {
+            if self.is_empty() {
+                return None;
+            }
+            let line = self.line_at_caret_scr_adj()?;
+            let caret_str_adj_col_index = self.get_caret_scr_adj().col_index;
+            let result = line.get_string_at_display_col_index(caret_str_adj_col_index)?;
+            Some(result)
+        }
+
+        pub fn next_line_below_caret_to_string(&self) -> Option<&UnicodeString> {
+            if self.is_empty() {
+                return None;
+            }
+            let caret_scr_adj_row_index = self.get_caret_scr_adj().row_index;
+            let next_line_row_index = caret_scr_adj_row_index + row(1);
+            let line = self.get_lines().get(next_line_row_index.as_usize())?;
+            Some(line)
+        }
+    }
 }
 
 pub mod access_and_mutate {
+    use r3bl_core::RowHeight;
+
     use super::*;
 
     impl EditorBuffer {
@@ -364,16 +523,11 @@ pub mod access_and_mutate {
 
         pub fn is_empty(&self) -> bool { self.editor_content.lines.is_empty() }
 
-        pub fn len(&self) -> ChUnit { ch(self.editor_content.lines.len()) }
-
-        pub fn get_line_display_width(&self, row_index: ChUnit) -> ChUnit {
-            let index = usize(row_index);
-            if let Some(line) = self.editor_content.lines.get(index) {
-                line.display_width
-            } else {
-                ch(0)
-            }
+        pub fn line_at_row_index(&self, row_index: RowIndex) -> Option<&UnicodeString> {
+            self.editor_content.lines.get(row_index.as_usize())
         }
+
+        pub fn len(&self) -> RowHeight { height(self.editor_content.lines.len()) }
 
         pub fn get_lines(&self) -> &VecEditorContentLines { &self.editor_content.lines }
 
@@ -414,7 +568,7 @@ pub mod access_and_mutate {
         /// - Then you can convert the `&[u8]` to a `&str` using `std::str::from_utf8`.
         /// - And then call `.lines()` on the `&str` to get an iterator over the lines
         ///   which can be passed to this method.
-        // BOOKM: Clever Rust, use of `IntoIterator` to efficiently and flexibly load data.
+        // XMARK: Clever Rust, use of `IntoIterator` to efficiently and flexibly load data.
         pub fn set_lines<'a, I: IntoIterator<Item = &'a str>>(&mut self, lines: I) {
             // Clear existing lines and lines_us.
             self.editor_content.lines.clear();
@@ -425,10 +579,10 @@ pub mod access_and_mutate {
             }
 
             // Reset caret.
-            self.editor_content.caret_display_position_raw = Position::default();
+            self.editor_content.caret_raw = CaretRaw::default();
 
             // Reset scroll_offset.
-            self.editor_content.scroll_offset = ScrollOffset::default();
+            self.editor_content.scr_ofs = ScrOfs::default();
 
             // Empty the content render cache.
             cache::clear(self);
@@ -437,59 +591,13 @@ pub mod access_and_mutate {
             history::clear(self);
         }
 
-        /// Returns the current caret position in two variants:
-        /// 1. [CaretKind::Raw] -> The raw caret position not adjusted for scrolling.
-        /// 2. [CaretKind::ScrollAdjusted] -> The caret position adjusted for scrolling using
-        ///    scroll_offset.
-        pub fn get_caret(&self, kind: CaretKind) -> Position {
-            Self::get_caret_adjusted(
-                self.editor_content.caret_display_position_raw,
-                self.editor_content.scroll_offset,
-                kind,
-            )
+        pub fn get_caret_raw(&self) -> CaretRaw { self.editor_content.caret_raw }
+
+        pub fn get_caret_scr_adj(&self) -> CaretScrAdj {
+            self.editor_content.caret_raw + self.editor_content.scr_ofs
         }
 
-        // BUG: [ ] introduce scroll adjusted type
-        pub fn get_caret_adjusted(
-            caret_display_position_raw: Position,
-            scroll_offset: ScrollOffset,
-            kind: CaretKind,
-        ) -> Position {
-            match kind {
-                // No conversion needed for raw caret, since it is stored as such.
-                CaretKind::Raw => caret_display_position_raw,
-                // Scroll adjusted caret = caret (raw) + scroll_offset.
-                CaretKind::ScrollAdjusted => caret_display_position_raw + scroll_offset,
-            }
-        }
-
-        /// Scroll adjusted caret row = caret.row (raw) + scroll_offset.row.
-        pub fn calc_scroll_adj_caret_row(
-            caret: &Position,
-            scroll_offset: &ScrollOffset,
-        ) -> usize {
-            usize(caret.row_index + scroll_offset.row_index)
-        }
-
-        /// Scroll adjusted caret col = caret.col (raw) + scroll_offset.col.
-        pub fn calc_scroll_adj_caret_col(
-            caret: &Position,
-            scroll_offset: &ScrollOffset,
-        ) -> usize {
-            usize(caret.col_index + scroll_offset.col_index)
-        }
-
-        // BUG: [ ] introduce scroll adjusted type
-        pub fn convert_from_scroll_adjusted_to_raw_caret(
-            caret: Position,
-            scroll_offset: ScrollOffset,
-        ) -> Position {
-            caret - scroll_offset
-        }
-
-        pub fn get_scroll_offset(&self) -> ScrollOffset {
-            self.editor_content.scroll_offset
-        }
+        pub fn get_scr_ofs(&self) -> ScrOfs { self.editor_content.scr_ofs }
 
         // REFACTOR: [ ] return struct, not tuple, add drop impl to it, to update lines_us? or drop lines_us?
         // REFACTOR: [ ] after mutations to lines, lines_us must be recomputed! consider remove this from the struct & computing it only when needed
@@ -501,29 +609,22 @@ pub mod access_and_mutate {
         ///
         /// [EditorBufferMut] implements the [Drop] trait, which ensures that any
         /// validation changes are applied after making changes to the [EditorBuffer].
-        pub fn get_mut(
-            &mut self,
-            viewport_width: ChUnit,
-            viewport_height: ChUnit,
-        ) -> EditorBufferMut<'_> {
+        pub fn get_mut(&mut self, vp: Dim) -> EditorBufferMut<'_> {
             EditorBufferMut::new(
                 &mut self.editor_content.lines,
-                &mut self.editor_content.caret_display_position_raw,
-                &mut self.editor_content.scroll_offset,
-                &mut self.editor_content.selection_list,
-                viewport_width,
-                viewport_height,
+                &mut self.editor_content.caret_raw,
+                &mut self.editor_content.scr_ofs,
+                &mut self.editor_content.sel_list,
+                vp,
             )
         }
 
-        pub fn has_selection(&self) -> bool {
-            !self.editor_content.selection_list.is_empty()
-        }
+        pub fn has_selection(&self) -> bool { !self.editor_content.sel_list.is_empty() }
 
-        pub fn clear_selection(&mut self) { self.editor_content.selection_list.clear(); }
+        pub fn clear_selection(&mut self) { self.editor_content.sel_list.clear(); }
 
-        pub fn get_selection_map(&self) -> &SelectionList {
-            &self.editor_content.selection_list
+        pub fn get_selection_list(&self) -> &SelectionList {
+            &self.editor_content.sel_list
         }
     }
 }
@@ -577,12 +678,10 @@ pub mod history {
         // Invalidate the content cache, since the content just changed.
         cache::clear(editor_buffer);
 
-        let retain_caret_position =
-            editor_buffer.editor_content.caret_display_position_raw;
+        let retain_caret_position = editor_buffer.editor_content.caret_raw;
         if let Some(content) = editor_buffer.history.previous_content() {
             editor_buffer.editor_content = content;
-            editor_buffer.editor_content.caret_display_position_raw =
-                retain_caret_position;
+            editor_buffer.editor_content.caret_raw = retain_caret_position;
         }
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
@@ -734,9 +833,9 @@ mod impl_debug_format {
                 lines = self.lines.len(),
                 size = format_as_kilobytes_with_commas(self.size_of().total_bytes()),
                 ext = self.maybe_file_extension,
-                caret = self.caret_display_position_raw,
-                map = self.selection_list.to_formatted_string(),
-                scroll = self.scroll_offset,
+                caret = self.caret_raw,
+                map = self.sel_list.to_formatted_string(),
+                scroll = self.scr_ofs,
                 path = self.maybe_file_path,
             }
         }

@@ -28,7 +28,7 @@ use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
             MdBlock,
             MdDocument};
 
-// BOOKM: Main Markdown parser entry point
+// XMARK: Main Markdown parser entry point
 
 /// This is the main parser entry point, aka, the root parser. It takes a string slice and
 /// if it can be parsed, returns a [MdDocument] that represents the parsed Markdown.

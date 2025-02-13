@@ -21,7 +21,10 @@ use crossterm::style::Stylize;
 use r3bl_core::{call_if_true, usize, VecArrayStr};
 
 use super::EditorBuffer;
-use crate::{EditorArgsMut, EditorEngineInternalApi, DEBUG_TUI_COPY_PASTE};
+use crate::{constants::NEW_LINE,
+            EditorArgsMut,
+            EditorEngineInternalApi,
+            DEBUG_TUI_COPY_PASTE};
 
 pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 
@@ -38,21 +41,21 @@ pub trait ClipboardService {
 pub fn copy_to_clipboard(
     buffer: &EditorBuffer,
     clipboard_service_provider: &mut impl ClipboardService,
-) {
+) -> Option<()> {
     let lines = buffer.get_lines();
-    let selection_map = buffer.get_selection_map();
+    let sel_list = buffer.get_selection_list();
 
     // Initialize an empty string to store the copied text.
     let mut vec_str = VecArrayStr::new();
 
     // Sort the row indices so that the copied text is in the correct order.
-    let row_indices = selection_map.get_ordered_indices();
+    let row_indices = sel_list.get_ordered_indices();
 
     // Iterate through the sorted row indices, and copy the selected text.
     for row_index in row_indices {
-        if let Some(selection_range) = selection_map.get(row_index) {
-            if let Some(line) = lines.get(usize(row_index)) {
-                let selected_text_holder = line.clip_to_range(selection_range);
+        if let Some(sel_range) = sel_list.get(row_index) {
+            if let Some(line) = lines.get(usize(*row_index)) {
+                let selected_text_holder = line.clip_to_range(sel_range);
                 vec_str.push(selected_text_holder);
             }
         }
@@ -68,34 +71,36 @@ pub fn copy_to_clipboard(
             );
         });
     }
+
+    None
 }
 
 pub fn paste_from_clipboard(
     args: EditorArgsMut<'_>,
     clipboard_service_provider: &mut impl ClipboardService,
-) {
+) -> Option<()> {
     let result = clipboard_service_provider.try_to_get_content_from_clipboard();
     match result {
         Ok(clipboard_text) => {
             // If the clipboard text does not contain a new line, then insert the text.
-            if !clipboard_text.contains('\n') {
+            if !clipboard_text.contains(NEW_LINE) {
                 EditorEngineInternalApi::insert_str_at_caret(
                     EditorArgsMut {
-                        editor_engine: args.editor_engine,
-                        editor_buffer: args.editor_buffer,
+                        engine: args.engine,
+                        buffer: args.buffer,
                     },
                     clipboard_text.as_str(),
                 );
             }
             // If the clipboard text contains a new line, then insert the text line by line.
             else {
-                let lines = clipboard_text.split('\n');
+                let lines = clipboard_text.split(NEW_LINE);
                 let line_count = lines.clone().count();
                 for (line_index, line) in lines.enumerate() {
                     EditorEngineInternalApi::insert_str_at_caret(
                         EditorArgsMut {
-                            editor_engine: args.editor_engine,
-                            editor_buffer: args.editor_buffer,
+                            engine: args.engine,
+                            buffer: args.buffer,
                         },
                         line,
                     );
@@ -103,8 +108,8 @@ pub fn paste_from_clipboard(
                     if line_index < line_count - 1 {
                         EditorEngineInternalApi::insert_new_line_at_caret(
                             EditorArgsMut {
-                                editor_engine: args.editor_engine,
-                                editor_buffer: args.editor_buffer,
+                                engine: args.engine,
+                                buffer: args.buffer,
                             },
                         );
                     }
@@ -128,4 +133,6 @@ pub fn paste_from_clipboard(
             });
         }
     }
+
+    None
 }

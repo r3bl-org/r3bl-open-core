@@ -19,13 +19,7 @@ use std::{fmt::Debug,
           ops::{AddAssign, Index}};
 
 use super::{TuiStyledText, sizing::VecTuiStyledText};
-use crate::{ChUnit,
-            ConvertToPlainText,
-            StringStorage,
-            UnicodeString,
-            ch,
-            join_with_index_fmt,
-            ok};
+use crate::{ConvertToPlainText, StringStorage, UnicodeString, join_with_index_fmt, ok};
 
 /// Macro to make building [`TuiStyledTexts`] easy.
 ///
@@ -94,7 +88,7 @@ mod impl_ops {
 
 mod impl_display {
     use super::*;
-    use crate::join;
+    use crate::{ColWidth, join};
 
     impl ConvertToPlainText for TuiStyledTexts {
         fn to_plain_text(&self) -> StringStorage {
@@ -108,10 +102,10 @@ mod impl_display {
     }
 
     impl TuiStyledTexts {
-        pub fn display_width(&self) -> ChUnit {
+        pub fn display_width(&self) -> ColWidth {
             let plain_text = self.to_plain_text();
             let display_width = UnicodeString::str_display_width(plain_text.as_str());
-            ch(display_width)
+            display_width
         }
     }
 }

@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{Position, Size, TuiStyle};
+use r3bl_core::{Dim, Pos, TuiStyle};
 
 use super::{FlexBox, FlexBoxId};
 
@@ -26,15 +26,15 @@ use super::{FlexBox, FlexBoxId};
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct PartialFlexBox {
     pub id: FlexBoxId,
-    pub style_adjusted_origin_pos: Position,
-    pub style_adjusted_bounds_size: Size,
+    pub style_adjusted_origin_pos: Pos,
+    pub style_adjusted_bounds_size: Dim,
     pub maybe_computed_style: Option<TuiStyle>,
 }
 
 impl PartialFlexBox {
     pub fn get_computed_style(&self) -> Option<TuiStyle> { self.maybe_computed_style }
 
-    pub fn get_style_adjusted_position_and_size(&self) -> (Position, Size) {
+    pub fn get_style_adjusted_position_and_size(&self) -> (Pos, Dim) {
         (
             self.style_adjusted_origin_pos,
             self.style_adjusted_bounds_size,
@@ -71,7 +71,7 @@ impl From<&FlexBox> for PartialFlexBox {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{position, size};
+    use r3bl_core::{col, height, row, width, Dim, Pos};
 
     use super::*;
 
@@ -79,11 +79,8 @@ mod tests {
     fn test_partial_flex_box_default() {
         let partial_flex_box = PartialFlexBox::default();
         assert_eq!(partial_flex_box.id, FlexBoxId::default());
-        assert_eq!(
-            partial_flex_box.style_adjusted_origin_pos,
-            Position::default()
-        );
-        assert_eq!(partial_flex_box.style_adjusted_bounds_size, Size::default());
+        assert_eq!(partial_flex_box.style_adjusted_origin_pos, Pos::default());
+        assert_eq!(partial_flex_box.style_adjusted_bounds_size, Dim::default());
         assert_eq!(partial_flex_box.maybe_computed_style, None);
     }
 
@@ -99,8 +96,8 @@ mod tests {
 
     #[test]
     fn test_partial_flex_box_get_style_adjusted_position_and_size() {
-        let position = position!(col_index: 1, row_index: 2);
-        let size = size!(col_count: 3, row_count: 4);
+        let position = col(1) + row(2);
+        let size = width(3) + height(4);
         let partial_flex_box = PartialFlexBox {
             style_adjusted_origin_pos: position,
             style_adjusted_bounds_size: size,
@@ -128,11 +125,8 @@ mod tests {
         let flex_box = FlexBox::default();
         let partial_flex_box: PartialFlexBox = flex_box.into();
         assert_eq!(partial_flex_box.id, FlexBoxId::default());
-        assert_eq!(
-            partial_flex_box.style_adjusted_origin_pos,
-            Position::default()
-        );
-        assert_eq!(partial_flex_box.style_adjusted_bounds_size, Size::default());
+        assert_eq!(partial_flex_box.style_adjusted_origin_pos, Pos::default());
+        assert_eq!(partial_flex_box.style_adjusted_bounds_size, Dim::default());
         assert_eq!(partial_flex_box.maybe_computed_style, None);
     }
 
@@ -141,8 +135,8 @@ mod tests {
         let partial_flex_box = PartialFlexBox::default();
         let flex_box: FlexBox = partial_flex_box.into();
         assert_eq!(flex_box.id, FlexBoxId::default());
-        assert_eq!(flex_box.style_adjusted_origin_pos, Position::default());
-        assert_eq!(flex_box.style_adjusted_bounds_size, Size::default());
+        assert_eq!(flex_box.style_adjusted_origin_pos, Pos::default());
+        assert_eq!(flex_box.style_adjusted_bounds_size, Dim::default());
         assert_eq!(flex_box.maybe_computed_style, None);
     }
 }

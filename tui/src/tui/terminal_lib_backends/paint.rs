@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{call_if_true, LockedOutputDevice, Position, Size};
+use r3bl_core::{call_if_true, Dim, LockedOutputDevice, Pos};
 
 use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
 use crate::{diff_chunks::{OffscreenBufferDiffResult, PixelCharDiffChunks},
@@ -35,7 +35,7 @@ pub trait PaintRenderOp {
         &mut self,
         skip_flush: &mut bool,
         render_op: &RenderOp,
-        window_size: Size,
+        window_size: Dim,
         local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
@@ -104,7 +104,7 @@ pub fn paint<S, AS>(
 
     fn perform_diff_paint(
         diff_chunks: &PixelCharDiffChunks,
-        window_size: Size,
+        window_size: Dim,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) {
@@ -119,14 +119,14 @@ pub fn paint<S, AS>(
                     is_mock,
                 );
             }
-            TerminalLibBackend::Termion => todo!(), // FUTURE: implement OffscreenBufferPaint trait for termion
+            TerminalLibBackend::Termion => unimplemented!(),
         }
     }
 
     fn perform_full_paint(
         offscreen_buffer: &OffscreenBuffer,
         flush_kind: FlushKind,
-        window_size: Size,
+        window_size: Dim,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) {
@@ -142,34 +142,36 @@ pub fn paint<S, AS>(
                     is_mock,
                 );
             }
-            TerminalLibBackend::Termion => todo!(), // FUTURE: implement OffscreenBufferPaint trait for termion
+            TerminalLibBackend::Termion => unimplemented!(),
         }
     }
 }
 
-/// 1. Ensure that the [Position] is within the bounds of the terminal window using
+/// 1. Ensure that the [Pos] is within the bounds of the terminal window using
 ///    [RenderOpsLocalData].
-/// 2. If the [Position] is outside of the bounds of the window then it is clamped to the nearest
-///    edge of the window. This clamped [Position] is returned.
-/// 3. This also saves the clamped [Position] to [RenderOpsLocalData].
+/// 2. If the [Pos] is outside of the bounds of the window then it is clamped to the
+///    nearest edge of the window. This clamped [Pos] is returned.
+/// 3. This also saves the clamped [Pos] to [RenderOpsLocalData].
 pub fn sanitize_and_save_abs_position(
-    orig_abs_pos: Position,
-    window_size: Size,
+    orig_abs_pos: Pos,
+    window_size: Dim,
     local_data: &mut RenderOpsLocalData,
-) -> Position {
-    let Size {
-        col_count: max_cols,
-        row_count: max_rows,
+) -> Pos {
+    let Dim {
+        col_width: max_cols,
+        row_height: max_rows,
     } = window_size;
 
-    let mut sanitized_abs_pos: Position = orig_abs_pos;
+    let mut sanitized_abs_pos: Pos = orig_abs_pos;
 
-    if orig_abs_pos.col_index > max_cols {
-        sanitized_abs_pos.col_index = max_cols;
+    // REVIEW: [x] sanitize_and_save_abs_position verified() correct
+    if orig_abs_pos.col_index >= max_cols.convert_to_col_index() {
+        sanitized_abs_pos.col_index = max_cols.convert_to_col_index();
     }
 
-    if orig_abs_pos.row_index > max_rows {
-        sanitized_abs_pos.row_index = max_rows;
+    // REVIEW: [x] sanitize_and_save_abs_position verified() correct
+    if orig_abs_pos.row_index >= max_rows.convert_to_row_index() {
+        sanitized_abs_pos.row_index = max_rows.convert_to_row_index();
     }
 
     // Save the cursor position to local data.
@@ -179,20 +181,23 @@ pub fn sanitize_and_save_abs_position(
 
     return sanitized_abs_pos;
 
-    fn debug(orig_pos: Position, sanitized_pos: Position) {
+    fn debug(orig_pos: Pos, sanitized_pos: Pos) {
         call_if_true!(DEBUG_TUI_MOD, {
             if sanitized_pos != orig_pos {
+                // % is Display, ? is Debug.
                 tracing::info!(
-                    "pipeline : 📍🗜️ Attempt to set cursor position {orig_pos:?} \
-                    outside of terminal window; clamping to nearest edge of window {sanitized_pos:?}"
+                    message = "pipeline : 🗜️ Attempt to set cursor position (orig) outside of terminal window; clamping to nearest edge of window (sanitized)",
+                    orig = ?orig_pos,
+                    sanitized = ?sanitized_pos
                 );
             }
         });
 
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
+            // % is Display, ? is Debug.
             tracing::info!(
-                "pipeline : 📍 Save the cursor position {sanitized_pos:?} \
-                to SharedGlobalData"
+                message = "pipeline : 📍 Save the cursor position (sanitized) to SharedGlobalData",
+                sanitized = ?sanitized_pos
             );
         });
     }

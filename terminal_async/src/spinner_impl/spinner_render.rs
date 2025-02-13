@@ -20,9 +20,8 @@ use crossterm::{QueueableCommand,
                 style::{self, Print, Stylize},
                 terminal::{Clear, ClearType}};
 use miette::IntoDiagnostic as _;
-use r3bl_core::{ChUnit, ch};
+use r3bl_core::{ColWidth, StringStorage, UnicodeString, string_storage, width};
 use r3bl_tui::convert_from_tui_color_to_crossterm_color;
-use r3bl_tuify::clip_string_to_width_with_ellipsis;
 
 use crate::{BLOCK_DOTS,
             BRAILLE_DOTS,
@@ -36,43 +35,50 @@ pub fn render_tick(
     style: &mut SpinnerStyle,
     message: &str,
     count: usize,
-    display_width: ChUnit,
-) -> String {
+    display_width: ColWidth,
+) -> StringStorage {
     match style.template {
-        SpinnerTemplate::Dots => {
-            let padding_right = ".".repeat(count);
-            let clipped_message = clip_string_to_width_with_ellipsis(
-                message.to_string(),
-                ch(display_width) - ch(padding_right.len()),
-            );
-            let output_message = format!("{clipped_message}{padding_right}");
-            let clipped_message =
-                clip_string_to_width_with_ellipsis(output_message, ch(display_width));
-            apply_color(clipped_message.as_str(), &mut style.color)
-        }
         SpinnerTemplate::Braille => {
             // Translate count into the index of the BRAILLE_DOTS array.
             let index_to_use = count % BRAILLE_DOTS.len();
             let output_symbol = BRAILLE_DOTS[index_to_use];
             let output_symbol = apply_color(output_symbol, &mut style.color);
-            let clipped_message = clip_string_to_width_with_ellipsis(
-                message.to_string(),
-                ch(display_width) - ch(2),
+
+            let text = UnicodeString::new(message);
+            let text_trunc = text.truncate_end_to_fit_width(
+                display_width -
+                width(3) /* 1 for symbol, 1 for space, 1 empty for last display col */
             );
-            let clipped_message = apply_color(&clipped_message, &mut style.color);
-            format!("{output_symbol} {clipped_message}")
+            let text_trunc_fmt = apply_color(text_trunc, &mut style.color);
+
+            string_storage!("{output_symbol} {text_trunc_fmt}")
         }
         SpinnerTemplate::Block => {
             // Translate count into the index of the BLOCK_DOTS array.
             let index_to_use = count % BLOCK_DOTS.len();
             let output_symbol = BLOCK_DOTS[index_to_use];
             let output_symbol = apply_color(output_symbol, &mut style.color);
-            let clipped_message = clip_string_to_width_with_ellipsis(
-                message.to_string(),
-                ch(display_width) - ch(2),
+
+            let text = UnicodeString::new(message);
+            let text_trunc = text.truncate_end_to_fit_width(
+                display_width -
+                width(3) /* 1 for symbol, 1 for space, 1 empty for last display col */
             );
-            let clipped_message = apply_color(&clipped_message, &mut style.color);
-            format!("{output_symbol} {clipped_message}")
+            let text_trunc_fmt = apply_color(text_trunc, &mut style.color);
+
+            string_storage!("{output_symbol} {text_trunc_fmt}")
+        }
+        SpinnerTemplate::Dots => {
+            let padding_right = ".".repeat(count);
+
+            let text = UnicodeString::new(message);
+            let text_trunc = text.truncate_end_to_fit_width({
+                display_width - width(padding_right.len()) -
+                /* last display col is empty */ width(1)
+            });
+            let text_trunc_with_padding = string_storage!("{text_trunc}{padding_right}");
+
+            apply_color(&text_trunc_with_padding, &mut style.color)
         }
     }
 }
@@ -132,14 +138,14 @@ pub fn print_tick(
 pub fn render_final_tick(
     style: &SpinnerStyle,
     final_message: &str,
-    display_width: ChUnit,
-) -> String {
-    let clipped_final_message =
-        clip_string_to_width_with_ellipsis(final_message.to_string(), ch(display_width));
+    display_width: ColWidth,
+) -> StringStorage {
+    let text = UnicodeString::new(final_message);
+    let text_trunc = text.truncate_end_to_fit_width(display_width);
     match style.template {
-        SpinnerTemplate::Dots => clipped_final_message.to_string(),
-        SpinnerTemplate::Braille => clipped_final_message.to_string(),
-        SpinnerTemplate::Block => clipped_final_message.to_string(),
+        SpinnerTemplate::Dots => text_trunc.into(),
+        SpinnerTemplate::Braille => text_trunc.into(),
+        SpinnerTemplate::Block => text_trunc.into(),
     }
 }
 
@@ -165,15 +171,14 @@ pub fn print_final_tick(
     Ok(())
 }
 
-fn apply_color(output: &str, color: &mut SpinnerColor) -> String {
-    let mut return_it = output.to_string();
+fn apply_color(output: &str, color: &mut SpinnerColor) -> StringStorage {
     if let SpinnerColor::ColorWheel(color_wheel) = color {
         let maybe_next_color = color_wheel.next_color();
         if let Some(next_color) = maybe_next_color {
             let color = convert_from_tui_color_to_crossterm_color(next_color);
             let styled_content = style(output).with(color);
-            return_it = styled_content.to_string()
+            return string_storage!("{styled_content}");
         }
     }
-    return_it
+    StringStorage::from(output)
 }

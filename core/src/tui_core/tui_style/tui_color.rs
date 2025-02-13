@@ -47,63 +47,63 @@ macro_rules! color {
     };
 
     (@dark_grey) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::DarkGrey)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkGrey)
     };
 
     (@red) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::Red)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Red)
     };
 
     (@dark_red) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::DarkRed)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkRed)
     };
 
     (@green) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::Green)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Green)
     };
 
     (@dark_green) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::DarkGreen)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkGreen)
     };
 
     (@yellow) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::Yellow)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Yellow)
     };
 
     (@dark_yellow) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::DarkYellow)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkYellow)
     };
 
     (@blue) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::Blue)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Blue)
     };
 
     (@dark_blue) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::DarkBlue)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkBlue)
     };
 
     (@magenta) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::Magenta)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Magenta)
     };
 
     (@dark_magenta) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::DarkMagenta)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkMagenta)
     };
 
     (@cyan) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::Cyan)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Cyan)
     };
 
     (@dark_cyan) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::DarkCyan)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkCyan)
     };
 
     (@white) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::White)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::White)
     };
 
     (@grey) => {
-        $crate::TuiColor::Basic(ANSIBasicColor::Grey)
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Grey)
     };
 }
 

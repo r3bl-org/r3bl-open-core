@@ -36,7 +36,7 @@ fn main() -> miette::Result<()> {
         });
 
         // Get display size.
-        let max_width_col_count = usize(get_terminal_width());
+        let max_width_col_count = usize(*get_terminal_width());
         let max_height_row_count: usize = 5;
 
         // Create styles.
@@ -184,7 +184,7 @@ fn multi_line_header() {
 }
 
 fn single_line_header() {
-    let max_width_col_count = usize(get_terminal_width());
+    let max_width_col_count = usize(*get_terminal_width());
     let user_input = select_from_list(
         "🦜 Please select one or more items. This is an example of a very long header text 🐧. You can pass emoji here 🐥 and text gets clipped off correctly 🐒, based on terminal size".to_string(),
         [

@@ -20,7 +20,7 @@ use std::io::stdout;
 use clap::ValueEnum;
 use crossterm::style::Stylize;
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_core::{call_if_true, ch, get_size, string_storage, usize, Size};
+use r3bl_core::{call_if_true, ch, get_size, string_storage, usize};
 
 use crate::{enter_event_loop,
             CalculateResizeHint,
@@ -160,11 +160,10 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
 
     let return_it = match key_press {
         // Resize.
-        KeyPress::Resize(Size {
-            col_count,
-            row_count,
-        }) => {
+        KeyPress::Resize(size) => {
             call_if_true!(DEVELOPMENT_MODE, {
+                let col_count = size.col_width;
+                let row_count = size.row_height;
                 let message = "🍎🍎🍎 keypress_handler() resize";
                 let details = string_storage!(
                     "New size width:{a} x height:{b}",
@@ -176,10 +175,7 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
                     details = %details
                 };
             });
-            state.set_resize_hint(Size {
-                col_count,
-                row_count,
-            });
+            state.set_resize_hint(size);
             EventLoopResult::ContinueAndRerenderAndClear
         }
 

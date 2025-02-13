@@ -174,7 +174,7 @@ macro_rules! console_log {
 
     (
         $(                      /* Start a repetition. */
-            $element:expr         /* Expression. */
+            $element:expr       /* Expression. */
         )                       /* End repetition. */
         ,                       /* Comma separated. */
         *                       /* Zero or more times. */
@@ -186,10 +186,10 @@ macro_rules! console_log {
             $(
                 /* Each repeat will contain the following statement, with $element replaced. */
                 println!(
-                    "{} {} = {}",
+                    "{} {} <- {}",
                     r3bl_core::style_error("▶"),
-                    r3bl_core::style_prompt(stringify!($element)),
-                    r3bl_core::style_underline(&format!("{:#?}", $element))
+                    r3bl_core::style_underline(&format!("{:#?}", $element)),
+                    r3bl_core::style_prompt(stringify!($element))
                 );
             )*
         }

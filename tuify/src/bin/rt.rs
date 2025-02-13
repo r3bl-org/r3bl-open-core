@@ -207,7 +207,7 @@ fn show_tui(
     }
 
     // Get display size.
-    let max_width_col_count = tui_width.unwrap_or_else(|| usize(get_terminal_width()));
+    let max_width_col_count = tui_width.unwrap_or_else(|| usize(*get_terminal_width()));
     let max_height_row_count: usize = tui_height.unwrap_or(5);
 
     // Handle `selection-mode` is not passed in.

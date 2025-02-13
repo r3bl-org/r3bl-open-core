@@ -111,7 +111,7 @@ pub fn try_checkout_branch(
 
                     // If user has files that are modified (unstaged or staged), but not committed.
                     if !modified_files.is_empty() {
-                        let terminal_width = get_terminal_width();
+                        let terminal_width = *get_terminal_width();
 
                         let one_modified_file = &ModifiedFileOnCurrentBranch.to_string();
                         let one_modified_file = add_spaces_to_end_of_string(
@@ -306,7 +306,7 @@ mod branch_checkout_formatting {
 
     pub fn add_spaces_to_end_of_string(string: &str, terminal_width: ChUnit) -> String {
         let string_length = UnicodeString::str_display_width(string);
-        let spaces_to_add = terminal_width - string_length;
+        let spaces_to_add = terminal_width - *string_length;
         let spaces = " ".repeat(usize(spaces_to_add));
         let string = format!("{}{}", string, spaces);
         string

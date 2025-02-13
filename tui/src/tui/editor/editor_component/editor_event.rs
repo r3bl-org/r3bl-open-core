@@ -306,7 +306,7 @@ impl EditorEvent {
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,
     ) {
-        if editor_buffer.get_selection_map().is_empty() {
+        if editor_buffer.get_selection_list().is_empty() {
             return;
         }
 
@@ -319,68 +319,59 @@ impl EditorEvent {
     }
 
     pub fn apply_editor_event(
-        editor_engine: &mut EditorEngine,
-        editor_buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        buffer: &mut EditorBuffer,
         editor_event: EditorEvent,
         clipboard_service_provider: &mut impl ClipboardService,
     ) {
         match editor_event {
             EditorEvent::Undo => {
-                history::undo(editor_buffer);
+                history::undo(buffer);
             }
 
             EditorEvent::Redo => {
-                history::redo(editor_buffer);
+                history::redo(buffer);
             }
 
             EditorEvent::InsertChar(character) => {
-                Self::delete_text_if_selected(editor_engine, editor_buffer);
+                Self::delete_text_if_selected(engine, buffer);
                 EditorEngineInternalApi::insert_str_at_caret(
-                    EditorArgsMut {
-                        editor_buffer,
-                        editor_engine,
-                    },
+                    EditorArgsMut { buffer, engine },
                     &String::from(character),
-                )
+                );
             }
 
             EditorEvent::InsertNewLine => {
-                Self::delete_text_if_selected(editor_engine, editor_buffer);
+                Self::delete_text_if_selected(engine, buffer);
                 EditorEngineInternalApi::insert_new_line_at_caret(EditorArgsMut {
-                    editor_buffer,
-                    editor_engine,
+                    buffer,
+                    engine,
                 });
             }
 
             EditorEvent::Delete => {
-                if editor_buffer.get_selection_map().is_empty() {
+                if buffer.get_selection_list().is_empty() {
                     // There is no selection and we want to delete a single character.
-                    EditorEngineInternalApi::delete_at_caret(
-                        editor_buffer,
-                        editor_engine,
-                    );
+                    EditorEngineInternalApi::delete_at_caret(buffer, engine);
                 } else {
                     // The text is selected and we want to delete the entire selected text.
                     EditorEngineInternalApi::delete_selected(
-                        editor_buffer,
-                        editor_engine,
+                        buffer,
+                        engine,
                         DeleteSelectionWith::Delete,
                     );
                 }
             }
 
             EditorEvent::Backspace => {
-                if editor_buffer.get_selection_map().is_empty() {
+                if buffer.get_selection_list().is_empty() {
                     // There is no selection and we want to backspace a single character.
-                    EditorEngineInternalApi::backspace_at_caret(
-                        editor_buffer,
-                        editor_engine,
-                    );
+                    EditorEngineInternalApi::backspace_at_caret(buffer, engine);
                 } else {
                     // The text is selected and we want to delete the entire selected text.
                     EditorEngineInternalApi::delete_selected(
-                        editor_buffer,
-                        editor_engine,
+                        buffer,
+                        engine,
                         DeleteSelectionWith::Backspace,
                     );
                 }
@@ -389,171 +380,116 @@ impl EditorEvent {
             EditorEvent::MoveCaret(direction) => {
                 match direction {
                     CaretDirection::Left => EditorEngineInternalApi::left(
-                        editor_buffer,
-                        editor_engine,
+                        buffer,
+                        engine,
                         SelectMode::Disabled,
                     ),
                     CaretDirection::Right => EditorEngineInternalApi::right(
-                        editor_buffer,
-                        editor_engine,
+                        buffer,
+                        engine,
                         SelectMode::Disabled,
                     ),
-                    CaretDirection::Up => EditorEngineInternalApi::up(
-                        editor_buffer,
-                        editor_engine,
-                        SelectMode::Disabled,
-                    ),
+                    CaretDirection::Up => {
+                        EditorEngineInternalApi::up(buffer, engine, SelectMode::Disabled)
+                    }
                     CaretDirection::Down => EditorEngineInternalApi::down(
-                        editor_buffer,
-                        editor_engine,
+                        buffer,
+                        engine,
                         SelectMode::Disabled,
                     ),
                 };
             }
 
             EditorEvent::InsertString(chunk) => {
-                Self::delete_text_if_selected(editor_engine, editor_buffer);
+                Self::delete_text_if_selected(engine, buffer);
                 EditorEngineInternalApi::insert_str_at_caret(
-                    EditorArgsMut {
-                        editor_buffer,
-                        editor_engine,
-                    },
+                    EditorArgsMut { buffer, engine },
                     &chunk,
-                )
+                );
             }
 
             EditorEvent::Resize(_) => {
                 // Check to see whether scroll is valid.
                 EditorEngineInternalApi::validate_scroll(EditorArgsMut {
-                    editor_buffer,
-                    editor_engine,
+                    buffer,
+                    engine,
                 });
             }
 
             EditorEvent::Home => {
-                EditorEngineInternalApi::home(
-                    editor_buffer,
-                    editor_engine,
-                    SelectMode::Disabled,
-                );
+                EditorEngineInternalApi::home(buffer, engine, SelectMode::Disabled);
             }
 
             EditorEvent::End => {
-                EditorEngineInternalApi::end(
-                    editor_buffer,
-                    editor_engine,
-                    SelectMode::Disabled,
-                );
+                EditorEngineInternalApi::end(buffer, engine, SelectMode::Disabled);
             }
 
             EditorEvent::PageDown => {
-                EditorEngineInternalApi::page_down(
-                    editor_buffer,
-                    editor_engine,
-                    SelectMode::Disabled,
-                );
+                EditorEngineInternalApi::page_down(buffer, engine, SelectMode::Disabled);
             }
 
             EditorEvent::PageUp => {
-                EditorEngineInternalApi::page_up(
-                    editor_buffer,
-                    editor_engine,
-                    SelectMode::Disabled,
-                );
+                EditorEngineInternalApi::page_up(buffer, engine, SelectMode::Disabled);
             }
 
             EditorEvent::Select(selection_action) => match selection_action {
                 SelectionAction::OneCharRight => {
-                    EditorEngineInternalApi::right(
-                        editor_buffer,
-                        editor_engine,
-                        SelectMode::Enabled,
-                    );
+                    EditorEngineInternalApi::right(buffer, engine, SelectMode::Enabled);
                 }
                 SelectionAction::OneCharLeft => {
-                    EditorEngineInternalApi::left(
-                        editor_buffer,
-                        editor_engine,
-                        SelectMode::Enabled,
-                    );
+                    EditorEngineInternalApi::left(buffer, engine, SelectMode::Enabled);
                 }
                 SelectionAction::OneLineDown => {
-                    EditorEngineInternalApi::down(
-                        editor_buffer,
-                        editor_engine,
-                        SelectMode::Enabled,
-                    );
+                    EditorEngineInternalApi::down(buffer, engine, SelectMode::Enabled);
                 }
                 SelectionAction::OneLineUp => {
-                    EditorEngineInternalApi::up(
-                        editor_buffer,
-                        editor_engine,
-                        SelectMode::Enabled,
-                    );
+                    EditorEngineInternalApi::up(buffer, engine, SelectMode::Enabled);
                 }
                 SelectionAction::PageUp => {
-                    EditorEngineInternalApi::page_up(
-                        editor_buffer,
-                        editor_engine,
-                        SelectMode::Enabled,
-                    );
+                    EditorEngineInternalApi::page_up(buffer, engine, SelectMode::Enabled);
                 }
                 SelectionAction::PageDown => {
                     EditorEngineInternalApi::page_down(
-                        editor_buffer,
-                        editor_engine,
+                        buffer,
+                        engine,
                         SelectMode::Enabled,
                     );
                 }
                 SelectionAction::Home => {
-                    EditorEngineInternalApi::home(
-                        editor_buffer,
-                        editor_engine,
-                        SelectMode::Enabled,
-                    );
+                    EditorEngineInternalApi::home(buffer, engine, SelectMode::Enabled);
                 }
                 SelectionAction::End => {
-                    EditorEngineInternalApi::end(
-                        editor_buffer,
-                        editor_engine,
-                        SelectMode::Enabled,
-                    );
+                    EditorEngineInternalApi::end(buffer, engine, SelectMode::Enabled);
                 }
                 SelectionAction::All => {
-                    EditorEngineInternalApi::select_all(
-                        editor_buffer,
-                        SelectMode::Enabled,
-                    );
+                    EditorEngineInternalApi::select_all(buffer, SelectMode::Enabled);
                 }
                 SelectionAction::Esc => {
-                    EditorEngineInternalApi::clear_selection(editor_buffer);
+                    EditorEngineInternalApi::clear_selection(buffer);
                 }
             },
 
             EditorEvent::Cut => {
                 EditorEngineInternalApi::copy_editor_selection_to_clipboard(
-                    editor_buffer,
+                    buffer,
                     clipboard_service_provider,
                 );
-                Self::delete_text_if_selected(editor_engine, editor_buffer);
+                Self::delete_text_if_selected(engine, buffer);
             }
 
             EditorEvent::Copy => {
                 EditorEngineInternalApi::copy_editor_selection_to_clipboard(
-                    editor_buffer,
+                    buffer,
                     clipboard_service_provider,
                 );
             }
 
             EditorEvent::Paste => {
-                Self::delete_text_if_selected(editor_engine, editor_buffer);
+                Self::delete_text_if_selected(engine, buffer);
                 EditorEngineInternalApi::paste_clipboard_content_into_editor(
-                    EditorArgsMut {
-                        editor_buffer,
-                        editor_engine,
-                    },
+                    EditorArgsMut { buffer, engine },
                     clipboard_service_provider,
-                )
+                );
             }
         };
     }

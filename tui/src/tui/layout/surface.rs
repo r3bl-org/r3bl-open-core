@@ -15,12 +15,13 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{size,
+use r3bl_core::{height,
                 throws,
+                width,
                 CommonResult,
-                Position,
+                Dim,
+                Pos,
                 RequestedSizePercent,
-                Size,
                 TuiStyle,
                 TuiStylesheet,
                 VecArray};
@@ -37,8 +38,8 @@ use crate::{unwrap_or_err, LayoutError, LayoutErrorType, RenderPipeline};
 /// screen.
 #[derive(Clone, Debug, Default)]
 pub struct Surface {
-    pub origin_pos: Position,
-    pub box_size: Size,
+    pub origin_pos: Pos,
+    pub box_size: Dim,
     pub stack_of_boxes: Vec<FlexBox>,
     pub stylesheet: TuiStylesheet,
     pub render_pipeline: RenderPipeline,
@@ -46,8 +47,8 @@ pub struct Surface {
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct SurfaceBounds {
-    pub origin_pos: Position,
-    pub box_size: Size,
+    pub origin_pos: Pos,
+    pub box_size: Dim,
 }
 
 mod surface_bounds_impl {
@@ -170,18 +171,16 @@ impl PerformPositioningAndSizing for Surface {
 
     fn no_boxes_added(&self) -> bool { self.stack_of_boxes.is_empty() }
 
-    /// Must be called *before* the new [FlexBox] is added to the stack of boxes
-    /// otherwise [LayoutErrorType::ErrorCalculatingNextBoxPos] error is
-    /// returned.
+    /// Must be called *before* the new [FlexBox] is added to the stack of boxes otherwise
+    /// [LayoutErrorType::ErrorCalculatingNextBoxPos] error is returned.
     ///
     /// This updates the `box_cursor_pos` of the current [FlexBox].
     ///
-    /// Returns the [Position] where the next [FlexBox] can be added to the stack of
-    /// boxes.
+    /// Returns the [Pos] where the next [FlexBox] can be added to the stack of boxes.
     fn update_insertion_pos_for_next_box(
         &mut self,
-        allocated_size: Size,
-    ) -> CommonResult<Position> {
+        allocated_size: Dim,
+    ) -> CommonResult<Pos> {
         let current_box = self.current_box()?;
         let current_insertion_pos = current_box.insertion_pos_for_next_box;
 
@@ -190,12 +189,12 @@ impl PerformPositioningAndSizing for Surface {
           LayoutErrorType::ErrorCalculatingNextBoxPos
         };
 
-        let new_pos: Position = current_insertion_pos + allocated_size;
+        let new_pos: Pos = current_insertion_pos + allocated_size;
 
         // Adjust `new_pos` using Direction.
-        let new_pos: Position = match current_box.dir {
-            LayoutDirection::Vertical => new_pos * (0, 1),
-            LayoutDirection::Horizontal => new_pos * (1, 0),
+        let new_pos: Pos = match current_box.dir {
+            LayoutDirection::Vertical => new_pos * (width(0) + height(1)),
+            LayoutDirection::Horizontal => new_pos * (width(1) + height(0)),
         };
 
         // Update the box_cursor_pos of the current layout.
@@ -204,8 +203,8 @@ impl PerformPositioningAndSizing for Surface {
         Ok(new_pos)
     }
 
-    /// 🍀 Handle non-root box to add to stack of boxes. [Position] and [Size] will be calculated.
-    /// `insertion_pos_for_next_box` will also be updated.
+    /// 🍀 Handle non-root box to add to stack of boxes. [Pos] and [Dim] will be
+    /// calculated. `insertion_pos_for_next_box` will also be updated.
     fn add_non_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
         throws!({
             let container_box = self.current_box()?;
@@ -219,10 +218,11 @@ impl PerformPositioningAndSizing for Surface {
                 height_pc,
             } = flex_box_props.requested_size_percent;
 
-            let requested_size_allocation = size!(
-              col_count: width_pc.apply_to(container_bounds.col_count),
-              row_count: height_pc.apply_to(container_bounds.row_count)
-            );
+            let requested_size_allocation = {
+                let width_val = width_pc.apply_to(*container_bounds.col_width);
+                let height_val = height_pc.apply_to(*container_bounds.row_height);
+                width(width_val) + height(height_val)
+            };
 
             let origin_pos = unwrap_or_err! {
               container_box.insertion_pos_for_next_box,
@@ -248,10 +248,11 @@ impl PerformPositioningAndSizing for Surface {
                 height_pc,
             } = flex_box_props.requested_size_percent;
 
-            let bounds_size = size!(
-              col_count: width_pc.apply_to(self.box_size.col_count),
-              row_count: height_pc.apply_to(self.box_size.row_count)
-            );
+            let bounds_size = {
+                let width_val = width_pc.apply_to(*self.box_size.col_width);
+                let height_val = height_pc.apply_to(*self.box_size.row_height);
+                width(width_val) + height(height_val)
+            };
 
             self.stack_of_boxes.push(make_root_box_with_style(
                 flex_box_props,
@@ -278,14 +279,15 @@ fn make_non_root_box_with_style(
             },
         maybe_styles: _,
     }: FlexBoxProps,
-    origin_pos: Position,
-    container_bounds: Size,
+    origin_pos: Pos,
+    container_bounds: Dim,
     maybe_cascaded_style: Option<TuiStyle>,
 ) -> FlexBox {
-    let bounds_size = size!(
-      col_count: width_pc.apply_to(container_bounds.col_count),
-      row_count: height_pc.apply_to(container_bounds.row_count)
-    );
+    let bounds_size = {
+        let width_val = width_pc.apply_to(*container_bounds.col_width);
+        let height_val = height_pc.apply_to(*container_bounds.row_height);
+        width(width_val) + height(height_val)
+    };
 
     // Adjust `bounds_size` & `origin` based on the style's padding.
     let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
@@ -314,8 +316,8 @@ fn make_root_box_with_style(
         requested_size_percent,
         maybe_styles,
     }: FlexBoxProps,
-    origin_pos: Position,
-    bounds_size: Size,
+    origin_pos: Pos,
+    bounds_size: Dim,
 ) -> FlexBox {
     let computed_style = TuiStylesheet::compute(&maybe_styles);
 
@@ -339,9 +341,9 @@ fn make_root_box_with_style(
 /// Adjust `origin` & `bounds_size` based on the `maybe_style`'s padding.
 fn adjust_with_style(
     maybe_computed_style: &Option<TuiStyle>,
-    origin_pos: Position,
-    bounds_size: Size,
-) -> (Position, Size) {
+    origin_pos: Pos,
+    bounds_size: Dim,
+) -> (Pos, Dim) {
     let mut style_adjusted_origin_pos = origin_pos;
     let mut style_adjusted_bounds_size = bounds_size;
 

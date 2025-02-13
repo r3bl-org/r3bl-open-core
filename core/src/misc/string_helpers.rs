@@ -17,7 +17,7 @@
 
 use std::fmt::Write;
 
-use crate::{ChUnit,
+use crate::{ColWidth,
             ELLIPSIS_GLYPH,
             StringStorage,
             UnicodeString,
@@ -25,6 +25,7 @@ use crate::{ChUnit,
             f64,
             glyphs::SPACER_GLYPH as SPACER,
             usize,
+            width,
             with_mut};
 
 /// Tests whether the given text contains an ANSI escape sequence.
@@ -82,7 +83,7 @@ pub fn remove_escaped_quotes(s: &str) -> String {
 /// Take into account the fact that there maybe emoji in the string.
 pub fn truncate_from_right(
     string: &str,
-    display_width: impl Into<ChUnit>,
+    display_width: impl Into<ColWidth>,
     pad: bool,
 ) -> StringStorage {
     use crate::glyphs::SPACER_GLYPH as SPACER;
@@ -97,8 +98,10 @@ pub fn truncate_from_right(
         let postfix_us = UnicodeString::new(postfix_string);
         let postfix_display_width = postfix_us.display_width;
 
-        let trunc_str =
-            string_us.truncate_end_to_fit_width(display_width - postfix_display_width);
+        let trunc_str = string_us.truncate_end_to_fit_width({
+            let it = display_width - postfix_display_width;
+            width(*it)
+        });
         // The above statement is Equivalent to:
         // let trunc_string =
         //     string.truncate_end_by_n_col(display_width - suffix_display_width - 1);
@@ -114,9 +117,9 @@ pub fn truncate_from_right(
     // Handle padding.
     else if pad {
         let display_width_to_pad = display_width - string_display_width;
-        let display_width_to_pad = f64(display_width_to_pad);
+        let display_width_to_pad = f64(*display_width_to_pad);
         let spacer_display_width = UnicodeString::str_display_width(SPACER);
-        let spacer_display_width = f64(spacer_display_width);
+        let spacer_display_width = f64(*spacer_display_width);
         let repeat_count = (display_width_to_pad / spacer_display_width).round();
         let repeat_count = repeat_count as usize;
         with_mut!(
@@ -135,7 +138,7 @@ pub fn truncate_from_right(
 
 pub fn truncate_from_left(
     string: &str,
-    display_width: impl Into<ChUnit>,
+    display_width: impl Into<ColWidth>,
     pad: bool,
 ) -> StringStorage {
     let display_width = display_width.into();
@@ -148,8 +151,10 @@ pub fn truncate_from_left(
         let prefix_us = UnicodeString::new(prefix);
         let prefix_display_width = prefix_us.display_width;
         let truncate_cols_from_left = string_display_width - display_width;
-        let truncated_text = string_us
-            .truncate_start_by_n_col(truncate_cols_from_left + prefix_display_width);
+        let truncated_text = string_us.truncate_start_by_n_col({
+            let it = truncate_cols_from_left + prefix_display_width;
+            width(*it)
+        });
         with_mut!(
             StringStorage::new(),
             as acc,
@@ -162,7 +167,7 @@ pub fn truncate_from_left(
     else if pad {
         let width_to_pad = display_width - string_display_width;
         let spacer_width = UnicodeString::str_display_width(SPACER);
-        let repeat_count = (f64(width_to_pad) / f64(spacer_width)).ceil();
+        let repeat_count = (f64(*width_to_pad) / f64(*spacer_width)).ceil();
         let repeat_count = ch(repeat_count);
         with_mut!(
             StringStorage::new(),
@@ -179,12 +184,13 @@ pub fn truncate_from_left(
 #[cfg(test)]
 mod tests_truncate_or_pad {
     use super::*;
+    use crate::width;
 
     #[test]
     fn test_truncate_or_pad_from_right() {
         let long_string = "Hello, world!";
         let short_string = "Hi!";
-        let width = 10;
+        let width = width(10);
 
         assert_eq!(truncate_from_right(long_string, width, true), "Hello, wo…");
         assert_eq!(truncate_from_right(short_string, width, true), "Hi!       ");
@@ -197,7 +203,7 @@ mod tests_truncate_or_pad {
     fn test_truncate_or_pad_from_left() {
         let long_string = "Hello, world!";
         let short_string = "Hi!";
-        let width = 10;
+        let width = width(10);
 
         assert_eq!(truncate_from_left(long_string, width, true), "…o, world!");
         assert_eq!(truncate_from_left(short_string, width, true), "       Hi!");

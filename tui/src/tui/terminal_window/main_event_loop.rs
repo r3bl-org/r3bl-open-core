@@ -18,27 +18,31 @@
 use std::{fmt::Debug, marker::PhantomData};
 
 use r3bl_core::{call_if_true,
+                ch,
+                col,
                 format_as_kilobytes_with_commas,
                 glyphs,
+                height,
                 ok,
                 output_device_as_mut,
-                position,
+                row,
                 string_storage,
                 telemetry::{telemetry_default_constants, Telemetry},
                 telemetry_record,
+                width,
                 Ansi256GradientIndex,
                 ColorWheel,
                 ColorWheelConfig,
                 ColorWheelSpeed,
                 CommonResult,
+                Dim,
                 GradientGenerationPolicy,
                 InputDevice,
                 LockedOutputDevice,
                 OutputDevice,
-                Size,
+                SufficientSize,
                 TelemetryAtomHint,
                 TextColorizationPolicy,
-                TooSmallToDisplayResult,
                 UnicodeString};
 use r3bl_macro::tui_style;
 use size_of::SizeOf as _;
@@ -73,7 +77,7 @@ pub async fn main_event_loop_impl<S, AS>(
     mut app: BoxedSafeApp<S, AS>,
     exit_keys: &[InputEvent],
     state: S,
-    initial_size: Size,
+    initial_size: Dim,
     mut input_device: InputDevice,
     output_device: OutputDevice,
 ) -> CommonResult<(
@@ -346,7 +350,7 @@ fn actually_process_input_event<S, AS>(
 /// This function gets called as a result of:
 /// 1. Terminal resize event.
 pub fn handle_resize<S, AS>(
-    new_size: Size,
+    new_size: Dim,
     global_data_mut_ref: &mut GlobalData<S, AS>,
     app: &mut BoxedSafeApp<S, AS>,
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
@@ -476,16 +480,17 @@ where
         let window_size = global_data_mut_ref.window_size;
 
         // Check to see if the window_size is large enough to render.
-        let render_result =
-            match window_size.fits_min_size(MinSize::Col as u8, MinSize::Row as u8) {
-                TooSmallToDisplayResult::IsLargeEnough => {
-                    app.app_render(global_data_mut_ref, component_registry_map, has_focus)
-                }
-                TooSmallToDisplayResult::IsTooSmall => {
-                    global_data_mut_ref.maybe_saved_offscreen_buffer = None;
-                    Ok(render_window_too_small_error(window_size))
-                }
-            };
+        let render_result = match window_size
+            .fits_min_size(width(MinSize::Col as u8) + height(MinSize::Row as u8))
+        {
+            SufficientSize::IsLargeEnough => {
+                app.app_render(global_data_mut_ref, component_registry_map, has_focus)
+            }
+            SufficientSize::IsTooSmall => {
+                global_data_mut_ref.maybe_saved_offscreen_buffer = None;
+                Ok(render_window_too_small_error(window_size))
+            }
+        };
 
         match render_result {
             Err(error) => {
@@ -519,7 +524,7 @@ where
     }
 }
 
-fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
+fn render_window_too_small_error(window_size: Dim) -> RenderPipeline {
     // Show warning message that window_size is too small.
     let msg = string_storage!(
         "Window size is too small. Minimum size is {} cols x {} rows",
@@ -532,8 +537,14 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
     let trunc_msg_us = UnicodeString::new(trunc_msg);
     let trunc_msg_width = trunc_msg_us.display_width;
 
-    let row_pos = window_size.row_count / 2;
-    let col_pos = (window_size.col_count - trunc_msg_width) / 2;
+    let row_pos = row({
+        let it = window_size.row_height / ch(2);
+        *it
+    });
+    let col_pos = col({
+        let it = (window_size.col_width - trunc_msg_width) / ch(2);
+        *it
+    });
 
     let mut pipeline = render_pipeline!();
 
@@ -544,7 +555,8 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
         at ZOrder::Normal
         =>
             RenderOp::ResetColor,
-            RenderOp::MoveCursorPositionAbs(position! {col_index: col_pos, row_index: row_pos})
+            // RenderOp::MoveCursorPositionAbs(position! {col_index: col_pos, row_index: row_pos})
+            RenderOp::MoveCursorPositionAbs(col_pos + row_pos)
     }
 
     render_pipeline! {
@@ -570,36 +582,36 @@ mod tests {
     use std::{fmt::{Debug, Formatter},
               time::Duration};
 
-    use position::Position;
     use r3bl_ansi_color::{is_fully_uninteractive_terminal, TTYResult};
     use r3bl_core::{assert_eq2,
                     ch,
+                    col,
                     color,
                     defaults::get_default_gradient_stops,
+                    height,
                     ok,
-                    position,
                     send_signal,
-                    size,
                     string_storage,
                     throws_with_return,
                     tui_styled_text,
                     tui_styled_texts,
-                    ChUnit,
+                    width,
                     ColorWheel,
                     ColorWheelConfig,
                     ColorWheelSpeed,
                     CommonResult,
                     CrosstermEventResult,
+                    Dim,
                     GradientGenerationPolicy,
                     GradientLengthKind,
                     InputDevice,
                     OutputDevice,
                     TextColorizationPolicy,
                     TuiStyle,
+                    UnicodeString,
                     VecArray};
     use r3bl_macro::tui_style;
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, InputDeviceExt};
-    use size::Size;
     use smallvec::smallvec;
     use test_fixture_app::AppMainTest;
     use test_fixture_state::{AppSignal, State};
@@ -666,7 +678,7 @@ mod tests {
         ];
 
         // Create a window.
-        let initial_size = size!(col_count: 65, row_count: 11);
+        let initial_size = width(65) + height(11);
         let input_device =
             InputDevice::new_mock_with_delay(generator_vec, Duration::from_millis(10));
         let (output_device, stdout_mock) = OutputDevice::new_mock();
@@ -683,6 +695,9 @@ mod tests {
         .await?;
 
         // Make assertions.
+
+        // console_log!(global_data.state);
+        // console_log!(stdout_mock.get_copy_of_buffer_as_string_strip_ansi());
 
         assert_eq!(global_data.state.counter, 2);
         assert!(stdout_mock
@@ -806,7 +821,7 @@ mod tests {
     }
 
     mod test_fixture_app_main_impl_trait_app {
-        use r3bl_core::UnicodeString;
+        use r3bl_core::{row, Pos};
 
         use super::*;
 
@@ -827,11 +842,17 @@ mod tests {
 
                     let sample_line_of_text =
                         format!("{state_string}, gradient: [index: X, len: Y]");
-                    let content_size_col = ch(sample_line_of_text.len());
+                    let content_size_col = width(sample_line_of_text.len());
                     let window_size = global_data_mut_ref.window_size;
 
-                    let col = (window_size.col_count - content_size_col) / 2;
-                    let mut row = (window_size.row_count - ch(2)) / 2;
+                    let col_idx = col({
+                        let it = window_size.col_width - content_size_col;
+                        *it / ch(2)
+                    });
+                    let mut row_idx = row({
+                        let it = window_size.row_height - height(2);
+                        *it / ch(2)
+                    });
 
                     let mut pipeline = render_pipeline!();
 
@@ -842,10 +863,10 @@ mod tests {
                         };
 
                         // Render using color_wheel_rgb.
-                        acc_render_op += RenderOp::MoveCursorPositionAbs(position!(
-                            col_index: col,
-                            row_index: row
-                        ));
+                        acc_render_op += RenderOp::MoveCursorPositionAbs(Pos {
+                            col_index: col_idx,
+                            row_index: row_idx,
+                        });
 
                         let index = data.color_wheel_rgb.get_index();
                         let len = match data.color_wheel_rgb.get_gradient_len() {
@@ -871,7 +892,7 @@ mod tests {
                             )
                         );
 
-                        row += 1;
+                        *row_idx += 1;
 
                         acc_render_op
                     });
@@ -1005,7 +1026,7 @@ mod tests {
         use super::*;
 
         /// Shows helpful messages at the bottom row of the screen.
-        pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {
+        pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Dim) {
             let styled_texts = tui_styled_texts! {
                 tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
                 tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit 🖖 "},
@@ -1016,10 +1037,9 @@ mod tests {
             };
 
             let display_width = styled_texts.display_width();
-            let col_center: ChUnit = (size.col_count - display_width) / 2;
-            let row_bottom: ChUnit = size.row_count - 1;
-            let center: Position =
-                position!(col_index: col_center, row_index: row_bottom);
+            let col_center = *(size.col_width - display_width) / ch(2);
+            let row_bottom = size.row_height.convert_to_row_index();
+            let center = col(col_center) + row_bottom;
 
             let mut render_ops = render_ops!();
             render_ops.push(RenderOp::MoveCursorPositionAbs(center));

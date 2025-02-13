@@ -115,7 +115,7 @@ where
                     DialogEngineArgs {
                         self_id,
                         global_data,
-                        dialog_engine,
+                        engine: dialog_engine,
                         has_focus,
                     }
                 };

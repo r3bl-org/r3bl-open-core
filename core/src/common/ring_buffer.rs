@@ -75,13 +75,13 @@ pub struct RingBuffer<T, const N: usize> {
 mod constructor {
     use super::*;
 
-    // BOOKM: Clever Rust, use of `const N: usize` for the array size in generics.
+    // XMARK: Clever Rust, use of `const N: usize` for the array size in generics.
     impl<T, const N: usize> Default for RingBuffer<T, N> {
         fn default() -> Self { Self::new() }
     }
 
     impl<T, const N: usize> RingBuffer<T, N> {
-        // BOOKM: Clever Rust, use of `map` to initialize the array.
+        // XMARK: Clever Rust, use of `map` to initialize the array.
         pub fn new() -> Self {
             RingBuffer {
                 internal_storage: [(); N].map(|_| None),

@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023 R3BL LLC
+ *   Copyright (c) 2023-2025 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 use std::{cmp::{self},
           fmt::Debug};
 
-use crate::{ChUnit, Position};
+use crate::{CaretScrAdj, ColIndex, ColWidth, RowIndex, ScrOfs, width};
 
 /// Represents a range of characters in a line.
 ///
@@ -30,20 +30,25 @@ use crate::{ChUnit, Position};
 /// ```text
 /// 0 1 2 3 4 5 6 7 8 9
 /// h e ▓ ▓ o   w o r l
-///   ↑     ↑
+///   ┬     ┬
 ///   │     │
-///   │     end_display_col_index
-/// start_display_col_index
+///   │     ⎩end_display_col_index
+///   ⎩start_display_col_index
 /// ```
 /// - `▓▓` = `😃`
 /// - [clip_to_range](crate::UnicodeString::clip_to_range): "e😃"
 #[derive(Default, Clone, PartialEq, Copy, size_of::SizeOf)]
 // BUG: [ ] introduce scroll adjusted type
 pub struct SelectionRange {
-    /// This is not "raw", this is "scroll adjusted".
-    pub start_display_col_index_scroll_adjusted: ChUnit,
-    /// This is not "raw", this is "scroll adjusted".
-    pub end_display_col_index_scroll_adjusted: ChUnit,
+    /// This is not "raw", this is "scroll adjusted". This represents the display width at
+    /// which the selection starts. The display width is used, in order to support
+    /// variable width characters.
+    pub start_disp_col_idx_scr_adj: ColIndex,
+    /// This is not "raw", this is "scroll adjusted". This represents the display width at
+    /// which the selection ends. The display width is used, in order to support variable
+    /// width characters. The end index is not inclusive when the selection range is
+    /// resolved into a result (string).
+    pub end_disp_col_idx_scr_adj: ColIndex,
 }
 
 #[derive(Clone, PartialEq, Copy, Debug)]
@@ -53,14 +58,36 @@ pub enum ScrollOffsetColLocationInRange {
 }
 
 impl SelectionRange {
+    /// Due to the nature of selection ranges, the index values are actually display
+    /// widths. And sometimes it is useful to type cast them as a width, eg: when using
+    /// with [crate::UnicodeString::clip_to_range].
+    pub fn get_start_display_col_index_as_width(&self) -> ColWidth {
+        width(*self.start_disp_col_idx_scr_adj)
+    }
+}
+
+impl SelectionRange {
     pub fn locate_scroll_offset_col(
         &self,
-        scroll_offset: Position,
+        scroll_offset: ScrOfs,
     ) -> ScrollOffsetColLocationInRange {
-        if self.start_display_col_index_scroll_adjusted >= scroll_offset.col_index {
+        if self.start_disp_col_idx_scr_adj >= scroll_offset.col_index {
             ScrollOffsetColLocationInRange::Underflow
         } else {
             ScrollOffsetColLocationInRange::Overflow
+        }
+    }
+}
+
+mod convert {
+    use super::*;
+
+    impl From<(ColIndex, ColIndex)> for SelectionRange {
+        fn from((start, end): (ColIndex, ColIndex)) -> Self {
+            Self {
+                start_disp_col_idx_scr_adj: start,
+                end_disp_col_idx_scr_adj: end,
+            }
         }
     }
 }
@@ -85,37 +112,37 @@ pub enum CaretMovementDirection {
 #[cfg(test)]
 mod tests_range {
     use super::*;
-    use crate::{assert_eq2, ch};
+    use crate::{assert_eq2, col};
 
     /// ```text
     /// 0 1 2 3 4 5 6 7 8 9
     /// h e l l o   w o r l
-    ///   ↑     ↑
+    ///   ┬     ┬
     ///   │     │
-    ///   │     4 = end_display_col_index
-    ///   1 = start_display_col_index
+    ///   │     ⎩4 = end_display_col_index
+    ///   ⎩1 = start_display_col_index
     /// ```
     /// - [UnicodeString::clip_to_range](UnicodeString::clip_to_range): "ell"
     #[test]
     fn test_locate() {
         let range = {
-            let start = ch(1);
-            let end = ch(4);
+            let start = col(1);
+            let end = col(4);
             SelectionRange::new(start, end)
         };
-        assert_eq2!(range.locate_column(ch(0)), CaretLocationInRange::Underflow);
-        assert_eq2!(range.locate_column(ch(1)), CaretLocationInRange::Contained);
-        assert_eq2!(range.locate_column(ch(2)), CaretLocationInRange::Contained);
-        assert_eq2!(range.locate_column(ch(3)), CaretLocationInRange::Contained);
-        assert_eq2!(range.locate_column(ch(4)), CaretLocationInRange::Overflow);
-        assert_eq2!(range.locate_column(ch(5)), CaretLocationInRange::Overflow);
+        assert_eq2!(range.locate_column(col(0)), CaretLocationInRange::Underflow);
+        assert_eq2!(range.locate_column(col(1)), CaretLocationInRange::Contained);
+        assert_eq2!(range.locate_column(col(2)), CaretLocationInRange::Contained);
+        assert_eq2!(range.locate_column(col(3)), CaretLocationInRange::Contained);
+        assert_eq2!(range.locate_column(col(4)), CaretLocationInRange::Overflow);
+        assert_eq2!(range.locate_column(col(5)), CaretLocationInRange::Overflow);
     }
 }
 
 impl SelectionRange {
     pub fn caret_movement_direction(
-        previous_caret_display_position: Position,
-        current_caret_display_position: Position,
+        previous_caret_display_position: CaretScrAdj,
+        current_caret_display_position: CaretScrAdj,
     ) -> CaretMovementDirection {
         let previous_caret_display_row_index = previous_caret_display_position.row_index;
         let current_caret_display_row_index = current_caret_display_position.row_index;
@@ -135,8 +162,8 @@ impl SelectionRange {
     }
 
     pub fn caret_movement_direction_up_down(
-        previous_caret_display_row_index: ChUnit,
-        current_caret_display_row_index: ChUnit,
+        previous_caret_display_row_index: RowIndex,
+        current_caret_display_row_index: RowIndex,
     ) -> CaretMovementDirection {
         match current_caret_display_row_index.cmp(&previous_caret_display_row_index) {
             cmp::Ordering::Greater => CaretMovementDirection::Down,
@@ -146,8 +173,8 @@ impl SelectionRange {
     }
 
     pub fn caret_movement_direction_left_right(
-        previous_caret_display_col_index: ChUnit,
-        current_caret_display_col_index: ChUnit,
+        previous_caret_display_col_index: ColIndex,
+        current_caret_display_col_index: ColIndex,
     ) -> CaretMovementDirection {
         match current_caret_display_col_index.cmp(&previous_caret_display_col_index) {
             cmp::Ordering::Greater => CaretMovementDirection::Right,
@@ -159,82 +186,98 @@ impl SelectionRange {
     /// ```text
     /// 0 1 2 3 4 5 6 7 8 9
     /// h e l l o   w o r l
-    ///   ↑     ↑
+    ///   ┬     ┬
     ///   │     │
-    ///   │     4 = end_display_col_index
-    ///   1 = start_display_col_index
+    ///   │     ⎩4 = end_display_col_index
+    ///   ⎩1 = start_display_col_index
     /// ```
     /// - [UnicodeString::clip_to_range](crate::UnicodeString::clip_to_range): "ell"
-    pub fn locate_column(&self, caret_display_col_index: ChUnit) -> CaretLocationInRange {
-        if caret_display_col_index < self.start_display_col_index_scroll_adjusted {
+    pub fn locate_column(
+        &self,
+        caret_display_col_index: ColIndex,
+    ) -> CaretLocationInRange {
+        if caret_display_col_index < self.start_disp_col_idx_scr_adj {
             CaretLocationInRange::Underflow
-        } else if caret_display_col_index >= self.end_display_col_index_scroll_adjusted {
+        } else if caret_display_col_index >= self.end_disp_col_idx_scr_adj {
             CaretLocationInRange::Overflow
         } else {
             CaretLocationInRange::Contained
         }
     }
 
-    pub fn new(start_display_col_index: ChUnit, end_display_col_index: ChUnit) -> Self {
+    /// Alternatively you can also just use a tuple of [ColIndex] to represent the range.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use r3bl_core::graphemes::range::SelectionRange;
+    /// use r3bl_core::col;
+    /// let range_1: SelectionRange = ( col(1), col(4) ).into();
+    /// let range_2 = SelectionRange::new(col(1), col(4));
+    /// ```
+    pub fn new(
+        start_display_col_index: ColIndex,
+        end_display_col_index: ColIndex,
+    ) -> Self {
         Self {
-            start_display_col_index_scroll_adjusted: start_display_col_index,
-            end_display_col_index_scroll_adjusted: end_display_col_index,
+            start_disp_col_idx_scr_adj: start_display_col_index,
+            end_disp_col_idx_scr_adj: end_display_col_index,
         }
     }
 
     /// ```text
     /// 0 1 2 3 4 5 6 7 8 9
     /// h e l l o   w o r l
-    ///   ↑     ↑
+    ///   ┬     ┬
     ///   │     │
-    ///   │     → end_display_col_index + amount
-    /// start_display_col_index
+    ///   │     ⎩end_display_col_index + col_amt
+    ///   ⎩start_display_col_index
     /// ```
-    pub fn grow_end_by(&self, amount: ChUnit) -> Self {
+    pub fn grow_end_by(&self, col_amt: ColWidth) -> Self {
         let mut copy = *self;
-        copy.end_display_col_index_scroll_adjusted += amount;
+        copy.end_disp_col_idx_scr_adj += col_amt;
         copy
     }
 
     /// ```text
     /// 0 1 2 3 4 5 6 7 8 9
     /// h e l l o   w o r l
-    ///   ↑     ↑
+    ///   ┬     ┬
     ///   │     │
-    ///   │     ← end_display_col_index - amount
-    /// start_display_col_index
+    ///   │     ⎩ end_display_col_index - col_amt
+    ///   ⎩start_display_col_index
     /// ```
-    pub fn shrink_end_by(&self, amount: ChUnit) -> Self {
+    pub fn shrink_end_by(&self, col_amt: ColWidth) -> Self {
         let mut copy = *self;
-        copy.end_display_col_index_scroll_adjusted -= amount;
+        copy.end_disp_col_idx_scr_adj -= col_amt;
         copy
     }
 
     /// ```text
     /// 0 1 2 3 4 5 6 7 8 9
     /// h e l l o   w o r l
-    ///   ↑     ↑
+    ///   ┬     ┬
     ///   │     │
-    ///   │     end_display_col_index
-    ///   ← start_display_col_index - amount
+    ///   │     ⎩end_display_col_index
+    ///   ⎩start_display_col_index - col_amt
     /// ```
-    pub fn grow_start_by(&self, amount: ChUnit) -> Self {
+    pub fn grow_start_by(&self, col_amt: ColWidth) -> Self {
         let mut copy = *self;
-        copy.start_display_col_index_scroll_adjusted -= amount;
+        copy.start_disp_col_idx_scr_adj -= col_amt;
         copy
     }
 
     /// ```text
     /// 0 1 2 3 4 5 6 7 8 9
     /// h e l l o   w o r l
-    ///   ↑     ↑
+    ///   ┬     ┬
     ///   │     │
-    ///   │     end_display_col_index
-    ///   → start_display_col_index + amount
+    ///   │     ⎩end_display_col_index
+    ///   ⎩start_display_col_index - col_amt
     /// ```
-    pub fn shrink_start_by(&self, amount: ChUnit) -> Self {
+    pub fn shrink_start_by(&self, col_amt: ColWidth) -> Self {
         let mut copy = *self;
-        copy.start_display_col_index_scroll_adjusted += amount;
+        copy.start_disp_col_idx_scr_adj += col_amt;
         copy
     }
 }
@@ -246,9 +289,9 @@ mod range_impl_debug_format {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
-                "[start_display_col_index: {start:?}, end_display_col_index: {end:?}]",
-                start = self.start_display_col_index_scroll_adjusted,
-                end = self.end_display_col_index_scroll_adjusted
+                "[start_disp_col_idx_scr_adj: {start:?}, end_disp_col_idx_scr_adj: {end:?}]",
+                start = self.start_disp_col_idx_scr_adj,
+                end = self.end_disp_col_idx_scr_adj
             )
         }
     }

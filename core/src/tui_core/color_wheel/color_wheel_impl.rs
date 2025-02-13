@@ -148,7 +148,7 @@ impl ColorWheel {
     ///
     /// # Arguments
     /// * `steps_override` - If `Some` then the number of steps will be overridden. If `None` then
-    ///                      the number of steps will be determined by the `ColorWheelConfig`.
+    ///   the number of steps will be determined by the `ColorWheelConfig`.
     ///
     /// Here's the priority order of how `steps` is determined:
     /// 1. If `steps_override` is `Some` then use that.

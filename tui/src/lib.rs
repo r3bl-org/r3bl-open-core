@@ -15,6 +15,12 @@
  *   limitations under the License.
  */
 
+// You can get the unicode symbols for the drawings here:
+// - <https://symbl.cc/en/unicode/blocks/miscellaneous-symbols-and-arrows/>
+// - <https://symbl.cc/en/unicode/blocks/box-drawing/>
+// - <https://symbl.cc/en/collections/brackets/>
+// - <https://symbl.cc/en/collections/crosses/>
+
 //! # Why R3BL?
 //!
 //! <img
@@ -216,8 +222,8 @@
 //! | Command                                | Description                                       |
 //! | -------------------------------------- | ------------------------------------------------- |
 //! | `nu run help`                          | See all the commands you can pass to the `run` script |
-//! | `nu run examples`                  | Run all the examples                              |
-//! | `nu run release-examples`          | Run all the examples with the release binary      |
+//! | `nu run examples`                      | Run all the examples                              |
+//! | `nu run release-examples`              | Run all the examples with the release binary      |
 //! | `nu run examples-with-flamegraph-profiling` | This will run the examples and generate a flamegraph at the end so you can see profile the performance of the app. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this |
 //! | `nu run log`                           | View the log output. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this. |
 //! | `nu run build`                         | Build                                             |
@@ -293,17 +299,17 @@
 //! # How does layout, rendering, and event handling work in general?
 //!
 //! ```text
-//! ┌──────────────────────────────────────────────────┐
-//! │                                                  │
-//! │  main.rs                                         │
-//! │                             ┌──────────────────┐ │
-//! │  GlobalData ───────────────►│ window size      │ │
-//! │  HasFocus                   │ offscreen buffer │ │
-//! │  ComponentRegistryMap       │ state            │ │
-//! │  App & Component(s)         │ channel sender   │ │
-//! │                             └──────────────────┘ │
-//! │                                                  │
-//! └──────────────────────────────────────────────────┘
+//! ╭───────────────────────────────────────────────╮
+//! │                                               │
+//! │  main.rs                                      │
+//! │                          ╭──────────────────╮ │
+//! │  GlobalData ────────────〉│ window size      │ │
+//! │  HasFocus                │ offscreen buffer │ │
+//! │  ComponentRegistryMap    │ state            │ │
+//! │  App & Component(s)      │ channel sender   │ │
+//! │                          ╰──────────────────╯ │
+//! │                                               │
+//! ╰───────────────────────────────────────────────╯
 //! ```
 //! <!-- https://asciiflow.com/#/share/eJzNkE0KwjAQha9SZiEK4kIUsTtR1I0b19mMdaqFdFKSFK0iXkI8jHgaT2JcqPUHoS7E4REmJN97k6yBMSbwOZWyChIz0uDDWsBSgN9utKoCMtfVW03XWVpatxFw2h3%2FVkKwW73ClUNjjLimzTfo51tfKx8xkGqCsocWC1ruDxd%2BEfFULTwTreg2V95%2BiKavgvTd6y%2FnKgxNoIl4O0nDkPQz3lVxopjYjmkWGauzESY53Fi0tL3Wa3onSbzS3aRsKg%2FpwRyZSXqGeOqyX%2FAffH%2FRuqF%2FKwEb2JwB17oGMg%3D%3D) -->
 //!
@@ -400,44 +406,43 @@
 //!   app in.
 //!
 //! ```text
-//! ┌──────────────────────────────────────────────────────────────────────────┐
-//! │In band input event                                                       │
-//! │                                                                          │
-//! │  Input ──► [TerminalWindow]                                              │
-//! │  Event          ▲      │                                                 │
-//! │                 │      ▼                  [ComponentRegistryMap] stores  │
-//! │                 │   [App]────────────────►[Component]s at 1st render     │
-//! │                 │      │                                                 │
-//! │                 │      │                                                 │
-//! │                 │      │          ┌──────► id=1 has focus                │
-//! │                 │      │          │                                      │
-//! │                 │      ├──► [Component] id=1 ─────┐                      │
-//! │                 │      │                          │                      │
-//! │                 │      └──► [Component] id=2      │                      │
-//! │                 │                                 │                      │
-//! │          default handler                          │                      │
-//! │                 ▲                                 │                      │
-//! │                 └─────────────────────────────────┘                      │
-//! │                                                                          │
-//! └──────────────────────────────────────────────────────────────────────────┘
+//! ╭─────────────────────────────────────────────────────────────────────────╮
+//! │In band input event                                                      │
+//! │                                                                         │
+//! │  Input ──〉 [TerminalWindow]                                             │
+//! │  Event          ⎫      │                                                │
+//! │                 │      ⎩                  [ComponentRegistryMap] stores │
+//! │                 │    [App]──────────────〉 [Component]s at 1st render    │
+//! │                 │      │                                                │
+//! │                 │      │                                                │
+//! │                 │      │          ╭──────〉 id=1 has focus               │
+//! │                 │      │          │                                     │
+//! │                 │      ├──〉 [Component] id=1 ─────╮                     │
+//! │                 │      │                          │                     │
+//! │                 │      ╰──〉 [Component] id=2      │                     │
+//! │                 │                                 │                     │
+//! │          default handler                          │                     │
+//! │                 ⎫                                 │                     │
+//! │                 ╰─────────────────────────────────╯                     │
+//! │                                                                         │
+//! ╰─────────────────────────────────────────────────────────────────────────╯
 //!
-//! ┌────────────────────────────────────────────────────────────┐
+//! ╭────────────────────────────────────────────────────────────╮
 //! │Out of band app signal                                      │
 //! │                                                            │
 //! │  App                                                       │
-//! │  Signal ──► [App]                                          │
+//! │  Signal ──〉 [App]                                          │
+//! │               ⎫                                            │
 //! │               │                                            │
-//! │               │                                            │
-//! │               └──────►Update state                         │
-//! │                       main thread rerender                 │
-//! │                              │                             │
-//! │                              │                             │
-//! │                              └─────►[App]                  │
-//! │                                       │                    │
-//! │                                       └────►[Component]s   │
+//! │               ╰──────〉 Update state                        │
+//! │                        main thread rerender                │
+//! │                               ⎫                            │
+//! │                               │                            │
+//! │                               ╰─────〉[App]                 │
+//! │                                        ⎫                   │
+//! │                                        ╰────〉 [Component]s │
 //! │                                                            │
-//! └────────────────────────────────────────────────────────────┘
-//! ```
+//! ╰────────────────────────────────────────────────────────────╯
 //! <!-- https://asciiflow.com/#/share/eJzdls9OwjAcx1%2Fll565wEEiiQdjPHAwJv6JB7ZDtQWabF3TdgohZC9h9iAeiU%2FDk1gcY8AAXbdh5JdfmkGbT7%2Ff7te1E8SxT1GHh57XQB4eU4k6aOKgkYM65%2B2zhoPG5qnVbpsnTUfa%2FHDQ%2FP3z5NNxuGm7HJ4xJ8C4CDXQV8o12MUKGWVhicohAbrf%2Bpbi4xn0Hqj0GcfeE%2BMkeHOtwdeblufxx2pIGb35npS%2FA9u7CnwRcCPkjg6Y0nJ8g4ULSgeSqh%2BxUe9SCLdwBcSzbFpXAdbQVBok5YTKX7upaZGOgN23KMDIRROGWEE%2FeAlVBdNUqX9tA2QvL5Gcd1NmooNCa3HQKo8%2FEEWwhPZx6GlTBJx4y81QGpr2pN%2BXirRmPcfJosKsY4U8%2BTQ2k%2FxzJWUsmPbWnNBBP7lPYCFAsYE5oAu%2B7kpqBsAcieUh94mBpc3FJ2tx0lqhtv%2B3VFQTZkfGs0dBsKaR0qYtDE3Dx4xHeigpJpGka7eLIpBsmJXB2jD5NdtTIEWre89IC8y2vvUrX9W77p%2Bmg6Zo%2BgU42osD) -->
 //!
 //! Let's trace the journey through the diagram when an input even is generated by the
@@ -559,11 +564,11 @@
 //! The [HasFocus] struct takes care of this. This provides 2 things:
 //!
 //! 1.  It holds an `id` of a [FlexBox] / [Component] that has focus.
-//! 2.  It also holds a map that holds a [r3bl_core::Position] for each `id`. This is used
-//!     to represent a cursor (whatever that means to your app & component). This cursor
-//!     is maintained for each `id`. This allows a separate cursor for each [Component]
-//!     that has focus. This is needed to build apps like editors and viewers that
-//!     maintains a cursor position between focus switches.
+//! 2.  It also holds a map that holds a [r3bl_core::Pos] for each `id`. This is used to
+//!     represent a cursor (whatever that means to your app & component). This cursor is
+//!     maintained for each `id`. This allows a separate cursor for each [Component] that
+//!     has focus. This is needed to build apps like editors and viewers that maintains a
+//!     cursor position between focus switches.
 //!
 //! Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent
 //! between re-renders.
@@ -644,24 +649,23 @@
 //! screen.
 //!
 //! ```text
-//! ┌──────────────────────────────────┐
+//! ╭──────────────────────────────────╮
 //! │ Container                        │
 //! │                                  │
-//! │ ┌─────────────┐  ┌─────────────┐ │
+//! │ ╭─────────────╮  ╭─────────────╮ │
 //! │ │ Col 1       │  │ Col 2       │ │
 //! │ │             │  │             │ │
-//! │ │             │  │     ────────┼─┼──────────► RenderPipeline─────┐
-//! │ │             │  │             │ │                               │
-//! │ │             │  │             │ │                               │
-//! │ │      ───────┼──┼─────────────┼─┼──────────► RenderPipeline─┐   │
-//! │ │             │  │             │ │                           │   │
-//! │ │             │  │             │ │                           ▼ + ▼
-//! │ │             │  │             │ │                  ┌─────────────────────┐
-//! │ └─────────────┘  └─────────────┘ │                  │                     │
-//! │                                  │                  │  OffscreenBuffer    │
-//! └──────────────────────────────────┘                  │                     │
-//!                                                       └─────────────────────┘
-//! ```
+//! │ │             │  │     ────────┼─┼────⟩ RenderPipeline ─────╮
+//! │ │             │  │             │ │                          │
+//! │ │             │  │             │ │                          │
+//! │ │      ───────┼──┼─────────────┼─┼────⟩ RenderPipeline ─╮   │
+//! │ │             │  │             │ │                      │   │
+//! │ │             │  │             │ │                      ⎩ ✚ ⎩
+//! │ │             │  │             │ │       ╭─────────────────────╮
+//! │ └─────────────┘  └─────────────┘ │       │                     │
+//! │                                  │       │  OffscreenBuffer    │
+//! ╰──────────────────────────────────╯       │                     │
+//!                                            ╰─────────────────────╯
 //! <!-- https://asciiflow.com/#/share/eJyrVspLzE1VssorzcnRUcpJrEwtUrJSqo5RqohRsrK0MNaJUaoEsozMTYGsktSKEiAnRunRlD10QzExeUBSwTk%2FryQxMy%2B1SAEHQCglCBBKSXKJAonKUawBeiBHwRDhAAW4oBGSIKoWNDcrYBUkUgulETFtl0JQal5KalFAZkFqDjAicMYUKS4nJaJoaCgdkjExgUkLH9PK2Gl7FLRBJFWMpUqo0ilL4wpirOIklEg4BP3T0oqTi1JT85xK09IgpR%2FcXLohUv1M2MM49FIhFSjVKtUCAEVNQq0%3D) -->
 //!
 //! Each component produces a `RenderPipeline`, which is a map of `ZOrder` and

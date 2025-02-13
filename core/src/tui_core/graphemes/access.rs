@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use crate::{ChUnit,
+use crate::{ColIndex,
+            ColWidth,
             GraphemeClusterSegment,
             SelectionRange,
             Size,
@@ -24,7 +25,8 @@ use crate::{ChUnit,
             UnicodeStringSegmentSliceResult,
             ch,
             pad_fmt,
-            usize};
+            usize,
+            width};
 
 impl UnicodeString {
     /// If any segment in `self.vec_segment` has a `display_col_offset` greater than 1
@@ -32,14 +34,12 @@ impl UnicodeString {
     /// column of the terminal.
     pub fn contains_wide_segments(&self) -> bool {
         let mut contains_wide_segments = false;
-
-        for grapheme_cluster_segment in self.iter() {
-            if grapheme_cluster_segment.unicode_width > ch(1) {
+        for seg in self.iter() {
+            if *seg.unicode_width > ch(1) {
                 contains_wide_segments = true;
                 break;
             }
         }
-
         contains_wide_segments
     }
 
@@ -50,24 +50,23 @@ impl UnicodeString {
     /// Note the [Self::truncate_end_by_n_col] and [Self::truncate_start_by_n_col]
     /// functions take a width.
     pub fn truncate_to_fit_size(&self, size: Size) -> &str {
-        let display_cols: ChUnit = size.col_count;
-        self.truncate_end_to_fit_width(display_cols)
+        self.truncate_end_to_fit_width(size.col_width)
     }
 
-    /// The `n_display_col` is a width, not a [Size].
+    /// The `n_col` is a width, not a [Size].
     /// - To convert width -> size / column index subtract 1.
     /// - To convert size / column index to width add 1.
     ///
     /// Note the [Self::truncate_to_fit_size] function takes a size / column index.
-    pub fn truncate_end_by_n_col(&self, n_display_col: ChUnit) -> &str {
-        let mut countdown_col_count = n_display_col;
+    pub fn truncate_end_by_n_col(&self, n_col: ColWidth) -> &str {
+        let mut countdown_col_count = n_col;
         let mut string_end_byte_index = ch(0);
 
-        for segment in self.iter().rev() {
-            let segment_display_width = segment.unicode_width;
-            string_end_byte_index = segment.byte_offset;
-            countdown_col_count -= segment_display_width;
-            if countdown_col_count == ch(0) {
+        for seg in self.iter().rev() {
+            let seg_display_width = seg.unicode_width;
+            string_end_byte_index = seg.start_byte_index;
+            countdown_col_count -= seg_display_width;
+            if *countdown_col_count == ch(0) {
                 // We are done skipping.
                 break;
             }
@@ -80,10 +79,10 @@ impl UnicodeString {
     /// skipped.
     ///
     /// ```rust
-    /// use r3bl_core::{UnicodeString, ChUnit, UnicodeStringExt};
+    /// use r3bl_core::{UnicodeString, UnicodeStringExt, width};
     ///
-    /// let col_count:r3bl_core::ChUnit = 2.into();
-    /// let display_cols:r3bl_core::ChUnit = 5.into();
+    /// let col_count = width(2);
+    /// let display_cols = width(5);
     ///
     /// let expected_clipped_string = "rst s";
     ///
@@ -97,14 +96,15 @@ impl UnicodeString {
     ///
     /// assert_eq!(truncated_line, expected_clipped_string);
     /// ```
-    pub fn truncate_start_by_n_col(&self, n_display_col: ChUnit) -> &str {
-        let mut skip_col_count = n_display_col;
+    pub fn truncate_start_by_n_col(&self, n_col: ColWidth) -> &str {
+        let mut skip_col_count = n_col;
         let mut string_start_byte_index = 0;
 
         for segment in self.iter() {
-            if skip_col_count != ch(0) {
+            let seg_display_width = segment.unicode_width;
+            if *skip_col_count != ch(0) {
                 // Skip segment.unicode_width.
-                skip_col_count -= segment.unicode_width;
+                skip_col_count -= seg_display_width;
                 string_start_byte_index += segment.byte_size;
             } else {
                 // We are done skipping.
@@ -121,7 +121,7 @@ impl UnicodeString {
     /// the result; please see the example below.
     ///
     /// ```text
-    ///   ←─3─→ : size (or "width" or "col count" or "count", 1 based)
+    ///   ⎛ 3 ⎫ : size (or "width" or "col count" or "count", 1 based)
     /// R ┌───┐
     /// 0 │fir│st second
     ///   └───┘
@@ -130,10 +130,10 @@ impl UnicodeString {
     ///
     /// Example.
     /// ```rust
-    /// use r3bl_core::{UnicodeString, ChUnit, UnicodeStringExt};
+    /// use r3bl_core::{UnicodeString, width, UnicodeStringExt};
     ///
-    /// let scroll_offset_col:r3bl_core::ChUnit = 0.into();
-    /// let display_cols:r3bl_core::ChUnit = 3.into();
+    /// let scroll_offset_col = width(0);
+    /// let display_cols = width(3);
     /// let expected_clipped_string = "fir";
     ///
     /// let line = "first second";
@@ -146,16 +146,17 @@ impl UnicodeString {
     ///
     /// assert_eq!(truncated_line_2, expected_clipped_string);
     /// ```
-    pub fn truncate_end_to_fit_width(&self, display_col_count: ChUnit) -> &str {
-        let mut avail_cols = display_col_count;
+    pub fn truncate_end_to_fit_width(&self, display_width: ColWidth) -> &str {
+        let mut avail_cols = display_width;
         let mut string_end_byte_index = 0;
 
-        for segment in self.iter() {
-            if avail_cols < segment.unicode_width {
+        for seg in self.iter() {
+            let seg_display_width = seg.unicode_width;
+            if avail_cols < seg_display_width {
                 break;
             }
-            string_end_byte_index += segment.byte_size;
-            avail_cols -= segment.unicode_width;
+            string_end_byte_index += seg.byte_size;
+            avail_cols -= seg_display_width;
         }
 
         &self.string[..string_end_byte_index]
@@ -167,12 +168,12 @@ impl UnicodeString {
         &self,
         chunk: &str,
         spacer: impl AsRef<str>,
-        max_display_col_count: ChUnit,
+        max_display_width: ColWidth,
     ) -> StringStorage {
-        let pad_len = max_display_col_count - self.display_width;
-        if pad_len > ch(0) {
+        let pad_len = max_display_width - self.display_width;
+        if *pad_len > ch(0) {
             let mut acc = StringStorage::from(chunk);
-            pad_fmt!(fmt: acc, pad_str: spacer.as_ref(), repeat_count: usize(pad_len));
+            pad_fmt!(fmt: acc, pad_str: spacer.as_ref(), repeat_count: usize(*pad_len));
             acc
         } else {
             // PERF: [ ] perf
@@ -185,33 +186,35 @@ impl UnicodeString {
     pub fn clip_to_range(&self, range: SelectionRange) -> &str {
         // BUG: [ ] introduce scroll adjusted type
         let SelectionRange {
-            start_display_col_index_scroll_adjusted: start_display_col_index,
-            end_display_col_index_scroll_adjusted: end_display_col_index,
+            start_disp_col_idx_scr_adj: start_display_col_index,
+            end_disp_col_idx_scr_adj: end_display_col_index,
         } = range;
-        let max_display_col_count = end_display_col_index - start_display_col_index;
-        self.clip_to_width(start_display_col_index, max_display_col_count)
+        let max_display_width_col_count =
+            width(*(end_display_col_index - start_display_col_index));
+        self.clip_to_width(start_display_col_index, max_display_width_col_count)
     }
 
-    /// Clip the content starting from `start_col_index` and take as many columns as
-    /// possible until `max_display_col_count` is reached.
+    /// Clip the content starting from `start_display_col_index` and take as many columns
+    /// as possible until `max_display_col_count` is reached.
     ///
     /// # Arguments
     /// - `start_display_col_index`: This an index value.
     /// - `max_display_col_count`: The is not an index value, but a size or count value.
     pub fn clip_to_width(
         &self,
-        /* index */ start_display_col_index: ChUnit,
-        /* width */ max_display_col_count: ChUnit,
+        /* index */ start_display_col_index: ColIndex,
+        /* width */ max_display_col_count: ColWidth,
     ) -> &str {
         let string_start_byte_index = {
             let mut it = 0;
             let mut skip_col_count = start_display_col_index;
-            for segment in self.iter() {
+            for seg in self.iter() {
+                let seg_display_width = seg.unicode_width;
                 // Skip scroll_offset_col_index columns.
-                if skip_col_count != ch(0) {
+                if *skip_col_count != ch(0) {
                     // Skip segment.unicode_width.
-                    skip_col_count -= segment.unicode_width;
-                    it += segment.byte_size;
+                    skip_col_count -= seg_display_width;
+                    it += seg.byte_size;
                 } else {
                     // We are done skipping.
                     break;
@@ -224,20 +227,21 @@ impl UnicodeString {
             let mut it = 0;
             let mut avail_col_count = max_display_col_count;
             let mut skip_col_count = start_display_col_index;
-            for segment in self.iter() {
+            for seg in self.iter() {
+                let seg_display_width = seg.unicode_width;
                 // Skip scroll_offset_col_index columns (again).
-                if skip_col_count != ch(0) {
+                if *skip_col_count != ch(0) {
                     // Skip segment.unicode_width.
-                    skip_col_count -= segment.unicode_width;
-                    it += segment.byte_size;
+                    skip_col_count -= seg_display_width;
+                    it += seg.byte_size;
                 }
                 // Clip max_display_col_count columns.
                 else {
-                    if avail_col_count < segment.unicode_width {
+                    if avail_col_count < seg_display_width {
                         break;
                     }
-                    it += segment.byte_size;
-                    avail_col_count -= segment.unicode_width;
+                    it += seg.byte_size;
+                    avail_col_count -= seg_display_width;
                 }
             }
             it
@@ -246,22 +250,22 @@ impl UnicodeString {
         &self.string[string_start_byte_index..string_end_byte_index]
     }
 
-    /// If `self.string` is shorter than `max_display_col_count` then a padding string is
+    /// If `self.string` is shorter than `max_display_width` then a padding string is
     /// returned (that is comprised of the `pad_char` repeated).
     pub fn try_get_postfix_padding_for(
         &self,
         chunk: &str,
         pad_char: impl AsRef<str>,
-        max_display_col_count: ChUnit,
+        max_display_width: ColWidth,
     ) -> Option<StringStorage> {
         // Pad the line to the max cols w/ spaces. This removes any "ghost" carets that
         // were painted in a previous render.
         // PERF: [ ] perf
-        let display_width = UnicodeString::str_display_width(chunk);
-        if display_width < max_display_col_count {
-            let pad_count = max_display_col_count - display_width;
+        let chunk_display_width = UnicodeString::str_display_width(chunk);
+        if chunk_display_width < max_display_width {
+            let pad_count = max_display_width - chunk_display_width;
             let mut acc = StringStorage::new();
-            pad_fmt!(fmt: acc, pad_str: pad_char.as_ref(), repeat_count: usize(pad_count));
+            pad_fmt!(fmt: acc, pad_str: pad_char.as_ref(), repeat_count: usize(*pad_count));
             Some(acc)
         } else {
             None
@@ -276,94 +280,100 @@ impl UnicodeString {
         self.get(logical_index)
     }
 
-    /// `display_col` is the col index in the terminal where this grapheme cluster can be
+    /// `display_col_index` is the col index in the terminal where this grapheme cluster can be
     /// displayed.
     pub fn at_display_col_index(
         &self,
-        display_col: ChUnit,
+        display_col_index: ColIndex,
     ) -> Option<&GraphemeClusterSegment> {
-        self.iter().find(|&grapheme_cluster_segment| {
-            let segment_display_col_start: ChUnit =
-                grapheme_cluster_segment.display_col_offset;
-            let segment_display_col_end: ChUnit =
-                segment_display_col_start + grapheme_cluster_segment.unicode_width;
-            display_col >= segment_display_col_start
-                && display_col < segment_display_col_end
+        self.iter().find(|&seg| {
+            let seg_display_width = seg.unicode_width;
+            let seg_start = seg.start_display_col_index;
+            let seg_end = seg_start + seg_display_width;
+            /* is within segment */
+            display_col_index >= seg_start && display_col_index < seg_end
         })
     }
 
-    /// Convert a `display_col` to a `logical_index`.
+    /// Convert a `display_col_index` to a `logical_index`.
     /// - `local_index` is the index of the grapheme cluster in the `vec_segment`.
-    /// - `display_col` is the col index in the terminal where this grapheme cluster can
+    /// - `display_col_index` is the col index in the terminal where this grapheme cluster can
     ///   be displayed.
     pub fn logical_index_at_display_col_index(
         &self,
-        display_col: ChUnit,
+        display_col_index: ColIndex,
     ) -> Option<usize> {
-        self.at_display_col_index(display_col)
+        self.at_display_col_index(display_col_index)
             .map(|segment| usize(segment.logical_index))
     }
 
-    /// Convert a `logical_index` to a `display_col`.
+    /// Convert a `logical_index` to a `display_col_index`.
     /// - `local_index` is the index of the grapheme cluster in the `vec_segment`.
-    /// - `display_col` is the col index in the terminal where this grapheme cluster can
+    /// - `display_col_index` is the col index in the terminal where this grapheme cluster can
     ///   be displayed.
     pub fn display_col_index_at_logical_index(
         &self,
         logical_index: usize,
-    ) -> Option<ChUnit> {
+    ) -> Option<ColIndex> {
         self.at_logical_index(logical_index)
-            .map(|segment| segment.display_col_offset)
+            .map(|segment| segment.start_display_col_index)
     }
 
     /// Return the string and unicode width of the grapheme cluster segment at the given
-    /// `display_col`. If this `display_col` falls in the middle of a grapheme cluster,
+    /// `display_col_index`. If this `display_col_index` falls in the middle of a grapheme cluster,
     /// then return [None].
     pub fn get_string_at_display_col_index(
         &self,
-        display_col: ChUnit,
+        display_col_index: ColIndex,
     ) -> Option<UnicodeStringSegmentSliceResult> {
-        let segment = self.at_display_col_index(display_col)?;
-        let segment_string = segment.get_str(&self.string);
-        // What if the display_col is in the middle of a grapheme cluster?
-        if display_col != segment.display_col_offset {
+        let seg: &GraphemeClusterSegment =
+            self.at_display_col_index(display_col_index)?;
+        let seg_string = seg.get_str(&self.string);
+        let seg_display_width = seg.unicode_width;
+
+        if display_col_index != seg.start_display_col_index {
+            // The display_col_index is in the middle of a grapheme cluster 👎.
             None
         } else {
+            // The display_col_index is at the start of a grapheme cluster 👍.
             Some(UnicodeStringSegmentSliceResult::new(
-                segment_string,
-                segment.unicode_width,
-                segment.display_col_offset,
+                seg_string,
+                seg_display_width,
+                seg.start_display_col_index,
             ))
         }
     }
 
-    /// If the given `display_col` falls in the middle of a grapheme cluster, then return
-    /// the [GraphemeClusterSegment] at that `display_col`. Otherwise return [None].
+    /// If the given `display_col_index` falls in the middle of a grapheme cluster, then return
+    /// the [GraphemeClusterSegment] at that `display_col_index`. Otherwise return [None].
     pub fn is_display_col_index_in_middle_of_grapheme_cluster(
         &self,
-        display_col: ChUnit,
+        display_col_index: ColIndex,
     ) -> Option<GraphemeClusterSegment> {
-        let segment = self.at_display_col_index(display_col);
-        if let Some(segment) = segment {
-            if display_col != segment.display_col_offset {
+        let seg = self.at_display_col_index(display_col_index);
+
+        if let Some(segment) = seg {
+            if display_col_index != segment.start_display_col_index {
                 return Some(*segment);
             }
         }
+
         None
     }
 
     pub fn get_string_at_right_of_display_col_index(
         &self,
-        display_col: ChUnit,
+        display_col_index: ColIndex,
     ) -> Option<UnicodeStringSegmentSliceResult> {
-        let segment_at_col = self.at_display_col_index(display_col)?;
-        if segment_at_col.logical_index < ch(self.len()) - ch(1) {
-            let segment_right_of_col =
-                self.at_logical_index(usize(segment_at_col.logical_index + 1))?;
+        let seg_at_col = self.at_display_col_index(display_col_index)?;
+
+        if seg_at_col.logical_index < ch(self.len()) - ch(1) {
+            let seg_right_of_col =
+                self.at_logical_index(usize(seg_at_col.logical_index + 1))?;
             Some(UnicodeStringSegmentSliceResult::new(
-                segment_right_of_col.get_str(&self.string),
-                segment_right_of_col.unicode_width,
-                segment_right_of_col.display_col_offset,
+                seg_right_of_col.get_str(&self.string),
+                seg_right_of_col.unicode_width,
+                seg_right_of_col.start_display_col_index,
             ))
         } else {
             None
@@ -372,16 +382,17 @@ impl UnicodeString {
 
     pub fn get_string_at_left_of_display_col_index(
         &self,
-        display_col: ChUnit,
+        display_col_index: ColIndex,
     ) -> Option<UnicodeStringSegmentSliceResult> {
-        let segment_at_col = self.at_display_col_index(display_col)?;
-        if segment_at_col.logical_index > ch(0) {
-            let segment_left_of_col =
-                self.at_logical_index(usize(segment_at_col.logical_index - ch(1)))?;
+        let seg_at_col = self.at_display_col_index(display_col_index)?;
+
+        if seg_at_col.logical_index > ch(0) {
+            let seg_left_of_col =
+                self.at_logical_index(usize(seg_at_col.logical_index - ch(1)))?;
             Some(UnicodeStringSegmentSliceResult::new(
-                segment_left_of_col.get_str(&self.string),
-                segment_left_of_col.unicode_width,
-                segment_left_of_col.display_col_offset,
+                seg_left_of_col.get_str(&self.string),
+                seg_left_of_col.unicode_width,
+                seg_left_of_col.start_display_col_index,
             ))
         } else {
             None
@@ -389,11 +400,12 @@ impl UnicodeString {
     }
 
     pub fn get_string_at_end(&self) -> Option<UnicodeStringSegmentSliceResult> {
-        let segment = self.last()?;
+        let seg = self.last()?;
+
         Some(UnicodeStringSegmentSliceResult::new(
-            segment.get_str(&self.string),
-            segment.unicode_width,
-            segment.display_col_offset,
+            seg.get_str(&self.string),
+            seg.unicode_width,
+            seg.start_display_col_index,
         ))
     }
 }

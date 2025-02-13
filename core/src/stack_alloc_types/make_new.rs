@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-// BOOKM: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
+// XMARK: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
 
 /// This macro joins a collection of items into a [crate::StringStorage] (which is
 /// allocated and returned) with a specified delimiter and format. It iterates over the

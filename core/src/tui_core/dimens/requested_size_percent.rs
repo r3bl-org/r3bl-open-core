@@ -31,9 +31,9 @@ use super::Percent;
 /// 2. Directly create it using the [RequestedSizePercent] struct with [crate::Percent]
 ///    values.
 ///
-/// Note that [crate::Size], defined as:
-/// - height or [crate::Size::row_count],
-/// - width or [crate::Size::col_count].
+/// Note that [crate::Dim], defined as:
+/// - height or [crate::Dim::row_height],
+/// - width or [crate::Dim::col_width].
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct RequestedSizePercent {
     pub width_pc: Percent,

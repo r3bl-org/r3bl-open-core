@@ -22,7 +22,7 @@ use tracing::dispatcher;
 
 use crate::{DisplayPreference, TracingConfig, WriterConfig};
 
-// BOOKM: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config options.
+// XMARK: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config options.
 /// This module makes it easier to configure the logging system. Instead of having lots of
 /// complex arguments to the [try_initialize_logging_global] and
 /// [try_initialize_logging_thread_local] functions, they both receive a type that

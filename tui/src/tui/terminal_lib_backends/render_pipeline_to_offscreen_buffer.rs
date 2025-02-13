@@ -21,11 +21,12 @@ use r3bl_core::{call_if_true,
                 seg_str,
                 string_storage,
                 usize,
-                ChUnit,
+                width,
+                ColWidth,
                 CommonError,
                 CommonErrorType,
                 CommonResult,
-                Position,
+                Pos,
                 Size,
                 TuiStyle,
                 UnicodeString};
@@ -148,34 +149,35 @@ pub fn print_plain_text(
     string: &str,
     maybe_style_ref: &Option<TuiStyle>,
     my_offscreen_buffer: &mut OffscreenBuffer,
-    maybe_max_display_col_count: Option<ChUnit>,
-) -> CommonResult<Position> {
+    maybe_max_display_col_count: Option<ColWidth>,
+) -> CommonResult<Pos> {
     // Get col and row index from `my_pos`.
     let display_col_index = usize(my_offscreen_buffer.my_pos.col_index);
     let display_row_index = usize(my_offscreen_buffer.my_pos.row_index);
 
-    // If `maybe_max_display_col_count` is `None`, then clip to the max bounds of the window
-    // 1. take the pos into account when determining clip
-    // 2. even if `maybe_max_display_col_count` is `None`, still clip to the max bounds of the
-    //    window
+    // If `maybe_max_display_col_count` is `None`, then clip to the max bounds of the
+    // window.
+    // 1. Take the pos into account when determining clip.
+    // 2. Even if `maybe_max_display_col_count` is `None`, still clip to the max bounds of
+    //    the window.
 
     // ✂️Clip `arg_text_ref` (if needed) and make `text`.
     let string_us = UnicodeString::new(string);
     let clip_1_str = if let Some(max_display_col_count) = maybe_max_display_col_count {
-        let adj_max = max_display_col_count - (ch(display_col_index));
-        string_us.truncate_end_to_fit_width(adj_max)
+        let adj_max = *max_display_col_count - ch(display_col_index);
+        string_us.truncate_end_to_fit_width(width(adj_max))
     } else {
         string
     };
     let clip_1_us = UnicodeString::new(clip_1_str);
 
     // ✂️Clip `text` (if needed) to the max display col count of the window.
-    let window_max_display_col_count = my_offscreen_buffer.window_size.col_count;
+    let window_max_display_col_count = *my_offscreen_buffer.window_size.col_width;
     let text_fits_in_window =
-        clip_1_us.display_width <= window_max_display_col_count - (ch(display_col_index));
+        *clip_1_us.display_width <= window_max_display_col_count - ch(display_col_index);
     let clip_2_str = if !text_fits_in_window {
-        let adj_max = window_max_display_col_count - (ch(display_col_index));
-        clip_1_us.truncate_end_to_fit_width(adj_max)
+        let adj_max = window_max_display_col_count - ch(display_col_index);
+        clip_1_us.truncate_end_to_fit_width(width(*adj_max))
     } else {
         clip_1_str
     };
@@ -272,7 +274,7 @@ pub fn print_plain_text(
     // Loop over each grapheme cluster segment (the character) in `text_ref_us` (text in a line).
     // For each GraphemeClusterSegment, create a PixelChar.
     for seg in text_us.iter() {
-        let segment_display_width = usize(seg.unicode_width);
+        let segment_display_width = usize(*seg.unicode_width);
         if segment_display_width == 0 {
             continue;
         }
@@ -310,7 +312,7 @@ pub fn print_plain_text(
             //    Void pixel chars.
             // 3. The insertion_col_index is calculated & updated based on the unicode_width crate
             //    values.
-            let segment_display_width = usize(seg.unicode_width);
+            let segment_display_width = usize(*seg.unicode_width);
             if segment_display_width > 1 {
                 // Deal w/ `gc_segment` display width that is > 1 => pad w/ Void.
                 let num_of_extra_display_cols_to_inject_void_into =
@@ -330,22 +332,22 @@ pub fn print_plain_text(
                 insertion_col_index += 1;
             }
 
-            already_inserted_display_width += seg.unicode_width;
+            already_inserted_display_width += *seg.unicode_width;
         } else {
             // Run out of space in the line of the offscreen buffer.
             break;
         }
     }
 
-    // Mimic what stdout does and move the position.col_index forward by the width of the text that
-    // was added to display.
+    // Mimic what stdout does and move the position.col_index forward by the width of the
+    // text that was added to display.
     let new_pos = my_offscreen_buffer
         .my_pos
-        .add_col(usize(already_inserted_display_width));
+        .add_col(already_inserted_display_width);
 
     // 🥊Deal w/ padding SPACERs padding to end of line (if `maybe_max_display_col_count` is some).
     if let Some(max_display_col_count) = maybe_max_display_col_count {
-        let adj_max = max_display_col_count - (ch(display_col_index));
+        let adj_max = *max_display_col_count - ch(display_col_index);
         while already_inserted_display_width < adj_max {
             if line_copy.get(insertion_col_index).is_some() {
                 line_copy[insertion_col_index] = PixelChar::Spacer;
@@ -372,8 +374,8 @@ pub fn print_text_with_attributes(
     arg_text_ref: &str,
     maybe_style_ref: &Option<TuiStyle>,
     my_offscreen_buffer: &mut OffscreenBuffer,
-    maybe_max_display_col_count: Option<ChUnit>,
-) -> CommonResult<Position> {
+    maybe_max_display_col_count: Option<ColWidth>,
+) -> CommonResult<Pos> {
     print_plain_text(
         arg_text_ref,
         maybe_style_ref,
@@ -384,7 +386,7 @@ pub fn print_text_with_attributes(
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, color, position, size, ANSIBasicColor};
+    use r3bl_core::{assert_eq2, col, color, height, row};
     use r3bl_macro::tui_style;
 
     use super::*;
@@ -392,7 +394,7 @@ mod tests {
 
     #[test]
     fn test_print_plain_text_render_path_reuse_buffer() {
-        let window_size = size! { col_count: 10, row_count: 2};
+        let window_size = width(10) + height(2);
         let mut my_offscreen_buffer =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
 
@@ -406,10 +408,10 @@ mod tests {
             let maybe_style = Some(
                 tui_style! { attrib: [dim, bold, italic] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
-            my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
+            my_offscreen_buffer.my_pos = col(0) + row(0);
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
-            let maybe_max_display_col_count = Some(10.into());
+            let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
@@ -469,10 +471,10 @@ mod tests {
             let maybe_style = Some(
                 tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
-            my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
+            my_offscreen_buffer.my_pos = col(0) + row(0);
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
-            let maybe_max_display_col_count = Some(10.into());
+            let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
@@ -517,7 +519,7 @@ mod tests {
 
     #[test]
     fn test_print_plain_text_render_path_new_buffer_for_each_paint() {
-        let window_size = size! { col_count: 10, row_count: 2};
+        let window_size = width(10) + height(2);
 
         // Input:  R0 "hello12345😃"
         //            C0123456789
@@ -531,10 +533,10 @@ mod tests {
             let maybe_style = Some(
                 tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
-            my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
+            my_offscreen_buffer.my_pos = col(0) + row(0);
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
-            let maybe_max_display_col_count = Some(10.into());
+            let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
@@ -596,10 +598,10 @@ mod tests {
             let maybe_style = Some(
                 tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
-            my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
+            my_offscreen_buffer.my_pos = col(0) + row(0);
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
-            let maybe_max_display_col_count = Some(10.into());
+            let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
@@ -651,10 +653,10 @@ mod tests {
             let maybe_style = Some(
                 tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
-            my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
+            my_offscreen_buffer.my_pos = col(0) + row(0);
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
-            let maybe_max_display_col_count = Some(10.into());
+            let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
@@ -715,10 +717,10 @@ mod tests {
             let maybe_style = Some(
                 tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
-            my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
+            my_offscreen_buffer.my_pos = col(0) + row(0);
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
-            let maybe_max_display_col_count = Some(10.into());
+            let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
@@ -790,7 +792,7 @@ mod tests {
 
     #[test]
     fn test_convert() {
-        let window_size = size! { col_count: 10, row_count: 2 };
+        let window_size = width(10) + height(2);
 
         // Create a RenderPipeline.
         // render_ops:
@@ -812,7 +814,7 @@ mod tests {
             RenderOp::ResetColor,
             RenderOp::SetFgColor(color!(@green)),
             RenderOp::SetBgColor(color!(@blue)),
-            RenderOp::MoveCursorPositionAbs(position! { col_index: 0, row_index: 0 }),
+            RenderOp::MoveCursorPositionAbs(col(0) + row(0)),
             RenderOp::PaintTextWithAttributes(
                 "hello12😃".into(), Some(tui_style! { attrib: [dim, bold] })),
             RenderOp::ResetColor
@@ -864,7 +866,7 @@ mod tests {
 
     #[test]
     fn test_convert_non_zero_position() {
-        let window_size = size! { col_count: 10, row_count: 2 };
+        let window_size = width(10) + height(2);
 
         // pipeline:
         // Some(
@@ -888,13 +890,13 @@ mod tests {
             RenderOp::ResetColor,
             RenderOp::SetFgColor(color!(@green)),
             RenderOp::SetBgColor(color!(@blue)),
-            RenderOp::MoveCursorPositionAbs(position! { col_index: 2, row_index: 0 }),
+            RenderOp::MoveCursorPositionAbs(col(2) + row(0)),
             RenderOp::PaintTextWithAttributes(
                 "hello😃".into(), Some(tui_style! { attrib: [dim, bold] })),
             RenderOp::ResetColor,
             RenderOp::SetFgColor(color!(@green)),
             RenderOp::SetBgColor(color!(@blue)),
-            RenderOp::MoveCursorPositionAbs(position! { col_index: 4, row_index: 1 }),
+            RenderOp::MoveCursorPositionAbs(col(4) + row(1)),
             RenderOp::PaintTextWithAttributes(
                 "world".into(), Some(tui_style! { attrib: [dim, bold] })),
             RenderOp::ResetColor,
@@ -983,6 +985,54 @@ mod tests {
                 }
             );
             assert_eq2!(my_offscreen_buffer.buffer[1][9], PixelChar::Spacer);
+        }
+    }
+
+    // REVIEW: [x] add test for sanitize_and_save_abs_position()
+    #[test]
+    fn test_sanitize_and_save_abs_position() {
+        let max_col = 8;
+        let max_row = 2;
+        let window_size = width(max_col) + height(max_row);
+
+        let pipeline = render_pipeline!(@new ZOrder::Normal =>
+            RenderOp::MoveCursorPositionAbs(col(max_col) + row(0)),
+            RenderOp::PaintTextWithAttributes(
+                "h".into(), Some(tui_style! { attrib: [dim, bold] })),
+            RenderOp::ResetColor,
+            RenderOp::MoveCursorPositionAbs(col(max_col+1) + row(1)),
+            RenderOp::PaintTextWithAttributes(
+                "i".into(), Some(tui_style! { attrib: [dim, bold] })),
+            RenderOp::ResetColor
+        );
+
+        println!(
+            "pipeline: \n{:#?}",
+            pipeline.get_all_render_op_in(ZOrder::Normal)
+        );
+
+        let my_offscreen_buffer = pipeline.convert(window_size);
+        println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+
+        // Line 1 (row_index = 7)
+        {
+            assert_eq2!(
+                my_offscreen_buffer.buffer[0][max_col - 1],
+                PixelChar::PlainText {
+                    text: "h".into(),
+                    maybe_style: Some(tui_style! { attrib: [dim, bold] }),
+                }
+            );
+        }
+        // Line 2 (row_index = 7)
+        {
+            assert_eq2!(
+                my_offscreen_buffer.buffer[1][max_col - 1],
+                PixelChar::PlainText {
+                    text: "i".into(),
+                    maybe_style: Some(tui_style! { attrib: [dim, bold] }),
+                }
+            );
         }
     }
 }

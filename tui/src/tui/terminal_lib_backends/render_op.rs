@@ -19,7 +19,7 @@ use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
 use r3bl_core::{LockedOutputDevice,
-                Position,
+                Pos,
                 Size,
                 StringStorage,
                 TuiColor,
@@ -170,7 +170,7 @@ impl Default for RenderOps {
 
 #[derive(Default, Debug)]
 pub struct RenderOpsLocalData {
-    pub cursor_position: Position,
+    pub cursor_position: Pos,
 }
 
 pub mod render_ops_impl {
@@ -218,7 +218,7 @@ pub mod render_ops_impl {
                         is_mock,
                     );
                 }
-                TerminalLibBackend::Termion => todo!(), // FUTURE: implement PaintRenderOp trait for termion
+                TerminalLibBackend::Termion => unimplemented!(),
             }
         }
     }
@@ -266,17 +266,17 @@ pub enum RenderOp {
 
     ExitRawMode,
 
-    /// This is always painted on top. [Position] is the absolute column and row on the
+    /// This is always painted on top. [Pos] is the absolute column and row on the
     /// terminal screen. This uses [super::sanitize_and_save_abs_position] to clean up the
-    /// given [Position].
-    MoveCursorPositionAbs(/* absolute position */ Position),
+    /// given [Pos].
+    MoveCursorPositionAbs(/* absolute position */ Pos),
 
-    /// This is always painted on top. 1st [Position] is the origin column and row, and the 2nd
-    /// [Position] is the offset column and row. They are added together to move the absolute position
+    /// This is always painted on top. 1st [Pos] is the origin column and row, and the 2nd
+    /// [Pos] is the offset column and row. They are added together to move the absolute position
     /// on the terminal screen. Then [RenderOp::MoveCursorPositionAbs] is used.
     MoveCursorPositionRelTo(
-        /* origin position */ Position,
-        /* relative position */ Position,
+        /* origin position */ Pos,
+        /* relative position */ Pos,
     ),
 
     ClearScreen,
@@ -336,7 +336,7 @@ mod render_op_impl {
                 TerminalLibBackend::Crossterm => {
                     CrosstermDebugFormatRenderOp {}.fmt_debug(self, f)
                 }
-                TerminalLibBackend::Termion => todo!(), // FUTURE: implement debug formatter for termion
+                TerminalLibBackend::Termion => unimplemented!(),
             }
         }
     }
@@ -351,7 +351,7 @@ mod render_op_impl_trait_flush {
                 TerminalLibBackend::Crossterm => {
                     RenderOpImplCrossterm {}.flush(locked_output_device);
                 }
-                TerminalLibBackend::Termion => todo!(), // FUTURE: implement flush for termion
+                TerminalLibBackend::Termion => unimplemented!(),
             }
         }
 
@@ -360,7 +360,7 @@ mod render_op_impl_trait_flush {
                 TerminalLibBackend::Crossterm => {
                     RenderOpImplCrossterm {}.clear_before_flush(locked_output_device);
                 }
-                TerminalLibBackend::Termion => todo!(), // FUTURE: implement clear_before_flush for termion
+                TerminalLibBackend::Termion => unimplemented!(),
             }
         }
     }

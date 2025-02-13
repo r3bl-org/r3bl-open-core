@@ -15,21 +15,19 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{get_tui_styles,
-                position,
+use r3bl_core::{col,
+                height,
                 requested_size_percent,
-                size,
+                row,
                 throws,
                 throws_with_return,
                 tui_styled_text,
                 tui_styled_texts,
                 tui_stylesheet,
-                ChUnit,
                 CommonResult,
                 ContainsResult,
-                Position,
+                Dim,
                 RgbValue,
-                Size,
                 TuiColor,
                 TuiStylesheet};
 use r3bl_macro::tui_style;
@@ -175,10 +173,13 @@ mod app_main_impl_app_trait {
                     let mut it = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
                     it.surface_start(SurfaceProps {
-                        pos: position!(col_index: 0, row_index: 0),
-                        size: size!(
-                            col_count: window_size.col_count,
-                            row_count: window_size.row_count - 1), // Bottom row for for status bar.
+                        pos: col(0) + row(0),
+                        size: {
+                            let col_count = window_size.col_width;
+                            let row_count = window_size.row_height -
+                                height(1) /* Bottom row for for status bar. */;
+                            col_count + row_count
+                        },
                     })?;
 
                     perform_layout::ContainerSurfaceRender { _app: self }
@@ -290,7 +291,7 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
+    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Dim) {
         let styled_texts = tui_styled_texts! {
             tui_styled_text! { @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
             tui_styled_text! { @style: tui_style!(attrib: [bold])      , @text: " x : Exit 🖖 "},
@@ -301,9 +302,9 @@ mod status_bar {
         };
 
         let display_width = styled_texts.display_width();
-        let col_center: ChUnit = (size.col_count - display_width) / 2;
-        let row_bottom: ChUnit = size.row_count - 1;
-        let center: Position = position!(col_index: col_center, row_index: row_bottom);
+        let col_center = *(size.col_width - display_width) / 2;
+        let row_bottom = size.row_height.convert_to_row_index();
+        let center = col(col_center) + row_bottom;
 
         let mut render_ops = render_ops!();
         render_ops.push(RenderOp::MoveCursorPositionAbs(center));

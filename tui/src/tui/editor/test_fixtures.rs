@@ -19,14 +19,14 @@
 pub mod mock_real_objects_for_editor {
     use std::fmt::Debug;
 
-    use r3bl_core::{position, size, OutputDevice, Size};
+    use r3bl_core::{col, height, row, width, Dim, OutputDevice};
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, StdoutMock};
     use tokio::sync::mpsc;
 
     use crate::{EditorEngine, FlexBox, GlobalData, PartialFlexBox, CHANNEL_WIDTH};
 
     pub fn make_global_data<S, AS>(
-        window_size: Option<Size>,
+        window_size: Option<Dim>,
     ) -> (GlobalData<S, AS>, StdoutMock)
     where
         S: Debug + Default + Clone + Sync + Send,
@@ -46,10 +46,10 @@ pub mod mock_real_objects_for_editor {
         (global_data, stdout_mock)
     }
 
-    pub fn make_editor_engine_with_bounds(size: Size) -> EditorEngine {
+    pub fn make_editor_engine_with_bounds(size: Dim) -> EditorEngine {
         let flex_box = FlexBox {
             style_adjusted_bounds_size: size,
-            style_adjusted_origin_pos: position!( col_index: 0, row_index: 0 ),
+            style_adjusted_origin_pos: col(0) + row(0),
             ..Default::default()
         };
         let current_box: PartialFlexBox = (&flex_box).into();
@@ -61,8 +61,8 @@ pub mod mock_real_objects_for_editor {
 
     pub fn make_editor_engine() -> EditorEngine {
         let flex_box = FlexBox {
-            style_adjusted_bounds_size: size!( col_count: 10, row_count: 10 ),
-            style_adjusted_origin_pos: position!( col_index: 0, row_index: 0 ),
+            style_adjusted_bounds_size: width(10) + height(10),
+            style_adjusted_origin_pos: col(0) + row(0),
             ..Default::default()
         };
         let current_box: PartialFlexBox = (&flex_box).into();
@@ -80,14 +80,13 @@ pub mod assert {
     use crate::{EditorBuffer, EditorEngineInternalApi};
 
     pub fn none_is_at_caret(buffer: &EditorBuffer) {
-        assert_eq2!(EditorEngineInternalApi::string_at_caret(buffer), None);
+        assert_eq2!(buffer.string_at_caret(), None);
     }
 
-    pub fn str_is_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
-        match EditorEngineInternalApi::string_at_caret(editor_buffer) {
+    pub fn str_is_at_caret(buffer: &EditorBuffer, expected: &str) {
+        match buffer.string_at_caret() {
             Some(UnicodeStringSegmentSliceResult {
-                unicode_string: string,
-                ..
+                seg_text: string, ..
             }) => {
                 assert_eq2!(&string.string, expected)
             }

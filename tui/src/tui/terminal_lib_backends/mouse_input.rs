@@ -16,13 +16,13 @@
  */
 
 use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
-use r3bl_core::{position, Position};
+use r3bl_core::{col, row, Pos};
 
 use super::{convert_key_modifiers, ModifierKeysMask};
 
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub struct MouseInput {
-    pub pos: Position,
+    pub pos: Pos,
     pub kind: MouseInputKind,
     pub maybe_modifier_keys: Option<ModifierKeysMask>,
 }
@@ -48,8 +48,7 @@ pub enum Button {
 
 impl From<MouseEvent> for MouseInput {
     fn from(mouse_event: MouseEvent) -> Self {
-        let pos: Position =
-            position!(col_index: mouse_event.column, row_index: mouse_event.row);
+        let pos = col(mouse_event.column) + row(mouse_event.row);
         let maybe_modifier_keys: Option<ModifierKeysMask> =
             convert_key_modifiers(&mouse_event.modifiers);
         let kind: MouseInputKind = mouse_event.kind.into();

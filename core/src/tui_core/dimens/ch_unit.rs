@@ -16,7 +16,7 @@
  */
 
 use std::{fmt::{Debug, Formatter},
-          ops::Deref};
+          ops::{Add, AddAssign, Deref, Div, Mul, MulAssign, Sub, SubAssign}};
 
 use crate::{add_unsigned, mul_unsigned, sub_unsigned};
 
@@ -43,7 +43,7 @@ pub struct ChUnit {
 impl ChUnit {
     pub fn new(value: ChUnitPrimitiveType) -> Self { Self { value } }
 
-    pub fn reset(&mut self) { self.value = 0; }
+    pub fn as_usize(&self) -> usize { usize(*self) }
 }
 
 /// ```rust
@@ -110,7 +110,13 @@ impl Deref for ChUnit {
 pub mod ch_unit_math_ops {
     use super::*;
 
-    impl std::ops::Add for ChUnit {
+    impl MulAssign<ChUnit> for ChUnit {
+        fn mul_assign(&mut self, rhs: Self) {
+            self.value = mul_unsigned!(self.value, rhs.value);
+        }
+    }
+
+    impl Add for ChUnit {
         type Output = Self;
 
         fn add(self, rhs: Self) -> Self::Output {
@@ -118,25 +124,25 @@ pub mod ch_unit_math_ops {
         }
     }
 
-    impl std::ops::Add<u16> for ChUnit {
+    impl Add<u16> for ChUnit {
         type Output = Self;
 
         fn add(self, rhs: u16) -> Self::Output { ch(add_unsigned!(self.value, rhs)) }
     }
 
-    impl std::ops::AddAssign for ChUnit {
+    impl AddAssign for ChUnit {
         fn add_assign(&mut self, rhs: Self) {
             self.value = add_unsigned!(self.value, rhs.value);
         }
     }
 
-    impl std::ops::AddAssign<u16> for ChUnit {
+    impl AddAssign<u16> for ChUnit {
         fn add_assign(&mut self, rhs: u16) {
             self.value = add_unsigned!(self.value, rhs);
         }
     }
 
-    impl std::ops::Sub for ChUnit {
+    impl Sub for ChUnit {
         type Output = Self;
 
         fn sub(self, rhs: Self) -> Self::Output {
@@ -144,25 +150,25 @@ pub mod ch_unit_math_ops {
         }
     }
 
-    impl std::ops::Sub<u16> for ChUnit {
+    impl Sub<u16> for ChUnit {
         type Output = Self;
 
         fn sub(self, rhs: u16) -> Self::Output { ch(sub_unsigned!(self.value, rhs)) }
     }
 
-    impl std::ops::SubAssign for ChUnit {
+    impl SubAssign for ChUnit {
         fn sub_assign(&mut self, rhs: Self) {
             self.value = sub_unsigned!(self.value, rhs.value);
         }
     }
 
-    impl std::ops::SubAssign<u16> for ChUnit {
+    impl SubAssign<u16> for ChUnit {
         fn sub_assign(&mut self, rhs: u16) {
             self.value = sub_unsigned!(self.value, rhs);
         }
     }
 
-    impl std::ops::Mul for ChUnit {
+    impl Mul for ChUnit {
         type Output = Self;
 
         fn mul(self, rhs: Self) -> Self::Output {
@@ -170,16 +176,22 @@ pub mod ch_unit_math_ops {
         }
     }
 
-    impl std::ops::Mul<u16> for ChUnit {
+    impl Mul<u16> for ChUnit {
         type Output = Self;
 
         fn mul(self, rhs: u16) -> Self::Output { ch(mul_unsigned!(self.value, rhs)) }
     }
 
-    impl std::ops::Div<u16> for ChUnit {
+    impl Div<u16> for ChUnit {
         type Output = Self;
 
         fn div(self, rhs: u16) -> Self::Output { ch(self.value / rhs) }
+    }
+
+    impl Div<ChUnit> for ChUnit {
+        type Output = Self;
+
+        fn div(self, rhs: ChUnit) -> Self::Output { ch(self.value / rhs.value) }
     }
 }
 
@@ -295,8 +307,15 @@ pub mod convert_from_other_types_to_ch {
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::{ChUnit, assert_eq2, ch, u16, usize};
+mod tests_convert {
+    use super::*;
+    use crate::assert_eq2;
+
+    #[test]
+    fn test_as_usize() {
+        let ch_1: ChUnit = ch(1);
+        assert_eq2!(ch_1.as_usize(), 1);
+    }
 
     #[test]
     fn test_from_whatever_into_ch() {
@@ -341,5 +360,66 @@ mod tests {
 
         let u16_4: u16 = u16(ch(0) - ch(1));
         assert_eq2!(u16_4, 0);
+    }
+}
+
+#[cfg(test)]
+mod tests_ch_unit_math_ops {
+    use super::*;
+    use crate::assert_eq2;
+
+    #[test]
+    fn test_add_ch_units() {
+        let ch_1: ChUnit = ch(1);
+        let ch_2: ChUnit = ch(2);
+        let result: ChUnit = ch_1 + ch_2;
+        assert_eq2!(*result, 3);
+    }
+
+    #[test]
+    fn test_add_assign_ch_units() {
+        let mut ch_1: ChUnit = ch(1);
+        let ch_2: ChUnit = ch(2);
+        ch_1 += ch_2;
+        assert_eq2!(*ch_1, 3);
+    }
+
+    #[test]
+    fn test_sub_ch_units() {
+        let ch_1: ChUnit = ch(3);
+        let ch_2: ChUnit = ch(1);
+        let result: ChUnit = ch_1 - ch_2;
+        assert_eq2!(*result, 2);
+    }
+
+    #[test]
+    fn test_sub_assign_ch_units() {
+        let mut ch_1: ChUnit = ch(3);
+        let ch_2: ChUnit = ch(1);
+        ch_1 -= ch_2;
+        assert_eq2!(*ch_1, 2);
+    }
+
+    #[test]
+    fn test_mul_ch_units() {
+        let ch_1: ChUnit = ch(2);
+        let ch_2: ChUnit = ch(3);
+        let result: ChUnit = ch_1 * ch_2;
+        assert_eq2!(*result, 6);
+    }
+
+    #[test]
+    fn test_mul_assign_ch_units() {
+        let mut ch_1: ChUnit = ch(2);
+        let ch_2: ChUnit = ch(3);
+        ch_1 *= ch_2;
+        assert_eq2!(*ch_1, 6);
+    }
+
+    #[test]
+    fn test_div_ch_units() {
+        let ch_1: ChUnit = ch(6);
+        let result: ChUnit = ch_1 / 2;
+        assert_eq2!(*result, 3);
     }
 }

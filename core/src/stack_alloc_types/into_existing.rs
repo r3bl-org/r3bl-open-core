@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-// BOOKM: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
+// XMARK: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
 
 /// A macro to pad a [crate::StringStorage] (which is allocated elsewhere) with a
 /// specified string repeated a specified number of times.
@@ -23,8 +23,8 @@
 /// # Arguments
 ///
 /// * `fmt: $acc` - The accumulator to write the padding into. It can be [String],
-///    [crate::StringStorage], [crate::CharStorage], or [std::fmt::Formatter], basically
-///    anything that implements [std::fmt::Write].
+///   [crate::StringStorage], [crate::CharStorage], or [std::fmt::Formatter], basically
+///   anything that implements [std::fmt::Write].
 /// * `pad_str: $pad_str` - The string to use for padding.
 /// * `repeat_count: $repeat_count` - The number of times to repeat the padding string.
 ///
@@ -99,7 +99,7 @@ mod tests_pad_fmt {
 /// # Arguments
 ///
 /// - `fmt` can be a [String], [crate::StringStorage], [crate::CharStorage], or
-///    [std::fmt::Formatter], basically anything that implements [std::fmt::Write].
+///   [std::fmt::Formatter], basically anything that implements [std::fmt::Write].
 /// - `from` is the collection to iterate over.
 /// - `each` is the identifier for each item in the collection.
 /// - `delim` is the delimiter to insert between items.
@@ -164,14 +164,14 @@ mod join_fmt_tests {
 /// # Arguments
 ///
 /// * `fmt: $acc` - The accumulator to write the padding into. It can be [String],
-///    [crate::StringStorage], [crate::CharStorage], or [std::fmt::Formatter], basically
-///    anything that implements [std::fmt::Write].
+///   [crate::StringStorage], [crate::CharStorage], or [std::fmt::Formatter], basically
+///   anything that implements [std::fmt::Write].
 /// * `from: $collection` - The collection to iterate over.
 /// * `each: $item` - The identifier for each item in the collection.
 /// * `index: $index` - The identifier for the index of each item in the collection.
 /// * `delim: $delim` - The delimiter to insert between items.
 /// * `format: $($format:tt)*` - The format to apply to each item. This is whatever you
-///    would pass to [format!] or [write!].
+///   would pass to [format!] or [write!].
 #[macro_export]
 macro_rules! join_with_index_fmt {
     (
@@ -249,7 +249,7 @@ pub mod read_from_file {
     /// of workloads that their code is used in) to determine what `const` size the
     /// `Array` should be. If it is greater than this, it will spill to the heap, and it
     /// is too small, then some memory will be wasted on the stack.
-    // BOOKM: Clever Rust, use of `A` to allow any size `Array` to be passed in.
+    // XMARK: Clever Rust, use of `A` to allow any size `Array` to be passed in.
     pub fn try_read_file_path_into_small_string<A: Array<Item = u8>>(
         acc: &mut SmallString<A>,
         file_path: impl Into<PathBuf>,

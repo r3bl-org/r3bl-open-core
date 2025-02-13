@@ -829,20 +829,28 @@ exhaustively tested and is able to handle many more corner cases.
 
 This release has lots of major breaking changes.
 
-- It also contains changes that are
-  part of optimizing memory allocation to increase performance, and ensure that performance
-  is stable over time. `ch_unit.rs` is also heavily refactored and the entire codebase
-  updated so that a the more ergonomic `ChUnit` API is now used throughout the codebase.
+- It contains changes that are part of optimizing memory allocation to increase
+  performance, and ensure that performance is stable over time. `ch_unit.rs` is also
+  heavily refactored and the entire codebase updated so that a the more ergonomic `ChUnit`
+  API is now used throughout the codebase.
 - A new telemetry API is also in this release, which makes it easy to measure and report
-  performance metrics in a memory access and CPU performant way. This is built for the `r3bl_tui`
-  main event loop (which is a very hot loop).
+  performance metrics in a memory access and CPU performant way. This is built for the
+  `r3bl_tui` main event loop (which is a very hot loop).
 - The `graphemes` module containing `UnicodeString` handling have been totally rewritten.
   They are now no allocation structures! In all past versions, the `UnicodeString` was a
   `String` under the hood. This is no longer the case. A `UnicodeStringHolder` and some
   macros are provided to make this relatively easy to use.
-- It does have some major rewrites of
-  existing functionality to be much faster and easier to use (focus on ergonomics, such as
-  the `arg: impl Into<T>` where `T` is a struct pattern).
+- It does have some major rewrites of existing functionality to be much faster and easier
+  to use (focus on ergonomics, such as the `arg: impl Into<T>` where `T` is a struct
+  pattern).
+- The entire codebase has been revamped to be strongly typed and no longer uses primitive
+  types (like `usize` or `ChUnit`) to represent column index, row index, width, height,
+  position, and size / dimension. This makes the entire API less error prone, relaxing to
+  use, and much easier to maintain. New types and the `arg: impl Into<T>` where `T` is a
+  struct is used in `Pos`, `RowIndex`, `ColIndex`, `Dim`, `ColWidth`, `RowHeight` types,
+  and their aliases (`Width`, `Height`) and lots of helper functions `row()`, `col()`,
+  `width()`, `height()`, and methods to convert between types and transform other types
+  into these types.
 
 These videos have been an inspiration for many of these changes:
 - [Data oriented design](https://youtu.be/WwkuAqObplU)
@@ -898,8 +906,6 @@ Changed:
     is no reason to have these derive macros in the `r3bl_core` crate. It is also an
     impedance to have no allocation structs, since `Deserialize` has some requirement for
     allocation.
-
-- Updated:
   - Use the latest Rust 2024 edition.
   - Fix all the Rust docs that are ignored (in all Rust source files in this crate), and
     replace them with doc comments that compile successfully.

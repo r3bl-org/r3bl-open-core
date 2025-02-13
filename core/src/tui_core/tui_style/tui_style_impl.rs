@@ -311,7 +311,7 @@ mod style_impl {
 #[cfg(test)]
 mod test_style {
     use super::*;
-    use crate::{ANSIBasicColor, assert_eq2, color};
+    use crate::{assert_eq2, color};
 
     #[test]
     fn test_all_fields_in_style() {
@@ -426,7 +426,7 @@ pub mod convert_to_ansi_color_styles {
     #[cfg(test)]
     mod tests_style {
         use super::*;
-        use crate::{ANSIBasicColor, assert_eq2, color};
+        use crate::{assert_eq2, color};
 
         #[test]
         fn test_all_fields_in_style() {

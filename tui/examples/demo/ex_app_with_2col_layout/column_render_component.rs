@@ -16,8 +16,9 @@
  */
 use r3bl_core::{call_if_true,
                 ch,
+                col,
                 glyphs,
-                position,
+                row,
                 send_signal,
                 string_storage,
                 throws_with_return,
@@ -27,6 +28,7 @@ use r3bl_core::{call_if_true,
                 ColorWheelSpeed,
                 CommonResult,
                 GradientGenerationPolicy,
+                Pos,
                 TextColorizationPolicy,
                 UnicodeString};
 use r3bl_tui::{render_ops,
@@ -184,11 +186,13 @@ mod column_render_component_impl_component_trait {
                 let line_2 = string_storage!("box.id:{a:?} - World", a = current_box.id);
 
                 // Setup intermediate vars.
-                let box_origin_pos = current_box.style_adjusted_origin_pos; // Adjusted for style margin (if any).
-                let box_bounds_size = current_box.style_adjusted_bounds_size; // Adjusted for style margin (if any).
+                // Adjusted for style margin (if any).
+                let box_origin_pos = current_box.style_adjusted_origin_pos;
+                // Adjusted for style margin (if any).
+                let box_bounds_size = current_box.style_adjusted_bounds_size;
 
-                let mut row = ch(0);
-                let mut col = ch(0);
+                let mut row_index = row(0);
+                let mut col_index = col(0);
 
                 let mut render_ops = render_ops!();
 
@@ -203,15 +207,13 @@ mod column_render_component_impl_component_trait {
                 // Line 1.
                 {
                     render_ops! {
-                      @add_to render_ops
-                      =>
+                        @add_to render_ops =>
                         RenderOp::ResetColor,
-                        RenderOp::MoveCursorPositionRelTo(box_origin_pos, position!(col_index: col, row_index: row)),
+                        RenderOp::MoveCursorPositionRelTo(box_origin_pos, col_index + row_index),
                         RenderOp::ApplyColors(current_box.get_computed_style()),
                     };
                     render_ops! {
-                        @render_styled_texts_into render_ops
-                        =>
+                        @render_styled_texts_into render_ops =>
                         color_wheel.colorize_into_styled_texts(
                             &line_1_trunc_us,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
@@ -223,16 +225,14 @@ mod column_render_component_impl_component_trait {
 
                 // Line 2.
                 {
-                    row += 1;
+                    *row_index += 1;
                     render_ops! {
-                      @add_to render_ops
-                      =>
-                        RenderOp::MoveCursorPositionRelTo(box_origin_pos, position!(col_index: col, row_index: row)),
+                        @add_to render_ops =>
+                        RenderOp::MoveCursorPositionRelTo(box_origin_pos, col_index + row_index),
                         RenderOp::ApplyColors(current_box.get_computed_style()),
                     };
                     render_ops! {
-                        @render_styled_texts_into render_ops
-                        =>
+                        @render_styled_texts_into render_ops =>
                         color_wheel.colorize_into_styled_texts(
                             &line_2_trunc_us,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
@@ -244,18 +244,18 @@ mod column_render_component_impl_component_trait {
 
                 // Paint is_focused.
                 {
-                    row += 1;
-                    col = line_2_trunc_us.display_width / 2 - 1;
+                    *row_index += 1;
+                    col_index =
+                        (line_2_trunc_us.display_width / ch(2)).convert_to_col_index();
                     render_ops! {
-                      @add_to render_ops
-                      =>
+                        @add_to render_ops =>
                         RenderOp::ResetColor,
-                        RenderOp::MoveCursorPositionRelTo(box_origin_pos, position!(col_index: col, row_index: row)),
+                        RenderOp::MoveCursorPositionRelTo(box_origin_pos, col_index + row_index),
                         if has_focus.does_current_box_have_focus(current_box) {
-                          RenderOp::PaintTextWithAttributes("👀".into(), None)
+                            RenderOp::PaintTextWithAttributes("👀".into(), None)
                         }
                         else {
-                          RenderOp::PaintTextWithAttributes(" ".into(), None)
+                            RenderOp::PaintTextWithAttributes(" ".into(), None)
                         }
                     };
                 }
@@ -276,7 +276,7 @@ mod column_render_component_impl_component_trait {
                         current_box = ?current_box,
                         box_origin_pos = ?box_origin_pos,
                         box_bounds_size = ?box_bounds_size,
-                        content_pos = ?position!(col_index: col, row_index: row),
+                        content_pos = ?Pos { col_index, row_index },
                         render_pipeline = ?pipeline,
                     );
                 });
