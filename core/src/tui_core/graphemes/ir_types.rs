@@ -16,28 +16,31 @@
  */
 
 use super::{UnicodeString, UnicodeStringExt as _};
-use crate::ChUnit;
+use crate::{ColIndex, ColWidth};
 
-/// We need a [String] (since we're returning a slice of a temporary
-/// [crate::UnicodeString] that is dropped by the function that creates it, not as a
-/// result of mutation).
+/// This represents a slice of the original [UnicodeString] and owns data. This is used to
+/// represent segments of the original string that are returned as a result of various
+/// computations, eg: [UnicodeString::get_string_at_right_of_display_col_index], etc.
+///
+/// We need an owned struct (since we're returning a slice that is dropped by the function
+/// that creates it, not as a result of mutation).
 #[derive(Debug, PartialEq, Eq)]
 pub struct UnicodeStringSegmentSliceResult {
-    pub unicode_string: UnicodeString,
-    pub display_width: ChUnit,
-    pub display_col_at_which_this_seg_starts: ChUnit,
+    /// The grapheme cluster slice, as a [UnicodeString]. This is a copy of the slice from
+    /// the original string.
+    pub seg_text: UnicodeString,
+    /// The display width of the slice.
+    pub seg_display_width: ColWidth,
+    /// The display col index at which this grapheme cluster starts in the original string.
+    pub display_col_at_which_seg_starts: ColIndex,
 }
 
 impl UnicodeStringSegmentSliceResult {
-    pub fn new(
-        text: &str,
-        display_width: ChUnit,
-        display_col_at_which_this_seg_starts: ChUnit,
-    ) -> Self {
+    pub fn new(text: &str, width: ColWidth, display_col_start: ColIndex) -> Self {
         Self {
-            unicode_string: text.unicode_string(),
-            display_width,
-            display_col_at_which_this_seg_starts,
+            seg_text: text.unicode_string(),
+            seg_display_width: width,
+            display_col_at_which_seg_starts: display_col_start,
         }
     }
 }

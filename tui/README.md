@@ -201,8 +201,8 @@ allows you to easily build, run, test, and do so much more with the repo.
 | Command                                | Description                                       |
 | -------------------------------------- | ------------------------------------------------- |
 | `nu run help`                          | See all the commands you can pass to the `run` script |
-| `nu run examples`                  | Run all the examples                              |
-| `nu run release-examples`          | Run all the examples with the release binary      |
+| `nu run examples`                      | Run all the examples                              |
+| `nu run release-examples`              | Run all the examples with the release binary      |
 | `nu run examples-with-flamegraph-profiling` | This will run the examples and generate a flamegraph at the end so you can see profile the performance of the app. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this |
 | `nu run log`                           | View the log output. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this. |
 | `nu run build`                         | Build                                             |
@@ -278,17 +278,17 @@ app built using this TUI engine.
 ## How does layout, rendering, and event handling work in general?
 
 ```
-┌──────────────────────────────────────────────────┐
-│                                                  │
-│  main.rs                                         │
-│                             ┌──────────────────┐ │
-│  GlobalData ───────────────►│ window size      │ │
-│  HasFocus                   │ offscreen buffer │ │
-│  ComponentRegistryMap       │ state            │ │
-│  App & Component(s)         │ channel sender   │ │
-│                             └──────────────────┘ │
-│                                                  │
-└──────────────────────────────────────────────────┘
+╭───────────────────────────────────────────────╮
+│                                               │
+│  main.rs                                      │
+│                          ╭──────────────────╮ │
+│  GlobalData ────────────〉│ window size      │ │
+│  HasFocus                │ offscreen buffer │ │
+│  ComponentRegistryMap    │ state            │ │
+│  App & Component(s)      │ channel sender   │ │
+│                          ╰──────────────────╯ │
+│                                               │
+╰───────────────────────────────────────────────╯
 ```
 <!-- https://asciiflow.com/#/share/eJzNkE0KwjAQha9SZiEK4kIUsTtR1I0b19mMdaqFdFKSFK0iXkI8jHgaT2JcqPUHoS7E4REmJN97k6yBMSbwOZWyChIz0uDDWsBSgN9utKoCMtfVW03XWVpatxFw2h3%2FVkKwW73ClUNjjLimzTfo51tfKx8xkGqCsocWC1ruDxd%2BEfFULTwTreg2V95%2BiKavgvTd6y%2FnKgxNoIl4O0nDkPQz3lVxopjYjmkWGauzESY53Fi0tL3Wa3onSbzS3aRsKg%2FpwRyZSXqGeOqyX%2FAffH%2FRuqF%2FKwEb2JwB17oGMg%3D%3D) -->
 
@@ -385,44 +385,43 @@ center & deals w/ how the system handles an input event (key press or mouse).
   app in.
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│In band input event                                                       │
-│                                                                          │
-│  Input ──► [TerminalWindow]                                              │
-│  Event          ▲      │                                                 │
-│                 │      ▼                  [ComponentRegistryMap] stores  │
-│                 │   [App]────────────────►[Component]s at 1st render     │
-│                 │      │                                                 │
-│                 │      │                                                 │
-│                 │      │          ┌──────► id=1 has focus                │
-│                 │      │          │                                      │
-│                 │      ├──► [Component] id=1 ─────┐                      │
-│                 │      │                          │                      │
-│                 │      └──► [Component] id=2      │                      │
-│                 │                                 │                      │
-│          default handler                          │                      │
-│                 ▲                                 │                      │
-│                 └─────────────────────────────────┘                      │
-│                                                                          │
-└──────────────────────────────────────────────────────────────────────────┘
+╭─────────────────────────────────────────────────────────────────────────╮
+│In band input event                                                      │
+│                                                                         │
+│  Input ──〉 [TerminalWindow]                                             │
+│  Event          ⎫      │                                                │
+│                 │      ⎩                  [ComponentRegistryMap] stores │
+│                 │    [App]──────────────〉 [Component]s at 1st render    │
+│                 │      │                                                │
+│                 │      │                                                │
+│                 │      │          ╭──────〉 id=1 has focus               │
+│                 │      │          │                                     │
+│                 │      ├──〉 [Component] id=1 ─────╮                     │
+│                 │      │                          │                     │
+│                 │      ╰──〉 [Component] id=2      │                     │
+│                 │                                 │                     │
+│          default handler                          │                     │
+│                 ⎫                                 │                     │
+│                 ╰─────────────────────────────────╯                     │
+│                                                                         │
+╰─────────────────────────────────────────────────────────────────────────╯
 
-┌────────────────────────────────────────────────────────────┐
+╭────────────────────────────────────────────────────────────╮
 │Out of band app signal                                      │
 │                                                            │
 │  App                                                       │
-│  Signal ──► [App]                                          │
+│  Signal ──〉 [App]                                          │
+│               ⎫                                            │
 │               │                                            │
-│               │                                            │
-│               └──────►Update state                         │
-│                       main thread rerender                 │
-│                              │                             │
-│                              │                             │
-│                              └─────►[App]                  │
-│                                       │                    │
-│                                       └────►[Component]s   │
+│               ╰──────〉 Update state                        │
+│                        main thread rerender                │
+│                               ⎫                            │
+│                               │                            │
+│                               ╰─────〉[App]                 │
+│                                        ⎫                   │
+│                                        ╰────〉 [Component]s │
 │                                                            │
-└────────────────────────────────────────────────────────────┘
-```
+╰────────────────────────────────────────────────────────────╯
 <!-- https://asciiflow.com/#/share/eJzdls9OwjAcx1%2Fll565wEEiiQdjPHAwJv6JB7ZDtQWabF3TdgohZC9h9iAeiU%2FDk1gcY8AAXbdh5JdfmkGbT7%2Ff7te1E8SxT1GHh57XQB4eU4k6aOKgkYM65%2B2zhoPG5qnVbpsnTUfa%2FHDQ%2FP3z5NNxuGm7HJ4xJ8C4CDXQV8o12MUKGWVhicohAbrf%2Bpbi4xn0Hqj0GcfeE%2BMkeHOtwdeblufxx2pIGb35npS%2FA9u7CnwRcCPkjg6Y0nJ8g4ULSgeSqh%2BxUe9SCLdwBcSzbFpXAdbQVBok5YTKX7upaZGOgN23KMDIRROGWEE%2FeAlVBdNUqX9tA2QvL5Gcd1NmooNCa3HQKo8%2FEEWwhPZx6GlTBJx4y81QGpr2pN%2BXirRmPcfJosKsY4U8%2BTQ2k%2FxzJWUsmPbWnNBBP7lPYCFAsYE5oAu%2B7kpqBsAcieUh94mBpc3FJ2tx0lqhtv%2B3VFQTZkfGs0dBsKaR0qYtDE3Dx4xHeigpJpGka7eLIpBsmJXB2jD5NdtTIEWre89IC8y2vvUrX9W77p%2Bmg6Zo%2BgU42osD) -->
 
 Let's trace the journey through the diagram when an input even is generated by the
@@ -455,7 +454,7 @@ directly in
 - [App::app_handle_input_event]
 - [Component::handle_event]
 
-## Life of a signal (aka "out of band event")
+# Life of a signal (aka "out of band event")
 
 This is great for input events which are generated by the user using their keyboard or
 mouse. These are all considered "in-band" events or signals, which have no delay or
@@ -488,7 +487,7 @@ the UI.
 Now that we have seen this whirlwind overview of the life of an input event, let's
 look at the details in each of the sections below.
 
-## The window
+# The window
 
 The main building blocks of a TUI app are:
 1. [TerminalWindow] - You can think of this as the main "window" of the app. All the
@@ -505,7 +504,7 @@ The main building blocks of a TUI app are:
    styling. But if you want layout and styling, now we have to deal with [FlexBox],
    [Component], and [r3bl_core::TuiStyle].
 
-## Layout and styling
+# Layout and styling
 
 Inside of your [App] if you want to use flexbox like layout and CSS like styling you
 can think of composing your code in the following way:
@@ -524,7 +523,7 @@ can think of composing your code in the following way:
     [GlobalData] struct. You can handle out of band events as well using the signal
     mechanism.
 
-## Component, ComponentRegistry, focus management, and event routing
+# Component, ComponentRegistry, focus management, and event routing
 
 Typically your [App] will look like this:
 
@@ -544,11 +543,11 @@ focus.
 The [HasFocus] struct takes care of this. This provides 2 things:
 
 1.  It holds an `id` of a [FlexBox] / [Component] that has focus.
-2.  It also holds a map that holds a [r3bl_core::Position] for each `id`. This is used
-    to represent a cursor (whatever that means to your app & component). This cursor
-    is maintained for each `id`. This allows a separate cursor for each [Component]
-    that has focus. This is needed to build apps like editors and viewers that
-    maintains a cursor position between focus switches.
+2.  It also holds a map that holds a [r3bl_core::Pos] for each `id`. This is used to
+    represent a cursor (whatever that means to your app & component). This cursor is
+    maintained for each `id`. This allows a separate cursor for each [Component] that
+    has focus. This is needed to build apps like editors and viewers that maintains a
+    cursor position between focus switches.
 
 Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent
 between re-renders.
@@ -629,24 +628,23 @@ components, which may contain components, and so on) are rendered to the termina
 screen.
 
 ```
-┌──────────────────────────────────┐
+╭──────────────────────────────────╮
 │ Container                        │
 │                                  │
-│ ┌─────────────┐  ┌─────────────┐ │
+│ ╭─────────────╮  ╭─────────────╮ │
 │ │ Col 1       │  │ Col 2       │ │
 │ │             │  │             │ │
-│ │             │  │     ────────┼─┼──────────► RenderPipeline─────┐
-│ │             │  │             │ │                               │
-│ │             │  │             │ │                               │
-│ │      ───────┼──┼─────────────┼─┼──────────► RenderPipeline─┐   │
-│ │             │  │             │ │                           │   │
-│ │             │  │             │ │                           ▼ + ▼
-│ │             │  │             │ │                  ┌─────────────────────┐
-│ └─────────────┘  └─────────────┘ │                  │                     │
-│                                  │                  │  OffscreenBuffer    │
-└──────────────────────────────────┘                  │                     │
-                                                      └─────────────────────┘
-```
+│ │             │  │     ────────┼─┼────⟩ RenderPipeline ─────╮
+│ │             │  │             │ │                          │
+│ │             │  │             │ │                          │
+│ │      ───────┼──┼─────────────┼─┼────⟩ RenderPipeline ─╮   │
+│ │             │  │             │ │                      │   │
+│ │             │  │             │ │                      ⎩ ✚ ⎩
+│ │             │  │             │ │       ╭─────────────────────╮
+│ └─────────────┘  └─────────────┘ │       │                     │
+│                                  │       │  OffscreenBuffer    │
+╰──────────────────────────────────╯       │                     │
+                                           ╰─────────────────────╯
 <!-- https://asciiflow.com/#/share/eJyrVspLzE1VssorzcnRUcpJrEwtUrJSqo5RqohRsrK0MNaJUaoEsozMTYGsktSKEiAnRunRlD10QzExeUBSwTk%2FryQxMy%2B1SAEHQCglCBBKSXKJAonKUawBeiBHwRDhAAW4oBGSIKoWNDcrYBUkUgulETFtl0JQal5KalFAZkFqDjAicMYUKS4nJaJoaCgdkjExgUkLH9PK2Gl7FLRBJFWMpUqo0ilL4wpirOIklEg4BP3T0oqTi1JT85xK09IgpR%2FcXLohUv1M2MM49FIhFSjVKtUCAEVNQq0%3D) -->
 
 Each component produces a `RenderPipeline`, which is a map of `ZOrder` and
@@ -663,7 +661,7 @@ Once a set of these `RenderPipeline`s have been generated, typically after the u
 enters some input event, and that produces a new state which then has to be rendered,
 they are combined and painted into an `OffscreenBuffer`.
 
-### First render
+## First render
 
 The `paint.rs` file contains the `paint` function, which is the entry point for all
 rendering. Once the first render occurs, the `OffscreenBuffer` that is generated is
@@ -682,7 +680,7 @@ Currently only `crossterm` is supported for actually painting to the terminal. B
 this process is really simple making it very easy to swap out other terminal libraries
 such as `termion`, or even a GUI backend, or some other custom output driver.
 
-### Subsequent render
+## Subsequent render
 
 Since the `OffscreenBuffer` is cached in `GlobalSharedState` a diff to be performed
 for subsequent renders. And only those diff chunks are painted to the screen. This
@@ -690,7 +688,7 @@ ensures that there is no flicker when the content of the screen changes. It also
 minimizes the amount of work that the terminal or terminal emulator has to do put the
 `PixelChar`s on the screen.
 
-## How does the editor component work?
+# How does the editor component work?
 
 The `EditorComponent` struct can hold data in its own memory, in addition to relying
 on the state.
@@ -732,7 +730,7 @@ Here are the connection points w/ the impl of `Component<S, AS>` in `EditorCompo
     - Can simply relay the arguments to `EditorEngine::render(state.editor_buffer)`
     - Which will return a `RenderPipeline`.
 
-## Painting the caret
+# Painting the caret
 
 Definitions:
 
@@ -770,7 +768,7 @@ different constraints).
      "standard" cursor features that are provided by the actual global cursor
      (discussed above).
 
-## How do modal dialog boxes work?
+# How do modal dialog boxes work?
 
 A modal dialog box is different than a normal reusable component. This is because:
 
@@ -816,7 +814,7 @@ shown) go? This seems as though it would be different in nature from an
     borrows at the same time to some portion of the component registry if one is not
     careful.
 
-### Two callback functions
+## Two callback functions
 
 When creating a new dialog box component, two callback functions are passed in:
 
@@ -825,7 +823,7 @@ When creating a new dialog box component, two callback functions are passed in:
 2. `on_dialog_editors_changed_handler()` - this will be called if the user types
    something into the editor.
 
-### How to use this dialog to make an HTTP request & pipe the results into a selection area?
+## How to use this dialog to make an HTTP request & pipe the results into a selection area?
 
 So far we have covered the use case for a simple modal dialog box. In order to provide
 auto-completion capabilities, via some kind of web service, there needs to be a
@@ -837,14 +835,14 @@ In autocomplete mode, an extra "results panel" is displayed, and the layout of t
 dialog is different on the screen. Instead of being in the middle of the screen, it
 starts at the top of the screen. The callbacks are the same.
 
-## How to make HTTP requests
+# How to make HTTP requests
 
 Crates like `reqwest` and `hyper` (which is part of Tokio) will work. Here's a link
 that shows the pros and cons of using each:
 - [Rust Crates for Networking and HTTP
   Foundations](https://blessed.rs/crates#section-networking-subsection-http-foundations)
 
-### Custom Markdown (MD) parsing and custom syntax highlighting
+## Custom Markdown (MD) parsing and custom syntax highlighting
 
 The code for parsing and syntax highlighting is in [try_parse_and_highlight].
 
@@ -871,13 +869,13 @@ but we decided to implement our own parser using
 [`nom`](https://developerlife.com/2023/02/20/guide-to-nom-parsing/) since it was
 streaming and used less CPU and memory.
 
-## Grapheme support
+# Grapheme support
 
 Unicode is supported (to an extent). There are some caveats. The
 [r3bl_core::UnicodeString] struct has lots of great information on this graphemes and
 what is supported and what is not.
 
-## Lolcat support
+# Lolcat support
 
 An implementation of lolcat color wheel is provided. Here's an example.
 

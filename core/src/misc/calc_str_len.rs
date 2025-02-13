@@ -31,11 +31,11 @@ use crate::{UnicodeString, u16};
 /// - `Unicode`: Calculates the Unicode width of the string.
 ///
 /// # Example
-///
 /// ```rust
 /// use std::collections::HashMap;
 /// use r3bl_core::StringLength;
 ///
+/* cspell:disable-next-line  */
 /// let input = "\u{1b}[31mfoo\u{1b}[0m";
 /// let mut memoized_len_map = HashMap::new();
 ///
@@ -74,7 +74,7 @@ impl StringLength {
     pub fn calculate(&self, input: &str, memoized_len_map: &mut MemoizedLenMap) -> u16 {
         match self {
             // Do not memoize (slower to do this).
-            StringLength::Unicode => u16(UnicodeString::str_display_width(input)),
+            StringLength::Unicode => u16(*UnicodeString::str_display_width(input)),
 
             // Memoize (faster to do this).
             StringLength::StripAnsi => match memoized_len_map.entry(input.to_string()) {
@@ -82,7 +82,7 @@ impl StringLength {
                 Entry::Vacant(entry) => {
                     let stripped_input = strip_ansi::strip_ansi(input);
                     let stripped_input: &str = stripped_input.as_ref();
-                    let length = u16(UnicodeString::str_display_width(stripped_input));
+                    let length = u16(*UnicodeString::str_display_width(stripped_input));
                     entry.insert(length);
                     length
                 }

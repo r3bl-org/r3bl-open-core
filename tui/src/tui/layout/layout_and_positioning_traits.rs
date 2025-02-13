@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{CommonResult, Position, Size};
+use r3bl_core::{CommonResult, Pos, Size};
 
 use super::{FlexBox, FlexBoxProps, SurfaceProps};
 
@@ -38,7 +38,7 @@ pub trait PerformPositioningAndSizing {
     fn update_insertion_pos_for_next_box(
         &mut self,
         allocated_size: Size,
-    ) -> CommonResult<Position>;
+    ) -> CommonResult<Pos>;
 
     /// Get the [FlexBox] at the "top" of the `stack`.
     fn current_box(&mut self) -> CommonResult<&mut FlexBox>;

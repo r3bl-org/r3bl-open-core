@@ -30,10 +30,11 @@
 //!    the editor component (based on scroll state in viewport). And finally that is
 //!    converted to a [r3bl_core::TuiStyledTexts].
 
-use r3bl_core::{ch,
-                char_storage,
+use r3bl_core::{char_storage,
                 tui_styled_text,
-                ChUnit,
+                width,
+                ColIndex,
+                ColWidth,
                 StringStorage,
                 TuiStyle,
                 TuiStyledTexts,
@@ -160,8 +161,8 @@ impl StyleUSSpanLine {
     /// represented as a [List] of ([TuiStyle], [UnicodeString])`s.
     pub fn clip(
         &self,
-        scroll_offset_col_index: ChUnit,
-        max_display_col_count: ChUnit,
+        scroll_offset_col_index: ColIndex,
+        max_display_col_count: ColWidth,
     ) -> TuiStyledTexts {
         // Populated and returned at the end.
         let mut list: List<StyleUSSpan> = List::default();
@@ -219,12 +220,12 @@ impl StyleUSSpanLine {
         TuiStyledTexts::from(list)
     }
 
-    pub fn display_width(&self) -> ChUnit {
-        let mut size = ch(0);
+    pub fn display_width(&self) -> ColWidth {
+        let mut display_width = width(0);
         for span in self.iter() {
-            size += span.text_us.display_width;
+            display_width += span.text_us.display_width;
         }
-        size
+        display_width
     }
 
     pub fn get_plain_text(&self) -> StringStorage {
@@ -238,8 +239,8 @@ impl StyleUSSpanLine {
     /// Clip the content [scroll_offset.col .. max cols].
     pub fn get_plain_text_clipped(
         &self,
-        scroll_offset_col_index: ChUnit,
-        max_display_col_count: ChUnit,
+        scroll_offset_col_index: ColIndex,
+        max_display_col_count: ColWidth,
     ) -> StringStorage {
         let line = self.get_plain_text();
         let line_us = UnicodeString::new(&line);
@@ -271,7 +272,7 @@ mod convert {
 /// list of styled unicode string represents a single line of text in an editor component.
 #[cfg(test)]
 mod tests_clip_styled_texts {
-    use r3bl_core::{assert_eq2, ConvertToPlainText, RgbValue, TuiColor};
+    use r3bl_core::{assert_eq2, ch, col, ConvertToPlainText, RgbValue, TuiColor};
     use r3bl_macro::tui_style;
 
     use super::*;
@@ -312,9 +313,9 @@ mod tests_clip_styled_texts {
 
     /// ```text
     /// BEFORE:
-    ///    ┌→s1
-    ///    │    ┌→s2
-    ///    │    │┌→s3
+    ///    ⎛s1
+    ///    │    ⎛s2
+    ///    │    │⎛s3
     ///    ▒▒▒▒▒█▒▒▒▒▒▒
     /// R ┌────────────┐
     /// 0 │first second│
@@ -322,9 +323,9 @@ mod tests_clip_styled_texts {
     ///   C012345678901
     ///
     /// AFTER: Cut [ 2 .. 5 ].
-    ///      ┌→s1
-    ///      │  ┌→s2
-    ///      │  │┌→s3
+    ///      ⎛s1
+    ///      │  ⎛s2
+    ///      │  │⎛s3
     /// R   ┌─────┐
     /// 0 fi│rst s│econd
     ///     └─────┘
@@ -344,17 +345,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_us = UnicodeString::new(&text);
 
-            let trunc_1_str = text_us.truncate_start_by_n_col(scroll_offset_col_index);
+            let trunc_1_str =
+                text_us.truncate_start_by_n_col(width(*scroll_offset_col_index));
             let trunc_1_us = UnicodeString::new(trunc_1_str);
 
-            let trunc_2_str = trunc_1_us.truncate_end_to_fit_width(max_display_col_count);
+            let trunc_2_str =
+                trunc_1_us.truncate_end_to_fit_width(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let clipped =
-                fixtures::get_list().clip(scroll_offset_col_index, max_display_col_count);
+            let clipped = fixtures::get_list()
+                .clip(col(*scroll_offset_col_index), width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 3);
             let lhs = clipped.to_plain_text();
@@ -364,9 +367,9 @@ mod tests_clip_styled_texts {
 
     /// ```text
     /// BEFORE:
-    ///    ┌→s1
-    ///    │    ┌→s2
-    ///    │    │┌→s3
+    ///    ⎛s1
+    ///    │    ⎛s2
+    ///    │    │⎛s3
     ///    ▒▒▒▒▒█▒▒▒▒▒▒
     /// R ┌────────────┐
     /// 0 │first second│
@@ -374,9 +377,9 @@ mod tests_clip_styled_texts {
     ///   C012345678901
     ///
     /// AFTER: Cut [ 0 .. 3 ].
-    ///    ┌→s1
-    ///    │     ┌→s2
-    ///    │     │┌→s3
+    ///    ⎛s1
+    ///    │     ⎛s2
+    ///    │     │⎛s3
     /// R ┌───┐
     /// 0 │fir│st second
     ///   └───┘
@@ -396,17 +399,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_us = UnicodeString::new(&text);
 
-            let trunc_1_str = text_us.truncate_start_by_n_col(scroll_offset_col_index);
+            let trunc_1_str =
+                text_us.truncate_start_by_n_col(width(*scroll_offset_col_index));
             let trunc_1_us = UnicodeString::new(trunc_1_str);
 
-            let trunc_2_str = trunc_1_us.truncate_end_to_fit_width(max_display_col_count);
+            let trunc_2_str =
+                trunc_1_us.truncate_end_to_fit_width(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let clipped =
-                fixtures::get_list().clip(scroll_offset_col_index, max_display_col_count);
+            let clipped = fixtures::get_list()
+                .clip(col(*scroll_offset_col_index), width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 1);
             let left = clipped.to_plain_text();
@@ -417,9 +422,9 @@ mod tests_clip_styled_texts {
 
     /// ```text
     /// BEFORE:
-    ///    ┌→s1
-    ///    │    ┌→s2
-    ///    │    │┌→s3
+    ///    ⎛s1
+    ///    │    ⎛s2
+    ///    │    │⎛s3
     ///    ▒▒▒▒▒█▒▒▒▒▒▒
     /// R ┌────────────┐
     /// 0 │first second│
@@ -427,9 +432,9 @@ mod tests_clip_styled_texts {
     ///   C012345678901
     ///
     /// AFTER: Cut [ 0 .. 5 ].
-    ///    ┌→s1
-    ///    │     ┌→s2
-    ///    │     │┌→s3
+    ///    ⎛s1
+    ///    │     ⎛s2
+    ///    │     │⎛s3
     /// R ┌─────┐
     /// 0 │first│ second
     ///   └─────┘
@@ -449,17 +454,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_us = UnicodeString::new(&text);
 
-            let trunc_1_str = text_us.truncate_start_by_n_col(scroll_offset_col_index);
+            let trunc_1_str =
+                text_us.truncate_start_by_n_col(width(*scroll_offset_col_index));
             let trunc_1_us = UnicodeString::new(trunc_1_str);
 
-            let trunc_2_str = trunc_1_us.truncate_end_to_fit_width(max_display_col_count);
+            let trunc_2_str =
+                trunc_1_us.truncate_end_to_fit_width(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let clipped =
-                fixtures::get_list().clip(scroll_offset_col_index, max_display_col_count);
+            let clipped = fixtures::get_list()
+                .clip(col(*scroll_offset_col_index), width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 1);
             let lhs = clipped.to_plain_text();
@@ -470,9 +477,9 @@ mod tests_clip_styled_texts {
 
     /// ```text
     /// BEFORE:
-    ///    ┌→s1
-    ///    │    ┌→s2
-    ///    │    │┌→s3
+    ///    ⎛s1
+    ///    │    ⎛s2
+    ///    │    │⎛s3
     ///    ▒▒▒▒▒█▒▒▒▒▒▒
     /// R ┌────────────┐
     /// 0 │first second│
@@ -480,9 +487,9 @@ mod tests_clip_styled_texts {
     ///   C012345678901
     ///
     /// AFTER: Cut [ 2 .. 8 ].
-    ///      ┌→s1
-    ///      │  ┌→s2
-    ///      │  │┌→s3
+    ///      ⎛s1
+    ///      │  ⎛s2
+    ///      │  │⎛s3
     /// R   ┌────────┐
     /// 0 fi│rst seco│nd
     ///     └────────┘
@@ -502,17 +509,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_us = UnicodeString::new(&text);
 
-            let trunc_1_str = text_us.truncate_start_by_n_col(scroll_offset_col_index);
+            let trunc_1_str =
+                text_us.truncate_start_by_n_col(width(*scroll_offset_col_index));
             let trunc_1_us = UnicodeString::new(trunc_1_str);
 
-            let trunc_2_str = trunc_1_us.truncate_end_to_fit_width(max_display_col_count);
+            let trunc_2_str =
+                trunc_1_us.truncate_end_to_fit_width(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let clipped =
-                fixtures::get_list().clip(scroll_offset_col_index, max_display_col_count);
+            let clipped = fixtures::get_list()
+                .clip(col(*scroll_offset_col_index), width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 3);
             let left = clipped.to_plain_text();
@@ -538,15 +547,15 @@ mod tests_clip_styled_texts {
                 "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234";
 
         // BEFORE:
-        // ┌→0                                                                              │
-        // │                                                                           ┌→77 │
-        // .............................................................................    │ viewport
+        // ⎛0                                                                              │
+        // │                                                                           ⎛77 │
+        // .............................................................................   │ viewport
         // 01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234
         //
         // AFTER:
-        // ┌→0                                                                              │
-        // │                                                                           ┌→77 │
-        // .............................................................................    │ viewport
+        // ⎛0                                                                              │
+        // │                                                                           ⎛77 │
+        // .............................................................................   │ viewport
         // 1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234
 
         // Expected no highlight version.
@@ -555,17 +564,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
             let text_us = UnicodeString::new(&text);
 
-            let trunc_1_str = text_us.truncate_start_by_n_col(scroll_offset_col_index);
+            let trunc_1_str =
+                text_us.truncate_start_by_n_col(width(*scroll_offset_col_index));
             let trunc_1_us = UnicodeString::new(trunc_1_str);
 
-            let trunc_2_str = trunc_1_us.truncate_end_to_fit_width(max_display_col_count);
+            let trunc_2_str =
+                trunc_1_us.truncate_end_to_fit_width(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let clipped =
-                get_list_alt().clip(scroll_offset_col_index, max_display_col_count);
+            let clipped = get_list_alt()
+                .clip(col(*scroll_offset_col_index), width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 1);
             let lhs = clipped.to_plain_text();
@@ -591,15 +602,15 @@ mod tests_clip_styled_texts {
                 "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345";
 
         // BEFORE:
-        // ┌→0                                                                              │
-        // │                                                                           ┌→77 │
-        // .............................................................................    │ viewport
+        // ⎛0                                                                              │
+        // │                                                                           ⎛77 │
+        // .............................................................................   │ viewport
         // 01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456
         //
         // AFTER:
-        // ┌→0                                                                              │
-        // │                                                                           ┌→77 │
-        // .............................................................................    │ viewport
+        // ⎛0                                                                              │
+        // │                                                                           ⎛77 │
+        // .............................................................................   │ viewport
         // 1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345
 
         // Expected no highlight version.
@@ -608,17 +619,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
             let text_us = UnicodeString::new(&text);
 
-            let trunc_1_str = text_us.truncate_start_by_n_col(scroll_offset_col_index);
+            let trunc_1_str =
+                text_us.truncate_start_by_n_col(width(*scroll_offset_col_index));
             let trunc_1_us = UnicodeString::new(trunc_1_str);
 
-            let trunc_2_str = trunc_1_us.truncate_end_to_fit_width(max_display_col_count);
+            let trunc_2_str =
+                trunc_1_us.truncate_end_to_fit_width(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let clipped =
-                get_list_alt().clip(scroll_offset_col_index, max_display_col_count);
+            let clipped = get_list_alt()
+                .clip(col(*scroll_offset_col_index), width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 1);
             let left = clipped.to_plain_text();

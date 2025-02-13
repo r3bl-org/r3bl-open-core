@@ -179,7 +179,7 @@ pub mod constructor {
         }
     }
 
-    // BOOKM: Clever Rust, use of `impl Into<struct>` for constructor & `const N: usize` for arrays.
+    // XMARK: Clever Rust, use of `impl Into<struct>` for constructor & `const N: usize` for arrays.
     impl<const N: usize> Telemetry<N> {
         pub fn new(options: impl Into<ResponseTimesRingBufferOptions>) -> Self {
             // "Dynamically" convert the options argument into the actual options struct.

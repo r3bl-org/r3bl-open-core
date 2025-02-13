@@ -16,7 +16,7 @@
  */
 
 use super::UnicodeString;
-use crate::{ChUnit, usize};
+use crate::{ChUnit, ColIndex, ColWidth, usize};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
 /// The actual grapheme cluster string slice &[str], is derived using
@@ -24,21 +24,18 @@ use crate::{ChUnit, usize};
 /// [UnicodeString]. Eg: "H", "📦", "🙏🏽".
 pub struct GraphemeClusterSegment {
     // PERF: [x] perf (remove alloc)
-    /// The start index, in the string slice, used to generate the [UnicodeString] that this
-    /// grapheme cluster represents.
-    pub start_index: ChUnit,
+    /// The start index (bytes), in the string slice, used to generate the [UnicodeString]
+    /// that this grapheme cluster represents.
+    pub start_byte_index: ChUnit,
 
-    /// The end index, in the string slice, used to generate the [UnicodeString] that this
-    /// grapheme cluster represents.
-    pub end_index: ChUnit,
-
-    /// The byte offset (in the original string slice) of the start of this grapheme cluster.
-    pub byte_offset: ChUnit,
+    /// The end index (bytes), in the string slice, used to generate the [UnicodeString]
+    /// that this grapheme cluster represents.
+    pub end_byte_index: ChUnit,
 
     /// Display width of the grapheme cluster calculated using
-    /// [unicode_width::UnicodeWidthChar]. The display width (aka `unicode_width`)
-    /// may not the same as the byte size [Self::byte_size].
-    pub unicode_width: ChUnit,
+    /// [unicode_width::UnicodeWidthChar]. The display width (aka `unicode_width`) may not
+    /// the same as the byte size [Self::byte_size].
+    pub unicode_width: ColWidth,
 
     /// The index of this entry in the [UnicodeString::vec_segment].
     pub logical_index: ChUnit,
@@ -47,16 +44,24 @@ pub struct GraphemeClusterSegment {
     /// The display width, aka [Self::unicode_width], may not the same as the byte size.
     pub byte_size: usize,
 
-    /// Display col at which this grapheme cluster starts.
-    pub display_col_offset: ChUnit,
+    /// Display col index [ColIndex] (in the original string slice) at which this grapheme
+    /// cluster starts. The "offset" in the name means that this is relative to the start
+    /// of the original string slice.
+    /// - It is used to determine whether a given display col index [ColIndex] is within
+    ///   the bounds of this grapheme cluster or not, eg:
+    ///   [UnicodeString::get_string_at_display_col_index()],
+    ///   [UnicodeString::is_display_col_index_in_middle_of_grapheme_cluster], etc.
+    /// - It is used to perform conversions to and from `logical_index` to
+    ///   `start_display_col_index`. [UnicodeString::display_col_index_at_logical_index]
+    pub start_display_col_index: ColIndex,
 }
 
 impl GraphemeClusterSegment {
     /// Get the string slice for the grapheme cluster segment. Closely related to
     /// [UnicodeString::get_str].
     pub fn get_str<'a>(&self, string: &'a str) -> &'a str {
-        let start_index = usize(self.start_index);
-        let end_index = usize(self.end_index);
+        let start_index = usize(self.start_byte_index);
+        let end_index = usize(self.end_byte_index);
         &string[start_index..end_index]
     }
 }
@@ -69,8 +74,8 @@ impl UnicodeString {
         string: &'a str,
         seg: &GraphemeClusterSegment,
     ) -> &'a str {
-        let start_index = crate::usize(seg.start_index);
-        let end_index = crate::usize(seg.end_index);
+        let start_index = crate::usize(seg.start_byte_index);
+        let end_index = crate::usize(seg.end_byte_index);
         &string[start_index..end_index]
     }
 }

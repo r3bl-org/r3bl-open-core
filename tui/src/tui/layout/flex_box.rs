@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{ok, Position, RequestedSizePercent, Size, TuiStyle};
+use r3bl_core::{ok, Dim, Pos, RequestedSizePercent, TuiStyle};
 
 use super::FlexBoxId;
 
@@ -36,12 +36,12 @@ pub enum LayoutDirection {
 pub struct FlexBox {
     pub id: FlexBoxId,
     pub dir: LayoutDirection,
-    pub origin_pos: Position,
-    pub bounds_size: Size,
-    pub style_adjusted_origin_pos: Position,
-    pub style_adjusted_bounds_size: Size,
+    pub origin_pos: Pos,
+    pub bounds_size: Dim,
+    pub style_adjusted_origin_pos: Pos,
+    pub style_adjusted_bounds_size: Dim,
     pub requested_size_percent: RequestedSizePercent,
-    pub insertion_pos_for_next_box: Option<Position>,
+    pub insertion_pos_for_next_box: Option<Pos>,
     pub maybe_computed_style: Option<TuiStyle>,
 }
 
@@ -104,7 +104,15 @@ impl std::fmt::Display for FlexBox {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{ok, position, requested_size_percent, size, CommonResult};
+    use r3bl_core::{col,
+                    height,
+                    ok,
+                    requested_size_percent,
+                    row,
+                    width,
+                    CommonResult,
+                    Dim,
+                    Pos};
 
     use super::*;
 
@@ -113,10 +121,10 @@ mod tests {
         let flex_box = FlexBox::default();
         assert_eq!(flex_box.id, FlexBoxId::default());
         assert_eq!(flex_box.dir, LayoutDirection::Horizontal);
-        assert_eq!(flex_box.origin_pos, Position::default());
-        assert_eq!(flex_box.bounds_size, Size::default());
-        assert_eq!(flex_box.style_adjusted_origin_pos, Position::default());
-        assert_eq!(flex_box.style_adjusted_bounds_size, Size::default());
+        assert_eq!(flex_box.origin_pos, Pos::default());
+        assert_eq!(flex_box.bounds_size, Dim::default());
+        assert_eq!(flex_box.style_adjusted_origin_pos, Pos::default());
+        assert_eq!(flex_box.style_adjusted_bounds_size, Dim::default());
         assert_eq!(
             flex_box.requested_size_percent,
             RequestedSizePercent::default()
@@ -146,15 +154,15 @@ mod tests {
         let flex_box = FlexBox {
             id: FlexBoxId::default(),
             dir: LayoutDirection::Vertical,
-            origin_pos: position! { col_index: 1, row_index: 2 },
-            bounds_size: size! { col_count: 3, row_count: 4 },
-            style_adjusted_origin_pos: position! { col_index: 5, row_index: 6 },
-            style_adjusted_bounds_size: size! { col_count: 7, row_count: 8 },
+            origin_pos: col(1) + row(2),
+            bounds_size: width(3) + height(4),
+            style_adjusted_origin_pos: col(5) + row(6),
+            style_adjusted_bounds_size: width(7) + height(8),
             requested_size_percent: requested_size_percent!(
                 width: 50,
                 height: 50
             ),
-            insertion_pos_for_next_box: position! { col_index: 9, row_index: 10 }.into(),
+            insertion_pos_for_next_box: Some(col(9) + row(10)),
             maybe_computed_style: TuiStyle::default().into(),
         };
 

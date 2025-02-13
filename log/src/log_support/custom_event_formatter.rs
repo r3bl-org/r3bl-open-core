@@ -45,13 +45,13 @@ use r3bl_core::{ColorWheel,
                 StringStorage,
                 UnicodeString,
                 VecArray,
-                ch,
                 get_terminal_width,
                 glyphs,
                 remove_escaped_quotes,
                 string_storage,
                 truncate_from_right,
-                usize};
+                usize,
+                width};
 use r3bl_macro::tui_style;
 use smallvec::smallvec;
 use textwrap::{Options, WordSeparator, wrap};
@@ -126,7 +126,7 @@ where
         let spacer_display_width = UnicodeString::str_display_width(spacer);
 
         // Length accumulator (for line width calculations).
-        let mut line_width_used = ch(0);
+        let mut line_width_used = width(0);
 
         // Custom timestamp.
         let timestamp = Local::now();
@@ -174,8 +174,6 @@ where
         //     callsite: Identifier(0x5a46fb928d40),
         //     kind: Kind(EVENT),
         // }
-        // REFACTOR: [x] replace all format! with string_storage! in this file
-        // REFACTOR: [x] replace all use of MicroVecBackingStore with VecArray
         let mut style_acc: VecArray<Style> = smallvec![];
         let level_str = match *event.metadata().level() {
             tracing::Level::ERROR => {
@@ -227,9 +225,9 @@ where
 
         // This is actually the terminal width of the process, not necessarily the
         // terminal width of the process that is viewing the log output.
-        let max_display_width = ch(get_terminal_width());
+        let max_display_width = get_terminal_width();
 
-        let text_wrap_options = Options::new(usize(max_display_width))
+        let text_wrap_options = Options::new(usize(*max_display_width))
             .initial_indent(FIRST_LINE_PREFIX)
             .subsequent_indent(SUBSEQUENT_LINE_PREFIX)
             .word_separator(WordSeparator::UnicodeBreakProperties);
@@ -238,10 +236,13 @@ where
             // Write heading line.
             let heading = remove_escaped_quotes(heading);
             line_width_used += spacer_display_width;
-            let line_1_width = max_display_width - line_width_used;
+            let line_1_width = {
+                let it = max_display_width - line_width_used;
+                width(*it)
+            };
             let line_1_text = string_storage!(
                 "{spacer}{heading}",
-                heading = truncate_from_right(&heading, usize(line_1_width), false)
+                heading = truncate_from_right(&heading, line_1_width, false)
             );
             let line_1_text_fmt = ColorWheel::lolcat_into_string(
                 &line_1_text,
@@ -268,7 +269,7 @@ where
         }
 
         // Write the terminating line separator.
-        let line_separator = ENTRY_SEPARATOR_CHAR.repeat(usize(max_display_width));
+        let line_separator = ENTRY_SEPARATOR_CHAR.repeat(usize(*max_display_width));
         let line_separator_fmt = line_separator.dark_green();
         writeln!(f, "{line_separator_fmt}")
     }

@@ -19,14 +19,19 @@ use std::cmp;
 
 use crossterm::style::Stylize;
 use r3bl_core::{call_if_true,
-                ch,
-                position,
+                caret_scr_adj,
+                col,
+                height,
+                row,
                 string_storage,
                 usize,
+                width,
+                Caret,
                 CaretLocationInRange,
                 CaretMovementDirection,
-                ChUnit,
-                Position,
+                CaretScrAdj,
+                ColIndex,
+                RowIndex,
                 SelectionRange};
 
 use super::{selection_list::RowLocationInSelectionList, EditorBuffer};
@@ -36,25 +41,25 @@ pub struct EditorBufferApi;
 
 impl EditorBufferApi {
     pub fn handle_selection_single_line_caret_movement(
-        editor_buffer: &mut EditorBuffer,
-        row_index: ChUnit,
-        previous_caret_display_col_index: ChUnit,
-        current_caret_display_col_index: ChUnit,
+        buffer: &mut EditorBuffer,
+        row_index: RowIndex,
+        previous_caret_display_col_index: ColIndex,
+        current_caret_display_col_index: ColIndex,
     ) {
         let previous = previous_caret_display_col_index;
         let current = current_caret_display_col_index;
 
         // Get the range for the row index. If it doesn't exist, create one & return early.
         let range = {
-            let Some(range) = editor_buffer.get_selection_map().get(row_index) else {
+            let Some(range) = buffer.get_selection_list().get(row_index) else {
                 let new_range = SelectionRange {
-                    start_display_col_index_scroll_adjusted: cmp::min(previous, current),
-                    end_display_col_index_scroll_adjusted: cmp::max(previous, current),
+                    start_disp_col_idx_scr_adj: cmp::min(previous, current),
+                    end_disp_col_idx_scr_adj: cmp::max(previous, current),
                 };
 
-                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
+                let buffer_mut = buffer.get_mut(width(0) + height(0));
 
-                editor_buffer_mut.selection_map.insert(
+                buffer_mut.sel_list.insert(
                     row_index,
                     new_range,
                     SelectionRange::caret_movement_direction_left_right(
@@ -73,8 +78,8 @@ impl EditorBufferApi {
 
         // Destructure range for easier access.
         let SelectionRange {
-            start_display_col_index_scroll_adjusted: range_start,
-            end_display_col_index_scroll_adjusted: range_end,
+            start_disp_col_idx_scr_adj: range_start,
+            end_disp_col_idx_scr_adj: range_end,
         } = range;
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
@@ -104,7 +109,7 @@ impl EditorBufferApi {
                 )
         });
 
-        // BOOKM: For reference, algo for left, right selection
+        // XMARK: For reference, algo for left, right selection
         // Handle the movement of the caret and apply the appropriate changes to the range.
         match (
             range.locate_column(previous),
@@ -118,10 +123,10 @@ impl EditorBufferApi {
                 CaretMovementDirection::Left,
             ) => {
                 let delta = previous - current;
-                let new_range = range.shrink_end_by(delta);
+                let new_range = range.shrink_end_by(width(*delta));
 
-                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
-                editor_buffer_mut.selection_map.insert(
+                let buffer_mut = buffer.get_mut(width(0) + height(0));
+                buffer_mut.sel_list.insert(
                     row_index,
                     new_range,
                     SelectionRange::caret_movement_direction_left_right(
@@ -137,10 +142,10 @@ impl EditorBufferApi {
                 CaretMovementDirection::Left,
             ) => {
                 let delta = range_start - current;
-                let new_range = range.grow_start_by(delta);
+                let new_range = range.grow_start_by(width(*delta));
 
-                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
-                editor_buffer_mut.selection_map.insert(
+                let buffer_mut = buffer.get_mut(width(0) + height(0));
+                buffer_mut.sel_list.insert(
                     row_index,
                     new_range,
                     SelectionRange::caret_movement_direction_left_right(
@@ -156,10 +161,10 @@ impl EditorBufferApi {
                 CaretMovementDirection::Right,
             ) => {
                 let delta = current - range_end;
-                let new_range = range.grow_end_by(delta);
+                let new_range = range.grow_end_by(width(*delta));
 
-                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
-                editor_buffer_mut.selection_map.insert(
+                let buffer_mut = buffer.get_mut(width(0) + height(0));
+                buffer_mut.sel_list.insert(
                     row_index,
                     new_range,
                     SelectionRange::caret_movement_direction_left_right(
@@ -176,10 +181,10 @@ impl EditorBufferApi {
                 CaretMovementDirection::Right,
             ) => {
                 let delta = current - range_start;
-                let new_range = range.shrink_start_by(delta);
+                let new_range = range.shrink_start_by(width(*delta));
 
-                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
-                editor_buffer_mut.selection_map.insert(
+                let buffer_mut = buffer.get_mut(width(0) + height(0));
+                buffer_mut.sel_list.insert(
                     row_index,
                     new_range,
                     SelectionRange::caret_movement_direction_left_right(
@@ -195,12 +200,10 @@ impl EditorBufferApi {
         // Remove any range that is empty after caret movement changes have been
         // incorporated. Ok to do this since empty lines are handled by
         // `handle_selection_multiline_caret_movement`.
-        if let Some(range) = editor_buffer.get_selection_map().get(row_index) {
-            if range.start_display_col_index_scroll_adjusted
-                == range.end_display_col_index_scroll_adjusted
-            {
-                let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
-                editor_buffer_mut.selection_map.remove(
+        if let Some(range) = buffer.get_selection_list().get(row_index) {
+            if range.start_disp_col_idx_scr_adj == range.end_disp_col_idx_scr_adj {
+                let buffer_mut = buffer.get_mut(width(0) + height(0));
+                buffer_mut.sel_list.remove(
                     row_index,
                     SelectionRange::caret_movement_direction_left_right(
                         previous, current,
@@ -210,12 +213,12 @@ impl EditorBufferApi {
         }
     }
 
-    // BOOKM: Impl multiline selection changes (up/down, and later page up/page down)
+    // XMARK: Impl multiline selection changes (up/down, and later page up/page down)
     /// Precondition: there has to be at least 2 rows.
     fn handle_two_lines(
         editor_buffer: &mut EditorBuffer,
-        previous_caret_display_position: Position,
-        current_caret_display_position: Position,
+        previous_caret_display_position: CaretScrAdj,
+        current_caret_display_position: CaretScrAdj,
     ) {
         let current = current_caret_display_position;
         let previous = previous_caret_display_position;
@@ -232,13 +235,13 @@ impl EditorBufferApi {
         }
 
         let locate_previous_row_index = editor_buffer
-            .get_selection_map()
+            .get_selection_list()
             .locate_row(previous.row_index);
         let locate_current_row_index = editor_buffer
-            .get_selection_map()
+            .get_selection_list()
             .locate_row(current.row_index);
         let has_caret_movement_direction_changed = editor_buffer
-            .get_selection_map()
+            .get_selection_list()
             .has_caret_movement_direction_changed(caret_vertical_movement_direction);
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
@@ -257,7 +260,7 @@ impl EditorBufferApi {
                     .magenta()
                     .on_dark_grey(),
                 /* selection_map */
-                d = format!("{:?}", editor_buffer.get_selection_map())
+                d = format!("{:?}", editor_buffer.get_selection_list())
                     .magenta()
                     .on_dark_grey(),
                 /* locate_previous_row_index */
@@ -423,17 +426,17 @@ impl EditorBufferApi {
     /// Precondition: there has to be at least 2 rows.
     pub fn handle_selection_multiline_caret_movement(
         editor_buffer: &mut EditorBuffer,
-        previous_caret_display_position: Position,
-        current_caret_display_position: Position,
+        prev_caret_scr_adj: CaretScrAdj,
+        curr_caret_scr_adj: CaretScrAdj,
     ) {
-        let current = current_caret_display_position;
-        let previous = previous_caret_display_position;
+        let curr = curr_caret_scr_adj;
+        let prev = prev_caret_scr_adj;
 
         // Validate preconditions.
         let caret_vertical_movement_direction =
             SelectionRange::caret_movement_direction_up_down(
-                previous.row_index,
-                current.row_index,
+                prev.row_index,
+                curr.row_index,
             );
         if let CaretMovementDirection::Overlap = caret_vertical_movement_direction {
             // Invalid state: There must be >= 2 rows, otherwise early return.
@@ -445,37 +448,45 @@ impl EditorBufferApi {
         match caret_vertical_movement_direction {
             // ```text
             // R ┌──────────┐
-            // 0 ▸C         │ ← Current caret
+            // 0 ❱C         │ ← Current caret
             // 1 │P         │ ← Previous caret
-            //   └▴─────────┘
+            //   └⮬─────────┘
             //   C0123456789
             // ```
             CaretMovementDirection::Up => {
-                for row_index in current.row_index.value..previous.row_index.value {
-                    let current_row_index = row_index;
-                    let previous_row_index = row_index + 1;
+                for row_index in curr.row_index.value..prev.row_index.value {
+                    let previous_row_index = row(row_index + 1);
+                    let prev_pos = prev.col_index + previous_row_index;
+
+                    let current_row_index = row(row_index);
+                    let curr_pos = curr.col_index + current_row_index;
+
                     Self::handle_two_lines(
                         editor_buffer,
-                        position!(col_index: previous.col_index, row_index: previous_row_index),
-                        position!(col_index: current.col_index, row_index: current_row_index),
+                        caret_scr_adj(prev_pos),
+                        caret_scr_adj(curr_pos),
                     );
                 }
             }
             // ```text
             // R ┌──────────┐
             // 0 │P         │ ← Previous caret
-            // 1 ▸C         │ ← Current caret
-            //   └▴─────────┘
+            // 1 ❱C         │ ← Current caret
+            //   └⮬─────────┘
             //   C0123456789
             // ```
             CaretMovementDirection::Down => {
-                for row_index in previous.row_index.value..current.row_index.value {
-                    let previous_row_index = row_index;
-                    let current_row_index = row_index + 1;
+                for row_index in prev.row_index.value..curr.row_index.value {
+                    let previous_row_index = row(row_index);
+                    let prev_pos = prev.col_index + previous_row_index;
+
+                    let current_row_index = row(row_index + 1);
+                    let curr_pos = curr.col_index + current_row_index;
+
                     Self::handle_two_lines(
                         editor_buffer,
-                        position!(col_index: previous.col_index, row_index: previous_row_index),
-                        position!(col_index: current.col_index, row_index: current_row_index),
+                        caret_scr_adj(prev_pos),
+                        caret_scr_adj(curr_pos),
                     );
                 }
             }
@@ -488,20 +499,20 @@ impl EditorBufferApi {
     /// but the caret might jump left or right.
     pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
         editor_buffer: &mut EditorBuffer,
-        previous_caret_display_position: Position,
-        current_caret_display_position: Position,
+        previous_caret_display_position: CaretScrAdj,
+        current_caret_display_position: CaretScrAdj,
     ) {
-        let current = current_caret_display_position;
-        let previous = previous_caret_display_position;
+        let curr = current_caret_display_position;
+        let prev = previous_caret_display_position;
 
         // Precondition check: Only run if the row previous and current row indices are same.
-        if current.row_index != previous.row_index {
+        if curr.row_index != prev.row_index {
             return;
         }
 
-        let row_index = current.row_index; // Same as previous.row_index.
+        let row_index = curr.row_index; // Same as previous.row_index.
 
-        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
+        let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
             let message = "📜🔼🔽 handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document";
@@ -513,13 +524,13 @@ impl EditorBufferApi {
                     .red()
                     .on_white(),
                 /* 1: previous */
-                b = format!("previous: {:?}", previous).cyan().on_dark_grey(),
+                b = format!("previous: {:?}", prev).cyan().on_dark_grey(),
                 /* 2: current */
-                c = format!("current: {:?}", current).yellow().on_dark_grey(),
+                c = format!("current: {:?}", curr).yellow().on_dark_grey(),
                 /* 3: row_index */
                 d = format!("row_index: {:?}", row_index).green().on_dark_grey(),
                 /* 4: selection_map */
-                e = format!("{:?}", editor_buffer_mut.selection_map)
+                e = format!("{:?}", buffer_mut.sel_list)
                     .magenta()
                     .on_dark_grey(),
             );
@@ -530,69 +541,68 @@ impl EditorBufferApi {
             }
         });
 
-        match current.col_index.cmp(&previous.col_index) {
+        match curr.col_index.cmp(&prev.col_index) {
             cmp::Ordering::Less => {
-                match editor_buffer_mut.selection_map.get(row_index) {
+                match buffer_mut.sel_list.get(row_index) {
                     // Extend range to left (caret moved up and hit the top).
                     Some(range) => {
-                        let start = ch(0);
-                        let end = range.end_display_col_index_scroll_adjusted;
-                        editor_buffer_mut.selection_map.insert(
+                        let start = col(0);
+                        let end = range.end_disp_col_idx_scr_adj;
+                        buffer_mut.sel_list.insert(
                             row_index,
                             SelectionRange {
-                                start_display_col_index_scroll_adjusted: start,
-                                end_display_col_index_scroll_adjusted: end,
+                                start_disp_col_idx_scr_adj: start,
+                                end_disp_col_idx_scr_adj: end,
                             },
-                            SelectionRange::caret_movement_direction(previous, current),
+                            SelectionRange::caret_movement_direction(prev, curr),
                         );
                     }
                     // Create range to left (caret moved up and hit the top).
                     None => {
-                        let start = ch(0);
-                        let end = previous.col_index;
-                        editor_buffer_mut.selection_map.insert(
+                        let start = col(0);
+                        let end = prev.col_index;
+                        buffer_mut.sel_list.insert(
                             row_index,
                             SelectionRange {
-                                start_display_col_index_scroll_adjusted: start,
-                                end_display_col_index_scroll_adjusted: end,
+                                start_disp_col_idx_scr_adj: start,
+                                end_disp_col_idx_scr_adj: end,
                             },
-                            SelectionRange::caret_movement_direction(previous, current),
+                            SelectionRange::caret_movement_direction(prev, curr),
                         );
                     }
                 }
             }
             cmp::Ordering::Greater => {
-                match editor_buffer_mut.selection_map.get(row_index) {
+                match buffer_mut.sel_list.get(row_index) {
                     // Extend range to right (caret moved down and hit bottom).
                     Some(range) => {
-                        if let Some(line_us) =
-                            editor_buffer_mut.lines.get(usize(row_index))
-                        {
-                            let start = range.start_display_col_index_scroll_adjusted;
-                            let end = line_us.display_width;
-                            editor_buffer_mut.selection_map.insert(
+                        if let Some(line_us) = buffer_mut.lines.get(usize(row_index)) {
+                            let start = range.start_disp_col_idx_scr_adj;
+                            // For selection, go one col index past the end of the line,
+                            // since selection range is not inclusive of the end index.
+                            let end =
+                                Caret::scroll_col_index_for_width(line_us.display_width);
+                            buffer_mut.sel_list.insert(
                                 row_index,
                                 SelectionRange {
-                                    start_display_col_index_scroll_adjusted: start,
-                                    end_display_col_index_scroll_adjusted: end,
+                                    start_disp_col_idx_scr_adj: start,
+                                    end_disp_col_idx_scr_adj: end,
                                 },
-                                SelectionRange::caret_movement_direction(
-                                    previous, current,
-                                ),
+                                SelectionRange::caret_movement_direction(prev, curr),
                             );
                         }
                     }
                     // Create range to right (caret moved down and hit bottom).
                     None => {
-                        let start = previous.col_index;
-                        let end = current.col_index;
-                        editor_buffer_mut.selection_map.insert(
+                        let start = prev.col_index;
+                        let end = curr.col_index;
+                        buffer_mut.sel_list.insert(
                             row_index,
                             SelectionRange {
-                                start_display_col_index_scroll_adjusted: start,
-                                end_display_col_index_scroll_adjusted: end,
+                                start_disp_col_idx_scr_adj: start,
+                                end_disp_col_idx_scr_adj: end,
                             },
-                            SelectionRange::caret_movement_direction(previous, current),
+                            SelectionRange::caret_movement_direction(prev, curr),
                         );
                     }
                 }
@@ -609,8 +619,8 @@ mod multiline_select_helpers {
     /// - Add first row selection range.
     /// - Add last row selection range.
     pub fn start_select_down(
-        previous: Position,
-        current: Position,
+        previous: CaretScrAdj,
+        current: CaretScrAdj,
         editor_buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
@@ -629,8 +639,8 @@ mod multiline_select_helpers {
     /// - Add first row selection range.
     /// - Add last row selection range.
     pub fn start_select_up(
-        previous: Position,
-        current: Position,
+        previous: CaretScrAdj,
+        current: CaretScrAdj,
         editor_buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
@@ -646,30 +656,38 @@ mod multiline_select_helpers {
     }
 
     fn add_first_and_last_row(
-        first: Position,
-        last: Position,
+        first: CaretScrAdj,
+        last: CaretScrAdj,
         editor_buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
-        let first_row_range = {
+        let first_row_range: SelectionRange = {
             let start_col = first.col_index;
-            let end_col = editor_buffer.get_line_display_width(first.row_index);
-            SelectionRange::new(start_col, end_col)
+            let end_col =
+                editor_buffer.get_line_display_width_at_row_index(first.row_index);
+
+            (
+                start_col,
+                // Go one col index past the end of the width, since selection range is
+                // not inclusive of end index.
+                Caret::scroll_col_index_for_width(end_col),
+            )
+                .into()
         };
 
-        let last_row_range = {
-            let start_col = ch(0);
+        let last_row_range: SelectionRange = {
+            let start_col = col(0);
             let end_col = last.col_index;
-            SelectionRange::new(start_col, end_col)
+            (start_col, end_col).into()
         };
 
-        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
-        editor_buffer_mut.selection_map.insert(
+        let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
+        buffer_mut.sel_list.insert(
             first.row_index,
             first_row_range,
             caret_vertical_movement_direction,
         );
-        editor_buffer_mut.selection_map.insert(
+        buffer_mut.sel_list.insert(
             last.row_index,
             last_row_range,
             caret_vertical_movement_direction,
@@ -680,30 +698,31 @@ mod multiline_select_helpers {
     /// - Add last row selection range.
     /// - Modify first row selection range.
     pub fn continue_select_down(
-        previous: Position,
-        current: Position,
+        previous: CaretScrAdj,
+        current: CaretScrAdj,
         editor_buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
         let first = previous;
         let last = current;
 
-        let first_line_width = editor_buffer.get_line_display_width(first.row_index);
+        let first_line_width =
+            editor_buffer.get_line_display_width_at_row_index(first.row_index);
 
         // Mutably borrow the selection map.
-        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
+        let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
 
         // Extend the existing range (in selection map) for the first row to end of line.
-        if let Some(first_row_range) =
-            editor_buffer_mut.selection_map.get(first.row_index)
-        {
-            let start_col = first_row_range.start_display_col_index_scroll_adjusted;
-            let end_col = first_line_width;
+        if let Some(first_row_range) = buffer_mut.sel_list.get(first.row_index) {
+            let start_col = first_row_range.start_disp_col_idx_scr_adj;
+            // Go one col index past the end of the width, since selection range is not
+            // inclusive of end index.
+            let end_col = Caret::scroll_col_index_for_width(first_line_width);
             let new_first_row_range = SelectionRange {
-                start_display_col_index_scroll_adjusted: start_col,
-                end_display_col_index_scroll_adjusted: end_col,
+                start_disp_col_idx_scr_adj: start_col,
+                end_disp_col_idx_scr_adj: end_col,
             };
-            editor_buffer_mut.selection_map.insert(
+            buffer_mut.sel_list.insert(
                 first.row_index,
                 new_first_row_range,
                 caret_vertical_movement_direction,
@@ -711,12 +730,12 @@ mod multiline_select_helpers {
         }
 
         // Add the new last row range to selection map.
-        let last_row_range = {
-            let start_col = ch(0);
+        let last_row_range: SelectionRange = {
+            let start_col = col(0);
             let end_col = last.col_index;
-            SelectionRange::new(start_col, end_col)
+            (start_col, end_col).into()
         };
-        editor_buffer_mut.selection_map.insert(
+        buffer_mut.sel_list.insert(
             last.row_index,
             last_row_range,
             caret_vertical_movement_direction,
@@ -727,42 +746,49 @@ mod multiline_select_helpers {
     /// - Add first row selection range.
     /// - Modify last row selection range.
     pub fn continue_select_up(
-        previous: Position,
-        current: Position,
+        previous: CaretScrAdj,
+        current: CaretScrAdj,
         editor_buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
         let first = current;
         let last = previous;
 
-        let first_line_width = editor_buffer.get_line_display_width(first.row_index);
+        let first_line_width =
+            editor_buffer.get_line_display_width_at_row_index(first.row_index);
 
         // Mutably borrow the selection map.
-        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
+        let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
 
         // FIRST ROW.
-        if let Some(first_row_range) =
-            editor_buffer_mut.selection_map.get(first.row_index)
-        {
+        if let Some(first_row_range) = buffer_mut.sel_list.get(first.row_index) {
             // Extend the existing range (in selection map) for the first row to end of line.
             let updated_first_row_range = SelectionRange {
-                start_display_col_index_scroll_adjusted: first_row_range
-                    .start_display_col_index_scroll_adjusted,
-                end_display_col_index_scroll_adjusted: first_line_width,
+                start_disp_col_idx_scr_adj: first_row_range.start_disp_col_idx_scr_adj,
+                end_disp_col_idx_scr_adj:
+                // Go one col index past the end of the width, since selection range is
+                // not inclusive of end index.
+                Caret::scroll_col_index_for_width(first_line_width),
             };
-            editor_buffer_mut.selection_map.insert(
+            buffer_mut.sel_list.insert(
                 first.row_index,
                 updated_first_row_range,
                 caret_vertical_movement_direction,
             );
         } else {
             // Add the new first row range to selection map.
-            let new_first_row_range = {
+            let new_first_row_range: SelectionRange = {
                 let start_col = first.col_index;
                 let end_col = first_line_width;
-                SelectionRange::new(start_col, end_col)
+                (
+                    start_col,
+                    // Go one col index past the end of the width, since selection range is
+                    // not inclusive of end index.
+                    Caret::scroll_col_index_for_width(end_col),
+                )
+                    .into()
             };
-            editor_buffer_mut.selection_map.insert(
+            buffer_mut.sel_list.insert(
                 first.row_index,
                 new_first_row_range,
                 caret_vertical_movement_direction,
@@ -770,28 +796,27 @@ mod multiline_select_helpers {
         }
 
         // LAST ROW.
-        if let Some(last_row_range) = editor_buffer_mut.selection_map.get(last.row_index)
-        {
+        if let Some(last_row_range) = buffer_mut.sel_list.get(last.row_index) {
             // Extend the existing range (in selection map) for the last row to start of line.
-            let start_col = ch(0);
-            let end_col = last_row_range.end_display_col_index_scroll_adjusted;
+            let start_col = col(0);
+            let end_col = last_row_range.end_disp_col_idx_scr_adj;
             let updated_last_row_range = SelectionRange {
-                start_display_col_index_scroll_adjusted: start_col,
-                end_display_col_index_scroll_adjusted: end_col,
+                start_disp_col_idx_scr_adj: start_col,
+                end_disp_col_idx_scr_adj: end_col,
             };
-            editor_buffer_mut.selection_map.insert(
+            buffer_mut.sel_list.insert(
                 last.row_index,
                 updated_last_row_range,
                 caret_vertical_movement_direction,
             );
         } else {
             // Add the new last row range to selection map.
-            let new_last_row_range = {
-                let start_col = ch(0);
+            let new_last_row_range: SelectionRange = {
+                let start_col = col(0);
                 let end_col = last.col_index;
-                SelectionRange::new(start_col, end_col)
+                (start_col, end_col).into()
             };
-            editor_buffer_mut.selection_map.insert(
+            buffer_mut.sel_list.insert(
                 last.row_index,
                 new_last_row_range,
                 caret_vertical_movement_direction,
@@ -803,8 +828,8 @@ mod multiline_select_helpers {
     /// - Drop the last row selection range.
     /// - Modify first row selection range.
     pub fn continue_direction_change_select_up(
-        previous: Position,
-        current: Position,
+        previous: CaretScrAdj,
+        current: CaretScrAdj,
         editor_buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
@@ -812,37 +837,31 @@ mod multiline_select_helpers {
         let last = previous;
 
         // Mutably borrow the selection map.
-        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
+        let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
 
         // Drop the existing range (in selection map) for the last row.
-        if editor_buffer_mut
-            .selection_map
-            .get(last.row_index)
-            .is_some()
-        {
-            editor_buffer_mut
-                .selection_map
+        if buffer_mut.sel_list.get(last.row_index).is_some() {
+            buffer_mut
+                .sel_list
                 .remove(last.row_index, caret_vertical_movement_direction);
         }
 
         // Change the existing range (in selection map) for the first row.
-        if let Some(first_row_range) =
-            editor_buffer_mut.selection_map.get(first.row_index)
-        {
-            let lhs = first_row_range.start_display_col_index_scroll_adjusted;
+        if let Some(first_row_range) = buffer_mut.sel_list.get(first.row_index) {
+            let lhs = first_row_range.start_disp_col_idx_scr_adj;
             let rhs = first.col_index;
             match lhs.cmp(&rhs) {
                 cmp::Ordering::Equal => {
-                    editor_buffer_mut
-                        .selection_map
+                    buffer_mut
+                        .sel_list
                         .remove(first.row_index, caret_vertical_movement_direction);
                 }
                 cmp::Ordering::Less | cmp::Ordering::Greater => {
-                    editor_buffer_mut.selection_map.insert(
+                    buffer_mut.sel_list.insert(
                         first.row_index,
                         SelectionRange {
-                            start_display_col_index_scroll_adjusted: lhs.min(rhs),
-                            end_display_col_index_scroll_adjusted: lhs.max(rhs),
+                            start_disp_col_idx_scr_adj: lhs.min(rhs),
+                            end_disp_col_idx_scr_adj: lhs.max(rhs),
                         },
                         caret_vertical_movement_direction,
                     );
@@ -855,8 +874,8 @@ mod multiline_select_helpers {
     /// - Drop the first row selection range.
     /// - Modify last row selection range.
     pub fn continue_direction_change_select_down(
-        previous: Position,
-        current: Position,
+        previous: CaretScrAdj,
+        current: CaretScrAdj,
         editor_buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
@@ -864,35 +883,30 @@ mod multiline_select_helpers {
         let last = current;
 
         // Mutably borrow the selection map.
-        let editor_buffer_mut = editor_buffer.get_mut(ch(0), ch(0));
+        let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
 
         // Drop the existing range (in selection map) for the first row.
-        if editor_buffer_mut
-            .selection_map
-            .get(first.row_index)
-            .is_some()
-        {
-            editor_buffer_mut
-                .selection_map
+        if buffer_mut.sel_list.get(first.row_index).is_some() {
+            buffer_mut
+                .sel_list
                 .remove(first.row_index, caret_vertical_movement_direction);
         }
 
         // Change the existing range (in selection map) for the last row.
-        if let Some(last_row_range) = editor_buffer_mut.selection_map.get(last.row_index)
-        {
+        if let Some(last_row_range) = buffer_mut.sel_list.get(last.row_index) {
             let lhs = last.col_index;
-            let rhs = last_row_range.end_display_col_index_scroll_adjusted;
+            let rhs = last_row_range.end_disp_col_idx_scr_adj;
             let row_index = last.row_index;
             match lhs.cmp(&rhs) {
-                cmp::Ordering::Equal => editor_buffer_mut
-                    .selection_map
+                cmp::Ordering::Equal => buffer_mut
+                    .sel_list
                     .remove(row_index, caret_vertical_movement_direction),
                 cmp::Ordering::Greater | cmp::Ordering::Less => {
-                    editor_buffer_mut.selection_map.insert(
+                    buffer_mut.sel_list.insert(
                         row_index,
                         SelectionRange {
-                            start_display_col_index_scroll_adjusted: rhs.min(lhs),
-                            end_display_col_index_scroll_adjusted: rhs.max(lhs),
+                            start_disp_col_idx_scr_adj: rhs.min(lhs),
+                            end_disp_col_idx_scr_adj: rhs.max(lhs),
                         },
                         caret_vertical_movement_direction,
                     )

@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{Position, RequestedSizePercent, Size, TuiStyle, VecArray};
+use r3bl_core::{Dim, Pos, RequestedSizePercent, TuiStyle, VecArray};
 
 use super::{FlexBoxId, LayoutDirection};
 
@@ -31,13 +31,21 @@ pub struct FlexBoxProps {
 /// Properties that are needed to create a [crate::Surface].
 #[derive(Clone, Debug, Default)]
 pub struct SurfaceProps {
-    pub pos: Position,
-    pub size: Size,
+    pub pos: Pos,
+    pub size: Dim,
 }
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{ok, position, requested_size_percent, size, CommonResult};
+    use r3bl_core::{col,
+                    height,
+                    ok,
+                    requested_size_percent,
+                    row,
+                    width,
+                    CommonResult,
+                    Dim,
+                    Pos};
     use smallvec::smallvec;
 
     use super::*;
@@ -77,17 +85,17 @@ mod tests {
     #[test]
     fn test_surface_props_default() {
         let props = SurfaceProps::default();
-        assert_eq!(props.pos, Position::default());
-        assert_eq!(props.size, Size::default());
+        assert_eq!(props.pos, Pos::default());
+        assert_eq!(props.size, Dim::default());
     }
 
     #[test]
     fn test_surface_props_custom() {
         let props = SurfaceProps {
-            pos: position!(col_index:10, row_index:20),
-            size: size!(col_count:30, row_count:40),
+            pos: col(10) + row(20),
+            size: width(30) + height(40),
         };
-        assert_eq!(props.pos, position!(col_index:10, row_index:20));
-        assert_eq!(props.size, size!(col_count:30, row_count:40));
+        assert_eq!(props.pos, col(10) + row(20));
+        assert_eq!(props.size, width(30) + height(40));
     }
 }

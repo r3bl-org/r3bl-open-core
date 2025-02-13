@@ -16,8 +16,9 @@
  */
 use r3bl_core::{call_if_true,
                 ch,
+                col,
                 glyphs,
-                position,
+                row,
                 send_signal,
                 string_storage,
                 throws_with_return,
@@ -183,7 +184,7 @@ mod single_column_component_impl_component_trait {
                 // Setup intermediate vars.
                 let box_origin_pos = current_box.style_adjusted_origin_pos; // Adjusted for style margin (if any).
                 let box_bounds_size = current_box.style_adjusted_bounds_size; // Adjusted for style margin (if any).
-                let mut content_cursor_pos = position! { col_index: 0 , row_index: 0 };
+                let mut content_cursor_pos = col(0) + row(0);
 
                 let mut render_ops = render_ops!();
 
@@ -217,7 +218,7 @@ mod single_column_component_impl_component_trait {
                       =>
                         RenderOp::MoveCursorPositionRelTo(
                           box_origin_pos,
-                          content_cursor_pos.add_row_with_bounds(ch(1), box_bounds_size.row_count)
+                          content_cursor_pos.add_row_with_bounds(ch(1), box_bounds_size.row_height)
                         ),
                         RenderOp::ApplyColors(current_box.get_computed_style()),
                     };
@@ -241,7 +242,7 @@ mod single_column_component_impl_component_trait {
                   =>
                     RenderOp::MoveCursorPositionRelTo(
                       box_origin_pos,
-                      content_cursor_pos.add_row_with_bounds(ch(1), box_bounds_size.row_count)
+                      content_cursor_pos.add_row_with_bounds(ch(1), box_bounds_size.row_height)
                     ),
                     if has_focus.does_current_box_have_focus(current_box) {
                       RenderOp::PaintTextWithAttributes("👀".into(), None)

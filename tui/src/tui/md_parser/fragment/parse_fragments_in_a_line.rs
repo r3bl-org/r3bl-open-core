@@ -43,7 +43,7 @@ use crate::{parse_fragment_plain_text_no_new_line,
             MdLineFragment,
             DEBUG_MD_PARSER};
 
-// BOOKM: Parser for a single line of markdown
+// XMARK: Parser for a single line of markdown
 
 /// Parse a single chunk of Markdown text (found in a single line of text) into a
 /// [MdLineFragment]. If there is no [crate::constants::NEW_LINE] character, then parse

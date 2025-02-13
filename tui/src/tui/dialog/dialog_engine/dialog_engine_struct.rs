@@ -17,20 +17,21 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{ch,
-                size,
+use r3bl_core::{get_terminal_width_no_default,
+                row,
                 u8,
+                width,
                 Ansi256GradientIndex,
-                ChUnit,
                 ColorWheel,
                 ColorWheelConfig,
                 ColorWheelSpeed,
+                RowHeight,
+                RowIndex,
                 Size,
                 TuiStyle};
 use smallvec::smallvec;
 
-use crate::{lookup_size,
-            DisplayConstants,
+use crate::{DisplayConstants,
             EditorEngine,
             EditorEngineConfig,
             PartialFlexBox,
@@ -70,8 +71,8 @@ pub struct DialogEngine {
         /* flex box calculated by render_engine(): */ PartialFlexBox,
     )>,
     pub maybe_surface_bounds: Option<SurfaceBounds>,
-    pub selected_row_index: ChUnit,
-    pub scroll_offset_row_index: ChUnit,
+    pub selected_row_index: RowIndex,
+    pub scroll_offset_row_index: RowIndex,
 }
 
 impl DialogEngine {
@@ -79,13 +80,10 @@ impl DialogEngine {
         dialog_options: DialogEngineConfigOptions,
         editor_options: EditorEngineConfig,
     ) -> Self {
-        // The col_count has to be large enough to fit the terminal width so that the gradient
-        // doesn't flicker. If for some reason the terminal width is not available, then we default
-        // to 250.
-        let Size {
-            col_count,
-            row_count: _,
-        } = lookup_size().unwrap_or(size!(col_count: 200, row_count: 0));
+        // The col_count has to be large enough to fit the terminal width so that the
+        // gradient doesn't flicker. If for some reason the terminal width is not
+        // available, then we default to 250.
+        let width_col_count = *get_terminal_width_no_default().unwrap_or(width(200));
 
         Self {
             dialog_options,
@@ -102,7 +100,7 @@ impl DialogEngine {
                         "#ff0000".into(), /* red */
                     ],
                     ColorWheelSpeed::Fast,
-                    u8(col_count + 50),
+                    u8(width_col_count + 50),
                 ),
                 // Ansi256 gradient.
                 ColorWheelConfig::Ansi256(
@@ -116,8 +114,8 @@ impl DialogEngine {
 
     /// Clean up any state in the engine, eg: selected_row_index or scroll_offset_row_index.
     pub fn reset(&mut self) {
-        self.selected_row_index = ch(0);
-        self.scroll_offset_row_index = ch(0);
+        self.selected_row_index = row(0);
+        self.scroll_offset_row_index = row(0);
     }
 }
 
@@ -125,7 +123,7 @@ impl DialogEngine {
 pub struct DialogEngineConfigOptions {
     pub mode: DialogEngineMode,
     /// Max height of the results panel.
-    pub result_panel_display_row_count: ChUnit,
+    pub result_panel_display_row_count: RowHeight,
     pub maybe_style_border: Option<TuiStyle>,
     pub maybe_style_title: Option<TuiStyle>,
     pub maybe_style_editor: Option<TuiStyle>,
@@ -133,13 +131,15 @@ pub struct DialogEngineConfigOptions {
 }
 
 mod dialog_engine_config_options_impl {
+    use r3bl_core::height;
+
     use super::*;
 
     impl Default for DialogEngineConfigOptions {
         fn default() -> Self {
             Self {
                 mode: DialogEngineMode::ModalSimple,
-                result_panel_display_row_count: ch(
+                result_panel_display_row_count: height(
                     DisplayConstants::DefaultResultsPanelRowCount as u16,
                 ),
                 maybe_style_border: None,

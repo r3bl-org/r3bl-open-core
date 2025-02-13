@@ -13,6 +13,7 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "s-nlf-fh.glassit", // GlassIt.
     "antfu.icons-carbon", // Carbon Icons (Intuitive product icons for symbols: fn, mod, etc).
     "pkief.material-icon-theme", // Material Icon Theme (Intuitive icons in file explorer).
     "bceskavich.theme-dracula-at-night", // Dracula at Night.
@@ -48,7 +49,6 @@
     "streetsidesoftware.code-spell-checker", // Code Spell Checker.
     "TheNuProjectContributors.vscode-nushell-lang", // Nushell.
     "fill-labs.dependi", // crates.io.
-    "s-nlf-fh.glassit", // GlassIt.
     "alefragnani.separators", // Separators, Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
     "bmalehorn.vscode-fish", // Fish.
     "huynhduong.nvtokyo-theme", // Tokyo Night NV Theme.

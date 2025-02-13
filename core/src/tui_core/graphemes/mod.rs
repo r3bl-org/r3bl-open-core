@@ -15,10 +15,28 @@
  *   limitations under the License.
  */
 
-//! A grapheme cluster is a user-perceived character.
+//! Rust uses `UTF-8` to represent text in [String]. `UTF-8` is a variable width encoding,
+//! so each character can take up a different number of bytes, between 1 and 4, and 1 byte
+//! is 8 bits; this is why we use [Vec] of [u8] to represent a [String].
 //!
-//! Rust uses `UTF-8` to represent text in `String`; so each character takes up 8 bits or
-//! one byte. Grapheme clusters can take up many more bytes, eg 4 bytes or 2 or 3, etc.
+//! For example, the character `H` takes up 1 byte. `UTF-8` is also backward compatible
+//! with `ASCII`, meaning that the first 128 characters (the ASCII characters) are
+//! represented using the same single byte as in ASCII. So the character `H` is
+//! represented by the same byte value in `UTF-8` as it is in `ASCII`. This is why `UTF-8`
+//! is so popular, as it allows for the representation of all the characters in the
+//! Unicode standard, while still being able to represent `ASCII` characters in the same
+//! way.
+//!
+//! A grapheme cluster is a user-perceived character. Grapheme clusters can take up many
+//! more bytes, eg 4 bytes or 2 or 3, etc. Here are some examples:
+//! - `😃` takes up 4 bytes.
+//! - `📦` also takes up 4 bytes.
+//! - `🙏🏽` takes up 4 bytes, but it is a compound grapheme cluster.
+//! - `H` takes up only 1 byte.
+//!
+//! Videos:
+//!
+//! - [Live coding video on Rust String](https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq)
 //!
 //! Docs:
 //!
@@ -26,13 +44,13 @@
 //!   clusters](https://medium.com/flutter-community/working-with-unicode-and-grapheme-clusters-in-dart-b054faab5705)
 //! - [UTF-8 String](https://doc.rust-lang.org/book/ch08-02-strings.html)
 //!
-//! There is a discrepancy between how a `String` that contains grapheme clusters is
+//! There is a discrepancy between how a [String] that contains grapheme clusters is
 //! represented in memory and how it is rendered in a terminal. When writing an TUI editor
 //! it is necessary to have a caret (cursor position) that the user can move by pressing
 //! up, down, left, right, etc. For left, this is assumed to move the caret or cursor one
 //! position to the left, regardless of how wide that character may be. Let's unpack that.
 //!
-//! 1. If we use byte boundaries in the `String` we can move the cursor one byte to the
+//! 1. If we use byte boundaries in the [String] we can move the cursor one byte to the
 //!    left.
 //! 2. This falls apart when we have a grapheme cluster.
 //! 3. A grapheme cluster can take up more than one byte, and they don't fall cleanly into
@@ -55,7 +73,7 @@
 //! 🏾‍ + 👨 + 🤝‍ + 👨 +  🏿 = 👨🏾‍🤝‍👨🏿
 //! ```
 //!
-//! Let's say you're browsing this source file in VSCode. The UTF-8 string this Rust
+//! Let's say you're browsing this source file in VSCode. The `UTF-8` string this Rust
 //! source file is rendered by VSCode correctly. But this is not how it looks in a
 //! terminal. And the size of the string in memory isn't clear either from looking at the
 //! string in VSCode. It isn't apparent that you can't just index into the string at byte
@@ -167,10 +185,10 @@
 
 // Attach sources.
 pub mod access;
-pub mod change;
 pub mod convert;
 pub mod grapheme_cluster_segment;
 pub mod ir_types;
+pub mod mutate;
 pub mod range;
 pub mod unicode_string;
 
@@ -180,6 +198,3 @@ pub use grapheme_cluster_segment::*;
 pub use ir_types::*;
 pub use range::*;
 pub use unicode_string::*;
-
-// Tests.
-mod test_unicode_string;

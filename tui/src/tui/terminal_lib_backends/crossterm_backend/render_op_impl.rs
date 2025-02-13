@@ -14,7 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::borrow::Cow;
 
 use crossterm::{self,
@@ -32,15 +31,17 @@ use crossterm::{self,
                            LeaveAlternateScreen}};
 use r3bl_core::{call_if_true,
                 LockedOutputDevice,
-                Position,
+                Pos,
                 Size,
                 TuiColor,
                 TuiStyle,
+                UnicodeString,
                 VecArray};
 use smallvec::smallvec;
 
 use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
             disable_raw_mode_now,
+            enable_raw_mode_now,
             flush_now,
             queue_render_op,
             sanitize_and_save_abs_position,
@@ -161,12 +162,11 @@ pub mod impl_trait_flush {
 
 mod impl_self {
     use super::*;
-    use crate::enable_raw_mode_now;
 
     impl RenderOpImplCrossterm {
         pub fn move_cursor_position_rel_to(
-            box_origin_pos: Position,
-            content_rel_pos: Position,
+            box_origin_pos: Pos,
+            content_rel_pos: Pos,
             window_size: Size,
             local_data: &mut RenderOpsLocalData,
             locked_output_device: LockedOutputDevice<'_>,
@@ -181,20 +181,23 @@ mod impl_self {
         }
 
         pub fn move_cursor_position_abs(
-            abs_pos: Position,
+            abs_pos: Pos,
             window_size: Size,
             local_data: &mut RenderOpsLocalData,
             locked_output_device: LockedOutputDevice<'_>,
         ) {
-            let Position {
-                col_index: col,
-                row_index: row,
+            let Pos {
+                col_index,
+                row_index,
             } = sanitize_and_save_abs_position(abs_pos, window_size, local_data);
+
+            let col = col_index.as_u16();
+            let row = row_index.as_u16();
 
             queue_render_op!(
                 locked_output_device,
-                format!("MoveCursorPosition(col: {}, row: {})", *col, *row),
-                MoveTo(*col, *row)
+                format!("MoveCursorPosition(col: {:?}, row: {:?})", col, row),
+                MoveTo(col, row)
             )
         }
 
@@ -337,8 +340,6 @@ mod impl_self {
 }
 
 mod perform_paint {
-    use r3bl_core::UnicodeString;
-
     use super::*;
 
     #[derive(Debug)]

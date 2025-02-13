@@ -70,7 +70,6 @@ pub mod render_op;
 pub mod render_pipeline;
 pub mod render_pipeline_to_offscreen_buffer;
 pub mod render_tui_styled_texts;
-pub mod terminal_lib_operations;
 pub mod termion_backend;
 pub mod z_order;
 
@@ -90,7 +89,6 @@ pub use render_op::*;
 pub use render_pipeline::*;
 pub use render_pipeline_to_offscreen_buffer::*;
 pub use render_tui_styled_texts::*;
-pub use terminal_lib_operations::*;
 pub use z_order::*;
 
 // Tests.

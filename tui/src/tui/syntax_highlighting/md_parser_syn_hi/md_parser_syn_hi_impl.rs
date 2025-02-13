@@ -106,7 +106,7 @@ pub fn try_parse_and_highlight(
     }
     let it = parse_markdown(&acc);
 
-    // BOOKM: Parse markdown from editor and render it
+    // XMARK: Parse markdown from editor and render it
     // Try and parse `editor_text_to_string` into a `Document`.
     match it {
         Ok((_remainder, document)) => Ok(StyleUSSpanLines::from_document(

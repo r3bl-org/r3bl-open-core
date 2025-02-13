@@ -17,10 +17,10 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{CommonResult, InputDevice, OutputDevice};
+use r3bl_core::{get_size, CommonResult, InputDevice, OutputDevice};
 
 use super::{main_event_loop_impl, BoxedSafeApp, GlobalData};
-use crate::{terminal_lib_operations, FlexBoxId, InputEvent};
+use crate::{FlexBoxId, InputEvent};
 
 pub struct TerminalWindow;
 
@@ -56,7 +56,7 @@ impl TerminalWindow {
         S: Debug + Default + Clone + Sync + Send,
         AS: Debug + Default + Clone + Sync + Send + 'static,
     {
-        let initial_size = terminal_lib_operations::lookup_size()?;
+        let initial_size = get_size()?;
         let input_device = InputDevice::new_event_stream();
         let output_device = OutputDevice::new_stdout();
 
