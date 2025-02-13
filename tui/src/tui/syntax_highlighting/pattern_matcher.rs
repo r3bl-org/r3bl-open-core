@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{ch, ChUnit, UnicodeString};
+use r3bl_core::{col, ColIndex, UnicodeString};
 
 #[derive(Debug)]
 pub enum CharacterMatchResult {
@@ -34,16 +34,16 @@ pub struct PatternMatcherStateMachine<'a> {
     pattern: &'a str,
     current_index: usize,
     is_finished: bool,
-    maybe_scroll_offset_col_index: Option<ChUnit>,
+    maybe_scr_ofs_col_index: Option<ColIndex>,
 }
 
 impl<'a> PatternMatcherStateMachine<'a> {
-    pub fn new(pattern: &'a str, scroll_offset_col_index: Option<ChUnit>) -> Self {
+    pub fn new(pattern: &'a str, scroll_offset_col_index: Option<ColIndex>) -> Self {
         Self {
             pattern,
             current_index: 0,
             is_finished: false,
-            maybe_scroll_offset_col_index: scroll_offset_col_index,
+            maybe_scr_ofs_col_index: scroll_offset_col_index,
         }
     }
 
@@ -54,9 +54,9 @@ impl<'a> PatternMatcherStateMachine<'a> {
             UnicodeString::char_display_width(character_to_test);
 
         // Skip the first "N" characters (these are display cols, so use the unicode width).
-        if let Some(scroll_offset_col_index) = self.maybe_scroll_offset_col_index {
-            if scroll_offset_col_index != ch(0) {
-                self.maybe_scroll_offset_col_index =
+        if let Some(scroll_offset_col_index) = self.maybe_scr_ofs_col_index {
+            if scroll_offset_col_index != col(0) {
+                self.maybe_scr_ofs_col_index =
                     (scroll_offset_col_index - character_to_test_width).into();
                 return CharacterMatchResult::Skip;
             }
@@ -135,18 +135,18 @@ mod tests {
             );
         }
 
-        let scroll_offset_col_index = UnicodeString::char_display_width('😃')
+        let scroll_offset_col_index = *(UnicodeString::char_display_width('😃')
             + UnicodeString::char_display_width('m')
             + UnicodeString::char_display_width('o')
             + UnicodeString::char_display_width('n')
             + UnicodeString::char_display_width('k')
             + UnicodeString::char_display_width('e')
-            + UnicodeString::char_display_width('y');
+            + UnicodeString::char_display_width('y'));
         assert_eq2!(scroll_offset_col_index, ch(8));
 
         let mut pattern_matcher = PatternMatcherStateMachine::new(
             my_pattern,
-            ch(scroll_offset_col_index).into(),
+            col(scroll_offset_col_index).into(),
         );
         let mut result = String::new();
 
@@ -179,8 +179,8 @@ mod tests {
     }
 
     /// ```text
-    ///       ┌→ match this
-    ///       │   ┌→ don't match this
+    ///       ⎛match this
+    ///       │   ⎛don't match this
     ///    ▒▒▒████▒▒▒▒
     /// R ┌───────────┐
     /// 0 │abcabcdabcd│
@@ -193,7 +193,7 @@ mod tests {
         let my_pattern = "abcd";
 
         let mut pattern_matcher =
-            PatternMatcherStateMachine::new(my_pattern, Some(ch(4)));
+            PatternMatcherStateMachine::new(my_pattern, Some(col(4)));
 
         let mut result = String::new();
         let mut final_index = 0;
@@ -227,8 +227,8 @@ mod tests {
     }
 
     /// ```text
-    ///       ┌→ match this
-    ///       │   ┌→ don't match this
+    ///       ⎛match this
+    ///       │   ⎛don't match this
     ///    ▒▒▒████▒▒▒▒
     /// R ┌───────────┐
     /// 0 │abcabcdabcd│

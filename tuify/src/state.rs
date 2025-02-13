@@ -16,7 +16,7 @@
  */
 
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_core::{ChUnit, Size};
+use r3bl_core::{ChUnit, Dim};
 
 use crate::{get_scroll_adjusted_row_index,
             locate_cursor_in_viewport,
@@ -40,7 +40,7 @@ pub struct State<'a> {
     /// This is used to determine if the terminal has been resized.
     pub resize_hint: Option<ResizeHint>,
     /// This is used to determine if the terminal has been resized.
-    pub window_size: Option<Size>,
+    pub window_size: Option<Dim>,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -83,22 +83,22 @@ mod tests {
 }
 
 impl CalculateResizeHint for State<'_> {
-    fn set_size(&mut self, new_size: Size) {
+    fn set_size(&mut self, new_size: Dim) {
         self.window_size = Some(new_size);
         self.clear_resize_hint();
     }
 
     fn get_resize_hint(&self) -> Option<ResizeHint> { self.resize_hint.clone() }
 
-    fn set_resize_hint(&mut self, new_size: Size) {
+    fn set_resize_hint(&mut self, new_size: Dim) {
         self.resize_hint = if let Some(old_size) = self.window_size {
             if new_size != old_size {
-                if (new_size.col_count > old_size.col_count)
-                    || (new_size.row_count > old_size.row_count)
+                if (new_size.col_width > old_size.col_width)
+                    || (new_size.row_height > old_size.row_height)
                 {
                     Some(ResizeHint::GotBigger)
-                } else if (new_size.col_count < old_size.col_count)
-                    || (new_size.row_count < old_size.row_count)
+                } else if (new_size.col_width < old_size.col_width)
+                    || (new_size.row_height < old_size.row_height)
                 {
                     Some(ResizeHint::GotSmaller)
                 } else {

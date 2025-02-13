@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023 R3BL LLC
+ *   Copyright (c) 2023-2025 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,26 +15,29 @@
  *   limitations under the License.
  */
 
-use crossterm::terminal::size;
 use miette::IntoDiagnostic;
 
-use crate::{ChUnit, ch, size::Size};
+use crate::{ColWidth, Size, height, width};
 
 pub const DEFAULT_WIDTH: u16 = 80;
 
-/// Get the terminal width. If there is a problem, return the default width.
-pub fn get_terminal_width() -> ChUnit {
+pub fn get_terminal_width_no_default() -> Option<ColWidth> {
     match get_size() {
-        Ok(size) => size.col_count,
-        Err(_) => ch(DEFAULT_WIDTH),
+        Ok(size) => Some(size.col_width),
+        Err(_) => None,
+    }
+}
+
+/// Get the terminal width. If there is a problem, return the default width.
+pub fn get_terminal_width() -> ColWidth {
+    match get_size() {
+        Ok(size) => size.col_width,
+        Err(_) => width(DEFAULT_WIDTH),
     }
 }
 
 /// Get the terminal size.
 pub fn get_size() -> miette::Result<Size> {
-    let (columns, rows) = size().into_diagnostic()?;
-    Ok(Size {
-        col_count: columns.into(),
-        row_count: rows.into(),
-    })
+    let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
+    Ok(width(columns) + height(rows))
 }

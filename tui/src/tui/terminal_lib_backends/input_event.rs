@@ -14,11 +14,10 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use crossterm::event::{Event::{self, FocusGained, FocusLost, Key, Mouse, Resize},
+use crossterm::event::{Event::{self},
                        KeyEvent,
                        MouseEvent};
-use r3bl_core::{size, Size};
+use r3bl_core::{height, width, Dim};
 
 use super::{KeyPress, MouseInput};
 
@@ -27,7 +26,7 @@ use super::{KeyPress, MouseInput};
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum InputEvent {
     Keyboard(KeyPress),
-    Resize(Size),
+    Resize(Dim),
     Mouse(MouseInput),
     Focus(FocusEvent),
 }
@@ -84,21 +83,19 @@ pub(crate) mod converters {
         /// Typecast / convert [Event] to [InputEvent].
         fn try_from(event: Event) -> Result<Self, Self::Error> {
             match event {
-                Key(key_event) => Ok(key_event.try_into()?),
-                Mouse(mouse_event) => Ok(mouse_event.into()),
-                Resize(cols, rows) => Ok((rows, cols).into()),
-                FocusGained => Ok(InputEvent::Focus(FocusEvent::Gained)),
-                FocusLost => Ok(InputEvent::Focus(FocusEvent::Lost)),
+                crossterm::event::Event::Key(key_event) => Ok(key_event.try_into()?),
+                crossterm::event::Event::Mouse(mouse_event) => Ok(mouse_event.into()),
+                crossterm::event::Event::Resize(columns, rows) => {
+                    Ok(InputEvent::Resize(width(columns) + height(rows)))
+                }
+                crossterm::event::Event::FocusGained => {
+                    Ok(InputEvent::Focus(FocusEvent::Gained))
+                }
+                crossterm::event::Event::FocusLost => {
+                    Ok(InputEvent::Focus(FocusEvent::Lost))
+                }
                 _ => Err(()),
             }
-        }
-    }
-
-    impl From<(/* rows: */ u16, /* cols: */ u16)> for InputEvent {
-        /// Typecast / convert [(u16, u16)] to [InputEvent::Resize].
-        fn from(size: (u16, u16)) -> Self {
-            let (rows, cols) = size;
-            InputEvent::Resize(size! { col_count: cols, row_count: rows })
         }
     }
 
@@ -109,6 +106,7 @@ pub(crate) mod converters {
 
     impl TryFrom<KeyEvent> for InputEvent {
         type Error = ();
+
         fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> {
             Ok(InputEvent::Keyboard(key_event.try_into()?))
         }

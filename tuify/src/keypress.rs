@@ -22,7 +22,7 @@ use crossterm::event::{read,
                        KeyEventKind,
                        KeyEventState,
                        KeyModifiers};
-use r3bl_core::{call_if_true, ch, Size};
+use r3bl_core::{call_if_true, height, width, Dim};
 
 use crate::DEVELOPMENT_MODE;
 
@@ -40,7 +40,7 @@ pub enum KeyPress {
     Noop,
     Error,
     Space,
-    Resize(Size),
+    Resize(Dim),
     CtrlC,
 }
 
@@ -68,11 +68,8 @@ fn read_key_press_unix() -> KeyPress {
             });
 
             match event {
-                crossterm::event::Event::Resize(width, height) => {
-                    KeyPress::Resize(Size {
-                        col_count: ch(width),
-                        row_count: ch(height),
-                    })
+                crossterm::event::Event::Resize(width_u16, height_u16) => {
+                    KeyPress::Resize(width(width_u16) + height(height_u16))
                 }
                 crossterm::event::Event::Key(KeyEvent {
                     modifiers: KeyModifiers::CONTROL,
@@ -162,10 +159,9 @@ fn read_key_press_windows() -> KeyPress {
                 }) => KeyPress::CtrlC,
 
                 // Resize.
-                Event::Resize(width, height) => KeyPress::Resize(Size {
-                    col_count: ch(width),
-                    row_count: ch(height),
-                }),
+                Event::Resize(width_u16, height_u16) => {
+                    KeyPress::Resize(width(width_u16) + height(height_u16))
+                }
 
                 // Catchall.
                 _ => KeyPress::Noop,

@@ -37,7 +37,7 @@ pub fn main() -> Result<()> {
     let all_questions_and_answers: Vec<QuestionData> =
         serde_json::from_str(json_data).unwrap();
     // Get display size.
-    let max_width_col_count = usize(get_terminal_width());
+    let max_width_col_count = usize(*get_terminal_width());
     let max_height_row_count: usize = 5;
 
     let mut score = 0;

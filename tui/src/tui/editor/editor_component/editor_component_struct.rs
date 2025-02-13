@@ -164,7 +164,7 @@ pub mod editor_component_impl_component_trait {
                         state, self_id,
                     );
 
-                // BOOKM: Editor component processes input event here
+                // XMARK: Editor component processes input event here
                 // Try to apply the `input_event` to `editor_engine` to decide whether to
                 // fire action.
                 let result = EditorEngineApi::apply_event(

@@ -20,14 +20,14 @@ use std::fmt::Debug;
 use crate::{DialogEngine, EditorBuffer, EditorEngine, FlexBoxId, GlobalData, HasFocus};
 
 pub struct RenderArgs<'a> {
-    pub editor_engine: &'a mut EditorEngine,
-    pub editor_buffer: &'a EditorBuffer,
+    pub engine: &'a mut EditorEngine,
+    pub buffer: &'a EditorBuffer,
     pub has_focus: &'a mut HasFocus,
 }
 
 pub struct EditorArgsMut<'a> {
-    pub editor_engine: &'a mut EditorEngine,
-    pub editor_buffer: &'a mut EditorBuffer,
+    pub engine: &'a mut EditorEngine,
+    pub buffer: &'a mut EditorBuffer,
 }
 
 /// [DialogEngine] args struct that holds references.
@@ -41,6 +41,6 @@ where
 {
     pub self_id: FlexBoxId,
     pub global_data: &'a mut GlobalData<S, AS>,
-    pub dialog_engine: &'a mut DialogEngine,
+    pub engine: &'a mut DialogEngine,
     pub has_focus: &'a mut HasFocus,
 }

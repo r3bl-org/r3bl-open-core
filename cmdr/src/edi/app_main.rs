@@ -17,15 +17,13 @@
 use crossterm::style::Stylize;
 use r3bl_core::{ANSIBasicColor,
                 Ansi256GradientIndex,
-                ChUnit,
                 ColorWheel,
                 ColorWheelConfig,
                 ColorWheelSpeed,
                 CommonError,
                 CommonResult,
+                Dim,
                 GradientGenerationPolicy,
-                Position,
-                Size,
                 StringStorage,
                 TextColorizationPolicy,
                 TuiColor,
@@ -33,13 +31,13 @@ use r3bl_core::{ANSIBasicColor,
                 TuiStylesheet,
                 UnicodeString,
                 call_if_true,
+                col,
                 get_tui_style,
-                get_tui_styles,
                 glyphs,
-                position,
+                height,
                 requested_size_percent,
+                row,
                 send_signal,
-                size,
                 throws,
                 throws_with_return,
                 tui_styled_text,
@@ -319,10 +317,9 @@ mod app_main_impl_app_trait {
                     let mut it = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
                     it.surface_start(SurfaceProps {
-                        pos: position!(col_index: 0, row_index: 0),
-                        size: size!(
-                            col_count: window_size.col_count,
-                            row_count: window_size.row_count - 1), // Bottom row for for status bar.
+                        pos: row(0) + col(0),
+                        size: window_size.col_width
+                            + (window_size.row_height - height(1)), // Bottom row for for status bar.
                     })?;
 
                     perform_layout::ContainerSurfaceRender { _app: self }
@@ -677,7 +674,7 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
+    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Dim) {
         let separator_style = tui_style!(
             attrib: [dim]
             color_fg: TuiColor::Basic(ANSIBasicColor::DarkGrey)
@@ -720,9 +717,9 @@ mod status_bar {
         };
 
         let display_width = styled_texts.display_width();
-        let col_center: ChUnit = (size.col_count - display_width) / 2;
-        let row_bottom: ChUnit = size.row_count - 1;
-        let center: Position = position!(col_index: col_center, row_index: row_bottom);
+        let col_center = *(size.col_width - display_width) / 2;
+        let row_bottom = size.row_height.convert_to_row_index();
+        let center = col(col_center) + row_bottom;
 
         let mut render_ops = render_ops!();
         render_ops.push(RenderOp::MoveCursorPositionAbs(center));

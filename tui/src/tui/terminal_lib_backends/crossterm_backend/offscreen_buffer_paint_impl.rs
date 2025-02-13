@@ -17,10 +17,12 @@
 
 use r3bl_core::{call_if_true,
                 ch,
+                col,
                 glyphs::SPACER_GLYPH as SPACER,
-                position,
-                ChUnit,
+                row,
+                ColIndex,
                 LockedOutputDevice,
+                RowIndex,
                 Size,
                 StringStorage,
                 TuiStyle,
@@ -137,7 +139,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
         // For each line in the offscreen buffer.
         for (row_index, line) in offscreen_buffer.buffer.iter().enumerate() {
-            context.clear_for_new_line(row_index);
+            context.clear_for_new_line(row(row_index));
 
             // For each pixel char in the line.
             for (pixel_char_index, pixel_char) in line.iter().enumerate() {
@@ -242,8 +244,8 @@ mod render_helpers {
 
     #[derive(Debug, Clone)]
     pub struct Context {
-        pub display_col_index_for_line: ChUnit,
-        pub display_row_index: ChUnit,
+        pub display_col_index_for_line: ColIndex,
+        pub display_row_index: RowIndex,
         // PERF: [ ] remove String
         pub buffer_plain_text: StringStorage,
         pub prev_style: Option<TuiStyle>,
@@ -253,18 +255,18 @@ mod render_helpers {
     impl Context {
         pub fn new() -> Self {
             Context {
-                display_col_index_for_line: ch(0),
+                display_col_index_for_line: col(0),
                 buffer_plain_text: StringStorage::new(),
                 render_ops: render_ops!(),
-                display_row_index: ch(0),
+                display_row_index: row(0),
                 prev_style: None,
             }
         }
 
-        pub fn clear_for_new_line(&mut self, row_index: usize) {
+        pub fn clear_for_new_line(&mut self, row_index: RowIndex) {
             self.buffer_plain_text.clear();
-            self.display_col_index_for_line = ch(0);
-            self.display_row_index = ch(row_index);
+            self.display_col_index_for_line = col(0);
+            self.display_row_index = row_index;
         }
     }
 
@@ -304,7 +306,7 @@ mod render_helpers {
 
     pub fn flush_plain_text_line_buffer(context: &mut Context) {
         // Generate `RenderOps` for each `PixelChar` and add it to `render_ops`.
-        let pos = position! { col_index: context.display_col_index_for_line, row_index: context.display_row_index };
+        let pos = context.display_col_index_for_line + context.display_row_index;
 
         // Deal w/ position.
         context
@@ -335,7 +337,7 @@ mod render_helpers {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, color, size, ANSIBasicColor};
+    use r3bl_core::{assert_eq2, color, height, width, ColWidth};
     use r3bl_macro::tui_style;
 
     use super::*;
@@ -343,7 +345,7 @@ mod tests {
 
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
-        let window_size = size! { col_count: 10, row_count: 2};
+        let window_size = width(10) + height(2);
         let mut my_offscreen_buffer =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
 
@@ -356,10 +358,10 @@ mod tests {
         let maybe_style = Some(
             tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
         );
-        my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
+        my_offscreen_buffer.my_pos = col(0) + row(0);
         my_offscreen_buffer.my_fg_color = Some(color!(@green));
         my_offscreen_buffer.my_bg_color = Some(color!(@blue));
-        let maybe_max_display_col_count: Option<ChUnit> = Some(10.into());
+        let maybe_max_display_col_count: Option<ColWidth> = Some(width(10));
         print_text_with_attributes(
             text,
             &maybe_style,
@@ -416,7 +418,7 @@ mod tests {
         assert_eq2!(render_ops[2], RenderOp::SetBgColor(color!(@blue)));
         assert_eq2!(
             render_ops[3],
-            RenderOp::MoveCursorPositionAbs(position! { col_index: 0, row_index: 0 })
+            RenderOp::MoveCursorPositionAbs(col(0) + row(0))
         );
         assert_eq2!(
             render_ops[4],
@@ -430,7 +432,7 @@ mod tests {
         assert_eq2!(render_ops[5], RenderOp::ResetColor);
         assert_eq2!(
             render_ops[6],
-            RenderOp::MoveCursorPositionAbs(position! { col_index: 9, row_index: 0 })
+            RenderOp::MoveCursorPositionAbs(col(9) + row(0))
         );
         assert_eq2!(
             render_ops[7],
@@ -438,7 +440,7 @@ mod tests {
         );
         assert_eq2!(
             render_ops[8],
-            RenderOp::MoveCursorPositionAbs(position! { col_index: 0, row_index: 1 })
+            RenderOp::MoveCursorPositionAbs(col(0) + row(1))
         );
         assert_eq2!(
             render_ops[9],

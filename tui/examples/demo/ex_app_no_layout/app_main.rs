@@ -16,26 +16,26 @@
  */
 use r3bl_core::{call_if_true,
                 ch,
+                col,
                 defaults::get_default_gradient_stops,
                 glyphs,
-                position,
+                row,
                 send_signal,
                 string_storage,
                 throws_with_return,
                 tui_styled_text,
                 tui_styled_texts,
+                width,
                 Ansi256GradientIndex,
-                ChUnit,
                 ColorChangeSpeed,
                 ColorWheel,
                 ColorWheelConfig,
                 ColorWheelSpeed,
                 CommonResult,
+                Dim,
                 GradientGenerationPolicy,
                 GradientLengthKind,
                 LolcatBuilder,
-                Position,
-                Size,
                 TextColorizationPolicy,
                 UnicodeString,
                 VecArray};
@@ -156,13 +156,19 @@ mod app_main_impl_trait_app {
 
                 let sample_line_of_text =
                     format!("{state_string}, gradient: [index: X, len: Y]");
-                let content_size_col = ChUnit::from(sample_line_of_text.len());
+                let content_size_col = width(sample_line_of_text.len());
                 let window_size = global_data.window_size;
                 let data = &mut self.data;
-                let col = (window_size.col_count - content_size_col) / 2;
-                let mut row =
-                    (window_size.row_count - ch(2) - ch(data.color_wheel_ansi_vec.len()))
-                        / 2;
+                let col_idx = col({
+                    let it = *window_size.col_width - *content_size_col;
+                    it / 2
+                });
+                let mut row_idx = row({
+                    let it = *window_size.row_height
+                        - ch(2)
+                        - ch(data.color_wheel_ansi_vec.len());
+                    it / 2
+                });
 
                 let mut pipeline = render_pipeline!();
 
@@ -190,10 +196,8 @@ mod app_main_impl_trait_app {
 
                         let text_us = UnicodeString::new(&text);
 
-                        acc_render_ops += RenderOp::MoveCursorPositionAbs(position!(
-                            col_index: col,
-                            row_index: row
-                        ));
+                        acc_render_ops +=
+                            RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
 
                         render_ops! {
                             @render_styled_texts_into acc_render_ops
@@ -205,15 +209,13 @@ mod app_main_impl_trait_app {
                             )
                         }
 
-                        row += 1;
+                        row_idx += row(1);
                     }
 
                     // Render using color_wheel_rgb.
                     {
-                        acc_render_ops += RenderOp::MoveCursorPositionAbs(position!(
-                            col_index: col,
-                            row_index: row
-                        ));
+                        acc_render_ops +=
+                            RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
 
                         let text = {
                             let index = data.color_wheel_rgb.get_index();
@@ -238,15 +240,13 @@ mod app_main_impl_trait_app {
                             )
                         }
 
-                        row += 1;
+                        row_idx += row(1);
                     }
 
                     // Render using lolcat_fg.
                     {
-                        acc_render_ops += RenderOp::MoveCursorPositionAbs(position!(
-                            col_index: col,
-                            row_index: row
-                        ));
+                        acc_render_ops +=
+                            RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
 
                         let text = {
                             string_storage!(
@@ -263,15 +263,13 @@ mod app_main_impl_trait_app {
                         );
                         render_tui_styled_texts_into(&texts, &mut acc_render_ops);
 
-                        row += 1;
+                        row_idx += row(1);
                     }
 
                     // Render using lolcat_bg.
                     {
-                        acc_render_ops += RenderOp::MoveCursorPositionAbs(position!(
-                            col_index: col,
-                            row_index: row
-                        ));
+                        acc_render_ops +=
+                            RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
 
                         let text = {
                             string_storage!(
@@ -288,7 +286,7 @@ mod app_main_impl_trait_app {
                         );
                         render_tui_styled_texts_into(&texts, &mut acc_render_ops);
 
-                        row += 1;
+                        row_idx += row(1);
                     }
 
                     acc_render_ops
@@ -542,7 +540,7 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {
+    pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Dim) {
         let styled_texts = tui_styled_texts! {
             tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
             tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit 🖖 "},
@@ -553,9 +551,9 @@ mod status_bar {
         };
 
         let display_width = styled_texts.display_width();
-        let col_center: ChUnit = (size.col_count - display_width) / 2;
-        let row_bottom: ChUnit = size.row_count - 1;
-        let center: Position = position!(col_index: col_center, row_index: row_bottom);
+        let col_center = *(size.col_width - display_width) / 2;
+        let row_bottom = size.row_height.convert_to_row_index();
+        let center = col(col_center) + row_bottom;
 
         let mut render_ops = render_ops!();
         render_ops.push(RenderOp::MoveCursorPositionAbs(center));

@@ -145,7 +145,7 @@ use std::io::Result;
 
 fn main() -> Result<()> {
     // Get display size.
-    let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch(80)).into();
+    let max_width_col_count: usize = (get_size().map(|it| *it.col_width).unwrap_or(ch(80))).into();
     let max_height_row_count: usize = 5;
 
     let user_input = select_from_list(
@@ -413,12 +413,12 @@ What does this do?
    subcommand. This subcommand requires 2 arguments: `--selection-mode` and
    `--command-to-run-with-each-selection`. Whew! This is getting long!
 1. `--selection-mode single` - sets the selection mode to `single`. This means that the
-    user can only select one item from the list. What list? The list that is piped in from
-    the previous command (ie, `cat TODO.todo`).
+   user can only select one item from the list. What list? The list that is piped in from
+   the previous command (ie, `cat TODO.todo`).
 1. `--command-to-run-with-each-selection "echo %"` - sets the command to run with each
-    selection. In this case, it is `echo %`. The `%` is a placeholder for the selected
-    item. So if the user selects `item 1`, then the command that will be run is `echo item
-    1`. The `echo` command simply prints the selected item to `stdout`.
+   selection. In this case, it is `echo %`. The `%` is a placeholder for the selected
+   item. So if the user selects `item 1`, then the command that will be run is `echo item
+   1`. The `echo` command simply prints the selected item to `stdout`.
 
 Now that is a lot to remember. It is helpful to use `clap` to provide nice command line help but
 that are still quite a few things that you have to get right for this command to work.
@@ -535,7 +535,7 @@ fn main() -> Result<()> {
     // let hot_pink_style = StyleSheet::hot_pink_style();
     let sea_foam_style = StyleSheet::sea_foam_style();
 
-    let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch(80)).into();
+    let max_width_col_count: usize = get_size().map(|it| *it.col_width).unwrap_or(ch(80)).into();
     let max_height_row_count: usize = 5;
 
     let user_input = select_from_list(

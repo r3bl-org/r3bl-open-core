@@ -17,16 +17,16 @@
 use std::fmt::Debug;
 
 use crossterm::style::Stylize;
-use r3bl_core::{glyphs::{CUT_GLYPH,
+use r3bl_core::{caret_scr_adj,
+                glyphs::{CUT_GLYPH,
                          DIRECTION_GLYPH,
                          ELLIPSIS_GLYPH,
                          TIRE_MARKS_GLYPH,
                          VERT_LINE_DASHED_GLYPH},
-                position,
                 usize,
                 CaretMovementDirection,
-                ChUnit,
-                Position,
+                CaretScrAdj,
+                RowIndex,
                 SelectionRange,
                 StringStorage,
                 VecArray};
@@ -45,8 +45,8 @@ mod sizing {
 /// range). This list is always sorted by row index.
 ///
 /// Note that both column indices are:
-/// - [Scroll adjusted](crate::editor_buffer_struct::CaretKind::ScrollAdjusted).
-/// - And not [raw](crate::editor_buffer_struct::CaretKind::Raw).
+/// - [r3bl_core::CaretScrAdj]
+/// - And not [r3bl_core::CaretRaw]
 #[derive(Clone, PartialEq, Default)]
 pub struct SelectionList {
     // REFACTOR: [x] consider making this a fixed size array (doesn't need to be a map which is heap allocated)
@@ -57,11 +57,9 @@ pub struct SelectionList {
 impl size_of::SizeOf for SelectionList {
     fn size_of_children(&self, context: &mut size_of::Context) {
         context.add(self.maybe_previous_direction.size_of().total_bytes());
-        context.add(self.list.size_of().total_bytes());
+        context.add(size_of_val(&self.list));
     }
 }
-
-pub type RowIndex = ChUnit;
 
 #[test]
 fn test_selection_map_direction_change() {
@@ -124,16 +122,19 @@ impl SelectionList {
     pub fn get_caret_at_start_of_range_scroll_adjusted(
         &self,
         _with: DeleteSelectionWith, /* Makes no difference for now. */
-    ) -> Option<Position> {
+    ) -> Option<CaretScrAdj> {
         // Row is the first row in the map.
         // Column is the last row of the range.
         let indices = self.get_ordered_indices();
         let first_row_index = indices.first()?;
         let last_row_index = indices.last()?;
-        Some(position!(
-            col_index: self.get(*last_row_index)?.start_display_col_index_scroll_adjusted,
-            row_index: *first_row_index
-        ))
+        let pos = {
+            let sel_range = self.get(*last_row_index)?;
+            let col_index = sel_range.start_disp_col_idx_scr_adj;
+            let row_index = *first_row_index;
+            col_index + row_index
+        };
+        Some(caret_scr_adj(pos))
     }
 
     pub fn get_selected_lines<'a>(
@@ -249,9 +250,9 @@ impl SelectionList {
     ///   selected, aka [RowLocationInSelectionList::Overflow].
     /// - Otherwise it means that some range of columns in that row is selected, aka
     ///   [RowLocationInSelectionList::Contained].
-    pub fn locate_row(&self, row_index_arg: ChUnit) -> RowLocationInSelectionList {
-        for (row_index, _range) in self.list.iter() {
-            if &row_index_arg == row_index {
+    pub fn locate_row(&self, query_row_index: RowIndex) -> RowLocationInSelectionList {
+        for (row_index, _) in self.list.iter() {
+            if &query_row_index == row_index {
                 return RowLocationInSelectionList::Contained;
             }
         }
@@ -323,8 +324,8 @@ mod impl_debug_format {
                             sep = VERT_LINE_DASHED_GLYPH,
                             row_idx = row_index,
                             dots = ELLIPSIS_GLYPH,
-                            col_start = selected_range.start_display_col_index_scroll_adjusted,
-                            col_end = selected_range.end_display_col_index_scroll_adjusted
+                            col_start = selected_range.start_disp_col_idx_scr_adj,
+                            col_end = selected_range.end_disp_col_idx_scr_adj
                         ));
                     }
                 }

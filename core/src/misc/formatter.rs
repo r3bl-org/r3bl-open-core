@@ -26,7 +26,7 @@ use crate::StringStorage;
 /// use r3bl_core::{fmt_option, FormatOptionMsg};
 ///
 /// struct FooStruct {
-///    pub insertion_pos_for_next_box: Option<r3bl_core::Position>,
+///    pub insertion_pos_for_next_box: Option<r3bl_core::Pos>,
 /// }
 ///
 /// impl std::fmt::Debug for FooStruct {
