@@ -16,11 +16,19 @@
  */
 
 // Attach.
-pub mod editor_engine_api;
-pub mod editor_engine_internal_api;
-pub mod editor_engine_struct;
+pub mod engine_internal_api;
+pub mod engine_public_api;
+pub mod engine_struct;
+pub mod scroll_editor_content;
+pub mod select_mode;
+pub mod validate_buffer_mut;
+pub mod validate_scroll_on_resize;
 
 // Re-export.
-pub use editor_engine_api::*;
-pub use editor_engine_internal_api::*;
-pub use editor_engine_struct::*;
+pub use engine_internal_api::*;
+pub use engine_public_api::*;
+pub use engine_struct::*;
+pub use scroll_editor_content::*;
+pub use select_mode::*;
+pub use validate_buffer_mut::*;
+pub use validate_scroll_on_resize::*;

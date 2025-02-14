@@ -35,7 +35,7 @@ use crate::{ChUnit, ColIndex, ch, col};
 /// case.
 ///
 /// There is a special case for scrolling horizontally, and creating a selection range,
-/// which is handled by [crate::Caret::scroll_col_index_for_width].
+/// which is handled by `r3bl_tui::caret_scroll_index::scroll_col_index_for_width()`.
 ///
 /// # Examples
 ///

@@ -19,13 +19,13 @@
 mod test_config_options {
     use r3bl_core::{assert_eq2, caret_scr_adj, col, row, UnicodeStringExt};
 
-    use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
+    use crate::{editor_engine::engine_internal_api,
+                system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::mock_real_objects_for_editor,
                 CaretDirection,
                 EditorBuffer,
                 EditorEngine,
                 EditorEngineConfig,
-                EditorEngineInternalApi,
                 EditorEvent,
                 LineMode,
                 DEFAULT_SYN_HI_FILE_EXT};
@@ -120,7 +120,7 @@ mod test_config_options {
             &mut TestClipboard::default(),
         );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
-        let maybe_line_str = EditorEngineInternalApi::line_at_caret_to_string(&buffer);
+        let maybe_line_str = engine_internal_api::line_at_caret_to_string(&buffer);
         assert_eq2!(maybe_line_str.unwrap(), &"abcaba".unicode_string());
     }
 }
@@ -140,12 +140,12 @@ mod test_editor_ops {
     use smallvec::smallvec;
 
     use crate::{editor::sizing::VecEditorContentLines,
+                editor_engine::engine_internal_api,
                 system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::{assert, mock_real_objects_for_editor},
                 CaretDirection,
                 EditorArgsMut,
                 EditorBuffer,
-                EditorEngineInternalApi,
                 EditorEvent,
                 DEFAULT_SYN_HI_FILE_EXT};
 
@@ -674,7 +674,7 @@ mod test_editor_ops {
 
         assert::none_is_at_caret(&buffer);
         assert_eq2!(
-            EditorEngineInternalApi::line_at_caret_to_string(&buffer,).unwrap(),
+            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap(),
             &"ab".unicode_string()
         );
 
@@ -772,7 +772,7 @@ mod test_editor_ops {
             &mut TestClipboard::default(),
         );
         assert_eq2!(
-            EditorEngineInternalApi::line_at_caret_to_string(&buffer,).unwrap(),
+            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap(),
             &"1a".unicode_string()
         );
         assert::str_is_at_caret(&buffer, "a");
@@ -819,7 +819,7 @@ mod test_editor_ops {
         );
         assert::str_is_at_caret(&buffer, "a");
         assert_eq2!(
-            EditorEngineInternalApi::line_at_caret_to_string(&buffer,).unwrap(),
+            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap(),
             &"12a".unicode_string()
         );
 
@@ -952,7 +952,7 @@ mod test_editor_ops {
         // 1 ❱b░        │
         //   └─⮬────────┘
         //   C0123456789
-        EditorEngineInternalApi::insert_new_line_at_caret(EditorArgsMut {
+        engine_internal_api::insert_new_line_at_caret(EditorArgsMut {
             buffer: &mut buffer,
             engine: &mut engine,
         });
@@ -1077,7 +1077,6 @@ mod test_editor_ops {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(0)));
     }
 
-    // REVIEW: [x] test copied from the in-between branch
     #[test]
     fn editor_move_caret_home_end_overflow_viewport() {
         let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);

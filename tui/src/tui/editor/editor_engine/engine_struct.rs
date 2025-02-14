@@ -32,12 +32,12 @@ use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox};
 ///    inside of the [crate::App].
 ///
 /// In order to change the document, you can use the
-/// [EditorEngineApi::apply_event](crate::EditorEngineApi::apply_event) method which takes
+/// [crate::engine_public_api::apply_event] method which takes
 /// [crate::InputEvent] and tries to convert it to an [crate::EditorEvent] and then execute them
 /// against this buffer.
 #[derive(Clone, Debug)]
 pub struct EditorEngine {
-    /// Set by [EditorEngineApi::render_engine](crate::EditorEngineApi::render_engine).
+    /// Set by [crate::engine_public_api::render_engine].
     pub current_box: PartialFlexBox,
     pub config_options: EditorEngineConfig,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.

@@ -14,6 +14,10 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+
+//! Functions that implement the event based API of the editor engine. See
+//! [mod@super::engine_internal_api] for the internal and functional API.
+
 use crossterm::style::Stylize;
 use r3bl_core::{call_if_true,
                 col,
@@ -28,7 +32,6 @@ use r3bl_core::{call_if_true,
                 usize,
                 usize_to_u8_array,
                 ANSIBasicColor,
-                Caret,
                 ColWidth,
                 CommonResult,
                 Dim,
@@ -45,9 +48,10 @@ use r3bl_core::{call_if_true,
 use r3bl_macro::tui_style;
 use syntect::easy::HighlightLines;
 
-use crate::{cache,
+use crate::{buffer_clipboard_support::ClipboardService,
+            cache,
+            caret_scroll_index,
             convert_syntect_to_styled_text,
-            editor_buffer_clipboard_support::ClipboardService,
             get_selection_style,
             history,
             render_ops,
@@ -78,382 +82,378 @@ use crate::{cache,
             DEBUG_TUI_SYN_HI,
             DEFAULT_CURSOR_CHAR};
 
-pub struct EditorEngineApi;
+/// Event based interface for the editor. This converts the [InputEvent] into an
+/// [EditorEvent] and then executes it. Returns a new [EditorBuffer] if the operation
+/// was applied otherwise returns [None].
+pub fn apply_event(
+    editor_buffer: &mut EditorBuffer,
+    editor_engine: &mut EditorEngine,
+    input_event: InputEvent,
+    clipboard_service_provider: &mut impl ClipboardService,
+) -> CommonResult<EditorEngineApplyEventResult> {
+    let editor_config = &editor_engine.config_options;
 
-impl EditorEngineApi {
-    /// Event based interface for the editor. This converts the [InputEvent] into an
-    /// [EditorEvent] and then executes it. Returns a new [EditorBuffer] if the operation
-    /// was applied otherwise returns [None].
-    pub fn apply_event(
-        editor_buffer: &mut EditorBuffer,
-        editor_engine: &mut EditorEngine,
-        input_event: InputEvent,
-        clipboard_service_provider: &mut impl ClipboardService,
-    ) -> CommonResult<EditorEngineApplyEventResult> {
-        let editor_config = &editor_engine.config_options;
-
-        if let EditMode::ReadOnly = editor_config.edit_mode {
-            if !input_event.matches_any_of_these_keypresses(&[
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Up),
-                },
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Down),
-                },
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Left),
-                },
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Right),
-                },
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Home),
-                },
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::End),
-                },
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::PageUp),
-                },
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::PageDown),
-                },
-            ]) {
-                return Ok(EditorEngineApplyEventResult::NotApplied);
-            }
-        }
-
-        if let Ok(editor_event) = EditorEvent::try_from(input_event) {
-            if editor_buffer.history.is_empty() {
-                history::push(editor_buffer);
-            }
-
-            EditorEvent::apply_editor_event(
-                editor_engine,
-                editor_buffer,
-                editor_event.clone(),
-                clipboard_service_provider,
-            );
-
-            match editor_event {
-                EditorEvent::InsertChar(_) => {
-                    history::push(editor_buffer);
-                }
-                EditorEvent::InsertString(_) => {
-                    history::push(editor_buffer);
-                }
-                EditorEvent::InsertNewLine => {
-                    history::push(editor_buffer);
-                }
-                EditorEvent::Delete => {
-                    history::push(editor_buffer);
-                }
-                EditorEvent::Backspace => {
-                    history::push(editor_buffer);
-                }
-                EditorEvent::Copy => {
-                    history::push(editor_buffer);
-                }
-                EditorEvent::Paste => {
-                    history::push(editor_buffer);
-                }
-                EditorEvent::Cut => {
-                    history::push(editor_buffer);
-                }
-                _ => {}
-            }
-            Ok(EditorEngineApplyEventResult::Applied)
-        } else {
-            Ok(EditorEngineApplyEventResult::NotApplied)
+    if let EditMode::ReadOnly = editor_config.edit_mode {
+        if !input_event.matches_any_of_these_keypresses(&[
+            KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Up),
+            },
+            KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Down),
+            },
+            KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Left),
+            },
+            KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Right),
+            },
+            KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Home),
+            },
+            KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::End),
+            },
+            KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::PageUp),
+            },
+            KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::PageDown),
+            },
+        ]) {
+            return Ok(EditorEngineApplyEventResult::NotApplied);
         }
     }
 
-    pub fn render_engine(
-        engine: &mut EditorEngine,
-        buffer: &mut EditorBuffer,
-        current_box: FlexBox,
-        has_focus: &mut HasFocus,
-        window_size: Size,
-    ) -> CommonResult<RenderPipeline> {
-        throws_with_return!({
-            engine.current_box = current_box.into();
+    if let Ok(editor_event) = EditorEvent::try_from(input_event) {
+        if editor_buffer.history.is_empty() {
+            history::push(editor_buffer);
+        }
 
-            if buffer.is_empty() {
-                EditorEngineApi::render_empty_state(RenderArgs {
-                    buffer,
-                    engine,
-                    has_focus,
-                })
-            } else {
-                let mut render_ops = render_ops!();
-
-                cache::render_content(
-                    buffer,
-                    engine,
-                    window_size,
-                    has_focus,
-                    &mut render_ops,
-                );
-
-                EditorEngineApi::render_selection(
-                    RenderArgs {
-                        buffer,
-                        engine,
-                        has_focus,
-                    },
-                    &mut render_ops,
-                );
-                EditorEngineApi::render_caret(
-                    RenderArgs {
-                        buffer,
-                        engine,
-                        has_focus,
-                    },
-                    &mut render_ops,
-                );
-
-                let mut render_pipeline = render_pipeline!();
-                render_pipeline.push(ZOrder::Normal, render_ops);
-                render_pipeline
-            }
-        })
-    }
-
-    pub fn render_content(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
-        let RenderArgs {
-            buffer: editor_buffer,
-            engine: editor_engine,
-            ..
-        } = render_args;
-        let Dim {
-            col_width: max_display_col_count,
-            row_height: max_display_row_count,
-        } = editor_engine.current_box.style_adjusted_bounds_size;
-
-        let syntax_highlight_enabled = matches!(
-            editor_engine.config_options.syntax_highlight,
-            SyntaxHighlightMode::Enable
+        EditorEvent::apply_editor_event(
+            editor_engine,
+            editor_buffer,
+            editor_event.clone(),
+            clipboard_service_provider,
         );
 
-        if !syntax_highlight_enabled {
-            no_syn_hi_path::render_content(
-                editor_buffer,
-                max_display_row_count,
-                render_ops,
-                editor_engine,
-                max_display_col_count,
-            );
-            return;
-        }
-
-        // XMARK: Render using syntect first, then custom MD parser.
-
-        call_if_true!(DEBUG_TUI_MOD, {
-            let message = format!(
-                "EditorEngineApi -> render_content() {ch}",
-                ch = glyphs::RENDER_GLYPH
-            );
-            // % is Display, ? is Debug.
-            tracing::info!(
-                message = message,
-                is_default_file_ext = %editor_buffer.is_file_extension_default(),
-                syn_hi_mode = ?editor_engine.config_options.syntax_highlight,
-                maybe_file_ext = ?editor_buffer.get_maybe_file_extension()
-            );
-        });
-
-        match editor_buffer.is_file_extension_default() {
-            // Render using custom MD parser.
-            true => syn_hi_r3bl_path::render_content(
-                editor_buffer,
-                max_display_row_count,
-                render_ops,
-                editor_engine,
-                max_display_col_count,
-            ),
-            // Render using syntect.
-            false => syn_hi_syntect_path::render_content(
-                editor_buffer,
-                max_display_row_count,
-                render_ops,
-                editor_engine,
-                max_display_col_count,
-            ),
-        };
-    }
-
-    // XMARK: Render selection
-    fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
-        let RenderArgs {
-            buffer: editor_buffer,
-            engine: editor_engine,
-            ..
-        } = render_args;
-
-        for (row_index, range_of_display_col_indices) in
-            editor_buffer.get_selection_list().iter()
-        {
-            let row_index = *row_index;
-            let lines = editor_buffer.get_lines();
-
-            let scroll_offset = editor_buffer.get_scr_ofs();
-
-            if let Some(line_us) = lines.get(usize(row_index)) {
-                // Take the scroll_offset into account when "slicing" the selection.
-                let selection_holder = match range_of_display_col_indices
-                    .locate_scroll_offset_col(scroll_offset)
-                {
-                    ScrollOffsetColLocationInRange::Underflow => {
-                        line_us.clip_to_range(*range_of_display_col_indices)
-                    }
-                    ScrollOffsetColLocationInRange::Overflow => {
-                        let scroll_offset_clipped_selection_range = SelectionRange {
-                            start_disp_col_idx_scr_adj: scroll_offset.col_index,
-                            ..*range_of_display_col_indices
-                        };
-                        line_us.clip_to_range(scroll_offset_clipped_selection_range)
-                    }
-                };
-
-                if selection_holder.is_empty() {
-                    continue;
-                }
-
-                call_if_true!(DEBUG_TUI_COPY_PASTE, {
-                    let selection_text = string_storage!("{}", selection_holder);
-                    let selection_text_fmt = style_prompt(&selection_text);
-                    let message = "🍉🍉🍉 selection_str_slice";
-                    let details = string_storage!(
-                        "\n\t{a}, \n\trange: {b:?}, \n\tscroll_offset: {c:?}",
-                        a = selection_text_fmt,
-                        b = range_of_display_col_indices,
-                        c = scroll_offset,
-                    );
-                    // % is Display, ? is Debug.
-                    tracing::debug! {
-                        message = %message,
-                        details = %details
-                    };
-                });
-
-                let position = {
-                    // Convert scroll adjusted to raw.
-                    let raw_row_index = {
-                        let row_scroll_offset = scroll_offset.row_index;
-                        row_index - row_scroll_offset
-                    };
-
-                    // Convert scroll adjusted to raw.
-                    let raw_col_index = {
-                        let col_scroll_offset = scroll_offset.col_index;
-                        range_of_display_col_indices.start_disp_col_idx_scr_adj
-                            - col_scroll_offset
-                    };
-
-                    raw_col_index + raw_row_index
-                };
-
-                render_ops.push(RenderOp::MoveCursorPositionRelTo(
-                    editor_engine.current_box.style_adjusted_origin_pos,
-                    position,
-                ));
-
-                render_ops.push(RenderOp::ApplyColors(Some(get_selection_style())));
-
-                render_ops.push(RenderOp::PaintTextWithAttributes(
-                    selection_holder.into(),
-                    None,
-                ));
-
-                render_ops.push(RenderOp::ResetColor);
+        match editor_event {
+            EditorEvent::InsertChar(_) => {
+                history::push(editor_buffer);
             }
+            EditorEvent::InsertString(_) => {
+                history::push(editor_buffer);
+            }
+            EditorEvent::InsertNewLine => {
+                history::push(editor_buffer);
+            }
+            EditorEvent::Delete => {
+                history::push(editor_buffer);
+            }
+            EditorEvent::Backspace => {
+                history::push(editor_buffer);
+            }
+            EditorEvent::Copy => {
+                history::push(editor_buffer);
+            }
+            EditorEvent::Paste => {
+                history::push(editor_buffer);
+            }
+            EditorEvent::Cut => {
+                history::push(editor_buffer);
+            }
+            _ => {}
         }
+        Ok(EditorEngineApplyEventResult::Applied)
+    } else {
+        Ok(EditorEngineApplyEventResult::NotApplied)
+    }
+}
+
+pub fn render_engine(
+    engine: &mut EditorEngine,
+    buffer: &mut EditorBuffer,
+    current_box: FlexBox,
+    has_focus: &mut HasFocus,
+    window_size: Size,
+) -> CommonResult<RenderPipeline> {
+    throws_with_return!({
+        engine.current_box = current_box.into();
+
+        if buffer.is_empty() {
+            render_empty_state(RenderArgs {
+                buffer,
+                engine,
+                has_focus,
+            })
+        } else {
+            let mut render_ops = render_ops!();
+
+            cache::render_content(
+                buffer,
+                engine,
+                window_size,
+                has_focus,
+                &mut render_ops,
+            );
+
+            render_selection(
+                RenderArgs {
+                    buffer,
+                    engine,
+                    has_focus,
+                },
+                &mut render_ops,
+            );
+            render_caret(
+                RenderArgs {
+                    buffer,
+                    engine,
+                    has_focus,
+                },
+                &mut render_ops,
+            );
+
+            let mut render_pipeline = render_pipeline!();
+            render_pipeline.push(ZOrder::Normal, render_ops);
+            render_pipeline
+        }
+    })
+}
+
+pub fn render_content(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
+    let RenderArgs {
+        buffer: editor_buffer,
+        engine: editor_engine,
+        ..
+    } = render_args;
+    let Dim {
+        col_width: max_display_col_count,
+        row_height: max_display_row_count,
+    } = editor_engine.current_box.style_adjusted_bounds_size;
+
+    let syntax_highlight_enabled = matches!(
+        editor_engine.config_options.syntax_highlight,
+        SyntaxHighlightMode::Enable
+    );
+
+    if !syntax_highlight_enabled {
+        no_syn_hi_path::render_content(
+            editor_buffer,
+            max_display_row_count,
+            render_ops,
+            editor_engine,
+            max_display_col_count,
+        );
+        return;
     }
 
-    fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
-        let RenderArgs {
-            buffer,
-            engine,
-            has_focus,
-        } = render_args;
+    // XMARK: Render using syntect first, then custom MD parser.
 
-        if has_focus.does_id_have_focus(engine.current_box.id) {
-            let str_at_caret = match buffer.string_at_caret() {
-                Some(UnicodeStringSegmentSliceResult { seg_text, .. }) => seg_text,
-                None => DEFAULT_CURSOR_CHAR.unicode_string(),
+    call_if_true!(DEBUG_TUI_MOD, {
+        let message = format!(
+            "EditorEngineApi -> render_content() {ch}",
+            ch = glyphs::RENDER_GLYPH
+        );
+        // % is Display, ? is Debug.
+        tracing::info!(
+            message = message,
+            is_default_file_ext = %editor_buffer.is_file_extension_default(),
+            syn_hi_mode = ?editor_engine.config_options.syntax_highlight,
+            maybe_file_ext = ?editor_buffer.get_maybe_file_extension()
+        );
+    });
+
+    match editor_buffer.is_file_extension_default() {
+        // Render using custom MD parser.
+        true => syn_hi_r3bl_path::render_content(
+            editor_buffer,
+            max_display_row_count,
+            render_ops,
+            editor_engine,
+            max_display_col_count,
+        ),
+        // Render using syntect.
+        false => syn_hi_syntect_path::render_content(
+            editor_buffer,
+            max_display_row_count,
+            render_ops,
+            editor_engine,
+            max_display_col_count,
+        ),
+    };
+}
+
+// XMARK: Render selection
+fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
+    let RenderArgs {
+        buffer: editor_buffer,
+        engine: editor_engine,
+        ..
+    } = render_args;
+
+    for (row_index, range_of_display_col_indices) in
+        editor_buffer.get_selection_list().iter()
+    {
+        let row_index = *row_index;
+        let lines = editor_buffer.get_lines();
+
+        let scroll_offset = editor_buffer.get_scr_ofs();
+
+        if let Some(line_us) = lines.get(usize(row_index)) {
+            // Take the scroll_offset into account when "slicing" the selection.
+            let selection_holder = match range_of_display_col_indices
+                .locate_scroll_offset_col(scroll_offset)
+            {
+                ScrollOffsetColLocationInRange::Underflow => {
+                    line_us.clip_to_range(*range_of_display_col_indices)
+                }
+                ScrollOffsetColLocationInRange::Overflow => {
+                    let scroll_offset_clipped_selection_range = SelectionRange {
+                        start_disp_col_idx_scr_adj: scroll_offset.col_index,
+                        ..*range_of_display_col_indices
+                    };
+                    line_us.clip_to_range(scroll_offset_clipped_selection_range)
+                }
+            };
+
+            if selection_holder.is_empty() {
+                continue;
+            }
+
+            call_if_true!(DEBUG_TUI_COPY_PASTE, {
+                let selection_text = string_storage!("{}", selection_holder);
+                let selection_text_fmt = style_prompt(&selection_text);
+                let message = "🍉🍉🍉 selection_str_slice";
+                let details = string_storage!(
+                    "\n\t{a}, \n\trange: {b:?}, \n\tscroll_offset: {c:?}",
+                    a = selection_text_fmt,
+                    b = range_of_display_col_indices,
+                    c = scroll_offset,
+                );
+                // % is Display, ? is Debug.
+                tracing::debug! {
+                    message = %message,
+                    details = %details
+                };
+            });
+
+            let position = {
+                // Convert scroll adjusted to raw.
+                let raw_row_index = {
+                    let row_scroll_offset = scroll_offset.row_index;
+                    row_index - row_scroll_offset
+                };
+
+                // Convert scroll adjusted to raw.
+                let raw_col_index = {
+                    let col_scroll_offset = scroll_offset.col_index;
+                    range_of_display_col_indices.start_disp_col_idx_scr_adj
+                        - col_scroll_offset
+                };
+
+                raw_col_index + raw_row_index
             };
 
             render_ops.push(RenderOp::MoveCursorPositionRelTo(
-                engine.current_box.style_adjusted_origin_pos,
-                *buffer.get_caret_raw(),
+                editor_engine.current_box.style_adjusted_origin_pos,
+                position,
             ));
+
+            render_ops.push(RenderOp::ApplyColors(Some(get_selection_style())));
+
             render_ops.push(RenderOp::PaintTextWithAttributes(
-                str_at_caret.string,
-                tui_style! { attrib: [reverse] }.into(),
+                selection_holder.into(),
+                None,
             ));
-            render_ops.push(RenderOp::MoveCursorPositionRelTo(
-                engine.current_box.style_adjusted_origin_pos,
-                *buffer.get_caret_raw(),
-            ));
+
             render_ops.push(RenderOp::ResetColor);
         }
     }
+}
 
-    pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
-        let RenderArgs {
-            has_focus,
-            engine: editor_engine,
-            ..
-        } = render_args;
-        let mut pipeline = render_pipeline!();
+fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
+    let RenderArgs {
+        buffer,
+        engine,
+        has_focus,
+    } = render_args;
 
-        // Only when the editor has focus.
-        if has_focus.does_id_have_focus(editor_engine.current_box.id) {
-            // Paint line 1.
-            render_pipeline! {
-                @push_into pipeline
-                at ZOrder::Normal
-                =>
-                RenderOp::MoveCursorPositionRelTo(
-                    editor_engine.current_box.style_adjusted_origin_pos,
-                    col(0) + row(0)
-                ),
-                RenderOp::ApplyColors(tui_style! {
-                    attrib: [dim]
-                    color_fg: TuiColor::Basic(ANSIBasicColor::Green)
-                }.into()),
-                RenderOp::PaintTextWithAttributes("📝 Please start typing your MD content.".into(), None),
-                RenderOp::ResetColor
-            };
+    if has_focus.does_id_have_focus(engine.current_box.id) {
+        let str_at_caret = match buffer.string_at_caret() {
+            Some(UnicodeStringSegmentSliceResult { seg_text, .. }) => seg_text,
+            None => DEFAULT_CURSOR_CHAR.unicode_string(),
+        };
 
-            // Paint line 2.
-            let mut content_cursor_pos = col(0) + row(0);
-            content_cursor_pos.add_row_with_bounds(
-                height(1),
-                editor_engine
-                    .current_box
-                    .style_adjusted_bounds_size
-                    .row_height,
-            );
-            render_pipeline! {
-              @push_into pipeline
-              at ZOrder::Normal
-              =>
-                RenderOp::MoveCursorPositionRelTo(
-                    editor_engine.current_box.style_adjusted_origin_pos,
-                    content_cursor_pos,
-                ),
-                RenderOp::ApplyColors(tui_style! {
-                    attrib: [dim]
-                    color_fg: TuiColor::Basic(ANSIBasicColor::DarkGrey)
-                }.into()),
-                RenderOp::PaintTextWithAttributes("🧭 Ctrl+S: Save your work. Ctrl+Q: Exit the app.".into(), None),
-                RenderOp::ResetColor
-            };
-        }
-
-        pipeline
+        render_ops.push(RenderOp::MoveCursorPositionRelTo(
+            engine.current_box.style_adjusted_origin_pos,
+            *buffer.get_caret_raw(),
+        ));
+        render_ops.push(RenderOp::PaintTextWithAttributes(
+            str_at_caret.string,
+            tui_style! { attrib: [reverse] }.into(),
+        ));
+        render_ops.push(RenderOp::MoveCursorPositionRelTo(
+            engine.current_box.style_adjusted_origin_pos,
+            *buffer.get_caret_raw(),
+        ));
+        render_ops.push(RenderOp::ResetColor);
     }
+}
+
+pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
+    let RenderArgs {
+        has_focus,
+        engine: editor_engine,
+        ..
+    } = render_args;
+    let mut pipeline = render_pipeline!();
+
+    // Only when the editor has focus.
+    if has_focus.does_id_have_focus(editor_engine.current_box.id) {
+        // Paint line 1.
+        render_pipeline! {
+            @push_into pipeline
+            at ZOrder::Normal
+            =>
+            RenderOp::MoveCursorPositionRelTo(
+                editor_engine.current_box.style_adjusted_origin_pos,
+                col(0) + row(0)
+            ),
+            RenderOp::ApplyColors(tui_style! {
+                attrib: [dim]
+                color_fg: TuiColor::Basic(ANSIBasicColor::Green)
+            }.into()),
+            RenderOp::PaintTextWithAttributes("📝 Please start typing your MD content.".into(), None),
+            RenderOp::ResetColor
+        };
+
+        // Paint line 2.
+        let mut content_cursor_pos = col(0) + row(0);
+        content_cursor_pos.add_row_with_bounds(
+            height(1),
+            editor_engine
+                .current_box
+                .style_adjusted_bounds_size
+                .row_height,
+        );
+        render_pipeline! {
+          @push_into pipeline
+          at ZOrder::Normal
+          =>
+            RenderOp::MoveCursorPositionRelTo(
+                editor_engine.current_box.style_adjusted_origin_pos,
+                content_cursor_pos,
+            ),
+            RenderOp::ApplyColors(tui_style! {
+                attrib: [dim]
+                color_fg: TuiColor::Basic(ANSIBasicColor::DarkGrey)
+            }.into()),
+            RenderOp::PaintTextWithAttributes("🧭 Ctrl+S: Save your work. Ctrl+Q: Exit the app.".into(), None),
+            RenderOp::ResetColor
+        };
+    }
+
+    pipeline
 }
 
 pub enum EditorEngineApplyEventResult {
@@ -528,7 +528,11 @@ mod syn_hi_r3bl_path {
                 let row_index = row(row_index);
 
                 // Clip the content to max rows.
-                if row_index > Caret::scroll_row_index_for_height(max_display_row_count) {
+                if row_index
+                    > caret_scroll_index::scroll_row_index_for_height(
+                        max_display_row_count,
+                    )
+                {
                     break;
                 }
 
@@ -584,7 +588,9 @@ mod syn_hi_syntect_path {
             let row_index = row(row_index);
 
             // Clip the content to max rows.
-            if row_index > Caret::scroll_row_index_for_height(max_display_row_count) {
+            if row_index
+                > caret_scroll_index::scroll_row_index_for_height(max_display_row_count)
+            {
                 break;
             }
 
@@ -694,7 +700,9 @@ mod no_syn_hi_path {
             let row_index = row(row_index);
 
             // Clip the content to max rows.
-            if row_index > Caret::scroll_row_index_for_height(max_display_row_count) {
+            if row_index
+                > caret_scroll_index::scroll_row_index_for_height(max_display_row_count)
+            {
                 break;
             }
 
@@ -790,7 +798,7 @@ mod test_cache {
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
         // Render the caret to screen. This should not change the content and result in a cache hit.
-        EditorEngineApi::render_caret(
+        render_caret(
             RenderArgs {
                 buffer: editor_buffer,
                 engine: editor_engine,
@@ -819,7 +827,7 @@ mod test_cache {
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
         // Render the selection of text to screen. This should not change the content and result in a cache hit.
-        EditorEngineApi::render_selection(
+        render_selection(
             RenderArgs {
                 buffer: editor_buffer,
                 engine: editor_engine,

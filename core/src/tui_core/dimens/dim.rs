@@ -92,16 +92,13 @@ use crate::{ChUnit, ColWidth, RowHeight};
 
 // Type aliases for better code readability.
 
-// REVIEW: [ ] drop aliases and rename the original structs to the alias names
 pub type Size = Dim;
 pub type Width = ColWidth;
 pub type Height = RowHeight;
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Dim {
-    // REVIEW: [ ] rename field to col_width
     pub col_width: ColWidth,
-    // REVIEW: [ ] rename field to row_height
     pub row_height: RowHeight,
 }
 
