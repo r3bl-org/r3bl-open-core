@@ -20,7 +20,6 @@
     "thiagolciobittencourt.omni-dracula-theme", // Omni Dracula Theme.
     "dracula-theme.theme-dracula", // Dracula Theme.
     "qwtel.sqlite-viewer", // SQLite Viewer.
-    "compulim.vscode-clock", // Clock.
     "keksiqc.idx-monospace-theme", // IDX Monospace Theme.
     "devgauravjatt.github-catppuccin-dark", // GitHub + Catppuccino Dark Theme.
     "bierner.emojisense", // Emoji Sense.
@@ -31,7 +30,6 @@
     "GitHub.github-vscode-theme", // Github Theme.
     "vadimcn.vscode-lldb", // LLDB. Debugger.
     "ms-vscode.cpptools", // C/C++. Debugger.
-    "ms-vscode.vscode-typescript-next", // Typescript Next.
     "mishkinf.goto-next-previous-member", // Go to Next/Previous Member.
     "github.copilot", // Github Copilot.
     "naumovs.color-highlight", // Color Highlight.
@@ -56,6 +54,8 @@
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript-next", // Typescript Next.
+    "compulim.vscode-clock", // Clock.
     "eamodio.gitlens", // GitLens by GitKraken.
     "mutantdino.resourcemonitor", // Resource Monitor.
     "huntertran.auto-markdown-toc", // Auto Markdown TOC.

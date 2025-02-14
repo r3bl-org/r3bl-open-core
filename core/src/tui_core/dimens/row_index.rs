@@ -50,8 +50,8 @@ mod constructor {
         pub fn as_u16(&self) -> u16 { self.0.into() }
 
         /// Add 1 to the index to convert it to a height. The intention of this function
-        /// is to meaningfully convert a [RowIndex] to a [RowHeight]. This is useful
-        /// in situations where you need to find what the height is at a given row index.
+        /// is to meaningfully convert a [RowIndex] to a [RowHeight]. This is useful in
+        /// situations where you need to find what the height is at this row index.
         pub fn convert_to_height(&self) -> RowHeight { height(self.0 + 1) }
     }
 

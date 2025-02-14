@@ -861,7 +861,7 @@ to render the list items in a way that is visually appealing.
 - The code for syntax highlighting is in [StyleUSSpanLines::from_document].
 
 Also, `syntect` crate is still used by the editor component
-[EditorEngineApi::render_engine] to syntax highlight the text inside code blocks of
+[engine_event_based_api::render_engine] to syntax highlight the text inside code blocks of
 Markdown documents.
 
 An alternative approach to doing this was considered using the crate `markdown-rs`,

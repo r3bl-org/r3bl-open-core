@@ -20,11 +20,11 @@ use std::fmt::Debug;
 use r3bl_core::{throws_with_return, CommonResult};
 use tokio::sync::mpsc::Sender;
 
-use crate::{BoxedSafeComponent,
+use crate::{editor_engine::engine_public_api,
+            BoxedSafeComponent,
             Component,
             EditorBuffer,
             EditorEngine,
-            EditorEngineApi,
             EditorEngineApplyEventResult,
             EditorEngineConfig,
             EventPropagation,
@@ -97,8 +97,7 @@ pub mod editor_component_impl_component_trait {
 
         fn get_id(&self) -> FlexBoxId { self.data.id }
 
-        /// This shim simply calls
-        /// [EditorEngineApi::render_engine](EditorEngineApi::render_engine) w/ all the
+        /// This shim simply calls [engine_public_api::render_engine] w/ all the
         /// necessary arguments:
         /// - Global scope: [GlobalData] containing app state.
         /// - Current box: [FlexBox] containing the current box's bounds.
@@ -123,7 +122,7 @@ pub mod editor_component_impl_component_trait {
                     state, self_id,
                 );
 
-            EditorEngineApi::render_engine(
+            engine_public_api::render_engine(
                 editor_engine,
                 editor_buffer,
                 current_box,
@@ -132,8 +131,7 @@ pub mod editor_component_impl_component_trait {
             )
         }
 
-        /// This shim simply calls
-        /// [EditorEngineApi::apply_event](EditorEngineApi::apply_event) w/ all the
+        /// This shim simply calls [engine_public_api::apply_event] w/ all the
         /// necessary arguments:
         /// - Global scope: [GlobalData] (containing app state).
         /// - User input (from [crate::main_event_loop]): [InputEvent].
@@ -167,7 +165,7 @@ pub mod editor_component_impl_component_trait {
                 // XMARK: Editor component processes input event here
                 // Try to apply the `input_event` to `editor_engine` to decide whether to
                 // fire action.
-                let result = EditorEngineApi::apply_event(
+                let result = engine_public_api::apply_event(
                     mut_editor_buffer,
                     editor_engine,
                     input_event,

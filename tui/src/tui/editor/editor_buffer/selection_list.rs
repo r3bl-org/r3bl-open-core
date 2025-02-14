@@ -57,7 +57,7 @@ pub struct SelectionList {
 impl size_of::SizeOf for SelectionList {
     fn size_of_children(&self, context: &mut size_of::Context) {
         context.add(self.maybe_previous_direction.size_of().total_bytes());
-        context.add(size_of_val(&self.list));
+        context.add(size_of_val(&self.list)); /* use for fields that can expand or contract */
     }
 }
 

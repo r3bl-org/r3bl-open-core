@@ -49,10 +49,9 @@ mod constructor {
         /// This is for use with [crossterm] crate.
         pub fn as_u16(&self) -> u16 { self.0.into() }
 
-        // REVIEW: [ ] EXPERIMENT!!! ADD TESTS!!! use this in inc_caret_col()
         /// Add 1 to the index to convert it to a width. The intention of this function is
         /// to meaningfully convert a [ColIndex] to a [ColWidth]. This is useful in
-        /// situations where you need to find what the width is at a given column index.
+        /// situations where you need to find what the width is at this row index.
         pub fn convert_to_width(&self) -> ColWidth { width(self.0 + 1) }
     }
 
@@ -249,15 +248,14 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_width() {
-        let col = ColIndex::new(5);
-        let wid = col.convert_to_width();
-        assert_eq!(wid, width(6));
-    }
-
-    #[test]
     fn test_as_u16() {
         let col = ColIndex::new(5);
         assert_eq!(col.as_u16(), 5);
+    }
+
+    #[test]
+    fn test_convert_to_width() {
+        let col = ColIndex::new(5);
+        assert_eq!(col.convert_to_width(), width(6));
     }
 }
