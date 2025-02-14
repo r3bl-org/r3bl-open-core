@@ -69,6 +69,10 @@ mod constructor {
     impl From<ChUnit> for ColWidth {
         fn from(ch_unit: ChUnit) -> Self { ColWidth(ch_unit) }
     }
+
+    impl From<usize> for ColWidth {
+        fn from(width: usize) -> Self { ColWidth(ch(width)) }
+    }
 }
 
 mod ops {
@@ -190,5 +194,10 @@ mod tests {
     #[test]
     fn test_convert_to_col_index() {
         assert_eq!(width(5).convert_to_col_index(), col(4));
+    }
+
+    #[test]
+    fn test_convert_from_usize() {
+        assert_eq!(ColWidth::from(5usize), width(5));
     }
 }
