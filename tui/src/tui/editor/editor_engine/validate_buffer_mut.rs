@@ -1,0 +1,186 @@
+/*
+ *   Copyright (c) 2025 R3BL LLC
+ *   All rights reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
+// REVIEW: [x] move this out into its own module
+
+use r3bl_core::{col, usize, width, CaretRaw, ColWidth, Dim, ScrOfs};
+
+use super::scroll_editor_content;
+use crate::{editor::sizing::VecEditorContentLines, EditorBuffer, SelectionList};
+
+pub struct EditorBufferMut<'a> {
+    pub lines: &'a mut VecEditorContentLines,
+    pub caret_raw: &'a mut CaretRaw,
+    pub scr_ofs: &'a mut ScrOfs,
+    pub sel_list: &'a mut SelectionList,
+    /// - Viewport width is optional because it's only needed for caret validation.
+    ///   And you can get it from [super::EditorEngine]. You can pass `0` if you don't have
+    ///   it.
+    /// - Viewport height is optional because it's only needed for caret validation.
+    ///   And you can get it from [super::EditorEngine]. You can pass `0` if you don't have
+    ///   it.
+    pub vp: Dim,
+}
+
+// XMARK: Clever Rust, use of Drop to perform transaction close / end.
+
+impl Drop for EditorBufferMut<'_> {
+    /// In addition to mutating the buffer, this function runs the following validations on the
+    /// [EditorBuffer]'s:
+    /// 1. `caret`:
+    ///    - the caret is in not in the middle of a unicode segment character.
+    ///    - if it is then it moves the caret.
+    /// 2. `scroll_offset`:
+    ///    - make sure that it's not in the middle of a wide unicode segment character.
+    ///    - if it is then it moves the scroll_offset and caret.
+    fn drop(&mut self) { perform_validation_checks_after_mutation(self); }
+}
+
+/// The drop implementation is split out into this separate function since that is how it
+/// used to be written in earlier versions of the codebase, it used to be called
+/// `apply_change()`. Also this function can be directly linked to in documentation.
+pub fn perform_validation_checks_after_mutation(arg: &mut EditorBufferMut<'_>) {
+    // Check caret validity.
+    adjust_caret_col_if_not_in_middle_of_grapheme_cluster(arg);
+    adjust_caret_col_if_not_in_bounds_of_line(arg);
+    // Check scroll_offset validity.
+    if let Some(diff) = is_scroll_offset_in_middle_of_grapheme_cluster(arg) {
+        adjust_scroll_offset_because_in_middle_of_grapheme_cluster(arg, diff);
+    }
+}
+
+impl<'a> EditorBufferMut<'a> {
+    pub fn new(
+        lines: &'a mut VecEditorContentLines,
+        caret_raw: &'a mut CaretRaw,
+        scr_ofs: &'a mut ScrOfs,
+        sel_list: &'a mut SelectionList,
+        vp: Dim,
+    ) -> Self {
+        Self {
+            lines,
+            caret_raw,
+            scr_ofs,
+            sel_list,
+            vp,
+        }
+    }
+
+    /// Returns the display width of the line at the caret (at it's scroll adjusted
+    /// row index).
+    pub fn get_line_display_width_at_caret_scr_adj_row_index(&self) -> ColWidth {
+        EditorBuffer::impl_get_line_display_width_at_caret_scr_adj(
+            *self.caret_raw,
+            *self.scr_ofs,
+            self.lines,
+        )
+    }
+}
+
+/// ```text
+///     0   4    9    1    2    2
+///                   4    0    5
+///    ┌────┴────┴────┴────┴────┴⮮─┤ col
+///  0 ┤     ├─      line     ─┤
+///  1 ❱     TEXT-TEXT-TEXT-TEXT ░❬───┐Caret is out of
+///  2 ┤         ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲  ⎝bounds of line.
+///    │         ├─    viewport   ─┤
+///    ┴
+///   row
+/// ```
+fn adjust_caret_col_if_not_in_bounds_of_line(
+    editor_buffer_mut: &mut EditorBufferMut<'_>,
+) {
+    // Check right side of line. Clip scroll adjusted caret to max line width.
+    let row_width = {
+        let line_display_width_at_caret_row =
+            editor_buffer_mut.get_line_display_width_at_caret_scr_adj_row_index();
+        let scr_ofs_col_index = editor_buffer_mut.scr_ofs.col_index;
+        width(*line_display_width_at_caret_row - *scr_ofs_col_index)
+    };
+
+    // Make sure that the col_index is within the bounds of the given line width.
+    let new_caret_col_index = col(std::cmp::min(
+        *editor_buffer_mut.caret_raw.col_index,
+        *row_width,
+    ));
+
+    editor_buffer_mut.caret_raw.col_index = new_caret_col_index;
+}
+
+pub fn is_scroll_offset_in_middle_of_grapheme_cluster(
+    editor_buffer_mut: &mut EditorBufferMut<'_>,
+) -> Option<ColWidth> {
+    let scroll_adjusted_caret = *editor_buffer_mut.caret_raw + *editor_buffer_mut.scr_ofs;
+
+    let line_at_caret = editor_buffer_mut
+        .lines
+        .get(usize(*scroll_adjusted_caret.row_index))?;
+
+    let display_width_of_str_at_caret = {
+        let str_at_caret = line_at_caret
+            .get_string_at_display_col_index(scroll_adjusted_caret.col_index);
+        match str_at_caret {
+            None => width(0),
+            Some(string_at_caret) => string_at_caret.seg_display_width,
+        }
+    };
+
+    if let Some(segment) = line_at_caret
+        .is_display_col_index_in_middle_of_grapheme_cluster(
+            editor_buffer_mut.scr_ofs.col_index,
+        )
+    {
+        let diff = segment.unicode_width - display_width_of_str_at_caret;
+        return Some(diff);
+    };
+
+    None
+}
+
+pub fn adjust_scroll_offset_because_in_middle_of_grapheme_cluster(
+    editor_buffer_mut: &mut EditorBufferMut<'_>,
+    diff: ColWidth,
+) -> Option<()> {
+    editor_buffer_mut.scr_ofs.col_index += diff;
+    editor_buffer_mut.caret_raw.col_index -= diff;
+    None
+}
+
+/// This function is visible inside the editor_ops.rs module only. It is not meant to
+/// be called directly, but instead is called by the [Drop] impl of [EditorBufferMut].
+pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
+    editor_buffer_mut: &mut EditorBufferMut<'_>,
+) -> Option<()> {
+    let caret_scr_adj = *editor_buffer_mut.caret_raw + *editor_buffer_mut.scr_ofs;
+    let row_index = caret_scr_adj.row_index;
+    let col_index = caret_scr_adj.col_index;
+    let line = editor_buffer_mut.lines.get(row_index.as_usize())?;
+
+    // Caret is in the middle of a grapheme cluster, so jump it.
+    let seg = line.is_display_col_index_in_middle_of_grapheme_cluster(col_index)?;
+
+    scroll_editor_content::set_caret_col_to(
+        seg.start_display_col_index + seg.unicode_width,
+        editor_buffer_mut.caret_raw,
+        editor_buffer_mut.scr_ofs,
+        editor_buffer_mut.vp.col_width,
+        line.display_width,
+    );
+
+    None
+}

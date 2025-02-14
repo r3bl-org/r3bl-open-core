@@ -35,7 +35,8 @@ use crate::{ChUnit, RowIndex, ch, row};
 /// case.
 ///
 /// There is a special case for scrolling vertically, and clipping rendering output to max
-/// display rows which is handled by [crate::Caret::scroll_row_index_for_height].
+/// display rows which is handled by
+/// `r3bl_tui::caret_scroll_index::scroll_row_index_for_height()`.
 ///
 /// # Examples
 ///

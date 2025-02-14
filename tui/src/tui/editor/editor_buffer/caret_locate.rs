@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{col, row, Caret};
+use r3bl_core::{col, row, ColIndex, ColWidth, RowHeight, RowIndex};
 
 use crate::EditorBuffer;
 
@@ -58,7 +58,7 @@ fn col_is_at_end_of_line(buffer: &EditorBuffer) -> bool {
     if buffer.line_at_caret_scr_adj().is_some() {
         let line_display_width = buffer.get_line_display_width_at_caret_scr_adj();
         buffer.get_caret_scr_adj().col_index
-            == Caret::scroll_col_index_for_width(line_display_width)
+            == caret_scroll_index::scroll_col_index_for_width(line_display_width)
     } else {
         false
     }
@@ -100,5 +100,53 @@ fn row_is_at_bottom_of_buffer(buffer: &EditorBuffer) -> bool {
         /* lines.len() - 1 is the last row index */
         let max_row_index = buffer.get_max_row_index();
         buffer.get_caret_scr_adj().row_index == max_row_index
+    }
+}
+
+pub mod caret_scroll_index {
+    use super::*;
+
+    /// The caret max index which is the scroll index goes 1 past the end of the given
+    /// width's index. Which just happens to be the same number as the given width.
+    ///
+    /// Equivalent to:
+    /// ```text
+    /// col_amt_index = col_amt - 1;
+    /// scroll_past_col_amt_index = col_amt_index + 1;
+    /// ```
+    ///
+    /// Here's an example:
+    /// ```text
+    /// R ┌──────────┐
+    /// 0 ▸hello░    │
+    ///   └─────▴────┘
+    ///   C0123456789
+    /// ```
+    pub fn scroll_col_index_for_width(col_amt: ColWidth) -> ColIndex {
+        col_amt.convert_to_col_index() /* -1 */ + col(1) /* +1 */
+    }
+
+    /// The caret max index which is the scroll index goes 1 past the end of the given
+    /// height's index. Which just happens to be the same number as the given height.
+    pub fn scroll_row_index_for_height(row_amt: RowHeight) -> RowIndex {
+        row_amt.convert_to_row_index() /* -1 */ + row(1) /* +1 */
+    }
+
+    #[test]
+    fn test_scroll_col_index_for_width() {
+        use r3bl_core::width;
+
+        let width = width(5);
+        let scroll_col_index = scroll_col_index_for_width(width);
+        assert_eq!(*scroll_col_index, *width);
+    }
+
+    #[test]
+    fn test_scroll_row_index_for_height() {
+        use r3bl_core::height;
+
+        let height = height(5);
+        let scroll_row_index = scroll_row_index_for_height(height);
+        assert_eq!(*scroll_row_index, *height);
     }
 }

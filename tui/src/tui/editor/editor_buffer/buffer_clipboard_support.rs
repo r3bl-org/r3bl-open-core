@@ -22,8 +22,8 @@ use r3bl_core::{call_if_true, usize, VecArrayStr};
 
 use super::EditorBuffer;
 use crate::{constants::NEW_LINE,
+            editor_engine::engine_internal_api,
             EditorArgsMut,
-            EditorEngineInternalApi,
             DEBUG_TUI_COPY_PASTE};
 
 pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
@@ -41,7 +41,7 @@ pub trait ClipboardService {
 pub fn copy_to_clipboard(
     buffer: &EditorBuffer,
     clipboard_service_provider: &mut impl ClipboardService,
-) -> Option<()> {
+) {
     let lines = buffer.get_lines();
     let sel_list = buffer.get_selection_list();
 
@@ -71,20 +71,18 @@ pub fn copy_to_clipboard(
             );
         });
     }
-
-    None
 }
 
 pub fn paste_from_clipboard(
     args: EditorArgsMut<'_>,
     clipboard_service_provider: &mut impl ClipboardService,
-) -> Option<()> {
+) {
     let result = clipboard_service_provider.try_to_get_content_from_clipboard();
     match result {
         Ok(clipboard_text) => {
             // If the clipboard text does not contain a new line, then insert the text.
             if !clipboard_text.contains(NEW_LINE) {
-                EditorEngineInternalApi::insert_str_at_caret(
+                engine_internal_api::insert_str_at_caret(
                     EditorArgsMut {
                         engine: args.engine,
                         buffer: args.buffer,
@@ -97,7 +95,7 @@ pub fn paste_from_clipboard(
                 let lines = clipboard_text.split(NEW_LINE);
                 let line_count = lines.clone().count();
                 for (line_index, line) in lines.enumerate() {
-                    EditorEngineInternalApi::insert_str_at_caret(
+                    engine_internal_api::insert_str_at_caret(
                         EditorArgsMut {
                             engine: args.engine,
                             buffer: args.buffer,
@@ -106,12 +104,10 @@ pub fn paste_from_clipboard(
                     );
                     // This is not the last line, so insert a new line.
                     if line_index < line_count - 1 {
-                        EditorEngineInternalApi::insert_new_line_at_caret(
-                            EditorArgsMut {
-                                engine: args.engine,
-                                buffer: args.buffer,
-                            },
-                        );
+                        engine_internal_api::insert_new_line_at_caret(EditorArgsMut {
+                            engine: args.engine,
+                            buffer: args.buffer,
+                        });
                     }
                 }
             }
@@ -133,6 +129,4 @@ pub fn paste_from_clipboard(
             });
         }
     }
-
-    None
 }

@@ -133,7 +133,7 @@ impl Default for UnicodeString {
 impl size_of::SizeOf for UnicodeString {
     fn size_of_children(&self, context: &mut size_of::Context) {
         /* vec_segment */
-        context.add(size_of_val(&self.vec_segment));
+        context.add(size_of_val(&self.vec_segment)); /* use for fields that can expand or contract */
         /* byte_size */
         context.add(std::mem::size_of::<usize>());
         /* grapheme_cluster_segment_count */

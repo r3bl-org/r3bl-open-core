@@ -46,9 +46,9 @@ use smallvec::{smallvec, SmallVec};
 
 use super::SelectionList;
 use crate::{caret_locate,
-            validate_editor_buffer_change::EditorBufferMut,
+            editor_engine::engine_public_api,
+            validate_buffer_mut::EditorBufferMut,
             EditorEngine,
-            EditorEngineApi,
             HasFocus,
             RenderArgs,
             RenderOps,
@@ -66,13 +66,12 @@ use crate::{caret_locate,
 /// # Modifying the buffer
 ///
 /// [crate::InputEvent] is converted into an [crate::EditorEvent] (by
-/// [EditorEngineApi]::[apply_event](EditorEngineApi::apply_event)), which is then used to
-/// modify the [EditorBuffer] via:
-/// 1. [EditorEvent::apply_editor_event](crate::EditorEvent::apply_editor_event)
-/// 2. [EditorEvent::apply_editor_events](crate::EditorEvent::apply_editor_events)
+/// [engine_public_api::apply_event], which is then used to modify the [EditorBuffer] via:
+/// 1. [crate::EditorEvent::apply_editor_event]
+/// 2. [crate::EditorEvent::apply_editor_events]
 ///
 /// In order for the commands to be executed, the functions in
-/// [crate::EditorEngineInternalApi] are used.
+/// [mod@crate::editor_engine::engine_internal_api] are used.
 ///
 /// These functions take any one of the following args:
 /// 1. [crate::EditorArgsMut]
@@ -84,8 +83,8 @@ use crate::{caret_locate,
 /// accessor associated functions. To mutate them, you have to use the
 /// [get_mut](EditorBuffer::get_mut) method, which returns a struct of mutable references
 /// to the fields. This struct [EditorBufferMut] implements the [Drop] trait, which allows
-/// for validation [crate::validate_editor_buffer_change] operations to be applied post
-/// mutation.
+/// for validation [crate::perform_validation_checks_after_mutation] operations to be
+/// applied post mutation.
 ///
 /// # Different kinds of caret positions
 ///
@@ -105,13 +104,18 @@ use crate::{caret_locate,
 ///
 /// A list of lines representing the document being edited.
 ///
-/// ## `caret_display_position`
+/// ## `caret_raw`
 ///
-/// This is the "display" (or `display_col_index`) and not "logical" (or `logical_index`)
-/// position (both are defined in [r3bl_core::tui_core::graphemes]). Please take a look at
-/// [r3bl_core::tui_core::graphemes::UnicodeString], specifically the methods in
-/// [r3bl_core::tui_core::graphemes::access] for more details on how the conversion
-/// between "display" and "logical" indices is done.
+/// This is the "display" col index (grapheme cluster based) and not "logical" col index
+/// (byte based) position (both are defined in [r3bl_core::tui_core::graphemes]).
+///
+/// > Please take a look at [r3bl_core::tui_core::graphemes::UnicodeString], specifically
+/// > the methods in [r3bl_core::tui_core::graphemes::access] for more details on how the
+/// > conversion between "display" and "logical" indices is done.
+/// >
+/// > This results from the fact that `UTF-8` is a variable width text encoding scheme,
+/// > that can use between 1 and 4 bytes to represent a single character. So the width a
+/// > human perceives and it's byte size in RAM can be different.
 ///
 /// 1. It represents the current caret position (relative to the
 ///    [style_adjusted_origin_pos](crate::FlexBox::style_adjusted_origin_pos) of the
@@ -144,7 +148,7 @@ use crate::{caret_locate,
 ///   C0123456789
 /// ```
 ///
-/// ## `scroll_offset`
+/// ## `scr_ofs`
 ///
 /// The col and row offset for scrolling if active. This is not marked pub in order to
 /// guard mutation. In order to access it, use [get_mut](EditorBuffer::get_mut).
@@ -215,9 +219,9 @@ pub(in crate::tui::editor) mod sizing {
 
     impl size_of::SizeOf for EditorContent {
         fn size_of_children(&self, context: &mut size_of::Context) {
-            context.add(size_of_val(&self.lines));
-            context.add(size_of_val(&self.maybe_file_extension));
-            context.add(size_of_val(&self.maybe_file_path));
+            context.add(size_of_val(&self.lines)); /* use for fields that can expand or contract */
+            context.add(size_of_val(&self.maybe_file_extension)); /* use for fields that can expand or contract */
+            context.add(size_of_val(&self.maybe_file_path)); /* use for fields that can expand or contract */
             context.add(self.caret_raw.size_of().total_bytes());
             context.add(self.scr_ofs.size_of().total_bytes());
             context.add(self.sel_list.size_of().total_bytes());
@@ -226,7 +230,7 @@ pub(in crate::tui::editor) mod sizing {
 
     impl size_of::SizeOf for EditorBufferHistory {
         fn size_of_children(&self, context: &mut size_of::Context) {
-            context.add(size_of_val(&self.versions));
+            context.add(size_of_val(&self.versions)); /* use for fields that can expand or contract */
             context.add(self.current_index.size_of().total_bytes());
         }
     }
@@ -336,7 +340,7 @@ pub mod cache {
         };
 
         // Re-render content, generate & write to render_ops.
-        EditorEngineApi::render_content(&render_args, render_ops);
+        engine_public_api::render_content(&render_args, render_ops);
 
         // Snapshot the render_ops in the cache.
         editor_buffer.render_cache.insert(key, render_ops.clone());

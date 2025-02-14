@@ -40,7 +40,8 @@ use r3bl_core::{ch,
                 UnicodeString,
                 UnicodeStringExt};
 
-use crate::{render_ops,
+use crate::{editor_engine::engine_public_api,
+            render_ops,
             render_pipeline,
             render_tui_styled_texts_into,
             BorderGlyphCharacter,
@@ -51,7 +52,6 @@ use crate::{render_ops,
             DialogEngineConfigOptions,
             DialogEngineMode,
             DialogEvent,
-            EditorEngineApi,
             EditorEngineApplyEventResult,
             EventPropagation,
             FlexBox,
@@ -238,7 +238,7 @@ impl DialogEngineApi {
             }
         };
 
-        let result = EditorEngineApi::apply_event(
+        let result = engine_public_api::apply_event(
             &mut dialog_buffer.editor_buffer,
             &mut dialog_engine.editor_engine,
             input_event,
@@ -452,7 +452,7 @@ mod internal_impl {
             }
         };
 
-        let mut pipeline = EditorEngineApi::render_engine(
+        let mut pipeline = engine_public_api::render_engine(
             &mut dialog_engine.editor_engine,
             &mut dialog_buffer.editor_buffer,
             flex_box,
