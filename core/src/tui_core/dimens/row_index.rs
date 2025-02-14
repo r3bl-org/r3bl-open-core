@@ -59,6 +59,10 @@ mod constructor {
         fn from(ch_unit: ChUnit) -> Self { RowIndex(ch_unit) }
     }
 
+    impl From<usize> for RowIndex {
+        fn from(val: usize) -> Self { RowIndex(val.into()) }
+    }
+
     impl From<RowIndex> for usize {
         fn from(row: RowIndex) -> Self { row.as_usize() }
     }
@@ -256,5 +260,10 @@ mod tests {
     fn test_as_u16() {
         let row = RowIndex::new(5);
         assert_eq!(row.as_u16(), 5);
+    }
+
+    #[test]
+    fn test_from_usize() {
+        assert_eq!(RowIndex::from(5usize), row(5));
     }
 }

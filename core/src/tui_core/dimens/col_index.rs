@@ -59,6 +59,10 @@ mod constructor {
         fn from(ch_unit: ChUnit) -> Self { ColIndex(ch_unit) }
     }
 
+    impl From<usize> for ColIndex {
+        fn from(val: usize) -> Self { ColIndex(val.into()) }
+    }
+
     impl From<ColIndex> for usize {
         fn from(col: ColIndex) -> Self { col.as_usize() }
     }
@@ -257,5 +261,10 @@ mod tests {
     fn test_convert_to_width() {
         let col = ColIndex::new(5);
         assert_eq!(col.convert_to_width(), width(6));
+    }
+
+    #[test]
+    fn test_convert_from_usize() {
+        assert_eq!(ColIndex::from(5usize), col(5));
     }
 }
