@@ -71,6 +71,10 @@ mod constructor {
     impl From<ChUnit> for RowHeight {
         fn from(ch_unit: ChUnit) -> Self { RowHeight(ch_unit) }
     }
+
+    impl From<usize> for RowHeight {
+        fn from(height: usize) -> Self { RowHeight(ch(height)) }
+    }
 }
 
 mod ops {
@@ -178,5 +182,10 @@ mod tests {
     #[test]
     fn test_convert_to_row_index() {
         assert_eq!(height(10).convert_to_row_index(), row(9));
+    }
+
+    #[test]
+    fn test_convert_from_usize() {
+        assert_eq!(RowHeight::from(10usize), height(10));
     }
 }
