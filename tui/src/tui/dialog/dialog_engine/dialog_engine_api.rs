@@ -721,8 +721,27 @@ mod internal_impl {
                 col_index + row_index
             };
 
-            let is_first_line = row_idx == 0;
-            let is_last_line = row_idx == u16(*bounds_size.row_height - ch(1));
+            enum IsFirstLine {
+                Yes,
+                No,
+            }
+
+            enum IsLastLine {
+                Yes,
+                No,
+            }
+
+            let is_first_line = if row_idx == 0 {
+                IsFirstLine::Yes
+            } else {
+                IsFirstLine::No
+            };
+
+            let is_last_line = if row_idx == u16(*bounds_size.row_height - ch(1)) {
+                IsLastLine::Yes
+            } else {
+                IsLastLine::No
+            };
 
             ops.push(RenderOp::ResetColor);
             ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
@@ -730,7 +749,7 @@ mod internal_impl {
 
             match (is_first_line, is_last_line) {
                 // First line.
-                (true, false) => {
+                (IsFirstLine::Yes, IsLastLine::No) => {
                     let text_content = format!(
                         "{}{}{}",
                         BorderGlyphCharacter::TopLeft.as_ref(),
@@ -750,7 +769,7 @@ mod internal_impl {
                 }
 
                 // Middle line.
-                (false, false) => {
+                (IsFirstLine::No, IsLastLine::No) => {
                     let text_content = format!(
                         "{}{}{}",
                         BorderGlyphCharacter::Vertical.as_ref(),
@@ -767,7 +786,7 @@ mod internal_impl {
                 }
 
                 // Last line.
-                (false, true) => {
+                (IsFirstLine::No, IsLastLine::Yes) => {
                     // Paint bottom border.
                     let text_content = format!(
                         "{}{}{}",

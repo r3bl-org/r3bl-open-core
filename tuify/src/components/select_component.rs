@@ -298,6 +298,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 let data_item = &state.items[data_row_index];
 
                 // Invert colors for selected items.
+                #[derive(Debug, Clone, Copy)]
                 enum SelectionStateStyle {
                     FocusedAndSelected,
                     Focused,
@@ -305,14 +306,35 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                     Unselected,
                 }
 
-                let is_selected = state.selected_items.contains(data_item);
-                let is_focused = ch(caret_row_scroll_adj) == state.get_focused_index();
+                #[derive(Debug, Clone, Copy)]
+                enum Select {
+                    Yes,
+                    No,
+                }
 
-                let selection_state = match (is_focused, is_selected) {
-                    (true, true) => SelectionStateStyle::FocusedAndSelected,
-                    (true, false) => SelectionStateStyle::Focused,
-                    (false, true) => SelectionStateStyle::Selected,
-                    (false, false) => SelectionStateStyle::Unselected,
+                #[derive(Debug, Clone, Copy)]
+                enum Focus {
+                    Yes,
+                    No,
+                }
+
+                let selected = if state.selected_items.contains(data_item) {
+                    Select::Yes
+                } else {
+                    Select::No
+                };
+
+                let focused = if ch(caret_row_scroll_adj) == state.get_focused_index() {
+                    Focus::Yes
+                } else {
+                    Focus::No
+                };
+
+                let selection_state = match (focused, selected) {
+                    (Focus::Yes, Select::Yes) => SelectionStateStyle::FocusedAndSelected,
+                    (Focus::Yes, Select::No) => SelectionStateStyle::Focused,
+                    (Focus::No, Select::Yes) => SelectionStateStyle::Selected,
+                    (Focus::No, Select::No) => SelectionStateStyle::Unselected,
                 };
 
                 let data_style = match selection_state {
@@ -325,7 +347,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 let row_prefix = match state.selection_mode {
                     SelectionMode::Single => {
                         let padding_left = " ".repeat(start_display_col_offset);
-                        if is_focused {
+                        if let Focus::Yes = focused {
                             format!("{padding_left} {SINGLE_SELECT_IS_SELECTED} ")
                         } else {
                             format!("{padding_left} {SINGLE_SELECT_IS_NOT_SELECTED} ")
@@ -333,17 +355,17 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                     }
                     SelectionMode::Multiple => {
                         let padding_left = " ".repeat(start_display_col_offset);
-                        match (is_focused, is_selected) {
-                            (true, true) => {
+                        match (focused, selected) {
+                            (Focus::Yes, Select::Yes) => {
                                 format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
                             }
-                            (true, false) => format!(
+                            (Focus::Yes, Select::No) => format!(
                                 "{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
                             ),
-                            (false, true) => format!(
+                            (Focus::No, Select::Yes) => format!(
                                 "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} "
                             ),
-                            (false, false) => format!(
+                            (Focus::No, Select::No) => format!(
                                 "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
                             ),
                         }

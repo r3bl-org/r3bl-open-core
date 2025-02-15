@@ -185,21 +185,40 @@ pub fn dec_caret_col_by(
     scr_ofs: &mut ScrOfs,
     col_amt: ColWidth,
 ) {
-    let horiz_scroll_active = scr_ofs.col_index > col(0);
-    let not_at_start_of_viewport = caret_raw.col_index > col(0);
+    enum HorizScr {
+        Active,
+        Inactive,
+    }
 
-    match (horiz_scroll_active, not_at_start_of_viewport) {
+    enum VpHorizPos {
+        AtSOL,
+        NotAtSOL,
+    }
+
+    let horiz_scr = if scr_ofs.col_index > col(0) {
+        HorizScr::Active
+    } else {
+        HorizScr::Inactive
+    };
+
+    let vp_horiz_pos = if caret_raw.col_index > col(0) {
+        VpHorizPos::NotAtSOL
+    } else {
+        VpHorizPos::AtSOL
+    };
+
+    match (horiz_scr, vp_horiz_pos) {
         // Scroll inactive. Simply move caret left by col_amt.
-        (false, _) => {
+        (HorizScr::Inactive, _) => {
             caret_raw.col_index -= col_amt;
         }
         // Scroll active & At start of viewport.
-        (true, false) => {
+        (HorizScr::Active, VpHorizPos::AtSOL) => {
             // Safe to sub, since scroll_offset.col_index can never be negative.
             scr_ofs.col_index -= col_amt;
         }
         // Scroll active & Not at start of viewport.
-        (true, true) => {
+        (HorizScr::Active, VpHorizPos::NotAtSOL) => {
             // The line below is equivalent to:
             // - Used to be: `col_amt > caret_raw.col_index`
             // - And `a > b` === `a >= b+1`
@@ -253,24 +272,41 @@ pub fn reset_caret_col(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) {
 /// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
 /// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
 pub fn dec_caret_row(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) -> RowIndex {
-    let vert_scroll_active = scr_ofs.row_index > row(0);
-    let not_at_top_of_viewport = caret_raw.row_index > row(0);
+    enum VertScr {
+        Active,
+        Inactive,
+    }
 
-    // REVIEW: [x] make sure this works
+    enum VpVertPos {
+        AtTop,
+        NotAtTop,
+    }
 
-    match (vert_scroll_active, not_at_top_of_viewport) {
+    let vert_scr = if scr_ofs.row_index > row(0) {
+        VertScr::Active
+    } else {
+        VertScr::Inactive
+    };
+
+    let vp_pos = if caret_raw.row_index > row(0) {
+        VpVertPos::AtTop
+    } else {
+        VpVertPos::NotAtTop
+    };
+
+    match (vert_scr, vp_pos) {
         // Vertical scroll inactive.
-        (false, _) => {
+        (VertScr::Inactive, _) => {
             // Scroll inactive.
             // Safe to minus 1, since caret.row_index can never be negative.
             caret_raw.row_index -= row(1);
         }
         // Scroll active & Not at top of viewport.
-        (true, true) => {
+        (VertScr::Active, VpVertPos::AtTop) => {
             caret_raw.row_index -= height(1);
         }
         // Scroll active & At top of viewport.
-        (true, false) => {
+        (VertScr::Active, VpVertPos::NotAtTop) => {
             // Safe to minus 1, since scroll_offset.row_index can never be negative.
             scr_ofs.row_index -= height(1);
         }
