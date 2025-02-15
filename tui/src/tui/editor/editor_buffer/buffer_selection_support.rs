@@ -36,7 +36,6 @@ use r3bl_core::{call_if_true,
 use super::{selection_list::RowLocationInSelectionList, EditorBuffer};
 use crate::{caret_scroll_index, DirectionChangeResult, DEBUG_TUI_COPY_PASTE};
 
-// REVIEW: [ ] this is public
 pub fn handle_selection_single_line_caret_movement(
     buffer: &mut EditorBuffer,
     row_index: RowIndex,
@@ -199,7 +198,6 @@ pub fn handle_selection_single_line_caret_movement(
 }
 
 /// Precondition: there has to be at least 2 rows.
-// REVIEW: [ ] this is public
 pub fn handle_selection_multiline_caret_movement(
     editor_buffer: &mut EditorBuffer,
     prev_caret_scr_adj: CaretScrAdj,
@@ -270,7 +268,6 @@ pub fn handle_selection_multiline_caret_movement(
 /// Special case to handle the situation where up / down movement has resulted in the top
 /// or bottom of the document to be hit, so that further movement up / down isn't possible,
 /// but the caret might jump left or right.
-// REVIEW: [ ] this is public
 pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
     editor_buffer: &mut EditorBuffer,
     previous_caret_display_position: CaretScrAdj,

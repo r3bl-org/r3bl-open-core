@@ -38,10 +38,6 @@ use r3bl_core::{ch,
 use super::{caret_mut, SelectMode};
 use crate::{caret_scroll_index, CaretDirection, EditorArgsMut, EditorBuffer};
 
-// REVIEW: [x] try remove add +1 or -1 from this file
-// REVIEW: [x] clean up the naming of the modules in this file (esp how it relates to editor buffer)
-// REVIEW: [x] move this out into its own module
-
 /// # Scrolling not active
 ///
 /// Note that a caret is allowed to "go past" the end of its max index, so max index +
@@ -85,8 +81,8 @@ use crate::{caret_scroll_index, CaretDirection, EditorArgsMut, EditorBuffer};
 /// - scr_ofs:   col(6) + row(0)
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::EditorBufferMut], which runs this function:
-/// [crate::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
 pub fn inc_caret_col_by(
     caret_raw: &mut CaretRaw,
     scr_ofs: &mut ScrOfs,
@@ -104,14 +100,12 @@ pub fn inc_caret_col_by(
     // The following are equivalent:
     // - caret_raw.col_index >= vp_width
     // - caret_raw.col_index > vp_width - 1 (aka vp_width.convert_to_col_index())
-    // REVIEW: [x] make sure this works (equivalent changed logic, not tested)
     let overflow_viewport_width =
-        caret_raw.col_index > vp_width.convert_to_col_index() /*-1*/;
+    caret_raw.col_index > vp_width.convert_to_col_index() /*-1*/;
 
     if overflow_viewport_width {
-        // REVIEW: [x] EXPERIMENT!!! remove dangling +1 using ColIndex::convert_to_width()
         // The following is equivalent to:
-        // `let diff_overflow = ch!(1) + caret_raw.col_index - vp_width;`
+        // `let diff_overflow = (caret_raw.col_index + ch!(1)) - vp_width;`
         let diff_overflow = caret_raw.col_index.convert_to_width() /*+1*/ - vp_width;
         scr_ofs.col_index += diff_overflow; // Activate horiz scroll.
         caret_raw.col_index -= diff_overflow; // Shift caret.
@@ -122,8 +116,8 @@ pub fn inc_caret_col_by(
 /// then scroll.
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::EditorBufferMut], which runs this function:
-/// [crate::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
 pub fn clip_caret_to_content_width(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
 
@@ -137,9 +131,8 @@ pub fn clip_caret_to_content_width(args: EditorArgsMut<'_>) {
     // The following are equivalent:
     // - col_index >= line_content_display_width
     // - col_index > line_content_display_width - 1
-    // REVIEW: [x] make sure this works (equivalent changed logic, not tested)
     let overflow_content_width =
-        caret_scr_adj.col_index > line_display_width.convert_to_col_index();
+        caret_scr_adj.col_index > line_display_width.convert_to_col_index() /*-1*/;
 
     if overflow_content_width {
         caret_mut::to_end_of_line(buffer, engine, SelectMode::Disabled);
@@ -147,8 +140,8 @@ pub fn clip_caret_to_content_width(args: EditorArgsMut<'_>) {
 }
 
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::EditorBufferMut], which runs this function:
-/// [crate::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
 pub fn set_caret_col_to(
     desired_col_index: ColIndex,
     caret_raw: &mut CaretRaw,
@@ -185,8 +178,8 @@ pub fn set_caret_col_to(
 /// scrolling is active.
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::EditorBufferMut], which runs this function:
-/// [crate::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
 pub fn dec_caret_col_by(
     caret_raw: &mut CaretRaw,
     scr_ofs: &mut ScrOfs,
@@ -207,7 +200,7 @@ pub fn dec_caret_col_by(
         }
         // Scroll active & Not at start of viewport.
         (true, true) => {
-            // REVIEW: [x] make sure this works
+            // The line below is equivalent to:
             // - Used to be: `col_amt > caret_raw.col_index`
             // - And `a > b` === `a >= b+1`
             let need_to_scroll_left = col_amt >= caret_raw.col_index.convert_to_width(); /*+1*/
@@ -223,8 +216,10 @@ pub fn dec_caret_col_by(
                     caret_raw.col_index -= col_amt;
 
                     // Move scroll left by diff.
-                    // REVIEW: [x] make sure this works (equivalent changed logic, not tested)
                     scr_ofs.col_index -= {
+                        // Due to scroll reasons, the `lhs` is the same value as the
+                        // `col_amt`, ie, it goes past the viewport width. See the
+                        // `scroll_col_index_for_width()` for more details.
                         let lhs = caret_scroll_index::scroll_col_index_for_width(col_amt);
                         let rhs = caret_raw.col_index;
                         lhs - rhs
@@ -236,8 +231,8 @@ pub fn dec_caret_col_by(
 }
 
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::EditorBufferMut], which runs this function:
-/// [crate::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
 pub fn reset_caret_col(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) {
     *scr_ofs.col_index = ch(0);
     *caret_raw.col_index = ch(0);
@@ -252,11 +247,11 @@ pub fn reset_caret_col(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) {
 ///
 /// > Since caret.row_index can never be negative, this function must handle changes to
 /// > scroll_offset itself, and can't rely on the validations in
-/// > [crate::perform_validation_checks_after_mutation].
+/// > [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::EditorBufferMut], which runs this function:
-/// [crate::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
 pub fn dec_caret_row(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) -> RowIndex {
     let vert_scroll_active = scr_ofs.row_index > row(0);
     let not_at_top_of_viewport = caret_raw.row_index > row(0);
@@ -383,8 +378,8 @@ pub fn clip_caret_row_to_content_height(
 /// caret.row_index goes past the viewport height.
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::EditorBufferMut], which runs this function:
-/// [crate::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
 pub fn inc_caret_row(
     caret: &mut CaretRaw,
     scroll_offset: &mut ScrOfs,

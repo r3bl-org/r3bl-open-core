@@ -15,8 +15,9 @@
  *   limitations under the License.
  */
 
-//! Functions that implement the event based API of the editor engine. See
-//! [mod@super::engine_internal_api] for the internal and functional API.
+//! Functions that implement the public (re-exported in `mod.rs`) event based API of the
+//! editor engine. See [mod@super::engine_internal_api] for the internal and functional
+//! API.
 
 use crossterm::style::Stylize;
 use r3bl_core::{call_if_true,

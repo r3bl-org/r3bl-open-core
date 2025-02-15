@@ -83,8 +83,8 @@ use crate::{caret_locate,
 /// accessor associated functions. To mutate them, you have to use the
 /// [get_mut](EditorBuffer::get_mut) method, which returns a struct of mutable references
 /// to the fields. This struct [EditorBufferMut] implements the [Drop] trait, which allows
-/// for validation [crate::perform_validation_checks_after_mutation] operations to be
-/// applied post mutation.
+/// for validation [crate::validate_buffer_mut::perform_validation_checks_after_mutation]
+/// operations to be applied post mutation.
 ///
 /// # Different kinds of caret positions
 ///
@@ -408,6 +408,10 @@ pub mod content {
 
     // Relating to content around the caret.
     impl EditorBuffer {
+        pub fn line_at_caret_is_empty(&self) -> bool {
+            self.get_line_display_width_at_caret_scr_adj() == width(0)
+        }
+
         pub fn line_at_caret_scr_adj(&self) -> Option<&UnicodeString> {
             if self.is_empty() {
                 return None;
