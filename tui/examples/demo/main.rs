@@ -37,7 +37,7 @@ use std::str::FromStr as _;
 
 use crossterm::style::Stylize as _;
 use miette::IntoDiagnostic as _;
-use r3bl_core::{ok, style_prompt, throws, CommonError, CommonResult};
+use r3bl_core::{get_size, ok, style_prompt, throws, CommonError, CommonResult};
 use r3bl_log::log_support::try_initialize_logging_global;
 use r3bl_terminal_async::{ReadlineEvent, TerminalAsync};
 use r3bl_tui::{keypress, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
@@ -190,9 +190,11 @@ enum AutoCompleteCommand {
 }
 
 fn generate_help_msg() -> String {
+    let window_size = get_size().unwrap_or_default();
     format!(
         "\
 Welcome to the R3BL TUI demo app.
+Window size: {window_size:?}
 Type a number to run corresponding example:
   0. 📏 {}
   1. 📐 {}
