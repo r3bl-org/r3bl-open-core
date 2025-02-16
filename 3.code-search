@@ -1,0 +1,40 @@
+# Query: (NAV:|REVIEW:|CS:)
+# Flags: CaseSensitive RegExp
+# ContextLines: 1
+
+7 results - 7 files
+
+tui/src/tui/editor/editor_engine/scroll_editor_content.rs:
+  430      let at_bottom_of_viewport =
+  431:         // REVIEW: [x] make sure this works (equivalent changed logic, not tested)
+  432          //
+
+tui/src/tui/editor/editor_engine/validate_buffer_mut.rs:
+  17  
+  18: // REVIEW: [x] move this out into its own module
+  19  
+
+tui/src/tui/editor/editor_engine/validate_scroll_on_resize.rs:
+  95  
+  96:     // REVIEW: [ ] replace use of bool w/ enum
+  97      match (is_caret_row_within_viewport, is_caret_row_above_viewport) {
+
+tui/src/tui/terminal_lib_backends/modifier_keys_mask.rs:
+  84      pub fn matches(&self, other: KeyModifiers) -> MatchResult {
+  85:         // REVIEW: [ ] replace use of bool w/ enum
+  86          match (
+
+tui/src/tui/terminal_lib_backends/paint.rs:
+  173  
+  174:     // REVIEW: [ ] sanitize_and_save_abs_position verify correct w/ offscreen buffer process_render_op()
+  175      sanitized_abs_pos.col_index = sanitized_abs_pos
+
+tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
+  990  
+  991:     // REVIEW: [x] add test for sanitize_and_save_abs_position()
+  992      #[test]
+
+tui/src/tui/terminal_lib_backends/crossterm_backend/offscreen_buffer_paint_impl.rs:
+  282      pub fn style_eq(this: &Option<TuiStyle>, other: &Option<TuiStyle>) -> bool {
+  283:         // REVIEW: [ ] replace use of bool w/ enum
+  284          match (this.is_some(), other.is_some()) {
