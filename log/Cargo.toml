@@ -54,6 +54,9 @@ const_format = "0.2.34"
 smallstr = { version = "0.3.0", features = ["serde", "std"] }
 smallvec = { version = "1.6.1", features = ["serde"] }
 
+# For ordermap.
+ordermap = "0.5.5"
+
 [dev-dependencies]
 
 # for assert_eq! macro

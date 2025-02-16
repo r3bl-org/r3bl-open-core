@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
+//! Use `ordermap` crate instead.
+
 use std::collections::HashMap;
-
 use smallvec::smallvec;
-
 use crate::VecArray;
 
 #[derive(Debug)]

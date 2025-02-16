@@ -104,6 +104,7 @@
     "notcurses",
     "nushell",
     "opentelemetry",
+    "ordermap",
     "otel",
     "otlp",
     "paintable",

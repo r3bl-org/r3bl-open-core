@@ -39,9 +39,9 @@ use chrono::Local;
 use const_format::formatcp;
 use crossterm::style::Stylize;
 use custom_event_formatter_constants::*;
+use ordermap::OrderMap;
 use r3bl_ansi_color::{AnsiStyledText, Color, Style};
 use r3bl_core::{ColorWheel,
-                OrderedMap,
                 StringStorage,
                 UnicodeString,
                 VecArray,
@@ -218,7 +218,7 @@ where
         //
         // Instead of:
         // ctx.field_format().format_fields(writer.by_ref(), event)?;
-        let mut ordered_map = OrderedMap::<StringStorage, StringStorage>::default();
+        let mut ordered_map = OrderMap::<StringStorage, StringStorage>::default();
         event.record(&mut VisitEventAndPopulateOrderedMapWithFields {
             inner: &mut ordered_map,
         });
@@ -276,7 +276,7 @@ where
 }
 
 pub struct VisitEventAndPopulateOrderedMapWithFields<'a> {
-    pub inner: &'a mut OrderedMap<StringStorage, StringStorage>,
+    pub inner: &'a mut OrderMap<StringStorage, StringStorage>,
 }
 
 impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
