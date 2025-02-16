@@ -83,12 +83,13 @@ impl Debug for FlexBox {
                 write!(f, "insertion_pos_for_next_box: None{EOL}")?;
             }
         }
+        // Last line.
         match self.maybe_computed_style {
             Some(style) => {
-                write!(f, "maybe_computed_style: {:?}{EOL}", style)?;
+                write!(f, "maybe_computed_style: {:?}", style)?;
             }
             None => {
-                write!(f, "maybe_computed_style: None{EOL}")?;
+                write!(f, "maybe_computed_style: None")?;
             }
         }
 

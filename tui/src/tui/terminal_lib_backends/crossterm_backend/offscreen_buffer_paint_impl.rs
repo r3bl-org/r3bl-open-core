@@ -18,7 +18,7 @@
 use r3bl_core::{call_if_true,
                 ch,
                 col,
-                glyphs::SPACER_GLYPH as SPACER,
+                glyphs::SPACER_GLYPH,
                 row,
                 ColIndex,
                 LockedOutputDevice,
@@ -146,7 +146,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 let (pixel_char_str, pixel_char_style): (&str, Option<TuiStyle>) =
                     match pixel_char {
                         PixelChar::Void => continue,
-                        PixelChar::Spacer => (SPACER, None),
+                        PixelChar::Spacer => (SPACER_GLYPH, None),
                         PixelChar::PlainText { text, maybe_style } => {
                             (text, *maybe_style)
                         }
@@ -218,7 +218,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 PixelChar::Void => continue,
                 PixelChar::Spacer => {
                     it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                        SPACER.into(),
+                        SPACER_GLYPH.into(),
                         None,
                     ))
                 }
@@ -436,7 +436,10 @@ mod tests {
         );
         assert_eq2!(
             render_ops[7],
-            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(SPACER.into(), None)
+            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+                SPACER_GLYPH.into(),
+                None
+            )
         );
         assert_eq2!(
             render_ops[8],
@@ -445,7 +448,7 @@ mod tests {
         assert_eq2!(
             render_ops[9],
             RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                (SPACER.repeat(10)).into(),
+                (SPACER_GLYPH.repeat(10)).into(),
                 None
             )
         );

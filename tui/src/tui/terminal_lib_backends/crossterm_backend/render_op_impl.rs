@@ -421,8 +421,6 @@ mod perform_paint {
             ..
         } = paint_args;
 
-        let mut cursor_position_copy = local_data.cursor_position;
-
         // Actually paint text.
         {
             let text = Cow::Borrowed(text);
@@ -436,9 +434,12 @@ mod perform_paint {
 
         // Update cursor position after paint.
         let text_display_width = UnicodeString::str_display_width(text);
-
-        cursor_position_copy.col_index += text_display_width;
-        sanitize_and_save_abs_position(cursor_position_copy, *window_size, local_data);
+        local_data.cursor_position.col_index += text_display_width;
+        sanitize_and_save_abs_position(
+            local_data.cursor_position,
+            *window_size,
+            local_data,
+        );
     }
 }
 

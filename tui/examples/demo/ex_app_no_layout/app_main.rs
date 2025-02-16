@@ -159,10 +159,12 @@ mod app_main_impl_trait_app {
                 let content_size_col = width(sample_line_of_text.len());
                 let window_size = global_data.window_size;
                 let data = &mut self.data;
+
                 let col_idx = col({
                     let it = *window_size.col_width - *content_size_col;
                     it / 2
                 });
+
                 let mut row_idx = row({
                     let it = *window_size.row_height
                         - ch(2)
@@ -199,15 +201,12 @@ mod app_main_impl_trait_app {
                         acc_render_ops +=
                             RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
 
-                        render_ops! {
-                            @render_styled_texts_into acc_render_ops
-                            =>
-                            color_wheel.colorize_into_styled_texts(
-                                &text_us,
-                                GradientGenerationPolicy::ReuseExistingGradientAndIndex,
-                                TextColorizationPolicy::ColorEachWord(None),
-                            )
-                        }
+                        let texts = color_wheel.colorize_into_styled_texts(
+                            &text_us,
+                            GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                            TextColorizationPolicy::ColorEachWord(None),
+                        );
+                        render_tui_styled_texts_into(&texts, &mut acc_render_ops);
 
                         row_idx += row(1);
                     }
@@ -230,15 +229,12 @@ mod app_main_impl_trait_app {
 
                         let text_us = UnicodeString::new(&text);
 
-                        render_ops! {
-                            @render_styled_texts_into acc_render_ops
-                            =>
-                            data.color_wheel_rgb.colorize_into_styled_texts(
-                                &text_us,
-                                GradientGenerationPolicy::ReuseExistingGradientAndIndex,
-                                TextColorizationPolicy::ColorEachWord(None),
-                            )
-                        }
+                        let texts = data.color_wheel_rgb.colorize_into_styled_texts(
+                            &text_us,
+                            GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                            TextColorizationPolicy::ColorEachWord(None),
+                        );
+                        render_tui_styled_texts_into(&texts, &mut acc_render_ops);
 
                         row_idx += row(1);
                     }
