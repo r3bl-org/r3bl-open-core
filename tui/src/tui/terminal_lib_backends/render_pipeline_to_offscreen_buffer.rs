@@ -76,7 +76,7 @@ impl RenderPipeline {
 }
 
 // PERF: [ ] figure out how this impacts OffscreenBuffer creation
-fn process_render_op(
+pub fn process_render_op(
     render_op: &RenderOp,
     window_size: Size,
     my_offscreen_buffer: &mut OffscreenBuffer,

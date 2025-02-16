@@ -26,7 +26,7 @@ use crate::{diff_chunks::{OffscreenBufferDiffResult, PixelCharDiffChunks},
             OffscreenBufferPaint,
             OffscreenBufferPaintImplCrossterm,
             TerminalLibBackend,
-            DEBUG_TUI_MOD,
+            DEBUG_TUI_COMPOSITOR,
             DEBUG_TUI_SHOW_PIPELINE_EXPANDED,
             TERMINAL_LIB_BACKEND};
 
@@ -152,27 +152,33 @@ pub fn paint<S, AS>(
 /// 2. If the [Pos] is outside of the bounds of the window then it is clamped to the
 ///    nearest edge of the window. This clamped [Pos] is returned.
 /// 3. This also saves the clamped [Pos] to [RenderOpsLocalData].
+///
+/// Note that printing [r3bl_core::SPACER_GLYPH] by
+/// [crate::render_pipeline_to_offscreen_buffer::process_render_op] will trigger clipping
+/// the [Pos] to the nearest edge of the window. This is OK. This is because the spacer is
+/// painted at the very last column of the terminal window due to the way in which the
+/// spacers are repeated. No checks are supposed to be done when [crate::OffscreenBuffer]
+/// is painting, so there is no clean way to skip this clipping check.
 pub fn sanitize_and_save_abs_position(
     orig_abs_pos: Pos,
     window_size: Dim,
     local_data: &mut RenderOpsLocalData,
 ) -> Pos {
     let Dim {
-        col_width: max_cols,
-        row_height: max_rows,
+        col_width: window_width,
+        row_height: window_height,
     } = window_size;
 
-    let mut sanitized_abs_pos: Pos = orig_abs_pos;
+    let mut sanitized_abs_pos = orig_abs_pos;
 
-    // REVIEW: [x] sanitize_and_save_abs_position verified() correct
-    if orig_abs_pos.col_index >= max_cols.convert_to_col_index() {
-        sanitized_abs_pos.col_index = max_cols.convert_to_col_index();
-    }
+    // REVIEW: [ ] sanitize_and_save_abs_position verify correct w/ offscreen buffer process_render_op()
+    sanitized_abs_pos.col_index = sanitized_abs_pos
+        .col_index
+        .min(window_width.convert_to_col_index());
 
-    // REVIEW: [x] sanitize_and_save_abs_position verified() correct
-    if orig_abs_pos.row_index >= max_rows.convert_to_row_index() {
-        sanitized_abs_pos.row_index = max_rows.convert_to_row_index();
-    }
+    sanitized_abs_pos.row_index = sanitized_abs_pos
+        .row_index
+        .min(window_height.convert_to_row_index());
 
     // Save the cursor position to local data.
     local_data.cursor_position = sanitized_abs_pos;
@@ -182,11 +188,11 @@ pub fn sanitize_and_save_abs_position(
     return sanitized_abs_pos;
 
     fn debug(orig_pos: Pos, sanitized_pos: Pos) {
-        call_if_true!(DEBUG_TUI_MOD, {
+        call_if_true!(DEBUG_TUI_COMPOSITOR, {
             if sanitized_pos != orig_pos {
                 // % is Display, ? is Debug.
                 tracing::info!(
-                    message = "pipeline : 🗜️ Attempt to set cursor position (orig) outside of terminal window; clamping to nearest edge of window (sanitized)",
+                    message = "pipeline : ⮻ Attempt to set cursor position (orig) outside of terminal window; clamping to nearest edge of window (sanitized)",
                     orig = ?orig_pos,
                     sanitized = ?sanitized_pos
                 );
@@ -196,7 +202,7 @@ pub fn sanitize_and_save_abs_position(
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = "pipeline : 📍 Save the cursor position (sanitized) to SharedGlobalData",
+                message = "pipeline : ⮺ Save the cursor position (sanitized) to SharedGlobalData",
                 sanitized = ?sanitized_pos
             );
         });
