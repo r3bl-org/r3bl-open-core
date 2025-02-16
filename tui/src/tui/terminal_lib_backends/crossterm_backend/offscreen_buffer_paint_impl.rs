@@ -280,6 +280,7 @@ mod render_helpers {
     /// - `hidden`
     /// - `strikethrough`
     pub fn style_eq(this: &Option<TuiStyle>, other: &Option<TuiStyle>) -> bool {
+        // REVIEW: [ ] replace use of bool w/ enum
         match (this.is_some(), other.is_some()) {
             (false, false) => true,
             (true, true) => {

@@ -1,0 +1,28 @@
+# Query: (NAV:|REVIEW: \\[ \\]|CS:)
+# Flags: CaseSensitive RegExp
+# ContextLines: 10
+
+1 result - 1 file
+
+tui/src/tui/terminal_lib_backends/paint.rs:
+  164      window_size: Dim,
+  165      local_data: &mut RenderOpsLocalData,
+  166  ) -> Pos {
+  167      let Dim {
+  168          col_width: window_width,
+  169          row_height: window_height,
+  170      } = window_size;
+  171  
+  172      let mut sanitized_abs_pos = orig_abs_pos;
+  173  
+  174:     // REVIEW: [ ] sanitize_and_save_abs_position verify correct w/ offscreen buffer process_render_op()
+  175      sanitized_abs_pos.col_index = sanitized_abs_pos
+  176          .col_index
+  177          .min(window_width.convert_to_col_index());
+  178  
+  179      sanitized_abs_pos.row_index = sanitized_abs_pos
+  180          .row_index
+  181          .min(window_height.convert_to_row_index());
+  182  
+  183      // Save the cursor position to local data.
+  184      local_data.cursor_position = sanitized_abs_pos;
