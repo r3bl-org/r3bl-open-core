@@ -93,6 +93,7 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
         caret_row >= scr_ofs_row && caret_row <= (scr_ofs_row + viewport.row_height);
     let is_caret_row_above_viewport = caret_row < scr_ofs_row;
 
+    // REVIEW: [ ] replace use of bool w/ enum
     match (is_caret_row_within_viewport, is_caret_row_above_viewport) {
         (true, _) => {
             // Caret is within viewport, do nothing.

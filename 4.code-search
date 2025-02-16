@@ -1,0 +1,707 @@
+# Query: tracing::
+# ContextLines: 1
+
+178 results - 47 files
+
+CHANGELOG.md:
+   996    - Remove all the functions like `log_debug`, `log_info`, etc. and favor directly using
+   997:     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
+   998  
+
+  1011    - Simplify the actual logging API into a single function, and allow use of tokio
+  1012:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
+  1013      `logging_api.rs` for more details.
+
+cmdr/src/analytics_client.rs:
+  112                          call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
+  113:                             tracing::debug!(
+  114                                  "Successfully created config folder: {}",
+
+  120                      Err(error) => {
+  121:                         tracing::error!(
+  122                              "Could not create config folder.\n{}",
+
+  131              None => {
+  132:                 tracing::error!(
+  133                      "Could not get config folder.\n{}",
+
+  175                          call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
+  176:                             tracing::debug!(
+  177                                  "Successfully read proxy machine ID from file: {}",
+
+  194                                  call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
+  195:                                     tracing::debug!(
+  196                                          "Successfully wrote proxy machine ID to file: {}",
+
+  201                              Err(error) => {
+  202:                                 tracing::error!(
+  203                                      "Could not write proxy machine ID to file.\n{}",
+
+  253                          Ok(_) => {
+  254:                             tracing::debug!(
+  255                                  "Successfully reported analytics event to r3bl-base.\n{}",
+
+  259                          Err(error) => {
+  260:                             tracing::error!(
+  261                                  "Could not report analytics event to r3bl-base.\n{}",
+
+  267                  Err(error) => {
+  268:                     tracing::error!(
+  269                          "Could not report analytics event to r3bl-base.\n{}",
+
+  301                      let latest_version = body_text.trim().to_string();
+  302:                     tracing::info!(
+  303                          "\n📦📦📦\nLatest version of cmdr is: {}",
+
+  308                          UPDATE_REQUIRED.store(true, std::sync::atomic::Ordering::Relaxed);
+  309:                         tracing::info!(
+  310                              "\n💿💿💿\nThere is a new version of cmdr available: {}",
+
+  330              call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
+  331:                 tracing::debug!(
+  332                      "GET request succeeded: {}",
+
+  338              // Handle error response.
+  339:             tracing::error!("GET request failed: {}", format!("{response:#?}").red());
+  340              response.error_for_status()
+
+  352              call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
+  353:                 tracing::debug!(
+  354                      "POST request succeeded: {}",
+
+  360              // Handle error response.
+  361:             tracing::error!("POST request failed: {}", format!("{response:#?}").red());
+  362              response.error_for_status()
+
+cmdr/src/bin/edi.rs:
+  44              try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+  45:             tracing::debug!("Start logging... cli_args {:?}", cli_arg);
+  46          });
+
+  90          call_if_true!(enable_logging, {
+  91:             tracing::debug!("Stop logging...");
+  92          });
+
+cmdr/src/bin/giti.rs:
+   51              try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+   52:             tracing::debug!("Start logging... cli_args {:?}", cli_arg);
+   53          });
+
+   68          call_if_true!(enable_logging, {
+   69:             tracing::debug!("Stop logging...");
+   70          });
+
+  107              );
+  108:             tracing::error!(err_msg);
+  109              AnsiStyledText {
+
+cmdr/src/edi/app_main.rs:
+  140              call_if_true!(DEBUG_TUI_MOD, {
+  141:                 tracing::debug!("🪙 construct edi::AppMain");
+  142              });
+
+  204                          call_if_true!(DEBUG_TUI_MOD, {
+  205:                             tracing::debug!(
+  206                                  "\n📣 Opened feedback link: {}",
+
+  211                      Err(err) => {
+  212:                         tracing::error!(
+  213                              "\n📣 Error opening feedback link: {}",
+
+  293                          {
+  294:                             tracing::error!("📣 Error activating simple modal: {msg:?}")
+  295                          }
+
+  391              call_if_true!(DEBUG_TUI_MOD, {
+  392:                 tracing::debug!("📣 activate modal simple: {:?}", has_focus);
+  393              });
+
+  447                              call_if_true!(DEBUG_TUI_MOD, {
+  448:                                 tracing::debug!(
+  449                                      "\n💾💾💾 About to save the new buffer with given filename: {}",
+
+  509          call_if_true!(DEBUG_TUI_MOD, {
+  510:             tracing::debug!(
+  511                  message =
+
+  591              // % is Display, ? is Debug.
+  592:             tracing::info!(
+  593                  message = message,
+
+  623          call_if_true!(DEBUG_TUI_MOD, {
+  624:             tracing::debug!(
+  625                  message = "app_main construct EditorComponent [ on_buffer_change ]"
+
+cmdr/src/edi/state.rs:
+  243                          // % is Display, ? is Debug.
+  244:                         tracing::debug!(
+  245                              message = %message,
+
+  256                      // % is Display, ? is Debug.
+  257:                     tracing::error!(
+  258                          message = %message,
+
+  281                      call_if_true!(DEBUG_TUI_MOD, {
+  282:                         tracing::debug!(
+  283                              "\n💾💾💾❌ Successfully saved file: {}",
+
+  288                  Err(error) => {
+  289:                     tracing::error!(
+  290                          "\n💾💾💾✅ Failed to save file: {}",
+
+cmdr/src/giti/branch/giti_ui_templates.rs:
+  155  
+  156:     tracing::error!(error_msg);
+  157      CommonError::new_error_result::<T>(CommonErrorType::CommandExecutionError, &error_msg)
+
+core/src/common/miette_setup_global_report_handler.rs:
+  49  use miette::MietteHandlerOpts;
+  50: use tracing::debug;
+  51  
+
+core/src/storage/kv.rs:
+   61  use serde::{Deserialize, Serialize};
+   62: use tracing::{debug, instrument};
+   63  
+
+  358      use serial_test::serial;
+  359:     use tracing::{Level, instrument};
+  360  
+
+core/src/tui_core/dimens/ch_unit.rs:
+  245                  Err(err) => {
+  246:                     tracing::error!(message = "Problem converting f64 to u16", err = err);
+  247                      0
+
+  261                  Err(err) => {
+  262:                     tracing::error!(message = "Problem converting f32 to u16", err = err);
+  263                      0
+
+log/src/bin/tracing_test_bin.rs:
+  55      // Log some messages.
+  56:     tracing::error!("error");
+  57:     tracing::warn!("warn");
+  58:     tracing::info!("info");
+  59:     tracing::debug!("debug");
+  60:     tracing::trace!("trace");
+  61  
+
+log/src/log_support/custom_event_formatter.rs:
+   57  use textwrap::{Options, WordSeparator, wrap};
+   58: use tracing::{Event,
+   59                Subscriber,
+
+  178          let level_str = match *event.metadata().level() {
+  179:             tracing::Level::ERROR => {
+  180                  style_acc.push(Style::Foreground(ERROR_FG_COLOR));
+
+  182              }
+  183:             tracing::Level::WARN => {
+  184                  style_acc.push(Style::Foreground(WARN_FG_COLOR));
+
+  186              }
+  187:             tracing::Level::INFO => {
+  188                  style_acc.push(Style::Foreground(INFO_FG_COLOR));
+
+  190              }
+  191:             tracing::Level::DEBUG => {
+  192                  style_acc.push(Style::Foreground(DEBUG_FG_COLOR));
+
+  194              }
+  195:             tracing::Level::TRACE => {
+  196                  style_acc.push(Style::Foreground(TRACE_FG_COLOR));
+
+  296      /// ```rust
+  297:     /// use tracing::{info};
+  298      /// info!(message = "This is a test log entry");
+
+  328      use r3bl_test_fixtures::StdoutMock;
+  329:     use tracing::{info, subscriber::set_default};
+  330      use tracing_subscriber::fmt::SubscriberBuilder;
+
+log/src/log_support/public_api.rs:
+   20  use r3bl_core::ok;
+   21: use tracing::dispatcher;
+   22  
+
+   38  ///
+   39: /// let level = tracing::Level::DEBUG;
+   40  /// let config_1: TracingConfig = level.into();
+
+   60  
+   61:     impl From<tracing::Level> for TracingConfig {
+   62:         fn from(level: tracing::Level) -> Self {
+   63              Self {
+
+  332  /// you call any of the other logging functions in this module, or directly use the
+  333: /// [tracing::info!], [tracing::debug!], etc. macros.
+  334  ///
+
+  343  /// You can use the functions in this module or just use the [mod@crate::log_support]
+  344: /// functions directly, along with using [tracing::info!], [tracing::debug!], etc. macros.
+  345  ///
+
+  374  /// you call any of the other logging functions in this module, or directly use the
+  375: /// [tracing::info!], [tracing::debug!], etc. macros.
+  376  ///
+
+log/src/log_support/tracing_config.rs:
+   20  use r3bl_core::SharedWriter;
+   21: use tracing::dispatcher;
+   22  use tracing_core::LevelFilter;
+
+  167      ///
+  168:     /// This function will return a [tracing::dispatcher::DefaultGuard]. You should drop
+  169      /// this guard when you're done with the tracing system. This will reset the tracing
+
+log/src/log_support/tracing_init.rs:
+  301          // Log some messages.
+  302:         tracing::error!("error");
+  303:         tracing::warn!("warn");
+  304:         tracing::info!("info");
+  305:         tracing::debug!("debug");
+  306:         tracing::trace!("trace");
+  307  
+
+script/src/environment.rs:
+  82      // % is Display, ? is Debug.
+  83:     tracing::debug!("my_path" = %add_to_path);
+  84      ok!(add_to_path)
+
+script/src/github_api.rs:
+  42      // % is Display, ? is Debug.
+  43:     tracing::debug!(
+  44          "Fetching latest release tag from GitHub" = %url.to_string().magenta()
+
+terminal_async/examples/terminal_async.rs:
+  37  use tokio::{select, time::interval};
+  38: use tracing::info;
+  39  
+
+tui/examples/demo/ex_app_no_layout/app_main.rs:
+  327                      // % is Display, ? is Debug.
+  328:                     tracing::info! {
+  329                          message = %message,
+
+tui/examples/demo/ex_app_with_1col_layout/single_column_component.rs:
+  265                      // % is Display, ? is Debug.
+  266:                     tracing::info!(
+  267                          message = %message,
+
+tui/examples/demo/ex_app_with_2col_layout/app_main.rs:
+  325              // % is Display, ? is Debug.
+  326:             tracing::info!(
+  327                  message = message,
+
+  345          } else {
+  346:             tracing::error!("No focus id has been set, and it should be set!");
+  347          }
+
+tui/examples/demo/ex_app_with_2col_layout/column_render_component.rs:
+  273                      // % is Display, ? is Debug.
+  274:                     tracing::info!(
+  275                          message = %message,
+
+tui/examples/demo/ex_editor/app_main.rs:
+  121              call_if_true!(DEBUG_TUI_MOD, {
+  122:                 tracing::debug!("🪙 construct ex_rc::AppMain");
+  123              });
+
+  337                      {
+  338:                         tracing::error!("📣 Error activating simple modal: {msg:?}");
+  339                      }
+
+  366                      {
+  367:                         tracing::error!(
+  368                              "📣 Error activating autocomplete modal: {msg:?}"
+
+  448                  // % is Display, ? is Debug.
+  449:                 tracing::debug!(
+  450                      message = %message,
+
+  488              // % is Display, ? is Debug.
+  489:             tracing::debug!(
+  490                  message = %message,
+
+  584              // % is Display, ? is Debug.
+  585:             tracing::info!(
+  586                  message = message,
+
+  616          call_if_true!(DEBUG_TUI_MOD, {
+  617:             tracing::debug!(
+  618                  message = "app_main construct EditorComponent [ on_buffer_change ]"
+
+  701          call_if_true!(DEBUG_TUI_MOD, {
+  702:             tracing::debug!(
+  703                  message =
+
+  787          call_if_true!(DEBUG_TUI_MOD, {
+  788:             tracing::debug!(
+  789                  message = "app_main construct DialogComponent (autocomplete) [ on_dialog_press ]"
+
+tui/examples/demo/ex_pitch/app_main.rs:
+   98              call_if_true!(DEBUG_TUI_MOD, {
+   99:                 tracing::debug!("🪙 construct ex_pitch::AppWithLayout");
+  100              });
+
+  308              // % is Display, ? is Debug.
+  309:             tracing::info!(
+  310                  message = message,
+
+  344          call_if_true!(DEBUG_TUI_MOD, {
+  345:             tracing::debug!(
+  346                  message = "app_main construct EditorComponent [ on_buffer_change ]"
+
+tui/examples/demo/ex_rc/app_main.rs:
+  178              call_if_true!(DEBUG_TUI_MOD, {
+  179:                 tracing::debug!("🪙 construct ex_rc::AppWithLayout");
+  180              });
+
+  429              // % is Display, ? is Debug.
+  430:             tracing::info!(
+  431                  message = message,
+
+  465          call_if_true!(DEBUG_TUI_MOD, {
+  466:             tracing::debug!(
+  467                  message = "app_main construct EditorComponent [ on_buffer_change ]"
+
+tui/src/tui/dialog/dialog_component/dialog_component_struct.rs:
+  174                          call_if_true!(DEBUG_TUI_MOD, {
+  175:                             tracing::debug!(
+  176                                  "🐝 restore focus to non modal: {:?}",
+
+tui/src/tui/editor/editor_buffer/editor_buffer_clipboard_support.rs:
+   67          call_if_true!(DEBUG_TUI_COPY_PASTE, {
+   68:             tracing::debug!(
+   69                  "\n📋📋📋 Failed to copy selected text to clipboard: {}",
+
+  119              call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  120:                 tracing::debug!(
+  121                      "\n📋📋📋 Text was pasted from clipboard: \n{}",
+
+  128              call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  129:                 tracing::debug!(
+  130                      "\n📋📋📋 Failed to paste the text from clipboard: {}",
+
+tui/src/tui/editor/editor_buffer/editor_buffer_selection_support.rs:
+   69                  call_if_true!(DEBUG_TUI_COPY_PASTE, {
+   70:                     tracing::debug!("\n🍕🍕🍕 new selection: \n\t{it:?}", it = new_range);
+   71                  });
+
+   84          call_if_true!(DEBUG_TUI_COPY_PASTE, {
+   85:             tracing::debug!(
+   86                      "\n🍕🍕🍕 {a}:\n\t{b}: {c:?}, {d}: {e:?}\n\t{f}: {g:?}, {h}: {i:?}\n\t{j}: {k}, {l}: {m}, {n}: {o}",
+
+  288              // % is Display, ? is Debug.
+  289:             tracing::debug! {
+  290                  message = %message,
+
+  410                  call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  411:                     tracing::debug!(
+  412                          "\n📜📜📜⚾⚾⚾ {0}",
+
+  536              // % is Display, ? is Debug.
+  537:             tracing::debug! {
+  538                  message = %message,
+
+tui/src/tui/editor/editor_buffer/editor_buffer_struct.rs:
+  280                  // % is Display, ? is Debug.
+  281:                 tracing::info!(
+  282                      message = message,
+
+  669          call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  670:             tracing::debug!(
+  671                  "🍎🍎🍎 add_content_to_undo_stack editor_buffer: {:?}",
+
+  687          call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  688:             tracing::debug!("🍎🍎🍎 undo editor_buffer: {:?}", editor_buffer);
+  689          });
+
+  700          call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  701:             tracing::debug!("🍎🍎🍎 redo editor_buffer: {:?}", editor_buffer);
+  702          });
+
+tui/src/tui/editor/editor_buffer/system_clipboard_service_provider.rs:
+  36              call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  37:                 tracing::debug!(
+  38                      "\n📋📋📋 Selected Text was copied to clipboard: \n{}",
+
+tui/src/tui/editor/editor_component/editor_event.rs:
+  93              // % is Display, ? is Debug.
+  94:             tracing::debug! {
+  95                  message = %message,
+
+tui/src/tui/editor/editor_engine/editor_engine_api.rs:
+  256              // % is Display, ? is Debug.
+  257:             tracing::info!(
+  258                  message = message,
+
+  332                      // % is Display, ? is Debug.
+  333:                     tracing::debug! {
+  334                          message = %message,
+
+  513                  let line_len_str = convert_to_string_slice(&line_len_ray);
+  514:                 tracing::debug!(
+  515                      "\n🎯🎯🎯\neditor_buffer.lines.len(): {} vs md_document.lines.len(): {}\n{}\n{:?}🎯🎯🎯",
+
+tui/src/tui/md_parser/fragment/parse_fragments_in_a_line.rs:
+   96      call_if_true!(DEBUG_MD_PARSER, {
+   97:         tracing::debug!("\n📣📣📣\n input: {}", string_storage!("{input:?}").green());
+   98          match it {
+   99              Ok(ref element) => {
+  100:                 tracing::debug!("✅✅✅ OK {}", string_storage!("{element:#?}").magenta());
+  101              },
+  102              Err(ref error) => {
+  103:                 tracing::debug!("🟥🟥🟥 NO {}", string_storage!("{error:#?}").red());
+  104              },
+
+tui/src/tui/terminal_lib_backends/input_device_ext.rs:
+   95                          call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, {
+   96:                             tracing::error!("Error: {e:?}");
+   97                          });
+
+  103                  call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, {
+  104:                     tracing::error!("Error: {e:?}");
+  105                  });
+
+tui/src/tui/terminal_lib_backends/paint.rs:
+  187                  // % is Display, ? is Debug.
+  188:                 tracing::info!(
+  189                      message = "pipeline : 🗜️ Attempt to set cursor position (orig) outside of terminal window; clamping to nearest edge of window (sanitized)",
+
+  197              // % is Display, ? is Debug.
+  198:             tracing::info!(
+  199                  message = "pipeline : 📍 Save the cursor position (sanitized) to SharedGlobalData",
+
+tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
+   67              // % is Display, ? is Debug.
+   68:             tracing::info!(
+   69                  message = message,
+
+  205          // % is Display, ? is Debug.
+  206:         tracing::info! {
+  207              message = %message,
+
+  270          // % is Display, ? is Debug.
+  271:         tracing::debug!(message = message);
+  272      });
+
+tui/src/tui/terminal_lib_backends/crossterm_backend/offscreen_buffer_paint_impl.rs:
+   75              // % is Display, ? is Debug.
+   76:             tracing::info!(
+   77                  message = "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok 🟢",
+
+  107              // % is Display, ? is Debug.
+  108:             tracing::info!(
+  109                  message = "🎨 offscreen_buffer_paint_impl_crossterm::paint_diff() ok 🟢",
+
+  205              // % is Display, ? is Debug.
+  206:             tracing::info!(
+  207                  message = "🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok 🟢",
+
+tui/src/tui/terminal_lib_backends/crossterm_backend/render_op_impl.rs:
+  445  /// Given a crossterm command, or commands, queue each one, and depending on what the
+  446: /// [Result] is produced, run [tracing::error!] or [tracing::info!].
+  447  ///
+
+  479                          DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+  480:                         tracing::info!(msg)
+  481                      };
+
+  485                          format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+  486:                     call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+  487                  }
+
+  502                      DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+  503:                     tracing::info!(msg)
+  504                  };
+
+  508                      format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+  509:                 call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+  510              }
+
+  530                      DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+  531:                     tracing::info!(msg)
+  532                  };
+
+  536                      format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+  537:                 call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+  538              }
+
+  558                      DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+  559:                     tracing::info!(msg)
+  560                  };
+
+  564                      format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+  565:                 call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+  566              }
+
+tui/src/tui/terminal_window/main_event_loop.rs:
+  148          // % is Display, ? is Debug.
+  149:         tracing::info!(
+  150              message = message,
+
+  219                              // % is Display, ? is Debug.
+  220:                             tracing::info!(
+  221                                  message = message,
+
+  267                  // % is Display, ? is Debug.
+  268:                 tracing::info!(
+  269                      message = message,
+
+  282                      // % is Display, ? is Debug.
+  283:                     tracing::info!(
+  284                          message = message,
+
+  303          // % is Display, ? is Debug.
+  304:         tracing::info!(
+  305              message = message,
+
+  434              // % is Display, ? is Debug.
+  435:             tracing::error!(
+  436                  message = message,
+
+  505                      // % is Display, ? is Debug.
+  506:                     tracing::error!(
+  507                          message = message,
+
+  646          //     ),
+  647:         //     level_filter: tracing::Level::DEBUG.into(),
+  648          // }
+
+tui/src/tui/terminal_window/shared_global_data.rs:
+  104              DEBUG_TUI_MOD,
+  105:             tracing::info!("main_event_loop -> Resize ⇲"=?new_size)
+  106          );
+
+tuify/examples/main_interactive.rs:
+   34              try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+   35:             tracing::debug!("Start logging... terminal window size: {:?}", get_size()?)
+   36          });
+
+  133          call_if_true!(DEVELOPMENT_MODE, {
+  134:             tracing::debug!("Stop logging...");
+  135          });
+
+  219      call_if_true!(DEVELOPMENT_MODE, {
+  220:         tracing::debug!("user_input: {user_input:?}");
+  221      });
+
+  299      call_if_true!(DEVELOPMENT_MODE, {
+  300:         tracing::debug!("user_input: {user_input:?}");
+  301      });
+
+  338      call_if_true!(DEVELOPMENT_MODE, {
+  339:         tracing::debug!("user_input: {user_input:?}");
+  340      });
+
+  380      call_if_true!(DEVELOPMENT_MODE, {
+  381:         tracing::debug!("user_input: {user_input:?}");
+  382      });
+
+  418      call_if_true!(DEVELOPMENT_MODE, {
+  419:         tracing::debug!("user_input: {user_input:?}");
+  420      });
+
+tuify/src/function_component.rs:
+  66              call_if_true!(DEVELOPMENT_MODE, {
+  67:                 tracing::debug!("\n🥑🥑🥑\nresize hint: {:?}", state.get_resize_hint());
+  68              });
+
+tuify/src/keypress.rs:
+   66              call_if_true!(DEVELOPMENT_MODE, {
+   67:                 tracing::debug!("got event: {event:?}");
+   68              });
+
+   93          Err(err) => {
+   94:             tracing::error!("ERROR getting event: {err:?}");
+   95              KeyPress::Error
+
+  108              call_if_true!(DEVELOPMENT_MODE, {
+  109:                 tracing::debug!("got event: {event:?}");
+  110              });
+
+  170          Err(err) => {
+  171:             tracing::error!("ERROR getting event: {err:?}");
+  172              KeyPress::Error
+
+tuify/src/public_api.rs:
+  152      call_if_true!(DEVELOPMENT_MODE, {
+  153:         tracing::debug!(
+  154              "🔆🔆🔆 *before* keypress: locate_cursor_in_viewport(): {}",
+
+  172                  );
+  173:                 tracing::debug! {
+  174                      message = %message,
+
+  184              call_if_true!(DEVELOPMENT_MODE, {
+  185:                 tracing::debug!("Down");
+  186              });
+
+  206              call_if_true!(DEVELOPMENT_MODE, {
+  207:                 tracing::debug!(
+  208                      "enter_event_loop()::state: {}",
+
+  218              call_if_true!(DEVELOPMENT_MODE, {
+  219:                 tracing::debug!("Up");
+  220              });
+
+  249              call_if_true!(DEVELOPMENT_MODE, {
+  250:                 tracing::debug!(
+  251                      "Enter: {}",
+
+  264              call_if_true!(DEVELOPMENT_MODE, {
+  265:                 tracing::debug!(
+  266                      "Enter: {}",
+
+  280              call_if_true!(DEVELOPMENT_MODE, {
+  281:                 tracing::debug!("Esc");
+  282              });
+
+  288              call_if_true!(DEVELOPMENT_MODE, {
+  289:                 tracing::debug!(
+  290                      "Space: {}",
+
+  316              call_if_true!(DEVELOPMENT_MODE, {
+  317:                 tracing::debug!("Noop");
+  318              });
+
+  324              call_if_true!(DEVELOPMENT_MODE, {
+  325:                 tracing::debug!("Exit with error");
+  326              });
+
+  331      call_if_true!(DEVELOPMENT_MODE, {
+  332:         tracing::debug!(
+  333              "👉 *after* keypress: locate_cursor_in_viewport(): {}",
+
+tuify/src/scroll.rs:
+  106          // % is Display, ? is Debug.
+  107:         tracing::info! {
+  108              message = %message,
+
+tuify/src/bin/rt.rs:
+  100              try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+  101:             tracing::debug!("Start logging... terminal window size: {:?}", get_size()?);
+  102:             tracing::debug!("cli_args {cli_args:?}")
+  103          });
+
+  153          call_if_true!(enable_logging, {
+  154:             tracing::debug!("Stop logging...");
+  155          });
+
+  200      call_if_true!(enable_logging, {
+  201:         tracing::debug!("lines: {lines:?}");
+  202      });
+
+  298      call_if_true!(enable_logging, {
+  299:         tracing::debug!("selected_items: {}", format!("{selected_items:?}").cyan());
+  300      });
+
+  393                  call_if_true!(DEVELOPMENT_MODE, {
+  394:                     tracing::debug!(
+  395                          "{subcommand}, {option} - possible_values: {}",
+
+tuify/src/components/select_component.rs:
+  135                  // % is Display, ? is Debug.
+  136:                 tracing::info! {
+  137                      message = %message,

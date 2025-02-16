@@ -82,6 +82,7 @@ impl ModifierKeysMask {
     /// - `contains` -> means that your variable ONLY contains these bits.
     /// - Docs: <https://docs.rs/bitflags/latest/bitflags/index.html>
     pub fn matches(&self, other: KeyModifiers) -> MatchResult {
+        // REVIEW: [ ] replace use of bool w/ enum
         match (
             other.intersects(KeyModifiers::SHIFT),
             other.intersects(KeyModifiers::CONTROL),
