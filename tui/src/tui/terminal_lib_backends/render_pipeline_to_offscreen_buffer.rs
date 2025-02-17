@@ -31,7 +31,7 @@ use r3bl_core::{call_if_true,
                 TuiStyle,
                 UnicodeString};
 
-use super::{sanitize_and_save_abs_position, OffscreenBuffer, RenderOp, RenderPipeline};
+use super::{sanitize_and_save_abs_pos, OffscreenBuffer, RenderOp, RenderPipeline};
 use crate::{PixelChar, RenderOpsLocalData, ZOrder, DEBUG_TUI_COMPOSITOR};
 
 impl RenderPipeline {
@@ -91,12 +91,12 @@ pub fn process_render_op(
         }
         RenderOp::MoveCursorPositionAbs(new_abs_pos) => {
             my_offscreen_buffer.my_pos =
-                sanitize_and_save_abs_position(*new_abs_pos, window_size, local_data);
+                sanitize_and_save_abs_pos(*new_abs_pos, window_size, local_data);
         }
         RenderOp::MoveCursorPositionRelTo(box_origin_pos_ref, content_rel_pos_ref) => {
             let new_abs_pos = *box_origin_pos_ref + *content_rel_pos_ref;
             my_offscreen_buffer.my_pos =
-                sanitize_and_save_abs_position(new_abs_pos, window_size, local_data);
+                sanitize_and_save_abs_pos(new_abs_pos, window_size, local_data);
         }
         RenderOp::SetFgColor(fg_color_ref) => {
             my_offscreen_buffer.my_fg_color = Some(*fg_color_ref);
@@ -129,7 +129,7 @@ pub fn process_render_op(
             );
             if let Ok(new_pos) = result_new_pos {
                 my_offscreen_buffer.my_pos =
-                    sanitize_and_save_abs_position(new_pos, window_size, local_data);
+                    sanitize_and_save_abs_pos(new_pos, window_size, local_data);
             }
         }
     }
@@ -865,7 +865,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_non_zero_position() {
+    fn test_convert_non_zero_pos() {
         let window_size = width(10) + height(2);
 
         // pipeline:
@@ -990,7 +990,7 @@ mod tests {
 
     // REVIEW: [x] add test for sanitize_and_save_abs_position()
     #[test]
-    fn test_sanitize_and_save_abs_position() {
+    fn test_sanitize_and_save_abs_pos() {
         let max_col = 8;
         let max_row = 2;
         let window_size = width(max_col) + height(max_row);

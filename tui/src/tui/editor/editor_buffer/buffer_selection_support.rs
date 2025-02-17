@@ -199,7 +199,7 @@ pub fn handle_selection_single_line_caret_movement(
 
 /// Precondition: there has to be at least 2 rows.
 pub fn handle_selection_multiline_caret_movement(
-    editor_buffer: &mut EditorBuffer,
+    buffer: &mut EditorBuffer,
     prev_caret_scr_adj: CaretScrAdj,
     curr_caret_scr_adj: CaretScrAdj,
 ) {
@@ -233,7 +233,7 @@ pub fn handle_selection_multiline_caret_movement(
                 let curr_pos = curr.col_index + current_row_index;
 
                 multiline_select_helpers::handle_two_lines(
-                    editor_buffer,
+                    buffer,
                     caret_scr_adj(prev_pos),
                     caret_scr_adj(curr_pos),
                 );
@@ -255,7 +255,7 @@ pub fn handle_selection_multiline_caret_movement(
                 let curr_pos = curr.col_index + current_row_index;
 
                 multiline_select_helpers::handle_two_lines(
-                    editor_buffer,
+                    buffer,
                     caret_scr_adj(prev_pos),
                     caret_scr_adj(curr_pos),
                 );
@@ -269,12 +269,12 @@ pub fn handle_selection_multiline_caret_movement(
 /// or bottom of the document to be hit, so that further movement up / down isn't possible,
 /// but the caret might jump left or right.
 pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
-    editor_buffer: &mut EditorBuffer,
-    previous_caret_display_position: CaretScrAdj,
-    current_caret_display_position: CaretScrAdj,
+    buffer: &mut EditorBuffer,
+    previous_caret_pos: CaretScrAdj,
+    current_caret_pos: CaretScrAdj,
 ) {
-    let curr = current_caret_display_position;
-    let prev = previous_caret_display_position;
+    let curr = current_caret_pos;
+    let prev = previous_caret_pos;
 
     // Precondition check: Only run if the row previous and current row indices are same.
     if curr.row_index != prev.row_index {
@@ -283,7 +283,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
 
     let row_index = curr.row_index; // Same as previous.row_index.
 
-    let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
+    let buffer_mut = buffer.get_mut(width(0) + height(0));
 
     call_if_true!(DEBUG_TUI_COPY_PASTE, {
         let message = "📜🔼🔽 handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document";
@@ -389,12 +389,12 @@ mod multiline_select_helpers {
     // XMARK: Impl multiline selection changes (up/down, and later page up/page down)
     /// Precondition: there has to be at least 2 rows.
     pub fn handle_two_lines(
-        editor_buffer: &mut EditorBuffer,
-        previous_caret_display_position: CaretScrAdj,
-        current_caret_display_position: CaretScrAdj,
+        buffer: &mut EditorBuffer,
+        previous_caret_pos: CaretScrAdj,
+        current_caret_pos: CaretScrAdj,
     ) {
-        let current = current_caret_display_position;
-        let previous = previous_caret_display_position;
+        let current = current_caret_pos;
+        let previous = previous_caret_pos;
 
         // Validate preconditions.
         let caret_vertical_movement_direction =
@@ -407,13 +407,11 @@ mod multiline_select_helpers {
             return;
         }
 
-        let locate_previous_row_index = editor_buffer
-            .get_selection_list()
-            .locate_row(previous.row_index);
-        let locate_current_row_index = editor_buffer
-            .get_selection_list()
-            .locate_row(current.row_index);
-        let has_caret_movement_direction_changed = editor_buffer
+        let locate_previous_row_index =
+            buffer.get_selection_list().locate_row(previous.row_index);
+        let locate_current_row_index =
+            buffer.get_selection_list().locate_row(current.row_index);
+        let has_caret_movement_direction_changed = buffer
             .get_selection_list()
             .has_caret_movement_direction_changed(caret_vertical_movement_direction);
 
@@ -433,7 +431,7 @@ mod multiline_select_helpers {
                     .magenta()
                     .on_dark_grey(),
                 /* selection_map */
-                d = format!("{:?}", editor_buffer.get_selection_list())
+                d = format!("{:?}", buffer.get_selection_list())
                     .magenta()
                     .on_dark_grey(),
                 /* locate_previous_row_index */
@@ -483,7 +481,7 @@ mod multiline_select_helpers {
             ) => multiline_select_helpers::start_select_down(
                 previous,
                 current,
-                editor_buffer,
+                buffer,
                 caret_vertical_movement_direction,
             ),
             // DirectionHasChanged: No selection -> Shift+Up -> Shift+Down -> Shift+Up.
@@ -496,7 +494,7 @@ mod multiline_select_helpers {
             ) => multiline_select_helpers::start_select_up(
                 previous,
                 current,
-                editor_buffer,
+                buffer,
                 caret_vertical_movement_direction,
             ),
             // DirectionIsTheSame: Previous selection with Shift+Down, then Shift+Down.
@@ -510,7 +508,7 @@ mod multiline_select_helpers {
             ) => multiline_select_helpers::continue_select_down(
                 previous,
                 current,
-                editor_buffer,
+                buffer,
                 caret_vertical_movement_direction,
             ),
             // Position caret below empty line, Shift+Up, Shift+Up, Shift+Up, Shift+Down.
@@ -522,7 +520,7 @@ mod multiline_select_helpers {
             ) => multiline_select_helpers::continue_select_down(
                 previous,
                 current,
-                editor_buffer,
+                buffer,
                 caret_vertical_movement_direction,
             ),
             // DirectionIsTheSame: Previous selection with Shift+Up, then Shift+Up.
@@ -536,7 +534,7 @@ mod multiline_select_helpers {
             ) => multiline_select_helpers::continue_select_up(
                 previous,
                 current,
-                editor_buffer,
+                buffer,
                 caret_vertical_movement_direction,
             ),
             // Position caret above empty line, Shift+Down, Shift+Down, Shift+Down, Shift+Up.
@@ -548,7 +546,7 @@ mod multiline_select_helpers {
             ) => multiline_select_helpers::continue_select_up(
                 previous,
                 current,
-                editor_buffer,
+                buffer,
                 caret_vertical_movement_direction,
             ),
             // DirectionHasChanged: Previous selection with Shift+Down, then Shift+Up.
@@ -562,7 +560,7 @@ mod multiline_select_helpers {
             ) => multiline_select_helpers::continue_direction_change_select_up(
                 previous,
                 current,
-                editor_buffer,
+                buffer,
                 caret_vertical_movement_direction,
             ),
             // DirectionHasChanged: Previous selection with Shift+Up, then Shift+Up, then Shift+Down.
@@ -576,7 +574,7 @@ mod multiline_select_helpers {
             ) => multiline_select_helpers::continue_direction_change_select_down(
                 previous,
                 current,
-                editor_buffer,
+                buffer,
                 caret_vertical_movement_direction,
             ),
             // Catchall.
@@ -602,18 +600,13 @@ mod multiline_select_helpers {
     pub fn start_select_down(
         previous: CaretScrAdj,
         current: CaretScrAdj,
-        editor_buffer: &mut EditorBuffer,
+        buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
         let first = previous;
         let last = current;
 
-        add_first_and_last_row(
-            first,
-            last,
-            editor_buffer,
-            caret_vertical_movement_direction,
-        );
+        add_first_and_last_row(first, last, buffer, caret_vertical_movement_direction);
     }
 
     /// No existing selection, up, no direction change:
@@ -622,30 +615,24 @@ mod multiline_select_helpers {
     pub fn start_select_up(
         previous: CaretScrAdj,
         current: CaretScrAdj,
-        editor_buffer: &mut EditorBuffer,
+        buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
         let first = current;
         let last = previous;
 
-        add_first_and_last_row(
-            first,
-            last,
-            editor_buffer,
-            caret_vertical_movement_direction,
-        );
+        add_first_and_last_row(first, last, buffer, caret_vertical_movement_direction);
     }
 
     fn add_first_and_last_row(
         first: CaretScrAdj,
         last: CaretScrAdj,
-        editor_buffer: &mut EditorBuffer,
+        buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
         let first_row_range: SelectionRange = {
             let start_col = first.col_index;
-            let end_col =
-                editor_buffer.get_line_display_width_at_row_index(first.row_index);
+            let end_col = buffer.get_line_display_width_at_row_index(first.row_index);
 
             (
                 start_col,
@@ -662,7 +649,7 @@ mod multiline_select_helpers {
             (start_col, end_col).into()
         };
 
-        let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
+        let buffer_mut = buffer.get_mut(width(0) + height(0));
         buffer_mut.sel_list.insert(
             first.row_index,
             first_row_range,
@@ -681,17 +668,17 @@ mod multiline_select_helpers {
     pub fn continue_select_down(
         previous: CaretScrAdj,
         current: CaretScrAdj,
-        editor_buffer: &mut EditorBuffer,
+        buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
         let first = previous;
         let last = current;
 
         let first_line_width =
-            editor_buffer.get_line_display_width_at_row_index(first.row_index);
+            buffer.get_line_display_width_at_row_index(first.row_index);
 
         // Mutably borrow the selection map.
-        let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
+        let buffer_mut = buffer.get_mut(width(0) + height(0));
 
         // Extend the existing range (in selection map) for the first row to end of line.
         if let Some(first_row_range) = buffer_mut.sel_list.get(first.row_index) {
@@ -730,17 +717,17 @@ mod multiline_select_helpers {
     pub fn continue_select_up(
         previous: CaretScrAdj,
         current: CaretScrAdj,
-        editor_buffer: &mut EditorBuffer,
+        buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
         let first = current;
         let last = previous;
 
         let first_line_width =
-            editor_buffer.get_line_display_width_at_row_index(first.row_index);
+            buffer.get_line_display_width_at_row_index(first.row_index);
 
         // Mutably borrow the selection map.
-        let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
+        let buffer_mut = buffer.get_mut(width(0) + height(0));
 
         // FIRST ROW.
         if let Some(first_row_range) = buffer_mut.sel_list.get(first.row_index) {
@@ -812,14 +799,14 @@ mod multiline_select_helpers {
     pub fn continue_direction_change_select_up(
         previous: CaretScrAdj,
         current: CaretScrAdj,
-        editor_buffer: &mut EditorBuffer,
+        buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
         let first = current;
         let last = previous;
 
         // Mutably borrow the selection map.
-        let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
+        let buffer_mut = buffer.get_mut(width(0) + height(0));
 
         // Drop the existing range (in selection map) for the last row.
         if buffer_mut.sel_list.get(last.row_index).is_some() {
@@ -858,14 +845,14 @@ mod multiline_select_helpers {
     pub fn continue_direction_change_select_down(
         previous: CaretScrAdj,
         current: CaretScrAdj,
-        editor_buffer: &mut EditorBuffer,
+        buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
         let first = previous;
         let last = current;
 
         // Mutably borrow the selection map.
-        let buffer_mut = editor_buffer.get_mut(width(0) + height(0));
+        let buffer_mut = buffer.get_mut(width(0) + height(0));
 
         // Drop the existing range (in selection map) for the first row.
         if buffer_mut.sel_list.get(first.row_index).is_some() {

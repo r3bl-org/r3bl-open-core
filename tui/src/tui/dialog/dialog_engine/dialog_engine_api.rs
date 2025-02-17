@@ -130,8 +130,7 @@ impl DialogEngineApi {
             }
         };
 
-        let (origin_pos, bounds_size) =
-            overlay_flex_box.get_style_adjusted_position_and_size();
+        let (origin_pos, bounds_size) = overlay_flex_box.get_style_adjusted_pos_and_dim();
 
         let pipeline = {
             let mut it = render_pipeline!();

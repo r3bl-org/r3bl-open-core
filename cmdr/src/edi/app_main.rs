@@ -247,7 +247,7 @@ mod app_main_impl_app_trait {
 
                     if let Some(editor_buffer) = maybe_editor_buffer {
                         let maybe_file_path =
-                            editor_buffer.editor_content.maybe_file_path.clone();
+                            editor_buffer.content.maybe_file_path.clone();
                         let content = editor_buffer.get_as_string_with_newlines();
 
                         match maybe_file_path {
@@ -457,11 +457,11 @@ mod modal_dialog_ask_for_filename_to_save_file {
 
                             if let Some(editor_buffer) = maybe_editor_buffer {
                                 // Set the file path.
-                                editor_buffer.editor_content.maybe_file_path =
+                                editor_buffer.content.maybe_file_path =
                                     Some(user_input_file_path.into());
 
                                 // Set the file extension.
-                                editor_buffer.editor_content.maybe_file_extension =
+                                editor_buffer.content.maybe_file_extension =
                                     Some(file_utils::get_file_extension(&Some(
                                         user_input_file_path,
                                     )));
