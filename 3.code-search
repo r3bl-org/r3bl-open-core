@@ -25,9 +25,9 @@ tui/src/tui/terminal_lib_backends/modifier_keys_mask.rs:
   86          match (
 
 tui/src/tui/terminal_lib_backends/paint.rs:
-  173  
-  174:     // REVIEW: [ ] sanitize_and_save_abs_position verify correct w/ offscreen buffer process_render_op()
-  175      sanitized_abs_pos.col_index = sanitized_abs_pos
+  176  
+  177:     // REVIEW: [x] sanitize_and_save_abs_position verify correct w/ offscreen buffer process_render_op()
+  178      sanitized_abs_pos.col_index = sanitized_abs_pos
 
 tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
   990  
@@ -35,6 +35,6 @@ tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
   992      #[test]
 
 tui/src/tui/terminal_lib_backends/crossterm_backend/offscreen_buffer_paint_impl.rs:
-  282      pub fn style_eq(this: &Option<TuiStyle>, other: &Option<TuiStyle>) -> bool {
-  283:         // REVIEW: [ ] replace use of bool w/ enum
-  284          match (this.is_some(), other.is_some()) {
+  279      pub fn style_eq(this: &Option<TuiStyle>, other: &Option<TuiStyle>) -> bool {
+  280:         // REVIEW: [ ] replace use of bool w/ enum
+  281          match (this.is_some(), other.is_some()) {

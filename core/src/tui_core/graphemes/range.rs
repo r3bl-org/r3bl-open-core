@@ -141,13 +141,13 @@ mod tests_range {
 
 impl SelectionRange {
     pub fn caret_movement_direction(
-        previous_caret_display_position: CaretScrAdj,
-        current_caret_display_position: CaretScrAdj,
+        previous_caret_pos: CaretScrAdj,
+        current_caret_pos: CaretScrAdj,
     ) -> CaretMovementDirection {
-        let previous_caret_display_row_index = previous_caret_display_position.row_index;
-        let current_caret_display_row_index = current_caret_display_position.row_index;
-        let previous_caret_display_col_index = previous_caret_display_position.col_index;
-        let current_caret_display_col_index = current_caret_display_position.col_index;
+        let previous_caret_display_row_index = previous_caret_pos.row_index;
+        let current_caret_display_row_index = current_caret_pos.row_index;
+        let previous_caret_display_col_index = previous_caret_pos.col_index;
+        let current_caret_display_col_index = current_caret_pos.col_index;
         if previous_caret_display_row_index == current_caret_display_row_index {
             Self::caret_movement_direction_left_right(
                 previous_caret_display_col_index,

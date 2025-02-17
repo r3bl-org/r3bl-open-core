@@ -37,8 +37,7 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
 
     // This is only set if sel_mod is enabled.
     // BUG: [ ] introduce scroll adjusted type
-    let maybe_previous_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
 
     match caret_locate::locate_row(buffer) {
         CaretRowLocationInBuffer::AtTop => {
@@ -80,14 +79,13 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
 
     // This is only set if sel_mod is enabled.
     // BUG: [ ] introduce scroll adjusted type
-    let maybe_current_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
 
     // This is only runs if sel_mod is enabled.
     sel_mod.update_selection_based_on_caret_movement_in_multiple_lines(
         buffer,
-        maybe_previous_caret_display_position,
-        maybe_current_caret_display_position,
+        maybe_prev_caret,
+        maybe_curr_caret,
     );
 }
 
@@ -100,8 +98,7 @@ pub fn page_up(
     multiline_disabled_check_early_return!(engine, @Nothing);
 
     // This is only set if sel_mod is enabled.
-    let maybe_previous_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
 
     let viewport_height = engine.viewport().row_height;
     scroll_editor_content::change_caret_row_by(
@@ -111,14 +108,13 @@ pub fn page_up(
     );
 
     // This is only set if sel_mod is enabled.
-    let maybe_current_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
 
     // This is only runs if sel_mod is enabled.
     sel_mod.update_selection_based_on_caret_movement_in_multiple_lines(
         buffer,
-        maybe_previous_caret_display_position,
-        maybe_current_caret_display_position,
+        maybe_prev_caret,
+        maybe_curr_caret,
     );
 }
 
@@ -127,8 +123,7 @@ pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Selec
     multiline_disabled_check_early_return!(engine, @Nothing);
 
     // This is only set if sel_mod is enabled.
-    let maybe_previous_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
 
     if buffer.next_line_below_caret_to_string().is_some() {
         // When buffer_mut goes out of scope, it will be dropped &
@@ -154,14 +149,13 @@ pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Selec
     }
 
     // This is only set if sel_mod is enabled.
-    let maybe_current_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
 
     // This is only runs if sel_mod is enabled.
     sel_mod.update_selection_based_on_caret_movement_in_multiple_lines(
         buffer,
-        maybe_previous_caret_display_position,
-        maybe_current_caret_display_position,
+        maybe_prev_caret,
+        maybe_curr_caret,
     );
 }
 
@@ -174,8 +168,7 @@ pub fn page_down(
     multiline_disabled_check_early_return!(engine, @Nothing);
 
     // This is only set if sel_mod is enabled.
-    let maybe_previous_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
 
     let viewport_height = engine.viewport().row_height;
     scroll_editor_content::change_caret_row_by(
@@ -185,14 +178,13 @@ pub fn page_down(
     );
 
     // This is only set if sel_mod is enabled.
-    let maybe_current_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
 
     // This is only runs if sel_mod is enabled.
     sel_mod.update_selection_based_on_caret_movement_in_multiple_lines(
         buffer,
-        maybe_previous_caret_display_position,
-        maybe_current_caret_display_position,
+        maybe_prev_caret,
+        maybe_curr_caret,
     );
 }
 
@@ -326,8 +318,7 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
     let caret_col_loc_in_line = locate_col(buffer);
 
     // This is only set if sel_mod is enabled.
-    let maybe_previous_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
 
     match caret_col_loc_in_line {
         // Special case of empty line w/ caret at start.
@@ -343,14 +334,13 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
     };
 
     // This is only set if sel_mod is enabled.
-    let maybe_current_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
 
     // This is only runs if sel_mod is enabled.
     sel_mod.handle_selection_single_line_caret_movement(
         buffer,
-        maybe_previous_caret_display_position,
-        maybe_current_caret_display_position,
+        maybe_prev_caret,
+        maybe_curr_caret,
     );
 
     return;
@@ -482,8 +472,7 @@ pub fn left(
     empty_check_early_return!(buffer, @None);
 
     // This is only set if sel_mod is enabled.
-    let maybe_previous_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
 
     match locate_col(buffer) {
         CaretColLocationInLine::AtStart => {
@@ -536,14 +525,13 @@ pub fn left(
     }
 
     // This is only set if sel_mod is enabled.
-    let maybe_current_caret_display_position =
-        sel_mod.get_caret_display_position_scroll_adjusted(buffer);
+    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
 
     // This is only runs if sel_mod is enabled.
     sel_mod.handle_selection_single_line_caret_movement(
         buffer,
-        maybe_previous_caret_display_position,
-        maybe_current_caret_display_position,
+        maybe_prev_caret,
+        maybe_curr_caret,
     );
 
     None

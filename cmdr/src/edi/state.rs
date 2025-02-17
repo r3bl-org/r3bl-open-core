@@ -141,7 +141,7 @@ mod state_tests {
                 .editor_buffers
                 .get(&FlexBoxId::from(Id::ComponentEditor))
                 .unwrap()
-                .editor_content
+                .content
                 .lines
                 .len(),
             2
@@ -151,7 +151,7 @@ mod state_tests {
                 .editor_buffers
                 .get(&FlexBoxId::from(Id::ComponentEditor))
                 .unwrap()
-                .editor_content
+                .content
                 .lines
                 .iter()
                 .map(|it| it.string.as_str())

@@ -14,18 +14,21 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::{fmt::{self, Debug, Write},
           ops::{Deref, DerefMut}};
 
 use diff_chunks::{OffscreenBufferDiffResult, PixelCharDiffChunks};
-use r3bl_core::{ok,
+use r3bl_core::{char_storage,
+                col,
+                ok,
+                row,
                 string_storage,
                 style_dim_underline,
                 style_primary,
                 style_prompt,
                 usize,
                 CharStorage,
+                ColWidth,
                 Dim,
                 LockedOutputDevice,
                 Pos,
@@ -91,8 +94,6 @@ pub mod diff_chunks {
 }
 
 mod offscreen_buffer_impl {
-    use r3bl_core::{col, row};
-
     use super::*;
 
     impl Debug for PixelCharDiffChunks {
@@ -223,13 +224,13 @@ mod pixel_char_lines_impl {
 
     impl PixelCharLines {
         pub fn new_with_capacity_initialized(window_size: Dim) -> Self {
-            let window_height = usize(*window_size.row_height);
-            let window_width = usize(*window_size.col_width);
+            let window_height = window_size.row_height;
+            let window_width = window_size.col_width;
             Self {
                 // PERF: [x] drop Vec and use SmallVec instead
                 lines: smallvec![
                     PixelCharLine::new_with_capacity_initialized(window_width);
-                    window_height
+                    window_height.as_usize()
                 ],
             }
         }
@@ -251,8 +252,6 @@ impl size_of::SizeOf for PixelCharLine {
 }
 
 mod pixel_char_line_impl {
-    use r3bl_core::{char_storage, ok};
-
     use super::*;
 
     impl Debug for PixelCharLine {
@@ -425,9 +424,9 @@ mod pixel_char_line_impl {
     // This represents a single row on the screen (i.e. a line of text).
     impl PixelCharLine {
         /// Create a new row with the given width and fill it with the empty chars.
-        pub fn new_with_capacity_initialized(window_width: usize) -> Self {
+        pub fn new_with_capacity_initialized(window_width: ColWidth) -> Self {
             Self {
-                pixel_chars: smallvec![PixelChar::Spacer; window_width],
+                pixel_chars: smallvec![PixelChar::Spacer; window_width.as_usize()],
             }
         }
     }

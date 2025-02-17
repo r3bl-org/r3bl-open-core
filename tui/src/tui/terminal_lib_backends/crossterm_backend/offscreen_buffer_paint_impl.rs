@@ -14,7 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use r3bl_core::{call_if_true,
                 ch,
                 col,
@@ -26,7 +25,7 @@ use r3bl_core::{call_if_true,
                 Size,
                 StringStorage,
                 TuiStyle,
-                UnicodeStringExt};
+                UnicodeString};
 
 use crate::{diff_chunks::PixelCharDiffChunks,
             render_ops,
@@ -112,26 +111,24 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         });
     }
 
-    /// Process each [PixelChar] in [OffscreenBuffer] and generate a [RenderOp] for it. Return a
-    /// [RenderOps] containing all the [RenderOp]s.
+    /// Process each [PixelChar] in [OffscreenBuffer] and generate a [RenderOp] for it.
+    /// Return a [RenderOps] containing all the [RenderOp]s.
     ///
-    /// > Note that each [PixelChar] gets the full [TuiStyle] embedded in it (not just a part of it
-    /// > that is different than the previous char). This means that it is possible to quickly
-    /// > "diff" between 2 of them, since the [TuiStyle] is part of the [PixelChar]. This is important
-    /// > for selective re-rendering of the [OffscreenBuffer].
+    /// > Note that each [PixelChar] gets the full [TuiStyle] embedded in it (not just a
+    /// > part of it that is different than the previous char). This means that it is
+    /// > possible to quickly "diff" between 2 of them, since the [TuiStyle] is part of
+    /// > the [PixelChar]. This is important for selective re-rendering of the
+    /// > [OffscreenBuffer].
     ///
     /// Here's the algorithm used in this function using pseudo-code:
     /// - When going thru every `PixelChar` in a line:
-    ///   - if the `PixelChar` is `Void`, `Spacer`, or `PlainText` then handle it like now
-    ///     - `temp_line_buffer`: accumulates over loop iterations
-    ///     - `flush_temp_line_buffer()`: flushes
-    ///   - if the `PixelChar` is `AnsiText`
-    ///     - `temp_ansi_line_buffer`: accumulates over loop iterations
-    ///     - `flush_temp_ansi_line_buffer()`: flushes
-    ///   - make sure to flush at the
-    ///     - end of line
-    ///     - when style changes
-    ///     - when switchover from ANSI <-> PLAIN happens
+    ///   - If the `PixelChar` is `Void`, `Spacer`, or `PlainText` then handle
+    ///     (pixel_char_str, pixel_char_style)
+    ///     - `temp_line_buffer`: accumulates over loop iterations.
+    ///     - `flush_temp_line_buffer()`: flushes.
+    ///   - Make sure to flush at the:
+    ///     - End of line.
+    ///     - When style changes.
     fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOps {
         use render_helpers::*;
 
@@ -324,12 +321,8 @@ mod render_helpers {
             ));
 
         // Update `display_col_index_for_line`.
-        let plain_text_display_width = context
-            .buffer_plain_text
-            .to_string()
-            .unicode_string()
-            .display_width;
-        context.display_col_index_for_line += plain_text_display_width;
+        let display_width = UnicodeString::str_display_width(&context.buffer_plain_text);
+        *context.display_col_index_for_line += *display_width;
 
         // Clear the buffer!
         context.buffer_plain_text.clear()

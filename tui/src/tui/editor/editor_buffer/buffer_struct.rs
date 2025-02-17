@@ -201,7 +201,7 @@ use crate::{caret_locate,
 /// - The value is the [r3bl_core::SelectionRange].
 #[derive(Clone, PartialEq, Default, size_of::SizeOf)]
 pub struct EditorBuffer {
-    pub editor_content: EditorContent,
+    pub content: EditorContent,
     pub history: EditorBufferHistory,
     pub render_cache: HashMap<StringStorage, RenderOps>,
 }
@@ -269,7 +269,7 @@ mod constructor {
             maybe_file_path: &Option<&str>,
         ) -> Self {
             let it = Self {
-                editor_content: EditorContent {
+                content: EditorContent {
                     lines: { smallvec!["".unicode_string()] },
                     maybe_file_extension: maybe_file_extension.map(|it| it.into()),
                     maybe_file_path: maybe_file_path.map(|it| it.into()),
@@ -297,13 +297,13 @@ mod constructor {
 pub mod cache {
     use super::*;
 
-    pub fn clear(editor_buffer: &mut EditorBuffer) { editor_buffer.render_cache.clear(); }
+    pub fn clear(buffer: &mut EditorBuffer) { buffer.render_cache.clear(); }
 
     /// Cache key is combination of scroll_offset and window_size.
-    fn generate_key(editor_buffer: &EditorBuffer, window_size: Size) -> StringStorage {
+    fn generate_key(buffer: &EditorBuffer, window_size: Size) -> StringStorage {
         string_storage!(
             "{offset:?}{size:?}",
-            offset = editor_buffer.get_scr_ofs(),
+            offset = buffer.get_scr_ofs(),
             size = window_size,
         )
     }
@@ -316,14 +316,14 @@ pub mod cache {
     /// - Window size changes
     /// - Content of the editor changes
     pub fn render_content(
-        editor_buffer: &mut EditorBuffer,
-        editor_engine: &mut EditorEngine,
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
         window_size: Size,
         has_focus: &mut HasFocus,
         render_ops: &mut RenderOps,
     ) {
-        let key = generate_key(editor_buffer, window_size);
-        if let Some(cached_output) = editor_buffer.render_cache.get(&key) {
+        let key = generate_key(buffer, window_size);
+        if let Some(cached_output) = buffer.render_cache.get(&key) {
             // Cache hit
             *render_ops = cached_output.clone();
             return;
@@ -332,10 +332,10 @@ pub mod cache {
         // Cache miss, due to either:
         // - Content has been modified.
         // - Scroll Offset or Window size has been modified.
-        editor_buffer.render_cache.clear();
+        buffer.render_cache.clear();
         let render_args = RenderArgs {
-            engine: editor_engine,
-            buffer: editor_buffer,
+            engine,
+            buffer,
             has_focus,
         };
 
@@ -343,7 +343,7 @@ pub mod cache {
         engine_public_api::render_content(&render_args, render_ops);
 
         // Snapshot the render_ops in the cache.
-        editor_buffer.render_cache.insert(key, render_ops.clone());
+        buffer.render_cache.insert(key, render_ops.clone());
     }
 }
 
@@ -512,32 +512,32 @@ pub mod access_and_mutate {
 
     impl EditorBuffer {
         pub fn is_file_extension_default(&self) -> bool {
-            match self.editor_content.maybe_file_extension {
+            match self.content.maybe_file_extension {
                 Some(ref ext) => ext == DEFAULT_SYN_HI_FILE_EXT,
                 None => false,
             }
         }
 
         pub fn has_file_extension(&self) -> bool {
-            self.editor_content.maybe_file_extension.is_some()
+            self.content.maybe_file_extension.is_some()
         }
 
         pub fn get_maybe_file_extension(&self) -> Option<&str> {
-            match self.editor_content.maybe_file_extension {
+            match self.content.maybe_file_extension {
                 Some(ref s) => Some(s.as_str()),
                 None => None,
             }
         }
 
-        pub fn is_empty(&self) -> bool { self.editor_content.lines.is_empty() }
+        pub fn is_empty(&self) -> bool { self.content.lines.is_empty() }
 
         pub fn line_at_row_index(&self, row_index: RowIndex) -> Option<&UnicodeString> {
-            self.editor_content.lines.get(row_index.as_usize())
+            self.content.lines.get(row_index.as_usize())
         }
 
-        pub fn len(&self) -> RowHeight { height(self.editor_content.lines.len()) }
+        pub fn len(&self) -> RowHeight { height(self.content.lines.len()) }
 
-        pub fn get_lines(&self) -> &VecEditorContentLines { &self.editor_content.lines }
+        pub fn get_lines(&self) -> &VecEditorContentLines { &self.content.lines }
 
         pub fn get_as_string_with_comma_instead_of_newlines(&self) -> StringStorage {
             self.get_as_string_with_separator(", ")
@@ -553,7 +553,7 @@ pub mod access_and_mutate {
                 StringStorage::new(),
                 as acc,
                 run {
-                    let lines = &self.editor_content.lines;
+                    let lines = &self.content.lines;
                     for (index, line) in lines.iter().enumerate() {
                         // Add separator if it's not the first line.
                         if index > 0 {
@@ -579,18 +579,18 @@ pub mod access_and_mutate {
         // XMARK: Clever Rust, use of `IntoIterator` to efficiently and flexibly load data.
         pub fn set_lines<'a, I: IntoIterator<Item = &'a str>>(&mut self, lines: I) {
             // Clear existing lines and lines_us.
-            self.editor_content.lines.clear();
+            self.content.lines.clear();
 
             // Set lines and lines_us in a single loop.
             for line in lines {
-                self.editor_content.lines.push(line.unicode_string());
+                self.content.lines.push(line.unicode_string());
             }
 
             // Reset caret.
-            self.editor_content.caret_raw = CaretRaw::default();
+            self.content.caret_raw = CaretRaw::default();
 
             // Reset scroll_offset.
-            self.editor_content.scr_ofs = ScrOfs::default();
+            self.content.scr_ofs = ScrOfs::default();
 
             // Empty the content render cache.
             cache::clear(self);
@@ -599,13 +599,13 @@ pub mod access_and_mutate {
             history::clear(self);
         }
 
-        pub fn get_caret_raw(&self) -> CaretRaw { self.editor_content.caret_raw }
+        pub fn get_caret_raw(&self) -> CaretRaw { self.content.caret_raw }
 
         pub fn get_caret_scr_adj(&self) -> CaretScrAdj {
-            self.editor_content.caret_raw + self.editor_content.scr_ofs
+            self.content.caret_raw + self.content.scr_ofs
         }
 
-        pub fn get_scr_ofs(&self) -> ScrOfs { self.editor_content.scr_ofs }
+        pub fn get_scr_ofs(&self) -> ScrOfs { self.content.scr_ofs }
 
         // REFACTOR: [ ] return struct, not tuple, add drop impl to it, to update lines_us? or drop lines_us?
         // REFACTOR: [ ] after mutations to lines, lines_us must be recomputed! consider remove this from the struct & computing it only when needed
@@ -619,21 +619,19 @@ pub mod access_and_mutate {
         /// validation changes are applied after making changes to the [EditorBuffer].
         pub fn get_mut(&mut self, vp: Dim) -> EditorBufferMut<'_> {
             EditorBufferMut::new(
-                &mut self.editor_content.lines,
-                &mut self.editor_content.caret_raw,
-                &mut self.editor_content.scr_ofs,
-                &mut self.editor_content.sel_list,
+                &mut self.content.lines,
+                &mut self.content.caret_raw,
+                &mut self.content.scr_ofs,
+                &mut self.content.sel_list,
                 vp,
             )
         }
 
-        pub fn has_selection(&self) -> bool { !self.editor_content.sel_list.is_empty() }
+        pub fn has_selection(&self) -> bool { !self.content.sel_list.is_empty() }
 
-        pub fn clear_selection(&mut self) { self.editor_content.sel_list.clear(); }
+        pub fn clear_selection(&mut self) { self.content.sel_list.clear(); }
 
-        pub fn get_selection_list(&self) -> &SelectionList {
-            &self.editor_content.sel_list
-        }
+        pub fn get_selection_list(&self) -> &SelectionList { &self.content.sel_list }
     }
 }
 
@@ -653,60 +651,57 @@ pub mod history {
         index.try_into().unwrap_or(index as usize)
     }
 
-    pub fn clear(editor_buffer: &mut EditorBuffer) {
-        editor_buffer.history = EditorBufferHistory::default();
+    pub fn clear(buffer: &mut EditorBuffer) {
+        buffer.history = EditorBufferHistory::default();
     }
 
-    pub fn push(editor_buffer: &mut EditorBuffer) {
+    pub fn push(buffer: &mut EditorBuffer) {
         // Invalidate the content cache, since the content just changed.
-        cache::clear(editor_buffer);
+        cache::clear(buffer);
 
-        let content_copy = editor_buffer.editor_content.clone();
+        let content_copy = buffer.content.clone();
 
         // Delete the history from the current version index to the end.
-        if let Some(current_index) = editor_buffer.history.get_current_index() {
-            editor_buffer
+        if let Some(current_index) = buffer.history.get_current_index() {
+            buffer
                 .history
                 .versions
                 .truncate(convert_isize_to_usize(current_index + 1));
         }
 
         // Normal history insertion.
-        editor_buffer.history.push_content(content_copy);
+        buffer.history.push_content(content_copy);
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            tracing::debug!(
-                "🍎🍎🍎 add_content_to_undo_stack editor_buffer: {:?}",
-                editor_buffer
-            );
+            tracing::debug!("🍎🍎🍎 add_content_to_undo_stack buffer: {:?}", buffer);
         });
     }
 
-    pub fn undo(editor_buffer: &mut EditorBuffer) {
+    pub fn undo(buffer: &mut EditorBuffer) {
         // Invalidate the content cache, since the content just changed.
-        cache::clear(editor_buffer);
+        cache::clear(buffer);
 
-        let retain_caret_position = editor_buffer.editor_content.caret_raw;
-        if let Some(content) = editor_buffer.history.previous_content() {
-            editor_buffer.editor_content = content;
-            editor_buffer.editor_content.caret_raw = retain_caret_position;
+        let retain_caret_pos = buffer.content.caret_raw;
+        if let Some(content) = buffer.history.previous_content() {
+            buffer.content = content;
+            buffer.content.caret_raw = retain_caret_pos;
         }
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            tracing::debug!("🍎🍎🍎 undo editor_buffer: {:?}", editor_buffer);
+            tracing::debug!("🍎🍎🍎 undo buffer: {:?}", buffer);
         });
     }
 
-    pub fn redo(editor_buffer: &mut EditorBuffer) {
+    pub fn redo(buffer: &mut EditorBuffer) {
         // Invalidate the content cache, since the content just changed.
-        cache::clear(editor_buffer);
+        cache::clear(buffer);
 
-        if let Some(content) = editor_buffer.history.next_content() {
-            editor_buffer.editor_content = content;
+        if let Some(content) = buffer.history.next_content() {
+            buffer.content = content;
         }
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            tracing::debug!("🍎🍎🍎 redo editor_buffer: {:?}", editor_buffer);
+            tracing::debug!("🍎🍎🍎 redo buffer: {:?}", buffer);
         });
     }
 
@@ -823,7 +818,7 @@ mod impl_debug_format {
   - content: {content:?}
   - history: {history:?}
 ]",
-                content = self.editor_content,
+                content = self.content,
                 history = self.history,
             }
         }
@@ -876,25 +871,25 @@ mod history_tests {
 
     #[test]
     fn test_push_default() {
-        let mut editor_buffer = EditorBuffer::default();
-        let content = editor_buffer.editor_content.clone();
+        let mut buffer = EditorBuffer::default();
+        let content = buffer.content.clone();
 
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 0);
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0);
 
-        let history_stack = editor_buffer.history.versions;
+        let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 1);
         assert_eq2!(history_stack[0], content);
     }
 
     #[test]
     fn test_push_with_contents() {
-        let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 0);
+        let mut buffer = EditorBuffer::default();
+        buffer.content.lines = smallvec!["abc".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0);
 
-        let history_stack = editor_buffer.history.versions;
+        let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 1);
         assert_eq2!(history_stack[0].lines.len(), 1);
         assert_eq2!(history_stack[0].lines[0], "abc".unicode_string());
@@ -902,28 +897,28 @@ mod history_tests {
 
     #[test]
     fn test_push_and_drop_future_redos() {
-        let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 0);
+        let mut buffer = EditorBuffer::default();
+        buffer.content.lines = smallvec!["abc".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0);
 
-        editor_buffer.editor_content.lines = smallvec!["def".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 1);
+        buffer.content.lines = smallvec!["def".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 1);
 
-        editor_buffer.editor_content.lines = smallvec!["ghi".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 2);
+        buffer.content.lines = smallvec!["ghi".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 2);
 
         // Do two undos.
-        history::undo(&mut editor_buffer);
-        history::undo(&mut editor_buffer);
+        history::undo(&mut buffer);
+        history::undo(&mut buffer);
 
         // Push new content. Should drop future redos.
-        editor_buffer.editor_content.lines = smallvec!["xyz".unicode_string()];
-        history::push(&mut editor_buffer);
+        buffer.content.lines = smallvec!["xyz".unicode_string()];
+        history::push(&mut buffer);
 
-        let history = editor_buffer.history;
+        let history = buffer.history;
         assert_eq2!(history.current_index, 1);
 
         let history_stack = history.versions;
@@ -936,38 +931,38 @@ mod history_tests {
 
     #[test]
     fn test_single_undo() {
-        let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 0);
+        let mut buffer = EditorBuffer::default();
+        buffer.content.lines = smallvec!["abc".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0);
 
         // Undo.
-        history::undo(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 0);
+        history::undo(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0);
     }
 
     #[test]
     fn test_many_undo() {
-        let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 0);
+        let mut buffer = EditorBuffer::default();
+        buffer.content.lines = smallvec!["abc".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0);
 
-        editor_buffer.editor_content.lines = smallvec!["def".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 1);
-        let copy_of_editor_content = editor_buffer.editor_content.clone();
+        buffer.content.lines = smallvec!["def".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 1);
+        let copy_of_editor_content = buffer.content.clone();
 
-        editor_buffer.editor_content.lines = smallvec!["ghi".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 2);
+        buffer.content.lines = smallvec!["ghi".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 2);
 
         // Undo.
-        history::undo(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 1);
-        assert_eq2!(editor_buffer.editor_content, copy_of_editor_content);
+        history::undo(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 1);
+        assert_eq2!(buffer.content, copy_of_editor_content);
 
-        let history_stack = editor_buffer.history.versions;
+        let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 3);
         assert_eq2!(history_stack[0].lines.len(), 1);
         assert_eq2!(history_stack[0].lines[0], "abc".unicode_string());
@@ -979,50 +974,50 @@ mod history_tests {
 
     #[test]
     fn test_multiple_undos() {
-        let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 0);
+        let mut buffer = EditorBuffer::default();
+        buffer.content.lines = smallvec!["abc".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0);
 
-        editor_buffer.editor_content.lines = smallvec!["def".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 1);
+        buffer.content.lines = smallvec!["def".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 1);
 
         // Undo multiple times.
-        history::undo(&mut editor_buffer);
-        history::undo(&mut editor_buffer);
-        history::undo(&mut editor_buffer);
+        history::undo(&mut buffer);
+        history::undo(&mut buffer);
+        history::undo(&mut buffer);
 
-        assert_eq2!(editor_buffer.history.current_index, 0);
+        assert_eq2!(buffer.history.current_index, 0);
     }
 
     #[test]
     fn test_undo_and_multiple_redos() {
-        let mut editor_buffer = EditorBuffer::default();
-        editor_buffer.editor_content.lines = smallvec!["abc".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 0);
+        let mut buffer = EditorBuffer::default();
+        buffer.content.lines = smallvec!["abc".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0);
 
-        editor_buffer.editor_content.lines = smallvec!["def".unicode_string()];
-        history::push(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 1);
-        let snapshot_content = editor_buffer.editor_content.clone();
+        buffer.content.lines = smallvec!["def".unicode_string()];
+        history::push(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 1);
+        let snapshot_content = buffer.content.clone();
 
         // Undo.
-        history::undo(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 0);
+        history::undo(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0);
 
         // Redo.
-        history::redo(&mut editor_buffer);
-        assert_eq2!(editor_buffer.history.current_index, 1);
+        history::redo(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 1);
 
         // Current state.
-        assert_eq2!(editor_buffer.editor_content, snapshot_content);
+        assert_eq2!(buffer.content, snapshot_content);
 
         // Redo.
-        history::redo(&mut editor_buffer);
+        history::redo(&mut buffer);
 
-        let history_stack = editor_buffer.history.versions;
+        let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 2);
         assert_eq2!(history_stack[0].lines.len(), 1);
         assert_eq2!(history_stack[0].lines[0], "abc".unicode_string());

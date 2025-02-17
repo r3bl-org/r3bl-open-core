@@ -14,11 +14,11 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_core::{LockedOutputDevice,
+use r3bl_core::{ok,
+                LockedOutputDevice,
                 Pos,
                 Size,
                 StringStorage,
@@ -170,12 +170,10 @@ impl Default for RenderOps {
 
 #[derive(Default, Debug)]
 pub struct RenderOpsLocalData {
-    pub cursor_position: Pos,
+    pub cursor_pos: Pos,
 }
 
 pub mod render_ops_impl {
-    use r3bl_core::{ok, VecArray};
-
     use super::*;
 
     impl RenderOps {
@@ -267,7 +265,7 @@ pub enum RenderOp {
     ExitRawMode,
 
     /// This is always painted on top. [Pos] is the absolute column and row on the
-    /// terminal screen. This uses [super::sanitize_and_save_abs_position] to clean up the
+    /// terminal screen. This uses [super::sanitize_and_save_abs_pos] to clean up the
     /// given [Pos].
     MoveCursorPositionAbs(/* absolute position */ Pos),
 
