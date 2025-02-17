@@ -846,7 +846,7 @@ mod test_cache {
         test_cache_hit(editor_buffer, &mut cache);
 
         // Change in scroll_offset should invalidate the cache and result in a cache miss.
-        editor_buffer.editor_content.scr_ofs = col(1) + row(1);
+        editor_buffer.content.scr_ofs = col(1) + row(1);
         cache::render_content(
             editor_buffer,
             editor_engine,

@@ -350,7 +350,7 @@ mod test_editor_ops {
     }
 
     #[test]
-    fn editor_validate_caret_position_on_up() {
+    fn editor_validate_caret_pos_on_up() {
         let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
@@ -388,7 +388,7 @@ mod test_editor_ops {
     }
 
     #[test]
-    fn editor_validate_caret_position_on_down() {
+    fn editor_validate_caret_pos_on_down() {
         let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 

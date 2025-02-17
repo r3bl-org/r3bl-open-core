@@ -159,7 +159,10 @@ pub fn paint<S, AS>(
 /// painted at the very last column of the terminal window due to the way in which the
 /// spacers are repeated. No checks are supposed to be done when [crate::OffscreenBuffer]
 /// is painting, so there is no clean way to skip this clipping check.
-pub fn sanitize_and_save_abs_position(
+///
+/// See the `test_sanitize_and_save_abs_pos` for more details on the behavior of this
+/// function.
+pub fn sanitize_and_save_abs_pos(
     orig_abs_pos: Pos,
     window_size: Dim,
     local_data: &mut RenderOpsLocalData,
@@ -171,17 +174,25 @@ pub fn sanitize_and_save_abs_position(
 
     let mut sanitized_abs_pos = orig_abs_pos;
 
-    // REVIEW: [ ] sanitize_and_save_abs_position verify correct w/ offscreen buffer process_render_op()
+    // REVIEW: [x] sanitize_and_save_abs_position verify correct w/ offscreen buffer process_render_op()
     sanitized_abs_pos.col_index = sanitized_abs_pos
         .col_index
         .min(window_width.convert_to_col_index());
+    // Equivalent code:
+    // if *orig_abs_pos.col_index >= *window_width {
+    //     *sanitized_abs_pos.col_index = *window_width - 1;
+    // }
 
     sanitized_abs_pos.row_index = sanitized_abs_pos
         .row_index
         .min(window_height.convert_to_row_index());
+    // Equivalent code:
+    // if *orig_abs_pos.row_index >= *window_height {
+    //     *sanitized_abs_pos.row_index = *window_height - 1;
+    // }
 
     // Save the cursor position to local data.
-    local_data.cursor_position = sanitized_abs_pos;
+    local_data.cursor_pos = sanitized_abs_pos;
 
     debug(orig_abs_pos, sanitized_abs_pos);
 

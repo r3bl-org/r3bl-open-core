@@ -34,7 +34,7 @@ pub struct PartialFlexBox {
 impl PartialFlexBox {
     pub fn get_computed_style(&self) -> Option<TuiStyle> { self.maybe_computed_style }
 
-    pub fn get_style_adjusted_position_and_size(&self) -> (Pos, Dim) {
+    pub fn get_style_adjusted_pos_and_dim(&self) -> (Pos, Dim) {
         (
             self.style_adjusted_origin_pos,
             self.style_adjusted_bounds_size,
@@ -95,7 +95,7 @@ mod tests {
     }
 
     #[test]
-    fn test_partial_flex_box_get_style_adjusted_position_and_size() {
+    fn test_partial_flex_box_get_style_adjusted_pos_and_dim() {
         let position = col(1) + row(2);
         let size = width(3) + height(4);
         let partial_flex_box = PartialFlexBox {
@@ -104,7 +104,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            partial_flex_box.get_style_adjusted_position_and_size(),
+            partial_flex_box.get_style_adjusted_pos_and_dim(),
             (position, size)
         );
     }

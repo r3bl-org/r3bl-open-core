@@ -44,7 +44,7 @@ use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color
             enable_raw_mode_now,
             flush_now,
             queue_render_op,
-            sanitize_and_save_abs_position,
+            sanitize_and_save_abs_pos,
             Flush,
             PaintRenderOp,
             RenderOp,
@@ -189,7 +189,7 @@ mod impl_self {
             let Pos {
                 col_index,
                 row_index,
-            } = sanitize_and_save_abs_position(abs_pos, window_size, local_data);
+            } = sanitize_and_save_abs_pos(abs_pos, window_size, local_data);
 
             let col = col_index.as_u16();
             let row = row_index.as_u16();
@@ -433,13 +433,13 @@ mod perform_paint {
         };
 
         // Update cursor position after paint.
-        let text_display_width = UnicodeString::str_display_width(text);
-        local_data.cursor_position.col_index += text_display_width;
-        sanitize_and_save_abs_position(
-            local_data.cursor_position,
-            *window_size,
-            local_data,
-        );
+        let cursor_pos_copy = {
+            let mut copy = local_data.cursor_pos;
+            let text_display_width = UnicodeString::str_display_width(text);
+            *copy.col_index += *text_display_width;
+            copy
+        };
+        sanitize_and_save_abs_pos(cursor_pos_copy, *window_size, local_data);
     }
 }
 

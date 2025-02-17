@@ -31,10 +31,7 @@ pub enum SelectMode {
 
 impl SelectMode {
     // BUG: [ ] introduce scroll adjusted type
-    pub fn get_caret_display_position_scroll_adjusted(
-        &self,
-        buffer: &EditorBuffer,
-    ) -> Option<CaretScrAdj> {
+    pub fn get_caret_scr_adj(&self, buffer: &EditorBuffer) -> Option<CaretScrAdj> {
         match self {
             SelectMode::Enabled => Some(buffer.get_caret_scr_adj()),
             _ => None,
@@ -58,8 +55,8 @@ impl SelectMode {
     pub fn handle_selection_single_line_caret_movement(
         &self,
         editor_buffer: &mut EditorBuffer,
-        maybe_previous_caret_display_position: Option<CaretScrAdj>,
-        maybe_current_caret_display_position: Option<CaretScrAdj>,
+        maybe_prev_caret: Option<CaretScrAdj>,
+        maybe_curr_caret: Option<CaretScrAdj>,
     ) -> Option<()> {
         match self {
             // Cancel the selection. We don't care about the caret positions (they maybe
@@ -68,18 +65,18 @@ impl SelectMode {
             // Create or update the selection w/ the caret positions (which can't be
             // None).
             SelectMode::Enabled => {
-                let previous = maybe_previous_caret_display_position?;
-                let current = maybe_current_caret_display_position?;
+                let prev = maybe_prev_caret?;
+                let curr = maybe_curr_caret?;
 
-                if previous.row_index != current.row_index {
+                if prev.row_index != curr.row_index {
                     return None;
                 }
 
                 handle_selection_single_line_caret_movement(
                     editor_buffer,
-                    previous.row_index, // Same as `current.row_index`.
-                    previous.col_index,
-                    current.col_index,
+                    prev.row_index, // Same as `current.row_index`.
+                    prev.col_index,
+                    curr.col_index,
                 )
             }
         };
@@ -90,8 +87,8 @@ impl SelectMode {
     pub fn update_selection_based_on_caret_movement_in_multiple_lines(
         &self,
         buffer: &mut EditorBuffer,
-        maybe_prev_caret_scr_adj: Option<CaretScrAdj>,
-        maybe_curr_caret_scr_adj: Option<CaretScrAdj>,
+        maybe_prev_caret: Option<CaretScrAdj>,
+        maybe_curr_caret: Option<CaretScrAdj>,
     ) -> Option<()> {
         match self {
             // Cancel the selection. We don't care about the caret positions (they maybe
@@ -100,8 +97,8 @@ impl SelectMode {
             // Create or update the selection w/ the caret positions (which can't be
             // None).
             SelectMode::Enabled => {
-                let prev = maybe_prev_caret_scr_adj?;
-                let curr = maybe_curr_caret_scr_adj?;
+                let prev = maybe_prev_caret?;
+                let curr = maybe_curr_caret?;
 
                 match prev.row_index.cmp(&curr.row_index) {
                      Ordering::Equal => handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(

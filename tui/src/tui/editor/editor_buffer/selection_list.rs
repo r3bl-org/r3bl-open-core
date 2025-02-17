@@ -220,10 +220,10 @@ impl SelectionList {
         selection_range: SelectionRange,
         direction: CaretMovementDirection,
     ) {
-        if let Some(existing_position) =
+        if let Some(existing_pos) =
             self.list.iter().position(|(index, _)| *index == row_index)
         {
-            self.list[existing_position] = (row_index, selection_range);
+            self.list[existing_pos] = (row_index, selection_range);
         } else {
             self.list.push((row_index, selection_range));
         }
