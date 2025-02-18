@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::col;
+use r3bl_core::{ch, BoundsCheck as _, BoundsStatus};
 
 use crate::{caret_scroll_index, EditorArgsMut};
 
@@ -45,7 +45,7 @@ pub fn validate_scroll_on_resize(args: EditorArgsMut<'_>) {
 ///                    +--- scroll_offset ---+
 ///              ->    |         ↑           |      ↑
 ///              |     |                     |      |
-///   caret.row_index  |     |      within vp      |  vp height
+///   caret.row_index  |     within vp       |  vp height
 ///              |     |                     |      |
 ///              ->    |         ↓           |      ↓
 ///                    +--- scroll_offset ---+
@@ -57,60 +57,71 @@ pub fn validate_scroll_on_resize(args: EditorArgsMut<'_>) {
 /// ```
 fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
+    let vp = engine.viewport();
+    let vp_height = vp.row_height;
+    let max_row = caret_scroll_index::row_index_for_height(buffer.len());
 
-    let viewport = engine.viewport();
-
-    // Make sure that caret can't go past the bottom of the buffer.
+    // Make sure that caret row can't go past the bottom of the buffer.
     {
-        let caret_row = buffer.get_caret_scr_adj().row_index;
-        let spilled_row_index =
-            caret_scroll_index::scroll_row_index_for_height(buffer.len());
-        let overflows_buffer = caret_row > spilled_row_index;
-        if overflows_buffer {
-            let diff = spilled_row_index - caret_row;
-            let buffer_mut = buffer.get_mut(viewport);
+        let caret_scr_adj_row_index = buffer.get_caret_scr_adj().row_index;
+        if caret_scr_adj_row_index.check_overflows(max_row) == BoundsStatus::Overflowed {
+            let diff = max_row - buffer.get_caret_scr_adj().row_index;
+            let buffer_mut = buffer.get_mut_no_drop(vp);
             buffer_mut.caret_raw.row_index -= diff;
         }
     }
 
-    // Make sure that scroll_offset can't go past the bottom of the buffer.
+    // Make sure that scr_ofs row can't go past the bottom of the buffer.
     {
-        let scr_ofs_row = buffer.get_scr_ofs().row_index;
-        let spilled_row_index =
-            caret_scroll_index::scroll_row_index_for_height(buffer.len());
-        let overflows_buffer = scr_ofs_row > spilled_row_index;
-        if overflows_buffer {
-            let diff = spilled_row_index - scr_ofs_row;
-            let buffer_mut = buffer.get_mut(viewport);
+        let scr_ofs_row_index = buffer.get_scr_ofs().row_index;
+        if scr_ofs_row_index.check_overflows(max_row) == BoundsStatus::Overflowed {
+            let diff = max_row - scr_ofs_row_index;
+            let buffer_mut = buffer.get_mut_no_drop(vp);
             buffer_mut.scr_ofs.row_index -= diff;
         }
     }
 
-    let caret_row = buffer.get_caret_scr_adj().row_index;
-    let scr_ofs_row = buffer.get_scr_ofs().row_index;
-
-    let is_caret_row_within_viewport =
-        caret_row >= scr_ofs_row && caret_row <= (scr_ofs_row + viewport.row_height);
-    let is_caret_row_above_viewport = caret_row < scr_ofs_row;
-
-    // REVIEW: [ ] replace use of bool w/ enum
-    match (is_caret_row_within_viewport, is_caret_row_above_viewport) {
-        (true, _) => {
-            // Caret is within viewport, do nothing.
+    {
+        #[derive(Debug, Copy, Clone)]
+        enum CaretLocRelativeToVp {
+            Within,
+            Above,
+            Below,
         }
-        (false, true) => {
-            // Caret is above viewport.
-            let row_diff = scr_ofs_row - caret_row;
-            let buffer_mut = buffer.get_mut(viewport);
-            buffer_mut.scr_ofs.row_index -= row_diff;
-            buffer_mut.caret_raw.row_index += row_diff;
-        }
-        (false, false) => {
-            // Caret is below viewport.
-            let row_diff = caret_row - (scr_ofs_row + viewport.row_height);
-            let buffer_mut = buffer.get_mut(viewport);
-            buffer_mut.scr_ofs.row_index += row_diff;
-            buffer_mut.caret_raw.row_index -= row_diff;
+
+        let caret_scr_adj_row_index = buffer.get_caret_scr_adj().row_index;
+        let scr_ofs_row_index = buffer.get_scr_ofs().row_index;
+
+        let location = {
+            let is_within = caret_scr_adj_row_index >= scr_ofs_row_index
+                && caret_scr_adj_row_index <= (scr_ofs_row_index + vp_height);
+            let is_above_or_below = caret_scr_adj_row_index < scr_ofs_row_index;
+            match (is_within, is_above_or_below) {
+                (true, _) => CaretLocRelativeToVp::Within,
+                (false, true) => CaretLocRelativeToVp::Above,
+                (false, false) => CaretLocRelativeToVp::Below,
+            }
+        };
+
+        match location {
+            CaretLocRelativeToVp::Within => {
+                // Caret is within viewport, do nothing.
+            }
+            CaretLocRelativeToVp::Above => {
+                // Caret is above viewport.
+                let row_diff = scr_ofs_row_index - caret_scr_adj_row_index;
+                let buffer_mut = buffer.get_mut_no_drop(vp);
+                buffer_mut.scr_ofs.row_index -= row_diff;
+                buffer_mut.caret_raw.row_index += row_diff;
+            }
+            CaretLocRelativeToVp::Below => {
+                // Caret is below viewport.
+                let row_diff =
+                    caret_scr_adj_row_index - (scr_ofs_row_index + vp.row_height);
+                let buffer_mut = buffer.get_mut_no_drop(vp);
+                buffer_mut.scr_ofs.row_index += row_diff;
+                buffer_mut.caret_raw.row_index -= row_diff;
+            }
         }
     }
 }
@@ -134,33 +145,99 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
 /// ```
 fn validate_horizontal_scroll(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
+    let viewport_width = engine.viewport().col_width;
 
-    let viewport = engine.viewport();
+    let caret_scr_adj_col_index = buffer.get_caret_scr_adj().col_index;
+    let scr_ofs_col_index = buffer.get_scr_ofs().col_index;
 
-    let caret_col = buffer.get_caret_scr_adj().col_index;
-    let scr_ofs_col = buffer.get_scr_ofs().col_index;
+    enum CaretColWithinVp {
+        Yes,
+        No,
+    }
 
-    let is_caret_col_abs_within_viewport =
-        caret_col >= scr_ofs_col && caret_col < scr_ofs_col + viewport.col_width;
+    enum CaretAtSideOfVp {
+        Left,
+        Right,
+    }
 
-    match is_caret_col_abs_within_viewport {
-        true => {
-            // Caret is within viewport, nothing to do.
+    let is_within = if caret_scr_adj_col_index >= scr_ofs_col_index
+        && caret_scr_adj_col_index < scr_ofs_col_index + viewport_width
+    {
+        CaretColWithinVp::Yes
+    } else {
+        CaretColWithinVp::No
+    };
+
+    let is_outside = if caret_scr_adj_col_index < scr_ofs_col_index {
+        CaretAtSideOfVp::Left
+    } else {
+        CaretAtSideOfVp::Right
+    };
+
+    match (is_within, is_outside) {
+        (CaretColWithinVp::Yes, _) => {
+            // Caret is within viewport, do nothing.
         }
-        false => {
-            // Caret is outside viewport.
-            let buffer_mut = buffer.get_mut(viewport);
-
-            if caret_col < scr_ofs_col {
-                // Caret is to the left of viewport.
-                buffer_mut.scr_ofs.col_index = caret_col;
-                buffer_mut.caret_raw.col_index = col(0);
-            } else {
-                // Caret is to the right of viewport.
-                let viewport_width = buffer_mut.vp.col_width;
-                buffer_mut.scr_ofs.col_index = caret_col - viewport_width + col(1);
-                buffer_mut.caret_raw.col_index = viewport_width.convert_to_col_index();
-            }
+        (CaretColWithinVp::No, CaretAtSideOfVp::Left) => {
+            // Caret is to the left of viewport.
+            let buffer_mut = buffer.get_mut_no_drop(engine.viewport());
+            *buffer_mut.scr_ofs.col_index = *caret_scr_adj_col_index;
+            *buffer_mut.caret_raw.col_index = ch(0);
         }
+        (CaretColWithinVp::No, CaretAtSideOfVp::Right) => {
+            // Caret is to the right of viewport.
+            let buffer_mut = buffer.get_mut_no_drop(engine.viewport());
+            *buffer_mut.scr_ofs.col_index =
+                *caret_scr_adj_col_index - *viewport_width + ch(1);
+            *buffer_mut.caret_raw.col_index = *viewport_width - ch(1);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use r3bl_core::{caret_raw, col, height, row, scr_ofs, width};
+
+    use super::*;
+    use crate::{test_fixtures::mock_real_objects_for_editor,
+                EditorBuffer,
+                EditorEngine,
+                EditorEngineConfig,
+                LineMode,
+                DEFAULT_SYN_HI_FILE_EXT};
+
+    // REVIEW: [ ] add test for above viewport
+    
+    // REVIEW: [ ] add test for below viewport
+
+    // REVIEW: [x] add test for within viewport
+    #[test]
+    fn test_validate_vertical_scroll_within_viewport() {
+        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut engine: EditorEngine = EditorEngine {
+            config_options: EditorEngineConfig {
+                multiline_mode: LineMode::MultiLine,
+                ..Default::default()
+            },
+            ..mock_real_objects_for_editor::make_editor_engine()
+        };
+
+        let viewport = height(10) + width(10);
+
+        {
+            let buffer_mut = buffer.get_mut_no_drop(viewport);
+            *buffer_mut.caret_raw = caret_raw(row(5) + col(0));
+            *buffer_mut.scr_ofs = scr_ofs(row(0) + col(0));
+        }
+
+        let editor_args_mut = EditorArgsMut {
+            engine: &mut engine,
+            buffer: &mut buffer,
+        };
+
+        validate_vertical_scroll(editor_args_mut);
+
+        assert_eq!(buffer.get_scr_ofs().row_index, row(0));
+        assert_eq!(buffer.get_caret_scr_adj().row_index, row(5));
     }
 }

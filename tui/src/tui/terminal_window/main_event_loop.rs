@@ -224,6 +224,7 @@ where
                         }
                     });
 
+                    // Handle resize event here. And then pass it to the app (next).
                     if let InputEvent::Resize(new_size) = input_event {
                         telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Resize, {
                             handle_resize(
@@ -235,20 +236,21 @@ where
                                 output_device.is_mock,
                             );
                         });
-                    } else {
-                        telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Input, {
-                            actually_process_input_event(
-                                global_data_mut_ref,
-                                app,
-                                input_event,
-                                exit_keys,
-                                component_registry_map,
-                                has_focus,
-                                output_device_as_mut!(output_device),
-                                output_device.is_mock,
-                            );
-                        });
                     }
+
+                    // This includes resize events.
+                    telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Input, {
+                        actually_process_input_event(
+                            global_data_mut_ref,
+                            app,
+                            input_event,
+                            exit_keys,
+                            component_registry_map,
+                            has_focus,
+                            output_device_as_mut!(output_device),
+                            output_device.is_mock,
+                        );
+                    });
                 } else {
                     // environments with InputDevice::new_mock_with_delay() or
                     // There are no events in the stream, so exit. This happens in test

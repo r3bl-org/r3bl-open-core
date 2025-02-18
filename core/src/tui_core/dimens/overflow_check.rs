@@ -18,12 +18,10 @@
 use super::{ColIndex, ColWidth, RowHeight, RowIndex};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum BoundsContainmentResult {
+pub enum BoundsStatus {
     Within,
     Overflowed,
 }
-
-// REVIEW: [ ] use this in place of (col/row) index and width/height overflow checks. See inc_caret_row() as example
 
 /// This trait "formalizes" the concept of checking for overflow. More specifically when
 /// an index (row or col index) overflows a length (width or height).
@@ -40,7 +38,7 @@ pub enum BoundsContainmentResult {
 ///
 /// ```rust
 /// use r3bl_core::{
-///     BoundsContainmentCheck, BoundsContainmentResult,
+///     BoundsCheck, BoundsStatus,
 ///     RowHeight, RowIndex, ColIndex, ColWidth
 /// };
 ///
@@ -48,44 +46,55 @@ pub enum BoundsContainmentResult {
 /// let height = RowHeight::new(5);
 /// assert_eq!(
 ///     row_index.check_overflows(height),
-///     BoundsContainmentResult::Overflowed);
+///     BoundsStatus::Overflowed);
 ///
 /// let col_index = ColIndex::new(3);
 /// let width = ColWidth::new(5);
 /// assert_eq!(
 ///     col_index.check_overflows(width),
-///     BoundsContainmentResult::Within);
+///     BoundsStatus::Within);
 /// ```
-pub trait BoundsContainmentCheck<OtherType> {
-    fn check_overflows(&self, max: OtherType) -> BoundsContainmentResult;
+pub trait BoundsCheck<OtherType> {
+    fn check_overflows(&self, max: OtherType) -> BoundsStatus;
 }
 
-impl BoundsContainmentCheck<RowHeight> for RowIndex {
+impl BoundsCheck<RowHeight> for RowIndex {
     /// Used to be `row_index >= height`.
     /// And: `a >= b` === `a > b-1`.
     /// So: `row_index > height - 1`.
-    fn check_overflows(&self, height: RowHeight) -> BoundsContainmentResult {
+    fn check_overflows(&self, height: RowHeight) -> BoundsStatus {
         let this = *self;
         let other = height.convert_to_row_index() /*-1*/;
         if this > other {
-            BoundsContainmentResult::Overflowed
+            BoundsStatus::Overflowed
         } else {
-            BoundsContainmentResult::Within
+            BoundsStatus::Within
         }
     }
 }
 
-impl BoundsContainmentCheck<ColWidth> for ColIndex {
+impl BoundsCheck<ColWidth> for ColIndex {
     /// Used to be `col_index >= width`.
     /// And: `a >= b` === `a > b-1`.
     /// So: `col_index > width - 1`.
-    fn check_overflows(&self, width: ColWidth) -> BoundsContainmentResult {
+    fn check_overflows(&self, width: ColWidth) -> BoundsStatus {
         let this = *self;
         let other = width.convert_to_col_index() /*-1*/;
         if this > other {
-            BoundsContainmentResult::Overflowed
+            BoundsStatus::Overflowed
         } else {
-            BoundsContainmentResult::Within
+            BoundsStatus::Within
+        }
+    }
+}
+
+impl BoundsCheck<RowIndex> for RowIndex {
+    fn check_overflows(&self, other: RowIndex) -> BoundsStatus {
+        let this = *self;
+        if this > other {
+            BoundsStatus::Overflowed
+        } else {
+            BoundsStatus::Within
         }
     }
 }
@@ -102,17 +111,11 @@ mod tests_overflow_check {
         let width = width(5);
 
         for col_index in within.iter() {
-            assert_eq!(
-                col_index.check_overflows(width),
-                BoundsContainmentResult::Within
-            );
+            assert_eq!(col_index.check_overflows(width), BoundsStatus::Within);
         }
 
         for col_index in overflowed.iter() {
-            assert_eq!(
-                col_index.check_overflows(width),
-                BoundsContainmentResult::Overflowed
-            );
+            assert_eq!(col_index.check_overflows(width), BoundsStatus::Overflowed);
         }
     }
 
@@ -123,17 +126,26 @@ mod tests_overflow_check {
         let height = height(5);
 
         for row_index in within.iter() {
-            assert_eq!(
-                row_index.check_overflows(height),
-                BoundsContainmentResult::Within
-            );
+            assert_eq!(row_index.check_overflows(height), BoundsStatus::Within);
         }
 
         for row_index in overflowed.iter() {
-            assert_eq!(
-                row_index.check_overflows(height),
-                BoundsContainmentResult::Overflowed
-            );
+            assert_eq!(row_index.check_overflows(height), BoundsStatus::Overflowed);
+        }
+    }
+
+    #[test]
+    fn test_row_index_for_row_index() {
+        let within = [row(0), row(1), row(2), row(3), row(4), row(5)];
+        let overflowed = [row(6), row(7)];
+        let max = row(5);
+
+        for row_index in within.iter() {
+            assert_eq!(row_index.check_overflows(max), BoundsStatus::Within);
+        }
+
+        for row_index in overflowed.iter() {
+            assert_eq!(row_index.check_overflows(max), BoundsStatus::Overflowed);
         }
     }
 }

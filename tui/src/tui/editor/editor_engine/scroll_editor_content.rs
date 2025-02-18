@@ -28,8 +28,8 @@ use r3bl_core::{ch,
                 height,
                 row,
                 width,
-                BoundsContainmentCheck,
-                BoundsContainmentResult,
+                BoundsCheck,
+                BoundsStatus,
                 CaretRaw,
                 ColIndex,
                 ColWidth,
@@ -100,9 +100,7 @@ pub fn inc_caret_col_by(
     // Just move the caret right.
     caret_raw.add_col_with_bounds(col_amt, line_display_width);
 
-    if caret_raw.col_index.check_overflows(vp_width)
-        == BoundsContainmentResult::Overflowed
-    {
+    if caret_raw.col_index.check_overflows(vp_width) == BoundsStatus::Overflowed {
         // The following is equivalent to:
         // `let diff_overflow = (caret_raw.col_index + ch!(1)) - vp_width;`
         let diff_overflow = caret_raw.col_index.convert_to_width() /*+1*/ - vp_width;
@@ -129,7 +127,7 @@ pub fn clip_caret_to_content_width(args: EditorArgsMut<'_>) {
     let line_display_width = buffer.get_line_display_width_at_caret_scr_adj();
 
     if caret_scr_adj.col_index.check_overflows(line_display_width)
-        == BoundsContainmentResult::Overflowed
+        == BoundsStatus::Overflowed
     {
         caret_mut::to_end_of_line(buffer, engine, SelectMode::Disabled);
     }
@@ -227,8 +225,7 @@ pub fn dec_caret_col_by(
         (HorizScr::Active, VpHorizLoc::NotAtStart) => {
             // The line below used to be: `col_amt > caret_raw.col_index`
             let need_to_scroll_left =
-                caret_scroll_index::scroll_col_index_for_width(col_amt)
-                    > caret_raw.col_index;
+                caret_scroll_index::col_index_for_width(col_amt) > caret_raw.col_index;
 
             match need_to_scroll_left {
                 // Just move caret left by col_amt.
@@ -245,7 +242,7 @@ pub fn dec_caret_col_by(
                         // Due to scroll reasons, the `lhs` is the same value as the
                         // `col_amt`, ie, it goes past the viewport width. See the
                         // `scroll_col_index_for_width()` for more details.
-                        let lhs = caret_scroll_index::scroll_col_index_for_width(col_amt);
+                        let lhs = caret_scroll_index::col_index_for_width(col_amt);
                         let rhs = caret_raw.col_index;
                         lhs - rhs
                     };
@@ -446,13 +443,11 @@ pub fn inc_caret_row(
     scroll_offset: &mut ScrOfs,
     viewport_height: RowHeight,
 ) -> RowIndex {
-    // REVIEW: [ ] use this in place of (col/row) index and width/height overflow checks. See inc_caret_row() as example
-
     match caret.row_index.check_overflows(viewport_height) {
-        BoundsContainmentResult::Overflowed => {
+        BoundsStatus::Overflowed => {
             scroll_offset.row_index += row(1); // Activate vertical scroll.
         }
-        BoundsContainmentResult::Within => {
+        BoundsStatus::Within => {
             caret.row_index += row(1); // Scroll inactive & Not at bottom of viewport.
         }
     }

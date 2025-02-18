@@ -618,13 +618,27 @@ pub mod access_and_mutate {
         /// [EditorBufferMut] implements the [Drop] trait, which ensures that any
         /// validation changes are applied after making changes to the [EditorBuffer].
         pub fn get_mut(&mut self, vp: Dim) -> EditorBufferMut<'_> {
-            EditorBufferMut::new(
-                &mut self.content.lines,
-                &mut self.content.caret_raw,
-                &mut self.content.scr_ofs,
-                &mut self.content.sel_list,
+            EditorBufferMut {
+                lines: &mut self.content.lines,
+                caret_raw: &mut self.content.caret_raw,
+                scr_ofs: &mut self.content.scr_ofs,
+                sel_list: &mut self.content.sel_list,
                 vp,
-            )
+            }
+        }
+
+        /// This is a special case of [EditorBuffer::get_mut] where the [Drop] trait is
+        /// not used to perform validation checks after mutation. This is useful when you
+        /// don't want to run validation checks after mutation, which happens when the
+        /// window is resized using [mod@crate::validate_scroll_on_resize].
+        pub fn get_mut_no_drop(&mut self, vp: Dim) -> EditorBufferMutNoDrop<'_> {
+            EditorBufferMutNoDrop {
+                lines: &mut self.content.lines,
+                caret_raw: &mut self.content.caret_raw,
+                scr_ofs: &mut self.content.scr_ofs,
+                sel_list: &mut self.content.sel_list,
+                vp,
+            }
         }
 
         pub fn has_selection(&self) -> bool { !self.content.sel_list.is_empty() }
@@ -633,6 +647,20 @@ pub mod access_and_mutate {
 
         pub fn get_selection_list(&self) -> &SelectionList { &self.content.sel_list }
     }
+}
+
+pub struct EditorBufferMutNoDrop<'a> {
+    pub lines: &'a mut VecEditorContentLines,
+    pub caret_raw: &'a mut CaretRaw,
+    pub scr_ofs: &'a mut ScrOfs,
+    pub sel_list: &'a mut SelectionList,
+    /// - Viewport width is optional because it's only needed for caret validation.
+    ///   And you can get it from [crate::EditorEngine]. You can pass `0` if you don't have
+    ///   it.
+    /// - Viewport height is optional because it's only needed for caret validation.
+    ///   And you can get it from [crate::EditorEngine]. You can pass `0` if you don't have
+    ///   it.
+    pub vp: Dim,
 }
 
 pub mod history {

@@ -530,9 +530,7 @@ mod syn_hi_r3bl_path {
 
                 // Clip the content to max rows.
                 if row_index
-                    > caret_scroll_index::scroll_row_index_for_height(
-                        max_display_row_count,
-                    )
+                    > caret_scroll_index::row_index_for_height(max_display_row_count)
                 {
                     break;
                 }
@@ -589,8 +587,7 @@ mod syn_hi_syntect_path {
             let row_index = row(row_index);
 
             // Clip the content to max rows.
-            if row_index
-                > caret_scroll_index::scroll_row_index_for_height(max_display_row_count)
+            if row_index > caret_scroll_index::row_index_for_height(max_display_row_count)
             {
                 break;
             }
@@ -701,8 +698,7 @@ mod no_syn_hi_path {
             let row_index = row(row_index);
 
             // Clip the content to max rows.
-            if row_index
-                > caret_scroll_index::scroll_row_index_for_height(max_display_row_count)
+            if row_index > caret_scroll_index::row_index_for_height(max_display_row_count)
             {
                 break;
             }
