@@ -28,6 +28,8 @@ use r3bl_core::{ch,
                 height,
                 row,
                 width,
+                BoundsContainmentCheck,
+                BoundsContainmentResult,
                 CaretRaw,
                 ColIndex,
                 ColWidth,
@@ -75,14 +77,19 @@ use crate::{caret_scroll_index, CaretDirection, EditorArgsMut, EditorBuffer};
 /// ```
 // <!-- cspell:enable -->
 ///
-/// And scroll offset will be adjusted to show the end of the line. So the numbers
-/// will be as follows:
+/// And scroll offset will be adjusted to show the end of the line. So the numbers will be
+/// as follows:
 /// - caret_raw: col(9) + row(0)
 /// - scr_ofs:   col(6) + row(0)
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// nature of `UTF-8` and its variable width characters, where the memory size is not the
+/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
+/// and scroll offset positions are not in the middle of a unicode segment character, we
+/// need to run the validation checks.
 pub fn inc_caret_col_by(
     caret_raw: &mut CaretRaw,
     scr_ofs: &mut ScrOfs,
@@ -93,17 +100,9 @@ pub fn inc_caret_col_by(
     // Just move the caret right.
     caret_raw.add_col_with_bounds(col_amt, line_display_width);
 
-    // Check to see if viewport needs to be scrolled.
-    // The following are equivalent:
-    // - `a >= b`
-    // - `a >  b-1`
-    // The following are equivalent:
-    // - caret_raw.col_index >= vp_width
-    // - caret_raw.col_index > vp_width - 1 (aka vp_width.convert_to_col_index())
-    let overflow_viewport_width =
-    caret_raw.col_index > vp_width.convert_to_col_index() /*-1*/;
-
-    if overflow_viewport_width {
+    if caret_raw.col_index.check_overflows(vp_width)
+        == BoundsContainmentResult::Overflowed
+    {
         // The following is equivalent to:
         // `let diff_overflow = (caret_raw.col_index + ch!(1)) - vp_width;`
         let diff_overflow = caret_raw.col_index.convert_to_width() /*+1*/ - vp_width;
@@ -117,31 +116,33 @@ pub fn inc_caret_col_by(
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// nature of `UTF-8` and its variable width characters, where the memory size is not the
+/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
+/// and scroll offset positions are not in the middle of a unicode segment character, we
+/// need to run the validation checks.
 pub fn clip_caret_to_content_width(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
 
     let caret_scr_adj = buffer.get_caret_scr_adj();
     let line_display_width = buffer.get_line_display_width_at_caret_scr_adj();
 
-    // line_content_display_width - 1 is the last col index
-    // The following are equivalent:
-    // - `a >= b`
-    // - `a >  b-1`
-    // The following are equivalent:
-    // - col_index >= line_content_display_width
-    // - col_index > line_content_display_width - 1
-    let overflow_content_width =
-        caret_scr_adj.col_index > line_display_width.convert_to_col_index() /*-1*/;
-
-    if overflow_content_width {
+    if caret_scr_adj.col_index.check_overflows(line_display_width)
+        == BoundsContainmentResult::Overflowed
+    {
         caret_mut::to_end_of_line(buffer, engine, SelectMode::Disabled);
     }
 }
 
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// nature of `UTF-8` and its variable width characters, where the memory size is not the
+/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
+/// and scroll offset positions are not in the middle of a unicode segment character, we
+/// need to run the validation checks.
 pub fn set_caret_col_to(
     desired_col_index: ColIndex,
     caret_raw: &mut CaretRaw,
@@ -179,7 +180,12 @@ pub fn set_caret_col_to(
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// nature of `UTF-8` and its variable width characters, where the memory size is not the
+/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
+/// and scroll offset positions are not in the middle of a unicode segment character, we
+/// need to run the validation checks.
 pub fn dec_caret_col_by(
     caret_raw: &mut CaretRaw,
     scr_ofs: &mut ScrOfs,
@@ -190,9 +196,9 @@ pub fn dec_caret_col_by(
         Inactive,
     }
 
-    enum VpHorizPos {
-        AtSOL,
-        NotAtSOL,
+    enum VpHorizLoc {
+        AtStart,
+        NotAtStart,
     }
 
     let horiz_scr = if scr_ofs.col_index > col(0) {
@@ -202,9 +208,9 @@ pub fn dec_caret_col_by(
     };
 
     let vp_horiz_pos = if caret_raw.col_index > col(0) {
-        VpHorizPos::NotAtSOL
+        VpHorizLoc::NotAtStart
     } else {
-        VpHorizPos::AtSOL
+        VpHorizLoc::AtStart
     };
 
     match (horiz_scr, vp_horiz_pos) {
@@ -213,16 +219,16 @@ pub fn dec_caret_col_by(
             caret_raw.col_index -= col_amt;
         }
         // Scroll active & At start of viewport.
-        (HorizScr::Active, VpHorizPos::AtSOL) => {
+        (HorizScr::Active, VpHorizLoc::AtStart) => {
             // Safe to sub, since scroll_offset.col_index can never be negative.
             scr_ofs.col_index -= col_amt;
         }
         // Scroll active & Not at start of viewport.
-        (HorizScr::Active, VpHorizPos::NotAtSOL) => {
-            // The line below is equivalent to:
-            // - Used to be: `col_amt > caret_raw.col_index`
-            // - And `a > b` === `a >= b+1`
-            let need_to_scroll_left = col_amt >= caret_raw.col_index.convert_to_width(); /*+1*/
+        (HorizScr::Active, VpHorizLoc::NotAtStart) => {
+            // The line below used to be: `col_amt > caret_raw.col_index`
+            let need_to_scroll_left =
+                caret_scroll_index::scroll_col_index_for_width(col_amt)
+                    > caret_raw.col_index;
 
             match need_to_scroll_left {
                 // Just move caret left by col_amt.
@@ -251,7 +257,12 @@ pub fn dec_caret_col_by(
 
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// nature of `UTF-8` and its variable width characters, where the memory size is not the
+/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
+/// and scroll offset positions are not in the middle of a unicode segment character, we
+/// need to run the validation checks.
 pub fn reset_caret_col(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) {
     *scr_ofs.col_index = ch(0);
     *caret_raw.col_index = ch(0);
@@ -270,7 +281,12 @@ pub fn reset_caret_col(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) {
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// nature of `UTF-8` and its variable width characters, where the memory size is not the
+/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
+/// and scroll offset positions are not in the middle of a unicode segment character, we
+/// need to run the validation checks.
 pub fn dec_caret_row(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) -> RowIndex {
     enum VertScr {
         Active,
@@ -370,16 +386,20 @@ pub fn change_caret_row_by(
         CaretDirection::Up => {
             let mut diff = row_amt;
 
-            // When buffer_mut goes out of scope, it will be dropped &
-            // validation performed.
+            // When buffer_mut goes out of scope, it will be dropped & validation
+            // performed.
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
 
                 while diff > height(0) {
                     dec_caret_row(buffer_mut.caret_raw, buffer_mut.scr_ofs);
                     diff -= height(1);
-                    let row_index =
-                        (*buffer_mut.caret_raw + *buffer_mut.scr_ofs).row_index;
+                    let row_index = {
+                        let lhs = *buffer_mut.caret_raw;
+                        let rhs = *buffer_mut.scr_ofs;
+                        let it = lhs + rhs;
+                        it.row_index
+                    };
                     if row_index == row(0) {
                         break;
                     }
@@ -415,31 +435,26 @@ pub fn clip_caret_row_to_content_height(
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// nature of `UTF-8` and its variable width characters, where the memory size is not the
+/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
+/// and scroll offset positions are not in the middle of a unicode segment character, we
+/// need to run the validation checks.
 pub fn inc_caret_row(
     caret: &mut CaretRaw,
     scroll_offset: &mut ScrOfs,
     viewport_height: RowHeight,
 ) -> RowIndex {
-    // The following are equivalent:
-    // - `a >= b`
-    // - `a >  b-1`
-    // The following are equivalent:
-    // - caret_raw.row_index >= vp_height
-    // - caret_raw.row_index > vp_height - 1 (aka vp_height.convert_to_row_index())
-    let at_bottom_of_viewport =
-        // REVIEW: [x] make sure this works (equivalent changed logic, not tested)
-        //
-        // Used to be `caret.row_index >= viewport_height`.
-        // And: `a >= b` === `a > b-1`.
-        // So: `caret.row_index > viewport_height - 1`.
-        caret.row_index > viewport_height.convert_to_row_index() /*-1*/;
+    // REVIEW: [ ] use this in place of (col/row) index and width/height overflow checks. See inc_caret_row() as example
 
-    // Fun fact: The following logic is the same whether scroll is active or not.
-    if at_bottom_of_viewport {
-        scroll_offset.row_index += row(1); // Activate scroll since at bottom of viewport.
-    } else {
-        caret.row_index += row(1); // Scroll inactive & Not at bottom of viewport.
+    match caret.row_index.check_overflows(viewport_height) {
+        BoundsContainmentResult::Overflowed => {
+            scroll_offset.row_index += row(1); // Activate vertical scroll.
+        }
+        BoundsContainmentResult::Within => {
+            caret.row_index += row(1); // Scroll inactive & Not at bottom of viewport.
+        }
     }
 
     (*caret + *scroll_offset).row_index
