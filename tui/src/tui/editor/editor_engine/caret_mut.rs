@@ -254,7 +254,7 @@ pub fn to_end_of_line(
                     // This caret col index goes 1 past the end of the line width, ie:
                     // - `line_display_width` which is the same as:
                     // - `line_display_width.convert_to_col_index() /*-1*/ + 1`
-                    caret_scroll_index::scroll_col_index_for_width(line_display_width),
+                    caret_scroll_index::col_index_for_width(line_display_width),
                     buffer_mut.caret_raw,
                     buffer_mut.scr_ofs,
                     buffer_mut.vp.col_width,
@@ -277,7 +277,7 @@ pub fn select_all(buffer: &mut EditorBuffer, sel_mod: SelectMode) {
         // This caret col index goes 1 past the end of the line width, ie:
         // - `last_line_display_width` which is the same as:
         // - `last_line_display_width.convert_to_col_index() /*-1*/ + 1`
-        caret_scroll_index::scroll_col_index_for_width(last_line_display_width)
+        caret_scroll_index::col_index_for_width(last_line_display_width)
     };
 
     buffer.clear_selection();

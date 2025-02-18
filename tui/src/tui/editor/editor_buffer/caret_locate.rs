@@ -58,7 +58,7 @@ fn col_is_at_end_of_line(buffer: &EditorBuffer) -> bool {
     if buffer.line_at_caret_scr_adj().is_some() {
         let line_display_width = buffer.get_line_display_width_at_caret_scr_adj();
         buffer.get_caret_scr_adj().col_index
-            == caret_scroll_index::scroll_col_index_for_width(line_display_width)
+            == caret_scroll_index::col_index_for_width(line_display_width)
     } else {
         false
     }
@@ -123,14 +123,14 @@ pub mod caret_scroll_index {
     ///   └─────▴────┘
     ///   C0123456789
     /// ```
-    pub fn scroll_col_index_for_width(col_amt: ColWidth) -> ColIndex {
+    pub fn col_index_for_width(col_amt: ColWidth) -> ColIndex {
         col_amt.convert_to_col_index() /* -1 */ + col(1) /* +1 */
     }
 
     /// This is the same number as the given height, just in different "unit". The caret
     /// max index which is the scroll index goes 1 past the end of the given height's
     /// index.
-    pub fn scroll_row_index_for_height(row_amt: RowHeight) -> RowIndex {
+    pub fn row_index_for_height(row_amt: RowHeight) -> RowIndex {
         row_amt.convert_to_row_index() /* -1 */ + row(1) /* +1 */
     }
 
@@ -139,7 +139,7 @@ pub mod caret_scroll_index {
         use r3bl_core::width;
 
         let width = width(5);
-        let scroll_col_index = scroll_col_index_for_width(width);
+        let scroll_col_index = col_index_for_width(width);
         assert_eq!(*scroll_col_index, *width);
     }
 
@@ -148,7 +148,7 @@ pub mod caret_scroll_index {
         use r3bl_core::height;
 
         let height = height(5);
-        let scroll_row_index = scroll_row_index_for_height(height);
+        let scroll_row_index = row_index_for_height(height);
         assert_eq!(*scroll_row_index, *height);
     }
 }

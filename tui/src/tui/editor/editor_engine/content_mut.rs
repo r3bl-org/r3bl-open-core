@@ -395,9 +395,7 @@ pub fn backspace_at_caret(
                     // This caret col index goes 1 past the end of the line width, ie:
                     // - `prev_line_display_width` which is the same as:
                     // - `prev_line_display_width.convert_to_col_index() /*-1*/ + 1`
-                    caret_scroll_index::scroll_col_index_for_width(
-                        prev_line_display_width,
-                    ),
+                    caret_scroll_index::col_index_for_width(prev_line_display_width),
                     buffer_mut.caret_raw,
                     buffer_mut.scr_ofs,
                     buffer_mut.vp.col_width,
@@ -435,7 +433,7 @@ pub fn delete_selected(
             // Remove entire line.
             if selection_range.start_disp_col_idx_scr_adj == col(0)
                 && selection_range.end_disp_col_idx_scr_adj
-                    == caret_scroll_index::scroll_col_index_for_width(line_width)
+                    == caret_scroll_index::col_index_for_width(line_width)
             {
                 vec_row_indices_to_remove.push(selected_row_index);
                 continue;

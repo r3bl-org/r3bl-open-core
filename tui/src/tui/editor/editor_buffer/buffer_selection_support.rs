@@ -351,7 +351,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
                         let start = range.start_disp_col_idx_scr_adj;
                         // For selection, go one col index past the end of the line,
                         // since selection range is not inclusive of the end index.
-                        let end = caret_scroll_index::scroll_col_index_for_width(
+                        let end = caret_scroll_index::col_index_for_width(
                             line_us.display_width,
                         );
                         buffer_mut.sel_list.insert(
@@ -638,7 +638,7 @@ mod multiline_select_helpers {
                 start_col,
                 // Go one col index past the end of the width, since selection range is
                 // not inclusive of end index.
-                caret_scroll_index::scroll_col_index_for_width(end_col),
+                caret_scroll_index::col_index_for_width(end_col),
             )
                 .into()
         };
@@ -685,8 +685,7 @@ mod multiline_select_helpers {
             let start_col = first_row_range.start_disp_col_idx_scr_adj;
             // Go one col index past the end of the width, since selection range is not
             // inclusive of end index.
-            let end_col =
-                caret_scroll_index::scroll_col_index_for_width(first_line_width);
+            let end_col = caret_scroll_index::col_index_for_width(first_line_width);
             let new_first_row_range = SelectionRange {
                 start_disp_col_idx_scr_adj: start_col,
                 end_disp_col_idx_scr_adj: end_col,
@@ -737,7 +736,7 @@ mod multiline_select_helpers {
                 end_disp_col_idx_scr_adj:
                 // Go one col index past the end of the width, since selection range is
                 // not inclusive of end index.
-                caret_scroll_index::scroll_col_index_for_width(first_line_width),
+                caret_scroll_index::col_index_for_width(first_line_width),
             };
             buffer_mut.sel_list.insert(
                 first.row_index,
@@ -753,7 +752,7 @@ mod multiline_select_helpers {
                     start_col,
                     // Go one col index past the end of the width, since selection range is
                     // not inclusive of end index.
-                    caret_scroll_index::scroll_col_index_for_width(end_col),
+                    caret_scroll_index::col_index_for_width(end_col),
                 )
                     .into()
             };

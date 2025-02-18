@@ -2,22 +2,7 @@
 # Flags: CaseSensitive RegExp
 # ContextLines: 1
 
-7 results - 7 files
-
-tui/src/tui/editor/editor_engine/scroll_editor_content.rs:
-  430      let at_bottom_of_viewport =
-  431:         // REVIEW: [x] make sure this works (equivalent changed logic, not tested)
-  432          //
-
-tui/src/tui/editor/editor_engine/validate_buffer_mut.rs:
-  17  
-  18: // REVIEW: [x] move this out into its own module
-  19  
-
-tui/src/tui/editor/editor_engine/validate_scroll_on_resize.rs:
-  95  
-  96:     // REVIEW: [ ] replace use of bool w/ enum
-  97      match (is_caret_row_within_viewport, is_caret_row_above_viewport) {
+4 results - 4 files
 
 tui/src/tui/terminal_lib_backends/modifier_keys_mask.rs:
   84      pub fn matches(&self, other: KeyModifiers) -> MatchResult {
