@@ -15,8 +15,6 @@
  *   limitations under the License.
  */
 
-// REVIEW: [x] move this out into its own module
-
 use r3bl_core::{col, usize, width, CaretRaw, ColWidth, Dim, ScrOfs};
 
 use super::scroll_editor_content;
@@ -82,23 +80,7 @@ pub fn perform_validation_checks_after_mutation(arg: &mut EditorBufferMut<'_>) {
     }
 }
 
-impl<'a> EditorBufferMut<'a> {
-    pub fn new(
-        lines: &'a mut VecEditorContentLines,
-        caret_raw: &'a mut CaretRaw,
-        scr_ofs: &'a mut ScrOfs,
-        sel_list: &'a mut SelectionList,
-        vp: Dim,
-    ) -> Self {
-        Self {
-            lines,
-            caret_raw,
-            scr_ofs,
-            sel_list,
-            vp,
-        }
-    }
-
+impl EditorBufferMut<'_> {
     /// Returns the display width of the line at the caret (at it's scroll adjusted
     /// row index).
     pub fn get_line_display_width_at_caret_scr_adj_row_index(&self) -> ColWidth {

@@ -473,7 +473,9 @@ Changed:
   - Use `smallvec` and `smallstr` crates to increase memory latency performance (for
     access, mutation, and allocation).
   - Use `Drop` trait implementation for `EditorBufferMut` to perform validation and clean
-    up of caret location after changes to editor buffer.
+    up of caret location after changes to editor buffer, in `EditorBuffer::get_mut()`.
+    Also provide a no `Drop` implementation that can be used via
+    `EditorBuffer::get_mut_no_drop()`, which does not perform any cleanup.
   - Improve the history handling in `EditorBufferMut` to ensure that the history is
     limited in size.
   - Improve the `editor_buffer_struct.rs` module to use `SelectionList` instead of
@@ -909,6 +911,7 @@ Changed:
   - Use the latest Rust 2024 edition.
   - Fix all the Rust docs that are ignored (in all Rust source files in this crate), and
     replace them with doc comments that compile successfully.
+  - Replace the use of `bool` with meaningful enums to enhance code readability.
 
 - Added:
   - Add a new test fixture `temp_dir::create_temp_dir()` to make it easy to create
