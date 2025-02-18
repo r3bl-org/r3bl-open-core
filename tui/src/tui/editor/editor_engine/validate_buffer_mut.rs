@@ -22,6 +22,14 @@ use r3bl_core::{col, usize, width, CaretRaw, ColWidth, Dim, ScrOfs};
 use super::scroll_editor_content;
 use crate::{editor::sizing::VecEditorContentLines, EditorBuffer, SelectionList};
 
+/// See the [Drop] implementation of `EditorBufferMut` which runs
+/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
+///
+/// Due to the nature of `UTF-8` and its variable width characters, where the memory size
+/// is not the same as display size. Eg: `a` is 1 byte and 1 display width (unicode
+/// segment width display). `😄` is 3 bytes but it's display width is 2! To ensure that
+/// caret position and scroll offset positions are not in the middle of a unicode segment
+/// character, we need to run the validation checks.
 pub struct EditorBufferMut<'a> {
     pub lines: &'a mut VecEditorContentLines,
     pub caret_raw: &'a mut CaretRaw,
@@ -39,17 +47,28 @@ pub struct EditorBufferMut<'a> {
 // XMARK: Clever Rust, use of Drop to perform transaction close / end.
 
 impl Drop for EditorBufferMut<'_> {
-    /// In addition to mutating the buffer, this function runs the following validations on the
-    /// [EditorBuffer]'s:
-    /// 1. `caret`:
-    ///    - the caret is in not in the middle of a unicode segment character.
-    ///    - if it is then it moves the caret.
-    /// 2. `scroll_offset`:
-    ///    - make sure that it's not in the middle of a wide unicode segment character.
-    ///    - if it is then it moves the scroll_offset and caret.
+    /// Once [crate::validate_buffer_mut::EditorBufferMut] is used to modify the buffer,
+    /// it needs to run the validation checks to ensure that the buffer is in a valid
+    /// state. This is done using
+    /// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
+    ///
+    /// Due to the nature of `UTF-8` and its variable width characters, where the memory
+    /// size is not the same as display size. Eg: `a` is 1 byte and 1 display width
+    /// (unicode segment width display). `😄` is 3 bytes but it's display width is 2! To
+    /// ensure that caret position and scroll offset positions are not in the middle of a
+    /// unicode segment character, we need to run the validation checks.
     fn drop(&mut self) { perform_validation_checks_after_mutation(self); }
 }
 
+/// In addition to mutating the buffer, this function runs the following validations on the
+/// [EditorBuffer]'s:
+/// 1. `caret`:
+///    - the caret is in not in the middle of a unicode segment character.
+///    - if it is then it moves the caret.
+/// 2. `scroll_offset`:
+///    - make sure that it's not in the middle of a wide unicode segment character.
+///    - if it is then it moves the scroll_offset and caret.
+///
 /// The drop implementation is split out into this separate function since that is how it
 /// used to be written in earlier versions of the codebase, it used to be called
 /// `apply_change()`. Also this function can be directly linked to in documentation.

@@ -26,6 +26,7 @@ pub mod pos;
 pub mod requested_size_percent;
 pub mod row_index;
 pub mod width_col_count;
+pub mod overflow_check;
 
 // Re-export.
 pub use caret::*;
@@ -38,3 +39,4 @@ pub use pos::*;
 pub use requested_size_percent::*;
 pub use row_index::*;
 pub use width_col_count::*;
+pub use overflow_check::*;
