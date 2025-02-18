@@ -106,8 +106,9 @@ fn row_is_at_bottom_of_buffer(buffer: &EditorBuffer) -> bool {
 pub mod caret_scroll_index {
     use super::*;
 
-    /// The caret max index which is the scroll index goes 1 past the end of the given
-    /// width's index. Which just happens to be the same number as the given width.
+    /// This is the same number as the given width, just in different "unit". The caret
+    /// max index which is the scroll index goes 1 past the end of the given width's
+    /// index.
     ///
     /// Equivalent to:
     /// ```text
@@ -126,8 +127,9 @@ pub mod caret_scroll_index {
         col_amt.convert_to_col_index() /* -1 */ + col(1) /* +1 */
     }
 
-    /// The caret max index which is the scroll index goes 1 past the end of the given
-    /// height's index. Which just happens to be the same number as the given height.
+    /// This is the same number as the given height, just in different "unit". The caret
+    /// max index which is the scroll index goes 1 past the end of the given height's
+    /// index.
     pub fn scroll_row_index_for_height(row_amt: RowHeight) -> RowIndex {
         row_amt.convert_to_row_index() /* -1 */ + row(1) /* +1 */
     }
