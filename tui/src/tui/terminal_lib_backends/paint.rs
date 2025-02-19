@@ -174,48 +174,47 @@ pub fn sanitize_and_save_abs_pos(
 
     let mut sanitized_abs_pos = orig_abs_pos;
 
-    // REVIEW: [x] sanitize_and_save_abs_position verify correct w/ offscreen buffer process_render_op()
-    sanitized_abs_pos.col_index = sanitized_abs_pos
-        .col_index
-        .min(window_width.convert_to_col_index());
     // Equivalent code:
     // if *orig_abs_pos.col_index >= *window_width {
     //     *sanitized_abs_pos.col_index = *window_width - 1;
     // }
+    sanitized_abs_pos.col_index = sanitized_abs_pos
+        .col_index
+        .min(window_width.convert_to_col_index());
 
-    sanitized_abs_pos.row_index = sanitized_abs_pos
-        .row_index
-        .min(window_height.convert_to_row_index());
     // Equivalent code:
     // if *orig_abs_pos.row_index >= *window_height {
     //     *sanitized_abs_pos.row_index = *window_height - 1;
     // }
+    sanitized_abs_pos.row_index = sanitized_abs_pos
+        .row_index
+        .min(window_height.convert_to_row_index());
 
     // Save the cursor position to local data.
     local_data.cursor_pos = sanitized_abs_pos;
 
     debug(orig_abs_pos, sanitized_abs_pos);
 
-    return sanitized_abs_pos;
+    sanitized_abs_pos
+}
 
-    fn debug(orig_pos: Pos, sanitized_pos: Pos) {
-        call_if_true!(DEBUG_TUI_COMPOSITOR, {
-            if sanitized_pos != orig_pos {
-                // % is Display, ? is Debug.
-                tracing::info!(
-                    message = "pipeline : ⮻ Attempt to set cursor position (orig) outside of terminal window; clamping to nearest edge of window (sanitized)",
-                    orig = ?orig_pos,
-                    sanitized = ?sanitized_pos
-                );
-            }
-        });
-
-        call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
+fn debug(orig_pos: Pos, sanitized_pos: Pos) {
+    call_if_true!(DEBUG_TUI_COMPOSITOR, {
+        if sanitized_pos != orig_pos {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = "pipeline : ⮺ Save the cursor position (sanitized) to SharedGlobalData",
+                message = "pipeline : ⮻ Attempt to set cursor position (orig) outside of terminal window; clamping to nearest edge of window (sanitized)",
+                orig = ?orig_pos,
                 sanitized = ?sanitized_pos
             );
-        });
-    }
+        }
+    });
+
+    call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
+        // % is Display, ? is Debug.
+        tracing::info!(
+            message = "pipeline : ⮺ Save the cursor position (sanitized) to SharedGlobalData",
+            sanitized = ?sanitized_pos
+        );
+    });
 }

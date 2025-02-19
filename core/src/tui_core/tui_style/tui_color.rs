@@ -43,7 +43,7 @@ macro_rules! color {
     };
 
     (@black) => {
-        $crate::TuiColor::Black
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Black)
     };
 
     (@dark_grey) => {
@@ -473,6 +473,173 @@ mod test_rgb_value {
                 blue: 0
             }
         );
+    }
+
+    #[test]
+    fn test_from_color_macro() {
+        let black = color!(@black);
+        let dark_grey = color!(@dark_grey);
+        let red = color!(@red);
+        let dark_red = color!(@dark_red);
+        let green = color!(@green);
+        let dark_green = color!(@dark_green);
+        let yellow = color!(@yellow);
+        let dark_yellow = color!(@dark_yellow);
+        let blue = color!(@blue);
+        let dark_blue = color!(@dark_blue);
+        let magenta = color!(@magenta);
+        let dark_magenta = color!(@dark_magenta);
+        let cyan = color!(@cyan);
+        let dark_cyan = color!(@dark_cyan);
+        let white = color!(@white);
+        let grey = color!(@grey);
+        let reset = color!(@reset);
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(black).unwrap(),
+            RgbValue {
+                red: 0,
+                green: 0,
+                blue: 0
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(dark_grey).unwrap(),
+            RgbValue {
+                red: 64,
+                green: 64,
+                blue: 64
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(red).unwrap(),
+            RgbValue {
+                red: 255,
+                green: 0,
+                blue: 0
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(dark_red).unwrap(),
+            RgbValue {
+                red: 128,
+                green: 0,
+                blue: 0
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(green).unwrap(),
+            RgbValue {
+                red: 0,
+                green: 255,
+                blue: 0
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(dark_green).unwrap(),
+            RgbValue {
+                red: 0,
+                green: 128,
+                blue: 0
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(yellow).unwrap(),
+            RgbValue {
+                red: 255,
+                green: 255,
+                blue: 0
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(dark_yellow).unwrap(),
+            RgbValue {
+                red: 128,
+                green: 128,
+                blue: 0
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(blue).unwrap(),
+            RgbValue {
+                red: 0,
+                green: 0,
+                blue: 255
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(dark_blue).unwrap(),
+            RgbValue {
+                red: 0,
+                green: 0,
+                blue: 128
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(magenta).unwrap(),
+            RgbValue {
+                red: 255,
+                green: 0,
+                blue: 255
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(dark_magenta).unwrap(),
+            RgbValue {
+                red: 128,
+                green: 0,
+                blue: 128
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(cyan).unwrap(),
+            RgbValue {
+                red: 0,
+                green: 255,
+                blue: 255
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(dark_cyan).unwrap(),
+            RgbValue {
+                red: 0,
+                green: 128,
+                blue: 128
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(white).unwrap(),
+            RgbValue {
+                red: 255,
+                green: 255,
+                blue: 255
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(grey).unwrap(),
+            RgbValue {
+                red: 128,
+                green: 128,
+                blue: 128
+            }
+        );
+
+        assert!(RgbValue::try_from_tui_color(reset).is_err());
     }
 }
 
