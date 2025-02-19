@@ -1,5 +1,6 @@
 # Query: (NAV:|REVIEW:|CS:)
 # Flags: CaseSensitive RegExp
+# Excluding: scratch.rs
 # ContextLines: 1
 
 No Results

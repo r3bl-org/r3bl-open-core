@@ -1,7 +1,9 @@
 # Query: tracing::
+# Flags: CaseSensitive
+# Excluding: scratch.rs
 # ContextLines: 1
 
-183 results - 48 files
+178 results - 47 files
 
 CHANGELOG.md:
    999    - Remove all the functions like `log_debug`, `log_info`, etc. and favor directly using
@@ -11,27 +13,6 @@ CHANGELOG.md:
   1014    - Simplify the actual logging API into a single function, and allow use of tokio
   1015:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
   1016      `logging_api.rs` for more details.
-
-scratch.rs:
-  38      // % is Display, ? is Debug.
-  39:     tracing::info! {
-  40          message = %message,
-
-  51    // % is Display, ? is Debug.
-  52:   tracing::info!(
-  53        message = message,
-
-  67    // % is Display, ? is Debug.
-  68:   tracing::debug!(
-  69        message = %message,
-
-  76  // % is Display, ? is Debug.
-  77: tracing::info!("main_event_loop -> Tick: 🌄 " = ?input_event);
-  78  
-
-  83  // % is Display, ? is Debug.
-  84: tracing::info!(
-  85      message = message,
 
 cmdr/src/analytics_client.rs:
   112                          call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
@@ -154,21 +135,21 @@ cmdr/src/edi/app_main.rs:
   625                  message = "app_main construct EditorComponent [ on_buffer_change ]"
 
 cmdr/src/edi/state.rs:
-  243                          // % is Display, ? is Debug.
-  244:                         tracing::debug!(
-  245                              message = %message,
+  242                          // % is Display, ? is Debug.
+  243:                         tracing::debug!(
+  244                              message = %message,
 
-  256                      // % is Display, ? is Debug.
-  257:                     tracing::error!(
-  258                          message = %message,
+  255                      // % is Display, ? is Debug.
+  256:                     tracing::error!(
+  257                          message = %message,
 
-  281                      call_if_true!(DEBUG_TUI_MOD, {
-  282:                         tracing::debug!(
-  283                              "\n💾💾💾❌ Successfully saved file: {}",
+  280                      call_if_true!(DEBUG_TUI_MOD, {
+  281:                         tracing::debug!(
+  282                              "\n💾💾💾❌ Successfully saved file: {}",
 
-  288                  Err(error) => {
-  289:                     tracing::error!(
-  290                          "\n💾💾💾✅ Failed to save file: {}",
+  287                  Err(error) => {
+  288:                     tracing::error!(
+  289                          "\n💾💾💾✅ Failed to save file: {}",
 
 cmdr/src/giti/branch/giti_ui_templates.rs:
   155  

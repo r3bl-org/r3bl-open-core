@@ -180,12 +180,13 @@ pub mod constructor {
     }
 
     // XMARK: Clever Rust, use of `impl Into<struct>` for constructor & `const N: usize` for arrays.
+
     impl<const N: usize> Telemetry<N> {
         pub fn new(options: impl Into<ResponseTimesRingBufferOptions>) -> Self {
             // "Dynamically" convert the options argument into the actual options struct.
             let options: ResponseTimesRingBufferOptions = options.into();
             Self {
-                ring_buffer: RingBuffer::new(),
+                ring_buffer: RingBuffer::default(),
                 start_timestamp: Instant::now(),
                 report: sizing::TelemetryReportLineStorage::new(),
                 rate_limiter_generate_report: RateLimiter::new(
