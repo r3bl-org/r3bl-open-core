@@ -372,9 +372,9 @@ pub fn change_caret_row_by(
 
                 while diff > row(0) {
                     inc_caret_row(
-                        buffer_mut.caret_raw,
-                        buffer_mut.scr_ofs,
-                        buffer_mut.vp.row_height,
+                        buffer_mut.inner.caret_raw,
+                        buffer_mut.inner.scr_ofs,
+                        buffer_mut.inner.vp.row_height,
                     );
                     diff -= row(1);
                 }
@@ -389,11 +389,11 @@ pub fn change_caret_row_by(
                 let buffer_mut = buffer.get_mut(engine.viewport());
 
                 while diff > height(0) {
-                    dec_caret_row(buffer_mut.caret_raw, buffer_mut.scr_ofs);
+                    dec_caret_row(buffer_mut.inner.caret_raw, buffer_mut.inner.scr_ofs);
                     diff -= height(1);
                     let row_index = {
-                        let lhs = *buffer_mut.caret_raw;
-                        let rhs = *buffer_mut.scr_ofs;
+                        let lhs = *buffer_mut.inner.caret_raw;
+                        let rhs = *buffer_mut.inner.scr_ofs;
                         let it = lhs + rhs;
                         it.row_index
                     };
