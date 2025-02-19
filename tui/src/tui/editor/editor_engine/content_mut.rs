@@ -68,7 +68,7 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
-            buffer_mut.lines.push("".unicode_string());
+            buffer_mut.inner.lines.push("".unicode_string());
         }
         return;
     }
@@ -107,17 +107,18 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
                 let buffer_mut = buffer.get_mut(engine.viewport());
 
                 let new_row_index = scroll_editor_content::inc_caret_row(
-                    buffer_mut.caret_raw,
-                    buffer_mut.scr_ofs,
-                    buffer_mut.vp.row_height,
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
+                    buffer_mut.inner.vp.row_height,
                 );
 
                 scroll_editor_content::reset_caret_col(
-                    buffer_mut.caret_raw,
-                    buffer_mut.scr_ofs,
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
                 );
 
                 buffer_mut
+                    .inner
                     .lines
                     .insert(new_row_index.as_usize(), "".unicode_string());
             }
@@ -132,8 +133,9 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
                 let cur_row_index =
-                    (*buffer_mut.caret_raw + *buffer_mut.scr_ofs).row_index;
+                    (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
                 buffer_mut
+                    .inner
                     .lines
                     .insert(cur_row_index.as_usize(), "".unicode_string());
             }
@@ -143,9 +145,9 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
                 scroll_editor_content::inc_caret_row(
-                    buffer_mut.caret_raw,
-                    buffer_mut.scr_ofs,
-                    buffer_mut.vp.row_height,
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
+                    buffer_mut.inner.vp.row_height,
                 );
             }
         }
@@ -167,23 +169,24 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
                         let buffer_mut = buffer.get_mut(engine.viewport());
 
                         let _ = std::mem::replace(
-                            &mut buffer_mut.lines[row_index],
+                            &mut buffer_mut.inner.lines[row_index],
                             left_string.unicode_string(),
                         );
 
                         buffer_mut
+                            .inner
                             .lines
                             .insert(row_index + 1, right_string.unicode_string());
 
                         scroll_editor_content::inc_caret_row(
-                            buffer_mut.caret_raw,
-                            buffer_mut.scr_ofs,
-                            buffer_mut.vp.row_height,
+                            buffer_mut.inner.caret_raw,
+                            buffer_mut.inner.scr_ofs,
+                            buffer_mut.inner.vp.row_height,
                         );
 
                         scroll_editor_content::reset_caret_col(
-                            buffer_mut.caret_raw,
-                            buffer_mut.scr_ofs,
+                            buffer_mut.inner.caret_raw,
+                            buffer_mut.inner.scr_ofs,
                         );
                     }
                 }
@@ -230,9 +233,10 @@ pub fn delete_at_caret(
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
-                let row_index = (*buffer_mut.caret_raw + *buffer_mut.scr_ofs).row_index;
+                let row_index =
+                    (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
                 let _ = std::mem::replace(
-                    &mut buffer_mut.lines[row_index.as_usize()],
+                    &mut buffer_mut.inner.lines[row_index.as_usize()],
                     new_line_content.unicode_string(),
                 );
             }
@@ -261,12 +265,13 @@ pub fn delete_at_caret(
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
-                let row_index = (*buffer_mut.caret_raw + *buffer_mut.scr_ofs).row_index;
+                let row_index =
+                    (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
                 let _ = std::mem::replace(
-                    &mut buffer_mut.lines[row_index.as_usize()],
+                    &mut buffer_mut.inner.lines[row_index.as_usize()],
                     new_line_content.unicode_string(),
                 );
-                buffer_mut.lines.remove(row_index.as_usize() + 1);
+                buffer_mut.inner.lines.remove(row_index.as_usize() + 1);
             }
 
             None
@@ -320,20 +325,20 @@ pub fn backspace_at_caret(
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
                 let cur_row_index =
-                    (*buffer_mut.caret_raw + *buffer_mut.scr_ofs).row_index;
+                    (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
                 let _ = std::mem::replace(
-                    &mut buffer_mut.lines[cur_row_index.as_usize()],
+                    &mut buffer_mut.inner.lines[cur_row_index.as_usize()],
                     new_line_content.unicode_string(),
                 );
 
                 let new_line_content_display_width =
-                    buffer_mut.lines[cur_row_index.as_usize()].display_width;
+                    buffer_mut.inner.lines[cur_row_index.as_usize()].display_width;
 
                 scroll_editor_content::set_caret_col_to(
                     delete_at_this_display_col,
-                    buffer_mut.caret_raw,
-                    buffer_mut.scr_ofs,
-                    buffer_mut.vp.col_width,
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
+                    buffer_mut.inner.vp.col_width,
                     new_line_content_display_width,
                 );
             }
@@ -371,24 +376,25 @@ pub fn backspace_at_caret(
                 let buffer_mut = buffer.get_mut(engine.viewport());
 
                 let prev_row_index =
-                    (*buffer_mut.caret_raw + *buffer_mut.scr_ofs).row_index - row(1);
+                    (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index
+                        - row(1);
 
                 let cur_row_index =
-                    (*buffer_mut.caret_raw + *buffer_mut.scr_ofs).row_index;
+                    (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
 
                 let _ = std::mem::replace(
-                    &mut buffer_mut.lines[prev_row_index.as_usize()],
+                    &mut buffer_mut.inner.lines[prev_row_index.as_usize()],
                     new_line_content.unicode_string(),
                 );
 
                 let new_line_content_display_width =
-                    buffer_mut.lines[prev_row_index.as_usize()].display_width;
+                    buffer_mut.inner.lines[prev_row_index.as_usize()].display_width;
 
-                buffer_mut.lines.remove(cur_row_index.as_usize());
+                buffer_mut.inner.lines.remove(cur_row_index.as_usize());
 
                 scroll_editor_content::dec_caret_row(
-                    buffer_mut.caret_raw,
-                    buffer_mut.scr_ofs,
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
                 );
 
                 scroll_editor_content::set_caret_col_to(
@@ -396,9 +402,9 @@ pub fn backspace_at_caret(
                     // - `prev_line_display_width` which is the same as:
                     // - `prev_line_display_width.convert_to_col_index() /*-1*/ + 1`
                     caret_scroll_index::col_index_for_width(prev_line_display_width),
-                    buffer_mut.caret_raw,
-                    buffer_mut.scr_ofs,
-                    buffer_mut.vp.col_width,
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
+                    buffer_mut.inner.vp.col_width,
                     new_line_content_display_width,
                 );
             }
@@ -476,7 +482,7 @@ pub fn delete_selected(
         for row_index in map_lines_to_replace.keys() {
             let new_line_content = map_lines_to_replace[row_index].clone();
             let _ = std::mem::replace(
-                &mut buffer_mut.lines[row_index.as_usize()],
+                &mut buffer_mut.inner.lines[row_index.as_usize()],
                 new_line_content.unicode_string(),
             );
         }
@@ -484,7 +490,7 @@ pub fn delete_selected(
         // Remove lines in inverse order, in order to preserve the validity of indices.
         vec_row_indices_to_remove.reverse();
         for row_index in vec_row_indices_to_remove {
-            buffer_mut.lines.remove(row_index.as_usize());
+            buffer_mut.inner.lines.remove(row_index.as_usize());
         }
 
         // Restore caret position to start of selection range.
@@ -493,9 +499,9 @@ pub fn delete_selected(
 
         if let Some(new_caret_scr_adj) = maybe_new_caret {
             // Convert scroll adjusted caret to raw caret by applying scroll offset.
-            // Equivalent to: `let caret_raw = *new_caret_scr_adj - *buffer_mut.scr_ofs;`
-            let caret_raw = new_caret_scr_adj + *buffer_mut.scr_ofs;
-            *buffer_mut.caret_raw = caret_raw;
+            // Equivalent to: `let caret_raw = *new_caret_scr_adj - *buffer_mut.inner.scr_ofs;`
+            let caret_raw = new_caret_scr_adj + *buffer_mut.inner.scr_ofs;
+            *buffer_mut.inner.caret_raw = caret_raw;
         }
     }
 
@@ -523,20 +529,20 @@ fn insert_into_existing_line(
 
         // Replace existing line w/ new line.
         let _ = std::mem::replace(
-            &mut buffer_mut.lines[row_index.as_usize()],
+            &mut buffer_mut.inner.lines[row_index.as_usize()],
             new_line_content.unicode_string(),
         );
 
         let new_line_content_display_width =
-            buffer_mut.lines[row_index.as_usize()].display_width;
+            buffer_mut.inner.lines[row_index.as_usize()].display_width;
 
         // Update caret position.
         scroll_editor_content::inc_caret_col_by(
-            buffer_mut.caret_raw,
-            buffer_mut.scr_ofs,
+            buffer_mut.inner.caret_raw,
+            buffer_mut.inner.scr_ofs,
             chunk_display_width,
             new_line_content_display_width,
-            buffer_mut.vp.col_width,
+            buffer_mut.inner.vp.col_width,
         );
     }
 
@@ -557,7 +563,7 @@ fn fill_in_missing_lines_up_to_row(args: EditorArgsMut<'_>, row_index: RowIndex)
                 // performed.
                 {
                     let buffer_mut = buffer.get_mut(engine.viewport());
-                    buffer_mut.lines.push("".unicode_string());
+                    buffer_mut.inner.lines.push("".unicode_string());
                 }
             }
         }
@@ -581,19 +587,22 @@ fn insert_chunk_into_new_line(
 
         // Actually add the character to the correct line.
         let new_content = chunk.unicode_string();
-        let _ = std::mem::replace(&mut buffer_mut.lines[row_index_scr_adj], new_content);
+        let _ = std::mem::replace(
+            &mut buffer_mut.inner.lines[row_index_scr_adj],
+            new_content,
+        );
 
-        let line_content = &buffer_mut.lines[row_index_scr_adj];
+        let line_content = &buffer_mut.inner.lines[row_index_scr_adj];
         let line_content_display_width = line_content.display_width;
         let col_amt = UnicodeString::str_display_width(chunk);
 
         // Update caret position.
         scroll_editor_content::inc_caret_col_by(
-            buffer_mut.caret_raw,
-            buffer_mut.scr_ofs,
+            buffer_mut.inner.caret_raw,
+            buffer_mut.inner.scr_ofs,
             col_amt,
             line_content_display_width,
-            buffer_mut.vp.col_width,
+            buffer_mut.inner.vp.col_width,
         );
     }
 

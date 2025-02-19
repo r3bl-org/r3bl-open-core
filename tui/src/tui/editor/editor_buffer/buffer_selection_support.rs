@@ -55,7 +55,7 @@ pub fn handle_selection_single_line_caret_movement(
 
             let buffer_mut = buffer.get_mut(width(0) + height(0));
 
-            buffer_mut.sel_list.insert(
+            buffer_mut.inner.sel_list.insert(
                 row_index,
                 new_range,
                 SelectionRange::caret_movement_direction_left_right(previous, current),
@@ -120,7 +120,7 @@ pub fn handle_selection_single_line_caret_movement(
             let new_range = range.shrink_end_by(width(*delta));
 
             let buffer_mut = buffer.get_mut(width(0) + height(0));
-            buffer_mut.sel_list.insert(
+            buffer_mut.inner.sel_list.insert(
                 row_index,
                 new_range,
                 SelectionRange::caret_movement_direction_left_right(previous, current),
@@ -137,7 +137,7 @@ pub fn handle_selection_single_line_caret_movement(
             let new_range = range.grow_start_by(width(*delta));
 
             let buffer_mut = buffer.get_mut(width(0) + height(0));
-            buffer_mut.sel_list.insert(
+            buffer_mut.inner.sel_list.insert(
                 row_index,
                 new_range,
                 SelectionRange::caret_movement_direction_left_right(previous, current),
@@ -154,7 +154,7 @@ pub fn handle_selection_single_line_caret_movement(
             let new_range = range.grow_end_by(width(*delta));
 
             let buffer_mut = buffer.get_mut(width(0) + height(0));
-            buffer_mut.sel_list.insert(
+            buffer_mut.inner.sel_list.insert(
                 row_index,
                 new_range,
                 SelectionRange::caret_movement_direction_left_right(previous, current),
@@ -172,7 +172,7 @@ pub fn handle_selection_single_line_caret_movement(
             let new_range = range.shrink_start_by(width(*delta));
 
             let buffer_mut = buffer.get_mut(width(0) + height(0));
-            buffer_mut.sel_list.insert(
+            buffer_mut.inner.sel_list.insert(
                 row_index,
                 new_range,
                 SelectionRange::caret_movement_direction_left_right(previous, current),
@@ -189,7 +189,7 @@ pub fn handle_selection_single_line_caret_movement(
     if let Some(range) = buffer.get_selection_list().get(row_index) {
         if range.start_disp_col_idx_scr_adj == range.end_disp_col_idx_scr_adj {
             let buffer_mut = buffer.get_mut(width(0) + height(0));
-            buffer_mut.sel_list.remove(
+            buffer_mut.inner.sel_list.remove(
                 row_index,
                 SelectionRange::caret_movement_direction_left_right(previous, current),
             );
@@ -301,7 +301,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
             /* 3: row_index */
             d = format!("row_index: {:?}", row_index).green().on_dark_grey(),
             /* 4: selection_map */
-            e = format!("{:?}", buffer_mut.sel_list)
+            e = format!("{:?}", buffer_mut.inner.sel_list)
                 .magenta()
                 .on_dark_grey(),
         );
@@ -314,12 +314,12 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
 
     match curr.col_index.cmp(&prev.col_index) {
         cmp::Ordering::Less => {
-            match buffer_mut.sel_list.get(row_index) {
+            match buffer_mut.inner.sel_list.get(row_index) {
                 // Extend range to left (caret moved up and hit the top).
                 Some(range) => {
                     let start = col(0);
                     let end = range.end_disp_col_idx_scr_adj;
-                    buffer_mut.sel_list.insert(
+                    buffer_mut.inner.sel_list.insert(
                         row_index,
                         SelectionRange {
                             start_disp_col_idx_scr_adj: start,
@@ -332,7 +332,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
                 None => {
                     let start = col(0);
                     let end = prev.col_index;
-                    buffer_mut.sel_list.insert(
+                    buffer_mut.inner.sel_list.insert(
                         row_index,
                         SelectionRange {
                             start_disp_col_idx_scr_adj: start,
@@ -344,17 +344,17 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
             }
         }
         cmp::Ordering::Greater => {
-            match buffer_mut.sel_list.get(row_index) {
+            match buffer_mut.inner.sel_list.get(row_index) {
                 // Extend range to right (caret moved down and hit bottom).
                 Some(range) => {
-                    if let Some(line_us) = buffer_mut.lines.get(usize(row_index)) {
+                    if let Some(line_us) = buffer_mut.inner.lines.get(usize(row_index)) {
                         let start = range.start_disp_col_idx_scr_adj;
                         // For selection, go one col index past the end of the line,
                         // since selection range is not inclusive of the end index.
                         let end = caret_scroll_index::col_index_for_width(
                             line_us.display_width,
                         );
-                        buffer_mut.sel_list.insert(
+                        buffer_mut.inner.sel_list.insert(
                             row_index,
                             SelectionRange {
                                 start_disp_col_idx_scr_adj: start,
@@ -368,7 +368,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
                 None => {
                     let start = prev.col_index;
                     let end = curr.col_index;
-                    buffer_mut.sel_list.insert(
+                    buffer_mut.inner.sel_list.insert(
                         row_index,
                         SelectionRange {
                             start_disp_col_idx_scr_adj: start,
@@ -650,12 +650,12 @@ mod multiline_select_helpers {
         };
 
         let buffer_mut = buffer.get_mut(width(0) + height(0));
-        buffer_mut.sel_list.insert(
+        buffer_mut.inner.sel_list.insert(
             first.row_index,
             first_row_range,
             caret_vertical_movement_direction,
         );
-        buffer_mut.sel_list.insert(
+        buffer_mut.inner.sel_list.insert(
             last.row_index,
             last_row_range,
             caret_vertical_movement_direction,
@@ -681,7 +681,7 @@ mod multiline_select_helpers {
         let buffer_mut = buffer.get_mut(width(0) + height(0));
 
         // Extend the existing range (in selection map) for the first row to end of line.
-        if let Some(first_row_range) = buffer_mut.sel_list.get(first.row_index) {
+        if let Some(first_row_range) = buffer_mut.inner.sel_list.get(first.row_index) {
             let start_col = first_row_range.start_disp_col_idx_scr_adj;
             // Go one col index past the end of the width, since selection range is not
             // inclusive of end index.
@@ -690,7 +690,7 @@ mod multiline_select_helpers {
                 start_disp_col_idx_scr_adj: start_col,
                 end_disp_col_idx_scr_adj: end_col,
             };
-            buffer_mut.sel_list.insert(
+            buffer_mut.inner.sel_list.insert(
                 first.row_index,
                 new_first_row_range,
                 caret_vertical_movement_direction,
@@ -703,7 +703,7 @@ mod multiline_select_helpers {
             let end_col = last.col_index;
             (start_col, end_col).into()
         };
-        buffer_mut.sel_list.insert(
+        buffer_mut.inner.sel_list.insert(
             last.row_index,
             last_row_range,
             caret_vertical_movement_direction,
@@ -729,7 +729,7 @@ mod multiline_select_helpers {
         let buffer_mut = buffer.get_mut(width(0) + height(0));
 
         // FIRST ROW.
-        if let Some(first_row_range) = buffer_mut.sel_list.get(first.row_index) {
+        if let Some(first_row_range) = buffer_mut.inner.sel_list.get(first.row_index) {
             // Extend the existing range (in selection map) for the first row to end of line.
             let updated_first_row_range = SelectionRange {
                 start_disp_col_idx_scr_adj: first_row_range.start_disp_col_idx_scr_adj,
@@ -738,7 +738,7 @@ mod multiline_select_helpers {
                 // not inclusive of end index.
                 caret_scroll_index::col_index_for_width(first_line_width),
             };
-            buffer_mut.sel_list.insert(
+            buffer_mut.inner.sel_list.insert(
                 first.row_index,
                 updated_first_row_range,
                 caret_vertical_movement_direction,
@@ -756,7 +756,7 @@ mod multiline_select_helpers {
                 )
                     .into()
             };
-            buffer_mut.sel_list.insert(
+            buffer_mut.inner.sel_list.insert(
                 first.row_index,
                 new_first_row_range,
                 caret_vertical_movement_direction,
@@ -764,7 +764,7 @@ mod multiline_select_helpers {
         }
 
         // LAST ROW.
-        if let Some(last_row_range) = buffer_mut.sel_list.get(last.row_index) {
+        if let Some(last_row_range) = buffer_mut.inner.sel_list.get(last.row_index) {
             // Extend the existing range (in selection map) for the last row to start of line.
             let start_col = col(0);
             let end_col = last_row_range.end_disp_col_idx_scr_adj;
@@ -772,7 +772,7 @@ mod multiline_select_helpers {
                 start_disp_col_idx_scr_adj: start_col,
                 end_disp_col_idx_scr_adj: end_col,
             };
-            buffer_mut.sel_list.insert(
+            buffer_mut.inner.sel_list.insert(
                 last.row_index,
                 updated_last_row_range,
                 caret_vertical_movement_direction,
@@ -784,7 +784,7 @@ mod multiline_select_helpers {
                 let end_col = last.col_index;
                 (start_col, end_col).into()
             };
-            buffer_mut.sel_list.insert(
+            buffer_mut.inner.sel_list.insert(
                 last.row_index,
                 new_last_row_range,
                 caret_vertical_movement_direction,
@@ -808,24 +808,26 @@ mod multiline_select_helpers {
         let buffer_mut = buffer.get_mut(width(0) + height(0));
 
         // Drop the existing range (in selection map) for the last row.
-        if buffer_mut.sel_list.get(last.row_index).is_some() {
+        if buffer_mut.inner.sel_list.get(last.row_index).is_some() {
             buffer_mut
+                .inner
                 .sel_list
                 .remove(last.row_index, caret_vertical_movement_direction);
         }
 
         // Change the existing range (in selection map) for the first row.
-        if let Some(first_row_range) = buffer_mut.sel_list.get(first.row_index) {
+        if let Some(first_row_range) = buffer_mut.inner.sel_list.get(first.row_index) {
             let lhs = first_row_range.start_disp_col_idx_scr_adj;
             let rhs = first.col_index;
             match lhs.cmp(&rhs) {
                 cmp::Ordering::Equal => {
                     buffer_mut
+                        .inner
                         .sel_list
                         .remove(first.row_index, caret_vertical_movement_direction);
                 }
                 cmp::Ordering::Less | cmp::Ordering::Greater => {
-                    buffer_mut.sel_list.insert(
+                    buffer_mut.inner.sel_list.insert(
                         first.row_index,
                         SelectionRange {
                             start_disp_col_idx_scr_adj: lhs.min(rhs),
@@ -854,23 +856,25 @@ mod multiline_select_helpers {
         let buffer_mut = buffer.get_mut(width(0) + height(0));
 
         // Drop the existing range (in selection map) for the first row.
-        if buffer_mut.sel_list.get(first.row_index).is_some() {
+        if buffer_mut.inner.sel_list.get(first.row_index).is_some() {
             buffer_mut
+                .inner
                 .sel_list
                 .remove(first.row_index, caret_vertical_movement_direction);
         }
 
         // Change the existing range (in selection map) for the last row.
-        if let Some(last_row_range) = buffer_mut.sel_list.get(last.row_index) {
+        if let Some(last_row_range) = buffer_mut.inner.sel_list.get(last.row_index) {
             let lhs = last.col_index;
             let rhs = last_row_range.end_disp_col_idx_scr_adj;
             let row_index = last.row_index;
             match lhs.cmp(&rhs) {
                 cmp::Ordering::Equal => buffer_mut
+                    .inner
                     .sel_list
                     .remove(row_index, caret_vertical_movement_direction),
                 cmp::Ordering::Greater | cmp::Ordering::Less => {
-                    buffer_mut.sel_list.insert(
+                    buffer_mut.inner.sel_list.insert(
                         row_index,
                         SelectionRange {
                             start_disp_col_idx_scr_adj: rhs.min(lhs),
