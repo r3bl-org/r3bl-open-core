@@ -236,6 +236,8 @@ pub mod read_from_file {
 
     use crate::{DEFAULT_READ_BUFFER_SIZE, ok};
 
+    // XMARK: Clever Rust, use of `A` to allow any size `Array` to be passed in.
+
     /// The generic argument `A` ensures that this function can mutate any size `Array` of
     /// `u8` that it receives. This removes any restrictions on this function knowing the
     /// size of the `Array` it receives.
@@ -249,7 +251,6 @@ pub mod read_from_file {
     /// of workloads that their code is used in) to determine what `const` size the
     /// `Array` should be. If it is greater than this, it will spill to the heap, and it
     /// is too small, then some memory will be wasted on the stack.
-    // XMARK: Clever Rust, use of `A` to allow any size `Array` to be passed in.
     pub fn try_read_file_path_into_small_string<A: Array<Item = u8>>(
         acc: &mut SmallString<A>,
         file_path: impl Into<PathBuf>,
