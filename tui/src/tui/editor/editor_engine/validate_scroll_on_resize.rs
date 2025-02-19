@@ -19,6 +19,11 @@ use r3bl_core::{ch, BoundsCheck as _, BoundsStatus};
 
 use crate::{caret_scroll_index, EditorArgsMut};
 
+// Unicode glyphs links (for the ASCII diagrams):
+// - https://symbl.cc/en/unicode/blocks/box-drawing/
+// - https://symbl.cc/en/unicode/blocks/arrows/
+// - https://symbl.cc/en/collections/brackets/
+
 /// Check whether caret is vertically within the viewport.
 /// - If it isn't then scroll by mutating:
 ///   1. [crate::EditorContent::caret_raw]'s row , so it is within the viewport.
@@ -33,28 +38,27 @@ pub fn validate_scroll_on_resize(args: EditorArgsMut<'_>) {
 /// Handle vertical scrolling (make sure caret is within viewport).
 ///
 /// Check whether caret is in the viewport.
-/// - If to top of viewport, then adjust scroll_offset & set it.
-/// - If to bottom of viewport, then adjust scroll_offset & set it.
+/// - If to top of viewport, then adjust scr_ofs & set it.
+/// - If to bottom of viewport, then adjust scr_ofs & set it.
 /// - If in viewport, then do nothing.
 ///
 /// ```text
-///                    +0--------------------+
-///                    0                     |
-///                    |        above        | <- caret_row_adj
-///                    |                     |
-///                    +--- scroll_offset ---+
-///              ->    |         ↑           |      ↑
-///              |     |                     |      |
-///   caret.row_index  |     within vp       |  vp height
-///              |     |                     |      |
-///              ->    |         ↓           |      ↓
-///                    +--- scroll_offset ---+
-///                    |    + vp height      |
-///                    |                     |
-///                    |        below        | <- caret_row_adj
-///                    |                     |
-///                    +---------------------+
-/// ```
+///                    ╭0───────────────────╮
+///                    0                    │
+///                    │       above        │ ← caret_row_scr_adj
+///                    │                    │
+///                    ├───    scr_ofs    ──┤
+///              ╭→    │         ↑          │      ┬
+///              │     │                    │      │
+/// caret_raw.row_index│     within vp      │  vp height
+///              │     │                    │      │
+///              ╰→    │         ↓          │      ┴
+///                    ├───    scr_ofs    ──┤
+///                    │    + vp height     │
+///                    │                    │
+///                    │       below        │ ← caret_row_scr_adj
+///                    │                    │
+///                    ╰────────────────────╯
 fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
     let vp = engine.viewport();
@@ -129,19 +133,19 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
 /// Handle horizontal scrolling (make sure caret is within viewport).
 ///
 /// Check whether caret is in the viewport.
-/// - If to left of viewport, then adjust scroll_offset & set it.
-/// - If to right of viewport, then adjust scroll_offset & set it.
+/// - If to left of viewport, then adjust scr_ofs & set it.
+/// - If to right of viewport, then adjust scr_ofs & set it.
 /// - If in viewport, then do nothing.
 ///
 /// ```text
-///           <-   vp width   ->
-/// +0--------+----------------+---------->
-/// 0         |                |
-/// | left of |<-  within vp ->| right of
-/// |         |                |
-/// +---------+----------------+---------->
-///       scroll_offset    scroll_offset
-///                        + vp width
+///           ├    vp width    ┤
+/// ╭0────────┬────────────────┬─────────→
+/// 0         │                │
+/// │ left of │←  within vp   →│ right of
+/// │         │                │
+/// ╰─────────┴────────────────┴─────────→
+///           ↑                ↑
+///        scr_ofs     scr_ofs + vp width
 /// ```
 fn validate_horizontal_scroll(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
@@ -206,11 +210,6 @@ mod tests {
                 LineMode,
                 DEFAULT_SYN_HI_FILE_EXT};
 
-    // REVIEW: [ ] add test for above viewport
-
-    // REVIEW: [ ] add test for below viewport
-
-    // REVIEW: [x] add test for within viewport
     #[test]
     fn test_validate_vertical_scroll_within_viewport() {
         let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
@@ -239,5 +238,65 @@ mod tests {
 
         assert_eq!(buffer.get_scr_ofs().row_index, row(0));
         assert_eq!(buffer.get_caret_scr_adj().row_index, row(5));
+    }
+
+    #[test]
+    fn test_validate_vertical_scroll_above_viewport() {
+        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut engine: EditorEngine = EditorEngine {
+            config_options: EditorEngineConfig {
+                multiline_mode: LineMode::MultiLine,
+                ..Default::default()
+            },
+            ..mock_real_objects_for_editor::make_editor_engine()
+        };
+
+        let viewport = height(10) + width(10);
+
+        {
+            let buffer_mut = buffer.get_mut_no_drop(viewport);
+            *buffer_mut.inner.caret_raw = caret_raw(row(0) + col(0));
+            *buffer_mut.inner.scr_ofs = scr_ofs(row(5) + col(0));
+        }
+
+        let editor_args_mut = EditorArgsMut {
+            engine: &mut engine,
+            buffer: &mut buffer,
+        };
+
+        validate_vertical_scroll(editor_args_mut);
+
+        assert_eq!(buffer.get_scr_ofs().row_index, row(5));
+        assert_eq!(buffer.get_caret_scr_adj().row_index, row(5));
+    }
+
+    #[test]
+    fn test_validate_vertical_scroll_below_viewport() {
+        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut engine: EditorEngine = EditorEngine {
+            config_options: EditorEngineConfig {
+                multiline_mode: LineMode::MultiLine,
+                ..Default::default()
+            },
+            ..mock_real_objects_for_editor::make_editor_engine()
+        };
+
+        let viewport = height(10) + width(10);
+
+        {
+            let buffer_mut = buffer.get_mut_no_drop(viewport);
+            *buffer_mut.inner.caret_raw = caret_raw(row(10) + col(0));
+            *buffer_mut.inner.scr_ofs = scr_ofs(row(5) + col(0));
+        }
+
+        let editor_args_mut = EditorArgsMut {
+            engine: &mut engine,
+            buffer: &mut buffer,
+        };
+
+        validate_vertical_scroll(editor_args_mut);
+
+        assert_eq!(buffer.get_scr_ofs().row_index, row(5));
+        assert_eq!(buffer.get_caret_scr_adj().row_index, row(15));
     }
 }
