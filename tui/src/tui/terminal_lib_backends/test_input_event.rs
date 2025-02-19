@@ -21,9 +21,9 @@ mod tests {
     use r3bl_core::{assert_eq2, throws};
 
     use crate::{convert_key_event,
-                convert_key_modifiers,
                 crossterm_keyevent,
                 keypress,
+                try_convert_key_modifiers,
                 InputEvent,
                 Key,
                 ModifierKeysMask};
@@ -91,7 +91,7 @@ mod tests {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::NONE
             };
-            let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
+            let maybe_modifier_keys = try_convert_key_modifiers(&key_event.modifiers);
             assert!(maybe_modifier_keys.is_none());
         }
         // "Ctrl + x"
@@ -100,7 +100,7 @@ mod tests {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::CONTROL
             };
-            let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
+            let maybe_modifier_keys = try_convert_key_modifiers(&key_event.modifiers);
             assert!(maybe_modifier_keys.is_some());
             assert!(maybe_modifier_keys.unwrap() == ModifierKeysMask::new().with_ctrl());
         }
@@ -110,7 +110,7 @@ mod tests {
               code: KeyCode::Char('X'),
               modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT
             };
-            let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
+            let maybe_modifier_keys = try_convert_key_modifiers(&key_event.modifiers);
             assert!(maybe_modifier_keys.is_some());
             assert!(
                 maybe_modifier_keys.unwrap()
@@ -123,7 +123,7 @@ mod tests {
               code: KeyCode::Char('X'),
               modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT | KeyModifiers::ALT
             };
-            let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
+            let maybe_modifier_keys = try_convert_key_modifiers(&key_event.modifiers);
             assert!(maybe_modifier_keys.is_some());
             assert!(
                 maybe_modifier_keys.unwrap()

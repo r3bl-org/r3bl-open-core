@@ -277,12 +277,8 @@ mod render_helpers {
     /// - `hidden`
     /// - `strikethrough`
     pub fn style_eq(this: &Option<TuiStyle>, other: &Option<TuiStyle>) -> bool {
-        // REVIEW: [ ] replace use of bool w/ enum
-        match (this.is_some(), other.is_some()) {
-            (false, false) => true,
-            (true, true) => {
-                let this = (*this).unwrap();
-                let other = (*other).unwrap();
+        match (this, other) {
+            (Some(this), Some(other)) => {
                 this.color_fg == other.color_fg
                     && this.color_bg == other.color_bg
                     && this.bold == other.bold
@@ -292,7 +288,8 @@ mod render_helpers {
                     && this.hidden == other.hidden
                     && this.strikethrough == other.strikethrough
             }
-            (_, _) => false,
+            (None, None) => true,
+            _ => false,
         }
     }
 
@@ -335,7 +332,8 @@ mod tests {
     use r3bl_macro::tui_style;
 
     use super::*;
-    use crate::render_pipeline_to_offscreen_buffer::print_text_with_attributes;
+    use crate::{offscreen_buffer_paint_impl::render_helpers::style_eq,
+                render_pipeline_to_offscreen_buffer::print_text_with_attributes};
 
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
@@ -446,5 +444,23 @@ mod tests {
                 None
             )
         );
+    }
+
+    #[test]
+    fn test_render_helper_style_eq() {
+        let style1 = Some(
+            tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+        );
+        let style2 = Some(
+            tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+        );
+
+        assert_eq2!(style_eq(&style1, &style2), true);
+
+        let style_3 = Some(
+            tui_style! { attrib: [italic] color_fg: color!(@black) color_bg: color!(@cyan) },
+        );
+
+        assert_eq2!(style_eq(&style1, &style_3), false);
     }
 }

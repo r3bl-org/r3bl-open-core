@@ -23,7 +23,7 @@ use crossterm::event::{KeyCode,
                        ModifierKeyCode};
 
 use super::{Enhanced, ModifierKeysMask};
-use crate::{convert_key_modifiers, MediaKey, ModifierKeyEnum, SpecialKeyExt};
+use crate::{try_convert_key_modifiers, MediaKey, ModifierKeyEnum, SpecialKeyExt};
 
 /// Examples.
 ///
@@ -298,7 +298,7 @@ pub mod convert_key_event {
         },
         // Non character keys.
         _ => {
-          let maybe_modifiers_keys_mask: Option<ModifierKeysMask> = convert_key_modifiers(&key_event.modifiers);
+          let maybe_modifiers_keys_mask= try_convert_key_modifiers(&key_event.modifiers);
           let maybe_key: Option<Key> = copy_code_from_key_event(&key_event);
           if let Some(key) = maybe_key {
             if let Some(mask) = maybe_modifiers_keys_mask {

@@ -2,7 +2,23 @@
 # Flags: RegExp
 # ContextLines: 1
 
-69 results - 34 files
+63 results - 34 files
+
+scratch.rs:
+  129  
+  130: // PERF: [ ] use this instead of [Micro/Tiny/Small/Normal/Large]StringBackingStore
+  131  pub type StringStorage = SmallStringBackingStore;
+  132  
+  133: // PERF: [ ] replace with StringStorage and avoid allocation using write! & index > 0 check to write \n
+  134  
+
+  142  
+  143: // DO_NOT_COMMIT:
+  144  |ApplyChangeArgs {
+
+  159  ) -> CommonResult<StyleUSSpanLines> {
+  160:   // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
+  161    // Convert the editor text into a StringStorage (unfortunately requires allocating to
 
 cmdr/src/edi/state.rs:
   196                  EditorBuffer::new_empty(&Some(&file_ext), maybe_file_path);
@@ -39,17 +55,17 @@ core/src/stack_alloc_types/into_existing.rs:
   230  pub mod read_from_file {
 
 core/src/tui_core/graphemes/access.rs:
-  177          } else {
-  178:             // PERF: [ ] perf
-  179              chunk.into()
+  178          } else {
+  179:             // PERF: [ ] perf
+  180              chunk.into()
 
-  185      pub fn clip_to_range(&self, range: SelectionRange) -> &str {
-  186:         // BUG: [ ] introduce scroll adjusted type
-  187          let SelectionRange {
+  186      pub fn clip_to_range(&self, range: SelectionRange) -> &str {
+  187:         // BUG: [ ] introduce scroll adjusted type
+  188          let SelectionRange {
 
-  260          // were painted in a previous render.
-  261:         // PERF: [ ] perf
-  262          let chunk_display_width = UnicodeString::str_display_width(chunk);
+  262          // were painted in a previous render.
+  263:         // PERF: [ ] perf
+  264          let chunk_display_width = UnicodeString::str_display_width(chunk);
 
 core/src/tui_core/graphemes/convert.rs:
   29  
@@ -81,7 +97,7 @@ core/src/tui_core/graphemes/unicode_string.rs:
 
   109      pub grapheme_cluster_segment_count: usize,
   110:     // REFACTOR: [x] replace all usages of .display_width w/ .display_width()
-  111      pub display_width: WidthColCount,
+  111      pub display_width: ColWidth,
 
   131  
   132: // PERF: [ ] perf
@@ -93,9 +109,9 @@ core/src/tui_core/tui_styled_text/tui_styled_text_impl.rs:
   56  /// Use [tui_styled_text!] macro for easier construction.
 
 core/src/tui_core/tui_styled_text/tui_styled_texts_impl.rs:
-  61  
-  62: // PERF: [ ] make sure this works
-  63  /// Use [tui_styled_texts!] macro for easier construction.
+  57  
+  58: // PERF: [ ] make sure this works
+  59  /// Use [tui_styled_texts!] macro for easier construction.
 
 terminal_async/src/readline_impl/readline.rs:
   411  
@@ -103,32 +119,32 @@ terminal_async/src/readline_impl/readline.rs:
   413          let is_paused_buffer = {
 
 tui/examples/demo/ex_app_no_layout/app_main.rs:
-  538  
-  539: // REFACTOR: [ ] introduce HUD for telemetry here & copy to all other examples
-  540  
+  532  
+  533: // REFACTOR: [ ] introduce HUD for telemetry here & copy to all other examples
+  534  
 
 tui/src/tui/dialog/dialog_engine/dialog_engine_api.rs:
-  558  
-  559:                 // PERF: [ ] perf
-  560                  let clipped_text = if text_display_width > max_display_col_count {
+  557  
+  558:                 // PERF: [ ] perf
+  559                  let clipped_text = if text_display_width > max_display_col_count {
 
-tui/src/tui/editor/editor_buffer/editor_buffer_struct.rs:
-  231  pub struct EditorBufferHistory {
-  232:     // REFACTOR: [ ] consider using a "heap" allocated ring buffer for `versions`
-  233      pub versions: sizing::VecEditorBufferHistoryVersions,
+tui/src/tui/editor/editor_buffer/buffer_struct.rs:
+  242  pub struct EditorBufferHistory {
+  243:     // REFACTOR: [ ] consider using a "heap" allocated ring buffer for `versions`
+  244      pub versions: sizing::VecEditorBufferHistoryVersions,
 
-  243      ///   [EditorBuffer::get_caret] and pass it [CaretKind::ScrollAdjusted].
-  244:     // BUG: [ ] introduce scroll adjusted type
-  245      pub caret_raw: CaretRaw,
+  250      pub lines: sizing::VecEditorContentLines,
+  251:     // BUG: [ ] introduce scroll adjusted type
+  252      /// The caret is stored as a "raw" [EditorContent::caret_raw].
 
-  453  
-  454:         // REFACTOR: [ ] return struct, not tuple, add drop impl to it, to update lines_us? or drop lines_us?
-  455:         // REFACTOR: [ ] after mutations to lines, lines_us must be recomputed! consider remove this from the struct & computing it only when needed
-  456          /// Even though this struct is mutable by editor_ops.rs, this method is provided
+  609  
+  610:         // REFACTOR: [ ] return struct, not tuple, add drop impl to it, to update lines_us? or drop lines_us?
+  611:         // REFACTOR: [ ] after mutations to lines, lines_us must be recomputed! consider remove this from the struct & computing it only when needed
+  612          /// Even though this struct is mutable by editor_ops.rs, this method is provided
 
-  718  
-  719:     // REFACTOR: [ ] add tests for sizing::MAX_UNDO_REDO_SIZE
-  720  
+  883  
+  884:     // REFACTOR: [ ] add tests for sizing::MAX_UNDO_REDO_SIZE
+  885  
 
 tui/src/tui/editor/editor_buffer/selection_list.rs:
    51  pub struct SelectionList {
@@ -139,43 +155,24 @@ tui/src/tui/editor/editor_buffer/selection_list.rs:
   121:     // BUG: [ ] introduce scroll adjusted type
   122      pub fn get_caret_at_start_of_range_scroll_adjusted(
 
-tui/src/tui/editor/editor_engine/editor_engine_api.rs:
-  384              {
-  385:                 // PERF: [ ] perf
-  386                  string
+tui/src/tui/editor/editor_engine/caret_mut.rs:
+  38      // This is only set if sel_mod is enabled.
+  39:     // BUG: [ ] introduce scroll adjusted type
+  40      let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
 
-tui/src/tui/editor/editor_engine/editor_engine_internal_api.rs:
-   298  impl SelectMode {
-   299:     // BUG: [ ] introduce scroll adjusted type
-   300      pub fn get_caret_display_position_scroll_adjusted(
+  80      // This is only set if sel_mod is enabled.
+  81:     // BUG: [ ] introduce scroll adjusted type
+  82      let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
 
-   390  
-   391: // REFACTOR: [ ] replace the use of position and scroll offset with Caret!
-   392  mod caret_mut {
-
-   403          // This is only set if select_mode is enabled.
-   404:         // BUG: [ ] introduce scroll adjusted type
-   405          let maybe_previous_caret_display_position =
-
-   446          // This is only set if select_mode is enabled.
-   447:         // BUG: [ ] introduce scroll adjusted type
-   448          let maybe_current_caret_display_position =
-
-  1513  
-  1514:             // BUG: [ ] introduce scroll adjusted type
-  1515:             // BUG: [x] fix the cut / copy bug!
-  1516              if let Some(new_caret_scr_adj) = maybe_new_caret {
-  1517:                 // REVIEW: [ ] make sure this works (changed logic, not tested)
-  1518                  let caret_raw = new_caret_scr_adj + *buffer_mut.scr_ofs;
-
-  1792  
-  1793:         // REVIEW: [ ] make sure this works (changed the logic, not tested)
-  1794          let is_caret_col_overflow_content_width =
+tui/src/tui/editor/editor_engine/select_mode.rs:
+  32  impl SelectMode {
+  33:     // BUG: [ ] introduce scroll adjusted type
+  34      pub fn get_caret_scr_adj(&self, buffer: &EditorBuffer) -> Option<CaretScrAdj> {
 
 tui/src/tui/layout/flex_box.rs:
-  100      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-  101:         Debug::fmt(self, f)
-  102      }
+  101      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+  102:         Debug::fmt(self, f)
+  103      }
 
 tui/src/tui/layout/layout_error.rs:
   53  impl Display for LayoutError {
@@ -188,29 +185,29 @@ tui/src/tui/md_parser/convert_to_plain_text.rs:
   192  pub fn generate_ordered_list_item_bullet(
 
 tui/src/tui/syntax_highlighting/intermediate_types.rs:
-  342          {
-  343:             // PERF: [ ] perf
-  344              let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
+  343          {
+  344:             // PERF: [ ] perf
+  345              let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
 
-  394          {
-  395:             // PERF: [ ] perf
-  396              let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
+  397          {
+  398:             // PERF: [ ] perf
+  399              let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
 
-  447          {
-  448:             // PERF: [ ] perf
-  449              let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
+  452          {
+  453:             // PERF: [ ] perf
+  454              let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
 
-  500          {
-  501:             // PERF: [ ] perf
-  502              let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
+  507          {
+  508:             // PERF: [ ] perf
+  509              let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
 
-  553          {
-  554:             // PERF: [ ] perf
-  555              let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
+  562          {
+  563:             // PERF: [ ] perf
+  564              let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
 
-  606          {
-  607:             // PERF: [ ] perf
-  608              let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
+  617          {
+  618:             // PERF: [ ] perf
+  619              let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
 
 tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:
   98  ) -> CommonResult<StyleUSSpanLines> {
@@ -218,25 +215,25 @@ tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:
   100      // Convert the editor text into a StringStorage (unfortunately requires allocating to
 
 tui/src/tui/terminal_lib_backends/offscreen_buffer.rs:
-  115      impl Debug for OffscreenBuffer {
-  116:         // PERF: [ ] make sure this works!
-  117          fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+  118      impl Debug for OffscreenBuffer {
+  119:         // PERF: [ ] make sure this works!
+  120          fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 
-  182          pub fn clear(&mut self) {
-  183:             // PERF: [ ] make this faster by keeping allocated memory?
-  184              let current_height = self.buffer.len();
+  184          pub fn clear(&mut self) {
+  185:             // PERF: [ ] make this faster by keeping allocated memory?
+  186              let current_height = self.buffer.len();
 
-  206  pub struct PixelCharLines {
-  207:     // PERF: [x] drop Vec and use SmallVec instead
-  208      pub lines: VecArray<PixelCharLine>,
+  208  pub struct PixelCharLines {
+  209:     // PERF: [x] drop Vec and use SmallVec instead
+  210      pub lines: VecArray<PixelCharLine>,
 
-  227              Self {
-  228:                 // PERF: [x] drop Vec and use SmallVec instead
-  229                  lines: smallvec![
+  229              Self {
+  230:                 // PERF: [x] drop Vec and use SmallVec instead
+  231                  lines: smallvec![
 
-  239  pub struct PixelCharLine {
-  240:     // PERF: [x] drop Vec and use SmallVec instead
-  241      pub pixel_chars: VecArray<PixelChar>,
+  241  pub struct PixelCharLine {
+  242:     // PERF: [x] drop Vec and use SmallVec instead
+  243      pub pixel_chars: VecArray<PixelChar>,
 
   257      impl Debug for PixelCharLine {
   258:         // PERF: [ ] make sure this works!
@@ -248,18 +245,18 @@ tui/src/tui/terminal_lib_backends/paint.rs:
   67      let offscreen_buffer = pipeline.convert(window_size);
 
 tui/src/tui/terminal_lib_backends/render_op.rs:
-  306      ///    bounds of the terminal screen.
-  307:     // PERF: [x] remove string
-  308      PaintTextWithAttributes(StringStorage, Option<TuiStyle>),
+  304      ///    bounds of the terminal screen.
+  305:     // PERF: [x] remove string
+  306      PaintTextWithAttributes(StringStorage, Option<TuiStyle>),
 
-  315      /// padding.
-  316:     // PERF: [x] remove string
-  317      CompositorNoClipTruncPaintTextWithAttributes(StringStorage, Option<TuiStyle>),
+  313      /// padding.
+  314:     // PERF: [x] remove string
+  315      CompositorNoClipTruncPaintTextWithAttributes(StringStorage, Option<TuiStyle>),
 
 tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
-  76  
-  77: // PERF: [ ] figure out how this impacts OffscreenBuffer creation
-  78  fn process_render_op(
+  77  
+  78: // PERF: [ ] figure out how this impacts OffscreenBuffer creation
+  79  pub fn process_render_op(
 
 tui/src/tui/terminal_lib_backends/render_tui_styled_texts.rs:
   26          render_ops.push(RenderOp::PaintTextWithAttributes(
@@ -272,35 +269,19 @@ tui/src/tui/terminal_lib_backends/crossterm_backend/mod.rs:
   25  pub use offscreen_buffer_paint_impl::*;
 
 tui/src/tui/terminal_lib_backends/crossterm_backend/offscreen_buffer_paint_impl.rs:
-  227                      it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-  228:                         // PERF: [ ] perf
-  229                          StringStorage::from_str(text),
+  226                      it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+  227:                         // PERF: [ ] perf
+  228                          StringStorage::from_str(text),
 
-  246          pub display_row_index: ChUnit,
-  247:         // PERF: [ ] remove String
-  248          pub buffer_plain_text: StringStorage,
+  245          pub display_row_index: RowIndex,
+  246:         // PERF: [ ] remove String
+  247          pub buffer_plain_text: StringStorage,
 
-  317              .push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-  318:                 // PERF: [ ] remove String clone
-  319                  context.buffer_plain_text.clone(),
+  314              .push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+  315:                 // PERF: [ ] remove String clone
+  316                  context.buffer_plain_text.clone(),
 
 tui/src/tui/terminal_window/shared_global_data.rs:
   60              Some(ref offscreen_buffer) =>
   61:             // PERF: [ ] make sure this pretty_print works!
   62              {
-
-~/Downloads/tracing.rs:
-  125  
-  126: // PERF: [ ] use this instead of [Micro/Tiny/Small/Normal/Large]StringBackingStore
-  127  pub type StringStorage = SmallStringBackingStore;
-  128  
-  129: // PERF: [ ] replace with StringStorage and avoid allocation using write! & index > 0 check to write \n
-  130  
-
-  138  
-  139: // DO_NOT_COMMIT:
-  140  |ApplyChangeArgs {
-
-  155  ) -> CommonResult<StyleUSSpanLines> {
-  156:   // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
-  157    // Convert the editor text into a StringStorage (unfortunately requires allocating to

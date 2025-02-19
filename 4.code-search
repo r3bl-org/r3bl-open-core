@@ -1,16 +1,37 @@
 # Query: tracing::
 # ContextLines: 1
 
-178 results - 47 files
+183 results - 48 files
 
 CHANGELOG.md:
-   996    - Remove all the functions like `log_debug`, `log_info`, etc. and favor directly using
-   997:     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
-   998  
+   999    - Remove all the functions like `log_debug`, `log_info`, etc. and favor directly using
+  1000:     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
+  1001  
 
-  1011    - Simplify the actual logging API into a single function, and allow use of tokio
-  1012:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
-  1013      `logging_api.rs` for more details.
+  1014    - Simplify the actual logging API into a single function, and allow use of tokio
+  1015:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
+  1016      `logging_api.rs` for more details.
+
+scratch.rs:
+  38      // % is Display, ? is Debug.
+  39:     tracing::info! {
+  40          message = %message,
+
+  51    // % is Display, ? is Debug.
+  52:   tracing::info!(
+  53        message = message,
+
+  67    // % is Display, ? is Debug.
+  68:   tracing::debug!(
+  69        message = %message,
+
+  76  // % is Display, ? is Debug.
+  77: tracing::info!("main_event_loop -> Tick: 🌄 " = ?input_event);
+  78  
+
+  83  // % is Display, ? is Debug.
+  84: tracing::info!(
+  85      message = message,
 
 cmdr/src/analytics_client.rs:
   112                          call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
@@ -279,9 +300,9 @@ terminal_async/examples/terminal_async.rs:
   39  
 
 tui/examples/demo/ex_app_no_layout/app_main.rs:
-  327                      // % is Display, ? is Debug.
-  328:                     tracing::info! {
-  329                          message = %message,
+  323                      // % is Display, ? is Debug.
+  324:                     tracing::info! {
+  325                          message = %message,
 
 tui/examples/demo/ex_app_with_1col_layout/single_column_component.rs:
   265                      // % is Display, ? is Debug.
@@ -370,56 +391,56 @@ tui/src/tui/dialog/dialog_component/dialog_component_struct.rs:
   175:                             tracing::debug!(
   176                                  "🐝 restore focus to non modal: {:?}",
 
-tui/src/tui/editor/editor_buffer/editor_buffer_clipboard_support.rs:
+tui/src/tui/editor/editor_buffer/buffer_clipboard_support.rs:
    67          call_if_true!(DEBUG_TUI_COPY_PASTE, {
    68:             tracing::debug!(
    69                  "\n📋📋📋 Failed to copy selected text to clipboard: {}",
 
-  119              call_if_true!(DEBUG_TUI_COPY_PASTE, {
-  120:                 tracing::debug!(
-  121                      "\n📋📋📋 Text was pasted from clipboard: \n{}",
+  115              call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  116:                 tracing::debug!(
+  117                      "\n📋📋📋 Text was pasted from clipboard: \n{}",
 
-  128              call_if_true!(DEBUG_TUI_COPY_PASTE, {
-  129:                 tracing::debug!(
-  130                      "\n📋📋📋 Failed to paste the text from clipboard: {}",
+  124              call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  125:                 tracing::debug!(
+  126                      "\n📋📋📋 Failed to paste the text from clipboard: {}",
 
-tui/src/tui/editor/editor_buffer/editor_buffer_selection_support.rs:
-   69                  call_if_true!(DEBUG_TUI_COPY_PASTE, {
-   70:                     tracing::debug!("\n🍕🍕🍕 new selection: \n\t{it:?}", it = new_range);
-   71                  });
+tui/src/tui/editor/editor_buffer/buffer_selection_support.rs:
+   64              call_if_true!(DEBUG_TUI_COPY_PASTE, {
+   65:                 tracing::debug!("\n🍕🍕🍕 new selection: \n\t{it:?}", it = new_range);
+   66              });
 
-   84          call_if_true!(DEBUG_TUI_COPY_PASTE, {
-   85:             tracing::debug!(
-   86                      "\n🍕🍕🍕 {a}:\n\t{b}: {c:?}, {d}: {e:?}\n\t{f}: {g:?}, {h}: {i:?}\n\t{j}: {k}, {l}: {m}, {n}: {o}",
+   79      call_if_true!(DEBUG_TUI_COPY_PASTE, {
+   80:         tracing::debug!(
+   81                      "\n🍕🍕🍕 {a}:\n\t{b}: {c:?}, {d}: {e:?}\n\t{f}: {g:?}, {h}: {i:?}\n\t{j}: {k}, {l}: {m}, {n}: {o}",
 
-  288              // % is Display, ? is Debug.
-  289:             tracing::debug! {
-  290                  message = %message,
+  308          // % is Display, ? is Debug.
+  309:         tracing::debug! {
+  310              message = %message,
 
-  410                  call_if_true!(DEBUG_TUI_COPY_PASTE, {
-  411:                     tracing::debug!(
-  412                          "\n📜📜📜⚾⚾⚾ {0}",
+  460              // % is Display, ? is Debug.
+  461:             tracing::debug! {
+  462                  message = %message,
 
-  536              // % is Display, ? is Debug.
-  537:             tracing::debug! {
-  538                  message = %message,
+  582                  call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  583:                     tracing::debug!(
+  584                          "\n📜📜📜⚾⚾⚾ {0}",
 
-tui/src/tui/editor/editor_buffer/editor_buffer_struct.rs:
-  280                  // % is Display, ? is Debug.
-  281:                 tracing::info!(
-  282                      message = message,
+tui/src/tui/editor/editor_buffer/buffer_struct.rs:
+  286                  // % is Display, ? is Debug.
+  287:                 tracing::info!(
+  288                      message = message,
 
-  669          call_if_true!(DEBUG_TUI_COPY_PASTE, {
-  670:             tracing::debug!(
-  671                  "🍎🍎🍎 add_content_to_undo_stack editor_buffer: {:?}",
+  689          call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  690:             tracing::debug!("🍎🍎🍎 add_content_to_undo_stack buffer: {:?}", buffer);
+  691          });
 
-  687          call_if_true!(DEBUG_TUI_COPY_PASTE, {
-  688:             tracing::debug!("🍎🍎🍎 undo editor_buffer: {:?}", editor_buffer);
-  689          });
+  704          call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  705:             tracing::debug!("🍎🍎🍎 undo buffer: {:?}", buffer);
+  706          });
 
-  700          call_if_true!(DEBUG_TUI_COPY_PASTE, {
-  701:             tracing::debug!("🍎🍎🍎 redo editor_buffer: {:?}", editor_buffer);
-  702          });
+  717          call_if_true!(DEBUG_TUI_COPY_PASTE, {
+  718:             tracing::debug!("🍎🍎🍎 redo buffer: {:?}", buffer);
+  719          });
 
 tui/src/tui/editor/editor_buffer/system_clipboard_service_provider.rs:
   36              call_if_true!(DEBUG_TUI_COPY_PASTE, {
@@ -427,22 +448,22 @@ tui/src/tui/editor/editor_buffer/system_clipboard_service_provider.rs:
   38                      "\n📋📋📋 Selected Text was copied to clipboard: \n{}",
 
 tui/src/tui/editor/editor_component/editor_event.rs:
-  93              // % is Display, ? is Debug.
-  94:             tracing::debug! {
-  95                  message = %message,
+  94              // % is Display, ? is Debug.
+  95:             tracing::debug! {
+  96                  message = %message,
 
-tui/src/tui/editor/editor_engine/editor_engine_api.rs:
-  256              // % is Display, ? is Debug.
-  257:             tracing::info!(
-  258                  message = message,
+tui/src/tui/editor/editor_engine/engine_public_api.rs:
+  258          // % is Display, ? is Debug.
+  259:         tracing::info!(
+  260              message = message,
 
-  332                      // % is Display, ? is Debug.
-  333:                     tracing::debug! {
-  334                          message = %message,
+  334                  // % is Display, ? is Debug.
+  335:                 tracing::debug! {
+  336                      message = %message,
 
-  513                  let line_len_str = convert_to_string_slice(&line_len_ray);
-  514:                 tracing::debug!(
-  515                      "\n🎯🎯🎯\neditor_buffer.lines.len(): {} vs md_document.lines.len(): {}\n{}\n{:?}🎯🎯🎯",
+  514                  let line_len_str = convert_to_string_slice(&line_len_ray);
+  515:                 tracing::debug!(
+  516                      "\n🎯🎯🎯\neditor_buffer.lines.len(): {} vs md_document.lines.len(): {}\n{}\n{:?}🎯🎯🎯",
 
 tui/src/tui/md_parser/fragment/parse_fragments_in_a_line.rs:
    96      call_if_true!(DEBUG_MD_PARSER, {
@@ -465,13 +486,13 @@ tui/src/tui/terminal_lib_backends/input_device_ext.rs:
   105                  });
 
 tui/src/tui/terminal_lib_backends/paint.rs:
-  187                  // % is Display, ? is Debug.
-  188:                 tracing::info!(
-  189                      message = "pipeline : 🗜️ Attempt to set cursor position (orig) outside of terminal window; clamping to nearest edge of window (sanitized)",
+  204              // % is Display, ? is Debug.
+  205:             tracing::info!(
+  206                  message = "pipeline : ⮻ Attempt to set cursor position (orig) outside of terminal window; clamping to nearest edge of window (sanitized)",
 
-  197              // % is Display, ? is Debug.
-  198:             tracing::info!(
-  199                  message = "pipeline : 📍 Save the cursor position (sanitized) to SharedGlobalData",
+  214          // % is Display, ? is Debug.
+  215:         tracing::info!(
+  216              message = "pipeline : ⮺ Save the cursor position (sanitized) to SharedGlobalData",
 
 tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
    67              // % is Display, ? is Debug.
@@ -487,54 +508,54 @@ tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
   272      });
 
 tui/src/tui/terminal_lib_backends/crossterm_backend/offscreen_buffer_paint_impl.rs:
-   75              // % is Display, ? is Debug.
-   76:             tracing::info!(
-   77                  message = "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok 🟢",
+   74              // % is Display, ? is Debug.
+   75:             tracing::info!(
+   76                  message = "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok 🟢",
 
-  107              // % is Display, ? is Debug.
-  108:             tracing::info!(
-  109                  message = "🎨 offscreen_buffer_paint_impl_crossterm::paint_diff() ok 🟢",
+  106              // % is Display, ? is Debug.
+  107:             tracing::info!(
+  108                  message = "🎨 offscreen_buffer_paint_impl_crossterm::paint_diff() ok 🟢",
 
-  205              // % is Display, ? is Debug.
-  206:             tracing::info!(
-  207                  message = "🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok 🟢",
+  202              // % is Display, ? is Debug.
+  203:             tracing::info!(
+  204                  message = "🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok 🟢",
 
 tui/src/tui/terminal_lib_backends/crossterm_backend/render_op_impl.rs:
-  445  /// Given a crossterm command, or commands, queue each one, and depending on what the
-  446: /// [Result] is produced, run [tracing::error!] or [tracing::info!].
-  447  ///
+  446  /// Given a crossterm command, or commands, queue each one, and depending on what the
+  447: /// [Result] is produced, run [tracing::error!] or [tracing::info!].
+  448  ///
 
-  479                          DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-  480:                         tracing::info!(msg)
-  481                      };
+  480                          DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+  481:                         tracing::info!(msg)
+  482                      };
 
-  485                          format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
-  486:                     call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
-  487                  }
+  486                          format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+  487:                     call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+  488                  }
 
-  502                      DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-  503:                     tracing::info!(msg)
-  504                  };
+  503                      DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+  504:                     tracing::info!(msg)
+  505                  };
 
-  508                      format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
-  509:                 call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
-  510              }
+  509                      format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+  510:                 call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+  511              }
 
-  530                      DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-  531:                     tracing::info!(msg)
-  532                  };
+  531                      DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+  532:                     tracing::info!(msg)
+  533                  };
 
-  536                      format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
-  537:                 call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
-  538              }
+  537                      format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+  538:                 call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+  539              }
 
-  558                      DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-  559:                     tracing::info!(msg)
-  560                  };
+  559                      DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+  560:                     tracing::info!(msg)
+  561                  };
 
-  564                      format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
-  565:                 call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
-  566              }
+  565                      format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+  566:                 call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+  567              }
 
 tui/src/tui/terminal_window/main_event_loop.rs:
   148          // % is Display, ? is Debug.
@@ -545,29 +566,29 @@ tui/src/tui/terminal_window/main_event_loop.rs:
   220:                             tracing::info!(
   221                                  message = message,
 
-  267                  // % is Display, ? is Debug.
-  268:                 tracing::info!(
-  269                      message = message,
+  269                  // % is Display, ? is Debug.
+  270:                 tracing::info!(
+  271                      message = message,
 
-  282                      // % is Display, ? is Debug.
-  283:                     tracing::info!(
-  284                          message = message,
+  284                      // % is Display, ? is Debug.
+  285:                     tracing::info!(
+  286                          message = message,
 
-  303          // % is Display, ? is Debug.
-  304:         tracing::info!(
-  305              message = message,
+  305          // % is Display, ? is Debug.
+  306:         tracing::info!(
+  307              message = message,
 
-  434              // % is Display, ? is Debug.
-  435:             tracing::error!(
-  436                  message = message,
+  436              // % is Display, ? is Debug.
+  437:             tracing::error!(
+  438                  message = message,
 
-  505                      // % is Display, ? is Debug.
-  506:                     tracing::error!(
-  507                          message = message,
+  507                      // % is Display, ? is Debug.
+  508:                     tracing::error!(
+  509                          message = message,
 
-  646          //     ),
-  647:         //     level_filter: tracing::Level::DEBUG.into(),
-  648          // }
+  648          //     ),
+  649:         //     level_filter: tracing::Level::DEBUG.into(),
+  650          // }
 
 tui/src/tui/terminal_window/shared_global_data.rs:
   104              DEBUG_TUI_MOD,
