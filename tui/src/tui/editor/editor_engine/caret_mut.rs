@@ -49,8 +49,8 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
                     let buffer_mut = buffer.get_mut(engine.viewport());
 
                     scroll_editor_content::reset_caret_col(
-                        buffer_mut.caret_raw,
-                        buffer_mut.scr_ofs,
+                        buffer_mut.inner.caret_raw,
+                        buffer_mut.inner.scr_ofs,
                     );
                 }
             }
@@ -64,8 +64,8 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
                     let buffer_mut = buffer.get_mut(engine.viewport());
 
                     scroll_editor_content::dec_caret_row(
-                        buffer_mut.caret_raw,
-                        buffer_mut.scr_ofs,
+                        buffer_mut.inner.caret_raw,
+                        buffer_mut.inner.scr_ofs,
                     );
                 }
 
@@ -133,9 +133,9 @@ pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Selec
             let buffer_mut = buffer.get_mut(engine.viewport());
 
             scroll_editor_content::inc_caret_row(
-                buffer_mut.caret_raw,
-                buffer_mut.scr_ofs,
-                buffer_mut.vp.row_height,
+                buffer_mut.inner.caret_raw,
+                buffer_mut.inner.scr_ofs,
+                buffer_mut.inner.vp.row_height,
             );
         }
 
@@ -213,8 +213,8 @@ pub fn to_start_of_line(
                 let buffer_mut = buffer.get_mut(engine.viewport());
 
                 scroll_editor_content::reset_caret_col(
-                    buffer_mut.caret_raw,
-                    buffer_mut.scr_ofs,
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
                 );
             }
         }
@@ -255,9 +255,9 @@ pub fn to_end_of_line(
                     // - `line_display_width` which is the same as:
                     // - `line_display_width.convert_to_col_index() /*-1*/ + 1`
                     caret_scroll_index::col_index_for_width(line_display_width),
-                    buffer_mut.caret_raw,
-                    buffer_mut.scr_ofs,
-                    buffer_mut.vp.col_width,
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
+                    buffer_mut.inner.vp.col_width,
                     line_display_width,
                 );
             }
@@ -380,11 +380,11 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
                             let buffer_mut = buffer.get_mut(engine.viewport());
 
                             scroll_editor_content::inc_caret_col_by(
-                                buffer_mut.caret_raw,
-                                buffer_mut.scr_ofs,
+                                buffer_mut.inner.caret_raw,
+                                buffer_mut.inner.scr_ofs,
                                 jump_by_col_width,
                                 max_display_width,
-                                buffer_mut.vp.col_width,
+                                buffer_mut.inner.vp.col_width,
                             );
                         }
 
@@ -395,8 +395,8 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
                                 let buffer_mut = buffer.get_mut(engine.viewport());
 
                                 scroll_editor_content::dec_caret_col_by(
-                                    buffer_mut.caret_raw,
-                                    buffer_mut.scr_ofs,
+                                    buffer_mut.inner.caret_raw,
+                                    buffer_mut.inner.scr_ofs,
                                     move_left_by_amt,
                                 );
                             }
@@ -408,11 +408,11 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
                             let buffer_mut = buffer.get_mut(engine.viewport());
 
                             scroll_editor_content::inc_caret_col_by(
-                                buffer_mut.caret_raw,
-                                buffer_mut.scr_ofs,
+                                buffer_mut.inner.caret_raw,
+                                buffer_mut.inner.scr_ofs,
                                 unicode_width_at_caret,
                                 max_display_width,
-                                buffer_mut.vp.col_width,
+                                buffer_mut.inner.vp.col_width,
                             );
                         }
                     }
@@ -425,11 +425,11 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
                         let buffer_mut = buffer.get_mut(engine.viewport());
 
                         scroll_editor_content::inc_caret_col_by(
-                            buffer_mut.caret_raw,
-                            buffer_mut.scr_ofs,
+                            buffer_mut.inner.caret_raw,
+                            buffer_mut.inner.scr_ofs,
                             unicode_width_at_caret,
                             max_display_width,
-                            buffer_mut.vp.col_width,
+                            buffer_mut.inner.vp.col_width,
                         );
                     }
                 }
@@ -449,14 +449,14 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
                     let buffer_mut = buffer.get_mut(engine.viewport());
 
                     scroll_editor_content::inc_caret_row(
-                        buffer_mut.caret_raw,
-                        buffer_mut.scr_ofs,
-                        buffer_mut.vp.row_height,
+                        buffer_mut.inner.caret_raw,
+                        buffer_mut.inner.scr_ofs,
+                        buffer_mut.inner.vp.row_height,
                     );
 
                     scroll_editor_content::reset_caret_col(
-                        buffer_mut.caret_raw,
-                        buffer_mut.scr_ofs,
+                        buffer_mut.inner.caret_raw,
+                        buffer_mut.inner.scr_ofs,
                     );
                 }
             }
@@ -486,8 +486,8 @@ pub fn left(
                     let buffer_mut = buffer.get_mut(editor.viewport());
 
                     scroll_editor_content::dec_caret_row(
-                        buffer_mut.caret_raw,
-                        buffer_mut.scr_ofs,
+                        buffer_mut.inner.caret_raw,
+                        buffer_mut.inner.scr_ofs,
                     );
                 }
 
@@ -502,8 +502,8 @@ pub fn left(
                 let buffer_mut = buffer.get_mut(editor.viewport());
 
                 scroll_editor_content::dec_caret_col_by(
-                    buffer_mut.caret_raw,
-                    buffer_mut.scr_ofs,
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
                     seg_slice.seg_display_width,
                 );
             }
@@ -516,8 +516,8 @@ pub fn left(
                 let buffer_mut = buffer.get_mut(editor.viewport());
 
                 scroll_editor_content::dec_caret_col_by(
-                    buffer_mut.caret_raw,
-                    buffer_mut.scr_ofs,
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
                     seg_slice.seg_display_width,
                 );
             }
