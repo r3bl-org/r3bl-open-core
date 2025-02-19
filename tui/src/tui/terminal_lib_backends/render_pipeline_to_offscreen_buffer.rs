@@ -988,7 +988,6 @@ mod tests {
         }
     }
 
-    // REVIEW: [x] add test for sanitize_and_save_abs_position()
     #[test]
     fn test_sanitize_and_save_abs_pos() {
         let max_col = 8;

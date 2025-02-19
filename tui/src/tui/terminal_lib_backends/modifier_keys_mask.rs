@@ -17,6 +17,14 @@
 
 use crossterm::event::KeyModifiers;
 
+/// The `ModifierKeysMask` struct is used to represent the state of the modifier keys
+/// (shift, ctrl, alt) on the keyboard. It is meant to be a replacement of the bitflags
+/// approach that `crossterm` takes in representing it's [KeyModifiers] struct.
+///
+/// There is no representation for an empty state (no modifier keys are pressed) in this
+/// struct. If you look at [try_convert_key_modifiers()] on how it converts from
+/// [KeyModifiers], you will see that it returns [None] if the given [KeyModifiers] is
+/// empty.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, size_of::SizeOf)]
 pub struct ModifierKeysMask {
     pub shift_key_state: KeyState,
@@ -72,65 +80,34 @@ impl ModifierKeysMask {
     }
 
     /// Check `other` for
-    /// [crossterm::event::KeyModifiers](crossterm::event::KeyModifiers::SHIFT) bit.
-    /// Check `other` for `CONTROL` bit. Check `other` for `ALT` bit. If all bits
-    /// match `self` then return `true`, otherwise return `false`.
+    /// [crossterm::event::KeyModifiers](crossterm::event::KeyModifiers::SHIFT) bit. Check
+    /// `other` for `CONTROL` bit. Check `other` for `ALT` bit. If all bits match `self`
+    /// then return `true`, otherwise return `false`.
     ///
     /// Difference in meaning between `intersects` and `contains`:
-    /// - `intersects` -> means that the given bit shows up in your variable, but it
-    ///   might contain other bits.
+    /// - `intersects` -> means that the given bit shows up in your variable, but it might
+    ///   contain other bits.
     /// - `contains` -> means that your variable ONLY contains these bits.
     /// - Docs: <https://docs.rs/bitflags/latest/bitflags/index.html>
-    pub fn matches(&self, other: KeyModifiers) -> MatchResult {
-        // REVIEW: [ ] replace use of bool w/ enum
-        match (
-            other.intersects(KeyModifiers::SHIFT),
-            other.intersects(KeyModifiers::CONTROL),
-            other.intersects(KeyModifiers::ALT),
-        ) {
-            (true, true, true) => (self.shift_key_state == KeyState::Pressed
-                && self.ctrl_key_state == KeyState::Pressed
-                && self.alt_key_state == KeyState::Pressed)
-                .into(),
-            (true, true, false) => (self.shift_key_state == KeyState::Pressed
-                && self.ctrl_key_state == KeyState::Pressed
-                && self.alt_key_state == KeyState::NotPressed)
-                .into(),
-            (true, false, true) => (self.shift_key_state == KeyState::Pressed
-                && self.ctrl_key_state == KeyState::NotPressed
-                && self.alt_key_state == KeyState::Pressed)
-                .into(),
-            (true, false, false) => (self.shift_key_state == KeyState::Pressed
-                && self.ctrl_key_state == KeyState::NotPressed
-                && self.alt_key_state == KeyState::NotPressed)
-                .into(),
-            (false, true, true) => (self.shift_key_state == KeyState::NotPressed
-                && self.ctrl_key_state == KeyState::Pressed
-                && self.alt_key_state == KeyState::Pressed)
-                .into(),
-            (false, true, false) => (self.shift_key_state == KeyState::NotPressed
-                && self.ctrl_key_state == KeyState::Pressed
-                && self.alt_key_state == KeyState::NotPressed)
-                .into(),
-            (false, false, true) => (self.shift_key_state == KeyState::NotPressed
-                && self.ctrl_key_state == KeyState::NotPressed
-                && self.alt_key_state == KeyState::Pressed)
-                .into(),
-            (false, false, false) => (self.shift_key_state == KeyState::NotPressed
-                && self.ctrl_key_state == KeyState::NotPressed
-                && self.alt_key_state == KeyState::NotPressed)
-                .into(),
+    pub fn matches(&self, other: impl Into<ModifierKeysMask>) -> MatchResult {
+        let other: ModifierKeysMask = other.into();
+        if *self == other {
+            MatchResult::Matches
+        } else {
+            MatchResult::DoesNotMatch
         }
     }
 }
 
-pub fn convert_key_modifiers(modifiers: &KeyModifiers) -> Option<ModifierKeysMask> {
-    // Start w/ empty my_modifiers.
-    let my_modifiers = ModifierKeysMask::from(*modifiers);
+/// If the given `modifiers` are empty, then return [None]. Otherwise, return a
+/// [ModifierKeysMask] with the bits set according to the given `modifiers`. This prevents
+/// having to add a field in [ModifierKeysMask] to represent an empty state (no modifier
+/// keys are pressed).
+pub fn try_convert_key_modifiers(modifiers: &KeyModifiers) -> Option<ModifierKeysMask> {
     if modifiers.is_empty() {
         None
     } else {
-        Some(my_modifiers)
+        Some(ModifierKeysMask::from(*modifiers))
     }
 }
 
