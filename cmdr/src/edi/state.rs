@@ -194,7 +194,6 @@ pub mod constructor {
             let file_ext = file_utils::get_file_extension(maybe_file_path);
             let mut editor_buffer =
                 EditorBuffer::new_empty(&Some(&file_ext), maybe_file_path);
-            // REFACTOR: [x] replace this with into_existing.rs::read_from_file()
             let content = file_utils::read_file_into_storage(maybe_file_path);
             editor_buffer.set_lines(content.lines());
             editor_buffer
@@ -226,7 +225,7 @@ pub mod file_utils {
         DEFAULT_SYN_HI_FILE_EXT.into()
     }
 
-    // REFACTOR: [x] fix this
+    /// This is just a wrapper around [try_read_file_path_into_small_string()].
     pub fn read_file_into_storage(maybe_file_path: &Option<&str>) -> DocumentStorage {
         // Create an empty document storage.
         let mut acc = DocumentStorage::new();

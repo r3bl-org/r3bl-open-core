@@ -15,58 +15,71 @@
  *   limitations under the License.
  */
 
-/// A fixed-size ring buffer implementation.
-///
-/// The `RingBuffer` struct is a generic data structure that allows for efficient
-/// insertion and removal of elements in a circular buffer. It maintains a fixed capacity
-/// and overwrites the oldest elements when the buffer is full. It behaves like a queue
-/// with a fixed size ([Self::add] and [Self::remove]).
-///
-/// # Type Parameters
-///
-/// * `T`: The type of elements stored in the ring buffer.
-/// * `N`: The fixed capacity of the ring buffer.
-///
-/// # Fields
-///
-/// * `internal_storage`: An array of `Option<T>` used to store the elements.
-/// * `head`: The index of the next insertion point.
-/// * `tail`: The index of the next removal point.
-/// * `count`: The current number of elements in the buffer.
-///
-/// # Modules
-///
-/// * `constructor`: Contains the implementation of the `new` method and the `Default`
-///   trait.
-/// * `mutator`: Contains methods for inserting and removing elements.
-/// * `size`: Contains methods for querying the size and state of the buffer.
-/// * `iterator`: Contains the implementation of an iterator for the ring buffer.
-///
-/// # Examples
-///
-/// ```
-/// use r3bl_core::RingBuffer;
-///
-/// let mut ring_buffer: RingBuffer<i32, 3> = RingBuffer::new();
-///
-/// ring_buffer.add(1);
-/// ring_buffer.add(2);
-/// ring_buffer.add(3);
-///
-/// assert_eq!(ring_buffer.len(), 3);
-/// assert_eq!(ring_buffer.is_full(), true);
-/// assert_eq!(ring_buffer.iter().collect::<Vec<&i32>>(), vec![&1, &2, &3]);
-///
-/// ring_buffer.remove();
-///
-/// assert_eq!(ring_buffer.len(), 2);
-/// assert_eq!(ring_buffer.is_empty(), false);
-/// assert_eq!(ring_buffer.iter().collect::<Vec<&i32>>(), vec![&2, &3]);
-/// ```
+//! A fixed-size ring buffer implementation. There are two variants of this [RingBuffer]
+//! based on which [RingBufferStorage] you choose:
+//! - [RingBufferStorage::Stack]: This variant uses a fixed-size array to store the
+//!   elements. You can use the [RingBuffer::new_stack()] method to create a new instance
+//!   of this variant.
+//! - [RingBufferStorage::Heap]: This variant uses a `Vec` to store the elements. You can
+//!   use the [RingBuffer::new_heap()] method to create a new instance of this variant.
+//!
+//! The [RingBuffer] struct is a generic data structure that allows for efficient
+//! insertion and removal of elements in a circular buffer. It maintains a fixed capacity
+//! and overwrites the oldest elements when the buffer is full. It behaves like a queue
+//! with a fixed size [RingBuffer::add()] and [RingBuffer::remove()] methods.
+//!
+//! # Type Parameters
+//!
+//! * `T`: The type of elements stored in the ring buffer.
+//! * `N`: The fixed capacity of the ring buffer.
+//!
+//! # Fields
+//!
+//! * `internal_storage`: An array of `Option<T>` used to store the elements if the stack
+//!   variant is used. Or a `Vec<T>` if the heap variant is used.
+//! * `head`: The index of the next insertion point.
+//! * `tail`: The index of the next removal point.
+//! * `count`: The current number of elements in the buffer.
+//!
+//! # Modules
+//!
+//! * `constructor`: Contains the implementation of the [RingBuffer::new_heap()] and
+//!   [RingBuffer::new_stack()] methods and the `Default` trait.
+//! * `mutator`: Contains methods for inserting and removing elements.
+//! * `size`: Contains methods for querying the size and state of the buffer.
+//! * `iterator`: Contains the implementation of an iterator for the ring buffer.
+//!
+//! # Examples
+//!
+//! ```
+//! use r3bl_core::RingBuffer;
+//!
+//! let mut ring_buffer: RingBuffer<i32, 3> = RingBuffer::new_stack();
+//!
+//! ring_buffer.add(1);
+//! ring_buffer.add(2);
+//! ring_buffer.add(3);
+//!
+//! assert_eq!(ring_buffer.len(), 3);
+//! assert_eq!(ring_buffer.is_full(), true);
+//! assert_eq!(ring_buffer.iter().collect::<Vec<&i32>>(), vec![&1, &2, &3]);
+//!
+//! ring_buffer.remove();
+//!
+//! assert_eq!(ring_buffer.len(), 2);
+//! assert_eq!(ring_buffer.is_empty(), false);
+//! assert_eq!(ring_buffer.iter().collect::<Vec<&i32>>(), vec![&2, &3]);
+//! ```
+
 #[derive(Debug, PartialEq)]
-/// REFACTOR: [ ] make a variant that is stack allocated and another that is heap allocated
+pub enum RingBufferStorage<T, const N: usize> {
+    Stack([Option<T>; N]),
+    Heap(Vec<Option<T>>),
+}
+
+#[derive(Debug, PartialEq)]
 pub struct RingBuffer<T, const N: usize> {
-    internal_storage: [Option<T>; N],
+    internal_storage: RingBufferStorage<T, N>,
     head: usize,
     tail: usize,
     count: usize,
@@ -75,21 +88,29 @@ pub struct RingBuffer<T, const N: usize> {
 mod constructor {
     use super::*;
 
-    // XMARK: Clever Rust, use of `const N: usize` for the array size in generics.
-    impl<T, const N: usize> Default for RingBuffer<T, N> {
-        fn default() -> Self { Self::new() }
-    }
-
     impl<T, const N: usize> RingBuffer<T, N> {
-        // XMARK: Clever Rust, use of `map` to initialize the array.
-        pub fn new() -> Self {
+        pub fn new_stack() -> Self {
             RingBuffer {
-                internal_storage: [(); N].map(|_| None),
+                internal_storage: RingBufferStorage::Stack([(); N].map(|_| None)),
                 head: 0,
                 tail: 0,
                 count: 0,
             }
         }
+
+        pub fn new_heap() -> Self {
+            RingBuffer {
+                internal_storage: RingBufferStorage::Heap(Vec::with_capacity(N)),
+                head: 0,
+                tail: 0,
+                count: 0,
+            }
+        }
+    }
+
+    impl<T, const N: usize> Default for RingBuffer<T, N> {
+        /// The default implementation is the "stack" variant.
+        fn default() -> Self { Self::new_stack() }
     }
 }
 
@@ -99,18 +120,29 @@ mod mutator {
     impl<T, const N: usize> RingBuffer<T, N> {
         /// Insert at head (ie, insert the newest item).
         pub fn add(&mut self, value: T) {
-            if self.count == N
-            // Wrap around. Update both head and tail.
-            {
-                self.internal_storage[self.head] = Some(value);
-                self.head = (self.head + 1) % N;
-                self.tail = (self.tail + 1) % N;
-            }
-            // Normal insert. Don't touch the tail.
-            else {
-                self.internal_storage[self.head] = Some(value);
-                self.head = (self.head + 1) % N;
-                self.count += 1;
+            match &mut self.internal_storage {
+                RingBufferStorage::Stack(arr) => {
+                    if self.count == N {
+                        arr[self.head] = Some(value);
+                        self.head = (self.head + 1) % N;
+                        self.tail = (self.tail + 1) % N;
+                    } else {
+                        arr[self.head] = Some(value);
+                        self.head = (self.head + 1) % N;
+                        self.count += 1;
+                    }
+                }
+                RingBufferStorage::Heap(vec) => {
+                    if self.count == N {
+                        vec[self.head] = Some(value);
+                        self.head = (self.head + 1) % N;
+                        self.tail = (self.tail + 1) % N;
+                    } else {
+                        vec.push(Some(value));
+                        self.head = (self.head + 1) % N;
+                        self.count += 1;
+                    }
+                }
             }
         }
 
@@ -120,17 +152,22 @@ mod mutator {
                 return None;
             }
 
-            let value = self.internal_storage[self.tail].take();
-            self.tail = (self.tail + 1) % N;
-            self.count -= 1;
-
-            value
+            match &mut self.internal_storage {
+                RingBufferStorage::Stack(arr) => {
+                    let value = arr[self.tail].take();
+                    self.tail = (self.tail + 1) % N;
+                    self.count -= 1;
+                    value
+                }
+                RingBufferStorage::Heap(vec) => {
+                    let value = vec[self.tail].take();
+                    self.tail = (self.tail + 1) % N;
+                    self.count -= 1;
+                    value
+                }
+            }
         }
 
-        /// Clear all items. This does not affect memory allocation (the capacity remains
-        /// the same). The `internal_storage` array is not modified, so there maybe stale
-        /// data in there, which does not affect the behavior of the ring buffer
-        /// ([Self::iter], [Self::add], [Self::remove], etc.) work as expected.
         pub fn clear(&mut self) {
             self.head = 0;
             self.tail = 0;
@@ -153,6 +190,7 @@ mod size {
 
 mod iterator {
     use super::*;
+
     pub struct RingBufferIterator<'a, T, const N: usize> {
         ring_buffer: &'a RingBuffer<T, N>,
         iterator_index: usize,
@@ -169,7 +207,10 @@ mod iterator {
             let actual_index = (self.ring_buffer.tail + self.iterator_index) % N;
             self.iterator_index += 1;
 
-            self.ring_buffer.internal_storage[actual_index].as_ref()
+            match &self.ring_buffer.internal_storage {
+                RingBufferStorage::Stack(arr) => arr[actual_index].as_ref(),
+                RingBufferStorage::Heap(vec) => vec[actual_index].as_ref(),
+            }
         }
     }
 
@@ -192,8 +233,8 @@ mod tests {
     pub const DEFAULT_SMALL_STRING_SIZE: usize = 32;
 
     #[test]
-    fn test_empty_ring_buffer() {
-        let ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+    fn test_empty_ring_buffer_stack() {
+        let ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new_stack();
         assert_eq!(ring_buffer.len(), 0);
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 0);
@@ -203,8 +244,20 @@ mod tests {
     }
 
     #[test]
-    fn test_normal_insert() {
-        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+    fn test_empty_ring_buffer_heap() {
+        let ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new_heap();
+        assert_eq!(ring_buffer.len(), 0);
+        assert_eq!(ring_buffer.head, 0);
+        assert_eq!(ring_buffer.tail, 0);
+        assert_eq!(ring_buffer.count, 0);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_normal_insert_stack() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_stack();
         ring_buffer.add("Hello".into());
         assert_eq!(ring_buffer.len(), 1);
         assert_eq!(ring_buffer.head, 1);
@@ -216,8 +269,23 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_inserts() {
-        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+    fn test_normal_insert_heap() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_heap();
+        ring_buffer.add("Hello".into());
+        assert_eq!(ring_buffer.len(), 1);
+        assert_eq!(ring_buffer.head, 1);
+        assert_eq!(ring_buffer.tail, 0);
+        assert_eq!(ring_buffer.count, 1);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "Hello");
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_multiple_inserts_stack() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_stack();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -233,8 +301,27 @@ mod tests {
     }
 
     #[test]
-    fn test_normal_remove() {
-        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+    fn test_multiple_inserts_heap() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_heap();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
+        assert_eq!(ring_buffer.len(), 3);
+        assert_eq!(ring_buffer.head, 0);
+        assert_eq!(ring_buffer.tail, 0);
+        assert_eq!(ring_buffer.count, 3);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "Hello");
+        assert_eq!(iter.next().unwrap(), "World");
+        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_normal_remove_stack() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_stack();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -250,8 +337,27 @@ mod tests {
     }
 
     #[test]
-    fn test_wrap_around_insert() {
-        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+    fn test_normal_remove_heap() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_heap();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
+        ring_buffer.remove();
+        assert_eq!(ring_buffer.len(), 2);
+        assert_eq!(ring_buffer.head, 0);
+        assert_eq!(ring_buffer.tail, 1);
+        assert_eq!(ring_buffer.count, 2);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "World");
+        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_wrap_around_insert_stack() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_stack();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -268,8 +374,28 @@ mod tests {
     }
 
     #[test]
-    fn test_wrap_around_remove() {
-        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+    fn test_wrap_around_insert_heap() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_heap();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
+        ring_buffer.add("R3BL".into());
+        assert_eq!(ring_buffer.len(), 3);
+        assert_eq!(ring_buffer.head, 1);
+        assert_eq!(ring_buffer.tail, 1);
+        assert_eq!(ring_buffer.count, 3);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "World");
+        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next().unwrap(), "R3BL");
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_wrap_around_remove_stack() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_stack();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -286,8 +412,44 @@ mod tests {
     }
 
     #[test]
-    fn test_clear() {
-        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new();
+    fn test_wrap_around_remove_heap() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_heap();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
+        ring_buffer.add("R3BL".into());
+        ring_buffer.remove();
+        assert_eq!(ring_buffer.len(), 2);
+        assert_eq!(ring_buffer.head, 1);
+        assert_eq!(ring_buffer.tail, 2);
+        assert_eq!(ring_buffer.count, 2);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next().unwrap(), "R3BL");
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_clear_stack() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_stack();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
+        ring_buffer.clear();
+        assert_eq!(ring_buffer.len(), 0);
+        assert_eq!(ring_buffer.head, 0);
+        assert_eq!(ring_buffer.tail, 0);
+        assert_eq!(ring_buffer.count, 0);
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_clear_heap() {
+        let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
+            RingBuffer::new_heap();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());

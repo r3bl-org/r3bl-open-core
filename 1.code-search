@@ -1,38 +1,9 @@
 # Query: (BUG:|REFACTOR:|PERF:|DO_NOT_COMMIT:|REVIEW:)
-# Flags: RegExp
+# Flags: CaseSensitive RegExp
+# Excluding: scratch.rs
 # ContextLines: 1
 
-63 results - 34 files
-
-scratch.rs:
-  129  
-  130: // PERF: [ ] use this instead of [Micro/Tiny/Small/Normal/Large]StringBackingStore
-  131  pub type StringStorage = SmallStringBackingStore;
-  132  
-  133: // PERF: [ ] replace with StringStorage and avoid allocation using write! & index > 0 check to write \n
-  134  
-
-  142  
-  143: // DO_NOT_COMMIT:
-  144  |ApplyChangeArgs {
-
-  159  ) -> CommonResult<StyleUSSpanLines> {
-  160:   // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
-  161    // Convert the editor text into a StringStorage (unfortunately requires allocating to
-
-cmdr/src/edi/state.rs:
-  196                  EditorBuffer::new_empty(&Some(&file_ext), maybe_file_path);
-  197:             // REFACTOR: [x] replace this with into_existing.rs::read_from_file()
-  198              let content = file_utils::read_file_into_storage(maybe_file_path);
-
-  228  
-  229:     // REFACTOR: [x] fix this
-  230      pub fn read_file_into_storage(maybe_file_path: &Option<&str>) -> DocumentStorage {
-
-core/src/common/common_result_and_error.rs:
-  110  impl Display for CommonError {
-  111:     fn fmt(&self, f: &mut Formatter<'_>) -> Result { Debug::fmt(self, f) }
-  112  }
+53 results - 28 files
 
 core/src/common/ring_buffer.rs:
   66  #[derive(Debug, PartialEq)]
@@ -169,16 +140,6 @@ tui/src/tui/editor/editor_engine/select_mode.rs:
   33:     // BUG: [ ] introduce scroll adjusted type
   34      pub fn get_caret_scr_adj(&self, buffer: &EditorBuffer) -> Option<CaretScrAdj> {
 
-tui/src/tui/layout/flex_box.rs:
-  101      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-  102:         Debug::fmt(self, f)
-  103      }
-
-tui/src/tui/layout/layout_error.rs:
-  53  impl Display for LayoutError {
-  54:     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result { Debug::fmt(self, f) }
-  55  }
-
 tui/src/tui/md_parser/convert_to_plain_text.rs:
   190  
   191: // REFACTOR: [x] use StringStorage here
@@ -262,11 +223,6 @@ tui/src/tui/terminal_lib_backends/render_tui_styled_texts.rs:
   26          render_ops.push(RenderOp::PaintTextWithAttributes(
   27:             // PERF: [ ] perf
   28              styled_text.get_text().into(),
-
-tui/src/tui/terminal_lib_backends/crossterm_backend/mod.rs:
-  23  // Re-export.
-  24: pub use debug::*;
-  25  pub use offscreen_buffer_paint_impl::*;
 
 tui/src/tui/terminal_lib_backends/crossterm_backend/offscreen_buffer_paint_impl.rs:
   226                      it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
