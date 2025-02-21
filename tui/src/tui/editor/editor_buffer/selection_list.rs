@@ -130,7 +130,7 @@ impl SelectionList {
         let last_row_index = indices.last()?;
         let pos = {
             let sel_range = self.get(*last_row_index)?;
-            let col_index = sel_range.start_disp_col_idx_scr_adj;
+            let col_index = sel_range.start();
             let row_index = *first_row_index;
             col_index + row_index
         };
@@ -324,8 +324,8 @@ mod impl_debug_format {
                             sep = VERT_LINE_DASHED_GLYPH,
                             row_idx = row_index,
                             dots = ELLIPSIS_GLYPH,
-                            col_start = selected_range.start_disp_col_idx_scr_adj,
-                            col_end = selected_range.end_disp_col_idx_scr_adj
+                            col_start = selected_range.start(),
+                            col_end = selected_range.end()
                         ));
                     }
                 }
