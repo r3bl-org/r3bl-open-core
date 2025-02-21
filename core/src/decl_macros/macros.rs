@@ -88,9 +88,9 @@ macro_rules! throws_with_return {
 ///
 /// ```
 /// use r3bl_core::call_if_true;
-/// const DEBUG: bool = true;
+/// const DBG_FLAG: bool = true;
 /// call_if_true!(
-///     DEBUG,
+///     DBG_FLAG,
 ///     eprintln!(
 ///         "{} {} {}\r",
 ///         "one",

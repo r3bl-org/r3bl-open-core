@@ -607,8 +607,6 @@ pub mod access_and_mutate {
 
         pub fn get_scr_ofs(&self) -> ScrOfs { self.content.scr_ofs }
 
-        // REFACTOR: [ ] return struct, not tuple, add drop impl to it, to update lines_us? or drop lines_us?
-        // REFACTOR: [ ] after mutations to lines, lines_us must be recomputed! consider remove this from the struct & computing it only when needed
         /// Even though this struct is mutable by editor_ops.rs, this method is provided
         /// to mark when mutable access is made to this struct.
         ///
@@ -617,6 +615,11 @@ pub mod access_and_mutate {
         ///
         /// [crate::EditorBufferMut] implements the [Drop] trait, which ensures that any
         /// validation changes are applied after making changes to the [EditorBuffer].
+        ///
+        /// Note that if `vp` is [r3bl_core::ChUnitPrimitiveType::MAX] x
+        /// [r3bl_core::ChUnitPrimitiveType::MAX] that means that the viewport argument
+        /// was not passed in from an [EditorEngine], since this method can be called
+        /// without having an instance of that type.
         pub fn get_mut(&mut self, vp: Dim) -> EditorBufferMutWithDrop<'_> {
             EditorBufferMutWithDrop::new(
                 &mut self.content.lines,

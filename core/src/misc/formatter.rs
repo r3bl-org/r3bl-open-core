@@ -59,7 +59,6 @@ pub trait ConvertToPlainText {
     fn to_plain_text(&self) -> StringStorage;
 }
 
-// REFACTOR: [x] replace String with StringStorage
 /// Marker trait to "remember" which types support pretty printing for debugging.
 pub trait PrettyPrintDebug {
     fn pretty_print_debug(&self) -> StringStorage;
