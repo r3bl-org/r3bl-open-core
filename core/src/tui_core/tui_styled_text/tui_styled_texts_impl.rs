@@ -55,7 +55,6 @@ macro_rules! tui_styled_texts {
     };
 }
 
-// PERF: [ ] make sure this works
 /// Use [tui_styled_texts!] macro for easier construction.
 #[derive(Clone, Default, size_of::SizeOf)]
 pub struct TuiStyledTexts {

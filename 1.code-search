@@ -2,56 +2,28 @@
 # Flags: CaseSensitive RegExp
 # Excluding: scratch.rs
 
-49 results - 25 files
-
-core/src/tui_core/graphemes/access.rs:
-  186:         // BUG: [ ] introduce scroll adjusted type
-  259:         // PERF: [ ] perf
-
-core/src/tui_core/graphemes/convert.rs:
-  30: // PERF: [ ] perf
-  35: // PERF: [ ] perf
-  60: // REFACTOR: [x] write test for all of the above!
-
-core/src/tui_core/graphemes/grapheme_cluster_segment.rs:
-  26:     // PERF: [x] perf (remove alloc)
-
-core/src/tui_core/graphemes/range.rs:
-  45: // BUG: [ ] introduce scroll adjusted type
-
-core/src/tui_core/graphemes/unicode_string.rs:
-  105:     // PERF: [ ] perf
-  110:     // REFACTOR: [x] replace all usages of .display_width w/ .display_width()
-  132: // PERF: [ ] perf
-
-core/src/tui_core/tui_styled_text/tui_styled_text_impl.rs:
-  55: // PERF: [ ] own text, why? slice? in the past, Deserialize meant it had to own, not anymore..
-
-core/src/tui_core/tui_styled_text/tui_styled_texts_impl.rs:
-  58: // PERF: [ ] make sure this works
-
-terminal_async/src/readline_impl/readline.rs:
-  412:         // REFACTOR: [ ] fix this!
+35 results - 18 files
 
 tui/examples/demo/ex_app_no_layout/app_main.rs:
-  533: // REFACTOR: [ ] introduce HUD for telemetry here & copy to all other examples
+  533: // REVIEW: [ ] introduce HUD for telemetry here & copy to all other examples
 
 tui/src/tui/dialog/dialog_engine/dialog_engine_api.rs:
   558:                 // PERF: [ ] perf
 
 tui/src/tui/editor/editor_buffer/buffer_selection_support.rs:
-  38: // BUG: [ ] introduce scr adj types instead of just ColIndex and RowIndex
+  50: // BUG: [ ] introduce scr adj types instead of just ColIndex and RowIndex
 
 tui/src/tui/editor/editor_buffer/buffer_struct.rs:
   243:     // REFACTOR: [ ] consider using a "heap" allocated ring buffer for `versions`
   251:     // BUG: [ ] introduce scroll adjusted type
-  610:         // REFACTOR: [ ] return struct, not tuple, add drop impl to it, to update lines_us? or drop lines_us?
-  611:         // REFACTOR: [ ] after mutations to lines, lines_us must be recomputed! consider remove this from the struct & computing it only when needed
-  888:     // REFACTOR: [ ] add tests for sizing::MAX_UNDO_REDO_SIZE
+  887:     // REFACTOR: [ ] add tests for sizing::MAX_UNDO_REDO_SIZE
 
 tui/src/tui/editor/editor_buffer/selection_list.rs:
-   52:     // REFACTOR: [x] consider making this a fixed size array (doesn't need to be a map which is heap allocated)
-  121:     // BUG: [ ] introduce scroll adjusted type
+   50:     // REFACTOR: [x] consider making this a fixed size array (doesn't need to be a map which is heap allocated)
+  119:     // BUG: [ ] introduce scroll adjusted type
+
+tui/src/tui/editor/editor_buffer/selection_range.rs:
+  33: // REVIEW: [ ] move this out of core into tui crate
 
 tui/src/tui/editor/editor_engine/caret_mut.rs:
   39:     // BUG: [ ] introduce scroll adjusted type

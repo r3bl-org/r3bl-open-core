@@ -37,6 +37,7 @@
 //! Videos:
 //!
 //! - [Live coding video on Rust String](https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq)
+//! - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA?si=D9sTt_G7_mBJFLmc)
 //!
 //! Docs:
 //!

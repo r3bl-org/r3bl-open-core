@@ -35,6 +35,32 @@ use crate::{ChUnit, ColWidth, StringStorage, ch, col, width};
 /// and logical indices. This allows for accurate and efficient manipulation and rendering
 /// of Unicode strings in terminal user interfaces (TUIs).
 ///
+/// # UTF-8 is variable length encoding
+///
+/// Rust uses `UTF-8` to represent text in [String]. `UTF-8` is a variable width encoding,
+/// so each character can take up a different number of bytes, between 1 and 4, and 1 byte
+/// is 8 bits; this is why we use [Vec] of [u8] to represent a [String].
+///
+/// For example, the character `H` takes up 1 byte. `UTF-8` is also backward compatible
+/// with `ASCII`, meaning that the first 128 characters (the ASCII characters) are
+/// represented using the same single byte as in ASCII. So the character `H` is
+/// represented by the same byte value in `UTF-8` as it is in `ASCII`. This is why `UTF-8`
+/// is so popular, as it allows for the representation of all the characters in the
+/// Unicode standard, while still being able to represent `ASCII` characters in the same
+/// way.
+///
+/// A grapheme cluster is a user-perceived character. Grapheme clusters can take up many
+/// more bytes, eg 4 bytes or 2 or 3, etc. Here are some examples:
+/// - `😃` takes up 4 bytes.
+/// - `📦` also takes up 4 bytes.
+/// - `🙏🏽` takes up 4 bytes, but it is a compound grapheme cluster.
+/// - `H` takes up only 1 byte.
+///
+/// Videos:
+///
+/// - [Live coding video on Rust String](https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq)
+/// - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA?si=D9sTt_G7_mBJFLmc)
+///
 /// # Performance, memory latency, access, allocation
 ///
 /// For performance reasons, the `UnicodeString` struct owns the underlying string data.
@@ -102,12 +128,10 @@ use crate::{ChUnit, ColWidth, StringStorage, ch, col, width};
 /// ```
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct UnicodeString {
-    // PERF: [ ] perf
     pub string: StringStorage,
     pub vec_segment: sizing::VecSegment,
-    pub byte_size: usize,
-    pub grapheme_cluster_segment_count: usize,
-    // REFACTOR: [x] replace all usages of .display_width w/ .display_width()
+    pub byte_size: ChUnit,
+    pub grapheme_cluster_segment_count: ChUnit,
     pub display_width: ColWidth,
 }
 
@@ -122,14 +146,13 @@ impl Default for UnicodeString {
         UnicodeString {
             string: StringStorage::new(),
             vec_segment: sizing::VecSegment::new(),
-            byte_size: 0,
-            grapheme_cluster_segment_count: 0,
+            byte_size: ch(0),
+            grapheme_cluster_segment_count: ch(0),
             display_width: width(0),
         }
     }
 }
 
-// PERF: [ ] perf
 impl size_of::SizeOf for UnicodeString {
     fn size_of_children(&self, context: &mut size_of::Context) {
         /* vec_segment */
@@ -150,8 +173,8 @@ impl AsRef<str> for &UnicodeString {
 impl UnicodeString {
     /// Constructor function that creates a [UnicodeString] from a string slice.
     pub fn new(this: &str) -> UnicodeString {
-        let mut total_byte_offset = 0;
-        let mut total_grapheme_cluster_count = 0;
+        let mut total_byte_offset: ChUnit = ch(0);
+        let mut total_grapheme_cluster_count: ChUnit = ch(0);
         // This is used both for the width and display col index.
         let mut unicode_width_offset_acc: ChUnit = ch(0);
 
@@ -170,21 +193,21 @@ impl UnicodeString {
                 start_display_col_index: col(unicode_width_offset_acc), // Used as ColIndex here.
             });
             unicode_width_offset_acc += *unicode_width;
-            total_byte_offset = byte_offset;
-            total_grapheme_cluster_count = grapheme_cluster_index;
+            total_byte_offset = ch(byte_offset);
+            total_grapheme_cluster_count = ch(grapheme_cluster_index);
         }
 
         UnicodeString {
             string: this.into(),
             vec_segment: unicode_string_segments,
             display_width: width(unicode_width_offset_acc), // Used as WidthColCount here.
-            byte_size: if total_byte_offset > 0 {
+            byte_size: if total_byte_offset > ch(0) {
                 /* size = byte_offset (index) + 1 */
                 total_byte_offset + 1
             } else {
                 total_byte_offset
             },
-            grapheme_cluster_segment_count: if total_grapheme_cluster_count > 0 {
+            grapheme_cluster_segment_count: if total_grapheme_cluster_count > ch(0) {
                 /* count = grapheme_cluster_index + 1 */
                 total_grapheme_cluster_count + 1
             } else {
@@ -231,18 +254,18 @@ mod tests {
 
         // Check overall sizes and counts on the `UnicodeString` struct.
         assert_eq2!(string_us.len(), 11);
-        assert_eq2!(string_us.grapheme_cluster_segment_count, 11);
-        assert_eq2!(string_us.byte_size, string.len());
+        assert_eq2!(string_us.grapheme_cluster_segment_count, ch(11));
+        assert_eq2!(string_us.byte_size, ch(string.len()));
         assert_eq2!(string_us.display_width, width(15));
     }
 
     #[allow(clippy::zero_prefixed_literal)]
     #[test]
     fn test_grapheme_cluster_segment() {
-        fn assert_segment(
+        fn seg_ok(
             string: &str,
-            seg: &GraphemeClusterSegment,
-            start_byte_index: usize,
+            seg: GraphemeClusterSegment,
+            byte_index: usize,
             unicode_width: ChUnit,
             logical_index: usize,
             byte_size: usize,
@@ -250,27 +273,27 @@ mod tests {
         ) {
             let segment_string = seg.get_str(string);
             assert_eq2!(segment_string, match_against);
-            assert_eq2!(seg.start_byte_index, ch(start_byte_index));
+            assert_eq2!(seg.start_byte_index, ch(byte_index));
             assert_eq2!(seg.unicode_width, width(unicode_width));
             assert_eq2!(seg.logical_index, ch(logical_index));
             assert_eq2!(seg.byte_size, byte_size);
         }
 
         let string = TEST_STRING;
-        let string_us = string.unicode_string();
+        let us = string.unicode_string();
 
         // Check the individual `GraphemeClusterSegment` structs.
-        assert_segment(string, &string_us[00], 00, 01.into(), 00, 01, "H");
-        assert_segment(string, &string_us[01], 01, 01.into(), 01, 01, "i");
-        assert_segment(string, &string_us[02], 02, 01.into(), 02, 01, " ");
-        assert_segment(string, &string_us[03], 03, 02.into(), 03, 04, "😃");
-        assert_segment(string, &string_us[04], 07, 01.into(), 04, 01, " ");
-        assert_segment(string, &string_us[05], 08, 02.into(), 05, 04, "📦");
-        assert_segment(string, &string_us[06], 12, 01.into(), 06, 01, " ");
-        assert_segment(string, &string_us[07], 13, 02.into(), 07, 08, "🙏🏽");
-        assert_segment(string, &string_us[08], 21, 01.into(), 08, 01, " ");
-        assert_segment(string, &string_us[09], 22, 02.into(), 09, 26, "👨🏾‍🤝‍👨🏿");
-        assert_segment(string, &string_us[10], 48, 01.into(), 10, 01, ".");
+        seg_ok(string, us[00], 00, 01.into(), 00, 01, "H");
+        seg_ok(string, us[01], 01, 01.into(), 01, 01, "i");
+        seg_ok(string, us[02], 02, 01.into(), 02, 01, " ");
+        seg_ok(string, us[03], 03, 02.into(), 03, 04, "😃");
+        seg_ok(string, us[04], 07, 01.into(), 04, 01, " ");
+        seg_ok(string, us[05], 08, 02.into(), 05, 04, "📦");
+        seg_ok(string, us[06], 12, 01.into(), 06, 01, " ");
+        seg_ok(string, us[07], 13, 02.into(), 07, 08, "🙏🏽");
+        seg_ok(string, us[08], 21, 01.into(), 08, 01, " ");
+        seg_ok(string, us[09], 22, 02.into(), 09, 26, "👨🏾‍🤝‍👨🏿");
+        seg_ok(string, us[10], 48, 01.into(), 10, 01, ".");
     }
 
     #[rustfmt::skip]
