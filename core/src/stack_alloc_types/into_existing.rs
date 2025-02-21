@@ -226,7 +226,6 @@ mod join_with_index_fmt_tests {
     }
 }
 
-// REFACTOR: [ ] use this in the cmdr/src/edi/state.rs::get_content()
 pub mod read_from_file {
     use std::{fs::File, io::Read, path::PathBuf, str::from_utf8};
 

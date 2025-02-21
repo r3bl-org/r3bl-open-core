@@ -24,7 +24,7 @@ use r3bl_core::{CharStorage,
                 DocumentStorage,
                 StringStorage,
                 call_if_true,
-                into_existing::read_from_file::try_read_file_path_into_small_string,
+                into_existing,
                 string_storage,
                 style_error,
                 style_primary};
@@ -225,7 +225,8 @@ pub mod file_utils {
         DEFAULT_SYN_HI_FILE_EXT.into()
     }
 
-    /// This is just a wrapper around [try_read_file_path_into_small_string()].
+    /// This is just a wrapper around
+    /// [into_existing::read_from_file::try_read_file_path_into_small_string()].
     pub fn read_file_into_storage(maybe_file_path: &Option<&str>) -> DocumentStorage {
         // Create an empty document storage.
         let mut acc = DocumentStorage::new();
@@ -233,7 +234,9 @@ pub mod file_utils {
         // Read the file contents into acc if possible (file exists, have read
         // permissions, etc).
         if let Some(file_path) = maybe_file_path {
-            match try_read_file_path_into_small_string(&mut acc, file_path) {
+            match into_existing::read_from_file::try_read_file_path_into_small_string(
+                &mut acc, file_path,
+            ) {
                 Ok(_) => {
                     call_if_true!(DEBUG_TUI_MOD, {
                         let message = "\n💾💾💾✅ Successfully read file";
