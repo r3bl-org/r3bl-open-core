@@ -210,7 +210,7 @@ impl SelectionRange {
     /// # Examples
     ///
     /// ```rust
-    /// use r3bl_core::graphemes::range::SelectionRange;
+    /// use r3bl_core::graphemes::selection_range::SelectionRange;
     /// use r3bl_core::{col, row, caret_scr_adj};
     /// let range_1: SelectionRange = (
     ///     caret_scr_adj(row(0) + col(1)),
