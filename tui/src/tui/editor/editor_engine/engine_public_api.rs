@@ -40,7 +40,6 @@ use r3bl_core::{call_if_true,
                 PrettyPrintDebug,
                 RowHeight,
                 RowIndex,
-                ScrollOffsetColLocationInRange,
                 Size,
                 TuiColor,
                 UnicodeString,
@@ -73,6 +72,8 @@ use crate::{buffer_clipboard_support::ClipboardService,
             RenderOp,
             RenderOps,
             RenderPipeline,
+            ScrollOffsetColLocationInRange,
+            SelectionRange,
             SpecialKey,
             StyleUSSpanLine,
             StyleUSSpanLines,
@@ -292,9 +293,7 @@ fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
         ..
     } = render_args;
 
-    for (row_index, range_of_display_col_indices) in
-        editor_buffer.get_selection_list().iter()
-    {
+    for (row_index, sel_range) in editor_buffer.get_selection_list().iter() {
         let row_index = *row_index;
         let lines = editor_buffer.get_lines();
 
@@ -302,18 +301,16 @@ fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
 
         if let Some(line_us) = lines.get(usize(row_index)) {
             // Take the scroll_offset into account when "slicing" the selection.
-            let selection_holder = match range_of_display_col_indices
-                .locate_scroll_offset_col(scroll_offset)
+            let selection_holder = match sel_range.locate_scroll_offset_col(scroll_offset)
             {
                 ScrollOffsetColLocationInRange::Underflow => {
-                    line_us.clip_to_range(*range_of_display_col_indices)
+                    (*sel_range).clip_to_range(line_us)
                 }
                 ScrollOffsetColLocationInRange::Overflow => {
                     let start = caret_scr_adj(scroll_offset.col_index + row_index);
-                    let end =
-                        caret_scr_adj(range_of_display_col_indices.end() + row_index);
-                    let scroll_offset_clipped_selection_range = (start, end).into();
-                    line_us.clip_to_range(scroll_offset_clipped_selection_range)
+                    let end = caret_scr_adj(sel_range.end() + row_index);
+                    let scr_ofs_clipped_sel_range: SelectionRange = (start, end).into();
+                    scr_ofs_clipped_sel_range.clip_to_range(line_us)
                 }
             };
 
@@ -328,7 +325,7 @@ fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
                 let details = string_storage!(
                     "\n\t{a}, \n\trange: {b:?}, \n\tscroll_offset: {c:?}",
                     a = selection_text_fmt,
-                    b = range_of_display_col_indices,
+                    b = sel_range,
                     c = scroll_offset,
                 );
                 // % is Display, ? is Debug.
@@ -348,7 +345,7 @@ fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
                 // Convert scroll adjusted to raw.
                 let raw_col_index = {
                     let col_scroll_offset = scroll_offset.col_index;
-                    range_of_display_col_indices.start() - col_scroll_offset
+                    sel_range.start() - col_scroll_offset
                 };
 
                 raw_col_index + raw_row_index

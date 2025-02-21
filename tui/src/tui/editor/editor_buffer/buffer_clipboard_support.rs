@@ -55,8 +55,8 @@ pub fn copy_to_clipboard(
     for row_index in row_indices {
         if let Some(sel_range) = sel_list.get(row_index) {
             if let Some(line) = lines.get(usize(*row_index)) {
-                let selected_text_holder = line.clip_to_range(sel_range);
-                vec_str.push(selected_text_holder);
+                let sel_text = sel_range.clip_to_range(line);
+                vec_str.push(sel_text);
             }
         }
     }
