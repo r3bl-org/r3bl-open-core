@@ -21,6 +21,7 @@
 
 use crossterm::style::Stylize;
 use r3bl_core::{call_if_true,
+                caret_scr_adj,
                 col,
                 convert_to_string_slice,
                 glyphs,
@@ -40,7 +41,6 @@ use r3bl_core::{call_if_true,
                 RowHeight,
                 RowIndex,
                 ScrollOffsetColLocationInRange,
-                SelectionRange,
                 Size,
                 TuiColor,
                 UnicodeString,
@@ -309,10 +309,10 @@ fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
                     line_us.clip_to_range(*range_of_display_col_indices)
                 }
                 ScrollOffsetColLocationInRange::Overflow => {
-                    let scroll_offset_clipped_selection_range = SelectionRange {
-                        start_disp_col_idx_scr_adj: scroll_offset.col_index,
-                        ..*range_of_display_col_indices
-                    };
+                    let start = caret_scr_adj(scroll_offset.col_index + row_index);
+                    let end =
+                        caret_scr_adj(range_of_display_col_indices.end() + row_index);
+                    let scroll_offset_clipped_selection_range = (start, end).into();
                     line_us.clip_to_range(scroll_offset_clipped_selection_range)
                 }
             };
@@ -348,8 +348,7 @@ fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
                 // Convert scroll adjusted to raw.
                 let raw_col_index = {
                     let col_scroll_offset = scroll_offset.col_index;
-                    range_of_display_col_indices.start_disp_col_idx_scr_adj
-                        - col_scroll_offset
+                    range_of_display_col_indices.start() - col_scroll_offset
                 };
 
                 raw_col_index + raw_row_index

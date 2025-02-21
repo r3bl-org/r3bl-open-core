@@ -176,7 +176,6 @@ impl UnicodeString {
             pad_fmt!(fmt: acc, pad_str: spacer.as_ref(), repeat_count: usize(*pad_len));
             acc
         } else {
-            // PERF: [ ] perf
             chunk.into()
         }
     }
@@ -185,10 +184,7 @@ impl UnicodeString {
     /// [clip_to_width](Self::clip_to_width).
     pub fn clip_to_range(&self, range: SelectionRange) -> &str {
         // BUG: [ ] introduce scroll adjusted type
-        let SelectionRange {
-            start_disp_col_idx_scr_adj: start_display_col_index,
-            end_disp_col_idx_scr_adj: end_display_col_index,
-        } = range;
+        let (start_display_col_index, end_display_col_index) = range.as_tuple();
         let max_display_width_col_count =
             width(*(end_display_col_index - start_display_col_index));
         self.clip_to_width(start_display_col_index, max_display_width_col_count)
