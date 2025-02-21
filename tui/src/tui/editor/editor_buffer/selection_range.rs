@@ -18,24 +18,27 @@
 use std::{cmp::{self},
           fmt::Debug};
 
-use crate::{CaretScrAdj,
-            ChUnitPrimitiveType,
-            ColIndex,
-            ColWidth,
-            ScrOfs,
-            caret_scr_adj,
-            row,
-            width};
+use r3bl_core::{caret_scr_adj,
+                row,
+                width,
+                CaretScrAdj,
+                ChUnitPrimitiveType,
+                ColIndex,
+                ColWidth,
+                ScrOfs,
+                UnicodeString};
 
 // cspell:ignore worl
+
+// REVIEW: [ ] move this out of core into tui crate
 
 /// Represents a range of characters in a line. The col indices are scroll adjusted (and
 /// not raw). The row indices are not used, and clobbered with [ChUnitPrimitiveType::MAX].
 ///
 /// The range is not inclusive of the item at the end index, which means that when you
-/// call [clip_to_range](crate::UnicodeString::clip_to_range) the item at the end index
-/// will not be part of the result (this is shown in the example below). The indices are
-/// all display column indices, not logical ones.
+/// call [crate::SelectionRange::clip_to_range()] the item at the end index will not be
+/// part of the result (this is shown in the example below). The indices are all display
+/// column indices, not logical ones.
 ///
 /// ```text
 /// ╭0123456789╮
@@ -47,13 +50,12 @@ use crate::{CaretScrAdj,
 /// ```
 ///
 /// - `"▓▓"` = `"😃"`
-/// - [clip_to_range](crate::UnicodeString::clip_to_range): "e😃"
+/// - [crate::SelectionRange::clip_to_range()] : "e😃"
 ///
 /// This range can't be instantiated directly via the struct, you have to use the tuple
 /// conversion. Even though the struct holds two [CaretScrAdj] values, it does not use the
-/// [crate::RowIndex] fields.
+/// [r3bl_core::RowIndex] fields.
 #[derive(Default, Clone, PartialEq, Copy, size_of::SizeOf)]
-// BUG: [ ] introduce scroll adjusted type
 pub struct SelectionRange {
     /// This is not "raw", this is "scroll adjusted".
     /// - It represents the display width at which the selection starts.
@@ -92,7 +94,7 @@ mod convert {
     use super::*;
 
     impl From<(CaretScrAdj, CaretScrAdj)> for SelectionRange {
-        /// The [crate::RowIndex] fields of each tuple value are not used. They are just
+        /// The [r3bl_core::RowIndex] fields of each tuple value are not used. They are just
         /// set to the maximum value of [ChUnitPrimitiveType].
         fn from((start, end): (CaretScrAdj, CaretScrAdj)) -> Self {
             let start = caret_scr_adj(start.col_index + row(ChUnitPrimitiveType::MAX));
@@ -109,7 +111,7 @@ impl SelectionRange {
 
     /// Due to the nature of selection ranges, the index values are actually display
     /// widths. And sometimes it is useful to type cast them as a width, eg: when using
-    /// with [crate::UnicodeString::clip_to_range].
+    /// with [crate::SelectionRange::clip_to_range()].
     pub fn get_start_display_col_index_as_width(&self) -> ColWidth {
         width(*self.start.col_index)
     }
@@ -119,6 +121,15 @@ impl SelectionRange {
     /// two [ColIndex] values.
     pub fn as_tuple(&self) -> (ColIndex, ColIndex) {
         (self.start.col_index, self.end.col_index)
+    }
+
+    /// Uses `SelectionRange` to calculate width and simply calls
+    /// [UnicodeString::clip_to_width()].
+    pub fn clip_to_range<'a>(&self, us: &'a UnicodeString) -> &'a str {
+        let (start_display_col_index, end_display_col_index) = self.as_tuple();
+        let max_display_width_col_count =
+            width(*(end_display_col_index - start_display_col_index));
+        us.clip_to_width(start_display_col_index, max_display_width_col_count)
     }
 }
 
@@ -194,7 +205,7 @@ impl SelectionRange {
     ///   │  ⎩4 = end_display_col_index
     ///   ⎩1 = start_display_col_index
     /// ```
-    /// - [UnicodeString::clip_to_range](crate::UnicodeString::clip_to_range): "ell"
+    /// - [crate::SelectionRange::clip_to_range()] : "ell"
     pub fn locate_column(&self, caret: CaretScrAdj) -> CaretLocationInRange {
         if caret.col_index < self.start.col_index {
             CaretLocationInRange::Underflow
@@ -210,7 +221,7 @@ impl SelectionRange {
     /// # Examples
     ///
     /// ```rust
-    /// use r3bl_core::graphemes::selection_range::SelectionRange;
+    /// use r3bl_tui::SelectionRange;
     /// use r3bl_core::{col, row, caret_scr_adj};
     /// let range_1: SelectionRange = (
     ///     caret_scr_adj(row(0) + col(1)),
@@ -297,8 +308,9 @@ mod range_impl_debug_format {
 
 #[cfg(test)]
 mod tests_range {
+    use r3bl_core::{assert_eq2, caret_scr_adj, col, row};
+
     use super::*;
-    use crate::{assert_eq2, caret_scr_adj, col, row};
 
     /// ```text
     /// ╭0123456789╮

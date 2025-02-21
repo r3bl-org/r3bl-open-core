@@ -1449,9 +1449,10 @@ mod selection_tests {
                     row,
                     CaretScrAdj,
                     RowIndex,
-                    SelectionRange,
                     VecArray};
     use smallvec::smallvec;
+
+    use crate::SelectionRange;
 
     type SelectionList = VecArray<(RowIndex, SelectionRange)>;
 

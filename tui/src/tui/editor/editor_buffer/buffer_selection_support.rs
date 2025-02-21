@@ -26,16 +26,18 @@ use r3bl_core::{call_if_true,
                 string_storage,
                 usize,
                 width,
-                CaretLocationInRange,
-                CaretMovementDirection,
                 CaretScrAdj,
                 ChUnitPrimitiveType,
                 Dim,
-                RowIndex,
-                SelectionRange};
+                RowIndex};
 
 use super::{selection_list::RowLocationInSelectionList, EditorBuffer};
-use crate::{caret_scroll_index, DirectionChangeResult, DEBUG_TUI_COPY_PASTE};
+use crate::{caret_scroll_index,
+            CaretLocationInRange,
+            CaretMovementDirection,
+            DirectionChangeResult,
+            SelectionRange,
+            DEBUG_TUI_COPY_PASTE};
 
 /// Usually [EditorBuffer::get_mut()] and [EditorBuffer::get_mut_no_drop()] need a
 /// viewport to be passed in (from the [crate::EditorEngine]). However, in this module, we

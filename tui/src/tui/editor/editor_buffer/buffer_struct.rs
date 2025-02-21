@@ -200,7 +200,7 @@ use crate::{caret_locate,
 /// The [SelectionList] is used to keep track of the selections in the buffer. Each entry
 /// in the list represents a row of text in the buffer.
 /// - The row index is the key [r3bl_core::RowIndex].
-/// - The value is the [r3bl_core::SelectionRange].
+/// - The value is the [crate::SelectionRange].
 #[derive(Clone, PartialEq, Default, size_of::SizeOf)]
 pub struct EditorBuffer {
     pub content: EditorContent,

@@ -21,6 +21,7 @@ pub mod buffer_selection_support;
 pub mod buffer_struct;
 pub mod caret_locate;
 pub mod selection_list;
+pub mod selection_range;
 pub mod system_clipboard_service_provider;
 
 // Re-export.
@@ -29,4 +30,5 @@ pub use buffer_selection_support::*;
 pub use buffer_struct::*;
 pub use caret_locate::*;
 pub use selection_list::*;
+pub use selection_range::*;
 pub use system_clipboard_service_provider::*;
