@@ -24,16 +24,14 @@ use r3bl_core::{caret_scr_adj,
                          TIRE_MARKS_GLYPH,
                          VERT_LINE_DASHED_GLYPH},
                 usize,
-                CaretMovementDirection,
                 CaretScrAdj,
                 RowIndex,
-                SelectionRange,
                 StringStorage,
                 VecArray};
 use sizing::VecRowIndex;
 use smallvec::{smallvec, SmallVec};
 
-use crate::{DeleteSelectionWith, EditorBuffer};
+use crate::{CaretMovementDirection, DeleteSelectionWith, EditorBuffer, SelectionRange};
 
 mod sizing {
     use super::*;
@@ -63,7 +61,7 @@ impl size_of::SizeOf for SelectionList {
 
 #[test]
 fn test_selection_map_direction_change() {
-    use r3bl_core::{assert_eq2, CaretMovementDirection};
+    use r3bl_core::assert_eq2;
 
     use super::*;
 
@@ -147,10 +145,10 @@ impl SelectionList {
         let ordered_row_indices = self.get_ordered_indices();
 
         for row_index in ordered_row_indices {
-            if let Some(selection_range) = self.get(row_index) {
+            if let Some(sel_range) = self.get(row_index) {
                 if let Some(line_us) = lines.get(usize(row_index)) {
-                    let selected_text = line_us.clip_to_range(selection_range);
-                    acc.push((row_index, selected_text));
+                    let sel_text = sel_range.clip_to_range(line_us);
+                    acc.push((row_index, sel_text));
                 }
             }
         }

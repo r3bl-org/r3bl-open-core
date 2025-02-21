@@ -18,15 +18,13 @@
 use crate::{ColIndex,
             ColWidth,
             GraphemeClusterSegment,
-            SelectionRange,
             Size,
             StringStorage,
             UnicodeString,
             UnicodeStringSegmentSliceResult,
             ch,
             pad_fmt,
-            usize,
-            width};
+            usize};
 
 impl UnicodeString {
     /// If any segment in `self.vec_segment` has a `display_col_offset` greater than 1
@@ -178,16 +176,6 @@ impl UnicodeString {
         } else {
             chunk.into()
         }
-    }
-
-    /// Uses [SelectionRange] to calculate width and simply calls
-    /// [clip_to_width](Self::clip_to_width).
-    pub fn clip_to_range(&self, range: SelectionRange) -> &str {
-        // BUG: [ ] introduce scroll adjusted type
-        let (start_display_col_index, end_display_col_index) = range.as_tuple();
-        let max_display_width_col_count =
-            width(*(end_display_col_index - start_display_col_index));
-        self.clip_to_width(start_display_col_index, max_display_width_col_count)
     }
 
     /// Clip the content starting from `start_display_col_index` and take as many columns
