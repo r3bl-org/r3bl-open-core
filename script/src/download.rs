@@ -41,9 +41,16 @@ pub async fn try_download_file_overwrite_existing(
 
 #[cfg(test)]
 mod tests_download {
+    // cspell::ignore cfssljson
+
+    use std::time::Duration;
+
     use r3bl_core::create_temp_dir;
+    use tokio::time::timeout;
 
     use super::*;
+
+    const TIMEOUT: Duration = Duration::from_secs(1);
 
     #[tokio::test]
     async fn test_download_file_overwrite_existing() {
@@ -57,19 +64,49 @@ mod tests_download {
         let destination_file = new_dir.join("cfssljson");
 
         // Download file (no pre-existing file).
-        try_download_file_overwrite_existing(source_url, &destination_file)
-            .await
-            .unwrap();
-        assert!(destination_file.exists());
+        match timeout(
+            TIMEOUT,
+            try_download_file_overwrite_existing(source_url, &destination_file),
+        )
+        .await
+        {
+            Ok(Ok(_)) => {
+                assert!(destination_file.exists());
+            }
+            Ok(Err(err)) => {
+                // Re-throw the error and fail the test.
+                panic!("Error: {:?}", err);
+            }
+            Err(_) => {
+                // Timeout does not mean that test has failed. Github is probably slow.
+                println!("Timeout");
+                return;
+            }
+        }
 
         let meta_data = destination_file.metadata().unwrap();
         let og_file_size = meta_data.len();
 
         // Download file again (overwrite existing).
-        try_download_file_overwrite_existing(source_url, &destination_file)
-            .await
-            .unwrap();
-        assert!(destination_file.exists());
+        match timeout(
+            TIMEOUT,
+            try_download_file_overwrite_existing(source_url, &destination_file),
+        )
+        .await
+        {
+            Ok(Ok(_)) => {
+                assert!(destination_file.exists());
+            }
+            Ok(Err(err)) => {
+                // Re-throw the error and fail the test.
+                panic!("Error: {:?}", err);
+            }
+            Err(_) => {
+                // Timeout does not mean that test has failed. Github is probably slow.
+                println!("Timeout");
+                return;
+            }
+        }
 
         // Ensure that the file sizes are the same.
         let meta_data = destination_file.metadata().unwrap();
