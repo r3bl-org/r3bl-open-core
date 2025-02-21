@@ -118,6 +118,11 @@ use crate::{caret_locate,
 /// > This results from the fact that `UTF-8` is a variable width text encoding scheme,
 /// > that can use between 1 and 4 bytes to represent a single character. So the width a
 /// > human perceives and it's byte size in RAM can be different.
+/// >
+/// >  Videos:
+/// >
+/// >  - [Live coding video on Rust String](https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq)
+/// >  - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA?si=D9sTt_G7_mBJFLmc)
 ///
 /// 1. It represents the current caret position (relative to the
 ///    [style_adjusted_origin_pos](crate::FlexBox::style_adjusted_origin_pos) of the

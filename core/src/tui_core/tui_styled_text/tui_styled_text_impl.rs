@@ -52,7 +52,6 @@ macro_rules! tui_styled_text {
     };
 }
 
-// PERF: [ ] own text, why? slice? in the past, Deserialize meant it had to own, not anymore..
 /// Use [tui_styled_text!] macro for easier construction.
 #[derive(Debug, Clone, size_of::SizeOf)]
 pub struct TuiStyledText {

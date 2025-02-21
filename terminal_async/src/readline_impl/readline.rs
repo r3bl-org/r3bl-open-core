@@ -409,18 +409,17 @@ pub mod manage_shared_writer_output {
             return Ok(());
         }
 
-        // REFACTOR: [ ] fix this!
         let is_paused_buffer = {
-            let it: PauseBuffer = self_safe_is_paused_buffer
+            let paused_text_buffer: PauseBuffer = self_safe_is_paused_buffer
                 .lock()
                 .unwrap()
                 .drain(..)
                 .collect();
             join!(
-                from: it,
-                each: buf,
+                from: paused_text_buffer,
+                each: text,
                 delim: "",
-                format: "{buf}"
+                format: "{text}"
             )
         };
 

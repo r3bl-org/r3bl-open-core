@@ -530,7 +530,7 @@ mod app_main_impl_trait_app {
     }
 }
 
-// REFACTOR: [ ] introduce HUD for telemetry here & copy to all other examples
+// REVIEW: [ ] introduce HUD for telemetry here & copy to all other examples
 
 mod status_bar {
     use super::*;

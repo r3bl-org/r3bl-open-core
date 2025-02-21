@@ -234,8 +234,10 @@ impl UnicodeString {
         &self.string[string_start_byte_index..string_end_byte_index]
     }
 
-    /// If `self.string` is shorter than `max_display_width` then a padding string is
-    /// returned (that is comprised of the `pad_char` repeated).
+    /// If `self.string`'s display width is less than `max_display_width`, this returns a
+    /// padding string consisting of the `pad_char` repeated to make up the difference.
+    /// Otherwise, if `self.string` is already as wide or wider than `max_display_width`,
+    /// it returns `None`.
     pub fn try_get_postfix_padding_for(
         &self,
         chunk: &str,
@@ -244,12 +246,14 @@ impl UnicodeString {
     ) -> Option<StringStorage> {
         // Pad the line to the max cols w/ spaces. This removes any "ghost" carets that
         // were painted in a previous render.
-        // PERF: [ ] perf
         let chunk_display_width = UnicodeString::str_display_width(chunk);
         if chunk_display_width < max_display_width {
-            let pad_count = max_display_width - chunk_display_width;
+            let pad_count = {
+                let it = max_display_width - chunk_display_width;
+                usize(*it)
+            };
             let mut acc = StringStorage::new();
-            pad_fmt!(fmt: acc, pad_str: pad_char.as_ref(), repeat_count: usize(*pad_count));
+            pad_fmt!(fmt: acc, pad_str: pad_char.as_ref(), repeat_count: pad_count);
             Some(acc)
         } else {
             None
