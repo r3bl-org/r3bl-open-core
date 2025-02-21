@@ -1443,7 +1443,14 @@ mod test_editor_ops {
 
 #[cfg(test)]
 mod selection_tests {
-    use r3bl_core::{assert_eq2, col, row, RowIndex, SelectionRange, VecArray};
+    use r3bl_core::{assert_eq2,
+                    caret_scr_adj,
+                    col,
+                    row,
+                    CaretScrAdj,
+                    RowIndex,
+                    SelectionRange,
+                    VecArray};
     use smallvec::smallvec;
 
     type SelectionList = VecArray<(RowIndex, SelectionRange)>;
@@ -1455,6 +1462,10 @@ mod selection_tests {
                 EditorEvent,
                 SelectionAction,
                 DEFAULT_SYN_HI_FILE_EXT};
+
+    fn csa(col_index: usize, row_index: usize) -> CaretScrAdj {
+        caret_scr_adj(col(col_index) + row(row_index))
+    }
 
     #[test]
     fn test_text_selection() {
@@ -1480,7 +1491,7 @@ mod selection_tests {
 
             // Selection Map : {{0, SelectionRange {start: 0, end: 12}}}
             let selection_list: SelectionList = smallvec! {
-                (row(0), (col(0), col(12)).into())
+                (row(0), (csa(0, 0), csa(12, 0)).into())
             };
             assert_eq2!(
                 buffer.get_selection_list().get_ordered_list(),
@@ -1510,7 +1521,7 @@ mod selection_tests {
 
             // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
             let selection_list: SelectionList = smallvec! {
-                (row(1), (col(0), col(4)).into())
+                (row(1), (csa(0, 1), csa(4, 1)).into())
             };
             assert_eq2!(
                 buffer.get_selection_list().get_ordered_list(),
@@ -1532,7 +1543,7 @@ mod selection_tests {
 
             // Selection Map : {{1, SelectionRange {start: 1, end: 4}}}
             let selection_list: SelectionList = smallvec! {
-                (row(1), (col(1), col(4)).into())
+                (row(1), (csa(1, 1), csa(4, 1)).into())
             };
             assert_eq2!(
                 buffer.get_selection_list().get_ordered_list(),
@@ -1554,7 +1565,7 @@ mod selection_tests {
 
             // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
             let selection_list: SelectionList = smallvec! {
-                (row(1), (col(0), col(4)).into())
+                (row(1), (csa(0, 1), csa(4, 1)).into())
             };
             assert_eq2!(
                 buffer.get_selection_list().get_ordered_list(),
@@ -1576,8 +1587,8 @@ mod selection_tests {
 
             // Selection Map : {{0, SelectionRange {start: 0, end: 12}}, {1, SelectionRange {start: 0, end: 4}}}
             let selection_list: SelectionList = smallvec! {
-                (row(0), (col(0), col(12)).into()),
-                (row(1), (col(0), col(4)).into())
+                (row(0), (csa(0, 0), csa(12, 0)).into()),
+                (row(1), (csa(0, 1), csa(4, 1)).into())
             };
             assert_eq2!(
                 buffer.get_selection_list().get_ordered_list(),
@@ -1599,7 +1610,7 @@ mod selection_tests {
 
             // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
             let selection_list: SelectionList = smallvec! {
-                (row(1), (col(0), col(4)).into())
+                (row(1), (csa(0, 1), csa(4, 1)).into())
             };
             assert_eq2!(
                 buffer.get_selection_list().get_ordered_list(),
@@ -1639,8 +1650,8 @@ mod selection_tests {
 
             // Selection Map : {{0, SelectionRange {start: 1, end: 12}}, {1, SelectionRange {start: 0, end: 1}}}
             let selection_list: SelectionList = smallvec! {
-                (row(0), (col(1), col(12)).into()),
-                (row(1), (col(0), col(1)).into())
+                (row(0), (csa(1, 0), csa(12, 0)).into()),
+                (row(1), (csa(0, 1), csa(1, 1)).into())
             };
             assert_eq2!(
                 buffer.get_selection_list().get_ordered_list(),
@@ -1667,8 +1678,8 @@ mod selection_tests {
 
             // Selection Map : {{0, SelectionRange {start: 2, end: 12}},{1, SelectionRange {start: 0, end: 2}}}
             let selection_list: SelectionList = smallvec! {
-                (row(0), (col(2), col(12)).into()),
-                (row(1), (col(0), col(2)).into())
+                (row(0), (csa(2, 0), csa(12, 0)).into()),
+                (row(1), (csa(0, 1), csa(2, 1)).into())
             };
             assert_eq2!(
                 buffer.get_selection_list().get_ordered_list(),
@@ -1689,8 +1700,8 @@ mod selection_tests {
 
             // Selection Map : {{0, SelectionRange {start: 0, end: 12}},{1, SelectionRange {start: 0, end: 2}}}
             let selection_list: SelectionList = smallvec! {
-                (row(0), (col(0), col(12)).into()),
-                (row(1), (col(0), col(12)).into())
+                (row(0), (csa(0, 0), csa(12, 0)).into()),
+                (row(1), (csa(0, 1), csa(12, 1)).into())
             };
             assert_eq2!(
                 buffer.get_selection_list().get_ordered_list(),

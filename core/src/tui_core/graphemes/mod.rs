@@ -189,12 +189,12 @@ pub mod convert;
 pub mod grapheme_cluster_segment;
 pub mod ir_types;
 pub mod mutate;
-pub mod range;
+pub mod selection_range;
 pub mod unicode_string;
 
 // Re-export.
 pub use convert::*;
 pub use grapheme_cluster_segment::*;
 pub use ir_types::*;
-pub use range::*;
+pub use selection_range::*;
 pub use unicode_string::*;

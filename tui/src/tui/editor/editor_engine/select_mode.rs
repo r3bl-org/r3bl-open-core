@@ -75,8 +75,8 @@ impl SelectMode {
                 handle_selection_single_line_caret_movement(
                     editor_buffer,
                     prev.row_index, // Same as `current.row_index`.
-                    prev.col_index,
-                    curr.col_index,
+                    prev,
+                    curr,
                 )
             }
         };

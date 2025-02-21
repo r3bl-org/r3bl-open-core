@@ -436,19 +436,21 @@ pub fn delete_selected(
             let line_width =
                 buffer.get_line_display_width_at_row_index(selected_row_index);
 
+            let (start_col_index, end_col_index) = selection_range.as_tuple();
+
             // Remove entire line.
-            if selection_range.start_disp_col_idx_scr_adj == col(0)
-                && selection_range.end_disp_col_idx_scr_adj
-                    == caret_scroll_index::col_index_for_width(line_width)
             {
-                vec_row_indices_to_remove.push(selected_row_index);
-                continue;
+                if start_col_index == col(0)
+                    && end_col_index
+                        == caret_scroll_index::col_index_for_width(line_width)
+                {
+                    vec_row_indices_to_remove.push(selected_row_index);
+                    continue;
+                }
             }
 
             // Skip if selection range is empty.
-            if selection_range.start_disp_col_idx_scr_adj
-                == selection_range.end_disp_col_idx_scr_adj
-            {
+            if selection_range.start() == selection_range.end() {
                 continue;
             }
 
@@ -460,8 +462,7 @@ pub fn delete_selected(
                 selection_range.get_start_display_col_index_as_width(),
             );
 
-            let keep_after_selected = line_us
-                .clip_to_width(selection_range.end_disp_col_idx_scr_adj, line_width);
+            let keep_after_selected = line_us.clip_to_width(end_col_index, line_width);
 
             let mut remaining_text = StringStorage::with_capacity(
                 keep_before_selected.len() + keep_after_selected.len(),
