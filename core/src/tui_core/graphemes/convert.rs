@@ -22,42 +22,44 @@ use smallvec::Array;
 
 use crate::UnicodeString;
 
-/// UnicodeStringExt trait.
+/// `UnicodeStringExt` trait that allows converting lots of different types into
+/// [`UnicodeString`].
 pub trait UnicodeStringExt {
     fn unicode_string(&self) -> UnicodeString;
 }
 
-// PERF: [ ] perf
-impl<A: Array<Item = u8>> UnicodeStringExt for SmallString<A> {
-    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_str()) }
+mod convert_impl_blocks {
+    use super::*;
+
+    impl<A: Array<Item = u8>> UnicodeStringExt for SmallString<A> {
+        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_str()) }
+    }
+
+    impl<A: Array<Item = u8>> UnicodeStringExt for &SmallString<A> {
+        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_str()) }
+    }
+
+    impl UnicodeStringExt for dyn AsRef<str> {
+        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_ref()) }
+    }
+
+    impl UnicodeStringExt for Cow<'_, str> {
+        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
+    }
+
+    impl UnicodeStringExt for &str {
+        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
+    }
+
+    impl UnicodeStringExt for &&str {
+        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
+    }
+
+    impl UnicodeStringExt for String {
+        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
+    }
 }
 
-// PERF: [ ] perf
-impl<A: Array<Item = u8>> UnicodeStringExt for &SmallString<A> {
-    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_str()) }
-}
-
-impl UnicodeStringExt for dyn AsRef<str> {
-    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_ref()) }
-}
-
-impl UnicodeStringExt for Cow<'_, str> {
-    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
-}
-
-impl UnicodeStringExt for &str {
-    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
-}
-
-impl UnicodeStringExt for &&str {
-    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
-}
-
-impl UnicodeStringExt for String {
-    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
-}
-
-// REFACTOR: [x] write test for all of the above!
 #[cfg(test)]
 mod tests_unicode_string_ext {
     use super::*;
@@ -84,5 +86,26 @@ mod tests_unicode_string_ext {
     fn test_unicode_string_for_string() {
         let string: String = String::from("hello");
         assert_eq!(string.unicode_string(), UnicodeString::new("hello"));
+    }
+
+    #[test]
+    fn test_unicode_string_for_ref_smallstring() {
+        let small_str: SmallString<[u8; 16]> = SmallString::from("hello");
+        let ref_small_str: &SmallString<[u8; 16]> = &small_str;
+        assert_eq!(ref_small_str.unicode_string(), UnicodeString::new("hello"));
+    }
+
+    #[test]
+    fn test_unicode_string_for_dyn_as_ref_str() {
+        let string: String = String::from("hello");
+        let dyn_as_ref_str: &dyn AsRef<str> = &string;
+        assert_eq!(dyn_as_ref_str.unicode_string(), UnicodeString::new("hello"));
+    }
+
+    #[test]
+    fn test_unicode_string_for_ref_str() {
+        let str_slice: &str = "hello";
+        let ref_str_slice: &&str = &str_slice;
+        assert_eq!(ref_str_slice.unicode_string(), UnicodeString::new("hello"));
     }
 }

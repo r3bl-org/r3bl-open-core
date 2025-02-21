@@ -163,8 +163,8 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
                 if let Some((left_string, right_string)) = split_result {
                     let row_index = caret_adj.row_index.as_usize();
 
-                    // When buffer_mut goes out of scope, it will be dropped &
-                    // validation performed.
+                    // When buffer_mut goes out of scope, it will be dropped & validation
+                    // performed.
                     {
                         let buffer_mut = buffer.get_mut(engine.viewport());
 
