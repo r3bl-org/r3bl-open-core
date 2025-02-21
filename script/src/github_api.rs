@@ -59,10 +59,14 @@ pub async fn try_get_latest_release_tag_from_github(
 
 #[cfg(test)]
 mod tests_github_api {
+    use std::time::Duration;
+
     use r3bl_ansi_color::{TTYResult, is_fully_uninteractive_terminal};
+    use tokio::time::timeout;
 
     use super::*;
-    use crate::github_api::try_get_latest_release_tag_from_github;
+
+    const TIMEOUT: Duration = Duration::from_secs(1);
 
     /// Do not run this in CI/CD since it makes API calls to github.com.
     #[tokio::test]
@@ -74,17 +78,12 @@ mod tests_github_api {
         let org = "cloudflare";
         let repo = "cfssl";
 
-        let result = tokio::time::timeout(std::time::Duration::from_secs(10), async {
-            try_get_latest_release_tag_from_github(org, repo).await
-        })
-        .await;
-
         // Original code w/out timeout.
         // let tag = try_get_latest_release_tag_from_github(org, repo)
         //     .await
         //     .unwrap();
 
-        match result {
+        match timeout(TIMEOUT, try_get_latest_release_tag_from_github(org, repo)).await {
             Ok(Ok(tag)) => {
                 assert!(!tag.is_empty());
                 println!("Latest tag: {}", tag.magenta());
