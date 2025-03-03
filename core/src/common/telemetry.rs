@@ -23,7 +23,14 @@ use miette::IntoDiagnostic;
 use smallstr::SmallString;
 use strum_macros::{Display, EnumString};
 
-use crate::{Pc, RateLimitStatus, RateLimiter, RingBuffer, TimeDuration, ch, f64, ok};
+use crate::{Pc,
+            RateLimitStatus,
+            RateLimiter,
+            RingBufferStack,
+            TimeDuration,
+            ch,
+            f64,
+            ok};
 
 pub(in crate::common) mod sizing {
     use super::*;
@@ -84,7 +91,7 @@ pub mod telemetry_default_constants {
 /// ```
 #[derive(Debug, PartialEq)]
 pub struct Telemetry<const N: usize> {
-    pub ring_buffer: RingBuffer<TelemetryAtom, N>,
+    pub ring_buffer: RingBufferStack<TelemetryAtom, N>,
     pub start_timestamp: Instant,
     /// Pre-allocated buffer to store the report (after generating it). This is a cache
     /// that is used to avoid generating the report too frequently (rate limited with
@@ -179,7 +186,7 @@ pub mod constructor {
             // "Dynamically" convert the options argument into the actual options struct.
             let options: ResponseTimesRingBufferOptions = arg_opts.into();
             Self {
-                ring_buffer: RingBuffer::default(),
+                ring_buffer: RingBufferStack::new(),
                 start_timestamp: Instant::now(),
                 report: sizing::TelemetryReportLineStorage::new(),
                 rate_limiter_generate_report: RateLimiter::new(
