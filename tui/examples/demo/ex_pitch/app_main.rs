@@ -18,7 +18,7 @@ use std::fmt::Debug;
 
 use r3bl_core::{call_if_true,
                 col,
-                requested_size_percent,
+                req_size_pc,
                 row,
                 send_signal,
                 throws,
@@ -271,7 +271,7 @@ mod perform_layout {
                         in:                     surface,
                         id:                     component_id,
                         dir:                    LayoutDirection::Vertical,
-                        requested_size_percent: requested_size_percent!(width: 100, height: 100),
+                        requested_size_percent: req_size_pc!(width: 100, height: 100),
                         styles:                 [Id::EditorStyleNameDefault]
                     );
                     render_component_in_current_box!(

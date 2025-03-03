@@ -22,7 +22,7 @@ mod tests {
                     console_log,
                     get_tui_styles,
                     height,
-                    requested_size_percent,
+                    req_size_pc,
                     row,
                     throws,
                     throws_with_return,
@@ -71,7 +71,7 @@ mod tests {
             surface.box_start(FlexBoxProps {
                 id: FlexBoxId::from(0),
                 dir: LayoutDirection::Horizontal,
-                requested_size_percent: requested_size_percent!(width:100, height:100),
+                requested_size_percent: req_size_pc!(width:100, height:100),
                 maybe_styles: get_tui_styles! { @from: surface.stylesheet, [0] },
             })?;
 
@@ -100,7 +100,7 @@ mod tests {
 
                 assert_eq2!(
                     layout_item.requested_size_percent,
-                    requested_size_percent!(width:100, height:100)
+                    req_size_pc!(width:100, height:100)
                 );
 
                 assert_eq2!(
@@ -125,7 +125,7 @@ mod tests {
               in:                     surface,
               id:                     FlexBoxId::from(1),
               dir:                    LayoutDirection::Vertical,
-              requested_size_percent: requested_size_percent!(width:50, height:100),
+              requested_size_percent: req_size_pc!(width:50, height:100),
               styles:                 [1]
             }
             make_left_col_assertions(surface)?;
@@ -151,7 +151,7 @@ mod tests {
 
                 assert_eq2!(
                     layout_item.requested_size_percent,
-                    requested_size_percent!(width:50, height:100)
+                    req_size_pc!(width:50, height:100)
                 );
                 assert_eq2!(layout_item.insertion_pos_for_next_box, None);
 
@@ -171,7 +171,7 @@ mod tests {
                 maybe_styles: get_tui_styles! { @from: surface.stylesheet, [2] },
                 id: FlexBoxId::from(2),
                 dir: LayoutDirection::Vertical,
-                requested_size_percent: requested_size_percent!(width:50, height:100),
+                requested_size_percent: req_size_pc!(width:50, height:100),
             })?;
             make_right_col_assertions(surface)?;
             surface.box_end()?;
@@ -194,7 +194,7 @@ mod tests {
 
                 assert_eq2!(
                     current_box.requested_size_percent,
-                    requested_size_percent!(width:50, height:100)
+                    req_size_pc!(width:50, height:100)
                 );
                 assert_eq2!(current_box.insertion_pos_for_next_box, None);
 

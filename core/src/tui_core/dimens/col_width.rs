@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign};
+use std::{fmt::Debug,
+          ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
 use crate::{ChUnit, ColIndex, ch, col};
 
@@ -44,16 +45,22 @@ use crate::{ChUnit, ColIndex, ch, col};
 /// let width = width(5);
 /// let width = ColWidth::new(5);
 /// ```
-#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, Debug)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct ColWidth(pub ChUnit);
 
-pub fn width(width: impl Into<ChUnit>) -> ColWidth { ColWidth(width.into()) }
+impl Debug for ColWidth {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ColWidth({:?})", self.0)
+    }
+}
+
+pub fn width(arg_col_width: impl Into<ColWidth>) -> ColWidth { arg_col_width.into() }
 
 mod constructor {
     use super::*;
 
     impl ColWidth {
-        pub fn new(arg: impl Into<ChUnit>) -> Self { ColWidth(arg.into()) }
+        pub fn new(arg_col_width: impl Into<ColWidth>) -> Self { arg_col_width.into() }
 
         /// Subtract 1 from col index to get the width. I.e.: `col index = width - 1`.
         ///
@@ -72,6 +79,18 @@ mod constructor {
 
     impl From<usize> for ColWidth {
         fn from(width: usize) -> Self { ColWidth(ch(width)) }
+    }
+
+    impl From<u16> for ColWidth {
+        fn from(val: u16) -> Self { ColWidth(val.into()) }
+    }
+
+    impl From<i32> for ColWidth {
+        fn from(val: i32) -> Self { ColWidth(val.into()) }
+    }
+
+    impl From<u8> for ColWidth {
+        fn from(val: u8) -> Self { ColWidth(val.into()) }
     }
 }
 

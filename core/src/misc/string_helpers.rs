@@ -18,15 +18,9 @@
 use std::fmt::Write;
 
 use crate::{ColWidth,
-            ELLIPSIS_GLYPH,
+            GCStringExt as _,
             StringStorage,
-            UnicodeString,
-            ch,
-            f64,
-            glyphs::SPACER_GLYPH as SPACER,
-            usize,
-            width,
-            with_mut};
+            glyphs::{ELLIPSIS_GLYPH, SPACER_GLYPH}};
 
 /// Tests whether the given text contains an ANSI escape sequence.
 pub fn contains_ansi_escape_sequence(text: &str) -> bool {
@@ -49,21 +43,21 @@ fn test_contains_ansi_escape_sequence() {
     assert_eq2!(contains_ansi_escape_sequence("This is normal text."), false);
 
     assert_eq2!(
-        contains_ansi_escape_sequence(
-            &AnsiStyledText {
-                text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
-                style: &[
-                    Style::Bold,
-                    Style::Italic,
-                    Style::Underline,
-                    Style::Foreground(Color::Rgb(50, 50, 50)),
-                    Style::Background(Color::Rgb(100, 200, 1)),
-                ],
-            }
-            .to_string()
-        ),
-        true
-    );
+          contains_ansi_escape_sequence(
+              &AnsiStyledText {
+                  text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
+                  style: &[
+                      Style::Bold,
+                      Style::Italic,
+                      Style::Underline,
+                      Style::Foreground(Color::Rgb(50, 50, 50)),
+                      Style::Background(Color::Rgb(100, 200, 1)),
+                  ],
+              }
+              .to_string()
+          ),
+          true
+      );
 }
 
 /// Replace escaped quotes with unescaped quotes. The escaped quotes are generated
@@ -83,52 +77,30 @@ pub fn remove_escaped_quotes(s: &str) -> String {
 /// Take into account the fact that there maybe emoji in the string.
 pub fn truncate_from_right(
     string: &str,
-    display_width: impl Into<ColWidth>,
+    arg_width: impl Into<ColWidth>,
     pad: bool,
 ) -> StringStorage {
-    use crate::glyphs::SPACER_GLYPH as SPACER;
-
-    let display_width = display_width.into();
-    let string_us = UnicodeString::new(string);
-    let string_display_width = string_us.display_width;
+    let display_width = arg_width.into();
+    let string_gcs = string.grapheme_string();
+    let string_display_width = string_gcs.display_width;
 
     // Handle truncation.
     if string_display_width > display_width {
-        let postfix_string = ELLIPSIS_GLYPH;
-        let postfix_us = UnicodeString::new(postfix_string);
-        let postfix_display_width = postfix_us.display_width;
+        let postfix = ELLIPSIS_GLYPH;
+        let postfix_gcs = postfix.grapheme_string();
+        let postfix_display_width = postfix_gcs.display_width;
+        let truncate_cols_from_right = string_display_width - display_width;
+        let truncated_text =
+            string_gcs.trunc_end_by(truncate_cols_from_right + postfix_display_width);
 
-        let trunc_str = string_us.truncate_end_to_fit_width({
-            let it = display_width - postfix_display_width;
-            width(*it)
-        });
-        // The above statement is Equivalent to:
-        // let trunc_string =
-        //     string.truncate_end_by_n_col(display_width - suffix_display_width - 1);
-
-        with_mut!(
-            StringStorage::new(),
-            as acc,
-            run {
-                _ = write!(acc, "{}{}", trunc_str, postfix_us.string);
-            }
-        )
+        let mut acc = StringStorage::new();
+        _ = write!(acc, "{}{}", truncated_text, postfix_gcs.string);
+        acc
     }
     // Handle padding.
     else if pad {
-        let display_width_to_pad = display_width - string_display_width;
-        let display_width_to_pad = f64(*display_width_to_pad);
-        let spacer_display_width = UnicodeString::str_display_width(SPACER);
-        let spacer_display_width = f64(*spacer_display_width);
-        let repeat_count = (display_width_to_pad / spacer_display_width).round();
-        let repeat_count = repeat_count as usize;
-        with_mut!(
-            StringStorage::new(),
-            as acc,
-            run {
-                _ = write!(acc, "{}{}", string, SPACER.repeat(repeat_count));
-            }
-        )
+        use crate::glyphs::SPACER_GLYPH as SPACER;
+        string_gcs.pad_end_to_fit(SPACER, display_width)
     }
     // No post processing needed.
     else {
@@ -138,44 +110,29 @@ pub fn truncate_from_right(
 
 pub fn truncate_from_left(
     string: &str,
-    display_width: impl Into<ColWidth>,
+    arg_width: impl Into<ColWidth>,
     pad: bool,
 ) -> StringStorage {
-    let display_width = display_width.into();
-    let string_us = UnicodeString::new(string);
-    let string_display_width = string_us.display_width;
+    let display_width = arg_width.into();
+    let string_gcs = string.grapheme_string();
+    let string_display_width = string_gcs.display_width;
 
     // Handle truncation.
     if string_display_width > display_width {
         let prefix = ELLIPSIS_GLYPH;
-        let prefix_us = UnicodeString::new(prefix);
-        let prefix_display_width = prefix_us.display_width;
+        let prefix_gcs = prefix.grapheme_string();
+        let prefix_display_width = prefix_gcs.display_width;
         let truncate_cols_from_left = string_display_width - display_width;
-        let truncated_text = string_us.truncate_start_by_n_col({
-            let it = truncate_cols_from_left + prefix_display_width;
-            width(*it)
-        });
-        with_mut!(
-            StringStorage::new(),
-            as acc,
-            run {
-            _ = write!(acc, "{}{}", prefix_us.string, truncated_text);
-            }
-        )
+        let truncated_text =
+            string_gcs.trunc_start_by(truncate_cols_from_left + prefix_display_width);
+
+        let mut acc = StringStorage::new();
+        _ = write!(acc, "{}{}", prefix_gcs.string, truncated_text);
+        acc
     }
     // Handle padding.
     else if pad {
-        let width_to_pad = display_width - string_display_width;
-        let spacer_width = UnicodeString::str_display_width(SPACER);
-        let repeat_count = (f64(*width_to_pad) / f64(*spacer_width)).ceil();
-        let repeat_count = ch(repeat_count);
-        with_mut!(
-            StringStorage::new(),
-            as acc,
-            run {
-                _ = write!(acc, "{}{}", SPACER.repeat(usize(repeat_count)), string);
-            }
-        )
+        string_gcs.pad_start_to_fit(SPACER_GLYPH, display_width)
     } else {
         string.into()
     }

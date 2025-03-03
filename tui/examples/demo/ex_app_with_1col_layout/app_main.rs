@@ -17,7 +17,7 @@
 
 use r3bl_core::{col,
                 height,
-                requested_size_percent,
+                req_size_pc,
                 row,
                 throws,
                 throws_with_return,
@@ -228,7 +228,7 @@ mod perform_layout {
                     in:                     surface,
                     id:                     component_id,
                     dir:                    LayoutDirection::Vertical,
-                    requested_size_percent: requested_size_percent!(width: 100, height: 100),
+                    requested_size_percent: req_size_pc!(width: 100, height: 100),
                     styles:                 [component_id]
                 );
                 render_component_in_current_box!(

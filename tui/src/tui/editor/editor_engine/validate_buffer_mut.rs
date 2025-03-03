@@ -213,20 +213,17 @@ pub fn is_scroll_offset_in_middle_of_grapheme_cluster(
         .get(usize(*scroll_adjusted_caret.row_index))?;
 
     let display_width_of_str_at_caret = {
-        let str_at_caret = line_at_caret
-            .get_string_at_display_col_index(scroll_adjusted_caret.col_index);
+        let str_at_caret = line_at_caret.get_string_at(scroll_adjusted_caret.col_index);
         match str_at_caret {
             None => width(0),
-            Some(string_at_caret) => string_at_caret.seg_display_width,
+            Some(string_at_caret) => string_at_caret.width,
         }
     };
 
     if let Some(segment) = line_at_caret
-        .is_display_col_index_in_middle_of_grapheme_cluster(
-            editor_buffer_mut.inner.scr_ofs.col_index,
-        )
+        .check_is_in_middle_of_grapheme(editor_buffer_mut.inner.scr_ofs.col_index)
     {
-        let diff = segment.unicode_width - display_width_of_str_at_caret;
+        let diff = segment.display_width - display_width_of_str_at_caret;
         return Some(diff);
     };
 
@@ -254,10 +251,10 @@ pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
     let line = editor_buffer_mut.inner.lines.get(row_index.as_usize())?;
 
     // Caret is in the middle of a grapheme cluster, so jump it.
-    let seg = line.is_display_col_index_in_middle_of_grapheme_cluster(col_index)?;
+    let seg = line.check_is_in_middle_of_grapheme(col_index)?;
 
     scroll_editor_content::set_caret_col_to(
-        seg.start_display_col_index + seg.unicode_width,
+        seg.start_display_col_index + seg.display_width,
         editor_buffer_mut.inner.caret_raw,
         editor_buffer_mut.inner.scr_ofs,
         editor_buffer_mut.inner.vp.col_width,

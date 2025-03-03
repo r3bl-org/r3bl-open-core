@@ -20,7 +20,7 @@ use r3bl_core::{ch,
                 col,
                 glyphs::SPACER_GLYPH as SPACER,
                 height,
-                percent,
+                pc,
                 row,
                 string_storage,
                 throws_with_return,
@@ -32,13 +32,12 @@ use r3bl_core::{ch,
                 CommonErrorType,
                 CommonResult,
                 Dim,
+                GCStringExt as _,
                 GradientGenerationPolicy,
                 Pos,
                 StringStorage,
                 TextColorizationPolicy,
-                TuiStyle,
-                UnicodeString,
-                UnicodeStringExt};
+                TuiStyle};
 
 use crate::{editor_engine::engine_public_api,
             render_ops,
@@ -327,9 +326,9 @@ mod internal_impl {
                 let simple_dialog_size = {
                     // Calc dialog bounds size based on window size.
                     let col_count = {
-                        let percent = percent!(
-                            DisplayConstants::DialogComponentBorderWidthPercent as u16
-                        )?;
+                        let percent =
+                            pc!(DisplayConstants::DialogComponentBorderWidthPercent
+                                as u16)?;
                         width(percent.apply_to(*surface_size.col_width))
                     };
                     let row_count = height(DisplayConstants::SimpleModalRowCount as u16);
@@ -358,9 +357,9 @@ mod internal_impl {
                         + height(DisplayConstants::EmptyLine as u16)
                         + dialog_options.result_panel_display_row_count;
                     let col_count = {
-                        let percent = percent!(
-                            DisplayConstants::DialogComponentBorderWidthPercent as u16
-                        )?;
+                        let percent =
+                            pc!(DisplayConstants::DialogComponentBorderWidthPercent
+                                as u16)?;
                         width(percent.apply_to(*surface_size.col_width))
                     };
                     let size = col_count + row_count;
@@ -550,8 +549,8 @@ mod internal_impl {
                 rel_insertion_pos.add_row(height(1));
 
                 let text = item.as_str();
-                let text_us = UnicodeString::new(text);
-                let text_display_width = text_us.display_width;
+                let text_gcs = text.grapheme_string();
+                let text_display_width = text_gcs.display_width;
 
                 let max_display_col_count = bounds_size.col_width - width(2);
 
@@ -562,15 +561,14 @@ mod internal_impl {
 
                     let lhs_start_index = col(0);
                     let lhs_end_width = max_display_col_count - postfix_len - snip_len;
-                    let lhs_str = text_us.clip_to_width(lhs_start_index, lhs_end_width);
+                    let lhs_str = text_gcs.clip(lhs_start_index, lhs_end_width);
 
                     // This is calculated relative to the end of the string (not the
                     // start!). So it's backwards.
                     let rhs_start_index = (text_display_width - postfix_len)
                         .convert_to_col_index()
                         + col(1) /* skip one segment right */;
-                    let rhs_str =
-                        text_us.clip_to_width(rhs_start_index, text_display_width);
+                    let rhs_str = text_gcs.clip(rhs_start_index, text_display_width);
 
                     Cow::Owned(string_storage!("{lhs_str}..{rhs_str}"))
                 } else {
@@ -650,9 +648,9 @@ mod internal_impl {
             col_index + row_index
         };
 
-        let title_us = title.unicode_string();
+        let title_gcs = title.grapheme_string();
         let title_content_clipped =
-            title_us.truncate_end_to_fit_width(bounds_size.col_width - width(2));
+            title_gcs.trunc_end_to_fit(bounds_size.col_width - width(2));
 
         ops.push(RenderOp::ResetColor);
         ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
@@ -682,9 +680,9 @@ mod internal_impl {
         // If lolcat is enabled, then colorize the text.
         if let Some(style) = maybe_style {
             if style.lolcat {
-                let text_us = UnicodeString::new(text);
+                let text_gcs = text.grapheme_string();
                 let texts = color_wheel.colorize_into_styled_texts(
-                    &text_us,
+                    &text_gcs,
                     GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
                     TextColorizationPolicy::ColorEachCharacter(*maybe_style),
                 );

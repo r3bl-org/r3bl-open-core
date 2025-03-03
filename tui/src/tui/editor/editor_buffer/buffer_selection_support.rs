@@ -349,13 +349,13 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
             match buffer_mut.inner.sel_list.get(row_index) {
                 // Extend range to right (caret moved down and hit bottom).
                 Some(range) => {
-                    if let Some(line_us) = buffer_mut.inner.lines.get(usize(row_index)) {
+                    if let Some(line_gcs) = buffer_mut.inner.lines.get(usize(row_index)) {
                         let start = caret_scr_adj(range.start() + row_index);
                         let end = {
                             // For selection, go one col index past the end of the line,
                             // since selection range is not inclusive of the end index.
                             let end_col_index = caret_scroll_index::col_index_for_width(
-                                line_us.display_width,
+                                line_gcs.display_width,
                             );
                             caret_scr_adj(end_col_index + row_index)
                         };

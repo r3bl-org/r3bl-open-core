@@ -24,41 +24,41 @@ use crate::{ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType, ch, glyph
 /// it, since it has to validate that the value is between 0 and 100. You can create it
 /// one of two ways (depending on how you want to handle out of range errors):
 ///
-/// 1. Using the [crate::percent!] macro (which returns a [Result] type, so that you can
-///    handle the any conversion out of range errors.
-/// 2. Using the [Percent::try_and_convert] method, which returns an [Option] type, so
-///    that you can handle the any conversion out of range errors.
+/// 1. Using the [crate::pc!] macro (which returns a [Result] type, so that you can handle
+///    the any conversion out of range errors.
+/// 2. Using the [Pc::try_and_convert] method, which returns an [Option] type, so that you
+///    can handle the any conversion out of range errors.
 ///
 /// # Fields
-/// - `value`: The percentage value as an unsigned 8-bit integer.
+/// - `value`: The pcage value as an unsigned 8-bit integer.
 ///
 /// # Traits Implementations
 ///
 /// - [Deref]: Dereferences to [u8].
-/// - [std::fmt::Debug]: Formats the percentage value followed by a `%` sign.
-/// - [TryFrom]: Attempts to convert a [ChUnitPrimitiveType] to a `Percent`.
-/// - [TryFrom]: Attempts to convert an [i32] to a `Percent`.
+/// - [std::fmt::Debug]: Formats the pcage value followed by a `%` sign.
+/// - [TryFrom]: Attempts to convert a [ChUnitPrimitiveType] to a `pc`.
+/// - [TryFrom]: Attempts to convert an [i32] to a `pc`.
 ///
 /// # How to use it
 ///
-/// - [crate::percent!]: A macro that attempts to convert a given expression to `Percent`.
-///   Returns [Err] if the value not between 0 and 100.
-/// - [Percent::try_and_convert]: Attempts to convert a given [ChUnit] value to `Percent`.
-///   Returns [None] if the value is not between 0 and 100.
-/// - [Percent::apply_to]: Returns the calculated percentage of the given value.
+/// - [crate::pc!]: A macro that attempts to convert a given expression to `pc`. Returns
+///   [Err] if the value not between 0 and 100.
+/// - [Pc::try_and_convert]: Attempts to convert a given [ChUnit] value to `pc`. Returns
+///   [None] if the value is not between 0 and 100.
+/// - [Pc::apply_to]: Returns the calculated pcage of the given value.
 ///
 /// # Example
 ///
 /// ```rust
-/// use r3bl_core::{Percent, percent};
+/// use r3bl_core::{Pc, pc};
 ///
 /// // Get as result.
-/// let percent = percent!(50);
+/// let percent = pc!(50);
 /// assert_eq!(percent.is_ok(), true);
 /// assert_eq!(*percent.unwrap(), 50);
 ///
 /// // Get as option.
-/// let percent = Percent::try_and_convert(50);
+/// let percent = Pc::try_and_convert(50);
 /// assert_eq!(percent.is_some(), true);
 /// assert_eq!(*percent.unwrap(), 50);
 ///
@@ -66,85 +66,85 @@ use crate::{ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType, ch, glyph
 /// assert_eq!(format!("{:?}", percent.unwrap()), "50%");
 /// ```
 #[derive(Copy, Clone, PartialEq, Eq, Default, Hash)]
-pub struct Percent {
+pub struct Pc {
     value: u8,
 }
 
-/// Create a [crate::Percent] instance from the given value. It returns a `Result` type,
+/// Create a [crate::Pc] instance from the given value. It returns a `Result` type,
 #[macro_export]
-macro_rules! percent {
+macro_rules! pc {
     (
         $arg_val: expr
     ) => {
-        $crate::Percent::try_from($arg_val)
+        $crate::Pc::try_from($arg_val)
     };
 }
 
-impl Deref for Percent {
+impl Deref for Pc {
     type Target = u8;
 
     fn deref(&self) -> &Self::Target { &self.value }
 }
 
-impl Debug for Percent {
+impl Debug for Pc {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{}%", self.value) }
 }
 
 /// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
-impl TryFrom<ChUnitPrimitiveType> for Percent {
+impl TryFrom<ChUnitPrimitiveType> for Pc {
     type Error = miette::Error;
-    fn try_from(arg: ChUnitPrimitiveType) -> miette::Result<Percent> {
-        match Percent::try_and_convert(arg) {
-            Some(percent) => Ok(percent),
+    fn try_from(arg: ChUnitPrimitiveType) -> miette::Result<Pc> {
+        match Pc::try_and_convert(arg) {
+            Some(pc) => Ok(pc),
             None => CommonError::new_error_result(
                 CommonErrorType::ValueOutOfRange,
-                "Invalid percentage value",
+                "Invalid pcage value",
             ),
         }
     }
 }
 
 /// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
-impl TryFrom<i32> for Percent {
+impl TryFrom<i32> for Pc {
     type Error = miette::Error;
-    fn try_from(arg: i32) -> miette::Result<Percent> {
-        match Percent::try_and_convert(arg as u16) {
-            Some(percent) => Ok(percent),
+    fn try_from(arg: i32) -> miette::Result<Pc> {
+        match Pc::try_and_convert(arg as u16) {
+            Some(pc) => Ok(pc),
             None => CommonError::new_error_result(
                 CommonErrorType::ValueOutOfRange,
-                "Invalid percentage value",
+                "Invalid pcage value",
             ),
         }
     }
 }
 
-/// Try and convert given `ChUnit` value to `Percent`. Return `None` if given value is not
+/// Try and convert given `ChUnit` value to `pc`. Return `None` if given value is not
 /// between 0 and 100.
-impl Percent {
-    pub fn try_and_convert(item: impl Into<ChUnit>) -> Option<Percent> {
-        let item = *item.into();
+impl Pc {
+    pub fn try_and_convert(arg_num: impl Into<ChUnit>) -> Option<Pc> {
+        let item = *arg_num.into();
         if !(0..=100).contains(&item) {
             return None;
         }
-        Percent { value: item as u8 }.into()
+        Pc { value: item as u8 }.into()
     }
 
-    /// Given the value, calculate the result of the percentage.
+    /// Given the value, calculate the result of the pcage.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use r3bl_core::{Percent, ChUnit, ch, percent};
+    /// use r3bl_core::{pc, ChUnit, ch, Pc};
     ///
-    /// let percent = percent!(50).unwrap();
+    /// let percent = pc!(50).unwrap();
     /// let value = ch(5000);
     /// let result = percent.apply_to(value);
     /// assert_eq!(result, ch(2500));
     /// ```
     pub fn apply_to(&self, value: ChUnit) -> ChUnit {
-        let percentage_int = self.value;
-        let percentage_f32 = f32::from(percentage_int) / 100.0;
-        let result_f32 = percentage_f32 * f32::from(*value);
+        let pcage_int = self.value;
+        let pcage_f32 = f32::from(pcage_int) / 100.0;
+        let result_f32 = pcage_f32 * f32::from(*value);
         let converted_value = result_f32.trunc() as ChUnitPrimitiveType;
         ch(converted_value)
     }
@@ -161,7 +161,7 @@ impl Percent {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Percent,
+    use crate::{Pc,
                 STATS_25P_GLYPH,
                 STATS_50P_GLYPH,
                 STATS_75P_GLYPH,
@@ -169,53 +169,53 @@ mod tests {
                 ch};
 
     #[test]
-    fn test_percent_works_as_expected() {
-        let maybe_pc_100 = percent!(100i32);
+    fn test_pc_works_as_expected() {
+        let maybe_pc_100 = pc!(100i32);
         if let Ok(pc_100) = maybe_pc_100 {
             assert_eq!(*pc_100, 100);
             let result = pc_100.apply_to(ch(500));
             assert_eq!(*result, 500);
         } else {
-            panic!("Failed to create Percent from 100");
+            panic!("Failed to create pc from 100");
         }
 
-        let pc_50 = Percent::try_from(50i32).unwrap();
+        let pc_50 = Pc::try_from(50i32).unwrap();
         assert_eq!(*pc_50, 50);
         let result = pc_50.apply_to(ch(500));
         assert_eq!(*result, 250);
 
-        let pc_0 = Percent::try_from(0i32).unwrap();
+        let pc_0 = Pc::try_from(0i32).unwrap();
         assert_eq!(*pc_0, 0);
         let result = pc_0.apply_to(ch(500));
         assert_eq!(*result, 0);
     }
 
     #[test]
-    fn test_percent_parsing_fails_as_expected() {
-        Percent::try_from(-1i32).unwrap_err();
+    fn test_pc_parsing_fails_as_expected() {
+        Pc::try_from(-1i32).unwrap_err();
 
-        Percent::try_from(0i32).unwrap();
-        Percent::try_from(0u16).unwrap();
+        Pc::try_from(0i32).unwrap();
+        Pc::try_from(0u16).unwrap();
 
-        Percent::try_from(100i32).unwrap();
-        Percent::try_from(100u16).unwrap();
+        Pc::try_from(100i32).unwrap();
+        Pc::try_from(100u16).unwrap();
 
-        Percent::try_from(101i32).unwrap_err();
-        Percent::try_from(101u16).unwrap_err();
+        Pc::try_from(101i32).unwrap_err();
+        Pc::try_from(101u16).unwrap_err();
     }
 
     #[test]
-    fn test_percent_to_glyph_works_as_expected() {
-        let pc_0_to_25 = percent!(25i32).unwrap();
+    fn test_pc_to_glyph_works_as_expected() {
+        let pc_0_to_25 = pc!(25i32).unwrap();
         assert_eq!(pc_0_to_25.as_glyph(), STATS_25P_GLYPH);
 
-        let pc_25_to_50 = percent!(50i32).unwrap();
+        let pc_25_to_50 = pc!(50i32).unwrap();
         assert_eq!(pc_25_to_50.as_glyph(), STATS_50P_GLYPH);
 
-        let pc_50_to_75 = percent!(75i32).unwrap();
+        let pc_50_to_75 = pc!(75i32).unwrap();
         assert_eq!(pc_50_to_75.as_glyph(), STATS_75P_GLYPH);
 
-        let pc_100 = percent!(100i32).unwrap();
+        let pc_100 = pc!(100i32).unwrap();
         assert_eq!(pc_100.as_glyph(), STATS_100P_GLYPH);
     }
 }

@@ -15,6 +15,9 @@
  *   limitations under the License.
  */
 
+// REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
+// cspell:ignore reedline
+
 //! Rust uses `UTF-8` to represent text in [String]. `UTF-8` is a variable width encoding,
 //! so each character can take up a different number of bytes, between 1 and 4, and 1 byte
 //! is 8 bits; this is why we use [Vec] of [u8] to represent a [String].
@@ -51,11 +54,11 @@
 //! up, down, left, right, etc. For left, this is assumed to move the caret or cursor one
 //! position to the left, regardless of how wide that character may be. Let's unpack that.
 //!
-//! 1. If we use byte boundaries in the [String] we can move the cursor one byte to the
-//!    left.
-//! 2. This falls apart when we have a grapheme cluster.
-//! 3. A grapheme cluster can take up more than one byte, and they don't fall cleanly into
-//!    byte boundaries.
+//! - If we use byte boundaries in the [String] we can move the cursor one byte to the
+//!   left.
+//! - This falls apart when we have a grapheme cluster.
+//! - A grapheme cluster can take up more than one byte, and they don't fall cleanly into
+//!   byte boundaries.
 //!
 //! To complicate things further, the size that a grapheme cluster takes up is not the
 //! same as its byte size in memory. Let's unpack that.
@@ -155,45 +158,44 @@
 //! index into the string (which isn't byte boundary based) as a "display" (or "physical")
 //! index into the rendered output of the string in a terminal.
 //!
-//! 1. Some parsing is necessary to get "logical" index into the string that is grapheme
-//!    cluster based (not byte boundary based).
-//!    - This is where
-//!      [`unicode-segmentation`](https://crates.io/crates/unicode-segmentation) crate
-//!      comes in and allows us to split our string into a vector of grapheme clusters.
-//! 2. Some translation is necessary to get from the "logical" index to the physical index
-//!    and back again. This is where we can apply one of the following approaches:
-//!    - We can use the [`unicode-width`](https://crates.io/crates/unicode-width) crate to
-//!      calculate the width of the grapheme cluster. This works on Linux, but doesn't
-//!      work very well on macOS & I haven't tested it on Windows. This crate will (on
-//!      Linux) reliably tell us what the displayed width of a grapheme cluster is.
-//!    - We can take the approach from the [`reedline`](https://crates.io/crates/reedline)
-//!      crate's
-//!      [`repaint_buffer()`](https://github.com/nazmulidris/reedline/blob/79e7d8da92cd5ae4f8e459f901189d7419c3adfd/src/painting/painter.rs#L129)
-//!      where we split the string based on the "logical" index into the vector of
-//!      grapheme clusters. And then we print the 1st part of the string, then call
-//!      `SavePosition` to save the cursor at this point, then print the 2nd part of the
-//!      string, then call `RestorePosition` to restore the cursor to where it "should"
-//!      be.
+//! - Some parsing is necessary to get "logical" index into the string that is grapheme
+//!   cluster based (not byte boundary based).
+//!   - This is where
+//!     [`unicode-segmentation`](https://crates.io/crates/unicode-segmentation) crate
+//!     comes in and allows us to split our string into a vector of grapheme clusters.
+//! - Some translation is necessary to get from the "logical" index to the physical index
+//!   and back again. This is where we can apply one of the following approaches:
+//!   - We can use the [`unicode-width`](https://crates.io/crates/unicode-width) crate to
+//!     calculate the width of the grapheme cluster. This works on Linux, but doesn't work
+//!     very well on macOS & I haven't tested it on Windows. This crate will (on Linux)
+//!     reliably tell us what the displayed width of a grapheme cluster is.
+//!   - We can take the approach from the [`reedline`](https://crates.io/crates/reedline)
+//!     crate's
+//!     [`repaint_buffer()`](https://github.com/nazmulidris/reedline/blob/79e7d8da92cd5ae4f8e459f901189d7419c3adfd/src/painting/painter.rs#L129)
+//!     where we split the string based on the "logical" index into the vector of grapheme
+//!     clusters. And then we print the 1st part of the string, then call `SavePosition`
+//!     to save the cursor at this point, then print the 2nd part of the string, then call
+//!     `RestorePosition` to restore the cursor to where it "should" be.
 //!
-//! Please take a look at [crate::tui_core::graphemes::UnicodeString] for the following
+//! Please take a look at [crate::tui_core::graphemes::GCString] for the following
 //! items:
-//! - Methods in [crate::tui_core::graphemes::access] for more details on how the
-//!   conversion between "display" (or `display_col_index`) and "logical" (or
-//!   `logical_index`) indices is done.
-//! - The choices that were made in the design of the `UnicodeString` struct for
+//! - Methods in [mod@crate::tui_core::graphemes::gc_string] for more details on how the
+//!   conversion between "display" (or `display_col_index`), ie, [crate::ColIndex] and
+//!   "logical" or "segment", ie, [SegIndex] is done.
+//! - The choices that were made in the design of the [GCString] struct for
 //!   performance to minimize memory latency (for access and allocation). The results
 //!   might surprise you, as intuition around performance is often not reliable.
 
 // Attach sources.
-pub mod access;
-pub mod convert;
-pub mod grapheme_cluster_segment;
-pub mod ir_types;
-pub mod mutate;
-pub mod unicode_string;
+pub mod byte_index;
+pub mod gc_string;
+pub mod gc_string_ext;
+pub mod seg;
+pub mod seg_index;
 
 // Re-export.
-pub use convert::*;
-pub use grapheme_cluster_segment::*;
-pub use ir_types::*;
-pub use unicode_string::*;
+pub use byte_index::*;
+pub use gc_string::*;
+pub use gc_string_ext::*;
+pub use seg::*;
+pub use seg_index::*;

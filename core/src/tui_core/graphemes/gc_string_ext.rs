@@ -20,43 +20,43 @@ use std::borrow::Cow;
 use smallstr::SmallString;
 use smallvec::Array;
 
-use crate::UnicodeString;
+use crate::GCString;
 
-/// `UnicodeStringExt` trait that allows converting lots of different types into
-/// [`UnicodeString`].
-pub trait UnicodeStringExt {
-    fn unicode_string(&self) -> UnicodeString;
+/// `GCStringExt` trait that allows converting lots of different types into
+/// [`GCString`].
+pub trait GCStringExt {
+    fn grapheme_string(&self) -> GCString;
 }
 
 mod convert_impl_blocks {
     use super::*;
 
-    impl<A: Array<Item = u8>> UnicodeStringExt for SmallString<A> {
-        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_str()) }
+    impl<A: Array<Item = u8>> GCStringExt for SmallString<A> {
+        fn grapheme_string(&self) -> GCString { GCString::new(self.as_str()) }
     }
 
-    impl<A: Array<Item = u8>> UnicodeStringExt for &SmallString<A> {
-        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_str()) }
+    impl<A: Array<Item = u8>> GCStringExt for &SmallString<A> {
+        fn grapheme_string(&self) -> GCString { GCString::new(self.as_str()) }
     }
 
-    impl UnicodeStringExt for dyn AsRef<str> {
-        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self.as_ref()) }
+    impl GCStringExt for dyn AsRef<str> {
+        fn grapheme_string(&self) -> GCString { GCString::new(self.as_ref()) }
     }
 
-    impl UnicodeStringExt for Cow<'_, str> {
-        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
+    impl GCStringExt for Cow<'_, str> {
+        fn grapheme_string(&self) -> GCString { GCString::new(self) }
     }
 
-    impl UnicodeStringExt for &str {
-        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
+    impl GCStringExt for &str {
+        fn grapheme_string(&self) -> GCString { GCString::new(self) }
     }
 
-    impl UnicodeStringExt for &&str {
-        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
+    impl GCStringExt for &&str {
+        fn grapheme_string(&self) -> GCString { GCString::new(self) }
     }
 
-    impl UnicodeStringExt for String {
-        fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
+    impl GCStringExt for String {
+        fn grapheme_string(&self) -> GCString { GCString::new(self) }
     }
 }
 
@@ -67,45 +67,45 @@ mod tests_unicode_string_ext {
     #[test]
     fn test_unicode_string_for_smallstring() {
         let small_str: SmallString<[u8; 16]> = SmallString::from("hello");
-        assert_eq!(small_str.unicode_string(), UnicodeString::new("hello"));
+        assert_eq!(small_str.grapheme_string(), GCString::new("hello"));
     }
 
     #[test]
     fn test_unicode_string_for_cow() {
         let cow_str: Cow<str> = Cow::Borrowed("hello");
-        assert_eq!(cow_str.unicode_string(), UnicodeString::new("hello"));
+        assert_eq!(cow_str.grapheme_string(), GCString::new("hello"));
     }
 
     #[test]
     fn test_unicode_string_for_str() {
         let str_slice: &str = "hello";
-        assert_eq!(str_slice.unicode_string(), UnicodeString::new("hello"));
+        assert_eq!(str_slice.grapheme_string(), GCString::new("hello"));
     }
 
     #[test]
     fn test_unicode_string_for_string() {
         let string: String = String::from("hello");
-        assert_eq!(string.unicode_string(), UnicodeString::new("hello"));
+        assert_eq!(string.grapheme_string(), GCString::new("hello"));
     }
 
     #[test]
     fn test_unicode_string_for_ref_smallstring() {
         let small_str: SmallString<[u8; 16]> = SmallString::from("hello");
         let ref_small_str: &SmallString<[u8; 16]> = &small_str;
-        assert_eq!(ref_small_str.unicode_string(), UnicodeString::new("hello"));
+        assert_eq!(ref_small_str.grapheme_string(), GCString::new("hello"));
     }
 
     #[test]
     fn test_unicode_string_for_dyn_as_ref_str() {
         let string: String = String::from("hello");
         let dyn_as_ref_str: &dyn AsRef<str> = &string;
-        assert_eq!(dyn_as_ref_str.unicode_string(), UnicodeString::new("hello"));
+        assert_eq!(dyn_as_ref_str.grapheme_string(), GCString::new("hello"));
     }
 
     #[test]
     fn test_unicode_string_for_ref_str() {
         let str_slice: &str = "hello";
         let ref_str_slice: &&str = &str_slice;
-        assert_eq!(ref_str_slice.unicode_string(), UnicodeString::new("hello"));
+        assert_eq!(ref_str_slice.grapheme_string(), GCString::new("hello"));
     }
 }

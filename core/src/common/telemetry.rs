@@ -23,14 +23,7 @@ use miette::IntoDiagnostic;
 use smallstr::SmallString;
 use strum_macros::{Display, EnumString};
 
-use crate::{Percent,
-            RateLimitStatus,
-            RateLimiter,
-            RingBuffer,
-            TimeDuration,
-            ch,
-            f64,
-            ok};
+use crate::{Pc, RateLimitStatus, RateLimiter, RingBuffer, TimeDuration, ch, f64, ok};
 
 pub(in crate::common) mod sizing {
     use super::*;
@@ -182,9 +175,9 @@ pub mod constructor {
     // XMARK: Clever Rust, use of `impl Into<struct>` for constructor & `const N: usize` for arrays.
 
     impl<const N: usize> Telemetry<N> {
-        pub fn new(options: impl Into<ResponseTimesRingBufferOptions>) -> Self {
+        pub fn new(arg_opts: impl Into<ResponseTimesRingBufferOptions>) -> Self {
             // "Dynamically" convert the options argument into the actual options struct.
-            let options: ResponseTimesRingBufferOptions = options.into();
+            let options: ResponseTimesRingBufferOptions = arg_opts.into();
             Self {
                 ring_buffer: RingBuffer::default(),
                 start_timestamp: Instant::now(),
@@ -308,14 +301,14 @@ mod calculator {
         ///
         /// Returns the representative duration for the most common bucket and the percentage
         /// of occurrences of that bucket.
-        pub fn median(&self) -> Option<(Duration, Percent, TelemetryAtomHint)> {
+        pub fn median(&self) -> Option<(Duration, Pc, TelemetryAtomHint)> {
             if self.ring_buffer.is_empty() {
                 return None;
             }
 
             if self.ring_buffer.len() == 1 {
                 let atom = self.ring_buffer.iter().next().copied()?;
-                let percent = Percent::try_and_convert(100)?;
+                let percent = Pc::try_and_convert(100)?;
                 return Some((atom.as_duration(), percent, atom.hint));
             }
 
@@ -324,7 +317,7 @@ mod calculator {
                 let first_atom = it.next().copied()?;
                 let second_atom = it.next().copied()?;
                 let median = (first_atom.as_duration() + second_atom.as_duration()) / 2;
-                let pc = Percent::try_and_convert(50)?;
+                let pc = Pc::try_and_convert(50)?;
                 return Some((median, pc, first_atom.hint));
             }
 
@@ -366,7 +359,7 @@ mod calculator {
             let lhs = f64(max_count);
             let rhs = f64(ch(self.ring_buffer.len()));
             let percent = lhs / rhs * 100.0;
-            let percent = Percent::try_and_convert(percent)?;
+            let percent = Pc::try_and_convert(percent)?;
 
             if max_key == 0 {
                 None
@@ -813,7 +806,7 @@ mod tests_math {
             response_times.median(),
             Some((
                 Duration::from_micros(300),
-                Percent::try_and_convert(40).unwrap(),
+                Pc::try_and_convert(40).unwrap(),
                 TelemetryAtomHint::None
             ))
         );
@@ -858,7 +851,7 @@ mod tests_median {
             response_times.median(),
             Some((
                 Duration::from_micros(100),
-                Percent::try_and_convert(100).unwrap(),
+                Pc::try_and_convert(100).unwrap(),
                 TelemetryAtomHint::None
             ))
         );
@@ -887,7 +880,7 @@ mod tests_median {
             response_times.median(),
             Some((
                 Duration::from_micros(150),
-                Percent::try_and_convert(50).unwrap(),
+                Pc::try_and_convert(50).unwrap(),
                 TelemetryAtomHint::None
             ))
         );
@@ -919,7 +912,7 @@ mod tests_median {
             response_times.median(),
             Some((
                 Duration::from_micros(300),
-                Percent::try_and_convert(40).unwrap(),
+                Pc::try_and_convert(40).unwrap(),
                 TelemetryAtomHint::None
             ))
         );
@@ -944,7 +937,7 @@ mod tests_median {
             response_times.median(),
             Some((
                 Duration::from_micros(100),
-                Percent::try_and_convert(100).unwrap(),
+                Pc::try_and_convert(100).unwrap(),
                 TelemetryAtomHint::None
             ))
         );
@@ -977,7 +970,7 @@ mod tests_median {
             response_times.median(),
             Some((
                 Duration::from_micros(150),
-                Percent::try_and_convert(50).unwrap(),
+                Pc::try_and_convert(50).unwrap(),
                 TelemetryAtomHint::None
             ))
         );
@@ -1011,7 +1004,7 @@ mod tests_median {
             response_times.median(),
             Some((
                 Duration::from_micros(100),
-                Percent::try_and_convert(60).unwrap(),
+                Pc::try_and_convert(60).unwrap(),
                 TelemetryAtomHint::None
             ))
         );
@@ -1040,7 +1033,7 @@ mod tests_median {
             response_times.median(),
             Some((
                 Duration::from_micros(100),
-                Percent::try_and_convert(60).unwrap(),
+                Pc::try_and_convert(60).unwrap(),
                 TelemetryAtomHint::Render
             ))
         );

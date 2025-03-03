@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::ops::{Add, Deref, DerefMut, Div, Sub, SubAssign};
+use std::{fmt::Debug,
+          ops::{Add, Deref, DerefMut, Div, Sub, SubAssign}};
 
 use crate::{ChUnit, RowIndex, ch, row};
 
@@ -45,16 +46,22 @@ use crate::{ChUnit, RowIndex, ch, row};
 /// let height = height(5);
 /// let height = RowHeight::new(5);
 /// ```
-#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, Debug)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct RowHeight(pub ChUnit);
 
-pub fn height(height: impl Into<ChUnit>) -> RowHeight { RowHeight(height.into()) }
+impl Debug for RowHeight {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RowHeight({:?})", self.0)
+    }
+}
+
+pub fn height(arg_row_height: impl Into<RowHeight>) -> RowHeight { arg_row_height.into() }
 
 mod constructor {
     use super::*;
 
     impl RowHeight {
-        pub fn new(arg: impl Into<ChUnit>) -> Self { RowHeight(arg.into()) }
+        pub fn new(arg_row_height: impl Into<RowHeight>) -> Self { arg_row_height.into() }
 
         /// Subtract 1 from row index to get the height. I.e.: `row index = height - 1`.
         /// row index = height - 1
@@ -74,6 +81,18 @@ mod constructor {
 
     impl From<usize> for RowHeight {
         fn from(height: usize) -> Self { RowHeight(ch(height)) }
+    }
+
+    impl From<u16> for RowHeight {
+        fn from(val: u16) -> Self { RowHeight(val.into()) }
+    }
+
+    impl From<i32> for RowHeight {
+        fn from(val: i32) -> Self { RowHeight(val.into()) }
+    }
+
+    impl From<u8> for RowHeight {
+        fn from(val: u8) -> Self { RowHeight(val.into()) }
     }
 }
 

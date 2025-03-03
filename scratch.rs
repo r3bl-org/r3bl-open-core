@@ -32,8 +32,8 @@ call_if_true!(DEBUG_TUI_COMPOSITOR, {
         a = display_row_index,
         b = display_col_index,
         c = my_offscreen_buffer.window_size,
-        d = str!(clip_2_us),
-        e = clip_2_us.get_display_width(),
+        d = str!(clip_2_gcs),
+        e = clip_2_gcs.get_display_width(),
     );
     // % is Display, ? is Debug.
     tracing::info! {

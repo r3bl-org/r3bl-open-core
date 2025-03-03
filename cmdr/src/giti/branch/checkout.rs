@@ -22,8 +22,8 @@ use branch_checkout_formatting::{add_spaces_to_end_of_string,
 use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_core::{ChUnit,
                 CommonResult,
+                GCString,
                 StringStorage,
-                UnicodeString,
                 VecArray,
                 get_terminal_width,
                 usize};
@@ -305,7 +305,7 @@ mod branch_checkout_formatting {
     use super::*;
 
     pub fn add_spaces_to_end_of_string(string: &str, terminal_width: ChUnit) -> String {
-        let string_length = UnicodeString::str_display_width(string);
+        let string_length = GCString::width(string);
         let spaces_to_add = terminal_width - *string_length;
         let spaces = " ".repeat(usize(spaces_to_add));
         let string = format!("{}{}", string, spaces);

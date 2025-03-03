@@ -89,8 +89,8 @@ impl ModifierKeysMask {
     ///   contain other bits.
     /// - `contains` -> means that your variable ONLY contains these bits.
     /// - Docs: <https://docs.rs/bitflags/latest/bitflags/index.html>
-    pub fn matches(&self, other: impl Into<ModifierKeysMask>) -> MatchResult {
-        let other: ModifierKeysMask = other.into();
+    pub fn matches(&self, arg_mask: impl Into<ModifierKeysMask>) -> MatchResult {
+        let other: ModifierKeysMask = arg_mask.into();
         if *self == other {
             MatchResult::Matches
         } else {

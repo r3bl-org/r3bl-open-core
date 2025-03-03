@@ -37,7 +37,6 @@ use r3bl_core::{call_if_true,
                 GradientLengthKind,
                 LolcatBuilder,
                 TextColorizationPolicy,
-                UnicodeString,
                 VecArray};
 use r3bl_macro::tui_style;
 use r3bl_tui::{render_ops,
@@ -139,6 +138,8 @@ mod animator_task {
 }
 
 mod app_main_impl_trait_app {
+    use r3bl_core::{Colorize, GCStringExt};
+
     use super::{animator_task::start_animator_task, *};
 
     impl App for AppMain {
@@ -196,13 +197,13 @@ mod app_main_impl_trait_app {
                             )
                         };
 
-                        let text_us = UnicodeString::new(&text);
+                        let text_gcs = text.grapheme_string();
 
                         acc_render_ops +=
                             RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
 
                         let texts = color_wheel.colorize_into_styled_texts(
-                            &text_us,
+                            &text_gcs,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachWord(None),
                         );
@@ -227,10 +228,10 @@ mod app_main_impl_trait_app {
                             )
                         };
 
-                        let text_us = UnicodeString::new(&text);
+                        let text_gcs = text.grapheme_string();
 
                         let texts = data.color_wheel_rgb.colorize_into_styled_texts(
-                            &text_us,
+                            &text_gcs,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachWord(None),
                         );
@@ -250,10 +251,10 @@ mod app_main_impl_trait_app {
                             )
                         };
 
-                        let text_us = UnicodeString::new(&text);
+                        let text_gcs = text.grapheme_string();
 
                         let texts = data.lolcat_fg.colorize_into_styled_texts(
-                            &text_us,
+                            &text_gcs,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(None),
                         );
@@ -273,10 +274,10 @@ mod app_main_impl_trait_app {
                             )
                         };
 
-                        let text_us = UnicodeString::new(&text);
+                        let text_gcs = text.grapheme_string();
 
                         let texts = data.lolcat_bg.colorize_into_styled_texts(
-                            &text_us,
+                            &text_gcs,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(None),
                         );
@@ -516,7 +517,7 @@ mod app_main_impl_trait_app {
             data.lolcat_bg = ColorWheel::new(smallvec![
                 ColorWheelConfig::Lolcat(
                     LolcatBuilder::new()
-                        .set_background_mode(true)
+                        .set_background_mode(Colorize::BothBackgroundAndForeground)
                         .set_color_change_speed(ColorChangeSpeed::Rapid)
                         .set_seed(0.5)
                         .set_seed_delta(1.0),

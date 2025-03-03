@@ -33,15 +33,15 @@ use std::{error::Error,
 /// # Example
 ///
 /// ```
-/// use r3bl_core::{CommonResult, CommonError, CommonErrorType, Percent};
-/// pub fn try_from_pair(pair: (i32, i32)) -> CommonResult<(Percent, Percent)> {
+/// use r3bl_core::{CommonResult, CommonError, CommonErrorType, Pc};
+/// pub fn try_from_pair(pair: (i32, i32)) -> CommonResult<(Pc, Pc)> {
 ///   let first = pair.0.try_into();
 ///   let second = pair.0.try_into();
 ///
 ///   match (first, second) {
 ///     (Ok(first), Ok(second)) => Ok((first, second)),
 ///     _ => {
-///       let err_msg = format!("Invalid percentage values in tuple: {:?}", pair);
+///       let err_msg = format!("Invalid Pcage values in tuple: {:?}", pair);
 ///       CommonError::new_error_result(CommonErrorType::ValueOutOfRange, &err_msg)
 ///     }
 ///   }
@@ -55,15 +55,15 @@ pub type CommonResult<T> = miette::Result<T>;
 /// # Example
 ///
 /// ```
-/// use r3bl_core::{CommonResult, CommonError, CommonErrorType, Percent};
-/// pub fn try_from_pair(pair: (i32, i32)) -> CommonResult<(Percent, Percent)> {
+/// use r3bl_core::{CommonResult, CommonError, CommonErrorType, Pc};
+/// pub fn try_from_pair(pair: (i32, i32)) -> CommonResult<(Pc, Pc)> {
 ///   let first = pair.0.try_into();
 ///   let second = pair.1.try_into();
 ///
 ///   match (first, second) {
 ///     (Ok(first), Ok(second)) => Ok((first, second)),
 ///     _ => {
-///       let err_msg = format!("Invalid percentage values in tuple: {:?}", pair);
+///       let err_msg = format!("Invalid Pcage values in tuple: {:?}", pair);
 ///       CommonError::new_error_result(CommonErrorType::ValueOutOfRange, &err_msg)
 ///     }
 ///   }

@@ -20,9 +20,11 @@ pub mod color_wheel_impl;
 pub mod config;
 pub mod lolcat_api;
 pub mod lolcat_impl;
+pub mod types;
 
 // Re-export.
 pub use color_wheel_impl::*;
 pub use config::*;
 pub use lolcat_api::*;
 pub use lolcat_impl::*;
+pub use types::*;

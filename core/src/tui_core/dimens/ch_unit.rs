@@ -52,7 +52,7 @@ impl ChUnit {
 /// let it_usize: usize = 12;
 /// let it_ch: ChUnit = ch(it_usize);
 /// ```
-pub fn ch(value: impl Into<ChUnit>) -> ChUnit { value.into() }
+pub fn ch(arg_num: impl Into<ChUnit>) -> ChUnit { arg_num.into() }
 
 /// ```rust
 /// use r3bl_core::{ch, ChUnit, usize};
@@ -60,7 +60,7 @@ pub fn ch(value: impl Into<ChUnit>) -> ChUnit { value.into() }
 /// let it_ch: ChUnit = ch(12);
 /// let it_usize: usize = usize(it_ch);
 /// ```
-pub fn usize(value: impl Into<usize>) -> usize { value.into() }
+pub fn usize(arg_num: impl Into<usize>) -> usize { arg_num.into() }
 
 /// ```rust
 /// use r3bl_core::{ch, ChUnit, isize};
@@ -68,7 +68,7 @@ pub fn usize(value: impl Into<usize>) -> usize { value.into() }
 /// let it_ch: ChUnit = ch(12);
 /// let it_isize: isize = isize(it_ch);
 /// ```
-pub fn isize(value: impl Into<isize>) -> isize { value.into() }
+pub fn isize(arg_num: impl Into<isize>) -> isize { arg_num.into() }
 
 /// ```rust
 /// use r3bl_core::{ch, ChUnit, f64};
@@ -76,7 +76,7 @@ pub fn isize(value: impl Into<isize>) -> isize { value.into() }
 /// let it_ch: ChUnit = ch(12);
 /// let it_f64: f64 = f64(it_ch);
 /// ```
-pub fn f64(value: impl Into<f64>) -> f64 { value.into() }
+pub fn f64(arg_num: impl Into<f64>) -> f64 { arg_num.into() }
 
 /// ```rust
 /// use r3bl_core::{ch, ChUnit, u8};
@@ -85,7 +85,7 @@ pub fn f64(value: impl Into<f64>) -> f64 { value.into() }
 /// let it_ch: ChUnit = ch(it_usize);
 /// let it_u8: u8 = u8(it_ch);
 /// ```
-pub fn u8(value: impl Into<u8>) -> u8 { value.into() }
+pub fn u8(arg_num: impl Into<u8>) -> u8 { arg_num.into() }
 
 /// ```rust
 /// use r3bl_core::{ch, ChUnit, u16};
@@ -93,7 +93,7 @@ pub fn u8(value: impl Into<u8>) -> u8 { value.into() }
 /// let it_ch: ChUnit = ch(12);
 /// let it_u16: u16 = u16(it_ch);
 /// ```
-pub fn u16(value: impl Into<u16>) -> u16 { value.into() }
+pub fn u16(arg_num: impl Into<u16>) -> u16 { arg_num.into() }
 
 impl Debug for ChUnit {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

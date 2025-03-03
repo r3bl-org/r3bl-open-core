@@ -17,15 +17,14 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use super::LolcatBuilder;
+use super::{Colorize, LolcatBuilder, Seed, SeedDelta};
 use crate::{ColorUtils,
             ColorWheelControl,
+            GCString,
             RgbValue,
             TuiColor,
             TuiStyle,
             TuiStyledTexts,
-            UnicodeString,
-            seg_str,
             tui_styled_text};
 
 /// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
@@ -33,7 +32,7 @@ use crate::{ColorUtils,
 #[derive(Clone, Copy, PartialEq, size_of::SizeOf)]
 pub struct Lolcat {
     pub color_wheel_control: ColorWheelControl,
-    pub seed_delta: f64,
+    pub seed_delta: SeedDelta,
 }
 
 impl Default for Lolcat {
@@ -44,9 +43,9 @@ impl Debug for Lolcat {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         return write! { f,
           "lolcat: [{}, {}, {}, {}]",
-          pretty_print_f64(self.color_wheel_control.seed),
-          pretty_print_f64(self.color_wheel_control.spread),
-          pretty_print_f64(self.color_wheel_control.frequency),
+          pretty_print_f64(*self.color_wheel_control.seed),
+          pretty_print_f64(*self.color_wheel_control.spread),
+          pretty_print_f64(*self.color_wheel_control.frequency),
           self.color_wheel_control.color_change_speed
         };
 
@@ -60,14 +59,16 @@ impl Lolcat {
     /// (it will always colorize to truecolor regardless of terminal limitations). Use
     /// [crate::ColorWheel] if you want to respect
     /// [r3bl_ansi_color::global_color_support::detect].
-    pub fn colorize_to_styled_texts(&mut self, us: &UnicodeString) -> TuiStyledTexts {
+    pub fn colorize_to_styled_texts(&mut self, us: &GCString) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
 
         for seg in us.iter() {
             let new_color = ColorUtils::get_color_tuple(&self.color_wheel_control);
             let derived_from_new_color = ColorUtils::calc_fg_color(new_color);
 
-            let style = if self.color_wheel_control.background_mode {
+            let style = if self.color_wheel_control.background_mode
+                == Colorize::BothBackgroundAndForeground
+            {
                 TuiStyle {
                     color_fg: TuiColor::Rgb(RgbValue::from_u8(
                         derived_from_new_color.0,
@@ -97,11 +98,11 @@ impl Lolcat {
 
             acc += tui_styled_text!(
                 @style: style,
-                @text: seg_str!(seg, us),
+                @text: seg.get_str(us),
             );
 
             self.color_wheel_control.seed +=
-                f64::from(self.color_wheel_control.color_change_speed);
+                Seed::from(self.color_wheel_control.color_change_speed);
         }
 
         acc

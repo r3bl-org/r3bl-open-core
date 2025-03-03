@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign};
+use std::{fmt::Debug,
+          ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
 use crate::{ChUnit, ColWidth, usize, width};
 
@@ -31,18 +32,22 @@ use crate::{ChUnit, ColWidth, usize, width};
 /// let col = col(5);
 /// let col = ColIndex::new(5);
 /// ```
-#[derive(
-    Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, Debug, size_of::SizeOf,
-)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, size_of::SizeOf)]
 pub struct ColIndex(pub ChUnit);
 
-pub fn col(col: impl Into<ChUnit>) -> ColIndex { ColIndex(col.into()) }
+impl Debug for ColIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ColIndex({:?})", self.0)
+    }
+}
+
+pub fn col(arg_col_index: impl Into<ColIndex>) -> ColIndex { arg_col_index.into() }
 
 mod constructor {
     use super::*;
 
     impl ColIndex {
-        pub fn new(ch_unit: impl Into<ChUnit>) -> Self { ColIndex(ch_unit.into()) }
+        pub fn new(arg_col_index: impl Into<ColIndex>) -> Self { arg_col_index.into() }
 
         pub fn as_usize(&self) -> usize { usize(self.0) }
 
@@ -65,6 +70,14 @@ mod constructor {
 
     impl From<ColIndex> for usize {
         fn from(col: ColIndex) -> Self { col.as_usize() }
+    }
+
+    impl From<u16> for ColIndex {
+        fn from(val: u16) -> Self { ColIndex(val.into()) }
+    }
+
+    impl From<i32> for ColIndex {
+        fn from(val: i32) -> Self { ColIndex(val.into()) }
     }
 }
 

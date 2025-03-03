@@ -15,20 +15,19 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{Display, Formatter},
-          io::IsTerminal};
+use std::fmt::{Display, Formatter};
 
 use rand::random;
+
+use crate::{Colorize, Frequency, Seed, Spread};
 
 /// A struct to contain info we need to print with every character.
 #[derive(Debug, Clone, Copy, size_of::SizeOf)]
 pub struct ColorWheelControl {
-    pub seed: f64,
-    pub spread: f64,
-    pub frequency: f64,
-    pub background_mode: bool,
-    pub dialup_mode: bool,
-    pub print_color: bool,
+    pub seed: Seed,
+    pub spread: Spread,
+    pub frequency: Frequency,
+    pub background_mode: Colorize,
     pub color_change_speed: ColorChangeSpeed,
 }
 
@@ -38,13 +37,11 @@ impl PartialEq for ColorWheelControl {
     /// 2. <https://doc.rust-lang.org/std/primitive.f64.html#associatedconstant.EPSILON>
     /// 3. <https://rust-lang.github.io/rust-clippy/master/index.html#float_equality_without_abs>
     fn eq(&self, other: &Self) -> bool {
-        (self.seed - other.seed).abs() < f64::EPSILON // self.seed == other.seed
-   && self.spread == other.spread
-   && self.frequency == other.frequency
-   && self.background_mode == other.background_mode
-   && self.dialup_mode == other.dialup_mode
-   && self.print_color == other.print_color
-   && self.color_change_speed == other.color_change_speed
+        (*self.seed - *other.seed).abs() < f64::EPSILON // self.seed == other.seed
+            && *self.spread == *other.spread
+            && *self.frequency == *other.frequency
+            && self.background_mode == other.background_mode
+            && self.color_change_speed == other.color_change_speed
     }
 }
 
@@ -67,44 +64,42 @@ impl Display for ColorChangeSpeed {
     }
 }
 
-impl From<ColorChangeSpeed> for f64 {
+impl From<ColorChangeSpeed> for Seed {
     /// The float is added to seed in [crate::Lolcat] after every iteration. If the number
     /// is `Rapid` then the changes in color between new lines is quite abrupt. If it is
     /// `Slow` then the changes are much much smoother. And so this is the default.
-    fn from(value: ColorChangeSpeed) -> Self {
+    fn from(value: ColorChangeSpeed) -> Seed {
         match value {
-            ColorChangeSpeed::Rapid => 1.0,
-            ColorChangeSpeed::Slow => 0.1,
+            ColorChangeSpeed::Rapid => 1.0.into(),
+            ColorChangeSpeed::Slow => 0.1.into(),
         }
     }
 }
 
 impl ColorWheelControl {
     pub fn new(
-        seed: &str,
-        spread: &str,
-        frequency: &str,
+        arg_seed: impl Into<Seed>,
+        arg_spread: impl Into<Spread>,
+        arg_frequency: impl Into<Frequency>,
         color_change: ColorChangeSpeed,
     ) -> ColorWheelControl {
-        let mut seed: f64 = seed.parse().unwrap();
-        if seed == 0.0 {
-            seed = random::<f64>() * 10e9;
+        let mut seed: Seed = arg_seed.into();
+        if *seed == 0.0 {
+            *seed = random::<f64>() * 10e9;
         }
-        let spread: f64 = spread.parse().unwrap();
-        let frequency: f64 = frequency.parse().unwrap();
+        let spread: Spread = arg_spread.into();
+        let frequency: Frequency = arg_frequency.into();
 
         ColorWheelControl {
             seed,
             spread,
             frequency,
-            background_mode: false,
-            dialup_mode: false,
-            print_color: std::io::stdout().is_terminal(),
+            background_mode: Colorize::OnlyForeground,
             color_change_speed: color_change,
         }
     }
 }
 
 impl Default for ColorWheelControl {
-    fn default() -> Self { Self::new("0.0", "3.0", "0.1", ColorChangeSpeed::Slow) }
+    fn default() -> Self { Self::new(0.0, 3.0, 0.1, ColorChangeSpeed::Slow) }
 }

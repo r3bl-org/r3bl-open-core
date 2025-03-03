@@ -890,9 +890,9 @@ let mut lolcat = LolcatBuilder::new()
   .build();
 
 let content = "Hello, world!";
-let content_us = UnicodeString::new(content);
+let content_gcs = UnicodeString::new(content);
 let lolcat_mut = &mut lolcat;
-let st = lolcat_mut.colorize_to_styled_texts(&content_us);
+let st = lolcat_mut.colorize_to_styled_texts(&content_gcs);
 lolcat.next_color();
 ```
 

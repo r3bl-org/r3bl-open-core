@@ -346,17 +346,17 @@ pub mod tracing_config_options {
 /// If you don't want to use sophisticated logging, you can use the [file_log] function to
 /// log messages to a file.
 pub fn try_initialize_logging_global(
-    options: impl Into<TracingConfig>,
+    arg_options: impl Into<TracingConfig>,
 ) -> miette::Result<()> {
-    let it: TracingConfig = options.into();
+    let config: TracingConfig = arg_options.into();
 
     // Early return if the level filter is off.
-    if matches!(it.get_level_filter(), tracing_core::LevelFilter::OFF) {
+    if matches!(config.get_level_filter(), tracing_core::LevelFilter::OFF) {
         return ok!();
     }
 
     // Try to initialize the tracing system w/ (rolling) file log output.
-    it.install_global()
+    config.install_global()
 }
 
 /// Thread local subscriber, which is thread local, and you can assign different ones
@@ -381,17 +381,17 @@ pub fn try_initialize_logging_global(
 /// If you don't want to use sophisticated logging, you can use the [file_log] function to
 /// log messages to a file.
 pub fn try_initialize_logging_thread_local(
-    options: impl Into<TracingConfig>,
+    arg_options: impl Into<TracingConfig>,
 ) -> miette::Result<Option<dispatcher::DefaultGuard>> {
-    let it: TracingConfig = options.into();
+    let config: TracingConfig = arg_options.into();
 
     // Early return if the level filter is off.
-    if matches!(it.get_level_filter(), tracing_core::LevelFilter::OFF) {
+    if matches!(config.get_level_filter(), tracing_core::LevelFilter::OFF) {
         return Ok(None);
     }
 
     // Try to initialize the tracing system w/ (rolling) file log output.
-    it.install_thread_local().map(Some)
+    config.install_thread_local().map(Some)
 }
 
 /// This is a simple function that logs a message to a file. This is meant to be used when

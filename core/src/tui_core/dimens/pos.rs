@@ -15,76 +15,6 @@
  *   limitations under the License.
  */
 
-//! [Pos] is a struct that holds the `row` and `col` indices of a character in a text
-//! buffer. [RowIndex] and [ColIndex] are the types of the `row` and `col` indices
-//! respectively. This ensures that it isn't possible to use a `col` when you intended to
-//! use a `row` and vice versa. Also [ScrOfs] is an alias for [Pos], since a scroll offset
-//! is just a position after all.
-//!
-//! Here is a visual representation of how position and sizing works for the layout
-//! engine.
-//!
-//! ```text
-//!     0   4    9    1    2    2
-//!                   4    0    5
-//!    ┌────┴────┴────┴────┴────┴── col
-//!  0 ┤     ╭─────────────╮
-//!  1 ┤     │ origin pos: │
-//!  2 ┤     │ [5, 0]      │
-//!  3 ┤     │ size:       │
-//!  4 ┤     │ [16, 5]     │
-//!  5 ┤     ╰─────────────╯
-//!    │
-//!   row
-//! ```
-//!
-//! # The many ways to create one
-//!
-//! This API uses the `impl Into<struct>` pattern and [Add] `+` operator overloading to
-//! allow for easy conversion between [crate::ChUnit] and [RowIndex]/[ColIndex].
-//! - You can use [crate::pos()] function and pass it a [RowIndex] and [ColIndex] tuple,
-//!   or pass a sequence of them with the [Add] `+` operator.
-//! - Just using the [Add] `+` operator:
-//!     - You can use [Add] to convert: [RowIndex] + [ColIndex], into: a [Pos].
-//!     - You can use [Add] to convert: [ColIndex] + [RowIndex], into: a [Pos].
-//!
-//! # Examples
-//!
-//! ```rust
-//! use r3bl_core::{
-//!     ch,
-//!     ScrOfs, Pos, RowIndex, ColIndex,
-//!     row, col, pos,
-//! };
-//!
-//! // So many different ways to create a Pos.
-//! let pos_1: Pos = pos(row(2) + col(3));
-//! let pos_1: Pos = (row(2) + col(3)).into();
-//! let pos_1: Pos = (row(2), col(3)).into();
-//! let pos_1: Pos = (col(3), row(2)).into();
-//!
-//! // So many different ways to create a ScrOfs.
-//! let scr_ofs_1: ScrOfs = pos(row(2) + col(3));
-//! let scr_ofs_1: ScrOfs = (row(2) + col(3)).into();
-//! let scr_ofs_1: ScrOfs = (row(2), col(3)).into();
-//! let scr_ofs_1: ScrOfs = (col(3), row(2)).into();
-//!
-//! assert!(matches!(pos_1.row_index, RowIndex(_)));
-//! assert!(matches!(pos_1.col_index, ColIndex(_)));
-//! assert_eq!(*pos_1.row_index, ch(2));
-//! assert_eq!(*pos_1.col_index, ch(3));
-//!
-//! let pos_a = pos(row(4) + col(10));
-//! let pos_b = pos(row(2) + col(6));
-//!
-//! let pos_sum = pos_a + pos_b;
-//! assert_eq!(*pos_sum.row_index, ch(6));
-//! assert_eq!(*pos_sum.col_index, ch(16));
-//!
-//! let pos_diff = pos_a - pos_b;
-//! assert_eq!(*pos_diff.row_index, ch(2));
-//! assert_eq!(*pos_diff.col_index, ch(4));
-//! ```
 use std::{fmt::{Debug, Formatter, Result},
           ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
@@ -92,10 +22,80 @@ use crate::{ColIndex, ColWidth, Dim, RowHeight, RowIndex, ch};
 
 // Type aliases for better code readability.
 
-pub type ScrOfs = Pos;
 pub type Row = RowIndex;
 pub type Col = ColIndex;
 
+/// `Pos` is a struct that holds the `row` and `col` indices of a character in a text
+/// buffer. [RowIndex] and [ColIndex] are the types of the `row` and `col` indices
+/// respectively. This ensures that it isn't possible to use a `col` when you intended to
+/// use a `row` and vice versa.
+///
+/// Also [crate::ScrOfs] is a "newtype" built around `Pos`, since a scroll offset is just
+/// a position after all, but semantically it is used for different reasons in the API. It
+/// is used to declare a differnet intention on how `Pos` is used.
+///
+/// Here is a visual representation of how position and sizing works for the layout
+/// engine.
+///
+/// ```text
+///     0   4    9    1    2    2
+///                   4    0    5
+///    ┌────┴────┴────┴────┴────┴── col
+///  0 ┤     ╭─────────────╮
+///  1 ┤     │ origin pos: │
+///  2 ┤     │ [5, 0]      │
+///  3 ┤     │ size:       │
+///  4 ┤     │ [16, 5]     │
+///  5 ┤     ╰─────────────╯
+///    │
+///   row
+/// ```
+///
+/// # The many ways to create one
+///
+/// This API uses the `impl Into<struct>` pattern and [Add] `+` operator overloading to
+/// allow for easy conversion between [crate::ChUnit] and [RowIndex]/[ColIndex].
+/// - You can use [crate::pos()] function and pass it a [RowIndex] and [ColIndex] tuple,
+///   or pass a sequence of them with the [Add] `+` operator.
+/// - Just using the [Add] `+` operator:
+///     - You can use [Add] to convert: [RowIndex] + [ColIndex], into: a `Pos`.
+///     - You can use [Add] to convert: [ColIndex] + [RowIndex], into: a `Pos`.
+///
+/// # Examples
+///
+/// ```rust
+/// use r3bl_core::{
+///     ch,
+///     ScrOfs, Pos, RowIndex, ColIndex,
+///     row, col, pos, scr_ofs
+/// };
+///
+/// // So many different ways to create a Pos.
+/// let pos_1: Pos = pos(row(2) + col(3));
+/// let pos_1: Pos = (row(2) + col(3)).into();
+/// let pos_1: Pos = (row(2), col(3)).into();
+/// let pos_1: Pos = (col(3), row(2)).into();
+///
+/// // Create a ScrOfs from a Pos.
+/// let scr_ofs_1: ScrOfs = (row(2) + col(3)).into();
+/// let scr_ofs_1: ScrOfs = pos_1.into();
+///
+/// assert!(matches!(pos_1.row_index, RowIndex(_)));
+/// assert!(matches!(pos_1.col_index, ColIndex(_)));
+/// assert_eq!(*pos_1.row_index, ch(2));
+/// assert_eq!(*pos_1.col_index, ch(3));
+///
+/// let pos_a = pos(row(4) + col(10));
+/// let pos_b = pos(row(2) + col(6));
+///
+/// let pos_sum = pos_a + pos_b;
+/// assert_eq!(*pos_sum.row_index, ch(6));
+/// assert_eq!(*pos_sum.col_index, ch(16));
+///
+/// let pos_diff = pos_a - pos_b;
+/// assert_eq!(*pos_diff.row_index, ch(2));
+/// assert_eq!(*pos_diff.col_index, ch(4));
+/// ```
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, size_of::SizeOf)]
 pub struct Pos {
     /// Row index, 0 based.
@@ -104,15 +104,13 @@ pub struct Pos {
     pub col_index: ColIndex,
 }
 
-pub fn pos(arg: impl Into<Pos>) -> Pos { arg.into() }
-
-pub fn scr_ofs(arg: impl Into<Pos>) -> ScrOfs { arg.into() }
+pub fn pos(arg_pos: impl Into<Pos>) -> Pos { arg_pos.into() }
 
 mod constructor {
     use super::*;
 
     impl Pos {
-        pub fn new(arg: impl Into<Pos>) -> Self { arg.into() }
+        pub fn new(arg_pos: impl Into<Pos>) -> Self { arg_pos.into() }
     }
 
     impl From<(RowIndex, ColIndex)> for Pos {
@@ -153,6 +151,18 @@ mod constructor {
                 col_index: self,
             }
         }
+    }
+}
+
+mod convert {
+    use super::*;
+
+    impl From<Pos> for RowIndex {
+        fn from(pos: Pos) -> Self { pos.row_index }
+    }
+
+    impl From<Pos> for ColIndex {
+        fn from(pos: Pos) -> Self { pos.col_index }
     }
 }
 
@@ -357,13 +367,13 @@ mod api {
     // Row index API.
     impl Pos {
         /// Set row index to `value`.
-        pub fn set_row(&mut self, value: impl Into<RowIndex>) {
-            self.row_index = value.into();
+        pub fn set_row(&mut self, arg_row_index: impl Into<RowIndex>) {
+            self.row_index = arg_row_index.into();
         }
 
         /// Increment row index by `value`.
-        pub fn add_row(&mut self, value: impl Into<RowHeight>) {
-            let value: RowHeight = value.into();
+        pub fn add_row(&mut self, arg_row_index: impl Into<RowHeight>) {
+            let value: RowHeight = arg_row_index.into();
             *self.row_index += *value;
         }
 
@@ -371,18 +381,18 @@ mod api {
         /// `max_row`.
         pub fn add_row_with_bounds(
             &mut self,
-            value: impl Into<RowHeight>,
-            max_row: impl Into<RowHeight>,
+            arg_row_height: impl Into<RowHeight>,
+            arg_max_row_height: impl Into<RowHeight>,
         ) -> Self {
-            let value: RowHeight = value.into();
-            let max: RowHeight = max_row.into();
+            let value: RowHeight = arg_row_height.into();
+            let max: RowHeight = arg_max_row_height.into();
             *self.row_index = std::cmp::min(*self.row_index + *value, *max);
             *self
         }
 
         /// Decrement row index by `value`.
-        pub fn sub_row(&mut self, value: impl Into<RowHeight>) {
-            let value: RowHeight = value.into();
+        pub fn sub_row(&mut self, arg_row_height: impl Into<RowHeight>) {
+            let value: RowHeight = arg_row_height.into();
             *self.row_index -= *value;
         }
     }
@@ -390,20 +400,20 @@ mod api {
     // Col index API.
     impl Pos {
         /// Set col index to `value`.
-        pub fn set_col(&mut self, value: impl Into<ColIndex>) {
-            let value: ColIndex = value.into();
+        pub fn set_col(&mut self, arg_col_index: impl Into<ColIndex>) {
+            let value: ColIndex = arg_col_index.into();
             self.col_index = value;
         }
 
         /// Increment col index by `value`. Returns a copy of `Pos`.
-        pub fn add_col(&mut self, value: impl Into<ColWidth>) -> Self {
-            let width: ColWidth = value.into();
+        pub fn add_col(&mut self, arg_col_width: impl Into<ColWidth>) -> Self {
+            let width: ColWidth = arg_col_width.into();
             *self.col_index += *width;
             *self
         }
 
         /// Increment col index by `col_amt`, while making sure it will never exceed
-        /// `max_col_amt`. This function is not concerned with scrolling or [ScrOfs].
+        /// `max_col_amt`. This function is not concerned with scrolling or [crate::ScrOfs].
         ///
         /// Note that a caret is allowed to "go past" the end of the its max index, so max
         /// index + 1 is a valid position.
@@ -425,23 +435,23 @@ mod api {
         /// for that.
         pub fn add_col_with_bounds(
             &mut self,
-            col_amt: impl Into<ColWidth>,
-            max_col_amt: impl Into<ColWidth>,
+            arg_col_width: impl Into<ColWidth>,
+            arg_max_col_width: impl Into<ColWidth>,
         ) {
-            let value: ColWidth = col_amt.into();
-            let max: ColWidth = max_col_amt.into();
+            let value: ColWidth = arg_col_width.into();
+            let max: ColWidth = arg_max_col_width.into();
             *self.col_index = std::cmp::min(*self.col_index + *value, *max);
         }
 
         /// Clip col index to `max_col` if it exceeds it.
-        pub fn clip_col_to_bounds(&mut self, max_col: impl Into<ColWidth>) {
-            let max: ColWidth = max_col.into();
+        pub fn clip_col_to_bounds(&mut self, arg_max_col_width: impl Into<ColWidth>) {
+            let max: ColWidth = arg_max_col_width.into();
             *self.col_index = std::cmp::min(*self.col_index, *max);
         }
 
         /// Decrement col index by `value`.
-        pub fn sub_col(&mut self, value: impl Into<ColWidth>) {
-            let value: ColWidth = value.into();
+        pub fn sub_col(&mut self, arg_col_width: impl Into<ColWidth>) {
+            let value: ColWidth = arg_col_width.into();
             *self.col_index -= *value;
         }
     }
@@ -454,7 +464,7 @@ mod debug {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             write!(
                 f,
-                "[c: {a:?}, r: {b:?}]",
+                "Pos [c: {a:?}, r: {b:?}]",
                 a = *self.col_index,
                 b = *self.row_index
             )
@@ -484,10 +494,6 @@ mod tests {
             let pos_2 = pos(col(2) + row(1));
             assert_eq!(*pos_2.row_index, ch(1));
             assert_eq!(*pos_2.col_index, ch(2));
-
-            let scr_ofs_1 = scr_ofs(row(1) + col(2));
-            assert_eq!(*scr_ofs_1.row_index, ch(1));
-            assert_eq!(*scr_ofs_1.col_index, ch(2));
         }
 
         // Methods.
@@ -557,7 +563,7 @@ mod tests {
             let pos = Pos::new((ColIndex::new(ch(2)), RowIndex::new(ch(1))));
             let mut acc = String::new();
             let _ = write!(acc, "{:?}", pos);
-            assert_eq!(acc, "[c: 2, r: 1]");
+            assert_eq!(acc, "Pos [c: 2, r: 1]");
         }
 
         // Mul (ColWidthCount, RowHeightCount) or (RowHeightCount, ColWidthCount).
@@ -755,5 +761,14 @@ mod tests {
 
         let pos1 = pos0 + ch(12);
         assert_eq!(pos1, row(16) + col(17));
+    }
+
+    #[test]
+    fn test_convert_pos_to_row_or_col() {
+        let pos = row(1) + col(2);
+        let r: RowIndex = pos.into();
+        let c: ColIndex = pos.into();
+        assert_eq!(c, col(2));
+        assert_eq!(r, row(1));
     }
 }

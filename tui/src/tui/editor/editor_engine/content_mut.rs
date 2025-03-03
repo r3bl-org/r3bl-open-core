@@ -22,10 +22,10 @@ use r3bl_core::{col,
                 string_storage,
                 CaretScrAdj,
                 ColIndex,
+                GCString,
+                GCStringExt,
                 RowIndex,
                 StringStorage,
-                UnicodeString,
-                UnicodeStringExt,
                 VecArray};
 
 use super::{scroll_editor_content, DeleteSelectionWith};
@@ -68,7 +68,7 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
-            buffer_mut.inner.lines.push("".unicode_string());
+            buffer_mut.inner.lines.push("".grapheme_string());
         }
         return;
     }
@@ -120,7 +120,7 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
                 buffer_mut
                     .inner
                     .lines
-                    .insert(new_row_index.as_usize(), "".unicode_string());
+                    .insert(new_row_index.as_usize(), "".grapheme_string());
             }
         }
 
@@ -137,7 +137,7 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
                 buffer_mut
                     .inner
                     .lines
-                    .insert(cur_row_index.as_usize(), "".unicode_string());
+                    .insert(cur_row_index.as_usize(), "".grapheme_string());
             }
 
             // When buffer_mut goes out of scope, it will be dropped &
@@ -170,13 +170,13 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
 
                         let _ = std::mem::replace(
                             &mut buffer_mut.inner.lines[row_index],
-                            left_string.unicode_string(),
+                            left_string.grapheme_string(),
                         );
 
                         buffer_mut
                             .inner
                             .lines
-                            .insert(row_index + 1, right_string.unicode_string());
+                            .insert(row_index + 1, right_string.grapheme_string());
 
                         scroll_editor_content::inc_caret_row(
                             buffer_mut.inner.caret_raw,
@@ -227,7 +227,7 @@ pub fn delete_at_caret(
             let line = buffer.line_at_caret_scr_adj()?;
 
             let new_line_content =
-                line.delete_char_at_display_col(buffer.get_caret_scr_adj().col_index)?;
+                line.delete_char_at_col(buffer.get_caret_scr_adj().col_index)?;
 
             // When buffer_mut goes out of scope, it will be dropped &
             // validation performed.
@@ -237,7 +237,7 @@ pub fn delete_at_caret(
                     (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
                 let _ = std::mem::replace(
                     &mut buffer_mut.inner.lines[row_index.as_usize()],
-                    new_line_content.unicode_string(),
+                    new_line_content.grapheme_string(),
                 );
             }
 
@@ -269,7 +269,7 @@ pub fn delete_at_caret(
                     (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
                 let _ = std::mem::replace(
                     &mut buffer_mut.inner.lines[row_index.as_usize()],
-                    new_line_content.unicode_string(),
+                    new_line_content.grapheme_string(),
                 );
                 buffer_mut.inner.lines.remove(row_index.as_usize() + 1);
             }
@@ -287,11 +287,7 @@ pub fn backspace_at_caret(
 
     match buffer.string_to_left_of_caret() {
         Some(seg_result) => {
-            inner::backspace_in_middle_of_line(
-                buffer,
-                engine,
-                seg_result.display_col_at_which_seg_starts,
-            )?;
+            inner::backspace_in_middle_of_line(buffer, engine, seg_result.start_at)?;
         }
         None => {
             inner::backspace_at_start_of_line(buffer, engine)?;
@@ -318,7 +314,7 @@ pub fn backspace_at_caret(
         ) -> Option<()> {
             let cur_line = buffer.line_at_caret_scr_adj()?;
             let new_line_content =
-                cur_line.delete_char_at_display_col(delete_at_this_display_col)?;
+                cur_line.delete_char_at_col(delete_at_this_display_col)?;
 
             // When buffer_mut goes out of scope, it will be dropped &
             // validation performed.
@@ -328,7 +324,7 @@ pub fn backspace_at_caret(
                     (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
                 let _ = std::mem::replace(
                     &mut buffer_mut.inner.lines[cur_row_index.as_usize()],
-                    new_line_content.unicode_string(),
+                    new_line_content.grapheme_string(),
                 );
 
                 let new_line_content_display_width =
@@ -384,7 +380,7 @@ pub fn backspace_at_caret(
 
                 let _ = std::mem::replace(
                     &mut buffer_mut.inner.lines[prev_row_index.as_usize()],
-                    new_line_content.unicode_string(),
+                    new_line_content.grapheme_string(),
                 );
 
                 let new_line_content_display_width =
@@ -455,21 +451,21 @@ pub fn delete_selected(
             }
 
             // Remove selection range (part of the line).
-            let line_us = lines.get(selected_row_index.as_usize())?.clone();
+            let line_gcs = lines.get(selected_row_index.as_usize())?.clone();
 
-            let keep_before_selected = line_us.clip_to_width(
+            let keep_before_selected_str = line_gcs.clip(
                 col(0),
                 selection_range.get_start_display_col_index_as_width(),
             );
 
-            let keep_after_selected = line_us.clip_to_width(end_col_index, line_width);
+            let keep_after_selected_str = line_gcs.clip(end_col_index, line_width);
 
             let mut remaining_text = StringStorage::with_capacity(
-                keep_before_selected.len() + keep_after_selected.len(),
+                keep_before_selected_str.len() + keep_after_selected_str.len(),
             );
 
-            remaining_text.push_str(keep_before_selected);
-            remaining_text.push_str(keep_after_selected);
+            remaining_text.push_str(keep_before_selected_str);
+            remaining_text.push_str(keep_after_selected_str);
             map_lines_to_replace.insert(selected_row_index, remaining_text);
         }
     }
@@ -484,7 +480,7 @@ pub fn delete_selected(
             let new_line_content = map_lines_to_replace[row_index].clone();
             let _ = std::mem::replace(
                 &mut buffer_mut.inner.lines[row_index.as_usize()],
-                new_line_content.unicode_string(),
+                new_line_content.grapheme_string(),
             );
         }
 
@@ -522,7 +518,7 @@ fn insert_into_existing_line(
     let line = buffer.line_at_row_index(row_index)?;
 
     let (new_line_content, chunk_display_width) =
-        line.insert_chunk_at_display_col(caret_scr_adj.col_index, chunk);
+        line.insert_chunk_at_col(caret_scr_adj.col_index, chunk);
 
     // When buffer_mut goes out of scope, it will be dropped & validation performed.
     {
@@ -531,7 +527,7 @@ fn insert_into_existing_line(
         // Replace existing line w/ new line.
         let _ = std::mem::replace(
             &mut buffer_mut.inner.lines[row_index.as_usize()],
-            new_line_content.unicode_string(),
+            new_line_content.grapheme_string(),
         );
 
         let new_line_content_display_width =
@@ -564,7 +560,7 @@ fn fill_in_missing_lines_up_to_row(args: EditorArgsMut<'_>, row_index: RowIndex)
                 // performed.
                 {
                     let buffer_mut = buffer.get_mut(engine.viewport());
-                    buffer_mut.inner.lines.push("".unicode_string());
+                    buffer_mut.inner.lines.push("".grapheme_string());
                 }
             }
         }
@@ -587,7 +583,7 @@ fn insert_chunk_into_new_line(
         let buffer_mut = buffer.get_mut(engine.viewport());
 
         // Actually add the character to the correct line.
-        let new_content = chunk.unicode_string();
+        let new_content = chunk.grapheme_string();
         let _ = std::mem::replace(
             &mut buffer_mut.inner.lines[row_index_scr_adj],
             new_content,
@@ -595,7 +591,7 @@ fn insert_chunk_into_new_line(
 
         let line_content = &buffer_mut.inner.lines[row_index_scr_adj];
         let line_content_display_width = line_content.display_width;
-        let col_amt = UnicodeString::str_display_width(chunk);
+        let col_amt = GCString::width(chunk);
 
         // Update caret position.
         scroll_editor_content::inc_caret_col_by(

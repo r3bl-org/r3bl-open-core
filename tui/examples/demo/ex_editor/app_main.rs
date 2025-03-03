@@ -14,11 +14,12 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+
 use r3bl_core::{call_if_true,
                 col,
                 get_tui_style,
                 ok,
-                requested_size_percent,
+                req_size_pc,
                 row,
                 send_signal,
                 throws,
@@ -31,10 +32,10 @@ use r3bl_core::{call_if_true,
                 CommonError,
                 CommonResult,
                 Dim,
+                GCStringExt,
                 StringStorage,
                 TuiColor,
                 TuiStylesheet,
-                UnicodeString,
                 VecArray};
 use r3bl_macro::tui_style;
 use r3bl_tui::{box_end,
@@ -397,11 +398,11 @@ mod modal_dialogs {
             let start_display_col_index = col(0);
             let max_display_col_count = width(100);
 
-            let text_us = UnicodeString::new(&text);
+            let text_gcs = text.grapheme_string();
 
             let content = {
-                if text_us.display_width > max_display_col_count {
-                    text_us.clip_to_width(start_display_col_index, max_display_col_count)
+                if text_gcs.display_width > max_display_col_count {
+                    text_gcs.clip(start_display_col_index, max_display_col_count)
                 } else {
                     text.as_str()
                 }
@@ -518,7 +519,7 @@ mod perform_layout {
                         in:                     surface,
                         id:                     FlexBoxId::from(Id::Editor),
                         dir:                    LayoutDirection::Vertical,
-                        requested_size_percent: requested_size_percent!(width: 100, height: 100),
+                        requested_size_percent: req_size_pc!(width: 100, height: 100),
                         styles:                 [Id::EditorStyleNameDefault]
                     );
                     render_component_in_current_box!(
