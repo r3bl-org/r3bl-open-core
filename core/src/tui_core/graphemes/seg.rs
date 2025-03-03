@@ -15,15 +15,10 @@
  *   limitations under the License.
  */
 
-// REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
-// cspell:ignore bindex smallvec ustr assert_eq ustring col_index uindex disp
-
 use std::fmt::Debug;
 
 use super::SegIndex;
 use crate::{ChUnit, ColIndex, ColWidth, usize};
-
-// REVIEW: [x] update docs
 
 /// `Seg` represents grapheme cluster segment within a [super::GCString]. A Unicode
 /// "grapheme" is a user-perceived character. For `UTF-8` encoded text, a grapheme can be
@@ -53,9 +48,9 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 /// # Performance, memory latency, access, allocation
 ///
 /// 1. This struct does not allocate anything and is [Copy].
-/// 2. The [super::GCString] owns the memory and this struct is a "view" into parts
-///    of it, where each part is a grapheme cluster, and each of them is represented by
-///    this struct.
+/// 2. The [super::GCString] owns the memory and this struct is a "view" into parts of it,
+///    where each part is a grapheme cluster, and each of them is represented by this
+///    struct.
 ///
 /// This struct provides information about a single grapheme cluster, including its byte
 /// indices within the original string, its display width, its logical index within the
@@ -79,8 +74,8 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 /// ## Purpose
 ///
 /// The `Seg` struct is used to efficiently represent and manipulate grapheme clusters
-/// within a [super::GCString]. It allows for easy access to the underlying string
-/// slice, as well as information about its display width and position.
+/// within a [super::GCString]. It allows for easy access to the underlying string slice,
+/// as well as information about its display width and position.
 ///
 /// # UTF-8 is variable length encoding
 ///
@@ -110,9 +105,8 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 ///
 /// ## Usage
 ///
-/// This struct is primarily used internally by the [super::GCString] struct.
-/// However, it can also be used directly to access information about individual grapheme
-/// clusters.
+/// This struct is primarily used internally by the [super::GCString] struct. However, it
+/// can also be used directly to access information about individual grapheme clusters.
 ///
 /// ## Example
 ///

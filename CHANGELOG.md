@@ -973,8 +973,10 @@ Changed:
   - `RateLimiter` is a struct that handles rate limiting for a given task. It is used to
     limit the rate at which a task can be executed. It is used in telemetry measurement &
     reporting for the `r3bl_tui` crate.
-  - `RingBuffer` is a struct that is used to store a fixed number of elements in a ring
-    buffer. It is used in telemetry measurement & reporting for the `r3bl_tui` crate.
+  - `RingBufferStack` and `RingBufferHeap` are structs that store a fixed number of
+    elements in a ring buffer. One is allocated on the stack and the other on the heap. It
+    is used in `Telemetry` measurement & reporting in the `r3bl_core` crate and in undo
+    redo history in the `EditorBufferHistory` in the `r3bl_tui` crate.
   - Since `ch!` macro is removed, add new functions to replace it: `ch()`, `usize()`,
     `f64()`, etc. These functions provide better compiler type checking, better
     readability, better composability,  and are much easier to use than the `ch!` macro.
