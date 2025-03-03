@@ -164,33 +164,33 @@ use crate::{caret_locate,
 /// # Vertical scrolling and viewport
 ///
 /// ```text
-///                    +0--------------------+
-///                    0                     |
-///                    |        above        | <- caret_row_adj
-///                    |                     |
-///                    +--- scroll_offset ---+
-///              ->    |         ↑           |      ↑
-///              |     |                     |      |
-///   caret.row_index  |     |      within vp      |  vp height
-///              |     |                     |      |
-///              ->    |         ↓           |      ↓
-///                    +--- scroll_offset ---+
-///                    |    + vp height      |
-///                    |                     |
-///                    |        below        | <- caret_row_adj
-///                    |                     |
-///                    +---------------------+
+///                    ╭0────────────────────╮
+///                    0                     │
+///                    │        above        │ <- caret_row_adj
+///                    │                     │
+///                    ├─── scroll_offset ───┤
+///              ->    │         ↑           │      ↑
+///              │     │                     │      │
+///   caret.row_index  │      within vp      │  vp height
+///              │     │                     │      │
+///              ->    │         ↓           │      ↓
+///                    ├─── scroll_offset ───┤
+///                    │    + vp height      │
+///                    │                     │
+///                    │        below        │ <- caret_row_adj
+///                    │                     │
+///                    ╰─────────────────────╯
 /// ```
 ///
 /// # Horizontal scrolling and viewport
 ///
 /// ```text
 ///           <-   vp width   ->
-/// +0--------+----------------+---------->
-/// 0         |                |
-/// | left of |<-  within vp ->| right of
-/// |         |                |
-/// +---------+----------------+---------->
+/// ╭0────────┼────────────────┼─────────>
+/// 0         │                │
+/// │ left of │<-  within vp ->│ right of
+/// │         │                │
+/// ╰─────────┼────────────────┼─────────>
 ///       scroll_offset    scroll_offset
 ///                        + vp width
 /// ```
