@@ -85,8 +85,12 @@ unicode-segmentation = "1.12.0"
 const_format = "0.2.34"
 
 # For smallstr & smallvec.
-smallstr = { version = "0.3.0", features = ["serde", "std"] }
-smallvec = { version = "1.6.1", features = ["serde"] }
+smallstr = { version = "0.3.0", features = ["std", "union"] }
+smallvec = { version = "1.6.1", features = [
+  "union",
+  "const_generics",
+  "const_new",
+] }
 
 [dev-dependencies]
 # - Async readline for running examples, with the source code checked out for
