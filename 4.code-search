@@ -5,8 +5,8 @@
 178 results - 47 files
 
 CHANGELOG.md:
-  1000:     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
-  1015:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
+  1035:     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
+  1050:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
 
 cmdr/src/analytics_client.rs:
   113:                             tracing::debug!(
@@ -35,21 +35,21 @@ cmdr/src/bin/giti.rs:
   108:             tracing::error!(err_msg);
 
 cmdr/src/edi/app_main.rs:
-  141:                 tracing::debug!("🪙 construct edi::AppMain");
-  205:                             tracing::debug!(
-  212:                         tracing::error!(
-  294:                             tracing::error!("📣 Error activating simple modal: {msg:?}")
-  392:                 tracing::debug!("📣 activate modal simple: {:?}", has_focus);
-  448:                                 tracing::debug!(
-  510:             tracing::debug!(
-  592:             tracing::info!(
-  624:             tracing::debug!(
+  142:                 tracing::debug!("🪙 construct edi::AppMain");
+  206:                             tracing::debug!(
+  213:                         tracing::error!(
+  295:                             tracing::error!("📣 Error activating simple modal: {msg:?}")
+  393:                 tracing::debug!("📣 activate modal simple: {:?}", has_focus);
+  449:                                 tracing::debug!(
+  511:             tracing::debug!(
+  593:             tracing::info!(
+  625:             tracing::debug!(
 
 cmdr/src/edi/state.rs:
-  247:                         tracing::debug!(
-  260:                     tracing::error!(
-  285:                         tracing::debug!(
-  292:                     tracing::error!(
+  246:                         tracing::debug!(
+  259:                     tracing::error!(
+  284:                         tracing::debug!(
+  291:                     tracing::error!(
 
 cmdr/src/giti/branch/giti_ui_templates.rs:
   156:     tracing::error!(error_msg);
@@ -112,28 +112,28 @@ terminal_async/examples/terminal_async.rs:
   38: use tracing::info;
 
 tui/examples/demo/ex_app_no_layout/app_main.rs:
-  324:                     tracing::info! {
+  325:                     tracing::info! {
 
 tui/examples/demo/ex_app_with_1col_layout/single_column_component.rs:
-  266:                     tracing::info!(
+  265:                     tracing::info!(
 
 tui/examples/demo/ex_app_with_2col_layout/app_main.rs:
   326:             tracing::info!(
   346:             tracing::error!("No focus id has been set, and it should be set!");
 
 tui/examples/demo/ex_app_with_2col_layout/column_render_component.rs:
-  274:                     tracing::info!(
+  275:                     tracing::info!(
 
 tui/examples/demo/ex_editor/app_main.rs:
-  122:                 tracing::debug!("🪙 construct ex_rc::AppMain");
-  338:                         tracing::error!("📣 Error activating simple modal: {msg:?}");
-  367:                         tracing::error!(
-  449:                 tracing::debug!(
-  489:             tracing::debug!(
-  585:             tracing::info!(
-  617:             tracing::debug!(
-  702:             tracing::debug!(
-  788:             tracing::debug!(
+  123:                 tracing::debug!("🪙 construct ex_rc::AppMain");
+  339:                         tracing::error!("📣 Error activating simple modal: {msg:?}");
+  368:                         tracing::error!(
+  450:                 tracing::debug!(
+  490:             tracing::debug!(
+  586:             tracing::info!(
+  618:             tracing::debug!(
+  703:             tracing::debug!(
+  789:             tracing::debug!(
 
 tui/examples/demo/ex_pitch/app_main.rs:
    99:                 tracing::debug!("🪙 construct ex_pitch::AppWithLayout");
@@ -154,17 +154,17 @@ tui/src/tui/editor/editor_buffer/buffer_clipboard_support.rs:
   125:                 tracing::debug!(
 
 tui/src/tui/editor/editor_buffer/buffer_selection_support.rs:
-   69:                 tracing::debug!("\n🍕🍕🍕 new selection: \n\t{it:?}", it = new_range);
-   84:         tracing::debug!(
-  308:         tracing::debug! {
-  444:             tracing::debug! {
-  566:                     tracing::debug!(
+   81:                 tracing::debug!("\n🍕🍕🍕 new selection: \n\t{it:?}", it = new_range);
+   93:         tracing::debug!(
+  317:         tracing::debug! {
+  453:             tracing::debug! {
+  575:                     tracing::debug!(
 
 tui/src/tui/editor/editor_buffer/buffer_struct.rs:
-  287:                 tracing::info!(
-  694:             tracing::debug!("🍎🍎🍎 add_content_to_undo_stack buffer: {:?}", buffer);
-  709:             tracing::debug!("🍎🍎🍎 undo buffer: {:?}", buffer);
-  722:             tracing::debug!("🍎🍎🍎 redo buffer: {:?}", buffer);
+  293:                 tracing::info!(
+  691:             tracing::debug!("🍎🍎🍎 add_content_to_undo_stack buffer: {:?}", buffer);
+  706:             tracing::debug!("🍎🍎🍎 undo buffer: {:?}", buffer);
+  719:             tracing::debug!("🍎🍎🍎 redo buffer: {:?}", buffer);
 
 tui/src/tui/editor/editor_buffer/system_clipboard_service_provider.rs:
   37:                 tracing::debug!(
@@ -173,8 +173,8 @@ tui/src/tui/editor/editor_component/editor_event.rs:
   95:             tracing::debug! {
 
 tui/src/tui/editor/editor_engine/engine_public_api.rs:
-  259:         tracing::info!(
-  334:                 tracing::debug! {
+  260:         tracing::info!(
+  332:                 tracing::debug! {
   513:                 tracing::debug!(
 
 tui/src/tui/md_parser/fragment/parse_fragments_in_a_line.rs:
@@ -191,8 +191,8 @@ tui/src/tui/terminal_lib_backends/paint.rs:
   215:         tracing::info!(
 
 tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
-   68:             tracing::info!(
-  206:         tracing::info! {
+   67:             tracing::info!(
+  205:         tracing::info! {
   271:         tracing::debug!(message = message);
 
 tui/src/tui/terminal_lib_backends/crossterm_backend/offscreen_buffer_paint_impl.rs:
@@ -219,7 +219,7 @@ tui/src/tui/terminal_window/main_event_loop.rs:
   306:         tracing::info!(
   437:             tracing::error!(
   508:                     tracing::error!(
-  649:         //     level_filter: tracing::Level::DEBUG.into(),
+  648:         //     level_filter: tracing::Level::DEBUG.into(),
 
 tui/src/tui/terminal_window/shared_global_data.rs:
   105:             tracing::info!("main_event_loop -> Resize ⇲"=?new_size)
@@ -268,4 +268,4 @@ tuify/src/bin/rt.rs:
   394:                     tracing::debug!(
 
 tuify/src/components/select_component.rs:
-  136:                 tracing::info! {
+  135:                 tracing::info! {

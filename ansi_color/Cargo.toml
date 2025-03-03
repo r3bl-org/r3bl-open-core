@@ -26,8 +26,12 @@ license = "Apache-2.0"
 is_ci = "1.2.0"
 
 # For smallstr & smallvec.
-smallstr = { version = "0.3.0", features = ["serde", "std"] }
-smallvec = { version = "1.6.1", features = ["serde"] }
+smallstr = { version = "0.3.0", features = ["std", "union"] }
+smallvec = { version = "1.6.1", features = [
+  "union",
+  "const_generics",
+  "const_new",
+] }
 
 # For counting enum variants.
 strum = "0.26.3"

@@ -97,8 +97,12 @@ paste = "1.0.15"
 uuid = { version = "1.11.0", features = ["v4"] }
 
 # For smallstr & smallvec.
-smallstr = { version = "0.3.0", features = ["serde", "std"] }
-smallvec = { version = "1.6.1", features = ["serde"] }
+smallstr = { version = "0.3.0", features = ["std", "union"] }
+smallvec = { version = "1.6.1", features = [
+  "union",
+  "const_generics",
+  "const_new",
+] }
 
 [dev-dependencies]
 

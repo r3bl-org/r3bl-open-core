@@ -2,21 +2,32 @@
 # Flags: CaseSensitive RegExp
 # Excluding: scratch.rs
 
-35 results - 18 files
+40 results - 21 files
+
+core/src/tui_core/graphemes/gc_string.rs:
+    18: // REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
+  1509:         // REVIEW: [ ] impl test
+
+core/src/tui_core/graphemes/mod.rs:
+  18: // REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
+
+core/src/tui_core/graphemes/seg.rs:
+  18: // REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
+  26: // REVIEW: [x] update docs
 
 tui/examples/demo/ex_app_no_layout/app_main.rs:
-  533: // REVIEW: [ ] introduce HUD for telemetry here & copy to all other examples
+  534: // REVIEW: [ ] introduce HUD for telemetry here & copy to all other examples
 
 tui/src/tui/dialog/dialog_engine/dialog_engine_api.rs:
-  558:                 // PERF: [ ] perf
+  557:                 // PERF: [ ] perf
 
 tui/src/tui/editor/editor_buffer/buffer_selection_support.rs:
   50: // BUG: [ ] introduce scr adj types instead of just ColIndex and RowIndex
 
 tui/src/tui/editor/editor_buffer/buffer_struct.rs:
-  243:     // REFACTOR: [ ] consider using a "heap" allocated ring buffer for `versions`
-  251:     // BUG: [ ] introduce scroll adjusted type
-  887:     // REFACTOR: [ ] add tests for sizing::MAX_UNDO_REDO_SIZE
+  249:     // REFACTOR: [ ] consider using a "heap" allocated ring buffer for `versions`
+  257:     // BUG: [ ] introduce scroll adjusted type
+  885:     // REFACTOR: [ ] add tests for sizing::MAX_UNDO_REDO_SIZE
 
 tui/src/tui/editor/editor_buffer/selection_list.rs:
    50:     // REFACTOR: [x] consider making this a fixed size array (doesn't need to be a map which is heap allocated)
@@ -26,8 +37,8 @@ tui/src/tui/editor/editor_buffer/selection_range.rs:
   33: // REVIEW: [ ] move this out of core into tui crate
 
 tui/src/tui/editor/editor_engine/caret_mut.rs:
-  39:     // BUG: [ ] introduce scroll adjusted type
-  81:     // BUG: [ ] introduce scroll adjusted type
+  44:     // BUG: [ ] introduce scroll adjusted type
+  86:     // BUG: [ ] introduce scroll adjusted type
 
 tui/src/tui/editor/editor_engine/select_mode.rs:
   33:     // BUG: [ ] introduce scroll adjusted type
@@ -36,15 +47,15 @@ tui/src/tui/md_parser/convert_to_plain_text.rs:
   191: // REFACTOR: [x] use StringStorage here
 
 tui/src/tui/syntax_highlighting/intermediate_types.rs:
-  344:             // PERF: [ ] perf
-  398:             // PERF: [ ] perf
-  453:             // PERF: [ ] perf
-  508:             // PERF: [ ] perf
-  563:             // PERF: [ ] perf
-  618:             // PERF: [ ] perf
+  351:             // PERF: [ ] perf
+  409:             // PERF: [ ] perf
+  468:             // PERF: [ ] perf
+  527:             // PERF: [ ] perf
+  586:             // PERF: [ ] perf
+  644:             // PERF: [ ] perf
 
 tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:
-  99:     // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
+  100:     // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
 
 tui/src/tui/terminal_lib_backends/offscreen_buffer.rs:
   119:         // PERF: [ ] make sure this works!
@@ -62,7 +73,7 @@ tui/src/tui/terminal_lib_backends/render_op.rs:
   314:     // PERF: [x] remove string
 
 tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
-  78: // PERF: [ ] figure out how this impacts OffscreenBuffer creation
+  77: // PERF: [ ] figure out how this impacts OffscreenBuffer creation
 
 tui/src/tui/terminal_lib_backends/render_tui_styled_texts.rs:
   27:             // PERF: [ ] perf

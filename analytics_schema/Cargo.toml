@@ -23,5 +23,10 @@ uuid = { version = "1.11.0", features = [
 ] }
 
 # For smallstr & smallvec.
-smallstr = { version = "0.3.0", features = ["serde", "std"] }
-smallvec = { version = "1.6.1", features = ["serde"] }
+smallstr = { version = "0.3.0", features = ["std", "union"] }
+smallvec = { version = "1.6.1", features = [
+  "union",
+  "const_generics",
+  "const_new",
+  "serde",          # small needs `server` feature flag here, but not in other Cargo.toml files in this workspace.
+] }

@@ -221,6 +221,7 @@ pub(in crate::tui::editor) mod sizing {
     const DEFAULT_EDITOR_LINES_SIZE: usize = 32;
 
     /// The version history is stored on the heap.
+    // REVIEW: [ ] replace w/ RingBuffer since it's a fixed size.
     pub type VecEditorBufferHistoryVersions = Vec<EditorContent>;
     /// This is the absolute maximum number of undo/redo steps that will ever be stored.
     pub const MAX_UNDO_REDO_SIZE: usize = 16;
