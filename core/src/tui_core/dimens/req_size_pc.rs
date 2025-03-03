@@ -17,7 +17,7 @@
 
 use std::fmt::{self, Debug};
 
-use super::Percent;
+use super::Pc;
 
 /// Represents a percentage value for the requested size. It is used to calculate the
 /// requested size as a percentage of the parent size.
@@ -25,37 +25,36 @@ use super::Percent;
 /// # How to use it
 ///
 /// You can create it either of the following ways:
-/// 1. Use the [crate::requested_size_percent!] macro. It uses the [crate::percent!] macro
-///    to do the [crate::Percent] conversion. Make sure to call this macro from a block
-///    that returns a `Result` type, since the `?` operator is used here.
-/// 2. Directly create it using the [RequestedSizePercent] struct with [crate::Percent]
-///    values.
+/// 1. Use the [crate::req_size_pc!] macro. It uses the [crate::pc!] macro to do
+///    the [crate::Pc] conversion. Make sure to call this macro from a block that
+///    returns a [Result] type, since the `?` operator is used here.
+/// 2. Directly create it using the [ReqSizePc] struct with [crate::Pc] values.
 ///
 /// Note that [crate::Dim], defined as:
 /// - height or [crate::Dim::row_height],
 /// - width or [crate::Dim::col_width].
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash)]
-pub struct RequestedSizePercent {
-    pub width_pc: Percent,
-    pub height_pc: Percent,
+pub struct ReqSizePc {
+    pub width_pc: Pc,
+    pub height_pc: Pc,
 }
 
-/// This must be called from a block that returns a `Result` type. Since the `?` operator
+/// This must be called from a block that returns a [Result] type. Since the `?` operator
 /// is used here.
 #[macro_export]
-macro_rules! requested_size_percent {
+macro_rules! req_size_pc {
     (
         width:  $arg_width: expr,
         height: $arg_height: expr
     ) => {
-        $crate::RequestedSizePercent {
-            width_pc: $crate::percent!($arg_width)?,
-            height_pc: $crate::percent!($arg_height)?,
+        $crate::ReqSizePc {
+            width_pc: $crate::pc!($arg_width)?,
+            height_pc: $crate::pc!($arg_height)?,
         }
     };
 }
 
-impl Debug for RequestedSizePercent {
+impl Debug for ReqSizePc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

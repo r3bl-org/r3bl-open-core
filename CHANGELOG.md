@@ -829,34 +829,59 @@ exhaustively tested and is able to handle many more corner cases.
 
 ### v_next_release_r3bl_core
 
-This release has lots of major breaking changes.
+This release has **lots** of major breaking changes. The codebase has rougly 140K lines of
+code. And about 25K lines of code have been added, and 14K lines have been removed. This
+is a major release that is part of a total reorganization of the `r3bl-open-core` repo.
+These changes pay down all the technical debt accrued over the past 2 years of
+development.
 
+Our goal is to ensure a clean and maintainable codebase that is easy to understand and
+easy to add new features to in the future. And also a codebase that does not require
+extreme precision to use correctly or maintain (eg: try to remove off by one errors by
+leveraging the type system extensively).
+
+We want the code to be very difficult to use incorrectly or modify incorrectly, by
+leveraging compiler driven development and Rust's fantastic type system. Lots of powerful
+idioms and design patterns are used in this release.
+
+- It does have some major rewrites of existing functionality to be much faster and easier
+  to use (focus on ergonomics, such as the `arg: impl Into<T>` where `T` is a struct
+  pattern) which heavily leverages the ["newtype" design pattern /
+  newtype](https://doc.rust-lang.org/rust-by-example/generics/new_types.html). The goal is
+  to make this API difficult to use (as a whole) incorrectly. And trivial to use (as a
+  whole) correctly.
 - It contains changes that are part of optimizing memory allocation to increase
   performance, and ensure that performance is stable over time. `ch_unit.rs` is also
-  heavily refactored and the entire codebase updated so that a the more ergonomic `ChUnit`
-  API is now used throughout the codebase.
+  rewritten and the entire codebase updated so that a the more ergonomic `ChUnit` API is
+  now used throughout the codebase. Lots of missing test cases and documentation have been
+  added to ensure that the code is stable and reliable over time.
+- The entire codebase has been revamped to be strongly typed and no longer uses primitive
+  types (like `usize` or `ChUnit`) to represent column index, row index, width, height,
+  position, and size / dimension, using the "newtype" design pattern / idiom. This makes
+  it difficult to use the API incorrectly. It also makes the entire API less error prone,
+  relaxing to use, and much easier to maintain. New types and the `arg: impl Into<T>`
+  where `T` is a struct is used in `Pos`, `RowIndex`, `ColIndex`, `Dim`, `ColWidth`,
+  `RowHeight` types, and their aliases (`Width`, `Height`) and lots of helper functions
+  `row()`, `col()`, `width()`, `height()`, and methods to convert between types and
+  transform other types into these types.
+- The `graphemes` module containing `UnicodeString` handling have been totally rewritten.
+  They are now no allocation structures! In all past versions, the `UnicodeString` was a
+  `String` under the hood. Now it is a `StringStorage` which is a `smallstr` that
+  initially allocates on the stack, and it can spill over into the heap if it needs to.
+  The struct is now named `GCString`. The "newtype" design pattern / idiom and
+  `arg: impl Into<T>` in `GCString` and other specific types are used, such as `SegIndex`,
+  `SegWidth`, `ByteIndex`, and works with `ColWidth`, `ColIndex`, et al. It is quite
+  difficult to use this API incorrectly!
+- The `color_wheel` module now uses "newtype" design pattern / idiom and `arg: impl Into<T>`
+  where `T` is a struct pattern. `bool` is replace with enums as well.
 - A new telemetry API is also in this release, which makes it easy to measure and report
   performance metrics in a memory access and CPU performant way. This is built for the
   `r3bl_tui` main event loop (which is a very hot loop).
-- The `graphemes` module containing `UnicodeString` handling have been totally rewritten.
-  They are now no allocation structures! In all past versions, the `UnicodeString` was a
-  `String` under the hood. This is no longer the case. A `UnicodeStringHolder` and some
-  macros are provided to make this relatively easy to use.
-- It does have some major rewrites of existing functionality to be much faster and easier
-  to use (focus on ergonomics, such as the `arg: impl Into<T>` where `T` is a struct
-  pattern).
-- The entire codebase has been revamped to be strongly typed and no longer uses primitive
-  types (like `usize` or `ChUnit`) to represent column index, row index, width, height,
-  position, and size / dimension. This makes the entire API less error prone, relaxing to
-  use, and much easier to maintain. New types and the `arg: impl Into<T>` where `T` is a
-  struct is used in `Pos`, `RowIndex`, `ColIndex`, `Dim`, `ColWidth`, `RowHeight` types,
-  and their aliases (`Width`, `Height`) and lots of helper functions `row()`, `col()`,
-  `width()`, `height()`, and methods to convert between types and transform other types
-  into these types.
 
 These videos have been an inspiration for many of these changes:
 - [Data oriented design](https://youtu.be/WwkuAqObplU)
 - [Memory alloc](https://youtu.be/pJ-FRRB5E84)
+- [Compiler driven development](https://www.youtube.com/watch?v=_oaGNy3_798)
 
 Here are the highlights:
 - [PR](https://github.com/r3bl-org/r3bl-open-core/pull/370/commits/20fe5e730a0f592c203c85a68ee6e5b345136f44)
@@ -895,10 +920,20 @@ Changed:
   - The `graphemes` module containing `UnicodeString` handling have been totally
     rewritten. They are now optimized for memory latency (access, mutation, and
     allocation). For performance reasons they are not "no allocation" structures.
-    `UnicodeString` now owns a `StringStorage` under the hood. The `UnicodeStringSegment`
-    does not own anything (no heap or string allocation, and is a very "scalarized"
-    struct), and needs a `UnicodeString` to be able to do anything. All the existing code
-    that relies on this has been rewritten to accommodate this change.
+    `GCString` now owns a `StringStorage` under the hood. The
+    `UnicodeStringSegment`, now called `Seg`, does not own anything (no heap or string
+    allocation, and is a very "scalarized" struct), and needs a `GCString` to be
+    able to do anything. All the existing code that relies on this has been rewritten to
+    accommodate this change. These changes are similar in spirit to the changes for
+    `ColIndex`, `RowIndex`, `RowHeight`, `ColWidth`, `Dim`, `Pos`, etc and follow the same
+    API style and principles.
+  - Use "newtype" design pattern / idiom and `arg: impl Into<T>` where `T` is a struct
+    pattern in the `color_wheel` module.
+    - Replace all the `f64` types with wrapper structs like `Seed`, `Freq`, `SeedDelta`,
+      `Spread`, and implement `AddAssign` ops between some of them. Use `arg: into Impl<T>`
+      where `T` are these new (struct) types.
+    - Replace `bool` with enum as well. Remove `unwrap()` calls in the constructor for the
+      `ColorWheel` struct.
   - Fix all the Rust doc tests that were marked with `ignore`. Remove the `ignore` with
     either run and compile, or just `no_run` (compile only) in some cases where the code
     can't be run, but needs to be compiled.

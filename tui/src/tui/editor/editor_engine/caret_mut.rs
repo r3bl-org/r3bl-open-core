@@ -15,7 +15,12 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{caret_scr_adj, col, row, width, UnicodeStringSegmentSliceResult};
+use r3bl_core::{caret_scr_adj,
+                col,
+                row,
+                wide_segments::ContainsWideSegments,
+                width,
+                SegString};
 
 use super::{scroll_editor_content, SelectMode};
 use crate::{caret_locate::{self,
@@ -355,8 +360,8 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
             buffer: &mut EditorBuffer,
             engine: &mut EditorEngine,
         ) -> Option<()> {
-            let UnicodeStringSegmentSliceResult {
-                seg_display_width: unicode_width_at_caret,
+            let SegString {
+                width: unicode_width_at_caret,
                 ..
             } = buffer.string_at_caret()?;
 
@@ -365,55 +370,55 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
             let maybe_char_to_right_of_caret = buffer.string_to_right_of_caret();
 
             match maybe_char_to_right_of_caret {
-                Some(right_of_caret_seg_slice_result) => {
-                    let chunk_to_right_of_caret_us =
-                        right_of_caret_seg_slice_result.seg_text;
+                Some(right_of_caret_seg_string) => {
+                    let chunk_to_right_of_caret_gcs = right_of_caret_seg_string.string;
 
-                    if chunk_to_right_of_caret_us.contains_wide_segments() {
-                        let jump_by_col_width = chunk_to_right_of_caret_us.display_width
-                            + unicode_width_at_caret;
-                        let move_left_by_amt = chunk_to_right_of_caret_us.display_width;
+                    match chunk_to_right_of_caret_gcs.contains_wide_segments() {
+                        ContainsWideSegments::Yes => {
+                            let jump_by_col_width = chunk_to_right_of_caret_gcs
+                                .display_width
+                                + unicode_width_at_caret;
+                            let move_left_by_amt =
+                                chunk_to_right_of_caret_gcs.display_width;
+                            {
+                                let buffer_mut = buffer.get_mut(engine.viewport());
 
-                        // When buffer_mut goes out of scope, it will be dropped &
-                        // validation performed.
-                        {
-                            let buffer_mut = buffer.get_mut(engine.viewport());
+                                scroll_editor_content::inc_caret_col_by(
+                                    buffer_mut.inner.caret_raw,
+                                    buffer_mut.inner.scr_ofs,
+                                    jump_by_col_width,
+                                    max_display_width,
+                                    buffer_mut.inner.vp.col_width,
+                                );
+                            }
+                            if move_left_by_amt > width(0) {
+                                // When buffer_mut goes out of scope, it will be dropped &
+                                // validation performed.
+                                {
+                                    let buffer_mut = buffer.get_mut(engine.viewport());
 
-                            scroll_editor_content::inc_caret_col_by(
-                                buffer_mut.inner.caret_raw,
-                                buffer_mut.inner.scr_ofs,
-                                jump_by_col_width,
-                                max_display_width,
-                                buffer_mut.inner.vp.col_width,
-                            );
+                                    scroll_editor_content::dec_caret_col_by(
+                                        buffer_mut.inner.caret_raw,
+                                        buffer_mut.inner.scr_ofs,
+                                        move_left_by_amt,
+                                    );
+                                }
+                            }
                         }
-
-                        if move_left_by_amt > width(0) {
+                        ContainsWideSegments::No => {
                             // When buffer_mut goes out of scope, it will be dropped &
                             // validation performed.
                             {
                                 let buffer_mut = buffer.get_mut(engine.viewport());
 
-                                scroll_editor_content::dec_caret_col_by(
+                                scroll_editor_content::inc_caret_col_by(
                                     buffer_mut.inner.caret_raw,
                                     buffer_mut.inner.scr_ofs,
-                                    move_left_by_amt,
+                                    unicode_width_at_caret,
+                                    max_display_width,
+                                    buffer_mut.inner.vp.col_width,
                                 );
                             }
-                        }
-                    } else {
-                        // When buffer_mut goes out of scope, it will be dropped &
-                        // validation performed.
-                        {
-                            let buffer_mut = buffer.get_mut(engine.viewport());
-
-                            scroll_editor_content::inc_caret_col_by(
-                                buffer_mut.inner.caret_raw,
-                                buffer_mut.inner.scr_ofs,
-                                unicode_width_at_caret,
-                                max_display_width,
-                                buffer_mut.inner.vp.col_width,
-                            );
                         }
                     }
                 }
@@ -504,21 +509,21 @@ pub fn left(
                 scroll_editor_content::dec_caret_col_by(
                     buffer_mut.inner.caret_raw,
                     buffer_mut.inner.scr_ofs,
-                    seg_slice.seg_display_width,
+                    seg_slice.width,
                 );
             }
         }
         CaretColLocationInLine::InMiddle => {
-            let seg_slice = buffer.string_to_left_of_caret()?;
-            // When buffer_mut goes out of scope, it will be dropped &
-            // validation performed.
+            let left_seg_string = buffer.string_to_left_of_caret()?;
+            // When buffer_mut goes out of scope, it will be dropped & validation
+            // performed.
             {
                 let buffer_mut = buffer.get_mut(editor.viewport());
 
                 scroll_editor_content::dec_caret_col_by(
                     buffer_mut.inner.caret_raw,
                     buffer_mut.inner.scr_ofs,
-                    seg_slice.seg_display_width,
+                    left_seg_string.width,
                 );
             }
         }

@@ -146,8 +146,8 @@ impl SelectionList {
 
         for row_index in ordered_row_indices {
             if let Some(sel_range) = self.get(row_index) {
-                if let Some(line_us) = lines.get(usize(row_index)) {
-                    let sel_text = sel_range.clip_to_range(line_us);
+                if let Some(line_gcs) = lines.get(usize(row_index)) {
+                    let sel_text = sel_range.clip_to_range(line_gcs);
                     acc.push((row_index, sel_text));
                 }
             }

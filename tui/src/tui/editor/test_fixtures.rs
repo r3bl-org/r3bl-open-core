@@ -75,7 +75,7 @@ pub mod mock_real_objects_for_editor {
 
 #[cfg(test)]
 pub mod assert {
-    use r3bl_core::{assert_eq2, UnicodeStringExt as _, UnicodeStringSegmentSliceResult};
+    use r3bl_core::{assert_eq2, GCStringExt as _, SegString};
 
     use crate::{editor_engine::engine_internal_api, EditorBuffer};
 
@@ -85,9 +85,7 @@ pub mod assert {
 
     pub fn str_is_at_caret(buffer: &EditorBuffer, expected: &str) {
         match buffer.string_at_caret() {
-            Some(UnicodeStringSegmentSliceResult {
-                seg_text: string, ..
-            }) => {
+            Some(SegString { string, .. }) => {
                 assert_eq2!(&string.string, expected)
             }
             None => panic!("Expected string at caret, but got None."),
@@ -97,7 +95,7 @@ pub mod assert {
     pub fn line_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
         assert_eq2!(
             engine_internal_api::line_at_caret_to_string(editor_buffer).unwrap(),
-            &expected.unicode_string()
+            &expected.grapheme_string()
         );
     }
 }

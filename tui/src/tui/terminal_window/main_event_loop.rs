@@ -36,14 +36,14 @@ use r3bl_core::{call_if_true,
                 ColorWheelSpeed,
                 CommonResult,
                 Dim,
+                GCStringExt as _,
                 GradientGenerationPolicy,
                 InputDevice,
                 LockedOutputDevice,
                 OutputDevice,
                 SufficientSize,
                 TelemetryAtomHint,
-                TextColorizationPolicy,
-                UnicodeString};
+                TextColorizationPolicy};
 use r3bl_macro::tui_style;
 use size_of::SizeOf as _;
 use smallvec::smallvec;
@@ -533,11 +533,11 @@ fn render_window_too_small_error(window_size: Dim) -> RenderPipeline {
         MinSize::Col as u8,
         MinSize::Row as u8
     );
-    let msg_us = UnicodeString::new(&msg);
-    let trunc_msg = msg_us.truncate_to_fit_size(window_size);
+    let msg_gcs = msg.grapheme_string();
+    let trunc_msg = msg_gcs.trunc_end_to_fit(window_size);
 
-    let trunc_msg_us = UnicodeString::new(trunc_msg);
-    let trunc_msg_width = trunc_msg_us.display_width;
+    let trunc_msg_gcs = trunc_msg.grapheme_string();
+    let trunc_msg_width = trunc_msg_gcs.display_width;
 
     let row_pos = row({
         let it = window_size.row_height / ch(2);
@@ -570,7 +570,7 @@ fn render_window_too_small_error(window_size: Dim) -> RenderPipeline {
                 ColorWheelConfig::Ansi256(Ansi256GradientIndex::DarkRedToDarkMagenta, ColorWheelSpeed::Medium),
             ])
                 .colorize_into_styled_texts(
-                    &trunc_msg_us,
+                    &trunc_msg_gcs,
                     GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
                     TextColorizationPolicy::ColorEachCharacter(Some(style_bold)),
                 )
@@ -610,7 +610,6 @@ mod tests {
                     OutputDevice,
                     TextColorizationPolicy,
                     TuiStyle,
-                    UnicodeString,
                     VecArray};
     use r3bl_macro::tui_style;
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, InputDeviceExt};
@@ -823,7 +822,7 @@ mod tests {
     }
 
     mod test_fixture_app_main_impl_trait_app {
-        use r3bl_core::{row, Pos};
+        use r3bl_core::{row, GCStringExt as _, Pos};
 
         use super::*;
 
@@ -882,13 +881,13 @@ mod tests {
                             b = len
                         );
 
-                        let string_us = UnicodeString::new(&string);
+                        let string_gcs = string.grapheme_string();
 
                         render_ops!(
                             @render_styled_texts_into acc_render_op
                             =>
                             data.color_wheel_rgb.colorize_into_styled_texts(
-                                &string_us,
+                                &string_gcs,
                                 GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                                 TextColorizationPolicy::ColorEachWord(None),
                             )

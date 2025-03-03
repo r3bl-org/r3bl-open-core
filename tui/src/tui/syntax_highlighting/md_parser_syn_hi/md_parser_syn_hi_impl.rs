@@ -23,13 +23,14 @@ use r3bl_core::{join,
                 CommonErrorType,
                 CommonResult,
                 DocumentStorage,
+                GCString,
+                GCStringExt,
                 GradientGenerationPolicy,
                 PrettyPrintDebug,
                 StringStorage,
                 TextColorizationPolicy,
                 TuiStyle,
-                TuiStyledTexts,
-                UnicodeString};
+                TuiStyledTexts};
 use r3bl_macro::tui_style;
 use smallvec::smallvec;
 use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
@@ -85,14 +86,14 @@ use crate::{constants::{AUTHORS,
 
 /// This is the main function that the [crate::editor] uses this in order to display the
 /// markdown to the user.It is responsible for converting:
-/// - from a &[Vec] of [UnicodeString] which comes from the [crate::editor],
+/// - from a &[Vec] of [GCString] which comes from the [crate::editor],
 /// - into a [StyleUSSpanLines], which the [crate::editor] will clip & render.
 ///
 /// # Arguments
 /// - `editor_text` - The text that the user has typed into the editor.
 /// - `current_box_computed_style` - The computed style of the box that the editor is in.
 pub fn try_parse_and_highlight(
-    editor_text_lines: &[UnicodeString],
+    editor_text_lines: &[GCString],
     maybe_current_box_computed_style: &Option<TuiStyle>,
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
 ) -> CommonResult<StyleUSSpanLines> {
@@ -123,18 +124,14 @@ pub fn try_parse_and_highlight(
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
     use crossterm::style::Stylize;
-    use r3bl_core::{assert_eq2,
-                    throws,
-                    ANSIBasicColor,
-                    TuiColor,
-                    UnicodeStringExt as _};
+    use r3bl_core::{assert_eq2, throws, ANSIBasicColor, TuiColor};
 
     use super::*;
 
     #[test]
-    fn from_vec_us() -> CommonResult<()> {
+    fn from_vec_gcs() -> CommonResult<()> {
         throws!({
-            let editor_text_lines = ["Hello", "World"].map(UnicodeString::new);
+            let editor_text_lines = ["Hello", "World"].map(GCString::new);
             let current_box_computed_style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
@@ -153,8 +150,8 @@ mod tests_try_parse_and_highlight {
             assert_eq2!(editor_text_lines.len(), style_us_span_lines.len());
             let line_0 = &style_us_span_lines[0][0];
             let line_1 = &style_us_span_lines[1][0];
-            assert_eq2!(editor_text_lines[0], line_0.text.as_str().unicode_string());
-            assert_eq2!(editor_text_lines[1], line_1.text.as_str().unicode_string());
+            assert_eq2!(editor_text_lines[0], line_0.text_gcs);
+            assert_eq2!(editor_text_lines[1], line_1.text_gcs);
 
             assert_eq2!(
                 line_0.style,
@@ -634,7 +631,7 @@ impl PrettyPrintDebug for StyleUSSpanLine {
             from: self.inner,
             each: span,
             delim: NEW_LINE,
-            format: "fragment[ {:?} , {:?} ]", span.text, span.style
+            format: "fragment[ {} , {:?} ]", &span.text_gcs.string, span.style
         )
     }
 }
@@ -686,9 +683,9 @@ impl StyleUSSpanLine {
 
         let heading_text_span: StyleUSSpanLine = {
             let heading_text = heading_data.text;
-            let heading_text_us = UnicodeString::new(heading_text);
+            let heading_text_gcs = heading_text.grapheme_string();
             let styled_texts = color_wheel.colorize_into_styled_texts(
-                &heading_text_us,
+                &heading_text_gcs,
                 GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
                 TextColorizationPolicy::ColorEachCharacter(
                     *maybe_current_box_computed_style,
@@ -1272,8 +1269,10 @@ mod tests_style_us_span_lines_from {
 
             let line_0 = &lines.inner[0];
             let span_0_in_line_0 = &line_0.inner[0];
-            let StyleUSSpan { style, text, .. } = span_0_in_line_0;
-            assert_eq2!(text, "Foobar");
+            let StyleUSSpan {
+                style, text_gcs, ..
+            } = span_0_in_line_0;
+            assert_eq2!(text_gcs.as_ref(), "Foobar");
             assert_eq2!(style, &(*style + get_foreground_style()));
         }
 
@@ -1305,7 +1304,7 @@ mod tests_style_us_span_lines_from {
                 TuiColor::Basic(ANSIBasicColor::Red)
             );
             assert_eq2!(spans_in_line[0].style.color_fg.is_some(), false);
-            assert_eq2!(spans_in_line[0].text, "# ");
+            assert_eq2!(spans_in_line[0].text_gcs.as_ref(), "# ");
 
             // The remainder of the spans are the heading text which are colorized with a color
             // wheel.

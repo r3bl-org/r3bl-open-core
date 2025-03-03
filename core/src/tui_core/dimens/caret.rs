@@ -44,7 +44,7 @@
 //!     col, row, caret_raw, scr_ofs, pos, caret_scr_adj
 //! };
 //!
-//! let scroll_offset_1: ScrOfs = row(2) + col(3);
+//! let scroll_offset_1: ScrOfs = scr_ofs(row(2) + col(3));
 //!
 //! //
 //! // Directly using CaretRaw and CaretScrAdj.
@@ -64,14 +64,14 @@
 //! // Convert CaretScrAdj (and ScrollOffset) to CaretRaw.
 //! let caret_1 = scr_adj_caret_1 + scroll_offset_1;
 //! let caret_2 = scroll_offset_1 + scr_adj_caret_1;
-//! let expected_1 = pos(row(8) + col(7)) - scr_ofs(row(2) + col(3));
+//! let expected_1 = pos(row(8) + col(7)) - *scr_ofs(row(2) + col(3));
 //! assert_eq!(expected_1, *caret_1);
 //! assert_eq!(expected_1, *caret_2);
 //!
 //! // Convert CaretRaw (and ScrollOffset) to CaretScrAdj.
 //! let caret_3 = raw_caret_1 + scroll_offset_1;
 //! let caret_4 = scroll_offset_1 + raw_caret_1;
-//! let expected_2 = pos(row(5) + col(5)) + scr_ofs(row(2) + col(3));
+//! let expected_2 = pos(row(5) + col(5)) + *scr_ofs(row(2) + col(3));
 //! assert_eq!(expected_2, *caret_3);
 //! assert_eq!(expected_2, *caret_4);
 //! ```
@@ -80,9 +80,11 @@ use std::ops::{Add, Deref, DerefMut};
 
 use crate::{Pos, ScrOfs};
 
-pub fn caret_raw(arg: impl Into<CaretRaw>) -> CaretRaw { arg.into() }
+pub fn caret_raw(arg_caret_raw: impl Into<CaretRaw>) -> CaretRaw { arg_caret_raw.into() }
 
-pub fn caret_scr_adj(arg: impl Into<CaretScrAdj>) -> CaretScrAdj { arg.into() }
+pub fn caret_scr_adj(arg_caret_scr_adj: impl Into<CaretScrAdj>) -> CaretScrAdj {
+    arg_caret_scr_adj.into()
+}
 
 /// The "raw" position is the `col_index` and `row_index` of the caret INSIDE the
 /// viewport, without making any adjustments for scrolling.
@@ -98,7 +100,7 @@ mod caret_raw_impl {
     use super::*;
 
     impl CaretRaw {
-        pub fn new(arg: impl Into<CaretRaw>) -> Self { arg.into() }
+        pub fn new(arg_caret_raw: impl Into<CaretRaw>) -> Self { arg_caret_raw.into() }
     }
 
     impl Deref for CaretRaw {
@@ -113,7 +115,7 @@ mod caret_raw_impl {
 
     impl From<(CaretScrAdj, ScrOfs)> for CaretRaw {
         fn from((caret_scr_adj, scr_ofs): (CaretScrAdj, ScrOfs)) -> Self {
-            let position = *caret_scr_adj - scr_ofs;
+            let position = *caret_scr_adj - *scr_ofs;
             CaretRaw(position)
         }
     }
@@ -155,7 +157,9 @@ mod caret_scr_adj_impl {
     use super::*;
 
     impl CaretScrAdj {
-        pub fn new(arg: impl Into<CaretScrAdj>) -> Self { arg.into() }
+        pub fn new(arg_caret_scr_adj: impl Into<CaretScrAdj>) -> Self {
+            arg_caret_scr_adj.into()
+        }
     }
 
     impl Deref for CaretScrAdj {
@@ -170,7 +174,7 @@ mod caret_scr_adj_impl {
 
     impl From<(CaretRaw, ScrOfs)> for CaretScrAdj {
         fn from((caret_raw, scr_ofs): (CaretRaw, ScrOfs)) -> Self {
-            let position = *caret_raw + scr_ofs;
+            let position = *caret_raw + *scr_ofs;
             CaretScrAdj(position)
         }
     }
@@ -230,10 +234,10 @@ mod tests {
             let scr_adj_caret = caret_scr_adj(pos_1);
 
             let raw_caret_1 = scr_ofs + scr_adj_caret;
-            assert_eq!(*raw_caret_1, *scr_adj_caret - scr_ofs);
+            assert_eq!(*raw_caret_1, *scr_adj_caret - *scr_ofs);
 
             let raw_caret_2 = scr_adj_caret + scr_ofs;
-            assert_eq!(*raw_caret_2, *scr_adj_caret - scr_ofs);
+            assert_eq!(*raw_caret_2, *scr_adj_caret - *scr_ofs);
         }
 
         // Into CaretScrAdj, from ...
@@ -242,10 +246,10 @@ mod tests {
             let scr_ofs = scr_ofs(pos_1);
 
             let scr_adj_caret_1 = raw_caret + scr_ofs;
-            assert_eq!(*scr_adj_caret_1, *raw_caret + scr_ofs);
+            assert_eq!(*scr_adj_caret_1, *raw_caret + *scr_ofs);
 
             let scr_adj_caret_2 = scr_ofs + raw_caret;
-            assert_eq!(*scr_adj_caret_2, *raw_caret + scr_ofs);
+            assert_eq!(*scr_adj_caret_2, *raw_caret + *scr_ofs);
         }
     }
 
@@ -256,10 +260,10 @@ mod tests {
             row_index: ch(5).into(),
         };
 
-        let scr_ofs = ScrOfs {
+        let scr_ofs = scr_ofs(Pos {
             col_index: ch(2).into(),
             row_index: ch(3).into(),
-        };
+        });
 
         // Create CaretRaw from Position.
         let raw_caret: CaretRaw = position.into();
@@ -298,10 +302,10 @@ mod tests {
         }
         .into();
 
-        let scr_ofs = ScrOfs {
+        let scr_ofs = scr_ofs(Pos {
             col_index: ch(2).into(),
             row_index: ch(3).into(),
-        };
+        });
 
         let raw_caret: CaretRaw = (scr_adj_caret, scr_ofs).into();
 
@@ -326,10 +330,10 @@ mod tests {
         }
         .into();
 
-        let scr_ofs = ScrOfs {
+        let scr_ofs = scr_ofs(Pos {
             col_index: ch(2).into(),
             row_index: ch(3).into(),
-        };
+        });
 
         let scr_adj_caret: CaretScrAdj = (raw_caret, scr_ofs).into();
 
@@ -350,10 +354,10 @@ mod tests {
         }
         .into();
 
-        let scr_ofs = ScrOfs {
+        let scr_ofs = scr_ofs(Pos {
             col_index: ch(2).into(),
             row_index: ch(3).into(),
-        };
+        });
 
         let raw_caret: CaretRaw = (scr_adj_caret, scr_ofs).into();
 

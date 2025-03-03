@@ -42,8 +42,8 @@ use custom_event_formatter_constants::*;
 use ordermap::OrderMap;
 use r3bl_ansi_color::{AnsiStyledText, Color, Style};
 use r3bl_core::{ColorWheel,
+                GCString,
                 StringStorage,
-                UnicodeString,
                 VecArray,
                 get_terminal_width,
                 glyphs,
@@ -123,7 +123,7 @@ where
     ) -> fmt::Result {
         // Get spacer.
         let spacer = r3bl_core::glyphs::SPACER_GLYPH;
-        let spacer_display_width = UnicodeString::str_display_width(spacer);
+        let spacer_display_width = GCString::width(spacer);
 
         // Length accumulator (for line width calculations).
         let mut line_width_used = width(0);
@@ -135,7 +135,7 @@ where
             ts = timestamp.format("%I:%M%P"),
             sp = spacer
         );
-        line_width_used += UnicodeString::str_display_width(&timestamp_str);
+        line_width_used += GCString::width(&timestamp_str);
         let timestamp_str_fmt = AnsiStyledText {
             text: &timestamp_str,
             style: &[
@@ -148,7 +148,7 @@ where
         // Custom span context.
         if let Some(scope) = ctx.lookup_current() {
             let scope_str = string_storage!("[{}] ", scope.name());
-            line_width_used += UnicodeString::str_display_width(&scope_str);
+            line_width_used += GCString::width(&scope_str);
             let scope_str_fmt = AnsiStyledText {
                 text: &scope_str,
                 style: &[
@@ -203,7 +203,7 @@ where
             text: &level_str,
             style: &style_acc,
         };
-        let level_str_display_width = UnicodeString::str_display_width(&level_str);
+        let level_str_display_width = GCString::width(&level_str);
         line_width_used += spacer_display_width;
         line_width_used += level_str_display_width;
         write!(f, "{level_str_fmt}")?;

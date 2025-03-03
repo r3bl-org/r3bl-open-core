@@ -30,12 +30,12 @@ use crossterm::{self,
                            EnterAlternateScreen,
                            LeaveAlternateScreen}};
 use r3bl_core::{call_if_true,
+                GCString,
                 LockedOutputDevice,
                 Pos,
                 Size,
                 TuiColor,
                 TuiStyle,
-                UnicodeString,
                 VecArray};
 use smallvec::smallvec;
 
@@ -435,7 +435,7 @@ mod perform_paint {
         // Update cursor position after paint.
         let cursor_pos_copy = {
             let mut copy = local_data.cursor_pos;
-            let text_display_width = UnicodeString::str_display_width(text);
+            let text_display_width = GCString::width(text);
             *copy.col_index += *text_display_width;
             copy
         };

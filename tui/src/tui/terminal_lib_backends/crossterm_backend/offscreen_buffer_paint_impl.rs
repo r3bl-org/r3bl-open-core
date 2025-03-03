@@ -20,12 +20,12 @@ use r3bl_core::{call_if_true,
                 glyphs::SPACER_GLYPH,
                 row,
                 ColIndex,
+                GCString,
                 LockedOutputDevice,
                 RowIndex,
                 Size,
                 StringStorage,
-                TuiStyle,
-                UnicodeString};
+                TuiStyle};
 
 use crate::{diff_chunks::PixelCharDiffChunks,
             render_ops,
@@ -318,7 +318,7 @@ mod render_helpers {
             ));
 
         // Update `display_col_index_for_line`.
-        let display_width = UnicodeString::str_display_width(&context.buffer_plain_text);
+        let display_width = GCString::width(&context.buffer_plain_text);
         *context.display_col_index_for_line += *display_width;
 
         // Clear the buffer!

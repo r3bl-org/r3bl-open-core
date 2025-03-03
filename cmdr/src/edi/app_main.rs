@@ -14,6 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+
 use crossterm::style::Stylize;
 use r3bl_core::{ANSIBasicColor,
                 Ansi256GradientIndex,
@@ -23,19 +24,19 @@ use r3bl_core::{ANSIBasicColor,
                 CommonError,
                 CommonResult,
                 Dim,
+                GCStringExt as _,
                 GradientGenerationPolicy,
                 StringStorage,
                 TextColorizationPolicy,
                 TuiColor,
                 TuiStyledTexts,
                 TuiStylesheet,
-                UnicodeString,
                 call_if_true,
                 col,
                 get_tui_style,
                 glyphs,
                 height,
-                requested_size_percent,
+                req_size_pc,
                 row,
                 send_signal,
                 throws,
@@ -537,7 +538,7 @@ mod perform_layout {
                         in:                     surface,
                         id:                     FlexBoxId::from(Id::ComponentEditor),
                         dir:                    LayoutDirection::Vertical,
-                        requested_size_percent: requested_size_percent!(width: 100, height: 100),
+                        requested_size_percent: req_size_pc!(width: 100, height: 100),
                         styles:                 [Id::StyleEditorDefault]
                     );
                     render_component_in_current_box!(
@@ -694,9 +695,9 @@ mod status_bar {
             ),
         ]);
 
-        let app_text_us = UnicodeString::new(app_text);
+        let app_text_gcs = app_text.grapheme_string();
         let app_text_styled_texts = color_wheel.colorize_into_styled_texts(
-            &app_text_us,
+            &app_text_gcs,
             GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
             TextColorizationPolicy::ColorEachCharacter(None),
         );

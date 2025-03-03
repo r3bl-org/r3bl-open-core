@@ -37,14 +37,14 @@ use r3bl_core::{call_if_true,
                 ColWidth,
                 CommonResult,
                 Dim,
+                GCString,
+                GCStringExt as _,
                 PrettyPrintDebug,
                 RowHeight,
                 RowIndex,
+                SegString,
                 Size,
-                TuiColor,
-                UnicodeString,
-                UnicodeStringExt as _,
-                UnicodeStringSegmentSliceResult};
+                TuiColor};
 use r3bl_macro::tui_style;
 use syntect::easy::HighlightLines;
 
@@ -299,18 +299,18 @@ fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
 
         let scroll_offset = editor_buffer.get_scr_ofs();
 
-        if let Some(line_us) = lines.get(usize(row_index)) {
+        if let Some(line_gcs) = lines.get(usize(row_index)) {
             // Take the scroll_offset into account when "slicing" the selection.
             let selection_holder = match sel_range.locate_scroll_offset_col(scroll_offset)
             {
                 ScrollOffsetColLocationInRange::Underflow => {
-                    (*sel_range).clip_to_range(line_us)
+                    (*sel_range).clip_to_range(line_gcs)
                 }
                 ScrollOffsetColLocationInRange::Overflow => {
                     let start = caret_scr_adj(scroll_offset.col_index + row_index);
                     let end = caret_scr_adj(sel_range.end() + row_index);
                     let scr_ofs_clipped_sel_range: SelectionRange = (start, end).into();
-                    scr_ofs_clipped_sel_range.clip_to_range(line_us)
+                    scr_ofs_clipped_sel_range.clip_to_range(line_gcs)
                 }
             };
 
@@ -377,8 +377,10 @@ fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
 
     if has_focus.does_id_have_focus(engine.current_box.id) {
         let str_at_caret = match buffer.string_at_caret() {
-            Some(UnicodeStringSegmentSliceResult { seg_text, .. }) => seg_text,
-            None => DEFAULT_CURSOR_CHAR.unicode_string(),
+            Some(SegString {
+                string: seg_text, ..
+            }) => seg_text,
+            None => DEFAULT_CURSOR_CHAR.grapheme_string(),
         };
 
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
@@ -555,8 +557,8 @@ mod syn_hi_r3bl_path {
             editor_engine.current_box.style_adjusted_origin_pos,
             col(0) + row_index,
         ));
-        let scroll_offset_col = editor_buffer.get_scr_ofs().col_index;
-        let styled_texts = line.clip(scroll_offset_col, max_display_col_count);
+        let scr_ofs = editor_buffer.get_scr_ofs();
+        let styled_texts = line.clip(scr_ofs, max_display_col_count);
         render_tui_styled_texts_into(&styled_texts, render_ops);
         render_ops.push(RenderOp::ResetColor);
     }
@@ -604,7 +606,7 @@ mod syn_hi_syntect_path {
         row_index: RowIndex,
         editor_engine: &&mut EditorEngine,
         editor_buffer: &&EditorBuffer,
-        line: &UnicodeString,
+        line: &GCString,
         max_display_col_count: ColWidth,
     ) {
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
@@ -643,12 +645,12 @@ mod syn_hi_syntect_path {
         max_display_col_count: ColWidth,
         render_ops: &mut RenderOps,
     ) {
-        let scroll_offset_col = editor_buffer.get_scr_ofs().col_index;
+        let scr_ofs = editor_buffer.get_scr_ofs();
         let line =
             convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
                 syntect_highlighted_line,
             );
-        let styled_texts = line.clip(scroll_offset_col, max_display_col_count);
+        let styled_texts = line.clip(scr_ofs, max_display_col_count);
         render_tui_styled_texts_into(&styled_texts, render_ops);
         render_ops.push(RenderOp::ResetColor);
     }
@@ -661,7 +663,7 @@ mod syn_hi_syntect_path {
     fn try_get_syntect_highlighted_line<'a>(
         editor_engine: &'a &mut EditorEngine,
         editor_buffer: &&EditorBuffer,
-        line: &'a UnicodeString,
+        line: &'a GCString,
     ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
         let file_ext = editor_buffer.get_maybe_file_extension()?;
         let syntax_ref = try_get_syntax_ref(&editor_engine.syntax_set, file_ext)?;
@@ -715,7 +717,7 @@ mod no_syn_hi_path {
         row_index: RowIndex,
         editor_engine: &&mut EditorEngine,
         editor_buffer: &&EditorBuffer,
-        line: &UnicodeString,
+        line: &GCString,
         max_display_col_count: ColWidth,
     ) {
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
@@ -734,7 +736,7 @@ mod no_syn_hi_path {
 
     /// This is used as a fallback by other render paths.
     pub fn render_line_no_syntax_highlight(
-        line_us: &UnicodeString,
+        line_gcs: &GCString,
         editor_buffer: &&EditorBuffer,
         max_display_col_count: ColWidth,
         render_ops: &mut RenderOps,
@@ -743,8 +745,7 @@ mod no_syn_hi_path {
         let scroll_offset_col_index = editor_buffer.get_scr_ofs().col_index;
 
         // Clip the content [scroll_offset.col_index .. max cols].
-        let line_trunc =
-            line_us.clip_to_width(scroll_offset_col_index, max_display_col_count);
+        let line_trunc = line_gcs.clip(scroll_offset_col_index, max_display_col_count);
 
         render_ops.push(RenderOp::ApplyColors(
             editor_engine.current_box.get_computed_style(),
@@ -763,7 +764,7 @@ mod no_syn_hi_path {
 mod test_cache {
     use std::collections::HashMap;
 
-    use r3bl_core::{assert_eq2, col, row, width, StringStorage};
+    use r3bl_core::{assert_eq2, col, row, scr_ofs, width, StringStorage};
 
     use super::*;
 
@@ -838,7 +839,7 @@ mod test_cache {
         test_cache_hit(editor_buffer, &mut cache);
 
         // Change in scroll_offset should invalidate the cache and result in a cache miss.
-        editor_buffer.content.scr_ofs = col(1) + row(1);
+        editor_buffer.content.scr_ofs = scr_ofs(col(1) + row(1));
         cache::render_content(
             editor_buffer,
             editor_engine,

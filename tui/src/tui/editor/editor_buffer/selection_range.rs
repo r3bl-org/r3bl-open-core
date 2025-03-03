@@ -25,8 +25,8 @@ use r3bl_core::{caret_scr_adj,
                 ChUnitPrimitiveType,
                 ColIndex,
                 ColWidth,
-                ScrOfs,
-                UnicodeString};
+                GCString,
+                ScrOfs};
 
 // cspell:ignore worl
 
@@ -65,8 +65,8 @@ pub struct SelectionRange {
     ///   `UTF-8` encoding uses between 1 and 4 bytes to encode a character, eg: `"H"` is
     ///   1 byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces, eg
     ///   `"H"` is 1 space wide, and `"😄"` is two spaces wide
-    ///   [super::UnicodeString::str_display_width()] and
-    ///   [super::UnicodeString::char_display_width()].
+    ///   [r3bl_core::GCString::width()] and
+    ///   [r3bl_core::GCString::width_char()].
     start: CaretScrAdj,
     /// This is not "raw", this is "scroll adjusted".
     /// - It represents the display width at which the selection ends. The display width
@@ -77,8 +77,8 @@ pub struct SelectionRange {
     ///   `UTF-8` encoding uses between 1 and 4 bytes to encode a character, eg: `"H"` is
     ///   1 byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces, eg
     ///   `"H"` is 1 space wide, and `"😄"` is two spaces wide
-    ///   [super::UnicodeString::str_display_width()] and
-    ///   [super::UnicodeString::char_display_width()].
+    ///   [r3bl_core::GCString::width()] and
+    ///   [r3bl_core::GCString::width_char()].
     end: CaretScrAdj,
 }
 
@@ -124,12 +124,12 @@ impl SelectionRange {
     }
 
     /// Uses `SelectionRange` to calculate width and simply calls
-    /// [UnicodeString::clip_to_width()].
-    pub fn clip_to_range<'a>(&self, us: &'a UnicodeString) -> &'a str {
+    /// [r3bl_core::GCString::clip()].
+    pub fn clip_to_range<'a>(&self, us: &'a GCString) -> &'a str {
         let (start_display_col_index, end_display_col_index) = self.as_tuple();
         let max_display_width_col_count =
             width(*(end_display_col_index - start_display_col_index));
-        us.clip_to_width(start_display_col_index, max_display_width_col_count)
+        us.clip(start_display_col_index, max_display_width_col_count)
     }
 }
 
@@ -320,7 +320,7 @@ mod tests_range {
     ///   │  ⎩4 = end_display_col_index
     ///   ⎩1 = start_display_col_index
     /// ```
-    /// - [UnicodeString::clip_to_range](UnicodeString::clip_to_range): "ell"
+    /// - [GCString::clip_to_range](GCString::clip_to_range): "ell"
     #[test]
     fn test_locate() {
         let range = {

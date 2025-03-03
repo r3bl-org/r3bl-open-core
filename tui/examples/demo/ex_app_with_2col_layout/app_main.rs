@@ -18,7 +18,7 @@
 use r3bl_core::{col,
                 glyphs,
                 height,
-                requested_size_percent,
+                req_size_pc,
                 row,
                 throws,
                 throws_with_return,
@@ -242,7 +242,7 @@ mod perform_layout {
                     in: surface,
                     id: id_container,
                     dir: LayoutDirection::Horizontal,
-                    requested_size_percent: requested_size_percent!(width: 100, height: 100),
+                    requested_size_percent: req_size_pc!(width: 100, height: 100),
                     styles:                 [id_container],
                 );
 
@@ -253,7 +253,7 @@ mod perform_layout {
                       in:                     surface,
                       id:                     id_column_1,
                       dir:                    LayoutDirection::Vertical,
-                      requested_size_percent: requested_size_percent!(width: 50, height: 100),
+                      requested_size_percent: req_size_pc!(width: 50, height: 100),
                       styles:                 [id_column_1],
                     );
                     render_component_in_current_box!(
@@ -273,7 +273,7 @@ mod perform_layout {
                       in:                     surface,
                       id:                     id_column_2,
                       dir:                    LayoutDirection::Vertical,
-                      requested_size_percent: requested_size_percent!(width: 50, height: 100),
+                      requested_size_percent: req_size_pc!(width: 50, height: 100),
                       styles:                 [id_column_2],
                     );
                     render_component_in_current_box!(

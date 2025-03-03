@@ -102,7 +102,7 @@ pub struct Dim {
     pub row_height: RowHeight,
 }
 
-pub fn dim(arg: impl Into<Dim>) -> Dim { arg.into() }
+pub fn dim(arg_dim: impl Into<Dim>) -> Dim { arg_dim.into() }
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Ord, Eq, Hash)]
 pub enum SufficientSize {
@@ -110,13 +110,11 @@ pub enum SufficientSize {
     IsTooSmall,
 }
 
-// TODO: [ ] impl constructor, debug, ops for Dim (equivalent to r3bl_core::Size)
-
 mod constructor {
     use super::*;
 
     impl Dim {
-        pub fn new(arg: impl Into<Dim>) -> Self { arg.into() }
+        pub fn new(arg_dim: impl Into<Dim>) -> Self { arg_dim.into() }
     }
 
     impl From<(ColWidth, RowHeight)> for Dim {
@@ -160,12 +158,24 @@ mod constructor {
     }
 }
 
+mod convert {
+    use super::*;
+
+    impl From<Dim> for ColWidth {
+        fn from(size: Dim) -> Self { size.col_width }
+    }
+
+    impl From<Dim> for RowHeight {
+        fn from(size: Dim) -> Self { size.row_height }
+    }
+}
+
 mod api {
     use super::*;
 
     impl Dim {
-        pub fn fits_min_size(&self, min_size: impl Into<Dim>) -> SufficientSize {
-            let size: Dim = min_size.into();
+        pub fn fits_min_size(&self, arg_min_size: impl Into<Dim>) -> SufficientSize {
+            let size: Dim = arg_min_size.into();
             let min_width = size.col_width;
             let min_height = size.row_height;
 
@@ -360,5 +370,14 @@ mod tests {
         let size1 = size0 + ch(1);
         assert_eq!(size1.col_width, ColWidth(ch(9)));
         assert_eq!(size1.row_height, RowHeight(ch(14)));
+    }
+
+    #[test]
+    fn test_convert_dim_to_width_or_height() {
+        let size = width(5) + height(10);
+        let w: Width = size.into();
+        let h: Height = size.into();
+        assert_eq!(h, RowHeight(ch(10)));
+        assert_eq!(w, ColWidth(ch(5)));
     }
 }

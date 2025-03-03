@@ -20,8 +20,8 @@ use sizing::VecSteps;
 use smallstr::SmallString;
 use smallvec::SmallVec;
 
-use super::{Lolcat, LolcatBuilder};
-use crate::{Ansi256GradientIndex, TuiColor};
+use super::{Lolcat, LolcatBuilder, Seed};
+use crate::{Ansi256GradientIndex, Colorize, TuiColor};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
 /// reason these are exceeded, then they will [smallvec::SmallVec::spilled] over into the
@@ -89,7 +89,7 @@ impl ColorWheelConfig {
             matches!(
                 config,
                 ColorWheelConfig::Lolcat(LolcatBuilder {
-                    background_mode: true,
+                    colorization_strategy: Colorize::BothBackgroundAndForeground,
                     ..
                 })
             )
@@ -184,6 +184,6 @@ pub enum GradientKind {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum GradientLengthKind {
     ColorWheel(usize),
-    Lolcat(/* seed */ f64),
+    Lolcat(Seed),
     NotCalculatedYet,
 }

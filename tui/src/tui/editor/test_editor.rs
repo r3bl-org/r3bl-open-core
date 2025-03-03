@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod test_config_options {
-    use r3bl_core::{assert_eq2, caret_scr_adj, col, row, UnicodeStringExt};
+    use r3bl_core::{assert_eq2, caret_scr_adj, col, row, GCStringExt};
 
     use crate::{editor_engine::engine_internal_api,
                 system_clipboard_service_provider::test_fixtures::TestClipboard,
@@ -121,7 +121,7 @@ mod test_config_options {
         );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
         let maybe_line_str = engine_internal_api::line_at_caret_to_string(&buffer);
-        assert_eq2!(maybe_line_str.unwrap(), &"abcaba".unicode_string());
+        assert_eq2!(maybe_line_str.unwrap(), &"abcaba".grapheme_string());
     }
 }
 
@@ -135,8 +135,8 @@ mod test_editor_ops {
                     row,
                     scr_ofs,
                     width,
-                    UnicodeString,
-                    UnicodeStringExt};
+                    GCString,
+                    GCStringExt};
     use smallvec::smallvec;
 
     use crate::{editor::sizing::VecEditorContentLines,
@@ -675,7 +675,7 @@ mod test_editor_ops {
         assert::none_is_at_caret(&buffer);
         assert_eq2!(
             engine_internal_api::line_at_caret_to_string(&buffer,).unwrap(),
-            &"ab".unicode_string()
+            &"ab".grapheme_string()
         );
 
         // Move caret left, insert new line (at middle of line).
@@ -773,7 +773,7 @@ mod test_editor_ops {
         );
         assert_eq2!(
             engine_internal_api::line_at_caret_to_string(&buffer,).unwrap(),
-            &"1a".unicode_string()
+            &"1a".grapheme_string()
         );
         assert::str_is_at_caret(&buffer, "a");
 
@@ -820,7 +820,7 @@ mod test_editor_ops {
         assert::str_is_at_caret(&buffer, "a");
         assert_eq2!(
             engine_internal_api::line_at_caret_to_string(&buffer,).unwrap(),
-            &"12a".unicode_string()
+            &"12a".grapheme_string()
         );
 
         // Move caret right. It should do nothing.
@@ -941,7 +941,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('a')],
             &mut TestClipboard::default(),
         );
-        let expected: VecEditorContentLines = smallvec!["a".unicode_string()];
+        let expected: VecEditorContentLines = smallvec!["a".grapheme_string()];
         assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(0)));
 
@@ -963,7 +963,7 @@ mod test_editor_ops {
             &mut TestClipboard::default(),
         );
         let expected: VecEditorContentLines =
-            smallvec!["a".unicode_string(), "b".unicode_string()];
+            smallvec!["a".grapheme_string(), "b".grapheme_string()];
         assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(1)));
 
@@ -987,10 +987,10 @@ mod test_editor_ops {
             &mut TestClipboard::default(),
         );
         let expected: VecEditorContentLines = smallvec![
-            "a".unicode_string(),
-            "b".unicode_string(),
-            "".unicode_string(),
-            "😀".unicode_string()
+            "a".grapheme_string(),
+            "b".grapheme_string(),
+            "".grapheme_string(),
+            "😀".grapheme_string()
         ];
         assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(3)));
@@ -1011,10 +1011,10 @@ mod test_editor_ops {
             &mut TestClipboard::default(),
         );
         let expected: VecEditorContentLines = smallvec![
-            "a".unicode_string(),
-            "b".unicode_string(),
-            "".unicode_string(),
-            "😀d".unicode_string()
+            "a".grapheme_string(),
+            "b".grapheme_string(),
+            "".grapheme_string(),
+            "😀d".grapheme_string()
         ];
         assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(3) + row(3)));
@@ -1034,12 +1034,12 @@ mod test_editor_ops {
             vec![EditorEvent::InsertString("🙏🏽".into())],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(width(2), UnicodeString::str_display_width("🙏🏽"));
+        assert_eq2!(width(2), GCString::width("🙏🏽"));
         let expected: VecEditorContentLines = smallvec![
-            "a".unicode_string(),
-            "b".unicode_string(),
-            "".unicode_string(),
-            "😀d🙏🏽".unicode_string()
+            "a".grapheme_string(),
+            "b".grapheme_string(),
+            "".grapheme_string(),
+            "😀d🙏🏽".grapheme_string()
         ];
         assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(3)));
@@ -1312,16 +1312,16 @@ mod test_editor_ops {
             mock_real_objects_for_editor::make_editor_engine_with_bounds(window_size);
 
         let long_line = "# Did he take those two new droids with him? They hit accelerator.🙏🏽😀░ We will deal with your Rebel friends. Commence primary ignition.🙏🏽😀░";
-        let long_line_us = long_line.unicode_string();
+        let long_line_gcs = long_line.grapheme_string();
         buffer.set_lines([long_line]);
 
         // Setup assertions.
         {
-            assert_eq2!(width(2), UnicodeString::str_display_width("🙏🏽"));
+            assert_eq2!(width(2), GCString::width("🙏🏽"));
             assert_eq2!(buffer.len(), height(1));
-            assert_eq2!(buffer.get_lines()[0], long_line.unicode_string());
+            assert_eq2!(buffer.get_lines()[0], long_line.grapheme_string());
             let us = &buffer.get_lines()[0];
-            assert_eq2!(us, &long_line_us);
+            assert_eq2!(us, &long_line_gcs);
             assert_eq2!(buffer.get_caret_raw(), caret_raw(col(0) + row(0)));
             assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
             assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(0) + row(0)));
@@ -1344,8 +1344,8 @@ mod test_editor_ops {
             // Right of viewport.
             let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_caret_scr_adj().col_index;
-            let result = line.get_string_at_display_col_index(display_col_index);
-            assert_eq2!(result.unwrap().seg_text.string, "🙏🏽");
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, "🙏🏽");
 
             // Press right 1 more time. The caret should correctly jump the width of "😀" from 68 to
             // 70.
@@ -1359,8 +1359,8 @@ mod test_editor_ops {
             // Right of viewport.
             let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_caret_scr_adj().col_index;
-            let result = line.get_string_at_display_col_index(display_col_index);
-            assert_eq2!(result.unwrap().seg_text.string, "😀");
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, "😀");
         }
 
         // Press right 60 more times. The **LEFT** side of the viewport should be at the
@@ -1380,8 +1380,8 @@ mod test_editor_ops {
             // Start of viewport.
             let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = line.get_string_at_display_col_index(display_col_index);
-            assert_eq2!(result.unwrap().seg_text.string, "r");
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, "r");
         }
 
         // Press right 1 more time. It should jump the jumbo emoji at the start of the
@@ -1401,8 +1401,8 @@ mod test_editor_ops {
             // Start of viewport.
             let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = line.get_string_at_display_col_index(display_col_index);
-            assert_eq2!(result.unwrap().seg_text.string, ".");
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, ".");
         }
 
         // Press right 4 times. It should jump the emoji at the start of the line (and not
@@ -1420,8 +1420,8 @@ mod test_editor_ops {
             // Start of viewport.
             let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = line.get_string_at_display_col_index(display_col_index);
-            assert_eq2!(result.unwrap().seg_text.string, "😀");
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, "😀");
         }
 
         // Press right 1 more time. It should jump the emoji.
@@ -1435,8 +1435,8 @@ mod test_editor_ops {
             // Start of viewport.
             let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = line.get_string_at_display_col_index(display_col_index);
-            assert_eq2!(result.unwrap().seg_text.string, "░");
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, "░");
         }
     }
 }
@@ -1733,7 +1733,7 @@ mod selection_tests {
 
 #[cfg(test)]
 mod clipboard_tests {
-    use r3bl_core::{assert_eq2, UnicodeStringExt as _};
+    use r3bl_core::{assert_eq2, GCStringExt as _};
     use smallvec::smallvec;
 
     use crate::{editor::sizing::VecEditorContentLines,
@@ -1834,8 +1834,8 @@ mod clipboard_tests {
             );
 
             let new_lines: VecEditorContentLines = smallvec![
-                "abc copied text r3bl xyz".unicode_string(),
-                "pqr rust uvw".unicode_string()
+                "abc copied text r3bl xyz".grapheme_string(),
+                "pqr rust uvw".grapheme_string()
             ];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
@@ -1855,9 +1855,9 @@ mod clipboard_tests {
             );
 
             let new_lines: VecEditorContentLines = smallvec![
-                "abc copied text old line".unicode_string(),
-                "new line r3bl xyz".unicode_string(),
-                "pqr rust uvw".unicode_string()
+                "abc copied text old line".grapheme_string(),
+                "new line r3bl xyz".grapheme_string(),
+                "pqr rust uvw".grapheme_string()
             ];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
@@ -1899,7 +1899,7 @@ mod clipboard_tests {
             assert_eq2!(content, "abc r3bl xyz".to_string()); // copied to clipboard
 
             let new_lines: VecEditorContentLines = smallvec![
-                "pqr rust uvw".unicode_string(), // First line 'abc r3bl xyz' is cut
+                "pqr rust uvw".grapheme_string(), // First line 'abc r3bl xyz' is cut
             ];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
@@ -1943,7 +1943,7 @@ mod clipboard_tests {
             /* cspell:disable-next-line */
             assert_eq2!(content, "r3bl xyz\npqr ".to_string()); // copied to clipboard
             let new_lines: VecEditorContentLines =
-                smallvec!["abc ".unicode_string(), "rust uvw".unicode_string()];
+                smallvec!["abc ".grapheme_string(), "rust uvw".grapheme_string()];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
     }
