@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-//! A fixed-size ring buffer implementation using heap allocation.
+//! A fixed-size ring buffer implementation using heap allocation. For stack allocated
+//! version, take a look at [super::RingBufferStack].
 
-use std::{fmt::Debug,
-          ops::{Index, IndexMut}};
+use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RingBufferHeap<T, const N: usize> {
@@ -26,6 +26,10 @@ pub struct RingBufferHeap<T, const N: usize> {
     head: usize,
     tail: usize,
     count: usize,
+}
+
+impl<T, const N: usize> Default for RingBufferHeap<T, N> {
+    fn default() -> Self { Self::new() }
 }
 
 impl<T, const N: usize> RingBufferHeap<T, N> {
@@ -85,15 +89,26 @@ impl<T, const N: usize> RingBufferHeap<T, N> {
         value
     }
 
-    // Shortens the buffer, keeping the first `new_len` elements and dropping the rest.
-    pub fn truncate(&mut self, new_len: usize) {
-        if new_len >= self.count {
+    // Delete the items from the given index to the end of the buffer.
+    pub fn truncate(&mut self, index: usize) {
+        if index >= self.count {
             return;
         }
 
-        while self.count > new_len {
-            self.remove_head();
+        let actual_index = (self.tail + index) % N;
+
+        // Clear elements from actual_index to the end of the buffer.
+        for i in 0..N {
+            let wrapped_index = (actual_index + i) % N;
+            if i < self.count - index {
+                self.internal_storage[wrapped_index] = None;
+            } else {
+                break;
+            }
         }
+
+        self.head = actual_index;
+        self.count = index;
     }
 
     pub fn clear(&mut self) {
@@ -125,40 +140,6 @@ impl<T, const N: usize> RingBufferHeap<T, N> {
         self.internal_storage
             .get(actual_index)
             .and_then(|x| x.as_ref())
-    }
-}
-
-impl<T, const N: usize> Index<usize> for RingBufferHeap<T, N> {
-    type Output = T;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        if index >= self.count {
-            panic!(
-                "Index out of bounds: the len is {} but the index is {}",
-                self.count, index
-            );
-        }
-
-        let actual_index = (self.tail + index) % N;
-        self.internal_storage[actual_index]
-            .as_ref()
-            .expect("Should be Some")
-    }
-}
-
-impl<T, const N: usize> IndexMut<usize> for RingBufferHeap<T, N> {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        if index >= self.count {
-            panic!(
-                "Index out of bounds: the len is {} but the index is {}",
-                self.count, index
-            );
-        }
-
-        let actual_index = (self.tail + index) % N;
-        self.internal_storage[actual_index]
-            .as_mut()
-            .expect("Should be Some")
     }
 }
 
@@ -350,14 +331,14 @@ mod tests {
         vec.push("Rust".into());
         vec.truncate(2);
         assert_eq!(vec.len(), 2);
-        assert_eq!(vec[0], "Hello");
-        assert_eq!(vec[1], "World");
+        assert_eq!(vec.first().unwrap(), "Hello");
+        assert_eq!(vec.get(1).unwrap(), "World");
+        assert_eq!(vec.get(2), None);
 
         let mut ring_buffer: RingBufferHeap<SmallStringBackingStore, 3> =
             RingBufferHeap::new();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
-
         ring_buffer.add("Rust".into());
         ring_buffer.truncate(2);
 
@@ -386,8 +367,9 @@ mod tests {
         vec.push("Rust".into());
         vec.truncate(2);
         assert_eq!(vec.len(), 2);
-        assert_eq!(vec[0], "Hello");
-        assert_eq!(vec[1], "World");
+        assert_eq!(vec.first().unwrap(), "Hello");
+        assert_eq!(vec.get(1).unwrap(), "World");
+        assert_eq!(vec.get(2), None);
 
         let mut ring_buffer: RingBufferHeap<SmallStringBackingStore, 3> =
             RingBufferHeap::new();
@@ -402,14 +384,14 @@ mod tests {
         assert_eq!(ring_buffer.tail, 1);
         assert_eq!(ring_buffer.count, 2);
 
-        let mut iter = ring_buffer.iter();
-        assert_eq!(iter.next().unwrap(), "World");
-        assert_eq!(iter.next().unwrap(), "Rust");
-        assert_eq!(iter.next(), None);
-
         assert_eq!(ring_buffer.get(0).unwrap(), "World");
         assert_eq!(ring_buffer.get(1).unwrap(), "Rust");
         assert_eq!(ring_buffer.get(2), None);
         assert_eq!(ring_buffer.get(3), None);
+
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "World");
+        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next(), None);
     }
 }

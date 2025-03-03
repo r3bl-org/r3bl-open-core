@@ -35,6 +35,7 @@ use r3bl_core::{call_if_true,
                 Dim,
                 GCString,
                 GCStringExt,
+                RingBufferHeap,
                 RowHeight,
                 RowIndex,
                 ScrOfs,
@@ -220,9 +221,8 @@ pub(in crate::tui::editor) mod sizing {
     pub type VecEditorContentLines = SmallVec<[GCString; DEFAULT_EDITOR_LINES_SIZE]>;
     const DEFAULT_EDITOR_LINES_SIZE: usize = 32;
 
-    /// The version history is stored on the heap.
-    // REVIEW: [ ] replace w/ RingBuffer since it's a fixed size.
-    pub type VecEditorBufferHistoryVersions = Vec<EditorContent>;
+    /// The version history is stored on the heap, as a ring buffer.
+    pub type VersionHistory = RingBufferHeap<EditorContent, MAX_UNDO_REDO_SIZE>;
     /// This is the absolute maximum number of undo/redo steps that will ever be stored.
     pub const MAX_UNDO_REDO_SIZE: usize = 16;
 
@@ -245,17 +245,56 @@ pub(in crate::tui::editor) mod sizing {
     }
 }
 
+/// # Undo/Redo Algorithm
+///
+/// The `EditorBufferHistory` struct manages the undo/redo functionality for the
+/// `EditorBuffer`. It uses a ring buffer (`versions`) to store the different states of
+/// the `EditorContent`. The `current_index` field points to the current state in the
+/// `versions` buffer.
+///
+/// ## Pushing a new state (history::push)
+///
+/// 1. The current render cache is cleared to invalidate any cached rendering.
+/// 2. A copy of the current `EditorContent` is created.
+/// 3. If the `current_index` is not the last index in the `versions` buffer, the history
+///    from `current_index + 1` to the end of the buffer is truncated (removed). This
+///    discards any "future" states that were previously redone.
+/// 4. The copy of the `EditorContent` is added to the `versions` buffer.
+/// 5. The `current_index` is incremented to point to the newly added state.
+///
+/// ## Undoing (history::undo)
+///
+/// 1. The current render cache is cleared to invalidate any cached rendering.
+/// 2. The current caret position is retained.
+/// 3. If there is a previous state in the `versions` buffer (i.e., `current_index > 0`),
+///    the `current_index` is decremented.
+/// 4. The `EditorContent` at the new `current_index` is retrieved from the `versions`
+///    buffer and set as the current content of the `EditorBuffer`.
+/// 5. The caret position is restored.
+///
+/// ## Redoing (history::redo)
+///
+/// 1. The current render cache is cleared to invalidate any cached rendering.
+/// 2. If there is a next state in the `versions` buffer (i.e., `current_index <
+///    versions.len() - 1`), the `current_index` is incremented.
+/// 3. The `EditorContent` at the new `current_index` is retrieved from the `versions`
+///    buffer and set as the current content of the `EditorBuffer`.
+///
+/// ## Notes
+///
+/// - The `versions` buffer has a maximum size (`MAX_UNDO_REDO_SIZE`). When the buffer is
+///   full, adding a new state will overwrite the oldest state in the buffer.
+/// - The `current_index` can be -1 if the buffer is empty.
+/// - The caret position is retained during undo operations.
 #[derive(Clone, PartialEq)]
 pub struct EditorBufferHistory {
-    // REFACTOR: [ ] consider using a "heap" allocated ring buffer for `versions`
-    pub versions: sizing::VecEditorBufferHistoryVersions,
+    pub versions: sizing::VersionHistory,
     pub current_index: isize,
 }
 
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorContent {
     pub lines: sizing::VecEditorContentLines,
-    // BUG: [ ] introduce scroll adjusted type
     /// The caret is stored as a "raw" [EditorContent::caret_raw].
     /// - This is the col and row index that is relative to the viewport.
     /// - In order to get the "scroll adjusted" caret position, use
@@ -657,7 +696,7 @@ pub mod history {
     impl Default for EditorBufferHistory {
         fn default() -> Self {
             Self {
-                versions: sizing::VecEditorBufferHistoryVersions::new(),
+                versions: sizing::VersionHistory::new(),
                 current_index: -1,
             }
         }
@@ -677,7 +716,7 @@ pub mod history {
 
         let content_copy = buffer.content.clone();
 
-        // Delete the history from the current version index to the end.
+        // Delete the history from the current version index + 1 to the end.
         if let Some(current_index) = buffer.history.get_current_index() {
             buffer
                 .history
@@ -765,16 +804,7 @@ pub mod history {
         }
 
         fn push_content(&mut self, content: EditorContent) {
-            // Remove the oldest version if the limit is reached.
-            if self.versions.len() >= sizing::MAX_UNDO_REDO_SIZE {
-                self.versions.remove(0);
-                // Decrement the current_index to maintain the correct position.
-                if self.current_index > 0 {
-                    self.current_index -= 1;
-                }
-            }
-
-            self.versions.push(content);
+            self.versions.add(content);
             self.increment_index();
         }
 
@@ -895,7 +925,7 @@ mod history_tests {
 
         let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 1);
-        assert_eq2!(history_stack[0], content);
+        assert_eq2!(history_stack.get(0).unwrap(), &content);
     }
 
     #[test]
@@ -907,8 +937,11 @@ mod history_tests {
 
         let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 1);
-        assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0], "abc".grapheme_string());
+        assert_eq2!(history_stack.get(0).unwrap().lines.len(), 1);
+        assert_eq2!(
+            history_stack.get(0).unwrap().lines[0],
+            "abc".grapheme_string()
+        );
     }
 
     #[test]
@@ -924,25 +957,42 @@ mod history_tests {
 
         buffer.content.lines = smallvec!["ghi".grapheme_string()];
         history::push(&mut buffer);
+
+        // 3 pushes, so the current index should be 2.
         assert_eq2!(buffer.history.current_index, 2);
 
         // Do two undos.
         history::undo(&mut buffer);
         history::undo(&mut buffer);
+        // The current index should be 0.
+        assert_eq!(buffer.history.current_index, 0);
+        // There are two versions ahead of the current index.
+        assert_eq!(buffer.history.versions.len(), 3);
 
-        // Push new content. Should drop future redos.
+        // Push new content. Should drop future redos (2 versions should be removed).
         buffer.content.lines = smallvec!["xyz".grapheme_string()];
         history::push(&mut buffer);
+        assert_eq!(buffer.history.current_index, 1);
+        assert_eq!(buffer.history.versions.len(), 2);
 
         let history = buffer.history;
         assert_eq2!(history.current_index, 1);
 
         let history_stack = history.versions;
         assert_eq2!(history_stack.len(), 2);
-        assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0], "abc".grapheme_string());
-        assert_eq2!(history_stack[1].lines.len(), 1);
-        assert_eq2!(history_stack[1].lines[0], "xyz".grapheme_string());
+        for (index, content) in history_stack.iter().enumerate() {
+            match index {
+                0 => {
+                    assert_eq2!(content.lines.len(), 1);
+                    assert_eq2!(content.lines[0], "abc".grapheme_string());
+                }
+                1 => {
+                    assert_eq2!(content.lines.len(), 1);
+                    assert_eq2!(content.lines[0], "xyz".grapheme_string());
+                }
+                _ => unreachable!(),
+            }
+        }
     }
 
     #[test]
@@ -980,12 +1030,24 @@ mod history_tests {
 
         let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 3);
-        assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0], "abc".grapheme_string());
-        assert_eq2!(history_stack[1].lines.len(), 1);
-        assert_eq2!(history_stack[1].lines[0], "def".grapheme_string());
-        assert_eq2!(history_stack[2].lines.len(), 1);
-        assert_eq2!(history_stack[2].lines[0], "ghi".grapheme_string());
+
+        for (index, content) in history_stack.iter().enumerate() {
+            match index {
+                0 => {
+                    assert_eq2!(content.lines.len(), 1);
+                    assert_eq2!(content.lines[0], "abc".grapheme_string());
+                }
+                1 => {
+                    assert_eq2!(content.lines.len(), 1);
+                    assert_eq2!(content.lines[0], "def".grapheme_string());
+                }
+                2 => {
+                    assert_eq2!(content.lines.len(), 1);
+                    assert_eq2!(content.lines[0], "ghi".grapheme_string());
+                }
+                _ => unreachable!(),
+            }
+        }
     }
 
     #[test]
@@ -1035,9 +1097,19 @@ mod history_tests {
 
         let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 2);
-        assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0], "abc".grapheme_string());
-        assert_eq2!(history_stack[1].lines.len(), 1);
-        assert_eq2!(history_stack[1].lines[0], "def".grapheme_string());
+
+        for (index, content) in history_stack.iter().enumerate() {
+            match index {
+                0 => {
+                    assert_eq2!(content.lines.len(), 1);
+                    assert_eq2!(content.lines[0], "abc".grapheme_string());
+                }
+                1 => {
+                    assert_eq2!(content.lines.len(), 1);
+                    assert_eq2!(content.lines[0], "def".grapheme_string());
+                }
+                _ => unreachable!(),
+            }
+        }
     }
 }
