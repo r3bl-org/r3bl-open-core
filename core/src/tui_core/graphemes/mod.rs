@@ -15,9 +15,6 @@
  *   limitations under the License.
  */
 
-// REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
-// cspell:ignore reedline
-
 //! Rust uses `UTF-8` to represent text in [String]. `UTF-8` is a variable width encoding,
 //! so each character can take up a different number of bytes, between 1 and 4, and 1 byte
 //! is 8 bits; this is why we use [Vec] of [u8] to represent a [String].

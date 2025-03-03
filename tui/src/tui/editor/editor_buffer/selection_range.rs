@@ -28,10 +28,6 @@ use r3bl_core::{caret_scr_adj,
                 GCString,
                 ScrOfs};
 
-// cspell:ignore worl
-
-// REVIEW: [ ] move this out of core into tui crate
-
 /// Represents a range of characters in a line. The col indices are scroll adjusted (and
 /// not raw). The row indices are not used, and clobbered with [ChUnitPrimitiveType::MAX].
 ///

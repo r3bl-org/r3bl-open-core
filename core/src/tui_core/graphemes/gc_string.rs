@@ -15,8 +15,6 @@
  *   limitations under the License.
  */
 
-// REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
-// cspell:ignore bindex smallvec ustr assert_eq ustring col_index uindex xello Xelo Loby
 use std::{fmt::Debug,
           ops::{Add, Deref, DerefMut}};
 
@@ -1506,7 +1504,6 @@ mod tests {
         assert_eq!(gs.len(), seg_width(12));
         assert_eq!(gs.get_max_seg_index(), seg_index(11));
 
-        // REVIEW: [ ] impl test
         let test_cases = [
             (col(0), Some(("".into(), "Hi📦XelLo🙏🏽Bye".into()))),
             (col(1), Some(("H".into(), "i📦XelLo🙏🏽Bye".into()))),

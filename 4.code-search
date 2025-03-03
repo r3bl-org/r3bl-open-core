@@ -5,8 +5,8 @@
 178 results - 47 files
 
 CHANGELOG.md:
-  1035:     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
-  1050:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
+  1037:     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
+  1052:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
 
 cmdr/src/analytics_client.rs:
   113:                             tracing::debug!(
@@ -161,10 +161,10 @@ tui/src/tui/editor/editor_buffer/buffer_selection_support.rs:
   575:                     tracing::debug!(
 
 tui/src/tui/editor/editor_buffer/buffer_struct.rs:
-  293:                 tracing::info!(
-  691:             tracing::debug!("🍎🍎🍎 add_content_to_undo_stack buffer: {:?}", buffer);
-  706:             tracing::debug!("🍎🍎🍎 undo buffer: {:?}", buffer);
-  719:             tracing::debug!("🍎🍎🍎 redo buffer: {:?}", buffer);
+  333:                 tracing::info!(
+  731:             tracing::debug!("🍎🍎🍎 add_content_to_undo_stack buffer: {:?}", buffer);
+  746:             tracing::debug!("🍎🍎🍎 undo buffer: {:?}", buffer);
+  759:             tracing::debug!("🍎🍎🍎 redo buffer: {:?}", buffer);
 
 tui/src/tui/editor/editor_buffer/system_clipboard_service_provider.rs:
   37:                 tracing::debug!(

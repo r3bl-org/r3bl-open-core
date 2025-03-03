@@ -2,18 +2,7 @@
 # Flags: CaseSensitive RegExp
 # Excluding: scratch.rs
 
-40 results - 21 files
-
-core/src/tui_core/graphemes/gc_string.rs:
-    18: // REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
-  1509:         // REVIEW: [ ] impl test
-
-core/src/tui_core/graphemes/mod.rs:
-  18: // REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
-
-core/src/tui_core/graphemes/seg.rs:
-  18: // REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
-  26: // REVIEW: [x] update docs
+32 results - 17 files
 
 tui/examples/demo/ex_app_no_layout/app_main.rs:
   534: // REVIEW: [ ] introduce HUD for telemetry here & copy to all other examples
@@ -25,16 +14,11 @@ tui/src/tui/editor/editor_buffer/buffer_selection_support.rs:
   50: // BUG: [ ] introduce scr adj types instead of just ColIndex and RowIndex
 
 tui/src/tui/editor/editor_buffer/buffer_struct.rs:
-  249:     // REFACTOR: [ ] consider using a "heap" allocated ring buffer for `versions`
-  257:     // BUG: [ ] introduce scroll adjusted type
-  885:     // REFACTOR: [ ] add tests for sizing::MAX_UNDO_REDO_SIZE
+  916:     // REFACTOR: [ ] add tests for sizing::MAX_UNDO_REDO_SIZE
 
 tui/src/tui/editor/editor_buffer/selection_list.rs:
    50:     // REFACTOR: [x] consider making this a fixed size array (doesn't need to be a map which is heap allocated)
   119:     // BUG: [ ] introduce scroll adjusted type
-
-tui/src/tui/editor/editor_buffer/selection_range.rs:
-  33: // REVIEW: [ ] move this out of core into tui crate
 
 tui/src/tui/editor/editor_engine/caret_mut.rs:
   44:     // BUG: [ ] introduce scroll adjusted type
