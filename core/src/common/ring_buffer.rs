@@ -71,13 +71,13 @@
 //! assert_eq!(ring_buffer.iter().collect::<Vec<&i32>>(), vec![&2, &3]);
 //! ```
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum RingBufferStorage<T, const N: usize> {
     Stack([Option<T>; N]),
     Heap(Vec<Option<T>>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RingBuffer<T, const N: usize> {
     internal_storage: RingBufferStorage<T, N>,
     head: usize,
@@ -89,7 +89,7 @@ mod constructor {
     use super::*;
 
     impl<T, const N: usize> RingBuffer<T, N> {
-        pub fn new_stack() -> Self {
+        pub fn new_alloc_on_stack() -> Self {
             RingBuffer {
                 internal_storage: RingBufferStorage::Stack([(); N].map(|_| None)),
                 head: 0,
@@ -98,7 +98,7 @@ mod constructor {
             }
         }
 
-        pub fn new_heap() -> Self {
+        pub fn new_alloc_on_heap() -> Self {
             RingBuffer {
                 internal_storage: RingBufferStorage::Heap(Vec::with_capacity(N)),
                 head: 0,
@@ -110,7 +110,7 @@ mod constructor {
 
     impl<T, const N: usize> Default for RingBuffer<T, N> {
         /// The default implementation is the "stack" variant.
-        fn default() -> Self { Self::new_stack() }
+        fn default() -> Self { Self::new_alloc_on_stack() }
     }
 }
 
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn test_empty_ring_buffer_stack() {
-        let ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new_stack();
+        let ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new_alloc_on_stack();
         assert_eq!(ring_buffer.len(), 0);
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 0);
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_empty_ring_buffer_heap() {
-        let ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new_heap();
+        let ring_buffer: RingBuffer<SmallStringBackingStore, 3> = RingBuffer::new_alloc_on_heap();
         assert_eq!(ring_buffer.len(), 0);
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 0);
@@ -257,7 +257,7 @@ mod tests {
     #[test]
     fn test_normal_insert_stack() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_stack();
+            RingBuffer::new_alloc_on_stack();
         ring_buffer.add("Hello".into());
         assert_eq!(ring_buffer.len(), 1);
         assert_eq!(ring_buffer.head, 1);
@@ -271,7 +271,7 @@ mod tests {
     #[test]
     fn test_normal_insert_heap() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_heap();
+            RingBuffer::new_alloc_on_heap();
         ring_buffer.add("Hello".into());
         assert_eq!(ring_buffer.len(), 1);
         assert_eq!(ring_buffer.head, 1);
@@ -285,7 +285,7 @@ mod tests {
     #[test]
     fn test_multiple_inserts_stack() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_stack();
+            RingBuffer::new_alloc_on_stack();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -303,7 +303,7 @@ mod tests {
     #[test]
     fn test_multiple_inserts_heap() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_heap();
+            RingBuffer::new_alloc_on_heap();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -321,7 +321,7 @@ mod tests {
     #[test]
     fn test_normal_remove_stack() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_stack();
+            RingBuffer::new_alloc_on_stack();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -339,7 +339,7 @@ mod tests {
     #[test]
     fn test_normal_remove_heap() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_heap();
+            RingBuffer::new_alloc_on_heap();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -357,7 +357,7 @@ mod tests {
     #[test]
     fn test_wrap_around_insert_stack() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_stack();
+            RingBuffer::new_alloc_on_stack();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -376,7 +376,7 @@ mod tests {
     #[test]
     fn test_wrap_around_insert_heap() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_heap();
+            RingBuffer::new_alloc_on_heap();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -395,7 +395,7 @@ mod tests {
     #[test]
     fn test_wrap_around_remove_stack() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_stack();
+            RingBuffer::new_alloc_on_stack();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -414,7 +414,7 @@ mod tests {
     #[test]
     fn test_wrap_around_remove_heap() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_heap();
+            RingBuffer::new_alloc_on_heap();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -433,7 +433,7 @@ mod tests {
     #[test]
     fn test_clear_stack() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_stack();
+            RingBuffer::new_alloc_on_stack();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
@@ -449,7 +449,7 @@ mod tests {
     #[test]
     fn test_clear_heap() {
         let mut ring_buffer: RingBuffer<SmallStringBackingStore, 3> =
-            RingBuffer::new_heap();
+            RingBuffer::new_alloc_on_heap();
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
