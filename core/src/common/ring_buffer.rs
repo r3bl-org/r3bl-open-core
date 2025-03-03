@@ -137,7 +137,7 @@ mod index {
     }
 }
 
-mod constructor {
+mod construct {
     use super::*;
 
     impl<T, const N: usize> RingBuffer<T, N> {
@@ -161,7 +161,7 @@ mod constructor {
     }
 }
 
-mod mutator {
+mod mutate {
     use super::*;
 
     impl<T, const N: usize> RingBuffer<T, N> {
@@ -220,6 +220,26 @@ mod mutator {
             self.tail = 0;
             self.count = 0;
         }
+
+        pub fn trunc(&mut self, new_len: usize) {
+            if new_len >= self.count {
+                return;
+            }
+
+            match &mut self.internal_storage {
+                RingBufferStorage::Stack(arr) => {
+                    for i in new_len..self.count {
+                        arr[(self.tail + i) % N] = None;
+                    }
+                }
+                RingBufferStorage::Heap(vec) => {
+                    vec.truncate(new_len);
+                }
+            }
+
+            self.head = (self.tail + new_len) % N;
+            self.count = new_len;
+        }
     }
 }
 
@@ -235,7 +255,7 @@ mod size {
     }
 }
 
-mod iterator {
+mod iterate {
     use super::*;
 
     pub struct RingBufferIterator<'a, T, const N: usize> {
@@ -271,7 +291,7 @@ mod iterator {
     }
 }
 
-mod accessor {
+mod access {
     use super::*;
 
     impl<T, const N: usize> RingBuffer<T, N> {

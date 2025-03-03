@@ -68,6 +68,34 @@ impl<T, const N: usize> RingBufferHeap<T, N> {
         value
     }
 
+    /// Remove from head (ie, remove the newest item). This is the opposite of
+    /// [Self::remove].
+    pub fn remove_head(&mut self) -> Option<T> {
+        if self.count == 0 {
+            return None;
+        }
+
+        if self.internal_storage.is_empty() {
+            return None;
+        }
+
+        self.head = (self.head + N - 1) % N;
+        let value = self.internal_storage[self.head].take();
+        self.count -= 1;
+        value
+    }
+
+    // Shortens the buffer, keeping the first `new_len` elements and dropping the rest.
+    pub fn truncate(&mut self, new_len: usize) {
+        if new_len >= self.count {
+            return;
+        }
+
+        while self.count > new_len {
+            self.remove_head();
+        }
+    }
+
     pub fn clear(&mut self) {
         self.head = 0;
         self.tail = 0;
@@ -179,7 +207,6 @@ mod tests {
         assert_eq!(ring_buffer.get(1), None);
         assert_eq!(ring_buffer.get(2), None);
     }
-
 
     #[test]
     fn test_normal_insert_heap() {
@@ -310,6 +337,78 @@ mod tests {
 
         assert_eq!(ring_buffer.get(0), None);
         assert_eq!(ring_buffer.get(1), None);
+        assert_eq!(ring_buffer.get(2), None);
+        assert_eq!(ring_buffer.get(3), None);
+    }
+
+    #[test]
+    fn test_normal_truncate() {
+        // Vec::truncate() behavior for comparison.
+        let mut vec: Vec<String> = vec![];
+        vec.push("Hello".into());
+        vec.push("World".into());
+        vec.push("Rust".into());
+        vec.truncate(2);
+        assert_eq!(vec.len(), 2);
+        assert_eq!(vec[0], "Hello");
+        assert_eq!(vec[1], "World");
+
+        let mut ring_buffer: RingBufferHeap<SmallStringBackingStore, 3> =
+            RingBufferHeap::new();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+
+        ring_buffer.add("Rust".into());
+        ring_buffer.truncate(2);
+
+        assert_eq!(ring_buffer.len(), 2);
+        assert_eq!(ring_buffer.head, 2);
+        assert_eq!(ring_buffer.tail, 0);
+        assert_eq!(ring_buffer.count, 2);
+
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "Hello");
+        assert_eq!(iter.next().unwrap(), "World");
+        assert_eq!(iter.next(), None);
+
+        assert_eq!(ring_buffer.get(0).unwrap(), "Hello");
+        assert_eq!(ring_buffer.get(1).unwrap(), "World");
+        assert_eq!(ring_buffer.get(2), None);
+        assert_eq!(ring_buffer.get(3), None);
+    }
+
+    #[test]
+    fn test_wrap_around_truncate() {
+        // Vec::truncate() behavior for comparison.
+        let mut vec: Vec<String> = vec![];
+        vec.push("Hello".into());
+        vec.push("World".into());
+        vec.push("Rust".into());
+        vec.truncate(2);
+        assert_eq!(vec.len(), 2);
+        assert_eq!(vec[0], "Hello");
+        assert_eq!(vec[1], "World");
+
+        let mut ring_buffer: RingBufferHeap<SmallStringBackingStore, 3> =
+            RingBufferHeap::new();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
+        ring_buffer.add("R3BL".into());
+        ring_buffer.truncate(2);
+
+        assert_eq!(ring_buffer.len(), 2);
+        assert_eq!(ring_buffer.head, 0);
+        assert_eq!(ring_buffer.tail, 1);
+        assert_eq!(ring_buffer.count, 2);
+
+        let mut iter = ring_buffer.iter();
+        assert_eq!(iter.next().unwrap(), "World");
+        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next(), None);
+
+        assert_eq!(ring_buffer.get(0).unwrap(), "World");
+        assert_eq!(ring_buffer.get(1).unwrap(), "Rust");
         assert_eq!(ring_buffer.get(2), None);
         assert_eq!(ring_buffer.get(3), None);
     }
