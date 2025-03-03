@@ -36,8 +36,7 @@ use r3bl_core::{call_if_true,
                 usize,
                 width,
                 ChUnit,
-                UnicodeString,
-                UnicodeStringExt};
+                GCStringExt};
 
 use crate::{apply_style,
             get_crossterm_color_based_on_terminal_capabilities,
@@ -198,15 +197,13 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
 
                         'inner: for last_span in header_line.iter() {
                             let span_text = last_span.text;
-                            let span_text_us = UnicodeString::new(span_text);
-                            let span_us_display_width = *span_text_us.display_width;
+                            let span_text_gcs = span_text.grapheme_string();
+                            let span_us_display_width = *span_text_gcs.display_width;
 
                             if span_us_display_width > available_space_col_count {
                                 // Clip the text to available space.
-                                let clipped_text_str = span_text_us.clip_to_width(
-                                    col(0),
-                                    width(available_space_col_count),
-                                );
+                                let clipped_text_str = span_text_gcs
+                                    .clip(col(0), width(available_space_col_count));
                                 let clipped_text = format!("{clipped_text_str}...");
                                 header_line_modified.push(clipped_text);
                                 break 'inner;
@@ -376,7 +373,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 let data_item: String =
                     clip_string_to_width_with_ellipsis(data_item, viewport_width);
                 let data_item_display_width: ChUnit =
-                    *data_item.unicode_string().display_width;
+                    *data_item.grapheme_string().display_width;
                 let padding_right = if data_item_display_width < viewport_width {
                     " ".repeat(usize(viewport_width - data_item_display_width))
                 } else {
@@ -428,13 +425,13 @@ fn clip_string_to_width_with_ellipsis(
     header_text: String,
     viewport_width: ChUnit,
 ) -> String {
-    let header_text_us = UnicodeString::new(&header_text);
-    let header_text_display_width = header_text_us.display_width;
+    let header_text_gcs = header_text.grapheme_string();
+    let header_text_display_width = header_text_gcs.display_width;
     let available_space_col_count: ChUnit = viewport_width;
     if *header_text_display_width > available_space_col_count {
         // Clip the text to available space.
         let clipped_text =
-            header_text_us.clip_to_width(col(0), width(available_space_col_count - 3));
+            header_text_gcs.clip(col(0), width(available_space_col_count - 3));
         let clipped_text = format!("{a}...", a = clipped_text);
         return clipped_text;
     }

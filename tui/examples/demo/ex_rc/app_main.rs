@@ -19,14 +19,13 @@ use std::fmt::Debug;
 use chrono::{DateTime, Local};
 use r3bl_core::{call_if_true,
                 col,
-                requested_size_percent,
+                req_size_pc,
                 row,
                 send_signal,
                 string_storage,
                 throws,
                 throws_with_return,
                 tui_styled_text,
-                tui_styled_texts,
                 tui_stylesheet,
                 ANSIBasicColor,
                 Ansi256GradientIndex,
@@ -36,12 +35,13 @@ use r3bl_core::{call_if_true,
                 ColorWheelSpeed,
                 CommonResult,
                 Dim,
+                GCStringExt,
                 GradientGenerationPolicy,
                 LolcatBuilder,
                 TextColorizationPolicy,
                 TuiColor,
-                TuiStylesheet,
-                UnicodeString};
+                TuiStyledTexts,
+                TuiStylesheet};
 use r3bl_macro::tui_style;
 use r3bl_tui::{box_end,
                box_props,
@@ -197,7 +197,7 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use r3bl_core::height;
+    use r3bl_core::{height, Colorize};
 
     use super::*;
 
@@ -214,7 +214,7 @@ mod app_main_impl_app_trait {
             self.data.lolcat_bg = ColorWheel::new(smallvec![
                 ColorWheelConfig::Lolcat(
                     LolcatBuilder::new()
-                        .set_background_mode(true)
+                        .set_background_mode(Colorize::BothBackgroundAndForeground)
                         .set_color_change_speed(ColorChangeSpeed::Slow)
                         .set_seed(0.5)
                         .set_seed_delta(0.05),
@@ -391,7 +391,7 @@ mod perform_layout {
                         in:                     surface,
                         id:                     component_id,
                         dir:                    LayoutDirection::Vertical,
-                        requested_size_percent: requested_size_percent!(width: 100, height: 100),
+                        requested_size_percent: req_size_pc!(width: 100, height: 100),
                         styles:                 [Id::EditorStyleNameDefault]
                     );
                     render_component_in_current_box!(
@@ -498,21 +498,21 @@ mod status_bar {
         size: Dim,
         state: &State,
     ) {
-        let mut styled_texts = tui_styled_texts!();
-
         let lolcat_st = {
             let now: DateTime<Local> = Local::now();
             let time_string = string_storage!(" 🦜 {} ", now.format("%H:%M:%S"));
-            let time_string_us = UnicodeString::new(&time_string);
+            let time_string_gcs = time_string.grapheme_string();
             let style = tui_style! {
                 color_fg: TuiColor::Basic(ANSIBasicColor::Black)
             };
             app.data.lolcat_bg.colorize_into_styled_texts(
-                &time_string_us,
+                &time_string_gcs,
                 GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                 TextColorizationPolicy::ColorEachCharacter(Some(style)),
             )
         };
+
+        let mut styled_texts = TuiStyledTexts::default();
 
         styled_texts += lolcat_st;
 

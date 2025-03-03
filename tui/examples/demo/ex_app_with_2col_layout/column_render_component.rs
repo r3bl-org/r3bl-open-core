@@ -29,8 +29,7 @@ use r3bl_core::{call_if_true,
                 CommonResult,
                 GradientGenerationPolicy,
                 Pos,
-                TextColorizationPolicy,
-                UnicodeString};
+                TextColorizationPolicy};
 use r3bl_tui::{render_ops,
                render_pipeline,
                BoxedSafeComponent,
@@ -88,6 +87,8 @@ mod constructor {
 }
 
 mod column_render_component_impl_component_trait {
+    use r3bl_core::GCStringExt;
+
     use super::*;
 
     impl Component<State, AppSignal> for ColumnComponent {
@@ -196,13 +197,13 @@ mod column_render_component_impl_component_trait {
 
                 let mut render_ops = render_ops!();
 
-                let line_1_us = UnicodeString::new(&line_1);
-                let line_1_trunc_str = line_1_us.truncate_to_fit_size(box_bounds_size);
-                let line_1_trunc_us = UnicodeString::new(line_1_trunc_str);
+                let line_1_gcs = line_1.grapheme_string();
+                let line_1_trunc_str = line_1_gcs.trunc_end_to_fit(box_bounds_size);
+                let line_1_trunc_gcs = line_1_trunc_str.grapheme_string();
 
-                let line_2_us = UnicodeString::new(&line_2);
-                let line_2_trunc_str = line_2_us.truncate_to_fit_size(box_bounds_size);
-                let line_2_trunc_us = UnicodeString::new(line_2_trunc_str);
+                let line_2_gcs = line_2.grapheme_string();
+                let line_2_trunc_str = line_2_gcs.trunc_end_to_fit(box_bounds_size);
+                let line_2_trunc_gcs = line_2_trunc_str.grapheme_string();
 
                 // Line 1.
                 {
@@ -215,7 +216,7 @@ mod column_render_component_impl_component_trait {
                     render_ops! {
                         @render_styled_texts_into render_ops =>
                         color_wheel.colorize_into_styled_texts(
-                            &line_1_trunc_us,
+                            &line_1_trunc_gcs,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
                         )
@@ -234,7 +235,7 @@ mod column_render_component_impl_component_trait {
                     render_ops! {
                         @render_styled_texts_into render_ops =>
                         color_wheel.colorize_into_styled_texts(
-                            &line_2_trunc_us,
+                            &line_2_trunc_gcs,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
                         )
@@ -246,7 +247,7 @@ mod column_render_component_impl_component_trait {
                 {
                     *row_index += 1;
                     col_index =
-                        (line_2_trunc_us.display_width / ch(2)).convert_to_col_index();
+                        (line_2_trunc_gcs.display_width / ch(2)).convert_to_col_index();
                     render_ops! {
                         @add_to render_ops =>
                         RenderOp::ResetColor,

@@ -27,9 +27,9 @@ use r3bl_core::{call_if_true,
                 ColorWheelConfig,
                 ColorWheelSpeed,
                 CommonResult,
+                GCStringExt as _,
                 GradientGenerationPolicy,
-                TextColorizationPolicy,
-                UnicodeString};
+                TextColorizationPolicy};
 use r3bl_tui::{render_ops,
                render_pipeline,
                BoxedSafeComponent,
@@ -190,8 +190,8 @@ mod single_column_component_impl_component_trait {
 
                 // Line 1.
                 {
-                    let line_1_us = UnicodeString::new(&line_1);
-                    let line_1_trunc = line_1_us.truncate_to_fit_size(box_bounds_size);
+                    let line_1_gcs = line_1.grapheme_string();
+                    let line_1_trunc = line_1_gcs.trunc_end_to_fit(box_bounds_size);
 
                     render_ops! {
                       @add_to render_ops
@@ -208,10 +208,9 @@ mod single_column_component_impl_component_trait {
 
                 // Line 2.
                 {
-                    let line_2_us = UnicodeString::new(&line_2);
-                    let line_2_trunc_str =
-                        line_2_us.truncate_to_fit_size(box_bounds_size);
-                    let line_2_trunc_us = UnicodeString::new(line_2_trunc_str);
+                    let line_2_gcs = line_2.grapheme_string();
+                    let line_2_trunc_str = line_2_gcs.trunc_end_to_fit(box_bounds_size);
+                    let line_2_trunc_gcs = line_2_trunc_str.grapheme_string();
 
                     render_ops! {
                       @add_to render_ops
@@ -227,7 +226,7 @@ mod single_column_component_impl_component_trait {
                         @render_styled_texts_into render_ops
                         =>
                         color_wheel.colorize_into_styled_texts(
-                            &line_2_trunc_us,
+                            &line_2_trunc_gcs,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
                         )

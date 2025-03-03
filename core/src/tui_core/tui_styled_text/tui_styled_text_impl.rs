@@ -69,10 +69,10 @@ impl Default for TuiStyledText {
 }
 
 impl TuiStyledText {
-    pub fn new(style: TuiStyle, text: impl Into<StringTuiStyledText>) -> Self {
+    pub fn new(style: TuiStyle, arg_styled_text: impl Into<StringTuiStyledText>) -> Self {
         TuiStyledText {
             style,
-            text: text.into(),
+            text: arg_styled_text.into(),
         }
     }
 

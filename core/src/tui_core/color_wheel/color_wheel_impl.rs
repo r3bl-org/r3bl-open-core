@@ -26,12 +26,15 @@ use super::{ColorWheelConfig,
             ColorWheelSpeed,
             GradientKind,
             GradientLengthKind,
+            Seed,
             config::sizing::VecSteps,
             defaults::{Defaults, get_default_gradient_stops}};
 use crate::{Ansi256GradientIndex,
             AnsiValue,
             ChUnit,
             ColorUtils,
+            GCString,
+            GCStringExt as _,
             GradientGenerationPolicy,
             RgbValue,
             StringStorage,
@@ -40,14 +43,12 @@ use crate::{Ansi256GradientIndex,
             TuiStyle,
             TuiStyledText,
             TuiStyledTexts,
-            UnicodeString,
             ch,
             convert_to_ansi_color_styles,
             generate_random_truecolor_gradient,
             generate_truecolor_gradient,
             get_gradient_array_for,
             glyphs::SPACER_GLYPH as SPACER,
-            seg_str,
             tui_styled_text,
             u8,
             usize};
@@ -125,12 +126,14 @@ impl ColorWheel {
 }
 
 impl ColorWheel {
-    /// This method will return the index of the current color in the gradient.
+    /// This method will return the index of the current color in the gradient. If the
+    /// color wheeel is a lolcat, then the seed * 1000 is returned. If the gradient has
+    /// not been computed yet, then 0 is returned.
     pub fn get_index(&self) -> ChUnit {
         match self.gradient_kind {
             GradientKind::ColorWheel(_) => self.index,
             GradientKind::Lolcat(lolcat) => {
-                let seed = (lolcat.color_wheel_control.seed * 1000.0) as usize;
+                let seed = (*lolcat.color_wheel_control.seed * 1000.0) as usize;
                 ch(seed)
             }
             GradientKind::NotCalculatedYet => ch(0),
@@ -244,7 +247,7 @@ impl ColorWheel {
             return if let GradientKind::Lolcat(lolcat) = &mut self.gradient_kind {
                 let new_color = ColorUtils::get_color_tuple(&lolcat.color_wheel_control);
                 lolcat.color_wheel_control.seed +=
-                    f64::from(lolcat.color_wheel_control.color_change_speed);
+                    Seed::from(lolcat.color_wheel_control.color_change_speed);
                 Some(TuiColor::Rgb(RgbValue::from_u8(
                     new_color.0,
                     new_color.1,
@@ -383,9 +386,9 @@ impl ColorWheel {
         text_colorization_policy: TextColorizationPolicy,
         maybe_default_style: Option<TuiStyle>,
     ) -> StringStorage {
-        let string_us = UnicodeString::new(string);
+        let string_gcs = string.grapheme_string();
         let spans_in_line = self.colorize_into_styled_texts(
-            &string_us,
+            &string_gcs,
             gradient_generation_policy,
             text_colorization_policy,
         );
@@ -427,7 +430,7 @@ impl ColorWheel {
     ///   of steps. Subsequent calls will use the same gradient and index.
     pub fn colorize_into_styled_texts(
         &mut self,
-        us: &UnicodeString,
+        us: &GCString,
         gradient_generation_policy: GradientGenerationPolicy,
         text_colorization_policy: TextColorizationPolicy,
     ) -> TuiStyledTexts {
@@ -438,7 +441,7 @@ impl ColorWheel {
     fn generate_styled_texts(
         &mut self,
         text_colorization_policy: TextColorizationPolicy,
-        us: &UnicodeString,
+        us: &GCString,
     ) -> TuiStyledTexts {
         mod inner {
             use super::*;
@@ -483,7 +486,7 @@ impl ColorWheel {
 
             // Loop: Colorize each (next) character w/ (next) color.
             for seg in us.iter() {
-                let next_character = seg_str!(seg, us);
+                let next_character = seg.get_str(us);
                 let maybe_next_bg_color = self.next_color();
 
                 if let Some(next_bg_color) = maybe_next_bg_color {
@@ -542,7 +545,7 @@ impl ColorWheel {
         match text_colorization_policy {
             TextColorizationPolicy::ColorEachCharacter(maybe_style) => {
                 for seg in us.iter() {
-                    let next_character = seg_str!(seg, us);
+                    let next_character = seg.get_str(us);
                     // Loop: Colorize each (next) character w/ (next) color.
                     acc += tui_styled_text!(
                         @style: inner::gen_style_fg_color_for(maybe_style, self.next_color()),
@@ -574,12 +577,12 @@ impl ColorWheel {
 
     fn generate_gradient(
         &mut self,
-        us: &UnicodeString,
+        us: &GCString,
         gradient_generation_policy: GradientGenerationPolicy,
     ) {
         match gradient_generation_policy {
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength => {
-                let steps = u8(ch(us.len()));
+                let steps = u8(*us.len());
 
                 // Generate a new gradient if one doesn't exist.
                 if let GradientLengthKind::NotCalculatedYet = self.get_gradient_len() {
@@ -826,9 +829,9 @@ mod tests_color_wheel_rgb {
         global_color_support::set_override(ColorSupport::Truecolor);
 
         let string = "HELLO WORLD";
-        let string_us = UnicodeString::new(string);
+        let string_gcs = string.grapheme_string();
         let styled_texts = color_wheel_rgb.colorize_into_styled_texts(
-            &string_us,
+            &string_gcs,
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
             TextColorizationPolicy::ColorEachWord(None),
         );
@@ -881,9 +884,9 @@ mod tests_color_wheel_rgb {
         };
 
         let string = "HELLO";
-        let string_us = UnicodeString::new(string);
+        let string_gcs = string.grapheme_string();
         let styled_texts = color_wheel_rgb.colorize_into_styled_texts(
-            &string_us,
+            &string_gcs,
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
             TextColorizationPolicy::ColorEachCharacter(Some(style)),
         );

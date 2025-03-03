@@ -252,10 +252,10 @@ pub mod read_from_file {
     /// is too small, then some memory will be wasted on the stack.
     pub fn try_read_file_path_into_small_string<A: Array<Item = u8>>(
         acc: &mut SmallString<A>,
-        file_path: impl Into<PathBuf>,
+        arg_path: impl Into<PathBuf>,
     ) -> miette::Result<()> {
         // Open the file.
-        let file_path: PathBuf = file_path.into();
+        let file_path: PathBuf = arg_path.into();
         let mut file = File::open(&file_path)
             .into_diagnostic()
             .with_context(|| format!("Failed to open file {}", file_path.display()))?;

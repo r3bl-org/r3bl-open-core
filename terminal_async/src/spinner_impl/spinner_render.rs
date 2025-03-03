@@ -20,7 +20,7 @@ use crossterm::{QueueableCommand,
                 style::{self, Print, Stylize},
                 terminal::{Clear, ClearType}};
 use miette::IntoDiagnostic as _;
-use r3bl_core::{ColWidth, StringStorage, UnicodeString, string_storage, width};
+use r3bl_core::{ColWidth, GCStringExt, StringStorage, string_storage, width};
 use r3bl_tui::convert_from_tui_color_to_crossterm_color;
 
 use crate::{BLOCK_DOTS,
@@ -44,8 +44,8 @@ pub fn render_tick(
             let output_symbol = BRAILLE_DOTS[index_to_use];
             let output_symbol = apply_color(output_symbol, &mut style.color);
 
-            let text = UnicodeString::new(message);
-            let text_trunc = text.truncate_end_to_fit_width(
+            let text = message.grapheme_string();
+            let text_trunc = text.trunc_end_to_fit(
                 display_width -
                 width(3) /* 1 for symbol, 1 for space, 1 empty for last display col */
             );
@@ -59,8 +59,8 @@ pub fn render_tick(
             let output_symbol = BLOCK_DOTS[index_to_use];
             let output_symbol = apply_color(output_symbol, &mut style.color);
 
-            let text = UnicodeString::new(message);
-            let text_trunc = text.truncate_end_to_fit_width(
+            let text = message.grapheme_string();
+            let text_trunc = text.trunc_end_to_fit(
                 display_width -
                 width(3) /* 1 for symbol, 1 for space, 1 empty for last display col */
             );
@@ -71,8 +71,8 @@ pub fn render_tick(
         SpinnerTemplate::Dots => {
             let padding_right = ".".repeat(count);
 
-            let text = UnicodeString::new(message);
-            let text_trunc = text.truncate_end_to_fit_width({
+            let text = message.grapheme_string();
+            let text_trunc = text.trunc_end_to_fit({
                 display_width - width(padding_right.len()) -
                 /* last display col is empty */ width(1)
             });
@@ -140,8 +140,8 @@ pub fn render_final_tick(
     final_message: &str,
     display_width: ColWidth,
 ) -> StringStorage {
-    let text = UnicodeString::new(final_message);
-    let text_trunc = text.truncate_end_to_fit_width(display_width);
+    let text = final_message.grapheme_string();
+    let text_trunc = text.trunc_end_to_fit(display_width);
     match style.template {
         SpinnerTemplate::Dots => text_trunc.into(),
         SpinnerTemplate::Braille => text_trunc.into(),

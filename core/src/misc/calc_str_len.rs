@@ -18,7 +18,7 @@ use std::collections::{HashMap, hash_map::Entry};
 
 use sha2::{Digest, Sha256};
 
-use crate::{UnicodeString, u16};
+use crate::{GCString, u16};
 
 /// Enum representing different methods for calculating the length of a string. The
 /// [Self::calculate] function memoizes the length of the string for the
@@ -74,7 +74,7 @@ impl StringLength {
     pub fn calculate(&self, input: &str, memoized_len_map: &mut MemoizedLenMap) -> u16 {
         match self {
             // Do not memoize (slower to do this).
-            StringLength::Unicode => u16(*UnicodeString::str_display_width(input)),
+            StringLength::Unicode => u16(*GCString::width(input)),
 
             // Memoize (faster to do this).
             StringLength::StripAnsi => match memoized_len_map.entry(input.to_string()) {
@@ -82,7 +82,7 @@ impl StringLength {
                 Entry::Vacant(entry) => {
                     let stripped_input = strip_ansi::strip_ansi(input);
                     let stripped_input: &str = stripped_input.as_ref();
-                    let length = u16(*UnicodeString::str_display_width(stripped_input));
+                    let length = u16(*GCString::width(stripped_input));
                     entry.insert(length);
                     length
                 }

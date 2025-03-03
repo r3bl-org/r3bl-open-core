@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign};
+use std::{fmt::Debug,
+          ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
 use crate::{ChUnit, RowHeight, height, usize};
 
@@ -31,18 +32,22 @@ use crate::{ChUnit, RowHeight, height, usize};
 /// let row = row(5);
 /// let row = RowIndex::new(5);
 /// ```
-#[derive(
-    Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, Debug, size_of::SizeOf,
-)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, size_of::SizeOf)]
 pub struct RowIndex(pub ChUnit);
 
-pub fn row(row: impl Into<ChUnit>) -> RowIndex { RowIndex(row.into()) }
+impl Debug for RowIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RowIndex({:?})", self.0)
+    }
+}
+
+pub fn row(arg_row_index: impl Into<RowIndex>) -> RowIndex { arg_row_index.into() }
 
 mod constructor {
     use super::*;
 
     impl RowIndex {
-        pub fn new(ch_unit: impl Into<ChUnit>) -> Self { RowIndex(ch_unit.into()) }
+        pub fn new(arg_row_index: impl Into<RowIndex>) -> Self { arg_row_index.into() }
 
         pub fn as_usize(&self) -> usize { usize(self.0) }
 
@@ -65,6 +70,14 @@ mod constructor {
 
     impl From<RowIndex> for usize {
         fn from(row: RowIndex) -> Self { row.as_usize() }
+    }
+
+    impl From<u16> for RowIndex {
+        fn from(val: u16) -> Self { RowIndex(val.into()) }
+    }
+
+    impl From<i32> for RowIndex {
+        fn from(val: i32) -> Self { RowIndex(val.into()) }
     }
 }
 

@@ -24,7 +24,11 @@ pub struct FlexBoxId {
 }
 
 impl FlexBoxId {
-    pub fn new(id: impl Into<u8>) -> Self { Self { inner: id.into() } }
+    pub fn new(arg_id: impl Into<u8>) -> Self {
+        Self {
+            inner: arg_id.into(),
+        }
+    }
 }
 
 impl From<FlexBoxId> for u8 {

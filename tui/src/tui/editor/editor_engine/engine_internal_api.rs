@@ -19,7 +19,7 @@
 //! of the editor engine. See [mod@super::engine_public_api] for the public event based
 //! API.
 
-use r3bl_core::UnicodeString;
+use r3bl_core::GCString;
 
 use super::{caret_mut, content_mut, DeleteSelectionWith, SelectMode};
 use crate::{buffer_clipboard_support,
@@ -74,7 +74,7 @@ pub fn select_all(buffer: &mut EditorBuffer, sel_mod: SelectMode) {
 
 pub fn clear_selection(buffer: &mut EditorBuffer) { buffer.clear_selection(); }
 
-pub fn line_at_caret_to_string(buffer: &EditorBuffer) -> Option<&UnicodeString> {
+pub fn line_at_caret_to_string(buffer: &EditorBuffer) -> Option<&GCString> {
     buffer.line_at_caret_scr_adj()
 }
 

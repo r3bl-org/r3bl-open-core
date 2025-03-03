@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{Dim, Pos, RequestedSizePercent, TuiStyle, VecArray};
+use r3bl_core::{Dim, Pos, ReqSizePc, TuiStyle, VecArray};
 
 use super::{FlexBoxId, LayoutDirection};
 
@@ -24,7 +24,7 @@ use super::{FlexBoxId, LayoutDirection};
 pub struct FlexBoxProps {
     pub id: FlexBoxId,
     pub dir: LayoutDirection,
-    pub requested_size_percent: RequestedSizePercent,
+    pub requested_size_percent: ReqSizePc,
     pub maybe_styles: Option<VecArray<TuiStyle>>,
 }
 
@@ -37,15 +37,7 @@ pub struct SurfaceProps {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{col,
-                    height,
-                    ok,
-                    requested_size_percent,
-                    row,
-                    width,
-                    CommonResult,
-                    Dim,
-                    Pos};
+    use r3bl_core::{col, height, ok, req_size_pc, row, width, CommonResult, Dim, Pos};
     use smallvec::smallvec;
 
     use super::*;
@@ -56,10 +48,7 @@ mod tests {
         let props = FlexBoxProps::default();
         assert_eq!(props.id, FlexBoxId::default());
         assert_eq!(props.dir, LayoutDirection::default());
-        assert_eq!(
-            props.requested_size_percent,
-            RequestedSizePercent::default()
-        );
+        assert_eq!(props.requested_size_percent, ReqSizePc::default());
         assert_eq!(props.maybe_styles, None);
     }
 
@@ -68,14 +57,14 @@ mod tests {
         let props = FlexBoxProps {
             id: FlexBoxId::from(10),
             dir: LayoutDirection::Horizontal,
-            requested_size_percent: requested_size_percent!(width: 50, height: 50),
+            requested_size_percent: req_size_pc!(width: 50, height: 50),
             maybe_styles: Some(smallvec![TuiStyle::default()]),
         };
         assert_eq!(props.id.inner, 10);
         assert_eq!(props.dir, LayoutDirection::Horizontal);
         assert_eq!(
             props.requested_size_percent,
-            requested_size_percent!(width: 50, height: 50)
+            req_size_pc!(width: 50, height: 50)
         );
         assert_eq!(props.maybe_styles.unwrap().len(), 1);
 

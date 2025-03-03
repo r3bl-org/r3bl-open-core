@@ -21,7 +21,7 @@ use r3bl_core::{height,
                 CommonResult,
                 Dim,
                 Pos,
-                RequestedSizePercent,
+                ReqSizePc,
                 TuiStyle,
                 TuiStylesheet,
                 VecArray};
@@ -213,7 +213,7 @@ impl PerformPositioningAndSizing for Surface {
             let maybe_cascaded_style: Option<TuiStyle> =
                 cascade_styles(container_box, &flex_box_props);
 
-            let RequestedSizePercent {
+            let ReqSizePc {
                 width_pc,
                 height_pc,
             } = flex_box_props.requested_size_percent;
@@ -243,7 +243,7 @@ impl PerformPositioningAndSizing for Surface {
     /// 🌳 Handle root (first) box to add to stack of boxes, explicitly sized & positioned.
     fn add_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
         throws!({
-            let RequestedSizePercent {
+            let ReqSizePc {
                 width_pc,
                 height_pc,
             } = flex_box_props.requested_size_percent;
@@ -273,7 +273,7 @@ fn make_non_root_box_with_style(
         id,
         dir,
         requested_size_percent:
-            RequestedSizePercent {
+            ReqSizePc {
                 width_pc,
                 height_pc,
             },
@@ -300,7 +300,7 @@ fn make_non_root_box_with_style(
         bounds_size,
         style_adjusted_origin_pos,
         style_adjusted_bounds_size,
-        requested_size_percent: RequestedSizePercent {
+        requested_size_percent: ReqSizePc {
             width_pc,
             height_pc,
         },

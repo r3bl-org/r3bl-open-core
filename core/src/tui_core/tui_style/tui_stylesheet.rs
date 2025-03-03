@@ -87,8 +87,8 @@ impl TuiStylesheet {
         });
     }
 
-    pub fn find_style_by_id(&self, id: impl Into<u8>) -> Option<TuiStyle> {
-        let id: u8 = id.into();
+    pub fn find_style_by_id(&self, arg_id: impl Into<u8>) -> Option<TuiStyle> {
+        let id: u8 = arg_id.into();
         self.styles.iter().find(|style| style.id == id).cloned()
     }
 

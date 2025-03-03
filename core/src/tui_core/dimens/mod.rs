@@ -18,25 +18,27 @@
 // Attach source files.
 pub mod caret;
 pub mod ch_unit;
+pub mod check_overflow;
 pub mod col_index;
+pub mod col_width;
 pub mod dim;
-pub mod height_row_count;
-pub mod overflow_check;
-pub mod percent;
+pub mod pc;
 pub mod pos;
-pub mod requested_size_percent;
+pub mod req_size_pc;
+pub mod row_height;
 pub mod row_index;
-pub mod width_col_count;
+pub mod scr_ofs;
 
 // Re-export.
 pub use caret::*;
 pub use ch_unit::*;
+pub use check_overflow::*;
 pub use col_index::*;
+pub use col_width::*;
 pub use dim::*;
-pub use height_row_count::*;
-pub use overflow_check::*;
-pub use percent::*;
+pub use pc::*;
 pub use pos::*;
-pub use requested_size_percent::*;
+pub use req_size_pc::*;
+pub use row_height::*;
 pub use row_index::*;
-pub use width_col_count::*;
+pub use scr_ofs::*;

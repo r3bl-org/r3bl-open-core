@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{col, ColIndex, UnicodeString};
+use r3bl_core::{col, ColIndex, GCString};
 
 #[derive(Debug)]
 pub enum CharacterMatchResult {
@@ -50,8 +50,7 @@ impl<'a> PatternMatcherStateMachine<'a> {
     pub fn get_current_index(&self) -> usize { self.current_index }
 
     pub fn match_next(&mut self, character_to_test: char) -> CharacterMatchResult {
-        let character_to_test_width =
-            UnicodeString::char_display_width(character_to_test);
+        let character_to_test_width = GCString::width_char(character_to_test);
 
         // Skip the first "N" characters (these are display cols, so use the unicode width).
         if let Some(scroll_offset_col_index) = self.maybe_scr_ofs_col_index {
@@ -131,17 +130,17 @@ mod tests {
                 "index[{a}]: '{b}' -> width: {c:?}",
                 a = index,
                 b = character,
-                c = UnicodeString::char_display_width(character),
+                c = GCString::width_char(character),
             );
         }
 
-        let scroll_offset_col_index = *(UnicodeString::char_display_width('😃')
-            + UnicodeString::char_display_width('m')
-            + UnicodeString::char_display_width('o')
-            + UnicodeString::char_display_width('n')
-            + UnicodeString::char_display_width('k')
-            + UnicodeString::char_display_width('e')
-            + UnicodeString::char_display_width('y'));
+        let scroll_offset_col_index = *(GCString::width_char('😃')
+            + GCString::width_char('m')
+            + GCString::width_char('o')
+            + GCString::width_char('n')
+            + GCString::width_char('k')
+            + GCString::width_char('e')
+            + GCString::width_char('y'));
         assert_eq2!(scroll_offset_col_index, ch(8));
 
         let mut pattern_matcher = PatternMatcherStateMachine::new(

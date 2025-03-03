@@ -17,8 +17,7 @@
 
 use r3bl_core::{call_if_true,
                 ch,
-                glyphs::{self, SPACER_GLYPH as SPACER},
-                seg_str,
+                glyphs::{self, SPACER_GLYPH},
                 string_storage,
                 usize,
                 width,
@@ -26,10 +25,10 @@ use r3bl_core::{call_if_true,
                 CommonError,
                 CommonErrorType,
                 CommonResult,
+                GCStringExt,
                 Pos,
                 Size,
-                TuiStyle,
-                UnicodeString};
+                TuiStyle};
 
 use super::{sanitize_and_save_abs_pos, OffscreenBuffer, RenderOp, RenderPipeline};
 use crate::{PixelChar, RenderOpsLocalData, ZOrder, DEBUG_TUI_COMPOSITOR};
@@ -162,29 +161,29 @@ pub fn print_plain_text(
     //    the window.
 
     // ✂️Clip `arg_text_ref` (if needed) and make `text`.
-    let string_us = UnicodeString::new(string);
+    let string_gcs = string.grapheme_string();
     let clip_1_str = if let Some(max_display_col_count) = maybe_max_display_col_count {
         let adj_max = *max_display_col_count - ch(display_col_index);
-        string_us.truncate_end_to_fit_width(width(adj_max))
+        string_gcs.trunc_end_to_fit(width(adj_max))
     } else {
         string
     };
-    let clip_1_us = UnicodeString::new(clip_1_str);
+    let clip_1_gcs = clip_1_str.grapheme_string();
 
     // ✂️Clip `text` (if needed) to the max display col count of the window.
     let window_max_display_col_count = *my_offscreen_buffer.window_size.col_width;
     let text_fits_in_window =
-        *clip_1_us.display_width <= window_max_display_col_count - ch(display_col_index);
+        *clip_1_gcs.display_width <= window_max_display_col_count - ch(display_col_index);
     let clip_2_str = if !text_fits_in_window {
         let adj_max = window_max_display_col_count - ch(display_col_index);
-        clip_1_us.truncate_end_to_fit_width(width(*adj_max))
+        clip_1_gcs.trunc_end_to_fit(width(*adj_max))
     } else {
         clip_1_str
     };
-    let clip_2_us = UnicodeString::new(clip_2_str);
+    let clip_2_gcs = clip_2_str.grapheme_string();
 
     // This is the final text that will be printed.
-    let text_us = clip_2_us;
+    let text_gcs = clip_2_gcs;
 
     call_if_true!(DEBUG_TUI_COMPOSITOR, {
         let message = string_storage!(
@@ -199,8 +198,8 @@ pub fn print_plain_text(
             a = display_row_index,
             b = display_col_index,
             c = my_offscreen_buffer.window_size,
-            d = text_us.string,
-            e = text_us.display_width,
+            d = text_gcs.string,
+            e = text_gcs.display_width,
         );
         // % is Display, ? is Debug.
         tracing::info! {
@@ -221,8 +220,9 @@ pub fn print_plain_text(
         }
     }?;
 
-    // Insert clipped `text_ref_us` into `line` at `insertion_col_index`. Ok to use
-    // `line_copy[insertion_col_index]` syntax because we know that row and col indices are valid.
+    // Insert clipped `text_ref_gcs` into `line` at `insertion_col_index`. Ok to use
+    // `line_copy[insertion_col_index]` syntax because we know that row and col indices
+    // are valid.
     let mut insertion_col_index = display_col_index;
     let mut already_inserted_display_width = ch(0);
 
@@ -271,10 +271,10 @@ pub fn print_plain_text(
         tracing::debug!(message = message);
     });
 
-    // Loop over each grapheme cluster segment (the character) in `text_ref_us` (text in a line).
-    // For each GraphemeClusterSegment, create a PixelChar.
-    for seg in text_us.iter() {
-        let segment_display_width = usize(*seg.unicode_width);
+    // Loop over each grapheme cluster segment (the character) in `text_ref_gcs` (text in
+    // a line). For each GraphemeClusterSegment, create a PixelChar.
+    for seg in text_gcs.iter() {
+        let segment_display_width = usize(*seg.display_width);
         if segment_display_width == 0 {
             continue;
         }
@@ -282,9 +282,9 @@ pub fn print_plain_text(
         // Set the `PixelChar` at `insertion_col_index`.
         if line_copy.get(insertion_col_index).is_some() {
             let pixel_char = {
-                let seg_text = seg_str!(seg, text_us);
-                match (&maybe_style, seg_text) {
-                    (None, SPACER) => PixelChar::Spacer,
+                let seg_text: &str = seg.get_str(&text_gcs);
+                match (maybe_style, seg_text) {
+                    (None, SPACER_GLYPH) => PixelChar::Spacer,
                     _ => PixelChar::PlainText {
                         text: seg_text.into(),
                         maybe_style,
@@ -312,7 +312,7 @@ pub fn print_plain_text(
             //    Void pixel chars.
             // 3. The insertion_col_index is calculated & updated based on the unicode_width crate
             //    values.
-            let segment_display_width = usize(*seg.unicode_width);
+            let segment_display_width = usize(*seg.display_width);
             if segment_display_width > 1 {
                 // Deal w/ `gc_segment` display width that is > 1 => pad w/ Void.
                 let num_of_extra_display_cols_to_inject_void_into =
@@ -332,7 +332,7 @@ pub fn print_plain_text(
                 insertion_col_index += 1;
             }
 
-            already_inserted_display_width += *seg.unicode_width;
+            already_inserted_display_width += *seg.display_width;
         } else {
             // Run out of space in the line of the offscreen buffer.
             break;
@@ -368,7 +368,7 @@ pub fn print_plain_text(
 /// Render plain to an offscreen buffer.
 ///
 /// This will modify the `my_offscreen_buffer` argument.  For plain text it supports
-/// counting [r3bl_core::GraphemeClusterSegment]s. The display width of each segment is
+/// counting [r3bl_core::Seg]s. The display width of each segment is
 /// taken into account when filling the offscreen buffer.
 pub fn print_text_with_attributes(
     arg_text_ref: &str,

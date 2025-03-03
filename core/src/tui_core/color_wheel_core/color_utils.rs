@@ -34,7 +34,7 @@ impl ColorUtils {
     }
 
     pub fn get_color_tuple(c: &ColorWheelControl) -> (u8, u8, u8) {
-        let i = c.frequency * c.seed / c.spread;
+        let i = *c.frequency * *c.seed / *c.spread;
         let red = i.sin() * 127.00 + 128.00;
         let green = (i + (std::f64::consts::PI * 2.00 / 3.00)).sin() * 127.00 + 128.00;
         let blue = (i + (std::f64::consts::PI * 4.00 / 3.00)).sin() * 127.00 + 128.00;

@@ -33,14 +33,14 @@ use r3bl_core::{call_if_true,
                 CharStorage,
                 ColWidth,
                 Dim,
+                GCString,
+                GCStringExt,
                 RowHeight,
                 RowIndex,
                 ScrOfs,
+                SegString,
                 Size,
-                StringStorage,
-                UnicodeString,
-                UnicodeStringExt,
-                UnicodeStringSegmentSliceResult};
+                StringStorage};
 use size_of::SizeOf as _;
 use sizing::VecEditorContentLines;
 use smallvec::{smallvec, SmallVec};
@@ -111,9 +111,9 @@ use crate::{caret_locate,
 /// This is the "display" col index (grapheme cluster based) and not "logical" col index
 /// (byte based) position (both are defined in [r3bl_core::tui_core::graphemes]).
 ///
-/// > Please take a look at [r3bl_core::tui_core::graphemes::UnicodeString], specifically
-/// > the methods in [r3bl_core::tui_core::graphemes::access] for more details on how the
-/// > conversion between "display" and "logical" indices is done.
+/// > Please take a look at [r3bl_core::tui_core::graphemes::GCString], specifically
+/// > the methods in [mod@r3bl_core::tui_core::graphemes::gc_string] for more details on how
+/// > the conversion between "display" and "logical" indices is done.
 /// >
 /// > This results from the fact that `UTF-8` is a variable width text encoding scheme,
 /// > that can use between 1 and 4 bytes to represent a single character. So the width a
@@ -121,7 +121,8 @@ use crate::{caret_locate,
 /// >
 /// >  Videos:
 /// >
-/// >  - [Live coding video on Rust String](https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq)
+/// >  - [Live coding video on Rust
+/// >    String](https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq)
 /// >  - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA?si=D9sTt_G7_mBJFLmc)
 ///
 /// 1. It represents the current caret position (relative to the
@@ -216,7 +217,7 @@ pub struct EditorBuffer {
 pub(in crate::tui::editor) mod sizing {
     use super::*;
 
-    pub type VecEditorContentLines = SmallVec<[UnicodeString; DEFAULT_EDITOR_LINES_SIZE]>;
+    pub type VecEditorContentLines = SmallVec<[GCString; DEFAULT_EDITOR_LINES_SIZE]>;
     const DEFAULT_EDITOR_LINES_SIZE: usize = 32;
 
     /// The version history is stored on the heap.
@@ -277,7 +278,7 @@ mod constructor {
         ) -> Self {
             let it = Self {
                 content: EditorContent {
-                    lines: { smallvec!["".unicode_string()] },
+                    lines: { smallvec!["".grapheme_string()] },
                     maybe_file_extension: maybe_file_extension.map(|it| it.into()),
                     maybe_file_path: maybe_file_path.map(|it| it.into()),
                     ..Default::default()
@@ -382,9 +383,9 @@ pub mod content {
         ) -> ColWidth {
             let caret_scr_adj = caret_raw + scr_ofs;
             let row_index = caret_scr_adj.row_index;
-            let maybe_line_us = lines.get(row_index.as_usize());
-            if let Some(line_us) = maybe_line_us {
-                line_us.display_width
+            let maybe_line_gcs = lines.get(row_index.as_usize());
+            if let Some(line_gcs) = maybe_line_gcs {
+                line_gcs.display_width
             } else {
                 width(0)
             }
@@ -404,9 +405,9 @@ pub mod content {
             row_index: RowIndex,
             lines: &VecEditorContentLines,
         ) -> ColWidth {
-            let maybe_line_us = lines.get(row_index.as_usize());
-            if let Some(line_us) = maybe_line_us {
-                line_us.display_width
+            let maybe_line_gcs = lines.get(row_index.as_usize());
+            if let Some(line_gcs) = maybe_line_gcs {
+                line_gcs.display_width
             } else {
                 width(0)
             }
@@ -419,7 +420,7 @@ pub mod content {
             self.get_line_display_width_at_caret_scr_adj() == width(0)
         }
 
-        pub fn line_at_caret_scr_adj(&self) -> Option<&UnicodeString> {
+        pub fn line_at_caret_scr_adj(&self) -> Option<&GCString> {
             if self.is_empty() {
                 return None;
             }
@@ -428,9 +429,7 @@ pub mod content {
             Some(line)
         }
 
-        pub fn string_at_end_of_line_at_caret_scr_adj(
-            &self,
-        ) -> Option<UnicodeStringSegmentSliceResult> {
+        pub fn string_at_end_of_line_at_caret_scr_adj(&self) -> Option<SegString> {
             if self.is_empty() {
                 return None;
             }
@@ -438,15 +437,13 @@ pub mod content {
             if let caret_locate::CaretColLocationInLine::AtEnd =
                 caret_locate::locate_col(self)
             {
-                let maybe_last_str_seg = line.get_string_at_end();
-                return maybe_last_str_seg;
+                let maybe_last_seg_string = line.get_string_at_end();
+                return maybe_last_seg_string;
             }
             None
         }
 
-        pub fn string_to_right_of_caret(
-            &self,
-        ) -> Option<UnicodeStringSegmentSliceResult> {
+        pub fn string_to_right_of_caret(&self) -> Option<SegString> {
             if self.is_empty() {
                 return None;
             }
@@ -455,13 +452,11 @@ pub mod content {
                 // Caret is at end of line, past the last character.
                 caret_locate::CaretColLocationInLine::AtEnd => line.get_string_at_end(),
                 // Caret is not at end of line.
-                _ => line.get_string_at_right_of_display_col_index(
-                    self.get_caret_scr_adj().col_index,
-                ),
+                _ => line.get_string_at_right_of(self.get_caret_scr_adj().col_index),
             }
         }
 
-        pub fn string_to_left_of_caret(&self) -> Option<UnicodeStringSegmentSliceResult> {
+        pub fn string_to_left_of_caret(&self) -> Option<SegString> {
             if self.is_empty() {
                 return None;
             }
@@ -470,13 +465,11 @@ pub mod content {
                 // Caret is at end of line, past the last character.
                 caret_locate::CaretColLocationInLine::AtEnd => line.get_string_at_end(),
                 // Caret is not at end of line.
-                _ => line.get_string_at_left_of_display_col_index(
-                    self.get_caret_scr_adj().col_index,
-                ),
+                _ => line.get_string_at_left_of(self.get_caret_scr_adj().col_index),
             }
         }
 
-        pub fn prev_line_above_caret(&self) -> Option<&UnicodeString> {
+        pub fn prev_line_above_caret(&self) -> Option<&GCString> {
             if self.is_empty() {
                 return None;
             }
@@ -490,17 +483,17 @@ pub mod content {
             Some(line)
         }
 
-        pub fn string_at_caret(&self) -> Option<UnicodeStringSegmentSliceResult> {
+        pub fn string_at_caret(&self) -> Option<SegString> {
             if self.is_empty() {
                 return None;
             }
             let line = self.line_at_caret_scr_adj()?;
             let caret_str_adj_col_index = self.get_caret_scr_adj().col_index;
-            let result = line.get_string_at_display_col_index(caret_str_adj_col_index)?;
-            Some(result)
+            let seg_string = line.get_string_at(caret_str_adj_col_index)?;
+            Some(seg_string)
         }
 
-        pub fn next_line_below_caret_to_string(&self) -> Option<&UnicodeString> {
+        pub fn next_line_below_caret_to_string(&self) -> Option<&GCString> {
             if self.is_empty() {
                 return None;
             }
@@ -536,7 +529,7 @@ pub mod access_and_mutate {
 
         pub fn is_empty(&self) -> bool { self.content.lines.is_empty() }
 
-        pub fn line_at_row_index(&self, row_index: RowIndex) -> Option<&UnicodeString> {
+        pub fn line_at_row_index(&self, row_index: RowIndex) -> Option<&GCString> {
             self.content.lines.get(row_index.as_usize())
         }
 
@@ -582,13 +575,13 @@ pub mod access_and_mutate {
         /// - And then call `.lines()` on the `&str` to get an iterator over the lines
         ///   which can be passed to this method.
         // XMARK: Clever Rust, use of `IntoIterator` to efficiently and flexibly load data.
-        pub fn set_lines<'a, I: IntoIterator<Item = &'a str>>(&mut self, lines: I) {
-            // Clear existing lines and lines_us.
+        pub fn set_lines<'a>(&mut self, arg_lines: impl IntoIterator<Item = &'a str>) {
+            // Clear existing lines.
             self.content.lines.clear();
 
-            // Set lines and lines_us in a single loop.
-            for line in lines {
-                self.content.lines.push(line.unicode_string());
+            // Populate lines with the new data.
+            for line in arg_lines {
+                self.content.lines.push(line.grapheme_string());
             }
 
             // Reset caret.
@@ -907,28 +900,28 @@ mod history_tests {
     #[test]
     fn test_push_with_contents() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".unicode_string()];
+        buffer.content.lines = smallvec!["abc".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 0);
 
         let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 1);
         assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0], "abc".unicode_string());
+        assert_eq2!(history_stack[0].lines[0], "abc".grapheme_string());
     }
 
     #[test]
     fn test_push_and_drop_future_redos() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".unicode_string()];
+        buffer.content.lines = smallvec!["abc".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 0);
 
-        buffer.content.lines = smallvec!["def".unicode_string()];
+        buffer.content.lines = smallvec!["def".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 1);
 
-        buffer.content.lines = smallvec!["ghi".unicode_string()];
+        buffer.content.lines = smallvec!["ghi".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 2);
 
@@ -937,7 +930,7 @@ mod history_tests {
         history::undo(&mut buffer);
 
         // Push new content. Should drop future redos.
-        buffer.content.lines = smallvec!["xyz".unicode_string()];
+        buffer.content.lines = smallvec!["xyz".grapheme_string()];
         history::push(&mut buffer);
 
         let history = buffer.history;
@@ -946,15 +939,15 @@ mod history_tests {
         let history_stack = history.versions;
         assert_eq2!(history_stack.len(), 2);
         assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0], "abc".unicode_string());
+        assert_eq2!(history_stack[0].lines[0], "abc".grapheme_string());
         assert_eq2!(history_stack[1].lines.len(), 1);
-        assert_eq2!(history_stack[1].lines[0], "xyz".unicode_string());
+        assert_eq2!(history_stack[1].lines[0], "xyz".grapheme_string());
     }
 
     #[test]
     fn test_single_undo() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".unicode_string()];
+        buffer.content.lines = smallvec!["abc".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 0);
 
@@ -966,16 +959,16 @@ mod history_tests {
     #[test]
     fn test_many_undo() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".unicode_string()];
+        buffer.content.lines = smallvec!["abc".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 0);
 
-        buffer.content.lines = smallvec!["def".unicode_string()];
+        buffer.content.lines = smallvec!["def".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 1);
         let copy_of_editor_content = buffer.content.clone();
 
-        buffer.content.lines = smallvec!["ghi".unicode_string()];
+        buffer.content.lines = smallvec!["ghi".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 2);
 
@@ -987,21 +980,21 @@ mod history_tests {
         let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 3);
         assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0], "abc".unicode_string());
+        assert_eq2!(history_stack[0].lines[0], "abc".grapheme_string());
         assert_eq2!(history_stack[1].lines.len(), 1);
-        assert_eq2!(history_stack[1].lines[0], "def".unicode_string());
+        assert_eq2!(history_stack[1].lines[0], "def".grapheme_string());
         assert_eq2!(history_stack[2].lines.len(), 1);
-        assert_eq2!(history_stack[2].lines[0], "ghi".unicode_string());
+        assert_eq2!(history_stack[2].lines[0], "ghi".grapheme_string());
     }
 
     #[test]
     fn test_multiple_undos() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".unicode_string()];
+        buffer.content.lines = smallvec!["abc".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 0);
 
-        buffer.content.lines = smallvec!["def".unicode_string()];
+        buffer.content.lines = smallvec!["def".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 1);
 
@@ -1016,11 +1009,11 @@ mod history_tests {
     #[test]
     fn test_undo_and_multiple_redos() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".unicode_string()];
+        buffer.content.lines = smallvec!["abc".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 0);
 
-        buffer.content.lines = smallvec!["def".unicode_string()];
+        buffer.content.lines = smallvec!["def".grapheme_string()];
         history::push(&mut buffer);
         assert_eq2!(buffer.history.current_index, 1);
         let snapshot_content = buffer.content.clone();
@@ -1042,8 +1035,8 @@ mod history_tests {
         let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 2);
         assert_eq2!(history_stack[0].lines.len(), 1);
-        assert_eq2!(history_stack[0].lines[0], "abc".unicode_string());
+        assert_eq2!(history_stack[0].lines[0], "abc".grapheme_string());
         assert_eq2!(history_stack[1].lines.len(), 1);
-        assert_eq2!(history_stack[1].lines[0], "def".unicode_string());
+        assert_eq2!(history_stack[1].lines[0], "def".grapheme_string());
     }
 }
