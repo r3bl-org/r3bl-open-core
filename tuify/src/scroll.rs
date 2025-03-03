@@ -21,43 +21,43 @@
 //! relative to the viewport. The viewport is the visible area of the terminal.
 //!
 //! ```text
-//!                    +0--------------------+
-//!                    0                     |
-//!                    |        above        | <- caret_row_scroll_adj
-//!                    |                     |
-//!                    +--- scroll_offset ---+
-//!              ->    |         ↑           |      ↑
-//!   raw_caret  |     |                     |      |
-//!   _row_index |     |      within vp      |  vp height
-//!              |     |                     |      |
-//!              ->    |         ↓           |      ↓
-//!                    +--- scroll_offset ---+
-//!                    |    + vp height      |
-//!                    |                     |
-//!                    |        below        | <- caret_row_scroll_adj
-//!                    |                     |
-//!                    +---------------------+
+//!                    ╭0────────────────────╮
+//!                    0                     │
+//!                    │        above        │ <- caret_row_scroll_adj
+//!                    │                     │
+//!                    ├─── scroll_offset ───┤
+//!              ->    │         ↑           │      ↑
+//!   raw_caret  │     │                     │      │
+//!   _row_index │     │      within vp      │  vp height
+//!              │     │                     │      │
+//!              ->    │         ↓           │      ↓
+//!                    ├─── scroll_offset ───┤
+//!                    │    + vp height      │
+//!                    │                     │
+//!                    │        below        │ <- caret_row_scroll_adj
+//!                    │                     │
+//!                    ╰─────────────────────╯
 //! ```
 //!
 //! What the [CaretVerticalViewportLocation] enum represents:
 //!
 //! ```text
-//!    +0--------------------+ <- AtAbsoluteTop
-//!    0                     |
-//!    |        above        | <- AboveTopOfViewport
-//!    |                     |
-//!    +--- scroll_offset ---+ <- AtTopOfViewport
-//!    |         ↑           |
-//!    |                     |
-//!    |      within vp      | <- InMiddleOfViewport
-//!    |                     |
-//!    |         ↓           |
-//!    +--- scroll_offset ---+ <- AtBottomOfViewport
-//!    |    + vp height      |
-//!    |                     |
-//!    |        below        | <- BelowBottomOfViewport
-//!    |                     |
-//!    +---------------------+ <- AtAbsoluteBottom
+//!    ╭0────────────────────╮ <- AtAbsoluteTop
+//!    0                     │
+//!    │        above        │ <- AboveTopOfViewport
+//!    │                     │
+//!    ├─── scroll_offset ───┤ <- AtTopOfViewport
+//!    │         ↑           │
+//!    │                     │
+//!    │      within vp      │ <- InMiddleOfViewport
+//!    │                     │
+//!    │         ↓           │
+//!    ├─── scroll_offset ───┤ <- AtBottomOfViewport
+//!    │    + vp height      │
+//!    │                     │
+//!    │        below        │ <- BelowBottomOfViewport
+//!    │                     │
+//!    ╰─────────────────────╯ <- AtAbsoluteBottom
 //! ```
 
 use crossterm::style::Stylize;
