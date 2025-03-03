@@ -51,5 +51,9 @@ tokio-test = "0.4.4"
 crossterm = { version = "0.28.1", features = ["event-stream"] } # EventStream
 
 # For smallstr & smallvec.
-smallstr = { version = "0.3.0", features = ["serde", "std"] }
-smallvec = { version = "1.6.1", features = ["serde"] }
+smallstr = { version = "0.3.0", features = ["std", "union"] }
+smallvec = { version = "1.6.1", features = [
+  "union",
+  "const_generics",
+  "const_new",
+] }

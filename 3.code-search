@@ -3,4 +3,37 @@
 # Excluding: scratch.rs
 # ContextLines: 1
 
-No Results
+7 results - 5 files
+
+core/src/tui_core/graphemes/gc_string.rs:
+    17  6
+    18: // REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
+    19  // cspell:ignore bindex smallvec ustr assert_eq ustring col_index uindex xello Xelo Loby
+
+  1508  
+  1509:         // REVIEW: [ ] impl test
+  1510          let test_cases = [
+
+core/src/tui_core/graphemes/mod.rs:
+  17  
+  18: // REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
+  19  // cspell:ignore reedline
+
+core/src/tui_core/graphemes/seg.rs:
+  17  
+  18: // REVIEW: [ ] remove these cspell exceptions after merging this patch into the feature branch
+  19  // cspell:ignore bindex smallvec ustr assert_eq ustring col_index uindex disp
+
+  25  
+  26: // REVIEW: [x] update docs
+  27  
+
+tui/examples/demo/ex_app_no_layout/app_main.rs:
+  533  
+  534: // REVIEW: [ ] introduce HUD for telemetry here & copy to all other examples
+  535  
+
+tui/src/tui/editor/editor_buffer/selection_range.rs:
+  32  
+  33: // REVIEW: [ ] move this out of core into tui crate
+  34  
