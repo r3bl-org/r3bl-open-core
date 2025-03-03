@@ -85,6 +85,58 @@ pub struct RingBuffer<T, const N: usize> {
     count: usize,
 }
 
+mod index {
+    use std::ops::{Index, IndexMut};
+
+    use super::*;
+
+    impl<T, const N: usize> Index<usize> for RingBuffer<T, N> {
+        type Output = T;
+
+        fn index(&self, index: usize) -> &Self::Output {
+            if index >= self.count {
+                panic!(
+                    "Index out of bounds: the len is {} but the index is {}",
+                    self.count, index
+                );
+            }
+
+            let actual_index = (self.tail + index) % N;
+
+            match &self.internal_storage {
+                RingBufferStorage::Stack(arr) => {
+                    arr[actual_index].as_ref().expect("Should be Some")
+                }
+                RingBufferStorage::Heap(vec) => {
+                    vec[actual_index].as_ref().expect("Should be Some")
+                }
+            }
+        }
+    }
+
+    impl<T, const N: usize> IndexMut<usize> for RingBuffer<T, N> {
+        fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+            if index >= self.count {
+                panic!(
+                    "Index out of bounds: the len is {} but the index is {}",
+                    self.count, index
+                );
+            }
+
+            let actual_index = (self.tail + index) % N;
+
+            match &mut self.internal_storage {
+                RingBufferStorage::Stack(arr) => {
+                    arr[actual_index].as_mut().expect("Should be Some")
+                }
+                RingBufferStorage::Heap(vec) => {
+                    vec[actual_index].as_mut().expect("Should be Some")
+                }
+            }
+        }
+    }
+}
+
 mod constructor {
     use super::*;
 
@@ -106,11 +158,6 @@ mod constructor {
                 count: 0,
             }
         }
-    }
-
-    impl<T, const N: usize> Default for RingBuffer<T, N> {
-        /// The default implementation is the "stack" variant.
-        fn default() -> Self { Self::new_alloc_on_stack() }
     }
 }
 
