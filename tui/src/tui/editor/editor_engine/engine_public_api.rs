@@ -49,7 +49,7 @@ use r3bl_macro::tui_style;
 use syntect::easy::HighlightLines;
 
 use crate::{buffer_clipboard_support::ClipboardService,
-            cache,
+            cache::{self, UseCache},
             caret_scroll_index,
             convert_syntect_to_styled_text,
             get_selection_style,
@@ -84,87 +84,87 @@ use crate::{buffer_clipboard_support::ClipboardService,
             DEBUG_TUI_SYN_HI,
             DEFAULT_CURSOR_CHAR};
 
+fn triggers_undo_redo(editor_event: &EditorEvent) -> bool {
+    matches!(
+        editor_event,
+        EditorEvent::InsertChar(_)
+            | EditorEvent::InsertString(_)
+            | EditorEvent::InsertNewLine
+            | EditorEvent::Delete
+            | EditorEvent::Backspace
+            | EditorEvent::Copy
+            | EditorEvent::Paste
+            | EditorEvent::Cut
+    )
+}
+
+fn input_event_matches_navigation_keys(input_event: InputEvent) -> bool {
+    input_event.matches_any_of_these_keypresses(&[
+        KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Up),
+        },
+        KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Down),
+        },
+        KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Left),
+        },
+        KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Right),
+        },
+        KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Home),
+        },
+        KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::End),
+        },
+        KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::PageUp),
+        },
+        KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::PageDown),
+        },
+    ])
+}
+
 /// Event based interface for the editor. This converts the [InputEvent] into an
 /// [EditorEvent] and then executes it. Returns a new [EditorBuffer] if the operation
 /// was applied otherwise returns [None].
 pub fn apply_event(
-    editor_buffer: &mut EditorBuffer,
-    editor_engine: &mut EditorEngine,
+    buffer: &mut EditorBuffer,
+    engine: &mut EditorEngine,
     input_event: InputEvent,
-    clipboard_service_provider: &mut impl ClipboardService,
+    clipboard: &mut impl ClipboardService,
 ) -> CommonResult<EditorEngineApplyEventResult> {
-    let editor_config = &editor_engine.config_options;
+    let editor_config = &engine.config_options;
 
+    // If in ReadOnly mode, filter out all input events that are not navigation keys, by
+    // doing early return. It is not possible to modify the buffer in ReadOnly mode.
     if let EditMode::ReadOnly = editor_config.edit_mode {
-        if !input_event.matches_any_of_these_keypresses(&[
-            KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::Up),
-            },
-            KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::Down),
-            },
-            KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::Left),
-            },
-            KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::Right),
-            },
-            KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::Home),
-            },
-            KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::End),
-            },
-            KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::PageUp),
-            },
-            KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::PageDown),
-            },
-        ]) {
+        if !input_event_matches_navigation_keys(input_event) {
             return Ok(EditorEngineApplyEventResult::NotApplied);
         }
     }
 
     if let Ok(editor_event) = EditorEvent::try_from(input_event) {
-        if editor_buffer.history.is_empty() {
-            history::push(editor_buffer);
+        // The following events trigger undo / redo. Add the initial state to the history
+        // if it is empty. This seeds the history buffer with its first entry.
+        if triggers_undo_redo(&editor_event) {
+            if buffer.history.is_empty() {
+                history::add(buffer);
+            }
+        };
+
+        // Actually apply the editor event, which might produce a new buffer.
+        EditorEvent::apply_editor_event(engine, buffer, editor_event.clone(), clipboard);
+
+        // The following events trigger undo / redo. Now that the event has been applied,
+        // add the new state to the history. So that the user will be able to get back to
+        // this state if they want to (after making a change in the future).
+        if triggers_undo_redo(&editor_event) {
+            history::add(buffer);
         }
 
-        EditorEvent::apply_editor_event(
-            editor_engine,
-            editor_buffer,
-            editor_event.clone(),
-            clipboard_service_provider,
-        );
-
-        match editor_event {
-            EditorEvent::InsertChar(_) => {
-                history::push(editor_buffer);
-            }
-            EditorEvent::InsertString(_) => {
-                history::push(editor_buffer);
-            }
-            EditorEvent::InsertNewLine => {
-                history::push(editor_buffer);
-            }
-            EditorEvent::Delete => {
-                history::push(editor_buffer);
-            }
-            EditorEvent::Backspace => {
-                history::push(editor_buffer);
-            }
-            EditorEvent::Copy => {
-                history::push(editor_buffer);
-            }
-            EditorEvent::Paste => {
-                history::push(editor_buffer);
-            }
-            EditorEvent::Cut => {
-                history::push(editor_buffer);
-            }
-            _ => {}
-        }
         Ok(EditorEngineApplyEventResult::Applied)
     } else {
         Ok(EditorEngineApplyEventResult::NotApplied)
@@ -196,6 +196,7 @@ pub fn render_engine(
                 window_size,
                 has_focus,
                 &mut render_ops,
+                UseCache::No,
             );
 
             render_selection(
@@ -788,6 +789,7 @@ mod test_cache {
             window_size,
             has_focus,
             render_ops,
+            UseCache::Yes,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
@@ -806,6 +808,7 @@ mod test_cache {
             window_size,
             has_focus,
             render_ops,
+            UseCache::Yes,
         );
         test_cache_hit(editor_buffer, &mut cache);
 
@@ -817,6 +820,7 @@ mod test_cache {
             window_size,
             has_focus,
             render_ops,
+            UseCache::Yes,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
@@ -835,6 +839,7 @@ mod test_cache {
             window_size,
             has_focus,
             render_ops,
+            UseCache::Yes,
         );
         test_cache_hit(editor_buffer, &mut cache);
 
@@ -846,6 +851,7 @@ mod test_cache {
             window_size,
             has_focus,
             render_ops,
+            UseCache::Yes,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
@@ -857,6 +863,7 @@ mod test_cache {
             window_size,
             has_focus,
             render_ops,
+            UseCache::Yes,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
     }

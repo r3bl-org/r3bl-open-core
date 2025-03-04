@@ -322,10 +322,10 @@ impl EditorEvent {
     pub fn apply_editor_event(
         engine: &mut EditorEngine,
         buffer: &mut EditorBuffer,
-        editor_event: EditorEvent,
-        clipboard_service_provider: &mut impl ClipboardService,
+        event: EditorEvent,
+        clipboard: &mut impl ClipboardService,
     ) {
-        match editor_event {
+        match event {
             EditorEvent::Undo => {
                 history::undo(buffer);
             }
@@ -459,16 +459,14 @@ impl EditorEvent {
 
             EditorEvent::Cut => {
                 engine_internal_api::copy_editor_selection_to_clipboard(
-                    buffer,
-                    clipboard_service_provider,
+                    buffer, clipboard,
                 );
                 Self::delete_text_if_selected(engine, buffer);
             }
 
             EditorEvent::Copy => {
                 engine_internal_api::copy_editor_selection_to_clipboard(
-                    buffer,
-                    clipboard_service_provider,
+                    buffer, clipboard,
                 );
             }
 
@@ -476,7 +474,7 @@ impl EditorEvent {
                 Self::delete_text_if_selected(engine, buffer);
                 engine_internal_api::paste_clipboard_content_into_editor(
                     EditorArgsMut { buffer, engine },
-                    clipboard_service_provider,
+                    clipboard,
                 );
             }
         };

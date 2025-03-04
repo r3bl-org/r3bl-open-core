@@ -17,19 +17,19 @@
 use std::{collections::HashMap,
           fmt::{Debug, Formatter, Result}};
 
+use history::EditorHistory;
 use r3bl_core::{call_if_true,
                 ch,
                 format_as_kilobytes_with_commas,
                 glyphs,
                 height,
-                isize,
+                i16,
                 row,
                 string_storage,
                 width,
                 with_mut,
                 CaretRaw,
                 CaretScrAdj,
-                ChUnit,
                 CharStorage,
                 ColWidth,
                 Dim,
@@ -211,7 +211,7 @@ use crate::{caret_locate,
 #[derive(Clone, PartialEq, Default, size_of::SizeOf)]
 pub struct EditorBuffer {
     pub content: EditorContent,
-    pub history: EditorBufferHistory,
+    pub history: EditorHistory,
     pub render_cache: HashMap<StringStorage, RenderOps>,
 }
 
@@ -237,59 +237,12 @@ pub(in crate::tui::editor) mod sizing {
         }
     }
 
-    impl size_of::SizeOf for EditorBufferHistory {
+    impl size_of::SizeOf for EditorHistory {
         fn size_of_children(&self, context: &mut size_of::Context) {
             context.add(size_of_val(&self.versions)); /* use for fields that can expand or contract */
             context.add(self.current_index.size_of().total_bytes());
         }
     }
-}
-
-/// # Undo/Redo Algorithm
-///
-/// The `EditorBufferHistory` struct manages the undo/redo functionality for the
-/// `EditorBuffer`. It uses a ring buffer (`versions`) to store the different states of
-/// the `EditorContent`. The `current_index` field points to the current state in the
-/// `versions` buffer.
-///
-/// ## Pushing a new state (history::push)
-///
-/// 1. The current render cache is cleared to invalidate any cached rendering.
-/// 2. A copy of the current `EditorContent` is created.
-/// 3. If the `current_index` is not the last index in the `versions` buffer, the history
-///    from `current_index + 1` to the end of the buffer is truncated (removed). This
-///    discards any "future" states that were previously redone.
-/// 4. The copy of the `EditorContent` is added to the `versions` buffer.
-/// 5. The `current_index` is incremented to point to the newly added state.
-///
-/// ## Undoing (history::undo)
-///
-/// 1. The current render cache is cleared to invalidate any cached rendering.
-/// 2. The current caret position is retained.
-/// 3. If there is a previous state in the `versions` buffer (i.e., `current_index > 0`),
-///    the `current_index` is decremented.
-/// 4. The `EditorContent` at the new `current_index` is retrieved from the `versions`
-///    buffer and set as the current content of the `EditorBuffer`.
-/// 5. The caret position is restored.
-///
-/// ## Redoing (history::redo)
-///
-/// 1. The current render cache is cleared to invalidate any cached rendering.
-/// 2. If there is a next state in the `versions` buffer (i.e., `current_index <
-///    versions.len() - 1`), the `current_index` is incremented.
-/// 3. The `EditorContent` at the new `current_index` is retrieved from the `versions`
-///    buffer and set as the current content of the `EditorBuffer`.
-///
-/// ## Notes
-///
-/// - The `versions` buffer has a maximum size (`MAX_UNDO_REDO_SIZE`). When the buffer is
-///   full, adding a new state will overwrite the oldest state in the buffer.
-/// - The `current_index` can be -1 if the buffer is empty.
-/// - The caret position is retained during undo operations.
-#[derive(Clone, PartialEq)]
-pub struct EditorBufferHistory {
-    pub versions: sizing::VersionHistory,
-    pub current_index: isize,
 }
 
 #[derive(Clone, PartialEq, Default)]
@@ -356,6 +309,11 @@ pub mod cache {
         )
     }
 
+    pub enum UseCache {
+        Yes,
+        No,
+    }
+
     /// Render the content of the editor buffer to the screen from the cache if the content
     /// has not been modified.
     ///
@@ -369,29 +327,44 @@ pub mod cache {
         window_size: Size,
         has_focus: &mut HasFocus,
         render_ops: &mut RenderOps,
+        use_cache: UseCache,
     ) {
-        let key = generate_key(buffer, window_size);
-        if let Some(cached_output) = buffer.render_cache.get(&key) {
-            // Cache hit
-            *render_ops = cached_output.clone();
-            return;
+        match use_cache {
+            UseCache::Yes => {
+                let key = generate_key(buffer, window_size);
+                if let Some(cached_output) = buffer.render_cache.get(&key) {
+                    // Cache hit
+                    *render_ops = cached_output.clone();
+                    return;
+                }
+
+                // Cache miss, due to either:
+                // - Content has been modified.
+                // - Scroll Offset or Window size has been modified.
+                buffer.render_cache.clear();
+                let render_args = RenderArgs {
+                    engine,
+                    buffer,
+                    has_focus,
+                };
+
+                // Re-render content, generate & write to render_ops.
+                engine_public_api::render_content(&render_args, render_ops);
+
+                // Snapshot the render_ops in the cache.
+                buffer.render_cache.insert(key, render_ops.clone());
+            }
+            UseCache::No => {
+                buffer.render_cache.clear();
+                let render_args = RenderArgs {
+                    engine,
+                    buffer,
+                    has_focus,
+                };
+                // Re-render content, generate & write to render_ops.
+                engine_public_api::render_content(&render_args, render_ops);
+            }
         }
-
-        // Cache miss, due to either:
-        // - Content has been modified.
-        // - Scroll Offset or Window size has been modified.
-        buffer.render_cache.clear();
-        let render_args = RenderArgs {
-            engine,
-            buffer,
-            has_focus,
-        };
-
-        // Re-render content, generate & write to render_ops.
-        engine_public_api::render_content(&render_args, render_ops);
-
-        // Snapshot the render_ops in the cache.
-        buffer.render_cache.insert(key, render_ops.clone());
     }
 }
 
@@ -693,39 +666,253 @@ pub mod access_and_mutate {
 pub mod history {
     use super::*;
 
-    impl Default for EditorBufferHistory {
-        fn default() -> Self {
-            Self {
-                versions: sizing::VersionHistory::new(),
-                current_index: -1,
+    pub const MIN_INDEX: CurIndexNumber = -1;
+
+    /// # Undo/Redo Algorithm
+    ///
+    /// The `EditorBufferHistory` struct manages the undo/redo functionality for the
+    /// `EditorBuffer`. It uses a ring buffer (`versions`) to store the different states of
+    /// the `EditorContent`. The `current_index` field points to the current state in the
+    /// `versions` buffer.
+    ///
+    /// ## Pushing a new state (history::push)
+    ///
+    /// 1. The current render cache is cleared to invalidate any cached rendering.
+    /// 2. A copy of the current `EditorContent` is created.
+    /// 3. If the `current_index` is not the last index in the `versions` buffer, the history
+    ///    from `current_index + 1` to the end of the buffer is truncated (removed). This
+    ///    discards any "future" states that were previously redone.
+    /// 4. The copy of the `EditorContent` is added to the `versions` buffer.
+    /// 5. The `current_index` is incremented to point to the newly added state.
+    ///
+    /// ## Undoing (history::undo)
+    ///
+    /// 1. The current render cache is cleared to invalidate any cached rendering.
+    /// 2. The current caret position is retained.
+    /// 3. If there is a previous state in the `versions` buffer (i.e., `current_index > 0`),
+    ///    the `current_index` is decremented.
+    /// 4. The `EditorContent` at the new `current_index` is retrieved from the `versions`
+    ///    buffer and set as the current content of the `EditorBuffer`.
+    /// 5. The caret position is restored.
+    ///
+    /// ## Redoing (history::redo)
+    ///
+    /// 1. The current render cache is cleared to invalidate any cached rendering.
+    /// 2. If there is a next state in the `versions` buffer (i.e., `current_index <
+    ///    versions.len() - 1`), the `current_index` is incremented.
+    /// 3. The `EditorContent` at the new `current_index` is retrieved from the `versions`
+    ///    buffer and set as the current content of the `EditorBuffer`.
+    ///
+    /// ## Notes
+    ///
+    /// - The `versions` buffer has a maximum size (`MAX_UNDO_REDO_SIZE`). When the buffer is
+    ///   full, adding a new state will overwrite the oldest state in the buffer.
+    /// - The `current_index` can be -1 if the buffer is empty.
+    /// - The caret position is retained during undo operations.
+    #[derive(Clone, PartialEq)]
+    pub struct EditorHistory {
+        pub versions: sizing::VersionHistory,
+        pub current_index: CurIndex,
+    }
+
+    type CurIndexNumber = i16;
+
+    #[derive(Clone, Copy, PartialEq, size_of::SizeOf, Debug)]
+    pub struct CurIndex(pub CurIndexNumber);
+
+    impl Default for CurIndex {
+        fn default() -> Self { Self(MIN_INDEX) }
+    }
+
+    impl From<usize> for CurIndex {
+        fn from(val: usize) -> Self { Self(val as CurIndexNumber) }
+    }
+
+    impl From<isize> for CurIndex {
+        fn from(val: isize) -> Self { Self(val as CurIndexNumber) }
+    }
+
+    impl From<i32> for CurIndex {
+        fn from(val: i32) -> Self { Self(val as CurIndexNumber) }
+    }
+
+    impl From<i16> for CurIndex {
+        fn from(val: i16) -> Self { Self(val) }
+    }
+
+    impl CurIndex {
+        /// This won't be negative. Even if a negative number is passed in, it will be
+        /// converted to 0.
+        pub fn as_usize(self) -> usize {
+            if self.0 < 0 {
+                0
+            } else {
+                self.0.try_into().unwrap_or(self.0 as usize)
+            }
+        }
+
+        /// If the history buffer is empty, this will return `None`. Otherwise, it will
+        /// return `Some(true)` if the current index is at the start of the history
+        /// buffer, and `Some(false)` otherwise.
+        pub fn is_at_start(&self, versions: &sizing::VersionHistory) -> Option<bool> {
+            if versions.is_empty() {
+                None
+            } else {
+                Some(self.0 == MIN_INDEX)
+            }
+        }
+
+        /// If the history buffer is empty, this will return `None`. Otherwise, it will
+        /// return `Some(true)` if the current index is at the end of the history buffer,
+        /// and `Some(false)` otherwise.
+        pub fn is_at_end(&self, versions: &sizing::VersionHistory) -> Option<bool> {
+            if versions.is_empty() {
+                None
+            } else {
+                let max_index = ch(versions.len()) - ch(1);
+                Some(self.0 == i16(max_index))
+            }
+        }
+
+        /// Reset the current index to the start of the history buffer.
+        pub fn clear(&mut self) { self.0 = MIN_INDEX; }
+
+        /// Increment the current index. If the current index is at the end of the history
+        /// buffer, or the buffer is empty, this does nothing.
+        pub fn inc(&mut self, versions: &sizing::VersionHistory) {
+            match self.is_at_end(versions) {
+                None => {
+                    // Is empty. Nothing to increment.
+                }
+                Some(true) => {
+                    // Already at end of history buffer. Nothing to increment.
+                }
+                Some(false) => {
+                    // Increment index.
+                    self.0 += 1;
+                }
+            }
+        }
+
+        /// Decrement the current index. If the current index is at the start of the
+        /// history buffer, or the buffer is empty, this does nothing.
+        pub fn dec(&mut self, versions: &sizing::VersionHistory) {
+            match self.is_at_start(versions) {
+                None => {
+                    // Is empty. Nothing to decrement.
+                }
+                Some(true) => {
+                    // Already at start of history buffer. Nothing to decrement.
+                }
+                Some(false) => {
+                    // Decrement index.
+                    self.0 -= 1;
+                }
             }
         }
     }
 
-    pub fn convert_isize_to_usize(index: isize) -> usize {
-        index.try_into().unwrap_or(index as usize)
+    impl EditorHistory {
+        pub fn is_empty(&self) -> bool { self.versions.is_empty() }
+
+        pub fn clear(&mut self) {
+            self.versions.clear();
+            self.current_index.clear();
+        }
+
+        /// Get the current index in the history buffer. If the buffer is empty, this will
+        /// return `None`.
+        pub fn current_index(&self) -> Option<CurIndex> {
+            if self.is_empty() {
+                None
+            } else {
+                Some(self.current_index)
+            }
+        }
+
+        /// This function adds a state to the history buffer. It is called whenever the
+        /// content of the editor changes. Once this is called, the current index is
+        /// incremented. And [EditorHistory::prev_content] can be called to undo.
+        ///
+        /// Any dangling redos are truncated when a new state is added to the buffer.
+        pub fn add_content(&mut self, content: EditorContent) {
+            if let Some(current_index) = self.current_index() {
+                // Delete the history from the current version index + 1 to the end.
+                self.versions.truncate(current_index.as_usize() + 1);
+            }
+            self.versions.add(content);
+            self.current_index.inc(&self.versions);
+        }
+
+        /// This is the underlying function that enables undo. It changes the current
+        /// index to the previous index in the versions buffer.
+        ///
+        /// Once called, you can use [EditorHistory::next_content] to redo, as long as the
+        /// current index is not at the end of the versions buffer.
+        pub fn prev_content(&mut self) -> Option<EditorContent> {
+            match self.current_index.is_at_start(&self.versions) {
+                None => {
+                    // Is empty. Nothing to undo.
+                    None
+                }
+                Some(true) => {
+                    // At start of history. Nothing to undo.
+                    None
+                }
+                Some(false) => {
+                    // Decrement index.
+                    self.current_index.dec(&self.versions);
+
+                    // Return item at index.
+                    self.versions.get(self.current_index.as_usize()).cloned()
+                }
+            }
+        }
+
+        /// This is the underlying function that enables redo. It changes the current
+        /// index to the next index in the versions buffer.
+        ///
+        /// You can call [EditorHistory::prev_content] to undo, as long as the current
+        /// index is not at the start of the versions buffer.
+        pub fn next_content(&mut self) -> Option<EditorContent> {
+            match self.current_index.is_at_end(&self.versions) {
+                None => {
+                    // Is empty. Nothing to redo.
+                    None
+                }
+                Some(true) => {
+                    // At end of history. Nothing to redo.
+                    None
+                }
+                Some(false) => {
+                    // Increment index.
+                    self.current_index.inc(&self.versions);
+
+                    // Return item at index.
+                    self.versions.get(self.current_index.as_usize()).cloned()
+                }
+            }
+        }
     }
 
-    pub fn clear(buffer: &mut EditorBuffer) {
-        buffer.history = EditorBufferHistory::default();
+    impl Default for EditorHistory {
+        fn default() -> Self {
+            Self {
+                versions: sizing::VersionHistory::new(),
+                current_index: CurIndex::default(),
+            }
+        }
     }
 
-    pub fn push(buffer: &mut EditorBuffer) {
+    pub fn clear(buffer: &mut EditorBuffer) { buffer.history.clear(); }
+
+    pub fn add(buffer: &mut EditorBuffer) {
         // Invalidate the content cache, since the content just changed.
         cache::clear(buffer);
 
-        let content_copy = buffer.content.clone();
-
-        // Delete the history from the current version index + 1 to the end.
-        if let Some(current_index) = buffer.history.get_current_index() {
-            buffer
-                .history
-                .versions
-                .truncate(convert_isize_to_usize(current_index + 1));
-        }
-
         // Normal history insertion.
-        buffer.history.push_content(content_copy);
+        let content_copy = buffer.content.clone();
+        buffer.history.add_content(content_copy);
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
             tracing::debug!("🍎🍎🍎 add_content_to_undo_stack buffer: {:?}", buffer);
@@ -736,10 +923,13 @@ pub mod history {
         // Invalidate the content cache, since the content just changed.
         cache::clear(buffer);
 
-        let retain_caret_pos = buffer.content.caret_raw;
-        if let Some(content) = buffer.history.previous_content() {
+        // REVIEW: [ ] does the following behavior make sense?
+        // Save the caret position & restore it after undo.
+        // let retain_caret_pos = buffer.content.caret_raw;
+        if let Some(content) = buffer.history.prev_content() {
             buffer.content = content;
-            buffer.content.caret_raw = retain_caret_pos;
+            // buffer.content.caret_raw = retain_caret_pos;
+            // _ = buffer.get_mut(dummy_viewport()); // Validate the caret position.
         }
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
@@ -758,98 +948,6 @@ pub mod history {
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
             tracing::debug!("🍎🍎🍎 redo buffer: {:?}", buffer);
         });
-    }
-
-    impl EditorBufferHistory {
-        pub(crate) fn is_empty(&self) -> bool { self.versions.is_empty() }
-
-        fn get_last_index(&self) -> Option<ChUnit> {
-            if self.is_empty() {
-                None
-            } else {
-                Some(ch(self.versions.len()) - ch(1))
-            }
-        }
-
-        fn get_current_index(&self) -> Option<isize> {
-            if self.is_empty() {
-                None
-            } else {
-                Some(self.current_index)
-            }
-        }
-
-        fn increment_index(&mut self) {
-            // Don't do anything if is empty.
-            if let Some(max_index) = self.get_last_index() {
-                // Make sure it doesn't go past the end.
-                if self.current_index == isize(max_index) {
-                    return;
-                }
-                // Increment index.
-                self.current_index += 1;
-            }
-        }
-
-        fn decrement_index(&mut self) {
-            // Don't do anything if is empty.
-            if let Some(current_index) = self.get_current_index() {
-                // Make sure it doesn't go past the start.
-                if current_index == 0 {
-                    return;
-                }
-                // Decrement index.
-                self.current_index -= 1;
-            }
-        }
-
-        fn push_content(&mut self, content: EditorContent) {
-            self.versions.add(content);
-            self.increment_index();
-        }
-
-        fn previous_content(&mut self) -> Option<EditorContent> {
-            if self.is_empty() {
-                None
-            } else {
-                // At start of history.
-                if self.current_index == -1 {
-                    return None;
-                }
-
-                // Decrement index.
-                self.decrement_index();
-
-                // Return item at index.
-                let it = self
-                    .versions
-                    .get(convert_isize_to_usize(self.current_index))
-                    .cloned();
-                it
-            }
-        }
-
-        fn next_content(&mut self) -> Option<EditorContent> {
-            if self.is_empty() {
-                None
-            } else {
-                // At end of versions.
-                if let Some(max_index) = self.get_last_index() {
-                    let max_index = isize(max_index);
-                    if self.current_index == max_index {
-                        return None;
-                    }
-                }
-
-                // Increment index.
-                self.increment_index();
-
-                // Return item at index.
-                self.versions
-                    .get(convert_isize_to_usize(self.current_index))
-                    .cloned()
-            }
-        }
     }
 }
 
@@ -890,17 +988,14 @@ mod impl_debug_format {
         }
     }
 
-    impl Debug for EditorBufferHistory {
+    impl Debug for EditorHistory {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             write! {
                 f,
-"EditorBufferHistory [
-    - stack: {len}, size: {size}
-    - index: {index}
-    ]",
+            "EditorHistory [index: {index:?} | versions: {len} | size: {size}]",
                 len = self.versions.len(),
                 size = format_as_kilobytes_with_commas(self.size_of().total_bytes()),
-                index = self.current_index
+                index = self.current_index.0
             }
         }
     }
@@ -912,16 +1007,139 @@ mod history_tests {
     use smallvec::smallvec;
 
     use super::*;
+    use crate::history::{CurIndex, MIN_INDEX};
 
-    // REFACTOR: [ ] add tests for sizing::MAX_UNDO_REDO_SIZE
+    #[test]
+    fn test_editor_history_struct_one_item() {
+        let mut history = EditorHistory::default();
+        assert_eq2!(history.versions.len(), 0);
+        assert_eq2!(history.current_index, CurIndex(MIN_INDEX));
+        assert_eq2!(history.current_index.is_at_start(&history.versions), None);
+        assert_eq2!(history.current_index.is_at_end(&history.versions), None);
+        assert_eq!(history.is_empty(), true);
+
+        history.add_content(EditorContent::default());
+        assert_eq!(history.versions.len(), 1);
+        assert_eq!(history.current_index, 0.into());
+        assert_eq!(history.is_empty(), false);
+        assert_eq!(history.current_index(), Some(0.into()));
+        assert_eq!(
+            history.current_index.is_at_start(&history.versions),
+            Some(false)
+        );
+        assert_eq!(
+            history.current_index.is_at_end(&history.versions),
+            Some(true)
+        );
+
+        // Can't redo, since there is only one version, can only undo.
+        assert_eq!(history.next_content().is_none(), true);
+        assert_eq!(history.current_index, 0.into());
+        assert_eq!(
+            history.current_index.is_at_start(&history.versions),
+            Some(false)
+        );
+        assert_eq!(
+            history.current_index.is_at_end(&history.versions),
+            Some(true)
+        );
+
+        // Can undo, since there is only one version. And current_index is 0.
+        assert_eq!(history.prev_content().is_some(), true);
+        assert_eq!(history.current_index, CurIndex(MIN_INDEX));
+        assert_eq!(
+            history.current_index.is_at_start(&history.versions),
+            Some(true)
+        );
+        assert_eq!(
+            history.current_index.is_at_end(&history.versions),
+            Some(false)
+        );
+
+        // Can redo, since there is only one version. And current_index is -1.
+        assert_eq!(history.next_content().is_some(), true);
+        assert_eq!(history.current_index, 0.into());
+        assert_eq!(
+            history.current_index.is_at_start(&history.versions),
+            Some(false)
+        );
+        assert_eq!(
+            history.current_index.is_at_end(&history.versions),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn test_editor_history_struct_multiple_items() {
+        let mut history = EditorHistory::default();
+
+        // Add 3 items to the history.
+        history.add_content(EditorContent::default());
+        history.add_content(EditorContent::default());
+        history.add_content(EditorContent::default());
+
+        assert_eq!(history.versions.len(), 3);
+        assert_eq!(history.current_index, 2.into());
+        assert_eq!(history.is_empty(), false);
+        assert_eq!(history.current_index(), Some(2.into()));
+
+        // Can undo, since there are 3 versions. And current_index is 2.
+        assert_eq!(history.prev_content().is_some(), true);
+        assert_eq!(history.current_index, 1.into());
+        assert_eq!(history.prev_content().is_some(), true);
+        assert_eq!(history.current_index, 0.into());
+        assert_eq!(history.prev_content().is_some(), true);
+        assert_eq!(history.current_index, CurIndex(-1));
+        assert_eq!(history.prev_content().is_none(), true);
+
+        // Can redo, 3 times.
+        assert_eq!(history.next_content().is_some(), true);
+        assert_eq!(history.current_index, 0.into());
+        assert_eq!(history.next_content().is_some(), true);
+        assert_eq!(history.current_index, 1.into());
+        assert_eq!(history.next_content().is_some(), true);
+        assert_eq!(history.current_index, 2.into());
+        assert_eq!(history.next_content().is_none(), true);
+    }
+
+    #[test]
+    fn test_editor_history_struct_truncate_dangling_redos() {
+        let mut history = EditorHistory::default();
+
+        // Add 3 items to the history.
+        history.add_content(EditorContent::default());
+        history.add_content(EditorContent::default());
+        history.add_content(EditorContent::default());
+        history.add_content(EditorContent::default());
+
+        assert_eq!(history.versions.len(), 4);
+        assert_eq!(history.current_index, 3.into());
+        assert_eq!(history.is_empty(), false);
+        assert_eq!(history.current_index(), Some(3.into()));
+
+        // Undo twice. Can undo 4 times, since there are 4 versions. And current_index is
+        // 3.
+        assert_eq!(history.prev_content().is_some(), true);
+        assert_eq!(history.prev_content().is_some(), true);
+        assert_eq!(history.current_index, 1.into());
+        assert_eq!(history.versions.len(), 4);
+
+        // Add new content (+1) which should truncate the 2 dangling redos (-2).
+        // So net change in versions.len() 4 - 2 + 1 = 3.
+        history.add_content(EditorContent::default());
+        assert_eq!(history.versions.len(), 3);
+        assert_eq!(history.current_index, 2.into());
+        assert_eq!(history.is_empty(), false);
+        assert_eq!(history.current_index(), Some(2.into()));
+    }
 
     #[test]
     fn test_push_default() {
         let mut buffer = EditorBuffer::default();
         let content = buffer.content.clone();
 
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 0);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0.into());
 
         let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 1);
@@ -932,8 +1150,8 @@ mod history_tests {
     fn test_push_with_contents() {
         let mut buffer = EditorBuffer::default();
         buffer.content.lines = smallvec!["abc".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 0);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0.into());
 
         let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), 1);
@@ -948,35 +1166,35 @@ mod history_tests {
     fn test_push_and_drop_future_redos() {
         let mut buffer = EditorBuffer::default();
         buffer.content.lines = smallvec!["abc".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 0);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0.into());
 
         buffer.content.lines = smallvec!["def".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 1);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 1.into());
 
         buffer.content.lines = smallvec!["ghi".grapheme_string()];
-        history::push(&mut buffer);
+        history::add(&mut buffer);
 
         // 3 pushes, so the current index should be 2.
-        assert_eq2!(buffer.history.current_index, 2);
+        assert_eq2!(buffer.history.current_index, 2.into());
 
         // Do two undos.
         history::undo(&mut buffer);
         history::undo(&mut buffer);
         // The current index should be 0.
-        assert_eq!(buffer.history.current_index, 0);
+        assert_eq!(buffer.history.current_index, 0.into());
         // There are two versions ahead of the current index.
         assert_eq!(buffer.history.versions.len(), 3);
 
         // Push new content. Should drop future redos (2 versions should be removed).
         buffer.content.lines = smallvec!["xyz".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq!(buffer.history.current_index, 1);
+        history::add(&mut buffer);
+        assert_eq!(buffer.history.current_index, 1.into());
         assert_eq!(buffer.history.versions.len(), 2);
 
         let history = buffer.history;
-        assert_eq2!(history.current_index, 1);
+        assert_eq2!(history.current_index, 1.into());
 
         let history_stack = history.versions;
         assert_eq2!(history_stack.len(), 2);
@@ -999,33 +1217,33 @@ mod history_tests {
     fn test_single_undo() {
         let mut buffer = EditorBuffer::default();
         buffer.content.lines = smallvec!["abc".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 0);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0.into());
 
         // Undo.
         history::undo(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 0);
+        assert_eq2!(buffer.history.current_index, CurIndex(-1));
     }
 
     #[test]
     fn test_many_undo() {
         let mut buffer = EditorBuffer::default();
         buffer.content.lines = smallvec!["abc".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 0);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0.into());
 
         buffer.content.lines = smallvec!["def".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 1);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 1.into());
         let copy_of_editor_content = buffer.content.clone();
 
         buffer.content.lines = smallvec!["ghi".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 2);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 2.into());
 
         // Undo.
         history::undo(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 1);
+        assert_eq2!(buffer.history.current_index, 1.into());
         assert_eq2!(buffer.content, copy_of_editor_content);
 
         let history_stack = buffer.history.versions;
@@ -1054,40 +1272,40 @@ mod history_tests {
     fn test_multiple_undos() {
         let mut buffer = EditorBuffer::default();
         buffer.content.lines = smallvec!["abc".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 0);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0.into());
 
         buffer.content.lines = smallvec!["def".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 1);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 1.into());
 
         // Undo multiple times.
         history::undo(&mut buffer);
         history::undo(&mut buffer);
         history::undo(&mut buffer);
 
-        assert_eq2!(buffer.history.current_index, 0);
+        assert_eq2!(buffer.history.current_index, CurIndex(-1));
     }
 
     #[test]
     fn test_undo_and_multiple_redos() {
         let mut buffer = EditorBuffer::default();
         buffer.content.lines = smallvec!["abc".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 0);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 0.into());
 
         buffer.content.lines = smallvec!["def".grapheme_string()];
-        history::push(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 1);
+        history::add(&mut buffer);
+        assert_eq2!(buffer.history.current_index, 1.into());
         let snapshot_content = buffer.content.clone();
 
         // Undo.
         history::undo(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 0);
+        assert_eq2!(buffer.history.current_index, 0.into());
 
         // Redo.
         history::redo(&mut buffer);
-        assert_eq2!(buffer.history.current_index, 1);
+        assert_eq2!(buffer.history.current_index, 1.into());
 
         // Current state.
         assert_eq2!(buffer.content, snapshot_content);
