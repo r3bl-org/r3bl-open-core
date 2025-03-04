@@ -149,10 +149,8 @@ pub fn apply_event(
     if let Ok(editor_event) = EditorEvent::try_from(input_event) {
         // The following events trigger undo / redo. Add the initial state to the history
         // if it is empty. This seeds the history buffer with its first entry.
-        if triggers_undo_redo(&editor_event) {
-            if buffer.history.is_empty() {
-                history::add(buffer);
-            }
+        if triggers_undo_redo(&editor_event) && buffer.history.is_empty() {
+            history::add(buffer);
         };
 
         // Actually apply the editor event, which might produce a new buffer.

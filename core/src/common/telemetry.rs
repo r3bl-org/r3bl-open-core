@@ -14,7 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::{collections::HashMap,
           fmt::Write as _,
           time::{Duration, Instant}};
@@ -26,6 +25,7 @@ use strum_macros::{Display, EnumString};
 use crate::{Pc,
             RateLimitStatus,
             RateLimiter,
+            RingBuffer as _,
             RingBufferStack,
             TimeDuration,
             ch,
