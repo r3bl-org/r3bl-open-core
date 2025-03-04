@@ -141,6 +141,9 @@ impl<T, const N: usize> RingBufferHeap<T, N> {
             .get(actual_index)
             .and_then(|x| x.as_ref())
     }
+
+    pub fn first(&self) -> Option<&T> { self.get(0) }
+    pub fn last(&self) -> Option<&T> { self.get(self.count.saturating_sub(1)) }
 }
 
 pub struct RingBufferHeapIterator<'a, T, const N: usize> {
@@ -187,6 +190,9 @@ mod tests {
         assert_eq!(ring_buffer.get(0), None);
         assert_eq!(ring_buffer.get(1), None);
         assert_eq!(ring_buffer.get(2), None);
+
+        assert_eq!(ring_buffer.first(), None);
+        assert_eq!(ring_buffer.last(), None);
     }
 
     #[test]
@@ -205,6 +211,9 @@ mod tests {
         assert_eq!(ring_buffer.get(0).unwrap(), "Hello");
         assert_eq!(ring_buffer.get(1), None);
         assert_eq!(ring_buffer.get(2), None);
+
+        assert_eq!(ring_buffer.first().unwrap(), "Hello");
+        assert_eq!(ring_buffer.last().unwrap(), "Hello");
     }
 
     #[test]
@@ -228,6 +237,9 @@ mod tests {
         assert_eq!(ring_buffer.get(1).unwrap(), "World");
         assert_eq!(ring_buffer.get(2).unwrap(), "Rust");
         assert_eq!(ring_buffer.get(3), None);
+
+        assert_eq!(ring_buffer.first().unwrap(), "Hello");
+        assert_eq!(ring_buffer.last().unwrap(), "Rust");
     }
 
     #[test]
@@ -251,6 +263,9 @@ mod tests {
         assert_eq!(ring_buffer.get(1).unwrap(), "Rust");
         assert_eq!(ring_buffer.get(2), None);
         assert_eq!(ring_buffer.get(3), None);
+
+        assert_eq!(ring_buffer.first().unwrap(), "World");
+        assert_eq!(ring_buffer.last().unwrap(), "Rust");
     }
 
     #[test]
@@ -275,6 +290,9 @@ mod tests {
         assert_eq!(ring_buffer.get(1).unwrap(), "Rust");
         assert_eq!(ring_buffer.get(2).unwrap(), "R3BL");
         assert_eq!(ring_buffer.get(3), None);
+
+        assert_eq!(ring_buffer.first().unwrap(), "World");
+        assert_eq!(ring_buffer.last().unwrap(), "R3BL");
     }
 
     #[test]
@@ -299,6 +317,9 @@ mod tests {
         assert_eq!(ring_buffer.get(1).unwrap(), "R3BL");
         assert_eq!(ring_buffer.get(2), None);
         assert_eq!(ring_buffer.get(3), None);
+
+        assert_eq!(ring_buffer.first().unwrap(), "Rust");
+        assert_eq!(ring_buffer.last().unwrap(), "R3BL");
     }
 
     #[test]
@@ -320,6 +341,9 @@ mod tests {
         assert_eq!(ring_buffer.get(1), None);
         assert_eq!(ring_buffer.get(2), None);
         assert_eq!(ring_buffer.get(3), None);
+
+        assert_eq!(ring_buffer.first(), None);
+        assert_eq!(ring_buffer.last(), None);
     }
 
     #[test]
@@ -356,6 +380,9 @@ mod tests {
         assert_eq!(ring_buffer.get(1).unwrap(), "World");
         assert_eq!(ring_buffer.get(2), None);
         assert_eq!(ring_buffer.get(3), None);
+
+        assert_eq!(ring_buffer.first().unwrap(), "Hello");
+        assert_eq!(ring_buffer.last().unwrap(), "World");
     }
 
     #[test]
@@ -393,5 +420,8 @@ mod tests {
         assert_eq!(iter.next().unwrap(), "World");
         assert_eq!(iter.next().unwrap(), "Rust");
         assert_eq!(iter.next(), None);
+
+        assert_eq!(ring_buffer.first().unwrap(), "World");
+        assert_eq!(ring_buffer.last().unwrap(), "Rust");
     }
 }
