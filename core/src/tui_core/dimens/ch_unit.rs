@@ -71,6 +71,22 @@ pub fn usize(arg_num: impl Into<usize>) -> usize { arg_num.into() }
 pub fn isize(arg_num: impl Into<isize>) -> isize { arg_num.into() }
 
 /// ```rust
+/// use r3bl_core::{ch, ChUnit, i32};
+///
+/// let it_ch: ChUnit = ch(12);
+/// let it_i32: i32 = i32(it_ch);
+/// ```
+pub fn i32(arg_num: impl Into<i32>) -> i32 { arg_num.into() }
+
+/// ```rust
+/// use r3bl_core::{ch, ChUnit, i16};
+///
+/// let it_ch: ChUnit = ch(12);
+/// let it_i16: i16 = i16(it_ch);
+/// ```
+pub fn i16(arg_num: impl Into<i16>) -> i16 { arg_num.into() }
+
+/// ```rust
 /// use r3bl_core::{ch, ChUnit, f64};
 ///
 /// let it_ch: ChUnit = ch(12);
@@ -211,6 +227,14 @@ pub mod convert_to_other_types_from_ch {
         fn from(arg: ChUnit) -> Self { arg.value as isize }
     }
 
+    impl From<ChUnit> for i32 {
+        fn from(arg: ChUnit) -> Self { arg.value as i32 }
+    }
+
+    impl From<ChUnit> for i16 {
+        fn from(arg: ChUnit) -> Self { arg.value as i16 }
+    }
+
     impl From<ChUnit> for usize {
         fn from(arg: ChUnit) -> Self { arg.value as usize }
     }
@@ -299,6 +323,14 @@ pub mod convert_from_other_types_to_ch {
 
     impl From<i32> for ChUnit {
         fn from(value: i32) -> Self {
+            Self {
+                value: value.try_into().unwrap_or(value as ChUnitPrimitiveType),
+            }
+        }
+    }
+
+    impl From<i16> for ChUnit {
+        fn from(value: i16) -> Self {
             Self {
                 value: value.try_into().unwrap_or(value as ChUnitPrimitiveType),
             }
