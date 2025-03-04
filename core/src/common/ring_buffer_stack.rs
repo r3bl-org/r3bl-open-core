@@ -21,6 +21,8 @@
 
 use std::fmt::Debug;
 
+use super::RingBuffer;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct RingBufferStack<T, const N: usize> {
     internal_storage: [Option<T>; N],
@@ -42,9 +44,29 @@ impl<T, const N: usize> RingBufferStack<T, N> {
             count: 0,
         }
     }
+}
+
+impl<T, const N: usize> RingBuffer<T, N> for RingBufferStack<T, N> {
+    fn clear(&mut self) {
+        self.head = 0;
+        self.tail = 0;
+        self.count = 0;
+        self.internal_storage.iter_mut().for_each(|x| *x = None);
+    }
+
+    fn get(&self, index: usize) -> Option<&T> {
+        if index >= self.count {
+            return None;
+        }
+
+        let actual_index = (self.tail + index) % N;
+        self.internal_storage[actual_index].as_ref()
+    }
+
+    fn len(&self) -> usize { self.count }
 
     /// Insert at head (ie, insert the newest item).
-    pub fn add(&mut self, value: T) {
+    fn add(&mut self, value: T) {
         if self.count == N {
             self.internal_storage[self.head] = Some(value);
             self.head = (self.head + 1) % N;
@@ -57,7 +79,7 @@ impl<T, const N: usize> RingBufferStack<T, N> {
     }
 
     /// Remove from tail (ie, remove the oldest item).
-    pub fn remove(&mut self) -> Option<T> {
+    fn remove(&mut self) -> Option<T> {
         if self.count == 0 {
             return None;
         }
@@ -70,7 +92,7 @@ impl<T, const N: usize> RingBufferStack<T, N> {
 
     /// Remove from head (ie, remove the newest item). This is the opposite of
     /// [Self::remove].
-    pub fn remove_head(&mut self) -> Option<T> {
+    fn remove_head(&mut self) -> Option<T> {
         if self.count == 0 {
             return None;
         }
@@ -82,7 +104,7 @@ impl<T, const N: usize> RingBufferStack<T, N> {
     }
 
     // Delete the items from the given index to the end of the buffer.
-    pub fn truncate(&mut self, index: usize) {
+    fn truncate(&mut self, index: usize) {
         if index >= self.count {
             return;
         }
@@ -102,38 +124,15 @@ impl<T, const N: usize> RingBufferStack<T, N> {
         self.head = actual_index;
         self.count = index;
     }
+}
 
-    pub fn clear(&mut self) {
-        self.head = 0;
-        self.tail = 0;
-        self.count = 0;
-        self.internal_storage.iter_mut().for_each(|x| *x = None);
-    }
-
-    pub fn len(&self) -> usize { self.count }
-
-    pub fn is_empty(&self) -> bool { self.count == 0 }
-
-    pub fn is_full(&self) -> bool { self.count == N }
-
+impl<T, const N: usize> RingBufferStack<T, N> {
     pub fn iter(&self) -> RingBufferStackIterator<'_, T, N> {
         RingBufferStackIterator {
             ring_buffer: self,
             iterator_index: 0,
         }
     }
-
-    pub fn get(&self, index: usize) -> Option<&T> {
-        if index >= self.count {
-            return None;
-        }
-
-        let actual_index = (self.tail + index) % N;
-        self.internal_storage[actual_index].as_ref()
-    }
-
-    pub fn first(&self) -> Option<&T> { self.get(0) }
-    pub fn last(&self) -> Option<&T> { self.get(self.count.saturating_sub(1)) }
 }
 
 pub struct RingBufferStackIterator<'a, T, const N: usize> {

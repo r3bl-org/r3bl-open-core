@@ -35,6 +35,7 @@ use r3bl_core::{call_if_true,
                 Dim,
                 GCString,
                 GCStringExt,
+                RingBuffer as _,
                 RingBufferHeap,
                 RowHeight,
                 RowIndex,
@@ -1016,12 +1017,12 @@ mod history_tests {
         assert_eq2!(history.current_index, CurIndex(MIN_INDEX));
         assert_eq2!(history.current_index.is_at_start(&history.versions), None);
         assert_eq2!(history.current_index.is_at_end(&history.versions), None);
-        assert_eq!(history.is_empty(), true);
+        assert!(history.is_empty());
 
         history.add_content(EditorContent::default());
         assert_eq!(history.versions.len(), 1);
         assert_eq!(history.current_index, 0.into());
-        assert_eq!(history.is_empty(), false);
+        assert!(!history.is_empty());
         assert_eq!(history.current_index(), Some(0.into()));
         assert_eq!(
             history.current_index.is_at_start(&history.versions),
@@ -1033,7 +1034,7 @@ mod history_tests {
         );
 
         // Can't redo, since there is only one version, can only undo.
-        assert_eq!(history.next_content().is_none(), true);
+        assert!(history.next_content().is_none());
         assert_eq!(history.current_index, 0.into());
         assert_eq!(
             history.current_index.is_at_start(&history.versions),
@@ -1045,7 +1046,7 @@ mod history_tests {
         );
 
         // Can undo, since there is only one version. And current_index is 0.
-        assert_eq!(history.prev_content().is_some(), true);
+        assert!(history.prev_content().is_some());
         assert_eq!(history.current_index, CurIndex(MIN_INDEX));
         assert_eq!(
             history.current_index.is_at_start(&history.versions),
@@ -1057,7 +1058,7 @@ mod history_tests {
         );
 
         // Can redo, since there is only one version. And current_index is -1.
-        assert_eq!(history.next_content().is_some(), true);
+        assert!(history.next_content().is_some());
         assert_eq!(history.current_index, 0.into());
         assert_eq!(
             history.current_index.is_at_start(&history.versions),
@@ -1080,26 +1081,26 @@ mod history_tests {
 
         assert_eq!(history.versions.len(), 3);
         assert_eq!(history.current_index, 2.into());
-        assert_eq!(history.is_empty(), false);
+        assert!(!history.is_empty());
         assert_eq!(history.current_index(), Some(2.into()));
 
         // Can undo, since there are 3 versions. And current_index is 2.
-        assert_eq!(history.prev_content().is_some(), true);
+        assert!(history.prev_content().is_some());
         assert_eq!(history.current_index, 1.into());
-        assert_eq!(history.prev_content().is_some(), true);
+        assert!(history.prev_content().is_some());
         assert_eq!(history.current_index, 0.into());
-        assert_eq!(history.prev_content().is_some(), true);
+        assert!(history.prev_content().is_some());
         assert_eq!(history.current_index, CurIndex(-1));
-        assert_eq!(history.prev_content().is_none(), true);
+        assert!(history.prev_content().is_none());
 
         // Can redo, 3 times.
-        assert_eq!(history.next_content().is_some(), true);
+        assert!(history.next_content().is_some());
         assert_eq!(history.current_index, 0.into());
-        assert_eq!(history.next_content().is_some(), true);
+        assert!(history.next_content().is_some());
         assert_eq!(history.current_index, 1.into());
-        assert_eq!(history.next_content().is_some(), true);
+        assert!(history.next_content().is_some());
         assert_eq!(history.current_index, 2.into());
-        assert_eq!(history.next_content().is_none(), true);
+        assert!(history.next_content().is_none());
     }
 
     #[test]
@@ -1114,13 +1115,13 @@ mod history_tests {
 
         assert_eq!(history.versions.len(), 4);
         assert_eq!(history.current_index, 3.into());
-        assert_eq!(history.is_empty(), false);
+        assert!(!history.is_empty());
         assert_eq!(history.current_index(), Some(3.into()));
 
         // Undo twice. Can undo 4 times, since there are 4 versions. And current_index is
         // 3.
-        assert_eq!(history.prev_content().is_some(), true);
-        assert_eq!(history.prev_content().is_some(), true);
+        assert!(history.prev_content().is_some());
+        assert!(history.prev_content().is_some());
         assert_eq!(history.current_index, 1.into());
         assert_eq!(history.versions.len(), 4);
 
@@ -1129,7 +1130,7 @@ mod history_tests {
         history.add_content(EditorContent::default());
         assert_eq!(history.versions.len(), 3);
         assert_eq!(history.current_index, 2.into());
-        assert_eq!(history.is_empty(), false);
+        assert!(!history.is_empty());
         assert_eq!(history.current_index(), Some(2.into()));
     }
 
