@@ -43,7 +43,7 @@ use crate::{caret_scroll_index,
 /// viewport to be passed in (from the [crate::EditorEngine]). However, in this module, we
 /// don't need a viewport, nor do we have access to the [crate::EditorEngine], so we use
 /// this dummy viewport.
-fn dummy_viewport() -> Dim {
+pub fn dummy_viewport() -> Dim {
     width(ChUnitPrimitiveType::MAX) + height(ChUnitPrimitiveType::MAX)
 }
 
