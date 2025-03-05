@@ -11,21 +11,6 @@
 			]
 		},
 		{
-			"path": "tui/src/tui/editor/editor_buffer/buffer_struct.rs",
-			"bookmarks": [
-				{
-					"line": 911,
-					"column": 0,
-					"label": ""
-				},
-				{
-					"line": 924,
-					"column": 0,
-					"label": ""
-				}
-			]
-		},
-		{
 			"path": "tui/src/tui/editor/editor_engine/engine_public_api.rs",
 			"bookmarks": [
 				{
