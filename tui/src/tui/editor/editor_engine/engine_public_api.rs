@@ -48,12 +48,11 @@ use r3bl_core::{call_if_true,
 use r3bl_macro::tui_style;
 use syntect::easy::HighlightLines;
 
-use crate::{buffer_clipboard_support::ClipboardService,
-            cache::{self, UseCache},
-            caret_scroll_index,
+use crate::{caret_scroll_index,
+            clipboard_support::ClipboardService,
             convert_syntect_to_styled_text,
             get_selection_style,
-            history,
+            render_cache::{RenderCache, UseRenderCache},
             render_ops,
             render_pipeline,
             render_tui_styled_texts_into,
@@ -150,7 +149,7 @@ pub fn apply_event(
         // The following events trigger undo / redo. Add the initial state to the history
         // if it is empty. This seeds the history buffer with its first entry.
         if triggers_undo_redo(&editor_event) && buffer.history.is_empty() {
-            history::add(buffer);
+            buffer.add();
         };
 
         // Actually apply the editor event, which might produce a new buffer.
@@ -160,7 +159,7 @@ pub fn apply_event(
         // add the new state to the history. So that the user will be able to get back to
         // this state if they want to (after making a change in the future).
         if triggers_undo_redo(&editor_event) {
-            history::add(buffer);
+            buffer.add();
         }
 
         Ok(EditorEngineApplyEventResult::Applied)
@@ -188,13 +187,13 @@ pub fn render_engine(
         } else {
             let mut render_ops = render_ops!();
 
-            cache::render_content(
+            RenderCache::render_content(
                 buffer,
                 engine,
                 window_size,
                 has_focus,
                 &mut render_ops,
-                UseCache::Yes,
+                UseRenderCache::Yes,
             );
 
             render_selection(
@@ -781,13 +780,13 @@ mod test_cache {
         let mut cache = HashMap::new();
 
         // The very first request to cache is always missed since cache is empty.
-        cache::render_content(
+        RenderCache::render_content(
             editor_buffer,
             editor_engine,
             window_size,
             has_focus,
             render_ops,
-            UseCache::Yes,
+            UseRenderCache::Yes,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
@@ -800,25 +799,25 @@ mod test_cache {
             },
             render_ops,
         );
-        cache::render_content(
+        RenderCache::render_content(
             editor_buffer,
             editor_engine,
             window_size,
             has_focus,
             render_ops,
-            UseCache::Yes,
+            UseRenderCache::Yes,
         );
         test_cache_hit(editor_buffer, &mut cache);
 
         // Change in window size should invalidate the cache and result in a cache miss.
         let window_size = height(50) + width(15);
-        cache::render_content(
+        RenderCache::render_content(
             editor_buffer,
             editor_engine,
             window_size,
             has_focus,
             render_ops,
-            UseCache::Yes,
+            UseRenderCache::Yes,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
@@ -831,37 +830,37 @@ mod test_cache {
             },
             render_ops,
         );
-        cache::render_content(
+        RenderCache::render_content(
             editor_buffer,
             editor_engine,
             window_size,
             has_focus,
             render_ops,
-            UseCache::Yes,
+            UseRenderCache::Yes,
         );
         test_cache_hit(editor_buffer, &mut cache);
 
         // Change in scroll_offset should invalidate the cache and result in a cache miss.
         editor_buffer.content.scr_ofs = scr_ofs(col(1) + row(1));
-        cache::render_content(
+        RenderCache::render_content(
             editor_buffer,
             editor_engine,
             window_size,
             has_focus,
             render_ops,
-            UseCache::Yes,
+            UseRenderCache::Yes,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
         // Change in content should invalidate the cache and result in a cache miss.
         editor_buffer.set_lines(["r3bl"]);
-        cache::render_content(
+        RenderCache::render_content(
             editor_buffer,
             editor_engine,
             window_size,
             has_focus,
             render_ops,
-            UseCache::Yes,
+            UseRenderCache::Yes,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
     }
@@ -879,13 +878,13 @@ mod test_cache {
             b = window_size
         ); // generating key
         cache.insert(key, render_ops.clone()); // enter the new entry into cache
-        assert_eq2!(editor_buffer.render_cache, cache.clone());
+        assert_eq2!(*editor_buffer.render_cache, cache.clone());
     }
 
     fn test_cache_hit(
         editor_buffer: &mut EditorBuffer,
         cache: &mut HashMap<StringStorage, RenderOps>,
     ) {
-        assert_eq2!(editor_buffer.render_cache, cache.clone());
+        assert_eq2!(*editor_buffer.render_cache, cache.clone());
     }
 }
