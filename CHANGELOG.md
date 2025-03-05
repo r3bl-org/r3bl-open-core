@@ -464,6 +464,7 @@ Added:
     operation that is called in a hot loop, the main event loop).
 
 Removed:
+  - Remove `size-of` crate from `Cargo.toml`.
   - Delete `static_global_data.rs` file and `telemetry_global_static` module.
     - Move the `vscode` terminal color detection code to `r3bl_ansi_color`, which is where
       it belongs.
@@ -903,6 +904,7 @@ Here are the highlights:
      generated lolcat output.
 
 Removed:
+  - Remove `size-of` crate from `Cargo.toml`.
   - The `ch!` macro was confusing. It is now removed, and `ch_unit.rs` has clean
     conversions to and from other types. There are easy to use, typed checked functions,
     like `ch()`, `usize()`, `f64()`, etc.

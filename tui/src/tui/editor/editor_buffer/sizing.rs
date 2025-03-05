@@ -15,33 +15,42 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{GCString, RingBufferHeap};
+use r3bl_core::{get_mem_size,
+                CaretRaw,
+                CharStorage,
+                GCString,
+                GetMemSize,
+                RingBufferHeap,
+                ScrOfs,
+                StringStorage};
 use smallvec::SmallVec;
 
-use super::{history::EditorHistory, EditorContent};
+use super::{cur_index::CurIndex, history::EditorHistory, EditorContent};
 
 pub type VecEditorContentLines = SmallVec<[GCString; DEFAULT_EDITOR_LINES_SIZE]>;
 const DEFAULT_EDITOR_LINES_SIZE: usize = 32;
 
 /// The version history is stored on the heap, as a ring buffer.
 pub type HistoryBuffer = RingBufferHeap<EditorContent, MAX_UNDO_REDO_SIZE>;
+
 /// This is the absolute maximum number of undo/redo steps that will ever be stored.
 pub const MAX_UNDO_REDO_SIZE: usize = 16;
 
-impl size_of::SizeOf for EditorContent {
-    fn size_of_children(&self, context: &mut size_of::Context) {
-        context.add(size_of_val(&self.lines)); /* use for fields that can expand or contract */
-        context.add(size_of_val(&self.maybe_file_extension)); /* use for fields that can expand or contract */
-        context.add(size_of_val(&self.maybe_file_path)); /* use for fields that can expand or contract */
-        context.add(self.caret_raw.size_of().total_bytes());
-        context.add(self.scr_ofs.size_of().total_bytes());
-        context.add(self.sel_list.size_of().total_bytes());
+impl GetMemSize for EditorContent {
+    fn get_mem_size(&self) -> usize {
+        get_mem_size::slice_size(&self.lines)
+            + std::mem::size_of::<CaretRaw>()
+            + std::mem::size_of::<ScrOfs>()
+            + std::mem::size_of::<Option<CharStorage>>()
+            + std::mem::size_of::<Option<StringStorage>>()
+            + self.sel_list.get_mem_size()
     }
 }
 
-impl size_of::SizeOf for EditorHistory {
-    fn size_of_children(&self, context: &mut size_of::Context) {
-        context.add(size_of_val(&self.versions)); /* use for fields that can expand or contract */
-        context.add(self.current_index.size_of().total_bytes());
+impl GetMemSize for EditorHistory {
+    fn get_mem_size(&self) -> usize {
+        let versions_size = get_mem_size::ring_buffer_size(&self.versions);
+        let cur_index_field_size = std::mem::size_of::<CurIndex>();
+        versions_size + cur_index_field_size
     }
 }

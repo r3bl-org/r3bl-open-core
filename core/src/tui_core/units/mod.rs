@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022-2025 R3BL LLC
+ *   Copyright (c) 2025 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,22 +15,15 @@
  *   limitations under the License.
  */
 
-//! All the modules this crate are in support of the `r3bl_tui` crate.
-
-// Attach sources.
-pub mod color_wheel;
-pub mod color_wheel_core;
-pub mod dimens;
-pub mod graphemes;
-pub mod tui_style;
-pub mod tui_styled_text;
-pub mod units;
+// Attach.
+pub mod bounds_check;
+pub mod ch_unit;
+pub mod index;
+pub mod length;
+pub mod unit_check_overflows; // Don't re-export.
 
 // Re-export.
-pub use color_wheel::*;
-pub use color_wheel_core::*;
-pub use dimens::*;
-pub use graphemes::*;
-pub use tui_style::*;
-pub use tui_styled_text::*;
-pub use units::*;
+pub use bounds_check::*;
+pub use ch_unit::*;
+pub use index::*;
+pub use length::*;

@@ -117,7 +117,7 @@ macro_rules! color {
 ///   and
 ///   [`ColorSupport`](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/color_wheel/detect_color_support/enum.ColorSupport.html).
 /// - If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not be downgraded.
-#[derive(Clone, PartialEq, Eq, Copy, Hash, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Copy, Hash)]
 pub enum TuiColor {
     /// Resets the terminal color.
     Reset,
@@ -137,7 +137,7 @@ pub enum TuiColor {
     Ansi(AnsiValue),
 }
 
-#[derive(Clone, PartialEq, Eq, Copy, Hash, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Copy, Hash)]
 pub enum ANSIBasicColor {
     /// Black color.
     Black,
@@ -188,14 +188,14 @@ pub enum ANSIBasicColor {
     DarkCyan,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Copy, Debug, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
 pub struct RgbValue {
     pub red: u8,
     pub green: u8,
     pub blue: u8,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Copy, Debug, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
 pub struct AnsiValue {
     pub color: u8,
 }

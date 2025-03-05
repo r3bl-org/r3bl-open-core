@@ -54,7 +54,7 @@ use crate::{constants::{COLON, COMMA, SPACE},
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple
 /// spans in a line of text.
-#[derive(Clone, PartialEq, Eq, Debug, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct StyleUSSpan {
     pub style: TuiStyle,
     pub text_gcs: GCString,

@@ -16,47 +16,7 @@
  */
 
 use super::{ColIndex, ColWidth, RowHeight, RowIndex};
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum BoundsStatus {
-    Within,
-    Overflowed,
-}
-
-/// This trait "formalizes" the concept of checking for overflow. More specifically when
-/// an index (row or col index) overflows a length (width or height).
-///
-/// When `a` and `b` are both unsigned integers, the following are equivalent:
-/// - `a >= b`
-/// - `a >  b-1`
-///
-/// So, the following are equivalent:
-/// - `row_index >= height`
-/// - `row_index > height - 1`
-///
-/// # Examples
-///
-/// ```rust
-/// use r3bl_core::{
-///     BoundsCheck, BoundsStatus,
-///     RowHeight, RowIndex, ColIndex, ColWidth
-/// };
-///
-/// let row_index = RowIndex::new(5);
-/// let height = RowHeight::new(5);
-/// assert_eq!(
-///     row_index.check_overflows(height),
-///     BoundsStatus::Overflowed);
-///
-/// let col_index = ColIndex::new(3);
-/// let width = ColWidth::new(5);
-/// assert_eq!(
-///     col_index.check_overflows(width),
-///     BoundsStatus::Within);
-/// ```
-pub trait BoundsCheck<OtherType> {
-    fn check_overflows(&self, max: OtherType) -> BoundsStatus;
-}
+use crate::{BoundsCheck, BoundsStatus};
 
 impl BoundsCheck<RowHeight> for RowIndex {
     /// Used to be `row_index >= height`.

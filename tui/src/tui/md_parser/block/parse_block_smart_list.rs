@@ -519,7 +519,7 @@ impl<'a> SmartListLine<'a> {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, size_of::SizeOf)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum BulletKind {
     Ordered(usize),
     Unordered,

@@ -24,7 +24,7 @@ use super::sizing;
 pub const MIN_INDEX: CurIndexNumber = -1;
 type CurIndexNumber = i16;
 
-#[derive(Clone, Copy, PartialEq, size_of::SizeOf, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct CurIndex(pub CurIndexNumber);
 
 mod construct {

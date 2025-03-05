@@ -35,7 +35,7 @@ pub type ChUnitPrimitiveType = u16;
 /// - This unit is unsigned and supports basic arithmetic operations, with arguments that
 ///   have negative values.
 /// - It has extensive support for conversion to and from other types.
-#[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash, size_of::SizeOf)]
+#[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct ChUnit {
     pub value: ChUnitPrimitiveType,
 }

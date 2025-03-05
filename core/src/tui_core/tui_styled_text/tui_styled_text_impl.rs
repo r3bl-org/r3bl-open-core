@@ -53,7 +53,7 @@ macro_rules! tui_styled_text {
 }
 
 /// Use [tui_styled_text!] macro for easier construction.
-#[derive(Debug, Clone, size_of::SizeOf)]
+#[derive(Debug, Clone)]
 pub struct TuiStyledText {
     pub style: TuiStyle,
     pub text: StringTuiStyledText,

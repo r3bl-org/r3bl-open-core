@@ -63,7 +63,7 @@ use crate::{ChUnit, VecArrayStr, ch, convert_tui_color_into_r3bl_ansi_color};
 ///
 /// Here are the [crossterm docs on
 /// attributes](https://docs.rs/crossterm/0.25.0/crossterm/style/enum.Attribute.html)
-#[derive(Copy, Default, Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
+#[derive(Copy, Default, Clone, PartialEq, Eq, Hash)]
 pub struct TuiStyle {
     pub id: u8,
     pub bold: bool,

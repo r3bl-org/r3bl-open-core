@@ -19,6 +19,7 @@
 pub mod common_enums;
 pub mod common_math;
 pub mod common_result_and_error;
+pub mod get_mem_size;
 pub mod miette_setup_global_report_handler;
 pub mod ordered_map;
 pub mod rate_limiter;
@@ -33,6 +34,7 @@ pub mod time_duration;
 pub use common_enums::*;
 pub use common_math::*;
 pub use common_result_and_error::*;
+pub use get_mem_size::*;
 pub use miette_setup_global_report_handler::*;
 pub use ordered_map::*;
 pub use rate_limiter::*;

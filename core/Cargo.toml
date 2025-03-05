@@ -51,9 +51,6 @@ rand = "0.8.5"
 sha2 = "0.10.8"
 strip-ansi = "0.1.0"
 
-# For size of variables in heap.
-size-of = "0.1.5"
-
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
 # https://tokio.rs/tokio/topics/tracing-next-steps

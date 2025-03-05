@@ -56,7 +56,7 @@ macro_rules! tui_styled_texts {
 }
 
 /// Use [tui_styled_texts!] macro for easier construction.
-#[derive(Clone, Default, size_of::SizeOf)]
+#[derive(Clone, Default)]
 pub struct TuiStyledTexts {
     pub inner: VecTuiStyledText,
 }
@@ -103,8 +103,8 @@ mod impl_display {
     impl TuiStyledTexts {
         pub fn display_width(&self) -> ColWidth {
             let plain_text = self.to_plain_text();
-            let display_width = GCString::width(plain_text.as_str());
-            display_width
+
+            GCString::width(plain_text.as_str())
         }
     }
 }

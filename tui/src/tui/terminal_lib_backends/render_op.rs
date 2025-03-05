@@ -155,7 +155,7 @@ macro_rules! render_ops {
 /// Due to the compositor [super::OffscreenBuffer], there is no need to optimize the
 /// individual paint operations. You don't have to manage your own whitespace or doing
 /// clear before paint! 🎉 The compositor takes care of that for you!
-#[derive(Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct RenderOps {
     pub list: VecArray<RenderOp>,
 }
@@ -258,7 +258,7 @@ pub mod render_ops_impl {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum RenderOp {
     EnterRawMode,
 

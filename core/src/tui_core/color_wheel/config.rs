@@ -172,7 +172,7 @@ pub enum ColorWheelSpeed {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, PartialEq, Debug, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum GradientKind {
     ColorWheel(VecSteps),
     Lolcat(Lolcat),
