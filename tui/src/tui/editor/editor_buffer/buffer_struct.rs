@@ -924,13 +924,8 @@ pub mod history {
         // Invalidate the content cache, since the content just changed.
         cache::clear(buffer);
 
-        // REVIEW: [ ] does the following behavior make sense?
-        // Save the caret position & restore it after undo.
-        // let retain_caret_pos = buffer.content.caret_raw;
         if let Some(content) = buffer.history.prev_content() {
             buffer.content = content;
-            // buffer.content.caret_raw = retain_caret_pos;
-            // _ = buffer.get_mut(dummy_viewport()); // Validate the caret position.
         }
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
