@@ -21,9 +21,7 @@ use crate::ChUnit;
 
 /// Represents a byte index inside of the underlying [crate::StringStorage] of
 /// [super::GCString].
-#[derive(
-    Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash, size_of::SizeOf,
-)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct ByteIndex(pub usize);
 
 pub fn byte_index(arg_byte_index: impl Into<ByteIndex>) -> ByteIndex {

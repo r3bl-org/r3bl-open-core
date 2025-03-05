@@ -92,8 +92,8 @@ pub fn convert_to_string_slice(arg: &[u8; USIZE_FMT_MAX_DIGITS]) -> &str {
         // This should never happen!
         "Failed to convert u8 array to string slice"
     );
-    let result_str = result_str.unwrap().trim_start_matches(char::from(0));
-    result_str
+
+    (result_str.unwrap().trim_start_matches(char::from(0))) as _
 }
 
 /// This is just a sanity check done in the debug release to makes sure that the

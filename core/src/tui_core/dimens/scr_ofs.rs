@@ -30,7 +30,7 @@ use crate::{ColIndex, Pos, RowIndex};
 /// let so = scr_ofs(pos);
 /// let pos: Pos = *so;
 /// ```
-#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, size_of::SizeOf)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct ScrOfs(pub Pos);
 
 pub fn scr_ofs(arg_scr_ofs: impl Into<ScrOfs>) -> ScrOfs { arg_scr_ofs.into() }

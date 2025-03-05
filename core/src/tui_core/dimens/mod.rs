@@ -17,11 +17,10 @@
 
 // Attach source files.
 pub mod caret;
-pub mod ch_unit;
-pub mod check_overflow;
 pub mod col_index;
 pub mod col_width;
 pub mod dim;
+pub mod dimens_check_overflows; // Don't re-export.
 pub mod pc;
 pub mod pos;
 pub mod req_size_pc;
@@ -31,8 +30,6 @@ pub mod scr_ofs;
 
 // Re-export.
 pub use caret::*;
-pub use ch_unit::*;
-pub use check_overflow::*;
 pub use col_index::*;
 pub use col_width::*;
 pub use dim::*;

@@ -96,7 +96,7 @@ pub type Col = ColIndex;
 /// assert_eq!(*pos_diff.row_index, ch(2));
 /// assert_eq!(*pos_diff.col_index, ch(4));
 /// ```
-#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, size_of::SizeOf)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Pos {
     /// Row index, 0 based.
     pub row_index: RowIndex,

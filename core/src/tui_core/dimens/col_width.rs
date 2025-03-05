@@ -56,7 +56,7 @@ impl Debug for ColWidth {
 
 pub fn width(arg_col_width: impl Into<ColWidth>) -> ColWidth { arg_col_width.into() }
 
-mod constructor {
+mod construct {
     use super::*;
 
     impl ColWidth {

@@ -16,7 +16,7 @@
  */
 use std::ops::{AddAssign, Deref, DerefMut};
 
-#[derive(Debug, Clone, Copy, PartialEq, size_of::SizeOf)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Seed(pub f64);
 
 mod seed {
@@ -46,7 +46,7 @@ mod seed {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, size_of::SizeOf)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Spread(pub f64);
 
 mod spread {
@@ -67,7 +67,7 @@ mod spread {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, size_of::SizeOf)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Frequency(pub f64);
 
 mod frequency {
@@ -88,7 +88,7 @@ mod frequency {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, size_of::SizeOf)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SeedDelta(pub f64);
 
 mod seed_delta {

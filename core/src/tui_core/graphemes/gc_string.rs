@@ -228,20 +228,17 @@ pub fn grapheme_string(arg_from: impl Into<GCString>) -> GCString { arg_from.int
 /// if it becomes necessary).
 mod sizing {
     use super::*;
+    use crate::GetMemSize;
 
     pub type SegmentArray = SmallVec<[Seg; VEC_SEGMENT_SIZE]>;
     const VEC_SEGMENT_SIZE: usize = 28;
 
-    impl size_of::SizeOf for GCString {
-        fn size_of_children(&self, context: &mut size_of::Context) {
-            /* string */
-            context.add(size_of_val(&self.string)); /* use for fields that can expand or contract */
-            /* segments */
-            context.add(size_of_val(&self.segments)); /* use for fields that can expand or contract */
-            /* display_width */
-            context.add(std::mem::size_of::<ColWidth>());
-            /* bytes_size */
-            context.add(std::mem::size_of::<ChUnit>());
+    impl GetMemSize for GCString {
+        fn get_mem_size(&self) -> usize {
+            let string_size = self.bytes_size.as_usize();
+            let segments_size = self.segments.len() * std::mem::size_of::<Seg>();
+            let display_width_field_size = std::mem::size_of::<ColWidth>();
+            string_size + segments_size + display_width_field_size
         }
     }
 }
@@ -705,7 +702,7 @@ mod convert {
 pub mod wide_segments {
     use super::*;
 
-    #[derive(Debug, Clone, Copy, PartialEq, size_of::SizeOf)]
+    #[derive(Debug, Clone, Copy, PartialEq)]
     pub enum ContainsWideSegments {
         Yes,
         No,

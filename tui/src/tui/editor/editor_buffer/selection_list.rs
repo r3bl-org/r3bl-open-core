@@ -25,6 +25,7 @@ use r3bl_core::{caret_scr_adj,
                          VERT_LINE_DASHED_GLYPH},
                 usize,
                 CaretScrAdj,
+                GetMemSize,
                 RowIndex,
                 StringStorage,
                 VecArray};
@@ -36,7 +37,19 @@ use crate::{CaretMovementDirection, DeleteSelectionWith, EditorBuffer, Selection
 mod sizing {
     use super::*;
     pub(crate) type VecRowIndex = SmallVec<[RowIndex; ROW_INDEX_SIZE]>;
+
     const ROW_INDEX_SIZE: usize = 32;
+
+    impl GetMemSize for SelectionList {
+        fn get_mem_size(&self) -> usize {
+            let item_size = std::mem::size_of::<SelectionListItem>();
+            let list_len = self.list.len();
+            let list_size = item_size * list_len;
+            let field_direction_size =
+                std::mem::size_of::<Option<CaretMovementDirection>>();
+            list_size + field_direction_size
+        }
+    }
 }
 
 /// Key is the row index, value is the selected range in that line (display col index
@@ -48,16 +61,11 @@ mod sizing {
 #[derive(Clone, PartialEq, Default)]
 pub struct SelectionList {
     // REFACTOR: [x] consider making this a fixed size array (doesn't need to be a map which is heap allocated)
-    list: VecArray<(RowIndex, SelectionRange)>,
+    list: VecArray<SelectionListItem>,
     maybe_previous_direction: Option<CaretMovementDirection>,
 }
 
-impl size_of::SizeOf for SelectionList {
-    fn size_of_children(&self, context: &mut size_of::Context) {
-        context.add(self.maybe_previous_direction.size_of().total_bytes());
-        context.add(size_of_val(&self.list)); /* use for fields that can expand or contract */
-    }
-}
+pub type SelectionListItem = (RowIndex, SelectionRange);
 
 #[test]
 fn test_selection_map_direction_change() {

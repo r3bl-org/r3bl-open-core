@@ -359,7 +359,7 @@ pub mod manage_shared_writer_output {
                 let mut line_state = self_safe_line_state.lock().unwrap();
                 if line_state.set_paused(new_value, term).is_err() {
                     return ControlFlowLimited::ReturnError(ReadlineError::IO(
-                        io::Error::new(io::ErrorKind::Other, "failed to pause terminal"),
+                        io::Error::other("failed to pause terminal"),
                     ));
                 };
             }
@@ -372,7 +372,7 @@ pub mod manage_shared_writer_output {
                 // Resume the terminal.
                 if line_state.set_paused(new_value, term).is_err() {
                     return ControlFlowLimited::ReturnError(ReadlineError::IO(
-                        io::Error::new(io::ErrorKind::Other, "failed to resume terminal"),
+                        io::Error::other("failed to resume terminal"),
                     ));
                 };
                 let _ = flush_internal(
@@ -653,7 +653,7 @@ pub mod readline_internal {
 
             Err(report) => {
                 return ControlFlowExtended::ReturnError(ReadlineError::IO(
-                    io::Error::new(io::ErrorKind::Other, format!("{report}")),
+                    std::io::Error::other(format!("{report}")),
                 ));
             }
         }

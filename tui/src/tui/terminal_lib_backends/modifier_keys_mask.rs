@@ -25,21 +25,21 @@ use crossterm::event::KeyModifiers;
 /// struct. If you look at [try_convert_key_modifiers()] on how it converts from
 /// [KeyModifiers], you will see that it returns [None] if the given [KeyModifiers] is
 /// empty.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, size_of::SizeOf)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ModifierKeysMask {
     pub shift_key_state: KeyState,
     pub ctrl_key_state: KeyState,
     pub alt_key_state: KeyState,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, size_of::SizeOf)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum KeyState {
     Pressed,
     #[default]
     NotPressed,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, size_of::SizeOf)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MatchResult {
     Matches,
     DoesNotMatch,

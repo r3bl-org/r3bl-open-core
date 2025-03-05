@@ -18,7 +18,6 @@
 use std::fmt::{Debug, Formatter, Result};
 
 use r3bl_core::{format_as_kilobytes_with_commas, RingBuffer as _};
-use size_of::SizeOf as _;
 
 use super::{cur_index::{CurIndex, CurIndexLoc},
             sizing,
@@ -179,11 +178,15 @@ mod impl_debug_format {
 
     impl Debug for EditorHistory {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            use r3bl_core::GetMemSize as _;
+            let self_mem_size = self.get_mem_size();
+            let size_fmt = format_as_kilobytes_with_commas(self_mem_size);
+
             write! {
                 f,
             "EditorHistory [index: {index:?} | versions: {len} | size: {size}]",
                 len = self.versions.len(),
-                size = format_as_kilobytes_with_commas(self.size_of().total_bytes()),
+                size = size_fmt,
                 index = self.current_index.0
             }
         }

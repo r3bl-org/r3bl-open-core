@@ -1,4 +1,4 @@
-# Query: (BUG:|REFACTOR:|PERF:|DO_NOT_COMMIT:|REVIEW:)
+# Query: (NAV:|CS:|BUG:|REFACTOR:|PERF:|DO_NOT_COMMIT:|REVIEW:)
 # Flags: CaseSensitive RegExp
 # Excluding: scratch.rs
 
@@ -10,15 +10,15 @@ tui/examples/demo/ex_app_no_layout/app_main.rs:
 tui/src/tui/dialog/dialog_engine/dialog_engine_api.rs:
   557:                 // PERF: [ ] perf
 
-tui/src/tui/editor/editor_buffer/buffer_selection_support.rs:
-  50: // BUG: [ ] introduce scr adj types instead of just ColIndex and RowIndex
-
-tui/src/tui/editor/editor_buffer/buffer_struct.rs:
-  916:     // REFACTOR: [ ] add tests for sizing::MAX_UNDO_REDO_SIZE
+tui/src/tui/editor/editor_buffer/cur_index.rs:
+  53:             // REVIEW: [ ] introduce Length and Index "newtype" in r3bl_core to replace off by one code below
 
 tui/src/tui/editor/editor_buffer/selection_list.rs:
    50:     // REFACTOR: [x] consider making this a fixed size array (doesn't need to be a map which is heap allocated)
   119:     // BUG: [ ] introduce scroll adjusted type
+
+tui/src/tui/editor/editor_buffer/selection_support.rs:
+  50: // BUG: [ ] introduce scr adj types instead of just ColIndex and RowIndex
 
 tui/src/tui/editor/editor_engine/caret_mut.rs:
   44:     // BUG: [ ] introduce scroll adjusted type
