@@ -194,7 +194,7 @@ pub fn render_engine(
                 window_size,
                 has_focus,
                 &mut render_ops,
-                UseCache::No,
+                UseCache::Yes,
             );
 
             render_selection(
