@@ -442,7 +442,8 @@ This release contains changes that are part of optimizing memory allocation to i
 performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
 refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
 now used throughout the codebase. No new functionality is added in this release. The
-telemetry gathering and reporting mechanism is rewritten.
+telemetry gathering and reporting mechanism is rewritten. The undo and redo functionality
+is also rewritten.
 
 These videos have been an inspiration for many of these changes:
 - [Data oriented design](https://youtu.be/WwkuAqObplU)
@@ -486,6 +487,11 @@ Changed:
     to get to they value. Both key and value tuple are stored side by side in an array (on
     the stack) or moved to the heap if they spill over the stack allocation. It's not a
     big deal in this case, but it's a good practice to follow.
+  - Rewrite `editor_buffer` module, and add lots of test to ensure good code coverage. And
+    fix undo / redo bugs that were present in the previous implementation. Use "newtype"
+    design pattern to represent `CurIndex` instead of using `usize` in many places.
+    Eliminate the use of `bool` and functions that check for state, by encoding all the
+    possible states in an enum `CurIndexLocation` and use that instead.
 
 ### v0.6.0 (2024-10-21)
 
