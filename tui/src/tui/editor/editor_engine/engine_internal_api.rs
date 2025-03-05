@@ -22,8 +22,8 @@
 use r3bl_core::GCString;
 
 use super::{caret_mut, content_mut, DeleteSelectionWith, SelectMode};
-use crate::{buffer_clipboard_support,
-            buffer_clipboard_support::ClipboardService,
+use crate::{clipboard_support,
+            clipboard_support::ClipboardService,
             EditorArgsMut,
             EditorBuffer,
             EditorEngine};
@@ -106,12 +106,12 @@ pub fn copy_editor_selection_to_clipboard(
     buffer: &EditorBuffer,
     clipboard: &mut impl ClipboardService,
 ) {
-    buffer_clipboard_support::copy_to_clipboard(buffer, clipboard);
+    clipboard_support::copy_to_clipboard(buffer, clipboard);
 }
 
 pub fn paste_clipboard_content_into_editor(
     args: EditorArgsMut<'_>,
     clipboard: &mut impl ClipboardService,
 ) {
-    buffer_clipboard_support::paste_from_clipboard(args, clipboard);
+    clipboard_support::paste_from_clipboard(args, clipboard);
 }

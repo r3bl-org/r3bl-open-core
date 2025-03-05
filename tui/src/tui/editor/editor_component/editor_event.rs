@@ -19,10 +19,9 @@ use std::fmt::Debug;
 
 use r3bl_core::{call_if_true, string_storage, style_prompt, Size};
 
-use crate::{buffer_clipboard_support::ClipboardService,
+use crate::{clipboard_support::ClipboardService,
             editor_buffer::EditorBuffer,
             editor_engine::engine_internal_api,
-            history,
             validate_scroll_on_resize,
             DeleteSelectionWith,
             EditorArgsMut,
@@ -327,11 +326,11 @@ impl EditorEvent {
     ) {
         match event {
             EditorEvent::Undo => {
-                history::undo(buffer);
+                buffer.undo();
             }
 
             EditorEvent::Redo => {
-                history::redo(buffer);
+                buffer.redo();
             }
 
             EditorEvent::InsertChar(character) => {
