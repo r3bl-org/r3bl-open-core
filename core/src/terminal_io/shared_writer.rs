@@ -138,10 +138,7 @@ impl Write for SharedWriter {
                 }
                 Err(_) => {
                     if !self.silent_error {
-                        return Err(io::Error::new(
-                            io::ErrorKind::Other,
-                            "SharedWriter Receiver has closed",
-                        ));
+                        return Err(io::Error::other("SharedWriter Receiver has closed"));
                     }
                 }
             }
@@ -160,10 +157,7 @@ impl Write for SharedWriter {
             }
             Err(_) => {
                 if !self.silent_error {
-                    return Err(io::Error::new(
-                        io::ErrorKind::Other,
-                        "SharedWriter Receiver has closed",
-                    ));
+                    return Err(io::Error::other("SharedWriter Receiver has closed"));
                 }
             }
         }

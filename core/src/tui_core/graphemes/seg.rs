@@ -122,7 +122,7 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 ///     assert_eq!(segment.start_display_col_index, col(0));
 /// }
 /// ```
-#[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash, size_of::SizeOf)]
+#[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct Seg {
     /// The start index (bytes), in the string slice, used to generate the [super::GCString]
     /// that this grapheme cluster represents.

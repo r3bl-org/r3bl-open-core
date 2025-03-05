@@ -32,7 +32,7 @@ use crate::{ChUnit, RowHeight, height, usize};
 /// let row = row(5);
 /// let row = RowIndex::new(5);
 /// ```
-#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, size_of::SizeOf)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct RowIndex(pub ChUnit);
 
 impl Debug for RowIndex {

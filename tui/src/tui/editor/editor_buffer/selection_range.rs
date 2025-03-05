@@ -51,7 +51,7 @@ use r3bl_core::{caret_scr_adj,
 /// This range can't be instantiated directly via the struct, you have to use the tuple
 /// conversion. Even though the struct holds two [CaretScrAdj] values, it does not use the
 /// [r3bl_core::RowIndex] fields.
-#[derive(Default, Clone, PartialEq, Copy, size_of::SizeOf)]
+#[derive(Default, Clone, PartialEq, Copy)]
 pub struct SelectionRange {
     /// This is not "raw", this is "scroll adjusted".
     /// - It represents the display width at which the selection starts.
@@ -150,7 +150,7 @@ pub enum CaretLocationInRange {
 }
 
 /// Note this must derive [Eq]. More info [here](https://stackoverflow.com/a/68900245/2085356).
-#[derive(Clone, PartialEq, Eq, Copy, Debug, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Copy, Debug)]
 pub enum CaretMovementDirection {
     Up,
     Down,

@@ -32,7 +32,7 @@ use crate::{ChUnit, ColWidth, usize, width};
 /// let col = col(5);
 /// let col = ColIndex::new(5);
 /// ```
-#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, size_of::SizeOf)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct ColIndex(pub ChUnit);
 
 impl Debug for ColIndex {

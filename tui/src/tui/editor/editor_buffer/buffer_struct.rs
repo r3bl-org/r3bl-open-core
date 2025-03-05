@@ -35,7 +35,6 @@ use r3bl_core::{call_if_true,
                 ScrOfs,
                 SegString,
                 StringStorage};
-use size_of::SizeOf as _;
 use smallvec::smallvec;
 
 use super::{history::EditorHistory, render_cache::RenderCache, sizing, SelectionList};
@@ -196,7 +195,7 @@ use crate::{caret_locate,
 /// in the list represents a row of text in the buffer.
 /// - The row index is the key [r3bl_core::RowIndex].
 /// - The value is the [crate::SelectionRange].
-#[derive(Clone, PartialEq, Default, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Default)]
 pub struct EditorBuffer {
     pub content: EditorContent,
     pub history: EditorHistory,
@@ -615,6 +614,10 @@ mod debug_format {
 
     impl Debug for EditorContent {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            use r3bl_core::GetMemSize as _;
+            let mem_size = self.get_mem_size();
+            let mem_size_fmt = format_as_kilobytes_with_commas(mem_size);
+
             write! {
                 f,
                 "EditorContent [
@@ -623,7 +626,7 @@ mod debug_format {
     - ext: {ext:?}, path:{path:?}, caret: {caret:?}, scroll_offset: {scroll:?}
     ]",
                 lines = self.lines.len(),
-                size = format_as_kilobytes_with_commas(self.size_of().total_bytes()),
+                size = mem_size_fmt,
                 ext = self.maybe_file_extension,
                 caret = self.caret_raw,
                 map = self.sel_list.to_formatted_string(),

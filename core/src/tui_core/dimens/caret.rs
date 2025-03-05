@@ -93,7 +93,7 @@ pub fn caret_scr_adj(arg_caret_scr_adj: impl Into<CaretScrAdj>) -> CaretScrAdj {
 /// - When scrolling is "active", this position will be different from the "scroll
 ///   adjusted" position.
 /// - This is the default `CaretKind`.
-#[derive(Copy, Clone, PartialEq, Debug, Default, size_of::SizeOf)]
+#[derive(Copy, Clone, PartialEq, Debug, Default)]
 pub struct CaretRaw(pub Pos);
 
 mod caret_raw_impl {
@@ -150,7 +150,7 @@ mod caret_raw_impl {
 /// - It takes into account the amount of scrolling (vertical, horizontal) that is
 ///   currently active.
 /// - When scrolling is "active", this position will be different from the "raw" position.
-#[derive(Copy, Clone, PartialEq, Debug, Default, size_of::SizeOf)]
+#[derive(Copy, Clone, PartialEq, Debug, Default)]
 pub struct CaretScrAdj(pub Pos);
 
 mod caret_scr_adj_impl {

@@ -20,6 +20,7 @@ use std::{fmt::{self, Debug, Write},
 use diff_chunks::{OffscreenBufferDiffResult, PixelCharDiffChunks};
 use r3bl_core::{char_storage,
                 col,
+                get_mem_size,
                 ok,
                 row,
                 string_storage,
@@ -30,6 +31,7 @@ use r3bl_core::{char_storage,
                 CharStorage,
                 ColWidth,
                 Dim,
+                GetMemSize,
                 LockedOutputDevice,
                 Pos,
                 Size,
@@ -55,13 +57,23 @@ use crate::List;
 /// indices of the terminal screen. By inserting a [PixelChar::Void] pixel char in the
 /// next cell, we signal the rendering logic to skip it since it has already been painted.
 /// And this is different than a [PixelChar::Spacer] which has to be painted!
-#[derive(Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct OffscreenBuffer {
     pub buffer: PixelCharLines,
     pub window_size: Dim,
     pub my_pos: Pos,
     pub my_fg_color: Option<TuiColor>,
     pub my_bg_color: Option<TuiColor>,
+}
+
+impl GetMemSize for OffscreenBuffer {
+    fn get_mem_size(&self) -> usize {
+        self.buffer.get_mem_size()
+            + std::mem::size_of::<Dim>()
+            + std::mem::size_of::<Pos>()
+            + std::mem::size_of::<Option<TuiColor>>()
+            + std::mem::size_of::<Option<TuiColor>>()
+    }
 }
 
 pub mod diff_chunks {
@@ -204,7 +216,7 @@ mod offscreen_buffer_impl {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, size_of::SizeOf)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PixelCharLines {
     // PERF: [x] drop Vec and use SmallVec instead
     pub lines: VecArray<PixelCharLine>,
@@ -212,6 +224,10 @@ pub struct PixelCharLines {
 
 mod pixel_char_lines_impl {
     use super::*;
+
+    impl GetMemSize for PixelCharLines {
+        fn get_mem_size(&self) -> usize { get_mem_size::slice_size(self.lines.as_ref()) }
+    }
 
     impl Deref for PixelCharLines {
         type Target = VecArray<PixelCharLine>;
@@ -243,11 +259,9 @@ pub struct PixelCharLine {
     pub pixel_chars: VecArray<PixelChar>,
 }
 
-impl size_of::SizeOf for PixelCharLine {
-    fn size_of_children(&self, context: &mut size_of::Context) {
-        for pixel_char in self.iter() {
-            context.add(pixel_char.size_of().total_bytes());
-        }
+impl GetMemSize for PixelCharLine {
+    fn get_mem_size(&self) -> usize {
+        get_mem_size::slice_size(self.pixel_chars.as_ref())
     }
 }
 
@@ -451,20 +465,18 @@ pub enum PixelChar {
     },
 }
 
-impl size_of::SizeOf for PixelChar {
-    /// Should be statically allocated on the stack. Handle the special case if the text
-    /// is [smallstr::SmallString::spilled] out of the backing store.
-    fn size_of_children(&self, context: &mut size_of::Context) {
+impl GetMemSize for PixelChar {
+    fn get_mem_size(&self) -> usize {
         match self {
-            // Special case: text is spilled.
-            PixelChar::PlainText { text, maybe_style } if text.spilled() => {
-                context.add(text.len());
-                context.add(std::mem::size_of_val(maybe_style));
-            }
-            // Normal case: size is static.
-            _ => {
-                context.add(std::mem::size_of::<CharStorage>());
-                context.add(std::mem::size_of::<Option<TuiStyle>>());
+            PixelChar::Void => std::mem::size_of::<PixelChar>(),
+            PixelChar::Spacer => std::mem::size_of::<PixelChar>(),
+            PixelChar::PlainText {
+                text,
+                maybe_style: _,
+            } => {
+                std::mem::size_of::<PixelChar>()
+                    + text.len()
+                    + std::mem::size_of::<Option<TuiStyle>>()
             }
         }
     }

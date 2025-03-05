@@ -29,7 +29,7 @@ use crate::{ColorUtils,
 
 /// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
 /// Please do not use this struct directly.
-#[derive(Clone, Copy, PartialEq, size_of::SizeOf)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Lolcat {
     pub color_wheel_control: ColorWheelControl,
     pub seed_delta: SeedDelta,

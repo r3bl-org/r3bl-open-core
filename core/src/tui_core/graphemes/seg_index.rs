@@ -20,9 +20,7 @@ use std::ops::{Deref, DerefMut};
 use crate::{ChUnit, ch};
 
 /// Represents a grapheme segment index inside of [super::GCString].
-#[derive(
-    Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash, size_of::SizeOf,
-)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct SegIndex(pub ChUnit);
 
 pub fn seg_index(arg_seg_index: impl Into<SegIndex>) -> SegIndex { arg_seg_index.into() }
@@ -65,9 +63,7 @@ mod seg_index_impl_block {
 
 /// Represents a count of the number of grapheme segments inside of
 /// [super::GCString]. The width is max index (zero based) + 1.
-#[derive(
-    Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash, size_of::SizeOf,
-)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct SegWidth(pub ChUnit);
 
 pub fn seg_width(arg_seg_width: impl Into<SegWidth>) -> SegWidth { arg_seg_width.into() }

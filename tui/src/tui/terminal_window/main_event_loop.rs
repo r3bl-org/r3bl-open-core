@@ -37,6 +37,7 @@ use r3bl_core::{call_if_true,
                 CommonResult,
                 Dim,
                 GCStringExt as _,
+                GetMemSize as _,
                 GradientGenerationPolicy,
                 InputDevice,
                 LockedOutputDevice,
@@ -45,7 +46,6 @@ use r3bl_core::{call_if_true,
                 TelemetryAtomHint,
                 TextColorizationPolicy};
 use r3bl_macro::tui_style;
-use size_of::SizeOf as _;
 use smallvec::smallvec;
 use tokio::sync::mpsc;
 
@@ -287,7 +287,7 @@ where
                         offscreen_buffer.size = format!(
                             "Memory used: {size}",
                             size = format_as_kilobytes_with_commas(
-                                offscreen_buffer.size_of().total_bytes()
+                                offscreen_buffer.get_mem_size()
                             )
                         )
                     );

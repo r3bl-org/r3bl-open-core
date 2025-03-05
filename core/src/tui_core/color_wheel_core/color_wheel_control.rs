@@ -22,7 +22,7 @@ use rand::random;
 use crate::{Colorize, Frequency, Seed, Spread};
 
 /// A struct to contain info we need to print with every character.
-#[derive(Debug, Clone, Copy, size_of::SizeOf)]
+#[derive(Debug, Clone, Copy)]
 pub struct ColorWheelControl {
     pub seed: Seed,
     pub spread: Spread,
@@ -45,7 +45,7 @@ impl PartialEq for ColorWheelControl {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, size_of::SizeOf)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorChangeSpeed {
     Rapid,
     Slow,
