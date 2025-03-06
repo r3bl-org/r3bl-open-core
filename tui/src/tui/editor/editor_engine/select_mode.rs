@@ -30,7 +30,6 @@ pub enum SelectMode {
 }
 
 impl SelectMode {
-    // BUG: [ ] introduce scroll adjusted type
     pub fn get_caret_scr_adj(&self, buffer: &EditorBuffer) -> Option<CaretScrAdj> {
         match self {
             SelectMode::Enabled => Some(buffer.get_caret_scr_adj()),
@@ -74,8 +73,7 @@ impl SelectMode {
 
                 handle_selection_single_line_caret_movement(
                     editor_buffer,
-                    prev.row_index, // Same as `current.row_index`.
-                    prev,
+                    prev, // `prev.row_index` is same as `current.row_index`.
                     curr,
                 )
             }

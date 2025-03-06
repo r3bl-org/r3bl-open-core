@@ -554,7 +554,6 @@ mod internal_impl {
 
                 let max_display_col_count = bounds_size.col_width - width(2);
 
-                // PERF: [ ] perf
                 let clipped_text = if text_display_width > max_display_col_count {
                     let snip_len = width(2); /* `..` */
                     let postfix_len = width(5); /* last 5 characters */
