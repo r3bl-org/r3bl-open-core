@@ -21,8 +21,6 @@ use smallvec::smallvec;
 
 use crate::VecArray;
 
-/// Use `OrderMap` struct from `ordermap` crate instead from
-/// [here](https://crates.io/crates/ordermap). That is used in the `r3bl_log` crate.
 #[derive(Debug)]
 pub struct OrderedMap<K, V> {
     keys: VecArray<K>,
