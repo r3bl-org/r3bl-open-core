@@ -22,13 +22,28 @@ use crate::{Index, Length, idx, len};
 /// - [super::RingBufferHeap] which uses a [Vec] on the heap.
 pub trait RingBuffer<T, const N: usize> {
     fn len(&self) -> Length;
+
     fn clear(&mut self);
+
     fn get(&self, arg_index: impl Into<Index>) -> Option<&T>;
+
     fn is_empty(&self) -> bool { self.len() == len(0) }
+
     fn first(&self) -> Option<&T> { self.get(idx(0)) }
+
     fn last(&self) -> Option<&T> { self.get(self.len().convert_to_index()) }
+
     fn add(&mut self, value: T);
+
     fn remove(&mut self) -> Option<T>;
+
     fn remove_head(&mut self) -> Option<T>;
+
     fn truncate(&mut self, arg_index: impl Into<Index>);
+
+    fn push(&mut self, value: T) { self.add(value); }
+
+    fn pop(&mut self) -> Option<T> { self.remove_head() }
+
+    fn as_slice(&self) -> &[Option<T>];
 }

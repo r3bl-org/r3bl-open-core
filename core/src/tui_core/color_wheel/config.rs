@@ -33,7 +33,7 @@ pub(in crate::tui_core) mod sizing {
     const MAX_HEX_COLOR_STRING_SIZE: usize = 8;
 
     pub type VecStops = SmallVec<[StringHexColor; MAX_STOPS_SIZE]>;
-    const MAX_STOPS_SIZE: usize = 16;
+    const MAX_STOPS_SIZE: usize = 8;
 
     pub type VecSteps = SmallVec<[TuiColor; defaults::Defaults::Steps as usize]>;
 }
@@ -71,7 +71,6 @@ pub mod defaults {
 /// 3. The steps are the number of colors that will be generated. The larger this number is the
 ///    smoother the transition will be between each color. 100 is a good number to start with.
 #[derive(Clone, PartialEq, Debug)]
-#[allow(clippy::large_enum_variant)]
 pub enum ColorWheelConfig {
     Rgb(
         /* stops */ sizing::VecStops,

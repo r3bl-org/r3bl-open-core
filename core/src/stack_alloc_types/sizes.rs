@@ -49,4 +49,4 @@ pub const DEFAULT_READ_BUFFER_SIZE: usize = 16384;
 /// Stack allocated list, that can [smallvec::SmallVec::spilled] into the heap if it gets
 /// larger than `VEC_ARRAY_SIZE`.
 pub type VecArray<T> = SmallVec<[T; VEC_ARRAY_SIZE]>;
-const VEC_ARRAY_SIZE: usize = 8;
+pub const VEC_ARRAY_SIZE: usize = 8;

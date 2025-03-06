@@ -20,7 +20,7 @@ use std::fmt::Debug;
 use r3bl_core::{call_if_true, Dim, LockedOutputDevice, Pos};
 
 use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
-use crate::{diff_chunks::{OffscreenBufferDiffResult, PixelCharDiffChunks},
+use crate::{diff_chunks::PixelCharDiffChunks,
             GlobalData,
             OffscreenBuffer,
             OffscreenBufferPaint,
@@ -79,7 +79,7 @@ pub fn paint<S, AS>(
         Some(saved_offscreen_buffer) => {
             // Compare offscreen buffers & paint only the diff.
             match saved_offscreen_buffer.diff(&offscreen_buffer) {
-                OffscreenBufferDiffResult::NotComparable => {
+                None => {
                     perform_full_paint(
                         &offscreen_buffer,
                         flush_kind,
@@ -88,7 +88,7 @@ pub fn paint<S, AS>(
                         is_mock,
                     );
                 }
-                OffscreenBufferDiffResult::Comparable(ref diff_chunks) => {
+                Some(ref diff_chunks) => {
                     perform_diff_paint(
                         diff_chunks,
                         window_size,
