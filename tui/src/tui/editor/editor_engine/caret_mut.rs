@@ -41,7 +41,6 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
     multiline_disabled_check_early_return!(engine, @Nothing);
 
     // This is only set if sel_mod is enabled.
-    // BUG: [ ] introduce scroll adjusted type
     let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
 
     match caret_locate::locate_row(buffer) {
@@ -83,7 +82,6 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
     }
 
     // This is only set if sel_mod is enabled.
-    // BUG: [ ] introduce scroll adjusted type
     let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
 
     // This is only runs if sel_mod is enabled.

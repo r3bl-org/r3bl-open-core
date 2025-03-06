@@ -52,8 +52,8 @@ pub struct AnsiStyledText<'a> {
 const SMALL_VEC_SIZE: usize = 8;
 
 impl<'a> AnsiStyledText<'a> {
-    /// Receive a slice of [Option<Style>] and return a [SmallVec] of [Style] without the
-    /// [None]s.
+    /// Receive a slice of [`Option<Style>`] and return a [SmallVec] of [Style] without
+    /// the [None]s.
     pub fn filter(style: &'a [Option<Style>]) -> SmallVec<[Style; SMALL_VEC_SIZE]> {
         let style: SmallVec<[Style; SMALL_VEC_SIZE]> = style
             .iter()
