@@ -21,6 +21,7 @@
 use std::fmt::Debug;
 
 use super::RingBuffer;
+use crate::{Index, Length, len};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RingBufferHeap<T, const N: usize> {
@@ -53,18 +54,22 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
         self.internal_storage.iter_mut().for_each(|x| *x = None);
     }
 
-    fn get(&self, index: usize) -> Option<&T> {
+    fn get(&self, index_arg: impl Into<Index>) -> Option<&T> {
+        let index = {
+            let it: Index = index_arg.into();
+            it.as_usize()
+        };
+
         if index >= self.count {
             return None;
         }
-
         let actual_index = (self.tail + index) % N;
         self.internal_storage
             .get(actual_index)
-            .and_then(|x| x.as_ref())
+            .and_then(|item| item.as_ref())
     }
 
-    fn len(&self) -> usize { self.count }
+    fn len(&self) -> Length { len(self.count) }
 
     /// Insert at head (ie, insert the newest item).
     fn add(&mut self, value: T) {
@@ -114,7 +119,12 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
     }
 
     // Delete the items from the given index to the end of the buffer.
-    fn truncate(&mut self, index: usize) {
+    fn truncate(&mut self, arg_index: impl Into<Index>) {
+        let index = {
+            let it: Index = arg_index.into();
+            it.as_usize()
+        };
+
         if index >= self.count {
             return;
         }
@@ -172,6 +182,7 @@ mod tests {
     use smallstr::SmallString;
 
     use super::*;
+    use crate::len;
     pub type SmallStringBackingStore = SmallString<[u8; DEFAULT_SMALL_STRING_SIZE]>;
     pub const DEFAULT_SMALL_STRING_SIZE: usize = 32;
 
@@ -179,7 +190,7 @@ mod tests {
     fn test_empty_ring_buffer_heap() {
         let ring_buffer: RingBufferHeap<SmallStringBackingStore, 3> =
             RingBufferHeap::new();
-        assert_eq!(ring_buffer.len(), 0);
+        assert_eq!(ring_buffer.len(), len(0));
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 0);
         assert_eq!(ring_buffer.count, 0);
@@ -199,7 +210,7 @@ mod tests {
         let mut ring_buffer: RingBufferHeap<SmallStringBackingStore, 3> =
             RingBufferHeap::new();
         ring_buffer.add("Hello".into());
-        assert_eq!(ring_buffer.len(), 1);
+        assert_eq!(ring_buffer.len(), len(1));
         assert_eq!(ring_buffer.head, 1);
         assert_eq!(ring_buffer.tail, 0);
         assert_eq!(ring_buffer.count, 1);
@@ -222,7 +233,7 @@ mod tests {
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
-        assert_eq!(ring_buffer.len(), 3);
+        assert_eq!(ring_buffer.len(), len(3));
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 0);
         assert_eq!(ring_buffer.count, 3);
@@ -249,7 +260,7 @@ mod tests {
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
         ring_buffer.remove();
-        assert_eq!(ring_buffer.len(), 2);
+        assert_eq!(ring_buffer.len(), len(2));
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 1);
         assert_eq!(ring_buffer.count, 2);
@@ -275,7 +286,7 @@ mod tests {
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
         ring_buffer.add("R3BL".into());
-        assert_eq!(ring_buffer.len(), 3);
+        assert_eq!(ring_buffer.len(), len(3));
         assert_eq!(ring_buffer.head, 1);
         assert_eq!(ring_buffer.tail, 1);
         assert_eq!(ring_buffer.count, 3);
@@ -303,7 +314,7 @@ mod tests {
         ring_buffer.add("Rust".into());
         ring_buffer.add("R3BL".into());
         ring_buffer.remove();
-        assert_eq!(ring_buffer.len(), 2);
+        assert_eq!(ring_buffer.len(), len(2));
         assert_eq!(ring_buffer.head, 1);
         assert_eq!(ring_buffer.tail, 2);
         assert_eq!(ring_buffer.count, 2);
@@ -329,7 +340,7 @@ mod tests {
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
         ring_buffer.clear();
-        assert_eq!(ring_buffer.len(), 0);
+        assert_eq!(ring_buffer.len(), len(0));
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 0);
         assert_eq!(ring_buffer.count, 0);
@@ -365,7 +376,7 @@ mod tests {
         ring_buffer.add("Rust".into());
         ring_buffer.truncate(2);
 
-        assert_eq!(ring_buffer.len(), 2);
+        assert_eq!(ring_buffer.len(), len(2));
         assert_eq!(ring_buffer.head, 2);
         assert_eq!(ring_buffer.tail, 0);
         assert_eq!(ring_buffer.count, 2);
@@ -405,7 +416,7 @@ mod tests {
         ring_buffer.add("R3BL".into());
         ring_buffer.truncate(2);
 
-        assert_eq!(ring_buffer.len(), 2);
+        assert_eq!(ring_buffer.len(), len(2));
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 1);
         assert_eq!(ring_buffer.count, 2);

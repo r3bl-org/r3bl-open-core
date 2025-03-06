@@ -15,18 +15,20 @@
  *   limitations under the License.
  */
 
+use crate::{Index, Length, idx, len};
+
 /// There are two implementations of this trait:
 /// - [super::RingBufferStack] which uses a fixed-size array on the stack.
 /// - [super::RingBufferHeap] which uses a [Vec] on the heap.
 pub trait RingBuffer<T, const N: usize> {
-    fn len(&self) -> usize;
+    fn len(&self) -> Length;
     fn clear(&mut self);
-    fn get(&self, index: usize) -> Option<&T>;
-    fn is_empty(&self) -> bool { self.len() == 0 }
-    fn first(&self) -> Option<&T> { self.get(0) }
-    fn last(&self) -> Option<&T> { self.get(self.len().saturating_sub(1)) }
+    fn get(&self, arg_index: impl Into<Index>) -> Option<&T>;
+    fn is_empty(&self) -> bool { self.len() == len(0) }
+    fn first(&self) -> Option<&T> { self.get(idx(0)) }
+    fn last(&self) -> Option<&T> { self.get(self.len().convert_to_index()) }
     fn add(&mut self, value: T);
     fn remove(&mut self) -> Option<T>;
     fn remove_head(&mut self) -> Option<T>;
-    fn truncate(&mut self, index: usize);
+    fn truncate(&mut self, arg_index: impl Into<Index>);
 }
