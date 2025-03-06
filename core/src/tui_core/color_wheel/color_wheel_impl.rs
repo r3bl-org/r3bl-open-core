@@ -60,7 +60,7 @@ pub(in crate::tui_core) mod sizing {
     use super::*;
 
     pub type VecConfigs = SmallVec<[ColorWheelConfig; MAX_CONFIGS]>;
-    const MAX_CONFIGS: usize = 16;
+    const MAX_CONFIGS: usize = 2;
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -127,7 +127,7 @@ impl ColorWheel {
 
 impl ColorWheel {
     /// This method will return the index of the current color in the gradient. If the
-    /// color wheeel is a lolcat, then the seed * 1000 is returned. If the gradient has
+    /// color wheel is a lolcat, then the seed * 1000 is returned. If the gradient has
     /// not been computed yet, then 0 is returned.
     pub fn get_index(&self) -> ChUnit {
         match self.gradient_kind {

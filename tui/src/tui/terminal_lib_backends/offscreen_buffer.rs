@@ -17,7 +17,7 @@
 use std::{fmt::{self, Debug, Write},
           ops::{Deref, DerefMut}};
 
-use diff_chunks::{OffscreenBufferDiffResult, PixelCharDiffChunks};
+use diff_chunks::PixelCharDiffChunks;
 use r3bl_core::{char_storage,
                 col,
                 get_mem_size,
@@ -78,12 +78,6 @@ impl GetMemSize for OffscreenBuffer {
 
 pub mod diff_chunks {
     use super::*;
-
-    #[allow(clippy::large_enum_variant)]
-    pub enum OffscreenBufferDiffResult {
-        NotComparable,
-        Comparable(PixelCharDiffChunks),
-    }
 
     /// This is a wrapper type so the [std::fmt::Debug] can be implemented for it, that
     /// won't conflict with [List]'s implementation of the trait.
@@ -159,9 +153,9 @@ mod offscreen_buffer_impl {
     impl OffscreenBuffer {
         /// Checks for differences between self and other. Returns a list of positions and pixel
         /// chars if there are differences (from other).
-        pub fn diff(&self, other: &Self) -> OffscreenBufferDiffResult {
+        pub fn diff(&self, other: &Self) -> Option<PixelCharDiffChunks> {
             if self.window_size != other.window_size {
-                return OffscreenBufferDiffResult::NotComparable;
+                return None;
             }
 
             let mut acc = List::default();
@@ -178,7 +172,7 @@ mod offscreen_buffer_impl {
                     }
                 }
             }
-            OffscreenBufferDiffResult::Comparable(PixelCharDiffChunks::from(acc))
+            Some(PixelCharDiffChunks::from(acc))
         }
 
         /// Create a new buffer and fill it with empty chars.

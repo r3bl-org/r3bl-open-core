@@ -44,6 +44,7 @@ use r3bl_ansi_color::{AnsiStyledText, Color, Style};
 use r3bl_core::{ColorWheel,
                 GCString,
                 StringStorage,
+                VEC_ARRAY_SIZE,
                 VecArray,
                 get_terminal_width,
                 glyphs,
@@ -53,7 +54,6 @@ use r3bl_core::{ColorWheel,
                 usize,
                 width};
 use r3bl_macro::tui_style;
-use smallvec::smallvec;
 use textwrap::{Options, WordSeparator, wrap};
 use tracing::{Event,
               Subscriber,
@@ -174,7 +174,8 @@ where
         //     callsite: Identifier(0x5a46fb928d40),
         //     kind: Kind(EVENT),
         // }
-        let mut style_acc: VecArray<Style> = smallvec![];
+
+        let mut style_acc: VecArray<Style> = VecArray::with_capacity(VEC_ARRAY_SIZE);
         let level_str = match *event.metadata().level() {
             tracing::Level::ERROR => {
                 style_acc.push(Style::Foreground(ERROR_FG_COLOR));
@@ -203,6 +204,7 @@ where
             text: &level_str,
             style: &style_acc,
         };
+
         let level_str_display_width = GCString::width(&level_str);
         line_width_used += spacer_display_width;
         line_width_used += level_str_display_width;
