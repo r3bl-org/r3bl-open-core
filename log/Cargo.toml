@@ -58,9 +58,6 @@ smallvec = { version = "1.6.1", features = [
   "const_new",
 ] }
 
-# For ordermap.
-ordermap = "0.5.5"
-
 [dev-dependencies]
 
 # for assert_eq! macro
