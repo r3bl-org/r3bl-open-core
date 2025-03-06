@@ -28,7 +28,6 @@ use crate::{Pc,
             RingBuffer as _,
             RingBufferStack,
             TimeDuration,
-            ch,
             f64,
             ok};
 
@@ -282,7 +281,7 @@ mod calculator {
                 return None;
             }
             let sum: Duration = self.ring_buffer.iter().map(|it| it.as_duration()).sum();
-            let avg: Duration = sum / self.ring_buffer.len() as u32;
+            let avg: Duration = sum / self.ring_buffer.len().as_u32();
             Some(TimeDuration::from(avg))
         }
 
@@ -313,13 +312,13 @@ mod calculator {
                 return None;
             }
 
-            if self.ring_buffer.len() == 1 {
+            if **self.ring_buffer.len() == 1 {
                 let atom = self.ring_buffer.iter().next().copied()?;
                 let percent = Pc::try_and_convert(100)?;
                 return Some((atom.as_duration(), percent, atom.hint));
             }
 
-            if self.ring_buffer.len() == 2 {
+            if **self.ring_buffer.len() == 2 {
                 let mut it = self.ring_buffer.iter();
                 let first_atom = it.next().copied()?;
                 let second_atom = it.next().copied()?;
@@ -364,7 +363,7 @@ mod calculator {
                 .unwrap_or(TelemetryAtomHint::None);
 
             let lhs = f64(max_count);
-            let rhs = f64(ch(self.ring_buffer.len()));
+            let rhs = f64(*self.ring_buffer.len());
             let percent = lhs / rhs * 100.0;
             let percent = Pc::try_and_convert(percent)?;
 
@@ -498,7 +497,7 @@ mod tests_record {
     #[test]
     fn test_record_auto_stop() {
         let mut response_times = create_default_telemetry();
-        assert_eq!(response_times.ring_buffer.len(), 0);
+        assert_eq!(response_times.ring_buffer.len(), 0.into());
 
         // This block causes the _auto_stop handle to drop, which will record the response time.
         {
@@ -507,7 +506,7 @@ mod tests_record {
             sleep(Duration::from_micros(100));
         }
 
-        assert_eq!(response_times.ring_buffer.len(), 1);
+        assert_eq!(response_times.ring_buffer.len(), 1.into());
         let vec = response_times.ring_buffer.iter().collect::<Vec<_>>();
         let first = **vec.first().unwrap();
         assert!(first.as_duration() >= Duration::from_micros(100));
@@ -544,7 +543,7 @@ mod tests_record {
     #[test]
     fn test_telemetry_recording() {
         let mut response_times = create_default_telemetry();
-        assert_eq!(response_times.ring_buffer.len(), 0);
+        assert_eq!(response_times.ring_buffer.len(), 0.into());
 
         let durations = [
             Duration::from_micros(100),
@@ -853,7 +852,7 @@ mod tests_median {
             TryRecordResult::Ok
         );
 
-        assert_eq!(response_times.ring_buffer.len(), 1);
+        assert_eq!(response_times.ring_buffer.len(), 1.into());
         assert_eq!(
             response_times.median(),
             Some((
@@ -870,7 +869,7 @@ mod tests_median {
             )),
             TryRecordResult::Ok
         );
-        assert_eq!(response_times.ring_buffer.len(), 2);
+        assert_eq!(response_times.ring_buffer.len(), 2.into());
 
         let vec = response_times
             .ring_buffer
@@ -914,7 +913,7 @@ mod tests_median {
             TryRecordResult::Ok
         );
 
-        assert_eq!(response_times.ring_buffer.len(), 5);
+        assert_eq!(response_times.ring_buffer.len(), 5.into());
         assert_eq!(
             response_times.median(),
             Some((
@@ -939,7 +938,7 @@ mod tests_median {
             TryRecordResult::Ok
         );
 
-        assert_eq!(response_times.ring_buffer.len(), 1);
+        assert_eq!(response_times.ring_buffer.len(), 1.into());
         assert_eq!(
             response_times.median(),
             Some((
@@ -972,7 +971,7 @@ mod tests_median {
             TryRecordResult::Ok
         );
 
-        assert_eq!(response_times.ring_buffer.len(), 2);
+        assert_eq!(response_times.ring_buffer.len(), 2.into());
         assert_eq!(
             response_times.median(),
             Some((
@@ -1005,7 +1004,10 @@ mod tests_median {
             );
         }
 
-        assert_eq!(response_times.ring_buffer.len(), TEST_RING_BUFFER_SIZE);
+        assert_eq!(
+            response_times.ring_buffer.len(),
+            TEST_RING_BUFFER_SIZE.into()
+        );
 
         assert_eq!(
             response_times.median(),
@@ -1035,7 +1037,10 @@ mod tests_median {
             assert_eq!(response_times.try_record(atom), TryRecordResult::Ok);
         }
 
-        assert_eq!(response_times.ring_buffer.len(), TEST_RING_BUFFER_SIZE);
+        assert_eq!(
+            response_times.ring_buffer.len(),
+            TEST_RING_BUFFER_SIZE.into()
+        );
         assert_eq!(
             response_times.median(),
             Some((

@@ -15,53 +15,79 @@
  *   limitations under the License.
  */
 
-use std::fmt::Debug;
+use std::{fmt::Debug,
+          ops::{Deref, DerefMut}};
 
-use r3bl_core::{ch, i16, RingBuffer as _};
+use r3bl_core::{idx, Index, RingBuffer as _};
 
 use super::sizing;
 
-pub const MIN_INDEX: CurIndexNumber = -1;
-type CurIndexNumber = i16;
+/// The current index in the history buffer.
+///
+/// This index is used to keep track of the current version in the history buffer. It
+/// works with the history buffer [super::history::EditorHistory] to allow undoing and
+/// redoing actions.
+///
+/// - If it's `None`, then the current index is at the start of the history buffer. This
+///   does not mean that the history buffer is empty. The current index can be `None` and
+///   the length of the buffer can be greater than 0.
+/// - If it's `Some(index)`, then the current index is at the index in the history buffer.
+///   Redoing an action will increment the index. Undoing an action will decrement the
+///   index.
+/// - Undoing and then redoing will truncate / remove all the "dangling" redo versions.
+/// - If the current index is at the end of the history buffer, then there are no redo
+///   versions.
+#[derive(Clone, Copy, PartialEq, Debug, Default)]
+pub struct CurIndex(pub Option<Index>);
 
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub struct CurIndex(pub CurIndexNumber);
+mod construct {}
 
-mod construct {
-    use super::*;
-    impl Default for CurIndex {
-        fn default() -> Self { Self(MIN_INDEX) }
-    }
-}
-
+/// This is a state machine that represents the location of the current index in the
+/// history buffer.
+///
+/// - It encodes all the possible states that the current index can be in as it is
+///   manipulated using [Self::inc] and [Self::dec].
+/// - This state information can be queried using [Self::locate].
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum CurIndexLoc {
+    /// The history buffer is empty. Regardless of the current index, there are no
+    /// versions to undo or redo.
     EmptyHistory,
-    Start(CurIndex),
-    End(CurIndex),
-    Middle(CurIndex),
+    /// Current index is None.
+    Start,
+    /// Current index is Some(it), where it >= 0.
+    End(Index),
+    /// Current index is Some(it), where it >= 0.
+    Middle(Index),
 }
 
 impl CurIndexLoc {
     /// Determine the location of the current index in the history buffer.
     pub fn locate(cur_index: &CurIndex, versions: &sizing::HistoryBuffer) -> CurIndexLoc {
         if versions.is_empty() {
-            CurIndexLoc::EmptyHistory
-        } else if cur_index.0 == MIN_INDEX {
-            CurIndexLoc::Start(*cur_index)
-        } else if cur_index.0 == {
-            // REVIEW: [ ] introduce Length and Index "newtype" in r3bl_core to replace off by one code below
-            let max_index = ch(versions.len()) - ch(1);
-            i16(max_index)
-        } {
-            CurIndexLoc::End(*cur_index)
-        } else {
-            CurIndexLoc::Middle(*cur_index)
+            // Is empty.
+            return CurIndexLoc::EmptyHistory;
+        }
+
+        match cur_index.0 {
+            None => {
+                // cur_index is None.
+                CurIndexLoc::Start
+            }
+            Some(inner) => {
+                if inner == versions.len().convert_to_index() {
+                    CurIndexLoc::End(inner)
+                } else {
+                    CurIndexLoc::Middle(inner)
+                }
+            }
         }
     }
 
-    /// Increment the current index. If the current index is at the end of the history
-    /// buffer, or the buffer is empty, this does nothing.
+    /// Increment the current index.
+    /// - If it's a `None`, set it to `Some(0)`.
+    /// - If the current index is at the end of the history buffer, or the buffer is
+    ///   empty, this does nothing.
     pub fn inc(cur_index: &mut CurIndex, versions: &sizing::HistoryBuffer) {
         match Self::locate(cur_index, versions) {
             Self::EmptyHistory => {
@@ -70,63 +96,86 @@ impl CurIndexLoc {
             Self::End(_) => {
                 // Already at end of history buffer. Nothing to increment.
             }
-            Self::Start(_) | Self::Middle(_) => {
+            Self::Start => {
+                // Set index to Some(0) from None.
+                cur_index.0 = Some(idx(0));
+            }
+            Self::Middle(_) => {
                 // Increment index.
-                cur_index.0 += 1;
+                if let Some(index) = cur_index.0 {
+                    cur_index.0 = Some(index + idx(1));
+                }
             }
         }
     }
 
-    /// Decrement the current index. If the current index is at the start of the history
-    /// buffer, or the buffer is empty, this does nothing.
+    /// Decrement the current index.
+    /// - If it's at `Some(0)` then set it to `None`.
+    /// - If the current index is at the start of the history buffer, or the buffer is
+    ///   empty, this does nothing.
     pub fn dec(cur_index: &mut CurIndex, versions: &sizing::HistoryBuffer) {
         match Self::locate(cur_index, versions) {
             Self::EmptyHistory => {
                 // Is empty. Nothing to decrement.
             }
-            Self::Start(_) => {
+            Self::Start => {
                 // Already at start of history buffer. Nothing to decrement.
+                cur_index.0 = None;
             }
             Self::End(_) | Self::Middle(_) => {
-                // Decrement index.
-                cur_index.0 -= 1;
+                if let Some(index) = cur_index.0 {
+                    if index > idx(0) {
+                        // Decrement index.
+                        cur_index.0 = Some(index - idx(1));
+                    } else {
+                        // Set index to None from Some(0).
+                        cur_index.0 = None;
+                    }
+                }
             }
         }
     }
 }
 
 impl CurIndex {
-    /// This won't be negative. Even if a negative number is passed in, it will be
-    /// converted to 0.
-    pub fn as_usize(self) -> usize {
-        if self.0 < 0 {
-            0
-        } else {
-            self.0.try_into().unwrap_or(self.0 as usize)
-        }
-    }
+    /// If `self.0` is None, it will be converted to 0.
+    pub fn as_index(self) -> Index { self.0.unwrap_or(idx(0)) }
 
     /// Reset the current index to the start of the history buffer.
-    pub fn clear(&mut self) { self.0 = MIN_INDEX; }
+    pub fn clear(&mut self) { self.0 = None; }
+}
+
+mod ops {
+    use super::*;
+
+    impl Deref for CurIndex {
+        type Target = Option<Index>;
+
+        fn deref(&self) -> &Self::Target { &self.0 }
+    }
+
+    impl DerefMut for CurIndex {
+        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+    }
 }
 
 mod convert {
     use super::*;
 
     impl From<usize> for CurIndex {
-        fn from(val: usize) -> Self { Self(val as CurIndexNumber) }
+        fn from(val: usize) -> Self { CurIndex(Some(Index(val.into()))) }
     }
 
     impl From<isize> for CurIndex {
-        fn from(val: isize) -> Self { Self(val as CurIndexNumber) }
+        fn from(val: isize) -> Self { CurIndex(Some(Index(val.into()))) }
     }
 
     impl From<i32> for CurIndex {
-        fn from(val: i32) -> Self { Self(val as CurIndexNumber) }
+        fn from(val: i32) -> Self { CurIndex(Some(Index(val.into()))) }
     }
 
     impl From<i16> for CurIndex {
-        fn from(val: i16) -> Self { Self(val) }
+        fn from(val: i16) -> Self { CurIndex(Some(Index(val.into()))) }
     }
 }
 
@@ -152,7 +201,7 @@ mod tests {
         let cur_index = CurIndex::default();
         assert_eq!(
             CurIndexLoc::locate(&cur_index, &versions),
-            CurIndexLoc::Start(cur_index)
+            CurIndexLoc::Start
         );
     }
 
@@ -163,7 +212,7 @@ mod tests {
         let cur_index = CurIndex::from(0);
         assert_eq!(
             CurIndexLoc::locate(&cur_index, &versions),
-            CurIndexLoc::End(cur_index)
+            CurIndexLoc::End(cur_index.as_index())
         );
     }
 
@@ -175,7 +224,7 @@ mod tests {
         let cur_index = CurIndex::from(0);
         assert_eq!(
             CurIndexLoc::locate(&cur_index, &versions),
-            CurIndexLoc::Middle(cur_index)
+            CurIndexLoc::Middle(cur_index.as_index())
         );
     }
 }
