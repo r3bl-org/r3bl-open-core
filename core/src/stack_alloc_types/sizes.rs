@@ -27,7 +27,9 @@ const VEC_STR_BUFFER_CAPACITY: usize = 16;
 /// Stack allocated string storage for small strings. When this gets larger than
 /// `DEFAULT_STRING_SIZE`, it will be [smallvec::SmallVec::spilled] on the heap.
 pub type StringStorage = SmallString<[u8; DEFAULT_STRING_STORAGE_SIZE]>;
-pub const DEFAULT_STRING_STORAGE_SIZE: usize = 128;
+
+// PERF: If you make this number too large, eg: more than 16, then it will slow down the editor performance
+pub const DEFAULT_STRING_STORAGE_SIZE: usize = 16;
 
 /// Stack allocated string storage for small chars. When this gets larger than
 /// `DEFAULT_CHAR_SIZE`, it will be [smallvec::SmallVec::spilled] on the heap.

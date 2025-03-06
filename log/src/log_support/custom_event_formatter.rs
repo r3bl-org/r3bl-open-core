@@ -220,9 +220,10 @@ where
         //
         // Instead of:
         // ctx.field_format().format_fields(writer.by_ref(), event)?;
-        let mut ordered_map = OrderMap::<StringStorage, StringStorage>::default();
+
+        let mut order_map = OrderMap::<StringStorage, StringStorage>::default();
         event.record(&mut VisitEventAndPopulateOrderedMapWithFields {
-            inner: &mut ordered_map,
+            inner: &mut order_map,
         });
 
         // This is actually the terminal width of the process, not necessarily the
@@ -234,7 +235,7 @@ where
             .subsequent_indent(SUBSEQUENT_LINE_PREFIX)
             .word_separator(WordSeparator::UnicodeBreakProperties);
 
-        for (heading, body) in ordered_map.iter() {
+        for (heading, body) in order_map.iter() {
             // Write heading line.
             let heading = remove_escaped_quotes(heading);
             line_width_used += spacer_display_width;

@@ -1,31 +1,11 @@
-# Query: (NAV:|CS:|BUG:|REFACTOR:|PERF:|DO_NOT_COMMIT:|REVIEW:)
+# Query: (NAV:|CS:|BUG:|REFACTOR:|PERF: \\[ \\]|DO_NOT_COMMIT:|REVIEW:)
 # Flags: CaseSensitive RegExp
 # Excluding: scratch.rs
 
-32 results - 17 files
+18 results - 9 files
 
 tui/examples/demo/ex_app_no_layout/app_main.rs:
   534: // REVIEW: [ ] introduce HUD for telemetry here & copy to all other examples
-
-tui/src/tui/dialog/dialog_engine/dialog_engine_api.rs:
-  557:                 // PERF: [ ] perf
-
-tui/src/tui/editor/editor_buffer/cur_index.rs:
-  53:             // REVIEW: [ ] introduce Length and Index "newtype" in r3bl_core to replace off by one code below
-
-tui/src/tui/editor/editor_buffer/selection_list.rs:
-   50:     // REFACTOR: [x] consider making this a fixed size array (doesn't need to be a map which is heap allocated)
-  119:     // BUG: [ ] introduce scroll adjusted type
-
-tui/src/tui/editor/editor_buffer/selection_support.rs:
-  50: // BUG: [ ] introduce scr adj types instead of just ColIndex and RowIndex
-
-tui/src/tui/editor/editor_engine/caret_mut.rs:
-  44:     // BUG: [ ] introduce scroll adjusted type
-  86:     // BUG: [ ] introduce scroll adjusted type
-
-tui/src/tui/editor/editor_engine/select_mode.rs:
-  33:     // BUG: [ ] introduce scroll adjusted type
 
 tui/src/tui/md_parser/convert_to_plain_text.rs:
   191: // REFACTOR: [x] use StringStorage here
@@ -38,23 +18,13 @@ tui/src/tui/syntax_highlighting/intermediate_types.rs:
   586:             // PERF: [ ] perf
   644:             // PERF: [ ] perf
 
-tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:
-  100:     // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
-
 tui/src/tui/terminal_lib_backends/offscreen_buffer.rs:
-  119:         // PERF: [ ] make sure this works!
-  185:             // PERF: [ ] make this faster by keeping allocated memory?
-  209:     // PERF: [x] drop Vec and use SmallVec instead
-  230:                 // PERF: [x] drop Vec and use SmallVec instead
-  242:     // PERF: [x] drop Vec and use SmallVec instead
-  258:         // PERF: [ ] make sure this works!
+  125:         // PERF: [ ] make sure this works!
+  191:             // PERF: [ ] make this faster by keeping allocated memory?
+  266:         // PERF: [ ] make sure this works!
 
 tui/src/tui/terminal_lib_backends/paint.rs:
   66:     // PERF: [ ] figure out how this affects offscreen buffer memory
-
-tui/src/tui/terminal_lib_backends/render_op.rs:
-  305:     // PERF: [x] remove string
-  314:     // PERF: [x] remove string
 
 tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
   77: // PERF: [ ] figure out how this impacts OffscreenBuffer creation

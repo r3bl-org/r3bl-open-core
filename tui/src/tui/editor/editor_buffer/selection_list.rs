@@ -60,7 +60,6 @@ mod sizing {
 /// - And not [r3bl_core::CaretRaw]
 #[derive(Clone, PartialEq, Default)]
 pub struct SelectionList {
-    // REFACTOR: [x] consider making this a fixed size array (doesn't need to be a map which is heap allocated)
     list: VecArray<SelectionListItem>,
     maybe_previous_direction: Option<CaretMovementDirection>,
 }
@@ -124,7 +123,6 @@ pub enum DirectionChangeResult {
 
 // Functionality.
 impl SelectionList {
-    // BUG: [ ] introduce scroll adjusted type
     pub fn get_caret_at_start_of_range_scroll_adjusted(
         &self,
         _with: DeleteSelectionWith, /* Makes no difference for now. */

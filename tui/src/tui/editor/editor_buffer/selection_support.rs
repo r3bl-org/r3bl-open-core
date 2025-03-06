@@ -28,8 +28,7 @@ use r3bl_core::{call_if_true,
                 width,
                 CaretScrAdj,
                 ChUnitPrimitiveType,
-                Dim,
-                RowIndex};
+                Dim};
 
 use super::{selection_list::RowLocationInSelectionList, EditorBuffer};
 use crate::{caret_scroll_index,
@@ -47,13 +46,12 @@ pub fn dummy_viewport() -> Dim {
     width(ChUnitPrimitiveType::MAX) + height(ChUnitPrimitiveType::MAX)
 }
 
-// BUG: [ ] introduce scr adj types instead of just ColIndex and RowIndex
 pub fn handle_selection_single_line_caret_movement(
     buffer: &mut EditorBuffer,
-    row_index: RowIndex,
     prev: CaretScrAdj,
     curr: CaretScrAdj,
 ) {
+    let row_index = prev.row_index;
     let prev_col_index = prev.col_index;
     let curr_col_index = curr.col_index;
 
