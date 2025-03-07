@@ -29,6 +29,7 @@ pub mod mock_real_objects_for_dialog {
                 FlexBoxId,
                 GlobalData,
                 HasDialogBuffers,
+                OffscreenBufferPool,
                 CHANNEL_WIDTH};
 
     pub fn make_global_data(
@@ -39,6 +40,7 @@ pub mod mock_real_objects_for_dialog {
         let window_size = window_size.unwrap_or_default();
         let maybe_saved_offscreen_buffer = Default::default();
         let (output_device, stdout_mock) = OutputDevice::new_mock();
+        let offscreen_buffer_pool = OffscreenBufferPool::new(window_size);
 
         let global_data = GlobalData {
             state,
@@ -46,6 +48,7 @@ pub mod mock_real_objects_for_dialog {
             maybe_saved_offscreen_buffer,
             main_thread_channel_sender,
             output_device,
+            offscreen_buffer_pool,
         };
 
         (global_data, stdout_mock)

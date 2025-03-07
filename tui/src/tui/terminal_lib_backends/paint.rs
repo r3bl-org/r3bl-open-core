@@ -59,17 +59,22 @@ pub fn paint<S, AS>(
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
+    // If this is None, then a full paint will be performed & the offscreen buffer will be
+    // saved to global_data.
     let maybe_saved_offscreen_buffer = global_data.maybe_saved_offscreen_buffer.clone();
 
     let window_size = global_data.window_size;
 
-    // PERF: [ ] figure out how this affects offscreen buffer memory
-    let offscreen_buffer = pipeline.convert(window_size);
+    let Some(mut buffer_from_pool) = global_data.offscreen_buffer_pool.take() else {
+        panic!("All offscreen buffers are currently taken. This should never happen.");
+    };
+
+    pipeline.convert(window_size, &mut buffer_from_pool);
 
     match maybe_saved_offscreen_buffer {
         None => {
             perform_full_paint(
-                &offscreen_buffer,
+                &buffer_from_pool,
                 flush_kind,
                 window_size,
                 locked_output_device,
@@ -78,10 +83,10 @@ pub fn paint<S, AS>(
         }
         Some(saved_offscreen_buffer) => {
             // Compare offscreen buffers & paint only the diff.
-            match saved_offscreen_buffer.diff(&offscreen_buffer) {
+            match saved_offscreen_buffer.diff(&buffer_from_pool) {
                 None => {
                     perform_full_paint(
-                        &offscreen_buffer,
+                        &buffer_from_pool,
                         flush_kind,
                         window_size,
                         locked_output_device,
@@ -100,7 +105,15 @@ pub fn paint<S, AS>(
         }
     }
 
-    global_data.maybe_saved_offscreen_buffer = Some(offscreen_buffer);
+    // Give back the buffer to the pool.
+    if global_data.maybe_saved_offscreen_buffer.is_some() {
+        // Safe to call unwrap because we checked is_some() in this block.
+        let old_buffer = global_data.maybe_saved_offscreen_buffer.take().unwrap();
+        global_data.offscreen_buffer_pool.give_back(old_buffer);
+    }
+
+    // Save the buffer to global_data.
+    global_data.maybe_saved_offscreen_buffer = Some(buffer_from_pool);
 
     fn perform_diff_paint(
         diff_chunks: &PixelCharDiffChunks,

@@ -21,7 +21,7 @@ use r3bl_core::{call_if_true, ok, CommonResult, OutputDevice, Size};
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{OffscreenBuffer, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD};
+use crate::{OffscreenBuffer, OffscreenBufferPool, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD};
 
 /// This is a global data structure that holds state for the entire application
 /// [crate::App] and the terminal window [crate::TerminalWindow] itself.
@@ -44,6 +44,7 @@ where
     pub main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
     pub state: S,
     pub output_device: OutputDevice,
+    pub offscreen_buffer_pool: OffscreenBufferPool,
 }
 
 impl<S, AS> Debug for GlobalData<S, AS>
@@ -57,14 +58,10 @@ where
         write!(f, "\n  - ")?;
         match &self.maybe_saved_offscreen_buffer {
             None => write!(f, "no saved offscreen_buffer")?,
-            Some(ref offscreen_buffer) =>
-            // PERF: [ ] make sure this pretty_print works!
-            {
-                match DEBUG_TUI_COMPOSITOR {
-                    false => write!(f, "offscreen_buffer saved from previous render")?,
-                    true => write!(f, "{:?}", offscreen_buffer)?,
-                }
-            }
+            Some(ref offscreen_buffer) => match DEBUG_TUI_COMPOSITOR {
+                false => write!(f, "offscreen_buffer saved from previous render")?,
+                true => write!(f, "{:?}", offscreen_buffer)?,
+            },
         }
         ok!()
     }
@@ -81,6 +78,7 @@ where
         state: S,
         initial_size: Size,
         output_device: OutputDevice,
+        offscreen_buffer_pool: OffscreenBufferPool,
     ) -> CommonResult<GlobalData<S, AS>>
     where
         AS: Debug + Default + Clone + Sync + Send,
@@ -91,6 +89,7 @@ where
             state,
             main_thread_channel_sender,
             output_device,
+            offscreen_buffer_pool,
         };
 
         it.set_size(initial_size);

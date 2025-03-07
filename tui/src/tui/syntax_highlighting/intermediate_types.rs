@@ -348,7 +348,6 @@ mod tests_clip_styled_texts {
 
         // Equivalent no highlight version.
         {
-            // PERF: [ ] perf
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_gcs = text.grapheme_string();
 
@@ -406,7 +405,6 @@ mod tests_clip_styled_texts {
 
         // Equivalent no highlight version.
         {
-            // PERF: [ ] perf
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_gcs = text.grapheme_string();
 
@@ -465,7 +463,6 @@ mod tests_clip_styled_texts {
 
         // Equivalent no highlight version.
         {
-            // PERF: [ ] perf
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_gcs = text.grapheme_string();
 
@@ -524,7 +521,6 @@ mod tests_clip_styled_texts {
 
         // Expected no highlight version.
         {
-            // PERF: [ ] perf
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_gcs = text.grapheme_string();
 
@@ -583,7 +579,6 @@ mod tests_clip_styled_texts {
 
         // Expected no highlight version.
         {
-            // PERF: [ ] perf
             let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
             let text_gcs = text.grapheme_string();
 
@@ -641,7 +636,6 @@ mod tests_clip_styled_texts {
 
         // Expected no highlight version.
         {
-            // PERF: [ ] perf
             let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
             let text_gcs = text.grapheme_string();
 

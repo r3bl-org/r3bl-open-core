@@ -224,7 +224,6 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 } => {
                     it.push(RenderOp::ApplyColors(*maybe_style));
                     it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                        // PERF: [ ] perf
                         StringStorage::from_str(text),
                         *maybe_style,
                     ))
@@ -243,7 +242,6 @@ mod render_helpers {
     pub struct Context {
         pub display_col_index_for_line: ColIndex,
         pub display_row_index: RowIndex,
-        // PERF: [ ] remove String
         pub buffer_plain_text: StringStorage,
         pub prev_style: Option<TuiStyle>,
         pub render_ops: RenderOps,
@@ -312,7 +310,6 @@ mod render_helpers {
         context
             .render_ops
             .push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                // PERF: [ ] remove String clone
                 context.buffer_plain_text.clone(),
                 context.prev_style,
             ));
