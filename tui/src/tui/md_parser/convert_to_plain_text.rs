@@ -188,7 +188,6 @@ impl PrettyPrintDebug for MdLineFragment<'_> {
     }
 }
 
-// REFACTOR: [x] use StringStorage here
 pub fn generate_ordered_list_item_bullet(
     indent: &usize,
     number: &usize,

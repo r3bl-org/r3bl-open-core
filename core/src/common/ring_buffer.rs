@@ -23,6 +23,8 @@ use crate::{Index, Length, VecArray, idx, len};
 pub trait RingBuffer<T, const N: usize> {
     fn len(&self) -> Length;
 
+    fn is_full(&self) -> bool { self.len() == len(N) }
+
     fn clear(&mut self);
 
     fn get(&self, arg_index: impl Into<Index>) -> Option<&T>;

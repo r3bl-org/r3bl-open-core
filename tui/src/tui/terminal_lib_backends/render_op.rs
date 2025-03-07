@@ -302,7 +302,6 @@ pub enum RenderOp {
     /// 2. If the [StringStorage] argument contains ANSI sequences then it will
     ///    be printed as-is. You are responsible for handling clipping of the text to the
     ///    bounds of the terminal screen.
-    // PERF: [x] remove string
     PaintTextWithAttributes(StringStorage, Option<TuiStyle>),
 
     /// This is **not** meant for use directly by apps. It is to be used only by the
@@ -311,7 +310,6 @@ pub enum RenderOp {
     /// compositor is painting an offscreen buffer, since when the offscreen buffer was
     /// created the two render ops above were used which already handle the clipping and
     /// padding.
-    // PERF: [x] remove string
     CompositorNoClipTruncPaintTextWithAttributes(StringStorage, Option<TuiStyle>),
 
     /// For [Default] impl.

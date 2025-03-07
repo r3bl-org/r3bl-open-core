@@ -23,7 +23,12 @@ pub mod mock_real_objects_for_editor {
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, StdoutMock};
     use tokio::sync::mpsc;
 
-    use crate::{EditorEngine, FlexBox, GlobalData, PartialFlexBox, CHANNEL_WIDTH};
+    use crate::{EditorEngine,
+                FlexBox,
+                GlobalData,
+                OffscreenBufferPool,
+                PartialFlexBox,
+                CHANNEL_WIDTH};
 
     pub fn make_global_data<S, AS>(
         window_size: Option<Dim>,
@@ -34,6 +39,8 @@ pub mod mock_real_objects_for_editor {
     {
         let (sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
         let (output_device, stdout_mock) = OutputDevice::new_mock();
+        let offscreen_buffer_pool =
+            OffscreenBufferPool::new(window_size.unwrap_or_default());
 
         let global_data = GlobalData {
             window_size: window_size.unwrap_or_default(),
@@ -41,6 +48,7 @@ pub mod mock_real_objects_for_editor {
             main_thread_channel_sender: sender,
             state: Default::default(),
             output_device,
+            offscreen_buffer_pool,
         };
 
         (global_data, stdout_mock)

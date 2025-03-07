@@ -59,6 +59,7 @@ use crate::{render_pipeline,
             InputDeviceExt,
             InputEvent,
             MinSize,
+            OffscreenBufferPool,
             RawMode,
             RenderOp,
             RenderPipeline,
@@ -100,6 +101,7 @@ where
         state,
         initial_size,
         output_device.clone(),
+        OffscreenBufferPool::new(initial_size),
     )?;
     let global_data_mut_ref = &mut global_data;
 
@@ -281,6 +283,7 @@ where
                         "AppManager::render_app() offscreen_buffer stats {ch}",
                         ch = glyphs::SCREEN_BUFFER_GLYPH
                     );
+
                     // % is Display, ? is Debug.
                     tracing::info!(
                         message = message,
@@ -365,6 +368,7 @@ pub fn handle_resize<S, AS>(
 {
     global_data_mut_ref.set_size(new_size);
     global_data_mut_ref.maybe_saved_offscreen_buffer = None;
+    global_data_mut_ref.offscreen_buffer_pool.resize(new_size);
     let _ = AppManager::render_app(
         app,
         global_data_mut_ref,
