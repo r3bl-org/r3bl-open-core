@@ -5,8 +5,8 @@
 178 results - 47 files
 
 CHANGELOG.md:
-  1043:     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
-  1058:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
+  1045:     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
+  1060:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
 
 cmdr/src/analytics_client.rs:
   113:                             tracing::debug!(
@@ -61,9 +61,9 @@ core/src/storage/kv.rs:
    62: use tracing::{debug, instrument};
   359:     use tracing::{Level, instrument};
 
-core/src/tui_core/dimens/ch_unit.rs:
-  270:                     tracing::error!(message = "Problem converting f64 to u16", err = err);
-  286:                     tracing::error!(message = "Problem converting f32 to u16", err = err);
+core/src/tui_core/units/ch_unit.rs:
+  284:                     tracing::error!(message = "Problem converting f64 to u16", err = err);
+  300:                     tracing::error!(message = "Problem converting f32 to u16", err = err);
 
 log/src/bin/tracing_test_bin.rs:
   56:     tracing::error!("error");
@@ -74,13 +74,13 @@ log/src/bin/tracing_test_bin.rs:
 
 log/src/log_support/custom_event_formatter.rs:
    58: use tracing::{Event,
-  179:             tracing::Level::ERROR => {
-  183:             tracing::Level::WARN => {
-  187:             tracing::Level::INFO => {
-  191:             tracing::Level::DEBUG => {
-  195:             tracing::Level::TRACE => {
-  297:     /// use tracing::{info};
-  329:     use tracing::{info, subscriber::set_default};
+  180:             tracing::Level::ERROR => {
+  184:             tracing::Level::WARN => {
+  188:             tracing::Level::INFO => {
+  192:             tracing::Level::DEBUG => {
+  196:             tracing::Level::TRACE => {
+  300:     /// use tracing::{info};
+  332:     use tracing::{info, subscriber::set_default};
 
 log/src/log_support/public_api.rs:
    21: use tracing::dispatcher;
@@ -149,10 +149,10 @@ tui/src/tui/dialog/dialog_component/dialog_component_struct.rs:
   175:                             tracing::debug!(
 
 tui/src/tui/editor/editor_buffer/buffer_struct.rs:
-  244:                 tracing::info!(
-  269:                 tracing::debug!("🍎🍎🍎 add_content_to_undo_stack buffer: {:?}", self);
-  281:                 tracing::debug!("🍎🍎🍎 undo buffer: {:?}", self);
-  294:                 tracing::debug!("🍎🍎🍎 redo buffer: {:?}", self);
+  243:                 tracing::info!(
+  268:                 tracing::debug!("🍎🍎🍎 add_content_to_undo_stack buffer: {:?}", self);
+  280:                 tracing::debug!("🍎🍎🍎 undo buffer: {:?}", self);
+  293:                 tracing::debug!("🍎🍎🍎 redo buffer: {:?}", self);
 
 tui/src/tui/editor/editor_buffer/clipboard_support.rs:
    68:             tracing::debug!(
@@ -160,11 +160,11 @@ tui/src/tui/editor/editor_buffer/clipboard_support.rs:
   125:                 tracing::debug!(
 
 tui/src/tui/editor/editor_buffer/selection_support.rs:
-   81:                 tracing::debug!("\n🍕🍕🍕 new selection: \n\t{it:?}", it = new_range);
-   93:         tracing::debug!(
-  317:         tracing::debug! {
-  453:             tracing::debug! {
-  575:                     tracing::debug!(
+   79:                 tracing::debug!("\n🍕🍕🍕 new selection: \n\t{it:?}", it = new_range);
+   91:         tracing::debug!(
+  315:         tracing::debug! {
+  451:             tracing::debug! {
+  573:                     tracing::debug!(
 
 tui/src/tui/editor/editor_buffer/system_clipboard_service_provider.rs:
   37:                 tracing::debug!(
