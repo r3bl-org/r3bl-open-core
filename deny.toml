@@ -26,6 +26,7 @@ allow = ["ISC"]
 # see if it was yanked on or not. So to prevent warnings or failed advisory warnings, you
 # can add the `RUSTSEC...` identifier instead.
 ignore = [
+  "RUSTSEC-2024-0436", # "paste 1.0.15"
   "RUSTSEC-2024-0320", # "instant@0.1.13"
   "RUSTSEC-2024-0384", # "hashbrown@0.15.0"
   "RUSTSEC-2024-0402", # "yaml-rust@0.4.5"
