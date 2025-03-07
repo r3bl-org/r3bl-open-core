@@ -145,7 +145,7 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
         self.count = index;
     }
 
-    fn as_slice(&self) -> &[Option<T>] { &self.internal_storage }
+    fn as_slice_raw(&self) -> &[Option<T>] { &self.internal_storage }
 }
 
 impl<T, const N: usize> RingBufferHeap<T, N> {
