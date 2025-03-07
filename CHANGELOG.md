@@ -493,6 +493,10 @@ Changed:
     design pattern to represent `CurIndex` instead of using `usize` in many places.
     Eliminate the use of `bool` and functions that check for state, by encoding all the
     possible states in an enum `CurIndexLocation` and use that instead.
+  - Rewrite `RenderCache` using "newtype" pattern and "scalarize" it by removing `HashMap`
+    and `String` keys. Introduce `CacheEntry` and `CacheKey` (which is just derived from
+    `u16`s). Clean up tests so they provide good code coverage for happy path and lots of
+    edge cases.
 
 ### v0.6.0 (2024-10-21)
 
