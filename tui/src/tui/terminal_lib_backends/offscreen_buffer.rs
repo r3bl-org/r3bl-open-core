@@ -27,7 +27,6 @@ use r3bl_core::{char_storage,
                 style_dim_underline,
                 style_primary,
                 style_prompt,
-                usize,
                 CharStorage,
                 ColWidth,
                 Dim,
@@ -122,7 +121,6 @@ mod offscreen_buffer_impl {
     }
 
     impl Debug for OffscreenBuffer {
-        // PERF: [ ] make sure this works!
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             writeln!(f, "window_size: {:?}, ", self.window_size)?;
 
@@ -188,20 +186,9 @@ mod offscreen_buffer_impl {
 
         // Make sure each line is full of empty chars.
         pub fn clear(&mut self) {
-            // PERF: [ ] make this faster by keeping allocated memory?
-            let current_height = self.buffer.len();
-            let current_width = self.buffer.lines.first().map_or(0, |line| line.len());
-
-            if current_height != usize(*self.window_size.row_height)
-                || current_width != usize(*self.window_size.col_width)
-            {
-                // Need to re-allocate the buffer.
-                self.buffer =
-                    PixelCharLines::new_with_capacity_initialized(self.window_size);
-            } else {
-                // Re-use the existing buffer.
-                for line in self.buffer.iter_mut() {
-                    for pixel_char in line.iter_mut() {
+            for line in self.buffer.iter_mut() {
+                for pixel_char in line.iter_mut() {
+                    if pixel_char != &PixelChar::Spacer {
                         *pixel_char = PixelChar::Spacer;
                     }
                 }
@@ -212,7 +199,6 @@ mod offscreen_buffer_impl {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PixelCharLines {
-    // PERF: [x] drop Vec and use SmallVec instead
     pub lines: VecArray<PixelCharLine>,
 }
 
@@ -237,7 +223,6 @@ mod pixel_char_lines_impl {
             let window_height = window_size.row_height;
             let window_width = window_size.col_width;
             Self {
-                // PERF: [x] drop Vec and use SmallVec instead
                 lines: smallvec![
                     PixelCharLine::new_with_capacity_initialized(window_width);
                     window_height.as_usize()
@@ -249,7 +234,6 @@ mod pixel_char_lines_impl {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct PixelCharLine {
-    // PERF: [x] drop Vec and use SmallVec instead
     pub pixel_chars: VecArray<PixelChar>,
 }
 
@@ -263,7 +247,6 @@ mod pixel_char_line_impl {
     use super::*;
 
     impl Debug for PixelCharLine {
-        // PERF: [ ] make sure this works!
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             let mut void_indices: VecArray<usize> = smallvec![];
             let mut spacer_indices: VecArray<usize> = smallvec![];

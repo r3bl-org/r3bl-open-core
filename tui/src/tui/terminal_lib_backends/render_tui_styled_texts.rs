@@ -24,7 +24,6 @@ pub fn render_tui_styled_texts_into(texts: &TuiStyledTexts, render_ops: &mut Ren
         let style = styled_text.get_style();
         render_ops.push(RenderOp::ApplyColors(Some(*style)));
         render_ops.push(RenderOp::PaintTextWithAttributes(
-            // PERF: [ ] perf
             styled_text.get_text().into(),
             Some(*style),
         ));

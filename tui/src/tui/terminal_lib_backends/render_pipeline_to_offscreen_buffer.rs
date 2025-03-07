@@ -35,14 +35,16 @@ use crate::{PixelChar, RenderOpsLocalData, ZOrder, DEBUG_TUI_COMPOSITOR};
 
 impl RenderPipeline {
     /// Convert the render pipeline to an offscreen buffer.
+    ///
     /// 1. This does not require any specific implementation of crossterm or termion.
-    /// 2. This is the intermediate representation (IR) of a [RenderPipeline]. In order to turn
-    ///    this IR into actual paint commands for the terminal, you must use the
+    /// 2. This is the intermediate representation (IR) of a [RenderPipeline]. In order to
+    ///    turn this IR into actual paint commands for the terminal, you must use the
     ///    [super::OffscreenBufferPaint] trait implementations.
-    pub fn convert(&self, window_size: Size) -> OffscreenBuffer {
-        let mut my_offscreen_buffer =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
-
+    pub fn convert(
+        &self,
+        window_size: Size,
+        mut_offscreen_buffer: &mut OffscreenBuffer, /* Pass in the locked buffer. */
+    ) {
         let mut local_data = RenderOpsLocalData::default();
 
         for z_order in ZOrder::get_render_order().iter() {
@@ -52,7 +54,7 @@ impl RenderPipeline {
                         process_render_op(
                             render_op,
                             window_size,
-                            &mut my_offscreen_buffer,
+                            mut_offscreen_buffer,
                             &mut local_data,
                         );
                     }
@@ -66,15 +68,12 @@ impl RenderPipeline {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = message,
-                offscreen_buffer = ?my_offscreen_buffer
+                offscreen_buffer = ?mut_offscreen_buffer
             );
         });
-
-        my_offscreen_buffer
     }
 }
 
-// PERF: [ ] figure out how this impacts OffscreenBuffer creation
 pub fn process_render_op(
     render_op: &RenderOp,
     window_size: Size,
@@ -839,7 +838,10 @@ mod tests {
         //     0: ╳ ..
         //     9: ╳
 
-        let my_offscreen_buffer = pipeline.convert(window_size);
+        let mut my_offscreen_buffer =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
+        pipeline.convert(window_size, &mut my_offscreen_buffer);
+
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
         assert_eq2!(my_offscreen_buffer.buffer.len(), 2);
         assert_eq2!(
@@ -903,7 +905,9 @@ mod tests {
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
 
-        let my_offscreen_buffer = pipeline.convert(window_size);
+        let mut my_offscreen_buffer =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
+        pipeline.convert(window_size, &mut my_offscreen_buffer);
         // my_offscreen_buffer:
         // window_size: [width:10, height:2],
         // row_index: [0]
@@ -1010,7 +1014,9 @@ mod tests {
             pipeline.get_all_render_op_in(ZOrder::Normal)
         );
 
-        let my_offscreen_buffer = pipeline.convert(window_size);
+        let mut my_offscreen_buffer =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
+        pipeline.convert(window_size, &mut my_offscreen_buffer);
         println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
 
         // Line 1 (row_index = 7)

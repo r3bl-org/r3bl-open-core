@@ -1,54 +1,8 @@
-# Query: (NAV:|CS:|BUG:|REFACTOR:|PERF:|DO_NOT_COMMIT:|REVIEW:)
+# Query: (NAV:|CS:|BUG:|REFACTOR:|PERF: \\[|DO_NOT_COMMIT:|REVIEW:)
 # Flags: CaseSensitive RegExp
 # Excluding: scratch.rs
 
-25 results - 12 files
-
-core/src/stack_alloc_types/sizes.rs:
-  31: // PERF: If you make this number too large, eg: more than 16, then it will slow down the editor performance
+1 result - 1 file
 
 tui/examples/demo/ex_app_no_layout/app_main.rs:
   534: // REVIEW: [ ] introduce HUD for telemetry here & copy to all other examples
-
-tui/src/tui/md_parser/convert_to_plain_text.rs:
-  191: // REFACTOR: [x] use StringStorage here
-
-tui/src/tui/syntax_highlighting/intermediate_types.rs:
-  351:             // PERF: [ ] perf
-  409:             // PERF: [ ] perf
-  468:             // PERF: [ ] perf
-  527:             // PERF: [ ] perf
-  586:             // PERF: [ ] perf
-  644:             // PERF: [ ] perf
-
-tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:
-  100:     // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
-
-tui/src/tui/terminal_lib_backends/offscreen_buffer.rs:
-  125:         // PERF: [ ] make sure this works!
-  191:             // PERF: [ ] make this faster by keeping allocated memory?
-  215:     // PERF: [x] drop Vec and use SmallVec instead
-  240:                 // PERF: [x] drop Vec and use SmallVec instead
-  252:     // PERF: [x] drop Vec and use SmallVec instead
-  266:         // PERF: [ ] make sure this works!
-
-tui/src/tui/terminal_lib_backends/paint.rs:
-  66:     // PERF: [ ] figure out how this affects offscreen buffer memory
-
-tui/src/tui/terminal_lib_backends/render_op.rs:
-  305:     // PERF: [x] remove string
-  314:     // PERF: [x] remove string
-
-tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
-  77: // PERF: [ ] figure out how this impacts OffscreenBuffer creation
-
-tui/src/tui/terminal_lib_backends/render_tui_styled_texts.rs:
-  27:             // PERF: [ ] perf
-
-tui/src/tui/terminal_lib_backends/crossterm_backend/offscreen_buffer_paint_impl.rs:
-  227:                         // PERF: [ ] perf
-  246:         // PERF: [ ] remove String
-  315:                 // PERF: [ ] remove String clone
-
-tui/src/tui/terminal_window/shared_global_data.rs:
-  61:             // PERF: [ ] make sure this pretty_print works!
