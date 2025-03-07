@@ -284,7 +284,7 @@ pub fn render_content(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) 
 }
 
 // XMARK: Render selection
-fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
+pub fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
     let RenderArgs {
         buffer: editor_buffer,
         engine: editor_engine,
@@ -366,7 +366,7 @@ fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
     }
 }
 
-fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
+pub fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
     let RenderArgs {
         buffer,
         engine,
@@ -755,136 +755,5 @@ mod no_syn_hi_path {
         ));
 
         render_ops.push(RenderOp::ResetColor);
-    }
-}
-
-#[cfg(test)]
-mod test_cache {
-    use std::collections::HashMap;
-
-    use r3bl_core::{assert_eq2, col, row, scr_ofs, width, StringStorage};
-
-    use super::*;
-
-    #[test]
-    fn test_render_content() {
-        let render_ops = &mut render_ops!();
-
-        let editor_buffer = &mut EditorBuffer::default();
-        let editor_engine = &mut EditorEngine::default();
-        let window_size = height(70) + width(15);
-
-        let has_focus = &mut HasFocus::default();
-
-        // Creating expected cache data structure
-        let mut cache = HashMap::new();
-
-        // The very first request to cache is always missed since cache is empty.
-        RenderCache::render_content(
-            editor_buffer,
-            editor_engine,
-            window_size,
-            has_focus,
-            render_ops,
-            UseRenderCache::Yes,
-        );
-        test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
-
-        // Render the caret to screen. This should not change the content and result in a cache hit.
-        render_caret(
-            RenderArgs {
-                buffer: editor_buffer,
-                engine: editor_engine,
-                has_focus,
-            },
-            render_ops,
-        );
-        RenderCache::render_content(
-            editor_buffer,
-            editor_engine,
-            window_size,
-            has_focus,
-            render_ops,
-            UseRenderCache::Yes,
-        );
-        test_cache_hit(editor_buffer, &mut cache);
-
-        // Change in window size should invalidate the cache and result in a cache miss.
-        let window_size = height(50) + width(15);
-        RenderCache::render_content(
-            editor_buffer,
-            editor_engine,
-            window_size,
-            has_focus,
-            render_ops,
-            UseRenderCache::Yes,
-        );
-        test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
-
-        // Render the selection of text to screen. This should not change the content and result in a cache hit.
-        render_selection(
-            RenderArgs {
-                buffer: editor_buffer,
-                engine: editor_engine,
-                has_focus,
-            },
-            render_ops,
-        );
-        RenderCache::render_content(
-            editor_buffer,
-            editor_engine,
-            window_size,
-            has_focus,
-            render_ops,
-            UseRenderCache::Yes,
-        );
-        test_cache_hit(editor_buffer, &mut cache);
-
-        // Change in scroll_offset should invalidate the cache and result in a cache miss.
-        editor_buffer.content.scr_ofs = scr_ofs(col(1) + row(1));
-        RenderCache::render_content(
-            editor_buffer,
-            editor_engine,
-            window_size,
-            has_focus,
-            render_ops,
-            UseRenderCache::Yes,
-        );
-        test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
-
-        // Change in content should invalidate the cache and result in a cache miss.
-        editor_buffer.set_lines(["r3bl"]);
-        RenderCache::render_content(
-            editor_buffer,
-            editor_engine,
-            window_size,
-            has_focus,
-            render_ops,
-            UseRenderCache::Yes,
-        );
-        test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
-    }
-
-    fn test_cache_miss(
-        editor_buffer: &mut EditorBuffer,
-        window_size: Size,
-        render_ops: &mut RenderOps,
-        cache: &mut HashMap<StringStorage, RenderOps>,
-    ) {
-        cache.clear(); // invalidating cache
-        let key = string_storage!(
-            "{a:?}{b:?}",
-            a = editor_buffer.get_scr_ofs(),
-            b = window_size
-        ); // generating key
-        cache.insert(key, render_ops.clone()); // enter the new entry into cache
-        assert_eq2!(*editor_buffer.render_cache, cache.clone());
-    }
-
-    fn test_cache_hit(
-        editor_buffer: &mut EditorBuffer,
-        cache: &mut HashMap<StringStorage, RenderOps>,
-    ) {
-        assert_eq2!(*editor_buffer.render_cache, cache.clone());
     }
 }
