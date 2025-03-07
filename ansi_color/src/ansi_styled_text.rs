@@ -17,7 +17,6 @@
 
 use std::fmt::{Display, Formatter, Result};
 
-use smallvec::SmallVec;
 use strum_macros::EnumCount;
 
 use crate::{Color, SgrCode};
@@ -47,21 +46,6 @@ use crate::{Color, SgrCode};
 pub struct AnsiStyledText<'a> {
     pub text: &'a str,
     pub style: &'a [Style],
-}
-
-const SMALL_VEC_SIZE: usize = 8;
-
-impl<'a> AnsiStyledText<'a> {
-    /// Receive a slice of [`Option<Style>`] and return a [SmallVec] of [Style] without
-    /// the [None]s.
-    pub fn filter(style: &'a [Option<Style>]) -> SmallVec<[Style; SMALL_VEC_SIZE]> {
-        let style: SmallVec<[Style; SMALL_VEC_SIZE]> = style
-            .iter()
-            .filter_map(|style| style.as_ref())
-            .cloned()
-            .collect();
-        style
-    }
 }
 
 mod ansi_styled_text_impl {
