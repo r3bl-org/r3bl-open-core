@@ -19,7 +19,7 @@
 pub mod mock_real_objects_for_dialog {
     use std::{collections::HashMap, fmt::Debug};
 
-    use r3bl_core::{OutputDevice, Size};
+    use r3bl_core::{sizing::TelemetryReportLineStorage, OutputDevice, Size};
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, StdoutMock};
     use tokio::sync::mpsc;
 
@@ -41,6 +41,7 @@ pub mod mock_real_objects_for_dialog {
         let maybe_saved_offscreen_buffer = Default::default();
         let (output_device, stdout_mock) = OutputDevice::new_mock();
         let offscreen_buffer_pool = OffscreenBufferPool::new(window_size);
+        let hud_report = TelemetryReportLineStorage::new();
 
         let global_data = GlobalData {
             state,
@@ -49,6 +50,7 @@ pub mod mock_real_objects_for_dialog {
             main_thread_channel_sender,
             output_device,
             offscreen_buffer_pool,
+            hud_report,
         };
 
         (global_data, stdout_mock)

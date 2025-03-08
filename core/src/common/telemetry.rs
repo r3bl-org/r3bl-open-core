@@ -31,8 +31,9 @@ use crate::{Pc,
             f64,
             ok};
 
-pub(in crate::common) mod sizing {
+pub mod sizing {
     use super::*;
+
     pub type TelemetryReportLineStorage = SmallString<[u8; TELEMETRY_REPORT_STRING_SIZE]>;
     pub const TELEMETRY_REPORT_STRING_SIZE: usize = 128;
 }
@@ -128,11 +129,21 @@ impl TelemetryAtom {
     pub fn as_duration(&self) -> Duration { self.duration }
 }
 
+/// - Calls the [Telemetry::record_start_auto_stop] method.
+/// - Runs `$block`, and then drops the handle to stop recording the response time.
+/// - Finally it calls `$after_block`.
 #[macro_export]
 macro_rules! telemetry_record {
-    (@telemetry: $telemetry:ident, @hint: $hint:expr, $block:block) => {{
+    (
+        @telemetry: $telemetry:ident,
+        @hint: $hint:expr,
+        @block: $block:block,
+        @after_block: $after_block:block
+    ) => {{
         let _stop_record_on_drop = $telemetry.record_start_auto_stop($hint);
         $block
+        drop(_stop_record_on_drop);
+        $after_block
     }};
 }
 

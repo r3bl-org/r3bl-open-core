@@ -122,24 +122,31 @@ where
     let has_focus = &mut HasFocus::default();
 
     // Init telemetry recording explicitly (without using the simple constructor).
-    let mut telemetry_alt: Telemetry<{ telemetry_default_constants::RING_BUFFER_SIZE }> =
+    let mut telemetry: Telemetry<{ telemetry_default_constants::RING_BUFFER_SIZE }> =
         Telemetry::new((
             telemetry_default_constants::RATE_LIMIT_TIME_THRESHOLD,
             telemetry_default_constants::FILTER_MIN_RESPONSE_TIME,
         ));
 
     // Init the app, and perform first render.
-    telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Render, {
-        app.app_init(component_registry_map, has_focus);
-        AppManager::render_app(
-            app,
-            global_data_mut_ref,
-            component_registry_map,
-            has_focus,
-            output_device_as_mut!(output_device),
-            output_device.is_mock,
-        )?;
-    });
+    telemetry_record!(
+        @telemetry: telemetry,
+        @hint: TelemetryAtomHint::Render,
+        @block: {
+            app.app_init(component_registry_map, has_focus);
+            AppManager::render_app(
+                app,
+                global_data_mut_ref,
+                component_registry_map,
+                has_focus,
+                output_device_as_mut!(output_device),
+                output_device.is_mock,
+            )?;
+        },
+        @after_block: {
+            global_data_mut_ref.set_hud_report(telemetry.report());
+        }
+    );
 
     call_if_true!(DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD, {
         let message = format!(
@@ -172,32 +179,46 @@ where
                             break;
                         },
                         TerminalWindowMainThreadSignal::Render(_) => {
-                            telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Render, {
-                                AppManager::render_app(
-                                    app,
-                                    global_data_mut_ref,
-                                    component_registry_map,
-                                    has_focus,
-                                    output_device_as_mut!(output_device),
-                                    output_device.is_mock,
-                                )?;
-                            });
+                            telemetry_record!(
+                                @telemetry: telemetry,
+                                @hint: TelemetryAtomHint::Render,
+                                @block: {
+                                    AppManager::render_app(
+                                        app,
+                                        global_data_mut_ref,
+                                        component_registry_map,
+                                        has_focus,
+                                        output_device_as_mut!(output_device),
+                                        output_device.is_mock,
+                                    )?;
+                                },
+                                @after_block: {
+                                    global_data_mut_ref.set_hud_report(telemetry.report());
+                                }
+                            );
                         },
                         TerminalWindowMainThreadSignal::ApplyAppSignal(action) => {
-                            telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Signal, {
-                                let result = app.app_handle_signal(action, global_data_mut_ref, component_registry_map, has_focus);
-                                handle_result_generated_by_app_after_handling_action_or_input_event(
-                                    result,
-                                    None,
-                                    exit_keys,
-                                    app,
-                                    global_data_mut_ref,
-                                    component_registry_map,
-                                    has_focus,
-                                    output_device_as_mut!(output_device),
-                                    output_device.is_mock,
-                                );
-                            });
+                            telemetry_record!(
+                                @telemetry: telemetry,
+                                @hint: TelemetryAtomHint::Signal,
+                                @block: {
+                                    let result = app.app_handle_signal(action, global_data_mut_ref, component_registry_map, has_focus);
+                                    handle_result_generated_by_app_after_handling_action_or_input_event(
+                                        result,
+                                        None,
+                                        exit_keys,
+                                        app,
+                                        global_data_mut_ref,
+                                        component_registry_map,
+                                        has_focus,
+                                        output_device_as_mut!(output_device),
+                                        output_device.is_mock,
+                                    );
+                                },
+                                @after_block: {
+                                    global_data_mut_ref.set_hud_report(telemetry.report());
+                                }
+                            );
                         },
                     }
                 }
@@ -228,31 +249,45 @@ where
 
                     // Handle resize event here. And then pass it to the app (next).
                     if let InputEvent::Resize(new_size) = input_event {
-                        telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Resize, {
-                            handle_resize(
-                                new_size,
-                                global_data_mut_ref, app,
+                        telemetry_record!(
+                            @telemetry: telemetry,
+                            @hint: TelemetryAtomHint::Resize,
+                            @block: {
+                                handle_resize(
+                                    new_size,
+                                    global_data_mut_ref, app,
+                                    component_registry_map,
+                                    has_focus,
+                                    output_device_as_mut!(output_device),
+                                    output_device.is_mock,
+                                );
+                            },
+                            @after_block: {
+                                global_data_mut_ref.set_hud_report(telemetry.report());
+                            }
+                        );
+                    }
+
+                    // This includes resize events.
+                    telemetry_record!(
+                        @telemetry: telemetry,
+                        @hint: TelemetryAtomHint::Input,
+                        @block: {
+                            actually_process_input_event(
+                                global_data_mut_ref,
+                                app,
+                                input_event,
+                                exit_keys,
                                 component_registry_map,
                                 has_focus,
                                 output_device_as_mut!(output_device),
                                 output_device.is_mock,
                             );
-                        });
-                    }
-
-                    // This includes resize events.
-                    telemetry_record!(@telemetry: telemetry_alt, @hint: TelemetryAtomHint::Input, {
-                        actually_process_input_event(
-                            global_data_mut_ref,
-                            app,
-                            input_event,
-                            exit_keys,
-                            component_registry_map,
-                            has_focus,
-                            output_device_as_mut!(output_device),
-                            output_device.is_mock,
-                        );
-                    });
+                        },
+                        @after_block: {
+                            global_data_mut_ref.set_hud_report(telemetry.report());
+                        }
+                    );
                 } else {
                     // environments with InputDevice::new_mock_with_delay() or
                     // There are no events in the stream, so exit. This happens in test
@@ -273,7 +308,7 @@ where
                     message = message,
                     window_size = ?global_data_mut_ref.window_size,
                     state = ?state,
-                    report = %telemetry_alt.report()?,
+                    report = %telemetry.report()?,
                 );
 
                 if let Some(ref offscreen_buffer) =
@@ -308,7 +343,7 @@ where
         // % is Display, ? is Debug.
         tracing::info!(
             message = message,
-            session_duration = %telemetry_alt.session_duration()
+            session_duration = %telemetry.session_duration()
         );
     });
 

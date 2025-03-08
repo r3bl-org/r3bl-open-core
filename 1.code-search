@@ -5,4 +5,4 @@
 1 result - 1 file
 
 tui/examples/demo/ex_app_no_layout/app_main.rs:
-  534: // REVIEW: [ ] introduce HUD for telemetry here & copy to all other examples
+  292:                 // REVIEW: [ ] introduce HUD telemetry `global_data.get_hud_report()` & copy to all other examples

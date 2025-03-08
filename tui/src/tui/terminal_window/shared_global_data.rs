@@ -17,7 +17,12 @@
 
 use std::fmt::{Debug, Formatter};
 
-use r3bl_core::{call_if_true, ok, CommonResult, OutputDevice, Size};
+use r3bl_core::{call_if_true,
+                ok,
+                sizing::TelemetryReportLineStorage,
+                CommonResult,
+                OutputDevice,
+                Size};
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
@@ -45,6 +50,7 @@ where
     pub state: S,
     pub output_device: OutputDevice,
     pub offscreen_buffer_pool: OffscreenBufferPool,
+    pub hud_report: TelemetryReportLineStorage,
 }
 
 impl<S, AS> Debug for GlobalData<S, AS>
@@ -90,6 +96,7 @@ where
             main_thread_channel_sender,
             output_device,
             offscreen_buffer_pool,
+            hud_report: TelemetryReportLineStorage::new(),
         };
 
         it.set_size(initial_size);
@@ -106,4 +113,16 @@ where
     }
 
     pub fn get_size(&self) -> Size { self.window_size }
+
+    pub fn set_hud_report(&mut self, new_report: miette::Result<&str>) {
+        if let Ok(report) = new_report {
+            if report != self.hud_report.as_str() {
+                self.hud_report.clear();
+                use std::fmt::Write as _;
+                _ = write!(&mut self.hud_report, "{}", report);
+            }
+        }
+    }
+
+    pub fn get_hud_report(&self) -> &str { &self.hud_report }
 }
