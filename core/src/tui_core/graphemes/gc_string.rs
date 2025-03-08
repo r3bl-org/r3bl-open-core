@@ -1327,12 +1327,12 @@ mod tests {
     /// Helper function to create a [SegString] for testing. Keeps the width of the
     /// lines of code in each test to a minimum (for easier readability).
     fn ssr(
-        arg_gcstring: impl Into<GCString>,
+        arg_gc_string: impl Into<GCString>,
         width: ColWidth,
         start_at: ColIndex,
     ) -> SegString {
         SegString {
-            string: arg_gcstring.into(),
+            string: arg_gc_string.into(),
             width,
             start_at,
         }
