@@ -106,10 +106,8 @@ pub fn paint<S, AS>(
     }
 
     // Give back the buffer to the pool.
-    if global_data.maybe_saved_offscreen_buffer.is_some() {
-        // Safe to call unwrap because we checked is_some() in this block.
-        let old_buffer = global_data.maybe_saved_offscreen_buffer.take().unwrap();
-        global_data.offscreen_buffer_pool.give_back(old_buffer);
+    if let Some(old_buffer) = global_data.maybe_saved_offscreen_buffer.take() {
+        global_data.offscreen_buffer_pool.give_back(old_buffer)
     }
 
     // Save the buffer to global_data.

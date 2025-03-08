@@ -289,6 +289,8 @@ mod app_main_impl_trait_app {
                     acc_render_ops
                 });
 
+                // REVIEW: [ ] introduce HUD telemetry `global_data.get_hud_report()` & copy to all other examples
+
                 status_bar::create_status_bar_message(&mut pipeline, window_size);
 
                 // Handle animation.
@@ -530,8 +532,6 @@ mod app_main_impl_trait_app {
         }
     }
 }
-
-// REVIEW: [ ] introduce HUD for telemetry here & copy to all other examples
 
 mod status_bar {
     use super::*;
