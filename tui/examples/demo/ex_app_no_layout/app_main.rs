@@ -36,8 +36,11 @@ use r3bl_core::{call_if_true,
                 GradientGenerationPolicy,
                 GradientLengthKind,
                 LolcatBuilder,
+                RgbValue,
                 TextColorizationPolicy,
-                VecArray};
+                TuiColor,
+                VecArray,
+                SPACER_GLYPH};
 use r3bl_macro::tui_style;
 use r3bl_tui::{render_ops,
                render_pipeline,
@@ -161,18 +164,19 @@ mod app_main_impl_trait_app {
                 let window_size = global_data.window_size;
                 let data = &mut self.data;
 
+                // Horizontal centering.
                 let col_idx = col({
                     let it = *window_size.col_width - *content_size_col;
                     it / 2
                 });
 
+                // Vertical centering.
                 let mut row_idx = row({
-                    let it = *window_size.row_height
-                        - ch(2)
-                        - ch(data.color_wheel_ansi_vec.len());
-                    it / 2
+                    // Shift up by 2 rows (adjust for extra status & HUD rows).
+                    let vertical_offset = 2;
+                    let content_height = ch(data.color_wheel_ansi_vec.len());
+                    (*window_size.row_height - content_height) / 2 - vertical_offset
                 });
-
                 let mut pipeline = render_pipeline!();
 
                 pipeline.push(ZOrder::Normal, {
@@ -181,7 +185,7 @@ mod app_main_impl_trait_app {
                         RenderOp::ResetColor,
                     };
 
-                    // Render using color_wheel_ansi_vec.
+                    // Render many rows using color_wheel_ansi_vec.
                     for color_wheel_index in 0..data.color_wheel_ansi_vec.len() {
                         let color_wheel =
                             &mut data.color_wheel_ansi_vec[color_wheel_index];
@@ -212,7 +216,7 @@ mod app_main_impl_trait_app {
                         row_idx += row(1);
                     }
 
-                    // Render using color_wheel_rgb.
+                    // Render 1 row using color_wheel_rgb.
                     {
                         acc_render_ops +=
                             RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
@@ -240,7 +244,7 @@ mod app_main_impl_trait_app {
                         row_idx += row(1);
                     }
 
-                    // Render using lolcat_fg.
+                    // Render 1 row using lolcat_fg.
                     {
                         acc_render_ops +=
                             RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
@@ -263,7 +267,7 @@ mod app_main_impl_trait_app {
                         row_idx += row(1);
                     }
 
-                    // Render using lolcat_bg.
+                    // Render 1 row using lolcat_bg.
                     {
                         acc_render_ops +=
                             RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
@@ -289,9 +293,13 @@ mod app_main_impl_trait_app {
                     acc_render_ops
                 });
 
-                // REVIEW: [ ] introduce HUD telemetry `global_data.get_hud_report()` & copy to all other examples
-
                 status_bar::create_status_bar_message(&mut pipeline, window_size);
+
+                hud::create_hud(
+                    &mut pipeline,
+                    window_size,
+                    global_data.get_hud_report_as_str(),
+                );
 
                 // Handle animation.
                 if data.animator.is_animation_not_started() {
@@ -533,27 +541,88 @@ mod app_main_impl_trait_app {
     }
 }
 
+// REVIEW: [ ] introduce HUD telemetry & copy to all other examples
+
+mod hud {
+    use super::*;
+
+    pub fn create_hud(pipeline: &mut RenderPipeline, size: Dim, hud_report_str: &str) {
+        let color_bg = TuiColor::Rgb(RgbValue::from_hex("#fdb6fd"));
+        let color_fg = TuiColor::Rgb(RgbValue::from_hex("#942997"));
+        let styled_texts = tui_styled_texts! {
+            tui_styled_text! {
+                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg ),
+                @text: hud_report_str
+            },
+        };
+        let display_width = styled_texts.display_width();
+        let col_idx = col(*(size.col_width - display_width) / 2);
+        let row_idx = size.row_height.convert_to_row_index() - row(1);
+        let cursor = col_idx + row_idx;
+
+        let mut render_ops = render_ops!();
+        render_ops.push(RenderOp::MoveCursorPositionAbs(col(0) + row_idx));
+        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOp::SetBgColor(color_bg));
+        render_ops.push(RenderOp::PaintTextWithAttributes(
+            SPACER_GLYPH.repeat(size.col_width.as_usize()).into(),
+            None,
+        ));
+        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOp::MoveCursorPositionAbs(cursor));
+        render_tui_styled_texts_into(&styled_texts, &mut render_ops);
+        pipeline.push(ZOrder::Normal, render_ops);
+    }
+}
+
 mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Dim) {
+        let color_bg = TuiColor::Rgb(RgbValue::from_hex("#076DEB"));
         let styled_texts = tui_styled_texts! {
-            tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
-            tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit 🖖 "},
-            tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
-            tui_styled_text!{ @style: tui_style!(attrib: [underline]) , @text: " ↑ / + : inc "},
-            tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
-            tui_styled_text!{ @style: tui_style!(attrib: [underline]) , @text: " ↓ / - : dec "},
+            tui_styled_text!{
+                @style: tui_style!(attrib: [dim] color_bg: color_bg),
+                @text: "Hints:"
+            },
+            tui_styled_text!{
+                @style: tui_style!(attrib: [bold] color_bg: color_bg),
+                @text: " x : Exit 🖖 "
+            },
+            tui_styled_text!{
+                @style: tui_style!(attrib: [dim] color_bg: color_bg),
+                @text: " … "
+            },
+            tui_styled_text!{
+                @style: tui_style!(attrib: [underline] color_bg: color_bg),
+                @text: " ↑ / + : inc "
+            },
+            tui_styled_text!{
+                @style: tui_style!(attrib: [dim] color_bg: color_bg),
+                @text: " … "
+            },
+            tui_styled_text!{
+                @style: tui_style!(attrib: [underline] color_bg: color_bg),
+                @text: " ↓ / - : dec "
+            },
         };
 
         let display_width = styled_texts.display_width();
-        let col_center = *(size.col_width - display_width) / 2;
-        let row_bottom = size.row_height.convert_to_row_index();
-        let center = col(col_center) + row_bottom;
+        let col_idx = col(*(size.col_width - display_width) / 2);
+        let row_idx = size.row_height.convert_to_row_index();
+        let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();
-        render_ops.push(RenderOp::MoveCursorPositionAbs(center));
+        render_ops.push(RenderOp::MoveCursorPositionAbs(col(0) + row_idx));
+        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOp::SetBgColor(color_bg));
+        render_ops.push(RenderOp::PaintTextWithAttributes(
+            SPACER_GLYPH.repeat(size.col_width.as_usize()).into(),
+            None,
+        ));
+        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOp::MoveCursorPositionAbs(cursor));
         render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }
