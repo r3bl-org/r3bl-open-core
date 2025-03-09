@@ -47,6 +47,9 @@ use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
+    let args: Vec<String> = std::env::args().collect();
+    let no_log_arg_passed = args.contains(&"--no-log".to_string());
+
     // If the terminal is not fully interactive, then return early.
     let Some(mut terminal_async) = TerminalAsync::try_new("> ").await? else {
         return CommonError::new_error_result_with_only_msg(
@@ -66,10 +69,10 @@ async fn main() -> CommonResult<()> {
         .await;
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
-    if ENABLE_TRACE_EXAMPLES | DEBUG_TUI_MOD {
-        try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
-    } else {
+    if no_log_arg_passed {
         try_initialize_logging_global(tracing_core::LevelFilter::OFF).ok();
+    } else if ENABLE_TRACE_EXAMPLES | DEBUG_TUI_MOD {
+        try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
     }
 
     loop {
@@ -114,29 +117,18 @@ async fn run_user_selected_example(
 ) -> CommonResult<()> {
     let result_command /* Eg: Ok(Exit) */ =
         AutoCompleteCommand::from_str(&selection /* eg: "0" */);
+
+    use AutoCompleteCommand::*;
+
     match result_command {
         Ok(command) => match command {
-            AutoCompleteCommand::NoLayout => {
-                throws!(ex_app_no_layout::launcher::run_app().await?)
-            }
-            AutoCompleteCommand::OneColLayout => {
-                throws!(ex_app_with_1col_layout::launcher::run_app().await?)
-            }
-            AutoCompleteCommand::TwoColLayout => {
-                throws!(ex_app_with_2col_layout::launcher::run_app().await?)
-            }
-            AutoCompleteCommand::Editor => {
-                throws!(ex_editor::launcher::run_app().await?)
-            }
-            AutoCompleteCommand::Slides => {
-                throws!(ex_pitch::launcher::run_app().await?)
-            }
-            AutoCompleteCommand::Commander => {
-                throws!(ex_rc::launcher::run_app().await?)
-            }
-            AutoCompleteCommand::Exit => {
-                CommonError::new_error_result_with_only_msg("Exiting...")
-            }
+            NoLayout => ex_app_no_layout::launcher::run_app().await,
+            OneColLayout => ex_app_with_1col_layout::launcher::run_app().await,
+            TwoColLayout => ex_app_with_2col_layout::launcher::run_app().await,
+            Editor => ex_editor::launcher::run_app().await,
+            Slides => ex_pitch::launcher::run_app().await,
+            Commander => ex_rc::launcher::run_app().await,
+            Exit => CommonError::new_error_result_with_only_msg("Exiting..."),
         },
         Err(_) => {
             terminal_async
@@ -190,8 +182,11 @@ enum AutoCompleteCommand {
 }
 
 fn generate_help_msg() -> String {
+    use AutoCompleteCommand::*;
+
     let window_size = get_size().unwrap_or_default();
-    format!(
+
+    let it = format!(
         "\
 Welcome to the R3BL TUI demo app.
 Window size: {window_size:?}
@@ -204,11 +199,8 @@ Type a number to run corresponding example:
   5. 📔 {}
 
 or type Ctrl+C, Ctrl+D, 'exit', or 'x' to exit",
-        AutoCompleteCommand::NoLayout,
-        AutoCompleteCommand::OneColLayout,
-        AutoCompleteCommand::TwoColLayout,
-        AutoCompleteCommand::Editor,
-        AutoCompleteCommand::Slides,
-        AutoCompleteCommand::Commander,
-    )
+        NoLayout, OneColLayout, TwoColLayout, Editor, Slides, Commander,
+    );
+
+    it
 }
