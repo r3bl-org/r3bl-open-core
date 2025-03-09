@@ -22,7 +22,8 @@ use r3bl_core::{call_if_true,
                 sizing::TelemetryReportLineStorage,
                 CommonResult,
                 OutputDevice,
-                Size};
+                Size,
+                TelemetryHudReport};
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
@@ -50,6 +51,8 @@ where
     pub state: S,
     pub output_device: OutputDevice,
     pub offscreen_buffer_pool: OffscreenBufferPool,
+    /// Stack allocated string buffer for the HUD report. This is re-used and
+    /// pre-allocated to avoid heap allocations.
     pub hud_report: TelemetryReportLineStorage,
 }
 
@@ -114,15 +117,18 @@ where
 
     pub fn get_size(&self) -> Size { self.window_size }
 
-    pub fn set_hud_report(&mut self, new_report: miette::Result<&str>) {
-        if let Ok(report) = new_report {
-            if report != self.hud_report.as_str() {
-                self.hud_report.clear();
-                use std::fmt::Write as _;
-                _ = write!(&mut self.hud_report, "{}", report);
-            }
-        }
+    /// Generate display output for the HUD report by writing it to [Self::hud_report], a
+    /// pre-allocated (and re-used) string buffer [TelemetryReportLineStorage], which is
+    /// stack allocated.
+    ///
+    /// Look at the [std::fmt::Display] implementation of [TelemetryHudReport] for details
+    /// on how the report is formatted.
+    pub fn set_hud_report(&mut self, new: TelemetryHudReport) {
+        self.hud_report.clear();
+        use std::fmt::Write as _;
+        _ = write!(self.hud_report, "{}", new);
     }
 
-    pub fn get_hud_report(&self) -> &str { &self.hud_report }
+    /// If [Self::set_hud_report()] has not been called, this will return an empty string.
+    pub fn get_hud_report_as_str(&self) -> &str { &self.hud_report }
 }

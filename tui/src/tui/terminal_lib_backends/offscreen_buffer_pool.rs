@@ -21,6 +21,10 @@ use super::OffscreenBuffer;
 
 const OFFSCREEN_BUFFER_POOL_SIZE: usize = 3;
 
+/// Creating [OffscreenBuffer]s is expensive, so we keep a pool of them to reuse. This
+/// struct manages the pool. When a buffer is needed, it can be taken from the pool. When
+/// a buffer is no longer needed, it can be given back to the pool. If you take a buffer
+/// and don't give it back, it is lost from the pool (and will be dropped).
 pub struct OffscreenBufferPool {
     pub pool: RingBufferStack<OffscreenBuffer, OFFSCREEN_BUFFER_POOL_SIZE>,
     pub window_size: Dim,
@@ -36,24 +40,31 @@ impl OffscreenBufferPool {
         Self { pool, window_size }
     }
 
-    /// Get a buffer from the pool.  Returns None if all buffers are currently locked.
+    /// Get a buffer from the pool. If the pool is empty, a new buffer is created.
     pub fn take(&mut self) -> Option<OffscreenBuffer> {
         if self.pool.is_empty() {
-            None
+            Some(OffscreenBuffer::new_with_capacity_initialized(
+                self.window_size,
+            ))
         } else {
             self.pool.pop()
         }
     }
 
-    /// Add a buffer back to the pool.
+    /// Add a buffer back to the pool. If the pool is full, the buffer is dropped. Only
+    /// take the buffer back if it is still the correct size, otherwise drop it.
     pub fn give_back(&mut self, mut buffer: OffscreenBuffer) {
         buffer.clear();
         if self.pool.is_full() {
             self.pool.pop();
         }
-        self.pool.push(buffer);
+        if buffer.window_size == self.window_size {
+            self.pool.push(buffer);
+        }
     }
 
+    /// Resize the buffers in the pool. This will drop all buffers in the pool and create
+    /// new ones with the new size.
     pub fn resize(&mut self, new_window_size: Dim) {
         if self.window_size != new_window_size {
             self.window_size = new_window_size;
@@ -162,7 +173,7 @@ mod tests {
     }
 
     #[test]
-    fn test_offscreen_buffer_pool_take_returns_none_when_empty() {
+    fn test_offscreen_buffer_pool_take_returns_some_when_empty() {
         let window_size = width(10) + height(5);
         let mut pool = OffscreenBufferPool::new(window_size);
 
@@ -175,7 +186,7 @@ mod tests {
         assert_eq!(pool.len(), 0);
         assert!(pool.is_empty());
 
-        // Taking from an empty pool should return None.
-        assert!(pool.take().is_none());
+        // Taking from an empty pool should return Some.
+        assert!(pool.take().is_some());
     }
 }

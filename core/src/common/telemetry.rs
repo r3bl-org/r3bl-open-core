@@ -15,10 +15,9 @@
  *   limitations under the License.
  */
 use std::{collections::HashMap,
-          fmt::Write as _,
+          fmt::Display,
           time::{Duration, Instant}};
 
-use miette::IntoDiagnostic;
 use smallstr::SmallString;
 use strum_macros::{Display, EnumString};
 
@@ -29,12 +28,13 @@ use crate::{Pc,
             RingBufferStack,
             TimeDuration,
             f64,
-            ok};
+            glyphs};
 
 pub mod sizing {
     use super::*;
 
     pub type TelemetryReportLineStorage = SmallString<[u8; TELEMETRY_REPORT_STRING_SIZE]>;
+
     pub const TELEMETRY_REPORT_STRING_SIZE: usize = 128;
 }
 
@@ -96,12 +96,12 @@ pub struct Telemetry<const N: usize> {
     /// Pre-allocated buffer to store the report (after generating it). This is a cache
     /// that is used to avoid generating the report too frequently (rate limited with
     /// [Self::rate_limiter_generate_report]).
-    pub report: sizing::TelemetryReportLineStorage,
+    pub report: TelemetryHudReport,
     pub rate_limiter_generate_report: RateLimiter,
     pub min_duration_filter: Option<Duration>,
 }
 
-#[derive(Debug, PartialEq, Copy, Clone, EnumString, Display, Eq, Hash)]
+#[derive(Debug, PartialEq, Copy, Clone, EnumString, Display, Eq, Hash, Default)]
 pub enum TelemetryAtomHint {
     #[strum(serialize = "REND")]
     Render,
@@ -112,6 +112,7 @@ pub enum TelemetryAtomHint {
     #[strum(serialize = "INPT")]
     Input,
     #[strum(serialize = "NONE")]
+    #[default]
     None,
 }
 
@@ -198,7 +199,7 @@ pub mod constructor {
             Self {
                 ring_buffer: RingBufferStack::new(),
                 start_timestamp: Instant::now(),
-                report: sizing::TelemetryReportLineStorage::new(),
+                report: Default::default(),
                 rate_limiter_generate_report: RateLimiter::new(
                     options.rate_limit_min_time_threshold,
                 ),
@@ -396,7 +397,6 @@ mod calculator {
 
 mod report_generator {
     use super::*;
-    use crate::glyphs;
 
     impl<const N: usize> Telemetry<N> {
         /// Generate a report of the response times.
@@ -405,20 +405,22 @@ mod report_generator {
         /// - If called more frequently, it will return the cached result.
         /// - The `generate_report` function is actually responsible for generating the
         ///   report (and saving it).
-        pub fn report(&mut self) -> miette::Result<&str> {
+        ///
+        /// This returns a Result, because it
+        pub fn report(&mut self) -> TelemetryHudReport {
             match self
                 .rate_limiter_generate_report
                 .get_status_and_update_last_run(Instant::now())
             {
                 RateLimitStatus::NotStarted => {
-                    self.generate_report()?;
+                    self.generate_report();
                 }
                 RateLimitStatus::Expired => {
-                    self.generate_report()?;
+                    self.generate_report();
                 }
                 RateLimitStatus::Active => { /* Do nothing & return cached report */ }
             }
-            Ok(self.report.as_str())
+            self.report
         }
 
         /// Actually generate the report. This can an expensive function to execute in a
@@ -429,30 +431,68 @@ mod report_generator {
         ///
         /// It is similar to web performance metrics like "Time to Interactive (TTI)" or
         /// or "First Input Delay (FID)".
-        fn generate_report(&mut self) -> miette::Result<()> {
-            // Generate the new report.
+        fn generate_report(&mut self) {
+            // No data available to generate a report.
             if self.ring_buffer.is_empty() {
-                // Clear the existing report.
-                self.report.clear();
-                write!(self.report, "No data").into_diagnostic()?
-            } else if let (Some(avg), Some(min), Some(max), Some(median)) =
+                return;
+            }
+
+            // Generate the new report.
+            if let (Some(avg), Some(min), Some(max), Some(median)) =
                 (self.average(), self.min(), self.max(), self.median())
             {
                 let (med, pc, hint) = median;
                 let med = TimeDuration::from(med);
                 let fps = med.get_as_fps();
-                let st_ch = pc.as_glyph();
-                let sep = glyphs::RIGHT_ARROW_DASHED_GLYPH;
-                // Clear the existing report.
-                self.report.clear();
-                write!(
-                self.report,
-                "Latency ⣼ Avg{sep} {avg}, Min{sep} {min}, Max{sep} {max}, Med{sep} {med} ({fps}fps {st_ch} {pc:?} {hint})",
-            ).into_diagnostic()?;
+                self.report = TelemetryHudReport {
+                    avg,
+                    min,
+                    max,
+                    med,
+                    pc,
+                    hint,
+                    fps,
+                };
             }
-            ok!()
         }
     }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
+pub struct TelemetryHudReport {
+    pub avg: TimeDuration,
+    pub min: TimeDuration,
+    pub max: TimeDuration,
+    pub med: TimeDuration,
+    pub pc: Pc,
+    pub hint: TelemetryAtomHint,
+    pub fps: u32,
+}
+
+impl Display for TelemetryHudReport {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_empty() {
+            return write!(f, "No data");
+        }
+
+        let st_ch = self.pc.as_glyph();
+        let sep = glyphs::RIGHT_ARROW_DASHED_GLYPH;
+        write!(
+            f,
+            "Latency ⣼ Avg{sep} {avg}, Min{sep} {min}, Max{sep} {max}, Med{sep} {med} ({fps}fps {st_ch} {pc:?} {hint})",
+            avg = self.avg,
+            min = self.min,
+            max = self.max,
+            med = self.med,
+            fps = self.fps,
+            pc = self.pc,
+            hint = self.hint
+        )
+    }
+}
+
+impl TelemetryHudReport {
+    pub fn is_empty(&self) -> bool { self.avg.inner == Duration::default() }
 }
 
 #[cfg(test)]
@@ -490,6 +530,66 @@ mod tests_fixtures {
         -> Telemetry<TEST_RING_BUFFER_SIZE> {
             Telemetry::new((Duration::from_secs(0), Duration::from_micros(0)))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_display_format {
+    use std::fmt::Write as _;
+
+    use super::{sizing::{TELEMETRY_REPORT_STRING_SIZE, TelemetryReportLineStorage},
+                *};
+
+    #[test]
+    fn test_display_formatter() {
+        let mut backing_store = TelemetryReportLineStorage::new();
+
+        assert!(!backing_store.spilled());
+        assert_eq!(backing_store.capacity(), TELEMETRY_REPORT_STRING_SIZE);
+
+        let avg = TimeDuration::from(
+            Duration::from_secs(3600)
+                + Duration::from_secs(1)
+                + Duration::from_millis(100)
+                + Duration::from_micros(100),
+        );
+
+        let min = TimeDuration::from(
+            Duration::from_secs(60)
+                + Duration::from_secs(1)
+                + Duration::from_millis(100)
+                + Duration::from_micros(100),
+        );
+
+        let max = TimeDuration::from(
+            Duration::from_secs(1)
+                + Duration::from_millis(100)
+                + Duration::from_micros(100),
+        );
+
+        let median = TimeDuration::from(
+            Duration::from_secs(1)
+                + Duration::from_millis(100)
+                + Duration::from_micros(500),
+        );
+
+        let median_micros = median.subsec_micros() % 1_000;
+        let median_fps = 1_000_000 / median_micros;
+
+        write!(backing_store,
+            "Response time ⣼ Avg: {avg}, Min: {min}, Max: {max}, Median: {median}, FPS ⵚ Median: {median_fps}",
+        ).unwrap();
+
+        assert_eq!(
+            backing_store.as_str(),
+            "Response time ⣼ Avg: 1h:0m:1s100ms, Min: 1m:1s:100ms, Max: 1s:100ms, Median: 1s:100ms, FPS ⵚ Median: 2000"
+        );
+
+        println!("backing_store.len(): {}", backing_store.len());
+        println!("backing_store.capacity(): {}", backing_store.capacity());
+
+        assert!(!backing_store.spilled());
+        assert_eq!(backing_store.capacity(), 128);
     }
 }
 
@@ -636,12 +736,8 @@ mod tests_record {
             TryRecordResult::Ok
         );
 
-        let it = response_times.report().unwrap();
+        let it = response_times.report().to_string();
         assert_eq!(it.len(), 93);
-
-        // Make sure that this backing store / buffer is large enough, so there is no need
-        // to move it from the stack to the heap.
-        assert!(!response_times.report.spilled());
     }
 
     #[test]
@@ -689,15 +785,15 @@ mod tests_record {
         );
 
         // No report is generated yet.
-        assert_eq!(response_times.report.len(), 0);
+        assert_eq!(response_times.report, TelemetryHudReport::default());
 
         // Generate the report.
-        let report = response_times.report().unwrap();
+        let report = response_times.report().to_string();
         let expected_len = 93;
         let expected_output_str = "Latency ⣼ Avg⇢ 280μs, Min⇢ 100μs, Max⇢ 500μs, Med⇢ 300μs (3333fps ◑ 40% NONE)";
         assert_eq!(report.len(), expected_len);
         assert_eq!(report, expected_output_str);
-        let og_report_copy = response_times.report.clone();
+        let og_report_copy = response_times.report;
 
         // Generate the report again, but due to the rate limiter in effect, the report
         // should be the same as the previous one (and out of date).
@@ -708,17 +804,17 @@ mod tests_record {
             )),
             TryRecordResult::Ok
         );
-        let report = response_times.report().unwrap();
+        let report = response_times.report().to_string();
         assert_eq!(report.len(), expected_len);
         assert_eq!(report, expected_output_str);
 
         // Wait for the rate limiter to expire. The report should be different now.
         sleep(rate_limit_time_threshold);
-        let report = response_times.report().unwrap();
+        let report = response_times.report();
         let expected_output_str_new = "Latency ⣼ Avg⇢ 320μs, Min⇢ 200μs, Max⇢ 500μs, Med⇢ 300μs (3333fps ◕ 60% NONE)";
-        assert_ne!(report, og_report_copy.as_str());
-        assert_eq!(expected_output_str_new, report);
-        assert_ne!(expected_output_str_new, og_report_copy.as_str());
+        assert_ne!(report, og_report_copy);
+        assert_eq!(expected_output_str_new, report.to_string());
+        assert_ne!(expected_output_str_new, og_report_copy.to_string());
     }
 
     #[test]

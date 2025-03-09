@@ -303,12 +303,13 @@ where
                 let state = &global_data_mut_ref.state;
                 let message =
                     format!("AppManager::render_app() ok {ch}", ch = glyphs::PAINT_GLYPH);
+                let report = &global_data_mut_ref.get_hud_report_as_str();
                 // % is Display, ? is Debug.
                 tracing::info!(
                     message = message,
                     window_size = ?global_data_mut_ref.window_size,
                     state = ?state,
-                    report = %telemetry.report()?,
+                    report = %report,
                 );
 
                 if let Some(ref offscreen_buffer) =
