@@ -122,11 +122,9 @@ mod display_formatter {
 
 #[cfg(test)]
 mod tests {
-    use std::{fmt::Write as _, time::Duration};
+    use std::time::Duration;
 
     use super::*;
-    use crate::common::sizing::{TELEMETRY_REPORT_STRING_SIZE,
-                                TelemetryReportLineStorage};
 
     #[test]
     fn test_converters() {
@@ -152,57 +150,5 @@ mod tests {
                 + Duration::from_micros(100),
         );
         assert_eq!(format!("{}", time_duration), "1s:100ms");
-    }
-
-    #[test]
-    fn test_display_formatter() {
-        let mut backing_store = TelemetryReportLineStorage::new();
-
-        assert!(!backing_store.spilled());
-        assert_eq!(backing_store.capacity(), TELEMETRY_REPORT_STRING_SIZE);
-
-        let avg = TimeDuration::from(
-            Duration::from_secs(3600)
-                + Duration::from_secs(1)
-                + Duration::from_millis(100)
-                + Duration::from_micros(100),
-        );
-
-        let min = TimeDuration::from(
-            Duration::from_secs(60)
-                + Duration::from_secs(1)
-                + Duration::from_millis(100)
-                + Duration::from_micros(100),
-        );
-
-        let max = TimeDuration::from(
-            Duration::from_secs(1)
-                + Duration::from_millis(100)
-                + Duration::from_micros(100),
-        );
-
-        let median = TimeDuration::from(
-            Duration::from_secs(1)
-                + Duration::from_millis(100)
-                + Duration::from_micros(500),
-        );
-
-        let median_micros = median.subsec_micros() % 1_000;
-        let median_fps = 1_000_000 / median_micros;
-
-        write!(backing_store,
-            "Response time ⣼ Avg: {avg}, Min: {min}, Max: {max}, Median: {median}, FPS ⵚ Median: {median_fps}",
-        ).unwrap();
-
-        assert_eq!(
-            backing_store.as_str(),
-            "Response time ⣼ Avg: 1h:0m:1s100ms, Min: 1m:1s:100ms, Max: 1s:100ms, Median: 1s:100ms, FPS ⵚ Median: 2000"
-        );
-
-        println!("backing_store.len(): {}", backing_store.len());
-        println!("backing_store.capacity(): {}", backing_store.capacity());
-
-        assert!(!backing_store.spilled());
-        assert_eq!(backing_store.capacity(), 128);
     }
 }

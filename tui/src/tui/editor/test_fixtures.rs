@@ -47,7 +47,6 @@ pub mod mock_real_objects_for_editor {
         let (output_device, stdout_mock) = OutputDevice::new_mock();
         let offscreen_buffer_pool =
             OffscreenBufferPool::new(window_size.unwrap_or_default());
-        let hud_report = TelemetryReportLineStorage::new();
 
         let global_data = GlobalData {
             window_size: window_size.unwrap_or_default(),
@@ -56,7 +55,7 @@ pub mod mock_real_objects_for_editor {
             state: Default::default(),
             output_device,
             offscreen_buffer_pool,
-            hud_report,
+            hud_report: TelemetryReportLineStorage::new(),
         };
 
         (global_data, stdout_mock)
