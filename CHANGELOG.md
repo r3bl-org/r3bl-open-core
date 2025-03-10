@@ -457,6 +457,11 @@ Updated:
     the `write!` macro to write to a pre-existing buffer.
 
 Added:
+  - Add new target in `run` Nushell script called `nu run release-examples-no-log` to run
+    the examples without logging. This is useful for performance testing. Now that HUD is
+    displayed in the examples, there is no need to enable logging just to see this
+    information (via `nu run log`).
+  - Add `spinner_impl` module from `r3bl_terminal_async` crate.
   - Add `ResponseTimesRingBuffer` to replace `telemetry_global_static` module in
     `static_global_data.rs`. This is more accurate, performant, and space efficient. It
     uses a fixed backing store (`RingBuffer`) and a rate limiter (`RateLimiter`) to ensure
@@ -472,6 +477,8 @@ Removed:
       (and its dependencies `RateLimiter` and `RingBuffer`) in `r3bl_core`.
 
 Changed:
+  - Update all the demo examples in the `examples` folder to use the new telemetry API and
+    display a HUD above the status bar to display FPS counter.
   - Use `smallvec` and `smallstr` crates to increase memory latency performance (for
     access, mutation, and allocation).
   - Use `Drop` trait implementation for `EditorBufferMut` to perform validation and clean
@@ -840,7 +847,7 @@ exhaustively tested and is able to handle many more corner cases.
 
 ### v_next_release_r3bl_core
 
-This release has **lots** of major breaking changes. The codebase has rougly 140K lines of
+This release has **lots** of major breaking changes. The codebase has roughly 140K lines of
 code. And about 25K lines of code have been added, and 14K lines have been removed. This
 is a major release that is part of a total reorganization of the `r3bl-open-core` repo.
 These changes pay down all the technical debt accrued over the past 2 years of
@@ -1504,6 +1511,9 @@ that `truecolor` is supported.
 - Added:
   - Support for `$TERM_PROGRAM` = `vscode` to the list of environment variables that mean
     that `truecolor` is supported. This is in `check_ansi_color.rs` file.
+  - Lots of new helper functions to make it easy to colorize `&str` like `red("hello")`,
+    `green("world")`, etc. This removes the requirement to depend on `crossterm::Stylize`
+    for colorizing strings that are intended to be displayed in console stdout / stderr.
 
 ### v0.7.0 (2024-10-18)
 

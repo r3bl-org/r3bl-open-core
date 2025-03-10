@@ -62,6 +62,65 @@ mod ansi_styled_text_impl {
     }
 }
 
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn green(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Foreground(Color::Ansi256(34))],
+    }
+}
+
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn red(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Foreground(Color::Ansi256(196))],
+    }
+}
+
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn magenta(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Foreground(Color::Ansi256(201))],
+    }
+}
+
+pub fn bold(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Bold],
+    }
+}
+
+pub fn italic(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Italic],
+    }
+}
+
+pub fn underline(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Underline],
+    }
+}
+
+pub fn strikethrough(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Strikethrough],
+    }
+}
+
+pub fn dim(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Dim],
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumCount)]
 pub enum Style {
     Foreground(Color),

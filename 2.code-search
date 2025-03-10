@@ -5,8 +5,8 @@
 178 results - 47 files
 
 CHANGELOG.md:
-  1045:     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
-  1060:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
+  1056:     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
+  1071:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
 
 cmdr/src/analytics_client.rs:
   113:                             tracing::debug!(
@@ -109,41 +109,41 @@ script/src/github_api.rs:
   43:     tracing::debug!(
 
 terminal_async/examples/terminal_async.rs:
-  38: use tracing::info;
+  35: use tracing::info;
 
 tui/examples/demo/ex_app_no_layout/app_main.rs:
-  325:                     tracing::info! {
+  335:                     tracing::info! {
 
 tui/examples/demo/ex_app_with_1col_layout/single_column_component.rs:
   265:                     tracing::info!(
 
 tui/examples/demo/ex_app_with_2col_layout/app_main.rs:
-  326:             tracing::info!(
-  346:             tracing::error!("No focus id has been set, and it should be set!");
+  334:             tracing::info!(
+  354:             tracing::error!("No focus id has been set, and it should be set!");
 
 tui/examples/demo/ex_app_with_2col_layout/column_render_component.rs:
   275:                     tracing::info!(
 
 tui/examples/demo/ex_editor/app_main.rs:
-  123:                 tracing::debug!("🪙 construct ex_rc::AppMain");
-  339:                         tracing::error!("📣 Error activating simple modal: {msg:?}");
-  368:                         tracing::error!(
-  450:                 tracing::debug!(
-  490:             tracing::debug!(
-  586:             tracing::info!(
-  618:             tracing::debug!(
-  703:             tracing::debug!(
-  789:             tracing::debug!(
+  125:                 tracing::debug!("🪙 construct ex_rc::AppMain");
+  348:                         tracing::error!("📣 Error activating simple modal: {msg:?}");
+  377:                         tracing::error!(
+  459:                 tracing::debug!(
+  499:             tracing::debug!(
+  595:             tracing::info!(
+  627:             tracing::debug!(
+  712:             tracing::debug!(
+  798:             tracing::debug!(
 
 tui/examples/demo/ex_pitch/app_main.rs:
-   99:                 tracing::debug!("🪙 construct ex_pitch::AppWithLayout");
-  309:             tracing::info!(
-  345:             tracing::debug!(
+  103:                 tracing::debug!("🪙 construct ex_pitch::AppWithLayout");
+  320:             tracing::info!(
+  356:             tracing::debug!(
 
 tui/examples/demo/ex_rc/app_main.rs:
-  179:                 tracing::debug!("🪙 construct ex_rc::AppWithLayout");
-  430:             tracing::info!(
-  466:             tracing::debug!(
+  182:                 tracing::debug!("🪙 construct ex_rc::AppWithLayout");
+  440:             tracing::info!(
+  476:             tracing::debug!(
 
 tui/src/tui/dialog/dialog_component/dialog_component_struct.rs:
   175:                             tracing::debug!(
@@ -187,13 +187,13 @@ tui/src/tui/terminal_lib_backends/input_device_ext.rs:
   104:                     tracing::error!("Error: {e:?}");
 
 tui/src/tui/terminal_lib_backends/paint.rs:
-  205:             tracing::info!(
-  215:         tracing::info!(
+  216:             tracing::info!(
+  226:         tracing::info!(
 
 tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs:
-   67:             tracing::info!(
-  205:         tracing::info! {
-  271:         tracing::debug!(message = message);
+   69:             tracing::info!(
+  204:         tracing::info! {
+  270:         tracing::debug!(message = message);
 
 tui/src/tui/terminal_lib_backends/crossterm_backend/offscreen_buffer_paint_impl.rs:
    75:             tracing::info!(
@@ -212,17 +212,17 @@ tui/src/tui/terminal_lib_backends/crossterm_backend/render_op_impl.rs:
   566:                 call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
 
 tui/src/tui/terminal_window/main_event_loop.rs:
-  149:         tracing::info!(
-  220:                             tracing::info!(
-  270:                 tracing::info!(
-  285:                     tracing::info!(
-  306:         tracing::info!(
-  437:             tracing::error!(
-  508:                     tracing::error!(
-  648:         //     level_filter: tracing::Level::DEBUG.into(),
+  158:         tracing::info!(
+  243:                             tracing::info!(
+  308:                 tracing::info!(
+  324:                     tracing::info!(
+  345:         tracing::info!(
+  477:             tracing::error!(
+  548:                     tracing::error!(
+  688:         //     level_filter: tracing::Level::DEBUG.into(),
 
 tui/src/tui/terminal_window/shared_global_data.rs:
-  105:             tracing::info!("main_event_loop -> Resize ⇲"=?new_size)
+  130:             tracing::info!("main_event_loop -> Resize ⇲"=?new_size)
 
 tuify/examples/main_interactive.rs:
    35:             tracing::debug!("Start logging... terminal window size: {:?}", get_size()?)
