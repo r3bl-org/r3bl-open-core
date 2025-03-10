@@ -15,21 +15,45 @@
  *   limitations under the License.
  */
 
-use crossterm::{QueueableCommand,
-                cursor::{MoveToColumn, MoveUp},
+use crossterm::{cursor::{MoveToColumn, MoveUp},
                 style::{self, Print, Stylize},
-                terminal::{Clear, ClearType}};
+                terminal::{Clear, ClearType},
+                QueueableCommand};
 use miette::IntoDiagnostic as _;
-use r3bl_core::{SendRawTerminal,ColWidth, GCStringExt, StringStorage, string_storage, width};
-use crate::convert_from_tui_color_to_crossterm_color;
+use r3bl_core::{pad_fmt,
+                string_storage,
+                width,
+                ColWidth,
+                GCStringExt,
+                SendRawTerminal,
+                StringStorage,
+                ELLIPSIS_GLYPH};
 
-use crate::{BLOCK_DOTS,
-            BRAILLE_DOTS,
-
+use crate::{convert_from_tui_color_to_crossterm_color,
+            spinner_render::style::style,
             SpinnerColor,
             SpinnerStyle,
             SpinnerTemplate,
-            spinner_render::style::style};
+            BLOCK_DOTS,
+            BRAILLE_DOTS};
+
+pub fn get_next_tick_glyph(style: &SpinnerStyle, count: usize) -> StringStorage {
+    match style.template {
+        SpinnerTemplate::Braille => {
+            let index_to_use = count % BRAILLE_DOTS.len();
+            BRAILLE_DOTS[index_to_use].into()
+        }
+        SpinnerTemplate::Block => {
+            let index_to_use = count % BLOCK_DOTS.len();
+            BLOCK_DOTS[index_to_use].into()
+        }
+        SpinnerTemplate::Dots => {
+            let mut acc = StringStorage::with_capacity(count);
+            pad_fmt!(fmt: acc, pad_str: ELLIPSIS_GLYPH, repeat_count: count);
+            acc
+        }
+    }
+}
 
 pub fn render_tick(
     style: &mut SpinnerStyle,
@@ -40,9 +64,8 @@ pub fn render_tick(
     match style.template {
         SpinnerTemplate::Braille => {
             // Translate count into the index of the BRAILLE_DOTS array.
-            let index_to_use = count % BRAILLE_DOTS.len();
-            let output_symbol = BRAILLE_DOTS[index_to_use];
-            let output_symbol = apply_color(output_symbol, &mut style.color);
+            let output_symbol = get_next_tick_glyph(style, count);
+            let output_symbol = apply_color(&output_symbol, &mut style.color);
 
             let text = message.grapheme_string();
             let text_trunc = text.trunc_end_to_fit(
@@ -55,9 +78,8 @@ pub fn render_tick(
         }
         SpinnerTemplate::Block => {
             // Translate count into the index of the BLOCK_DOTS array.
-            let index_to_use = count % BLOCK_DOTS.len();
-            let output_symbol = BLOCK_DOTS[index_to_use];
-            let output_symbol = apply_color(output_symbol, &mut style.color);
+            let output_symbol = get_next_tick_glyph(style, count);
+            let output_symbol = apply_color(&output_symbol, &mut style.color);
 
             let text = message.grapheme_string();
             let text_trunc = text.trunc_end_to_fit(
@@ -69,7 +91,7 @@ pub fn render_tick(
             string_storage!("{output_symbol} {text_trunc_fmt}")
         }
         SpinnerTemplate::Dots => {
-            let padding_right = ".".repeat(count);
+            let padding_right = get_next_tick_glyph(style, count);
 
             let text = message.grapheme_string();
             let text_trunc = text.trunc_end_to_fit({

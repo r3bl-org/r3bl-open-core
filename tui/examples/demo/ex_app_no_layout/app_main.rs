@@ -293,12 +293,12 @@ mod app_main_impl_trait_app {
                     acc_render_ops
                 });
 
-                status_bar::create_status_bar_message(&mut pipeline, window_size);
+                status_bar::render_status_bar(&mut pipeline, window_size);
 
                 hud::create_hud(
                     &mut pipeline,
                     window_size,
-                    global_data.get_hud_report_as_str(),
+                    global_data.get_hud_report_with_spinner(),
                 );
 
                 // Handle animation.
@@ -541,8 +541,6 @@ mod app_main_impl_trait_app {
     }
 }
 
-// REVIEW: [ ] introduce HUD telemetry & copy to all other examples
-
 mod hud {
     use super::*;
 
@@ -579,7 +577,7 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Dim) {
+    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Dim) {
         let color_bg = TuiColor::Rgb(RgbValue::from_hex("#076DEB"));
         let color_fg = TuiColor::Rgb(RgbValue::from_hex("#E9C940"));
         let styled_texts = tui_styled_texts! {

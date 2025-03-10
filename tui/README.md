@@ -185,7 +185,7 @@ commands:
 
 ```sh
 cd tui/examples
-cargo run --release --example demo
+cargo run --release --example demo -- --no-log
 ```
 
 These examples cover the entire surface area of the TUI API. You can also take a look
@@ -198,13 +198,29 @@ allows you to easily build, run, test, and do so much more with the repo.
 
 ## Nushell scripts to build, run, test etc.
 
+Typically in the `tui` sub folder of the repo, you will run the following commands,
+each in a separate terminal window or pane.
+
+```sh
+# Terminal 1, run this first.
+cd tui
+nu run log
+```
+
+```sh
+# Terminal 2, run this second.
+cd tui
+nu run release-examples
+```
+
 | Command                                | Description                                       |
 | -------------------------------------- | ------------------------------------------------- |
+| `nu run log`                           | View the log output. This [video](https://youtu.be/Sy26IMkOEiM) has a walkthrough of how to use this. |
+| `nu run examples`                      | Run all the examples, with logging                    |
+| `nu run release-examples`              | Run all the examples with the release binary, with logging |
+| `nu run release-examples-no-log`       | Run all the examples with the release binary, no logging   |
 | `nu run help`                          | See all the commands you can pass to the `run` script |
-| `nu run examples`                      | Run all the examples                              |
-| `nu run release-examples`              | Run all the examples with the release binary      |
 | `nu run examples-with-flamegraph-profiling` | This will run the examples and generate a flamegraph at the end so you can see profile the performance of the app. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this |
-| `nu run log`                           | View the log output. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this. |
 | `nu run build`                         | Build                                             |
 | `nu run clean`                         | Clean                                             |
 | `nu run test`                          | Run tests                                         |

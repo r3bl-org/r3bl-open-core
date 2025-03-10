@@ -190,30 +190,30 @@
 //!
 //! 1. Read user input from the terminal line by line, while your program concurrently
 //!    writes lines to the same terminal. One [`Readline`] instance can be used to spawn
-//!    many async `stdout` writers ([r3bl_core::SharedWriter]) that can write to
-//!    the terminal concurrently. For most users the [`TerminalAsync`] struct is the
-//!    simplest way to use this crate. You rarely have to access the underlying
-//!    [`Readline`] or [`r3bl_core::SharedWriter`] directly. But you can if you
-//!    need to. [`r3bl_core::SharedWriter`] can be cloned and is thread-safe.
-//!    However, there is only one instance of [`Readline`] per [`TerminalAsync`] instance.
+//!    many async `stdout` writers ([r3bl_core::SharedWriter]) that can write to the
+//!    terminal concurrently. For most users the [`TerminalAsync`] struct is the simplest
+//!    way to use this crate. You rarely have to access the underlying [`Readline`] or
+//!    [`r3bl_core::SharedWriter`] directly. But you can if you need to.
+//!    [`r3bl_core::SharedWriter`] can be cloned and is thread-safe. However, there is
+//!    only one instance of [`Readline`] per [`TerminalAsync`] instance.
 //!
 //! 2. Generate a spinner (indeterminate progress indicator). This spinner works
 //!    concurrently with the rest of your program. When the [`Spinner`] is active it
-//!    automatically pauses output from all the [`r3bl_core::SharedWriter`]
-//!    instances that are associated with one [`Readline`] instance. Typically a spawned
-//!    task clones its own [`r3bl_core::SharedWriter`] to generate its output.
-//!    This is useful when you want to show a spinner while waiting for a long-running
-//!    task to complete. Please look at the example to see this in action, by running
-//!    `cargo run --example terminal_async`. Then type `starttask1`, press Enter. Then
-//!    type `spinner`, press Enter.
+//!    automatically pauses output from all the [`r3bl_core::SharedWriter`] instances that
+//!    are associated with one [`Readline`] instance. Typically a spawned task clones its
+//!    own [`r3bl_core::SharedWriter`] to generate its output. This is useful when you
+//!    want to show a spinner while waiting for a long-running task to complete. Please
+//!    look at the example to see this in action, by running `cargo run --example
+//!    terminal_async`. Then type `starttask1`, press Enter. Then type `spinner`, press
+//!    Enter.
 //!
 //! 3. Use tokio tracing with support for concurrent `stout` writes. If you choose to log
-//!    to `stdout` then the concurrent version ([`r3bl_core::SharedWriter`]) from
-//!    this crate will be used. This ensures that the concurrent output is supported even
-//!    for your tracing logs to `stdout`.
+//!    to `stdout` then the concurrent version ([`r3bl_core::SharedWriter`]) from this
+//!    crate will be used. This ensures that the concurrent output is supported even for
+//!    your tracing logs to `stdout`.
 //!
 //! 4. You can also plug in your own terminal, like `stdout`, or `stderr`, or any other
-//!    terminal that implements [`SendRawTerminal`] trait for more details.
+//!    terminal that implements [r3bl_core::SendRawTerminal] trait for more details.
 //!
 //! This crate can detect when your terminal is not in interactive mode. Eg: when you pipe
 //! the output of your program to another program. In this case, the `readline` feature is
@@ -237,20 +237,20 @@
 //! - [LineState::is_paused] - Used to check if the line state is paused and affects
 //!   rendering and input.
 //! - [LineState::set_paused] - Use to set the paused state via the
-//!   [r3bl_core::SharedWriter] below. This can't be called directly (outside the
-//!   crate itself).
-//! - [r3bl_core::SharedWriter::line_state_control_channel_sender] - Mechanism
-//!   used to manipulate the paused state.
+//!   [r3bl_core::SharedWriter] below. This can't be called directly (outside the crate
+//!   itself).
+//! - [r3bl_core::SharedWriter::line_state_control_channel_sender] - Mechanism used to
+//!   manipulate the paused state.
 //!
 //! The [Readline::new] or [TerminalAsync::try_new] create a `line_channel` to send and
 //! receive [r3bl_core::LineStateControlSignal]:
-//! 1. The sender end of this channel is moved to the [r3bl_core::SharedWriter].
-//!    So any [r3bl_core::SharedWriter] can be used to send
-//!    [r3bl_core::LineStateControlSignal]s to the channel, which will be
-//!    processed in the task started, just for this, in [Readline::new]. This is the
-//!    primary mechanism to switch between pause and resume. Some helper functions are
-//!    provided in [TerminalAsync::pause] and [TerminalAsync::resume], though you can just
-//!    send the signals directly to the channel's sender via the
+//! 1. The sender end of this channel is moved to the [r3bl_core::SharedWriter]. So any
+//!    [r3bl_core::SharedWriter] can be used to send [r3bl_core::LineStateControlSignal]s
+//!    to the channel, which will be processed in the task started, just for this, in
+//!    [Readline::new]. This is the primary mechanism to switch between pause and resume.
+//!    Some helper functions are provided in [TerminalAsync::pause] and
+//!    [TerminalAsync::resume], though you can just send the signals directly to the
+//!    channel's sender via the
 //!    [r3bl_core::SharedWriter::line_state_control_channel_sender].
 //! 2. The receiver end of this [tokio::sync::mpsc::channel] is moved to the task that is
 //!    spawned by [Readline::new]. This is where the actual work is done when signals are
@@ -338,8 +338,8 @@
 //!   the user can retrieve it while editing a later line), call
 //!   [`Readline::add_history_entry()`].
 //!
-//! - Lines written to the associated [`r3bl_core::SharedWriter`] while
-//!   `readline()` is in progress will be output to the screen above the input line.
+//! - Lines written to the associated [`r3bl_core::SharedWriter`] while `readline()` is in
+//!   progress will be output to the screen above the input line.
 //!
 //! - When done, call [`crate::manage_shared_writer_output::flush_internal()`] to ensure
 //!   that all lines written to the [`r3bl_core::SharedWriter`] are output.
@@ -351,9 +351,9 @@
 //! that the program is still running and hasn't hung up or become unresponsive. When
 //! other tasks produce output concurrently, this spinner's output will not be clobbered.
 //! Neither will the spinner output clobber the output from other tasks. It suspends the
-//! output from all the [`r3bl_core::SharedWriter`] instances that are associated
-//! with one [`Readline`] instance. Both the `terminal_async.rs` and `spinner.rs` examples
-//! shows this (`cargo run --example terminal_async` and `cargo run --example spinner`).
+//! output from all the [`r3bl_core::SharedWriter`] instances that are associated with one
+//! [`Readline`] instance. Both the `terminal_async.rs` and `spinner.rs` examples shows
+//! this (`cargo run --example terminal_async` and `cargo run --example spinner`).
 //!
 //! [`Spinner`]s also has cancellation support. Once a spinner is started,
 //! <kbd>Ctrl+C</kbd> and <kbd>Ctrl+D</kbd> are directed to the spinner, to cancel it.
@@ -417,8 +417,8 @@
 //! - Rearchitect the entire crate from the ground up to operate in a totally different
 //!   manner than the original. All the underlying mental models are different, and
 //!   simpler. The main event loop is redone. And a task is used to monitor the line
-//!   channel for communication between multiple [`r3bl_core::SharedWriter`]s and
-//!   the [`Readline`], to properly support pause and resume, and other control functions.
+//!   channel for communication between multiple [`r3bl_core::SharedWriter`]s and the
+//!   [`Readline`], to properly support pause and resume, and other control functions.
 //! - Drop support for all async runtimes other than `tokio`. Rewrite all the code for
 //!   this.
 //! - Drop crates like `pin-project`, `thingbuf` in favor of `tokio`. Rewrite all the code

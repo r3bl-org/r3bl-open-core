@@ -33,10 +33,12 @@ use r3bl_core::{call_if_true,
                 CommonResult,
                 Dim,
                 GCStringExt,
+                RgbValue,
                 StringStorage,
                 TuiColor,
                 TuiStylesheet,
-                VecArray};
+                VecArray,
+                SPACER_GLYPH};
 use r3bl_macro::tui_style;
 use r3bl_tui::{box_end,
                box_props,
@@ -214,7 +216,7 @@ mod app_main_impl_app_trait {
                         size: {
                             let col_count = window_size.col_width;
                             let row_count = window_size.row_height -
-                                height(1) /* Bottom row for for status bar. */;
+                                height(2) /* Bottom row for for status bar & HUD. */;
                             col_count + row_count
                         },
                     })?;
@@ -231,6 +233,13 @@ mod app_main_impl_app_trait {
 
                     it
                 };
+
+                // Render HUD.
+                hud::create_hud(
+                    &mut surface.render_pipeline,
+                    window_size,
+                    global_data.get_hud_report_with_spinner(),
+                );
 
                 // Render status bar.
                 status_bar::render_status_bar(&mut surface.render_pipeline, window_size);
@@ -835,32 +844,107 @@ mod stylesheet {
     }
 }
 
+mod hud {
+    use super::*;
+
+    pub fn create_hud(pipeline: &mut RenderPipeline, size: Dim, hud_report_str: &str) {
+        let color_bg = TuiColor::Rgb(RgbValue::from_hex("#fdb6fd"));
+        let color_fg = TuiColor::Rgb(RgbValue::from_hex("#942997"));
+        let styled_texts = tui_styled_texts! {
+            tui_styled_text! {
+                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg ),
+                @text: hud_report_str
+            },
+        };
+        let display_width = styled_texts.display_width();
+        let col_idx = col(*(size.col_width - display_width) / 2);
+        let row_idx = size.row_height.convert_to_row_index() - row(1); /* 1 row above bottom */
+        let cursor = col_idx + row_idx;
+
+        let mut render_ops = render_ops!();
+        render_ops.push(RenderOp::MoveCursorPositionAbs(col(0) + row_idx));
+        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOp::SetBgColor(color_bg));
+        render_ops.push(RenderOp::PaintTextWithAttributes(
+            SPACER_GLYPH.repeat(size.col_width.as_usize()).into(),
+            None,
+        ));
+        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOp::MoveCursorPositionAbs(cursor));
+        render_tui_styled_texts_into(&styled_texts, &mut render_ops);
+        pipeline.push(ZOrder::Normal, render_ops);
+    }
+}
+
 mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Dim) {
+        let color_bg = TuiColor::Rgb(RgbValue::from_hex("#076DEB"));
+        let color_fg = TuiColor::Rgb(RgbValue::from_hex("#E9C940"));
         let styled_texts = tui_styled_texts! {
-            tui_styled_text! { @style: tui_style!(attrib: [bold, dim]) ,      @text: "Hints: "},
-            tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + q"},
-            tui_styled_text! { @style: tui_style!(attrib: [bold]) ,           @text: " : Exit 🖖"},
-            tui_styled_text! { @style: tui_style!(attrib: [dim]) ,            @text: " … "},
-            tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + l"},
-            tui_styled_text! { @style: tui_style!(attrib: [bold]) ,           @text: " : Simple 📣"},
-            tui_styled_text! { @style: tui_style!(attrib: [dim]) ,            @text: " … "},
-            tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + k"},
-            tui_styled_text! { @style: tui_style!(attrib: [bold]) ,           @text: " : Autocomplete 🤖"},
-            tui_styled_text! { @style: tui_style!(attrib: [dim]) ,            @text: " … "},
-            tui_styled_text! { @style: tui_style!(attrib: [underline]) ,      @text: "Type content 🌊"},
+            tui_styled_text! {
+                @style: tui_style!(attrib: [bold, dim] color_fg: color_fg color_bg: color_bg),
+                @text: "Hints: "
+            },
+            tui_styled_text! {
+                @style: tui_style!(attrib: [dim, underline] color_fg: color_fg color_bg: color_bg),
+                @text: "Ctrl + q"
+            },
+            tui_styled_text! {
+                @style: tui_style!(attrib: [bold] color_fg: color_fg color_bg: color_bg),
+                @text: " : Exit 🖖"
+            },
+            tui_styled_text! {
+                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg),
+                @text: " … "
+            },
+            tui_styled_text! {
+                @style: tui_style!(attrib: [dim, underline] color_fg: color_fg color_bg: color_bg),
+                @text: "Ctrl + l"
+            },
+            tui_styled_text! {
+                @style: tui_style!(attrib: [bold] color_fg: color_fg color_bg: color_bg),
+                @text: " : Simple 📣"
+            },
+            tui_styled_text! {
+                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg),
+                @text: " … "
+            },
+            tui_styled_text! {
+                @style: tui_style!(attrib: [dim, underline] color_fg: color_fg color_bg: color_bg),
+                @text: "Ctrl + k"
+            },
+            tui_styled_text! {
+                @style: tui_style!(attrib: [bold] color_fg: color_fg color_bg: color_bg),
+                @text: " : Autocomplete 🤖"
+            },
+            tui_styled_text! {
+                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg),
+                @text: " … "
+            },
+            tui_styled_text! {
+                @style: tui_style!(attrib: [underline] color_fg: color_fg color_bg: color_bg),
+                @text: "Type content 🌊"
+            },
         };
 
         let display_width = styled_texts.display_width();
-        let col_center = *(size.col_width - display_width) / 2;
-        let row_bottom = size.row_height.convert_to_row_index();
-        let center = col(col_center) + row_bottom;
+        let col_idx = col(*(size.col_width - display_width) / 2);
+        let row_idx = size.row_height.convert_to_row_index(); /* Bottom row */
+        let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();
-        render_ops.push(RenderOp::MoveCursorPositionAbs(center));
+        render_ops.push(RenderOp::MoveCursorPositionAbs(col(0) + row_idx));
+        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOp::SetBgColor(color_bg));
+        render_ops.push(RenderOp::PaintTextWithAttributes(
+            SPACER_GLYPH.repeat(size.col_width.as_usize()).into(),
+            None,
+        ));
+        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOp::MoveCursorPositionAbs(cursor));
         render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }

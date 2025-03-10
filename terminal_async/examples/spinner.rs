@@ -68,7 +68,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
 
     // Start spinner. Automatically pauses the terminal.
     let mut maybe_spinner = Spinner::try_start(
-        message_trying_to_connect.clone(),
+        message_trying_to_connect,
         DELAY_UNIT,
         style,
         Arc::new(StdMutex::new(stderr())),
