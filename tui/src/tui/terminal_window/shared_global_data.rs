@@ -130,5 +130,11 @@ where
     }
 
     /// If [Self::set_hud_report()] has not been called, this will return an empty string.
-    pub fn get_hud_report_as_str(&self) -> &str { &self.hud_report }
+    pub fn get_hud_report_as_str(&self) -> &str {
+        if self.hud_report.is_empty() {
+            "⮺ Collecting data ⠎"
+        } else {
+            &self.hud_report
+        }
+    }
 }
