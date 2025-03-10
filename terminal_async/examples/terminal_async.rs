@@ -26,11 +26,8 @@ use crossterm::style::Stylize as _;
 use miette::{IntoDiagnostic as _, miette};
 use r3bl_core::{SendRawTerminal, SharedWriter, StdMutex, VecArray};
 use r3bl_log::{DisplayPreference, try_initialize_logging_global};
-use r3bl_terminal_async::{Readline,
-                          ReadlineEvent,
-                          Spinner,
-                          SpinnerStyle,
-                          TerminalAsync};
+use r3bl_terminal_async::{Readline, ReadlineEvent, Spinner, TerminalAsync};
+use r3bl_tui::SpinnerStyle;
 use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};

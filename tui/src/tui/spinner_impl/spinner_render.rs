@@ -20,12 +20,12 @@ use crossterm::{QueueableCommand,
                 style::{self, Print, Stylize},
                 terminal::{Clear, ClearType}};
 use miette::IntoDiagnostic as _;
-use r3bl_core::{ColWidth, GCStringExt, StringStorage, string_storage, width};
-use r3bl_tui::convert_from_tui_color_to_crossterm_color;
+use r3bl_core::{SendRawTerminal,ColWidth, GCStringExt, StringStorage, string_storage, width};
+use crate::convert_from_tui_color_to_crossterm_color;
 
 use crate::{BLOCK_DOTS,
             BRAILLE_DOTS,
-            SendRawTerminal,
+
             SpinnerColor,
             SpinnerStyle,
             SpinnerTemplate,

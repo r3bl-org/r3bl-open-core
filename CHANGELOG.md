@@ -1270,6 +1270,11 @@ performance, and ensure that performance is stable over time. `ch_unit.rs` is al
 refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
 now used throughout the codebase. No new functionality is added in this release.
 
+- Removed:
+  - Move `spinner_impl` to `r3bl_tui` crate. This code is also used in
+    `shared_global_data.rs` in `r3bl_tui` crate.
+  - Drop the dependency on `r3bl_tuify` crate in `Cargo.toml`.
+
 ### v0.6.0 (2024-10-21)
 
 This is a major version upgrade and potentially a breaking change if you use the tracing
