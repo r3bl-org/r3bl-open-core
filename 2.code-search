@@ -9,21 +9,21 @@ CHANGELOG.md:
   1071:     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
 
 cmdr/src/analytics_client.rs:
-  113:                             tracing::debug!(
-  121:                         tracing::error!(
-  132:                 tracing::error!(
-  176:                             tracing::debug!(
-  195:                                     tracing::debug!(
-  202:                                 tracing::error!(
-  254:                             tracing::debug!(
-  260:                             tracing::error!(
-  268:                     tracing::error!(
-  302:                     tracing::info!(
-  309:                         tracing::info!(
-  331:                 tracing::debug!(
-  339:             tracing::error!("GET request failed: {}", format!("{response:#?}").red());
-  353:                 tracing::debug!(
-  361:             tracing::error!("POST request failed: {}", format!("{response:#?}").red());
+  117:                             tracing::debug!(
+  129:                         tracing::error!(
+  145:                 tracing::error!(
+  193:                             tracing::debug!(
+  216:                                     tracing::debug!(
+  227:                                 tracing::error!(
+  285:                                 tracing::debug!(
+  297:                             tracing::error!(
+  309:                     tracing::error!(
+  347:                         tracing::info!(
+  360:                             tracing::info!(
+  387:                 tracing::debug!(
+  399:             tracing::error!(
+  420:                 tracing::debug!(
+  432:             tracing::error!(
 
 cmdr/src/bin/edi.rs:
   45:             tracing::debug!("Start logging... cli_args {:?}", cli_arg);
