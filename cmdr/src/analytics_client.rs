@@ -27,8 +27,8 @@ use r3bl_ansi_color::{green, magenta, red};
 use r3bl_core::{CommonError,
                 CommonErrorType,
                 CommonResult,
-                call_if_true,
-                friendly_random_id};
+                friendly_random_id,
+                string_storage};
 use reqwest::{Client, Response};
 
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;
@@ -109,18 +109,26 @@ pub mod config_folder {
                 let result_create_dir_all = fs::create_dir_all(&config_folder_path);
                 match result_create_dir_all {
                     Ok(_) => {
-                        call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
+                        DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                            let message = "Successfully created config folder.";
+                            let config_folder = string_storage!("{config_folder_path:?}");
+                            let config_folder_fmt = green(&config_folder);
+                            // % is Display, ? is Debug.
                             tracing::debug!(
-                                "Successfully created config folder: {}",
-                                green(&format!("{config_folder_path:?}"))
+                                message = %message,
+                                config_folder_path = %config_folder_fmt
                             );
                         });
                         Ok(config_folder_path)
                     }
                     Err(error) => {
+                        let message = "Could not create config folder.";
+                        let error = string_storage!("{error:?}");
+                        let error_fmt = red(&error);
+                        // % is Display, ? is Debug.
                         tracing::error!(
-                            "Could not create config folder.\n{}",
-                            red(&format!("{error:?}"))
+                            message = %message,
+                            error_fmt = %error_fmt,
                         );
                         CommonError::new_error_result_with_only_type(
                             CommonErrorType::ConfigFolderCountNotBeCreated,
@@ -129,9 +137,14 @@ pub mod config_folder {
                 }
             }
             None => {
+                let message = "Could not get config folder.";
+                let config_folder_path =
+                    string_storage!("{:?}", try_get_config_folder_path());
+                let config_folder_fmt = red(&config_folder_path);
+                // % is Display, ? is Debug.
                 tracing::error!(
-                    "Could not get config folder.\n{}",
-                    red(&format!("{:?}", try_get_config_folder_path()))
+                    message = %message,
+                    config_folder_path = %config_folder_fmt
                 );
                 CommonError::new_error_result_with_only_type(
                     CommonErrorType::ConfigFolderPathCouldNotBeGenerated,
@@ -172,10 +185,14 @@ pub mod proxy_machine_id {
                 let result = file_io::try_read_file_contents(&id_file_path);
                 match result {
                     Ok(contents) => {
-                        call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
+                        DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                            let message = "Successfully read proxy machine ID from file.";
+                            let contents = string_storage!("{contents:?}");
+                            let contents_fmt = green(&contents);
+                            // % is Display, ? is Debug.
                             tracing::debug!(
-                                "Successfully read proxy machine ID from file: {}",
-                                green(&format!("{contents:?}"))
+                                message = %message,
+                                contents = %contents_fmt
                             );
                         });
                         contents
@@ -190,18 +207,26 @@ pub mod proxy_machine_id {
                                     "".to_string(),
                                     AnalyticsAction::MachineIdProxyCreate,
                                 );
-
-                                call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
+                                DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                                    let message =
+                                        "Successfully wrote proxy machine ID to file.";
+                                    let new_id = string_storage!("{new_id:?}");
+                                    let new_id_fmt = green(&new_id);
+                                    // % is Display, ? is Debug.
                                     tracing::debug!(
-                                        "Successfully wrote proxy machine ID to file: {}",
-                                        green(&format!("{new_id:?}"))
+                                        message = %message,
+                                        new_id = %new_id_fmt
                                     );
                                 });
                             }
                             Err(error) => {
+                                let message = "Could not write proxy machine ID to file.";
+                                let error = string_storage!("{error:?}");
+                                let error_fmt = red(&error);
+                                // % is Display, ? is Debug.
                                 tracing::error!(
-                                    "Could not write proxy machine ID to file.\n{}",
-                                    red(&format!("{error:?}"))
+                                    message = %message,
+                                    error = %error_fmt
                                 );
                             }
                         }
@@ -251,23 +276,39 @@ pub mod report_analytics {
                     .await;
                     match result {
                         Ok(_) => {
-                            tracing::debug!(
-                                "Successfully reported analytics event to r3bl-base.\n{}",
-                                green(&format!("{json:#?}"))
-                            );
+                            DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                                let message =
+                                    "Successfully reported analytics event to r3bl-base.";
+                                let json = string_storage!("{json:#?}");
+                                let json_fmt = green(&json);
+                                // % is Display, ? is Debug.
+                                tracing::debug!(
+                                    message = %message,
+                                    json = %json_fmt
+                                );
+                            });
                         }
                         Err(error) => {
+                            let message =
+                                "Could not report analytics event to r3bl-base.";
+                            let error = string_storage!("{error:#?}");
+                            let error_fmt = red(&error);
+                            // % is Display, ? is Debug.
                             tracing::error!(
-                                "Could not report analytics event to r3bl-base.\n{}",
-                                red(&format!("{error:#?}"))
+                                message = %message,
+                                error = %error_fmt
                             );
                         }
                     }
                 }
                 Err(error) => {
+                    let message = "Could not serialize analytics event to JSON.";
+                    let error = string_storage!("{error:#?}");
+                    let error_fmt = red(&error);
+                    // % is Display, ? is Debug.
                     tracing::error!(
-                        "Could not report analytics event to r3bl-base.\n{}",
-                        red(&format!("{error:#?}"))
+                        message = %message,
+                        error = %error_fmt
                     );
                 }
             }
@@ -299,17 +340,28 @@ pub mod upgrade_check {
             if let Ok(response) = result {
                 if let Ok(body_text) = response.text().await {
                     let latest_version = body_text.trim().to_string();
-                    tracing::info!(
-                        "\n📦📦📦\nLatest version of cmdr is: {}",
-                        magenta(&latest_version)
-                    );
+                    DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                        let message = "\n📦📦📦\nLatest version of cmdr";
+                        let version_fmt = magenta(&latest_version);
+                        // % is Display, ? is Debug.
+                        tracing::info!(
+                            message = %message,
+                            version = %version_fmt
+                        );
+                    });
                     let current_version = UPDATE_IF_NOT_THIS_VERSION.to_string();
                     if latest_version != current_version {
                         UPDATE_REQUIRED.store(true, std::sync::atomic::Ordering::Relaxed);
-                        tracing::info!(
-                            "\n💿💿💿\nThere is a new version of cmdr available: {}",
-                            magenta(&latest_version)
-                        );
+                        DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                            let message =
+                                "\n💿💿💿\nThere is a new version of cmdr available";
+                            let version_fmt = magenta(&latest_version);
+                            // % is Display, ? is Debug.
+                            tracing::info!(
+                                message = %message,
+                                version = %version_fmt
+                            );
+                        });
                     }
                 }
             }
@@ -327,16 +379,27 @@ pub mod http_client {
         let response = client.get(url).send().await?;
         if response.status().is_success() {
             // Handle successful response.
-            call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
+            DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                let message = "GET request succeeded.";
+                let response = string_storage!("{response:#?}");
+                let response_fmt = green(&response);
+                // % is Display, ? is Debug.
                 tracing::debug!(
-                    "GET request succeeded: {}",
-                    green(&format!("{response:#?}"))
+                    message = %message,
+                    response = %response_fmt
                 );
             });
             Ok(response)
         } else {
             // Handle error response.
-            tracing::error!("GET request failed: {}", red(&format!("{response:#?}")));
+            let message = "GET request failed.";
+            let response_msg = string_storage!("{response:#?}");
+            let response_msg_fmt = red(&response_msg);
+            // % is Display, ? is Debug.
+            tracing::error!(
+                message = %message,
+                response = %response_msg_fmt
+            );
             response.error_for_status()
         }
     }
@@ -349,16 +412,27 @@ pub mod http_client {
         let response = client.post(url).json(data).send().await?;
         if response.status().is_success() {
             // Handle successful response.
-            call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
+            DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                let message = "POST request succeeded.";
+                let response_msg = string_storage!("{response:#?}");
+                let response_msg_fmt = green(&response_msg);
+                // % is Display, ? is Debug.
                 tracing::debug!(
-                    "POST request succeeded: {}",
-                    green(&format!("{response:#?}"))
+                    message = %message,
+                    response = %response_msg_fmt
                 );
             });
             Ok(response)
         } else {
             // Handle error response.
-            tracing::error!("POST request failed: {}", red(&format!("{response:#?}")));
+            let message = "POST request failed.";
+            let response_msg = string_storage!("{response:#?}");
+            let response_msg_fmt = red(&response_msg);
+            // % is Display, ? is Debug.
+            tracing::error!(
+                message = %message,
+                response = %response_msg_fmt
+            );
             response.error_for_status()
         }
     }
