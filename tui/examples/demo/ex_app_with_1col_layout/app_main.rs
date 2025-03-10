@@ -14,6 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+
 use r3bl_core::{col,
                 height,
                 req_size_pc,
@@ -199,14 +200,11 @@ mod app_main_impl_app_trait {
                 hud::create_hud(
                     &mut surface.render_pipeline,
                     window_size,
-                    global_data.get_hud_report_as_str(),
+                    global_data.get_hud_report_with_spinner(),
                 );
 
                 // Render status bar.
-                status_bar::create_status_bar_message(
-                    &mut surface.render_pipeline,
-                    window_size,
-                );
+                status_bar::render_status_bar(&mut surface.render_pipeline, window_size);
 
                 // Return RenderOps pipeline (which will actually be painted elsewhere).
                 surface.render_pipeline
@@ -297,19 +295,10 @@ mod stylesheet {
     }
 }
 
-// REVIEW: [ ] add HUD here
-
 mod hud {
-    use std::borrow::Cow;
-
     use super::*;
 
-    pub fn create_hud(pipeline: &mut RenderPipeline, size: Dim, arg_hud_report: &str) {
-        let mut hud_report_str = Cow::Borrowed(arg_hud_report);
-        if hud_report_str.is_empty() {
-            hud_report_str = Cow::Borrowed("⠎ Collecting data ...");
-        }
-
+    pub fn create_hud(pipeline: &mut RenderPipeline, size: Dim, hud_report_str: &str) {
         let color_bg = TuiColor::Rgb(RgbValue::from_hex("#fdb6fd"));
         let color_fg = TuiColor::Rgb(RgbValue::from_hex("#942997"));
         let styled_texts = tui_styled_texts! {
@@ -342,7 +331,7 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Dim) {
+    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Dim) {
         let color_bg = TuiColor::Rgb(RgbValue::from_hex("#076DEB"));
         let color_fg = TuiColor::Rgb(RgbValue::from_hex("#E9C940"));
         let styled_texts = tui_styled_texts! {
