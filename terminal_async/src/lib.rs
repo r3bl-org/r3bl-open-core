@@ -457,19 +457,17 @@
 // Attach sources.
 pub mod public_api;
 pub mod readline_impl;
-pub mod spinner_impl;
 
 // Re-export the public API.
 pub use public_api::*;
 pub use readline_impl::*;
 use smallvec::SmallVec;
-pub use spinner_impl::*;
 
 // External crates.
 use std::sync::Arc;
 
 // r3bl-open-core crates.
-use r3bl_core::{SafeRawTerminal, SendRawTerminal, StdMutex, Text};
+use r3bl_core::{SafeRawTerminal, StdMutex, Text};
 
 // Type aliases.
 pub type SafeLineState = Arc<StdMutex<LineState>>;

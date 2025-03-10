@@ -22,9 +22,10 @@ use r3bl_ansi_color::{StdoutIsPipedResult,
                       is_fully_uninteractive_terminal,
                       is_stdout_piped};
 use r3bl_core::{LineStateControlSignal, SharedWriter, get_terminal_width};
+use r3bl_tui::{SpinnerStyle, spinner_render};
 use tokio::time::interval;
 
-use crate::{SafeBool, SafeRawTerminal, SpinnerStyle, StdMutex, spinner_render};
+use crate::{SafeBool, SafeRawTerminal, StdMutex};
 
 pub struct Spinner {
     pub tick_delay: Duration,
@@ -201,7 +202,9 @@ impl Spinner {
 mod tests {
     use std::sync::Arc;
 
+    use r3bl_core::StdMutex;
     use r3bl_test_fixtures::StdoutMock;
+    use r3bl_tui::{SpinnerColor, SpinnerTemplate};
     use smallvec::SmallVec;
 
     use super::{Duration,
@@ -211,7 +214,6 @@ mod tests {
                 SpinnerStyle,
                 TTYResult,
                 is_fully_uninteractive_terminal};
-    use crate::{SpinnerColor, StdMutex};
 
     type ArrayVec = SmallVec<[LineStateControlSignal; FACTOR as usize]>;
     const FACTOR: u32 = 5;
@@ -231,7 +233,7 @@ mod tests {
             "message".to_string(),
             QUANTUM,
             SpinnerStyle {
-                template: crate::SpinnerTemplate::Braille,
+                template: SpinnerTemplate::Braille,
                 color: SpinnerColor::None,
             },
             safe_output_terminal,

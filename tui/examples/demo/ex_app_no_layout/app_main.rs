@@ -557,7 +557,7 @@ mod hud {
         };
         let display_width = styled_texts.display_width();
         let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_row_index() - row(1);
+        let row_idx = size.row_height.convert_to_row_index() - row(1); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();
@@ -581,36 +581,37 @@ mod status_bar {
     /// Shows helpful messages at the bottom row of the screen.
     pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Dim) {
         let color_bg = TuiColor::Rgb(RgbValue::from_hex("#076DEB"));
+        let color_fg = TuiColor::Rgb(RgbValue::from_hex("#E9C940"));
         let styled_texts = tui_styled_texts! {
             tui_styled_text!{
-                @style: tui_style!(attrib: [dim] color_bg: color_bg),
+                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg),
                 @text: "Hints:"
             },
             tui_styled_text!{
-                @style: tui_style!(attrib: [bold] color_bg: color_bg),
+                @style: tui_style!(attrib: [bold] color_fg: color_fg color_bg: color_bg),
                 @text: " x : Exit 🖖 "
             },
             tui_styled_text!{
-                @style: tui_style!(attrib: [dim] color_bg: color_bg),
+                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg),
                 @text: " … "
             },
             tui_styled_text!{
-                @style: tui_style!(attrib: [underline] color_bg: color_bg),
+                @style: tui_style!(attrib: [underline] color_fg: color_fg color_bg: color_bg),
                 @text: " ↑ / + : inc "
             },
             tui_styled_text!{
-                @style: tui_style!(attrib: [dim] color_bg: color_bg),
+                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg),
                 @text: " … "
             },
             tui_styled_text!{
-                @style: tui_style!(attrib: [underline] color_bg: color_bg),
+                @style: tui_style!(attrib: [underline] color_fg: color_fg color_bg: color_bg),
                 @text: " ↓ / - : dec "
             },
         };
 
         let display_width = styled_texts.display_width();
         let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_row_index();
+        let row_idx = size.row_height.convert_to_row_index(); /* Bottom row */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();

@@ -1854,7 +1854,6 @@ dependencies = [
  "r3bl_log",
  "r3bl_test_fixtures",
  "r3bl_tui",
- "r3bl_tuify",
  "smallstr",
  "smallvec",
  "strum",
