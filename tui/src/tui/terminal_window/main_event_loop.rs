@@ -303,7 +303,7 @@ where
                 let state = &global_data_mut_ref.state;
                 let message =
                     format!("AppManager::render_app() ok {ch}", ch = glyphs::PAINT_GLYPH);
-                let report = &global_data_mut_ref.get_hud_report_as_str();
+                let report = &global_data_mut_ref.get_hud_report_no_spinner();
                 // % is Display, ? is Debug.
                 tracing::info!(
                     message = message,

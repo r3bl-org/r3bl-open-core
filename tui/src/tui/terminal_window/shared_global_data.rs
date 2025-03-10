@@ -20,14 +20,21 @@ use std::fmt::{Debug, Formatter};
 use r3bl_core::{call_if_true,
                 ok,
                 sizing::TelemetryReportLineStorage,
+                ChUnit,
                 CommonResult,
                 OutputDevice,
                 Size,
+                StringStorage,
                 TelemetryHudReport};
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{OffscreenBuffer, OffscreenBufferPool, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD};
+use crate::{spinner_impl,
+            OffscreenBuffer,
+            OffscreenBufferPool,
+            SpinnerStyle,
+            DEBUG_TUI_COMPOSITOR,
+            DEBUG_TUI_MOD};
 
 /// This is a global data structure that holds state for the entire application
 /// [crate::App] and the terminal window [crate::TerminalWindow] itself.
@@ -54,6 +61,14 @@ where
     /// Stack allocated string buffer for the HUD report. This is re-used and
     /// pre-allocated to avoid heap allocations.
     pub hud_report: TelemetryReportLineStorage,
+    pub spinner_helper: SpinnerHelper,
+}
+
+#[derive(Default)]
+pub struct SpinnerHelper {
+    pub spinner_style: SpinnerStyle,
+    pub count: ChUnit,
+    pub empty_message: StringStorage,
 }
 
 impl<S, AS> Debug for GlobalData<S, AS>
@@ -100,6 +115,7 @@ where
             output_device,
             offscreen_buffer_pool,
             hud_report: TelemetryReportLineStorage::new(),
+            spinner_helper: Default::default(),
         };
 
         it.set_size(initial_size);
@@ -129,10 +145,41 @@ where
         _ = write!(self.hud_report, "{}", new);
     }
 
-    /// If [Self::set_hud_report()] has not been called, this will return an empty string.
-    pub fn get_hud_report_as_str(&self) -> &str {
+    const EMPTY_HUD_REPORT_STATIC: &str = "⮺ Collecting data ⠎";
+    const EMPTY_HUD_REPORT_PREFIX_SPINNER: &str = "⮺ Collecting data ";
+
+    /// If [Self::set_hud_report()] has not been called, this will return an empty string
+    /// with a static message.
+    pub fn get_hud_report_no_spinner(&self) -> &str {
         if self.hud_report.is_empty() {
-            "⮺ Collecting data ⠎"
+            Self::EMPTY_HUD_REPORT_STATIC
+        } else {
+            &self.hud_report
+        }
+    }
+
+    /// If [Self::set_hud_report()] has not been called, this will return an empty string
+    /// with a "dynamic" message where a spinner glyph changes every time this method is
+    /// called.
+    pub fn get_hud_report_with_spinner(&mut self) -> &str {
+        if self.hud_report.is_empty() {
+            let count = self.spinner_helper.count;
+            let style = &mut self.spinner_helper.spinner_style;
+            let spinner_glyph =
+                spinner_impl::get_next_tick_glyph(style, count.as_usize());
+
+            self.spinner_helper.empty_message.clear();
+            use std::fmt::Write as _;
+            _ = write!(
+                self.spinner_helper.empty_message,
+                "{a}{b}",
+                a = Self::EMPTY_HUD_REPORT_PREFIX_SPINNER,
+                b = spinner_glyph,
+            );
+
+            self.spinner_helper.count += 1;
+
+            &self.spinner_helper.empty_message
         } else {
             &self.hud_report
         }

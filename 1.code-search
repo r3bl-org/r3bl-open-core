@@ -2,7 +2,4 @@
 # Flags: CaseSensitive RegExp
 # Excluding: scratch.rs
 
-1 result - 1 file
-
-tui/examples/demo/ex_app_no_layout/app_main.rs:
-  544: // REVIEW: [ ] introduce HUD telemetry & copy to all other examples
+No Results

@@ -56,6 +56,7 @@ pub mod mock_real_objects_for_editor {
             output_device,
             offscreen_buffer_pool,
             hud_report: TelemetryReportLineStorage::new(),
+            spinner_helper: Default::default(),
         };
 
         (global_data, stdout_mock)
