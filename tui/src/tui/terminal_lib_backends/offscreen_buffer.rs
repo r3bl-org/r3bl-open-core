@@ -535,8 +535,7 @@ pub trait OffscreenBufferPaint {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, color, height, width};
-    use r3bl_macro::tui_style;
+    use r3bl_core::{assert_eq2, height, new_style, tui_color, width};
 
     use super::*;
 
@@ -565,13 +564,13 @@ mod tests {
         let text_1 = "a".into();
         my_offscreen_buffer.buffer[0][0] = PixelChar::PlainText {
             text: text_1,
-            maybe_style: Some(tui_style! {color_bg: color!(@green) }),
+            maybe_style: Some(new_style!(color_bg: {tui_color!(green)})),
         };
 
         let text_2 = "z".into();
         my_offscreen_buffer.buffer[1][9] = PixelChar::PlainText {
             text: text_2,
-            maybe_style: Some(tui_style! {color_bg: color!(@red) }),
+            maybe_style: Some(new_style!(color_bg: {tui_color!(red)})),
         };
 
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);

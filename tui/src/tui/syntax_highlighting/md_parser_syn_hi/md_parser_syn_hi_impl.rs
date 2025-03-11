@@ -19,6 +19,7 @@
 use std::fmt::Write as _;
 
 use r3bl_core::{join,
+                new_style,
                 CommonError,
                 CommonErrorType,
                 CommonResult,
@@ -31,7 +32,6 @@ use r3bl_core::{join,
                 TextColorizationPolicy,
                 TuiStyle,
                 TuiStyledTexts};
-use r3bl_macro::tui_style;
 use smallvec::smallvec;
 use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
@@ -124,7 +124,7 @@ pub fn try_parse_and_highlight(
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
     use crossterm::style::Stylize;
-    use r3bl_core::{assert_eq2, throws, ANSIBasicColor, TuiColor};
+    use r3bl_core::{assert_eq2, throws, tui_color};
 
     use super::*;
 
@@ -132,9 +132,9 @@ mod tests_try_parse_and_highlight {
     fn from_vec_gcs() -> CommonResult<()> {
         throws!({
             let editor_text_lines = ["Hello", "World"].map(GCString::new);
-            let current_box_computed_style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let current_box_computed_style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
 
             let style_us_span_lines = try_parse_and_highlight(
                 &editor_text_lines,
@@ -673,10 +673,7 @@ impl StyleUSSpanLine {
         let heading_level_span: StyleUSSpan = {
             let heading_level_string = heading_data.heading_level.pretty_print_debug();
             let my_style = {
-                maybe_current_box_computed_style.unwrap_or_default()
-                    + tui_style! {
-                        attrib: [dim]
-                    }
+                maybe_current_box_computed_style.unwrap_or_default() + new_style!(dim)
             };
             StyleUSSpan::new(my_style, &heading_level_string)
         };
@@ -718,8 +715,7 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 mod tests_style_us_span_lines_from {
     use crossterm::style::Stylize as _;
     use miette::IntoDiagnostic as _;
-    use r3bl_core::{assert_eq2, throws, ANSIBasicColor, TuiColor};
-    use r3bl_macro::tui_style;
+    use r3bl_core::{assert_eq2, throws, tui_color};
 
     use super::*;
     use crate::{get_metadata_tags_marker_style,
@@ -738,9 +734,9 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_checkbox_unchecked() {
             let fragment = MdLineFragment::Checkbox(false);
-            let style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             assert_eq2!(actual.len(), 1);
@@ -759,9 +755,9 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_checkbox_checked() {
             let fragment = MdLineFragment::Checkbox(true);
-            let style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             assert_eq2!(actual.len(), 1);
@@ -780,28 +776,26 @@ mod tests_style_us_span_lines_from {
                 text: "R3BL",
                 url: "https://r3bl.com",
             });
-            let style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             assert_eq2!(actual.len(), 6);
 
             // "!["
             let actual = actual.first().unwrap();
-            let actual_style_color_fg = actual
-                .style
-                .color_fg
-                .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+            let actual_style_color_fg =
+                actual.style.color_fg.unwrap_or(tui_color!(white));
             assert_eq2!(
                 actual,
                 &StyleUSSpan::new(
                     style
-                        + tui_style! {
-                            attrib: [dim]
-                            color_fg: actual_style_color_fg
-                            color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                        },
+                        + new_style!(
+                            dim
+                            color_fg: {actual_style_color_fg}
+                            color_bg: {tui_color!(red)}
+                        ),
                     "![",
                 )
             );
@@ -815,9 +809,9 @@ mod tests_style_us_span_lines_from {
                 text: "R3BL",
                 url: "https://r3bl.com",
             });
-            let style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             assert_eq2!(actual.len(), 6);
@@ -825,19 +819,17 @@ mod tests_style_us_span_lines_from {
             // "["
             {
                 let actual = actual.first().unwrap();
-                let actual_style_color_fg = actual
-                    .style
-                    .color_fg
-                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                let actual_style_color_fg =
+                    actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + tui_style! {
-                                attrib: [dim]
-                                color_fg: actual_style_color_fg
-                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                            },
+                            + new_style!(
+                                dim
+                                color_fg: {actual_style_color_fg}
+                                color_bg: {tui_color!(red)}
+                            ),
                         "[",
                     )
                 );
@@ -846,18 +838,16 @@ mod tests_style_us_span_lines_from {
             // "Foobar"
             {
                 let actual = actual.get(1).unwrap();
-                let actual_style_color_fg = actual
-                    .style
-                    .color_fg
-                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                let actual_style_color_fg =
+                    actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + tui_style! {
-                                color_fg: actual_style_color_fg
-                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                            },
+                            + new_style!(
+                                color_fg: {actual_style_color_fg}
+                                color_bg: {tui_color!(red)}
+                            ),
                         "R3BL",
                     )
                 )
@@ -866,19 +856,17 @@ mod tests_style_us_span_lines_from {
             // "]"
             {
                 let actual = actual.get(2).unwrap();
-                let actual_style_color_fg = actual
-                    .style
-                    .color_fg
-                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                let actual_style_color_fg =
+                    actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + tui_style! {
-                                attrib: [dim]
-                                color_fg: actual_style_color_fg
-                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                            },
+                            + new_style!(
+                                dim
+                                color_fg: {actual_style_color_fg}
+                                color_bg: {tui_color!(red)}
+                            ),
                         "]",
                     )
                 );
@@ -887,19 +875,17 @@ mod tests_style_us_span_lines_from {
             // "("
             {
                 let actual = actual.get(3).unwrap();
-                let actual_style_color_fg = actual
-                    .style
-                    .color_fg
-                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                let actual_style_color_fg =
+                    actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + tui_style! {
-                                attrib: [dim]
-                                color_fg: actual_style_color_fg
-                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                            },
+                            + new_style!(
+                                dim
+                                color_fg: {actual_style_color_fg}
+                                color_bg: {tui_color!(red)}
+                            ),
                         "(",
                     )
                 );
@@ -908,19 +894,17 @@ mod tests_style_us_span_lines_from {
             // "https://r3bl.com"
             {
                 let actual = actual.get(4).unwrap();
-                let actual_style_color_fg = actual
-                    .style
-                    .color_fg
-                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                let actual_style_color_fg =
+                    actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + tui_style! {
-                                attrib: [underline]
-                                color_fg: actual_style_color_fg
-                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                            },
+                            + new_style!(
+                                underline
+                                color_fg: {actual_style_color_fg}
+                                color_bg: {tui_color!(red)}
+                            ),
                         "https://r3bl.com",
                     )
                 );
@@ -929,19 +913,17 @@ mod tests_style_us_span_lines_from {
             // ")"
             {
                 let actual = actual.get(5).unwrap();
-                let actual_style_color_fg = actual
-                    .style
-                    .color_fg
-                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                let actual_style_color_fg =
+                    actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + tui_style! {
-                                attrib: [dim]
-                                color_fg: actual_style_color_fg
-                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                            },
+                            + new_style!(
+                                dim
+                                color_fg: {actual_style_color_fg}
+                                color_bg: {tui_color!(red)}
+                            ),
                         ")",
                     )
                 );
@@ -953,9 +935,9 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_inline_code() {
             let fragment = MdLineFragment::InlineCode("Foobar");
-            let style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
 
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
@@ -978,9 +960,9 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_italic() {
             let fragment = MdLineFragment::Italic("Foobar");
-            let style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
 
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
@@ -1003,9 +985,9 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_bold() {
             let fragment = MdLineFragment::Bold("Foobar");
-            let style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
 
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
@@ -1028,9 +1010,9 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_plain() {
             let fragment = MdLineFragment::Plain("Foobar");
-            let style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
             let expected =
                 vec![StyleUSSpan::new(style + get_foreground_style(), "Foobar")];
@@ -1047,9 +1029,9 @@ mod tests_style_us_span_lines_from {
         fn test_block_metadata_tags() -> Result<(), ()> {
             throws!({
                 let tags = MdBlock::Tags(list!["tag1", "tag2", "tag3"]);
-                let style = tui_style! {
-                    color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                };
+                let style = new_style!(
+                    color_bg: {tui_color!(red)}
+                );
                 let lines = StyleUSSpanLines::from_block(&tags, &Some(style), None);
                 let line_0 = &lines.inner[0];
                 let mut iter = line_0.inner.iter();
@@ -1089,9 +1071,9 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_metadata_title() {
             let title = MdBlock::Title("Something");
-            let style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
             let lines = StyleUSSpanLines::from_block(&title, &Some(style), None);
             // println!("{}", lines..pretty_print_debug());
 
@@ -1133,9 +1115,9 @@ mod tests_style_us_span_lines_from {
                 },
             ));
 
-            let style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
 
             let lines =
                 StyleUSSpanLines::from_block(&codeblock_block, &Some(style), None);
@@ -1169,9 +1151,9 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_ol() -> CommonResult<()> {
             throws!({
-                let style = tui_style! {
-                    color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                };
+                let style = new_style!(
+                    color_bg: {tui_color!(red)}
+                );
                 let (remainder, doc) =
                     parse_markdown("100. Foo\n200. Bar\n").into_diagnostic()?;
                 assert_eq2!(remainder, "");
@@ -1217,9 +1199,9 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_ul() -> CommonResult<()> {
             throws!({
-                let style = tui_style! {
-                    color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                };
+                let style = new_style!(
+                    color_bg: {tui_color!(red)}
+                );
                 let (_, doc) = parse_markdown("- Foo\n- Bar\n").into_diagnostic()?;
                 println!("{}", format!("{:#?}", doc).cyan());
 
@@ -1260,9 +1242,9 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_text() {
             let text_block = MdBlock::Text(list![MdLineFragment::Plain("Foobar")]);
-            let style = tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
+            let style = new_style!(
+                color_bg: {tui_color!(red)}
+            );
 
             let lines = StyleUSSpanLines::from_block(&text_block, &Some(style), None);
             // println!("{}", lines..pretty_print_debug());
@@ -1282,9 +1264,9 @@ mod tests_style_us_span_lines_from {
                 heading_level: HeadingLevel { level: 1 },
                 text: "Foobar",
             });
-            let maybe_style = Some(tui_style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
+            let maybe_style = Some(new_style!(
+                color_bg: {tui_color!(red)}
+            ));
 
             let lines = StyleUSSpanLines::from_block(&heading_block, &maybe_style, None);
             // println!("{}", lines..pretty_print_debug());
@@ -1299,10 +1281,7 @@ mod tests_style_us_span_lines_from {
 
             // First span is the heading level `# ` in dim w/ Red bg color, and no fg color.
             assert_eq2!(spans_in_line[0].style.dim, true);
-            assert_eq2!(
-                spans_in_line[0].style.color_bg.unwrap(),
-                TuiColor::Basic(ANSIBasicColor::Red)
-            );
+            assert_eq2!(spans_in_line[0].style.color_bg.unwrap(), tui_color!(red));
             assert_eq2!(spans_in_line[0].style.color_fg.is_some(), false);
             assert_eq2!(spans_in_line[0].text_gcs.as_ref(), "# ");
 
@@ -1310,10 +1289,7 @@ mod tests_style_us_span_lines_from {
             // wheel.
             for span in &spans_in_line[1..=6] {
                 assert_eq2!(span.style.dim, false);
-                assert_eq2!(
-                    span.style.color_bg.unwrap(),
-                    TuiColor::Basic(ANSIBasicColor::Red)
-                );
+                assert_eq2!(span.style.color_bg.unwrap(), tui_color!(red));
                 assert_eq2!(span.style.color_fg.is_some(), true);
             }
         }

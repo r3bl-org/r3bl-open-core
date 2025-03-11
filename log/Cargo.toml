@@ -41,7 +41,6 @@ pretty_assertions = "1.4.1"
 # r3bl-open-core.
 r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" }       # Convert between ansi and rgb.
 r3bl_core = { path = "../core", version = "0.10.0" }                  # Core functionality.
-r3bl_macro = { path = "../macro", version = "0.10.0" }                # Macros for r3bl-open-core.
 r3bl_test_fixtures = { path = "../test_fixtures", version = "0.1.0" } # Test fixtures.
 
 # Terminal color output.

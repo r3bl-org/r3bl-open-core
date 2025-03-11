@@ -1694,7 +1694,6 @@ dependencies = [
  "r3bl_ansi_color",
  "r3bl_core",
  "r3bl_log",
- "r3bl_macro",
  "r3bl_tui",
  "r3bl_tuify",
  "rand",
@@ -1789,7 +1788,6 @@ dependencies = [
  "pretty_assertions",
  "r3bl_ansi_color",
  "r3bl_core",
- "r3bl_macro",
  "r3bl_test_fixtures",
  "serial_test",
  "smallstr",
@@ -1804,18 +1802,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "r3bl_macro"
-version = "0.10.0"
-dependencies = [
- "paste",
- "pretty_assertions",
- "proc-macro2",
- "quote",
- "r3bl_core",
- "syn",
-]
-
-[[package]]
 name = "r3bl_script"
 version = "0.1.0"
 dependencies = [
@@ -1825,7 +1811,6 @@ dependencies = [
  "miette",
  "r3bl_ansi_color",
  "r3bl_core",
- "r3bl_macro",
  "reqwest",
  "serde_json",
  "serial_test",
@@ -1908,7 +1893,6 @@ dependencies = [
  "r3bl_ansi_color",
  "r3bl_core",
  "r3bl_log",
- "r3bl_macro",
  "r3bl_terminal_async",
  "r3bl_test_fixtures",
  "rand",

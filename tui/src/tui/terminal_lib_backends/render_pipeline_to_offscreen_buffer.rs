@@ -385,8 +385,7 @@ pub fn print_text_with_attributes(
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, col, color, height, row};
-    use r3bl_macro::tui_style;
+    use r3bl_core::{assert_eq2, col, height, new_style, row, tui_color};
 
     use super::*;
     use crate::render_pipeline;
@@ -405,11 +404,11 @@ mod tests {
             let text = "hello12345😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                tui_style! { attrib: [dim, bold, italic] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                new_style!(dim bold italic color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
             my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(color!(@green));
-            my_offscreen_buffer.my_bg_color = Some(color!(@blue));
+            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
+            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -427,7 +426,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "h".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -436,7 +435,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "o".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -445,7 +444,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "1".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -454,7 +453,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "5".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -468,11 +467,11 @@ mod tests {
             let text = "hello1234😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
             my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(color!(@green));
-            my_offscreen_buffer.my_bg_color = Some(color!(@blue));
+            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
+            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -490,7 +489,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "h".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -499,7 +498,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "o".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -508,7 +507,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "1".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -530,11 +529,11 @@ mod tests {
             let text = "hello12345😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
             my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(color!(@green));
-            my_offscreen_buffer.my_bg_color = Some(color!(@blue));
+            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
+            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -552,7 +551,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "h".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -561,7 +560,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "o".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -570,7 +569,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "1".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -579,7 +578,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "5".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -595,11 +594,11 @@ mod tests {
             let text = "hello1234😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
             my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(color!(@green));
-            my_offscreen_buffer.my_bg_color = Some(color!(@blue));
+            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
+            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -617,7 +616,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "h".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -626,7 +625,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "o".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)} )
                     ),
                 }
             );
@@ -635,7 +634,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "1".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)} )
                     ),
                 }
             );
@@ -650,11 +649,11 @@ mod tests {
             let text = "hello123😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                new_style!( dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
             my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(color!(@green));
-            my_offscreen_buffer.my_bg_color = Some(color!(@blue));
+            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
+            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -672,7 +671,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "h".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -681,7 +680,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "o".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -690,7 +689,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "1".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -699,7 +698,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "😃".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -714,11 +713,11 @@ mod tests {
             let text = "hello12😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
             my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(color!(@green));
-            my_offscreen_buffer.my_bg_color = Some(color!(@blue));
+            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
+            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -753,7 +752,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "h".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -762,7 +761,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "o".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -771,7 +770,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "1".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -780,7 +779,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "😃".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -811,11 +810,11 @@ mod tests {
         let pipeline = render_pipeline!(@new ZOrder::Normal =>
             RenderOp::ClearScreen,
             RenderOp::ResetColor,
-            RenderOp::SetFgColor(color!(@green)),
-            RenderOp::SetBgColor(color!(@blue)),
+            RenderOp::SetFgColor(tui_color!(green)),
+            RenderOp::SetBgColor(tui_color!(blue)),
             RenderOp::MoveCursorPositionAbs(col(0) + row(0)),
             RenderOp::PaintTextWithAttributes(
-                "hello12😃".into(), Some(tui_style! { attrib: [dim, bold] })),
+                "hello12😃".into(), Some(new_style!(dim bold))),
             RenderOp::ResetColor
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
@@ -849,7 +848,7 @@ mod tests {
             PixelChar::PlainText {
                 text: "h".into(),
                 maybe_style: Some(
-                    tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                    new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                 ),
             }
         );
@@ -858,7 +857,7 @@ mod tests {
             PixelChar::PlainText {
                 text: "😃".into(),
                 maybe_style: Some(
-                    tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                    new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                 ),
             }
         );
@@ -890,17 +889,17 @@ mod tests {
         let pipeline = render_pipeline!(@new ZOrder::Normal =>
             RenderOp::ClearScreen,
             RenderOp::ResetColor,
-            RenderOp::SetFgColor(color!(@green)),
-            RenderOp::SetBgColor(color!(@blue)),
+            RenderOp::SetFgColor(tui_color!(green)),
+            RenderOp::SetBgColor(tui_color!(blue)),
             RenderOp::MoveCursorPositionAbs(col(2) + row(0)),
             RenderOp::PaintTextWithAttributes(
-                "hello😃".into(), Some(tui_style! { attrib: [dim, bold] })),
+                "hello😃".into(), Some(new_style!(dim bold))),
             RenderOp::ResetColor,
-            RenderOp::SetFgColor(color!(@green)),
-            RenderOp::SetBgColor(color!(@blue)),
+            RenderOp::SetFgColor(tui_color!(green)),
+            RenderOp::SetBgColor(tui_color!(blue)),
             RenderOp::MoveCursorPositionAbs(col(4) + row(1)),
             RenderOp::PaintTextWithAttributes(
-                "world".into(), Some(tui_style! { attrib: [dim, bold] })),
+                "world".into(), Some(new_style!(dim bold))),
             RenderOp::ResetColor,
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
@@ -947,7 +946,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "h".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -956,7 +955,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "😃".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -975,7 +974,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "w".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -984,7 +983,7 @@ mod tests {
                 PixelChar::PlainText {
                     text: "d".into(),
                     maybe_style: Some(
-                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
                 }
             );
@@ -1001,11 +1000,11 @@ mod tests {
         let pipeline = render_pipeline!(@new ZOrder::Normal =>
             RenderOp::MoveCursorPositionAbs(col(max_col) + row(0)),
             RenderOp::PaintTextWithAttributes(
-                "h".into(), Some(tui_style! { attrib: [dim, bold] })),
+                "h".into(), Some(new_style! ( dim bold ))),
             RenderOp::ResetColor,
             RenderOp::MoveCursorPositionAbs(col(max_col+1) + row(1)),
             RenderOp::PaintTextWithAttributes(
-                "i".into(), Some(tui_style! { attrib: [dim, bold] })),
+                "i".into(), Some(new_style! ( dim bold ))),
             RenderOp::ResetColor
         );
 
@@ -1025,7 +1024,7 @@ mod tests {
                 my_offscreen_buffer.buffer[0][max_col - 1],
                 PixelChar::PlainText {
                     text: "h".into(),
-                    maybe_style: Some(tui_style! { attrib: [dim, bold] }),
+                    maybe_style: Some(new_style! ( dim bold )),
                 }
             );
         }
@@ -1035,7 +1034,7 @@ mod tests {
                 my_offscreen_buffer.buffer[1][max_col - 1],
                 PixelChar::PlainText {
                     text: "i".into(),
-                    maybe_style: Some(tui_style! { attrib: [dim, bold] }),
+                    maybe_style: Some(new_style! ( dim bold )),
                 }
             );
         }

@@ -23,100 +23,109 @@ use super::parse_hex_color;
 use crate::common::{CommonError, CommonErrorType, CommonResult};
 
 #[macro_export]
-macro_rules! color {
+macro_rules! tui_color {
+    (reset) => {
+        $crate::TuiColor::Reset
+    };
+
+    (black) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Black)
+    };
+
+    (dark_grey) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkGrey)
+    };
+
+    (red) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Red)
+    };
+
+    (dark_red) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkRed)
+    };
+
+    (green) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Green)
+    };
+
+    (dark_green) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkGreen)
+    };
+
+    (yellow) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Yellow)
+    };
+
+    (dark_yellow) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkYellow)
+    };
+
+    (blue) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Blue)
+    };
+
+    (dark_blue) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkBlue)
+    };
+
+    (magenta) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Magenta)
+    };
+
+    (dark_magenta) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkMagenta)
+    };
+
+    (cyan) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Cyan)
+    };
+
+    (dark_cyan) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkCyan)
+    };
+
+    (white) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::White)
+    };
+
+    (grey) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Grey)
+    };
+
+    (
+        hex $arg_hex : expr
+    ) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_hex($arg_hex))
+    };
+
+    (
+        ansi $arg_value : expr
+    ) => {
+        $crate::TuiColor::Ansi($crate::AnsiValue::new($arg_value))
+    };
+
     (
         $arg_r : expr,
         $arg_g : expr,
         $arg_b : expr
+        $(,)? /* optional trailing comma */
     ) => {
         $crate::TuiColor::Rgb($crate::RgbValue::from_u8($arg_r, $arg_g, $arg_b))
     };
-
-    (
-        $arg_value : expr
-    ) => {
-        $crate::TuiColor::AnsiValue($arg_value)
-    };
-
-    (@reset) => {
-        $crate::TuiColor::Reset
-    };
-
-    (@black) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::Black)
-    };
-
-    (@dark_grey) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkGrey)
-    };
-
-    (@red) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::Red)
-    };
-
-    (@dark_red) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkRed)
-    };
-
-    (@green) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::Green)
-    };
-
-    (@dark_green) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkGreen)
-    };
-
-    (@yellow) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::Yellow)
-    };
-
-    (@dark_yellow) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkYellow)
-    };
-
-    (@blue) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::Blue)
-    };
-
-    (@dark_blue) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkBlue)
-    };
-
-    (@magenta) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::Magenta)
-    };
-
-    (@dark_magenta) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkMagenta)
-    };
-
-    (@cyan) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::Cyan)
-    };
-
-    (@dark_cyan) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkCyan)
-    };
-
-    (@white) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::White)
-    };
-
-    (@grey) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::Grey)
-    };
 }
 
-/// Please use the macro [color] to create a new [TuiColor] instances, instead of directly
-/// manipulating this struct.
+/// Please use the macro [crate::tui_color!] to create a new [TuiColor] instances, instead
+/// of directly manipulating this struct.
 ///
 /// A [TuiColor] can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`.
-/// - It is safe to use just `RgbValue` since the library will degrade gracefully to ANSI 256 or
-///   grayscale based on terminal emulator capabilities at runtime, which are provided by
+/// - It is safe to use just `RgbValue` since the library will degrade gracefully to ANSI
+///   256 or grayscale based on terminal emulator capabilities at runtime, which are
+///   provided by
 ///   [`to_crossterm_color()`](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/terminal_lib_backends/color_converter/fn.to_crossterm_color.html)
 ///   and
 ///   [`ColorSupport`](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/color_wheel/detect_color_support/enum.ColorSupport.html).
-/// - If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not be downgraded.
+/// - If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not be
+///   downgraded.
 #[derive(Clone, PartialEq, Eq, Copy, Hash)]
 pub enum TuiColor {
     /// Resets the terminal color.
@@ -391,8 +400,14 @@ mod rgb_values_impl {
 }
 
 #[cfg(test)]
-mod test_rgb_value {
+mod tests {
     use super::*;
+
+    #[test]
+    fn test_ansi_colors() {
+        let color = tui_color!(ansi 42);
+        assert_eq!(color, TuiColor::Ansi(AnsiValue::new(42)));
+    }
 
     #[test]
     fn test_new() {
@@ -414,6 +429,13 @@ mod test_rgb_value {
             let hex_color = "#ff000";
             let value = RgbValue::try_from_hex_color(hex_color);
             assert!(value.is_err());
+        }
+
+        // Using macro.
+        {
+            let hex_color = "#ff0000";
+            let value = tui_color!(hex hex_color);
+            assert_eq!(value, tui_color!(255, 0, 0));
         }
     }
 
@@ -477,23 +499,23 @@ mod test_rgb_value {
 
     #[test]
     fn test_from_color_macro() {
-        let black = color!(@black);
-        let dark_grey = color!(@dark_grey);
-        let red = color!(@red);
-        let dark_red = color!(@dark_red);
-        let green = color!(@green);
-        let dark_green = color!(@dark_green);
-        let yellow = color!(@yellow);
-        let dark_yellow = color!(@dark_yellow);
-        let blue = color!(@blue);
-        let dark_blue = color!(@dark_blue);
-        let magenta = color!(@magenta);
-        let dark_magenta = color!(@dark_magenta);
-        let cyan = color!(@cyan);
-        let dark_cyan = color!(@dark_cyan);
-        let white = color!(@white);
-        let grey = color!(@grey);
-        let reset = color!(@reset);
+        let black = tui_color!(black);
+        let dark_grey = tui_color!(dark_grey);
+        let red = tui_color!(red);
+        let dark_red = tui_color!(dark_red);
+        let green = tui_color!(green);
+        let dark_green = tui_color!(dark_green);
+        let yellow = tui_color!(yellow);
+        let dark_yellow = tui_color!(dark_yellow);
+        let blue = tui_color!(blue);
+        let dark_blue = tui_color!(dark_blue);
+        let magenta = tui_color!(magenta);
+        let dark_magenta = tui_color!(dark_magenta);
+        let cyan = tui_color!(cyan);
+        let dark_cyan = tui_color!(dark_cyan);
+        let white = tui_color!(white);
+        let grey = tui_color!(grey);
+        let reset = tui_color!(reset);
 
         assert_eq!(
             RgbValue::try_from_tui_color(black).unwrap(),
