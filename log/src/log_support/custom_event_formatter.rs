@@ -48,12 +48,12 @@ use r3bl_core::{ColorWheel,
                 VecArray,
                 get_terminal_width,
                 glyphs,
+                new_style,
                 remove_escaped_quotes,
                 string_storage,
                 truncate_from_right,
                 usize,
                 width};
-use r3bl_macro::tui_style;
 use textwrap::{Options, WordSeparator, wrap};
 use tracing::{Event,
               Subscriber,
@@ -247,12 +247,8 @@ where
                 "{spacer}{heading}",
                 heading = truncate_from_right(&heading, line_1_width, false)
             );
-            let line_1_text_fmt = ColorWheel::lolcat_into_string(
-                &line_1_text,
-                Some(tui_style!(
-                    attrib: [bold]
-                )),
-            );
+            let line_1_text_fmt =
+                ColorWheel::lolcat_into_string(&line_1_text, Some(new_style!(bold)));
             writeln!(f, "{line_1_text_fmt}")?;
 
             // Write body line(s).

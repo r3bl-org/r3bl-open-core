@@ -325,8 +325,7 @@ mod render_helpers {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, color, height, width, ColWidth};
-    use r3bl_macro::tui_style;
+    use r3bl_core::{assert_eq2, height, new_style, tui_color, width, ColWidth};
 
     use super::*;
     use crate::{offscreen_buffer_paint_impl::render_helpers::style_eq,
@@ -345,11 +344,11 @@ mod tests {
         let text = "hello1234😃";
         // The style colors should be overwritten by fg_color and bg_color.
         let maybe_style = Some(
-            tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+            new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
         );
         my_offscreen_buffer.my_pos = col(0) + row(0);
-        my_offscreen_buffer.my_fg_color = Some(color!(@green));
-        my_offscreen_buffer.my_bg_color = Some(color!(@blue));
+        my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
+        my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
         let maybe_max_display_col_count: Option<ColWidth> = Some(width(10));
         print_text_with_attributes(
             text,
@@ -403,8 +402,8 @@ mod tests {
 
         assert_eq2!(render_ops.len(), 10);
         assert_eq2!(render_ops[0], RenderOp::ResetColor);
-        assert_eq2!(render_ops[1], RenderOp::SetFgColor(color!(@green)));
-        assert_eq2!(render_ops[2], RenderOp::SetBgColor(color!(@blue)));
+        assert_eq2!(render_ops[1], RenderOp::SetFgColor(tui_color!(green)));
+        assert_eq2!(render_ops[2], RenderOp::SetBgColor(tui_color!(blue)));
         assert_eq2!(
             render_ops[3],
             RenderOp::MoveCursorPositionAbs(col(0) + row(0))
@@ -414,7 +413,7 @@ mod tests {
             RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                 "hello1234".into(),
                 Some(
-                    tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                    new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                 )
             )
         );
@@ -446,16 +445,16 @@ mod tests {
     #[test]
     fn test_render_helper_style_eq() {
         let style1 = Some(
-            tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+            new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
         );
         let style2 = Some(
-            tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+            new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
         );
 
         assert_eq2!(style_eq(&style1, &style2), true);
 
         let style_3 = Some(
-            tui_style! { attrib: [italic] color_fg: color!(@black) color_bg: color!(@cyan) },
+            new_style!(italic color_fg:{tui_color!(black)} color_bg:{tui_color!(cyan)}),
         );
 
         assert_eq2!(style_eq(&style1, &style_3), false);

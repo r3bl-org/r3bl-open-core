@@ -895,6 +895,9 @@ idioms and design patterns are used in this release.
 - A new telemetry API is also in this release, which makes it easy to measure and report
   performance metrics in a memory access and CPU performant way. This is built for the
   `r3bl_tui` main event loop (which is a very hot loop).
+- `new_style!` (decl macro) replaces `tui_style!` (proc macro). `tui_color!` also replaces
+  `color!`. You are not expected to work with `TuiStyle` or `TuiColor` directly. Instead,
+  you are expected to work with these decl macros.
 
 These videos have been an inspiration for many of these changes:
 - [Data oriented design](https://youtu.be/WwkuAqObplU)
@@ -921,6 +924,9 @@ Removed:
     like `ch()`, `usize()`, `f64()`, etc.
 
 Changed:
+  - In `decl_macros/macros.rs` change the semantics of the `with!` macro, so that the
+    `$id` is only contained to the `run` block and doesn't get added to the caller's scope
+    / block.
   - Add new declarative macros to mimic `.join(..)` method on `Vec` and `String`. This
     makes it easier to join a collection of items into a string, or a collection of
     strings into a string with (`join!` & `join_with_index!`) or without allocations
@@ -968,6 +974,14 @@ Changed:
   - Replace the use of `bool` with meaningful enums to enhance code readability.
 
 - Added:
+  - [Archive](#archived-2025-03-11) the `tui_style!` proc macro. Replace it with an easier
+    to use decl macro `new_style!`. This allows the `r3bl_macro` crate to be removed from
+    the workspace, and all the crates in it. `new_style!` makes it a breeze to work with
+    `TuiStyle` struct, so there is no need to manipulate it directly except if you need
+    to.
+  - Expand the functionality of `tui_color!` and rename it from `color!`. This macro makes
+    it trivial to create different variants of `TuiColor` without having to work with the
+    complex variants of the struct.
   - Add a new test fixture `temp_dir::create_temp_dir()` to make it easy to create
     temporary directories for tests. Any temporary directories created are automatically
     cleaned up after the test is done. The `TempDir` struct implements many traits that
@@ -1111,50 +1125,6 @@ in the real world.
 
 - Added:
   - Initial support structs for use by `r3bl-base` and `r3bl-cmdr`.
-
-## `r3bl_macro`
-
-### v_next_release_r3bl_macro
-
-This release contains changes that are part of optimizing memory allocation to increase
-performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
-refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
-now used throughout the codebase. No new functionality is added in this release.
-
-- Updated:
-  - Use the latest Rust 2024 edition.
-
-- Changed:
-  - Change the semantics of the `with!` macro, so that the `$id` is only contained to the `run` block and doesn't
-    get added to the caller's scope / block.
-
-### v0.10.0 (2024-10-20)
-
-This is a major release that does not include any new functionality, but is a radical
-reorganization & rename of the crate, it used to be
-[`r3bl_rs_utils_macro`](#rename-to-r3bl_macro).
-
-The `r3bl-open-core` repo was started in `2022-02-23`, about 1 year, 7 months, and 11 days
-ago, (which you can get using `curl https://api.github.com/repos/r3bl-org/r3bl-open-core |
-jq .created_at`). We have learned many lessons since then after writing about 125K lines
-of Rust code.
-
-And it is time to pay down the accrued technical debt, to ensure that the codebase is
-easier to maintain and understand, and easier to add new features to in the future. The
-separation of concerns is now much clearer, and they reflect how the functionality is used
-in the real world.
-
-This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
-
-Changed:
-  - The name of this repo used to be [`r3bl_rs_utils_macro`](#rename-to-r3bl_macro).
-  - The modules and functions in this crate which are used (by other crates in this monorepo)
-    are left unchanged. Only the unused modules and functions are moved to the
-    [`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
-
-Deleted:
-  - Move all the unused modules and functions to the
-    [`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
 
 ## `r3bl_test_fixtures`
 
@@ -1731,6 +1701,47 @@ the `ok!()` macro.
 # Archived
 
 <!-- Archived section -->
+
+## `r3bl_macro`
+
+### Archived (2025-03-11)
+
+The only purpose for having this crate is the requirements for Rust to have procedural
+macros be in a separate crate. Proc macros also increase the build time. For this reason
+we have rewritten the `tui_style!` macro as a declarative macro in the `r3bl_core` crate
+called `new_style!`. And are archiving this crate.
+
+This crate used to be called `r3bl_rs_utils_macro`. It was renamed to `r3bl_macro` in
+late 2024. And in early 2025, it is being archived.
+
+### v0.10.0 (2024-10-20)
+
+This is a major release that does not include any new functionality, but is a radical
+reorganization & rename of the crate, it used to be
+[`r3bl_rs_utils_macro`](#rename-to-r3bl_macro).
+
+The `r3bl-open-core` repo was started in `2022-02-23`, about 1 year, 7 months, and 11 days
+ago, (which you can get using `curl https://api.github.com/repos/r3bl-org/r3bl-open-core |
+jq .created_at`). We have learned many lessons since then after writing about 125K lines
+of Rust code.
+
+And it is time to pay down the accrued technical debt, to ensure that the codebase is
+easier to maintain and understand, and easier to add new features to in the future. The
+separation of concerns is now much clearer, and they reflect how the functionality is used
+in the real world.
+
+This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
+
+Changed:
+  - The name of this repo used to be [`r3bl_rs_utils_macro`](#rename-to-r3bl_macro).
+  - The modules and functions in this crate which are used (by other crates in this monorepo)
+    are left unchanged. Only the unused modules and functions are moved to the
+    [`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
+
+Deleted:
+  - Move all the unused modules and functions to the
+    [`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
+
 
 ## `r3bl_simple_logger`
 

@@ -19,21 +19,20 @@ use std::fmt::Debug;
 
 use r3bl_core::{call_if_true,
                 col,
+                new_style,
                 req_size_pc,
                 row,
                 send_signal,
                 throws,
                 throws_with_return,
+                tui_color,
                 tui_styled_text,
                 tui_styled_texts,
                 tui_stylesheet,
                 CommonResult,
                 Dim,
-                RgbValue,
-                TuiColor,
                 TuiStylesheet,
                 SPACER_GLYPH};
-use r3bl_macro::tui_style;
 use r3bl_tui::{box_end,
                box_props,
                box_start,
@@ -366,13 +365,13 @@ mod stylesheet {
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
-              tui_style! {
-                id: Id::EditorStyleNameDefault
-                padding: 1
-                // These are ignored due to syntax highlighting.
-                // attrib: [bold]
-                // color_fg: TuiColor::Blue
-              },
+                new_style! {
+                    id: {Id::EditorStyleNameDefault}
+                    padding: {1}
+                    // These are ignored due to syntax highlighting.
+                    // bold
+                    // color_fg: {TuiColor::Basic(crate::ANSIBasicColor::Blue)}
+                },
             }
         })
     }
@@ -382,11 +381,11 @@ mod hud {
     use super::*;
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Dim, hud_report_str: &str) {
-        let color_bg = TuiColor::Rgb(RgbValue::from_hex("#fdb6fd"));
-        let color_fg = TuiColor::Rgb(RgbValue::from_hex("#942997"));
+        let color_bg = tui_color!(hex "#fdb6fd");
+        let color_fg = tui_color!(hex "#942997");
         let styled_texts = tui_styled_texts! {
             tui_styled_text! {
-                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg ),
+                @style: new_style!(dim color_fg: {color_fg} color_bg: {color_bg}),
                 @text: hud_report_str
             },
         };
@@ -415,46 +414,46 @@ mod status_bar {
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Dim, state: &State) {
-        let color_bg = TuiColor::Rgb(RgbValue::from_hex("#076DEB"));
-        let color_fg = TuiColor::Rgb(RgbValue::from_hex("#E9C940"));
+        let color_bg = tui_color!(hex "#076DEB");
+        let color_fg = tui_color!(hex "#E9C940");
 
         let mut styled_texts = tui_styled_texts! {
             tui_styled_text! {
-                @style: tui_style!(attrib: [dim, bold] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(dim bold color_fg: {color_fg} color_bg: {color_bg}),
                 @text: "Exit 👋 : "
             },
             tui_styled_text! {
-                @style: tui_style!(attrib: [dim, underline] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(dim underline color_fg: {color_fg} color_bg: {color_bg}),
                 @text: "Ctrl + q"
             },
         };
 
         if state.current_slide_index < FILE_CONTENT_ARRAY.len() - 1 {
             styled_texts += tui_styled_text! {
-                @style: tui_style!(attrib: [dim, bold] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(dim bold color_fg: {color_fg} color_bg: {color_bg}),
                 @text: " ┊ "
             };
             styled_texts += tui_styled_text! {
-                @style: tui_style!(attrib: [dim, bold] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(dim bold color_fg: {color_fg} color_bg: {color_bg}),
                 @text: "Next 👉 : "
             };
             styled_texts += tui_styled_text! {
-                @style: tui_style!(attrib: [dim, underline] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(dim underline color_fg: {color_fg} color_bg: {color_bg}),
                 @text: "Ctrl + n"
             };
         }
 
         if state.current_slide_index > 0 {
             styled_texts += tui_styled_text! {
-                @style: tui_style!(attrib: [dim, bold] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(dim bold color_fg: {color_fg} color_bg: {color_bg}),
                 @text: " ┊ "
             };
             styled_texts += tui_styled_text! {
-                @style: tui_style!(attrib: [dim, bold] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(dim bold color_fg: {color_fg} color_bg: {color_bg}),
                 @text: "Prev 👈 : "
             };
             styled_texts += tui_styled_text! {
-                @style: tui_style!(attrib: [dim, underline] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(dim underline color_fg: {color_fg} color_bg: {color_bg}),
                 @text: "Ctrl + p"
             };
         }

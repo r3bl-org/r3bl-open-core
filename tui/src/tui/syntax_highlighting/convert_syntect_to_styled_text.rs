@@ -30,7 +30,7 @@
 //! 1. Convert the syntect [SyntectStyleStrSpanLine] into a [StyleUSSpanLine].
 //! 2. Then convert [StyleUSSpanLine] into a [TuiStyledTexts].
 
-use r3bl_core::{tui_styled_text, RgbValue, TuiColor, TuiStyle, TuiStyledTexts};
+use r3bl_core::{tui_color, tui_styled_text, TuiColor, TuiStyle, TuiStyledTexts};
 use syntect::parsing::SyntaxSet;
 
 use super::{StyleUSSpan, StyleUSSpanLine};
@@ -67,7 +67,7 @@ pub fn convert_style_from_syntect_to_tui(st_style: SyntectStyle) -> TuiStyle {
 }
 
 pub fn convert_color_from_syntect_to_tui(st_color: SyntectColor) -> TuiColor {
-    TuiColor::Rgb(RgbValue::from_u8(st_color.r, st_color.g, st_color.b))
+    tui_color!(st_color.r, st_color.g, st_color.b)
 }
 
 pub fn convert_highlighted_line_from_syntect_to_tui(
@@ -107,7 +107,7 @@ pub fn convert_span_line_from_syntect_to_tui_styled_texts(
 
 #[cfg(test)]
 mod tests_simple_md_highlight {
-    use r3bl_core::{assert_eq2, color, ConvertToPlainText, TuiStyledTexts};
+    use r3bl_core::{assert_eq2, tui_color, ConvertToPlainText, TuiStyledTexts};
     use syntect::{easy::HighlightLines,
                   highlighting::Style,
                   parsing::SyntaxSet,
@@ -174,7 +174,7 @@ mod tests_simple_md_highlight {
             let col1 = &line[0];
             assert_eq2!(col1.get_style().bold, true);
             let col3 = &line[2];
-            assert_eq2!(col3.get_style().color_fg.unwrap(), color!(46, 206, 43));
+            assert_eq2!(col3.get_style().color_fg.unwrap(), tui_color!(46, 206, 43));
         }
 
         // Interrogate last line.
@@ -183,14 +183,17 @@ mod tests_simple_md_highlight {
             assert_eq2!(line.len(), 1);
             assert_eq2!(line.to_plain_text(), "--- END ---\n");
             let col1 = &line[0];
-            assert_eq2!(col1.get_style().color_fg.unwrap(), color!(193, 179, 208));
+            assert_eq2!(
+                col1.get_style().color_fg.unwrap(),
+                tui_color!(193, 179, 208)
+            );
         }
     }
 }
 
 #[cfg(test)]
 mod tests_convert_span_line_and_highlighted_line {
-    use r3bl_core::{assert_eq2, RgbValue, TuiColor, TuiStyledTexts};
+    use r3bl_core::{assert_eq2, tui_color, TuiStyledTexts};
 
     use crate::convert_span_line_from_syntect_to_tui_styled_texts;
 
@@ -253,19 +256,11 @@ mod tests_convert_span_line_and_highlighted_line {
             assert_eq2!(styled_texts[0].get_text(), "st_color_1");
             assert_eq2!(
                 styled_texts[0].get_style().color_fg.unwrap(),
-                TuiColor::Rgb(RgbValue {
-                    red: 255,
-                    green: 255,
-                    blue: 255
-                })
+                tui_color!(255, 255, 255)
             );
             assert_eq2!(
                 styled_texts[0].get_style().color_bg.unwrap(),
-                TuiColor::Rgb(RgbValue {
-                    red: 255,
-                    green: 255,
-                    blue: 255
-                })
+                tui_color!(255, 255, 255)
             );
         }
 
@@ -274,19 +269,11 @@ mod tests_convert_span_line_and_highlighted_line {
             assert_eq2!(styled_texts[1].get_text(), "st_color_2");
             assert_eq2!(
                 styled_texts[1].get_style().color_fg.unwrap(),
-                TuiColor::Rgb(RgbValue {
-                    red: 0,
-                    green: 0,
-                    blue: 0
-                })
+                tui_color!(0, 0, 0)
             );
             assert_eq2!(
                 styled_texts[1].get_style().color_bg.unwrap(),
-                TuiColor::Rgb(RgbValue {
-                    red: 0,
-                    green: 0,
-                    blue: 0
-                })
+                tui_color!(0, 0, 0)
             );
             assert_eq2!(styled_texts[1].get_style().bold, true);
         }
@@ -296,19 +283,11 @@ mod tests_convert_span_line_and_highlighted_line {
             assert_eq2!(styled_texts[2].get_text(), "st_color_1 and 2");
             assert_eq2!(
                 styled_texts[2].get_style().color_fg.unwrap(),
-                TuiColor::Rgb(RgbValue {
-                    red: 255,
-                    green: 255,
-                    blue: 255
-                })
+                tui_color!(255, 255, 255)
             );
             assert_eq2!(
                 styled_texts[2].get_style().color_bg.unwrap(),
-                TuiColor::Rgb(RgbValue {
-                    red: 0,
-                    green: 0,
-                    blue: 0
-                })
+                tui_color!(0, 0, 0)
             );
             assert_eq2!(styled_texts[2].get_style().bold, true);
             assert_eq2!(styled_texts[2].get_style().underline, true);
@@ -320,20 +299,17 @@ mod tests_convert_span_line_and_highlighted_line {
 mod tests_convert_style_and_color {
     use r3bl_core::{assert_eq2,
                     ch,
-                    color,
                     console_log,
                     get_tui_style,
                     get_tui_styles,
+                    new_style,
                     throws,
+                    tui_color,
                     tui_stylesheet,
-                    ANSIBasicColor,
                     CommonResult,
-                    RgbValue,
-                    TuiColor,
                     TuiStyle,
                     TuiStylesheet,
                     VecArray};
-    use r3bl_macro::tui_style;
     use smallvec::smallvec;
 
     use crate::convert_style_from_syntect_to_tui;
@@ -348,58 +324,44 @@ mod tests_convert_style_and_color {
                 | syntect::highlighting::FontStyle::UNDERLINE,
         };
         let style = convert_style_from_syntect_to_tui(st_style);
-        assert_eq2!(
-            style.color_fg.unwrap(),
-            TuiColor::Rgb(RgbValue {
-                red: 255,
-                green: 255,
-                blue: 255
-            })
-        );
-        assert_eq2!(
-            style.color_bg.unwrap(),
-            TuiColor::Rgb(RgbValue {
-                red: 0,
-                green: 0,
-                blue: 0
-            })
-        );
+        assert_eq2!(style.color_fg.unwrap(), tui_color!(255, 255, 255));
+        assert_eq2!(style.color_bg.unwrap(), tui_color!(0, 0, 0));
         assert_eq2!(style.bold, true);
         assert_eq2!(style.underline, true);
     }
 
     #[test]
     fn test_cascade_style() {
-        let style_bold_green_fg = tui_style! {
-          id: 1 // "bold_green_fg"
-          attrib: [bold]
-          color_fg: TuiColor::Basic(ANSIBasicColor::Green)
-        };
+        let style_bold_green_fg = new_style!(
+            id: {1} // "bold_green_fg"
+            bold
+            color_fg: {tui_color!(green)}
+        );
 
-        let style_dim = tui_style! {
-          id: 2 // "dim"
-          attrib: [dim]
-        };
+        let style_dim = new_style!(
+            id: {2} // "dim"
+            dim
+        );
 
-        let style_yellow_bg = tui_style! {
-          id: 3 // "yellow_bg"
-          color_bg: TuiColor::Basic(ANSIBasicColor::Yellow)
-        };
+        let style_yellow_bg = new_style!(
+            id: {3} // "yellow_bg"
+            color_bg: {tui_color!(yellow)}
+        );
 
-        let style_padding = tui_style! {
-          id: 4 // "padding"
-          padding: 2
-        };
+        let style_padding = new_style!(
+            id: {4} // "padding"
+            padding: {2}
+        );
 
-        let style_red_fg = tui_style! {
-          id: 5 // "red_fg"
-          color_fg: TuiColor::Basic(ANSIBasicColor::Red)
-        };
+        let style_red_fg = new_style!(
+            id: {5} // "red_fg"
+            color_fg: {tui_color!(red)}
+        );
 
-        let style_padding_another = tui_style! {
-          id: 6 // "padding"
-          padding: 1
-        };
+        let style_padding_another = new_style!(
+            id: {6} // "padding"
+            padding: {1}
+        );
 
         let my_style = style_bold_green_fg
             + style_dim
@@ -411,14 +373,8 @@ mod tests_convert_style_and_color {
         console_log!(my_style);
 
         assert_eq2!(my_style.padding.unwrap(), ch(3));
-        assert_eq2!(
-            my_style.color_bg.unwrap(),
-            TuiColor::Basic(ANSIBasicColor::Yellow)
-        );
-        assert_eq2!(
-            my_style.color_fg.unwrap(),
-            TuiColor::Basic(ANSIBasicColor::Red)
-        );
+        assert_eq2!(my_style.color_bg.unwrap(), tui_color!(yellow));
+        assert_eq2!(my_style.color_fg.unwrap(), tui_color!(red));
         assert!(my_style.bold);
         assert!(my_style.dim);
         assert!(my_style.computed);
@@ -477,23 +433,23 @@ mod tests_convert_style_and_color {
             let style1 = make_a_style(1);
             let mut stylesheet = tui_stylesheet! {
                 style1,
-                tui_style! {
-                    id: id_2 /* using a variable instead of string literal */
-                    padding: 1
-                    color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
-                },
+                new_style!(
+                    id: {id_2} /* using a variable instead of string literal */
+                    padding: {1}
+                    color_bg: {tui_color!(55, 55, 248)}
+                ),
                 make_a_style(3),
                 smallvec![
-                    tui_style! {
-                        id: 4
-                        padding: 1
-                        color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
-                    },
-                    tui_style! {
-                        id: 5
-                        padding: 1
-                        color_bg: TuiColor::Rgb (RgbValue{ red: 85, green: 85, blue: 255 })
-                    },
+                    new_style!(
+                        id: {4}
+                        padding: {1}
+                        color_bg: {tui_color!(55, 55, 248)}
+                    ),
+                    new_style!(
+                        id: {5}
+                        padding: {1}
+                        color_bg: {tui_color!(85, 85, 255)}
+                    ),
                 ],
                 make_a_style(6)
             };
@@ -526,8 +482,8 @@ mod tests_convert_style_and_color {
             id,
             dim: true,
             bold: true,
-            color_fg: color!(0, 0, 0).into(),
-            color_bg: color!(0, 0, 0).into(),
+            color_fg: tui_color!(0, 0, 0).into(),
+            color_bg: tui_color!(0, 0, 0).into(),
             ..TuiStyle::default()
         }
     }

@@ -26,14 +26,15 @@ use r3bl_core::{call_if_true,
                 convert_to_string_slice,
                 glyphs,
                 height,
+                new_style,
                 row,
                 string_storage,
                 style_prompt,
                 throws,
                 throws_with_return,
+                tui_color,
                 usize,
                 usize_to_u8_array,
-                ANSIBasicColor,
                 ColWidth,
                 CommonResult,
                 Dim,
@@ -43,9 +44,7 @@ use r3bl_core::{call_if_true,
                 RowHeight,
                 RowIndex,
                 SegString,
-                Size,
-                TuiColor};
-use r3bl_macro::tui_style;
+                Size};
 use syntect::easy::HighlightLines;
 
 use crate::{caret_scroll_index,
@@ -387,7 +386,7 @@ pub fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
         ));
         render_ops.push(RenderOp::PaintTextWithAttributes(
             str_at_caret.string,
-            tui_style! { attrib: [reverse] }.into(),
+            Some(new_style!(reverse)),
         ));
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
             engine.current_box.style_adjusted_origin_pos,
@@ -416,10 +415,9 @@ pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
                 editor_engine.current_box.style_adjusted_origin_pos,
                 col(0) + row(0)
             ),
-            RenderOp::ApplyColors(tui_style! {
-                attrib: [dim]
-                color_fg: TuiColor::Basic(ANSIBasicColor::Green)
-            }.into()),
+            RenderOp::ApplyColors(
+                Some(new_style!(dim color_fg: {tui_color!(green)}))
+            ),
             RenderOp::PaintTextWithAttributes("📝 Please start typing your MD content.".into(), None),
             RenderOp::ResetColor
         };
@@ -441,10 +439,9 @@ pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
                 editor_engine.current_box.style_adjusted_origin_pos,
                 content_cursor_pos,
             ),
-            RenderOp::ApplyColors(tui_style! {
-                attrib: [dim]
-                color_fg: TuiColor::Basic(ANSIBasicColor::DarkGrey)
-            }.into()),
+            RenderOp::ApplyColors(
+                Some(new_style!(dim color_fg: {tui_color!(dark_grey)}))
+            ),
             RenderOp::PaintTextWithAttributes("🧭 Ctrl+S: Save your work. Ctrl+Q: Exit the app.".into(), None),
             RenderOp::ResetColor
         };

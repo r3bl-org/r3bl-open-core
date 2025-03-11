@@ -274,13 +274,12 @@ mod tests_clip_styled_texts {
     use r3bl_core::{assert_eq2,
                     ch,
                     col,
+                    new_style,
                     row,
                     scr_ofs,
+                    tui_color,
                     ChUnitPrimitiveType,
-                    ConvertToPlainText,
-                    RgbValue,
-                    TuiColor};
-    use r3bl_macro::tui_style;
+                    ConvertToPlainText};
 
     use super::*;
     use crate::{list, List};
@@ -289,17 +288,17 @@ mod tests_clip_styled_texts {
         use super::*;
 
         pub fn get_s1() -> TuiStyle {
-            tui_style! {
-              id: 1
-              color_bg: TuiColor::Rgb (RgbValue{ red: 1, green: 1, blue: 1 })
-            }
+            new_style!(
+                id: {1}
+                color_bg: {tui_color!(1, 1, 1)}
+            )
         }
 
         pub fn get_s2() -> TuiStyle {
-            tui_style! {
-              id: 2
-              color_bg: TuiColor::Rgb(RgbValue{ red: 2, green: 2, blue: 2 })
-            }
+            new_style!(
+                id: {2}
+                color_bg: {tui_color!(2, 2, 2)}
+            )
         }
 
         /// A struct containing the following pseudo HTML representation is returned.

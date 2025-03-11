@@ -22,17 +22,16 @@ mod tests {
                     console_log,
                     get_tui_styles,
                     height,
+                    new_style,
                     req_size_pc,
                     row,
                     throws,
                     throws_with_return,
+                    tui_color,
                     tui_stylesheet,
                     width,
                     CommonResult,
-                    RgbValue,
-                    TuiColor,
                     TuiStylesheet};
-    use r3bl_macro::tui_style;
 
     use crate::{box_end,
                 box_props,
@@ -210,24 +209,24 @@ mod tests {
     fn dsl_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
-              tui_style! {
-                id: 0
-                padding: 1
-              },
-              tui_style! {
-                id: 1
-                attrib: [dim, bold]
-                padding: 2
-                color_fg: TuiColor::Rgb (RgbValue{ red: 255, green: 255, blue: 0 }) /* Yellow. */
-                color_bg: TuiColor::Rgb (RgbValue{ red: 128, green: 128, blue: 128 }) /* Grey. */
-              },
-              tui_style! {
-                id: 2
-                attrib: [underline, strikethrough]
-                padding: 3
-                color_fg: TuiColor::Rgb (RgbValue{ red: 0, green: 0, blue: 0 }) /* Black. */
-                color_bg: TuiColor::Rgb (RgbValue{ red: 255, green: 255, blue: 255 }) /* White. */
-              }
+                new_style!(
+                    id: {0}
+                    padding: {1}
+                ),
+                new_style!(
+                    id: {1}
+                    dim bold
+                    padding: {2}
+                    color_fg: {tui_color!(255, 255, 0)} /* Yellow. */
+                    color_bg: {tui_color!(128, 128, 128)} /* Grey. */
+                ),
+                new_style!(
+                    id: {2}
+                    underline strikethrough
+                    padding: {3}
+                    color_fg: {tui_color!(black)} /* Black. */
+                    color_bg: {tui_color!(white)} /* White. */
+                )
             }
         })
     }

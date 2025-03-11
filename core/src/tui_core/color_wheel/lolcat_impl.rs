@@ -21,10 +21,9 @@ use super::{Colorize, LolcatBuilder, Seed, SeedDelta};
 use crate::{ColorUtils,
             ColorWheelControl,
             GCString,
-            RgbValue,
-            TuiColor,
             TuiStyle,
             TuiStyledTexts,
+            tui_color,
             tui_styled_text};
 
 /// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
@@ -70,28 +69,17 @@ impl Lolcat {
                 == Colorize::BothBackgroundAndForeground
             {
                 TuiStyle {
-                    color_fg: TuiColor::Rgb(RgbValue::from_u8(
+                    color_fg: Some(tui_color!(
                         derived_from_new_color.0,
                         derived_from_new_color.1,
                         derived_from_new_color.2,
-                    ))
-                    .into(),
-                    color_bg: TuiColor::Rgb(RgbValue::from_u8(
-                        new_color.0,
-                        new_color.1,
-                        new_color.2,
-                    ))
-                    .into(),
+                    )),
+                    color_bg: Some(tui_color!(new_color.0, new_color.1, new_color.2,)),
                     ..Default::default()
                 }
             } else {
                 TuiStyle {
-                    color_fg: TuiColor::Rgb(RgbValue::from_u8(
-                        new_color.0,
-                        new_color.1,
-                        new_color.2,
-                    ))
-                    .into(),
+                    color_fg: Some(tui_color!(new_color.0, new_color.1, new_color.2,)),
                     ..Default::default()
                 }
             };

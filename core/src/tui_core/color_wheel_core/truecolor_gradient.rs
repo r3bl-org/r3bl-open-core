@@ -18,15 +18,14 @@
 use colorgrad::Gradient;
 use rand::Rng;
 
-use crate::{RgbValue,
-            TuiColor,
-            config::sizing::{StringHexColor, VecSteps}};
+use crate::{config::sizing::{StringHexColor, VecSteps},
+            tui_color};
 
 /// # Arguments
 /// * `steps` - The number of steps to take between each color stop.
 ///
 /// # Returns
-/// A vector of [TuiColor] objects representing the gradient.
+/// A vector of [crate::TuiColor] objects representing the gradient.
 pub fn generate_random_truecolor_gradient(steps: u8) -> VecSteps {
     let mut rng = rand::thread_rng();
 
@@ -65,7 +64,7 @@ pub fn generate_random_truecolor_gradient(steps: u8) -> VecSteps {
 /// * `steps` - The number of steps to take between each color stop.
 ///
 /// # Returns
-/// A vector of [TuiColor] objects representing the gradient.
+/// A vector of [crate::TuiColor] objects representing the gradient.
 pub fn generate_truecolor_gradient(stops: &[StringHexColor], steps: u8) -> VecSteps {
     let result_gradient = colorgrad::GradientBuilder::new()
         .html_colors(stops)
@@ -84,11 +83,7 @@ pub fn generate_truecolor_gradient(stops: &[StringHexColor], steps: u8) -> VecSt
             for step_count in 0..steps {
                 let color = gradient.at(fractional_step * step_count as Number);
                 let color = color.to_rgba8();
-                acc.push(TuiColor::Rgb(RgbValue {
-                    red: color[0],
-                    green: color[1],
-                    blue: color[2],
-                }));
+                acc.push(tui_color!(color[0], color[1], color[2]));
             }
 
             acc
@@ -108,13 +103,7 @@ pub fn generate_truecolor_gradient(stops: &[StringHexColor], steps: u8) -> VecSt
                 (0, 51, 204),
             ]
             .iter()
-            .map(|(red, green, blue)| {
-                TuiColor::Rgb(RgbValue {
-                    red: *red,
-                    green: *green,
-                    blue: *blue,
-                })
-            })
+            .map(|(red, green, blue)| tui_color!(*red, *green, *blue))
             .collect::<VecSteps>()
         }
     }
@@ -125,7 +114,7 @@ mod tests {
     use r3bl_ansi_color::{AnsiStyledText, Style};
 
     use super::*;
-    use crate::{assert_eq2, usize};
+    use crate::{TuiColor, assert_eq2, usize};
 
     #[test]
     fn test_generate_random_truecolor_gradient() {
@@ -177,14 +166,7 @@ mod tests {
         .iter()
         .enumerate()
         .for_each(|(i, (red, green, blue))| {
-            assert_eq2!(
-                result[i],
-                TuiColor::Rgb(RgbValue {
-                    red: *red,
-                    green: *green,
-                    blue: *blue,
-                })
-            );
+            assert_eq2!(result[i], tui_color!(*red, *green, *blue));
         });
 
         result

@@ -5,7 +5,6 @@ members = [
   "ansi_color",
   "cmdr",
   "core",
-  "macro",
   "terminal_async",
   "test_fixtures",
   "tui",

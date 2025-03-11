@@ -14,10 +14,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use crossterm::style::Stylize;
-use r3bl_core::{ANSIBasicColor,
-                Ansi256GradientIndex,
+use r3bl_core::{Ansi256GradientIndex,
                 ColorWheel,
                 ColorWheelConfig,
                 ColorWheelSpeed,
@@ -28,7 +26,6 @@ use r3bl_core::{ANSIBasicColor,
                 GradientGenerationPolicy,
                 StringStorage,
                 TextColorizationPolicy,
-                TuiColor,
                 TuiStyledTexts,
                 TuiStylesheet,
                 call_if_true,
@@ -36,14 +33,15 @@ use r3bl_core::{ANSIBasicColor,
                 get_tui_style,
                 glyphs,
                 height,
+                new_style,
                 req_size_pc,
                 row,
                 send_signal,
                 throws,
                 throws_with_return,
+                tui_color,
                 tui_styled_text,
                 tui_stylesheet};
-use r3bl_macro::tui_style;
 use r3bl_tui::{App,
                BoxedSafeApp,
                ComponentRegistry,
@@ -635,37 +633,37 @@ mod stylesheet {
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
-                tui_style! {
-                    id: Id::StyleEditorDefault
-                    padding: 1
+                new_style!(
+                    id: {Id::StyleEditorDefault}
+                    padding: {1}
                     // These are ignored due to syntax highlighting.
                     // attrib: [bold]
                     // color_fg: TuiColor::Blue
-                },
-                tui_style! {
-                    id: Id::StyleDialogTitle
-                    lolcat: true
+                ),
+                new_style!(
+                    id: {Id::StyleDialogTitle}
+                    lolcat
                     // These are ignored due to lolcat: true.
                     // attrib: [bold]
                     // color_fg: TuiColor::Yellow
-                },
-                tui_style! {
-                    id: Id::StyleDialogBorder
-                    lolcat: true
+                ),
+                new_style!(
+                    id: {Id::StyleDialogBorder}
+                    lolcat
                     // These are ignored due to lolcat: true.
                     // attrib: [dim]
                     // color_fg: TuiColor::Green
-                },
-                tui_style! {
-                    id: Id::StyleDialogEditor
-                    attrib: [bold]
-                    color_fg: TuiColor::Basic(ANSIBasicColor::Magenta)
-                },
-                tui_style! {
-                    id: Id::StyleDialogResultsPanel
-                    // attrib: [bold]
-                    color_fg: TuiColor::Basic(ANSIBasicColor::Blue)
-                }
+                ),
+                new_style!(
+                    id: {Id::StyleDialogEditor}
+                    bold
+                    color_fg: {tui_color!(magenta)}
+                ),
+                new_style!(
+                    id: {Id::StyleDialogResultsPanel}
+                    // bold
+                    color_fg: {tui_color!(blue)}
+                )
             }
         })
     }
@@ -676,10 +674,7 @@ mod status_bar {
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Dim) {
-        let separator_style = tui_style!(
-            attrib: [dim]
-            color_fg: TuiColor::Basic(ANSIBasicColor::DarkGrey)
-        );
+        let separator_style = new_style!(dim color_fg: {tui_color!(dark_grey)});
 
         let app_text = "edi 🦜 ✶early access✶";
 
@@ -706,14 +701,15 @@ mod status_bar {
             let mut it = Default::default();
             it += app_text_styled_texts;
             it += tui_styled_text! { @style: separator_style , @text: " │ "};
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim]) , @text: "Save: Ctrl+S "};
-            it += tui_styled_text! { @style: tui_style!() , @text: "💾"};
+            it += tui_styled_text! { @style: new_style!(dim) , @text: "Save: Ctrl+S "};
+            it += tui_styled_text! { @style: new_style!() , @text: "💾"};
             it += tui_styled_text! { @style: separator_style , @text: " │ "};
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim]) , @text: "Feedback: Ctrl+K "};
-            it += tui_styled_text! { @style: tui_style!() , @text: "💭"};
+            it +=
+                tui_styled_text! { @style: new_style!(dim) , @text: "Feedback: Ctrl+K "};
+            it += tui_styled_text! { @style: new_style!() , @text: "💭"};
             it += tui_styled_text! { @style: separator_style , @text: " │ "};
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim]) , @text: "Exit: Ctrl+Q "};
-            it += tui_styled_text! { @style: tui_style!() , @text: "🖖"};
+            it += tui_styled_text! { @style: new_style!(dim) , @text: "Exit: Ctrl+Q "};
+            it += tui_styled_text! { @style: new_style!() , @text: "🖖"};
             it
         };
 
