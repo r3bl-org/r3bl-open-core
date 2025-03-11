@@ -30,7 +30,6 @@ use super::{ColorWheelConfig,
             config::sizing::VecSteps,
             defaults::{Defaults, get_default_gradient_stops}};
 use crate::{Ansi256GradientIndex,
-            AnsiValue,
             ChUnit,
             ColorUtils,
             GCString,
@@ -49,6 +48,7 @@ use crate::{Ansi256GradientIndex,
             generate_truecolor_gradient,
             get_gradient_array_for,
             glyphs::SPACER_GLYPH as SPACER,
+            tui_color,
             tui_styled_text,
             u8,
             usize};
@@ -215,7 +215,8 @@ impl ColorWheel {
                     let size_hint = gradient_array.len();
                     let mut gradient_vec: VecSteps = VecSteps::with_capacity(size_hint);
                     for color_u8 in gradient_array {
-                        gradient_vec.push(TuiColor::Ansi(AnsiValue::new(*color_u8)));
+                        // gradient_vec.push(TuiColor::Ansi(AnsiValue::new(*color_u8)));
+                        gradient_vec.push(tui_color!(ansi * color_u8));
                     }
                     gradient_vec
                 };
@@ -248,11 +249,7 @@ impl ColorWheel {
                 let new_color = ColorUtils::get_color_tuple(&lolcat.color_wheel_control);
                 lolcat.color_wheel_control.seed +=
                     Seed::from(lolcat.color_wheel_control.color_change_speed);
-                Some(TuiColor::Rgb(RgbValue::from_u8(
-                    new_color.0,
-                    new_color.1,
-                    new_color.2,
-                )))
+                Some(tui_color!(new_color.0, new_color.1, new_color.2))
             } else {
                 None
             };
@@ -519,8 +516,8 @@ impl ColorWheel {
                         acc += tui_styled_text!(
                             @style: inner::gen_style_fg_bg_color_for(
                                 maybe_style,
-                                Some(TuiColor::Rgb(RgbValue::from_u8(fg_red, fg_green, fg_blue))),
-                                Some(TuiColor::Rgb(RgbValue::from_u8(bg_red, bg_green, bg_blue))),
+                                Some(tui_color!(fg_red, fg_green, fg_blue)),
+                                Some(tui_color!(bg_red, bg_green, bg_blue)),
                             ),
                             @text: next_character,
                         );
@@ -738,7 +735,7 @@ mod tests_color_wheel_rgb {
             (230, 230, 230),
         ]
         .iter()
-        .map(|(r, g, b)| TuiColor::Rgb(RgbValue::from_u8(*r, *g, *b)))
+        .map(|(r, g, b)| tui_color!(*r, *g, *b))
         .collect::<VecSteps>();
         assert_eq2!(lhs, rhs);
 
@@ -746,32 +743,32 @@ mod tests_color_wheel_rgb {
         assert_eq2!(
             // 1st call to next(), index is 0
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(0, 0, 0))
+            tui_color!(0, 0, 0)
         );
         assert_eq2!(
             // 2nd call to next(), index is 0
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(0, 0, 0))
+            tui_color!(0, 0, 0)
         );
         assert_eq2!(
             // 3rd call to next(), index is 1
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(26, 26, 26))
+            tui_color!(26, 26, 26)
         );
         assert_eq2!(
             // # 4th call to next(), index is 1
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(26, 26, 26))
+            tui_color!(26, 26, 26)
         );
         assert_eq2!(
             // # 5th call to next(), index is 2
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(51, 51, 51))
+            tui_color!(51, 51, 51)
         );
         assert_eq2!(
             // # 6th call to next(), index is 2
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(51, 51, 51))
+            tui_color!(51, 51, 51)
         );
 
         // Advance color wheel to index = 8.
@@ -780,16 +777,10 @@ mod tests_color_wheel_rgb {
         }
 
         // Next call to next() which is the 20th call should return the end_color.
-        assert_eq2!(
-            color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(230, 230, 230))
-        );
+        assert_eq2!(color_wheel.next_color().unwrap(), tui_color!(230, 230, 230));
 
         // Next call to next() should return the end_color - 1.
-        assert_eq2!(
-            color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(204, 204, 204))
-        );
+        assert_eq2!(color_wheel.next_color().unwrap(), tui_color!(204, 204, 204));
 
         // Reverse color wheel to index = 0.
         for _ in 0..16 {
@@ -797,16 +788,10 @@ mod tests_color_wheel_rgb {
         }
 
         // Next call to next() should return the start_color.
-        assert_eq2!(
-            color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(0, 0, 0))
-        );
+        assert_eq2!(color_wheel.next_color().unwrap(), tui_color!(0, 0, 0));
 
         // Next call to next() should advance the index again to 1.
-        assert_eq2!(
-            color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(26, 26, 26))
-        );
+        assert_eq2!(color_wheel.next_color().unwrap(), tui_color!(26, 26, 26));
 
         global_color_support::clear_override()
     }
@@ -841,7 +826,7 @@ mod tests_color_wheel_rgb {
         assert_eq2!(styled_texts[0].get_text(), "HELLO");
         assert_eq2!(
             styled_texts[0].get_style().color_fg,
-            Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
+            Some(tui_color!(0, 0, 0))
         );
         assert_eq2!(styled_texts[0].get_style().dim, false);
         assert_eq2!(styled_texts[0].get_style().bold, false);
@@ -854,7 +839,7 @@ mod tests_color_wheel_rgb {
         assert_eq2!(styled_texts[2].get_text(), "WORLD");
         assert_eq2!(
             styled_texts[2].get_style().color_fg,
-            Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
+            Some(tui_color!(0, 0, 0))
         );
 
         global_color_support::clear_override()
@@ -896,7 +881,7 @@ mod tests_color_wheel_rgb {
         assert_eq2!(styled_texts[0].get_text(), "H");
         assert_eq2!(
             styled_texts[0].get_style().color_fg,
-            Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
+            Some(tui_color!(0, 0, 0))
         );
         assert_eq2!(styled_texts[0].get_style().dim, true);
         assert_eq2!(styled_texts[0].get_style().bold, true);
@@ -905,28 +890,28 @@ mod tests_color_wheel_rgb {
         assert_eq2!(styled_texts[1].get_text(), "E");
         assert_eq2!(
             styled_texts[1].get_style().color_fg,
-            Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
+            Some(tui_color!(0, 0, 0))
         );
 
         // [2]: "L", color_fg: Rgb(51, 51, 51)
         assert_eq2!(styled_texts[2].get_text(), "L");
         assert_eq2!(
             styled_texts[2].get_style().color_fg,
-            Some(TuiColor::Rgb(RgbValue::from_u8(51, 51, 51)))
+            Some(tui_color!(51, 51, 51))
         );
 
         // [3]: "L", color_fg: Rgb(51, 51, 51)
         assert_eq2!(styled_texts[3].get_text(), "L");
         assert_eq2!(
             styled_texts[3].get_style().color_fg,
-            Some(TuiColor::Rgb(RgbValue::from_u8(51, 51, 51)))
+            Some(tui_color!(51, 51, 51))
         );
 
         // [4]: "O", color_fg: Rgb(102,102,102)
         assert_eq2!(styled_texts[4].get_text(), "O");
         assert_eq2!(
             styled_texts[4].get_style().color_fg,
-            Some(TuiColor::Rgb(RgbValue::from_u8(102, 102, 102)))
+            Some(tui_color!(102, 102, 102))
         );
 
         global_color_support::clear_override()

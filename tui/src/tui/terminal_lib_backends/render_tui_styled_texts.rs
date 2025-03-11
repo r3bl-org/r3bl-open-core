@@ -37,15 +37,13 @@ mod tests {
                     console_log,
                     throws,
                     throws_with_return,
+                    tui_color,
                     tui_styled_text,
                     tui_styled_texts,
                     tui_stylesheet,
                     CommonResult,
-                    RgbValue,
-                    TuiColor,
                     TuiStylesheet,
                     VecArray};
-    use r3bl_macro::tui_style;
 
     use super::*;
     use crate::{render_ops, render_pipeline, ZOrder};
@@ -77,6 +75,8 @@ mod tests {
     }
 
     mod helpers {
+        use r3bl_core::new_style;
+
         use super::*;
 
         pub fn create_styled_text() -> CommonResult<TuiStyledTexts> {
@@ -101,16 +101,16 @@ mod tests {
         pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
             throws_with_return!({
                 tui_stylesheet! {
-                  tui_style! {
-                    id: 1
-                    padding: 1
-                    color_bg: TuiColor::Rgb(RgbValue{ red: 55, green: 55, blue: 100 })
-                  },
-                  tui_style! {
-                    id: 2
-                    padding: 1
-                    color_bg: TuiColor::Rgb(RgbValue{ red: 55, green: 55, blue: 248 })
-                  }
+                    new_style! {
+                        id: {1}
+                        padding: {1}
+                        color_bg: {tui_color!(55, 55, 100)}
+                    },
+                    new_style! {
+                        id: {2}
+                        padding: {1}
+                        color_bg: {tui_color!(55, 55, 248)}
+                    }
                 }
             })
         }

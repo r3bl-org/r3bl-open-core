@@ -14,24 +14,23 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use r3bl_core::{col,
+use r3bl_core::{ch,
+                col,
                 height,
+                new_style,
                 req_size_pc,
                 row,
                 throws,
                 throws_with_return,
+                tui_color,
                 tui_styled_text,
                 tui_styled_texts,
                 tui_stylesheet,
                 CommonResult,
                 ContainsResult,
                 Dim,
-                RgbValue,
-                TuiColor,
                 TuiStylesheet,
                 SPACER_GLYPH};
-use r3bl_macro::tui_style;
 use r3bl_tui::{box_end,
                box_props,
                box_start,
@@ -276,20 +275,18 @@ mod populate_component_registry {
 }
 
 mod stylesheet {
+    use r3bl_core::tui_color;
+
     use super::*;
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
-              tui_style! {
-                id: Id::Container
-                padding: 1
-              },
-              tui_style! {
-                id: Id::Column
-                padding: 1
-                color_bg: TuiColor::Rgb (RgbValue { red: 55, green: 55, blue: 100 })
-              }
+              new_style!(id: {Id::Container} padding: {ch(1)}),
+              new_style!(id: {Id::Column} padding: {ch(1)} color_bg: {
+                tui_color!(55, 55, 100)
+
+            })
             }
         })
     }
@@ -299,11 +296,11 @@ mod hud {
     use super::*;
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Dim, hud_report_str: &str) {
-        let color_bg = TuiColor::Rgb(RgbValue::from_hex("#fdb6fd"));
-        let color_fg = TuiColor::Rgb(RgbValue::from_hex("#942997"));
+        let color_bg = tui_color!(hex "#fdb6fd");
+        let color_fg = tui_color!(hex "#942997");
         let styled_texts = tui_styled_texts! {
             tui_styled_text! {
-                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg ),
+                @style: new_style!(dim color_fg: {color_fg} color_bg: {color_bg}),
                 @text: hud_report_str
             },
         };
@@ -332,31 +329,31 @@ mod status_bar {
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Dim) {
-        let color_bg = TuiColor::Rgb(RgbValue::from_hex("#076DEB"));
-        let color_fg = TuiColor::Rgb(RgbValue::from_hex("#E9C940"));
+        let color_bg = tui_color!(hex "#076DEB");
+        let color_fg = tui_color!(hex "#E9C940");
         let styled_texts = tui_styled_texts! {
             tui_styled_text!{
-                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(dim color_fg: {color_fg} color_bg: {color_bg}),
                 @text: "Hints:"
             },
             tui_styled_text!{
-                @style: tui_style!(attrib: [bold] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(bold color_fg: {color_fg} color_bg: {color_bg}),
                 @text: " x : Exit 🖖 "
             },
             tui_styled_text!{
-                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(dim color_fg: {color_fg} color_bg: {color_bg}),
                 @text: " … "
             },
             tui_styled_text!{
-                @style: tui_style!(attrib: [underline] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(underline color_fg: {color_fg} color_bg: {color_bg}),
                 @text: " ↑ / + : inc "
             },
             tui_styled_text!{
-                @style: tui_style!(attrib: [dim] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(dim color_fg: {color_fg} color_bg: {color_bg}),
                 @text: " … "
             },
             tui_styled_text!{
-                @style: tui_style!(attrib: [underline] color_fg: color_fg color_bg: color_bg),
+                @style: new_style!(underline color_fg: {color_fg} color_bg: {color_bg}),
                 @text: " ↓ / - : dec "
             },
         };

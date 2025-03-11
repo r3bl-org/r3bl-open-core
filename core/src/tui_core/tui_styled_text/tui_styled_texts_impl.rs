@@ -133,8 +133,6 @@ mod impl_debug {
 mod tests {
     use super::*;
     use crate::{CommonResult,
-                RgbValue,
-                TuiColor,
                 TuiStyle,
                 TuiStylesheet,
                 assert_eq2,
@@ -155,6 +153,7 @@ mod tests {
 
     mod helpers {
         use super::*;
+        use crate::tui_color;
 
         pub fn create_styled_text() -> CommonResult<TuiStyledTexts> {
             throws_with_return!({
@@ -181,13 +180,13 @@ mod tests {
                     TuiStyle {
                         id: 1,
                         padding: Some(ch(1)),
-                        color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(55, 55, 100))),
+                        color_bg: Some(tui_color!(55, 55, 100)),
                         ..Default::default()
                     },
                     TuiStyle {
                         id: 2,
                         padding: Some(ch(1)),
-                        color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(55, 55, 248))),
+                        color_bg: Some(tui_color!(55, 55, 248)),
                         ..Default::default()
                     }
                 }

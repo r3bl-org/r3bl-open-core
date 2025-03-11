@@ -14,7 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::{fmt::Debug, marker::PhantomData};
 
 use r3bl_core::{call_if_true,
@@ -23,6 +22,7 @@ use r3bl_core::{call_if_true,
                 format_as_kilobytes_with_commas,
                 glyphs,
                 height,
+                new_style,
                 ok,
                 output_device_as_mut,
                 row,
@@ -45,7 +45,6 @@ use r3bl_core::{call_if_true,
                 SufficientSize,
                 TelemetryAtomHint,
                 TextColorizationPolicy};
-use r3bl_macro::tui_style;
 use smallvec::smallvec;
 use tokio::sync::mpsc;
 
@@ -590,7 +589,7 @@ fn render_window_too_small_error(window_size: Dim) -> RenderPipeline {
 
     let mut pipeline = render_pipeline!();
 
-    let style_bold = tui_style!(attrib: [bold]);
+    let style_bold = new_style!(bold);
 
     render_pipeline! {
         @push_into pipeline
@@ -628,13 +627,14 @@ mod tests {
     use r3bl_core::{assert_eq2,
                     ch,
                     col,
-                    color,
                     defaults::get_default_gradient_stops,
                     height,
+                    new_style,
                     ok,
                     send_signal,
                     string_storage,
                     throws_with_return,
+                    tui_color,
                     tui_styled_text,
                     tui_styled_texts,
                     width,
@@ -651,7 +651,6 @@ mod tests {
                     TextColorizationPolicy,
                     TuiStyle,
                     VecArray};
-    use r3bl_macro::tui_style;
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, InputDeviceExt};
     use smallvec::smallvec;
     use test_fixture_app::AppMainTest;
@@ -792,7 +791,7 @@ mod tests {
                     PixelChar::PlainText {
                         text: "S".into(),
                         maybe_style: Some(TuiStyle {
-                            color_fg: Some(color!(102, 0, 255)),
+                            color_fg: Some(tui_color!(102, 0, 255)),
                             ..Default::default()
                         }),
                     },
@@ -1069,12 +1068,12 @@ mod tests {
         /// Shows helpful messages at the bottom row of the screen.
         pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Dim) {
             let styled_texts = tui_styled_texts! {
-                tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
-                tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit 🖖 "},
-                tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
-                tui_styled_text!{ @style: tui_style!(attrib: [underline]) , @text: " ↑ / + : inc "},
-                tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
-                tui_styled_text!{ @style: tui_style!(attrib: [underline]) , @text: " ↓ / - : dec "},
+                tui_styled_text!{ @style: new_style!(dim)       , @text: "Hints:"},
+                tui_styled_text!{ @style: new_style!(bold)      , @text: " x : Exit 🖖 "},
+                tui_styled_text!{ @style: new_style!(dim)       , @text: " … "},
+                tui_styled_text!{ @style: new_style!(underline) , @text: " ↑ / + : inc "},
+                tui_styled_text!{ @style: new_style!(dim)       , @text: " … "},
+                tui_styled_text!{ @style: new_style!(underline) , @text: " ↓ / - : dec "},
             };
 
             let display_width = styled_texts.display_width();

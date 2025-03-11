@@ -19,6 +19,7 @@
 pub mod hex_color_parser;
 pub mod tui_color;
 pub mod tui_style_impl;
+pub mod tui_style_lite;
 pub mod tui_stylesheet;
 
 // Re-export.

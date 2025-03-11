@@ -26,11 +26,12 @@ use strum::EnumCount;
 use super::TuiColor;
 use crate::{ChUnit, VecArrayStr, ch, convert_tui_color_into_r3bl_ansi_color};
 
-/// Please use [tui_style!](crate::tui_style) proc macro to generate code for this struct.
+/// Please use [crate::new_style!] declarative macro to generate code for this struct.
 ///
-/// For the macro, if `id` isn't supplied, then [u8::MAX](u8::MAX) is used. This
-/// represents the "style does not have an assigned id" case. Computed styles don't have
-/// an id and are set to [u8::MAX](u8::MAX) as well.
+/// The following is handled by the [Default] implementation of `TuiStyle`:
+/// - For the macro, if `id` isn't supplied, then [u8::MAX](u8::MAX) is used. This
+///   represents the "style does not have an assigned id" case.
+/// - Computed styles don't have an id and are set to [u8::MAX](u8::MAX) as well.
 ///
 /// Here's an example.
 ///
@@ -63,7 +64,7 @@ use crate::{ChUnit, VecArrayStr, ch, convert_tui_color_into_r3bl_ansi_color};
 ///
 /// Here are the [crossterm docs on
 /// attributes](https://docs.rs/crossterm/0.25.0/crossterm/style/enum.Attribute.html)
-#[derive(Copy, Default, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct TuiStyle {
     pub id: u8,
     pub bold: bool,
@@ -79,11 +80,29 @@ pub struct TuiStyle {
     /// The semantics of this are the same as CSS. The padding is space that is taken up
     /// inside a `FlexBox`. This does not affect the size or position of a `FlexBox`, it
     /// only applies to the contents inside of that `FlexBox`.
-    ///
-    /// [`FlexBox`
-    /// docs](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/layout/flex_box/struct.FlexBox.html).
+    /// - [`FlexBox` docs](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/layout/flex_box/struct.FlexBox.html).
     pub padding: Option<ChUnit>,
     pub lolcat: bool,
+}
+
+impl Default for TuiStyle {
+    fn default() -> Self {
+        TuiStyle {
+            id: u8::MAX,
+            bold: false,
+            italic: false,
+            dim: false,
+            underline: false,
+            reverse: false,
+            hidden: false,
+            strikethrough: false,
+            computed: false,
+            color_fg: None,
+            color_bg: None,
+            padding: None,
+            lolcat: false,
+        }
+    }
 }
 
 mod addition {
@@ -311,7 +330,7 @@ mod style_impl {
 #[cfg(test)]
 mod test_style {
     use super::*;
-    use crate::{assert_eq2, color};
+    use crate::{assert_eq2, tui_color};
 
     #[test]
     fn test_all_fields_in_style() {
@@ -323,8 +342,8 @@ mod test_style {
             reverse: true,
             hidden: true,
             strikethrough: true,
-            color_fg: color!(@red).into(),
-            color_bg: color!(0, 0, 0).into(),
+            color_fg: tui_color!(red).into(),
+            color_bg: tui_color!(0, 0, 0).into(),
             padding: Some(ch(10)),
             ..TuiStyle::default()
         };
@@ -337,8 +356,8 @@ mod test_style {
         assert!(style.reverse);
         assert!(style.hidden);
         assert!(style.strikethrough);
-        assert_eq2!(style.color_fg, color!(@red).into());
-        assert_eq2!(style.color_bg, color!(0, 0, 0).into());
+        assert_eq2!(style.color_fg, tui_color!(red).into());
+        assert_eq2!(style.color_bg, tui_color!(0, 0, 0).into());
         assert_eq2!(style.padding, Some(ch(10)));
     }
 
@@ -346,8 +365,8 @@ mod test_style {
     fn test_style() {
         let style = TuiStyle {
             id: 1,
-            color_fg: color!(0, 0, 0).into(),
-            color_bg: color!(0, 0, 0).into(),
+            color_fg: tui_color!(0, 0, 0).into(),
+            color_bg: tui_color!(0, 0, 0).into(),
             bold: true,
             dim: true,
             italic: true,
@@ -426,7 +445,7 @@ pub mod convert_to_ansi_color_styles {
     #[cfg(test)]
     mod tests_style {
         use super::*;
-        use crate::{assert_eq2, color};
+        use crate::{assert_eq2, tui_color};
 
         #[test]
         fn test_all_fields_in_style() {
@@ -438,8 +457,8 @@ pub mod convert_to_ansi_color_styles {
                 reverse: true,
                 hidden: true,
                 strikethrough: true,
-                color_fg: color!(@red).into(),
-                color_bg: color!(0, 0, 0).into(),
+                color_fg: tui_color!(red).into(),
+                color_bg: tui_color!(0, 0, 0).into(),
                 padding: Some(ch(10)),
                 ..TuiStyle::default()
             };
@@ -452,8 +471,8 @@ pub mod convert_to_ansi_color_styles {
             assert!(style.reverse);
             assert!(style.hidden);
             assert!(style.strikethrough);
-            assert_eq2!(style.color_fg, color!(@red).into());
-            assert_eq2!(style.color_bg, color!(0, 0, 0).into());
+            assert_eq2!(style.color_fg, tui_color!(red).into());
+            assert_eq2!(style.color_bg, tui_color!(0, 0, 0).into());
             assert_eq2!(style.padding, Some(ch(10)));
         }
 
@@ -461,8 +480,8 @@ pub mod convert_to_ansi_color_styles {
         fn test_style() {
             let style = TuiStyle {
                 id: 1,
-                color_fg: color!(0, 0, 0).into(),
-                color_bg: color!(0, 0, 0).into(),
+                color_fg: tui_color!(0, 0, 0).into(),
+                color_bg: tui_color!(0, 0, 0).into(),
                 bold: true,
                 dim: true,
                 italic: true,
@@ -483,13 +502,13 @@ pub mod convert_to_ansi_color_styles {
         fn test_add_styles() {
             let style1 = TuiStyle {
                 bold: true,
-                color_fg: color!(@red).into(),
+                color_fg: tui_color!(red).into(),
                 ..TuiStyle::default()
             };
 
             let style2 = TuiStyle {
                 italic: true,
-                color_bg: color!(0, 0, 0).into(),
+                color_bg: tui_color!(0, 0, 0).into(),
                 ..TuiStyle::default()
             };
 
@@ -497,21 +516,21 @@ pub mod convert_to_ansi_color_styles {
 
             assert!(combined_style.bold);
             assert!(combined_style.italic);
-            assert_eq2!(combined_style.color_fg, color!(@red).into());
-            assert_eq2!(combined_style.color_bg, color!(0, 0, 0).into());
+            assert_eq2!(combined_style.color_fg, tui_color!(red).into());
+            assert_eq2!(combined_style.color_bg, tui_color!(0, 0, 0).into());
         }
 
         #[test]
         fn test_add_assign_styles() {
             let mut style1 = TuiStyle {
                 bold: true,
-                color_fg: color!(@red).into(),
+                color_fg: tui_color!(red).into(),
                 ..TuiStyle::default()
             };
 
             let style2 = TuiStyle {
                 italic: true,
-                color_bg: color!(0, 0, 0).into(),
+                color_bg: tui_color!(0, 0, 0).into(),
                 ..TuiStyle::default()
             };
 
@@ -519,14 +538,14 @@ pub mod convert_to_ansi_color_styles {
 
             assert!(style1.bold);
             assert!(style1.italic);
-            assert_eq2!(style1.color_fg, color!(@red).into());
-            assert_eq2!(style1.color_bg, color!(0, 0, 0).into());
+            assert_eq2!(style1.color_fg, tui_color!(red).into());
+            assert_eq2!(style1.color_bg, tui_color!(0, 0, 0).into());
         }
 
         #[test]
         fn test_remove_bg_color() {
             let mut style = TuiStyle {
-                color_bg: color!(0, 0, 0).into(),
+                color_bg: tui_color!(0, 0, 0).into(),
                 ..TuiStyle::default()
             };
 

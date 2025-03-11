@@ -81,6 +81,3 @@ pub use spinner_impl::*;
 pub use syntax_highlighting::*;
 pub use terminal_lib_backends::*;
 pub use terminal_window::*;
-
-// Tests.
-mod test_make_style_macro;
