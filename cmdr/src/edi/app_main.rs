@@ -14,7 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use crossterm::style::Stylize;
+use r3bl_ansi_color::{green, magenta};
 use r3bl_core::{Ansi256GradientIndex,
                 ColorWheel,
                 ColorWheelConfig,
@@ -28,7 +28,6 @@ use r3bl_core::{Ansi256GradientIndex,
                 TextColorizationPolicy,
                 TuiStyledTexts,
                 TuiStylesheet,
-                call_if_true,
                 col,
                 get_tui_style,
                 glyphs,
@@ -37,6 +36,7 @@ use r3bl_core::{Ansi256GradientIndex,
                 req_size_pc,
                 row,
                 send_signal,
+                string_storage,
                 throws,
                 throws_with_return,
                 tui_color,
@@ -136,8 +136,9 @@ mod app_main_constructor {
 
     impl Default for AppMain {
         fn default() -> Self {
-            call_if_true!(DEBUG_TUI_MOD, {
-                tracing::debug!("🪙 construct edi::AppMain");
+            DEBUG_TUI_MOD.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(message = "🪙 construct edi::AppMain");
             });
             Self
         }
@@ -153,6 +154,9 @@ mod app_main_constructor {
 }
 
 mod app_main_impl_app_trait {
+    use r3bl_ansi_color::red;
+    use r3bl_core::string_storage;
+
     use super::*;
 
     impl App for AppMain {
@@ -200,17 +204,19 @@ mod app_main_impl_app_trait {
                 let result_open = open::that(link_url);
                 match result_open {
                     Ok(_) => {
-                        call_if_true!(DEBUG_TUI_MOD, {
+                        DEBUG_TUI_MOD.then(|| {
+                            // % is Display, ? is Debug.
                             tracing::debug!(
-                                "\n📣 Opened feedback link: {}",
-                                format!("{link_url:?}").green()
+                                message = "📣 Opened feedback link",
+                                link = %green(&string_storage!("{link_url:?}"))
                             );
                         });
                     }
                     Err(err) => {
+                        // % is Display, ? is Debug.
                         tracing::error!(
-                            "\n📣 Error opening feedback link: {}",
-                            format!("{err:?}").red()
+                            message = "📣 Error opening feedback link",
+                            error = %red(&string_storage!("{err:?}"))
                         );
                     }
                 }
@@ -285,12 +291,17 @@ mod app_main_impl_app_trait {
                         has_focus,
                         state,
                     ) {
-                        if let Some(CommonError {
-                            error_type: _,
-                            error_message: msg,
-                        }) = err.downcast_ref::<CommonError>()
-                        {
-                            tracing::error!("📣 Error activating simple modal: {msg:?}")
+                        match err.downcast_ref::<CommonError>() {
+                            // err is of concrete type CommonError.
+                            Some(common_error) => {
+                                // % is Display, ? is Debug.
+                                tracing::error!(
+                                    message = "📣 Error activating simple modal",
+                                    error = ?common_error
+                                );
+                            }
+                            // err is not of concrete type CommonError.
+                            _ => { /* do nothing */ }
                         }
                     };
 
@@ -387,8 +398,12 @@ mod modal_dialog_ask_for_filename_to_save_file {
                 text.into(),
             );
 
-            call_if_true!(DEBUG_TUI_MOD, {
-                tracing::debug!("📣 activate modal simple: {:?}", has_focus);
+            DEBUG_TUI_MOD.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "📣 activate modal simple",
+                    has_focus = ?has_focus
+                );
             });
         });
     }
@@ -443,10 +458,11 @@ mod modal_dialog_ask_for_filename_to_save_file {
 
                         let user_input_file_path = text.trim();
                         if !user_input_file_path.is_empty() {
-                            call_if_true!(DEBUG_TUI_MOD, {
+                            DEBUG_TUI_MOD.then(|| {
+                                // % is Display, ? is Debug.
                                 tracing::debug!(
-                                    "\n💾💾💾 About to save the new buffer with given filename: {}",
-                                    format!("{user_input_file_path:?}").magenta()
+                                    message = "💾💾💾 About to save the new buffer with given filename",
+                                    file_path = %magenta(&string_storage!("{user_input_file_path}"))
                                 );
                             });
 
@@ -460,10 +476,12 @@ mod modal_dialog_ask_for_filename_to_save_file {
                                     Some(user_input_file_path.into());
 
                                 // Set the file extension.
-                                editor_buffer.content.maybe_file_extension =
-                                    Some(file_utils::get_file_extension(&Some(
-                                        user_input_file_path,
-                                    )));
+
+                                editor_buffer.content.maybe_file_extension = {
+                                    let one = Some(user_input_file_path);
+                                    let two = file_utils::get_file_extension(one);
+                                    Some(two)
+                                };
 
                                 // Fire a signal to save the file.
                                 send_signal!(
@@ -505,7 +523,8 @@ mod modal_dialog_ask_for_filename_to_save_file {
             boxed_dialog_component,
         );
 
-        call_if_true!(DEBUG_TUI_MOD, {
+        DEBUG_TUI_MOD.then(|| {
+            // % is Display, ? is Debug.
             tracing::debug!(
                 message =
                     "app_main construct DialogComponent (simple) [ on_dialog_press ]"
@@ -569,6 +588,8 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
+    use r3bl_core::string_storage;
+
     use super::*;
 
     pub fn create_components(
@@ -584,12 +605,10 @@ mod populate_component_registry {
         let id = FlexBoxId::from(Id::ComponentEditor);
         has_focus.set_id(id);
 
-        call_if_true!(DEBUG_TUI_MOD, {
-            let message =
-                format!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH);
+        DEBUG_TUI_MOD.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = message,
+                message = %string_storage!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
                 has_focus = ?has_focus.get_id()
             );
         });
@@ -619,7 +638,8 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        call_if_true!(DEBUG_TUI_MOD, {
+        DEBUG_TUI_MOD.then(|| {
+            // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct EditorComponent [ on_buffer_change ]"
             );

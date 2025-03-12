@@ -41,7 +41,7 @@ use std::{error::Error,
 ///   match (first, second) {
 ///     (Ok(first), Ok(second)) => Ok((first, second)),
 ///     _ => {
-///       let err_msg = format!("Invalid Pcage values in tuple: {:?}", pair);
+///       let err_msg = format!("Invalid Pair values in tuple: {:?}", pair);
 ///       CommonError::new_error_result(CommonErrorType::ValueOutOfRange, &err_msg)
 ///     }
 ///   }
@@ -63,7 +63,7 @@ pub type CommonResult<T> = miette::Result<T>;
 ///   match (first, second) {
 ///     (Ok(first), Ok(second)) => Ok((first, second)),
 ///     _ => {
-///       let err_msg = format!("Invalid Pcage values in tuple: {:?}", pair);
+///       let err_msg = format!("Invalid Pair values in tuple: {:?}", pair);
 ///       CommonError::new_error_result(CommonErrorType::ValueOutOfRange, &err_msg)
 ///     }
 ///   }
@@ -99,7 +99,7 @@ pub enum CommonErrorType {
     NotFound,
     CommandExecutionError,
     ConfigFolderCountNotBeCreated,
-    ConfigFolderPathCouldNotBeGenerated,
+    ConfigFolderPathCouldNotBeAccessed,
 }
 
 /// Implement [`Error`] trait.

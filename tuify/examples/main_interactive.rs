@@ -18,7 +18,7 @@
 use std::vec;
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
-use r3bl_core::{call_if_true, get_size, get_terminal_width, throws, usize};
+use r3bl_core::{get_size, get_terminal_width, throws, usize};
 use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{components::style::StyleSheet,
                  select_from_list,
@@ -30,9 +30,13 @@ use single_select_quiz_game::main as single_select_quiz_game;
 
 fn main() -> miette::Result<()> {
     throws!({
-        call_if_true!(DEVELOPMENT_MODE, {
+        DEVELOPMENT_MODE.then(|| {
             try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
-            tracing::debug!("Start logging... terminal window size: {:?}", get_size()?)
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = "Start logging...",
+                window_size = ?get_size()
+            )
         });
 
         // Get display size.
@@ -130,8 +134,9 @@ fn main() -> miette::Result<()> {
             None => println!("User did not select anything"),
         }
 
-        call_if_true!(DEVELOPMENT_MODE, {
-            tracing::debug!("Stop logging...");
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(message = "Stop logging...");
         });
     });
 }
@@ -216,8 +221,12 @@ fn single_line_header() {
         }
         None => println!("User did not select anything"),
     }
-    call_if_true!(DEVELOPMENT_MODE, {
-        tracing::debug!("user_input: {user_input:?}");
+    DEVELOPMENT_MODE.then(|| {
+        // % is Display, ? is Debug.
+        tracing::debug!(
+            message = "User selected something",
+            user_input = ?user_input
+        );
     });
 }
 
@@ -296,8 +305,12 @@ fn multiple_select_13_items_vph_5(
         }
         None => println!("User did not select anything"),
     }
-    call_if_true!(DEVELOPMENT_MODE, {
-        tracing::debug!("user_input: {user_input:?}");
+    DEVELOPMENT_MODE.then(|| {
+        // % is Display, ? is Debug.
+        tracing::debug!(
+            message = "User selected something",
+            user_input = ?user_input
+        );
     });
 }
 
@@ -335,8 +348,12 @@ fn multiple_select_2_items_vph_5(
         }
         None => println!("User did not select anything"),
     }
-    call_if_true!(DEVELOPMENT_MODE, {
-        tracing::debug!("user_input: {user_input:?}");
+    DEVELOPMENT_MODE.then(|| {
+        // % is Display, ? is Debug.
+        tracing::debug!(
+            message = "User selected something",
+            user_input = ?user_input
+        );
     });
 }
 
@@ -377,8 +394,12 @@ fn single_select_13_items_vph_5(
         }
         None => println!("User did not select anything"),
     }
-    call_if_true!(DEVELOPMENT_MODE, {
-        tracing::debug!("user_input: {user_input:?}");
+    DEVELOPMENT_MODE.then(|| {
+        // % is Display, ? is Debug.
+        tracing::debug!(
+            message = "User selected something",
+            user_input = ?user_input
+        );
     });
 }
 
@@ -415,8 +436,12 @@ fn single_select_2_items_vph_5(
         }
         None => println!("User did not select anything"),
     }
-    call_if_true!(DEVELOPMENT_MODE, {
-        tracing::debug!("user_input: {user_input:?}");
+    DEVELOPMENT_MODE.then(|| {
+        // % is Display, ? is Debug.
+        tracing::debug!(
+            message = "User selected something",
+            user_input = ?user_input
+        );
     });
 }
 

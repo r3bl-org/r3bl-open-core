@@ -17,8 +17,7 @@
 
 use std::fmt::{Debug, Formatter};
 
-use r3bl_core::{call_if_true,
-                ok,
+use r3bl_core::{ok,
                 sizing::TelemetryReportLineStorage,
                 ChUnit,
                 CommonResult,
@@ -125,10 +124,13 @@ where
 
     pub fn set_size(&mut self, new_size: Size) {
         self.window_size = new_size;
-        call_if_true!(
-            DEBUG_TUI_MOD,
-            tracing::info!("main_event_loop -> Resize ⇲"=?new_size)
-        );
+        DEBUG_TUI_MOD.then(|| {
+            // % is Display, ? is Debug.
+            tracing::info!(
+                message = "main_event_loop -> Resize ⇲",
+                new_size = ?new_size
+            );
+        });
     }
 
     pub fn get_size(&self) -> Size { self.window_size }

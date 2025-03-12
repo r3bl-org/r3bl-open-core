@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{call_if_true,
-                ch,
+use r3bl_core::{ch,
                 glyphs::{self, SPACER_GLYPH},
                 string_storage,
                 usize,
@@ -62,12 +61,10 @@ impl RenderPipeline {
             }
         }
 
-        call_if_true!(DEBUG_TUI_COMPOSITOR, {
-            let message =
-                format!("offscreen_buffer {ch}", ch = glyphs::SCREEN_BUFFER_GLYPH);
+        DEBUG_TUI_COMPOSITOR.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = message,
+                message = %string_storage!("offscreen_buffer {ch}", ch = glyphs::SCREEN_BUFFER_GLYPH),
                 offscreen_buffer = ?mut_offscreen_buffer
             );
         });
@@ -184,26 +181,24 @@ pub fn print_plain_text(
     // This is the final text that will be printed.
     let text_gcs = clip_2_gcs;
 
-    call_if_true!(DEBUG_TUI_COMPOSITOR, {
-        let message = string_storage!(
-            "print_plain_text() {ar} {ch}",
-            ar = glyphs::RIGHT_ARROW_GLYPH,
-            ch = glyphs::PAINT_GLYPH,
-        );
-        let details = string_storage!(
-            "insertion at: display_row_index: {a}, display_col_index: {b}, window_size: {c:?},
-            text: '{d}',
-            width: {e:?}",
-            a = display_row_index,
-            b = display_col_index,
-            c = my_offscreen_buffer.window_size,
-            d = text_gcs.string,
-            e = text_gcs.display_width,
-        );
+    DEBUG_TUI_COMPOSITOR.then(|| {
         // % is Display, ? is Debug.
         tracing::info! {
-            message = %message,
-            details = %details
+            message = %string_storage!(
+                "print_plain_text() {ar} {ch}",
+                ar = glyphs::RIGHT_ARROW_GLYPH,
+                ch = glyphs::PAINT_GLYPH,
+            ),
+            details = %string_storage!(
+                "insertion at: display_row_index: {a}, display_col_index: {b}, window_size: {c:?},
+                text: '{d}',
+                width: {e:?}",
+                a = display_row_index,
+                b = display_col_index,
+                c = my_offscreen_buffer.window_size,
+                d = text_gcs.string,
+                e = text_gcs.display_width,
+            )
         };
     });
 
@@ -246,28 +241,29 @@ pub fn print_plain_text(
         }
     };
 
-    call_if_true!(DEBUG_TUI_COMPOSITOR, {
-        let message = match maybe_style {
-            Some(style) => {
-                format!(
-                    "{ch} [row: {row}, col: {col}] - style: {style:?}",
-                    ch = glyphs::BOX_FILL_GLYPH,
-                    row = display_row_index,
-                    col = display_col_index,
-                    style = style
-                )
-            }
-            None => {
-                format!(
-                    "{ch} [row: {row}, col: {col}] - style: None",
-                    ch = glyphs::BOX_EMPTY_GLYPH,
-                    row = display_row_index,
-                    col = display_col_index,
-                )
-            }
-        };
+    DEBUG_TUI_COMPOSITOR.then(|| {
         // % is Display, ? is Debug.
-        tracing::debug!(message = message);
+        tracing::debug!(
+            message = %match maybe_style {
+                Some(style) => {
+                    string_storage!(
+                        "{ch} [row: {row}, col: {col}] - style: {style:?}",
+                        ch = glyphs::BOX_FILL_GLYPH,
+                        row = display_row_index,
+                        col = display_col_index,
+                        style = style
+                    )
+                }
+                None => {
+                    string_storage!(
+                        "{ch} [row: {row}, col: {col}] - style: None",
+                        ch = glyphs::BOX_EMPTY_GLYPH,
+                        row = display_row_index,
+                        col = display_col_index,
+                    )
+                }
+            }
+        );
     });
 
     // Loop over each grapheme cluster segment (the character) in `text_ref_gcs` (text in

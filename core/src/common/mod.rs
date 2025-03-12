@@ -27,7 +27,6 @@ pub mod ring_buffer;
 pub mod ring_buffer_heap;
 pub mod ring_buffer_stack;
 pub mod telemetry;
-pub mod text_default_styles;
 pub mod time_duration;
 
 // Re-export.
@@ -42,5 +41,4 @@ pub use ring_buffer::*;
 pub use ring_buffer_heap::*;
 pub use ring_buffer_stack::*;
 pub use telemetry::*;
-pub use text_default_styles::*;
 pub use time_duration::*;

@@ -17,8 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{call_if_true,
-                common::{CommonError, CommonErrorType, CommonResult}};
+use r3bl_core::common::{CommonError, CommonErrorType, CommonResult};
 
 use crate::{Component,
             DialogEngine,
@@ -171,16 +170,17 @@ where
                     DialogEngineApplyResponse::DialogChoice(dialog_choice) => {
                         has_focus.reset_modal_id();
 
-                        call_if_true!(DEBUG_TUI_MOD, {
+                        DEBUG_TUI_MOD.then(|| {
+                            // % is Display, ? is Debug.
                             tracing::debug!(
-                                "🐝 restore focus to non modal: {:?}",
-                                has_focus
+                                message = "🐝 restore focus to non modal",
+                                has_focus = ?has_focus
                             );
                         });
 
                         // Run the handler (if any) w/ `dialog_choice`.
-                        if let Some(it) = &on_dialog_press_handler {
-                            it(
+                        if let Some(fun) = &on_dialog_press_handler {
+                            fun(
                                 dialog_choice,
                                 state,
                                 &mut main_thread_channel_sender.clone(),

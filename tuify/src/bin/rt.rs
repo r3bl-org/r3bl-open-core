@@ -28,7 +28,7 @@ use r3bl_ansi_color::{is_stdin_piped,
                       is_stdout_piped,
                       StdinIsPipedResult,
                       StdoutIsPipedResult};
-use r3bl_core::{call_if_true, get_size, get_terminal_width, throws, usize};
+use r3bl_core::{get_size, get_terminal_width, string_storage, throws, usize};
 use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, DEVELOPMENT_MODE};
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
@@ -96,10 +96,14 @@ fn main() -> miette::Result<()> {
 
         let enable_logging = DEVELOPMENT_MODE | cli_args.global_opts.enable_logging;
 
-        call_if_true!(enable_logging, {
+        enable_logging.then(|| {
             try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
-            tracing::debug!("Start logging... terminal window size: {:?}", get_size()?);
-            tracing::debug!("cli_args {cli_args:?}")
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = "Start logging",
+                window_size = ?get_size(),
+                cli_args = ?cli_args,
+            );
         });
 
         match cli_args.command {
@@ -150,8 +154,9 @@ fn main() -> miette::Result<()> {
                 }
             }
         }
-        call_if_true!(enable_logging, {
-            tracing::debug!("Stop logging...");
+        enable_logging.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(message = "Stop logging...");
         });
     });
 }
@@ -197,8 +202,12 @@ fn show_tui(
         .map_while(Result::ok)
         .collect::<Vec<String>>();
 
-    call_if_true!(enable_logging, {
-        tracing::debug!("lines: {lines:?}");
+    enable_logging.then(|| {
+        // % is Display, ? is Debug.
+        tracing::debug!(
+            message = "lines",
+            lines = ?lines,
+        );
     });
 
     // Early return, nothing to do. No content found in stdin.
@@ -295,8 +304,12 @@ fn show_tui(
         convert_user_input_into_vec_of_strings(it)
     };
 
-    call_if_true!(enable_logging, {
-        tracing::debug!("selected_items: {}", format!("{selected_items:?}").cyan());
+    enable_logging.then(|| {
+        // % is Display, ? is Debug.
+        tracing::debug!(
+            message = "selected_items",
+            selected_items = ?selected_items,
+        );
     });
 
     for selected_item in selected_items {
@@ -390,10 +403,11 @@ fn get_possible_values_for_subcommand_and_option(
                     .map(|it| it.get_name().to_string())
                     .collect::<Vec<_>>();
 
-                call_if_true!(DEVELOPMENT_MODE, {
+                DEVELOPMENT_MODE.then(|| {
+                    // % is Display, ? is Debug.
                     tracing::debug!(
-                        "{subcommand}, {option} - possible_values: {}",
-                        format!("{possible_values:?}").green()
+                        message = %string_storage!("{subcommand}, {option}"),
+                        possible_values = ?possible_values,
                     );
                 });
 

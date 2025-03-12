@@ -24,6 +24,38 @@ use crate::common::{CommonError, CommonErrorType, CommonResult};
 
 #[macro_export]
 macro_rules! tui_color {
+    (lizard_green) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(20, 244, 0))
+    };
+
+    (slate_grey) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(94, 103, 111))
+    };
+
+    (silver_metallic) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(213, 217, 220))
+    };
+
+    (frozen_blue) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(171, 204, 242))
+    };
+
+    (moonlight_blue) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(31, 36, 46))
+    };
+
+    (night_blue) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(14, 17, 23))
+    };
+
+    (guards_red) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(200, 1, 1))
+    };
+
+    (orange) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(255, 132, 18))
+    };
+
     (reset) => {
         $crate::TuiColor::Reset
     };
@@ -517,6 +549,15 @@ mod tests {
         let grey = tui_color!(grey);
         let reset = tui_color!(reset);
 
+        let lizard_green = tui_color!(lizard_green);
+        let slate_grey = tui_color!(slate_grey);
+        let silver_metallic = tui_color!(silver_metallic);
+        let frozen_blue = tui_color!(frozen_blue);
+        let moonlight_blue = tui_color!(moonlight_blue);
+        let night_blue = tui_color!(night_blue);
+        let guards_red = tui_color!(guards_red);
+        let orange = tui_color!(orange);
+
         assert_eq!(
             RgbValue::try_from_tui_color(black).unwrap(),
             RgbValue {
@@ -662,6 +703,78 @@ mod tests {
         );
 
         assert!(RgbValue::try_from_tui_color(reset).is_err());
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(lizard_green).unwrap(),
+            RgbValue {
+                red: 20,
+                green: 244,
+                blue: 0
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(slate_grey).unwrap(),
+            RgbValue {
+                red: 94,
+                green: 103,
+                blue: 111
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(silver_metallic).unwrap(),
+            RgbValue {
+                red: 213,
+                green: 217,
+                blue: 220
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(frozen_blue).unwrap(),
+            RgbValue {
+                red: 171,
+                green: 204,
+                blue: 242
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(moonlight_blue).unwrap(),
+            RgbValue {
+                red: 31,
+                green: 36,
+                blue: 46
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(night_blue).unwrap(),
+            RgbValue {
+                red: 14,
+                green: 17,
+                blue: 23
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(guards_red).unwrap(),
+            RgbValue {
+                red: 200,
+                green: 1,
+                blue: 1
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(orange).unwrap(),
+            RgbValue {
+                red: 255,
+                green: 132,
+                blue: 18
+            }
+        );
     }
 }
 

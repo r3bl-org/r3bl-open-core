@@ -16,8 +16,7 @@
  */
 
 use copypasta_ext::{copypasta::ClipboardProvider, x11_fork::ClipboardContext};
-use crossterm::style::Stylize;
-use r3bl_core::{call_if_true, throws};
+use r3bl_core::throws;
 
 use super::{ClipboardResult, ClipboardService};
 use crate::DEBUG_TUI_COPY_PASTE;
@@ -33,10 +32,11 @@ impl ClipboardService for SystemClipboard {
             let mut ctx = ClipboardContext::new()?;
             ctx.set_contents(content.clone())?;
 
-            call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            DEBUG_TUI_COPY_PASTE.then(|| {
+                // % is Display, ? is Debug.
                 tracing::debug!(
-                    "\n📋📋📋 Selected Text was copied to clipboard: \n{}",
-                    content.to_string().black().on_green(),
+                    message = "📋📋📋 Selected Text was copied to clipboard",
+                    copied = %content,
                 );
             });
         })

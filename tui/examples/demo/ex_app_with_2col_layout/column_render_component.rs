@@ -14,8 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_core::{call_if_true,
-                ch,
+use r3bl_core::{ch,
                 col,
                 glyphs,
                 row,
@@ -266,14 +265,13 @@ mod column_render_component_impl_component_trait {
                 pipeline.push(ZOrder::Normal, render_ops);
 
                 // Log pipeline.
-                call_if_true!(DEBUG_TUI_MOD, {
-                    let message = string_storage!(
-                        "ColumnComponent::render {ch}",
-                        ch = glyphs::RENDER_GLYPH
-                    );
+                DEBUG_TUI_MOD.then(|| {
                     // % is Display, ? is Debug.
                     tracing::info!(
-                        message = %message,
+                        message = %string_storage!(
+                            "ColumnComponent::render {ch}",
+                            ch = glyphs::RENDER_GLYPH
+                        ),
                         current_box = ?current_box,
                         box_origin_pos = ?box_origin_pos,
                         box_bounds_size = ?box_bounds_size,

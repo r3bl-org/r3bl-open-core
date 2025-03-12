@@ -33,7 +33,7 @@ mod test_config_options {
     #[test]
     fn test_multiline_true() {
         // multiline true.
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine: EditorEngine = EditorEngine {
             config_options: EditorEngineConfig {
                 multiline_mode: LineMode::MultiLine,
@@ -80,7 +80,7 @@ mod test_config_options {
     #[test]
     fn test_multiline_false() {
         // multiline false.
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine: EditorEngine = EditorEngine {
             config_options: EditorEngineConfig {
                 multiline_mode: LineMode::SingleLine,
@@ -151,7 +151,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_delete() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "abc\nab\na".
@@ -239,7 +239,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_backspace() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "abc\nab\na".
@@ -351,7 +351,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_validate_caret_pos_on_up() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "😀\n1".
@@ -389,7 +389,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_validate_caret_pos_on_down() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "😀\n1".
@@ -445,7 +445,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_move_caret_up_down() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "abc\nab\na".
@@ -561,7 +561,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_insert_new_line() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Starts w/ an empty line.
@@ -725,7 +725,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_move_caret_left_right() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "a".
@@ -918,14 +918,14 @@ mod test_editor_ops {
 
     #[test]
     fn editor_empty_state() {
-        let buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         assert_eq2!(buffer.get_lines().len(), 1);
         assert!(!buffer.is_empty());
     }
 
     #[test]
     fn editor_insertion() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Move caret to col: FlexBoxId::from(0), row: 0. Insert "a".
@@ -1047,7 +1047,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_move_caret_home_end() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "hello". Then press home.
@@ -1079,7 +1079,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_move_caret_home_end_overflow_viewport() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // console_log!(OK_RAW "press hello");
@@ -1125,7 +1125,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_move_caret_page_up_page_down() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "hello" many times.
@@ -1203,7 +1203,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_scroll_vertical() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "hello" many times.
@@ -1250,7 +1250,7 @@ mod test_editor_ops {
 
     #[test]
     fn editor_scroll_horizontal() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert a long line of text.
@@ -1307,7 +1307,7 @@ mod test_editor_ops {
         let viewport_width = width(65);
         let viewport_height = height(2);
         let window_size = viewport_width + viewport_height;
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine =
             mock_real_objects_for_editor::make_editor_engine_with_bounds(window_size);
 
@@ -1470,7 +1470,7 @@ mod selection_tests {
 
     #[test]
     fn test_text_selection() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Buffer has two lines.
@@ -1747,7 +1747,7 @@ mod clipboard_tests {
 
     #[test]
     fn test_copy() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
         // Buffer has two lines.
         // Row Index : 0 , Column Length : 12
@@ -1803,7 +1803,7 @@ mod clipboard_tests {
 
     #[test]
     fn test_paste() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Buffer has two lines.
@@ -1865,7 +1865,7 @@ mod clipboard_tests {
 
     #[test]
     fn test_cut() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Buffer has two lines.

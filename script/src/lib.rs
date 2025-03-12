@@ -40,3 +40,5 @@ pub use fs_path::*;
 pub use github_api::*;
 pub use http_client::*;
 pub use permissions::*;
+
+pub const SCRIPT_MOD_DEBUG: bool = true;

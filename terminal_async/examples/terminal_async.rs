@@ -24,7 +24,7 @@ use std::{fs,
 
 use crossterm::style::Stylize as _;
 use miette::{IntoDiagnostic as _, miette};
-use r3bl_core::{SendRawTerminal, SharedWriter, StdMutex, VecArray};
+use r3bl_core::{SendRawTerminal, SharedWriter, StdMutex, VecArray, string_storage};
 use r3bl_log::{DisplayPreference, try_initialize_logging_global};
 use r3bl_terminal_async::{Readline, ReadlineEvent, Spinner, TerminalAsync};
 use r3bl_tui::SpinnerStyle;
@@ -32,7 +32,6 @@ use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
 use tokio::{select, time::interval};
-use tracing::info;
 
 /// More info:
 /// - <https://docs.rs/strum_macros/latest/strum_macros/derive.EnumString.html>
@@ -240,8 +239,12 @@ mod task_2 {
             return Ok(());
         };
 
-        let counter_2 = state.task_2_state.counter;
-        info!("[{counter_2}] Second interval went off!");
+        // Display a log message with the current counter value.
+        tracing::info!(
+            message = %string_storage!("[{}] Second interval went off!", state.task_2_state.counter)
+        );
+
+        // Increment the counter.
         state.task_2_state.counter += 1;
 
         Ok(())
