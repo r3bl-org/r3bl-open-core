@@ -18,8 +18,8 @@
 use std::cmp;
 
 use crossterm::style::Stylize;
-use r3bl_core::{call_if_true,
-                caret_scr_adj,
+use r3bl_ansi_color::{cyan, dim, green, magenta, underline, yellow};
+use r3bl_core::{caret_scr_adj,
                 col,
                 height,
                 row,
@@ -75,8 +75,12 @@ pub fn handle_selection_single_line_caret_movement(
                 ),
             );
 
-            call_if_true!(DEBUG_TUI_COPY_PASTE, {
-                tracing::debug!("\n🍕🍕🍕 new selection: \n\t{it:?}", it = new_range);
+            DEBUG_TUI_COPY_PASTE.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "🍕🍕🍕 new selection",
+                    new_range = ?new_range
+                );
             });
 
             return;
@@ -87,7 +91,7 @@ pub fn handle_selection_single_line_caret_movement(
     // Destructure range for easier access.
     let (range_start, range_end) = range.as_tuple();
 
-    call_if_true!(DEBUG_TUI_COPY_PASTE, {
+    DEBUG_TUI_COPY_PASTE.then(|| {
         tracing::debug!(
                     "\n🍕🍕🍕 {a}:\n\t{b}: {c:?}, {d}: {e:?}\n\t{f}: {g:?}, {h}: {i:?}\n\t{j}: {k}, {l}: {m}, {n}: {o}",
                     a = "modify_existing_range_at_row_index",
@@ -100,17 +104,11 @@ pub fn handle_selection_single_line_caret_movement(
                     h = "curr_col_index",
                     i = curr_col_index,
                     j = "previous",
-                    k = format!("{:?}", range.locate_column(prev)).black().on_dark_yellow(),
+                    k = dim(&string_storage!("{:?}", range.locate_column(prev))),
                     l = "current",
-                    m = format!("{:?}", range.locate_column(curr)).black().on_dark_cyan(),
+                    m = underline(&string_storage!("{:?}", range.locate_column(curr))),
                     n = "direction",
-                    o =
-                    format!(
-                        "{:?}",
-                        SelectionRange::caret_movement_direction_left_right(prev, curr)
-                    )
-                    .black()
-                    .on_dark_green(),
+                    o = green(&string_storage!("{:?}", SelectionRange::caret_movement_direction_left_right(prev, curr)))
                 )
     });
 
@@ -291,30 +289,26 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
 
     let buffer_mut = buffer.get_mut(dummy_viewport());
 
-    call_if_true!(DEBUG_TUI_COPY_PASTE, {
-        let message = "📜🔼🔽 handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document";
-        let details = string_storage!(
-            "\n{a}\n\t{b}, {c}, {d}, {e}",
-            /* 0 */
-            a = "handle multiline caret movement hit top or bottom of document"
-                .to_string()
-                .red()
-                .on_white(),
-            /* 1: previous */
-            b = format!("previous: {:?}", prev).cyan().on_dark_grey(),
-            /* 2: current */
-            c = format!("current: {:?}", curr).yellow().on_dark_grey(),
-            /* 3: row_index */
-            d = format!("row_index: {:?}", row_index).green().on_dark_grey(),
-            /* 4: selection_map */
-            e = format!("{:?}", buffer_mut.inner.sel_list)
-                .magenta()
-                .on_dark_grey(),
-        );
+    DEBUG_TUI_COPY_PASTE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug! {
-            message = %message,
-            details = %details,
+            message = "📜🔼🔽 handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document",
+            details = %string_storage!(
+                "\n{a}\n\t{b}, {c}, {d}, {e}",
+                /* 0 */
+                a = "handle multiline caret movement hit top or bottom of document"
+                    .to_string()
+                    .red()
+                    .on_white(),
+                /* 1: previous */
+                b = cyan(&string_storage!("previous: {:?}", prev)),
+                /* 2: current */
+                c = yellow(&string_storage!("current: {:?}", curr)),
+                /* 3: row_index */
+                d = green(&string_storage!("row_index: {:?}", row_index)),
+                /* 4: selection_map */
+                e = magenta(&string_storage!("{:?}", buffer_mut.inner.sel_list))
+            ),
         }
     });
 
@@ -381,6 +375,8 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
 }
 
 mod multiline_select_helpers {
+    use r3bl_ansi_color::blue;
+
     use super::*;
 
     // XMARK: Impl multiline selection changes (up/down, and later page up/page down)
@@ -407,50 +403,38 @@ mod multiline_select_helpers {
             .get_selection_list()
             .has_caret_movement_direction_changed(caret_vertical_movement_direction);
 
-        call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            let message = "📜📜📜 handle_two_lines";
-            let details = string_storage!(
-                "\n📜📜📜 {a}\n\t{b}, {c}\n\t{d}\n\t{e}\n\t{f}\n\t{g}\n\t{h}",
-                /* heading */
-                a = "handle multiline caret movement"
-                    .to_string()
-                    .red()
-                    .on_white(),
-                /* previous */
-                b = format!("👈 previous: {:?}", prev).cyan().on_dark_grey(),
-                /* current */
-                c = format!("👉 current: {:?}", curr).magenta().on_dark_grey(),
-                /* selection_map */
-                d = format!("{:?}", buffer.get_selection_list())
-                    .magenta()
-                    .on_dark_grey(),
-                /* locate_previous_row_index */
-                e = format!("locate_previous_row_index: {:?}", locate_previous_row_index)
-                    .cyan()
-                    .on_dark_grey(),
-                /* locate_current_row_index, */
-                f = format!("locate_current_row_index: {:?}", locate_current_row_index,)
-                    .magenta()
-                    .on_dark_grey(),
-                /* caret_vertical_movement_direction, */
-                g = format!(
-                    "caret_vertical_movement_direction: {:?}",
-                    caret_vertical_movement_direction,
-                )
-                .green()
-                .on_dark_grey(),
-                /* has_caret_movement_direction_changed, */
-                h = format!(
-                    "has_caret_movement_direction_changed: {:?}",
-                    has_caret_movement_direction_changed,
-                )
-                .yellow()
-                .on_dark_grey(),
-            );
+        DEBUG_TUI_COPY_PASTE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
-                message = %message,
-                details = %details
+                message = "📜📜📜 handle_two_lines",
+                details = %string_storage!(
+                    "\n📜📜📜 {a}\n\t{b}, {c}\n\t{d}\n\t{e}\n\t{f}\n\t{g}\n\t{h}",
+                    /* heading */
+                    a = "handle multiline caret movement"
+                        .to_string()
+                        .red()
+                        .on_white(),
+                    /* previous */
+                    b = cyan(&string_storage!("👈 previous: {:?}", prev)),
+                    /* current */
+                    c = magenta(&string_storage!("👉 current: {:?}", curr)),
+                    /* selection_map */
+                    d = magenta(&string_storage!("{:?}", buffer.get_selection_list())),
+                    /* locate_previous_row_index */
+                    e = cyan(&string_storage!("locate_previous_row_index: {:?}", locate_previous_row_index)),
+                    /* locate_current_row_index, */
+                    f = green(&string_storage!("locate_current_row_index: {:?}", locate_current_row_index)),
+                    /* caret_vertical_movement_direction, */
+                    g = blue(&string_storage!(
+                        "caret_vertical_movement_direction: {:?}",
+                        caret_vertical_movement_direction,
+                    )),
+                    /* has_caret_movement_direction_changed, */
+                    h = yellow(&string_storage!(
+                        "has_caret_movement_direction_changed: {:?}",
+                        has_caret_movement_direction_changed,
+                    ))
+                )
             };
         });
 
@@ -569,16 +553,11 @@ mod multiline_select_helpers {
             ),
             // Catchall.
             _ => {
-                call_if_true!(DEBUG_TUI_COPY_PASTE, {
+                DEBUG_TUI_COPY_PASTE.then(|| {
+                    // % is Display, ? is Debug.
                     tracing::debug!(
-                        "\n📜📜📜⚾⚾⚾ {0}",
-                        /* 0: heading */
-                        "handle multiline caret movement Catchall"
-                            .to_string()
-                            .bold()
-                            .yellow()
-                            .on_dark_green(),
-                    )
+                        message = "📜📜📜⚾⚾⚾ handle multiline caret movement Catchall"
+                    );
                 });
             }
         }

@@ -158,17 +158,17 @@ macro_rules! console_log {
     (ERROR_RAW $msg:expr, $err:expr) => {{
         eprintln!(
             "{} {} {}\r",
-            r3bl_core::style_error("▶"),
-            r3bl_core::style_prompt($msg),
-            r3bl_core::style_underline(&format!("{:#?}", $err))
+            r3bl_ansi_color::red("▶"),
+            r3bl_ansi_color::green($msg),
+            r3bl_ansi_color::underline(&format!("{:#?}", $err))
         );
     }};
 
     (OK_RAW $msg:expr) => {{
         println!(
             "{} {}\r",
-            r3bl_core::style_error("▶"),
-            r3bl_core::style_prompt($msg)
+            r3bl_ansi_color::red("▶"),
+            r3bl_ansi_color::green($msg)
         );
     }};
 
@@ -187,9 +187,9 @@ macro_rules! console_log {
                 /* Each repeat will contain the following statement, with $element replaced. */
                 println!(
                     "{} {} <- {}",
-                    r3bl_core::style_error("▶"),
-                    r3bl_core::style_underline(&format!("{:#?}", $element)),
-                    r3bl_core::style_prompt(stringify!($element))
+                    r3bl_ansi_color::red("▶"),
+                    r3bl_ansi_color::underline(&format!("{:#?}", $element)),
+                    r3bl_ansi_color::green(stringify!($element))
                 );
             )*
         }

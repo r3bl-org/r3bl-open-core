@@ -79,10 +79,34 @@ pub fn red(text: &str) -> AnsiStyledText<'_> {
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn cyan(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Foreground(Color::Ansi256(51))],
+    }
+}
+
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn yellow(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Foreground(Color::Ansi256(226))],
+    }
+}
+
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
 pub fn magenta(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
         style: &[Style::Foreground(Color::Ansi256(201))],
+    }
+}
+
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn blue(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Foreground(Color::Ansi256(27))],
     }
 }
 
@@ -118,6 +142,13 @@ pub fn dim(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
         style: &[Style::Dim],
+    }
+}
+
+pub fn dim_underline(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: &[Style::Dim, Style::Underline],
     }
 }
 

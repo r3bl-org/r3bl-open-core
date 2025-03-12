@@ -17,8 +17,7 @@
 
 use std::error::Error;
 
-use crossterm::style::Stylize;
-use r3bl_core::{call_if_true, usize, VecArrayStr};
+use r3bl_core::{usize, VecArrayStr};
 
 use super::EditorBuffer;
 use crate::{constants::NEW_LINE,
@@ -64,10 +63,11 @@ pub fn copy_to_clipboard(
     let result =
         clipboard_service_provider.try_to_put_content_into_clipboard(vec_str.join("\n"));
     if let Err(error) = result {
-        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+        DEBUG_TUI_COPY_PASTE.then(|| {
+            // % is Display, ? is Debug.
             tracing::debug!(
-                "\n📋📋📋 Failed to copy selected text to clipboard: {}",
-                format!("{error}").white().on_dark_red(),
+                message = "📋📋📋 Failed to copy selected text to clipboard",
+                error = ?error,
             );
         });
     }
@@ -112,19 +112,21 @@ pub fn paste_from_clipboard(
                 }
             }
 
-            call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            DEBUG_TUI_COPY_PASTE.then(|| {
+                // % is Display, ? is Debug.
                 tracing::debug!(
-                    "\n📋📋📋 Text was pasted from clipboard: \n{}",
-                    clipboard_text.to_string().black().on_green()
+                    message = "📋📋📋 Text was pasted from clipboard",
+                    clipboard_text = %clipboard_text
                 );
             });
         }
 
         Err(error) => {
-            call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            DEBUG_TUI_COPY_PASTE.then(|| {
+                // % is Display, ? is Debug.
                 tracing::debug!(
-                    "\n📋📋📋 Failed to paste the text from clipboard: {}",
-                    format!("{error}").white().on_dark_red(),
+                    message = "📋📋📋 Failed to paste the text from clipboard",
+                    error = ?error
                 );
             });
         }

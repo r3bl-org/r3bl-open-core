@@ -81,7 +81,7 @@ pub mod editor_component_impl_component_trait {
     {
         // Add an empty editor buffer if it doesn't exist.
         if !mut_state.contains_editor_buffer(self_id) {
-            let it = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+            let it = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
             mut_state.insert_editor_buffer(self_id, it);
         }
         // Safe to call unwrap here, since we are guaranteed to have an editor buffer.

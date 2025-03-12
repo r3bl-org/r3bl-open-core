@@ -44,7 +44,7 @@ mod constructor {
         let editor_buffers: HashMap<FlexBoxId, EditorBuffer> = {
             let editor_buffer = {
                 let mut editor_buffer =
-                    EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+                    EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
                 let iter = get_default_content().iter().copied();
                 editor_buffer.set_lines(iter);
                 editor_buffer

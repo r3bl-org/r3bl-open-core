@@ -37,7 +37,7 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                                              MoonlightBlue,
                                              NightBlue,
                                              Orange,
-                                             SlateGray},
+                                             SlateGrey},
             giti::{CommandSuccessfulResponse,
                    clap_config::BranchSubcommand,
                    report_unknown_error_and_propagate,
@@ -89,7 +89,7 @@ pub fn try_checkout_branch(
                     text: &current_branch,
                     style: &[Style::Foreground(LizardGreen.as_ansi_color())],
                 };
-                let slate_gray = SlateGray.as_ansi_color();
+                let slate_gray = SlateGrey.as_ansi_color();
                 let already_on_branch = AnsiStyledText {
                     text: &AlreadyOnCurrentBranch.to_string(),
                     style: &[Style::Foreground(slate_gray)],
@@ -146,7 +146,7 @@ pub fn try_checkout_branch(
                         }
 
                         let gray_text_style = &[
-                            Style::Foreground(SlateGray.as_ansi_color()),
+                            Style::Foreground(SlateGrey.as_ansi_color()),
                             Style::Background(NightBlue.as_ansi_color()),
                         ];
 
@@ -190,7 +190,7 @@ pub fn try_checkout_branch(
                             text: &branch_name,
                             style: &[Style::Foreground(LizardGreen.as_ansi_color())],
                         };
-                        let slate_gray = SlateGray.as_ansi_color();
+                        let slate_gray = SlateGrey.as_ansi_color();
 
                         if branch_name == current_branch {
                             let already_on_branch = AnsiStyledText {
@@ -361,7 +361,7 @@ mod branch_checkout_formatting {
             text: selected_branch,
             style: &[Style::Foreground(LizardGreen.as_ansi_color())],
         };
-        let slate_gray = SlateGray.as_ansi_color();
+        let slate_gray = SlateGrey.as_ansi_color();
 
         if selected_branch == current_branch {
             let already_on_branch = AnsiStyledText {

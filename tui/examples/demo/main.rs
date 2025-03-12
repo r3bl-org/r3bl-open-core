@@ -37,7 +37,8 @@ use std::str::FromStr as _;
 
 use crossterm::style::Stylize as _;
 use miette::IntoDiagnostic as _;
-use r3bl_core::{get_size, ok, style_prompt, throws, CommonError, CommonResult};
+use r3bl_ansi_color::magenta;
+use r3bl_core::{get_size, ok, string_storage, throws, CommonError, CommonResult};
 use r3bl_log::log_support::try_initialize_logging_global;
 use r3bl_terminal_async::{ReadlineEvent, TerminalAsync};
 use r3bl_tui::{keypress, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
@@ -64,9 +65,9 @@ async fn main() -> CommonResult<()> {
             .add_history_entry(command.to_string());
     }
 
-    terminal_async
-        .println(format!("{}", style_prompt(&generate_help_msg())))
-        .await;
+    let msg = string_storage!("{}", &generate_help_msg());
+    let msg_fmt = magenta(&msg);
+    terminal_async.println(msg_fmt).await;
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
     if no_log_arg_passed {

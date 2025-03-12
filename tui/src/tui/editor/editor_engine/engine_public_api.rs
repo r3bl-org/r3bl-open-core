@@ -19,22 +19,18 @@
 //! editor engine. See [mod@super::engine_internal_api] for the internal and functional
 //! API.
 
-use crossterm::style::Stylize;
-use r3bl_core::{call_if_true,
-                caret_scr_adj,
+use r3bl_ansi_color::green;
+use r3bl_core::{caret_scr_adj,
                 col,
-                convert_to_string_slice,
                 glyphs,
                 height,
                 new_style,
                 row,
                 string_storage,
-                style_prompt,
                 throws,
                 throws_with_return,
                 tui_color,
                 usize,
-                usize_to_u8_array,
                 ColWidth,
                 CommonResult,
                 Dim,
@@ -248,14 +244,13 @@ pub fn render_content(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) 
 
     // XMARK: Render using syntect first, then custom MD parser.
 
-    call_if_true!(DEBUG_TUI_MOD, {
-        let message = format!(
-            "EditorEngineApi -> render_content() {ch}",
-            ch = glyphs::RENDER_GLYPH
-        );
+    DEBUG_TUI_MOD.then(|| {
         // % is Display, ? is Debug.
         tracing::info!(
-            message = message,
+            message = %string_storage!(
+                "EditorEngineApi -> render_content() {ch}",
+                ch = glyphs::RENDER_GLYPH
+            ),
             is_default_file_ext = %editor_buffer.is_file_extension_default(),
             syn_hi_mode = ?editor_engine.config_options.syntax_highlight,
             maybe_file_ext = ?editor_buffer.get_maybe_file_extension()
@@ -315,20 +310,13 @@ pub fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps)
                 continue;
             }
 
-            call_if_true!(DEBUG_TUI_COPY_PASTE, {
-                let selection_text = string_storage!("{}", selection_holder);
-                let selection_text_fmt = style_prompt(&selection_text);
-                let message = "🍉🍉🍉 selection_str_slice";
-                let details = string_storage!(
-                    "\n\t{a}, \n\trange: {b:?}, \n\tscroll_offset: {c:?}",
-                    a = selection_text_fmt,
-                    b = sel_range,
-                    c = scroll_offset,
-                );
+            DEBUG_TUI_COPY_PASTE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
-                    message = %message,
-                    details = %details
+                    message = "🍉🍉🍉 selection_str_slice",
+                    selection = %green(&string_storage!("{}", selection_holder)),
+                    range = ?sel_range,
+                    scroll_offset = ?scroll_offset,
                 };
             });
 
@@ -456,6 +444,7 @@ pub enum EditorEngineApplyEventResult {
 }
 
 mod syn_hi_r3bl_path {
+
     use super::*;
 
     /// Try convert [Vec] of [US] to [MdDocument]:
@@ -502,16 +491,17 @@ mod syn_hi_r3bl_path {
                 Some((&editor_engine.syntax_set, &editor_engine.theme)),
             )?;
 
-            call_if_true!(DEBUG_TUI_SYN_HI, {
-                let line_len_ray = usize_to_u8_array(lines.len());
-                let line_len_str = convert_to_string_slice(&line_len_ray);
+            DEBUG_TUI_SYN_HI.then(|| {
+                // % is Display, ? is Debug.
                 tracing::debug!(
-                    "\n🎯🎯🎯\neditor_buffer.lines.len(): {} vs md_document.lines.len(): {}\n{}\n{:?}🎯🎯🎯",
-                    editor_buffer.get_lines().len().to_string().cyan(),
-                    line_len_str.yellow(),
-                    editor_buffer.get_as_string_with_comma_instead_of_newlines().cyan(),
-                    lines.pretty_print_debug().yellow(),
-                )
+                    message = %string_storage!(
+                        "🎯🎯🎯 editor_buffer.lines({a}) vs md_document.lines.len({b})",
+                        a = editor_buffer.get_lines().len(),
+                        b = lines.len(),
+                    ),
+                    buffer_as_string = %editor_buffer.get_as_string_with_comma_instead_of_newlines(),
+                    md_document_lines_debug = %lines.pretty_print_debug()
+                );
             });
 
             for (row_index, line) in lines

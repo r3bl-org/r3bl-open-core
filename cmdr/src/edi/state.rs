@@ -19,15 +19,12 @@ use std::{collections::HashMap,
           fmt::{Debug, Formatter, Result},
           path::Path};
 
-use crossterm::style::Stylize;
+use r3bl_ansi_color::{green, red};
 use r3bl_core::{CharStorage,
                 DocumentStorage,
                 StringStorage,
-                call_if_true,
                 into_existing,
-                string_storage,
-                style_error,
-                style_primary};
+                string_storage};
 use r3bl_tui::{DEBUG_TUI_MOD,
                DEFAULT_SYN_HI_FILE_EXT,
                DialogBuffer,
@@ -55,39 +52,39 @@ mod state_tests {
     #[test]
     fn test_file_extension() {
         let file_path = Some("foo.rs");
-        let file_ext = file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(file_path);
         assert_eq!(file_ext, "rs");
 
         let file_path = Some("foo");
-        let file_ext = file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = Some("foo.");
-        let file_ext = file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = Some("foo.bar.rs");
-        let file_ext = file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(file_path);
         assert_eq!(file_ext, "rs");
 
         let file_path = Some("foo.bar");
-        let file_ext = file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(file_path);
         assert_eq!(file_ext, "bar");
 
         let file_path = Some("foo.bar.");
-        let file_ext = file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = Some("foo.bar.baz");
-        let file_ext = file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(file_path);
         assert_eq!(file_ext, "baz");
 
         let file_path = Some("foo.bar.baz.");
-        let file_ext = file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = None;
-        let file_ext = file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(file_path);
         assert_eq!(file_ext, "md");
     }
 
@@ -104,7 +101,7 @@ mod state_tests {
         let content = "This is a test.\nThis is only a test.";
         std::fs::write(filename.clone(), content).unwrap();
 
-        let expected = file_utils::read_file_into_storage(&Some(filename));
+        let expected = file_utils::read_file_into_storage(Some(filename));
         assert_eq!(expected, content);
 
         // Delete the file.
@@ -126,7 +123,7 @@ mod state_tests {
         std::fs::write(filename.clone(), content).unwrap();
 
         // Create a state.
-        let state = constructor::new(&maybe_file_path);
+        let state = constructor::new(maybe_file_path);
 
         // Check the state.
         assert_eq!(state.editor_buffers.len(), 1);
@@ -171,13 +168,13 @@ pub mod constructor {
     impl Default for State {
         fn default() -> Self {
             Self {
-                editor_buffers: create_hash_map_of_editor_buffers(&None),
+                editor_buffers: create_hash_map_of_editor_buffers(None),
                 dialog_buffers: Default::default(),
             }
         }
     }
 
-    pub fn new(maybe_file_path: &Option<&str>) -> State {
+    pub fn new(maybe_file_path: Option<&str>) -> State {
         match maybe_file_path {
             Some(_) => State {
                 editor_buffers: create_hash_map_of_editor_buffers(maybe_file_path),
@@ -188,12 +185,14 @@ pub mod constructor {
     }
 
     fn create_hash_map_of_editor_buffers(
-        maybe_file_path: &Option<&str>,
+        maybe_file_path: Option<&str>,
     ) -> HashMap<FlexBoxId, EditorBuffer> {
         let editor_buffer = {
             let file_ext = file_utils::get_file_extension(maybe_file_path);
+
             let mut editor_buffer =
-                EditorBuffer::new_empty(&Some(&file_ext), maybe_file_path);
+                EditorBuffer::new_empty(Some(&file_ext), maybe_file_path);
+
             let content = file_utils::read_file_into_storage(maybe_file_path);
             editor_buffer.set_lines(content.lines());
             editor_buffer
@@ -210,7 +209,7 @@ pub mod constructor {
 pub mod file_utils {
     use super::*;
 
-    pub fn get_file_extension(maybe_file_path: &Option<&str>) -> CharStorage {
+    pub fn get_file_extension(maybe_file_path: Option<&str>) -> CharStorage {
         if let Some(file_path) = maybe_file_path {
             let maybe_extension =
                 Path::new(file_path).extension().and_then(OsStr::to_str);
@@ -227,7 +226,7 @@ pub mod file_utils {
 
     /// This is just a wrapper around
     /// [into_existing::read_from_file::try_read_file_path_into_small_string()].
-    pub fn read_file_into_storage(maybe_file_path: &Option<&str>) -> DocumentStorage {
+    pub fn read_file_into_storage(maybe_file_path: Option<&str>) -> DocumentStorage {
         // Create an empty document storage.
         let mut acc = DocumentStorage::new();
 
@@ -238,28 +237,22 @@ pub mod file_utils {
                 &mut acc, file_path,
             ) {
                 Ok(_) => {
-                    call_if_true!(DEBUG_TUI_MOD, {
-                        let message = "\n💾💾💾✅ Successfully read file";
-                        let details = string_storage!("{file_path:?}");
-                        let details_fmt = style_primary(&details);
+                    DEBUG_TUI_MOD.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug!(
-                            message = %message,
+                            message = "💾💾💾✅ Successfully read file",
                             file_path = ?file_path,
-                            details = %details_fmt
+                            details = %green(&string_storage!("{file_path:?}"))
                         );
                     });
                     return acc;
                 }
                 Err(error) => {
-                    let message = "\n💾💾💾❌ Failed to read file";
-                    let details = string_storage!("{error:?}");
-                    let details_fmt = style_error(&details);
                     // % is Display, ? is Debug.
                     tracing::error!(
-                        message = %message,
+                        message = "💾💾💾❌ Failed to read file",
                         file_path = ?file_path,
-                        details = %details_fmt
+                        error = %red(&string_storage!("{error:?}"))
                     );
                 }
             }
@@ -280,17 +273,19 @@ pub mod file_utils {
             let result_file_write = std::fs::write(&*file_path, &content);
             match result_file_write {
                 Ok(_) => {
-                    call_if_true!(DEBUG_TUI_MOD, {
+                    DEBUG_TUI_MOD.then(|| {
+                        // % is Display, ? is Debug.
                         tracing::debug!(
-                            "\n💾💾💾❌ Successfully saved file: {}",
-                            format!("{file_path:?}").green()
+                            message = "💾💾💾❌ Successfully saved file",
+                            file_path = %green(&string_storage!("{file_path:?}"))
                         );
                     });
                 }
                 Err(error) => {
+                    // % is Display, ? is Debug.
                     tracing::error!(
-                        "\n💾💾💾✅ Failed to save file: {}",
-                        format!("{error:?}").red()
+                        message = "💾💾💾✅ Failed to save file",
+                        file_path = %red(&string_storage!("{error:?}"))
                     );
                 }
             }

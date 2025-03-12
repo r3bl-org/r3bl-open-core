@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn test_validate_vertical_scroll_within_viewport() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine: EditorEngine = EditorEngine {
             config_options: EditorEngineConfig {
                 multiline_mode: LineMode::MultiLine,
@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_validate_vertical_scroll_above_viewport() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine: EditorEngine = EditorEngine {
             config_options: EditorEngineConfig {
                 multiline_mode: LineMode::MultiLine,
@@ -272,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_validate_vertical_scroll_below_viewport() {
-        let mut buffer = EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT), &None);
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine: EditorEngine = EditorEngine {
             config_options: EditorEngineConfig {
                 multiline_mode: LineMode::MultiLine,

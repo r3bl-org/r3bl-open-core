@@ -300,6 +300,8 @@ mod perform_layout {
 }
 
 mod handle_focus {
+    use r3bl_core::string_storage;
+
     use super::*;
 
     pub fn handle_focus_switch(
@@ -324,13 +326,13 @@ mod handle_focus {
                 }
                 _ => {}
             }
-            let message = format!(
-                "AppWithLayout::app_handle_event -> switch focus {ch}",
-                ch = glyphs::FOCUS_GLYPH
-            );
+
             // % is Display, ? is Debug.
             tracing::info!(
-                message = message,
+                message = %string_storage!(
+                    "AppWithLayout::app_handle_event -> switch focus {ch}",
+                    ch = glyphs::FOCUS_GLYPH
+                ),
                 has_focus = ?has_focus
             );
         }
@@ -349,7 +351,8 @@ mod handle_focus {
                 has_focus.set_id(FlexBoxId::from(Id::Column2 as u8))
             }
         } else {
-            tracing::error!("No focus id has been set, and it should be set!");
+            // % is Display, ? is Debug.
+            tracing::error!(message = "No focus id has been set, and it should be set!");
         }
     }
 }

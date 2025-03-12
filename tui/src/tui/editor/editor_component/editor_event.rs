@@ -17,7 +17,8 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{call_if_true, string_storage, style_prompt, Size};
+use r3bl_ansi_color::green;
+use r3bl_core::{string_storage, Size};
 
 use crate::{clipboard_support::ClipboardService,
             editor_buffer::EditorBuffer,
@@ -86,14 +87,11 @@ impl TryFrom<InputEvent> for EditorEvent {
     type Error = String;
 
     fn try_from(input_event: InputEvent) -> Result<Self, Self::Error> {
-        call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            let message = "🐥🐥🐥  EditorEvent::try_from";
-            let details = string_storage!("{:?}", input_event);
-            let details_fmt = style_prompt(&details);
+        DEBUG_TUI_COPY_PASTE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
-                message = %message,
-                details = %details_fmt
+                message = "🐥🐥🐥  EditorEvent::try_from",
+                details = %green(&string_storage!("{:?}", input_event))
             };
         });
 

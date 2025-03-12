@@ -51,7 +51,7 @@ use tokio::{io::AsyncWriteExt as _,
 ///
 /// async fn run_command() {
 ///     let my_path = "/usr/bin";
-///     let env_vars = environment::get_env_vars(EnvKeys::Path, my_path);
+///     let env_vars = environment::gen_path_env_vars(my_path);
 ///     let mut command = command!(
 ///         program => "printenv",
 ///         envs => env_vars,

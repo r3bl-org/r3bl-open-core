@@ -27,9 +27,9 @@
 //! To see this in action, set the [crate::DEBUG_MD_PARSER_STDOUT] to true, and run all
 //! the tests in this file.
 
-use crossterm::style::Stylize;
 use nom::{branch::alt, combinator::map, IResult};
-use r3bl_core::{call_if_true, string_storage};
+use r3bl_ansi_color::{green, red};
+use r3bl_core::string_storage;
 
 use crate::{parse_fragment_plain_text_no_new_line,
             parse_fragment_starts_with_backtick_err_on_new_line,
@@ -93,14 +93,26 @@ pub fn parse_inline_fragments_until_eol_or_eoi(
 
     };
 
-    call_if_true!(DEBUG_MD_PARSER, {
-        tracing::debug!("\n📣📣📣\n input: {}", string_storage!("{input:?}").green());
+    DEBUG_MD_PARSER.then(|| {
+        // % is Display, ? is Debug.
+        tracing::debug!(
+            message = "📣📣📣 input",
+            input = ?input
+        );
         match it {
             Ok(ref element) => {
-                tracing::debug!("✅✅✅ OK {}", string_storage!("{element:#?}").magenta());
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "✅✅✅ OK",
+                    element = %green(&string_storage!("{element:#?}"))
+                );
             },
             Err(ref error) => {
-                tracing::debug!("🟥🟥🟥 NO {}", string_storage!("{error:#?}").red());
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "🟥🟥🟥 NO",
+                    error = %red(&string_storage!("{error:#?}"))
+                );
             },
         }
     });

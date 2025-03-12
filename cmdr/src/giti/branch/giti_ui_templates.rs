@@ -153,6 +153,7 @@ pub fn report_unknown_error_and_propagate<T>(
     }
     .to_string();
 
-    tracing::error!(error_msg);
+    // % is Display, ? is Debug.
+    tracing::error!(message = error_msg);
     CommonError::new_error_result::<T>(CommonErrorType::CommandExecutionError, &error_msg)
 }
