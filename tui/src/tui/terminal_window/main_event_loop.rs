@@ -16,8 +16,7 @@
  */
 use std::{fmt::Debug, marker::PhantomData};
 
-use r3bl_core::{call_if_true,
-                ch,
+use r3bl_core::{ch,
                 col,
                 format_as_kilobytes_with_commas,
                 glyphs,
@@ -147,16 +146,15 @@ where
         }
     );
 
-    call_if_true!(DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD, {
-        let message = format!(
-            "main_event_loop {sp} Startup complete {ch}",
-            sp = glyphs::RIGHT_ARROW_GLYPH,
-            ch = glyphs::CELEBRATE_GLYPH
-        );
+    (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
         // % is Display, ? is Debug.
         tracing::info!(
-            message = message,
-            global_data_mut_ref=?global_data_mut_ref
+            message = %string_storage!(
+                "main_event_loop {sp} Startup {ch}",
+                sp = glyphs::RIGHT_ARROW_GLYPH,
+                ch = glyphs::CELEBRATE_GLYPH
+            ),
+            global_data_mut_ref = ?global_data_mut_ref,
         );
     });
 
@@ -231,16 +229,15 @@ where
             //   pinned_input_stream isn't used and the state isn't modified.
             maybe_input_event = input_device.next_input_event() => {
                 if let Some(input_event) = maybe_input_event {
-                    call_if_true!(DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD, {
-                        if let InputEvent::Keyboard(_)= input_event {
-                            let message = format!(
-                                "main_event_loop {sp} Tick {ch}",
-                                sp = glyphs::RIGHT_ARROW_GLYPH,
-                                ch = glyphs::CLOCK_TICK_GLYPH
-                            );
+                    (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
+                        if let InputEvent::Keyboard(_) = input_event {
                             // % is Display, ? is Debug.
                             tracing::info!(
-                                message = message,
+                                message = %string_storage!(
+                                    "main_event_loop {sp} Tick {ch}",
+                                    sp = glyphs::RIGHT_ARROW_GLYPH,
+                                    ch = glyphs::CLOCK_TICK_GLYPH
+                                ),
                                 input_event = ?input_event
                             );
                         }
@@ -297,52 +294,45 @@ where
         }
 
         // Output telemetry report to log.
-        call_if_true!(DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD, {
+        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
+            // % is Display, ? is Debug.
+            tracing::info!(
+                message = %string_storage!(
+                    "AppManager::render_app() ok {ch}",
+                    ch = glyphs::PAINT_GLYPH
+                ),
+                window_size = ?global_data_mut_ref.window_size,
+                state = ?global_data_mut_ref.state,
+                report = %global_data_mut_ref.get_hud_report_no_spinner(),
+            );
+
+            if let Some(ref offscreen_buffer) =
+                global_data_mut_ref.maybe_saved_offscreen_buffer
             {
-                let state = &global_data_mut_ref.state;
-                let message =
-                    format!("AppManager::render_app() ok {ch}", ch = glyphs::PAINT_GLYPH);
-                let report = &global_data_mut_ref.get_hud_report_no_spinner();
                 // % is Display, ? is Debug.
                 tracing::info!(
-                    message = message,
-                    window_size = ?global_data_mut_ref.window_size,
-                    state = ?state,
-                    report = %report,
-                );
-
-                if let Some(ref offscreen_buffer) =
-                    global_data_mut_ref.maybe_saved_offscreen_buffer
-                {
-                    let message = format!(
+                    message = %string_storage!(
                         "AppManager::render_app() offscreen_buffer stats {ch}",
                         ch = glyphs::SCREEN_BUFFER_GLYPH
-                    );
-
-                    // % is Display, ? is Debug.
-                    tracing::info!(
-                        message = message,
-                        offscreen_buffer.size = format!(
-                            "Memory used: {size}",
-                            size = format_as_kilobytes_with_commas(
-                                offscreen_buffer.get_mem_size()
-                            )
+                    ),
+                    offscreen_buffer_size = %string_storage!(
+                        "Memory used: {size}",
+                        size = format_as_kilobytes_with_commas(
+                            offscreen_buffer.get_mem_size()
                         )
-                    );
-                }
+                    )
+                );
             }
         });
     } // End main event loop.
 
-    call_if_true!(DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD, {
-        let message = format!(
-            "main_event_loop {sp} Shutdown {ch}",
-            ch = glyphs::BYE_GLYPH,
-            sp = glyphs::RIGHT_ARROW_GLYPH,
-        );
-        // % is Display, ? is Debug.
+    (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
         tracing::info!(
-            message = message,
+            message = %string_storage!(
+                "main_event_loop {sp} Shutdown {ch}",
+                ch = glyphs::BYE_GLYPH,
+                sp = glyphs::RIGHT_ARROW_GLYPH,
+            ),
             session_duration = %telemetry.session_duration()
         );
     });
@@ -467,15 +457,14 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
             }
         },
         Err(error) => {
-            let message = format!(
-                "main_event_loop {sp} handle_result_generated_by_app_after_handling_action {ch}",
-                ch = glyphs::SUSPICIOUS_GLYPH,
-                sp = glyphs::RIGHT_ARROW_GLYPH,
-            );
             // % is Display, ? is Debug.
             tracing::error!(
-                message = message,
-                error =? error
+                message = %string_storage!(
+                    "main_event_loop {sp} handle_result_generated_by_app_after_handling_action {ch}",
+                    ch = glyphs::SUSPICIOUS_GLYPH,
+                    sp = glyphs::RIGHT_ARROW_GLYPH,
+                ),
+                error = ?error
             );
         }
     }
@@ -538,14 +527,13 @@ where
                 RenderOp::default().flush(locked_output_device);
 
                 // Print debug message w/ error.
-                call_if_true!(DEBUG_TUI_MOD, {
-                    let message = format!(
-                        "AppManager::render_app() error {ch}",
-                        ch = glyphs::SUSPICIOUS_GLYPH
-                    );
+                DEBUG_TUI_MOD.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error!(
-                        message = message,
+                        message = %string_storage!(
+                            "AppManager::render_app() error {ch}",
+                            ch = glyphs::SUSPICIOUS_GLYPH
+                        ),
                         details = ?error
                     );
                 });

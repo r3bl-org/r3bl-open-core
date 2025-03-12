@@ -23,12 +23,10 @@ use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                         Print,
                         ResetColor,
                         SetBackgroundColor,
-                        SetForegroundColor,
-                        Stylize},
+                        SetForegroundColor},
                 terminal::{Clear, ClearType}};
-use r3bl_ansi_color::AnsiStyledText;
-use r3bl_core::{call_if_true,
-                ch,
+use r3bl_ansi_color::{blue, AnsiStyledText};
+use r3bl_core::{ch,
                 col,
                 get_terminal_width,
                 string_storage,
@@ -121,20 +119,18 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 }
             };
 
-            call_if_true!(DEVELOPMENT_MODE, {
-                let message = "🍎🍎🍎\n render()::state";
-                let details = string_storage!(
-                    "\t[raw_caret_row_index: {a}, scroll_offset_row_index: {b}], \n\theader_viewport_height: {c}, items_viewport_height:{d}, viewport_width:{e}",
-                    a = string_storage!("{:?}", state.raw_caret_row_index).blue(),
-                    b = string_storage!("{:?}", state.scroll_offset_row_index).blue(),
-                    c = string_storage!("{:?}", header_viewport_height).blue(),
-                    d = string_storage!("{:?}", items_viewport_height).blue(),
-                    e = string_storage!("{:?}", viewport_width).blue()
-                );
+            DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::info! {
-                    message = %message,
-                    details = %details
+                    message = "🍎🍎🍎\n render()::state",
+                    details = %string_storage!(
+                        "\t[raw_caret_row_index: {a}, scroll_offset_row_index: {b}], \n\theader_viewport_height: {c}, items_viewport_height:{d}, viewport_width:{e}",
+                        a = blue(&string_storage!("{:?}", state.raw_caret_row_index)),
+                        b = blue(&string_storage!("{:?}", state.scroll_offset_row_index)),
+                        c = blue(&string_storage!("{:?}", header_viewport_height)),
+                        d = blue(&string_storage!("{:?}", items_viewport_height)),
+                        e = blue(&string_storage!("{:?}", viewport_width)),
+                    )
                 };
             });
 

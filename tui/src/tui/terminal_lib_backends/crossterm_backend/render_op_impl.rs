@@ -29,14 +29,7 @@ use crossterm::{self,
                            ClearType,
                            EnterAlternateScreen,
                            LeaveAlternateScreen}};
-use r3bl_core::{call_if_true,
-                GCString,
-                LockedOutputDevice,
-                Pos,
-                Size,
-                TuiColor,
-                TuiStyle,
-                VecArray};
+use r3bl_core::{GCString, LockedOutputDevice, Pos, Size, TuiColor, TuiStyle, VecArray};
 use smallvec::smallvec;
 
 use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
@@ -443,73 +436,30 @@ mod perform_paint {
     }
 }
 
-/// Given a crossterm command, or commands, queue each one, and depending on what the
-/// [Result] is produced, run [tracing::error!] or [tracing::info!].
-///
-/// Paste docs: <https://github.com/dtolnay/paste>
-///
-/// Usage example:
-/// ```
-/// use r3bl_core::OutputDevice;
-/// use r3bl_test_fixtures::OutputDeviceExt;
-/// use r3bl_tui::queue_render_op;
-/// use r3bl_core::{output_device_as_mut, call_if_true};
-/// use crossterm::terminal::*;
-/// use crossterm::style::*;
-///
-/// let (output_device, _) = OutputDevice::new_mock();
-/// let writer = output_device_as_mut!(output_device);
-/// queue_render_op!(
-///     writer,
-///     "flush() -> after ResetColor, Clear",
-///     ResetColor,
-///     Clear(ClearType::All),
-/// );
-/// ```
 #[macro_export]
 macro_rules! queue_render_op {
     ($writer: expr, $arg_log_msg: expr $(, $command: expr)* $(,)?) => {{
-        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
-        use r3bl_core::call_if_true;
         use ::crossterm::QueueableCommand;
         $(
-            match QueueableCommand::queue($writer, $command) {
-                Ok(_) => {
-                    let msg = format!("crossterm: ✅ {} successfully", $arg_log_msg);
-                    call_if_true! {
-                        DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                        tracing::info!(msg)
-                    };
-                }
-                Err(err) => {
-                    let msg =
-                        format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
-                    call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
-                }
-            };
+            $crate::crossterm_op!(
+                $arg_log_msg,
+                QueueableCommand::queue($writer, $command),
+                "crossterm: ✅ Succeeded",
+                "crossterm: ❌ Failed"
+            );
         )*
-    }}
+    }};
 }
 
 #[macro_export]
 macro_rules! flush_now {
     ($writer: expr, $arg_log_msg: expr) => {{
-        use r3bl_core::call_if_true;
-        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
-        match $writer.flush() {
-            Ok(_) => {
-                let msg = format!("crossterm: ✅ {} successfully", $arg_log_msg);
-                call_if_true! {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                    tracing::info!(msg)
-                };
-            }
-            Err(err) => {
-                let msg =
-                    format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
-                call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
-            }
-        }
+        $crate::crossterm_op!(
+            $arg_log_msg,
+            $writer.flush(),
+            "crossterm: ✅ Succeeded",
+            "crossterm: ❌ Failed"
+        );
     }};
 }
 
@@ -519,25 +469,13 @@ macro_rules! disable_raw_mode_now {
         $arg_is_mock: expr,
         $arg_log_msg: expr
     ) => {{
-        if $arg_is_mock {
-            return;
-        }
-        use r3bl_core::call_if_true;
-        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
-        match crossterm::terminal::disable_raw_mode() {
-            Ok(_) => {
-                let msg = format!("crossterm: ✅ {} successfully", $arg_log_msg);
-                call_if_true! {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                    tracing::info!(msg)
-                };
-            }
-            Err(err) => {
-                let msg =
-                    format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
-                call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
-            }
-        }
+        $crate::crossterm_op!(
+            $arg_is_mock,
+            $arg_log_msg,
+            crossterm::terminal::disable_raw_mode(),
+            "crossterm: ✅ Succeeded",
+            "crossterm: ❌ Failed"
+        );
     }};
 }
 
@@ -547,23 +485,81 @@ macro_rules! enable_raw_mode_now {
         $arg_is_mock: expr,
         $arg_log_msg: expr
     ) => {{
+        $crate::crossterm_op!(
+            $arg_is_mock,
+            $arg_log_msg,
+            crossterm::terminal::enable_raw_mode(),
+            "crossterm: ✅ Succeeded",
+            "crossterm: ❌ Failed"
+        );
+    }};
+}
+
+#[macro_export]
+macro_rules! crossterm_op {
+    (
+        $arg_is_mock:expr, // Optional mock flag.
+        $arg_log_msg:expr, // Log message.
+        $op:expr,          // The crossterm operation to perform.
+        $success_msg:expr, // Success log message.
+        $error_msg:expr    // Error log message.
+    ) => {{
+        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+
+        // Conditionally skip execution if mock.
         if $arg_is_mock {
             return;
         }
-        use r3bl_core::call_if_true;
-        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
-        match crossterm::terminal::enable_raw_mode() {
+
+        match $op {
             Ok(_) => {
-                let msg = format!("crossterm: ✅ {} successfully", $arg_log_msg);
-                call_if_true! {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                    tracing::info!(msg)
-                };
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::info!(
+                        message = $success_msg,
+                        details = %$arg_log_msg
+                    );
+                });
             }
             Err(err) => {
-                let msg =
-                    format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
-                call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::error!(
+                        message = $error_msg,
+                        details = %$arg_log_msg,
+                        error = %err,
+                    );
+                });
+            }
+        }
+    }};
+    (
+        $arg_log_msg:expr, // Log message.
+        $op:expr,          // The crossterm operation to perform.
+        $success_msg:expr, // Success log message.
+        $error_msg:expr    // Error log message.
+    ) => {{
+        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+
+        match $op {
+            Ok(_) => {
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::info!(
+                        message = $success_msg,
+                        details = %$arg_log_msg
+                    );
+                });
+            }
+            Err(err) => {
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::error!(
+                        message = $error_msg,
+                        details = %$arg_log_msg,
+                        error = %err,
+                    );
+                });
             }
         }
     }};

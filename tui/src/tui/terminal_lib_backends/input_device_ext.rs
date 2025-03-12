@@ -73,7 +73,7 @@
 //!     - <https://github.com/crossterm-rs/crossterm/blob/master/examples/event-stream-tokio.rs>
 
 use futures_util::FutureExt;
-use r3bl_core::{call_if_true, InputDevice};
+use r3bl_core::InputDevice;
 
 use super::InputEvent;
 use crate::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
@@ -92,16 +92,24 @@ impl InputDeviceExt for InputDevice {
                 match input_event {
                     Ok(input_event) => Some(input_event),
                     Err(e) => {
-                        call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, {
-                            tracing::error!("Error: {e:?}");
+                        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                            // % is Display, ? is Debug.
+                            tracing::error!(
+                                message = "Error converting input event.",
+                                error = ?e,
+                            );
                         });
                         None
                     }
                 }
             }
             Err(e) => {
-                call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, {
-                    tracing::error!("Error: {e:?}");
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::error!(
+                        message = "Error reading input event.",
+                        error = ?e,
+                    );
                 });
                 None
             }

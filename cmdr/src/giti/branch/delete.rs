@@ -28,7 +28,7 @@ use crate::{AnalyticsAction,
                                              GuardsRed,
                                              LizardGreen,
                                              MoonlightBlue,
-                                             SlateGray},
+                                             SlateGrey},
             giti::{CommandSuccessfulResponse,
                    clap_config::BranchSubcommand,
                    giti_ui_templates::report_unknown_error_and_propagate,
@@ -283,7 +283,7 @@ mod try_delete_branch_inner {
         };
         let deleted = AnsiStyledText {
             text: &Deleted.to_string(),
-            style: &[Style::Foreground(SlateGray.as_ansi_color())],
+            style: &[Style::Foreground(SlateGrey.as_ansi_color())],
         };
         println!(" ✅ {deleted_branch} {deleted}");
     }
@@ -297,7 +297,7 @@ mod try_delete_branch_inner {
             };
             let deleted = AnsiStyledText {
                 text: &Deleted.to_string(),
-                style: &[Style::Foreground(SlateGray.as_ansi_color())],
+                style: &[Style::Foreground(SlateGrey.as_ansi_color())],
             };
             println!(" ✅ {deleted_branch} {deleted}");
         }

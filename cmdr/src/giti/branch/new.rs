@@ -25,7 +25,7 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                                              GuardsRed,
                                              LizardGreen,
                                              SilverMetallic,
-                                             SlateGray},
+                                             SlateGrey},
             giti::{self,
                    CommandSuccessfulResponse,
                    UIStrings::{BranchAlreadyExists,
@@ -57,7 +57,7 @@ pub fn try_make_new_branch(
                     BranchAlreadyExists { branch_name }.to_string();
                 AnsiStyledText {
                     text: &branch_already_exists,
-                    style: &[Style::Foreground(SlateGray.as_ansi_color())],
+                    style: &[Style::Foreground(SlateGrey.as_ansi_color())],
                 }
                 .println();
                 return Ok(response);
@@ -154,7 +154,7 @@ fn display_failed_to_create_new_branch(branch_name: &str) {
 fn display_successful_new_branch_creation(branch_name: &str) {
     let created_and_switched_to_new_branch = AnsiStyledText {
         text: &CreatedAndSwitchedToNewBranch.to_string(),
-        style: &[Style::Foreground(SlateGray.as_ansi_color())],
+        style: &[Style::Foreground(SlateGrey.as_ansi_color())],
     };
     let branch_name = AnsiStyledText {
         text: &format!("✅ {branch_name}"),

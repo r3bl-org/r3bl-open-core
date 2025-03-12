@@ -15,11 +15,11 @@
  *   limitations under the License.
  */
 
-use crossterm::style::Stylize as _;
 use miette::IntoDiagnostic;
+use r3bl_ansi_color::magenta;
 use r3bl_core::ok;
 
-use crate::http_client;
+use crate::{SCRIPT_MOD_DEBUG, http_client};
 
 mod constants {
     pub const TAG_NAME: &str = "tag_name";
@@ -39,10 +39,13 @@ pub async fn try_get_latest_release_tag_from_github(
         .replace("{org}", org)
         .replace("{repo}", repo);
 
-    // % is Display, ? is Debug.
-    tracing::debug!(
-        "Fetching latest release tag from GitHub" = %url.to_string().magenta()
-    );
+    SCRIPT_MOD_DEBUG.then(|| {
+        // % is Display, ? is Debug.
+        tracing::debug!(
+            message = "Fetching latest release tag from GitHub",
+            url = %magenta(&url)
+        );
+    });
 
     let client = http_client::create_client_with_user_agent(None)?;
     let response = client.get(url).send().await.into_diagnostic()?;
@@ -86,7 +89,7 @@ mod tests_github_api {
         match timeout(TIMEOUT, try_get_latest_release_tag_from_github(org, repo)).await {
             Ok(Ok(tag)) => {
                 assert!(!tag.is_empty());
-                println!("Latest tag: {}", tag.magenta());
+                println!("Latest tag: {}", magenta(&tag));
             }
             Ok(Err(err)) => {
                 // Re-throw the error and fail the test.

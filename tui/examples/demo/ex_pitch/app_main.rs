@@ -17,8 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{call_if_true,
-                col,
+use r3bl_core::{col,
                 new_style,
                 req_size_pc,
                 row,
@@ -98,8 +97,9 @@ mod constructor {
 
     impl Default for AppMain {
         fn default() -> Self {
-            call_if_true!(DEBUG_TUI_MOD, {
-                tracing::debug!("🪙 construct ex_pitch::AppWithLayout");
+            DEBUG_TUI_MOD.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(message = "🪙 construct ex_pitch::AppWithLayout");
             });
             Self
         }
@@ -299,7 +299,7 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use r3bl_core::glyphs;
+    use r3bl_core::{glyphs, string_storage};
 
     use super::*;
 
@@ -312,12 +312,10 @@ mod populate_component_registry {
 
         // Switch focus to the editor component if focus is not set.
         has_focus.set_id(id);
-        call_if_true!(DEBUG_TUI_MOD, {
-            let message =
-                format!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH);
+        DEBUG_TUI_MOD.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = message,
+                message = %string_storage!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
                 has_focus = ?has_focus.get_id()
             );
         });
@@ -351,7 +349,8 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        call_if_true!(DEBUG_TUI_MOD, {
+        DEBUG_TUI_MOD.then(|| {
+            // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct EditorComponent [ on_buffer_change ]"
             );

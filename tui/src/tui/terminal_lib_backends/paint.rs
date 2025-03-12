@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{call_if_true, Dim, LockedOutputDevice, Pos};
+use r3bl_core::{Dim, LockedOutputDevice, Pos};
 
 use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
 use crate::{diff_chunks::PixelCharDiffChunks,
@@ -210,7 +210,7 @@ pub fn sanitize_and_save_abs_pos(
 }
 
 fn debug(orig_pos: Pos, sanitized_pos: Pos) {
-    call_if_true!(DEBUG_TUI_COMPOSITOR, {
+    DEBUG_TUI_COMPOSITOR.then(|| {
         if sanitized_pos != orig_pos {
             // % is Display, ? is Debug.
             tracing::info!(
@@ -221,7 +221,7 @@ fn debug(orig_pos: Pos, sanitized_pos: Pos) {
         }
     });
 
-    call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
+    DEBUG_TUI_SHOW_PIPELINE_EXPANDED.then(|| {
         // % is Display, ? is Debug.
         tracing::info!(
             message = "pipeline : ⮺ Save the cursor position (sanitized) to SharedGlobalData",

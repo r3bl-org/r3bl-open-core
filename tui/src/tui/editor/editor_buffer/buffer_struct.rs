@@ -16,8 +16,7 @@
  */
 use std::fmt::{Debug, Formatter, Result};
 
-use r3bl_core::{call_if_true,
-                format_as_kilobytes_with_commas,
+use r3bl_core::{format_as_kilobytes_with_commas,
                 glyphs,
                 height,
                 row,
@@ -218,13 +217,15 @@ pub struct EditorContent {
 }
 
 mod construct {
+    use r3bl_core::string_storage;
+
     use super::*;
 
     impl EditorBuffer {
         /// Marker method to make it easy to search for where an empty instance is created.
         pub fn new_empty(
-            maybe_file_extension: &Option<&str>,
-            maybe_file_path: &Option<&str>,
+            maybe_file_extension: Option<&str>,
+            maybe_file_path: Option<&str>,
         ) -> Self {
             let it = Self {
                 content: EditorContent {
@@ -236,12 +237,10 @@ mod construct {
                 ..Default::default()
             };
 
-            call_if_true!(DEBUG_TUI_MOD, {
-                let message =
-                    format!("Construct EditorBuffer {ch}", ch = glyphs::CONSTRUCT_GLYPH);
+            DEBUG_TUI_MOD.then(|| {
                 // % is Display, ? is Debug.
                 tracing::info!(
-                    message = message,
+                    message = %string_storage!("Construct EditorBuffer {ch}", ch = glyphs::CONSTRUCT_GLYPH),
                     file_extension = ?maybe_file_extension,
                     file_path = ?maybe_file_path
                 );
@@ -264,8 +263,12 @@ pub mod versions {
             let content_copy = self.content.clone();
             self.history.add(content_copy);
 
-            call_if_true!(DEBUG_TUI_COPY_PASTE, {
-                tracing::debug!("🍎🍎🍎 add_content_to_undo_stack buffer: {:?}", self);
+            DEBUG_TUI_COPY_PASTE.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "🍎🍎🍎 add_content_to_undo_stack buffer",
+                    buffer = ?self
+                );
             });
         }
         pub fn undo(&mut self) {
@@ -276,8 +279,12 @@ pub mod versions {
                 self.content = content;
             }
 
-            call_if_true!(DEBUG_TUI_COPY_PASTE, {
-                tracing::debug!("🍎🍎🍎 undo buffer: {:?}", self);
+            DEBUG_TUI_COPY_PASTE.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "🍎🍎🍎 undo buffer",
+                    buffer = ?self
+                );
             });
         }
 
@@ -289,8 +296,11 @@ pub mod versions {
                 self.content = content;
             }
 
-            call_if_true!(DEBUG_TUI_COPY_PASTE, {
-                tracing::debug!("🍎🍎🍎 redo buffer: {:?}", self);
+            DEBUG_TUI_COPY_PASTE.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(message = "🍎🍎🍎 redo buffer",
+                    buffer = ?self
+                );
             });
         }
     }

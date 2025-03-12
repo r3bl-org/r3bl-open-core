@@ -281,6 +281,7 @@ pub mod convert_from_other_types_to_ch {
             let int_value: u16 = match f64_to_u16(value) {
                 Ok(it) => it,
                 Err(err) => {
+                    // % is Display, ? is Debug.
                     tracing::error!(message = "Problem converting f64 to u16", err = err);
                     0
                 }
@@ -297,6 +298,7 @@ pub mod convert_from_other_types_to_ch {
             let int_value: u16 = match f64_to_u16(f64::from(value)) {
                 Ok(it) => it,
                 Err(err) => {
+                    // % is Display, ? is Debug.
                     tracing::error!(message = "Problem converting f32 to u16", err = err);
                     0
                 }

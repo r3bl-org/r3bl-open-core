@@ -22,7 +22,7 @@ use crossterm::event::{read,
                        KeyEventKind,
                        KeyEventState,
                        KeyModifiers};
-use r3bl_core::{call_if_true, height, width, Dim};
+use r3bl_core::{height, width, Dim};
 
 use crate::DEVELOPMENT_MODE;
 
@@ -63,8 +63,12 @@ fn read_key_press_unix() -> KeyPress {
     let result_event = read();
     match result_event {
         Ok(event) => {
-            call_if_true!(DEVELOPMENT_MODE, {
-                tracing::debug!("got event: {event:?}");
+            DEVELOPMENT_MODE.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "got event",
+                    event = ?event,
+                );
             });
 
             match event {
@@ -91,7 +95,11 @@ fn read_key_press_unix() -> KeyPress {
             }
         }
         Err(err) => {
-            tracing::error!("ERROR getting event: {err:?}");
+            // % is Display, ? is Debug.
+            tracing::error!(
+                message = "ERROR getting event",
+                err = ?err,
+            );
             KeyPress::Error
         }
     }
@@ -105,8 +113,12 @@ fn read_key_press_windows() -> KeyPress {
     let result_event = read();
     match result_event {
         Ok(event) => {
-            call_if_true!(DEVELOPMENT_MODE, {
-                tracing::debug!("got event: {event:?}");
+            DEVELOPMENT_MODE.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "got event",
+                    event = ?event,
+                );
             });
 
             match event {
@@ -168,7 +180,11 @@ fn read_key_press_windows() -> KeyPress {
             }
         }
         Err(err) => {
-            tracing::error!("ERROR getting event: {err:?}");
+            // % is Display, ? is Debug.
+            tracing::error!(
+                message = "ERROR getting event",
+                err = ?err,
+            );
             KeyPress::Error
         }
     }

@@ -60,8 +60,8 @@
 //!    ╰─────────────────────╯ <- AtAbsoluteBottom
 //! ```
 
-use crossterm::style::Stylize;
-use r3bl_core::{call_if_true, ch, string_storage, ChUnit};
+use r3bl_ansi_color::green;
+use r3bl_core::{ch, string_storage, ChUnit};
 
 use crate::DEVELOPMENT_MODE;
 
@@ -93,20 +93,18 @@ pub fn locate_cursor_in_viewport(
     let abs_row_index =
         get_scroll_adjusted_row_index(raw_caret_row_index, scroll_offset_row_index);
 
-    call_if_true!(DEVELOPMENT_MODE, {
-        let message = "locate_cursor_in_viewport()";
-        let details = string_storage!(
-            "raw_caret_row_index: {a}, scroll_offset_row_index: {b}, abs_row_index: {c}, display_height: {d}, items_size: {e}",
-            a = string_storage!("{raw_caret_row_index:?}").green(),
-            b = string_storage!("{scroll_offset_row_index:?}").green(),
-            c = string_storage!("{abs_row_index:?}").green(),
-            d = string_storage!("{display_height:?}").green(),
-            e = string_storage!("{items_size:?}").green()
-        );
+    DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
         tracing::info! {
-            message = %message,
-            details = %details
+            message = "locate_cursor_in_viewport()",
+            details = %string_storage!(
+                "raw_caret_row_index: {a}, scroll_offset_row_index: {b}, abs_row_index: {c}, display_height: {d}, items_size: {e}",
+                a = green(&string_storage!("{raw_caret_row_index:?}")),
+                b = green(&string_storage!("{scroll_offset_row_index:?}")),
+                c = green(&string_storage!("{abs_row_index:?}")),
+                d = green(&string_storage!("{display_height:?}")),
+                e = green(&string_storage!("{items_size:?}")),
+            )
         };
     });
 

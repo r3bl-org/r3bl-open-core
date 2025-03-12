@@ -18,8 +18,10 @@
 use std::{env, path::Path};
 
 use miette::IntoDiagnostic;
-use r3bl_core::ok;
+use r3bl_core::{StringStorage, ok, string_storage};
 use strum_macros::{Display, EnumString};
+
+use crate::SCRIPT_MOD_DEBUG;
 
 #[cfg(target_os = "windows")]
 const OS_SPECIFIC_ENV_PATH_SEPARATOR: &str = ";";
@@ -35,14 +37,14 @@ pub enum EnvKeys {
 pub type EnvVars = Vec<(String, String)>;
 pub type EnvVarsSlice<'a> = &'a [(String, String)];
 
-/// Returns the PATH environment variable as a vector of tuples.
+/// Returns the `PATH` and given value as a vector of tuple.
 ///
 /// # Example
 ///
 /// ```
-/// use r3bl_script::environment::{get_env_vars, EnvKeys};
+/// use r3bl_script::environment::{gen_path_env_vars, EnvKeys};
 ///
-/// let path_envs = get_env_vars(EnvKeys::Path, "/usr/bin");
+/// let path_envs = gen_path_env_vars("/usr/bin");
 /// let expected = vec![
 ///     ("PATH".to_string(), "/usr/bin".to_string())
 /// ];
@@ -54,33 +56,41 @@ pub type EnvVarsSlice<'a> = &'a [(String, String)];
 /// The returned value can also be passed around as a `&[(String, String)]`.
 ///
 /// ```
-/// use r3bl_script::environment::{get_env_vars, EnvVars, EnvVarsSlice, EnvKeys};
+/// use r3bl_script::environment::{gen_path_env_vars, EnvVars, EnvVarsSlice, EnvKeys};
 ///
-/// let path_envs: EnvVars = get_env_vars(EnvKeys::Path, "/usr/bin");
+/// let path_envs: EnvVars = gen_path_env_vars("/usr/bin");
 /// let path_envs_ref: EnvVarsSlice = &path_envs;
 /// let path_envs_ref_2 = path_envs.as_slice();
 /// let path_envs_ref_clone = path_envs_ref.to_owned();
 /// assert_eq!(path_envs_ref, path_envs_ref_clone);
 /// assert_eq!(path_envs_ref, path_envs_ref_2);
 /// ```
-pub fn get_env_vars(key: EnvKeys, path: &str) -> EnvVars {
-    vec![(key.to_string(), path.to_string())]
+pub fn gen_path_env_vars(path_value: &str) -> EnvVars {
+    vec![(EnvKeys::Path.to_string(), path_value.to_string())]
 }
 
 pub fn try_get(key: EnvKeys) -> miette::Result<String> {
     env::var(key.to_string()).into_diagnostic()
 }
 
-pub fn try_get_path_prefixed(prefix_path: impl AsRef<Path>) -> miette::Result<String> {
+pub fn try_get_path_prefixed(
+    prefix_path: impl AsRef<Path>,
+) -> miette::Result<StringStorage> {
     let path = try_get(EnvKeys::Path)?;
-    let add_to_path: String = format!(
+    let add_to_path = string_storage!(
         "{}{}{}",
         prefix_path.as_ref().display(),
         OS_SPECIFIC_ENV_PATH_SEPARATOR,
         path
     );
-    // % is Display, ? is Debug.
-    tracing::debug!("my_path" = %add_to_path);
+    SCRIPT_MOD_DEBUG.then(|| {
+        // % is Display, ? is Debug.
+        tracing::debug!(
+            message = "try_get_path_prefixed",
+            add_to_path = %add_to_path
+        );
+    });
+
     ok!(add_to_path)
 }
 
@@ -103,7 +113,7 @@ mod tests_environment {
 
     #[test]
     fn test_get_path_envs() {
-        let path_envs = environment::get_env_vars(EnvKeys::Path, "/usr/bin");
+        let path_envs = environment::gen_path_env_vars("/usr/bin");
         let expected = vec![("PATH".to_string(), "/usr/bin".to_string())];
         assert_eq!(path_envs, expected);
     }

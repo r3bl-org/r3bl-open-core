@@ -14,8 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_core::{call_if_true,
-                ch,
+use r3bl_core::{ch,
                 col,
                 glyphs::SPACER_GLYPH,
                 row,
@@ -70,7 +69,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         };
 
         // Debug output.
-        call_if_true!(DEBUG_TUI_SHOW_PIPELINE, {
+        DEBUG_TUI_SHOW_PIPELINE.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok 🟢",
@@ -102,7 +101,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         };
 
         // Debug output.
-        call_if_true!(DEBUG_TUI_SHOW_PIPELINE, {
+        DEBUG_TUI_SHOW_PIPELINE.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = "🎨 offscreen_buffer_paint_impl_crossterm::paint_diff() ok 🟢",
@@ -198,7 +197,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     }
 
     fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps {
-        call_if_true!(DEBUG_TUI_COMPOSITOR, {
+        DEBUG_TUI_COMPOSITOR.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = "🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok 🟢",

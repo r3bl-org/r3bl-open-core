@@ -34,7 +34,7 @@ use r3bl_cmdr::{AnalyticsAction,
                        try_make_new_branch},
                 report_analytics,
                 upgrade_check};
-use r3bl_core::{CommonResult, call_if_true, throws};
+use r3bl_core::{CommonResult, throws};
 use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{SelectionMode, StyleSheet, select_from_list_with_multi_line_header};
 
@@ -47,9 +47,10 @@ async fn main() -> CommonResult<()> {
         let cli_arg = CLIArg::parse();
 
         let enable_logging = cli_arg.global_options.enable_logging;
-        call_if_true!(enable_logging, {
+        enable_logging.then(|| {
             try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
-            tracing::debug!("Start logging... cli_args {:?}", cli_arg);
+            // % is Display, ? is Debug.
+            tracing::debug!(message = "Start logging...", cli_arg = ?cli_arg);
         });
 
         // Check analytics reporting.
@@ -65,8 +66,8 @@ async fn main() -> CommonResult<()> {
 
         launch_giti(cli_arg);
 
-        call_if_true!(enable_logging, {
-            tracing::debug!("Stop logging...");
+        enable_logging.then(|| {
+            tracing::debug!(message = "Stop logging...");
         });
     })
 }
@@ -101,13 +102,17 @@ pub fn launch_giti(cli_arg: CLIArg) {
                 AnalyticsAction::GitiFailedToRun,
             );
 
-            let err_msg = format!(
-                " Could not run giti due to the following problem.\n{:#?}",
-                error
+            // % is Display, ? is Debug.
+            tracing::error!(
+                message = "Could not run giti due to the following problem",
+                error = ?error
             );
-            tracing::error!(err_msg);
+
             AnsiStyledText {
-                text: &err_msg.to_string(),
+                text: &format!(
+                    " Could not run giti due to the following problem.\n{:#?}",
+                    error
+                ),
                 style: &[Style::Foreground(GuardsRed.as_ansi_color())],
             }
             .println();

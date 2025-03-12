@@ -14,8 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_core::{call_if_true,
-                ch,
+use r3bl_core::{ch,
                 col,
                 defaults::get_default_gradient_stops,
                 glyphs,
@@ -323,17 +322,15 @@ mod app_main_impl_trait_app {
             let AppData { animator, .. } = &mut self.data;
 
             throws_with_return!({
-                call_if_true!(ENABLE_TRACE_EXAMPLES, {
-                    let message = string_storage!("AppNoLayout::handle_event");
-                    let details = string_storage!(
-                        "{a} {b:?}",
-                        a = glyphs::USER_INPUT_GLYPH,
-                        b = input_event
-                    );
+                ENABLE_TRACE_EXAMPLES.then(|| {
                     // % is Display, ? is Debug.
                     tracing::info! {
-                        message = %message,
-                        details = %details
+                        message = "AppNoLayout::handle_event",
+                        input_event = %string_storage!(
+                            "{a} {b:?}",
+                            a = glyphs::USER_INPUT_GLYPH,
+                            b = input_event
+                        )
                     };
                 });
 

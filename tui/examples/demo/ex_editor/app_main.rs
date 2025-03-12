@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{call_if_true,
-                col,
+use r3bl_core::{col,
                 get_tui_style,
                 new_style,
                 ok,
@@ -119,8 +118,9 @@ mod constructor {
 
     impl Default for AppMain {
         fn default() -> Self {
-            call_if_true!(DEBUG_TUI_MOD, {
-                tracing::debug!("🪙 construct ex_rc::AppMain");
+            DEBUG_TUI_MOD.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(message = "🪙 construct ex_rc::AppMain");
             });
             Self
         }
@@ -284,7 +284,7 @@ mod modal_dialogs {
                 // 2. [Action::AutocompleteDialogComponentInitializeFocused].
                 || {
                     let mut it = DialogBuffer::new_empty();
-                    it.editor_buffer = EditorBuffer::new_empty(&None, &None);
+                    it.editor_buffer = EditorBuffer::new_empty(None, None);
                     it
                 },
             );
@@ -338,12 +338,17 @@ mod modal_dialogs {
             return match activate_simple_modal(component_registry_map, has_focus, state) {
                 Ok(_) => ModalActivateResult::Yes,
                 Err(err) => {
-                    if let Some(CommonError {
-                        error_type: _,
-                        error_message: msg,
-                    }) = err.downcast_ref::<CommonError>()
-                    {
-                        tracing::error!("📣 Error activating simple modal: {msg:?}");
+                    match err.downcast_ref::<CommonError>() {
+                        // err is of concrete type CommonError.
+                        Some(common_error) => {
+                            // % is Display, ? is Debug.
+                            tracing::error!(
+                                message = "📣 Error activating simple modal",
+                                error = ?common_error
+                            );
+                        }
+                        // err is not of concrete type CommonError.
+                        _ => { /* do nothing */ }
                     }
                     ModalActivateResult::No
                 }
@@ -367,14 +372,17 @@ mod modal_dialogs {
             ) {
                 Ok(_) => ModalActivateResult::Yes,
                 Err(err) => {
-                    if let Some(CommonError {
-                        error_type: _,
-                        error_message: msg,
-                    }) = err.downcast_ref::<CommonError>()
-                    {
-                        tracing::error!(
-                            "📣 Error activating autocomplete modal: {msg:?}"
-                        );
+                    match err.downcast_ref::<CommonError>() {
+                        // err is of concrete type CommonError.
+                        Some(common_error) => {
+                            // % is Display, ? is Debug.
+                            tracing::error!(
+                                message = "📣 Error activating autocomplete modal",
+                                error = ?common_error
+                            );
+                        }
+                        // err is not of concrete type CommonError.
+                        _ => { /* do nothing */ }
                     }
                     ModalActivateResult::No
                 }
@@ -451,11 +459,10 @@ mod modal_dialogs {
                 text,
             );
 
-            call_if_true!(DEBUG_TUI_MOD, {
-                let message = "📣 activate modal simple";
+            DEBUG_TUI_MOD.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
-                    message = %message,
+                    message = "📣 activate modal simple",
                     has_focus = ?has_focus
                 );
             });
@@ -491,11 +498,10 @@ mod modal_dialogs {
             text,
         );
 
-        call_if_true!(DEBUG_TUI_MOD, {
-            let message = "📣 activate modal autocomplete";
+        DEBUG_TUI_MOD.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
-                message = %message,
+                message = "📣 activate modal autocomplete",
                 has_focus = ?has_focus
             );
         });
@@ -570,7 +576,7 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use r3bl_core::glyphs;
+    use r3bl_core::{glyphs, string_storage};
 
     use super::*;
 
@@ -586,12 +592,10 @@ mod populate_component_registry {
         let id = FlexBoxId::from(Id::Editor);
         has_focus.set_id(id);
 
-        call_if_true!(DEBUG_TUI_MOD, {
-            let message =
-                format!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH);
+        DEBUG_TUI_MOD.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = message,
+                message = %string_storage!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
                 has_focus = ?has_focus.get_id()
             );
         });
@@ -621,7 +625,8 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        call_if_true!(DEBUG_TUI_MOD, {
+        DEBUG_TUI_MOD.then(|| {
+            // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct EditorComponent [ on_buffer_change ]"
             );
@@ -706,7 +711,8 @@ mod populate_component_registry {
             boxed_dialog_component,
         );
 
-        call_if_true!(DEBUG_TUI_MOD, {
+        DEBUG_TUI_MOD.then(|| {
+            // % is Display, ? is Debug.
             tracing::debug!(
                 message =
                     "app_main construct DialogComponent (simple) [ on_dialog_press ]"
@@ -792,7 +798,8 @@ mod populate_component_registry {
             boxed_dialog_component,
         );
 
-        call_if_true!(DEBUG_TUI_MOD, {
+        DEBUG_TUI_MOD.then(|| {
+            // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct DialogComponent (autocomplete) [ on_dialog_press ]"
             );

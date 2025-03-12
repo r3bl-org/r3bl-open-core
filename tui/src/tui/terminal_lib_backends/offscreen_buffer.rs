@@ -18,15 +18,13 @@ use std::{fmt::{self, Debug, Write},
           ops::{Deref, DerefMut}};
 
 use diff_chunks::PixelCharDiffChunks;
+use r3bl_ansi_color::green;
 use r3bl_core::{char_storage,
                 col,
                 get_mem_size,
                 ok,
                 row,
                 string_storage,
-                style_dim_underline,
-                style_primary,
-                style_prompt,
                 CharStorage,
                 ColWidth,
                 Dim,
@@ -136,7 +134,7 @@ mod offscreen_buffer_impl {
                     writeln!(
                         f,
                         "{}",
-                        style_prompt(&string_storage!("row_index: {}", row_index))
+                        green(&string_storage!("row_index: {}", row_index))
                     )?;
 
                     // Print the row itself in the "next" line.
@@ -244,6 +242,8 @@ impl GetMemSize for PixelCharLine {
 }
 
 mod pixel_char_line_impl {
+    use r3bl_ansi_color::dim_underline;
+
     use super::*;
 
     impl Debug for PixelCharLine {
@@ -276,7 +276,7 @@ mod pixel_char_line_impl {
                 write!(
                     f,
                     "{}{:?}",
-                    style_dim_underline(&char_storage!("{col_index:03}")),
+                    dim_underline(&char_storage!("{col_index:03}")),
                     pixel_char
                 )?;
 
@@ -463,6 +463,8 @@ const EMPTY_CHAR: char = '╳';
 const VOID_CHAR: char = '❯';
 
 mod pixel_char_impl {
+    use r3bl_ansi_color::magenta;
+
     use super::*;
 
     impl Default for PixelChar {
@@ -501,7 +503,7 @@ mod pixel_char_impl {
                         }
                     };
                     let trunc_output = truncate(&acc_tmp, WIDTH);
-                    write!(f, " {} {trunc_output: ^WIDTH$}", style_primary("P"))?;
+                    write!(f, " {} {trunc_output: ^WIDTH$}", magenta("P"))?;
                 }
             };
 
