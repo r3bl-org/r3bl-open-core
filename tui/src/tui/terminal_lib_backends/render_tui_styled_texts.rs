@@ -42,8 +42,8 @@ mod tests {
                     tui_styled_texts,
                     tui_stylesheet,
                     CommonResult,
-                    TuiStylesheet,
-                    VecArray};
+                    InlineVec,
+                    TuiStylesheet};
 
     use super::*;
     use crate::{render_ops, render_pipeline, ZOrder};
@@ -61,7 +61,7 @@ mod tests {
             console_log!(pipeline);
             assert_eq2!(pipeline.len(), 1);
 
-            let set: &VecArray<RenderOps> = pipeline.get(&ZOrder::Normal).unwrap();
+            let set: &InlineVec<RenderOps> = pipeline.get(&ZOrder::Normal).unwrap();
 
             // "Hello" and "World" together.
             assert_eq2!(set.len(), 1);

@@ -18,13 +18,13 @@ use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
 use r3bl_core::{ok,
+                InlineString,
+                InlineVec,
                 LockedOutputDevice,
                 Pos,
                 Size,
-                StringStorage,
                 TuiColor,
-                TuiStyle,
-                VecArray};
+                TuiStyle};
 
 use super::TERMINAL_LIB_BACKEND;
 use crate::{CrosstermDebugFormatRenderOp,
@@ -157,13 +157,13 @@ macro_rules! render_ops {
 /// clear before paint! 🎉 The compositor takes care of that for you!
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct RenderOps {
-    pub list: VecArray<RenderOp>,
+    pub list: InlineVec<RenderOp>,
 }
 
 impl Default for RenderOps {
     fn default() -> Self {
         Self {
-            list: VecArray::new(),
+            list: InlineVec::new(),
         }
     }
 }
@@ -222,7 +222,7 @@ pub mod render_ops_impl {
     }
 
     impl Deref for RenderOps {
-        type Target = VecArray<RenderOp>;
+        type Target = InlineVec<RenderOp>;
 
         fn deref(&self) -> &Self::Target { &self.list }
     }
@@ -296,13 +296,13 @@ pub enum RenderOp {
     /// underline, strikethrough, etc) and not colors. If you need to apply color, use
     /// [RenderOp::ApplyColors] instead.
     ///
-    /// 1. If the [StringStorage] argument is plain text (no ANSI sequences)
+    /// 1. If the [InlineString] argument is plain text (no ANSI sequences)
     ///    then it will be clipped available width of the terminal screen).
     ///
-    /// 2. If the [StringStorage] argument contains ANSI sequences then it will
+    /// 2. If the [InlineString] argument contains ANSI sequences then it will
     ///    be printed as-is. You are responsible for handling clipping of the text to the
     ///    bounds of the terminal screen.
-    PaintTextWithAttributes(StringStorage, Option<TuiStyle>),
+    PaintTextWithAttributes(InlineString, Option<TuiStyle>),
 
     /// This is **not** meant for use directly by apps. It is to be used only by the
     /// [super::OffscreenBuffer]. This operation skips the checks for content width
@@ -310,7 +310,7 @@ pub enum RenderOp {
     /// compositor is painting an offscreen buffer, since when the offscreen buffer was
     /// created the two render ops above were used which already handle the clipping and
     /// padding.
-    CompositorNoClipTruncPaintTextWithAttributes(StringStorage, Option<TuiStyle>),
+    CompositorNoClipTruncPaintTextWithAttributes(InlineString, Option<TuiStyle>),
 
     /// For [Default] impl.
     Noop,

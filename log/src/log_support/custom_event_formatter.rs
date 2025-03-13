@@ -33,24 +33,28 @@
 //! explicitly use the `message` field name. Its value can then be any expression. There
 //! are lots of examples in the tests below.
 
-use std::fmt;
+use std::fmt::{self};
 
 use chrono::Local;
 use const_format::formatcp;
-use crossterm::style::Stylize;
 use custom_event_formatter_constants::*;
-use r3bl_ansi_color::{AnsiStyledText, Color, Style};
-use r3bl_core::{ColorWheel,
+use r3bl_ansi_color::{ASTColor,
+                      ASTStyle,
+                      AnsiStyledText,
+                      fg_rgb_color,
+                      rgb_color,
+                      sizing::InlineVecASTStyles};
+use r3bl_core::{ColWidth,
+                ColorWheel,
                 GCString,
+                InlineString,
                 OrderedMap,
-                StringStorage,
-                VEC_ARRAY_SIZE,
-                VecArray,
                 get_terminal_width,
                 glyphs,
+                inline_string,
                 new_style,
+                pad_fmt,
                 remove_escaped_quotes,
-                string_storage,
                 truncate_from_right,
                 usize,
                 width};
@@ -61,7 +65,20 @@ use tracing::{Event,
 use tracing_subscriber::{fmt::{FormatEvent, FormatFields},
                          registry::LookupSpan};
 
+#[derive(Debug, Default)]
 pub struct CustomEventFormatter;
+
+pub fn build_spacer(max_display_width: ColWidth) -> InlineString {
+    let mut acc_padding = InlineString::with_capacity(max_display_width.as_usize());
+    pad_fmt!(
+        fmt: acc_padding,
+        pad_str: ENTRY_SEPARATOR_CHAR,
+        repeat_count: max_display_width.as_usize()
+    );
+
+    // Format spacer.
+    fg_rgb_color(rgb_color!(dark_lizard_green), &acc_padding).to_small_str()
+}
 
 // Colors: <https://en.wikipedia.org/wiki/ANSI_escape_code>
 pub mod custom_event_formatter_constants {
@@ -84,15 +101,15 @@ pub mod custom_event_formatter_constants {
     pub const ENTRY_SEPARATOR_CHAR: &str =
         formatcp!("{ch}", ch = glyphs::TOP_UNDERLINE_GLYPH);
 
-    pub const BODY_FG_COLOR: Color = Color::Rgb(175, 175, 175);
-    pub const BODY_FG_COLOR_BRIGHT: Color = Color::Rgb(200, 200, 200);
-    pub const HEADING_BG_COLOR: Color = Color::Rgb(70, 70, 90);
+    pub const BODY_FG_COLOR: ASTColor = ASTColor::Rgb(175, 175, 175);
+    pub const BODY_FG_COLOR_BRIGHT: ASTColor = ASTColor::Rgb(200, 200, 200);
+    pub const HEADING_BG_COLOR: ASTColor = ASTColor::Rgb(70, 70, 90);
 
-    pub const INFO_FG_COLOR: Color = Color::Rgb(233, 150, 122);
-    pub const ERROR_FG_COLOR: Color = Color::Rgb(255, 182, 193); //Color::Rgb(220, 92, 92);
-    pub const WARN_FG_COLOR: Color = Color::Rgb(255, 140, 0);
-    pub const DEBUG_FG_COLOR: Color = Color::Rgb(255, 255, 0);
-    pub const TRACE_FG_COLOR: Color = Color::Rgb(186, 85, 211);
+    pub const INFO_FG_COLOR: ASTColor = ASTColor::Rgb(233, 150, 122);
+    pub const ERROR_FG_COLOR: ASTColor = ASTColor::Rgb(255, 182, 193); //Color::Rgb(220, 92, 92);
+    pub const WARN_FG_COLOR: ASTColor = ASTColor::Rgb(255, 140, 0);
+    pub const DEBUG_FG_COLOR: ASTColor = ASTColor::Rgb(255, 255, 0);
+    pub const TRACE_FG_COLOR: ASTColor = ASTColor::Rgb(186, 85, 211);
 }
 
 impl<S, N> FormatEvent<S, N> for CustomEventFormatter
@@ -130,7 +147,7 @@ where
 
         // Custom timestamp.
         let timestamp = Local::now();
-        let timestamp_str = string_storage!(
+        let timestamp_str = inline_string!(
             "{sp}{ts}{sp}",
             ts = timestamp.format("%I:%M%P"),
             sp = spacer
@@ -138,23 +155,23 @@ where
         line_width_used += GCString::width(&timestamp_str);
         let timestamp_str_fmt = AnsiStyledText {
             text: &timestamp_str,
-            style: &[
-                Style::Foreground(BODY_FG_COLOR_BRIGHT),
-                Style::Background(HEADING_BG_COLOR),
+            style: smallvec::smallvec![
+                ASTStyle::Foreground(BODY_FG_COLOR_BRIGHT),
+                ASTStyle::Background(HEADING_BG_COLOR),
             ],
         };
         write!(f, "\n{timestamp_str_fmt}")?;
 
         // Custom span context.
         if let Some(scope) = ctx.lookup_current() {
-            let scope_str = string_storage!("[{}] ", scope.name());
+            let scope_str = inline_string!("[{}] ", scope.name());
             line_width_used += GCString::width(&scope_str);
             let scope_str_fmt = AnsiStyledText {
                 text: &scope_str,
-                style: &[
-                    Style::Foreground(BODY_FG_COLOR_BRIGHT),
-                    Style::Background(HEADING_BG_COLOR),
-                    Style::Italic,
+                style: smallvec::smallvec![
+                    ASTStyle::Foreground(BODY_FG_COLOR_BRIGHT),
+                    ASTStyle::Background(HEADING_BG_COLOR),
+                    ASTStyle::Italic,
                 ],
             };
             write!(f, "{scope_str_fmt}")?;
@@ -175,34 +192,34 @@ where
         //     kind: Kind(EVENT),
         // }
 
-        let mut style_acc: VecArray<Style> = VecArray::with_capacity(VEC_ARRAY_SIZE);
+        let mut style_acc = InlineVecASTStyles::new();
         let level_str = match *event.metadata().level() {
             tracing::Level::ERROR => {
-                style_acc.push(Style::Foreground(ERROR_FG_COLOR));
-                string_storage!("{ERROR_SIGIL}{LEVEL_SUFFIX}{spacer}")
+                style_acc.push(ASTStyle::Foreground(ERROR_FG_COLOR));
+                inline_string!("{ERROR_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::WARN => {
-                style_acc.push(Style::Foreground(WARN_FG_COLOR));
-                string_storage!("{WARN_SIGIL}{LEVEL_SUFFIX}{spacer}")
+                style_acc.push(ASTStyle::Foreground(WARN_FG_COLOR));
+                inline_string!("{WARN_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::INFO => {
-                style_acc.push(Style::Foreground(INFO_FG_COLOR));
-                string_storage!("{INFO_SIGIL}{LEVEL_SUFFIX}{spacer}")
+                style_acc.push(ASTStyle::Foreground(INFO_FG_COLOR));
+                inline_string!("{INFO_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::DEBUG => {
-                style_acc.push(Style::Foreground(DEBUG_FG_COLOR));
-                string_storage!("{DEBUG_SIGIL}{LEVEL_SUFFIX}{spacer}")
+                style_acc.push(ASTStyle::Foreground(DEBUG_FG_COLOR));
+                inline_string!("{DEBUG_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::TRACE => {
-                style_acc.push(Style::Foreground(TRACE_FG_COLOR));
-                string_storage!("{TRACE_SIGIL}{LEVEL_SUFFIX}{spacer}")
+                style_acc.push(ASTStyle::Foreground(TRACE_FG_COLOR));
+                inline_string!("{TRACE_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
         };
-        style_acc.push(Style::Background(HEADING_BG_COLOR));
-        style_acc.push(Style::Bold);
+        style_acc.push(ASTStyle::Background(HEADING_BG_COLOR));
+        style_acc.push(ASTStyle::Bold);
         let level_str_fmt = AnsiStyledText {
             text: &level_str,
-            style: &style_acc,
+            style: style_acc,
         };
 
         let level_str_display_width = GCString::width(&level_str);
@@ -221,7 +238,7 @@ where
         // Instead of:
         // ctx.field_format().format_fields(writer.by_ref(), event)?;
 
-        let mut order_map = OrderedMap::<StringStorage, StringStorage>::default();
+        let mut order_map = OrderedMap::<InlineString, InlineString>::default();
         event.record(&mut VisitEventAndPopulateOrderedMapWithFields {
             inner: &mut order_map,
         });
@@ -243,7 +260,7 @@ where
                 let it = max_display_width - line_width_used;
                 width(*it)
             };
-            let line_1_text = string_storage!(
+            let line_1_text = inline_string!(
                 "{spacer}{heading}",
                 heading = truncate_from_right(&heading, line_1_width, false)
             );
@@ -260,7 +277,7 @@ where
                         truncate_from_right(body_line, max_display_width, true);
                     let body_line_fmt = AnsiStyledText {
                         text: &body_line,
-                        style: &[Style::Foreground(BODY_FG_COLOR)],
+                        style: smallvec::smallvec![ASTStyle::Foreground(BODY_FG_COLOR)],
                     };
                     writeln!(f, "{body_line_fmt}")?;
                 }
@@ -268,14 +285,12 @@ where
         }
 
         // Write the terminating line separator.
-        let line_separator = ENTRY_SEPARATOR_CHAR.repeat(usize(*max_display_width));
-        let line_separator_fmt = line_separator.dark_green();
-        writeln!(f, "{line_separator_fmt}")
+        writeln!(f, "{}", build_spacer(max_display_width))
     }
 }
 
 pub struct VisitEventAndPopulateOrderedMapWithFields<'a> {
-    pub inner: &'a mut OrderedMap<StringStorage, StringStorage>,
+    pub inner: &'a mut OrderedMap<InlineString, InlineString>,
 }
 
 impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
@@ -309,7 +324,7 @@ impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
     /// [CustomEventFormatter::format_event] to skip writing the body line.
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         let field_name = field.name();
-        let field_value = string_storage!("{:?}", value);
+        let field_value = inline_string!("{:?}", value);
         if field_name == "message" {
             self.inner.insert(field_value, "".into());
         } else {

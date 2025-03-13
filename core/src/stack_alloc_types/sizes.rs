@@ -15,29 +15,35 @@
  *   limitations under the License.
  */
 
+//! Be very careful when adjusting these tuning parameters. The rule of thumb is that
+//! smaller static allocation sizes are better than larger. There is a tradeoff between
+//! pre-allocating large amounts of memory and allocating small amounts (on the heap) as
+//! you need it. Also huge stack allocations can cause stack overflow errors. Please test
+//! your changes extensively using the demo examples in the `examples` directory to verify
+//! that they actually speed things up and cause performance regressions.
+
+// PERF: If you make this number too large, eg: more than 16, then it will slow down the editor performance
+use r3bl_ansi_color::sizing::DEFAULT_STRING_STORAGE_SIZE;
 use smallstr::SmallString;
 use smallvec::SmallVec;
 
 /// Intermediate struct used to insert a grapheme cluster segment into an existing unicode
-/// string. When this gets larger than `DEFAULT_STRING_SIZE`, it will be
+/// string. When this gets larger than [INLINE_VEC_SIZE], it will be
 /// [smallvec::SmallVec::spilled] on the heap.
-pub type VecArrayStr<'a> = SmallVec<[&'a str; VEC_STR_BUFFER_CAPACITY]>;
-const VEC_STR_BUFFER_CAPACITY: usize = 16;
+pub type InlineVecStr<'a> = InlineVec<&'a str>;
 
 /// Stack allocated string storage for small strings. When this gets larger than
-/// `DEFAULT_STRING_SIZE`, it will be [smallvec::SmallVec::spilled] on the heap.
-pub type StringStorage = SmallString<[u8; DEFAULT_STRING_STORAGE_SIZE]>;
+/// [DEFAULT_STRING_STORAGE_SIZE], it will be [smallvec::SmallVec::spilled] on the heap.
+pub type InlineString = SmallString<[u8; DEFAULT_STRING_STORAGE_SIZE]>;
 
-// PERF: If you make this number too large, eg: more than 16, then it will slow down the editor performance
-pub const DEFAULT_STRING_STORAGE_SIZE: usize = 16;
-
-/// Stack allocated string storage for small chars. When this gets larger than
-/// `DEFAULT_CHAR_SIZE`, it will be [smallvec::SmallVec::spilled] on the heap.
-pub type CharStorage = SmallString<[u8; DEFAULT_CHAR_STORAGE_SIZE]>;
+/// Stack allocated really small string storage for small char sequences. When this gets
+/// larger than [DEFAULT_CHAR_STORAGE_SIZE], it will be [smallvec::SmallVec::spilled] on
+/// the heap.
+pub type TinyInlineString = SmallString<[u8; DEFAULT_CHAR_STORAGE_SIZE]>;
 pub const DEFAULT_CHAR_STORAGE_SIZE: usize = 4;
 
 /// Stack allocated string storage for small documents. When this gets larger than
-/// `DEFAULT_DOCUMENT_SIZE`, it will be [smallvec::SmallVec::spilled] on the heap.
+/// [DEFAULT_DOCUMENT_SIZE], it will be [smallvec::SmallVec::spilled] on the heap.
 pub type DocumentStorage = SmallString<[u8; DEFAULT_DOCUMENT_SIZE]>;
 /// 128KB, or approximately 2200 lines of Markdown text (assuming 60 chars per line).
 pub const DEFAULT_DOCUMENT_SIZE: usize = 131072;
@@ -49,6 +55,6 @@ pub const DEFAULT_DOCUMENT_SIZE: usize = 131072;
 pub const DEFAULT_READ_BUFFER_SIZE: usize = 16384;
 
 /// Stack allocated list, that can [smallvec::SmallVec::spilled] into the heap if it gets
-/// larger than `VEC_ARRAY_SIZE`.
-pub type VecArray<T> = SmallVec<[T; VEC_ARRAY_SIZE]>;
-pub const VEC_ARRAY_SIZE: usize = 8;
+/// larger than [INLINE_VEC_SIZE].
+pub type InlineVec<T> = SmallVec<[T; INLINE_VEC_SIZE]>;
+pub const INLINE_VEC_SIZE: usize = 8;

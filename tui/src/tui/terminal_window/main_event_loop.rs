@@ -21,11 +21,11 @@ use r3bl_core::{ch,
                 format_as_kilobytes_with_commas,
                 glyphs,
                 height,
+                inline_string,
                 new_style,
                 ok,
                 output_device_as_mut,
                 row,
-                string_storage,
                 telemetry::{telemetry_default_constants, Telemetry},
                 telemetry_record,
                 width,
@@ -149,7 +149,7 @@ where
     (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
         // % is Display, ? is Debug.
         tracing::info!(
-            message = %string_storage!(
+            message = %inline_string!(
                 "main_event_loop {sp} Startup {ch}",
                 sp = glyphs::RIGHT_ARROW_GLYPH,
                 ch = glyphs::CELEBRATE_GLYPH
@@ -233,7 +233,7 @@ where
                         if let InputEvent::Keyboard(_) = input_event {
                             // % is Display, ? is Debug.
                             tracing::info!(
-                                message = %string_storage!(
+                                message = %inline_string!(
                                     "main_event_loop {sp} Tick {ch}",
                                     sp = glyphs::RIGHT_ARROW_GLYPH,
                                     ch = glyphs::CLOCK_TICK_GLYPH
@@ -297,7 +297,7 @@ where
         (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = %string_storage!(
+                message = %inline_string!(
                     "AppManager::render_app() ok {ch}",
                     ch = glyphs::PAINT_GLYPH
                 ),
@@ -311,11 +311,11 @@ where
             {
                 // % is Display, ? is Debug.
                 tracing::info!(
-                    message = %string_storage!(
+                    message = %inline_string!(
                         "AppManager::render_app() offscreen_buffer stats {ch}",
                         ch = glyphs::SCREEN_BUFFER_GLYPH
                     ),
-                    offscreen_buffer_size = %string_storage!(
+                    offscreen_buffer_size = %inline_string!(
                         "Memory used: {size}",
                         size = format_as_kilobytes_with_commas(
                             offscreen_buffer.get_mem_size()
@@ -328,7 +328,7 @@ where
 
     (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
         tracing::info!(
-            message = %string_storage!(
+            message = %inline_string!(
                 "main_event_loop {sp} Shutdown {ch}",
                 ch = glyphs::BYE_GLYPH,
                 sp = glyphs::RIGHT_ARROW_GLYPH,
@@ -459,7 +459,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
         Err(error) => {
             // % is Display, ? is Debug.
             tracing::error!(
-                message = %string_storage!(
+                message = %inline_string!(
                     "main_event_loop {sp} handle_result_generated_by_app_after_handling_action {ch}",
                     ch = glyphs::SUSPICIOUS_GLYPH,
                     sp = glyphs::RIGHT_ARROW_GLYPH,
@@ -530,7 +530,7 @@ where
                 DEBUG_TUI_MOD.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error!(
-                        message = %string_storage!(
+                        message = %inline_string!(
                             "AppManager::render_app() error {ch}",
                             ch = glyphs::SUSPICIOUS_GLYPH
                         ),
@@ -555,7 +555,7 @@ where
 
 fn render_window_too_small_error(window_size: Dim) -> RenderPipeline {
     // Show warning message that window_size is too small.
-    let msg = string_storage!(
+    let msg = inline_string!(
         "Window size is too small. Minimum size is {} cols x {} rows",
         MinSize::Col as u8,
         MinSize::Row as u8
@@ -611,16 +611,16 @@ mod tests {
     use std::{fmt::{Debug, Formatter},
               time::Duration};
 
-    use r3bl_ansi_color::{is_fully_uninteractive_terminal, TTYResult};
     use r3bl_core::{assert_eq2,
                     ch,
                     col,
                     defaults::get_default_gradient_stops,
                     height,
+                    inline_string,
+                    is_fully_uninteractive_terminal,
                     new_style,
                     ok,
                     send_signal,
-                    string_storage,
                     throws_with_return,
                     tui_color,
                     tui_styled_text,
@@ -634,11 +634,12 @@ mod tests {
                     Dim,
                     GradientGenerationPolicy,
                     GradientLengthKind,
+                    InlineVec,
                     InputDevice,
                     OutputDevice,
+                    TTYResult,
                     TextColorizationPolicy,
-                    TuiStyle,
-                    VecArray};
+                    TuiStyle};
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, InputDeviceExt};
     use smallvec::smallvec;
     use test_fixture_app::AppMainTest;
@@ -680,11 +681,11 @@ mod tests {
         let app = Box::<AppMainTest>::default();
 
         // Exit if these keys are pressed.
-        let exit_keys: VecArray<InputEvent> =
+        let exit_keys: InlineVec<InputEvent> =
             smallvec![InputEvent::Keyboard(keypress! { @char 'x' })];
 
         // Simulated key inputs.
-        let generator_vec: VecArray<CrosstermEventResult> = smallvec![
+        let generator_vec: InlineVec<CrosstermEventResult> = smallvec![
             Ok(crossterm::event::Event::Key(
                 crossterm::event::KeyEvent::new(
                     crossterm::event::KeyCode::Up,
@@ -865,7 +866,7 @@ mod tests {
             ) -> CommonResult<RenderPipeline> {
                 throws_with_return!({
                     let state_string =
-                        string_storage!("{a:?}", a = global_data_mut_ref.state);
+                        inline_string!("{a:?}", a = global_data_mut_ref.state);
                     let data = &mut self.data;
 
                     let sample_line_of_text =
@@ -902,7 +903,7 @@ mod tests {
                             _ => 0,
                         };
 
-                        let string = string_storage!(
+                        let string = inline_string!(
                             "{state_string}, gradient: [index: {a:?}, len: {b}]",
                             a = index,
                             b = len

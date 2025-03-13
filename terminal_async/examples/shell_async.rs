@@ -94,7 +94,6 @@
 
 use std::io::Write as _;
 
-use crossterm::style::Stylize as _;
 use miette::IntoDiagnostic as _;
 use r3bl_core::{SharedWriter, ok};
 use r3bl_terminal_async::{ReadlineEvent,
@@ -218,6 +217,8 @@ pub mod monitor_user_input_and_send_to_child {
 }
 
 pub mod monitor_child_output {
+    use r3bl_ansi_color::{guards_red, lizard_green};
+
     use super::*;
 
     pub async fn spawn(
@@ -244,8 +245,7 @@ pub mod monitor_child_output {
                     result_line = stdout_lines.next_line() => {
                         match result_line {
                             Ok(Some(line)) => {
-                                let line = line.to_string().green();
-                                _ = writeln!(shared_writer, "{}", line);
+                                _ = writeln!(shared_writer, "{}", lizard_green(&line));
                             },
                             _ => {
                                 _ = shutdown_sender.send(());
@@ -259,8 +259,7 @@ pub mod monitor_child_output {
                     result_line = stderr_lines.next_line() => {
                         match result_line {
                             Ok(Some(line)) => {
-                                let line = line.to_string().red();
-                                _ = writeln!(shared_writer, "{}", line);
+                                _ = writeln!(shared_writer, "{}", guards_red(&line));
                             }
                             _ => {
                                 _= shutdown_sender.send(());
@@ -275,6 +274,9 @@ pub mod monitor_child_output {
 }
 
 pub mod terminal_async_constructor {
+    use r3bl_ansi_color::{fg_rgb_color, rgb_color};
+    use r3bl_core::inline_string;
+
     use super::*;
 
     pub struct TerminalAsyncHandle {
@@ -284,10 +286,12 @@ pub mod terminal_async_constructor {
 
     pub async fn new(pid: u32) -> miette::Result<TerminalAsyncHandle> {
         let prompt = {
-            let prompt_seg_1 = "╭".magenta().on_dark_grey().to_string();
-            let prompt_seg_2 = format!("┤{pid}├").magenta().on_dark_grey().to_string();
-            let prompt_seg_3 = "╮".magenta().on_dark_grey().to_string();
-            format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3)
+            let fg = rgb_color!(slate_grey);
+            let bg = rgb_color!(moonlight_blue);
+            let prompt_str = inline_string!("┤{pid}├");
+            let prompt_seg_1 = fg_rgb_color(fg, &prompt_str).bg_rgb_color(bg);
+            let prompt_seg_2 = " ";
+            format!("{}{}", prompt_seg_1, prompt_seg_2)
         };
 
         let Ok(Some(terminal_async)) = TerminalAsync::try_new(prompt.as_str()).await

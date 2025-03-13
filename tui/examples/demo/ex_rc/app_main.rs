@@ -18,11 +18,11 @@ use std::fmt::Debug;
 
 use chrono::{DateTime, Local};
 use r3bl_core::{col,
+                inline_string,
                 new_style,
                 req_size_pc,
                 row,
                 send_signal,
-                string_storage,
                 throws,
                 throws_with_return,
                 tui_color,
@@ -434,7 +434,7 @@ mod populate_component_registry {
         DEBUG_TUI_MOD.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = %string_storage!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
+                message = %inline_string!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
                 has_focus = ?has_focus.get_id()
             );
         });
@@ -542,7 +542,7 @@ mod status_bar {
 
         let lolcat_st = {
             let now: DateTime<Local> = Local::now();
-            let time_string = string_storage!(" 🦜 {} ", now.format("%H:%M:%S"));
+            let time_string = inline_string!(" 🦜 {} ", now.format("%H:%M:%S"));
             let time_string_gcs = time_string.grapheme_string();
             let style = new_style!(color_fg: {tui_color!(black)});
             app.data.lolcat_bg.colorize_into_styled_texts(

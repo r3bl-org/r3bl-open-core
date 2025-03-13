@@ -35,8 +35,8 @@ use crate::{Ansi256GradientIndex,
             GCString,
             GCStringExt as _,
             GradientGenerationPolicy,
+            InlineString,
             RgbValue,
-            StringStorage,
             TextColorizationPolicy,
             TuiColor,
             TuiStyle,
@@ -366,7 +366,7 @@ impl ColorWheel {
     pub fn lolcat_into_string(
         text: &str,
         maybe_default_style: Option<TuiStyle>,
-    ) -> StringStorage {
+    ) -> InlineString {
         ColorWheel::default().colorize_into_string(
             text,
             GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
@@ -382,7 +382,7 @@ impl ColorWheel {
         gradient_generation_policy: GradientGenerationPolicy,
         text_colorization_policy: TextColorizationPolicy,
         maybe_default_style: Option<TuiStyle>,
-    ) -> StringStorage {
+    ) -> InlineString {
         let string_gcs = string.grapheme_string();
         let spans_in_line = self.colorize_into_styled_texts(
             &string_gcs,
@@ -390,7 +390,7 @@ impl ColorWheel {
             text_colorization_policy,
         );
 
-        let mut acc = StringStorage::new();
+        let mut acc = InlineString::new();
 
         for TuiStyledText { mut style, text } in spans_in_line.inner {
             if let Some(default_style) = maybe_default_style {
@@ -400,7 +400,7 @@ impl ColorWheel {
             let acc_style = convert_to_ansi_color_styles::from_tui_style(style);
 
             let ansi_styled_text = AnsiStyledText {
-                style: &acc_style,
+                style: acc_style,
                 text: &text,
             };
 

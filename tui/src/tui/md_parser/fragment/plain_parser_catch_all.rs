@@ -32,7 +32,6 @@
 //! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
 //! in [crate::parse_fragments_in_a_line].
 
-use crossterm::style::Stylize;
 use nom::{branch::alt,
           bytes::complete::{tag, take_till1},
           character::complete::anychar,
@@ -40,7 +39,7 @@ use nom::{branch::alt,
           multi::many1,
           sequence::preceded,
           IResult};
-use r3bl_core::call_if_true;
+use r3bl_ansi_color::{blue, magenta, red};
 
 use crate::{constants::{BACK_TICK,
                         LEFT_BRACKET,
@@ -83,8 +82,8 @@ use crate::{constants::{BACK_TICK,
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
 /// See: [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()].
 pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str> {
-    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-        println!("\n{} plain parser, input: {:?}", "██".magenta(), input);
+    DEBUG_MD_PARSER_STDOUT.then(|| {
+        println!("\n{} plain parser, input: {:?}", magenta("██"), input);
     });
 
     if check_input_starts_with(input, &get_sp_char_set_2()).is_none() {
@@ -120,13 +119,13 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
                 anychar,
             )),
         )(input);
-        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                 "{} normal case :: {:?}",
                 if it.is_err() {
-                    "⬢⬢".red()
+                    red("⬢⬢")
                 } else {
-                    "▲▲".blue()
+                    blue("▲▲")
                 },
                 it
             );
@@ -153,10 +152,10 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
             // Split the input, by returning the first part as plain text, and the
             // remainder as the input to be parsed by the specialized parsers.
             let (rem, output) = recognize(many1(tag(special_str)))(input)?;
-            call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+            DEBUG_MD_PARSER_STDOUT.then(|| {
                 println!(
                     "{} edge case -> special case :: rem: {:?}, output: {:?}",
-                    "▲▲".blue(),
+                    blue("▲▲"),
                     rem,
                     output
                 );
@@ -170,13 +169,13 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
     // Take till the first new line, as [MdLineFragment::Plain], since the specialized
     // parsers did not match the input.
     let it = take_till1(|it: char| it == NEW_LINE_CHAR)(input);
-    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+    DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
             "{} edge case -> normal case :: {:?}",
             if it.is_err() {
-                "⬢⬢".red()
+                red("⬢⬢")
             } else {
-                "▲▲".blue()
+                blue("▲▲")
             },
             it
         );

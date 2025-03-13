@@ -18,10 +18,10 @@ use r3bl_core::{ch,
                 col,
                 defaults::get_default_gradient_stops,
                 glyphs,
+                inline_string,
                 new_style,
                 row,
                 send_signal,
-                string_storage,
                 throws_with_return,
                 tui_color,
                 tui_styled_text,
@@ -36,9 +36,9 @@ use r3bl_core::{ch,
                 Dim,
                 GradientGenerationPolicy,
                 GradientLengthKind,
+                InlineVec,
                 LolcatBuilder,
                 TextColorizationPolicy,
-                VecArray,
                 SPACER_GLYPH};
 use r3bl_tui::{render_ops,
                render_pipeline,
@@ -72,7 +72,7 @@ pub struct AppMain {
 #[derive(Default)]
 pub struct AppData {
     pub color_wheel_rgb: ColorWheel,
-    pub color_wheel_ansi_vec: VecArray<ColorWheel>,
+    pub color_wheel_ansi_vec: InlineVec<ColorWheel>,
     pub lolcat_fg: ColorWheel,
     pub lolcat_bg: ColorWheel,
     pub animator: Animator,
@@ -154,7 +154,7 @@ mod app_main_impl_trait_app {
             _has_focus: &mut HasFocus,
         ) -> CommonResult<RenderPipeline> {
             throws_with_return!({
-                let state_string = string_storage!("{a:?}", a = global_data.state);
+                let state_string = inline_string!("{a:?}", a = global_data.state);
 
                 let sample_line_of_text =
                     format!("{state_string}, gradient: [index: X, len: Y]");
@@ -194,7 +194,7 @@ mod app_main_impl_trait_app {
                                 GradientLengthKind::ColorWheel(len) => len,
                                 _ => 0,
                             };
-                            string_storage!(
+                            inline_string!(
                                 "{state_string}, gradient: [index: {index:?}, len: {len}]"
                             )
                         };
@@ -225,7 +225,7 @@ mod app_main_impl_trait_app {
                                 GradientLengthKind::ColorWheel(len) => len,
                                 _ => 0,
                             };
-                            string_storage!(
+                            inline_string!(
                                 "{state_string}, gradient: [index: {index:?}, len: {len}]"
                             )
                         };
@@ -248,9 +248,7 @@ mod app_main_impl_trait_app {
                             RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
 
                         let text = {
-                            string_storage!(
-                                "{state_string}, gradient: [index: _, len: _]"
-                            )
+                            inline_string!("{state_string}, gradient: [index: _, len: _]")
                         };
 
                         let text_gcs = text.grapheme_string();
@@ -271,9 +269,7 @@ mod app_main_impl_trait_app {
                             RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
 
                         let text = {
-                            string_storage!(
-                                "{state_string}, gradient: [index: _, len: _]"
-                            )
+                            inline_string!("{state_string}, gradient: [index: _, len: _]")
                         };
 
                         let text_gcs = text.grapheme_string();
@@ -326,7 +322,7 @@ mod app_main_impl_trait_app {
                     // % is Display, ? is Debug.
                     tracing::info! {
                         message = "AppNoLayout::handle_event",
-                        input_event = %string_storage!(
+                        input_event = %inline_string!(
                             "{a} {b:?}",
                             a = glyphs::USER_INPUT_GLYPH,
                             b = input_event

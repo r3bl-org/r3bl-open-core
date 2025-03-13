@@ -17,12 +17,12 @@
 
 use r3bl_core::{get_mem_size,
                 CaretRaw,
-                CharStorage,
                 GCString,
                 GetMemSize,
+                InlineString,
                 RingBufferHeap,
                 ScrOfs,
-                StringStorage};
+                TinyInlineString};
 use smallvec::SmallVec;
 
 use super::{cur_index::CurIndex, history::EditorHistory, EditorContent};
@@ -41,8 +41,8 @@ impl GetMemSize for EditorContent {
         get_mem_size::slice_size(&self.lines)
             + std::mem::size_of::<CaretRaw>()
             + std::mem::size_of::<ScrOfs>()
-            + std::mem::size_of::<Option<CharStorage>>()
-            + std::mem::size_of::<Option<StringStorage>>()
+            + std::mem::size_of::<Option<TinyInlineString>>()
+            + std::mem::size_of::<Option<InlineString>>()
             + self.sel_list.get_mem_size()
     }
 }

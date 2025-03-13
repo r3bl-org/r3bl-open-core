@@ -89,7 +89,7 @@ mod exp_batch_1 {
 
     #[cfg(test)]
     pub mod new_nom_parser_code {
-        use crossterm::style::Stylize;
+        use r3bl_ansi_color::{bold, rgb_color};
         use r3bl_core::assert_eq2;
 
         use super::*;
@@ -98,7 +98,12 @@ mod exp_batch_1 {
         fn test_eol_or_not_behavior() {
             println!(
                 "\n\n{}",
-                format_args!("{}", "parse_opt_eol()".green().bold().on_dark_grey())
+                format_args!(
+                    "{}",
+                    bold("parse_opt_eol()")
+                        .fg_rgb_color(rgb_color!(lizard_green))
+                        .bg_dark_grey()
+                )
             );
 
             // With EOL.
@@ -125,7 +130,12 @@ mod exp_batch_1 {
 
             println!(
                 "{}",
-                format_args!("\n\n{}", "parse_opt_eol_2()".green().bold().on_dark_grey())
+                format_args!(
+                    "\n\n{}",
+                    bold("parse_opt_eol_2()")
+                        .fg_rgb_color(rgb_color!(lizard_green))
+                        .bg_dark_grey()
+                )
             );
 
             // With EOL.
@@ -185,7 +195,7 @@ mod exp_batch_2 {
 
     #[cfg(test)]
     mod test_text_until_opt_eol {
-        use crossterm::style::Stylize;
+        use r3bl_ansi_color::{bold, rgb_color};
         use r3bl_core::assert_eq2;
 
         use super::*;
@@ -196,7 +206,9 @@ mod exp_batch_2 {
                 "\n\n{}",
                 format_args!(
                     "{}",
-                    "test_text_until_opt_eol()".green().bold().on_dark_grey()
+                    bold("test_text_until_opt_eol()")
+                        .fg_rgb_color(rgb_color!(lizard_green))
+                        .bg_dark_grey()
                 )
             );
 

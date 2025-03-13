@@ -18,7 +18,7 @@
 use std::env::var;
 
 use clap::Parser;
-use r3bl_ansi_color::{AnsiStyledText, Style};
+use r3bl_ansi_color::{ASTStyle, AnsiStyledText};
 use r3bl_cmdr::{AnalyticsAction, edi::launcher, report_analytics, upgrade_check};
 use r3bl_core::{ColorWheel,
                 CommonResult,
@@ -141,15 +141,15 @@ pub mod edi_ui_templates {
                 let msg_line_2 = {
                     let chunk_1 = AnsiStyledText {
                         text: "Run `",
-                        style: &[Style::Foreground(SLATE_GRAY)],
+                        style: smallvec::smallvec![ASTStyle::Foreground(SLATE_GRAY)],
                     };
                     let chunk_2 = AnsiStyledText {
                         text: "cargo install r3bl-cmdr",
-                        style: &[Style::Foreground(LIZARD_GREEN)],
+                        style: smallvec::smallvec![ASTStyle::Foreground(LIZARD_GREEN)],
                     };
                     let chunk_3 = AnsiStyledText {
                         text: "` to upgrade 🚀.",
-                        style: &[Style::Foreground(SLATE_GRAY)],
+                        style: smallvec::smallvec![ASTStyle::Foreground(SLATE_GRAY)],
                     };
                     format!("{}{}{}", chunk_1, chunk_2, chunk_3,)
                 };

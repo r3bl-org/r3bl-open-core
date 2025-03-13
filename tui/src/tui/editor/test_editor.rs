@@ -1448,13 +1448,13 @@ mod selection_tests {
                     col,
                     row,
                     CaretScrAdj,
-                    RowIndex,
-                    VecArray};
+                    InlineVec,
+                    RowIndex};
     use smallvec::smallvec;
 
     use crate::SelectionRange;
 
-    type SelectionList = VecArray<(RowIndex, SelectionRange)>;
+    type SelectionList = InlineVec<(RowIndex, SelectionRange)>;
 
     use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::mock_real_objects_for_editor,

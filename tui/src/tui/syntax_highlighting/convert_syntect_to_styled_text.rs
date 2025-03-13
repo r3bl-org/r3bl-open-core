@@ -307,9 +307,9 @@ mod tests_convert_style_and_color {
                     tui_color,
                     tui_stylesheet,
                     CommonResult,
+                    InlineVec,
                     TuiStyle,
-                    TuiStylesheet,
-                    VecArray};
+                    TuiStylesheet};
     use smallvec::smallvec;
 
     use crate::convert_style_from_syntect_to_tui;
@@ -415,7 +415,7 @@ mod tests_convert_style_and_color {
                 @from: &stylesheet,
                 [1, 2]
             ));
-            fn assertions_for_find_styles_by_ids(result: &Option<VecArray<TuiStyle>>) {
+            fn assertions_for_find_styles_by_ids(result: &Option<InlineVec<TuiStyle>>) {
                 assert_eq2!(result.as_ref().unwrap().len(), 2);
                 assert_eq2!(result.as_ref().unwrap()[0].id, 1);
                 assert_eq2!(result.as_ref().unwrap()[1].id, 2);

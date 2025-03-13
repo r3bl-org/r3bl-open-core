@@ -17,7 +17,7 @@
 
 use std::process::Command;
 
-use r3bl_ansi_color::{AnsiStyledText, Style};
+use r3bl_ansi_color::{ASTStyle, AnsiStyledText};
 use r3bl_core::CommonResult;
 use r3bl_tuify::{SelectionMode, StyleSheet, select_from_list_with_multi_line_header};
 use smallvec::smallvec;
@@ -58,9 +58,9 @@ pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
         ..Default::default()
     };
 
-    let default_header_style = [
-        Style::Foreground(FrozenBlue.as_ansi_color()),
-        Style::Background(MoonlightBlue.as_ansi_color()),
+    let default_header_style = smallvec::smallvec![
+        ASTStyle::Foreground(FrozenBlue.as_ansi_color()),
+        ASTStyle::Background(MoonlightBlue.as_ansi_color()),
     ];
 
     let select_branches_header_text = &PleaseSelectBranchesYouWantToDelete.to_string();
@@ -69,7 +69,7 @@ pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
         let mut instructions_and_branches_to_delete = multi_select_instruction_header();
         let header = AnsiStyledText {
             text: select_branches_header_text,
-            style: &default_header_style,
+            style: default_header_style.clone(),
         };
         instructions_and_branches_to_delete.push(vec![header]);
         instructions_and_branches_to_delete
@@ -117,7 +117,7 @@ pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
                     single_select_instruction_header();
                 let header = AnsiStyledText {
                     text: &confirm_branch_deletion_header,
-                    style: &default_header_style,
+                    style: default_header_style,
                 };
                 instructions_and_confirm_deletion_header.push(vec![header]);
                 instructions_and_confirm_deletion_header
@@ -236,7 +236,7 @@ mod try_delete_branch_inner {
                                 .to_string(),
                         }
                         .to_string(),
-                        style: &[Style::Foreground(ferrari_red)],
+                        style: smallvec::smallvec![ASTStyle::Foreground(ferrari_red)],
                     }
                     .println();
                 } else {
@@ -248,7 +248,7 @@ mod try_delete_branch_inner {
                                 .to_string(),
                         }
                         .to_string(),
-                        style: &[Style::Foreground(ferrari_red)],
+                        style: smallvec::smallvec![ASTStyle::Foreground(ferrari_red)],
                     }
                     .println();
                 }
@@ -257,7 +257,7 @@ mod try_delete_branch_inner {
                 let branches = branches.join(",\n ╴");
                 AnsiStyledText {
                     text: &FailedToRunCommandToDeleteBranches { branches }.to_string(),
-                    style: &[Style::Foreground(ferrari_red)],
+                    style: smallvec::smallvec![ASTStyle::Foreground(ferrari_red)],
                 }
                 .println();
             }
@@ -279,11 +279,11 @@ mod try_delete_branch_inner {
         let branch_name = &branches[0].to_string();
         let deleted_branch = AnsiStyledText {
             text: branch_name,
-            style: &[Style::Foreground(lizard_green)],
+            style: smallvec::smallvec![ASTStyle::Foreground(lizard_green)],
         };
         let deleted = AnsiStyledText {
             text: &Deleted.to_string(),
-            style: &[Style::Foreground(SlateGrey.as_ansi_color())],
+            style: smallvec::smallvec![ASTStyle::Foreground(SlateGrey.as_ansi_color())],
         };
         println!(" ✅ {deleted_branch} {deleted}");
     }
@@ -293,11 +293,13 @@ mod try_delete_branch_inner {
         for branch in branches {
             let deleted_branch = AnsiStyledText {
                 text: branch,
-                style: &[Style::Foreground(lizard_green)],
+                style: smallvec::smallvec![ASTStyle::Foreground(lizard_green)],
             };
             let deleted = AnsiStyledText {
                 text: &Deleted.to_string(),
-                style: &[Style::Foreground(SlateGrey.as_ansi_color())],
+                style: smallvec::smallvec![ASTStyle::Foreground(
+                    SlateGrey.as_ansi_color()
+                )],
             };
             println!(" ✅ {deleted_branch} {deleted}");
         }

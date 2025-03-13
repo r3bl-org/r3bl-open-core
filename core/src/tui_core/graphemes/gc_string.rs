@@ -26,11 +26,11 @@ use crate::{ByteIndex,
             ChUnit,
             ColIndex,
             ColWidth,
+            InlineString,
+            InlineVecStr,
             Seg,
             SegIndex,
             SegWidth,
-            StringStorage,
-            VecArrayStr,
             ch,
             col,
             join,
@@ -215,7 +215,7 @@ use crate::{ByteIndex,
 /// ```
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct GCString {
-    pub string: StringStorage,
+    pub string: InlineString,
     pub segments: sizing::SegmentArray,
     pub display_width: ColWidth,
     pub bytes_size: ChUnit,
@@ -885,7 +885,7 @@ mod pad {
     use super::*;
 
     impl GCString {
-        /// Returns a new [StringStorage] that is the result of padding `self.string` to
+        /// Returns a new [InlineString] that is the result of padding `self.string` to
         /// fit the given width w/ the given spacer character.
         ///
         /// Here's a visual depiction of the different indices.
@@ -916,14 +916,14 @@ mod pad {
             &self,
             arg_pad_str: impl AsRef<str>,
             arg_col_width: impl Into<ColWidth>,
-        ) -> StringStorage {
+        ) -> InlineString {
             let pad_str = arg_pad_str.as_ref();
             let max_display_width: ColWidth = arg_col_width.into();
             let pad_count = max_display_width - self.display_width;
             let self_str = self.string.as_str();
 
             if pad_count > width(0) {
-                let mut acc = StringStorage::from(self_str);
+                let mut acc = InlineString::from(self_str);
                 pad_fmt!(fmt: acc, pad_str: pad_str, repeat_count: **pad_count);
                 acc
             } else {
@@ -935,14 +935,14 @@ mod pad {
             &self,
             arg_pad_str: impl AsRef<str>,
             arg_col_width: impl Into<ColWidth>,
-        ) -> StringStorage {
+        ) -> InlineString {
             let pad_str = arg_pad_str.as_ref();
             let max_display_width: ColWidth = arg_col_width.into();
             let pad_count = max_display_width - self.display_width;
             let self_str = self.string.as_str();
 
             if pad_count > width(0) {
-                let mut acc = StringStorage::new();
+                let mut acc = InlineString::new();
                 pad_fmt!(fmt: acc, pad_str: pad_str, repeat_count: **pad_count);
                 acc.push_str(self_str);
                 acc
@@ -952,7 +952,7 @@ mod pad {
         }
 
         /// If `self.string`'s display width is less than `display_width`, this returns a
-        /// padding [StringStorage] consisting of the `pad_str` repeated to make up the
+        /// padding [InlineString] consisting of the `pad_str` repeated to make up the
         /// difference. Otherwise, if `self.string` is already as wide or wider than
         /// `display_width`, it returns `None`.
         ///
@@ -984,7 +984,7 @@ mod pad {
             &self,
             arg_pad_str: impl AsRef<str>,
             arg_col_width: impl Into<ColWidth>,
-        ) -> Option<StringStorage> {
+        ) -> Option<InlineString> {
             // Pad the line to the max cols w/ spaces. This removes any "ghost" carets
             // that were painted in a previous render.
             let pad_str = arg_pad_str.as_ref();
@@ -992,7 +992,7 @@ mod pad {
 
             if self.display_width < max_display_width {
                 let pad_count = max_display_width - self.display_width;
-                let mut acc = StringStorage::new();
+                let mut acc = InlineString::new();
                 pad_fmt!(fmt: acc, pad_str: pad_str, repeat_count: **pad_count);
                 Some(acc)
             } else {
@@ -1099,8 +1099,8 @@ mod mutate {
 
     impl GCString {
         /// Inserts the given `chunk` in the correct position of the `string`, and returns
-        /// a new ([StringStorage], [ColWidth]) tuple:
-        /// 1. The new [StringStorage] produced containing the inserted chunk.
+        /// a new ([InlineString], [ColWidth]) tuple:
+        /// 1. The new [InlineString] produced containing the inserted chunk.
         /// 2. The unicode width / display width of the inserted `chunk`.
         ///
         /// Here's a visual depiction of the different indices.
@@ -1131,11 +1131,11 @@ mod mutate {
             &self,
             arg_col_index: impl Into<ColIndex>,
             arg_chunk: impl AsRef<str>,
-        ) -> (StringStorage, ColWidth) {
+        ) -> (InlineString, ColWidth) {
             let chunk = arg_chunk.as_ref();
 
             // Create an array-vec of &str from self.vec_segment, using self.iter().
-            let mut vec = VecArrayStr::with_capacity(self.len().as_usize() + 1);
+            let mut vec = InlineVecStr::with_capacity(self.len().as_usize() + 1);
             // Add each seg's &str to the acc.
             vec.extend(
                 // Turn self.segments into a list of &str.
@@ -1153,7 +1153,7 @@ mod mutate {
                 None => vec.push(chunk),
             };
 
-            // Generate a new StringStorage from acc and return it and the unicode width of
+            // Generate a new InlineString from acc and return it and the unicode width of
             // the character.
             (
                 join!(from: vec, each: item, delim: "", format: "{item}"),
@@ -1161,7 +1161,7 @@ mod mutate {
             )
         }
 
-        /// Returns a new [StringStorage] that is the result of deleting the character at
+        /// Returns a new [InlineString] that is the result of deleting the character at
         /// the given `display_col_index`.
         ///
         /// Here's a visual depiction of the different indices.
@@ -1191,7 +1191,7 @@ mod mutate {
         pub fn delete_char_at_col(
             &self,
             arg_col_index: impl Into<ColIndex>,
-        ) -> Option<StringStorage> {
+        ) -> Option<InlineString> {
             // There is no segment present (Deref trait makes `len()` apply to `vec_segment`).
             if self.is_empty() {
                 return None;
@@ -1209,7 +1209,7 @@ mod mutate {
             let split_seg_index = (self + col)?;
             let split_seg_index = usize(*split_seg_index);
 
-            let mut vec_left = VecArrayStr::with_capacity(self.len().as_usize());
+            let mut vec_left = InlineVecStr::with_capacity(self.len().as_usize());
             let mut str_left_display_width = width(0);
             {
                 for seg_index in 0..split_seg_index {
@@ -1220,7 +1220,7 @@ mod mutate {
                 }
             }
 
-            let mut vec_right = VecArrayStr::with_capacity(self.len().as_usize());
+            let mut vec_right = InlineVecStr::with_capacity(self.len().as_usize());
             let mut str_right_display_width = width(0);
             {
                 // Drop one segment.
@@ -1244,8 +1244,8 @@ mod mutate {
         /// cluster.
         ///
         /// Returns two new tuples:
-        /// 1. *left* [StringStorage],
-        /// 2. *right* [StringStorage].
+        /// 1. *left* [InlineString],
+        /// 2. *right* [InlineString].
         ///
         /// Here's a visual depiction of the different indices.
         ///
@@ -1274,13 +1274,13 @@ mod mutate {
         pub fn split_at_display_col(
             &self,
             arg_col_index: impl Into<ColIndex>,
-        ) -> Option<(StringStorage, StringStorage)> {
+        ) -> Option<(InlineString, InlineString)> {
             // Get seg_index at display_col_index.
             let col: ColIndex = arg_col_index.into();
             let split_seg_index = (self + col)?;
             let split_seg_index = usize(*split_seg_index);
 
-            let mut acc_left = VecArrayStr::with_capacity(self.len().as_usize());
+            let mut acc_left = InlineVecStr::with_capacity(self.len().as_usize());
             let mut str_left_display_width = width(0);
             {
                 for seg_index in 0..split_seg_index {
@@ -1290,7 +1290,7 @@ mod mutate {
                 }
             }
 
-            let mut acc_right = VecArrayStr::with_capacity(self.len().as_usize());
+            let mut acc_right = InlineVecStr::with_capacity(self.len().as_usize());
             let mut str_right_unicode_width = width(0);
             {
                 let max_seg_index = self.len();

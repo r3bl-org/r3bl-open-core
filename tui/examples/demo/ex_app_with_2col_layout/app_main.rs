@@ -300,7 +300,7 @@ mod perform_layout {
 }
 
 mod handle_focus {
-    use r3bl_core::string_storage;
+    use r3bl_core::inline_string;
 
     use super::*;
 
@@ -329,7 +329,7 @@ mod handle_focus {
 
             // % is Display, ? is Debug.
             tracing::info!(
-                message = %string_storage!(
+                message = %inline_string!(
                     "AppWithLayout::app_handle_event -> switch focus {ch}",
                     ch = glyphs::FOCUS_GLYPH
                 ),

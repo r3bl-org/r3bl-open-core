@@ -18,12 +18,12 @@
 use std::time::Duration;
 
 use async_stream::stream;
-use r3bl_core::{PinnedInputStream, VecArray};
+use r3bl_core::{InlineVec, PinnedInputStream};
 
 /// The main constructors are:
 /// - [super::InputDeviceExt::new_mock()]
 /// - [super::InputDeviceExt::new_mock_with_delay()]
-pub fn gen_input_stream<T>(generator_vec: VecArray<T>) -> PinnedInputStream<T>
+pub fn gen_input_stream<T>(generator_vec: InlineVec<T>) -> PinnedInputStream<T>
 where
     T: Send + Sync + 'static,
 {
@@ -36,7 +36,7 @@ where
 }
 
 pub fn gen_input_stream_with_delay<T>(
-    generator_vec: VecArray<T>,
+    generator_vec: InlineVec<T>,
     delay: Duration,
 ) -> PinnedInputStream<T>
 where

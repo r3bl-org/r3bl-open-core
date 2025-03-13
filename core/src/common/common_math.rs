@@ -17,7 +17,7 @@
 
 use std::fmt::Write;
 
-use crate::StringStorage;
+use crate::InlineString;
 
 /// Safely subtracts two unsigned numbers and returns the result. Does not panic.
 ///
@@ -149,7 +149,7 @@ macro_rules! dec_unsigned {
 
 /// Format the given number of bytes as kilobytes with commas. If the number of bytes is
 /// less than 1024, it will be formatted as bytes.
-pub fn format_as_kilobytes_with_commas(bytes_size: usize) -> StringStorage {
+pub fn format_as_kilobytes_with_commas(bytes_size: usize) -> InlineString {
     if bytes_size < 1024 {
         let mut acc = format_with_commas(bytes_size);
         _ = write!(acc, " B");
@@ -187,11 +187,11 @@ fn test_format_as_kilobytes_with_commas() {
 }
 
 /// Format a number with commas.
-pub fn format_with_commas(num: usize) -> StringStorage {
+pub fn format_with_commas(num: usize) -> InlineString {
     let num_str = num.to_string();
 
     let ir = {
-        let mut acc = StringStorage::with_capacity(num_str.len());
+        let mut acc = InlineString::with_capacity(num_str.len());
         for (count, ch) in num_str.chars().rev().enumerate() {
             if count % 3 == 0 && count != 0 {
                 acc.push(',');
@@ -202,7 +202,7 @@ pub fn format_with_commas(num: usize) -> StringStorage {
     };
 
     {
-        let mut acc = StringStorage::with_capacity(ir.len());
+        let mut acc = InlineString::with_capacity(ir.len());
         for ch in ir.chars().rev() {
             acc.push(ch);
         }

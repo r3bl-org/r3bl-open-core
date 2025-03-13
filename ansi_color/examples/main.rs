@@ -15,7 +15,11 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::{AnsiStyledText, Color, ColorSupport, Style, global_color_support};
+use r3bl_ansi_color::{ASTColor,
+                      ASTStyle,
+                      AnsiStyledText,
+                      ColorSupport,
+                      global_color_support};
 
 fn main() {
     // Print a string w/ ANSI color codes.
@@ -23,24 +27,24 @@ fn main() {
         AnsiStyledText {
             text:
                 "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
-            style: &[
-                Style::Bold,
-                Style::Italic,
-                Style::Underline,
-                Style::Foreground(Color::Rgb(50, 50, 50)),
-                Style::Background(Color::Rgb(100, 200, 1)),
+            style: smallvec::smallvec![
+                ASTStyle::Bold,
+                ASTStyle::Italic,
+                ASTStyle::Underline,
+                ASTStyle::Foreground(ASTColor::Rgb(50, 50, 50)),
+                ASTStyle::Background(ASTColor::Rgb(100, 200, 1)),
             ],
         }
         .println();
 
         AnsiStyledText {
             text: "Dim, Overline and Strikethrough line.",
-            style: &[
-                Style::Dim,
-                Style::Strikethrough,
-                Style::Overline,
-                Style::Foreground(Color::Rgb(200, 50, 50)),
-                Style::Background(Color::Rgb(200, 200, 1)),
+            style: smallvec::smallvec![
+                ASTStyle::Dim,
+                ASTStyle::Strikethrough,
+                ASTStyle::Overline,
+                ASTStyle::Foreground(ASTColor::Rgb(200, 50, 50)),
+                ASTStyle::Background(ASTColor::Rgb(200, 200, 1)),
             ],
         }
         .println();
@@ -90,28 +94,28 @@ fn main() {
 fn print_text(msg: &str) {
     AnsiStyledText {
         text: msg,
-        style: &[
-            Style::Underline,
-            Style::Foreground(Color::Rgb(200, 200, 1)),
-            Style::Background(Color::Rgb(100, 60, 150)),
+        style: smallvec::smallvec![
+            ASTStyle::Underline,
+            ASTStyle::Foreground(ASTColor::Rgb(200, 200, 1)),
+            ASTStyle::Background(ASTColor::Rgb(100, 60, 150)),
         ],
     }
     .println();
 
     let eg_1 = AnsiStyledText {
         text: "Hello",
-        style: &[
-            Style::Foreground(Color::Rgb(100, 60, 150)),
-            Style::Background(Color::Rgb(100, 200, 50)),
+        style: smallvec::smallvec![
+            ASTStyle::Foreground(ASTColor::Rgb(100, 60, 150)),
+            ASTStyle::Background(ASTColor::Rgb(100, 200, 50)),
         ],
     };
     println!("eg_1: {0}", eg_1);
 
     let eg_2 = AnsiStyledText {
         text: "World",
-        style: &[
-            Style::Foreground(Color::Ansi256(150)),
-            Style::Background(Color::Rgb(50, 50, 100)),
+        style: smallvec::smallvec![
+            ASTStyle::Foreground(ASTColor::Ansi256(150)),
+            ASTStyle::Background(ASTColor::Rgb(50, 50, 100)),
         ],
     };
     println!("eg_2: {0}", eg_2);

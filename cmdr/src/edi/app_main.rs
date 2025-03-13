@@ -24,7 +24,7 @@ use r3bl_core::{Ansi256GradientIndex,
                 Dim,
                 GCStringExt as _,
                 GradientGenerationPolicy,
-                StringStorage,
+                InlineString,
                 TextColorizationPolicy,
                 TuiStyledTexts,
                 TuiStylesheet,
@@ -32,11 +32,11 @@ use r3bl_core::{Ansi256GradientIndex,
                 get_tui_style,
                 glyphs,
                 height,
+                inline_string,
                 new_style,
                 req_size_pc,
                 row,
                 send_signal,
-                string_storage,
                 throws,
                 throws_with_return,
                 tui_color,
@@ -155,7 +155,7 @@ mod app_main_constructor {
 
 mod app_main_impl_app_trait {
     use r3bl_ansi_color::red;
-    use r3bl_core::string_storage;
+    use r3bl_core::inline_string;
 
     use super::*;
 
@@ -208,7 +208,7 @@ mod app_main_impl_app_trait {
                             // % is Display, ? is Debug.
                             tracing::debug!(
                                 message = "📣 Opened feedback link",
-                                link = %green(&string_storage!("{link_url:?}"))
+                                link = %green(&inline_string!("{link_url:?}"))
                             );
                         });
                     }
@@ -216,7 +216,7 @@ mod app_main_impl_app_trait {
                         // % is Display, ? is Debug.
                         tracing::error!(
                             message = "📣 Error opening feedback link",
-                            error = %red(&string_storage!("{err:?}"))
+                            error = %red(&inline_string!("{err:?}"))
                         );
                     }
                 }
@@ -361,8 +361,8 @@ mod modal_dialog_ask_for_filename_to_save_file {
     pub fn initialize(
         state: &mut State,
         id: FlexBoxId,
-        title: StringStorage,
-        text: StringStorage,
+        title: InlineString,
+        text: InlineString,
     ) {
         let new_dialog_buffer = {
             let mut it = DialogBuffer::new_empty();
@@ -462,7 +462,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
                                 // % is Display, ? is Debug.
                                 tracing::debug!(
                                     message = "💾💾💾 About to save the new buffer with given filename",
-                                    file_path = %magenta(&string_storage!("{user_input_file_path}"))
+                                    file_path = %magenta(&inline_string!("{user_input_file_path}"))
                                 );
                             });
 
@@ -588,7 +588,7 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use r3bl_core::string_storage;
+    use r3bl_core::inline_string;
 
     use super::*;
 
@@ -608,7 +608,7 @@ mod populate_component_registry {
         DEBUG_TUI_MOD.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = %string_storage!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
+                message = %inline_string!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
                 has_focus = ?has_focus.get_id()
             );
         });

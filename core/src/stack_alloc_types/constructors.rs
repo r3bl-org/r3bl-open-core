@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-/// A macro to create a [crate::StringStorage] (which is allocated and returned) with a
+/// A macro to create a [crate::InlineString] (which is allocated and returned) with a
 /// specified format. No heap allocation via [String] creation occurs when the `$format`
 /// expression is executed.
 ///
@@ -24,11 +24,11 @@
 /// - `$format` - The format to apply to the string storage. This is whatever you would
 ///   pass to [format!] or [write!].
 #[macro_export]
-macro_rules! string_storage {
+macro_rules! inline_string {
     (
         $($format:tt)*
     ) => {{
-        let mut acc = $crate::StringStorage::new();
+        let mut acc = $crate::InlineString::new();
         use std::fmt::Write as _;
         _ = write!(&mut acc, $($format)*);
         acc
@@ -36,15 +36,15 @@ macro_rules! string_storage {
 }
 
 #[cfg(test)]
-mod string_storage_tests {
+mod inline_string_tests {
     #[test]
-    fn test_string_storage() {
-        let result = string_storage!("{}, {}", "Hello", "world!");
+    fn test_inline_string() {
+        let result = inline_string!("{}, {}", "Hello", "world!");
         assert_eq!(result, "Hello, world!");
     }
 }
 
-/// A macro to create a [crate::CharStorage] (which is allocated and returned) with a
+/// A macro to create a [crate::TinyInlineString] (which is allocated and returned) with a
 /// specified format. No heap allocation via [String] creation occurs when the `$format`
 /// expression is executed.
 ///
@@ -53,11 +53,11 @@ mod string_storage_tests {
 /// - `$format` - The format to apply to the char storage. This is whatever you would
 ///   pass to [format!] or [write!].
 #[macro_export]
-macro_rules! char_storage {
+macro_rules! tiny_inline_string {
     (
         $($format:tt)*
     ) => {{
-        let mut acc = $crate::CharStorage::new();
+        let mut acc = $crate::TinyInlineString::new();
         use std::fmt::Write as _;
         _ = write!(&mut acc, $($format)*);
         acc
@@ -65,10 +65,10 @@ macro_rules! char_storage {
 }
 
 #[cfg(test)]
-mod char_storage_tests {
+mod tiny_inline_string_tests {
     #[test]
-    fn test_char_storage() {
-        let result = char_storage!("{}, {}", "X", "Y");
+    fn test_tiny_inline_string() {
+        let result = tiny_inline_string!("{}, {}", "X", "Y");
         assert_eq!(result, "X, Y");
     }
 }

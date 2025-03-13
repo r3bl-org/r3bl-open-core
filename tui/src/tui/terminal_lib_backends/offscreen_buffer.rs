@@ -19,23 +19,23 @@ use std::{fmt::{self, Debug, Write},
 
 use diff_chunks::PixelCharDiffChunks;
 use r3bl_ansi_color::green;
-use r3bl_core::{char_storage,
-                col,
+use r3bl_core::{col,
                 get_mem_size,
+                inline_string,
                 ok,
                 row,
-                string_storage,
-                CharStorage,
+                tiny_inline_string,
                 ColWidth,
                 Dim,
                 GetMemSize,
+                InlineString,
+                InlineVec,
                 LockedOutputDevice,
                 Pos,
                 Size,
-                StringStorage,
+                TinyInlineString,
                 TuiColor,
-                TuiStyle,
-                VecArray};
+                TuiStyle};
 use smallvec::smallvec;
 
 use super::{FlushKind, RenderOps};
@@ -134,7 +134,7 @@ mod offscreen_buffer_impl {
                     writeln!(
                         f,
                         "{}",
-                        green(&string_storage!("row_index: {}", row_index))
+                        green(&inline_string!("row_index: {}", row_index))
                     )?;
 
                     // Print the row itself in the "next" line.
@@ -197,7 +197,7 @@ mod offscreen_buffer_impl {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PixelCharLines {
-    pub lines: VecArray<PixelCharLine>,
+    pub lines: InlineVec<PixelCharLine>,
 }
 
 mod pixel_char_lines_impl {
@@ -208,7 +208,7 @@ mod pixel_char_lines_impl {
     }
 
     impl Deref for PixelCharLines {
-        type Target = VecArray<PixelCharLine>;
+        type Target = InlineVec<PixelCharLine>;
         fn deref(&self) -> &Self::Target { &self.lines }
     }
 
@@ -232,7 +232,7 @@ mod pixel_char_lines_impl {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct PixelCharLine {
-    pub pixel_chars: VecArray<PixelChar>,
+    pub pixel_chars: InlineVec<PixelChar>,
 }
 
 impl GetMemSize for PixelCharLine {
@@ -248,10 +248,10 @@ mod pixel_char_line_impl {
 
     impl Debug for PixelCharLine {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let mut void_indices: VecArray<usize> = smallvec![];
-            let mut spacer_indices: VecArray<usize> = smallvec![];
-            let mut void_count: VecArray<CharStorage> = smallvec![];
-            let mut spacer_count: VecArray<CharStorage> = smallvec![];
+            let mut void_indices: InlineVec<usize> = smallvec![];
+            let mut spacer_indices: InlineVec<usize> = smallvec![];
+            let mut void_count: InlineVec<TinyInlineString> = smallvec![];
+            let mut spacer_count: InlineVec<TinyInlineString> = smallvec![];
 
             // Pretty print only so many chars per line (depending on the terminal width in which
             // log.fish is run).
@@ -262,11 +262,11 @@ mod pixel_char_line_impl {
             for (col_index, pixel_char) in self.iter().enumerate() {
                 match pixel_char {
                     PixelChar::Void => {
-                        void_count.push(CharStorage::from(col_index.to_string()));
+                        void_count.push(TinyInlineString::from(col_index.to_string()));
                         void_indices.push(col_index);
                     }
                     PixelChar::Spacer => {
-                        spacer_count.push(CharStorage::from(col_index.to_string()));
+                        spacer_count.push(TinyInlineString::from(col_index.to_string()));
                         spacer_indices.push(col_index);
                     }
                     _ => {}
@@ -276,7 +276,7 @@ mod pixel_char_line_impl {
                 write!(
                     f,
                     "{}{:?}",
-                    dim_underline(&char_storage!("{col_index:03}")),
+                    dim_underline(&tiny_inline_string!("{col_index:03}")),
                     pixel_char
                 )?;
 
@@ -322,7 +322,7 @@ mod pixel_char_line_impl {
         f: &mut fmt::Formatter<'_>,
     ) -> std::fmt::Result {
         // Track state thru loop iteration.
-        let mut acc_current_range: VecArray<usize> = smallvec![];
+        let mut acc_current_range: InlineVec<usize> = smallvec![];
 
         mod helpers {
             use std::primitive::usize;
@@ -423,7 +423,7 @@ mod pixel_char_line_impl {
     }
 
     impl Deref for PixelCharLine {
-        type Target = VecArray<PixelChar>;
+        type Target = InlineVec<PixelChar>;
         fn deref(&self) -> &Self::Target { &self.pixel_chars }
     }
 
@@ -437,7 +437,7 @@ pub enum PixelChar {
     Void,
     Spacer,
     PlainText {
-        text: CharStorage,
+        text: TinyInlineString,
         maybe_style: Option<TuiStyle>,
     },
 }
@@ -491,7 +491,7 @@ mod pixel_char_impl {
                 }
                 PixelChar::PlainText { text, maybe_style } => {
                     // Need `acc_tmp` to be able to truncate the text if it's too long.
-                    let mut acc_tmp = StringStorage::with_capacity(WIDTH);
+                    let mut acc_tmp = InlineString::with_capacity(WIDTH);
                     match maybe_style {
                         // Content + style.
                         Some(style) => {

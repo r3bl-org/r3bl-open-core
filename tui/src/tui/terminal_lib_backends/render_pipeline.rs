@@ -19,7 +19,7 @@ use std::{collections::{hash_map::Entry, HashMap},
           fmt::Debug,
           ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_core::{ok, LockedOutputDevice, VecArray};
+use r3bl_core::{ok, InlineVec, LockedOutputDevice};
 use smallvec::smallvec;
 
 use super::{paint::paint, render_op::RenderOp, ZOrder};
@@ -143,7 +143,7 @@ macro_rules! render_pipeline {
       };
 }
 
-type PipelineMap = HashMap<ZOrder, VecArray<RenderOps>>;
+type PipelineMap = HashMap<ZOrder, InlineVec<RenderOps>>;
 
 /// See [render_pipeline!] for the documentation. Also consider using it instead of this struct
 /// directly for convenience.
@@ -199,12 +199,12 @@ impl RenderPipeline {
         }
     }
 
-    /// At the given [ZOrder] there can be a [VecArray] of [RenderOps]. Grab
+    /// At the given [ZOrder] there can be a [InlineVec] of [RenderOps]. Grab
     /// all the [RenderOps] in the set, get all their [RenderOp] and return them in a
-    /// [VecArray].
-    pub fn get_all_render_op_in(&self, z_order: ZOrder) -> Option<VecArray<RenderOp>> {
+    /// [InlineVec].
+    pub fn get_all_render_op_in(&self, z_order: ZOrder) -> Option<InlineVec<RenderOp>> {
         let vec_render_ops = self.pipeline_map.get(&z_order)?;
-        let mut vec_render_op: VecArray<RenderOp> = smallvec![];
+        let mut vec_render_op: InlineVec<RenderOp> = smallvec![];
         for render_ops in vec_render_ops {
             for render_op in render_ops.iter() {
                 vec_render_op.push(render_op.clone());

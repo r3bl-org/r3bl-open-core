@@ -35,10 +35,15 @@ mod ex_rc;
 // Use other crates.
 use std::str::FromStr as _;
 
-use crossterm::style::Stylize as _;
 use miette::IntoDiagnostic as _;
-use r3bl_ansi_color::magenta;
-use r3bl_core::{get_size, ok, string_storage, throws, CommonError, CommonResult};
+use r3bl_ansi_color::{bold, fg_rgb_color, frozen_blue, rgb_color, ASTColor};
+use r3bl_core::{get_size,
+                inline_string,
+                ok,
+                throws,
+                tui_color,
+                CommonError,
+                CommonResult};
 use r3bl_log::log_support::try_initialize_logging_global;
 use r3bl_terminal_async::{ReadlineEvent, TerminalAsync};
 use r3bl_tui::{keypress, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
@@ -65,8 +70,9 @@ async fn main() -> CommonResult<()> {
             .add_history_entry(command.to_string());
     }
 
-    let msg = string_storage!("{}", &generate_help_msg());
-    let msg_fmt = magenta(&msg);
+    let msg = inline_string!("{}", &generate_help_msg());
+
+    let msg_fmt = fg_rgb_color(ASTColor::from(tui_color!(lizard_green)), &msg);
     terminal_async.println(msg_fmt).await;
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
@@ -134,9 +140,9 @@ async fn run_user_selected_example(
         Err(_) => {
             terminal_async
                 .println(format!(
-                    "{} {}",
-                    "Invalid selection:".blue(),
-                    selection.red().bold()
+                    "{a} {b}",
+                    a = frozen_blue("Invalid selection:"),
+                    b = bold(&selection).fg_rgb_color(rgb_color!(pink))
                 ))
                 .await;
             Ok(())

@@ -82,7 +82,8 @@ macro_rules! throws_with_return {
     }};
 }
 
-/// Syntactic sugar to run a conditional statement.
+/// Syntactic sugar to run a conditional statement. You can use [bool::then()] instead of
+/// this macro in most case, except for when you need to return something from the block.
 ///
 /// # Example
 ///

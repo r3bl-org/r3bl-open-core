@@ -352,9 +352,9 @@ have ANSI escape sequences in them. Here's an example of this.
 ```rust
     let prompt = {
         let user = "naz";
-        let prompt_seg_1 = "╭".magenta().on_dark_grey().to_string();
-        let prompt_seg_2 = format!("┤{user}├").magenta().on_dark_grey().to_string();
-        let prompt_seg_3 = "╮".magenta().on_dark_grey().to_string();
+        let prompt_seg_1 = magenta("╭").bg_dark_grey().to_string();
+        let prompt_seg_2 = magenta(&format!("┤{user}├")).bg_dark_grey().to_string();
+        let prompt_seg_3 = magenta("╮").bg_dark_grey().to_string();
         format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3)
     };
     let maybe_terminal_async = TerminalAsync::try_new(prompt.as_str()).await?;

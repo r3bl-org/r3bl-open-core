@@ -27,7 +27,8 @@ use crate::log_support::{rolling_file_appender_impl, tracing_config::TracingConf
 #[macro_export]
 macro_rules! create_fmt {
     () => {
-        tracing_subscriber::fmt::layer().event_format($crate::CustomEventFormatter)
+        tracing_subscriber::fmt::layer()
+            .event_format($crate::CustomEventFormatter::default())
         //     .compact()
         //     .without_time()
         //     .with_thread_ids(false)
@@ -279,7 +280,7 @@ mod test_tracing_bin_stdio {
 
 #[cfg(test)]
 mod test_tracing_shared_writer_output {
-    use r3bl_core::{LineStateControlSignal, SharedWriter, Text, VecArray, join};
+    use r3bl_core::{InlineVec, LineStateControlSignal, SharedWriter, Text, join};
     use smallvec::smallvec;
 
     use super::{fixtures::get_expected, *};
@@ -309,7 +310,7 @@ mod test_tracing_shared_writer_output {
         receiver.close();
 
         // Check the output.
-        let mut output: VecArray<Text> = smallvec![];
+        let mut output: InlineVec<Text> = smallvec![];
         while let Some(LineStateControlSignal::Line(line)) = receiver.recv().await {
             let it = line.trim();
             output.push(it.into());

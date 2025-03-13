@@ -457,6 +457,16 @@ Updated:
     the `write!` macro to write to a pre-existing buffer.
 
 Added:
+  - New `tui_color!` decl macro that allows all the delightful color palette used in
+    `giti` to be available to anyone using this crate! `r3bl_ansi_color` is updated as
+    well to work with this macro. `AnsiStyledText` has constructor function `fg_rgb_color()`
+    and method `AnsiStyledText::bg_rgb_color()` that when combined make it very easy to use the
+    `tui_color!` macro to create fun colors and then use them in the `AnsiStyledText`
+    struct (via these new easy to use functions). This is very common when colorizing
+    terminal output for log formatting or a welcome message. You can see this in the demo
+    example for `r3bl_tui` which uses this
+    `let msg_fmt = fg_rgb_color(ASTColor::from(tui_color!(lizard_green)), &msg);`. Also `r3bl_ansi_color`
+    has an equivalent macro to this called `rgb_color!`.
   - Add new target in `run` Nushell script called `nu run release-examples-no-log` to run
     the examples without logging. This is useful for performance testing. Now that HUD is
     displayed in the examples, there is no need to enable logging just to see this
@@ -884,7 +894,7 @@ idioms and design patterns are used in this release.
   transform other types into these types.
 - The `graphemes` module containing `UnicodeString` handling have been totally rewritten.
   They are now no allocation structures! In all past versions, the `UnicodeString` was a
-  `String` under the hood. Now it is a `StringStorage` which is a `smallstr` that
+  `String` under the hood. Now it is a `InlineString` which is a `smallstr` that
   initially allocates on the stack, and it can spill over into the heap if it needs to.
   The struct is now named `GCString`. The "newtype" design pattern / idiom and
   `arg: impl Into<T>` in `GCString` and other specific types are used, such as `SegIndex`,
@@ -945,7 +955,7 @@ Changed:
   - The `graphemes` module containing `UnicodeString` handling have been totally
     rewritten. They are now optimized for memory latency (access, mutation, and
     allocation). For performance reasons they are not "no allocation" structures.
-    `GCString` now owns a `StringStorage` under the hood. The
+    `GCString` now owns a `InlineString` under the hood. The
     `UnicodeStringSegment`, now called `Seg`, does not own anything (no heap or string
     allocation, and is a very "scalarized" struct), and needs a `GCString` to be
     able to do anything. All the existing code that relies on this has been rewritten to
@@ -974,6 +984,10 @@ Changed:
   - Replace the use of `bool` with meaningful enums to enhance code readability.
 
 - Added:
+  - Move `term.rs` from `r3bl_ansi_color` to `r3bl_core` crate. This is where the functions
+    to get the terminal window size and width belong, and whether the terminal is
+    interactive or not. Terminal color detection capabilities and low level color output
+    manipulation are still in `r3bl_ansi_color`.
   - [Archive](#archived-2025-03-11) the `tui_style!` proc macro. Replace it with an easier
     to use decl macro `new_style!`. This allows the `r3bl_macro` crate to be removed from
     the workspace, and all the crates in it. `new_style!` makes it a breeze to work with
@@ -990,10 +1004,13 @@ Changed:
     - [PR 1](https://github.com/r3bl-org/r3bl-open-core/pull/372)
     - [PR 2](https://github.com/r3bl-org/r3bl-open-core/pull/373)
   - New hashmap which remembers insertion order called `OrderedMap`.
-  - New module `stack_alloc_types` that contain data structures that are allocated on the stack.
-    If they grow too big, they are then moved to the heap. Under the covers, the `small_vec` and
-    `small_str` crates are used. Lots of macros are provided to make it easy to work with these
-    data structures. And to make it easy to write into them without allocating them.
+  - New module `stack_alloc_types` that contain data structures that are allocated on the
+    stack. If they grow too big, they are then moved to the heap. Under the covers, the
+    `small_vec` and `small_str` crates are used. Lots of macros are provided to make it
+    easy to work with these data structures (eg: `inline_string!`, `tiny_inline_string!`).
+    And to make it easy to write into them without allocating them. Please note that if
+    you make the `r3bl_ansi_color::sizing::DEFAULT_STRING_STORAGE_SIZE` number too large,
+    eg: more than `16`, then it will slow down the TUI editor performance use.
   - `Percent` struct now has a `as_glyph()` method which displays the percentage as a
     Unicode glyph ranging from `STATS_25P_GLYPH` to `STATS_50P_GLYPH` to `STATS_75P_GLYPH`
     to `STATS_100P_GLYPH` depending on its value.
@@ -1473,17 +1490,41 @@ This is the first release of this crate.
 ### v_next_release_r3bl_ansi_color
 
 This is a minor change that adds `vscode` to the list of environment variables that mean
-that `truecolor` is supported.
+that `truecolor` is supported. It removes duplication of `term.rs` in the `r3bl-open-core`
+repo and workspace. The names are also cleaned up so there's no confusion about using
+`Color` or `Style` which are so generic and used in many other crates.
 
 - Updated:
   - Use the latest Rust 2024 edition.
 
 - Added:
-  - Support for `$TERM_PROGRAM` = `vscode` to the list of environment variables that mean
-    that `truecolor` is supported. This is in `check_ansi_color.rs` file.
-  - Lots of new helper functions to make it easy to colorize `&str` like `red("hello")`,
-    `green("world")`, etc. This removes the requirement to depend on `crossterm::Stylize`
-    for colorizing strings that are intended to be displayed in console stdout / stderr.
+  - Support for inline (stack allocated) data structures (`InlineVecASTStyles` and
+    `AnsiStyledText::to_small_str()`). Please note that if you make the
+    `r3bl_ansi_color::sizing::DEFAULT_STRING_STORAGE_SIZE` number too large, eg: more than
+    `16`, then it will slow down the TUI editor performance use.
+  - Lots of new easy constructor functions to make it easy to colorize `&str` like
+    `red("hello")`, `green("world")`, etc. This removes the requirement to depend on
+    `crossterm::Stylize` for colorizing strings that are intended to be displayed in
+    console stdout / stderr. Methods are provided to add background colors as well
+    `AnsiStyledText::bg_dark_grey()`.
+  - Easy constructor functions are provided `fg_rgb_color()` and
+    `AnsiStyledText::bg_rgb_color()`. Together they allow easy integration with
+    `tui_color!` and make it trivial to write code that uses styles / colors from the
+    `r3bl_tui` crate and apply them to `AnsiStyledText` which is a very common pattern
+    when colorizing log output.
+  - Easy macro `rgb_color!` to create lots of beautiful colors with ease. This is similar
+    to `r3bl_tui` crate's `tui_color!` macro.
+
+- Removed:
+  - `term.rs` is now in `r3bl_core`. Support for `$TERM_PROGRAM` = `vscode` to the list of
+    environment variables that mean that `truecolor` is supported. This is in
+    `check_ansi_color.rs` file.
+
+- Changed:
+  - `Color` is now `ASTColor`.
+  - `Style` is now `ASTStyle`.
+  - Proper converters `From` implementations are provided to convert between `ASTColor`
+    and `RGBColor`, and `Ansi256Color`.
 
 ### v0.7.0 (2024-10-18)
 

@@ -20,12 +20,12 @@ code --remote ssh-remote+nazmul-desktop.local /home/nazmul/github/r3bl-open-core
 
 
 call_if_true!(DEBUG_TUI_COMPOSITOR, {
-    let message = string_storage!(
+    let message = inline_string!(
         "print_plain_text() {ar} {ch}",
         ar = glyphs::RIGHT_ARROW_GLYPH,
         ch = glyphs::PAINT_GLYPH,
     );
-    let details = string_storage!(
+    let details = inline_string!(
         "insertion at: display_row_index: {a}, display_col_index: {b}, window_size: {c:?},
         text: '{d}',
         width: {e:?}",
@@ -62,7 +62,7 @@ call_if_true!(DEBUG_TUI_MOD, {
 
 call_if_true!(DEBUG_TUI_MOD, {
   let message = "\n💾💾💾✅ Successfully read file";
-  let details = string_storage!("{file_path:?}");
+  let details = inline_string!("{file_path:?}");
   let details_fmt = style_primary(&details);
   // % is Display, ? is Debug.
   tracing::debug!(
@@ -128,9 +128,9 @@ let mut lolcat_temp = LolcatBuilder::new()
 // it
 
 // PERF: [ ] use this instead of [Micro/Tiny/Small/Normal/Large]StringBackingStore
-pub type StringStorage = SmallStringBackingStore;
+pub type InlineString = SmallStringBackingStore;
 
-// PERF: [ ] replace with StringStorage and avoid allocation using write! & index > 0 check to write \n
+// PERF: [ ] replace with InlineString and avoid allocation using write! & index > 0 check to write \n
 
 /*
 UnicodeString no longer owns the underlying data
@@ -158,7 +158,7 @@ pub fn try_parse_and_highlight(
   maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
 ) -> CommonResult<StyleUSSpanLines> {
   // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
-  // Convert the editor text into a StringStorage (unfortunately requires allocating to
+  // Convert the editor text into a InlineString (unfortunately requires allocating to
   // get the new lines back, since they're stripped out when loading content into the
   // editor buffer struct).
   let mut acc = DocumentStorage::new();

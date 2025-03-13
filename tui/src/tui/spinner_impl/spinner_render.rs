@@ -20,13 +20,13 @@ use crossterm::{cursor::{MoveToColumn, MoveUp},
                 terminal::{Clear, ClearType},
                 QueueableCommand};
 use miette::IntoDiagnostic as _;
-use r3bl_core::{pad_fmt,
-                string_storage,
+use r3bl_core::{inline_string,
+                pad_fmt,
                 width,
                 ColWidth,
                 GCStringExt,
+                InlineString,
                 SendRawTerminal,
-                StringStorage,
                 ELLIPSIS_GLYPH};
 
 use crate::{convert_from_tui_color_to_crossterm_color,
@@ -37,7 +37,7 @@ use crate::{convert_from_tui_color_to_crossterm_color,
             BLOCK_DOTS,
             BRAILLE_DOTS};
 
-pub fn get_next_tick_glyph(style: &SpinnerStyle, count: usize) -> StringStorage {
+pub fn get_next_tick_glyph(style: &SpinnerStyle, count: usize) -> InlineString {
     match style.template {
         SpinnerTemplate::Braille => {
             let index_to_use = count % BRAILLE_DOTS.len();
@@ -48,7 +48,7 @@ pub fn get_next_tick_glyph(style: &SpinnerStyle, count: usize) -> StringStorage 
             BLOCK_DOTS[index_to_use].into()
         }
         SpinnerTemplate::Dots => {
-            let mut acc = StringStorage::with_capacity(count);
+            let mut acc = InlineString::with_capacity(count);
             pad_fmt!(fmt: acc, pad_str: ELLIPSIS_GLYPH, repeat_count: count);
             acc
         }
@@ -60,7 +60,7 @@ pub fn render_tick(
     message: &str,
     count: usize,
     display_width: ColWidth,
-) -> StringStorage {
+) -> InlineString {
     match style.template {
         SpinnerTemplate::Braille => {
             // Translate count into the index of the BRAILLE_DOTS array.
@@ -74,7 +74,7 @@ pub fn render_tick(
             );
             let text_trunc_fmt = apply_color(text_trunc, &mut style.color);
 
-            string_storage!("{output_symbol} {text_trunc_fmt}")
+            inline_string!("{output_symbol} {text_trunc_fmt}")
         }
         SpinnerTemplate::Block => {
             // Translate count into the index of the BLOCK_DOTS array.
@@ -88,7 +88,7 @@ pub fn render_tick(
             );
             let text_trunc_fmt = apply_color(text_trunc, &mut style.color);
 
-            string_storage!("{output_symbol} {text_trunc_fmt}")
+            inline_string!("{output_symbol} {text_trunc_fmt}")
         }
         SpinnerTemplate::Dots => {
             let padding_right = get_next_tick_glyph(style, count);
@@ -98,7 +98,7 @@ pub fn render_tick(
                 display_width - width(padding_right.len()) -
                 /* last display col is empty */ width(1)
             });
-            let text_trunc_with_padding = string_storage!("{text_trunc}{padding_right}");
+            let text_trunc_with_padding = inline_string!("{text_trunc}{padding_right}");
 
             apply_color(&text_trunc_with_padding, &mut style.color)
         }
@@ -161,7 +161,7 @@ pub fn render_final_tick(
     style: &SpinnerStyle,
     final_message: &str,
     display_width: ColWidth,
-) -> StringStorage {
+) -> InlineString {
     let text = final_message.grapheme_string();
     let text_trunc = text.trunc_end_to_fit(display_width);
     match style.template {
@@ -193,14 +193,14 @@ pub fn print_final_tick(
     Ok(())
 }
 
-fn apply_color(output: &str, color: &mut SpinnerColor) -> StringStorage {
+fn apply_color(output: &str, color: &mut SpinnerColor) -> InlineString {
     if let SpinnerColor::ColorWheel(color_wheel) = color {
         let maybe_next_color = color_wheel.next_color();
         if let Some(next_color) = maybe_next_color {
             let color = convert_from_tui_color_to_crossterm_color(next_color);
             let styled_content = style(output).with(color);
-            return string_storage!("{styled_content}");
+            return inline_string!("{styled_content}");
         }
     }
-    StringStorage::from(output)
+    InlineString::from(output)
 }
