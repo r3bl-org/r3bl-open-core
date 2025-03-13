@@ -20,11 +20,11 @@ use std::{collections::HashMap,
           path::Path};
 
 use r3bl_ansi_color::{green, red};
-use r3bl_core::{CharStorage,
-                DocumentStorage,
-                StringStorage,
-                into_existing,
-                string_storage};
+use r3bl_core::{DocumentStorage,
+                InlineString,
+                TinyInlineString,
+                inline_string,
+                into_existing};
 use r3bl_tui::{DEBUG_TUI_MOD,
                DEFAULT_SYN_HI_FILE_EXT,
                DialogBuffer,
@@ -43,7 +43,7 @@ pub struct State {
 
 #[cfg(test)]
 mod state_tests {
-    use r3bl_core::{VecArray, friendly_random_id};
+    use r3bl_core::{InlineVec, friendly_random_id};
     use r3bl_tui::FlexBoxId;
 
     use super::*;
@@ -152,7 +152,7 @@ mod state_tests {
                 .lines
                 .iter()
                 .map(|it| it.string.as_str())
-                .collect::<VecArray<&str>>()
+                .collect::<InlineVec<&str>>()
                 .join("\n"),
             content
         );
@@ -209,7 +209,7 @@ pub mod constructor {
 pub mod file_utils {
     use super::*;
 
-    pub fn get_file_extension(maybe_file_path: Option<&str>) -> CharStorage {
+    pub fn get_file_extension(maybe_file_path: Option<&str>) -> TinyInlineString {
         if let Some(file_path) = maybe_file_path {
             let maybe_extension =
                 Path::new(file_path).extension().and_then(OsStr::to_str);
@@ -225,7 +225,7 @@ pub mod file_utils {
     }
 
     /// This is just a wrapper around
-    /// [into_existing::read_from_file::try_read_file_path_into_small_string()].
+    /// [into_existing::read_from_file::try_read_file_path_into_inline_string()].
     pub fn read_file_into_storage(maybe_file_path: Option<&str>) -> DocumentStorage {
         // Create an empty document storage.
         let mut acc = DocumentStorage::new();
@@ -233,7 +233,7 @@ pub mod file_utils {
         // Read the file contents into acc if possible (file exists, have read
         // permissions, etc).
         if let Some(file_path) = maybe_file_path {
-            match into_existing::read_from_file::try_read_file_path_into_small_string(
+            match into_existing::read_from_file::try_read_file_path_into_inline_string(
                 &mut acc, file_path,
             ) {
                 Ok(_) => {
@@ -242,7 +242,7 @@ pub mod file_utils {
                         tracing::debug!(
                             message = "💾💾💾✅ Successfully read file",
                             file_path = ?file_path,
-                            details = %green(&string_storage!("{file_path:?}"))
+                            details = %green(&inline_string!("{file_path:?}"))
                         );
                     });
                     return acc;
@@ -252,7 +252,7 @@ pub mod file_utils {
                     tracing::error!(
                         message = "💾💾💾❌ Failed to read file",
                         file_path = ?file_path,
-                        error = %red(&string_storage!("{error:?}"))
+                        error = %red(&inline_string!("{error:?}"))
                     );
                 }
             }
@@ -262,8 +262,8 @@ pub mod file_utils {
     }
 
     pub fn save_content_to_file(file_path: &str, content: &str) {
-        let file_path = StringStorage::from_str(file_path);
-        let content = StringStorage::from_str(content);
+        let file_path = InlineString::from_str(file_path);
+        let content = InlineString::from_str(content);
 
         tokio::spawn(async move {
             report_analytics::start_task_to_generate_event(
@@ -277,7 +277,7 @@ pub mod file_utils {
                         // % is Display, ? is Debug.
                         tracing::debug!(
                             message = "💾💾💾❌ Successfully saved file",
-                            file_path = %green(&string_storage!("{file_path:?}"))
+                            file_path = %green(&inline_string!("{file_path:?}"))
                         );
                     });
                 }
@@ -285,7 +285,7 @@ pub mod file_utils {
                     // % is Display, ? is Debug.
                     tracing::error!(
                         message = "💾💾💾✅ Failed to save file",
-                        file_path = %red(&string_storage!("{error:?}"))
+                        file_path = %red(&inline_string!("{error:?}"))
                     );
                 }
             }

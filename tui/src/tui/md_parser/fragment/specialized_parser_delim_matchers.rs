@@ -22,9 +22,8 @@
 //! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
 //! in [crate::parse_fragments_in_a_line].
 
-use crossterm::style::Stylize;
 use nom::{bytes::complete::tag, combinator::recognize, multi::many1, IResult};
-use r3bl_core::call_if_true;
+use r3bl_ansi_color::{blue, green, red};
 
 use crate::{constants::NEW_LINE,
             take_text_between_delims_err_on_new_line,
@@ -62,10 +61,10 @@ pub fn take_starts_with_delim_no_new_line<'i>(
     let (num_of_delim_occurrences, starts_with_delim, input_is_delim, _) =
         count_delim_occurrences_until_eol(input, delim);
 
-    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+    DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
             "\n{} specialized parser {}: \ninput: {:?}, delim: {:?}",
-            "■■".green(),
+            green("■■"),
             delim,
             input,
             delim
@@ -88,8 +87,11 @@ pub fn take_starts_with_delim_no_new_line<'i>(
         // case.
         num_of_delim_occurrences == 1
     {
-        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-            println!("{} parser error out for input: {:?}", "⬢⬢".red(), input);
+        DEBUG_MD_PARSER_STDOUT.then(|| {
+            println!("{a} parser error out for input: {i:?}",
+                a = red("⬢⬢"),
+                i = input
+            );
         });
         return Err(nom::Err::Error(nom::error::Error {
             input,
@@ -100,8 +102,11 @@ pub fn take_starts_with_delim_no_new_line<'i>(
     // If there is a closing delim, then we can safely take the text between the delim.
     if num_of_delim_occurrences > 1 {
         let it = take_text_between_delims_err_on_new_line(input, delim, delim);
-        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-            println!("{} it: {:?}", "▲▲".blue(), it);
+        DEBUG_MD_PARSER_STDOUT.then(|| {
+            println!("{a} it: {b:?}",
+                a = blue("▲▲"),
+                b = it
+            );
         });
         return it;
     }
@@ -109,8 +114,12 @@ pub fn take_starts_with_delim_no_new_line<'i>(
     // Otherwise, we split the input at the first delim.
     let (rem, output) = recognize(many1(tag(delim)))(input)?;
 
-    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-        println!("{}, rem: {:?}, output: {:?}", "▲▲".blue(), rem, output);
+    DEBUG_MD_PARSER_STDOUT.then(|| {
+        println!("{a}, rem: {r:?}, output: {o:?}",
+            a = blue("▲▲"),
+            r = rem,
+            o = output
+        );
     });
 
     Ok((rem, output))

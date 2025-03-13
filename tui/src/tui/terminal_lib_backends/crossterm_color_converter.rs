@@ -116,7 +116,7 @@ pub fn convert_from_tui_color_to_crossterm_color(
                 // Convert to grayscale.
                 ColorSupport::Grayscale | ColorSupport::NoColor => {
                     let ansi_grayscale_color =
-                        r3bl_ansi_color::Color::Ansi256(from_ansi_value.color)
+                        r3bl_ansi_color::ASTColor::Ansi256(from_ansi_value.color)
                             .as_grayscale();
                     crossterm::style::Color::AnsiValue(ansi_grayscale_color.index)
                 }
@@ -151,6 +151,6 @@ pub fn convert_from_tui_color_to_crossterm_color(
 }
 
 fn convert_rgb_to_ansi_grayscale(r: u8, g: u8, b: u8) -> crossterm::style::Color {
-    let ansi_grayscale_color = r3bl_ansi_color::Color::Rgb(r, g, b).as_grayscale();
+    let ansi_grayscale_color = r3bl_ansi_color::ASTColor::Rgb(r, g, b).as_grayscale();
     crossterm::style::Color::AnsiValue(ansi_grayscale_color.index)
 }

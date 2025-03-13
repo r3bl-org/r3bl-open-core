@@ -109,7 +109,7 @@ impl AsRef<Path> for TempDir {
 
 #[cfg(test)]
 mod tests_temp_dir {
-    use crossterm::style::Stylize as _;
+    use r3bl_ansi_color::lizard_green;
 
     use super::*;
 
@@ -118,7 +118,7 @@ mod tests_temp_dir {
         let temp_dir = create_temp_dir().unwrap();
         println!(
             "Temp dir: {}",
-            temp_dir.inner.display().to_string().magenta()
+            lizard_green(&temp_dir.inner.display().to_string())
         );
 
         assert!(temp_dir.inner.exists());
@@ -145,7 +145,10 @@ mod tests_temp_dir {
         let temp_dir = create_temp_dir().unwrap();
 
         let copy_of_path = temp_dir.inner.clone();
-        println!("Temp dir: {}", copy_of_path.display().to_string().magenta());
+        println!(
+            "Temp dir: {}",
+            lizard_green(&copy_of_path.display().to_string())
+        );
 
         drop(temp_dir);
 

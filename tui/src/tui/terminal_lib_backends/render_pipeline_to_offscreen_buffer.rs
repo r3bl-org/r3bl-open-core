@@ -17,7 +17,7 @@
 
 use r3bl_core::{ch,
                 glyphs::{self, SPACER_GLYPH},
-                string_storage,
+                inline_string,
                 usize,
                 width,
                 ColWidth,
@@ -64,7 +64,7 @@ impl RenderPipeline {
         DEBUG_TUI_COMPOSITOR.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = %string_storage!("offscreen_buffer {ch}", ch = glyphs::SCREEN_BUFFER_GLYPH),
+                message = %inline_string!("offscreen_buffer {ch}", ch = glyphs::SCREEN_BUFFER_GLYPH),
                 offscreen_buffer = ?mut_offscreen_buffer
             );
         });
@@ -184,12 +184,12 @@ pub fn print_plain_text(
     DEBUG_TUI_COMPOSITOR.then(|| {
         // % is Display, ? is Debug.
         tracing::info! {
-            message = %string_storage!(
+            message = %inline_string!(
                 "print_plain_text() {ar} {ch}",
                 ar = glyphs::RIGHT_ARROW_GLYPH,
                 ch = glyphs::PAINT_GLYPH,
             ),
-            details = %string_storage!(
+            details = %inline_string!(
                 "insertion at: display_row_index: {a}, display_col_index: {b}, window_size: {c:?},
                 text: '{d}',
                 width: {e:?}",
@@ -246,7 +246,7 @@ pub fn print_plain_text(
         tracing::debug!(
             message = %match maybe_style {
                 Some(style) => {
-                    string_storage!(
+                    inline_string!(
                         "{ch} [row: {row}, col: {col}] - style: {style:?}",
                         ch = glyphs::BOX_FILL_GLYPH,
                         row = display_row_index,
@@ -255,7 +255,7 @@ pub fn print_plain_text(
                     )
                 }
                 None => {
-                    string_storage!(
+                    inline_string!(
                         "{ch} [row: {row}, col: {col}] - style: None",
                         ch = glyphs::BOX_EMPTY_GLYPH,
                         row = display_row_index,

@@ -665,10 +665,10 @@ pub mod readline_internal {
 #[cfg(test)]
 pub mod test_fixtures {
     use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-    use r3bl_core::{CrosstermEventResult, VecArray};
+    use r3bl_core::{CrosstermEventResult, InlineVec};
     use smallvec::smallvec;
 
-    pub(super) fn get_input_vec() -> VecArray<CrosstermEventResult> {
+    pub(super) fn get_input_vec() -> InlineVec<CrosstermEventResult> {
         smallvec![
             // a
             Ok(Event::Key(KeyEvent::new(
@@ -696,7 +696,7 @@ pub mod test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use r3bl_ansi_color::{TTYResult, is_fully_uninteractive_terminal};
+    use r3bl_core::{TTYResult, is_fully_uninteractive_terminal};
     use r3bl_test_fixtures::{InputDeviceExt as _,
                              output_device_ext::OutputDeviceExt as _};
     use test_fixtures::get_input_vec;

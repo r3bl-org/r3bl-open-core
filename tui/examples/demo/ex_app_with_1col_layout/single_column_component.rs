@@ -17,9 +17,9 @@
 use r3bl_core::{ch,
                 col,
                 glyphs,
+                inline_string,
                 row,
                 send_signal,
-                string_storage,
                 throws_with_return,
                 Ansi256GradientIndex,
                 ColorWheel,
@@ -177,8 +177,8 @@ mod single_column_component_impl_component_trait {
                 let SingleColumnComponentData { color_wheel, .. } = &mut self.data;
 
                 // Fixed strings.
-                let line_1 = string_storage!("box.id: {a:?} - Hello", a = current_box.id);
-                let line_2 = string_storage!("box.id: {b:?} - World", b = current_box.id);
+                let line_1 = inline_string!("box.id: {a:?} - Hello", a = current_box.id);
+                let line_2 = inline_string!("box.id: {b:?} - World", b = current_box.id);
 
                 // Setup intermediate vars.
                 let box_origin_pos = current_box.style_adjusted_origin_pos; // Adjusted for style margin (if any).
@@ -258,7 +258,7 @@ mod single_column_component_impl_component_trait {
                 DEBUG_TUI_MOD.then(|| {
                     // % is Display, ? is Debug.
                     tracing::info!(
-                        message = %string_storage!(
+                        message = %inline_string!(
                             "ColumnComponent::render {ch}",
                             ch = glyphs::RENDER_GLYPH
                         ),

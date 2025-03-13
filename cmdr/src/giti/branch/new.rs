@@ -17,7 +17,7 @@
 
 use std::process::Command;
 
-use r3bl_ansi_color::{AnsiStyledText, Style};
+use r3bl_ansi_color::{ASTStyle, AnsiStyledText};
 use r3bl_core::CommonResult;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 
@@ -57,7 +57,9 @@ pub fn try_make_new_branch(
                     BranchAlreadyExists { branch_name }.to_string();
                 AnsiStyledText {
                     text: &branch_already_exists,
-                    style: &[Style::Foreground(SlateGrey.as_ansi_color())],
+                    style: smallvec::smallvec![ASTStyle::Foreground(
+                        SlateGrey.as_ansi_color()
+                    )],
                 }
                 .println();
                 return Ok(response);
@@ -90,7 +92,9 @@ pub fn try_make_new_branch(
             let mut line_editor = Reedline::create();
             let prompt_text = AnsiStyledText {
                 text: &EnterBranchNameYouWantToCreate.to_string(),
-                style: &[Style::Foreground(FrozenBlue.as_ansi_color())],
+                style: smallvec::smallvec![ASTStyle::Foreground(
+                    FrozenBlue.as_ansi_color()
+                )],
             }
             .to_string();
             let prompt = DefaultPrompt::new(
@@ -128,7 +132,9 @@ pub fn try_make_new_branch(
                 Ok(Signal::CtrlC) => {
                     AnsiStyledText {
                         text: &NoNewBranchWasCreated.to_string(),
-                        style: &[Style::Foreground(SilverMetallic.as_ansi_color())],
+                        style: smallvec::smallvec![ASTStyle::Foreground(
+                            SilverMetallic.as_ansi_color()
+                        )],
                     }
                     .println();
                 }
@@ -146,7 +152,7 @@ fn display_failed_to_create_new_branch(branch_name: &str) {
             branch_name: branch_name.to_string(),
         }
         .to_string(),
-        style: &[Style::Foreground(GuardsRed.as_ansi_color())],
+        style: smallvec::smallvec![ASTStyle::Foreground(GuardsRed.as_ansi_color())],
     }
     .println();
 }
@@ -154,11 +160,11 @@ fn display_failed_to_create_new_branch(branch_name: &str) {
 fn display_successful_new_branch_creation(branch_name: &str) {
     let created_and_switched_to_new_branch = AnsiStyledText {
         text: &CreatedAndSwitchedToNewBranch.to_string(),
-        style: &[Style::Foreground(SlateGrey.as_ansi_color())],
+        style: smallvec::smallvec![ASTStyle::Foreground(SlateGrey.as_ansi_color())],
     };
     let branch_name = AnsiStyledText {
         text: &format!("✅ {branch_name}"),
-        style: &[Style::Foreground(LizardGreen.as_ansi_color())],
+        style: smallvec::smallvec![ASTStyle::Foreground(LizardGreen.as_ansi_color())],
     };
     println!("{created_and_switched_to_new_branch}{branch_name}");
 }

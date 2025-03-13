@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{Dim, Pos, ReqSizePc, TuiStyle, VecArray};
+use r3bl_core::{Dim, InlineVec, Pos, ReqSizePc, TuiStyle};
 
 use super::{FlexBoxId, LayoutDirection};
 
@@ -25,7 +25,7 @@ pub struct FlexBoxProps {
     pub id: FlexBoxId,
     pub dir: LayoutDirection,
     pub requested_size_percent: ReqSizePc,
-    pub maybe_styles: Option<VecArray<TuiStyle>>,
+    pub maybe_styles: Option<InlineVec<TuiStyle>>,
 }
 
 /// Properties that are needed to create a [crate::Surface].

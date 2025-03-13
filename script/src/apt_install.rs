@@ -84,7 +84,7 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
 
 #[cfg(test)]
 mod tests_apt_install {
-    use r3bl_ansi_color::{TTYResult, is_fully_uninteractive_terminal};
+    use r3bl_core::{TTYResult, is_fully_uninteractive_terminal};
 
     use super::*;
 

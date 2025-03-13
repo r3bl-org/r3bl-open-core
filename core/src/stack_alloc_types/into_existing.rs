@@ -17,13 +17,13 @@
 
 // XMARK: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
 
-/// A macro to pad a [crate::StringStorage] (which is allocated elsewhere) with a
+/// A macro to pad a [crate::InlineString] (which is allocated elsewhere) with a
 /// specified string repeated a specified number of times.
 ///
 /// # Arguments
 ///
 /// * `fmt: $acc` - The accumulator to write the padding into. It can be [String],
-///   [crate::StringStorage], [crate::CharStorage], or [std::fmt::Formatter], basically
+///   [crate::InlineString], [crate::TinyInlineString], or [std::fmt::Formatter], basically
 ///   anything that implements [std::fmt::Write].
 /// * `pad_str: $pad_str` - The string to use for padding.
 /// * `repeat_count: $repeat_count` - The number of times to repeat the padding string.
@@ -31,9 +31,9 @@
 /// # Example
 ///
 /// ```rust
-/// use r3bl_core::{pad_fmt, StringStorage};
+/// use r3bl_core::{pad_fmt, InlineString};
 ///
-/// let mut acc = StringStorage::new();
+/// let mut acc = InlineString::new();
 /// pad_fmt!(fmt: acc, pad_str: "-", repeat_count: 5);
 /// assert_eq!(acc, "-----");
 ///
@@ -68,24 +68,24 @@ macro_rules! pad_fmt {
 
 #[cfg(test)]
 mod tests_pad_fmt {
-    use crate::StringStorage;
+    use crate::InlineString;
     #[test]
     fn test_pad() {
-        let mut acc = StringStorage::new();
+        let mut acc = InlineString::new();
         pad_fmt!(fmt: acc, pad_str: "-", repeat_count: 5);
         assert_eq!(acc, "-----");
     }
 
     #[test]
     fn test_pad_zero() {
-        let mut acc = StringStorage::new();
+        let mut acc = InlineString::new();
         pad_fmt!(fmt: acc, pad_str: "-", repeat_count: 0);
         assert_eq!(acc, "");
     }
 
     #[test]
     fn test_pad_multiple() {
-        let mut acc = StringStorage::new();
+        let mut acc = InlineString::new();
         pad_fmt!(fmt: acc, pad_str: "abc", repeat_count: 3);
         // cspell:disable-next-line
         assert_eq!(acc, "abcabcabc");
@@ -98,7 +98,7 @@ mod tests_pad_fmt {
 ///
 /// # Arguments
 ///
-/// - `fmt` can be a [String], [crate::StringStorage], [crate::CharStorage], or
+/// - `fmt` can be a [String], [crate::InlineString], [crate::TinyInlineString], or
 ///   [std::fmt::Formatter], basically anything that implements [std::fmt::Write].
 /// - `from` is the collection to iterate over.
 /// - `each` is the identifier for each item in the collection.
@@ -164,7 +164,7 @@ mod join_fmt_tests {
 /// # Arguments
 ///
 /// * `fmt: $acc` - The accumulator to write the padding into. It can be [String],
-///   [crate::StringStorage], [crate::CharStorage], or [std::fmt::Formatter], basically
+///   [crate::InlineString], [crate::TinyInlineString], or [std::fmt::Formatter], basically
 ///   anything that implements [std::fmt::Write].
 /// * `from: $collection` - The collection to iterate over.
 /// * `each: $item` - The identifier for each item in the collection.
@@ -250,7 +250,7 @@ pub mod read_from_file {
     /// of workloads that their code is used in) to determine what `const` size the
     /// `Array` should be. If it is greater than this, it will spill to the heap, and it
     /// is too small, then some memory will be wasted on the stack.
-    pub fn try_read_file_path_into_small_string<A: Array<Item = u8>>(
+    pub fn try_read_file_path_into_inline_string<A: Array<Item = u8>>(
         acc: &mut SmallString<A>,
         arg_path: impl Into<PathBuf>,
     ) -> miette::Result<()> {
@@ -282,12 +282,12 @@ mod tests_read_from_file {
 
     use crate::{DEFAULT_DOCUMENT_SIZE,
                 DocumentStorage,
-                StringStorage,
+                InlineString,
                 create_temp_dir,
-                into_existing::read_from_file::try_read_file_path_into_small_string};
+                into_existing::read_from_file::try_read_file_path_into_inline_string};
 
     #[test]
-    fn test_read_tiny_file_into_string_storage() {
+    fn test_read_tiny_file_into_inline_string() {
         // Create a temporary dir.
         let temp_dir = create_temp_dir().expect("Failed to create temp dir");
         let temp_file_path = temp_dir.join("test_file.txt");
@@ -300,17 +300,17 @@ mod tests_read_from_file {
             .write_all(content.as_bytes())
             .expect("Failed to write to temp file");
 
-        // Read the file into StringStorage.
-        let mut acc = StringStorage::new();
-        try_read_file_path_into_small_string(&mut acc, temp_file_path)
-            .expect("Failed to read file into StringStorage");
+        // Read the file into InlineString.
+        let mut acc = InlineString::new();
+        try_read_file_path_into_inline_string(&mut acc, temp_file_path)
+            .expect("Failed to read file into InlineString");
 
         // Verify the content.
         assert_eq!(content, acc.as_str());
     }
 
     #[test]
-    fn test_read_large_file_into_string_storage() {
+    fn test_read_large_file_into_inline_string() {
         // Create a temporary file.
         let temp_dir = create_temp_dir().expect("Failed to create temp dir");
         let temp_file_path = temp_dir.join("test_file.txt");
@@ -334,7 +334,7 @@ mod tests_read_from_file {
 
         // Read the file into DocumentStorage.
         let mut acc = DocumentStorage::new();
-        try_read_file_path_into_small_string(&mut acc, temp_file_path)
+        try_read_file_path_into_inline_string(&mut acc, temp_file_path)
             .expect("Failed to read file into DocumentStorage");
 
         // Verify the content.
@@ -343,28 +343,28 @@ mod tests_read_from_file {
     }
 
     #[test]
-    fn test_read_empty_file_into_string_storage() {
+    fn test_read_empty_file_into_inline_string() {
         // Create a temporary file.
         let temp_dir = create_temp_dir().expect("Failed to create temp dir");
         let temp_file_path = temp_dir.join("test_file.txt");
         _ = File::create(&temp_file_path).expect("Failed to create temp file");
 
-        // Read the file into StringStorage.
-        let mut acc = StringStorage::new();
-        try_read_file_path_into_small_string(&mut acc, temp_file_path)
-            .expect("Failed to read file into StringStorage");
+        // Read the file into InlineString.
+        let mut acc = InlineString::new();
+        try_read_file_path_into_inline_string(&mut acc, temp_file_path)
+            .expect("Failed to read file into InlineString");
 
         // Verify the content.
         assert_eq!("", acc.as_str());
     }
 
     #[test]
-    fn test_read_nonexistent_file_into_string_storage() {
+    fn test_read_nonexistent_file_into_inline_string() {
         // Attempt to read a nonexistent file.
-        let mut acc = StringStorage::new();
+        let mut acc = InlineString::new();
         let temp_dir = create_temp_dir().expect("Failed to create temp dir");
         let temp_file_path = temp_dir.join("nonexistent_file.txt");
-        let result = try_read_file_path_into_small_string(&mut acc, temp_file_path);
+        let result = try_read_file_path_into_inline_string(&mut acc, temp_file_path);
 
         // Verify that an error is returned.
         assert!(result.is_err());

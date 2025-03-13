@@ -17,7 +17,7 @@
 
 use std::fmt::{Debug, Formatter};
 
-use r3bl_core::VecArray;
+use r3bl_core::InlineVec;
 use smallvec::smallvec;
 
 /// Reducer.
@@ -39,7 +39,7 @@ pub enum AppSignal {
 /// State.
 #[derive(Clone, PartialEq, Eq)]
 pub struct State {
-    pub stack: VecArray<i32>,
+    pub stack: InlineVec<i32>,
 }
 
 impl Default for State {

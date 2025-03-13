@@ -140,16 +140,34 @@
 //! Here's an example.
 //!
 //! ```rust
-//! use r3bl_ansi_color::{AnsiStyledText, Style, Color};
+//! use r3bl_ansi_color::*;
 //!
+//! // Using the constructor functions.
+//! let red_text = red("This is red text.");
+//! let red_text_on_dark_grey = red_text.bg_dark_grey();
+//! println!("{red_text_on_dark_grey}");
+//! red_text_on_dark_grey.println();
+//!
+//! // Combine constructor functions.
+//! let dim_red_text_on_dark_grey = dim("text").fg_rgb_color((255, 0, 0)).bg_rgb_color((50, 50, 50));
+//! println!("{dim_red_text_on_dark_grey}");
+//! dim_red_text_on_dark_grey.println();
+//!
+//! // Flexible construction using RGB color codes.
+//! let blue_text = fg_rgb_color(RgbColor::from((0, 0, 255)), "This is blue text.");
+//! let blue_text_on_white = blue_text.bg_rgb_color((255, 255, 255));
+//! println!("{blue_text_on_white}");
+//! blue_text_on_white.println();
+//!
+//! // Verbose struct construction.
 //! AnsiStyledText {
 //!     text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
-//!     style: &[
-//!         Style::Bold,
-//!         Style::Italic,
-//!         Style::Underline,
-//!         Style::Foreground(Color::Rgb(50, 50, 50)),
-//!         Style::Background(Color::Rgb(100, 200, 1)),
+//!     style: smallvec::smallvec![
+//!         ASTStyle::Bold,
+//!         ASTStyle::Italic,
+//!         ASTStyle::Underline,
+//!         ASTStyle::Foreground(ASTColor::Rgb(50, 50, 50)),
+//!         ASTStyle::Background(ASTColor::Rgb(100, 200, 1)),
 //!     ],
 //! }
 //! .println();
@@ -237,24 +255,18 @@
 #![warn(rust_2018_idioms)]
 
 // Attach.
-pub mod ansi256_color;
 pub mod ansi_escape_codes;
 pub mod ansi_styled_text;
-pub mod color;
+pub mod ast_color;
 pub mod convert;
 pub mod detect_color_support;
-pub mod rgb_color;
-pub mod term;
 pub mod transform_color;
 
 pub use ansi_escape_codes::*;
 pub use ansi_styled_text::*;
-pub use ansi256_color::*;
-pub use color::*;
+pub use ast_color::*;
 pub use convert::*;
 pub use detect_color_support::*;
-pub use rgb_color::*;
-pub use term::*;
 pub use transform_color::*;
 
 /// This is copied from `r3bl_core` crate's `common_type_aliases.rs` file.

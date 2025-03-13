@@ -69,7 +69,7 @@ mod tests {
         let mut state = State {
             multi_line_header: vec![vec![AnsiStyledText {
                 text: "line1",
-                style: &[],
+                style: smallvec::smallvec![],
             }]],
             ..Default::default()
         };

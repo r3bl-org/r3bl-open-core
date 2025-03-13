@@ -18,15 +18,15 @@
 use std::collections::HashMap;
 
 use r3bl_core::{col,
+                inline_string,
                 row,
-                string_storage,
                 CaretScrAdj,
                 ColIndex,
                 GCString,
                 GCStringExt,
-                RowIndex,
-                StringStorage,
-                VecArray};
+                InlineString,
+                InlineVec,
+                RowIndex};
 
 use super::{scroll_editor_content, DeleteSelectionWith};
 use crate::{caret_locate::{locate_col, CaretColLocationInLine},
@@ -208,7 +208,7 @@ pub fn delete_at_caret(
     return None;
 
     mod inner {
-        use r3bl_core::string_storage;
+        use r3bl_core::inline_string;
 
         use super::*;
 
@@ -259,7 +259,7 @@ pub fn delete_at_caret(
             let this_line = buffer.line_at_caret_scr_adj()?;
             let next_line = buffer.next_line_below_caret_to_string()?;
             let new_line_content =
-                string_storage!("{a}{b}", a = this_line.string, b = next_line.string);
+                inline_string!("{a}{b}", a = this_line.string, b = next_line.string);
 
             // When buffer_mut goes out of scope, it will be dropped &
             // validation performed.
@@ -364,7 +364,7 @@ pub fn backspace_at_caret(
             };
 
             let new_line_content =
-                string_storage!("{a}{b}", a = prev_line.string, b = this_line.string);
+                inline_string!("{a}{b}", a = prev_line.string, b = this_line.string);
 
             // When buffer_mut goes out of scope, it will be dropped &
             // validation performed.
@@ -424,7 +424,7 @@ pub fn delete_selected(
     let my_selection_map = buffer.get_selection_list().clone();
     let lines = buffer.get_lines();
     let selected_row_indices = my_selection_map.get_ordered_indices();
-    let mut vec_row_indices_to_remove = VecArray::<RowIndex>::new();
+    let mut vec_row_indices_to_remove = InlineVec::<RowIndex>::new();
     let mut map_lines_to_replace = HashMap::new();
 
     for selected_row_index in selected_row_indices {
@@ -460,7 +460,7 @@ pub fn delete_selected(
 
             let keep_after_selected_str = line_gcs.clip(end_col_index, line_width);
 
-            let mut remaining_text = StringStorage::with_capacity(
+            let mut remaining_text = InlineString::with_capacity(
                 keep_before_selected_str.len() + keep_after_selected_str.len(),
             );
 

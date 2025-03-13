@@ -20,11 +20,11 @@ use r3bl_core::{height,
                 width,
                 CommonResult,
                 Dim,
+                InlineVec,
                 Pos,
                 ReqSizePc,
                 TuiStyle,
-                TuiStylesheet,
-                VecArray};
+                TuiStylesheet};
 
 use super::{FlexBox,
             FlexBoxProps,
@@ -361,7 +361,7 @@ fn cascade_styles(
     parent_box: &FlexBox,
     self_box_props: &FlexBoxProps,
 ) -> Option<TuiStyle> {
-    let mut style_vec = VecArray::<TuiStyle>::new();
+    let mut style_vec = InlineVec::<TuiStyle>::new();
 
     if let Some(parent_style) = parent_box.get_computed_style() {
         style_vec.push(parent_style);

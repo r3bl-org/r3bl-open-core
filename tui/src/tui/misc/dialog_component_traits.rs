@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::StringStorage;
+use r3bl_core::InlineString;
 use tokio::sync::mpsc::Sender;
 
 use crate::{DialogBuffer, FlexBoxId, TerminalWindowMainThreadSignal};
@@ -32,7 +32,7 @@ pub trait HasDialogBuffers {
 
 #[derive(Debug)]
 pub enum DialogChoice {
-    Yes(StringStorage),
+    Yes(InlineString),
     No,
 }
 

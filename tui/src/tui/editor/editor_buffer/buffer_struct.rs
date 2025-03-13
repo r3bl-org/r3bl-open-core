@@ -24,16 +24,16 @@ use r3bl_core::{format_as_kilobytes_with_commas,
                 with_mut,
                 CaretRaw,
                 CaretScrAdj,
-                CharStorage,
                 ColWidth,
                 Dim,
                 GCString,
                 GCStringExt,
+                InlineString,
                 RowHeight,
                 RowIndex,
                 ScrOfs,
                 SegString,
-                StringStorage};
+                TinyInlineString};
 use smallvec::smallvec;
 
 use super::{history::EditorHistory, render_cache::RenderCache, sizing, SelectionList};
@@ -211,13 +211,13 @@ pub struct EditorContent {
     ///   [EditorContent::scr_ofs].
     pub caret_raw: CaretRaw,
     pub scr_ofs: ScrOfs,
-    pub maybe_file_extension: Option<CharStorage>,
-    pub maybe_file_path: Option<StringStorage>,
+    pub maybe_file_extension: Option<TinyInlineString>,
+    pub maybe_file_path: Option<InlineString>,
     pub sel_list: SelectionList,
 }
 
 mod construct {
-    use r3bl_core::string_storage;
+    use r3bl_core::inline_string;
 
     use super::*;
 
@@ -240,7 +240,7 @@ mod construct {
             DEBUG_TUI_MOD.then(|| {
                 // % is Display, ? is Debug.
                 tracing::info!(
-                    message = %string_storage!("Construct EditorBuffer {ch}", ch = glyphs::CONSTRUCT_GLYPH),
+                    message = %inline_string!("Construct EditorBuffer {ch}", ch = glyphs::CONSTRUCT_GLYPH),
                     file_extension = ?maybe_file_extension,
                     file_path = ?maybe_file_path
                 );
@@ -492,18 +492,18 @@ pub mod access_and_mutate {
 
         pub fn get_lines(&self) -> &sizing::VecEditorContentLines { &self.content.lines }
 
-        pub fn get_as_string_with_comma_instead_of_newlines(&self) -> StringStorage {
+        pub fn get_as_string_with_comma_instead_of_newlines(&self) -> InlineString {
             self.get_as_string_with_separator(", ")
         }
 
-        pub fn get_as_string_with_newlines(&self) -> StringStorage {
+        pub fn get_as_string_with_newlines(&self) -> InlineString {
             self.get_as_string_with_separator("\n")
         }
 
         /// Helper function to format the [EditorBuffer] as a delimited string.
-        pub fn get_as_string_with_separator(&self, separator: &str) -> StringStorage {
+        pub fn get_as_string_with_separator(&self, separator: &str) -> InlineString {
             with_mut!(
-                StringStorage::new(),
+                InlineString::new(),
                 as acc,
                 run {
                     let lines = &self.content.lines;

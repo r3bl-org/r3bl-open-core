@@ -17,7 +17,7 @@
 
 use std::error::Error;
 
-use r3bl_core::{usize, VecArrayStr};
+use r3bl_core::{usize, InlineVecStr};
 
 use super::EditorBuffer;
 use crate::{constants::NEW_LINE,
@@ -45,7 +45,7 @@ pub fn copy_to_clipboard(
     let sel_list = buffer.get_selection_list();
 
     // Initialize an empty string to store the copied text.
-    let mut vec_str = VecArrayStr::new();
+    let mut vec_str = InlineVecStr::new();
 
     // Sort the row indices so that the copied text is in the correct order.
     let row_indices = sel_list.get_ordered_indices();

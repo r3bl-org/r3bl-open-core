@@ -19,7 +19,7 @@ use std::io::{Result, Write};
 use crossterm::{cursor::{Hide, Show},
                 execute,
                 terminal::{disable_raw_mode, enable_raw_mode}};
-use r3bl_ansi_color::{is_fully_uninteractive_terminal, TTYResult};
+use r3bl_core::{is_fully_uninteractive_terminal, TTYResult};
 
 use crate::{CalculateResizeHint, FunctionComponent, KeyPress, KeyPressReader};
 

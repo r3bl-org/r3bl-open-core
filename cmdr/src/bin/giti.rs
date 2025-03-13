@@ -19,7 +19,7 @@
 //! <https://developerlife.com/2023/09/17/tuify-clap/>
 
 use clap::Parser;
-use r3bl_ansi_color::{AnsiStyledText, Style};
+use r3bl_ansi_color::{ASTStyle, AnsiStyledText};
 use r3bl_cmdr::{AnalyticsAction,
                 color_constants::DefaultColors::{FrozenBlue, GuardsRed, MoonlightBlue},
                 giti::{BranchSubcommand,
@@ -113,7 +113,9 @@ pub fn launch_giti(cli_arg: CLIArg) {
                     " Could not run giti due to the following problem.\n{:#?}",
                     error
                 ),
-                style: &[Style::Foreground(GuardsRed.as_ansi_color())],
+                style: smallvec::smallvec![ASTStyle::Foreground(
+                    GuardsRed.as_ansi_color()
+                )],
             }
             .println();
         }
@@ -148,16 +150,16 @@ fn user_typed_giti_branch() -> CommonResult<CommandSuccessfulResponse> {
         command_to_run_with_each_selection: None,
         maybe_branch_name: None,
     });
-    let default_header_style = [
-        Style::Foreground(FrozenBlue.as_ansi_color()),
-        Style::Background(MoonlightBlue.as_ansi_color()),
+    let default_header_style = smallvec::smallvec![
+        ASTStyle::Foreground(FrozenBlue.as_ansi_color()),
+        ASTStyle::Background(MoonlightBlue.as_ansi_color()),
     ];
     let instructions_and_select_branch_subcommand = {
         let mut instructions_and_select_branch_subcommand =
             single_select_instruction_header();
         let header = AnsiStyledText {
             text: "Please select a branch subcommand",
-            style: &default_header_style,
+            style: default_header_style,
         };
         instructions_and_select_branch_subcommand.push(vec![header]);
         instructions_and_select_branch_subcommand

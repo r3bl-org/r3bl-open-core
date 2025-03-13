@@ -17,48 +17,105 @@
 
 use std::fmt::{Display, Formatter, Result};
 
+use smallstr::SmallString;
+use smallvec::{SmallVec, smallvec};
 use strum_macros::EnumCount;
 
-use crate::{Color, SgrCode};
+use crate::{ASTColor, RgbColor, SgrCode};
 
 /// The main struct that we have to consider is `AnsiStyledText`. It has two fields:
 /// - `text` - the text to print.
-/// - `style` - a list of [Style] to apply to the text.
+/// - `style` - a list of [ASTStyle] to apply to the text. This is owned in a stack
+///   allocated buffer (which can spill to the heap if it gets larger than
+///   [sizing::MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE]).
+/// - Once created, either directly or using constructor functions like [super::red()],
+///   you can then use [Self::bg_dark_grey()] to add a background color to the text.
+/// - If you want even more flexibility you can use constructor function
+///   [super::fg_rgb_color()] and [Self::bg_rgb_color()] to create a styled text with a specific RGB
+///   color.
 ///
 /// # Example usage:
 ///
 /// ```rust
 /// use r3bl_ansi_color::*;
 ///
+/// // Using the constructor functions.
+/// let red_text = red("This is red text.");
+/// let red_text_on_dark_grey = red_text.bg_dark_grey();
+/// println!("{red_text_on_dark_grey}");
+/// red_text_on_dark_grey.println();
+///
+/// // Combine constructor functions.
+/// let dim_red_text_on_dark_grey = dim("text").fg_rgb_color((255, 0, 0)).bg_rgb_color((50, 50, 50));
+/// println!("{dim_red_text_on_dark_grey}");
+/// dim_red_text_on_dark_grey.println();
+///
+/// // Flexible construction using RGB color codes.
+/// let blue_text = fg_rgb_color(rgb_color!(blue), "This is blue text.");
+/// let blue_text_on_white = blue_text.bg_rgb_color(rgb_color!(white));
+/// println!("{blue_text_on_white}");
+/// blue_text_on_white.println();
+///
+/// // Verbose struct construction.
 /// AnsiStyledText {
 ///     text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
-///     style: &[
-///         Style::Bold,
-///         Style::Italic,
-///         Style::Underline,
-///         Style::Foreground(Color::Rgb(50, 50, 50)),
-///         Style::Background(Color::Rgb(100, 200, 1)),
+///     style: smallvec::smallvec![
+///         ASTStyle::Bold,
+///         ASTStyle::Italic,
+///         ASTStyle::Underline,
+///         ASTStyle::Foreground(ASTColor::Rgb(50, 50, 50)),
+///         ASTStyle::Background(ASTColor::Rgb(100, 200, 1)),
 ///     ],
 /// }
 /// .println();
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AnsiStyledText<'a> {
     pub text: &'a str,
-    pub style: &'a [Style],
+    pub style: sizing::InlineVecASTStyles,
+}
+
+pub mod sizing {
+    use super::*;
+
+    /// Attributes are: color_fg, color_bg, bold, dim, italic, underline, reverse, hidden,
+    /// etc. which are in [crate::ASTStyle].
+    pub const MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE: usize = 12;
+    pub type InlineVecASTStyles =
+        SmallVec<[ASTStyle; MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE]>;
+
+    // PERF: If you make this number too large, eg: more than 16, then it will slow down the editor performance
+    pub const DEFAULT_STRING_STORAGE_SIZE: usize = 16;
 }
 
 mod ansi_styled_text_impl {
-    use crate::AnsiStyledText;
+    use super::*;
 
     impl AnsiStyledText<'_> {
         pub fn println(&self) {
             println!("{}", self);
         }
 
-        pub fn print(&self) {
-            print!("{}", self);
+        pub fn print(&self) {}
+
+        /// This is different than the [Display] trait implementation, because it doesn't
+        /// allocate a new [String], but instead allocates an inline buffer on the stack.
+        /// If this buffer gets larger than [sizing::DEFAULT_STRING_STORAGE_SIZE], it will
+        /// spill to the heap.
+        pub fn to_small_str(
+            &self,
+        ) -> SmallString<[u8; super::sizing::DEFAULT_STRING_STORAGE_SIZE]> {
+            format!("{}", self).into()
         }
+    }
+}
+
+pub fn fg_rgb_color(arg_color: impl Into<RgbColor>, text: &str) -> AnsiStyledText<'_> {
+    let rgb_color = arg_color.into();
+    let ast_color = ASTColor::from(rgb_color);
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(ast_color)),
     }
 }
 
@@ -66,7 +123,7 @@ mod ansi_styled_text_impl {
 pub fn green(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Foreground(Color::Ansi256(34))],
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(34))),
     }
 }
 
@@ -74,7 +131,15 @@ pub fn green(text: &str) -> AnsiStyledText<'_> {
 pub fn red(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Foreground(Color::Ansi256(196))],
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(196))),
+    }
+}
+
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn white(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(231))),
     }
 }
 
@@ -82,7 +147,7 @@ pub fn red(text: &str) -> AnsiStyledText<'_> {
 pub fn cyan(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Foreground(Color::Ansi256(51))],
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(51))),
     }
 }
 
@@ -90,7 +155,7 @@ pub fn cyan(text: &str) -> AnsiStyledText<'_> {
 pub fn yellow(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Foreground(Color::Ansi256(226))],
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(226))),
     }
 }
 
@@ -98,7 +163,42 @@ pub fn yellow(text: &str) -> AnsiStyledText<'_> {
 pub fn magenta(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Foreground(Color::Ansi256(201))],
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(201))),
+    }
+}
+
+pub fn lizard_green(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(crate::rgb_color!(lizard_green).into())),
+    }
+}
+
+pub fn pink(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(crate::rgb_color!(pink).into())),
+    }
+}
+
+pub fn dark_pink(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(crate::rgb_color!(dark_pink).into())),
+    }
+}
+
+pub fn frozen_blue(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(crate::rgb_color!(frozen_blue).into())),
+    }
+}
+
+pub fn guards_red(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(crate::rgb_color!(guards_red).into())),
     }
 }
 
@@ -106,56 +206,78 @@ pub fn magenta(text: &str) -> AnsiStyledText<'_> {
 pub fn blue(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Foreground(Color::Ansi256(27))],
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(27))),
     }
 }
 
 pub fn bold(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Bold],
+        style: smallvec!(ASTStyle::Bold),
     }
 }
 
 pub fn italic(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Italic],
+        style: smallvec!(ASTStyle::Italic),
     }
 }
 
 pub fn underline(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Underline],
+        style: smallvec!(ASTStyle::Underline),
     }
 }
 
 pub fn strikethrough(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Strikethrough],
+        style: smallvec!(ASTStyle::Strikethrough),
     }
 }
 
 pub fn dim(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Dim],
+        style: smallvec!(ASTStyle::Dim),
     }
 }
 
 pub fn dim_underline(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: &[Style::Dim, Style::Underline],
+        style: smallvec!(ASTStyle::Dim, ASTStyle::Underline),
+    }
+}
+
+impl AnsiStyledText<'_> {
+    pub fn bg_dark_grey(mut self) -> Self {
+        self.style
+            .push(ASTStyle::Background(ASTColor::Ansi256(236)));
+        self
+    }
+
+    pub fn bg_rgb_color(mut self, arg_color: impl Into<RgbColor>) -> Self {
+        let color = arg_color.into();
+        let ast_color = ASTColor::from(color);
+        self.style.push(ASTStyle::Background(ast_color));
+        self
+    }
+
+    pub fn fg_rgb_color(mut self, arg_color: impl Into<RgbColor>) -> Self {
+        let color = arg_color.into();
+        let ast_color = ASTColor::from(color);
+        self.style.push(ASTStyle::Foreground(ast_color));
+        self
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumCount)]
-pub enum Style {
-    Foreground(Color),
-    Background(Color),
+pub enum ASTStyle {
+    Foreground(ASTColor),
+    Background(ASTColor),
     Bold,
     Dim,
     Italic,
@@ -171,11 +293,11 @@ pub enum Style {
 mod style_impl {
     use std::fmt::{Display, Formatter, Result};
 
-    use crate::{Color,
+    use crate::{ASTColor,
+                ASTStyle,
                 ColorSupport,
                 RgbColor,
                 SgrCode,
-                Style,
                 TransformColor,
                 global_color_support};
 
@@ -185,7 +307,11 @@ mod style_impl {
         Background,
     }
 
-    fn fmt_color(color: Color, color_kind: ColorKind, f: &mut Formatter<'_>) -> Result {
+    fn fmt_color(
+        color: ASTColor,
+        color_kind: ColorKind,
+        f: &mut Formatter<'_>,
+    ) -> Result {
         match global_color_support::detect() {
             ColorSupport::Ansi256 => {
                 // ANSI 256 color mode.
@@ -231,22 +357,22 @@ mod style_impl {
         }
     }
 
-    impl Display for Style {
+    impl Display for ASTStyle {
         #[rustfmt::skip]
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             match self {
-                Style::Foreground(color)  => fmt_color(*color, ColorKind::Foreground, f),
-                Style::Background(color)  => fmt_color(*color, ColorKind::Background, f),
-                Style::Bold               => write!(f, "{}", SgrCode::Bold),
-                Style::Dim                => write!(f, "{}", SgrCode::Dim),
-                Style::Italic             => write!(f, "{}", SgrCode::Italic),
-                Style::Underline          => write!(f, "{}", SgrCode::Underline),
-                Style::SlowBlink          => write!(f, "{}", SgrCode::SlowBlink),
-                Style::RapidBlink         => write!(f, "{}", SgrCode::RapidBlink),
-                Style::Invert             => write!(f, "{}", SgrCode::Invert),
-                Style::Hidden             => write!(f, "{}", SgrCode::Hidden),
-                Style::Strikethrough      => write!(f, "{}", SgrCode::Strikethrough),
-                Style::Overline           => write!(f, "{}", SgrCode::Overline),
+                ASTStyle::Foreground(color)  => fmt_color(*color, ColorKind::Foreground, f),
+                ASTStyle::Background(color)  => fmt_color(*color, ColorKind::Background, f),
+                ASTStyle::Bold               => write!(f, "{}", SgrCode::Bold),
+                ASTStyle::Dim                => write!(f, "{}", SgrCode::Dim),
+                ASTStyle::Italic             => write!(f, "{}", SgrCode::Italic),
+                ASTStyle::Underline          => write!(f, "{}", SgrCode::Underline),
+                ASTStyle::SlowBlink          => write!(f, "{}", SgrCode::SlowBlink),
+                ASTStyle::RapidBlink         => write!(f, "{}", SgrCode::RapidBlink),
+                ASTStyle::Invert             => write!(f, "{}", SgrCode::Invert),
+                ASTStyle::Hidden             => write!(f, "{}", SgrCode::Hidden),
+                ASTStyle::Strikethrough      => write!(f, "{}", SgrCode::Strikethrough),
+                ASTStyle::Overline           => write!(f, "{}", SgrCode::Overline),
             }
         }
     }
@@ -257,7 +383,7 @@ mod display_trait_impl {
 
     impl Display for AnsiStyledText<'_> {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            for style_item in self.style {
+            for style_item in &self.style {
                 write!(f, "{}", style_item)?;
             }
             write!(f, "{}", self.text)?;
@@ -265,121 +391,161 @@ mod display_trait_impl {
             Ok(())
         }
     }
+}
 
-    #[cfg(test)]
-    mod tests {
-        use pretty_assertions::assert_eq;
-        use serial_test::serial;
+#[cfg(test)]
+mod tests {
+    use pretty_assertions::assert_eq;
+    use serial_test::serial;
+    use smallvec::smallvec;
 
-        use crate::{AnsiStyledText, Color, ColorSupport, Style, global_color_support};
+    use super::dim;
+    use crate::{ASTColor, ASTStyle, AnsiStyledText, ColorSupport, global_color_support};
 
-        #[serial]
-        #[test]
-        fn test_formatted_string_creation_ansi256() -> Result<(), String> {
-            global_color_support::set_override(ColorSupport::Ansi256);
-            let eg_1 = AnsiStyledText {
-                text: "Hello",
-                style: &[
-                    Style::Bold,
-                    Style::Foreground(Color::Rgb(0, 0, 0)),
-                    Style::Background(Color::Rgb(1, 1, 1)),
-                ],
-            };
+    #[serial]
+    #[test]
+    fn test_fg_color_on_bg_color() {
+        let eg_1 = AnsiStyledText {
+            text: "Hello",
+            style: smallvec!(
+                ASTStyle::Bold,
+                ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
+            ),
+        };
+        println!("{:?}", eg_1);
+        println!("{}", eg_1);
+        assert_eq!(
+            format!("{:?}", eg_1),
+            r#"AnsiStyledText { text: "Hello", style: [Bold, Foreground(Rgb(0, 0, 0))] }"#
+        );
 
-            assert_eq!(
-                format!("{0}", eg_1),
-                "\x1b[1m\x1b[38;5;16m\x1b[48;5;16mHello\x1b[0m".to_string()
-            );
+        let eg_2 = eg_1.bg_dark_grey();
+        println!("{:?}", eg_2);
+        println!("{}", eg_2);
+        assert_eq!(
+            format!("{:?}", eg_2),
+            r#"AnsiStyledText { text: "Hello", style: [Bold, Foreground(Rgb(0, 0, 0)), Background(Ansi256(236))] }"#
+        );
+    }
 
-            let eg_2 = AnsiStyledText {
-                text: "World",
-                style: &[
-                    Style::Bold,
-                    Style::Foreground(Color::Ansi256(150)),
-                    Style::Background(Color::Rgb(1, 1, 1)),
-                ],
-            };
+    #[serial]
+    #[test]
+    fn test_fg_bg_combo() {
+        let eg_1 = dim("hello").fg_rgb_color((0, 0, 0)).bg_rgb_color((1, 1, 1));
+        println!("{:?}", eg_1);
+        println!("{}", eg_1);
+        assert_eq!(
+            format!("{:?}", eg_1),
+            r#"AnsiStyledText { text: "hello", style: [Dim, Foreground(Rgb(0, 0, 0)), Background(Rgb(1, 1, 1))] }"#
+        );
+    }
 
-            assert_eq!(
-                format!("{0}", eg_2),
-                "\x1b[1m\x1b[38;5;150m\x1b[48;5;16mWorld\x1b[0m".to_string()
-            );
+    #[serial]
+    #[test]
+    fn test_formatted_string_creation_ansi256() -> Result<(), String> {
+        global_color_support::set_override(ColorSupport::Ansi256);
+        let eg_1 = AnsiStyledText {
+            text: "Hello",
+            style: smallvec!(
+                ASTStyle::Bold,
+                ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
+                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+            ),
+        };
 
-            Ok(())
-        }
+        assert_eq!(
+            format!("{0}", eg_1),
+            "\x1b[1m\x1b[38;5;16m\x1b[48;5;16mHello\x1b[0m".to_string()
+        );
 
-        #[serial]
-        #[test]
-        fn test_formatted_string_creation_truecolor() -> Result<(), String> {
-            global_color_support::set_override(ColorSupport::Truecolor);
-            let eg_1 = AnsiStyledText {
-                text: "Hello",
-                style: &[
-                    Style::Bold,
-                    Style::Foreground(Color::Rgb(0, 0, 0)),
-                    Style::Background(Color::Rgb(1, 1, 1)),
-                ],
-            };
+        let eg_2 = AnsiStyledText {
+            text: "World",
+            style: smallvec!(
+                ASTStyle::Bold,
+                ASTStyle::Foreground(ASTColor::Ansi256(150)),
+                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+            ),
+        };
 
-            assert_eq!(
-                format!("{0}", eg_1),
-                "\x1b[1m\x1b[38;2;0;0;0m\x1b[48;2;1;1;1mHello\x1b[0m".to_string()
-            );
+        assert_eq!(
+            format!("{0}", eg_2),
+            "\x1b[1m\x1b[38;5;150m\x1b[48;5;16mWorld\x1b[0m".to_string()
+        );
 
-            let eg_2 = AnsiStyledText {
-                text: "World",
-                style: &[
-                    Style::Bold,
-                    Style::Foreground(Color::Ansi256(150)),
-                    Style::Background(Color::Rgb(1, 1, 1)),
-                ],
-            };
+        Ok(())
+    }
 
-            assert_eq!(
-                format!("{0}", eg_2),
-                "\x1b[1m\x1b[38;2;175;215;135m\x1b[48;2;1;1;1mWorld\x1b[0m".to_string()
-            );
+    #[serial]
+    #[test]
+    fn test_formatted_string_creation_truecolor() -> Result<(), String> {
+        global_color_support::set_override(ColorSupport::Truecolor);
+        let eg_1 = AnsiStyledText {
+            text: "Hello",
+            style: smallvec!(
+                ASTStyle::Bold,
+                ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
+                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+            ),
+        };
 
-            Ok(())
-        }
+        assert_eq!(
+            format!("{0}", eg_1),
+            "\x1b[1m\x1b[38;2;0;0;0m\x1b[48;2;1;1;1mHello\x1b[0m".to_string()
+        );
 
-        #[serial]
-        #[test]
-        fn test_formatted_string_creation_grayscale() -> Result<(), String> {
-            global_color_support::set_override(ColorSupport::Grayscale);
-            let eg_1 = AnsiStyledText {
-                text: "Hello",
-                style: &[
-                    Style::Bold,
-                    Style::Foreground(Color::Rgb(0, 0, 0)),
-                    Style::Background(Color::Rgb(1, 1, 1)),
-                ],
-            };
+        let eg_2 = AnsiStyledText {
+            text: "World",
+            style: smallvec!(
+                ASTStyle::Bold,
+                ASTStyle::Foreground(ASTColor::Ansi256(150)),
+                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+            ),
+        };
 
-            println!("{:?}", format!("{0}", eg_1));
+        assert_eq!(
+            format!("{0}", eg_2),
+            "\x1b[1m\x1b[38;2;175;215;135m\x1b[48;2;1;1;1mWorld\x1b[0m".to_string()
+        );
 
-            assert_eq!(
-                format!("{0}", eg_1),
-                "\u{1b}[1m\u{1b}[38;5;16m\u{1b}[48;5;16mHello\u{1b}[0m".to_string()
-            );
+        Ok(())
+    }
 
-            let eg_2 = AnsiStyledText {
-                text: "World",
-                style: &[
-                    Style::Bold,
-                    Style::Foreground(Color::Ansi256(150)),
-                    Style::Background(Color::Rgb(1, 1, 1)),
-                ],
-            };
+    #[serial]
+    #[test]
+    fn test_formatted_string_creation_grayscale() -> Result<(), String> {
+        global_color_support::set_override(ColorSupport::Grayscale);
+        let eg_1 = AnsiStyledText {
+            text: "Hello",
+            style: smallvec!(
+                ASTStyle::Bold,
+                ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
+                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+            ),
+        };
 
-            println!("{:?}", format!("{0}", eg_2));
+        println!("{:?}", format!("{0}", eg_1));
 
-            assert_eq!(
-                format!("{0}", eg_2),
-                "\u{1b}[1m\u{1b}[38;5;251m\u{1b}[48;5;16mWorld\u{1b}[0m".to_string()
-            );
+        assert_eq!(
+            format!("{0}", eg_1),
+            "\u{1b}[1m\u{1b}[38;5;16m\u{1b}[48;5;16mHello\u{1b}[0m".to_string()
+        );
 
-            Ok(())
-        }
+        let eg_2 = AnsiStyledText {
+            text: "World",
+            style: smallvec!(
+                ASTStyle::Bold,
+                ASTStyle::Foreground(ASTColor::Ansi256(150)),
+                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+            ),
+        };
+
+        println!("{:?}", format!("{0}", eg_2));
+
+        assert_eq!(
+            format!("{0}", eg_2),
+            "\u{1b}[1m\u{1b}[38;5;251m\u{1b}[48;5;16mWorld\u{1b}[0m".to_string()
+        );
+
+        Ok(())
     }
 }

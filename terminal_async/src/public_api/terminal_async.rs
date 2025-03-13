@@ -22,13 +22,16 @@ use crossterm::{cursor::MoveToColumn,
                 terminal::{Clear, ClearType}};
 use futures_util::FutureExt as _;
 use miette::IntoDiagnostic as _;
-use r3bl_ansi_color::{StdinIsPipedResult,
-                      StdoutIsPipedResult,
-                      TTYResult,
-                      is_fully_uninteractive_terminal,
-                      is_stdin_piped,
-                      is_stdout_piped};
-use r3bl_core::{InputDevice, LineStateControlSignal, OutputDevice, SharedWriter};
+use r3bl_core::{InputDevice,
+                LineStateControlSignal,
+                OutputDevice,
+                SharedWriter,
+                StdinIsPipedResult,
+                StdoutIsPipedResult,
+                TTYResult,
+                is_fully_uninteractive_terminal,
+                is_stdin_piped,
+                is_stdout_piped};
 
 use crate::{Readline, ReadlineEvent};
 

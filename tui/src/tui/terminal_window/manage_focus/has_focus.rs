@@ -17,12 +17,12 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{char_storage,
-                string_storage,
+use r3bl_core::{inline_string,
                 throws,
+                tiny_inline_string,
                 CommonError,
                 CommonResult,
-                VecArray};
+                InlineVec};
 
 use crate::{FlexBox, FlexBoxId};
 
@@ -48,13 +48,13 @@ use crate::{FlexBox, FlexBoxId};
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct HasFocus {
     /// This `id` has keyboard focus. This is global.
-    id_vec: VecArray<FlexBoxId>,
+    id_vec: InlineVec<FlexBoxId>,
 }
 
 impl Default for HasFocus {
     fn default() -> Self {
         Self {
-            id_vec: VecArray::with_capacity(2),
+            id_vec: InlineVec::with_capacity(2),
         }
     }
 }
@@ -108,13 +108,13 @@ impl HasFocus {
 
             // Must not have a modal id already set.
             if self.is_modal_set() {
-                let msg = string_storage!(
+                let msg = inline_string!(
                     "Modal id is already set to {a}. Can't set it to {b}.",
                     a = match self.get_id() {
-                        Some(existing_id) => char_storage!("{existing_id:?}"),
-                        None => char_storage!("None"),
+                        Some(existing_id) => tiny_inline_string!("{existing_id:?}"),
+                        None => tiny_inline_string!("None"),
                     },
-                    b = char_storage!("{id:?}")
+                    b = tiny_inline_string!("{id:?}")
                 );
                 return CommonError::new_error_result_with_only_msg(&msg);
             }

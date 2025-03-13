@@ -24,9 +24,9 @@ use r3bl_core::{caret_scr_adj,
                 col,
                 glyphs,
                 height,
+                inline_string,
                 new_style,
                 row,
-                string_storage,
                 throws,
                 throws_with_return,
                 tui_color,
@@ -247,7 +247,7 @@ pub fn render_content(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) 
     DEBUG_TUI_MOD.then(|| {
         // % is Display, ? is Debug.
         tracing::info!(
-            message = %string_storage!(
+            message = %inline_string!(
                 "EditorEngineApi -> render_content() {ch}",
                 ch = glyphs::RENDER_GLYPH
             ),
@@ -314,7 +314,7 @@ pub fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps)
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "🍉🍉🍉 selection_str_slice",
-                    selection = %green(&string_storage!("{}", selection_holder)),
+                    selection = %green(&inline_string!("{}", selection_holder)),
                     range = ?sel_range,
                     scroll_offset = ?scroll_offset,
                 };
@@ -494,7 +494,7 @@ mod syn_hi_r3bl_path {
             DEBUG_TUI_SYN_HI.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
-                    message = %string_storage!(
+                    message = %inline_string!(
                         "🎯🎯🎯 editor_buffer.lines({a}) vs md_document.lines.len({b})",
                         a = editor_buffer.get_lines().len(),
                         b = lines.len(),

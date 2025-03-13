@@ -16,7 +16,6 @@
  */
 use std::fmt::Debug;
 
-use crossterm::style::Stylize;
 use r3bl_core::{caret_scr_adj,
                 glyphs::{CUT_GLYPH,
                          DIRECTION_GLYPH,
@@ -26,9 +25,9 @@ use r3bl_core::{caret_scr_adj,
                 usize,
                 CaretScrAdj,
                 GetMemSize,
-                RowIndex,
-                StringStorage,
-                VecArray};
+                InlineString,
+                InlineVec,
+                RowIndex};
 use sizing::VecRowIndex;
 use smallvec::{smallvec, SmallVec};
 
@@ -60,7 +59,7 @@ mod sizing {
 /// - And not [r3bl_core::CaretRaw]
 #[derive(Clone, PartialEq, Default)]
 pub struct SelectionList {
-    list: VecArray<SelectionListItem>,
+    list: InlineVec<SelectionListItem>,
     maybe_previous_direction: Option<CaretMovementDirection>,
 }
 
@@ -144,8 +143,8 @@ impl SelectionList {
     pub fn get_selected_lines<'a>(
         &self,
         buffer: &'a EditorBuffer,
-    ) -> VecArray<(RowIndex, &'a str)> {
-        let mut acc = VecArray::new();
+    ) -> InlineVec<(RowIndex, &'a str)> {
+        let mut acc = InlineVec::new();
 
         let lines = buffer.get_lines();
         let ordered_row_indices = self.get_ordered_indices();
@@ -175,7 +174,9 @@ impl SelectionList {
     }
 
     /// Primarily for testing.
-    pub fn get_ordered_list(&self) -> &VecArray<(RowIndex, SelectionRange)> { &self.list }
+    pub fn get_ordered_list(&self) -> &InlineVec<(RowIndex, SelectionRange)> {
+        &self.list
+    }
 
     pub fn is_empty(&self) -> bool { self.list.is_empty() }
 
@@ -272,7 +273,8 @@ pub enum RowLocationInSelectionList {
 
 // Formatter for Debug and Display.
 mod impl_debug_format {
-    use r3bl_core::{join, string_storage};
+    use r3bl_ansi_color::{fg_rgb_color, rgb_color};
+    use r3bl_core::{inline_string, join};
 
     use super::*;
 
@@ -282,7 +284,7 @@ mod impl_debug_format {
     impl SelectionList {
         /// Get the output from [Self::to_unformatted_string] and format it with colors.
         /// And return that.
-        pub fn to_formatted_string(&self) -> StringStorage {
+        pub fn to_formatted_string(&self) -> InlineString {
             let mut selection_list_string = self.to_unformatted_string();
 
             let is_empty = selection_list_string
@@ -291,14 +293,18 @@ mod impl_debug_format {
 
             // Format the output.
             for line in selection_list_string.iter_mut() {
-                if is_empty {
-                    *line = line.to_string().blue().on_dark_grey().to_string().into();
+                let (fg_color, bg_color) = if is_empty {
+                    (rgb_color!(frozen_blue), rgb_color!(dark_grey))
                 } else {
-                    *line = line.to_string().green().on_dark_grey().to_string().into();
-                }
+                    (rgb_color!(lizard_green), rgb_color!(dark_grey))
+                };
+                let fmt_line = fg_rgb_color(fg_color, line)
+                    .bg_rgb_color(bg_color)
+                    .to_small_str();
+                *line = fmt_line;
             }
             for line in selection_list_string.iter_mut() {
-                *line = string_storage!("{PAD_LEFT}{line}");
+                *line = inline_string!("{PAD_LEFT}{line}");
             }
 
             let selection_list_string = join!(
@@ -308,21 +314,21 @@ mod impl_debug_format {
                 format: "{item}",
             );
 
-            string_storage! {
+            inline_string! {
 "SelectionList: [
 {selection_list_string}
 {PAD_LEFT}]"
             }
         }
 
-        /// Returns a [VecArray] of [StringStorage] that represent the selection map.
-        pub fn to_unformatted_string(&self) -> VecArray<StringStorage> {
+        /// Returns a [InlineVec] of [InlineString] that represent the selection map.
+        pub fn to_unformatted_string(&self) -> InlineVec<InlineString> {
             let mut vec_output = {
                 let mut acc = smallvec![];
                 let sorted_indices = self.get_ordered_indices();
                 for row_index in sorted_indices.iter() {
                     if let Some(selected_range) = self.get(*row_index) {
-                        acc.push(string_storage!(
+                        acc.push(inline_string!(
                             "{first_ch} {sep}row: {row_idx:?}, col: [{col_start:?}{dots}{col_end:?}]{sep}",
                             first_ch = CUT_GLYPH,
                             sep = VERT_LINE_DASHED_GLYPH,
@@ -338,11 +344,11 @@ mod impl_debug_format {
 
             if vec_output.is_empty() {
                 vec_output.push(
-                    string_storage!("{TIRE_MARKS_GLYPH} {VERT_LINE_DASHED_GLYPH}{EMPTY_STR}{VERT_LINE_DASHED_GLYPH}")
+                    inline_string!("{TIRE_MARKS_GLYPH} {VERT_LINE_DASHED_GLYPH}{EMPTY_STR}{VERT_LINE_DASHED_GLYPH}")
                 );
             }
 
-            vec_output.push(string_storage!(
+            vec_output.push(inline_string!(
                 "{ch} prev_dir: {prev_dir:?}",
                 ch = DIRECTION_GLYPH,
                 prev_dir = self.maybe_previous_direction

@@ -22,13 +22,17 @@ use std::{io::{stdin, BufRead, Result},
           process::Command};
 
 use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
-use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
-use r3bl_ansi_color::{is_stdin_piped,
-                      is_stdout_piped,
-                      StdinIsPipedResult,
-                      StdoutIsPipedResult};
-use r3bl_core::{get_size, get_terminal_width, string_storage, throws, usize};
+use r3bl_ansi_color::{blue, lizard_green, pink};
+use r3bl_core::{get_size,
+                get_terminal_width,
+                inline_string,
+                is_stdin_piped,
+                is_stdout_piped,
+                throws,
+                usize,
+                StdinIsPipedResult,
+                StdoutIsPipedResult};
 use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, DEVELOPMENT_MODE};
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
@@ -162,31 +166,25 @@ fn main() -> miette::Result<()> {
 }
 
 fn show_error_stdin_pipe_does_not_work_on_macos() {
-    let msg = "Unfortunately at this time macOS `stdin` pipe does not work on macOS.\
-                     \nhttps://github.com/crossterm-rs/crossterm/issues/396"
-        .blue()
-        .to_string();
-    println!("{msg}");
+    let msg = "Unfortunately at this time macOS `stdin` pipe does not work on macOS.
+https://github.com/crossterm-rs/crossterm/issues/396";
+    println!("{}", blue(msg).bg_dark_grey());
 }
 
 fn show_error_need_to_pipe_stdin(bin_name: &str) {
     let msg = format!(
-        "Please pipe the output of another command into {bin_name}. \
-         \n✅ For example: `ls -l | {bin_name} -s single-select`",
-    )
-    .green()
-    .to_string();
-    println!("{msg}");
+        "Please pipe the output of another command into {bin_name}.
+✅ For example: `ls -l | {bin_name} -s single-select`"
+    );
+    println!("{}", lizard_green(&msg).bg_dark_grey());
 }
 
 fn show_error_do_not_pipe_stdout(bin_name: &str) {
     let msg = format!(
-        "Please do *not* pipe the output of {bin_name} to another command. \
-         \n❎ For eg, don't do this: `ls -l | {bin_name} -s single-select | cat`",
-    )
-    .red()
-    .to_string();
-    println!("{msg}");
+        "Please do *not* pipe the output of {bin_name} to another command.
+❎ For eg, don't do this: `ls -l | {bin_name} -s single-select | cat`"
+    );
+    println!("{}", pink(&msg).bg_dark_grey());
 }
 
 fn show_tui(
@@ -406,7 +404,7 @@ fn get_possible_values_for_subcommand_and_option(
                 DEVELOPMENT_MODE.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug!(
-                        message = %string_storage!("{subcommand}, {option}"),
+                        message = %inline_string!("{subcommand}, {option}"),
                         possible_values = ?possible_values,
                     );
                 });

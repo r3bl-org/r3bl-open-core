@@ -19,11 +19,11 @@ use std::collections::HashMap;
 
 use smallvec::smallvec;
 
-use crate::VecArray;
+use crate::InlineVec;
 
 #[derive(Debug)]
 pub struct OrderedMap<K, V> {
-    keys: VecArray<K>,
+    keys: InlineVec<K>,
     map: HashMap<K, V>,
 }
 

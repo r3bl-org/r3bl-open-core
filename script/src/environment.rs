@@ -18,7 +18,7 @@
 use std::{env, path::Path};
 
 use miette::IntoDiagnostic;
-use r3bl_core::{StringStorage, ok, string_storage};
+use r3bl_core::{InlineString, inline_string, ok};
 use strum_macros::{Display, EnumString};
 
 use crate::SCRIPT_MOD_DEBUG;
@@ -75,9 +75,9 @@ pub fn try_get(key: EnvKeys) -> miette::Result<String> {
 
 pub fn try_get_path_prefixed(
     prefix_path: impl AsRef<Path>,
-) -> miette::Result<StringStorage> {
+) -> miette::Result<InlineString> {
     let path = try_get(EnvKeys::Path)?;
-    let add_to_path = string_storage!(
+    let add_to_path = inline_string!(
         "{}{}{}",
         prefix_path.as_ref().display(),
         OS_SPECIFIC_ENV_PATH_SEPARATOR,

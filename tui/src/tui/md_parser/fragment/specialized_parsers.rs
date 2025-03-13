@@ -15,13 +15,12 @@
  *   limitations under the License.
  */
 
-use crossterm::style::Stylize;
 use nom::{branch::alt,
           bytes::complete::tag,
           combinator::{map, recognize},
           multi::many0,
           IResult};
-use r3bl_core::call_if_true;
+use r3bl_ansi_color::{blue, red};
 
 use super::specialized_parser_delim_matchers;
 use crate::{constants::{BACK_TICK,
@@ -60,10 +59,10 @@ pub fn parse_fragment_starts_with_backtick_err_on_new_line(
     // return an error, since this could be a code block.
     let it = recognize(many0(tag(BACK_TICK)))(input);
     if it.is_err() {
-        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                 "\n{} specialized parser error out with backtick: \ninput: {:?}, delim: {:?}",
-                "⬢⬢".red(),
+                red("⬢⬢"),
                 input,
                 BACK_TICK
             );
@@ -71,8 +70,8 @@ pub fn parse_fragment_starts_with_backtick_err_on_new_line(
     }
     let (_, output) = it?;
     if output.len() > 2 {
-        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-            println!("{} more than 2 backticks in input:{:?}", "⬢⬢".red(), input);
+        DEBUG_MD_PARSER_STDOUT.then(|| {
+            println!("{} more than 2 backticks in input:{:?}", red("⬢⬢"), input);
         });
         return Err(nom::Err::Error(nom::error::Error {
             input: output,
@@ -93,10 +92,10 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line(
     let result_first =
         take_text_between_delims_err_on_new_line(input, LEFT_IMAGE, RIGHT_IMAGE);
     if result_first.is_err() {
-        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                     "\n{} specialized parser error out with image: \ninput: {:?}, delim: {:?}",
-                    "⬢⬢".red(),
+                    red("⬢⬢"),
                     input,
                     LEFT_IMAGE
                 );
@@ -111,10 +110,10 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line(
         RIGHT_PARENTHESIS,
     );
     if result_second.is_err() {
-        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                     "\n{} specialized parser error out with image: \ninput: {:?}, delim: {:?}",
-                    "⬢⬢".red(),
+                    red("⬢⬢"),
                     rem,
                     LEFT_PARENTHESIS
                 );
@@ -126,13 +125,13 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line(
         rem,
         HyperlinkData::from((part_between_image_tags, part_between_parenthesis)),
     ));
-    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+    DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
             "{} specialized parser for image: {:?}",
             if it.is_err() {
-                "⬢⬢".red()
+                red("⬢⬢")
             } else {
-                "▲▲".blue()
+                blue("▲▲")
             },
             it
         );
@@ -147,10 +146,10 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line(
     let result_first =
         take_text_between_delims_err_on_new_line(input, LEFT_BRACKET, RIGHT_BRACKET);
     if result_first.is_err() {
-        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                 "\n{} specialized parser error out with link: \ninput: {:?}, delim: {:?}",
-                "⬢⬢".red(),
+                red("⬢⬢"),
                 input,
                 LEFT_BRACKET
             );
@@ -165,10 +164,10 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line(
         RIGHT_PARENTHESIS,
     );
     if result_second.is_err() {
-        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                 "\n{} specialized parser error out with link: \ninput: {:?}, delim: {:?}",
-                "⬢⬢".red(),
+                red("⬢⬢"),
                 rem,
                 LEFT_PARENTHESIS
             );
@@ -180,13 +179,13 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line(
         rem,
         HyperlinkData::from((part_between_brackets, part_between_parenthesis)),
     ));
-    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+    DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
             "{} specialized parser for link: {:?}",
             if it.is_err() {
-                "⬢⬢".red()
+                red("⬢⬢")
             } else {
-                "▲▲".blue()
+                blue("▲▲")
             },
             it
         );
@@ -201,13 +200,13 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line(
 /// parse a checkbox into plain text, or into a boolean.
 pub fn parse_fragment_starts_with_checkbox_into_str(input: &str) -> IResult<&str, &str> {
     let it = alt((recognize(tag(CHECKED)), recognize(tag(UNCHECKED))))(input);
-    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+    DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
             "{} specialized parser for checkbox: {:?}",
             if it.is_err() {
-                "⬢⬢".red()
+                red("⬢⬢")
             } else {
-                "▲▲".blue()
+                blue("▲▲")
             },
             it
         );
@@ -224,13 +223,13 @@ pub fn parse_fragment_starts_with_checkbox_checkbox_into_bool(
     input: &str,
 ) -> IResult<&str, bool> {
     let it = alt((map(tag(CHECKED), |_| true), map(tag(UNCHECKED), |_| false)))(input);
-    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+    DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
             "{} specialized parser for checkbox: {:?}",
             if it.is_err() {
-                "⬢⬢".red()
+                red("⬢⬢")
             } else {
-                "▲▲".blue()
+                blue("▲▲")
             },
             it
         );

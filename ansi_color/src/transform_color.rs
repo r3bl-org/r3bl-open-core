@@ -35,19 +35,19 @@ mod tests {
     use test_case::test_case;
 
     use super::TransformColor;
-    use crate::{Ansi256Color, Color, RgbColor};
+    use crate::{ASTColor, Ansi256Color, RgbColor};
 
     #[test_case(0, 0, 0)]
     #[test_case(255, 125, 0)]
     #[test_case(255, 255, 255)]
     fn test_color_as_rgb(red: u8, green: u8, blue: u8) {
-        let rgb_color = Color::Rgb(red, green, blue);
+        let rgb_color = ASTColor::Rgb(red, green, blue);
         assert_eq!(rgb_color.as_rgb(), RgbColor { red, green, blue });
     }
 
-    #[test_case(Color::Rgb(255, 255, 255), 231)]
-    #[test_case(Color::Rgb(255, 128, 0), 208)]
-    fn test_color_as_ansi256(rgb_color: crate::Color, index: u8) {
+    #[test_case(ASTColor::Rgb(255, 255, 255), 231)]
+    #[test_case(ASTColor::Rgb(255, 128, 0), 208)]
+    fn test_color_as_ansi256(rgb_color: crate::ASTColor, index: u8) {
         let expected_ansi = Ansi256Color { index };
         assert_eq!(rgb_color.as_ansi256(), expected_ansi);
     }
@@ -71,9 +71,9 @@ mod tests {
         assert_eq!(rgb_color.as_ansi256(), expected_ansi);
     }
 
-    #[test_case(Color::Rgb(0, 0, 0), 16)]
-    #[test_case(Color::Rgb(255, 128, 0), 249)]
-    fn test_color_as_grayscale(rgb_color: crate::Color, index: u8) {
+    #[test_case(ASTColor::Rgb(0, 0, 0), 16)]
+    #[test_case(ASTColor::Rgb(255, 128, 0), 249)]
+    fn test_color_as_grayscale(rgb_color: crate::ASTColor, index: u8) {
         let expected_gray = Ansi256Color { index };
         assert_eq!(rgb_color.as_grayscale(), expected_gray);
     }

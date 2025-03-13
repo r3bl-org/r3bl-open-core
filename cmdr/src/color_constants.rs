@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::Color as AnsiColor;
+use r3bl_ansi_color::ASTColor as AnsiColor;
 
 pub enum DefaultColors {
     LizardGreen,

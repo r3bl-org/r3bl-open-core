@@ -24,7 +24,7 @@
 //!   content of the editor buffer to the screen.
 //!
 //! In the future, if there is a need to store multiple entries in the cache, the cache
-//! can be implemented as a [r3bl_core::RingBuffer] or [r3bl_core::VecArray] of
+//! can be implemented as a [r3bl_core::RingBuffer] or [r3bl_core::InlineVec] of
 //! [CacheEntry] structs.
 
 use std::ops::{Deref, DerefMut};

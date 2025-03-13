@@ -33,9 +33,9 @@ use r3bl_core::{col,
                 CommonResult,
                 Dim,
                 GCStringExt,
-                StringStorage,
+                InlineString,
+                InlineVec,
                 TuiStylesheet,
-                VecArray,
                 SPACER_GLYPH};
 use r3bl_tui::{box_end,
                box_props,
@@ -255,7 +255,7 @@ mod modal_dialogs {
     // This runs on every keystroke, so it should be fast.
     pub fn dialog_component_update_content(state: &mut State, id: FlexBoxId) {
         // This is Some only if the content has changed (ignoring caret movements).
-        let maybe_changed_results: Option<VecArray<StringStorage>> = {
+        let maybe_changed_results: Option<InlineVec<InlineString>> = {
             if let Some(dialog_buffer) = state.dialog_buffers.get_mut(&id) {
                 let vec_result = generate_random_results(
                     dialog_buffer
@@ -303,10 +303,10 @@ mod modal_dialogs {
         }
     }
 
-    fn generate_random_results(content: &str) -> VecArray<StringStorage> {
+    fn generate_random_results(content: &str) -> InlineVec<InlineString> {
         let start_rand_num = rand::random::<u8>() as usize;
         let max = 10;
-        let mut it = VecArray::with_capacity(max);
+        let mut it = InlineVec::with_capacity(max);
         for index in start_rand_num..(start_rand_num + max) {
             it.push(format!("{content}{index}").into());
         }
@@ -403,8 +403,8 @@ mod modal_dialogs {
     pub fn dialog_component_initialize_focused(
         state: &mut State,
         id: FlexBoxId,
-        title: StringStorage,
-        text: StringStorage,
+        title: InlineString,
+        text: InlineString,
     ) {
         let dialog_buffer = {
             let mut it = DialogBuffer::new_empty();
@@ -576,7 +576,7 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use r3bl_core::{glyphs, string_storage};
+    use r3bl_core::{glyphs, inline_string};
 
     use super::*;
 
@@ -595,7 +595,7 @@ mod populate_component_registry {
         DEBUG_TUI_MOD.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = %string_storage!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
+                message = %inline_string!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
                 has_focus = ?has_focus.get_id()
             );
         });

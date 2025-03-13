@@ -19,7 +19,7 @@ use std::io::stdout;
 
 use clap::ValueEnum;
 use r3bl_ansi_color::{green, AnsiStyledText};
-use r3bl_core::{ch, get_size, string_storage, usize};
+use r3bl_core::{ch, get_size, inline_string, usize};
 
 use crate::{enter_event_loop,
             CalculateResizeHint,
@@ -165,10 +165,10 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "🍎🍎🍎 keypress_handler() resize",
-                    details = %string_storage!(
+                    details = %inline_string!(
                         "New size width:{w} x height:{h}",
-                        w = green(&string_storage!("{:?}", size.col_width)),
-                        h = green(&string_storage!("{:?}", size.row_height)),
+                        w = green(&inline_string!("{:?}", size.col_width)),
+                        h = green(&inline_string!("{:?}", size.row_height)),
                     )
                 };
             });
@@ -358,8 +358,7 @@ pub enum SelectionMode {
 
 #[cfg(test)]
 mod test_select_from_list {
-    use r3bl_ansi_color::{is_fully_uninteractive_terminal, TTYResult};
-    use r3bl_core::assert_eq2;
+    use r3bl_core::{assert_eq2, is_fully_uninteractive_terminal, TTYResult};
 
     use super::*;
     use crate::{TestStringWriter, TestVecKeyPressReader};

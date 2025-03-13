@@ -22,9 +22,9 @@ use std::{fs,
           sync::Arc,
           time::Duration};
 
-use crossterm::style::Stylize as _;
 use miette::{IntoDiagnostic as _, miette};
-use r3bl_core::{SendRawTerminal, SharedWriter, StdMutex, VecArray, string_storage};
+use r3bl_ansi_color::{bold, fg_rgb_color, red, rgb_color};
+use r3bl_core::{InlineVec, SendRawTerminal, SharedWriter, StdMutex, inline_string};
 use r3bl_log::{DisplayPreference, try_initialize_logging_global};
 use r3bl_terminal_async::{Readline, ReadlineEvent, Spinner, TerminalAsync};
 use r3bl_tui::SpinnerStyle;
@@ -71,13 +71,14 @@ enum Command {
 }
 
 fn get_info_message() -> String {
-    let available_commands = {
+    let available_commands = &{
         let commands = Command::iter()
             .map(|it| it.to_string())
             .collect::<Vec<String>>();
-        format!("{:?}", commands).blue()
+        fg_rgb_color(rgb_color!(lizard_green), &format!("{:?}", commands)).to_string()
     };
-    let info_message = format!(
+
+    let info_message = &format!(
         "try Ctrl+D, Up, Down, Left, Right, Ctrl+left, Ctrl+right, `{}`, `{}`, `{}`, `{}`, and `{}`",
         Command::StartTask1,
         Command::Tree,
@@ -85,14 +86,12 @@ fn get_info_message() -> String {
         Command::StartTask2,
         Command::StopPrintouts
     );
+
     format!(
-        "{}: \n{}\n{}",
-        format!("{}", "Available commands".bold())
-            .magenta()
-            .bold()
-            .underlined(),
-        available_commands,
-        info_message.to_string().white().bold().on_dark_grey()
+        "{a}: \n{b}\n{c}",
+        a = bold("Available commands"),
+        b = available_commands,
+        c = fg_rgb_color(rgb_color!(frozen_blue), info_message)
     )
 }
 
@@ -130,8 +129,10 @@ impl Default for State {
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     let prompt = {
-        let prompt_seg_1 = "╭>╮".magenta().on_dark_grey().to_string();
-        let prompt_seg_2 = " ".to_string();
+        let fg = rgb_color!(slate_grey);
+        let bg = rgb_color!(moonlight_blue);
+        let prompt_seg_1 = fg_rgb_color(fg, "╭>╮").bg_rgb_color(bg);
+        let prompt_seg_2 = " ";
         format!("{}{}", prompt_seg_1, prompt_seg_2)
     };
 
@@ -187,7 +188,11 @@ async fn main() -> miette::Result<()> {
                             // Resize event.
                             ReadlineEvent::Resized => {
                                 let shared_writer = &mut terminal_async.clone_shared_writer();
-                                writeln!(shared_writer, "{}", "Terminal resized!".yellow()).into_diagnostic()?;
+                                writeln!(
+                                    shared_writer,
+                                    "{}",
+                                    fg_rgb_color(rgb_color!(frozen_blue), "Terminal resized!")
+                                ).into_diagnostic()?;
                             }
                             // Ctrl+D, Ctrl+C.
                             ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
@@ -196,8 +201,8 @@ async fn main() -> miette::Result<()> {
                         }
                     },
                     Err(err) => {
-                        let msg_1 = format!("Received err: {}", format!("{:?}",err).red());
-                        let msg_2 = format!("{}", "Exiting...".red());
+                        let msg_1 = format!("Received err: {}", red(&format!("{err:?}")));
+                        let msg_2 = format!("{}", red("Exiting..."));
                         terminal_async.println(msg_1).await;
                         terminal_async.println(msg_2).await;
                         break;
@@ -241,7 +246,7 @@ mod task_2 {
 
         // Display a log message with the current counter value.
         tracing::info!(
-            message = %string_storage!("[{}] Second interval went off!", state.task_2_state.counter)
+            message = %inline_string!("[{}] Second interval went off!", state.task_2_state.counter)
         );
 
         // Increment the counter.
@@ -547,7 +552,7 @@ pub mod file_walker {
         let root = create_root(root_path)?;
 
         // Walk the root.
-        let mut stack: VecArray<Folder> = smallvec![root.clone()];
+        let mut stack: InlineVec<Folder> = smallvec![root.clone()];
 
         while let Some(mut current_node) = stack.pop() {
             // Print the current node.

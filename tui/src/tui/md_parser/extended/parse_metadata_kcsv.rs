@@ -19,7 +19,7 @@ use nom::{bytes::complete::tag,
           combinator::opt,
           sequence::{preceded, tuple},
           IResult};
-use r3bl_core::VecArray;
+use r3bl_core::InlineVec;
 
 use crate::{constants::{COLON, COMMA, NEW_LINE, SPACE},
             list,
@@ -57,9 +57,9 @@ pub fn parse_csv_opt_eol<'a>(
 /// | input                | rem     |  output                           |
 /// | -------------------- | ------- | --------------------------------- |
 /// | `"tag1, tag2, tag3"` | `""`    | `vec!(["tag1", "tag2", "tag3"])`  |
-fn parse_comma_separated_list(input: &str) -> IResult<&str, VecArray<&str>> {
-    let acc: VecArray<&str> = input.split(COMMA).collect();
-    let mut trimmed_acc: VecArray<&str> = VecArray::with_capacity(acc.len());
+fn parse_comma_separated_list(input: &str) -> IResult<&str, InlineVec<&str>> {
+    let acc: InlineVec<&str> = input.split(COMMA).collect();
+    let mut trimmed_acc: InlineVec<&str> = InlineVec::with_capacity(acc.len());
 
     // Verify whitespace prefix rules.
     match acc.len() {

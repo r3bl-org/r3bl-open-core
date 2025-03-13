@@ -22,6 +22,7 @@ use r3bl_ansi_color::TransformColor;
 use super::parse_hex_color;
 use crate::common::{CommonError, CommonErrorType, CommonResult};
 
+/// Very similar to `rgb_color!` in `r3bl_ansi_color` crate.
 #[macro_export]
 macro_rules! tui_color {
     (lizard_green) => {
@@ -241,15 +242,48 @@ pub struct AnsiValue {
     pub color: u8,
 }
 
-impl AnsiValue {
-    pub fn new(color: u8) -> Self { Self { color } }
+mod construct {
+    use super::*;
+
+    impl Default for RgbValue {
+        fn default() -> Self { Self::from_u8(255, 255, 255) }
+    }
+
+    impl AnsiValue {
+        pub fn new(color: u8) -> Self { Self { color } }
+    }
 }
 
-impl Default for RgbValue {
-    fn default() -> Self { Self::from_u8(255, 255, 255) }
+/// This is useful when you want to mix and match the two crates. For example, you can use
+/// a nice color from `tui_color!(lizard_green)` and then convert it to an ASTColor using
+/// `ASTColor::from(tui_color)`. So you're no longer limited to the basic colors when
+/// using `ASTColor` in your code (which happens when generating colorized log output).
+mod convert_to_ast_color {
+    use r3bl_ansi_color::ASTColor;
+
+    use super::*;
+
+    impl From<TuiColor> for ASTColor {
+        fn from(tui_color: TuiColor) -> Self {
+            match tui_color {
+                TuiColor::Rgb(rgb_value) => {
+                    ASTColor::Rgb(rgb_value.red, rgb_value.green, rgb_value.blue)
+                }
+                TuiColor::Ansi(ansi_value) => ASTColor::Ansi256(ansi_value.color),
+                TuiColor::Basic(basic_color) => {
+                    let rgb_value =
+                        RgbValue::try_from_tui_color(TuiColor::Basic(basic_color))
+                            .unwrap_or_default();
+                    ASTColor::Rgb(rgb_value.red, rgb_value.green, rgb_value.blue)
+                }
+                TuiColor::Reset => ASTColor::default(),
+            }
+        }
+    }
 }
 
-mod convert_rgb_ansi_values {
+/// This is useful when you want to go between different variants of the `TuiColor` enum.
+mod convert_between_variants {
     use super::*;
 
     impl From<RgbValue> for AnsiValue {
@@ -274,32 +308,9 @@ mod convert_rgb_ansi_values {
             Self::from_u8(red, green, blue)
         }
     }
-
-    /// https://www.ditig.com/256-colors-cheat-sheet
-    /// ANSI: 57 BlueViolet
-    /// RGB: #5f00ff rgb(95,0,255)
-    #[cfg(test)]
-    mod test_conversions_between_ansi_and_rgb_values {
-        use super::*;
-        use crate::assert_eq2;
-
-        #[test]
-        fn test_ansi_to_rgb() {
-            let ansi = AnsiValue::new(57);
-            let rgb = RgbValue::from(ansi);
-            assert_eq2!(rgb, RgbValue::from_u8(95, 0, 255))
-        }
-
-        #[test]
-        fn test_rgb_to_ansi() {
-            let rgb = RgbValue::from_u8(95, 0, 255);
-            let ansi = AnsiValue::from(rgb);
-            assert_eq2!(ansi, AnsiValue::new(57))
-        }
-    }
 }
 
-mod rgb_values_impl {
+mod rgb_value_impl_block {
     use super::*;
 
     impl RgbValue {
@@ -434,17 +445,38 @@ mod rgb_values_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::assert_eq2;
+
+    /// https://www.ditig.com/256-colors-cheat-sheet
+    /// ANSI: 57 BlueViolet
+    /// RGB: #5f00ff rgb(95,0,255)
+    #[test]
+    fn test_ansi_to_rgb() {
+        let ansi = AnsiValue::new(57);
+        let rgb = RgbValue::from(ansi);
+        assert_eq2!(rgb, RgbValue::from_u8(95, 0, 255))
+    }
+
+    /// https://www.ditig.com/256-colors-cheat-sheet
+    /// ANSI: 57 BlueViolet
+    /// RGB: #5f00ff rgb(95,0,255)
+    #[test]
+    fn test_rgb_to_ansi() {
+        let rgb = RgbValue::from_u8(95, 0, 255);
+        let ansi = AnsiValue::from(rgb);
+        assert_eq2!(ansi, AnsiValue::new(57))
+    }
 
     #[test]
     fn test_ansi_colors() {
         let color = tui_color!(ansi 42);
-        assert_eq!(color, TuiColor::Ansi(AnsiValue::new(42)));
+        assert_eq2!(color, TuiColor::Ansi(AnsiValue::new(42)));
     }
 
     #[test]
     fn test_new() {
         let value = RgbValue::from_u8(1, 2, 3);
-        assert_eq!((value.red, value.green, value.blue), (1, 2, 3));
+        assert_eq2!((value.red, value.green, value.blue), (1, 2, 3));
     }
 
     #[test]
@@ -453,7 +485,7 @@ mod tests {
         {
             let hex_color = "#ff0000";
             let value = RgbValue::try_from_hex_color(hex_color).unwrap();
-            assert_eq!((value.red, value.green, value.blue), (255, 0, 0));
+            assert_eq2!((value.red, value.green, value.blue), (255, 0, 0));
         }
 
         // Invalid.
@@ -467,13 +499,13 @@ mod tests {
         {
             let hex_color = "#ff0000";
             let value = tui_color!(hex hex_color);
-            assert_eq!(value, tui_color!(255, 0, 0));
+            assert_eq2!(value, tui_color!(255, 0, 0));
         }
     }
 
     #[test]
     fn test_try_from_tui_color() {
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(TuiColor::Rgb(RgbValue::from_u8(1, 2, 3)))
                 .unwrap(),
             RgbValue {
@@ -483,7 +515,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Black)).unwrap(),
             RgbValue {
                 red: 0,
@@ -492,7 +524,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::White)).unwrap(),
             RgbValue {
                 red: 255,
@@ -501,7 +533,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Grey)).unwrap(),
             RgbValue {
                 red: 128,
@@ -510,7 +542,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Red)).unwrap(),
             RgbValue {
                 red: 255,
@@ -519,7 +551,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Green)).unwrap(),
             RgbValue {
                 red: 0,
@@ -558,7 +590,7 @@ mod tests {
         let guards_red = tui_color!(guards_red);
         let orange = tui_color!(orange);
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(black).unwrap(),
             RgbValue {
                 red: 0,
@@ -567,7 +599,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(dark_grey).unwrap(),
             RgbValue {
                 red: 64,
@@ -576,7 +608,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(red).unwrap(),
             RgbValue {
                 red: 255,
@@ -585,7 +617,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(dark_red).unwrap(),
             RgbValue {
                 red: 128,
@@ -594,7 +626,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(green).unwrap(),
             RgbValue {
                 red: 0,
@@ -603,7 +635,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(dark_green).unwrap(),
             RgbValue {
                 red: 0,
@@ -612,7 +644,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(yellow).unwrap(),
             RgbValue {
                 red: 255,
@@ -621,7 +653,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(dark_yellow).unwrap(),
             RgbValue {
                 red: 128,
@@ -630,7 +662,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(blue).unwrap(),
             RgbValue {
                 red: 0,
@@ -639,7 +671,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(dark_blue).unwrap(),
             RgbValue {
                 red: 0,
@@ -648,7 +680,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(magenta).unwrap(),
             RgbValue {
                 red: 255,
@@ -657,7 +689,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(dark_magenta).unwrap(),
             RgbValue {
                 red: 128,
@@ -666,7 +698,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(cyan).unwrap(),
             RgbValue {
                 red: 0,
@@ -675,7 +707,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(dark_cyan).unwrap(),
             RgbValue {
                 red: 0,
@@ -684,7 +716,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(white).unwrap(),
             RgbValue {
                 red: 255,
@@ -693,7 +725,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(grey).unwrap(),
             RgbValue {
                 red: 128,
@@ -704,7 +736,7 @@ mod tests {
 
         assert!(RgbValue::try_from_tui_color(reset).is_err());
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(lizard_green).unwrap(),
             RgbValue {
                 red: 20,
@@ -713,7 +745,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(slate_grey).unwrap(),
             RgbValue {
                 red: 94,
@@ -722,7 +754,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(silver_metallic).unwrap(),
             RgbValue {
                 red: 213,
@@ -731,7 +763,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(frozen_blue).unwrap(),
             RgbValue {
                 red: 171,
@@ -740,7 +772,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(moonlight_blue).unwrap(),
             RgbValue {
                 red: 31,
@@ -749,7 +781,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(night_blue).unwrap(),
             RgbValue {
                 red: 14,
@@ -758,7 +790,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(guards_red).unwrap(),
             RgbValue {
                 red: 200,
@@ -767,7 +799,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
+        assert_eq2!(
             RgbValue::try_from_tui_color(orange).unwrap(),
             RgbValue {
                 red: 255,
