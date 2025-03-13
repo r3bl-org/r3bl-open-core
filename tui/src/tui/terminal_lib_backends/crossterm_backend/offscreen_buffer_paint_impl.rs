@@ -20,10 +20,10 @@ use r3bl_core::{ch,
                 row,
                 ColIndex,
                 GCString,
+                InlineString,
                 LockedOutputDevice,
                 RowIndex,
                 Size,
-                StringStorage,
                 TuiStyle};
 
 use crate::{diff_chunks::PixelCharDiffChunks,
@@ -223,7 +223,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 } => {
                     it.push(RenderOp::ApplyColors(*maybe_style));
                     it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                        StringStorage::from_str(text),
+                        InlineString::from_str(text),
                         *maybe_style,
                     ))
                 }
@@ -241,7 +241,7 @@ mod render_helpers {
     pub struct Context {
         pub display_col_index_for_line: ColIndex,
         pub display_row_index: RowIndex,
-        pub buffer_plain_text: StringStorage,
+        pub buffer_plain_text: InlineString,
         pub prev_style: Option<TuiStyle>,
         pub render_ops: RenderOps,
     }
@@ -250,7 +250,7 @@ mod render_helpers {
         pub fn new() -> Self {
             Context {
                 display_col_index_for_line: col(0),
-                buffer_plain_text: StringStorage::new(),
+                buffer_plain_text: InlineString::new(),
                 render_ops: render_ops!(),
                 display_row_index: row(0),
                 prev_style: None,

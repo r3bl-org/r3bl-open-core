@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::StringStorage;
+use crate::InlineString;
 
 /// This macro is used to format an option. If the option is [Some], it will return the
 /// value. It is meant for use with [std::fmt::Formatter::debug_struct].
@@ -56,10 +56,10 @@ pub enum FormatOptionMsg {
 
 /// Marker trait to "remember" which types can be converted to plain text.
 pub trait ConvertToPlainText {
-    fn to_plain_text(&self) -> StringStorage;
+    fn to_plain_text(&self) -> InlineString;
 }
 
 /// Marker trait to "remember" which types support pretty printing for debugging.
 pub trait PrettyPrintDebug {
-    fn pretty_print_debug(&self) -> StringStorage;
+    fn pretty_print_debug(&self) -> InlineString;
 }

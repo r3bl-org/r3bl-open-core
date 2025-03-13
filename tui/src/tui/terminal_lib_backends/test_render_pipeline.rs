@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, VecArray};
+    use r3bl_core::{assert_eq2, InlineVec};
     use smallvec::smallvec;
 
     use crate::{render_ops, render_pipeline, RenderOp, RenderPipeline, ZOrder};
@@ -51,7 +51,7 @@ mod tests {
 
         assert_eq2!(render_op_vec.len(), 2);
         assert_eq2!(render_op_vec, {
-            let expected: VecArray<RenderOp> =
+            let expected: InlineVec<RenderOp> =
                 smallvec![RenderOp::ClearScreen, RenderOp::ResetColor];
             expected
         });
@@ -72,13 +72,13 @@ mod tests {
             );
 
             assert_eq2!(it.get_all_render_op_in(ZOrder::Normal).unwrap(), {
-                let expected: VecArray<RenderOp> =
+                let expected: InlineVec<RenderOp> =
                     smallvec![RenderOp::ClearScreen, RenderOp::ResetColor];
                 expected
             });
 
             assert_eq2!(it.get_all_render_op_in(ZOrder::High).unwrap(), {
-                let expected: VecArray<RenderOp> = smallvec![RenderOp::ResetColor];
+                let expected: InlineVec<RenderOp> = smallvec![RenderOp::ResetColor];
                 expected
             });
 
@@ -94,7 +94,7 @@ mod tests {
             );
 
             assert_eq2!(it.get_all_render_op_in(ZOrder::Normal).unwrap(), {
-                let expected: VecArray<RenderOp> =
+                let expected: InlineVec<RenderOp> =
                     smallvec![RenderOp::ClearScreen, RenderOp::ResetColor];
                 expected
             });
@@ -117,7 +117,7 @@ mod tests {
                     .get_all_render_op_in(ZOrder::Normal)
                     .unwrap(),
                 {
-                    let expected: VecArray<RenderOp> = smallvec![
+                    let expected: InlineVec<RenderOp> = smallvec![
                         RenderOp::ClearScreen,
                         RenderOp::ResetColor,
                         RenderOp::ClearScreen,
@@ -129,7 +129,7 @@ mod tests {
             assert_eq2!(
                 pipeline_merged.get_all_render_op_in(ZOrder::High).unwrap(),
                 {
-                    let expected: VecArray<RenderOp> = smallvec![RenderOp::ResetColor];
+                    let expected: InlineVec<RenderOp> = smallvec![RenderOp::ResetColor];
                     expected
                 }
             );

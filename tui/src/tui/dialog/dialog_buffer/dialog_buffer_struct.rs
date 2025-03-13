@@ -17,7 +17,7 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use r3bl_core::{ch, fmt_option, ChUnit, StringStorage, VecArray};
+use r3bl_core::{ch, fmt_option, ChUnit, InlineString, InlineVec};
 
 use crate::{EditorBuffer, DEFAULT_SYN_HI_FILE_EXT};
 
@@ -29,8 +29,8 @@ use crate::{EditorBuffer, DEFAULT_SYN_HI_FILE_EXT};
 #[derive(Clone, PartialEq)]
 pub struct DialogBuffer {
     pub editor_buffer: EditorBuffer,
-    pub title: StringStorage,
-    pub maybe_results: Option<VecArray<StringStorage>>,
+    pub title: InlineString,
+    pub maybe_results: Option<InlineVec<InlineString>>,
 }
 
 impl DialogBuffer {
@@ -47,7 +47,7 @@ impl DialogBuffer {
     pub fn new_empty() -> Self {
         DialogBuffer {
             editor_buffer: EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None),
-            title: StringStorage::new(),
+            title: InlineString::new(),
             maybe_results: None,
         }
     }

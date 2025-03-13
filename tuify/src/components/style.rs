@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::Color;
+use r3bl_ansi_color::ASTColor;
 
 #[derive(Copy, Clone, Debug)]
 pub struct StyleSheet {
@@ -29,23 +29,23 @@ pub struct StyleSheet {
 impl Default for StyleSheet {
     fn default() -> Self {
         let focused_and_selected_style = Style {
-            fg_color: Color::Rgb(20, 244, 0),
-            bg_color: Color::Rgb(51, 32, 66),
+            fg_color: ASTColor::Rgb(20, 244, 0),
+            bg_color: ASTColor::Rgb(51, 32, 66),
             ..Style::default()
         };
         let focused_style = Style {
-            fg_color: Color::Rgb(20, 244, 0),
+            fg_color: ASTColor::Rgb(20, 244, 0),
             ..Style::default()
         };
         let unselected_style = Style { ..Style::default() };
         let selected_style = Style {
-            fg_color: Color::Rgb(203, 170, 250),
-            bg_color: Color::Rgb(51, 32, 66),
+            fg_color: ASTColor::Rgb(203, 170, 250),
+            bg_color: ASTColor::Rgb(51, 32, 66),
             ..Style::default()
         };
         let header_style = Style {
-            fg_color: Color::Rgb(171, 204, 242),
-            bg_color: Color::Rgb(31, 36, 46),
+            fg_color: ASTColor::Rgb(171, 204, 242),
+            bg_color: ASTColor::Rgb(31, 36, 46),
             ..Style::default()
         };
         StyleSheet {
@@ -61,28 +61,28 @@ impl Default for StyleSheet {
 impl StyleSheet {
     pub fn sea_foam_style() -> Self {
         let focused_and_selected_style = Style {
-            fg_color: Color::Rgb(19, 227, 255),
-            bg_color: Color::Rgb(6, 41, 52),
+            fg_color: ASTColor::Rgb(19, 227, 255),
+            bg_color: ASTColor::Rgb(6, 41, 52),
             ..Style::default()
         };
         let focused_style = Style {
-            fg_color: Color::Rgb(19, 227, 255),
-            bg_color: Color::Rgb(14, 17, 23),
+            fg_color: ASTColor::Rgb(19, 227, 255),
+            bg_color: ASTColor::Rgb(14, 17, 23),
             ..Style::default()
         };
         let unselected_style = Style {
-            fg_color: Color::Rgb(241, 241, 241),
-            bg_color: Color::Rgb(14, 17, 23),
+            fg_color: ASTColor::Rgb(241, 241, 241),
+            bg_color: ASTColor::Rgb(14, 17, 23),
             ..Style::default()
         };
         let selected_style = Style {
-            fg_color: Color::Rgb(209, 244, 255),
-            bg_color: Color::Rgb(6, 41, 52),
+            fg_color: ASTColor::Rgb(209, 244, 255),
+            bg_color: ASTColor::Rgb(6, 41, 52),
             ..Style::default()
         };
         let header_style = Style {
-            fg_color: Color::Rgb(229, 239, 123),
-            bg_color: Color::Rgb(31, 36, 46),
+            fg_color: ASTColor::Rgb(229, 239, 123),
+            bg_color: ASTColor::Rgb(31, 36, 46),
             ..Style::default()
         };
         StyleSheet {
@@ -96,28 +96,28 @@ impl StyleSheet {
 
     pub fn hot_pink_style() -> Self {
         let focused_and_selected_style = Style {
-            fg_color: Color::Rgb(255, 0, 214),
-            bg_color: Color::Rgb(62, 14, 74),
+            fg_color: ASTColor::Rgb(255, 0, 214),
+            bg_color: ASTColor::Rgb(62, 14, 74),
             ..Style::default()
         };
         let focused_style = Style {
-            fg_color: Color::Rgb(255, 0, 214),
-            bg_color: Color::Rgb(14, 17, 23),
+            fg_color: ASTColor::Rgb(255, 0, 214),
+            bg_color: ASTColor::Rgb(14, 17, 23),
             ..Style::default()
         };
         let unselected_style = Style {
-            fg_color: Color::Rgb(219, 202, 232),
-            bg_color: Color::Rgb(14, 17, 23),
+            fg_color: ASTColor::Rgb(219, 202, 232),
+            bg_color: ASTColor::Rgb(14, 17, 23),
             ..Style::default()
         };
         let selected_style = Style {
-            fg_color: Color::Rgb(255, 181, 234),
-            bg_color: Color::Rgb(62, 14, 74),
+            fg_color: ASTColor::Rgb(255, 181, 234),
+            bg_color: ASTColor::Rgb(62, 14, 74),
             ..Style::default()
         };
         let header_style = Style {
-            fg_color: Color::Rgb(190, 253, 249),
-            bg_color: Color::Rgb(31, 36, 46),
+            fg_color: ASTColor::Rgb(190, 253, 249),
+            bg_color: ASTColor::Rgb(31, 36, 46),
             ..Style::default()
         };
         StyleSheet {
@@ -139,8 +139,8 @@ pub struct Style {
     pub reverse: bool,
     pub hidden: bool,
     pub strikethrough: bool,
-    pub fg_color: Color,
-    pub bg_color: Color,
+    pub fg_color: ASTColor,
+    pub bg_color: ASTColor,
 }
 
 impl Default for Style {
@@ -153,8 +153,8 @@ impl Default for Style {
             reverse: false,
             hidden: false,
             strikethrough: false,
-            fg_color: Color::Rgb(193, 193, 193),
-            bg_color: Color::Rgb(14, 17, 23),
+            fg_color: ASTColor::Rgb(193, 193, 193),
+            bg_color: ASTColor::Rgb(14, 17, 23),
         }
     }
 }
@@ -169,29 +169,38 @@ mod tests {
 
         assert_eq!(
             stylesheet.focused_and_selected_style.fg_color,
-            Color::Rgb(20, 244, 0)
+            ASTColor::Rgb(20, 244, 0)
         );
         assert_eq!(
             stylesheet.focused_and_selected_style.bg_color,
-            Color::Rgb(51, 32, 66)
+            ASTColor::Rgb(51, 32, 66)
         );
 
-        assert_eq!(stylesheet.focused_style.fg_color, Color::Rgb(20, 244, 0));
+        assert_eq!(stylesheet.focused_style.fg_color, ASTColor::Rgb(20, 244, 0));
 
         assert_eq!(
             stylesheet.unselected_style.fg_color,
-            Color::Rgb(193, 193, 193)
+            ASTColor::Rgb(193, 193, 193)
         );
-        assert_eq!(stylesheet.unselected_style.bg_color, Color::Rgb(14, 17, 23));
+        assert_eq!(
+            stylesheet.unselected_style.bg_color,
+            ASTColor::Rgb(14, 17, 23)
+        );
 
         assert_eq!(
             stylesheet.selected_style.fg_color,
-            Color::Rgb(203, 170, 250)
+            ASTColor::Rgb(203, 170, 250)
         );
-        assert_eq!(stylesheet.selected_style.bg_color, Color::Rgb(51, 32, 66));
+        assert_eq!(
+            stylesheet.selected_style.bg_color,
+            ASTColor::Rgb(51, 32, 66)
+        );
 
-        assert_eq!(stylesheet.header_style.fg_color, Color::Rgb(171, 204, 242));
-        assert_eq!(stylesheet.header_style.bg_color, Color::Rgb(31, 36, 46));
+        assert_eq!(
+            stylesheet.header_style.fg_color,
+            ASTColor::Rgb(171, 204, 242)
+        );
+        assert_eq!(stylesheet.header_style.bg_color, ASTColor::Rgb(31, 36, 46));
     }
 
     #[test]
@@ -200,30 +209,39 @@ mod tests {
 
         assert_eq!(
             stylesheet.focused_and_selected_style.fg_color,
-            Color::Rgb(19, 227, 255)
+            ASTColor::Rgb(19, 227, 255)
         );
         assert_eq!(
             stylesheet.focused_and_selected_style.bg_color,
-            Color::Rgb(6, 41, 52)
+            ASTColor::Rgb(6, 41, 52)
         );
 
-        assert_eq!(stylesheet.focused_style.fg_color, Color::Rgb(19, 227, 255));
-        assert_eq!(stylesheet.focused_style.bg_color, Color::Rgb(14, 17, 23));
+        assert_eq!(
+            stylesheet.focused_style.fg_color,
+            ASTColor::Rgb(19, 227, 255)
+        );
+        assert_eq!(stylesheet.focused_style.bg_color, ASTColor::Rgb(14, 17, 23));
 
         assert_eq!(
             stylesheet.unselected_style.fg_color,
-            Color::Rgb(241, 241, 241)
+            ASTColor::Rgb(241, 241, 241)
         );
-        assert_eq!(stylesheet.unselected_style.bg_color, Color::Rgb(14, 17, 23));
+        assert_eq!(
+            stylesheet.unselected_style.bg_color,
+            ASTColor::Rgb(14, 17, 23)
+        );
 
         assert_eq!(
             stylesheet.selected_style.fg_color,
-            Color::Rgb(209, 244, 255)
+            ASTColor::Rgb(209, 244, 255)
         );
-        assert_eq!(stylesheet.selected_style.bg_color, Color::Rgb(6, 41, 52));
+        assert_eq!(stylesheet.selected_style.bg_color, ASTColor::Rgb(6, 41, 52));
 
-        assert_eq!(stylesheet.header_style.fg_color, Color::Rgb(229, 239, 123));
-        assert_eq!(stylesheet.header_style.bg_color, Color::Rgb(31, 36, 46));
+        assert_eq!(
+            stylesheet.header_style.fg_color,
+            ASTColor::Rgb(229, 239, 123)
+        );
+        assert_eq!(stylesheet.header_style.bg_color, ASTColor::Rgb(31, 36, 46));
     }
 
     #[test]
@@ -232,28 +250,40 @@ mod tests {
 
         assert_eq!(
             style_sheet.focused_and_selected_style.fg_color,
-            Color::Rgb(255, 0, 214)
+            ASTColor::Rgb(255, 0, 214)
         );
         assert_eq!(
             style_sheet.focused_and_selected_style.bg_color,
-            Color::Rgb(62, 14, 74)
+            ASTColor::Rgb(62, 14, 74)
         );
-        assert_eq!(style_sheet.focused_style.fg_color, Color::Rgb(255, 0, 214));
-        assert_eq!(style_sheet.focused_style.bg_color, Color::Rgb(14, 17, 23));
+        assert_eq!(
+            style_sheet.focused_style.fg_color,
+            ASTColor::Rgb(255, 0, 214)
+        );
+        assert_eq!(
+            style_sheet.focused_style.bg_color,
+            ASTColor::Rgb(14, 17, 23)
+        );
         assert_eq!(
             style_sheet.unselected_style.fg_color,
-            Color::Rgb(219, 202, 232)
+            ASTColor::Rgb(219, 202, 232)
         );
         assert_eq!(
             style_sheet.unselected_style.bg_color,
-            Color::Rgb(14, 17, 23)
+            ASTColor::Rgb(14, 17, 23)
         );
         assert_eq!(
             style_sheet.selected_style.fg_color,
-            Color::Rgb(255, 181, 234)
+            ASTColor::Rgb(255, 181, 234)
         );
-        assert_eq!(style_sheet.selected_style.bg_color, Color::Rgb(62, 14, 74));
-        assert_eq!(style_sheet.header_style.fg_color, Color::Rgb(190, 253, 249));
-        assert_eq!(style_sheet.header_style.bg_color, Color::Rgb(31, 36, 46));
+        assert_eq!(
+            style_sheet.selected_style.bg_color,
+            ASTColor::Rgb(62, 14, 74)
+        );
+        assert_eq!(
+            style_sheet.header_style.fg_color,
+            ASTColor::Rgb(190, 253, 249)
+        );
+        assert_eq!(style_sheet.header_style.bg_color, ASTColor::Rgb(31, 36, 46));
     }
 }

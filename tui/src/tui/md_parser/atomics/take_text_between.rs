@@ -15,13 +15,12 @@
  *   limitations under the License.
  */
 
-use crossterm::style::Stylize;
 use nom::{bytes::complete::{tag, take_until},
           combinator::map,
           error::ErrorKind,
           sequence::tuple,
           IResult};
-use r3bl_core::call_if_true;
+use r3bl_ansi_color::{green, red};
 
 use crate::{constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
 
@@ -32,10 +31,10 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
     start_delim: &'input str,
     end_delim: &'input str,
 ) -> IResult<&'input str, &'input str> {
-    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+    DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
             "\n{} specialized parser take text between delims err on new line: \ninput: {:?}, start_delim: {:?}, end_delim: {:?}",
-            "■■".green(),
+            green("■■"),
             input,
             start_delim,
             end_delim
@@ -46,8 +45,8 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
 
     if let Ok((_, output)) = &it {
         if output.contains(NEW_LINE) {
-            call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-                println!("{} parser error out for input: {:?}", "⬢⬢".red(), input);
+            DEBUG_MD_PARSER_STDOUT.then(|| {
+                println!("{} parser error out for input: {:?}", red("⬢⬢"), input);
             });
             return Err(nom::Err::Error(nom::error::Error {
                 input: output,
@@ -57,8 +56,8 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
     }
 
     if it.is_err() {
-        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-            println!("{} parser error out for input: {:?}", "⬢⬢".red(), input);
+        DEBUG_MD_PARSER_STDOUT.then(|| {
+            println!("{} parser error out for input: {:?}", red("⬢⬢"), input);
         });
     }
     it

@@ -15,12 +15,12 @@
  *   limitations under the License.
  */
 
-use r3bl_core::VecArray;
+use r3bl_core::InlineVec;
 
 use super::clap_config::BranchSubcommand;
 
 #[derive(Debug, Clone, Default)]
 pub struct CommandSuccessfulResponse {
-    pub maybe_deleted_branches: Option<VecArray<String>>,
+    pub maybe_deleted_branches: Option<InlineVec<String>>,
     pub branch_subcommand: Option<BranchSubcommand>,
 }

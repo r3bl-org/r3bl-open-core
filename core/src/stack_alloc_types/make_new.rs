@@ -17,7 +17,7 @@
 
 // XMARK: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
 
-/// This macro joins a collection of items into a [crate::StringStorage] (which is
+/// This macro joins a collection of items into a [crate::InlineString] (which is
 /// allocated and returned) with a specified delimiter and format. It iterates over the
 /// collection, formats each item with the provided format, and joins them with the
 /// delimiter. No heap allocation via [String] creation occurs when the `$format`
@@ -57,7 +57,7 @@ macro_rules! join_with_index {
         format: $($format:tt)*
     ) => {{
         use std::fmt::Write as _;
-        let mut acc = $crate::StringStorage::new();
+        let mut acc = $crate::InlineString::new();
         let mut iter = $collection.iter().enumerate();
         // First item.
         if let Some(($index, $item)) = iter.next() {
@@ -166,7 +166,7 @@ mod tests_join_with_index {
     }
 }
 
-/// A macro to join elements of a collection into a single [crate::StringStorage] (which
+/// A macro to join elements of a collection into a single [crate::InlineString] (which
 /// is allocated and returned) with a specified delimiter and format. No heap allocation
 /// via [String] creation occurs when the `$format` expression is executed.
 ///
@@ -201,7 +201,7 @@ macro_rules! join {
         format: $($format:tt)*
     ) => {{
         use std::fmt::Write as _;
-        let mut acc = $crate::StringStorage::new();
+        let mut acc = $crate::InlineString::new();
         let mut iter = $collection.iter();
         // First item.
         if let Some($item) = iter.next() {

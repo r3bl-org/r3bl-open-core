@@ -55,11 +55,10 @@
 
 use std::fmt::{Debug, Display};
 
-use crossterm::style::Stylize;
 use kv::{Bincode, Config, Store};
 use miette::{Context, IntoDiagnostic};
+use r3bl_ansi_color::{bold, rgb_color};
 use serde::{Deserialize, Serialize};
-use tracing::{debug, instrument};
 
 /// Convenience type alias for the [kv::Bucket] type.
 /// 1. A [kv::Bucket] is created from a [Store].
@@ -102,7 +101,7 @@ mod default_settings {
 /// Note there are no lifetime annotations on this function. All the other functions below
 /// do have lifetime annotations, since they are all tied to the lifetime of the returned
 /// [Store].
-#[instrument]
+#[tracing::instrument]
 pub fn load_or_create_store(
     maybe_db_folder_path: Option<&String>,
 ) -> miette::Result<Store> {
@@ -121,13 +120,10 @@ pub fn load_or_create_store(
                 db_folder_path: db_folder_path.clone(),
             })?;
 
-    debug!(
-        "📑 {}",
-        format!(
-            "{}{}",
-            "load or create a store: ",
-            /*.blue() */ db_folder_path /*.bold().cyan() */
-        )
+    // % is Display, ? is Debug.
+    tracing::debug!(
+        message = "📑 load or create a store",
+        db_folder_path = %db_folder_path
     );
 
     Ok(store)
@@ -135,7 +131,7 @@ pub fn load_or_create_store(
 
 /// A [kv::Bucket] provides typed access to a section of the key/value [kv::Store]. It has
 /// a lifetime, since the [kv::Bucket] is created from a [kv::Store].
-#[instrument(fields(store = ?store.path(), buckets = ?store.buckets()))]
+#[tracing::instrument(fields(store = ?store.path(), buckets = ?store.buckets()))]
 pub fn load_or_create_bucket_from_store<
     'a,
     KeyT: for<'k> kv::Key<'k>,
@@ -155,20 +151,17 @@ pub fn load_or_create_bucket_from_store<
             bucket_name: bucket_name.clone(),
         })?;
 
-    debug!(
-        "📦 {}",
-        format!(
-            "{}{}",
-            "Load or create bucket from store, and instantiate: ", /*.blue() */
-            bucket_name,                                           /*.bold().cyan() */
-        )
+    // % is Display, ? is Debug.
+    tracing::debug!(
+        message = "📦 Load or create bucket from store, and instantiate",
+        bucket_name = %bucket_name
     );
 
     Ok(my_payload_bucket)
 }
 
 /// The value is serialized using [Bincode] prior to saving it to the key/value store.
-#[instrument(skip(bucket))]
+#[tracing::instrument(skip(bucket))]
 pub fn insert_into_bucket<
     'a,
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
@@ -178,7 +171,8 @@ pub fn insert_into_bucket<
     key: KeyT,
     value: ValueT,
 ) -> miette::Result<()> {
-    let value_str = format!("{:?}", value).bold().cyan();
+    let value_str = inline_string!("{:?}", value);
+    let value_str_fmt = bold(&value_str).fg_rgb_color(rgb_color!(cyan));
 
     // Serialize the Rust struct into a binary payload.
     bucket
@@ -186,14 +180,11 @@ pub fn insert_into_bucket<
         .into_diagnostic()
         .wrap_err(KvErrorCouldNot::SaveKeyValuePairToBucket)?;
 
-    debug!(
-        "🔽 {}",
-        format!(
-            "{}: {}: {}",
-            "Save key / value pair to bucket", /*.green() */
-            key.to_string(),                   /*.bold().cyan() */
-            value_str
-        )
+    // % is Display, ? is Debug.
+    tracing::debug!(
+        message = "🔽 Save key / value pair to bucket",
+        key = %key.to_string(),
+        value = %value_str_fmt
     );
 
     Ok(())
@@ -201,7 +192,7 @@ pub fn insert_into_bucket<
 
 /// The value in the key/value store is serialized using [Bincode]. Upon loading that
 /// value it is deserialized and returned by this function.
-#[instrument(skip(bucket))]
+#[tracing::instrument(skip(bucket))]
 pub fn get_from_bucket<
     'a,
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
@@ -221,20 +212,17 @@ pub fn get_from_bucket<
         _ => Ok(None),
     };
 
-    debug!(
-        "🔼 {}",
-        format!(
-            "{}: {}: {}",
-            "Load key / value pair from bucket", /*.green() */
-            key.to_string(),                     /*.bold().cyan() */
-            format!("{:?}", it)                  /*.bold().cyan() */
-        )
+    // % is Display, ? is Debug.
+    tracing::debug!(
+        message = "🔼 Load key / value pair from bucket",
+        key = %key.to_string(),
+        value = ?it
     );
 
     it
 }
 
-#[instrument(skip(bucket))]
+#[tracing::instrument(skip(bucket))]
 pub fn remove_from_bucket<
     'a,
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
@@ -254,20 +242,17 @@ pub fn remove_from_bucket<
         _ => Ok(None),
     };
 
-    debug!(
-        "❌ {}",
-        format!(
-            "{}: {}: {}",
-            "Delete key / value pair from bucket", /*.green() */
-            key.to_string(),                       /*.bold().cyan() */
-            format!("{:?}", it)                    /*.bold().cyan() */
-        )
+    // % is Display, ? is Debug.
+    tracing::debug!(
+        message = "❌ Delete key / value pair from bucket",
+        key = %key.to_string(),
+        value = ?it
     );
 
     it
 }
 
-#[instrument(skip(bucket))]
+#[tracing::instrument(skip(bucket))]
 pub fn is_key_contained_in_bucket<
     'a,
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
@@ -281,17 +266,14 @@ pub fn is_key_contained_in_bucket<
         .into_diagnostic()
         .wrap_err(KvErrorCouldNot::LoadKeyValuePairFromBucket)?;
 
-    debug!(
-        "🔼 {}",
-        format!(
-            "{}: {}: {}",
-            "Check if key is contained in bucket", /*.green() */
-            key.to_string(),                       /*.bold().cyan() */
-            match it {
-                true => "true",   /*.to_string().green() */
-                false => "false", /*.to_string().red() */
-            }
-        )
+    // % is Display, ? is Debug.
+    tracing::debug!(
+        message = "🔼 Check if key is contained in bucket",
+        key = %key.to_string(),
+        value = %match it {
+            true => "true",
+            false => "false",
+        }
     );
 
     Ok(it)
@@ -350,6 +332,8 @@ pub mod kv_error {
     }
 }
 use kv_error::*;
+
+use crate::inline_string;
 
 #[cfg(test)]
 mod kv_tests {

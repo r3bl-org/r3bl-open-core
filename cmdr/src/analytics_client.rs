@@ -27,7 +27,7 @@ use r3bl_core::{CommonError,
                 CommonErrorType,
                 CommonResult,
                 friendly_random_id,
-                string_storage};
+                inline_string};
 use reqwest::{Client, Response};
 
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;
@@ -259,7 +259,7 @@ pub mod report_analytics {
                                 // % is Display, ? is Debug.
                                 tracing::debug!(
                                     message = "Successfully reported analytics event to r3bl-base.",
-                                    json = %string_storage!("{json:#?}")
+                                    json = %inline_string!("{json:#?}")
                                 );
                             });
                         }
@@ -345,7 +345,7 @@ pub mod http_client {
             DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
                 tracing::debug!(
                     message = "GET request succeeded.",
-                    response = %string_storage!("{response:#?}")
+                    response = %inline_string!("{response:#?}")
                 );
             });
             Ok(response)
@@ -354,7 +354,7 @@ pub mod http_client {
             // % is Display, ? is Debug.
             tracing::error!(
                 message = "GET request failed.",
-                response = %string_storage!("{response:#?}")
+                response = %inline_string!("{response:#?}")
             );
             response.error_for_status()
         }
@@ -372,7 +372,7 @@ pub mod http_client {
                 // % is Display, ? is Debug.
                 tracing::debug!(
                     message = "POST request succeeded.",
-                    response = %string_storage!("{response:#?}")
+                    response = %inline_string!("{response:#?}")
                 );
             });
             Ok(response)
@@ -380,7 +380,7 @@ pub mod http_client {
             // Handle error response.
             tracing::error!(
                 message = "POST request failed.",
-                response = %string_storage!("{response:#?}")
+                response = %inline_string!("{response:#?}")
             );
             response.error_for_status()
         }

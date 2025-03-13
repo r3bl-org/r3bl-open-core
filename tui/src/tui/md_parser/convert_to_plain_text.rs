@@ -21,14 +21,14 @@
 use std::fmt::Write as _;
 
 use r3bl_core::{convert_to_string_slice,
+                inline_string,
                 join,
                 join_fmt,
                 join_with_index,
                 pad_fmt,
-                string_storage,
                 usize_to_u8_array,
-                PrettyPrintDebug,
-                StringStorage};
+                InlineString,
+                PrettyPrintDebug};
 
 use crate::{constants::{BACK_TICK,
                         CHECKED,
@@ -56,7 +56,7 @@ use crate::{constants::{BACK_TICK,
             MdLineFragment};
 
 impl PrettyPrintDebug for MdDocument<'_> {
-    fn pretty_print_debug(&self) -> StringStorage {
+    fn pretty_print_debug(&self) -> InlineString {
         join_with_index!(
             from: self,
             each: block,
@@ -68,7 +68,7 @@ impl PrettyPrintDebug for MdDocument<'_> {
 }
 
 impl PrettyPrintDebug for List<MdLineFragment<'_>> {
-    fn pretty_print_debug(&self) -> StringStorage {
+    fn pretty_print_debug(&self) -> InlineString {
         join!(
             from: self,
             each: fragment,
@@ -79,10 +79,10 @@ impl PrettyPrintDebug for List<MdLineFragment<'_>> {
 }
 
 impl PrettyPrintDebug for MdBlock<'_> {
-    fn pretty_print_debug(&self) -> StringStorage {
+    fn pretty_print_debug(&self) -> InlineString {
         match self {
             MdBlock::Heading(heading_data) => {
-                string_storage!(
+                inline_string!(
                     "{}{}",
                     heading_data.heading_level.pretty_print_debug(),
                     heading_data.text,
@@ -97,9 +97,9 @@ impl PrettyPrintDebug for MdBlock<'_> {
                         .and_then(|first_line| first_line.language)
                         .unwrap_or("n/a")
                 };
-                string_storage!("code block, line count: {line_count}, lang: {lang}")
+                inline_string!("code block, line count: {line_count}, lang: {lang}")
             }
-            MdBlock::Title(title) => string_storage!("title: {}", title),
+            MdBlock::Title(title) => inline_string!("title: {}", title),
             MdBlock::Tags(tags) => {
                 join!(
                     from: tags,
@@ -108,7 +108,7 @@ impl PrettyPrintDebug for MdBlock<'_> {
                     format: "{a}", a = tag
                 )
             }
-            MdBlock::Date(date) => string_storage!("title: {}", date),
+            MdBlock::Date(date) => inline_string!("title: {}", date),
             MdBlock::Authors(authors) => {
                 join!(
                     from: authors,
@@ -118,7 +118,7 @@ impl PrettyPrintDebug for MdBlock<'_> {
                 )
             }
             MdBlock::SmartList((list_lines, _bullet_kind, _indent)) => {
-                let mut acc = StringStorage::new();
+                let mut acc = InlineString::new();
                 _ = write!(acc, "[  ");
                 join_fmt!(
                     fmt: acc,
@@ -135,8 +135,8 @@ impl PrettyPrintDebug for MdBlock<'_> {
 }
 
 impl PrettyPrintDebug for HeadingLevel {
-    fn pretty_print_debug(&self) -> StringStorage {
-        let mut acc = StringStorage::new();
+    fn pretty_print_debug(&self) -> InlineString {
+        let mut acc = InlineString::new();
         let num_of_hashes = self.level;
         pad_fmt!(
             fmt: acc,
@@ -149,11 +149,11 @@ impl PrettyPrintDebug for HeadingLevel {
 }
 
 impl PrettyPrintDebug for MdLineFragment<'_> {
-    fn pretty_print_debug(&self) -> StringStorage {
+    fn pretty_print_debug(&self) -> InlineString {
         match self {
             MdLineFragment::Plain(text) => (*text).into(),
             MdLineFragment::Link(HyperlinkData { text, url }) => {
-                string_storage!(
+                inline_string!(
                     "{LEFT_BRACKET}{text}{RIGHT_BRACKET}{LEFT_PARENTHESIS}{url}{RIGHT_PARENTHESIS}"
                 )
             }
@@ -161,16 +161,16 @@ impl PrettyPrintDebug for MdLineFragment<'_> {
                 text: alt_text,
                 url,
             }) => {
-                string_storage!(
+                inline_string!(
                     "{LEFT_IMAGE}{alt_text}{RIGHT_IMAGE}{LEFT_PARENTHESIS}{url}{RIGHT_PARENTHESIS}"
                 )
             }
-            MdLineFragment::Bold(text) => string_storage!("{STAR}{text}{STAR}"),
+            MdLineFragment::Bold(text) => inline_string!("{STAR}{text}{STAR}"),
             MdLineFragment::Italic(text) => {
-                string_storage!("{UNDERSCORE}{text}{UNDERSCORE}")
+                inline_string!("{UNDERSCORE}{text}{UNDERSCORE}")
             }
             MdLineFragment::InlineCode(text) => {
-                string_storage!("{BACK_TICK}{text}{BACK_TICK}")
+                inline_string!("{BACK_TICK}{text}{BACK_TICK}")
             }
             MdLineFragment::Checkbox(is_checked) => {
                 (if *is_checked { CHECKED } else { UNCHECKED }).into()
@@ -192,8 +192,8 @@ pub fn generate_ordered_list_item_bullet(
     indent: &usize,
     number: &usize,
     is_first_line: &bool,
-) -> StringStorage {
-    let mut acc = StringStorage::new();
+) -> InlineString {
+    let mut acc = InlineString::new();
 
     if *is_first_line {
         pad_fmt!(
@@ -230,8 +230,8 @@ pub fn generate_ordered_list_item_bullet(
 pub fn generate_unordered_list_item_bullet(
     indent: &usize,
     is_first_line: &bool,
-) -> StringStorage {
-    let mut acc = StringStorage::new();
+) -> InlineString {
+    let mut acc = InlineString::new();
 
     if *is_first_line {
         pad_fmt!(

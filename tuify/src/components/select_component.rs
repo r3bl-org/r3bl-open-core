@@ -29,7 +29,7 @@ use r3bl_ansi_color::{blue, AnsiStyledText};
 use r3bl_core::{ch,
                 col,
                 get_terminal_width,
-                string_storage,
+                inline_string,
                 throws,
                 usize,
                 width,
@@ -123,13 +123,13 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 // % is Display, ? is Debug.
                 tracing::info! {
                     message = "🍎🍎🍎\n render()::state",
-                    details = %string_storage!(
+                    details = %inline_string!(
                         "\t[raw_caret_row_index: {a}, scroll_offset_row_index: {b}], \n\theader_viewport_height: {c}, items_viewport_height:{d}, viewport_width:{e}",
-                        a = blue(&string_storage!("{:?}", state.raw_caret_row_index)),
-                        b = blue(&string_storage!("{:?}", state.scroll_offset_row_index)),
-                        c = blue(&string_storage!("{:?}", header_viewport_height)),
-                        d = blue(&string_storage!("{:?}", items_viewport_height)),
-                        e = blue(&string_storage!("{:?}", viewport_width)),
+                        a = blue(&inline_string!("{:?}", state.raw_caret_row_index)),
+                        b = blue(&inline_string!("{:?}", state.scroll_offset_row_index)),
+                        c = blue(&inline_string!("{:?}", header_viewport_height)),
+                        d = blue(&inline_string!("{:?}", items_viewport_height)),
+                        e = blue(&inline_string!("{:?}", viewport_width)),
                     )
                 };
             });
@@ -246,7 +246,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                         zipped.for_each(|(clipped_text, header_span)| {
                             ansi_styled_text_vec.push(AnsiStyledText {
                                 text: clipped_text,
-                                style: header_span.style,
+                                style: header_span.style.clone(),
                             });
                         });
                         multi_line_header_clipped_vec.push(ansi_styled_text_vec);

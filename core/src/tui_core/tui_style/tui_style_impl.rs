@@ -19,12 +19,10 @@ use core::fmt::Debug;
 use std::{fmt::{Display, Formatter},
           ops::{Add, AddAssign}};
 
-use sizing::VecStyles;
-use smallvec::SmallVec;
-use strum::EnumCount;
+use r3bl_ansi_color::sizing::InlineVecASTStyles;
 
 use super::TuiColor;
-use crate::{ChUnit, VecArrayStr, ch, convert_tui_color_into_r3bl_ansi_color};
+use crate::{ChUnit, InlineVecStr, ch, convert_tui_color_into_r3bl_ansi_color};
 
 /// Please use [crate::new_style!] declarative macro to generate code for this struct.
 ///
@@ -195,7 +193,7 @@ mod addition {
 
 mod style_helpers {
     use super::*;
-    use crate::{CharStorage, char_storage, join, join_fmt, ok};
+    use crate::{TinyInlineString, join, join_fmt, ok, tiny_inline_string};
 
     impl Debug for TuiStyle {
         fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
@@ -203,7 +201,7 @@ mod style_helpers {
 
             // This accumulator is needed in order to be able to add `+` delimiter between
             // attributes.
-            let mut acc_attrs = VecArrayStr::new();
+            let mut acc_attrs = InlineVecStr::new();
 
             if self.computed {
                 acc_attrs.push("computed");
@@ -261,12 +259,12 @@ mod style_helpers {
     impl Display for TuiStyle {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             let pad_str = match self.padding {
-                Some(padding) => char_storage!("pad:{padding:?}"),
-                None => CharStorage::new(),
+                Some(padding) => tiny_inline_string!("pad:{padding:?}"),
+                None => TinyInlineString::new(),
             };
 
             // Need `acc` since we don't know how many attributes are set.
-            let mut acc = VecArrayStr::new();
+            let mut acc = InlineVecStr::new();
 
             if self.bold {
                 acc.push("bld");
@@ -384,59 +382,50 @@ mod test_style {
     }
 }
 
-mod sizing {
-    use super::*;
-
-    /// Attributes are: color_fg, color_bg, bold, dim, italic, underline, reverse, hidden,
-    /// etc. which are in [r3bl_ansi_color::Style].
-    pub type VecStyles = SmallVec<[r3bl_ansi_color::Style; MAX_STYLE_ATTRIB_SIZE]>;
-    const MAX_STYLE_ATTRIB_SIZE: usize = r3bl_ansi_color::Style::COUNT;
-}
-
 pub mod convert_to_ansi_color_styles {
     use super::*;
 
-    pub fn from_tui_style(tui_style: TuiStyle) -> VecStyles {
-        let mut acc = VecStyles::new();
+    pub fn from_tui_style(tui_style: TuiStyle) -> InlineVecASTStyles {
+        let mut acc = InlineVecASTStyles::new();
 
         if let Some(color_fg) = tui_style.color_fg {
-            acc.push(r3bl_ansi_color::Style::Foreground(
+            acc.push(r3bl_ansi_color::ASTStyle::Foreground(
                 convert_tui_color_into_r3bl_ansi_color(color_fg),
             ));
         }
 
         if let Some(color_bg) = tui_style.color_bg {
-            acc.push(r3bl_ansi_color::Style::Background(
+            acc.push(r3bl_ansi_color::ASTStyle::Background(
                 convert_tui_color_into_r3bl_ansi_color(color_bg),
             ));
         }
 
         if tui_style.bold {
-            acc.push(r3bl_ansi_color::Style::Bold);
+            acc.push(r3bl_ansi_color::ASTStyle::Bold);
         }
 
         if tui_style.dim {
-            acc.push(r3bl_ansi_color::Style::Dim);
+            acc.push(r3bl_ansi_color::ASTStyle::Dim);
         }
 
         if tui_style.italic {
-            acc.push(r3bl_ansi_color::Style::Italic);
+            acc.push(r3bl_ansi_color::ASTStyle::Italic);
         }
 
         if tui_style.underline {
-            acc.push(r3bl_ansi_color::Style::Underline);
+            acc.push(r3bl_ansi_color::ASTStyle::Underline);
         }
 
         if tui_style.reverse {
-            acc.push(r3bl_ansi_color::Style::Invert);
+            acc.push(r3bl_ansi_color::ASTStyle::Invert);
         }
 
         if tui_style.hidden {
-            acc.push(r3bl_ansi_color::Style::Hidden);
+            acc.push(r3bl_ansi_color::ASTStyle::Hidden);
         }
 
         if tui_style.strikethrough {
-            acc.push(r3bl_ansi_color::Style::Strikethrough);
+            acc.push(r3bl_ansi_color::ASTStyle::Strikethrough);
         }
 
         acc

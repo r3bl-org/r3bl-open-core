@@ -19,7 +19,7 @@ use nom::{bytes::complete::tag,
           combinator::opt,
           sequence::{preceded, tuple},
           IResult};
-use r3bl_core::char_storage;
+use r3bl_core::tiny_inline_string;
 
 use crate::{constants::{COLON, NEW_LINE, SPACE},
             take_text_until_new_line_or_end};
@@ -38,7 +38,7 @@ pub fn parse_unique_kv_opt_eol<'a>(
     )(input)?;
 
     // Can't nest `tag_name` in `output`. Early return in this case.
-    let tag_fragment = char_storage!("{tag_name}{COLON}{SPACE}");
+    let tag_fragment = tiny_inline_string!("{tag_name}{COLON}{SPACE}");
     if title_text.contains(tag_fragment.as_str())
         | remainder.contains(tag_fragment.as_str())
     {
@@ -64,8 +64,8 @@ pub fn parse_unique_kv_opt_eol<'a>(
 
 #[cfg(test)]
 mod test_parse_title_no_eol {
-    use crossterm::style::Stylize;
-    use r3bl_core::{assert_eq2, string_storage};
+    use r3bl_ansi_color::{fg_rgb_color, rgb_color};
+    use r3bl_core::{assert_eq2, inline_string};
 
     use super::*;
     use crate::constants::TITLE;
@@ -75,9 +75,9 @@ mod test_parse_title_no_eol {
         let input = "@title: Something";
         let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
-            "input: '{}', output: '{}'",
-            input.black().on_yellow(),
-            output.black().on_green(),
+            "input: '{i}', output: '{o}'",
+            i = fg_rgb_color(rgb_color!(black), input).bg_rgb_color(rgb_color!(yellow)),
+            o = fg_rgb_color(rgb_color!(black), output).bg_rgb_color(rgb_color!(green)),
         );
         assert_eq2!(input, "");
         assert_eq2!(output, "Something");
@@ -88,9 +88,9 @@ mod test_parse_title_no_eol {
         let input = "@title: Something\n";
         let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
-            "input: '{}', output: '{}'",
-            input.black().on_yellow(),
-            output.black().on_green(),
+            "input: '{i}', output: '{o}'",
+            i = fg_rgb_color(rgb_color!(black), input).bg_rgb_color(rgb_color!(yellow)),
+            o = fg_rgb_color(rgb_color!(black), output).bg_rgb_color(rgb_color!(green)),
         );
         assert_eq2!(input, "");
         assert_eq2!(output, "Something");
@@ -109,9 +109,11 @@ mod test_parse_title_no_eol {
 
         println!(
             "err: '{}'",
-            string_storage!("{:?}", it.err().unwrap())
-                .black()
-                .on_yellow()
+            fg_rgb_color(
+                rgb_color!(black),
+                &inline_string!("{:?}", it.err().unwrap())
+            )
+            .bg_rgb_color(rgb_color!(yellow)),
         );
     }
 
@@ -128,21 +130,27 @@ mod test_parse_title_no_eol {
 
         println!(
             "err: '{}'",
-            string_storage!("{:?}", it.err().unwrap())
-                .black()
-                .on_yellow()
+            fg_rgb_color(
+                rgb_color!(black),
+                &inline_string!("{:?}", it.err().unwrap())
+            )
+            .bg_rgb_color(rgb_color!(yellow)),
         );
     }
 
     #[test]
     fn test_no_quoted_with_eol_title_with_postfix_content_1() {
         let input = "@title: \nfoo\nbar";
-        println!("input: '{}'", input.black().on_cyan());
+        println!(
+            "input: '{}'",
+            fg_rgb_color(rgb_color!(black), input).bg_rgb_color(rgb_color!(cyan)),
+        );
+
         let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
-            "input: '{}'\noutput: '{}'",
-            input.black().on_yellow(),
-            output.black().on_green(),
+            "input: '{i}', output: '{o}'",
+            i = fg_rgb_color(rgb_color!(black), input).bg_rgb_color(rgb_color!(yellow)),
+            o = fg_rgb_color(rgb_color!(black), output).bg_rgb_color(rgb_color!(green)),
         );
         assert_eq2!(input, "foo\nbar");
         assert_eq2!(output, "");
@@ -151,12 +159,16 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_no_quoted_with_eol_title_with_postfix_content_2() {
         let input = "@title:  a\nfoo\nbar";
-        println!("input: '{}'", input.black().on_cyan());
+        println!(
+            "input: '{}'",
+            fg_rgb_color(rgb_color!(black), input).bg_rgb_color(rgb_color!(cyan)),
+        );
+
         let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
-            "input: '{}'\noutput: '{}'",
-            input.black().on_yellow(),
-            output.black().on_green(),
+            "input: '{i}', output: '{o}'",
+            i = fg_rgb_color(rgb_color!(black), input).bg_rgb_color(rgb_color!(yellow)),
+            o = fg_rgb_color(rgb_color!(black), output).bg_rgb_color(rgb_color!(green)),
         );
         assert_eq2!(input, "foo\nbar");
         assert_eq2!(output, " a");
@@ -165,12 +177,17 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_no_quoted_with_eol_title_with_postfix_content_3() {
         let input = "@title: \n\n# heading1\n## heading2";
-        println!("❯ input: \n'{}'", input.black().on_cyan());
+        println!(
+            "❯ input: \n'{}'",
+            fg_rgb_color(rgb_color!(black), input).bg_rgb_color(rgb_color!(cyan))
+        );
+
         let (remainder, title) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
-            "❯ remainder: \n'{}'\n❯ title: \n'{}'",
-            remainder.black().on_yellow(),
-            title.black().on_green(),
+            "❯ remainder: \n'{r}'\n❯ title: \n'{t}'",
+            r = fg_rgb_color(rgb_color!(black), remainder)
+                .bg_rgb_color(rgb_color!(yellow)),
+            t = fg_rgb_color(rgb_color!(black), title).bg_rgb_color(rgb_color!(green)),
         );
         assert_eq2!(remainder, "\n# heading1\n## heading2");
         assert_eq2!(title, "");

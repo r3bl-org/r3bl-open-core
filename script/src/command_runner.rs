@@ -133,16 +133,16 @@ impl Run for Command {
 #[macro_export]
 macro_rules! bail_command_ran_and_failed {
         ($command:expr, $status:expr, $stderr:expr) => {
-            use crossterm::style::Stylize as _;
+            use r3bl_ansi_color::{lizard_green, frozen_blue, magenta};
             miette::bail!(
                 "{name} failed\n{cmd_label}: '{cmd:?}'\n{status_label}: '{status}'\n{stderr_label}: '{stderr}'",
-                cmd_label = "[command]".to_string().yellow(),
-                status_label = "[status]".to_string().yellow(),
-                stderr_label = "[stderr]".to_string().yellow(),
-                name = stringify!($command).blue(),
+                cmd_label = lizard_green("[command]"),
+                status_label = lizard_green("[status]"),
+                stderr_label = lizard_green("[stderr]"),
+                name = frozen_blue(stringify!($command)),
                 cmd = $command,
-                status = format!("{:?}", $status).magenta(),
-                stderr = String::from_utf8_lossy(&$stderr).magenta(),
+                status = magenta(&format!("{:?}", $status)),
+                stderr = magenta(&String::from_utf8_lossy(&$stderr)),
             );
         };
     }

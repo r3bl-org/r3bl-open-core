@@ -29,7 +29,7 @@ use crossterm::{self,
                            ClearType,
                            EnterAlternateScreen,
                            LeaveAlternateScreen}};
-use r3bl_core::{GCString, LockedOutputDevice, Pos, Size, TuiColor, TuiStyle, VecArray};
+use r3bl_core::{GCString, InlineVec, LockedOutputDevice, Pos, Size, TuiColor, TuiStyle};
 use smallvec::smallvec;
 
 use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
@@ -343,7 +343,7 @@ mod perform_paint {
         pub window_size: Size,
     }
 
-    fn style_to_attribute(&style: &TuiStyle) -> VecArray<Attribute> {
+    fn style_to_attribute(&style: &TuiStyle) -> InlineVec<Attribute> {
         let mut it = smallvec![];
         if style.bold {
             it.push(Attribute::Bold);

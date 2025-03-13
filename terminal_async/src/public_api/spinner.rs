@@ -17,11 +17,13 @@
 
 use std::{sync::Arc, time::Duration};
 
-use r3bl_ansi_color::{StdoutIsPipedResult,
-                      TTYResult,
-                      is_fully_uninteractive_terminal,
-                      is_stdout_piped};
-use r3bl_core::{LineStateControlSignal, SharedWriter, get_terminal_width};
+use r3bl_core::{LineStateControlSignal,
+                SharedWriter,
+                StdoutIsPipedResult,
+                TTYResult,
+                get_terminal_width,
+                is_fully_uninteractive_terminal,
+                is_stdout_piped};
 use r3bl_tui::{SpinnerStyle, spinner_render};
 use tokio::time::interval;
 

@@ -30,15 +30,15 @@
 //!    the editor component (based on scroll state in viewport). And finally that is
 //!    converted to a [r3bl_core::TuiStyledTexts].
 
-use r3bl_core::{char_storage,
+use r3bl_core::{tiny_inline_string,
                 tui_styled_text,
                 width,
                 ColIndex,
                 ColWidth,
                 GCString,
                 GCStringExt as _,
+                InlineString,
                 ScrOfs,
-                StringStorage,
                 TuiStyle,
                 TuiStyledTexts};
 
@@ -100,7 +100,7 @@ impl StyleUSSpanLine {
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default()
                 + get_foreground_dim_style(),
-            &char_storage!("{COLON}{SPACE}"),
+            &tiny_inline_string!("{COLON}{SPACE}"),
         );
         for (index, span) in tag_list.iter().enumerate() {
             acc_line_output += StyleUSSpan::new(
@@ -113,7 +113,7 @@ impl StyleUSSpanLine {
                 acc_line_output += StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_foreground_dim_style(),
-                    &char_storage!("{COMMA}{SPACE}"),
+                    &tiny_inline_string!("{COMMA}{SPACE}"),
                 );
             }
         }
@@ -136,7 +136,7 @@ impl StyleUSSpanLine {
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default()
                 + get_foreground_dim_style(),
-            &char_storage!("{COLON}{SPACE}"),
+            &tiny_inline_string!("{COLON}{SPACE}"),
         );
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default()
@@ -180,7 +180,7 @@ impl StyleUSSpanLine {
         for span in self.iter() {
             let StyleUSSpan { style, text_gcs } = span;
 
-            let mut clipped_text_fragment = StringStorage::new();
+            let mut clipped_text_fragment = InlineString::new();
 
             for seg in text_gcs.iter() {
                 for character in seg.get_str(text_gcs).chars() {
@@ -224,8 +224,8 @@ impl StyleUSSpanLine {
         display_width
     }
 
-    pub fn get_plain_text(&self) -> StringStorage {
-        let mut plain_text_acc = StringStorage::new();
+    pub fn get_plain_text(&self) -> InlineString {
+        let mut plain_text_acc = InlineString::new();
         for span in self.iter() {
             let str = span.text_gcs.as_ref();
             plain_text_acc.push_str(str);
@@ -238,11 +238,11 @@ impl StyleUSSpanLine {
         &self,
         scroll_offset_col_index: ColIndex,
         max_display_col_count: ColWidth,
-    ) -> StringStorage {
+    ) -> InlineString {
         let line = self.get_plain_text();
         let line_gcs = line.grapheme_string();
         let str = line_gcs.clip(scroll_offset_col_index, max_display_col_count);
-        StringStorage::from(str)
+        InlineString::from(str)
     }
 }
 

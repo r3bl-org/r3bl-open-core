@@ -1930,6 +1930,8 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
+ "smallstr",
+ "smallvec",
  "thiserror 1.0.64",
  "tokio",
  "tracing",

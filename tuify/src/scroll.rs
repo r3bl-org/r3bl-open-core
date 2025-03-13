@@ -61,7 +61,7 @@
 //! ```
 
 use r3bl_ansi_color::green;
-use r3bl_core::{ch, string_storage, ChUnit};
+use r3bl_core::{ch, inline_string, ChUnit};
 
 use crate::DEVELOPMENT_MODE;
 
@@ -97,13 +97,13 @@ pub fn locate_cursor_in_viewport(
         // % is Display, ? is Debug.
         tracing::info! {
             message = "locate_cursor_in_viewport()",
-            details = %string_storage!(
+            details = %inline_string!(
                 "raw_caret_row_index: {a}, scroll_offset_row_index: {b}, abs_row_index: {c}, display_height: {d}, items_size: {e}",
-                a = green(&string_storage!("{raw_caret_row_index:?}")),
-                b = green(&string_storage!("{scroll_offset_row_index:?}")),
-                c = green(&string_storage!("{abs_row_index:?}")),
-                d = green(&string_storage!("{display_height:?}")),
-                e = green(&string_storage!("{items_size:?}")),
+                a = green(&inline_string!("{raw_caret_row_index:?}")),
+                b = green(&inline_string!("{scroll_offset_row_index:?}")),
+                c = green(&inline_string!("{abs_row_index:?}")),
+                d = green(&inline_string!("{display_height:?}")),
+                e = green(&inline_string!("{items_size:?}")),
             )
         };
     });

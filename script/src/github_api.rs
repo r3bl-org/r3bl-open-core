@@ -64,7 +64,7 @@ pub async fn try_get_latest_release_tag_from_github(
 mod tests_github_api {
     use std::time::Duration;
 
-    use r3bl_ansi_color::{TTYResult, is_fully_uninteractive_terminal};
+    use r3bl_core::{TTYResult, is_fully_uninteractive_terminal};
     use tokio::time::timeout;
 
     use super::*;

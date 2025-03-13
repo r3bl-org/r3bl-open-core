@@ -19,7 +19,7 @@ use std::fmt::Write;
 
 use crate::{ColWidth,
             GCStringExt as _,
-            StringStorage,
+            InlineString,
             glyphs::{ELLIPSIS_GLYPH, SPACER_GLYPH}};
 
 /// Tests whether the given text contains an ANSI escape sequence.
@@ -29,7 +29,7 @@ pub fn contains_ansi_escape_sequence(text: &str) -> bool {
 
 #[test]
 fn test_contains_ansi_escape_sequence() {
-    use r3bl_ansi_color::{AnsiStyledText, Color, Style};
+    use r3bl_ansi_color::{ASTColor, ASTStyle, AnsiStyledText};
 
     use crate::assert_eq2;
 
@@ -46,12 +46,12 @@ fn test_contains_ansi_escape_sequence() {
           contains_ansi_escape_sequence(
               &AnsiStyledText {
                   text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
-                  style: &[
-                      Style::Bold,
-                      Style::Italic,
-                      Style::Underline,
-                      Style::Foreground(Color::Rgb(50, 50, 50)),
-                      Style::Background(Color::Rgb(100, 200, 1)),
+                  style: smallvec::smallvec![
+                      ASTStyle::Bold,
+                      ASTStyle::Italic,
+                      ASTStyle::Underline,
+                      ASTStyle::Foreground(ASTColor::Rgb(50, 50, 50)),
+                      ASTStyle::Background(ASTColor::Rgb(100, 200, 1)),
                   ],
               }
               .to_string()
@@ -79,7 +79,7 @@ pub fn truncate_from_right(
     string: &str,
     arg_width: impl Into<ColWidth>,
     pad: bool,
-) -> StringStorage {
+) -> InlineString {
     let display_width = arg_width.into();
     let string_gcs = string.grapheme_string();
     let string_display_width = string_gcs.display_width;
@@ -93,7 +93,7 @@ pub fn truncate_from_right(
         let truncated_text =
             string_gcs.trunc_end_by(truncate_cols_from_right + postfix_display_width);
 
-        let mut acc = StringStorage::new();
+        let mut acc = InlineString::new();
         _ = write!(acc, "{}{}", truncated_text, postfix_gcs.string);
         acc
     }
@@ -112,7 +112,7 @@ pub fn truncate_from_left(
     string: &str,
     arg_width: impl Into<ColWidth>,
     pad: bool,
-) -> StringStorage {
+) -> InlineString {
     let display_width = arg_width.into();
     let string_gcs = string.grapheme_string();
     let string_display_width = string_gcs.display_width;
@@ -126,7 +126,7 @@ pub fn truncate_from_left(
         let truncated_text =
             string_gcs.trunc_start_by(truncate_cols_from_left + prefix_display_width);
 
-        let mut acc = StringStorage::new();
+        let mut acc = InlineString::new();
         _ = write!(acc, "{}{}", prefix_gcs.string, truncated_text);
         acc
     }

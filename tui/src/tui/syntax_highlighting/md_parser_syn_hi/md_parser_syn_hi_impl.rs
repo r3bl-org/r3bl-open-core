@@ -27,8 +27,8 @@ use r3bl_core::{join,
                 GCString,
                 GCStringExt,
                 GradientGenerationPolicy,
+                InlineString,
                 PrettyPrintDebug,
-                StringStorage,
                 TextColorizationPolicy,
                 TuiStyle,
                 TuiStyledTexts};
@@ -98,7 +98,7 @@ pub fn try_parse_and_highlight(
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
 ) -> CommonResult<StyleUSSpanLines> {
     // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
-    // Convert the editor text into a StringStorage (unfortunately requires allocating to
+    // Convert the editor text into a InlineString (unfortunately requires allocating to
     // get the new lines back, since they're stripped out when loading content into the
     // editor buffer struct).
     let mut acc = DocumentStorage::new();
@@ -123,7 +123,7 @@ pub fn try_parse_and_highlight(
 
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
-    use crossterm::style::Stylize;
+    use r3bl_ansi_color::cyan;
     use r3bl_core::{assert_eq2, throws, tui_color};
 
     use super::*;
@@ -144,7 +144,7 @@ mod tests_try_parse_and_highlight {
 
             println!(
                 "result: \n{}",
-                style_us_span_lines.pretty_print_debug().cyan()
+                cyan(&style_us_span_lines.pretty_print_debug())
             );
 
             assert_eq2!(editor_text_lines.len(), style_us_span_lines.len());
@@ -166,7 +166,7 @@ mod tests_try_parse_and_highlight {
 }
 
 impl PrettyPrintDebug for StyleUSSpanLines {
-    fn pretty_print_debug(&self) -> StringStorage {
+    fn pretty_print_debug(&self) -> InlineString {
         join!(
             from: self.inner,
             each: line,
@@ -626,7 +626,7 @@ impl StyleUSSpan {
 }
 
 impl PrettyPrintDebug for StyleUSSpanLine {
-    fn pretty_print_debug(&self) -> StringStorage {
+    fn pretty_print_debug(&self) -> InlineString {
         join!(
             from: self.inner,
             each: span,
@@ -713,7 +713,6 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
-    use crossterm::style::Stylize as _;
     use miette::IntoDiagnostic as _;
     use r3bl_core::{assert_eq2, throws, tui_color};
 
@@ -1023,6 +1022,8 @@ mod tests_style_us_span_lines_from {
     /// Test each variant of [MdBlockElement] is converted by
     /// [StyleUSSpanLines::from_block](StyleUSSpanLines::from_block).
     mod from_block {
+        use r3bl_ansi_color::cyan;
+
         use super::*;
 
         #[test]
@@ -1203,7 +1204,7 @@ mod tests_style_us_span_lines_from {
                     color_bg: {tui_color!(red)}
                 );
                 let (_, doc) = parse_markdown("- Foo\n- Bar\n").into_diagnostic()?;
-                println!("{}", format!("{:#?}", doc).cyan());
+                println!("{}", cyan(&format!("{:#?}", doc)));
 
                 // First smart list.
                 {

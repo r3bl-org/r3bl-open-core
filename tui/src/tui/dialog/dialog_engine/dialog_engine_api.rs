@@ -20,9 +20,9 @@ use r3bl_core::{ch,
                 col,
                 glyphs::SPACER_GLYPH as SPACER,
                 height,
+                inline_string,
                 pc,
                 row,
-                string_storage,
                 throws_with_return,
                 u16,
                 usize,
@@ -34,8 +34,8 @@ use r3bl_core::{ch,
                 Dim,
                 GCStringExt as _,
                 GradientGenerationPolicy,
+                InlineString,
                 Pos,
-                StringStorage,
                 TextColorizationPolicy,
                 TuiStyle};
 
@@ -525,7 +525,7 @@ mod internal_impl {
             ops: &mut RenderOps,
             origin_pos: Pos,
             bounds_size: Dim,
-            results: &[StringStorage],
+            results: &[InlineString],
             dialog_engine: &DialogEngine,
         ) {
             let col_start_index = col(1);
@@ -569,7 +569,7 @@ mod internal_impl {
                         + col(1) /* skip one segment right */;
                     let rhs_str = text_gcs.clip(rhs_start_index, text_display_width);
 
-                    Cow::Owned(string_storage!("{lhs_str}..{rhs_str}"))
+                    Cow::Owned(inline_string!("{lhs_str}..{rhs_str}"))
                 } else {
                     Cow::Borrowed(item)
                 };

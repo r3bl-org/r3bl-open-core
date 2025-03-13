@@ -21,9 +21,9 @@ use r3bl_core::{ok,
                 sizing::TelemetryReportLineStorage,
                 ChUnit,
                 CommonResult,
+                InlineString,
                 OutputDevice,
                 Size,
-                StringStorage,
                 TelemetryHudReport};
 use tokio::sync::mpsc::Sender;
 
@@ -67,7 +67,7 @@ where
 pub struct SpinnerHelper {
     pub spinner_style: SpinnerStyle,
     pub count: ChUnit,
-    pub empty_message: StringStorage,
+    pub empty_message: InlineString,
 }
 
 impl<S, AS> Debug for GlobalData<S, AS>

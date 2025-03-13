@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::Color;
+use r3bl_ansi_color::ASTColor;
 
 // Colors.
-pub const LIZARD_GREEN: Color = Color::Rgb(20, 244, 0);
-pub const SLATE_GRAY: Color = Color::Rgb(94, 103, 111);
-pub const FROZEN_BLUE: Color = Color::Rgb(171, 204, 242);
-pub const GUARDS_RED: Color = Color::Rgb(200, 1, 1);
+pub const LIZARD_GREEN: ASTColor = ASTColor::Rgb(20, 244, 0);
+pub const SLATE_GRAY: ASTColor = ASTColor::Rgb(94, 103, 111);
+pub const FROZEN_BLUE: ASTColor = ASTColor::Rgb(171, 204, 242);
+pub const GUARDS_RED: ASTColor = ASTColor::Rgb(200, 1, 1);

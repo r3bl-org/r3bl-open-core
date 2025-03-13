@@ -299,7 +299,7 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use r3bl_core::{glyphs, string_storage};
+    use r3bl_core::{glyphs, inline_string};
 
     use super::*;
 
@@ -315,7 +315,7 @@ mod populate_component_registry {
         DEBUG_TUI_MOD.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = %string_storage!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
+                message = %inline_string!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
                 has_focus = ?has_focus.get_id()
             );
         });

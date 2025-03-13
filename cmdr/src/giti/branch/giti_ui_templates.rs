@@ -17,7 +17,7 @@
 
 use std::{env::var, process::Command};
 
-use r3bl_ansi_color::{AnsiStyledText, Color, Style};
+use r3bl_ansi_color::{ASTColor, ASTStyle, AnsiStyledText};
 use r3bl_core::{ColorWheel,
                 CommonError,
                 CommonErrorType,
@@ -35,33 +35,33 @@ use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
 pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:     navigate",
-        style: &[
-            Style::Foreground(SLATE_GRAY),
-            Style::Background(Color::Rgb(14, 17, 23)),
+        style: smallvec::smallvec![
+            ASTStyle::Foreground(SLATE_GRAY),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
 
     let space = AnsiStyledText {
         text: " Space:          select or deselect item",
-        style: &[
-            Style::Foreground(SLATE_GRAY),
-            Style::Background(Color::Rgb(14, 17, 23)),
+        style: smallvec::smallvec![
+            ASTStyle::Foreground(SLATE_GRAY),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
 
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:  exit program",
-        style: &[
-            Style::Foreground(SLATE_GRAY),
-            Style::Background(Color::Rgb(14, 17, 23)),
+        style: smallvec::smallvec![
+            ASTStyle::Foreground(SLATE_GRAY),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
 
     let return_key = AnsiStyledText {
         text: " Return:         confirm selection",
-        style: &[
-            Style::Foreground(SLATE_GRAY),
-            Style::Background(Color::Rgb(14, 17, 23)),
+        style: smallvec::smallvec![
+            ASTStyle::Foreground(SLATE_GRAY),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
 
@@ -71,24 +71,24 @@ pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
 pub fn single_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let up_or_down = AnsiStyledText {
         text: " Up or down:     navigate",
-        style: &[
-            Style::Foreground(SLATE_GRAY),
-            Style::Background(Color::Rgb(14, 17, 23)),
+        style: smallvec::smallvec![
+            ASTStyle::Foreground(SLATE_GRAY),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:  exit program",
-        style: &[
-            Style::Foreground(SLATE_GRAY),
-            Style::Background(Color::Rgb(14, 17, 23)),
+        style: smallvec::smallvec![
+            ASTStyle::Foreground(SLATE_GRAY),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
 
     let return_key = AnsiStyledText {
         text: " Return:         confirm selection",
-        style: &[
-            Style::Foreground(SLATE_GRAY),
-            Style::Background(Color::Rgb(14, 17, 23)),
+        style: smallvec::smallvec![
+            ASTStyle::Foreground(SLATE_GRAY),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
 

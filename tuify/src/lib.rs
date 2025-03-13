@@ -251,7 +251,7 @@
 //! ```rust
 //! use std::{io::Result, vec};
 //!
-//! use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
+//! use r3bl_ansi_color::{AnsiStyledText, ASTColor, ASTStyle};
 //! use r3bl_core::*;
 //! use r3bl_tuify::{
 //!     components::style::StyleSheet,
@@ -262,16 +262,16 @@
 //! fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
 //!     let up_and_down = AnsiStyledText {
 //!         text: " Up or down:",
-//!         style: &[
-//!             RStyle::Foreground(Color::Rgb(9, 238, 211)),
-//!             RStyle::Background(Color::Rgb(14, 17, 23)),
+//!         style: smallvec::smallvec![
+//!             ASTStyle::Foreground(ASTColor::Rgb(9, 238, 211)),
+//!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
 //!         ],
 //!     };
 //!     let navigate = AnsiStyledText {
 //!         text: "     navigate",
-//!         style: &[
-//!             RStyle::Foreground(Color::Rgb(94, 103, 111)),
-//!             RStyle::Background(Color::Rgb(14, 17, 23)),
+//!         style: smallvec::smallvec![
+//!             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+//!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
 //!         ],
 //!     };
 //!
@@ -279,16 +279,16 @@
 //!
 //!     let space = AnsiStyledText {
 //!         text: " Space:",
-//!         style: &[
-//!             RStyle::Foreground(Color::Rgb(255, 216, 9)),
-//!             RStyle::Background(Color::Rgb(14, 17, 23)),
+//!         style: smallvec::smallvec![
+//!             ASTStyle::Foreground(ASTColor::Rgb(255, 216, 9)),
+//!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
 //!         ],
 //!     };
 //!     let select = AnsiStyledText {
 //!         text: "          select or deselect item",
-//!         style: &[
-//!             RStyle::Foreground(Color::Rgb(94, 103, 111)),
-//!             RStyle::Background(Color::Rgb(14, 17, 23)),
+//!         style: smallvec::smallvec![
+//!             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+//!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
 //!         ],
 //!     };
 //!
@@ -296,32 +296,32 @@
 //!
 //!     let esc = AnsiStyledText {
 //!         text: " Esc or Ctrl+C:",
-//!         style: &[
-//!             RStyle::Foreground(Color::Rgb(255, 132, 18)),
-//!             RStyle::Background(Color::Rgb(14, 17, 23)),
+//!         style: smallvec::smallvec![
+//!             ASTStyle::Foreground(ASTColor::Rgb(255, 132, 18)),
+//!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
 //!         ],
 //!     };
 //!     let exit = AnsiStyledText {
 //!         text: "  exit program",
-//!         style: &[
-//!             RStyle::Foreground(Color::Rgb(94, 103, 111)),
-//!             RStyle::Background(Color::Rgb(14, 17, 23)),
+//!         style: smallvec::smallvec![
+//!             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+//!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
 //!         ],
 //!     };
 //!
 //!     let line_3 = vec![esc, exit];
 //!     let return_key = AnsiStyledText {
 //!         text: " Return:",
-//!         style: &[
-//!             RStyle::Foreground(Color::Rgb(234, 0, 196)),
-//!             RStyle::Background(Color::Rgb(14, 17, 23)),
+//!         style: smallvec::smallvec![
+//!             ASTStyle::Foreground(ASTColor::Rgb(234, 0, 196)),
+//!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
 //!         ],
 //!     };
 //!     let confirm = AnsiStyledText {
 //!         text: "         confirm selection",
-//!         style: &[
-//!             RStyle::Foreground(Color::Rgb(94, 103, 111)),
-//!             RStyle::Background(Color::Rgb(14, 17, 23)),
+//!         style: smallvec::smallvec![
+//!             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+//!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
 //!         ],
 //!     };
 //!     let line_4 = vec![return_key, confirm];
@@ -331,9 +331,9 @@
 //! fn main() -> Result<()> {
 //!    let header = AnsiStyledText {
 //!         text: " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
-//!         style: &[
-//!             RStyle::Foreground(Color::Rgb(171, 204, 242)),
-//!             RStyle::Background(Color::Rgb(31, 36, 46)),
+//!         style: smallvec::smallvec![
+//!             ASTStyle::Foreground(ASTColor::Rgb(171, 204, 242)),
+//!             ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
 //!         ],
 //!     };
 //!
@@ -585,7 +585,7 @@
 //!
 //! ```rust
 //! use std::io::Result;
-//! use r3bl_ansi_color::{AnsiStyledText, Color};
+//! use r3bl_ansi_color::{AnsiStyledText, ASTColor};
 //! use r3bl_tuify::{components::style::{Style, StyleSheet},
 //!                 select_from_list,
 //!                 SelectionMode};
@@ -596,23 +596,23 @@
 //!    // Please take a look at the Style struct to see what you can override.
 //!    let my_custom_style = StyleSheet {
 //!       focused_and_selected_style: Style {
-//!             fg_color: Color::Rgb(255, 244, 0),
-//!             bg_color: Color::Rgb(15, 32, 66),
+//!             fg_color: ASTColor::Rgb(255, 244, 0),
+//!             bg_color: ASTColor::Rgb(15, 32, 66),
 //!             ..Style::default()
 //!       },
 //!       focused_style: Style {
-//!             fg_color: Color::Rgb(255, 244, 0),
+//!             fg_color: ASTColor::Rgb(255, 244, 0),
 //!             ..Style::default()
 //!       },
 //!       unselected_style: Style { ..Style::default() },
 //!       selected_style: Style {
-//!             fg_color: Color::Rgb(203, 170, 250),
-//!             bg_color: Color::Rgb(15, 32, 66),
+//!             fg_color: ASTColor::Rgb(203, 170, 250),
+//!             bg_color: ASTColor::Rgb(15, 32, 66),
 //!             ..Style::default()
 //!       },
 //!       header_style: Style {
-//!             fg_color: Color::Rgb(171, 204, 242),
-//!             bg_color: Color::Rgb(31, 36, 46),
+//!             fg_color: ASTColor::Rgb(171, 204, 242),
+//!             bg_color: ASTColor::Rgb(31, 36, 46),
 //!             ..Style::default()
 //!       },
 //!    };

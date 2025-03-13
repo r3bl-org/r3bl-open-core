@@ -111,7 +111,7 @@ pub fn generate_truecolor_gradient(stops: &[StringHexColor], steps: u8) -> VecSt
 
 #[cfg(test)]
 mod tests {
-    use r3bl_ansi_color::{AnsiStyledText, Style};
+    use r3bl_ansi_color::{ASTStyle, AnsiStyledText};
 
     use super::*;
     use crate::{TuiColor, assert_eq2, usize};
@@ -129,13 +129,12 @@ mod tests {
             .for_each(|(index, color)| match color {
                 TuiColor::Rgb(c) => {
                     AnsiStyledText {
-                        text: format!(
+                        text: &format!(
                             " {index}                                                   "
-                        )
-                        .as_str(),
-                        style: &[Style::Background(r3bl_ansi_color::Color::Rgb(
-                            c.red, c.green, c.blue,
-                        ))],
+                        ),
+                        style: smallvec::smallvec![ASTStyle::Background(
+                            r3bl_ansi_color::ASTColor::Rgb(c.red, c.green, c.blue,)
+                        )],
                     }
                     .println();
                 }
@@ -175,13 +174,12 @@ mod tests {
             .for_each(|(index, color)| match color {
                 TuiColor::Rgb(c) => {
                     AnsiStyledText {
-                        text: format!(
+                        text: &format!(
                             " {index}                                                   "
-                        )
-                        .as_str(),
-                        style: &[Style::Background(r3bl_ansi_color::Color::Rgb(
-                            c.red, c.green, c.blue,
-                        ))],
+                        ),
+                        style: smallvec::smallvec![ASTStyle::Background(
+                            r3bl_ansi_color::ASTColor::Rgb(c.red, c.green, c.blue,)
+                        )],
                     }
                     .println();
                 }
