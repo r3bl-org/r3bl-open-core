@@ -17,6 +17,7 @@
 use r3bl_core::{col,
                 glyphs,
                 height,
+                inline_string,
                 new_style,
                 req_size_pc,
                 row,
@@ -300,8 +301,6 @@ mod perform_layout {
 }
 
 mod handle_focus {
-    use r3bl_core::inline_string;
-
     use super::*;
 
     pub fn handle_focus_switch(

@@ -14,7 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_ansi_color::{green, magenta};
+use r3bl_ansi_color::{green, magenta, red};
 use r3bl_core::{Ansi256GradientIndex,
                 ColorWheel,
                 ColorWheelConfig,
@@ -154,9 +154,6 @@ mod app_main_constructor {
 }
 
 mod app_main_impl_app_trait {
-    use r3bl_ansi_color::red;
-    use r3bl_core::inline_string;
-
     use super::*;
 
     impl App for AppMain {
@@ -588,8 +585,6 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use r3bl_core::inline_string;
-
     use super::*;
 
     pub fn create_components(

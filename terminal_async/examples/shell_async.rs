@@ -95,7 +95,8 @@
 use std::io::Write as _;
 
 use miette::IntoDiagnostic as _;
-use r3bl_core::{SharedWriter, ok};
+use r3bl_ansi_color::{fg_rgb_color, guards_red, lizard_green, rgb_color};
+use r3bl_core::{SharedWriter, inline_string, ok};
 use r3bl_terminal_async::{ReadlineEvent,
                           ReadlineEvent::{Eof, Interrupted, Line, Resized},
                           TerminalAsync};
@@ -217,8 +218,6 @@ pub mod monitor_user_input_and_send_to_child {
 }
 
 pub mod monitor_child_output {
-    use r3bl_ansi_color::{guards_red, lizard_green};
-
     use super::*;
 
     pub async fn spawn(
@@ -274,9 +273,6 @@ pub mod monitor_child_output {
 }
 
 pub mod terminal_async_constructor {
-    use r3bl_ansi_color::{fg_rgb_color, rgb_color};
-    use r3bl_core::inline_string;
-
     use super::*;
 
     pub struct TerminalAsyncHandle {

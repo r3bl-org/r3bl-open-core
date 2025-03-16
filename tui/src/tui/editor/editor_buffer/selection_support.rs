@@ -17,7 +17,7 @@
 
 use std::cmp;
 
-use r3bl_ansi_color::{cyan, dim, green, magenta, red, underline, yellow};
+use r3bl_ansi_color::{blue, cyan, dim, green, magenta, red, underline, yellow};
 use r3bl_core::{caret_scr_adj,
                 col,
                 height,
@@ -371,8 +371,6 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
 }
 
 mod multiline_select_helpers {
-    use r3bl_ansi_color::blue;
-
     use super::*;
 
     // XMARK: Impl multiline selection changes (up/down, and later page up/page down)

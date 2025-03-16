@@ -208,8 +208,6 @@ pub fn delete_at_caret(
     return None;
 
     mod inner {
-        use r3bl_core::inline_string;
-
         use super::*;
 
         /// ```text

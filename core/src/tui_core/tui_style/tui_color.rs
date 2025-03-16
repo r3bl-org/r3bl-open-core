@@ -17,7 +17,7 @@
 
 use core::fmt::Debug;
 
-use r3bl_ansi_color::TransformColor;
+use r3bl_ansi_color::{ASTColor, TransformColor};
 
 use super::parse_hex_color;
 use crate::common::{CommonError, CommonErrorType, CommonResult};
@@ -259,8 +259,6 @@ mod construct {
 /// `ASTColor::from(tui_color)`. So you're no longer limited to the basic colors when
 /// using `ASTColor` in your code (which happens when generating colorized log output).
 mod convert_to_ast_color {
-    use r3bl_ansi_color::ASTColor;
-
     use super::*;
 
     impl From<TuiColor> for ASTColor {
