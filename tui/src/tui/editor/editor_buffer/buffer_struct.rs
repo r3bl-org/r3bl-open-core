@@ -19,6 +19,7 @@ use std::fmt::{Debug, Formatter, Result};
 use r3bl_core::{format_as_kilobytes_with_commas,
                 glyphs,
                 height,
+                inline_string,
                 row,
                 width,
                 with_mut,
@@ -217,8 +218,6 @@ pub struct EditorContent {
 }
 
 mod construct {
-    use r3bl_core::inline_string;
-
     use super::*;
 
     impl EditorBuffer {

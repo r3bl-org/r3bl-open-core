@@ -18,7 +18,7 @@ use std::{fmt::{self, Debug, Write},
           ops::{Deref, DerefMut}};
 
 use diff_chunks::PixelCharDiffChunks;
-use r3bl_ansi_color::green;
+use r3bl_ansi_color::{dim_underline, green, magenta};
 use r3bl_core::{col,
                 get_mem_size,
                 inline_string,
@@ -242,8 +242,6 @@ impl GetMemSize for PixelCharLine {
 }
 
 mod pixel_char_line_impl {
-    use r3bl_ansi_color::dim_underline;
-
     use super::*;
 
     impl Debug for PixelCharLine {
@@ -463,8 +461,6 @@ const EMPTY_CHAR: char = '╳';
 const VOID_CHAR: char = '❯';
 
 mod pixel_char_impl {
-    use r3bl_ansi_color::magenta;
-
     use super::*;
 
     impl Default for PixelChar {

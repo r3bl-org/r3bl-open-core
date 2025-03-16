@@ -16,12 +16,15 @@
  */
 use std::fmt::Debug;
 
+use r3bl_ansi_color::{fg_rgb_color, rgb_color};
 use r3bl_core::{caret_scr_adj,
                 glyphs::{CUT_GLYPH,
                          DIRECTION_GLYPH,
                          ELLIPSIS_GLYPH,
                          TIRE_MARKS_GLYPH,
                          VERT_LINE_DASHED_GLYPH},
+                inline_string,
+                join,
                 usize,
                 CaretScrAdj,
                 GetMemSize,
@@ -273,9 +276,6 @@ pub enum RowLocationInSelectionList {
 
 // Formatter for Debug and Display.
 mod impl_debug_format {
-    use r3bl_ansi_color::{fg_rgb_color, rgb_color};
-    use r3bl_core::{inline_string, join};
-
     use super::*;
 
     const PAD_LEFT: &str = "      ";
