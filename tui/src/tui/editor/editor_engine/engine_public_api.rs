@@ -143,7 +143,7 @@ pub fn apply_event(
     if let Ok(editor_event) = EditorEvent::try_from(input_event) {
         // The following events trigger undo / redo. Add the initial state to the history
         // if it is empty. This seeds the history buffer with its first entry.
-        if triggers_undo_redo(&editor_event) && buffer.history.is_empty() {
+        if triggers_undo_redo(&editor_event) & buffer.history.is_empty() {
             buffer.add();
         };
 
@@ -215,7 +215,7 @@ pub fn render_engine(
     })
 }
 
-pub fn render_content(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
+pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
     let RenderArgs {
         buffer: editor_buffer,
         engine: editor_engine,
@@ -454,10 +454,10 @@ mod syn_hi_r3bl_path {
     ///   [try_parse_and_highlight()]. If this fails then take the path of no
     ///   syntax highlighting else take the path of syntax highlighting.
     pub fn render_content(
-        editor_buffer: &&EditorBuffer,
+        editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,
         render_ops: &mut RenderOps,
-        editor_engine: &&mut EditorEngine,
+        editor_engine: &mut EditorEngine,
         max_display_col_count: ColWidth,
     ) {
         // Try to parse the Vec<US> into an MDDocument & render it.
@@ -478,10 +478,10 @@ mod syn_hi_r3bl_path {
     /// - Step 2: For each, call `StyleUSSpanLine::clip()` which returns a `StyledTexts`
     /// - Step 3: Render the `StyledTexts` into `render_ops`
     fn try_render_content(
-        editor_buffer: &&EditorBuffer,
+        editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,
         render_ops: &mut RenderOps,
-        editor_engine: &&mut EditorEngine,
+        editor_engine: &mut EditorEngine,
         max_display_col_count: ColWidth,
     ) -> CommonResult<()> {
         throws!({
@@ -489,6 +489,7 @@ mod syn_hi_r3bl_path {
                 editor_buffer.get_lines(),
                 &editor_engine.current_box.get_computed_style(),
                 Some((&editor_engine.syntax_set, &editor_engine.theme)),
+                Some(&mut editor_engine.parser_byte_cache),
             )?;
 
             DEBUG_TUI_SYN_HI.then(|| {
@@ -532,8 +533,8 @@ mod syn_hi_r3bl_path {
 
     fn render_single_line(
         line: &StyleUSSpanLine,
-        editor_buffer: &&EditorBuffer,
-        editor_engine: &&mut EditorEngine,
+        editor_buffer: &EditorBuffer,
+        editor_engine: &mut EditorEngine,
         row_index: RowIndex,
         max_display_col_count: ColWidth,
         render_ops: &mut RenderOps,
@@ -553,10 +554,10 @@ mod syn_hi_syntect_path {
     use super::*;
 
     pub fn render_content(
-        editor_buffer: &&EditorBuffer,
+        editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,
         render_ops: &mut RenderOps,
-        editor_engine: &&mut EditorEngine,
+        editor_engine: &mut EditorEngine,
         max_display_col_count: ColWidth,
     ) {
         // Paint each line in the buffer (skipping the scroll_offset.row_index).
@@ -589,8 +590,8 @@ mod syn_hi_syntect_path {
     fn render_single_line(
         render_ops: &mut RenderOps,
         row_index: RowIndex,
-        editor_engine: &&mut EditorEngine,
-        editor_buffer: &&EditorBuffer,
+        editor_engine: &mut EditorEngine,
+        editor_buffer: &EditorBuffer,
         line: &GCString,
         max_display_col_count: ColWidth,
     ) {
@@ -626,7 +627,7 @@ mod syn_hi_syntect_path {
 
     fn render_line_with_syntect(
         syntect_highlighted_line: Vec<(syntect::highlighting::Style, &str)>,
-        editor_buffer: &&EditorBuffer,
+        editor_buffer: &EditorBuffer,
         max_display_col_count: ColWidth,
         render_ops: &mut RenderOps,
     ) {
@@ -646,8 +647,8 @@ mod syn_hi_syntect_path {
     /// struct is mutated when it is used to highlight a line, so it must be re-created
     /// for each line.
     fn try_get_syntect_highlighted_line<'a>(
-        editor_engine: &'a &mut EditorEngine,
-        editor_buffer: &&EditorBuffer,
+        editor_engine: &'a mut EditorEngine,
+        editor_buffer: &EditorBuffer,
         line: &'a GCString,
     ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
         let file_ext = editor_buffer.get_maybe_file_extension()?;
@@ -664,10 +665,10 @@ mod no_syn_hi_path {
     use super::*;
 
     pub fn render_content(
-        editor_buffer: &&EditorBuffer,
+        editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,
         render_ops: &mut RenderOps,
-        editor_engine: &&mut EditorEngine,
+        editor_engine: &mut EditorEngine,
         max_display_col_count: ColWidth,
     ) {
         // Paint each line in the buffer (skipping the scroll_offset.row_index).
@@ -700,8 +701,8 @@ mod no_syn_hi_path {
     fn render_single_line(
         render_ops: &mut RenderOps,
         row_index: RowIndex,
-        editor_engine: &&mut EditorEngine,
-        editor_buffer: &&EditorBuffer,
+        editor_engine: &mut EditorEngine,
+        editor_buffer: &EditorBuffer,
         line: &GCString,
         max_display_col_count: ColWidth,
     ) {
@@ -722,10 +723,10 @@ mod no_syn_hi_path {
     /// This is used as a fallback by other render paths.
     pub fn render_line_no_syntax_highlight(
         line_gcs: &GCString,
-        editor_buffer: &&EditorBuffer,
+        editor_buffer: &EditorBuffer,
         max_display_col_count: ColWidth,
         render_ops: &mut RenderOps,
-        editor_engine: &&mut EditorEngine,
+        editor_engine: &mut EditorEngine,
     ) {
         let scroll_offset_col_index = editor_buffer.get_scr_ofs().col_index;
 

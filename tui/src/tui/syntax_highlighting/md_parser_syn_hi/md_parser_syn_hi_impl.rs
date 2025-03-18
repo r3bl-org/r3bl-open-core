@@ -16,14 +16,12 @@
  */
 
 //! This module is responsible for converting a [MdDocument] into a [StyleUSSpanLines].
-use std::fmt::Write as _;
 
 use r3bl_core::{join,
                 new_style,
                 CommonError,
                 CommonErrorType,
                 CommonResult,
-                DocumentStorage,
                 GCString,
                 GCStringExt,
                 GradientGenerationPolicy,
@@ -45,6 +43,7 @@ use crate::{constants::{AUTHORS,
                         LEFT_IMAGE,
                         LEFT_PARENTHESIS,
                         NEW_LINE,
+                        NEW_LINE_CHAR,
                         RIGHT_BRACKET,
                         RIGHT_IMAGE,
                         RIGHT_PARENTHESIS,
@@ -80,9 +79,11 @@ use crate::{constants::{AUTHORS,
             MdBlock,
             MdDocument,
             MdLineFragment,
+            ParserByteCache,
             StyleUSSpan,
             StyleUSSpanLine,
-            StyleUSSpanLines};
+            StyleUSSpanLines,
+            PARSER_BYTE_CACHE_PAGE_SIZE};
 
 /// This is the main function that the [crate::editor] uses this in order to display the
 /// markdown to the user.It is responsible for converting:
@@ -90,26 +91,71 @@ use crate::{constants::{AUTHORS,
 /// - into a [StyleUSSpanLines], which the [crate::editor] will clip & render.
 ///
 /// # Arguments
-/// - `editor_text` - The text that the user has typed into the editor.
+/// - `editor_text_lines` - The text that the user has typed into the editor.
 /// - `current_box_computed_style` - The computed style of the box that the editor is in.
+/// - `maybe_syntect_tuple` - The syntax set and theme that the editor should use to
+///   highlight the text.
+/// - `parser_byte_cache` - A cache that is used to store the byte array that results from
+///   adding CRLF back into the document [crate::sizing::VecEditorContentLines]. This is
+///   used to avoid re-allocating this struct every time the document is re-parsed, which
+///   requires this byte array to be re-created with CRLF added to the document contents
+///   (which may have changed).
 pub fn try_parse_and_highlight(
     editor_text_lines: &[GCString],
     maybe_current_box_computed_style: &Option<TuiStyle>,
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
+    parser_byte_cache: Option<&mut ParserByteCache>,
 ) -> CommonResult<StyleUSSpanLines> {
     // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
+
     // Convert the editor text into a InlineString (unfortunately requires allocating to
     // get the new lines back, since they're stripped out when loading content into the
     // editor buffer struct).
-    let mut acc = DocumentStorage::new();
+    let size_hint = editor_text_lines
+        .iter()
+        .map(|line| line.len().as_usize() + 1 /* for new line */)
+        .sum();
+
+    let acc = match parser_byte_cache {
+        // Re-use the parser_byte_cache if it exists.
+        Some(acc) => {
+            acc.clear();
+            let amount_to_reserve = {
+                // Increase the capacity of the acc if necessary by rounding up to the
+                // nearest PARSER_BYTE_CACHE_PAGE_SIZE.
+                let page_size = PARSER_BYTE_CACHE_PAGE_SIZE;
+                let current_capacity = acc.capacity();
+                if size_hint > current_capacity {
+                    let bytes_needed = size_hint - current_capacity;
+                    // Round up bytes_needed to the nearest page_size.
+                    let pages_needed = (bytes_needed + page_size - 1) / page_size;
+                    pages_needed * page_size
+                } else {
+                    0
+                }
+            };
+            acc.reserve(amount_to_reserve);
+            acc
+        }
+        // Allocate a new parser_byte_cache just for this function scope if it doesn't
+        // exist.
+        None => &mut { ParserByteCache::with_capacity(size_hint) },
+    };
+
+    // Write each line w/ CRLF into the accumulator.
+    // - The CRLF is necessary for the parser to work correctly.
+    // - This also requires the entire document to be copied into the accumulator (and
+    //   CRLFs added).
     for line in editor_text_lines {
-        _ = writeln!(acc, "{}", line.as_ref());
+        acc.push_str(line.as_ref());
+        acc.push(NEW_LINE_CHAR);
     }
-    let it = parse_markdown(&acc);
+
+    let result_md_ast = parse_markdown(&acc);
 
     // XMARK: Parse markdown from editor and render it
     // Try and parse `editor_text_to_string` into a `Document`.
-    match it {
+    match result_md_ast {
         Ok((_remainder, document)) => Ok(StyleUSSpanLines::from_document(
             &document,
             maybe_current_box_computed_style,
@@ -139,6 +185,7 @@ mod tests_try_parse_and_highlight {
             let style_us_span_lines = try_parse_and_highlight(
                 &editor_text_lines,
                 &Some(current_box_computed_style),
+                None,
                 None,
             )?;
 
