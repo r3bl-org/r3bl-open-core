@@ -146,7 +146,7 @@ mod render_cache_impl_block {
                     };
 
                     // Re-render content, generate & write to render_ops.
-                    engine_public_api::render_content(&render_args, render_ops);
+                    engine_public_api::render_content(render_args, render_ops);
 
                     // Snapshot the render_ops in the cache.
                     buffer
@@ -161,7 +161,7 @@ mod render_cache_impl_block {
                         has_focus,
                     };
                     // Re-render content, generate & write to render_ops.
-                    engine_public_api::render_content(&render_args, render_ops);
+                    engine_public_api::render_content(render_args, render_ops);
                 }
             }
         }

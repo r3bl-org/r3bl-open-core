@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::Dim;
+use r3bl_core::{Dim, DocumentStorage};
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
 use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox};
@@ -44,7 +44,30 @@ pub struct EditorEngine {
     pub syntax_set: SyntaxSet,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
     pub theme: Theme,
+    /// This is a byte cache that is used to write the entire editor content into, with
+    /// CRLF added, so that it can be parsed by the Markdown parser in order to apply
+    /// syntax highlighting using [crate::try_parse_and_highlight()].
+    /// [crate::EditorContent] stores the document as a
+    /// [crate::sizing::VecEditorContentLines] which has all the CRLF removed. This cache
+    /// is used to add the CRLF back in.
+    ///
+    /// The actual Markdown parser that needs this cache is here
+    /// [crate::parse_markdown()].
+    ///
+    /// The reason to have this as a field in this struct, is to avoid re-allocating this
+    /// cache every time we need to parse the document. This cache is re-used every time
+    /// the document is re-parsed (which happens every time a change is made to the
+    /// document).
+    pub parser_byte_cache: ParserByteCache,
 }
+
+/// You can swap this out with [String] if you want to exclusively heap allocate.
+pub type ParserByteCache = DocumentStorage;
+
+/// This is the page size amount by which to grow the
+/// [crate::EditorEngine::parser_byte_cache] so that it is done efficiently and not by 1
+/// or 2 bytes at time.
+pub const PARSER_BYTE_CACHE_PAGE_SIZE: usize = 1024;
 
 impl Default for EditorEngine {
     fn default() -> Self { EditorEngine::new(Default::default()) }
@@ -59,6 +82,7 @@ impl EditorEngine {
             config_options,
             syntax_set: SyntaxSet::load_defaults_newlines(),
             theme: try_load_r3bl_theme().unwrap_or_else(|_| load_default_theme()),
+            parser_byte_cache: ParserByteCache::new(),
         }
     }
 
