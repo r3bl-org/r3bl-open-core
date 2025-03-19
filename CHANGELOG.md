@@ -1,7 +1,8 @@
 # Changelog
 
 - [global-config](#global-config)
-  - [-12-04](#-12-04)
+  - [Global config (2025-03-19)](#global-config-2025-03-19)
+  - [Global config (2024-12-04)](#global-config-2024-12-04)
 - [r3bl-cmdr](#r3bl-cmdr)
   - [next](#v_next_release_cmdr)
   - [v0.0.16 2024-09-13](#v0016-2024-09-13)
@@ -153,7 +154,23 @@ test the `r3bl-open-core` repo. This includes all the `run` scripts in each crat
 contained in the monorepo, along with the top level `run` script. Things like RUSTSEC
 advisory whitelist and which tasks are run in CICD are included here.
 
-### 2024-12-04
+### Global config (2025-03-19)
+
+This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/378) contains the details for
+the following:
+
+- Updated:
+  - Add a few RUSTSEC advisories to the whitelist in `deny.toml` file. There's a total
+    of 5 in there now.
+    - `"RUSTSEC-2024-0436", # "paste 1.0.15"`
+    - `"RUSTSEC-2024-0320", # "instant@0.1.13"`
+    - `"RUSTSEC-2024-0384", # "hashbrown@0.15.0"`
+    - `"RUSTSEC-2024-0402", # "yaml-rust@0.4.5"`
+    - `"RUSTSEC-2024-0421", # "idna v0.5.0"`
+  - Add a new target to the `run` script in `tui` folder, to run examples without logging
+    with release build: `nu run release-examples-no-log`.
+
+### Global config (2024-12-04)
 
 This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/370) contains the details for
 the following:
