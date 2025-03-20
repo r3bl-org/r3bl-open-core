@@ -18,7 +18,6 @@
 //! Functions that implement the public (re-exported in `mod.rs`) event based API of the
 //! editor engine. See [mod@super::engine_internal_api] for the internal and functional
 //! API.
-
 use r3bl_ansi_color::green;
 use r3bl_core::{caret_scr_adj,
                 col,
@@ -69,7 +68,6 @@ use crate::{caret_scroll_index,
             ScrollOffsetColLocationInRange,
             SelectionRange,
             SpecialKey,
-            StyleUSSpanLine,
             StyleUSSpanLines,
             SyntaxHighlightMode,
             ZOrder,
@@ -144,6 +142,7 @@ pub fn apply_event(
         // The following events trigger undo / redo. Add the initial state to the history
         // if it is empty. This seeds the history buffer with its first entry.
         if triggers_undo_redo(&editor_event) & buffer.history.is_empty() {
+            engine.clear_ast_cache();
             buffer.add();
         };
 
@@ -154,6 +153,7 @@ pub fn apply_event(
         // add the new state to the history. So that the user will be able to get back to
         // this state if they want to (after making a change in the future).
         if triggers_undo_redo(&editor_event) {
+            engine.clear_ast_cache();
             buffer.add();
         }
 
@@ -484,13 +484,26 @@ mod syn_hi_r3bl_path {
         max_display_col_count: ColWidth,
     ) -> CommonResult<()> {
         throws!({
-            // PERF: This function call is very expensive.
-            let lines: StyleUSSpanLines = try_parse_and_highlight(
-                editor_buffer.get_lines(),
-                &editor_engine.current_box.get_computed_style(),
-                Some((&editor_engine.syntax_set, &editor_engine.theme)),
-                Some(&mut editor_engine.parser_byte_cache),
-            )?;
+            // Save some values that are needed later. But are copied here to avoid
+            // multiple borrows.
+            let box_pos = editor_engine.current_box.style_adjusted_origin_pos;
+            let scr_ofs = editor_buffer.get_scr_ofs();
+
+            // Fill engine ast cache if empty.
+            if editor_engine.ast_cache_is_empty() {
+                // PERF: This function call is very expensive.
+                let ast_cache: StyleUSSpanLines = try_parse_and_highlight(
+                    editor_buffer.get_lines(),
+                    &editor_engine.current_box.get_computed_style(),
+                    Some((&editor_engine.syntax_set, &editor_engine.theme)),
+                    Some(&mut editor_engine.parser_byte_cache),
+                )?;
+                editor_engine.set_ast_cache(ast_cache);
+            }
+
+            // Reuse the ast cache from engine.
+            debug_assert!(!editor_engine.ast_cache_is_empty());
+            let lines: &StyleUSSpanLines = editor_engine.get_ast_cache().unwrap();
 
             DEBUG_TUI_SYN_HI.then(|| {
                 // % is Display, ? is Debug.
@@ -519,34 +532,16 @@ mod syn_hi_r3bl_path {
                     break;
                 }
 
-                render_single_line(
-                    line,
-                    editor_buffer,
-                    editor_engine,
-                    row_index,
-                    max_display_col_count,
-                    render_ops,
-                );
+                // Render each line.
+                render_ops.push(RenderOp::MoveCursorPositionRelTo(
+                    box_pos,
+                    col(0) + row_index,
+                ));
+                let styled_texts = line.clip(scr_ofs, max_display_col_count);
+                render_tui_styled_texts_into(&styled_texts, render_ops);
+                render_ops.push(RenderOp::ResetColor);
             }
         });
-    }
-
-    fn render_single_line(
-        line: &StyleUSSpanLine,
-        editor_buffer: &EditorBuffer,
-        editor_engine: &mut EditorEngine,
-        row_index: RowIndex,
-        max_display_col_count: ColWidth,
-        render_ops: &mut RenderOps,
-    ) {
-        render_ops.push(RenderOp::MoveCursorPositionRelTo(
-            editor_engine.current_box.style_adjusted_origin_pos,
-            col(0) + row_index,
-        ));
-        let scr_ofs = editor_buffer.get_scr_ofs();
-        let styled_texts = line.clip(scr_ofs, max_display_col_count);
-        render_tui_styled_texts_into(&styled_texts, render_ops);
-        render_ops.push(RenderOp::ResetColor);
     }
 }
 

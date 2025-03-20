@@ -474,6 +474,12 @@ Updated:
     the `write!` macro to write to a pre-existing buffer.
 
 Added:
+  - Introduce `EditorEngine::ast_cache` which allows the `StyleUSSpanLines` that are
+    generated for any content loaded into the editor to be cached. This is a huge
+    performance win since scrolling and rendering is now much faster! Since the
+    `EditorEngine` is free to be mutated during the render phase, the cache is invalidated
+    and rebuilt after the `EditorBuffer` is modified. This works hand in hand with the
+    `EditorBuffer::render_cache`.
   - New `tui_color!` decl macro that allows all the delightful color palette used in
     `giti` to be available to anyone using this crate! `r3bl_ansi_color` is updated as
     well to work with this macro. `AnsiStyledText` has constructor function `fg_rgb_color()`
