@@ -276,6 +276,7 @@ pub mod versions {
                 );
             });
         }
+
         pub fn undo(&mut self) {
             // Invalidate the content cache, since the content just changed.
             self.render_cache.clear();

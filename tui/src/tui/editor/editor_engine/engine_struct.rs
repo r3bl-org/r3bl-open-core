@@ -20,7 +20,7 @@ use std::fmt::Debug;
 use r3bl_core::{Dim, DocumentStorage};
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox};
+use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox, StyleUSSpanLines};
 
 /// Do not create this struct directly. Please use [new()](EditorEngine::new) instead.
 ///
@@ -62,6 +62,7 @@ pub struct EditorEngine {
     /// the document is re-parsed (which happens every time a change is made to the
     /// document).
     pub parser_byte_cache: ParserByteCache,
+    pub ast_cache: Option<StyleUSSpanLines>,
 }
 
 /// You can swap this out with [String] if you want to exclusively heap allocate.
@@ -86,10 +87,21 @@ impl EditorEngine {
             syntax_set: SyntaxSet::load_defaults_newlines(),
             theme: try_load_r3bl_theme().unwrap_or_else(|_| load_default_theme()),
             parser_byte_cache: ParserByteCache::new(),
+            ast_cache: None,
         }
     }
 
     pub fn viewport(&self) -> Dim { self.current_box.style_adjusted_bounds_size }
+
+    pub fn set_ast_cache(&mut self, ast_cache: StyleUSSpanLines) {
+        self.ast_cache = Some(ast_cache)
+    }
+
+    pub fn clear_ast_cache(&mut self) { self.ast_cache = None }
+
+    pub fn get_ast_cache(&self) -> Option<&StyleUSSpanLines> { self.ast_cache.as_ref() }
+
+    pub fn ast_cache_is_empty(&self) -> bool { self.ast_cache.is_none() }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
