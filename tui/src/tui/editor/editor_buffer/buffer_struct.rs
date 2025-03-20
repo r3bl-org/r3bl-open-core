@@ -51,6 +51,12 @@ use crate::{caret_locate,
 /// 2. And it is paired w/ [crate::EditorEngine] at runtime; which is responsible for
 ///    rendering it to TUI, and handling user input.
 ///
+/// # Change state during render
+///
+/// This struct is not mutable during render phase. If you need to make changes during
+/// the render phase, then you should use the [crate::EditorEngine] struct, which is
+/// mutable during render phase.
+///
 /// # Modifying the buffer
 ///
 /// [crate::InputEvent] is converted into an [crate::EditorEvent] (by
