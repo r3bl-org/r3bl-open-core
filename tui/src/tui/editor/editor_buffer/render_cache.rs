@@ -76,6 +76,10 @@ pub enum UseRenderCache {
     No,
 }
 
+/// Holds a single cache entry that represents the render operations to render the content
+/// of the editor buffer to the current viewport and (terminal) screen size. The key
+/// encodes information about the scroll offset and window size, which is used to derive
+/// the viewport information.
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct RenderCache {
     pub entry: Option<cache_entry::CacheEntry>,
@@ -105,6 +109,8 @@ mod render_cache_impl_block {
             }
         }
 
+        /// This cache only holds a single entry. So if there is an existing entry, it is
+        /// replaced with the new entry.
         pub fn insert(&mut self, arg_key: impl Into<Key>, value: RenderOps) {
             let key: Key = arg_key.into();
             self.entry = Some(CacheEntry::new(key, value));
@@ -125,44 +131,35 @@ mod render_cache_impl_block {
             render_ops: &mut RenderOps,
             use_cache: UseRenderCache,
         ) {
+            // Cache enabled & hit so early return.
+            if matches!(use_cache, UseRenderCache::Yes)
+                && let Some(cached_output) =
+                    buffer.render_cache.get((buffer.get_scr_ofs(), window_size))
+            {
+                *render_ops = cached_output.clone();
+                return;
+            }
+
+            // Cached disabled, or miss due to:
+            // - Content has been modified.
+            // - Scroll Offset or Window size has been modified.
+            // So re-render content, generate & write to render_ops.
+            engine_public_api::render_content(
+                RenderArgs {
+                    engine,
+                    buffer,
+                    has_focus,
+                },
+                render_ops,
+            );
+
             match use_cache {
-                UseRenderCache::Yes => {
-                    if let Some(cached_output) =
-                        buffer.render_cache.get((buffer.get_scr_ofs(), window_size))
-                    {
-                        // Cache hit
-                        *render_ops = cached_output.clone();
-                        return;
-                    }
-
-                    // Cache miss, due to either:
-                    // - Content has been modified.
-                    // - Scroll Offset or Window size has been modified.
-                    buffer.render_cache.clear();
-                    let render_args = RenderArgs {
-                        engine,
-                        buffer,
-                        has_focus,
-                    };
-
-                    // Re-render content, generate & write to render_ops.
-                    engine_public_api::render_content(render_args, render_ops);
-
-                    // Snapshot the render_ops in the cache.
-                    buffer
-                        .render_cache
-                        .insert((buffer.get_scr_ofs(), window_size), render_ops.clone());
-                }
-                UseRenderCache::No => {
-                    buffer.render_cache.clear();
-                    let render_args = RenderArgs {
-                        engine,
-                        buffer,
-                        has_focus,
-                    };
-                    // Re-render content, generate & write to render_ops.
-                    engine_public_api::render_content(render_args, render_ops);
-                }
+                // Cache is enabled, so update it.
+                UseRenderCache::Yes => buffer
+                    .render_cache
+                    .insert((buffer.get_scr_ofs(), window_size), render_ops.clone()),
+                // Cache is disabled, so invalidate it (it should contain nothing at this point).
+                UseRenderCache::No => buffer.render_cache.clear(),
             }
         }
     }
