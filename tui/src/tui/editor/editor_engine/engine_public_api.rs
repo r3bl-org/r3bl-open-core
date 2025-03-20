@@ -444,7 +444,6 @@ pub enum EditorEngineApplyEventResult {
 }
 
 mod syn_hi_r3bl_path {
-
     use super::*;
 
     /// Try convert [Vec] of [US] to [MdDocument]:
@@ -485,6 +484,7 @@ mod syn_hi_r3bl_path {
         max_display_col_count: ColWidth,
     ) -> CommonResult<()> {
         throws!({
+            // PERF: This function call is very expensive.
             let lines: StyleUSSpanLines = try_parse_and_highlight(
                 editor_buffer.get_lines(),
                 &editor_engine.current_box.get_computed_style(),

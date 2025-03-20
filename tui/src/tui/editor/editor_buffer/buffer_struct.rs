@@ -223,7 +223,7 @@ mod construct {
     impl EditorBuffer {
         /// Marker method to make it easy to search for where an empty instance is created.
         pub fn new_empty(
-            maybe_file_extension: Option<&str>, 
+            maybe_file_extension: Option<&str>,
             maybe_file_path: Option<&str>,
         ) -> Self {
             let it = Self {
