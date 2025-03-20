@@ -24,7 +24,10 @@ use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox};
 
 /// Do not create this struct directly. Please use [new()](EditorEngine::new) instead.
 ///
-/// Holds data related to rendering in between render calls.
+/// Holds data related to rendering in between render calls. This struct is mutable when
+/// render is called. That is not the case with state, which is immutable during render
+/// phase.
+///
 /// 1. This is not stored in the [crate::EditorBuffer] struct, which lives in the app's
 ///    state. The state provides the underlying document or buffer struct that holds the
 ///    actual document.
@@ -32,9 +35,9 @@ use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox};
 ///    inside of the [crate::App].
 ///
 /// In order to change the document, you can use the
-/// [crate::engine_public_api::apply_event] method which takes
-/// [crate::InputEvent] and tries to convert it to an [crate::EditorEvent] and then execute them
-/// against this buffer.
+/// [crate::engine_public_api::apply_event] method which takes [crate::InputEvent] and
+/// tries to convert it to an [crate::EditorEvent] and then execute them against this
+/// buffer.
 #[derive(Clone, Debug)]
 pub struct EditorEngine {
     /// Set by [crate::engine_public_api::render_engine].
