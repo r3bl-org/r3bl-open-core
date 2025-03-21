@@ -18,4 +18,27 @@ resolver = "3"
 
 # https://github.com/trailofbits/cargo-unmaintained
 [workspace.metadata.unmaintained]
-ignore = ["gethostname", "objc", "home", "proc-macro-error", "wayland-commons"]
+ignore = ["gethostname", "objs", "home", "proc-macro-error", "wayland-commons"]
+
+# https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html
+# https://www.linkedin.com/posts/marcoieni_i-finally-found-some-time-to-review-all-the-activity-7307355034642452481-EVLZ
+[workspace.lints.rust]
+ambiguous_negative_literals = "warn"
+closure_returning_async_block = "warn"
+explicit_outlives_requirements = "warn"
+if_let_rescope = "warn"
+impl_trait_overcaptures = "warn"
+impl_trait_redundant_captures = "warn"
+let_underscore_drop = "warn"
+macro_use_extern_crate = "warn"
+missing_debug_implementations = "warn"
+non_ascii_indents = "warn"
+redundant_imports = "warn"
+redundant_lifetimes = "warn"
+single_use_lifetimes = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unit_bindings = "warn"
+unsafe_attr_outside_unsafe = "warn"
+unused = "warn"
+unused_import_braces = "warn"
