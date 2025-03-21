@@ -126,9 +126,9 @@ pub fn try_parse_and_highlight(
                 let page_size = PARSER_BYTE_CACHE_PAGE_SIZE;
                 let current_capacity = acc.capacity();
                 if size_hint > current_capacity {
-                    let bytes_needed = size_hint - current_capacity;
+                    let bytes_needed: usize = size_hint - current_capacity;
                     // Round up bytes_needed to the nearest page_size.
-                    let pages_needed = (bytes_needed + page_size - 1) / page_size;
+                    let pages_needed = bytes_needed.div_ceil(page_size);
                     pages_needed * page_size
                 } else {
                     0
@@ -151,7 +151,7 @@ pub fn try_parse_and_highlight(
         acc.push(NEW_LINE_CHAR);
     }
 
-    let result_md_ast = parse_markdown(&acc);
+    let result_md_ast = parse_markdown(acc);
 
     // XMARK: Parse markdown from editor and render it
     // Try and parse `editor_text_to_string` into a `Document`.
