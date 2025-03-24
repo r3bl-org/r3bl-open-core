@@ -38,7 +38,7 @@ pub enum AppSignal {
     #[default]
     Noop,
     NextSlide,
-    PreviousSlide,
+    PrevSlide,
 }
 
 #[derive(Clone, PartialEq)]
