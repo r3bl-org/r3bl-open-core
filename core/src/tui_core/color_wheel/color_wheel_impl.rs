@@ -482,8 +482,7 @@ impl ColorWheel {
             };
 
             // Loop: Colorize each (next) character w/ (next) color.
-            for seg in us.iter() {
-                let next_character = seg.get_str(us);
+            for next_seg_str in us.iter() {
                 let maybe_next_bg_color = self.next_color();
 
                 if let Some(next_bg_color) = maybe_next_bg_color {
@@ -519,18 +518,18 @@ impl ColorWheel {
                                 Some(tui_color!(fg_red, fg_green, fg_blue)),
                                 Some(tui_color!(bg_red, bg_green, bg_blue)),
                             ),
-                            @text: next_character,
+                            @text: next_seg_str,
                         );
                     } else {
                         acc += tui_styled_text!(
                             @style: inner::gen_style_fg_bg_color_for(maybe_style, None, None,),
-                            @text: next_character,
+                            @text: next_seg_str,
                         );
                     }
                 } else {
                     acc += tui_styled_text!(
                         @style: inner::gen_style_fg_bg_color_for(maybe_style, None, None,),
-                        @text: next_character,
+                        @text: next_seg_str,
                     );
                 }
             }
@@ -541,12 +540,11 @@ impl ColorWheel {
         // Handle regular case.
         match text_colorization_policy {
             TextColorizationPolicy::ColorEachCharacter(maybe_style) => {
-                for seg in us.iter() {
-                    let next_character = seg.get_str(us);
+                for next_seg_str in us.iter() {
                     // Loop: Colorize each (next) character w/ (next) color.
                     acc += tui_styled_text!(
                         @style: inner::gen_style_fg_color_for(maybe_style, self.next_color()),
-                        @text: next_character,
+                        @text: next_seg_str,
                     );
                 }
             }
