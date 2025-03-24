@@ -268,7 +268,7 @@ pub fn print_plain_text(
 
     // Loop over each grapheme cluster segment (the character) in `text_ref_gcs` (text in
     // a line). For each GraphemeClusterSegment, create a PixelChar.
-    for seg in text_gcs.iter() {
+    for seg in text_gcs.seg_iter() {
         let segment_display_width = usize(*seg.display_width);
         if segment_display_width == 0 {
             continue;
