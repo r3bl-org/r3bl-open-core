@@ -245,15 +245,12 @@ mod app_main_impl_app_trait {
             // Things from the app scope.
             let AppData { animator, .. } = &mut self.data;
 
-            // Things from global scope.
-            let GlobalData { state, .. } = global_data;
-
             // Ctrl + n => next slide.
             if input_event.matches_keypress(KeyPress::WithModifiers {
                 key: Key::Character('n'),
                 mask: ModifierKeysMask::new().with_ctrl(),
             }) {
-                // Spawn previous slide action.
+                // Spawn next slide action.
                 send_signal!(
                     global_data.main_thread_channel_sender,
                     TerminalWindowMainThreadSignal::ApplyAppSignal(AppSignal::NextSlide)
@@ -269,9 +266,7 @@ mod app_main_impl_app_trait {
                 // Spawn previous slide action.
                 send_signal!(
                     global_data.main_thread_channel_sender,
-                    TerminalWindowMainThreadSignal::ApplyAppSignal(
-                        AppSignal::PreviousSlide
-                    )
+                    TerminalWindowMainThreadSignal::ApplyAppSignal(AppSignal::PrevSlide)
                 );
                 return Ok(EventPropagation::Consumed);
             };
@@ -309,7 +304,7 @@ mod app_main_impl_app_trait {
                     AppSignal::NextSlide => {
                         state_mutator::next_slide(state, component_registry_map);
                     }
-                    AppSignal::PreviousSlide => {
+                    AppSignal::PrevSlide => {
                         state_mutator::prev_slide(state, component_registry_map);
                     }
                 };
