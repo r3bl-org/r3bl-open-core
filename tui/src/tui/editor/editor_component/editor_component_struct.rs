@@ -93,7 +93,7 @@ pub mod editor_component_impl_component_trait {
         S: HasEditorBuffers + Default + Clone + Debug + Sync + Send,
         AS: Debug + Default + Clone + Sync + Send,
     {
-        fn reset(&mut self) {}
+        fn reset(&mut self) { self.data.editor_engine.clear_ast_cache(); }
 
         fn get_id(&self) -> FlexBoxId { self.data.id }
 
