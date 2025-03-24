@@ -165,6 +165,20 @@ use crate::{ByteIndex,
 /// this design choice (no ownership and slicing into an existing struct) work for this
 /// use case it does not work for the `GCString` struct.
 ///
+/// # Iterators
+///
+/// There are two iterators. One for users of the struct, and another for use in a more
+/// un-abstract way, usually for internal use by the `r3bl_tui` codebase.
+///
+/// 1. [Self::iter]: Returns an iterator over the grapheme segments in the `GCString`.
+///    This iterator returns the `&str` segments in the order they appear in the
+///    underlying string. This makes it easy to iterate over the segments as `&str`
+///    without knowing about the [Seg] struct.
+/// 2. [Self::seg_iter]: Returns an iterator over the grapheme segments in the `GCString`.
+///    This iterator returns the [Seg] segments in the order they appear in the underlying
+///    string. This makes it easy to iterate over the segments as [Seg] and all the low
+///    level details on byte offsets, display width, etc.
+///
 /// # Features
 ///
 /// - `GCString`: Struct for representing Unicode strings with grapheme cluster
@@ -219,6 +233,79 @@ pub struct GCString {
     pub segments: sizing::SegmentArray,
     pub display_width: ColWidth,
     pub bytes_size: ChUnit,
+}
+
+mod iterator {
+    use super::*;
+
+    pub struct GCStringIterator<'a> {
+        gc_string: &'a GCString,
+        index: usize,
+    }
+
+    impl<'a> Iterator for GCStringIterator<'a> {
+        type Item = &'a str;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            match self.gc_string.get_segment(self.index) {
+                Some(segment) => {
+                    self.index += 1;
+                    Some(segment)
+                }
+                None => None, // Stop iteration when `get_segment` returns `None`.
+            }
+        }
+    }
+
+    impl GCString {
+        /// This is used to get the [Self::segments] of the grapheme string. This is used
+        /// for debugging and testing purposes, in addition to low level implementation of
+        /// things (like rendering) in the `r3bl_tui` crate. If you don't care about these
+        /// details and simply want a sequence of `&str`, then use the [Self::iter] method
+        /// to get an iterator over the grapheme segments.
+        pub fn seg_iter(&self) -> impl Iterator<Item = &Seg> { self.segments.iter() }
+
+        /// Returns an iterator over the grapheme segments in the `GCString` as a sequence
+        /// of `&str`. You don't have to worry about the [Seg] struct. If you care about
+        /// the internal details, use the [Self::seg_iter()] method that returns an
+        /// iterator over the [Self::segments].
+        pub fn iter(&self) -> GCStringIterator {
+            GCStringIterator {
+                gc_string: self,
+                index: 0,
+            }
+        }
+
+        /// Returns the segment at the given index.
+        pub fn get_segment(&self, index: usize) -> Option<&str> {
+            self.segments.get(index).map(|seg| seg.get_str(self))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_iterator {
+    use super::*;
+
+    #[test]
+    fn test_iterator() {
+        let gc_string = GCString::new("Hello, 世界🥞👨‍👩‍👧‍👦🙏🏽");
+        let mut iter = gc_string.iter();
+
+        assert_eq!(iter.next(), Some("H"));
+        assert_eq!(iter.next(), Some("e"));
+        assert_eq!(iter.next(), Some("l"));
+        assert_eq!(iter.next(), Some("l"));
+        assert_eq!(iter.next(), Some("o"));
+        assert_eq!(iter.next(), Some(","));
+        assert_eq!(iter.next(), Some(" "));
+        assert_eq!(iter.next(), Some("世"));
+        assert_eq!(iter.next(), Some("界"));
+        assert_eq!(iter.next(), Some("🥞"));
+        assert_eq!(iter.next(), Some("👨‍👩‍👧‍👦"));
+        assert_eq!(iter.next(), Some("🙏🏽"));
+        assert_eq!(iter.next(), None);
+    }
 }
 
 pub fn grapheme_string(arg_from: impl Into<GCString>) -> GCString { arg_from.into() }
@@ -768,7 +855,7 @@ pub mod trunc_end {
             let mut avail_cols: ColWidth = arg_col_width.into();
             let mut string_end_byte_index = 0;
 
-            for seg in self.iter() {
+            for seg in self.seg_iter() {
                 let seg_display_width = seg.display_width;
                 if avail_cols < seg_display_width {
                     break;
@@ -811,7 +898,9 @@ pub mod trunc_end {
             let mut countdown_col_count: ColWidth = arg_col_width.into();
             let mut string_end_byte_index = ch(0);
 
-            for seg in self.iter().rev() {
+            let rev_iter = self.segments.iter().rev();
+
+            for seg in rev_iter {
                 let seg_display_width = seg.display_width;
                 string_end_byte_index = seg.start_byte_index;
                 countdown_col_count -= seg_display_width;
@@ -863,7 +952,7 @@ pub mod trunc_start {
             let mut skip_col_count: ColWidth = arg_col_width.into();
             let mut string_start_byte_index = 0;
 
-            for segment in self.iter() {
+            for segment in self.seg_iter() {
                 let seg_display_width = segment.display_width;
                 if *skip_col_count != ch(0) {
                     // Skip segment.unicode_width.
@@ -1049,7 +1138,7 @@ mod clip {
             let string_start_byte_index = {
                 let mut it = 0;
                 let mut skip_col_count = start_display_col_index;
-                for seg in self.iter() {
+                for seg in self.seg_iter() {
                     let seg_display_width = seg.display_width;
                     // Skip scroll_offset_col_index columns.
                     if *skip_col_count != ch(0) {
@@ -1068,7 +1157,7 @@ mod clip {
                 let mut it = 0;
                 let mut avail_col_count = max_display_col_count;
                 let mut skip_col_count = start_display_col_index;
-                for seg in self.iter() {
+                for seg in self.seg_iter() {
                     let seg_display_width = seg.display_width;
                     // Skip scroll_offset_col_index columns (again).
                     if *skip_col_count != ch(0) {
@@ -1139,7 +1228,7 @@ mod mutate {
             // Add each seg's &str to the acc.
             vec.extend(
                 // Turn self.segments into a list of &str.
-                self.iter().map(|seg| seg.get_str(&self.string)),
+                self.seg_iter().map(|seg| seg.get_str(&self.string)),
             );
 
             // Get seg_index at display_col_index.
@@ -2119,7 +2208,7 @@ mod tests {
     #[test]
     fn test_get_at_seg_index() {
         let gs = grapheme_string(TEST_STR);
-        for (i, seg) in gs.iter().enumerate() {
+        for (i, seg) in gs.seg_iter().enumerate() {
             assert_eq!(gs.get(seg_index(i)), Some(*seg));
         }
     }

@@ -61,7 +61,7 @@ impl Lolcat {
     pub fn colorize_to_styled_texts(&mut self, us: &GCString) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
 
-        for seg in us.iter() {
+        for seg_str in us.iter() {
             let new_color = ColorUtils::get_color_tuple(&self.color_wheel_control);
             let derived_from_new_color = ColorUtils::calc_fg_color(new_color);
 
@@ -86,7 +86,7 @@ impl Lolcat {
 
             acc += tui_styled_text!(
                 @style: style,
-                @text: seg.get_str(us),
+                @text: seg_str,
             );
 
             self.color_wheel_control.seed +=
