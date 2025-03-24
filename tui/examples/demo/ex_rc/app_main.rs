@@ -253,8 +253,11 @@ mod app_main_impl_app_trait {
                 key: Key::Character('n'),
                 mask: ModifierKeysMask::new().with_ctrl(),
             }) {
-                // Update state and re-render.
-                state_mutator::next_slide(state);
+                // Spawn previous slide action.
+                send_signal!(
+                    global_data.main_thread_channel_sender,
+                    TerminalWindowMainThreadSignal::ApplyAppSignal(AppSignal::NextSlide)
+                );
                 return Ok(EventPropagation::ConsumedRender);
             };
 
@@ -290,22 +293,27 @@ mod app_main_impl_app_trait {
             )
         }
 
-        /// Examples are provided of directly manipulating the state in the
-        /// [app_handle_input_event](app_handle_input_event) method.
+        /// Examples are provided of directly manipulating the state in
+        /// [Self::app_handle_input_event()].
         fn app_handle_signal(
             &mut self,
             action: &AppSignal,
             global_data: &mut GlobalData<State, AppSignal>,
-            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+            component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             _has_focus: &mut HasFocus,
         ) -> CommonResult<EventPropagation> {
             throws_with_return!({
                 let state = &mut global_data.state;
                 match action {
                     AppSignal::Noop => {}
-                    AppSignal::NextSlide => state_mutator::next_slide(state),
-                    AppSignal::PreviousSlide => state_mutator::prev_slide(state),
+                    AppSignal::NextSlide => {
+                        state_mutator::next_slide(state, component_registry_map);
+                    }
+                    AppSignal::PreviousSlide => {
+                        state_mutator::prev_slide(state, component_registry_map);
+                    }
                 };
+
                 EventPropagation::ConsumedRender
             });
         }
