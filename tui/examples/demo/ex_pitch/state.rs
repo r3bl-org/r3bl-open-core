@@ -18,6 +18,7 @@ use std::{collections::HashMap,
           fmt::{Debug, Formatter, Result}};
 
 use r3bl_tui::{editor_buffer::EditorBuffer,
+               ComponentRegistryMap,
                FlexBoxId,
                HasEditorBuffers,
                DEFAULT_SYN_HI_FILE_EXT};
@@ -49,7 +50,20 @@ pub struct State {
 pub mod state_mutator {
     use super::*;
 
-    pub fn next_slide(state: &mut State) {
+    pub fn reset_editor_engine_ast_cache(
+        component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+    ) {
+        // Reset the editor component to the current state.
+        let id = FlexBoxId::from(Id::Editor);
+        if let Some(editor_component) = component_registry_map.get_mut(&id) {
+            editor_component.reset();
+        }
+    }
+
+    pub fn next_slide(
+        state: &mut State,
+        component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+    ) {
         if state.current_slide_index < FILE_CONTENT_ARRAY.len() - 1 {
             state.current_slide_index += 1;
             state
@@ -57,11 +71,15 @@ pub mod state_mutator {
                 .entry(FlexBoxId::from(Id::Editor as u8))
                 .and_modify(|it| {
                     it.set_lines(get_slide_content(state.current_slide_index));
+                    reset_editor_engine_ast_cache(component_registry_map);
                 });
         }
     }
 
-    pub fn prev_slide(state: &mut State) {
+    pub fn prev_slide(
+        state: &mut State,
+        component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+    ) {
         if state.current_slide_index > 0 {
             state.current_slide_index -= 1;
             state
@@ -69,6 +87,7 @@ pub mod state_mutator {
                 .entry(FlexBoxId::from(Id::Editor as u8))
                 .and_modify(|it| {
                     it.set_lines(get_slide_content(state.current_slide_index));
+                    reset_editor_engine_ast_cache(component_registry_map);
                 });
         }
     }
@@ -136,7 +155,7 @@ pub enum AppSignal {
     #[default]
     Noop,
     NextSlide,
-    PreviousSlide,
+    PrevSlide,
 }
 
 mod debug_format_helpers {
