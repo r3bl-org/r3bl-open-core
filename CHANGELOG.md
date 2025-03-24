@@ -1,6 +1,7 @@
 # Changelog
 
 - [global-config](#global-config)
+  - [Global config (2025-03-24)](#global-config-2025-03-24)
   - [Global config (2025-03-19)](#global-config-2025-03-19)
   - [Global config (2024-12-04)](#global-config-2024-12-04)
 - [r3bl-cmdr](#r3bl-cmdr)
@@ -153,6 +154,21 @@ This section contains all the changes that are made to global configuration to b
 test the `r3bl-open-core` repo. This includes all the `run` scripts in each crate
 contained in the monorepo, along with the top level `run` script. Things like RUSTSEC
 advisory whitelist and which tasks are run in CICD are included here.
+
+### Global config (2025-03-24)
+
+- Added:
+  - Add a new target to the `run` script in the workspace (root) folder that allows the
+    use of a "build server". This target is called `nu run build-server`. This sets up a
+    watcher using `inotifywait` to watch for changes in the source folders in
+    `r3bl-open-core` and `rsync` them to a destination ("build server") when changes
+    occur. The "build server" needs to run `bacon` to monitor tests, docs, and clippy
+    warnings continuously. This offloads all the computation from happening on the local
+    machine. This is preferred over creating a network share for the files on the local
+    machine, and running `bacon` on the "build server" machine. The problem with file
+    sharing is that a lot of locking occurs (when the remote process generates artifacts
+    on changes) that slow down the local machine's rust-analyzer from being interactive
+    (and it becomes really laggy and unusable).
 
 ### Global config (2025-03-19)
 

@@ -63,6 +63,7 @@ def main [...args: string] {
         "help" => {print-help all}
         "ramdisk-create" => {ramdisk-create}
         "ramdisk-delete" => {ramdisk-delete}
+        "build-server" => {build-server}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
 }
@@ -95,9 +96,65 @@ def print-help [command: string] {
         print $'    (ansi green)unmaintained(ansi reset)'
         print $'    (ansi green)ramdisk-create(ansi reset)'
         print $'    (ansi green)ramdisk-delete(ansi reset)'
+        print $'    (ansi green)build-server(ansi reset)'
         print $'    (ansi green)help(ansi reset)'
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
+    }
+}
+
+def build-server [] {
+    # Where you source files live.
+    let orgn_path = "/home/nazmul/github/r3bl-open-core"
+    # Copy files to here.
+    let dest_path = "nazmul-laptop.local:/home/nazmul/github/r3bl-open-core"
+
+    # Function to run rsync
+    def run_rsync [] {
+        print $'(ansi green)Changes detected, running rsync...(ansi reset)'
+        # Copy all the folders, don't know which one changed exactly.
+        $workspace_folders | each { |folder|
+            let orgn_path_full = ($orgn_path | path join $folder | path join "src/")
+            let dest_path_full = ($dest_path | path join $folder | path join "src/")
+            if ( $orgn_path_full | path exists ) {
+                let crlf = (char newline)
+                let prefix = "- "
+                let hanging_prefix = "  "
+                let tab = (char tab)
+                let msg_1 = $'(ansi yellow)($orgn_path_full)(ansi reset)'
+                let msg_2 = $'(ansi blue)($dest_path_full)(ansi reset)'
+                print $"($prefix)from:($tab)($msg_1)($crlf)($hanging_prefix)to:($tab)($msg_2)"
+                rsync -avz --delete $orgn_path_full $dest_path_full
+            } else {
+                print ($orgn_path_full | concat " does not exist, skipping")
+            }
+        }
+        print $'(ansi green)Rsync complete...(ansi reset)'
+    }
+
+    # Create a list of directories to watch.
+    let directories_to_watch = (
+        $workspace_folders
+        | each { |folder| $orgn_path | path join $folder | path join "src/" }
+        | where { |path| $path | path exists }
+    )
+
+    # Main loop
+    loop {
+        # Construct the inotifywait command with all directories.
+        let inotify_command = "inotifywait"
+        let inotify_args = [ "-r", "-e", "modify", "-e", "create", "-e", "delete", "-e", "move" ]
+        let inotify_args = ($inotify_args | append $directories_to_watch)
+
+        print $'(ansi green_bold) (ansi yellow)($inotify_command)(ansi reset) (ansi blue)($inotify_args)(ansi reset)'
+
+        print $'(ansi cyan)❪◕‿◕❫ (ansi reset)(ansi green)Please run bacon on build server: (ansi reset)(ansi yellow_underline)bacon nextest -W(ansi reset), (ansi yellow_underline)bacon doc -W(ansi reset), (ansi yellow_underline)bacon clippy -W(ansi reset)'
+
+        # Execute the inotifywait command.
+        ^$inotify_command ...$inotify_args
+
+        # Run rsync
+        run_rsync
     }
 }
 
