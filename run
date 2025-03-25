@@ -20,14 +20,16 @@
 
 # Make sure to keep this in sync with `Cargo.toml` workspace members.
 let workspace_folders = [
-  "analytics_schema",
-  "ansi_color",
-  "cmdr",
-  "core",
-  "terminal_async",
-  "test_fixtures",
-  "tui",
-  "tuify",
+    "tui",
+    "tuify",
+    "test_fixtures",
+    "terminal_async",
+    "script",
+    "log",
+    "core",
+    "cmdr",
+    "analytics_schema",
+    "ansi_color",
 ]
 
 # Main entry point for the script.
