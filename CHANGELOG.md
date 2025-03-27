@@ -1303,6 +1303,9 @@ performance, and ensure that performance is stable over time. `ch_unit.rs` is al
 refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
 now used throughout the codebase. No new functionality is added in this release.
 
+- Changed:
+  - Rename `get_readline_event()` to `read_line()`. This is an async replacement for
+    `std::io::Stdin::read_line()`.
 - Removed:
   - Move `spinner_impl` to `r3bl_tui` crate. This code is also used in
     `shared_global_data.rs` in `r3bl_tui` crate.

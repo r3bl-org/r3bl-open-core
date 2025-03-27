@@ -197,7 +197,7 @@ pub mod monitor_user_input_and_send_to_child {
 
                 // Branch: Monitor terminal_async for user input. This is cancel safe as
                 // `get_readline_event()` is cancel safe.
-                result_readline_event = terminal_async.get_readline_event() => {
+                result_readline_event = terminal_async.read_line() => {
                     match ControlFlow::from(result_readline_event) {
                         ControlFlow::ShutdownKillChild => {
                             _ = child.kill().await;

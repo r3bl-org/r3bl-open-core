@@ -41,7 +41,7 @@ pub struct TerminalAsync {
 }
 
 /// Don't change the `content`. Print it as is. And it is compatible w/ the
-/// [get_readline_event](TerminalAsync::get_readline_event) method.
+/// [TerminalAsync::read_line] method.
 #[macro_export]
 macro_rules! ta_println {
     (
@@ -145,7 +145,7 @@ impl TerminalAsync {
     pub fn clone_shared_writer(&self) -> SharedWriter { self.shared_writer.clone() }
 
     /// Replacement for [std::io::Stdin::read_line()] (this is async and non blocking).
-    pub async fn get_readline_event(&mut self) -> miette::Result<ReadlineEvent> {
+    pub async fn read_line(&mut self) -> miette::Result<ReadlineEvent> {
         self.readline.readline().fuse().await.into_diagnostic()
     }
 
