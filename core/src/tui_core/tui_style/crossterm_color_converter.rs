@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::{global_color_support, ColorSupport, TransformColor};
+use r3bl_ansi_color::{ColorSupport, TransformColor, global_color_support};
+
 use crate::{ANSIBasicColor, AnsiValue, RgbValue, TuiColor};
 
 #[rustfmt::skip]

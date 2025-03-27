@@ -22,17 +22,17 @@ pub mod color_wheel;
 pub mod color_wheel_core;
 pub mod dimens;
 pub mod graphemes;
+pub mod spinner_impl;
 pub mod tui_style;
 pub mod tui_styled_text;
 pub mod units;
-pub mod spinner_impl;
 
 // Re-export.
 pub use color_wheel::*;
 pub use color_wheel_core::*;
 pub use dimens::*;
 pub use graphemes::*;
+pub use spinner_impl::*;
 pub use tui_style::*;
 pub use tui_styled_text::*;
 pub use units::*;
-pub use spinner_impl::*;
