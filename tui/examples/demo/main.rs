@@ -83,7 +83,7 @@ async fn main() -> CommonResult<()> {
     }
 
     loop {
-        let result_readline_event = terminal_async.get_readline_event().await;
+        let result_readline_event = terminal_async.read_line().await;
         match result_readline_event {
             Ok(readline_event) => match readline_event {
                 ReadlineEvent::Line(input) => {

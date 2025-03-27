@@ -174,7 +174,7 @@ async fn main() -> miette::Result<()> {
             _ = interval_2_task.tick() => {
                 task_2::tick(&mut state, &mut terminal_async.clone_shared_writer())?;
             },
-            result_readline_event = terminal_async.get_readline_event() => {
+            result_readline_event = terminal_async.read_line() => {
                 match result_readline_event {
                     Ok(readline_event) => {
                         match readline_event {

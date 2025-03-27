@@ -118,7 +118,7 @@ const CTRL_D: crossterm::event::Event =
 /// that the user can't enter any input while the terminal is paused. And output from a
 /// [`crate::Spinner`] won't clobber the output from the [`SharedWriter`]s or from the
 /// user input prompt while [`crate::Readline::readline()`] (or
-/// [`crate::TerminalAsync::get_readline_event`]) is being awaited.
+/// [`crate::TerminalAsync::read_line`]) is being awaited.
 ///
 /// When the terminal is resumed, then the output from the [`SharedWriter`]s will be
 /// printed to the terminal by the [`manage_shared_writer_output::flush_internal()`]
