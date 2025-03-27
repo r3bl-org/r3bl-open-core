@@ -24,10 +24,14 @@ use std::{fs,
 
 use miette::{IntoDiagnostic as _, miette};
 use r3bl_ansi_color::{bold, fg_rgb_color, red, rgb_color};
-use r3bl_core::{InlineVec, SendRawTerminal, SharedWriter, StdMutex, inline_string};
+use r3bl_core::{InlineVec,
+                SendRawTerminal,
+                SharedWriter,
+                SpinnerStyle,
+                StdMutex,
+                inline_string};
 use r3bl_log::{DisplayPreference, try_initialize_logging_global};
-use r3bl_terminal_async::{Readline, ReadlineEvent, Spinner, TerminalAsync};
-use r3bl_core::SpinnerStyle;
+use r3bl_terminal_async::{Readline, ReadlineEvent, Spinner, TerminalAsync, ta_println};
 use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
@@ -160,7 +164,7 @@ async fn main() -> miette::Result<()> {
     let mut interval_1_task = interval(state.task_1_state.interval_delay);
     let mut interval_2_task = interval(state.task_2_state.interval_delay);
 
-    terminal_async.println(get_info_message().to_string()).await;
+    ta_println!(terminal_async, "{}", get_info_message());
 
     loop {
         select! {
@@ -203,8 +207,8 @@ async fn main() -> miette::Result<()> {
                     Err(err) => {
                         let msg_1 = format!("Received err: {}", red(&format!("{err:?}")));
                         let msg_2 = format!("{}", red("Exiting..."));
-                        terminal_async.println(msg_1).await;
-                        terminal_async.println(msg_2).await;
+                        ta_println!(terminal_async, "{msg_1}");
+                        ta_println!(terminal_async, "{msg_2}");
                         break;
                     },
                 }

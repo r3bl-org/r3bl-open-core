@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-use std::io::{Write, stdout};
+use std::io::stdout;
 
 use crossterm::{cursor::MoveToColumn,
-                style::{Print, ResetColor, Stylize},
+                style::{Print, ResetColor},
                 terminal::{Clear, ClearType}};
 use futures_util::FutureExt as _;
 use miette::IntoDiagnostic as _;
@@ -38,6 +38,42 @@ use crate::{Readline, ReadlineEvent};
 pub struct TerminalAsync {
     pub readline: Readline,
     pub shared_writer: SharedWriter,
+}
+
+/// Don't change the `content`. Print it as is. And it is compatible w/ the
+/// [get_readline_event](TerminalAsync::get_readline_event) method.
+#[macro_export]
+macro_rules! ta_println {
+    (
+        $ta:ident,
+        $($format:tt)*
+    ) => {{
+        use std::io::Write as _;
+        _ = writeln!($ta.shared_writer, $($format)*);
+    }};
+}
+
+#[macro_export]
+macro_rules! ta_print {
+    (
+        $ta:ident,
+        $($format:tt)*
+    ) => {{
+        use std::io::Write as _;
+        _ = write!($ta.shared_writer, $($format)*);
+    }};
+}
+
+/// Prefix the `content` with a color and special characters, then print it.
+#[macro_export]
+macro_rules! ta_println_prefixed {
+    (
+        $ta:ident,
+        $($format:tt)*
+    ) => {{
+        use std::io::Write as _;
+        _ = writeln!($ta.shared_writer, "{} {}", " > ".red().bold().on_dark_grey(), $($format)*);
+    }};
 }
 
 impl TerminalAsync {
@@ -111,29 +147,6 @@ impl TerminalAsync {
     /// Replacement for [std::io::Stdin::read_line()] (this is async and non blocking).
     pub async fn get_readline_event(&mut self) -> miette::Result<ReadlineEvent> {
         self.readline.readline().fuse().await.into_diagnostic()
-    }
-
-    /// Don't change the `content`. Print it as is. This works concurrently and is async
-    /// and non blocking. And it is compatible w/ the
-    /// [get_readline_event](TerminalAsync::get_readline_event) method.
-    pub async fn println<T>(&mut self, content: T)
-    where
-        T: std::fmt::Display,
-    {
-        let _ = writeln!(self.shared_writer, "{}", content);
-    }
-
-    /// Prefix the `content` with a color and special characters, then print it.
-    pub async fn println_prefixed<T>(&mut self, content: T)
-    where
-        T: std::fmt::Display,
-    {
-        let _ = writeln!(
-            self.shared_writer,
-            "{} {}",
-            " > ".red().bold().on_dark_grey(),
-            content
-        );
     }
 
     /// Simply flush the buffer. If there's a newline in the buffer, it will be printed.

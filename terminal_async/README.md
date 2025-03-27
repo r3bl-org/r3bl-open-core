@@ -289,7 +289,7 @@ cargo run --example shell_async
 3. If you use [`std::writeln!`] then there's no need to [`TerminalAsync::flush()`]
    because the `\n` will flush the buffer. When there's no `\n` in the buffer, or you
    are using [`std::write!`] then you might need to call [`TerminalAsync::flush()`].
-4. You can use the [`TerminalAsync::println`] and [`TerminalAsync::println_prefixed`]
+4. You can use the [`ta_println!`] and [`ta_println_prefixed!`]
    methods to easily write concurrent output to the `stdout`
    ([`r3bl_core::SharedWriter`]).
 5. You can also get access to the underlying [`Readline`] via the

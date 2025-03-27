@@ -1308,6 +1308,13 @@ now used throughout the codebase. No new functionality is added in this release.
     `shared_global_data.rs` in `r3bl_tui` crate.
   - Drop the dependency on `r3bl_tuify` crate in `Cargo.toml`.
   - Drop the dependency on `r3bl_tui` crate in `Cargo.toml`.
+  - Remove the `println()` and `println_prefixed()` methods.
+
+- Added:
+  - Add `ta_println!`, `ta_print!`, `ta_println_prefixed` macros that use `format_args!`
+    style (just like `println!`, `write!`, etc). This makes the API more familiar with
+    Rust standard library. This style of declarative macro is used in other crates in this
+    monorepo, like `r3bl_core`'s `into_existing.rs` module.
 
 ### v0.6.0 (2024-10-21)
 

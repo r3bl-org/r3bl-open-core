@@ -15,27 +15,27 @@
  *   limitations under the License.
  */
 
-use crossterm::{cursor::{MoveToColumn, MoveUp},
+use crossterm::{QueueableCommand,
+                cursor::{MoveToColumn, MoveUp},
                 style::{self, Print, Stylize},
-                terminal::{Clear, ClearType},
-                QueueableCommand};
+                terminal::{Clear, ClearType}};
 use miette::IntoDiagnostic as _;
-use crate::{inline_string,
-                pad_fmt,
-                width,
-                ColWidth,
-                GCStringExt,
-                InlineString,
-                SendRawTerminal,
-                ELLIPSIS_GLYPH};
 
-use crate::{convert_from_tui_color_to_crossterm_color,
-            spinner_render::style::style,
+use crate::{BLOCK_DOTS,
+            BRAILLE_DOTS,
+            ColWidth,
+            ELLIPSIS_GLYPH,
+            GCStringExt,
+            InlineString,
+            SendRawTerminal,
             SpinnerColor,
             SpinnerStyle,
             SpinnerTemplate,
-            BLOCK_DOTS,
-            BRAILLE_DOTS};
+            convert_from_tui_color_to_crossterm_color,
+            inline_string,
+            pad_fmt,
+            spinner_render::style::style,
+            width};
 
 pub fn get_next_tick_glyph(style: &SpinnerStyle, count: usize) -> InlineString {
     match style.template {
