@@ -56,7 +56,6 @@ pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crosste
 
 // Attach source files.
 pub mod crossterm_backend;
-pub mod crossterm_color_converter;
 pub mod enhanced_keys;
 pub mod input_device_ext;
 pub mod input_event;
@@ -76,7 +75,6 @@ pub mod z_order;
 
 // Re-export.
 pub use crossterm_backend::*;
-pub use crossterm_color_converter::*;
 pub use enhanced_keys::*;
 pub use input_device_ext::*;
 pub use input_event::*;

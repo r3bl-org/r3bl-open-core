@@ -1307,6 +1307,7 @@ now used throughout the codebase. No new functionality is added in this release.
   - Move `spinner_impl` to `r3bl_tui` crate. This code is also used in
     `shared_global_data.rs` in `r3bl_tui` crate.
   - Drop the dependency on `r3bl_tuify` crate in `Cargo.toml`.
+  - Drop the dependency on `r3bl_tui` crate in `Cargo.toml`.
 
 ### v0.6.0 (2024-10-21)
 

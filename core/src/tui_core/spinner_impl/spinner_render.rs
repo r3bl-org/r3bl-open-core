@@ -20,7 +20,7 @@ use crossterm::{cursor::{MoveToColumn, MoveUp},
                 terminal::{Clear, ClearType},
                 QueueableCommand};
 use miette::IntoDiagnostic as _;
-use r3bl_core::{inline_string,
+use crate::{inline_string,
                 pad_fmt,
                 width,
                 ColWidth,

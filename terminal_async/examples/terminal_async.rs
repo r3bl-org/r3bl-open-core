@@ -27,7 +27,7 @@ use r3bl_ansi_color::{bold, fg_rgb_color, red, rgb_color};
 use r3bl_core::{InlineVec, SendRawTerminal, SharedWriter, StdMutex, inline_string};
 use r3bl_log::{DisplayPreference, try_initialize_logging_global};
 use r3bl_terminal_async::{Readline, ReadlineEvent, Spinner, TerminalAsync};
-use r3bl_tui::SpinnerStyle;
+use r3bl_core::SpinnerStyle;
 use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
