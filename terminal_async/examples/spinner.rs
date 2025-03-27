@@ -21,7 +21,7 @@ use std::{io::{Write, stderr},
 
 use r3bl_core::StdMutex;
 use r3bl_terminal_async::{Spinner, TerminalAsync};
-use r3bl_tui::{SpinnerColor,
+use r3bl_core::{SpinnerColor,
                SpinnerStyle,
                SpinnerTemplate,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT}};

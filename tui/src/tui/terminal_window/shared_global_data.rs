@@ -28,10 +28,11 @@ use r3bl_core::{ok,
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{spinner_impl,
+use r3bl_core::{spinner_impl,SpinnerStyle,};
+use crate::{
             OffscreenBuffer,
             OffscreenBufferPool,
-            SpinnerStyle,
+
             DEBUG_TUI_COMPOSITOR,
             DEBUG_TUI_MOD};
 
