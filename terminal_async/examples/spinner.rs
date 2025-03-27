@@ -19,12 +19,12 @@ use std::{io::{Write, stderr},
           sync::Arc,
           time::Duration};
 
-use r3bl_core::StdMutex;
-use r3bl_terminal_async::{Spinner, TerminalAsync};
 use r3bl_core::{SpinnerColor,
-               SpinnerStyle,
-               SpinnerTemplate,
-               spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT}};
+                SpinnerStyle,
+                SpinnerTemplate,
+                StdMutex,
+                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT}};
+use r3bl_terminal_async::{Spinner, TerminalAsync};
 use tokio::{time::Instant, try_join};
 
 #[tokio::main]
