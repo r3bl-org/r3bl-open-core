@@ -25,6 +25,7 @@ pub mod graphemes;
 pub mod tui_style;
 pub mod tui_styled_text;
 pub mod units;
+pub mod spinner_impl;
 
 // Re-export.
 pub use color_wheel::*;
@@ -34,3 +35,4 @@ pub use graphemes::*;
 pub use tui_style::*;
 pub use tui_styled_text::*;
 pub use units::*;
+pub use spinner_impl::*;
