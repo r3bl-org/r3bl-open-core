@@ -236,8 +236,7 @@ multi line header. The first 5 lines are all part of the multi line header.
 ```rust
 use std::{io::Result, vec};
 
-use r3bl_ansi_color::{AnsiStyledText, ASTColor, ASTStyle};
-use r3bl_core::*;
+use r3bl_core::{AnsiStyledText, ASTColor, ASTStyle};
 use r3bl_tuify::{
     components::style::StyleSheet,
     select_from_list_with_multi_line_header,
@@ -570,7 +569,7 @@ To create your style, you need to create a `StyleSheet` struct and pass it as an
 
 ```rust
 use std::io::Result;
-use r3bl_ansi_color::{AnsiStyledText, ASTColor};
+use r3bl_core::{AnsiStyledText, ASTColor};
 use r3bl_tuify::{components::style::{Style, StyleSheet},
                 select_from_list,
                 SelectionMode};

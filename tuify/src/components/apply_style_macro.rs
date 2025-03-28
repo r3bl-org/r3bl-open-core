@@ -29,7 +29,7 @@ pub fn get_crossterm_color_based_on_terminal_capabilities(color: ASTColor) -> Co
                 b: rgb_color.blue,
             }
         }
-        _ => Color::AnsiValue(color.as_ansi256().index),
+        _ => Color::AnsiValue(color.as_ansi().index),
     }
 }
 

@@ -31,14 +31,14 @@ pub enum DefaultColors {
 impl DefaultColors {
     pub fn as_ansi_color(&self) -> ASTColor {
         match self {
-            DefaultColors::LizardGreen => ASTColor::Rgb(20, 244, 0),
-            DefaultColors::SlateGrey => ASTColor::Rgb(94, 103, 111),
-            DefaultColors::SilverMetallic => ASTColor::Rgb(213, 217, 220),
-            DefaultColors::FrozenBlue => ASTColor::Rgb(171, 204, 242),
-            DefaultColors::MoonlightBlue => ASTColor::Rgb(31, 36, 46),
-            DefaultColors::NightBlue => ASTColor::Rgb(14, 17, 23),
-            DefaultColors::GuardsRed => ASTColor::Rgb(200, 1, 1),
-            DefaultColors::Orange => ASTColor::Rgb(255, 132, 18),
+            DefaultColors::LizardGreen => ASTColor::Rgb((20, 244, 0).into()),
+            DefaultColors::SlateGrey => ASTColor::Rgb((94, 103, 111).into()),
+            DefaultColors::SilverMetallic => ASTColor::Rgb((213, 217, 220).into()),
+            DefaultColors::FrozenBlue => ASTColor::Rgb((171, 204, 242).into()),
+            DefaultColors::MoonlightBlue => ASTColor::Rgb((31, 36, 46).into()),
+            DefaultColors::NightBlue => ASTColor::Rgb((14, 17, 23).into()),
+            DefaultColors::GuardsRed => ASTColor::Rgb((200, 1, 1).into()),
+            DefaultColors::Orange => ASTColor::Rgb((255, 132, 18).into()),
         }
     }
 }

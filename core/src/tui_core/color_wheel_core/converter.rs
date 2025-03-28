@@ -20,7 +20,7 @@ use crate::{ANSIBasicColor, ASTColor, RgbValue, TuiColor};
 pub fn convert_tui_color_into_r3bl_ansi_color(color: TuiColor) -> ASTColor {
     match color {
         TuiColor::Rgb(RgbValue { red, green, blue }) => ASTColor::Rgb(red, green, blue),
-        TuiColor::Ansi(ansi_value) => ASTColor::Ansi256(ansi_value.color),
+        TuiColor::Ansi(ansi_value) => ASTColor::Ansi256(ansi_value.index),
         TuiColor::Basic(basic_color) => match basic_color {
             ANSIBasicColor::Black => ASTColor::Rgb(0, 0, 0),
             ANSIBasicColor::White => ASTColor::Rgb(255, 255, 255),
