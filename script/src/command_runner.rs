@@ -133,7 +133,7 @@ impl Run for Command {
 #[macro_export]
 macro_rules! bail_command_ran_and_failed {
         ($command:expr, $status:expr, $stderr:expr) => {
-            use r3bl_ansi_color::{lizard_green, frozen_blue, magenta};
+            use r3bl_core::{lizard_green, frozen_blue, magenta};
             miette::bail!(
                 "{name} failed\n{cmd_label}: '{cmd:?}'\n{status_label}: '{status}'\n{stderr_label}: '{stderr}'",
                 cmd_label = lizard_green("[command]"),

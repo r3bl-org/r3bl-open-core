@@ -17,14 +17,21 @@
 
 use std::cmp;
 
-use r3bl_ansi_color::{blue, cyan, dim, green, magenta, red, underline, yellow};
-use r3bl_core::{caret_scr_adj,
+use r3bl_core::{blue,
+                caret_scr_adj,
                 col,
+                cyan,
+                dim,
+                green,
                 height,
                 inline_string,
+                magenta,
+                red,
                 row,
+                underline,
                 usize,
                 width,
+                yellow,
                 CaretScrAdj,
                 ChUnitPrimitiveType,
                 Size};

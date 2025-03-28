@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::ASTColor;
+use r3bl_core::ASTColor;
 
 #[derive(Copy, Clone, Debug)]
 pub struct StyleSheet {

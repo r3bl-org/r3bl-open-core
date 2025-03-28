@@ -59,8 +59,7 @@ pub fn take_text_until_new_line_or_end<'input>() ->
 
 #[cfg(test)]
 mod test_text_until_opt_eol {
-    use r3bl_ansi_color::{bold, rgb_color};
-    use r3bl_core::assert_eq2;
+    use r3bl_core::{assert_eq2, bold, rgb_color};
 
     use super::*;
 

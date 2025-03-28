@@ -366,7 +366,7 @@
 //!
 //! ```
 //! # use r3bl_terminal_async::TerminalAsync;
-//! # use r3bl_ansi_color::{magenta};
+//! # use r3bl_core::{magenta};
 //! # pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
 //!         let user = "naz";

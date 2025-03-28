@@ -22,7 +22,6 @@ license = "Apache-2.0"
 [dependencies]
 # R3BL awesomeness.
 futures-util = "0.3.31"                                         # Async streams.
-r3bl_ansi_color = { path = "../ansi_color", version = "0.7.0" }
 r3bl_core = { path = "../core", version = "0.10.0" }
 
 # Tokio dependencies.

@@ -17,8 +17,7 @@
 
 use std::{fmt::Display, io::Result};
 
-use r3bl_ansi_color::{self, ASTColor, AnsiStyledText};
-use r3bl_core::{get_terminal_width, usize};
+use r3bl_core::{self, get_terminal_width, usize, ASTColor, ASTStyle, AnsiStyledText};
 use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet};
 use serde::{Deserialize, Serialize};
 
@@ -109,7 +108,7 @@ impl Display for Answer {
             "{}",
             AnsiStyledText {
                 text,
-                style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+                style: smallvec::smallvec![ASTStyle::Foreground(color)],
             }
         )
     }
@@ -142,19 +141,19 @@ fn display_header(line_length: usize) {
     println!();
     AnsiStyledText {
         text: "👋 Welcome to the Simple Quiz with Tuify",
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 
     AnsiStyledText {
         text: "To exit the game, press 'Esc'",
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 
     AnsiStyledText {
         text: "─".to_string().as_str().repeat(line_length).as_str(),
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 }
@@ -169,7 +168,7 @@ fn display_footer(
 
     AnsiStyledText {
         text: format!("╭{}╮", line).as_str(),
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 
@@ -189,13 +188,13 @@ fn display_footer(
 
     AnsiStyledText {
         text: score_text.join("").as_str(),
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 
     AnsiStyledText {
         text: format!("╰{}╯", line).as_str(),
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 }
@@ -235,9 +234,7 @@ fn check_user_input_and_display_result(
         "{} {} {}",
         AnsiStyledText {
             text: format!("{}. {}", question_number, &question_data.question).as_str(),
-            style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(
-                background_color
-            )],
+            style: smallvec::smallvec![ASTStyle::Foreground(background_color)],
         },
         input[0],
         correct_or_incorrect

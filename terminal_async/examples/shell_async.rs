@@ -95,8 +95,13 @@
 use std::io::Write as _;
 
 use miette::IntoDiagnostic as _;
-use r3bl_ansi_color::{fg_rgb_color, guards_red, lizard_green, rgb_color};
-use r3bl_core::{SharedWriter, inline_string, ok};
+use r3bl_core::{SharedWriter,
+                fg_rgb_color,
+                guards_red,
+                inline_string,
+                lizard_green,
+                ok,
+                rgb_color};
 use r3bl_terminal_async::{ReadlineEvent,
                           ReadlineEvent::{Eof, Interrupted, Line, Resized},
                           TerminalAsync};

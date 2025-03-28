@@ -19,10 +19,11 @@
 //! [ColorSupport] constraints. You can find ANSI colors
 //! [here](https://www.ditig.com/256-colors-cheat-sheet).
 
-use r3bl_ansi_color::{global_color_support, ColorSupport};
-use r3bl_core::{new_style,
+use r3bl_core::{global_color_support,
+                new_style,
                 tui_color,
                 Ansi256GradientIndex,
+                ColorSupport,
                 ColorWheel,
                 ColorWheelConfig,
                 ColorWheelSpeed,
