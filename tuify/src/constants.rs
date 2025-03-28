@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::ASTColor;
+use r3bl_core::ASTColor;
 
 // Colors.
 pub const LIZARD_GREEN: ASTColor = ASTColor::Rgb(20, 244, 0);

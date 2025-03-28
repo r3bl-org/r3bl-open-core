@@ -17,8 +17,10 @@
 
 use std::{env::var, process::Command};
 
-use r3bl_ansi_color::{ASTColor, ASTStyle, AnsiStyledText};
-use r3bl_core::{ColorWheel,
+use r3bl_core::{ASTColor,
+                ASTStyle,
+                AnsiStyledText,
+                ColorWheel,
                 CommonError,
                 CommonErrorType,
                 CommonResult,
