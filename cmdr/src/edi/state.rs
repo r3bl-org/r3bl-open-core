@@ -19,12 +19,13 @@ use std::{collections::HashMap,
           fmt::{Debug, Formatter, Result},
           path::Path};
 
-use r3bl_ansi_color::{green, red};
 use r3bl_core::{DocumentStorage,
                 InlineString,
                 TinyInlineString,
+                green,
                 inline_string,
-                into_existing};
+                into_existing,
+                red};
 use r3bl_tui::{DEBUG_TUI_MOD,
                DEFAULT_SYN_HI_FILE_EXT,
                DialogBuffer,

@@ -251,8 +251,7 @@
 //! ```rust
 //! use std::{io::Result, vec};
 //!
-//! use r3bl_ansi_color::{AnsiStyledText, ASTColor, ASTStyle};
-//! use r3bl_core::*;
+//! use r3bl_core::{AnsiStyledText, ASTColor, ASTStyle};
 //! use r3bl_tuify::{
 //!     components::style::StyleSheet,
 //!     select_from_list_with_multi_line_header,

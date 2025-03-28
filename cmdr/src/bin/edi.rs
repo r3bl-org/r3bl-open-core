@@ -18,7 +18,7 @@
 use std::env::var;
 
 use clap::Parser;
-use r3bl_ansi_color::{ASTStyle, AnsiStyledText};
+use r3bl_core::{ASTStyle, AnsiStyledText};
 use r3bl_cmdr::{AnalyticsAction, edi::launcher, report_analytics, upgrade_check};
 use r3bl_core::{ColorWheel,
                 CommonResult,

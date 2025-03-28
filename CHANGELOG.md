@@ -217,6 +217,9 @@ also heavily refactored and the entire codebase updated so that a the more ergon
 `ChUnit` API is now used throughout the codebase. No new functionality is added in this
 release.
 
+- Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
+
 - Updated:
   - Use the latest Rust 2024 edition.
   - This release just uses the latest deps from `r3bl-open-core` repo, since so many
@@ -482,6 +485,15 @@ These videos have been an inspiration for many of these changes:
 - [Data oriented design](https://youtu.be/WwkuAqObplU)
 - [Memory alloc](https://youtu.be/pJ-FRRB5E84)
 
+Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
+  - Remove `size-of` crate from `Cargo.toml`.
+  - Delete `static_global_data.rs` file and `telemetry_global_static` module.
+    - Move the `vscode` terminal color detection code to `r3bl_ansi_color`, which is where
+      it belongs.
+    - Move the telemetry functions from `telemetry_global_static` to  `Telemetry` module
+      (and its dependencies `RateLimiter` and `RingBuffer`) in `r3bl_core`.
+
 Updated:
   - Use the latest Rust 2024 edition.
   - The `Display` and `Debug` implementations for all the structs in this crate have been
@@ -516,14 +528,6 @@ Added:
     uses a fixed backing store (`RingBuffer`) and a rate limiter (`RateLimiter`) to ensure
     that the report is not computed too frequently (since this might be an expensive
     operation that is called in a hot loop, the main event loop).
-
-Removed:
-  - Remove `size-of` crate from `Cargo.toml`.
-  - Delete `static_global_data.rs` file and `telemetry_global_static` module.
-    - Move the `vscode` terminal color detection code to `r3bl_ansi_color`, which is where
-      it belongs.
-    - Move the telemetry functions from `telemetry_global_static` to  `Telemetry` module
-      (and its dependencies `RateLimiter` and `RingBuffer`) in `r3bl_core`.
 
 Changed:
   - Update all the demo examples in the `examples` folder to use the new telemetry API and
@@ -966,11 +970,11 @@ Here are the highlights:
      allow for an optional default style to be passed in, that will be applied to the
      generated lolcat output.
 
-Removed:
-  - Remove `size-of` crate from `Cargo.toml`.
-  - The `ch!` macro was confusing. It is now removed, and `ch_unit.rs` has clean
-    conversions to and from other types. There are easy to use, typed checked functions,
-    like `ch()`, `usize()`, `f64()`, etc.
+Moved:
+  - Move the contents of `r3bl_ansi_term` crate into `r3bl_core`. There is no need to have
+    that crate as an external dependency. Moving it where it belongs. It was developed as
+    a separate crate at the start, since the `r3bl_tui` codebase was in a much earlier stage
+    when it wasn't clear where `r3bl_ansi_term` fits with `r3bl_tui` and `r3bl_tuify`, etc.
 
 Changed:
   - In `decl_macros/macros.rs` change the semantics of the `with!` macro, so that the
@@ -1096,7 +1100,11 @@ Changed:
       the generated code itself and these docs include references to the types and static
       variables that are generated.
 
-- Removed:
+Removed:
+  - Remove `size-of` crate from `Cargo.toml`.
+  - The `ch!` macro was confusing. It is now removed, and `ch_unit.rs` has clean
+    conversions to and from other types. There are easy to use, typed checked functions,
+    like `ch()`, `usize()`, `f64()`, etc.
   - Remove the following declarative macros that were not being used anywhere, and there
     are suitable candidates in the standard library that can be used instead:
     - `unwrap_option_or_run_fn_returning_err!`
@@ -1537,7 +1545,15 @@ This is the first release of this crate.
 
 ## `r3bl_ansi_color`
 
-### v_next_release_r3bl_ansi_color
+### Archived (2025-03-28)
+
+Move the contents of `r3bl_ansi_term` crate into `r3bl_core`. There is no need to have
+that crate as an external dependency. Moving it where it belongs. It was developed as a
+separate crate at the start, since the `r3bl_tui` codebase was in a much earlier stage
+when it wasn't clear where `r3bl_ansi_term` fits with `r3bl_tui` and `r3bl_tuify`, etc.
+
+Here are the changes that were made before moving it to `r3bl_core` and archiving this
+repo.
 
 This is a minor change that adds `vscode` to the list of environment variables that mean
 that `truecolor` is supported. It removes duplication of `term.rs` in the `r3bl-open-core`

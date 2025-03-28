@@ -17,8 +17,13 @@
 
 use std::vec;
 
-use r3bl_ansi_color::{ASTColor as AnsiColor, ASTStyle as AnsiStyle, AnsiStyledText};
-use r3bl_core::{get_size, get_terminal_width, throws, usize};
+use r3bl_core::{get_size,
+                get_terminal_width,
+                throws,
+                usize,
+                ASTColor,
+                ASTStyle,
+                AnsiStyledText};
 use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{components::style::StyleSheet,
                  select_from_list,
@@ -146,8 +151,8 @@ fn multi_line_header() {
     let header = AnsiStyledText {
         text: " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(171, 204, 242)),
-            AnsiStyle::Background(AnsiColor::Rgb(31, 36, 46)),
+            ASTStyle::Foreground(ASTColor::Rgb(171, 204, 242)),
+            ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
         ],
     };
     let line_5 = vec![header];
@@ -236,8 +241,8 @@ fn multiple_select_single_item() {
     let header = AnsiStyledText {
         text: " Please select one or more items",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(171, 204, 242)),
-            AnsiStyle::Background(AnsiColor::Rgb(31, 36, 46)),
+            ASTStyle::Foreground(ASTColor::Rgb(171, 204, 242)),
+            ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
         ],
     };
     instructions.push(vec![header]);
@@ -268,8 +273,8 @@ fn multiple_select_13_items_vph_5(
     let header = AnsiStyledText {
         text: " Please select one or more items",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(229, 239, 123)),
-            AnsiStyle::Background(AnsiColor::Rgb(31, 36, 46)),
+            ASTStyle::Foreground(ASTColor::Rgb(229, 239, 123)),
+            ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
         ],
     };
     instructions.push(vec![header]);
@@ -324,8 +329,8 @@ fn multiple_select_2_items_vph_5(
     let header = AnsiStyledText {
         text: " Please select one or more items",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(229, 239, 123)),
-            AnsiStyle::Background(AnsiColor::Rgb(31, 36, 46)),
+            ASTStyle::Foreground(ASTColor::Rgb(229, 239, 123)),
+            ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
         ],
     };
 
@@ -413,8 +418,8 @@ fn single_select_2_items_vph_5(
     let header = AnsiStyledText {
         text: " Please select one item",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(171, 204, 242)),
-            AnsiStyle::Background(AnsiColor::Rgb(31, 36, 46)),
+            ASTStyle::Foreground(ASTColor::Rgb(171, 204, 242)),
+            ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
         ],
     };
     instructions.push(vec![header]);
@@ -449,15 +454,15 @@ fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(9, 238, 211)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(9, 238, 211)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
     let navigate = AnsiStyledText {
         text: "     navigate",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(94, 103, 111)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
 
@@ -466,15 +471,15 @@ fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
     let space = AnsiStyledText {
         text: " Space:",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(255, 216, 9)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(255, 216, 9)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
     let select = AnsiStyledText {
         text: "          select or deselect item",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(94, 103, 111)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
 
@@ -483,15 +488,15 @@ fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(255, 132, 18)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(255, 132, 18)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
     let exit = AnsiStyledText {
         text: "  exit program",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(94, 103, 111)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
 
@@ -499,15 +504,15 @@ fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
     let return_key = AnsiStyledText {
         text: " Return:",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(234, 0, 196)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(234, 0, 196)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
     let confirm = AnsiStyledText {
         text: "         confirm selection",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(94, 103, 111)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
     let line_4 = vec![return_key, confirm];
@@ -518,15 +523,15 @@ fn single_select_instruction() -> Vec<Vec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(9, 238, 211)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(9, 238, 211)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
     let navigate = AnsiStyledText {
         text: "     navigate",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(94, 103, 111)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
 
@@ -535,15 +540,15 @@ fn single_select_instruction() -> Vec<Vec<AnsiStyledText<'static>>> {
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(255, 132, 18)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(255, 132, 18)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
     let exit = AnsiStyledText {
         text: "  exit program",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(94, 103, 111)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
 
@@ -551,15 +556,15 @@ fn single_select_instruction() -> Vec<Vec<AnsiStyledText<'static>>> {
     let return_key = AnsiStyledText {
         text: " Return:",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(234, 0, 196)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(234, 0, 196)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
     let confirm = AnsiStyledText {
         text: "         confirm selection",
         style: smallvec::smallvec![
-            AnsiStyle::Foreground(AnsiColor::Rgb(94, 103, 111)),
-            AnsiStyle::Background(AnsiColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
         ],
     };
     let line_3 = vec![return_key, confirm];
