@@ -27,7 +27,7 @@ use r3bl_core::{caret_scr_adj,
                 width,
                 CaretScrAdj,
                 ChUnitPrimitiveType,
-                Dim};
+                Size};
 
 use super::{selection_list::RowLocationInSelectionList, EditorBuffer};
 use crate::{caret_scroll_index,
@@ -41,7 +41,7 @@ use crate::{caret_scroll_index,
 /// viewport to be passed in (from the [crate::EditorEngine]). However, in this module, we
 /// don't need a viewport, nor do we have access to the [crate::EditorEngine], so we use
 /// this dummy viewport.
-pub fn dummy_viewport() -> Dim {
+pub fn dummy_viewport() -> Size {
     width(ChUnitPrimitiveType::MAX) + height(ChUnitPrimitiveType::MAX)
 }
 

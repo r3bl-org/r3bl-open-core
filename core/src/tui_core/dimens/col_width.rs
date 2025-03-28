@@ -21,7 +21,7 @@ use std::{fmt::Debug,
 use crate::{ChUnit, ColIndex, ch, col};
 
 /// Width is column count, ie the number of columns that a UI component occupies. This is
-/// one part of a [crate::Dim] (size), and is not the same as the [crate::ColIndex]
+/// one part of a [crate::Size], and is not the same as the [crate::ColIndex]
 /// (position). You can simply use the [crate::width()] to create a new instance.
 ///
 /// # Working with col index

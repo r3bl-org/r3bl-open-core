@@ -14,15 +14,12 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use core::fmt::Debug;
 use std::{fmt::{Display, Formatter},
           ops::{Add, AddAssign}};
 
-use r3bl_ansi_color::sizing::InlineVecASTStyles;
-
 use super::TuiColor;
-use crate::{ChUnit, InlineVecStr, ch, convert_tui_color_into_r3bl_ansi_color};
+use crate::{ASTStyle, ChUnit, InlineVecASTStyles, InlineVecStr, ch};
 
 /// Please use [crate::new_style!] declarative macro to generate code for this struct.
 ///
@@ -384,48 +381,49 @@ mod test_style {
 
 pub mod convert_to_ansi_color_styles {
     use super::*;
+    use crate::convert_tui_color_into_r3bl_ansi_color;
 
     pub fn from_tui_style(tui_style: TuiStyle) -> InlineVecASTStyles {
         let mut acc = InlineVecASTStyles::new();
 
         if let Some(color_fg) = tui_style.color_fg {
-            acc.push(r3bl_ansi_color::ASTStyle::Foreground(
+            acc.push(ASTStyle::Foreground(
                 convert_tui_color_into_r3bl_ansi_color(color_fg),
             ));
         }
 
         if let Some(color_bg) = tui_style.color_bg {
-            acc.push(r3bl_ansi_color::ASTStyle::Background(
+            acc.push(ASTStyle::Background(
                 convert_tui_color_into_r3bl_ansi_color(color_bg),
             ));
         }
 
         if tui_style.bold {
-            acc.push(r3bl_ansi_color::ASTStyle::Bold);
+            acc.push(ASTStyle::Bold);
         }
 
         if tui_style.dim {
-            acc.push(r3bl_ansi_color::ASTStyle::Dim);
+            acc.push(ASTStyle::Dim);
         }
 
         if tui_style.italic {
-            acc.push(r3bl_ansi_color::ASTStyle::Italic);
+            acc.push(ASTStyle::Italic);
         }
 
         if tui_style.underline {
-            acc.push(r3bl_ansi_color::ASTStyle::Underline);
+            acc.push(ASTStyle::Underline);
         }
 
         if tui_style.reverse {
-            acc.push(r3bl_ansi_color::ASTStyle::Invert);
+            acc.push(ASTStyle::Invert);
         }
 
         if tui_style.hidden {
-            acc.push(r3bl_ansi_color::ASTStyle::Hidden);
+            acc.push(ASTStyle::Hidden);
         }
 
         if tui_style.strikethrough {
-            acc.push(r3bl_ansi_color::ASTStyle::Strikethrough);
+            acc.push(ASTStyle::Strikethrough);
         }
 
         acc

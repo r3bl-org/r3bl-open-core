@@ -17,7 +17,7 @@
 use crossterm::event::{Event::{self},
                        KeyEvent,
                        MouseEvent};
-use r3bl_core::{height, width, Dim};
+use r3bl_core::{height, width, Size};
 
 use super::{KeyPress, MouseInput};
 
@@ -26,7 +26,7 @@ use super::{KeyPress, MouseInput};
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum InputEvent {
     Keyboard(KeyPress),
-    Resize(Dim),
+    Resize(Size),
     Mouse(MouseInput),
     Focus(FocusEvent),
 }

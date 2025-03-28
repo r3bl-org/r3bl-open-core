@@ -57,8 +57,9 @@ use std::fmt::{Debug, Display};
 
 use kv::{Bincode, Config, Store};
 use miette::{Context, IntoDiagnostic};
-use r3bl_ansi_color::{bold, rgb_color};
 use serde::{Deserialize, Serialize};
+
+use crate::{bold, rgb_color};
 
 /// Convenience type alias for the [kv::Bucket] type.
 /// 1. A [kv::Bucket] is created from a [Store].

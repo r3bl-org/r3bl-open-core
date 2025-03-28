@@ -32,7 +32,6 @@ use r3bl_core::{caret_scr_adj,
                 usize,
                 ColWidth,
                 CommonResult,
-                Dim,
                 GCString,
                 GCStringExt as _,
                 PrettyPrintDebug,
@@ -221,7 +220,7 @@ pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
         engine: editor_engine,
         ..
     } = render_args;
-    let Dim {
+    let Size {
         col_width: max_display_col_count,
         row_height: max_display_row_count,
     } = editor_engine.current_box.style_adjusted_bounds_size;

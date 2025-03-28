@@ -36,12 +36,16 @@ mod ex_rc;
 use std::str::FromStr as _;
 
 use miette::IntoDiagnostic as _;
-use r3bl_ansi_color::{bold, fg_rgb_color, frozen_blue, rgb_color, ASTColor};
-use r3bl_core::{get_size,
+use r3bl_core::{bold,
+                fg_rgb_color,
+                frozen_blue,
+                get_size,
                 inline_string,
                 ok,
+                rgb_color,
                 throws,
                 tui_color,
+                ASTColor,
                 CommonError,
                 CommonResult};
 use r3bl_log::log_support::try_initialize_logging_global;

@@ -21,10 +21,10 @@ use r3bl_core::{Ansi256GradientIndex,
                 ColorWheelSpeed,
                 CommonError,
                 CommonResult,
-                Dim,
                 GCStringExt as _,
                 GradientGenerationPolicy,
                 InlineString,
+                Size,
                 TextColorizationPolicy,
                 TuiStyledTexts,
                 TuiStylesheet,
@@ -688,7 +688,7 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Dim) {
+    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
         let separator_style = new_style!(dim color_fg: {tui_color!(dark_grey)});
 
         let app_text = "edi 🦜 ✶early access✶";

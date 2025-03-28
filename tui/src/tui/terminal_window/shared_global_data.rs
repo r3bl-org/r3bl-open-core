@@ -18,8 +18,8 @@
 use std::fmt::{Debug, Formatter};
 
 use r3bl_core::{ok,
-                sizing::TelemetryReportLineStorage,
                 spinner_impl,
+                telemetry::sizing::TelemetryReportLineStorage,
                 ChUnit,
                 CommonResult,
                 InlineString,

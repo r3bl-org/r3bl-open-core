@@ -124,6 +124,7 @@
 #![feature(trivial_bounds)]
 
 // Connect to source file.
+pub mod ansi;
 pub mod common;
 pub mod decl_macros;
 pub mod glyphs;
@@ -135,6 +136,7 @@ pub mod terminal_io;
 pub mod tui_core;
 
 // Re-export.
+pub use ansi::*;
 pub use common::*;
 pub use decl_macros::*;
 pub use glyphs::*;

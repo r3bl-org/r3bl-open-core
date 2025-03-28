@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{Dim, DocumentStorage};
+use r3bl_core::{DocumentStorage, Size};
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
 use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox, StyleUSSpanLines};
@@ -91,7 +91,7 @@ impl EditorEngine {
         }
     }
 
-    pub fn viewport(&self) -> Dim { self.current_box.style_adjusted_bounds_size }
+    pub fn viewport(&self) -> Size { self.current_box.style_adjusted_bounds_size }
 
     pub fn set_ast_cache(&mut self, ast_cache: StyleUSSpanLines) {
         self.ast_cache = Some(ast_cache)

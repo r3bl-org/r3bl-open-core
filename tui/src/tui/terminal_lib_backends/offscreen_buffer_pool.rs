@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{Dim, RingBuffer, RingBufferStack};
+use r3bl_core::{RingBuffer, RingBufferStack, Size};
 
 use super::OffscreenBuffer;
 
@@ -27,11 +27,11 @@ const OFFSCREEN_BUFFER_POOL_SIZE: usize = 3;
 /// and don't give it back, it is lost from the pool (and will be dropped).
 pub struct OffscreenBufferPool {
     pub pool: RingBufferStack<OffscreenBuffer, OFFSCREEN_BUFFER_POOL_SIZE>,
-    pub window_size: Dim,
+    pub window_size: Size,
 }
 
 impl OffscreenBufferPool {
-    pub fn new(window_size: Dim) -> Self {
+    pub fn new(window_size: Size) -> Self {
         let mut pool = RingBufferStack::new();
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
             pool.add(OffscreenBuffer::new_with_capacity_initialized(window_size));
@@ -65,7 +65,7 @@ impl OffscreenBufferPool {
 
     /// Resize the buffers in the pool. This will drop all buffers in the pool and create
     /// new ones with the new size.
-    pub fn resize(&mut self, new_window_size: Dim) {
+    pub fn resize(&mut self, new_window_size: Size) {
         if self.window_size != new_window_size {
             self.window_size = new_window_size;
             self.rebuild_pool();
