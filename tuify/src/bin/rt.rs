@@ -23,12 +23,14 @@ use std::{io::{stdin, BufRead, Result},
 
 use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use miette::IntoDiagnostic;
-use r3bl_ansi_color::{blue, lizard_green, pink};
-use r3bl_core::{get_size,
+use r3bl_core::{blue,
+                get_size,
                 get_terminal_width,
                 inline_string,
                 is_stdin_piped,
                 is_stdout_piped,
+                lizard_green,
+                pink,
                 throws,
                 usize,
                 StdinIsPipedResult,

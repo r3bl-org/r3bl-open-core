@@ -20,7 +20,7 @@ use nom::{branch::alt,
           combinator::{map, recognize},
           multi::many0,
           IResult};
-use r3bl_ansi_color::{blue, red};
+use r3bl_core::{blue, red};
 
 use super::specialized_parser_delim_matchers;
 use crate::{constants::{BACK_TICK,

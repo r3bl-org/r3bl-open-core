@@ -23,13 +23,16 @@ use std::{fs,
           time::Duration};
 
 use miette::{IntoDiagnostic as _, miette};
-use r3bl_ansi_color::{bold, fg_rgb_color, red, rgb_color};
 use r3bl_core::{InlineVec,
                 SendRawTerminal,
                 SharedWriter,
                 SpinnerStyle,
                 StdMutex,
-                inline_string};
+                bold,
+                fg_rgb_color,
+                inline_string,
+                red,
+                rgb_color};
 use r3bl_log::{DisplayPreference, try_initialize_logging_global};
 use r3bl_terminal_async::{Readline, ReadlineEvent, Spinner, TerminalAsync, ta_println};
 use smallvec::smallvec;

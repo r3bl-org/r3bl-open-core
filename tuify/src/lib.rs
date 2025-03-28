@@ -584,7 +584,7 @@
 //!
 //! ```rust
 //! use std::io::Result;
-//! use r3bl_ansi_color::{AnsiStyledText, ASTColor};
+//! use r3bl_core::{AnsiStyledText, ASTColor};
 //! use r3bl_tuify::{components::style::{Style, StyleSheet},
 //!                 select_from_list,
 //!                 SelectionMode};

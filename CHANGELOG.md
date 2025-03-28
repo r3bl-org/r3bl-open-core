@@ -365,6 +365,7 @@ change for almost every crate in the repo. This
     just the imports.
 
 - Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
   - Move some of `term.rs` into:
     - `r3bl_core` - The functions to get the terminal window size and width.
     - `r3bl_ansi_color` - The functions to detect whether the current process is running
@@ -1273,6 +1274,9 @@ performance, and ensure that performance is stable over time. `ch_unit.rs` is al
 refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
 now used throughout the codebase.
 
+- Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
+
 Added:
   - Moved all the tracing and logging functionality from `r3bl_core` in here.
   - Make the public API more ergonomic and use the `options: impl Into<TracingConfig>`
@@ -1302,6 +1306,9 @@ that is meant to hold all the scripting related functionality for all the other 
 this monorepo. It provides a way to run scripts in a safe and secure way, that is meant to
 be a replacement for writing scripts in `fish` or `bash` or `nushell` syntax.
 
+- Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
+
 ## `r3bl_terminal_async`
 
 ### v_next_release_r3bl_terminal_async
@@ -1314,7 +1321,9 @@ now used throughout the codebase. No new functionality is added in this release.
 - Changed:
   - Rename `get_readline_event()` to `read_line()`. This is an async replacement for
     `std::io::Stdin::read_line()`.
+
 - Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
   - Move `spinner_impl` to `r3bl_tui` crate. This code is also used in
     `shared_global_data.rs` in `r3bl_tui` crate.
   - Drop the dependency on `r3bl_tuify` crate in `Cargo.toml`.

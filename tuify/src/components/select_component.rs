@@ -438,7 +438,8 @@ fn clip_string_to_width_with_ellipsis(
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
-    use r3bl_ansi_color::global_color_support::{clear_override, set_override};
+    use r3bl_core::{global_color_support::{clear_override, set_override},
+                    ColorSupport};
     use serial_test::serial;
 
     use super::*;
@@ -485,7 +486,7 @@ mod tests {
             style: StyleSheet::default(),
         };
 
-        set_override(r3bl_ansi_color::ColorSupport::Ansi256);
+        set_override(ColorSupport::Ansi256);
         component.render(&mut state).unwrap();
 
         let generated_output = writer.get_buffer().to_string();

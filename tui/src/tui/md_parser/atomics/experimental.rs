@@ -89,8 +89,7 @@ mod exp_batch_1 {
 
     #[cfg(test)]
     pub mod new_nom_parser_code {
-        use r3bl_ansi_color::{bold, rgb_color};
-        use r3bl_core::assert_eq2;
+        use r3bl_core::{assert_eq2, bold, rgb_color};
 
         use super::*;
 
@@ -195,8 +194,7 @@ mod exp_batch_2 {
 
     #[cfg(test)]
     mod test_text_until_opt_eol {
-        use r3bl_ansi_color::{bold, rgb_color};
-        use r3bl_core::assert_eq2;
+        use r3bl_core::{assert_eq2, bold, rgb_color};
 
         use super::*;
 

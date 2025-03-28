@@ -39,7 +39,7 @@ use nom::{branch::alt,
           multi::many1,
           sequence::preceded,
           IResult};
-use r3bl_ansi_color::{blue, magenta, red};
+use r3bl_core::{blue, magenta, red};
 
 use crate::{constants::{BACK_TICK,
                         LEFT_BRACKET,

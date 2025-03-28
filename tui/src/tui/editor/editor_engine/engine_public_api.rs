@@ -18,10 +18,10 @@
 //! Functions that implement the public (re-exported in `mod.rs`) event based API of the
 //! editor engine. See [mod@super::engine_internal_api] for the internal and functional
 //! API.
-use r3bl_ansi_color::green;
 use r3bl_core::{caret_scr_adj,
                 col,
                 glyphs,
+                green,
                 height,
                 inline_string,
                 new_style,
