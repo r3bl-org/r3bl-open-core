@@ -22,10 +22,10 @@ pub mod mock_real_objects_for_editor {
     use r3bl_core::{col,
                     height,
                     row,
-                    sizing::TelemetryReportLineStorage,
+                    telemetry::sizing::TelemetryReportLineStorage,
                     width,
-                    Dim,
-                    OutputDevice};
+                    OutputDevice,
+                    Size};
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, StdoutMock};
     use tokio::sync::mpsc;
 
@@ -37,7 +37,7 @@ pub mod mock_real_objects_for_editor {
                 CHANNEL_WIDTH};
 
     pub fn make_global_data<S, AS>(
-        window_size: Option<Dim>,
+        window_size: Option<Size>,
     ) -> (GlobalData<S, AS>, StdoutMock)
     where
         S: Debug + Default + Clone + Sync + Send,
@@ -62,7 +62,7 @@ pub mod mock_real_objects_for_editor {
         (global_data, stdout_mock)
     }
 
-    pub fn make_editor_engine_with_bounds(size: Dim) -> EditorEngine {
+    pub fn make_editor_engine_with_bounds(size: Size) -> EditorEngine {
         let flex_box = FlexBox {
             style_adjusted_bounds_size: size,
             style_adjusted_origin_pos: col(0) + row(0),

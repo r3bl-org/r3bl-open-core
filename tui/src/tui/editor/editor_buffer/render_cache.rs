@@ -29,7 +29,7 @@
 
 use std::ops::{Deref, DerefMut};
 
-use r3bl_core::{Dim, ScrOfs, Size};
+use r3bl_core::{ScrOfs, Size};
 
 use super::EditorBuffer;
 use crate::{engine_public_api, EditorEngine, HasFocus, RenderArgs, RenderOps};
@@ -39,16 +39,16 @@ pub(in crate::tui::editor::editor_buffer) mod key {
 
     /// Cache key is combination of scroll_offset and window_size.
     #[derive(Clone, Debug, PartialEq)]
-    pub struct Key((ScrOfs, Dim));
+    pub struct Key((ScrOfs, Size));
 
     impl Key {
-        pub fn new(scr_ofs: ScrOfs, window_size: Dim) -> Self {
+        pub fn new(scr_ofs: ScrOfs, window_size: Size) -> Self {
             (scr_ofs, window_size).into()
         }
     }
 
-    impl From<(ScrOfs, Dim)> for Key {
-        fn from((scr_ofs, window_size): (ScrOfs, Dim)) -> Self {
+    impl From<(ScrOfs, Size)> for Key {
+        fn from((scr_ofs, window_size): (ScrOfs, Size)) -> Self {
             Self((scr_ofs, window_size))
         }
     }
@@ -181,7 +181,7 @@ mod tests {
     }
 
     /// Fake window size to be used in the tests.
-    fn get_window_size_og() -> Dim { height(70) + width(15) }
+    fn get_window_size_og() -> Size { height(70) + width(15) }
 
     #[test]
     fn test_cache_can_be_disabled() {

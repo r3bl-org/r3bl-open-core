@@ -18,7 +18,7 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
-use crate::{ColIndex, ColWidth, Dim, RowHeight, RowIndex, ch};
+use crate::{ColIndex, ColWidth, RowHeight, RowIndex, Size, ch};
 
 // Type aliases for better code readability.
 
@@ -171,10 +171,10 @@ mod ops {
     use crate::{ChUnit, col, row};
 
     // Dim is equivalent to (ColWidthCount, RowHeightCount).
-    impl Mul<Dim> for Pos {
+    impl Mul<Size> for Pos {
         type Output = Pos;
 
-        fn mul(self, rhs: Dim) -> Self::Output {
+        fn mul(self, rhs: Size) -> Self::Output {
             let mut self_copy = self;
             self_copy.row_index = self.row_index * rhs.row_height;
             self_copy.col_index = self.col_index * rhs.col_width;
@@ -206,10 +206,10 @@ mod ops {
         }
     }
 
-    impl Add<Dim> for Pos {
+    impl Add<Size> for Pos {
         type Output = Pos;
 
-        fn add(self, rhs: Dim) -> Self::Output {
+        fn add(self, rhs: Size) -> Self::Output {
             let mut self_copy = self;
             self_copy.row_index = self.row_index + rhs.row_height;
             self_copy.col_index = self.col_index + rhs.col_width;
@@ -217,10 +217,10 @@ mod ops {
         }
     }
 
-    impl Sub<Dim> for Pos {
+    impl Sub<Size> for Pos {
         type Output = Pos;
 
-        fn sub(self, rhs: Dim) -> Self::Output {
+        fn sub(self, rhs: Size) -> Self::Output {
             let mut self_copy = self;
             self_copy.row_index = {
                 let it = self.row_index - rhs.row_height;
@@ -234,12 +234,12 @@ mod ops {
         }
     }
 
-    impl AddAssign<Dim> for Pos {
-        fn add_assign(&mut self, rhs: Dim) { *self = *self + rhs; }
+    impl AddAssign<Size> for Pos {
+        fn add_assign(&mut self, rhs: Size) { *self = *self + rhs; }
     }
 
-    impl SubAssign<Dim> for Pos {
-        fn sub_assign(&mut self, rhs: Dim) { *self = *self - rhs; }
+    impl SubAssign<Size> for Pos {
+        fn sub_assign(&mut self, rhs: Size) { *self = *self - rhs; }
     }
 
     impl Add<Pos> for Pos {
@@ -582,7 +582,7 @@ mod tests {
         // Add, Sub Dim.
         {
             let pos = Pos::new((row(1), col(2)));
-            let dim: Dim = (width(ch(2)), height(ch(2))).into();
+            let dim: Size = (width(ch(2)), height(ch(2))).into();
 
             let pos_1 = pos + dim;
             assert_eq!(*pos_1.row_index, ch(3));
@@ -596,11 +596,11 @@ mod tests {
         // AddAssign, SubAssign Dim.
         {
             let mut pos = Pos::new((RowIndex::new(ch(1)), ColIndex::new(ch(2))));
-            pos += Dim::new((width(ch(2)), height(ch(2))));
+            pos += Size::new((width(ch(2)), height(ch(2))));
             assert_eq!(*pos.row_index, ch(3));
             assert_eq!(*pos.col_index, ch(4));
 
-            pos -= Dim::new((width(ch(2)), height(ch(2))));
+            pos -= Size::new((width(ch(2)), height(ch(2))));
             assert_eq!(*pos.row_index, ch(1));
             assert_eq!(*pos.col_index, ch(2));
         }

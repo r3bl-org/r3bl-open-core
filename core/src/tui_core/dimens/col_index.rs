@@ -22,7 +22,7 @@ use crate::{ChUnit, ColWidth, usize, width};
 
 /// The horizontal index in a grid of characters, starting at 0, which is the first
 /// column. This is one part of a [crate::Pos] (position), and is not the same as
-/// [crate::ColWidth], which is one part of a [crate::Dim] (size). You can simply use the
+/// [crate::ColWidth], which is one part of a [crate::Size]. You can simply use the
 /// [crate::col()] to create a new instance.
 ///
 /// # Examples

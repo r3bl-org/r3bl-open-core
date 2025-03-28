@@ -45,7 +45,7 @@ pub fn create_temp_dir() -> miette::Result<TempDir> {
     })
 }
 
-// XMARK: Clever Rust, use of Drop to perform transactionn close / end.
+// XMARK: Clever Rust, use of Drop to perform transaction close / end.
 
 /// Automatically delete the temporary directory when the [TempDir] struct is dropped.
 impl Drop for TempDir {
@@ -109,9 +109,8 @@ impl AsRef<Path> for TempDir {
 
 #[cfg(test)]
 mod tests_temp_dir {
-    use r3bl_ansi_color::lizard_green;
-
     use super::*;
+    use crate::lizard_green;
 
     #[test]
     fn test_temp_dir() {

@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{Dim, InlineVec, Pos, ReqSizePc, TuiStyle};
+use r3bl_core::{InlineVec, Pos, ReqSizePc, Size, TuiStyle};
 
 use super::{FlexBoxId, LayoutDirection};
 
@@ -32,12 +32,12 @@ pub struct FlexBoxProps {
 #[derive(Clone, Debug, Default)]
 pub struct SurfaceProps {
     pub pos: Pos,
-    pub size: Dim,
+    pub size: Size,
 }
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{col, height, ok, req_size_pc, row, width, CommonResult, Dim, Pos};
+    use r3bl_core::{col, height, ok, req_size_pc, row, width, CommonResult, Pos, Size};
     use smallvec::smallvec;
 
     use super::*;
@@ -75,7 +75,7 @@ mod tests {
     fn test_surface_props_default() {
         let props = SurfaceProps::default();
         assert_eq!(props.pos, Pos::default());
-        assert_eq!(props.size, Dim::default());
+        assert_eq!(props.size, Size::default());
     }
 
     #[test]

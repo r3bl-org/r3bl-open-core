@@ -135,6 +135,7 @@ macro_rules! call_if_true {
 ///
 /// ```rust
 /// use r3bl_core::console_log;
+///
 /// let result: miette::Result<String> = Ok("foo".to_string());
 /// if let Err(err) = result {
 ///     let msg = format!("❌ Failed to {}", stringify!($cmd));
@@ -157,19 +158,21 @@ macro_rules! call_if_true {
 #[macro_export]
 macro_rules! console_log {
     (ERROR_RAW $msg:expr, $err:expr) => {{
+        use r3bl_core::{red, green, underline};
         eprintln!(
             "{} {} {}\r",
-            r3bl_ansi_color::red("▶"),
-            r3bl_ansi_color::green($msg),
-            r3bl_ansi_color::underline(&format!("{:#?}", $err))
+            red("▶"),
+            green($msg),
+            underline(&format!("{:#?}", $err))
         );
     }};
 
     (OK_RAW $msg:expr) => {{
+        use r3bl_core::{red, green};
         println!(
             "{} {}\r",
-            r3bl_ansi_color::red("▶"),
-            r3bl_ansi_color::green($msg)
+            red("▶"),
+            green($msg)
         );
     }};
 
@@ -183,14 +186,15 @@ macro_rules! console_log {
     ) => {
         /* Enclose the expansion in a block so that we can use multiple statements. */
         {
+            use r3bl_core::{red, green, underline};
             /* Start a repetition. */
             $(
                 /* Each repeat will contain the following statement, with $element replaced. */
                 println!(
                     "{} {} <- {}",
-                    r3bl_ansi_color::red("▶"),
-                    r3bl_ansi_color::underline(&format!("{:#?}", $element)),
-                    r3bl_ansi_color::green(stringify!($element))
+                    red("▶"),
+                    underline(&format!("{:#?}", $element)),
+                    green(stringify!($element))
                 );
             )*
         }

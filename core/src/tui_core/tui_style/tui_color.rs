@@ -17,10 +17,10 @@
 
 use core::fmt::Debug;
 
-use r3bl_ansi_color::{ASTColor, TransformColor};
-
 use super::parse_hex_color;
-use crate::common::{CommonError, CommonErrorType, CommonResult};
+use crate::{ASTColor,
+            TransformColor,
+            common::{CommonError, CommonErrorType, CommonResult}};
 
 /// Very similar to `rgb_color!` in `r3bl_ansi_color` crate.
 #[macro_export]
@@ -286,19 +286,19 @@ mod convert_between_variants {
 
     impl From<RgbValue> for AnsiValue {
         fn from(rgb_value: RgbValue) -> Self {
-            let rgb_color = r3bl_ansi_color::RgbColor {
+            let rgb_color = crate::RgbColor {
                 red: rgb_value.red,
                 green: rgb_value.green,
                 blue: rgb_value.blue,
             };
-            let ansi_color = r3bl_ansi_color::convert_rgb_into_ansi256(rgb_color).index;
+            let ansi_color = crate::convert_rgb_into_ansi256(rgb_color).index;
             Self::new(ansi_color)
         }
     }
 
     impl From<AnsiValue> for RgbValue {
         fn from(ansi_value: AnsiValue) -> Self {
-            let rgb_color = r3bl_ansi_color::Ansi256Color {
+            let rgb_color = crate::Ansi256Color {
                 index: ansi_value.color,
             }
             .as_rgb();

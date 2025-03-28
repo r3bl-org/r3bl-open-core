@@ -38,23 +38,23 @@ use std::fmt::{self};
 use chrono::Local;
 use const_format::formatcp;
 use custom_event_formatter_constants::*;
-use r3bl_ansi_color::{ASTColor,
-                      ASTStyle,
-                      AnsiStyledText,
-                      fg_rgb_color,
-                      rgb_color,
-                      sizing::InlineVecASTStyles};
-use r3bl_core::{ColWidth,
+use r3bl_core::{ASTColor,
+                ASTStyle,
+                AnsiStyledText,
+                ColWidth,
                 ColorWheel,
                 GCString,
                 InlineString,
+                InlineVecASTStyles,
                 OrderedMap,
+                fg_rgb_color,
                 get_terminal_width,
                 glyphs,
                 inline_string,
                 new_style,
                 pad_fmt,
                 remove_escaped_quotes,
+                rgb_color,
                 truncate_from_right,
                 usize,
                 width};

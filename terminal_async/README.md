@@ -282,7 +282,7 @@ cargo run --example shell_async
 
 ### [`TerminalAsync::try_new()`], which is the main entry point for most use cases
 
-1. To read user input, call [`TerminalAsync::get_readline_event()`].
+1. To read user input, call [`TerminalAsync::read_line()`].
 2. You can call [`TerminalAsync::clone_shared_writer()`] to get a
    [`r3bl_core::SharedWriter`] instance that you can use to write to `stdout`
    concurrently, using [`std::write!`] or [`std::writeln!`].

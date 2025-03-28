@@ -22,7 +22,7 @@ use crossterm::event::{read,
                        KeyEventKind,
                        KeyEventState,
                        KeyModifiers};
-use r3bl_core::{height, width, Dim};
+use r3bl_core::{height, width, Size};
 
 use crate::DEVELOPMENT_MODE;
 
@@ -40,7 +40,7 @@ pub enum KeyPress {
     Noop,
     Error,
     Space,
-    Resize(Dim),
+    Resize(Size),
     CtrlC,
 }
 
