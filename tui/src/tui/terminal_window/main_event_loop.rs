@@ -34,13 +34,13 @@ use r3bl_core::{ch,
                 ColorWheelConfig,
                 ColorWheelSpeed,
                 CommonResult,
-                Dim,
                 GCStringExt as _,
                 GetMemSize as _,
                 GradientGenerationPolicy,
                 InputDevice,
                 LockedOutputDevice,
                 OutputDevice,
+                Size,
                 SufficientSize,
                 TelemetryAtomHint,
                 TextColorizationPolicy};
@@ -76,7 +76,7 @@ pub async fn main_event_loop_impl<S, AS>(
     mut app: BoxedSafeApp<S, AS>,
     exit_keys: &[InputEvent],
     state: S,
-    initial_size: Dim,
+    initial_size: Size,
     mut input_device: InputDevice,
     output_device: OutputDevice,
 ) -> CommonResult<(
@@ -380,7 +380,7 @@ fn actually_process_input_event<S, AS>(
 /// This function gets called as a result of:
 /// 1. Terminal resize event.
 pub fn handle_resize<S, AS>(
-    new_size: Dim,
+    new_size: Size,
     global_data_mut_ref: &mut GlobalData<S, AS>,
     app: &mut BoxedSafeApp<S, AS>,
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
@@ -553,7 +553,7 @@ where
     }
 }
 
-fn render_window_too_small_error(window_size: Dim) -> RenderPipeline {
+fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
     // Show warning message that window_size is too small.
     let msg = inline_string!(
         "Window size is too small. Minimum size is {} cols x {} rows",
@@ -631,12 +631,12 @@ mod tests {
                     ColorWheelSpeed,
                     CommonResult,
                     CrosstermEventResult,
-                    Dim,
                     GradientGenerationPolicy,
                     GradientLengthKind,
                     InlineVec,
                     InputDevice,
                     OutputDevice,
+                    Size,
                     TTYResult,
                     TextColorizationPolicy,
                     TuiStyle};
@@ -1055,7 +1055,7 @@ mod tests {
         use super::*;
 
         /// Shows helpful messages at the bottom row of the screen.
-        pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Dim) {
+        pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {
             let styled_texts = tui_styled_texts! {
                 tui_styled_text!{ @style: new_style!(dim)       , @text: "Hints:"},
                 tui_styled_text!{ @style: new_style!(bold)      , @text: " x : Exit 🖖 "},

@@ -26,7 +26,6 @@ use r3bl_core::{col,
                 row,
                 tiny_inline_string,
                 ColWidth,
-                Dim,
                 GetMemSize,
                 InlineString,
                 InlineVec,
@@ -57,7 +56,7 @@ use crate::List;
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct OffscreenBuffer {
     pub buffer: PixelCharLines,
-    pub window_size: Dim,
+    pub window_size: Size,
     pub my_pos: Pos,
     pub my_fg_color: Option<TuiColor>,
     pub my_bg_color: Option<TuiColor>,
@@ -66,7 +65,7 @@ pub struct OffscreenBuffer {
 impl GetMemSize for OffscreenBuffer {
     fn get_mem_size(&self) -> usize {
         self.buffer.get_mem_size()
-            + std::mem::size_of::<Dim>()
+            + std::mem::size_of::<Size>()
             + std::mem::size_of::<Pos>()
             + std::mem::size_of::<Option<TuiColor>>()
             + std::mem::size_of::<Option<TuiColor>>()
@@ -217,7 +216,7 @@ mod pixel_char_lines_impl {
     }
 
     impl PixelCharLines {
-        pub fn new_with_capacity_initialized(window_size: Dim) -> Self {
+        pub fn new_with_capacity_initialized(window_size: Size) -> Self {
             let window_height = window_size.row_height;
             let window_width = window_size.col_width;
             Self {

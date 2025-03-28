@@ -15,9 +15,13 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::{ColorSupport, TransformColor, global_color_support};
-
-use crate::{ANSIBasicColor, AnsiValue, RgbValue, TuiColor};
+use crate::{ANSIBasicColor,
+            AnsiValue,
+            ColorSupport,
+            RgbValue,
+            TransformColor,
+            TuiColor,
+            global_color_support};
 
 #[rustfmt::skip]
 pub fn convert_from_crossterm_color_to_tui_color(value: crossterm::style::Color) -> TuiColor {
@@ -117,8 +121,7 @@ pub fn convert_from_tui_color_to_crossterm_color(
                 // Convert to grayscale.
                 ColorSupport::Grayscale | ColorSupport::NoColor => {
                     let ansi_grayscale_color =
-                        r3bl_ansi_color::ASTColor::Ansi256(from_ansi_value.color)
-                            .as_grayscale();
+                        crate::ASTColor::Ansi256(from_ansi_value.color).as_grayscale();
                     crossterm::style::Color::AnsiValue(ansi_grayscale_color.index)
                 }
             }
@@ -152,6 +155,6 @@ pub fn convert_from_tui_color_to_crossterm_color(
 }
 
 fn convert_rgb_to_ansi_grayscale(r: u8, g: u8, b: u8) -> crossterm::style::Color {
-    let ansi_grayscale_color = r3bl_ansi_color::ASTColor::Rgb(r, g, b).as_grayscale();
+    let ansi_grayscale_color = crate::ASTColor::Rgb(r, g, b).as_grayscale();
     crossterm::style::Color::AnsiValue(ansi_grayscale_color.index)
 }

@@ -35,10 +35,10 @@ use r3bl_core::{col,
                 ColorWheelConfig,
                 ColorWheelSpeed,
                 CommonResult,
-                Dim,
                 GCStringExt,
                 GradientGenerationPolicy,
                 LolcatBuilder,
+                Size,
                 TextColorizationPolicy,
                 TuiStyledTexts,
                 TuiStylesheet,
@@ -501,7 +501,7 @@ mod stylesheet {
 mod hud {
     use super::*;
 
-    pub fn create_hud(pipeline: &mut RenderPipeline, size: Dim, hud_report_str: &str) {
+    pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
         let color_fg = tui_color!(hex "#942997");
         let styled_texts = tui_styled_texts! {
@@ -537,7 +537,7 @@ mod status_bar {
     pub fn render_status_bar(
         app: &mut AppMain,
         pipeline: &mut RenderPipeline,
-        size: Dim,
+        size: Size,
         state: &State,
     ) {
         let color_bg = tui_color!(hex "#076DEB");

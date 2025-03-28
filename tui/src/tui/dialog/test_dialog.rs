@@ -19,7 +19,7 @@
 pub mod mock_real_objects_for_dialog {
     use std::{collections::HashMap, fmt::Debug};
 
-    use r3bl_core::{sizing::TelemetryReportLineStorage, OutputDevice, Size};
+    use r3bl_core::{telemetry::sizing::TelemetryReportLineStorage, OutputDevice, Size};
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, StdoutMock};
     use tokio::sync::mpsc;
 

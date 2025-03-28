@@ -15,13 +15,16 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::{ColorSupport, global_color_support};
 use sizing::VecSteps;
 use smallstr::SmallString;
 use smallvec::SmallVec;
 
 use super::{Lolcat, LolcatBuilder, Seed};
-use crate::{Ansi256GradientIndex, Colorize, TuiColor};
+use crate::{Ansi256GradientIndex,
+            ColorSupport,
+            Colorize,
+            TuiColor,
+            global_color_support};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
 /// reason these are exceeded, then they will [smallvec::SmallVec::spilled] over into the

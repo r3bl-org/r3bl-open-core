@@ -17,7 +17,6 @@
 
 use std::fmt::Write;
 
-use r3bl_ansi_color::AnsiStyledText;
 use sizing::VecConfigs;
 use smallvec::SmallVec;
 
@@ -30,6 +29,7 @@ use super::{ColorWheelConfig,
             config::sizing::VecSteps,
             defaults::{Defaults, get_default_gradient_stops}};
 use crate::{Ansi256GradientIndex,
+            AnsiStyledText,
             ChUnit,
             GCString,
             GCStringExt as _,
@@ -112,7 +112,7 @@ impl ColorWheel {
     ///    important. However, at the very least, one Truecolor config & one ANSI 256
     ///    config should be provided. The fallback is always grayscale. See
     ///    [ColorWheelConfig::narrow_config_based_on_color_support],
-    ///    [r3bl_ansi_color::global_color_support::detect] for more info.
+    ///    [crate::global_color_support::detect] for more info.
     pub fn new(configs: VecConfigs) -> Self {
         Self {
             configs,
@@ -412,7 +412,7 @@ impl ColorWheel {
     }
 
     /// This method gives you fine grained control over the color wheel. It returns a
-    /// gradient-colored string. It respects the [r3bl_ansi_color::ColorSupport]
+    /// gradient-colored string. It respects the [crate::ColorSupport]
     /// restrictions for the terminal.
     ///
     /// # Colorization Policy
@@ -615,11 +615,10 @@ impl ColorWheel {
 
 #[cfg(test)]
 mod tests_color_wheel_rgb {
-    use r3bl_ansi_color::{ColorSupport, global_color_support};
     use serial_test::serial;
 
     use super::*;
-    use crate::assert_eq2;
+    use crate::{ColorSupport, assert_eq2, global_color_support};
 
     mod test_helpers {
         use smallvec::smallvec;

@@ -21,7 +21,7 @@ use std::{fmt::Debug,
 use crate::{ChUnit, RowIndex, ch, row};
 
 /// Height is row count, ie the number of rows that a UI component occupies. This is one
-/// part of a [crate::Dim] (size), and is not the same as the [crate::RowIndex]
+/// part of a [crate::Size], and is not the same as the [crate::RowIndex]
 /// (position). You can simply use the [crate::height()] to create a new instance.
 ///
 /// # Working with row index
