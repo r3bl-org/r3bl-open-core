@@ -1,11 +1,1606 @@
-# Query: use crossterm::style::Stylize|call_if_true!
-# Flags: CaseSensitive RegExp
-# Excluding: scratch.rs
+# Query: ASTColor|RgbValue|AnsiValue|REFACTOR
+# Flags: CaseSensitive WordMatch RegExp
 # ContextLines: 1
 
-1 result - 1 file
+572 results - 27 files
 
-core/src/decl_macros/macros.rs:
-  92  /// const DBG_FLAG: bool = true;
-  93: /// call_if_true!(
-  94  ///     DBG_FLAG,
+CHANGELOG.md:
+   514      example for `r3bl_tui` which uses this
+   515:     `let msg_fmt = fg_rgb_color(ASTColor::from(tui_color!(lizard_green)), &msg);`. Also `r3bl_ansi_color`
+   516      has an equivalent macro to this called `rgb_color!`.
+
+  1704      `r3bl_rs_utils` repo workspace as `simple_logger`).
+  1705:   - `TuiColor` has a few new variants. They can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`. It
+  1706:     is safe to use just `RgbValue` since the library will degrade gracefully to ANSI 256 or
+  1707      grayscale based on terminal emulator capabilities at runtime (provided by `to_crossterm_color()`
+  1708:     and `ColorSupport`). If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not
+  1709      be downgraded.
+
+  1771  - Changed:
+  1772:   - `Color` is now `ASTColor`.
+  1773    - `Style` is now `ASTStyle`.
+  1774:   - Proper converters `From` implementations are provided to convert between `ASTColor`
+  1775      and `RGBColor`, and `Ansi256Color`.
+
+cmdr/src/color_constants.rs:
+  17  
+  18: use r3bl_core::ASTColor;
+  19  
+
+  31  impl DefaultColors {
+  32:     pub fn as_ansi_color(&self) -> ASTColor {
+  33          match self {
+  34:             DefaultColors::LizardGreen => ASTColor::Rgb(20, 244, 0),
+  35:             DefaultColors::SlateGrey => ASTColor::Rgb(94, 103, 111),
+  36:             DefaultColors::SilverMetallic => ASTColor::Rgb(213, 217, 220),
+  37:             DefaultColors::FrozenBlue => ASTColor::Rgb(171, 204, 242),
+  38:             DefaultColors::MoonlightBlue => ASTColor::Rgb(31, 36, 46),
+  39:             DefaultColors::NightBlue => ASTColor::Rgb(14, 17, 23),
+  40:             DefaultColors::GuardsRed => ASTColor::Rgb(200, 1, 1),
+  41:             DefaultColors::Orange => ASTColor::Rgb(255, 132, 18),
+  42          }
+
+cmdr/src/giti/branch/giti_ui_templates.rs:
+  19  
+  20: use r3bl_core::{ASTColor,
+  21                  ASTStyle,
+
+  41              ASTStyle::Foreground(SLATE_GRAY),
+  42:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  43          ],
+
+  49              ASTStyle::Foreground(SLATE_GRAY),
+  50:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  51          ],
+
+  57              ASTStyle::Foreground(SLATE_GRAY),
+  58:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  59          ],
+
+  65              ASTStyle::Foreground(SLATE_GRAY),
+  66:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  67          ],
+
+  77              ASTStyle::Foreground(SLATE_GRAY),
+  78:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  79          ],
+
+  84              ASTStyle::Foreground(SLATE_GRAY),
+  85:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  86          ],
+
+  92              ASTStyle::Foreground(SLATE_GRAY),
+  93:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  94          ],
+
+core/src/ansi/ansi_styled_text.rs:
+   23  
+   24: use crate::{ASTColor,
+   25              DEFAULT_STRING_STORAGE_SIZE,
+
+   43  /// use r3bl_core::{
+   44: ///     red, rgb_color, dim, AnsiStyledText, fg_rgb_color, ASTStyle, ASTColor
+   45  /// };
+
+   70  ///         ASTStyle::Underline,
+   71: ///         ASTStyle::Foreground(ASTColor::Rgb(50, 50, 50)),
+   72: ///         ASTStyle::Background(ASTColor::Rgb(100, 200, 1)),
+   73  ///     ],
+
+  104      let rgb_color = arg_color.into();
+  105:     let ast_color = ASTColor::from(rgb_color);
+  106      AnsiStyledText {
+
+  115          text,
+  116:         style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(34))),
+  117      }
+
+  123          text,
+  124:         style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(196))),
+  125      }
+
+  131          text,
+  132:         style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(231))),
+  133      }
+
+  139          text,
+  140:         style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(51))),
+  141      }
+
+  147          text,
+  148:         style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(226))),
+  149      }
+
+  155          text,
+  156:         style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(201))),
+  157      }
+
+  198          text,
+  199:         style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(27))),
+  200      }
+
+  247          self.style
+  248:             .push(ASTStyle::Background(ASTColor::Ansi256(236)));
+  249          self
+
+  253          let color = arg_color.into();
+  254:         let ast_color = ASTColor::from(color);
+  255          self.style.push(ASTStyle::Background(ast_color));
+
+  260          let color = arg_color.into();
+  261:         let ast_color = ASTColor::from(color);
+  262          self.style.push(ASTStyle::Foreground(ast_color));
+
+  268  pub enum ASTStyle {
+  269:     Foreground(ASTColor),
+  270:     Background(ASTColor),
+  271      Bold,
+
+  285  
+  286:     use crate::{ASTColor,
+  287                  ASTStyle,
+
+  300      fn fmt_color(
+  301:         color: ASTColor,
+  302          color_kind: ColorKind,
+
+  392      use super::dim;
+  393:     use crate::{ASTColor, ASTStyle, AnsiStyledText, ColorSupport, global_color_support};
+  394  
+
+  401                  ASTStyle::Bold,
+  402:                 ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
+  403              ),
+
+  440                  ASTStyle::Bold,
+  441:                 ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
+  442:                 ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+  443              ),
+
+  454                  ASTStyle::Bold,
+  455:                 ASTStyle::Foreground(ASTColor::Ansi256(150)),
+  456:                 ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+  457              ),
+
+  475                  ASTStyle::Bold,
+  476:                 ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
+  477:                 ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+  478              ),
+
+  489                  ASTStyle::Bold,
+  490:                 ASTStyle::Foreground(ASTColor::Ansi256(150)),
+  491:                 ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+  492              ),
+
+  510                  ASTStyle::Bold,
+  511:                 ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
+  512:                 ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+  513              ),
+
+  526                  ASTStyle::Bold,
+  527:                 ASTStyle::Foreground(ASTColor::Ansi256(150)),
+  528:                 ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+  529              ),
+
+core/src/ansi/ast_color.rs:
+  27  
+  28: use crate::{AnsiValue,
+  29:             RgbValue,
+  30              TransformColor,
+
+  40  #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+  41: pub enum ASTColor {
+  42:     Rgb(RgbValue),
+  43:     Ansi(AnsiValue),
+  44  }
+
+  48  
+  49:     impl Default for ASTColor {
+  50:         fn default() -> Self { ASTColor::Rgb((0, 0, 0).into()) }
+  51      }
+  52  
+  53:     impl From<AnsiValue> for ASTColor {
+  54:         fn from(ansi: AnsiValue) -> Self { ASTColor::Ansi(ansi) }
+  55      }
+  56  
+  57:     impl From<ASTColor> for RgbValue {
+  58:         fn from(ast_color: ASTColor) -> Self { ast_color.as_rgb() }
+  59      }
+  60  
+  61:     impl TransformColor for ASTColor {
+  62:         fn as_rgb(&self) -> RgbValue {
+  63              match self {
+  64:                 ASTColor::Rgb(rgb_value) => *rgb_value,
+  65:                 ASTColor::Ansi(ansi_value) => {
+  66:                     let rgb_color: RgbValue =
+  67                          ANSI_COLOR_PALETTE[ansi_value.index as usize].into();
+
+  72  
+  73:         fn as_ansi256(&self) -> AnsiValue {
+  74              match self {
+  75:                 ASTColor::Rgb(rgb_value) => convert_rgb_into_ansi256(RgbValue {
+  76                      red: rgb_value.red,
+
+  80                  .into(),
+  81:                 ASTColor::Ansi(ansi_value) => *ansi_value,
+  82              }
+
+  84  
+  85:         fn as_grayscale(&self) -> AnsiValue {
+  86              match self {
+  87:                 ASTColor::Rgb(rgb_value) => convert_rgb_into_ansi256(RgbValue {
+  88                      red: rgb_value.red,
+
+  93                  .into(),
+  94:                 ASTColor::Ansi(ansi_value) => {
+  95:                     let ansi256_color = AnsiValue {
+  96                          index: ansi_value.index,
+
+core/src/ansi/convert.rs:
+   23  
+   24: use crate::{Ansi256Color, AnsiValue, RgbColor, RgbValue};
+   25  
+
+   66  
+   67: pub fn convert_rgb_into_ansi256(rgb_color: RgbValue) -> AnsiValue {
+   68      let luminance_approximation: usize = calculate_luminance(rgb_color).into();
+
+   94  mod cube_mapping {
+   95:     use crate::{RgbColor, RgbValue};
+   96  
+
+  194      /// More info: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/Understanding_Colors_and_Luminance#luminance_and_perception>.
+  195:     pub fn calculate_luminance(rgb: RgbValue) -> u8 {
+  196:         let RgbValue { red, green, blue } = rgb;
+  197          let number = red as f32 * red as f32 * 0.2126729_f32
+
+  207      pub fn calculate_relative_diff_between_colors(
+  208:         this: RgbValue,
+  209:         other: RgbValue,
+  210      ) -> u32 {
+  211:         let RgbValue {
+  212              red: this_red,
+
+  216  
+  217:         let RgbValue {
+  218              red: other_red,
+
+  235  mod convert_between_rgb_and_u32 {
+  236:     use crate::RgbValue;
+  237  
+  238:     impl From<RgbValue> for u32 {
+  239:         fn from(rgb: RgbValue) -> Self {
+  240:             let RgbValue {
+  241                  red: r,
+
+  248  
+  249:     impl From<u32> for RgbValue {
+  250          fn from(rgb: u32) -> Self {
+  251:             RgbValue {
+  252                  red: (rgb >> 16) as u8,
+
+  328  
+  329:     use crate::{AnsiValue, RgbValue, TransformColor};
+  330  
+
+  333          assert_eq!(
+  334:             AnsiValue { index: 0 }.into(),
+  335:             RgbValue {
+  336                  red: 0,
+
+  342          assert_eq!(
+  343:             AnsiValue { index: 25 }.as_rgb(),
+  344:             RgbValue {
+  345                  red: 0,
+
+  351          assert_eq!(
+  352:             AnsiValue { index: 50 }.as_rgb(),
+  353:             RgbValue {
+  354                  red: 0,
+
+  360          assert_eq!(
+  361:             AnsiValue { index: 100 }.as_rgb(),
+  362:             RgbValue {
+  363                  red: 135,
+
+  369          assert_eq!(
+  370:             AnsiValue { index: 200 }.as_rgb(),
+  371:             RgbValue {
+  372                  red: 255,
+
+  378          assert_eq!(
+  379:             AnsiValue { index: 225 }.as_rgb(),
+  380:             RgbValue {
+  381                  red: 255,
+
+  387          assert_eq!(
+  388:             AnsiValue { index: 255 }.as_rgb(),
+  389:             RgbValue {
+  390                  red: 238,
+
+  401          assert_eq!(
+  402:             RgbValue {
+  403                  red: 0,
+
+  412          assert_eq!(
+  413:             RgbValue {
+  414                  red: 1,
+
+  423          assert_eq!(
+  424:             RgbValue {
+  425                  red: 25,
+
+  434          assert_eq!(
+  435:             RgbValue {
+  436                  red: 10,
+
+  445          assert_eq!(
+  446:             RgbValue {
+  447                  red: 50,
+
+  456          assert_eq!(
+  457:             RgbValue {
+  458                  red: 255,
+
+core/src/ansi/mod.rs:
+  143  //! use r3bl_core::{
+  144: //!     red, dim, fg_rgb_color, RgbColor, ASTStyle, AnsiStyledText, ASTColor
+  145  //! };
+
+  170  //!         ASTStyle::Underline,
+  171: //!         ASTStyle::Foreground(ASTColor::Rgb(50, 50, 50)),
+  172: //!         ASTStyle::Background(ASTColor::Rgb(100, 200, 1)),
+  173  //!     ],
+
+core/src/ansi/transform_color.rs:
+  17  
+  18: use crate::{Ansi256Color, AnsiValue, RgbColor, RgbValue};
+  19  
+
+  21      /// Returns a [RgbColor] representation of the `self` color.
+  22:     fn as_rgb(&self) -> RgbValue;
+  23  
+
+  25      /// color.
+  26:     fn as_ansi256(&self) -> AnsiValue;
+  27  
+
+  29      /// color as grayscale.
+  30:     fn as_grayscale(&self) -> AnsiValue;
+  31  }
+
+  37      use super::TransformColor;
+  38:     use crate::{ASTColor, Ansi256Color, RgbColor};
+  39  
+
+  43      fn test_color_as_rgb(red: u8, green: u8, blue: u8) {
+  44:         let rgb_color = ASTColor::Rgb(red, green, blue);
+  45          assert_eq!(rgb_color.as_rgb(), RgbColor { red, green, blue });
+
+  47  
+  48:     #[test_case(ASTColor::Rgb(255, 255, 255), 231)]
+  49:     #[test_case(ASTColor::Rgb(255, 128, 0), 208)]
+  50:     fn test_color_as_ansi256(rgb_color: crate::ASTColor, index: u8) {
+  51          let expected_ansi = Ansi256Color { index };
+
+  73  
+  74:     #[test_case(ASTColor::Rgb(0, 0, 0), 16)]
+  75:     #[test_case(ASTColor::Rgb(255, 128, 0), 249)]
+  76:     fn test_color_as_grayscale(rgb_color: crate::ASTColor, index: u8) {
+  77          let expected_gray = Ansi256Color { index };
+
+core/src/misc/string_helpers.rs:
+  31  fn test_contains_ansi_escape_sequence() {
+  32:     use crate::{ASTColor, ASTStyle, AnsiStyledText, assert_eq2};
+  33  
+
+  50                        ASTStyle::Underline,
+  51:                       ASTStyle::Foreground(ASTColor::Rgb(50, 50, 50)),
+  52:                       ASTStyle::Background(ASTColor::Rgb(100, 200, 1)),
+  53                    ],
+
+core/src/tui_core/color_wheel/color_wheel_impl.rs:
+   37              InlineString,
+   38:             RgbValue,
+   39              TextColorizationPolicy,
+
+  217                      for color_u8 in gradient_array {
+  218:                         // gradient_vec.push(TuiColor::Ansi(AnsiValue::new(*color_u8)));
+  219                          gradient_vec.push(tui_color!(ansi * color_u8));
+
+  490                      let maybe_bg_color = match next_bg_color {
+  491:                         TuiColor::Rgb(RgbValue {
+  492                              red: bg_red,
+
+  496                          TuiColor::Ansi(ansi_value) => {
+  497:                             let rgb_value = RgbValue::from(ansi_value);
+  498                              Some((rgb_value.red, rgb_value.green, rgb_value.blue))
+
+  500                          TuiColor::Basic(basic_color) => {
+  501:                             match RgbValue::try_from_tui_color(TuiColor::Basic(
+  502                                  basic_color,
+  503                              )) {
+  504:                                 Ok(RgbValue { red, green, blue }) => {
+  505                                      Some((red, green, blue))
+
+core/src/tui_core/color_wheel_core/converter.rs:
+  17  
+  18: use crate::{ANSIBasicColor, ASTColor, RgbValue, TuiColor};
+  19  
+  20: pub fn convert_tui_color_into_r3bl_ansi_color(color: TuiColor) -> ASTColor {
+  21      match color {
+  22:         TuiColor::Rgb(RgbValue { red, green, blue }) => ASTColor::Rgb(red, green, blue),
+  23:         TuiColor::Ansi(ansi_value) => ASTColor::Ansi256(ansi_value.index),
+  24          TuiColor::Basic(basic_color) => match basic_color {
+  25:             ANSIBasicColor::Black => ASTColor::Rgb(0, 0, 0),
+  26:             ANSIBasicColor::White => ASTColor::Rgb(255, 255, 255),
+  27:             ANSIBasicColor::Grey => ASTColor::Rgb(128, 128, 128),
+  28:             ANSIBasicColor::DarkGrey => ASTColor::Rgb(64, 64, 64),
+  29:             ANSIBasicColor::Red => ASTColor::Rgb(255, 0, 0),
+  30:             ANSIBasicColor::DarkRed => ASTColor::Rgb(128, 0, 0),
+  31:             ANSIBasicColor::Green => ASTColor::Rgb(0, 255, 0),
+  32:             ANSIBasicColor::DarkGreen => ASTColor::Rgb(0, 128, 0),
+  33:             ANSIBasicColor::Yellow => ASTColor::Rgb(255, 255, 0),
+  34:             ANSIBasicColor::DarkYellow => ASTColor::Rgb(128, 128, 0),
+  35:             ANSIBasicColor::Blue => ASTColor::Rgb(0, 0, 255),
+  36:             ANSIBasicColor::DarkBlue => ASTColor::Rgb(0, 0, 128),
+  37:             ANSIBasicColor::Magenta => ASTColor::Rgb(255, 0, 255),
+  38:             ANSIBasicColor::DarkMagenta => ASTColor::Rgb(128, 0, 128),
+  39:             ANSIBasicColor::Cyan => ASTColor::Rgb(0, 255, 255),
+  40:             ANSIBasicColor::DarkCyan => ASTColor::Rgb(0, 128, 128),
+  41          },
+  42:         TuiColor::Reset => ASTColor::default(),
+  43      }
+
+  53          let tui_color = tui_color!(255, 0, 0);
+  54:         let expected_color = ASTColor::Rgb(255, 0, 0);
+  55          let converted_color = convert_tui_color_into_r3bl_ansi_color(tui_color);
+
+  61          let tui_color = tui_color!(ansi 42);
+  62:         let expected_color = ASTColor::Ansi256(42);
+  63          let converted_color = convert_tui_color_into_r3bl_ansi_color(tui_color);
+
+  69          let tui_color = tui_color!(red);
+  70:         let expected_color = ASTColor::Rgb(255, 0, 0);
+  71          let converted_color = convert_tui_color_into_r3bl_ansi_color(tui_color);
+
+  77          let tui_color = tui_color!(reset);
+  78:         let expected_color = ASTColor::Rgb(0, 0, 0);
+  79          let converted_color = convert_tui_color_into_r3bl_ansi_color(tui_color);
+
+core/src/tui_core/color_wheel_core/truecolor_gradient.rs:
+  133                          style: smallvec::smallvec![ASTStyle::Background(
+  134:                             crate::ASTColor::Rgb(c.red, c.green, c.blue,)
+  135                          )],
+
+  178                          style: smallvec::smallvec![ASTStyle::Background(
+  179:                             crate::ASTColor::Rgb(c.red, c.green, c.blue,)
+  180                          )],
+
+core/src/tui_core/tui_style/crossterm_color_converter.rs:
+   18  use crate::{ANSIBasicColor,
+   19:             AnsiValue,
+   20              ColorSupport,
+   21:             RgbValue,
+   22              TransformColor,
+
+   48          // RGB colors.
+   49:         crossterm::style::Color::Rgb { r, g, b } => TuiColor::Rgb(RgbValue {
+   50              red: r,
+
+   55          // ANSI colors.
+   56:         crossterm::style::Color::AnsiValue(number) => {
+   57:             TuiColor::Ansi(AnsiValue::new(number))
+   58          }
+
+  117                  ColorSupport::Truecolor | ColorSupport::Ansi256 => {
+  118:                     crossterm::style::Color::AnsiValue(from_ansi_value.index)
+  119                  }
+
+  123                      let ansi_grayscale_color =
+  124:                         crate::ASTColor::Ansi256(from_ansi_value.index).as_grayscale();
+  125:                     crossterm::style::Color::AnsiValue(ansi_grayscale_color.index)
+  126                  }
+
+  131          TuiColor::Rgb(from_rgb_value) => {
+  132:             let RgbValue {
+  133                  red: r,
+
+  143                  ColorSupport::Ansi256 => {
+  144:                     let ansi_value = AnsiValue::from(from_rgb_value).index;
+  145:                     crossterm::style::Color::AnsiValue(ansi_value)
+  146                  }
+
+  157  fn convert_rgb_to_ansi_grayscale(r: u8, g: u8, b: u8) -> crossterm::style::Color {
+  158:     let ansi_grayscale_color = crate::ASTColor::Rgb(r, g, b).as_grayscale();
+  159:     crossterm::style::Color::AnsiValue(ansi_grayscale_color.index)
+  160  }
+
+core/src/tui_core/tui_style/hex_color_parser.rs:
+   17  
+   18: //! This module contains a parser that parses a hex color string into a [RgbValue] struct.
+   19  //! The hex color string can be in the following format: `#RRGGBB`, eg: `#FF0000` for red.
+
+   29  
+   30: use crate::RgbValue;
+   31  
+   32: /// Parse function that generate an [RgbValue] struct from a valid hex color string.
+   33: pub fn parse_hex_color(input: &str) -> IResult<&str, RgbValue> {
+   34      // This tuple contains 3 ways to do the same thing.
+
+   44      let (input, (red, green, blue)) = tuple(it)(input)?; // same as `it.parse(input)?`
+   45:     Ok((input, RgbValue { red, green, blue }))
+   46  }
+
+  100          assert_eq!(remainder, "🔅");
+  101:         assert_eq!(color, RgbValue::from_u8(47, 20, 223));
+  102      }
+
+core/src/tui_core/tui_style/tui_color.rs:
+   21  use crate::{ANSI_COLOR_PALETTE,
+   22:             ASTColor,
+   23              TransformColor,
+
+   31      (lizard_green) => {
+   32:         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(20, 244, 0))
+   33      };
+
+   35      (slate_grey) => {
+   36:         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(94, 103, 111))
+   37      };
+
+   39      (silver_metallic) => {
+   40:         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(213, 217, 220))
+   41      };
+
+   43      (frozen_blue) => {
+   44:         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(171, 204, 242))
+   45      };
+
+   47      (moonlight_blue) => {
+   48:         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(31, 36, 46))
+   49      };
+
+   51      (night_blue) => {
+   52:         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(14, 17, 23))
+   53      };
+
+   55      (guards_red) => {
+   56:         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(200, 1, 1))
+   57      };
+
+   59      (orange) => {
+   60:         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(255, 132, 18))
+   61      };
+
+  133      ) => {
+  134:         $crate::TuiColor::Rgb($crate::RgbValue::from_hex($arg_hex))
+  135      };
+
+  139      ) => {
+  140:         $crate::TuiColor::Ansi($crate::AnsiValue::new($arg_value))
+  141      };
+
+  148      ) => {
+  149:         $crate::TuiColor::Rgb($crate::RgbValue::from_u8($arg_r, $arg_g, $arg_b))
+  150      };
+
+  155  ///
+  156: /// A [TuiColor] can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`.
+  157: /// - It is safe to use just `RgbValue` since the library will degrade gracefully to ANSI
+  158  ///   256 or grayscale based on terminal emulator capabilities at runtime, which are
+
+  162  ///   [`ColorSupport`](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/color_wheel/detect_color_support/enum.ColorSupport.html).
+  163: /// - If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not be
+  164  ///   downgraded.
+
+  175      /// notes](enum.Color.html#platform-specific-notes) for more info.
+  176:     Rgb(RgbValue),
+  177      /// An ANSI color. See [256 colors - cheat sheet](https://jonasjacek.github.io/colors/) for more
+
+  181      /// notes](enum.Color.html#platform-specific-notes) for more info.
+  182:     Ansi(AnsiValue),
+  183  }
+
+  236  #[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
+  237: pub struct RgbValue {
+  238      pub red: u8,
+
+  245  
+  246:     impl From<(u8, u8, u8)> for RgbValue {
+  247          fn from((red, green, blue): (u8, u8, u8)) -> Self {
+
+  251  
+  252:     impl RgbValue {
+  253          pub fn from_u8(red: u8, green: u8, blue: u8) -> Self { Self { red, green, blue } }
+
+  262  
+  263:         pub fn try_from_hex_color(input: &str) -> CommonResult<RgbValue> {
+  264              match parse_hex_color(input) {
+
+  271  
+  272:         pub fn from_hex(input: &str) -> RgbValue {
+  273              match parse_hex_color(input) {
+
+  289                          // ANSI values.
+  290:                         ANSIBasicColor::Black => Ok(RgbValue {
+  291                              red: 0,
+
+  294                          }),
+  295:                         ANSIBasicColor::White => Ok(RgbValue {
+  296                              red: 255,
+
+  299                          }),
+  300:                         ANSIBasicColor::Grey => Ok(RgbValue {
+  301                              red: 128,
+
+  304                          }),
+  305:                         ANSIBasicColor::Red => Ok(RgbValue {
+  306                              red: 255,
+
+  309                          }),
+  310:                         ANSIBasicColor::Green => Ok(RgbValue {
+  311                              red: 0,
+
+  314                          }),
+  315:                         ANSIBasicColor::Blue => Ok(RgbValue {
+  316                              red: 0,
+
+  319                          }),
+  320:                         ANSIBasicColor::Yellow => Ok(RgbValue {
+  321                              red: 255,
+
+  324                          }),
+  325:                         ANSIBasicColor::Cyan => Ok(RgbValue {
+  326                              red: 0,
+
+  329                          }),
+  330:                         ANSIBasicColor::Magenta => Ok(RgbValue {
+  331                              red: 255,
+
+  334                          }),
+  335:                         ANSIBasicColor::DarkGrey => Ok(RgbValue {
+  336                              red: 64,
+
+  339                          }),
+  340:                         ANSIBasicColor::DarkRed => Ok(RgbValue {
+  341                              red: 128,
+
+  344                          }),
+  345:                         ANSIBasicColor::DarkGreen => Ok(RgbValue {
+  346                              red: 0,
+
+  349                          }),
+  350:                         ANSIBasicColor::DarkBlue => Ok(RgbValue {
+  351                              red: 0,
+
+  354                          }),
+  355:                         ANSIBasicColor::DarkYellow => Ok(RgbValue {
+  356                              red: 128,
+
+  359                          }),
+  360:                         ANSIBasicColor::DarkMagenta => Ok(RgbValue {
+  361                              red: 128,
+
+  364                          }),
+  365:                         ANSIBasicColor::DarkCyan => Ok(RgbValue {
+  366                              red: 0,
+
+  379  
+  380:     impl TransformColor for RgbValue {
+  381:         fn as_rgb(&self) -> RgbValue { *self }
+  382  
+  383:         fn as_ansi256(&self) -> AnsiValue { convert_rgb_into_ansi256(*self) }
+  384  
+  385:         fn as_grayscale(&self) -> AnsiValue {
+  386              convert_rgb_into_ansi256(*self).as_grayscale()
+
+  395      (dark_pink) => {
+  396:         $crate::RgbValue::from((203, 85, 121))
+  397      };
+
+  399      (pink) => {
+  400:         $crate::RgbValue::from((195, 106, 138))
+  401      };
+
+  403      (lizard_green) => {
+  404:         $crate::RgbValue::from((20, 244, 0))
+  405      };
+
+  407      (dark_lizard_green) => {
+  408:         $crate::RgbValue::from((10, 122, 0))
+  409      };
+
+  411      (slate_grey) => {
+  412:         $crate::RgbValue::from((94, 103, 111))
+  413      };
+
+  415      (silver_metallic) => {
+  416:         $crate::RgbValue::from((213, 217, 220))
+  417      };
+
+  419      (frozen_blue) => {
+  420:         $crate::RgbValue::from((171, 204, 242))
+  421      };
+
+  423      (moonlight_blue) => {
+  424:         $crate::RgbValue::from((31, 36, 46))
+  425      };
+
+  427      (night_blue) => {
+  428:         $crate::RgbValue::from((14, 17, 23))
+  429      };
+
+  431      (guards_red) => {
+  432:         $crate::RgbValue::from((200, 1, 1))
+  433      };
+
+  435      (orange) => {
+  436:         $crate::RgbValue::from((255, 132, 18))
+  437      };
+
+  439      (black) => {
+  440:         $crate::RgbValue::from((0, 0, 0))
+  441      };
+
+  443      (dark_grey) => {
+  444:         $crate::RgbValue::from((64, 64, 64))
+  445      };
+
+  447      (red) => {
+  448:         $crate::RgbValue::from((255, 0, 0))
+  449      };
+
+  451      (dark_red) => {
+  452:         $crate::RgbValue::from((139, 0, 0))
+  453      };
+
+  455      (green) => {
+  456:         $crate::RgbValue::from((0, 255, 0))
+  457      };
+
+  459      (dark_green) => {
+  460:         $crate::RgbValue::from((0, 100, 0))
+  461      };
+
+  463      (yellow) => {
+  464:         $crate::RgbValue::from((255, 255, 0))
+  465      };
+
+  467      (dark_yellow) => {
+  468:         $crate::RgbValue::from((204, 204, 0))
+  469      };
+
+  471      (blue) => {
+  472:         $crate::RgbValue::from((0, 0, 255))
+  473      };
+
+  475      (dark_blue) => {
+  476:         $crate::RgbValue::from((0, 0, 139))
+  477      };
+
+  479      (magenta) => {
+  480:         $crate::RgbValue::from((255, 0, 255))
+  481      };
+
+  483      (dark_magenta) => {
+  484:         $crate::RgbValue::from((139, 0, 139))
+  485      };
+
+  487      (cyan) => {
+  488:         $crate::RgbValue::from((0, 255, 255))
+  489      };
+
+  491      (dark_cyan) => {
+  492:         $crate::RgbValue::from((0, 139, 139))
+  493      };
+
+  495      (white) => {
+  496:         $crate::RgbValue::from((255, 255, 255))
+  497      };
+
+  499      (grey) => {
+  500:         $crate::RgbValue::from((192, 192, 192))
+  501      };
+
+  508      ) => {
+  509:         $crate::RgbValue::from(($arg_r, $arg_g, $arg_b))
+  510      };
+
+  513  #[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
+  514: pub struct AnsiValue {
+  515      pub index: u8,
+
+  520  
+  521:     impl TransformColor for AnsiValue {
+  522:         fn as_grayscale(&self) -> AnsiValue {
+  523              let index = self.index as usize;
+  524              let rgb = ANSI_COLOR_PALETTE[index];
+  525:             let rgb = RgbValue::from(rgb);
+  526              let rgb = color_utils::convert_grayscale((rgb.red, rgb.green, rgb.blue));
+  527:             let it = convert_rgb_into_ansi256(RgbValue {
+  528                  red: rgb.0,
+
+  535  
+  536:         fn as_rgb(&self) -> RgbValue {
+  537              let index = self.index as usize;
+
+  540  
+  541:         fn as_ansi256(&self) -> AnsiValue { *self }
+  542      }
+
+  547  
+  548:     impl Default for RgbValue {
+  549          fn default() -> Self { Self::from_u8(255, 255, 255) }
+
+  551  
+  552:     impl AnsiValue {
+  553          pub fn new(color: u8) -> Self { Self { index: color } }
+
+  557  /// This is useful when you want to mix and match the two crates. For example, you can use
+  558: /// a nice color from `tui_color!(lizard_green)` and then convert it to an ASTColor using
+  559: /// `ASTColor::from(tui_color)`. So you're no longer limited to the basic colors when
+  560: /// using `ASTColor` in your code (which happens when generating colorized log output).
+  561  mod convert_to_ast_color {
+
+  563  
+  564:     impl From<TuiColor> for ASTColor {
+  565          fn from(tui_color: TuiColor) -> Self {
+
+  567                  TuiColor::Rgb(rgb_value) => {
+  568:                     ASTColor::Rgb(rgb_value.red, rgb_value.green, rgb_value.blue)
+  569                  }
+  570:                 TuiColor::Ansi(ansi_value) => ASTColor::Ansi256(ansi_value.index),
+  571                  TuiColor::Basic(basic_color) => {
+  572                      let rgb_value =
+  573:                         RgbValue::try_from_tui_color(TuiColor::Basic(basic_color))
+  574                              .unwrap_or_default();
+  575:                     ASTColor::Rgb(rgb_value.red, rgb_value.green, rgb_value.blue)
+  576                  }
+  577:                 TuiColor::Reset => ASTColor::default(),
+  578              }
+
+  586  
+  587:     impl From<RgbValue> for AnsiValue {
+  588:         fn from(rgb_value: RgbValue) -> Self {
+  589:             let rgb_color = crate::RgbValue {
+  590                  red: rgb_value.red,
+
+  598  
+  599:     impl From<AnsiValue> for RgbValue {
+  600:         fn from(ansi_value: AnsiValue) -> Self {
+  601:             let rgb_color = crate::AnsiValue {
+  602                  index: ansi_value.index,
+
+  620      fn test_ansi_to_rgb() {
+  621:         let ansi = AnsiValue::new(57);
+  622:         let rgb = RgbValue::from(ansi);
+  623:         assert_eq2!(rgb, RgbValue::from_u8(95, 0, 255))
+  624      }
+
+  630      fn test_rgb_to_ansi() {
+  631:         let rgb = RgbValue::from_u8(95, 0, 255);
+  632:         let ansi = AnsiValue::from(rgb);
+  633:         assert_eq2!(ansi, AnsiValue::new(57))
+  634      }
+
+  638          let color = tui_color!(ansi 42);
+  639:         assert_eq2!(color, TuiColor::Ansi(AnsiValue::new(42)));
+  640      }
+
+  643      fn test_new() {
+  644:         let value = RgbValue::from_u8(1, 2, 3);
+  645          assert_eq2!((value.red, value.green, value.blue), (1, 2, 3));
+
+  652              let hex_color = "#ff0000";
+  653:             let value = RgbValue::try_from_hex_color(hex_color).unwrap();
+  654              assert_eq2!((value.red, value.green, value.blue), (255, 0, 0));
+
+  659              let hex_color = "#ff000";
+  660:             let value = RgbValue::try_from_hex_color(hex_color);
+  661              assert!(value.is_err());
+
+  674          assert_eq2!(
+  675:             RgbValue::try_from_tui_color(TuiColor::Rgb(RgbValue::from_u8(1, 2, 3)))
+  676                  .unwrap(),
+  677:             RgbValue {
+  678                  red: 1,
+
+  684          assert_eq2!(
+  685:             RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Black)).unwrap(),
+  686:             RgbValue {
+  687                  red: 0,
+
+  693          assert_eq2!(
+  694:             RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::White)).unwrap(),
+  695:             RgbValue {
+  696                  red: 255,
+
+  702          assert_eq2!(
+  703:             RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Grey)).unwrap(),
+  704:             RgbValue {
+  705                  red: 128,
+
+  711          assert_eq2!(
+  712:             RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Red)).unwrap(),
+  713:             RgbValue {
+  714                  red: 255,
+
+  720          assert_eq2!(
+  721:             RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Green)).unwrap(),
+  722:             RgbValue {
+  723                  red: 0,
+
+  759          assert_eq2!(
+  760:             RgbValue::try_from_tui_color(black).unwrap(),
+  761:             RgbValue {
+  762                  red: 0,
+
+  768          assert_eq2!(
+  769:             RgbValue::try_from_tui_color(dark_grey).unwrap(),
+  770:             RgbValue {
+  771                  red: 64,
+
+  777          assert_eq2!(
+  778:             RgbValue::try_from_tui_color(red).unwrap(),
+  779:             RgbValue {
+  780                  red: 255,
+
+  786          assert_eq2!(
+  787:             RgbValue::try_from_tui_color(dark_red).unwrap(),
+  788:             RgbValue {
+  789                  red: 128,
+
+  795          assert_eq2!(
+  796:             RgbValue::try_from_tui_color(green).unwrap(),
+  797:             RgbValue {
+  798                  red: 0,
+
+  804          assert_eq2!(
+  805:             RgbValue::try_from_tui_color(dark_green).unwrap(),
+  806:             RgbValue {
+  807                  red: 0,
+
+  813          assert_eq2!(
+  814:             RgbValue::try_from_tui_color(yellow).unwrap(),
+  815:             RgbValue {
+  816                  red: 255,
+
+  822          assert_eq2!(
+  823:             RgbValue::try_from_tui_color(dark_yellow).unwrap(),
+  824:             RgbValue {
+  825                  red: 128,
+
+  831          assert_eq2!(
+  832:             RgbValue::try_from_tui_color(blue).unwrap(),
+  833:             RgbValue {
+  834                  red: 0,
+
+  840          assert_eq2!(
+  841:             RgbValue::try_from_tui_color(dark_blue).unwrap(),
+  842:             RgbValue {
+  843                  red: 0,
+
+  849          assert_eq2!(
+  850:             RgbValue::try_from_tui_color(magenta).unwrap(),
+  851:             RgbValue {
+  852                  red: 255,
+
+  858          assert_eq2!(
+  859:             RgbValue::try_from_tui_color(dark_magenta).unwrap(),
+  860:             RgbValue {
+  861                  red: 128,
+
+  867          assert_eq2!(
+  868:             RgbValue::try_from_tui_color(cyan).unwrap(),
+  869:             RgbValue {
+  870                  red: 0,
+
+  876          assert_eq2!(
+  877:             RgbValue::try_from_tui_color(dark_cyan).unwrap(),
+  878:             RgbValue {
+  879                  red: 0,
+
+  885          assert_eq2!(
+  886:             RgbValue::try_from_tui_color(white).unwrap(),
+  887:             RgbValue {
+  888                  red: 255,
+
+  894          assert_eq2!(
+  895:             RgbValue::try_from_tui_color(grey).unwrap(),
+  896:             RgbValue {
+  897                  red: 128,
+
+  902  
+  903:         assert!(RgbValue::try_from_tui_color(reset).is_err());
+  904  
+  905          assert_eq2!(
+  906:             RgbValue::try_from_tui_color(lizard_green).unwrap(),
+  907:             RgbValue {
+  908                  red: 20,
+
+  914          assert_eq2!(
+  915:             RgbValue::try_from_tui_color(slate_grey).unwrap(),
+  916:             RgbValue {
+  917                  red: 94,
+
+  923          assert_eq2!(
+  924:             RgbValue::try_from_tui_color(silver_metallic).unwrap(),
+  925:             RgbValue {
+  926                  red: 213,
+
+  932          assert_eq2!(
+  933:             RgbValue::try_from_tui_color(frozen_blue).unwrap(),
+  934:             RgbValue {
+  935                  red: 171,
+
+  941          assert_eq2!(
+  942:             RgbValue::try_from_tui_color(moonlight_blue).unwrap(),
+  943:             RgbValue {
+  944                  red: 31,
+
+  950          assert_eq2!(
+  951:             RgbValue::try_from_tui_color(night_blue).unwrap(),
+  952:             RgbValue {
+  953                  red: 14,
+
+  959          assert_eq2!(
+  960:             RgbValue::try_from_tui_color(guards_red).unwrap(),
+  961:             RgbValue {
+  962                  red: 200,
+
+  968          assert_eq2!(
+  969:             RgbValue::try_from_tui_color(orange).unwrap(),
+  970:             RgbValue {
+  971                  red: 255,
+
+  984              match self {
+  985:                 TuiColor::Rgb(RgbValue { red, green, blue }) => {
+  986                      write!(f, "{red},{green},{blue}")
+
+core/src/tui_core/tui_style/tui_style_impl.rs:
+  33  /// ```rust
+  34: /// use r3bl_core::{TuiStyle, TuiColor, TuiStylesheet, RgbValue};
+  35  ///
+
+  46  ///         dim: true,
+  47: ///         color_fg: Some(TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })),
+  48  ///         .. Default::default()
+
+  53  ///         dim: true,
+  54: ///         color_fg: Some(TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })),
+  55  ///         .. Default::default()
+
+core/src/tui_core/tui_style/tui_style_lite.rs:
+  29  /// ```ignore
+  30: /// use r3bl_tui_core::{TuiColor, TuiStyle, RgbValue};
+  31: /// let color_bg = TuiColor::Rgb(RgbValue::from_hex("#076DEB"));
+  32: /// let color_fg = TuiColor::Rgb(RgbValue::from_hex("#E9C940"));
+  33  /// let style = new_style!(
+
+core/src/tui_core/tui_style/tui_stylesheet.rs:
+  131  /// ```
+  132: /// use r3bl_core::{ch, ChUnit, TuiColor, RgbValue, TuiStyle, TryAdd, tui_stylesheet, CommonResult, throws_with_return, TuiStylesheet};
+  133  /// fn create_tui_stylesheet() -> CommonResult<TuiStylesheet> {
+
+  138  ///             padding: Some(ch(1)),
+  139: ///             color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(55, 55, 248))),
+  140  ///             ..Default::default()
+
+  145  ///                 padding: Some(ch(1)),
+  146: ///                 color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(155, 155, 48))),
+  147  ///                 ..Default::default()
+
+  151  ///                 padding: Some(ch(1)),
+  152: ///                 color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(5, 5, 48))),
+  153  ///                 ..Default::default()
+
+log/src/log_support/custom_event_formatter.rs:
+   40  use custom_event_formatter_constants::*;
+   41: use r3bl_core::{ASTColor,
+   42                  ASTStyle,
+
+  103  
+  104:     pub const BODY_FG_COLOR: ASTColor = ASTColor::Rgb(175, 175, 175);
+  105:     pub const BODY_FG_COLOR_BRIGHT: ASTColor = ASTColor::Rgb(200, 200, 200);
+  106:     pub const HEADING_BG_COLOR: ASTColor = ASTColor::Rgb(70, 70, 90);
+  107  
+  108:     pub const INFO_FG_COLOR: ASTColor = ASTColor::Rgb(233, 150, 122);
+  109:     pub const ERROR_FG_COLOR: ASTColor = ASTColor::Rgb(255, 182, 193); //Color::Rgb(220, 92, 92);
+  110:     pub const WARN_FG_COLOR: ASTColor = ASTColor::Rgb(255, 140, 0);
+  111:     pub const DEBUG_FG_COLOR: ASTColor = ASTColor::Rgb(255, 255, 0);
+  112:     pub const TRACE_FG_COLOR: ASTColor = ASTColor::Rgb(186, 85, 211);
+  113  }
+
+tui/examples/demo/main.rs:
+  47                  tui_color,
+  48:                 ASTColor,
+  49                  CommonError,
+
+  78  
+  79:     let msg_fmt = fg_rgb_color(ASTColor::from(tui_color!(lizard_green)), &msg);
+  80      ta_println!(terminal_async, "{}", msg_fmt.to_string());
+
+tuify/README.md:
+  238  
+  239: use r3bl_core::{AnsiStyledText, ASTColor, ASTStyle};
+  240  use r3bl_tuify::{
+
+  249          style: smallvec::smallvec![
+  250:             ASTStyle::Foreground(ASTColor::Rgb(9, 238, 211)),
+  251:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  252          ],
+
+  256          style: smallvec::smallvec![
+  257:             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  258:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  259          ],
+
+  266          style: smallvec::smallvec![
+  267:             ASTStyle::Foreground(ASTColor::Rgb(255, 216, 9)),
+  268:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  269          ],
+
+  273          style: smallvec::smallvec![
+  274:             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  275:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  276          ],
+
+  283          style: smallvec::smallvec![
+  284:             ASTStyle::Foreground(ASTColor::Rgb(255, 132, 18)),
+  285:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  286          ],
+
+  290          style: smallvec::smallvec![
+  291:             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  292:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  293          ],
+
+  299          style: smallvec::smallvec![
+  300:             ASTStyle::Foreground(ASTColor::Rgb(234, 0, 196)),
+  301:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  302          ],
+
+  306          style: smallvec::smallvec![
+  307:             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  308:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  309          ],
+
+  318          style: smallvec::smallvec![
+  319:             ASTStyle::Foreground(ASTColor::Rgb(171, 204, 242)),
+  320:             ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
+  321          ],
+
+  571  use std::io::Result;
+  572: use r3bl_core::{AnsiStyledText, ASTColor};
+  573  use r3bl_tuify::{components::style::{Style, StyleSheet},
+
+  582        focused_and_selected_style: Style {
+  583:             fg_color: ASTColor::Rgb(255, 244, 0),
+  584:             bg_color: ASTColor::Rgb(15, 32, 66),
+  585              ..Style::default()
+
+  587        focused_style: Style {
+  588:             fg_color: ASTColor::Rgb(255, 244, 0),
+  589              ..Style::default()
+
+  592        selected_style: Style {
+  593:             fg_color: ASTColor::Rgb(203, 170, 250),
+  594:             bg_color: ASTColor::Rgb(15, 32, 66),
+  595              ..Style::default()
+
+  597        header_style: Style {
+  598:             fg_color: ASTColor::Rgb(171, 204, 242),
+  599:             bg_color: ASTColor::Rgb(31, 36, 46),
+  600              ..Style::default()
+
+tuify/examples/main_interactive.rs:
+   23                  usize,
+   24:                 ASTColor,
+   25                  ASTStyle,
+
+  153          style: smallvec::smallvec![
+  154:             ASTStyle::Foreground(ASTColor::Rgb(171, 204, 242)),
+  155:             ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
+  156          ],
+
+  243          style: smallvec::smallvec![
+  244:             ASTStyle::Foreground(ASTColor::Rgb(171, 204, 242)),
+  245:             ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
+  246          ],
+
+  275          style: smallvec::smallvec![
+  276:             ASTStyle::Foreground(ASTColor::Rgb(229, 239, 123)),
+  277:             ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
+  278          ],
+
+  331          style: smallvec::smallvec![
+  332:             ASTStyle::Foreground(ASTColor::Rgb(229, 239, 123)),
+  333:             ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
+  334          ],
+
+  420          style: smallvec::smallvec![
+  421:             ASTStyle::Foreground(ASTColor::Rgb(171, 204, 242)),
+  422:             ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
+  423          ],
+
+  456          style: smallvec::smallvec![
+  457:             ASTStyle::Foreground(ASTColor::Rgb(9, 238, 211)),
+  458:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  459          ],
+
+  463          style: smallvec::smallvec![
+  464:             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  465:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  466          ],
+
+  473          style: smallvec::smallvec![
+  474:             ASTStyle::Foreground(ASTColor::Rgb(255, 216, 9)),
+  475:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  476          ],
+
+  480          style: smallvec::smallvec![
+  481:             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  482:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  483          ],
+
+  490          style: smallvec::smallvec![
+  491:             ASTStyle::Foreground(ASTColor::Rgb(255, 132, 18)),
+  492:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  493          ],
+
+  497          style: smallvec::smallvec![
+  498:             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  499:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  500          ],
+
+  506          style: smallvec::smallvec![
+  507:             ASTStyle::Foreground(ASTColor::Rgb(234, 0, 196)),
+  508:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  509          ],
+
+  513          style: smallvec::smallvec![
+  514:             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  515:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  516          ],
+
+  525          style: smallvec::smallvec![
+  526:             ASTStyle::Foreground(ASTColor::Rgb(9, 238, 211)),
+  527:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  528          ],
+
+  532          style: smallvec::smallvec![
+  533:             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  534:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  535          ],
+
+  542          style: smallvec::smallvec![
+  543:             ASTStyle::Foreground(ASTColor::Rgb(255, 132, 18)),
+  544:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  545          ],
+
+  549          style: smallvec::smallvec![
+  550:             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  551:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  552          ],
+
+  558          style: smallvec::smallvec![
+  559:             ASTStyle::Foreground(ASTColor::Rgb(234, 0, 196)),
+  560:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  561          ],
+
+  565          style: smallvec::smallvec![
+  566:             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  567:             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  568          ],
+
+tuify/examples/single_select_quiz_game.rs:
+   19  
+   20: use r3bl_core::{self, get_terminal_width, usize, ASTColor, ASTStyle, AnsiStyledText};
+   21  use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet};
+
+   42      let mut score = 0;
+   43:     let correct_answer_color = ASTColor::Rgb(255, 216, 9);
+   44:     let incorrect_answer_color = ASTColor::Rgb(255, 70, 30);
+   45      let line_length = 60;
+
+   96          let color = match self {
+   97:             Answer::Correct => ASTColor::Rgb(5, 236, 0),
+   98:             Answer::Incorrect => ASTColor::Rgb(234, 0, 196),
+   99          };
+
+  138  fn display_header(line_length: usize) {
+  139:     let color = ASTColor::Rgb(9, 183, 238);
+  140      println!();
+
+  166      let line = "─".to_string().as_str().repeat(line_length - 2);
+  167:     let color = ASTColor::Rgb(9, 183, 238);
+  168  
+
+  205      user_input: &Option<Vec<String>>,
+  206:     correct_answer_color: ASTColor,
+  207:     incorrect_answer_color: ASTColor,
+  208      score: &mut i32,
+
+tuify/src/constants.rs:
+  17  
+  18: use r3bl_core::ASTColor;
+  19  
+  20  // Colors.
+  21: pub const LIZARD_GREEN: ASTColor = ASTColor::Rgb(20, 244, 0);
+  22: pub const SLATE_GRAY: ASTColor = ASTColor::Rgb(94, 103, 111);
+  23: pub const FROZEN_BLUE: ASTColor = ASTColor::Rgb(171, 204, 242);
+  24: pub const GUARDS_RED: ASTColor = ASTColor::Rgb(200, 1, 1);
+
+tuify/src/lib.rs:
+  253  //!
+  254: //! use r3bl_core::{AnsiStyledText, ASTColor, ASTStyle};
+  255  //! use r3bl_tuify::{
+
+  264  //!         style: smallvec::smallvec![
+  265: //!             ASTStyle::Foreground(ASTColor::Rgb(9, 238, 211)),
+  266: //!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  267  //!         ],
+
+  271  //!         style: smallvec::smallvec![
+  272: //!             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  273: //!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  274  //!         ],
+
+  281  //!         style: smallvec::smallvec![
+  282: //!             ASTStyle::Foreground(ASTColor::Rgb(255, 216, 9)),
+  283: //!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  284  //!         ],
+
+  288  //!         style: smallvec::smallvec![
+  289: //!             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  290: //!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  291  //!         ],
+
+  298  //!         style: smallvec::smallvec![
+  299: //!             ASTStyle::Foreground(ASTColor::Rgb(255, 132, 18)),
+  300: //!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  301  //!         ],
+
+  305  //!         style: smallvec::smallvec![
+  306: //!             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  307: //!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  308  //!         ],
+
+  314  //!         style: smallvec::smallvec![
+  315: //!             ASTStyle::Foreground(ASTColor::Rgb(234, 0, 196)),
+  316: //!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  317  //!         ],
+
+  321  //!         style: smallvec::smallvec![
+  322: //!             ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
+  323: //!             ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+  324  //!         ],
+
+  333  //!         style: smallvec::smallvec![
+  334: //!             ASTStyle::Foreground(ASTColor::Rgb(171, 204, 242)),
+  335: //!             ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
+  336  //!         ],
+
+  586  //! use std::io::Result;
+  587: //! use r3bl_core::{AnsiStyledText, ASTColor};
+  588  //! use r3bl_tuify::{components::style::{Style, StyleSheet},
+
+  597  //!       focused_and_selected_style: Style {
+  598: //!             fg_color: ASTColor::Rgb(255, 244, 0),
+  599: //!             bg_color: ASTColor::Rgb(15, 32, 66),
+  600  //!             ..Style::default()
+
+  602  //!       focused_style: Style {
+  603: //!             fg_color: ASTColor::Rgb(255, 244, 0),
+  604  //!             ..Style::default()
+
+  607  //!       selected_style: Style {
+  608: //!             fg_color: ASTColor::Rgb(203, 170, 250),
+  609: //!             bg_color: ASTColor::Rgb(15, 32, 66),
+  610  //!             ..Style::default()
+
+  612  //!       header_style: Style {
+  613: //!             fg_color: ASTColor::Rgb(171, 204, 242),
+  614: //!             bg_color: ASTColor::Rgb(31, 36, 46),
+  615  //!             ..Style::default()
+
+tuify/src/components/apply_style_macro.rs:
+  18  use crossterm::style::{Attribute, Color, SetAttribute};
+  19: use r3bl_core::{global_color_support, ASTColor, ColorSupport, TransformColor};
+  20  
+  21: pub fn get_crossterm_color_based_on_terminal_capabilities(color: ASTColor) -> Color {
+  22      let detect_color_support = global_color_support::detect();
+
+  31          }
+  32:         _ => Color::AnsiValue(color.as_ansi256().index),
+  33      }
+
+tuify/src/components/style.rs:
+   17  
+   18: use r3bl_core::ASTColor;
+   19  
+
+   31          let focused_and_selected_style = Style {
+   32:             fg_color: ASTColor::Rgb(20, 244, 0),
+   33:             bg_color: ASTColor::Rgb(51, 32, 66),
+   34              ..Style::default()
+
+   36          let focused_style = Style {
+   37:             fg_color: ASTColor::Rgb(20, 244, 0),
+   38              ..Style::default()
+
+   41          let selected_style = Style {
+   42:             fg_color: ASTColor::Rgb(203, 170, 250),
+   43:             bg_color: ASTColor::Rgb(51, 32, 66),
+   44              ..Style::default()
+
+   46          let header_style = Style {
+   47:             fg_color: ASTColor::Rgb(171, 204, 242),
+   48:             bg_color: ASTColor::Rgb(31, 36, 46),
+   49              ..Style::default()
+
+   63          let focused_and_selected_style = Style {
+   64:             fg_color: ASTColor::Rgb(19, 227, 255),
+   65:             bg_color: ASTColor::Rgb(6, 41, 52),
+   66              ..Style::default()
+
+   68          let focused_style = Style {
+   69:             fg_color: ASTColor::Rgb(19, 227, 255),
+   70:             bg_color: ASTColor::Rgb(14, 17, 23),
+   71              ..Style::default()
+
+   73          let unselected_style = Style {
+   74:             fg_color: ASTColor::Rgb(241, 241, 241),
+   75:             bg_color: ASTColor::Rgb(14, 17, 23),
+   76              ..Style::default()
+
+   78          let selected_style = Style {
+   79:             fg_color: ASTColor::Rgb(209, 244, 255),
+   80:             bg_color: ASTColor::Rgb(6, 41, 52),
+   81              ..Style::default()
+
+   83          let header_style = Style {
+   84:             fg_color: ASTColor::Rgb(229, 239, 123),
+   85:             bg_color: ASTColor::Rgb(31, 36, 46),
+   86              ..Style::default()
+
+   98          let focused_and_selected_style = Style {
+   99:             fg_color: ASTColor::Rgb(255, 0, 214),
+  100:             bg_color: ASTColor::Rgb(62, 14, 74),
+  101              ..Style::default()
+
+  103          let focused_style = Style {
+  104:             fg_color: ASTColor::Rgb(255, 0, 214),
+  105:             bg_color: ASTColor::Rgb(14, 17, 23),
+  106              ..Style::default()
+
+  108          let unselected_style = Style {
+  109:             fg_color: ASTColor::Rgb(219, 202, 232),
+  110:             bg_color: ASTColor::Rgb(14, 17, 23),
+  111              ..Style::default()
+
+  113          let selected_style = Style {
+  114:             fg_color: ASTColor::Rgb(255, 181, 234),
+  115:             bg_color: ASTColor::Rgb(62, 14, 74),
+  116              ..Style::default()
+
+  118          let header_style = Style {
+  119:             fg_color: ASTColor::Rgb(190, 253, 249),
+  120:             bg_color: ASTColor::Rgb(31, 36, 46),
+  121              ..Style::default()
+
+  141      pub strikethrough: bool,
+  142:     pub fg_color: ASTColor,
+  143:     pub bg_color: ASTColor,
+  144  }
+
+  155              strikethrough: false,
+  156:             fg_color: ASTColor::Rgb(193, 193, 193),
+  157:             bg_color: ASTColor::Rgb(14, 17, 23),
+  158          }
+
+  171              stylesheet.focused_and_selected_style.fg_color,
+  172:             ASTColor::Rgb(20, 244, 0)
+  173          );
+
+  175              stylesheet.focused_and_selected_style.bg_color,
+  176:             ASTColor::Rgb(51, 32, 66)
+  177          );
+  178  
+  179:         assert_eq!(stylesheet.focused_style.fg_color, ASTColor::Rgb(20, 244, 0));
+  180  
+
+  182              stylesheet.unselected_style.fg_color,
+  183:             ASTColor::Rgb(193, 193, 193)
+  184          );
+
+  186              stylesheet.unselected_style.bg_color,
+  187:             ASTColor::Rgb(14, 17, 23)
+  188          );
+
+  191              stylesheet.selected_style.fg_color,
+  192:             ASTColor::Rgb(203, 170, 250)
+  193          );
+
+  195              stylesheet.selected_style.bg_color,
+  196:             ASTColor::Rgb(51, 32, 66)
+  197          );
+
+  200              stylesheet.header_style.fg_color,
+  201:             ASTColor::Rgb(171, 204, 242)
+  202          );
+  203:         assert_eq!(stylesheet.header_style.bg_color, ASTColor::Rgb(31, 36, 46));
+  204      }
+
+  211              stylesheet.focused_and_selected_style.fg_color,
+  212:             ASTColor::Rgb(19, 227, 255)
+  213          );
+
+  215              stylesheet.focused_and_selected_style.bg_color,
+  216:             ASTColor::Rgb(6, 41, 52)
+  217          );
+
+  220              stylesheet.focused_style.fg_color,
+  221:             ASTColor::Rgb(19, 227, 255)
+  222          );
+  223:         assert_eq!(stylesheet.focused_style.bg_color, ASTColor::Rgb(14, 17, 23));
+  224  
+
+  226              stylesheet.unselected_style.fg_color,
+  227:             ASTColor::Rgb(241, 241, 241)
+  228          );
+
+  230              stylesheet.unselected_style.bg_color,
+  231:             ASTColor::Rgb(14, 17, 23)
+  232          );
+
+  235              stylesheet.selected_style.fg_color,
+  236:             ASTColor::Rgb(209, 244, 255)
+  237          );
+  238:         assert_eq!(stylesheet.selected_style.bg_color, ASTColor::Rgb(6, 41, 52));
+  239  
+
+  241              stylesheet.header_style.fg_color,
+  242:             ASTColor::Rgb(229, 239, 123)
+  243          );
+  244:         assert_eq!(stylesheet.header_style.bg_color, ASTColor::Rgb(31, 36, 46));
+  245      }
+
+  252              style_sheet.focused_and_selected_style.fg_color,
+  253:             ASTColor::Rgb(255, 0, 214)
+  254          );
+
+  256              style_sheet.focused_and_selected_style.bg_color,
+  257:             ASTColor::Rgb(62, 14, 74)
+  258          );
+
+  260              style_sheet.focused_style.fg_color,
+  261:             ASTColor::Rgb(255, 0, 214)
+  262          );
+
+  264              style_sheet.focused_style.bg_color,
+  265:             ASTColor::Rgb(14, 17, 23)
+  266          );
+
+  268              style_sheet.unselected_style.fg_color,
+  269:             ASTColor::Rgb(219, 202, 232)
+  270          );
+
+  272              style_sheet.unselected_style.bg_color,
+  273:             ASTColor::Rgb(14, 17, 23)
+  274          );
+
+  276              style_sheet.selected_style.fg_color,
+  277:             ASTColor::Rgb(255, 181, 234)
+  278          );
+
+  280              style_sheet.selected_style.bg_color,
+  281:             ASTColor::Rgb(62, 14, 74)
+  282          );
+
+  284              style_sheet.header_style.fg_color,
+  285:             ASTColor::Rgb(190, 253, 249)
+  286          );
+  287:         assert_eq!(style_sheet.header_style.bg_color, ASTColor::Rgb(31, 36, 46));
+  288      }

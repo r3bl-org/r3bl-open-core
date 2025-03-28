@@ -18,9 +18,12 @@
 use core::fmt::Debug;
 
 use super::parse_hex_color;
-use crate::{ASTColor,
+use crate::{ANSI_COLOR_PALETTE,
+            ASTColor,
             TransformColor,
-            common::{CommonError, CommonErrorType, CommonResult}};
+            color_utils,
+            common::{CommonError, CommonErrorType, CommonResult},
+            convert_rgb_into_ansi256};
 
 /// Very similar to `rgb_color!` in `r3bl_ansi_color` crate.
 #[macro_export]
@@ -237,79 +240,14 @@ pub struct RgbValue {
     pub blue: u8,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
-pub struct AnsiValue {
-    pub color: u8,
-}
-
-mod construct {
+mod rgb_value_impl_block {
     use super::*;
 
-    impl Default for RgbValue {
-        fn default() -> Self { Self::from_u8(255, 255, 255) }
-    }
-
-    impl AnsiValue {
-        pub fn new(color: u8) -> Self { Self { color } }
-    }
-}
-
-/// This is useful when you want to mix and match the two crates. For example, you can use
-/// a nice color from `tui_color!(lizard_green)` and then convert it to an ASTColor using
-/// `ASTColor::from(tui_color)`. So you're no longer limited to the basic colors when
-/// using `ASTColor` in your code (which happens when generating colorized log output).
-mod convert_to_ast_color {
-    use super::*;
-
-    impl From<TuiColor> for ASTColor {
-        fn from(tui_color: TuiColor) -> Self {
-            match tui_color {
-                TuiColor::Rgb(rgb_value) => {
-                    ASTColor::Rgb(rgb_value.red, rgb_value.green, rgb_value.blue)
-                }
-                TuiColor::Ansi(ansi_value) => ASTColor::Ansi256(ansi_value.color),
-                TuiColor::Basic(basic_color) => {
-                    let rgb_value =
-                        RgbValue::try_from_tui_color(TuiColor::Basic(basic_color))
-                            .unwrap_or_default();
-                    ASTColor::Rgb(rgb_value.red, rgb_value.green, rgb_value.blue)
-                }
-                TuiColor::Reset => ASTColor::default(),
-            }
-        }
-    }
-}
-
-/// This is useful when you want to go between different variants of the `TuiColor` enum.
-mod convert_between_variants {
-    use super::*;
-
-    impl From<RgbValue> for AnsiValue {
-        fn from(rgb_value: RgbValue) -> Self {
-            let rgb_color = crate::RgbColor {
-                red: rgb_value.red,
-                green: rgb_value.green,
-                blue: rgb_value.blue,
-            };
-            let ansi_color = crate::convert_rgb_into_ansi256(rgb_color).index;
-            Self::new(ansi_color)
-        }
-    }
-
-    impl From<AnsiValue> for RgbValue {
-        fn from(ansi_value: AnsiValue) -> Self {
-            let rgb_color = crate::Ansi256Color {
-                index: ansi_value.color,
-            }
-            .as_rgb();
-            let (red, green, blue) = (rgb_color.red, rgb_color.green, rgb_color.blue);
+    impl From<(u8, u8, u8)> for RgbValue {
+        fn from((red, green, blue): (u8, u8, u8)) -> Self {
             Self::from_u8(red, green, blue)
         }
     }
-}
-
-mod rgb_value_impl_block {
-    use super::*;
 
     impl RgbValue {
         pub fn from_u8(red: u8, green: u8, blue: u8) -> Self { Self { red, green, blue } }
@@ -433,9 +371,240 @@ mod rgb_value_impl_block {
                 }
 
                 _ => CommonError::new_error_result_with_only_type(
-                    CommonErrorType::InvalidRgbColor,
+                    CommonErrorType::InvalidValue,
                 ),
             }
+        }
+    }
+
+    impl TransformColor for RgbValue {
+        fn as_rgb(&self) -> RgbValue { *self }
+
+        fn as_ansi(&self) -> AnsiValue { convert_rgb_into_ansi256(*self) }
+
+        fn as_grayscale(&self) -> AnsiValue {
+            convert_rgb_into_ansi256(*self).as_grayscale()
+        }
+    }
+}
+
+// REVIEW: rename this to rgb_value!
+/// Very similar to `tui_color!` in `r3bl_tui` crate.
+#[macro_export]
+macro_rules! rgb_color {
+    (dark_pink) => {
+        $crate::RgbValue::from((203, 85, 121))
+    };
+
+    (pink) => {
+        $crate::RgbValue::from((195, 106, 138))
+    };
+
+    (lizard_green) => {
+        $crate::RgbValue::from((20, 244, 0))
+    };
+
+    (dark_lizard_green) => {
+        $crate::RgbValue::from((10, 122, 0))
+    };
+
+    (slate_grey) => {
+        $crate::RgbValue::from((94, 103, 111))
+    };
+
+    (silver_metallic) => {
+        $crate::RgbValue::from((213, 217, 220))
+    };
+
+    (frozen_blue) => {
+        $crate::RgbValue::from((171, 204, 242))
+    };
+
+    (moonlight_blue) => {
+        $crate::RgbValue::from((31, 36, 46))
+    };
+
+    (night_blue) => {
+        $crate::RgbValue::from((14, 17, 23))
+    };
+
+    (guards_red) => {
+        $crate::RgbValue::from((200, 1, 1))
+    };
+
+    (orange) => {
+        $crate::RgbValue::from((255, 132, 18))
+    };
+
+    (black) => {
+        $crate::RgbValue::from((0, 0, 0))
+    };
+
+    (dark_grey) => {
+        $crate::RgbValue::from((64, 64, 64))
+    };
+
+    (red) => {
+        $crate::RgbValue::from((255, 0, 0))
+    };
+
+    (dark_red) => {
+        $crate::RgbValue::from((139, 0, 0))
+    };
+
+    (green) => {
+        $crate::RgbValue::from((0, 255, 0))
+    };
+
+    (dark_green) => {
+        $crate::RgbValue::from((0, 100, 0))
+    };
+
+    (yellow) => {
+        $crate::RgbValue::from((255, 255, 0))
+    };
+
+    (dark_yellow) => {
+        $crate::RgbValue::from((204, 204, 0))
+    };
+
+    (blue) => {
+        $crate::RgbValue::from((0, 0, 255))
+    };
+
+    (dark_blue) => {
+        $crate::RgbValue::from((0, 0, 139))
+    };
+
+    (magenta) => {
+        $crate::RgbValue::from((255, 0, 255))
+    };
+
+    (dark_magenta) => {
+        $crate::RgbValue::from((139, 0, 139))
+    };
+
+    (cyan) => {
+        $crate::RgbValue::from((0, 255, 255))
+    };
+
+    (dark_cyan) => {
+        $crate::RgbValue::from((0, 139, 139))
+    };
+
+    (white) => {
+        $crate::RgbValue::from((255, 255, 255))
+    };
+
+    (grey) => {
+        $crate::RgbValue::from((192, 192, 192))
+    };
+
+    (
+        $arg_r : expr,
+        $arg_g : expr,
+        $arg_b : expr
+        $(,)? /* optional trailing comma */
+    ) => {
+        $crate::RgbValue::from(($arg_r, $arg_g, $arg_b))
+    };
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
+pub struct AnsiValue {
+    pub index: u8,
+}
+
+mod ansi_value_impl_block {
+    use super::*;
+
+    impl From<u8> for AnsiValue {
+        fn from(index: u8) -> Self { Self { index } }
+    }
+
+    impl TransformColor for AnsiValue {
+        fn as_grayscale(&self) -> AnsiValue {
+            let index = self.index as usize;
+            let rgb = ANSI_COLOR_PALETTE[index];
+            let rgb = RgbValue::from(rgb);
+            let rgb = color_utils::convert_grayscale((rgb.red, rgb.green, rgb.blue));
+            let it = convert_rgb_into_ansi256(RgbValue {
+                red: rgb.0,
+                green: rgb.1,
+                blue: rgb.2,
+            })
+            .into();
+            it
+        }
+
+        fn as_rgb(&self) -> RgbValue {
+            let index = self.index as usize;
+            ANSI_COLOR_PALETTE[index].into()
+        }
+
+        fn as_ansi(&self) -> AnsiValue { *self }
+    }
+}
+
+mod construct {
+    use super::*;
+
+    impl Default for RgbValue {
+        fn default() -> Self { Self::from_u8(255, 255, 255) }
+    }
+
+    impl AnsiValue {
+        pub fn new(color: u8) -> Self { Self { index: color } }
+    }
+}
+
+/// This is useful when you want to mix and match the two crates. For example, you can use
+/// a nice color from `tui_color!(lizard_green)` and then convert it to an ASTColor using
+/// `ASTColor::from(tui_color)`. So you're no longer limited to the basic colors when
+/// using `ASTColor` in your code (which happens when generating colorized log output).
+mod convert_to_ast_color {
+    use super::*;
+
+    impl From<TuiColor> for ASTColor {
+        fn from(tui_color: TuiColor) -> Self {
+            match tui_color {
+                TuiColor::Rgb(rgb) => ASTColor::Rgb(rgb),
+                TuiColor::Ansi(ansi) => ASTColor::Ansi(ansi),
+                TuiColor::Basic(basic) => {
+                    let rgb = RgbValue::try_from_tui_color(TuiColor::Basic(basic))
+                        .unwrap_or_default();
+                    ASTColor::Rgb(rgb)
+                }
+                TuiColor::Reset => ASTColor::default(),
+            }
+        }
+    }
+}
+
+/// This is useful when you want to go between different variants of the [TuiColor] enum.
+mod convert_between_variants {
+    use super::*;
+
+    impl From<RgbValue> for AnsiValue {
+        fn from(rgb_value: RgbValue) -> Self {
+            let rgb_color = crate::RgbValue {
+                red: rgb_value.red,
+                green: rgb_value.green,
+                blue: rgb_value.blue,
+            };
+            let ansi_color = crate::convert_rgb_into_ansi256(rgb_color).index;
+            Self::new(ansi_color)
+        }
+    }
+
+    impl From<AnsiValue> for RgbValue {
+        fn from(ansi_value: AnsiValue) -> Self {
+            let rgb_color = crate::AnsiValue {
+                index: ansi_value.index,
+            }
+            .as_rgb();
+            let (red, green, blue) = (rgb_color.red, rgb_color.green, rgb_color.blue);
+            Self::from_u8(red, green, blue)
         }
     }
 }
@@ -818,7 +987,7 @@ mod debug_helpers {
                     write!(f, "{red},{green},{blue}")
                 }
                 TuiColor::Ansi(ansi_value) => {
-                    write!(f, "ansi_value({})", ansi_value.color)
+                    write!(f, "ansi_value({})", ansi_value.index)
                 }
                 TuiColor::Reset => write!(f, "reset"),
                 TuiColor::Basic(basic_color) => match basic_color {

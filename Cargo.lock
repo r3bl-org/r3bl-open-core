@@ -1723,20 +1723,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "r3bl_ansi_color"
-version = "0.7.0"
-dependencies = [
- "is_ci",
- "pretty_assertions",
- "serial_test",
- "smallstr",
- "smallvec",
- "strum",
- "strum_macros",
- "test-case",
-]
-
-[[package]]
 name = "r3bl_core"
 version = "0.10.0"
 dependencies = [

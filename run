@@ -29,7 +29,6 @@ let workspace_folders = [
     "core",
     "cmdr",
     "analytics_schema",
-    "ansi_color",
 ]
 
 # Main entry point for the script.

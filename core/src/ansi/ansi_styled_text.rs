@@ -24,7 +24,7 @@ use strum_macros::EnumCount;
 use crate::{ASTColor,
             DEFAULT_STRING_STORAGE_SIZE,
             InlineVecASTStyles,
-            RgbColor,
+            RgbValue,
             SgrCode};
 
 /// The main struct that we have to consider is `AnsiStyledText`. It has two fields:
@@ -101,7 +101,7 @@ mod ansi_styled_text_impl {
     }
 }
 
-pub fn fg_rgb_color(arg_color: impl Into<RgbColor>, text: &str) -> AnsiStyledText<'_> {
+pub fn fg_rgb_color(arg_color: impl Into<RgbValue>, text: &str) -> AnsiStyledText<'_> {
     let rgb_color = arg_color.into();
     let ast_color = ASTColor::from(rgb_color);
     AnsiStyledText {
@@ -114,7 +114,7 @@ pub fn fg_rgb_color(arg_color: impl Into<RgbColor>, text: &str) -> AnsiStyledTex
 pub fn green(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(34))),
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(34.into()))),
     }
 }
 
@@ -122,7 +122,7 @@ pub fn green(text: &str) -> AnsiStyledText<'_> {
 pub fn red(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(196))),
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(196.into()))),
     }
 }
 
@@ -130,7 +130,7 @@ pub fn red(text: &str) -> AnsiStyledText<'_> {
 pub fn white(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(231))),
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(231.into()))),
     }
 }
 
@@ -138,7 +138,7 @@ pub fn white(text: &str) -> AnsiStyledText<'_> {
 pub fn cyan(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(51))),
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(51.into()))),
     }
 }
 
@@ -146,7 +146,7 @@ pub fn cyan(text: &str) -> AnsiStyledText<'_> {
 pub fn yellow(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(226))),
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(226.into()))),
     }
 }
 
@@ -154,7 +154,7 @@ pub fn yellow(text: &str) -> AnsiStyledText<'_> {
 pub fn magenta(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(201))),
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(201.into()))),
     }
 }
 
@@ -197,7 +197,7 @@ pub fn guards_red(text: &str) -> AnsiStyledText<'_> {
 pub fn blue(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi256(27))),
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(27.into()))),
     }
 }
 
@@ -246,18 +246,18 @@ pub fn dim_underline(text: &str) -> AnsiStyledText<'_> {
 impl AnsiStyledText<'_> {
     pub fn bg_dark_grey(mut self) -> Self {
         self.style
-            .push(ASTStyle::Background(ASTColor::Ansi256(236)));
+            .push(ASTStyle::Background(ASTColor::Ansi(236.into())));
         self
     }
 
-    pub fn bg_rgb_color(mut self, arg_color: impl Into<RgbColor>) -> Self {
+    pub fn bg_rgb_color(mut self, arg_color: impl Into<RgbValue>) -> Self {
         let color = arg_color.into();
         let ast_color = ASTColor::from(color);
         self.style.push(ASTStyle::Background(ast_color));
         self
     }
 
-    pub fn fg_rgb_color(mut self, arg_color: impl Into<RgbColor>) -> Self {
+    pub fn fg_rgb_color(mut self, arg_color: impl Into<RgbValue>) -> Self {
         let color = arg_color.into();
         let ast_color = ASTColor::from(color);
         self.style.push(ASTStyle::Foreground(ast_color));
@@ -287,7 +287,7 @@ mod style_impl {
     use crate::{ASTColor,
                 ASTStyle,
                 ColorSupport,
-                RgbColor,
+                RgbValue,
                 SgrCode,
                 TransformColor,
                 global_color_support};
@@ -306,7 +306,7 @@ mod style_impl {
         match global_color_support::detect() {
             ColorSupport::Ansi256 => {
                 // ANSI 256 color mode.
-                let color = color.as_ansi256();
+                let color = color.as_ansi();
                 let index = color.index;
                 write!(
                     f,
@@ -335,7 +335,7 @@ mod style_impl {
             _ => {
                 // True color mode.
                 let color = color.as_rgb();
-                let RgbColor { red, green, blue } = color;
+                let RgbValue { red, green, blue } = color;
                 write!(
                     f,
                     "{}",
@@ -400,7 +400,7 @@ mod tests {
             text: "Hello",
             style: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
+                ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
             ),
         };
         println!("{:?}", eg_1);
@@ -439,8 +439,8 @@ mod tests {
             text: "Hello",
             style: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
-                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+                ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
+                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -453,8 +453,8 @@ mod tests {
             text: "World",
             style: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Ansi256(150)),
-                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+                ASTStyle::Foreground(ASTColor::Ansi(150.into())),
+                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -474,8 +474,8 @@ mod tests {
             text: "Hello",
             style: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
-                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+                ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
+                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -488,8 +488,8 @@ mod tests {
             text: "World",
             style: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Ansi256(150)),
-                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+                ASTStyle::Foreground(ASTColor::Ansi(150.into())),
+                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -509,8 +509,8 @@ mod tests {
             text: "Hello",
             style: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Rgb(0, 0, 0)),
-                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+                ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
+                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -525,8 +525,8 @@ mod tests {
             text: "World",
             style: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Ansi256(150)),
-                ASTStyle::Background(ASTColor::Rgb(1, 1, 1)),
+                ASTStyle::Foreground(ASTColor::Ansi(150.into())),
+                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
             ),
         };
 
