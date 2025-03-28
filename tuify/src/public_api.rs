@@ -18,8 +18,7 @@
 use std::io::stdout;
 
 use clap::ValueEnum;
-use r3bl_ansi_color::{green, AnsiStyledText};
-use r3bl_core::{ch, get_size, inline_string, usize};
+use r3bl_core::{ch, get_size, green, inline_string, usize, AnsiStyledText};
 
 use crate::{enter_event_loop,
             CalculateResizeHint,

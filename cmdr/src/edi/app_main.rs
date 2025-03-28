@@ -14,7 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_ansi_color::{green, magenta, red};
 use r3bl_core::{Ansi256GradientIndex,
                 ColorWheel,
                 ColorWheelConfig,
@@ -31,9 +30,12 @@ use r3bl_core::{Ansi256GradientIndex,
                 col,
                 get_tui_style,
                 glyphs,
+                green,
                 height,
                 inline_string,
+                magenta,
                 new_style,
+                red,
                 req_size_pc,
                 row,
                 send_signal,

@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::AnsiStyledText;
-use r3bl_core::{ChUnit, Size};
+use r3bl_core::{AnsiStyledText, ChUnit, Size};
 
 use crate::{get_scroll_adjusted_row_index,
             locate_cursor_in_viewport,

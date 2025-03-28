@@ -25,14 +25,15 @@ use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                         SetBackgroundColor,
                         SetForegroundColor},
                 terminal::{Clear, ClearType}};
-use r3bl_ansi_color::{blue, AnsiStyledText};
-use r3bl_core::{ch,
+use r3bl_core::{blue,
+                ch,
                 col,
                 get_terminal_width,
                 inline_string,
                 throws,
                 usize,
                 width,
+                AnsiStyledText,
                 ChUnit,
                 GCStringExt};
 

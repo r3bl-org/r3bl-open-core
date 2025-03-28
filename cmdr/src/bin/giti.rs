@@ -19,7 +19,7 @@
 //! <https://developerlife.com/2023/09/17/tuify-clap/>
 
 use clap::Parser;
-use r3bl_ansi_color::{ASTStyle, AnsiStyledText};
+use r3bl_core::{ASTStyle, AnsiStyledText};
 use r3bl_cmdr::{AnalyticsAction,
                 color_constants::DefaultColors::{FrozenBlue, GuardsRed, MoonlightBlue},
                 giti::{BranchSubcommand,

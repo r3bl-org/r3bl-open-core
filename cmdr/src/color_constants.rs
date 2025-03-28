@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::ASTColor as AnsiColor;
+use r3bl_core::ASTColor;
 
 pub enum DefaultColors {
     LizardGreen,
@@ -29,16 +29,16 @@ pub enum DefaultColors {
 }
 
 impl DefaultColors {
-    pub fn as_ansi_color(&self) -> AnsiColor {
+    pub fn as_ansi_color(&self) -> ASTColor {
         match self {
-            DefaultColors::LizardGreen => AnsiColor::Rgb(20, 244, 0),
-            DefaultColors::SlateGrey => AnsiColor::Rgb(94, 103, 111),
-            DefaultColors::SilverMetallic => AnsiColor::Rgb(213, 217, 220),
-            DefaultColors::FrozenBlue => AnsiColor::Rgb(171, 204, 242),
-            DefaultColors::MoonlightBlue => AnsiColor::Rgb(31, 36, 46),
-            DefaultColors::NightBlue => AnsiColor::Rgb(14, 17, 23),
-            DefaultColors::GuardsRed => AnsiColor::Rgb(200, 1, 1),
-            DefaultColors::Orange => AnsiColor::Rgb(255, 132, 18),
+            DefaultColors::LizardGreen => ASTColor::Rgb(20, 244, 0),
+            DefaultColors::SlateGrey => ASTColor::Rgb(94, 103, 111),
+            DefaultColors::SilverMetallic => ASTColor::Rgb(213, 217, 220),
+            DefaultColors::FrozenBlue => ASTColor::Rgb(171, 204, 242),
+            DefaultColors::MoonlightBlue => ASTColor::Rgb(31, 36, 46),
+            DefaultColors::NightBlue => ASTColor::Rgb(14, 17, 23),
+            DefaultColors::GuardsRed => ASTColor::Rgb(200, 1, 1),
+            DefaultColors::Orange => ASTColor::Rgb(255, 132, 18),
         }
     }
 }
