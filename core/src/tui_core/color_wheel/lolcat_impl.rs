@@ -18,11 +18,11 @@
 use std::fmt::{Debug, Formatter, Result};
 
 use super::{Colorize, LolcatBuilder, Seed, SeedDelta};
-use crate::{ColorUtils,
-            ColorWheelControl,
+use crate::{ColorWheelControl,
             GCString,
             TuiStyle,
             TuiStyledTexts,
+            color_helpers,
             tui_color,
             tui_styled_text};
 
@@ -62,8 +62,8 @@ impl Lolcat {
         let mut acc = TuiStyledTexts::default();
 
         for seg_str in us.iter() {
-            let new_color = ColorUtils::get_color_tuple(&self.color_wheel_control);
-            let derived_from_new_color = ColorUtils::calc_fg_color(new_color);
+            let new_color = color_helpers::get_color_tuple(&self.color_wheel_control);
+            let derived_from_new_color = color_helpers::calc_fg_color(new_color);
 
             let style = if self.color_wheel_control.background_mode
                 == Colorize::BothBackgroundAndForeground

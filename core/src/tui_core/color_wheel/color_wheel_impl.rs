@@ -31,7 +31,6 @@ use super::{ColorWheelConfig,
             defaults::{Defaults, get_default_gradient_stops}};
 use crate::{Ansi256GradientIndex,
             ChUnit,
-            ColorUtils,
             GCString,
             GCStringExt as _,
             GradientGenerationPolicy,
@@ -43,6 +42,7 @@ use crate::{Ansi256GradientIndex,
             TuiStyledText,
             TuiStyledTexts,
             ch,
+            color_helpers,
             convert_to_ansi_color_styles,
             generate_random_truecolor_gradient,
             generate_truecolor_gradient,
@@ -246,7 +246,8 @@ impl ColorWheel {
         // Early return if lolcat.
         if let ColorWheelConfig::Lolcat(_) = &my_config {
             return if let GradientKind::Lolcat(lolcat) = &mut self.gradient_kind {
-                let new_color = ColorUtils::get_color_tuple(&lolcat.color_wheel_control);
+                let new_color =
+                    color_helpers::get_color_tuple(&lolcat.color_wheel_control);
                 lolcat.color_wheel_control.seed +=
                     Seed::from(lolcat.color_wheel_control.color_change_speed);
                 Some(tui_color!(new_color.0, new_color.1, new_color.2))
@@ -511,7 +512,7 @@ impl ColorWheel {
 
                     if let Some((bg_red, bg_green, bg_blue)) = maybe_bg_color {
                         let (fg_red, fg_green, fg_blue) =
-                            ColorUtils::calc_fg_color((bg_red, bg_green, bg_blue));
+                            color_helpers::calc_fg_color((bg_red, bg_green, bg_blue));
                         acc += tui_styled_text!(
                             @style: inner::gen_style_fg_bg_color_for(
                                 maybe_style,
