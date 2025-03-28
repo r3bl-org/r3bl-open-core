@@ -64,8 +64,7 @@ pub fn parse_unique_kv_opt_eol<'a>(
 
 #[cfg(test)]
 mod test_parse_title_no_eol {
-    use r3bl_ansi_color::{fg_rgb_color, rgb_color};
-    use r3bl_core::{assert_eq2, inline_string};
+    use r3bl_core::{assert_eq2, fg_rgb_color, inline_string, rgb_color};
 
     use super::*;
     use crate::constants::TITLE;

@@ -18,10 +18,12 @@ use std::{fmt::{self, Debug, Write},
           ops::{Deref, DerefMut}};
 
 use diff_chunks::PixelCharDiffChunks;
-use r3bl_ansi_color::{dim_underline, green, magenta};
 use r3bl_core::{col,
+                dim_underline,
                 get_mem_size,
+                green,
                 inline_string,
+                magenta,
                 ok,
                 row,
                 tiny_inline_string,

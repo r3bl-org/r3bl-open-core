@@ -16,8 +16,8 @@
  */
 use std::fmt::Debug;
 
-use r3bl_ansi_color::{fg_rgb_color, rgb_color};
 use r3bl_core::{caret_scr_adj,
+                fg_rgb_color,
                 glyphs::{CUT_GLYPH,
                          DIRECTION_GLYPH,
                          ELLIPSIS_GLYPH,
@@ -25,6 +25,7 @@ use r3bl_core::{caret_scr_adj,
                          VERT_LINE_DASHED_GLYPH},
                 inline_string,
                 join,
+                rgb_color,
                 usize,
                 CaretScrAdj,
                 GetMemSize,

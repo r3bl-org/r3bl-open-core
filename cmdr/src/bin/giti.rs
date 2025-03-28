@@ -19,7 +19,6 @@
 //! <https://developerlife.com/2023/09/17/tuify-clap/>
 
 use clap::Parser;
-use r3bl_core::{ASTStyle, AnsiStyledText};
 use r3bl_cmdr::{AnalyticsAction,
                 color_constants::DefaultColors::{FrozenBlue, GuardsRed, MoonlightBlue},
                 giti::{BranchSubcommand,
@@ -34,7 +33,7 @@ use r3bl_cmdr::{AnalyticsAction,
                        try_make_new_branch},
                 report_analytics,
                 upgrade_check};
-use r3bl_core::{CommonResult, throws};
+use r3bl_core::{ASTStyle, AnsiStyledText, CommonResult, throws};
 use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{SelectionMode, StyleSheet, select_from_list_with_multi_line_header};
 
