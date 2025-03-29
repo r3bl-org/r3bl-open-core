@@ -40,8 +40,8 @@ pub fn main() -> Result<()> {
     let max_height_row_count: usize = 5;
 
     let mut score = 0;
-    let correct_answer_color = ASTColor::Rgb(255, 216, 9);
-    let incorrect_answer_color = ASTColor::Rgb(255, 70, 30);
+    let correct_answer_color = ASTColor::Rgb((255, 216, 9).into());
+    let incorrect_answer_color = ASTColor::Rgb((255, 70, 30).into());
     let line_length = 60;
 
     display_header(line_length);
@@ -94,8 +94,8 @@ enum Answer {
 impl Display for Answer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let color = match self {
-            Answer::Correct => ASTColor::Rgb(5, 236, 0),
-            Answer::Incorrect => ASTColor::Rgb(234, 0, 196),
+            Answer::Correct => ASTColor::Rgb((5, 236, 0).into()),
+            Answer::Incorrect => ASTColor::Rgb((234, 0, 196).into()),
         };
 
         let text = match self {
@@ -136,7 +136,7 @@ fn check_answer(guess: &QuestionData, maybe_user_input: &Option<Vec<String>>) ->
 }
 
 fn display_header(line_length: usize) {
-    let color = ASTColor::Rgb(9, 183, 238);
+    let color = ASTColor::Rgb((9, 183, 238).into());
     println!();
     println!();
     AnsiStyledText {
@@ -164,7 +164,7 @@ fn display_footer(
     line_length: usize,
 ) {
     let line = "─".to_string().as_str().repeat(line_length - 2);
-    let color = ASTColor::Rgb(9, 183, 238);
+    let color = ASTColor::Rgb((9, 183, 238).into());
 
     AnsiStyledText {
         text: format!("╭{}╮", line).as_str(),

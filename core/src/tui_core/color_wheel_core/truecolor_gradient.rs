@@ -131,7 +131,7 @@ mod tests {
                             " {index}                                                   "
                         ),
                         style: smallvec::smallvec![ASTStyle::Background(
-                            crate::ASTColor::Rgb(c.red, c.green, c.blue,)
+                            crate::ASTColor::Rgb((c.red, c.green, c.blue).into())
                         )],
                     }
                     .println();
@@ -176,7 +176,7 @@ mod tests {
                             " {index}                                                   "
                         ),
                         style: smallvec::smallvec![ASTStyle::Background(
-                            crate::ASTColor::Rgb(c.red, c.green, c.blue,)
+                            crate::ASTColor::Rgb((c.red, c.green, c.blue).into())
                         )],
                     }
                     .println();

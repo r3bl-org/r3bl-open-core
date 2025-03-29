@@ -247,15 +247,15 @@ fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:",
         style: smallvec::smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb(9, 238, 211)),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb((9, 238, 211).into())),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let navigate = AnsiStyledText {
         text: "     navigate",
         style: smallvec::smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
@@ -264,15 +264,15 @@ fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
     let space = AnsiStyledText {
         text: " Space:",
         style: smallvec::smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb(255, 216, 9)),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb((255, 216, 9).into())),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let select = AnsiStyledText {
         text: "          select or deselect item",
         style: smallvec::smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
@@ -281,15 +281,15 @@ fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:",
         style: smallvec::smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb(255, 132, 18)),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb((255, 132, 18).into())),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let exit = AnsiStyledText {
         text: "  exit program",
         style: smallvec::smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
@@ -297,15 +297,15 @@ fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
     let return_key = AnsiStyledText {
         text: " Return:",
         style: smallvec::smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb(234, 0, 196)),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb((234, 0, 196).into())),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let confirm = AnsiStyledText {
         text: "         confirm selection",
         style: smallvec::smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb(94, 103, 111)),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let line_4 = vec![return_key, confirm];
@@ -316,8 +316,8 @@ fn main() -> Result<()> {
    let header = AnsiStyledText {
         text: " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
         style: smallvec::smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb(171, 204, 242)),
-            ASTStyle::Background(ASTColor::Rgb(31, 36, 46)),
+            ASTStyle::Foreground(ASTColor::Rgb((171, 204, 242).into())),
+            ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
         ],
     };
 
@@ -580,23 +580,23 @@ fn main() -> Result<()> {
    // Please take a look at the Style struct to see what you can override.
    let my_custom_style = StyleSheet {
       focused_and_selected_style: Style {
-            fg_color: ASTColor::Rgb(255, 244, 0),
-            bg_color: ASTColor::Rgb(15, 32, 66),
+            fg_color: ASTColor::Rgb((255, 244, 0).into()),
+            bg_color: ASTColor::Rgb((15, 32, 66).into()),
             ..Style::default()
       },
       focused_style: Style {
-            fg_color: ASTColor::Rgb(255, 244, 0),
+            fg_color: ASTColor::Rgb((255, 244, 0).into()),
             ..Style::default()
       },
       unselected_style: Style { ..Style::default() },
       selected_style: Style {
-            fg_color: ASTColor::Rgb(203, 170, 250),
-            bg_color: ASTColor::Rgb(15, 32, 66),
+            fg_color: ASTColor::Rgb((203, 170, 250).into()),
+            bg_color: ASTColor::Rgb((15, 32, 66).into()),
             ..Style::default()
       },
       header_style: Style {
-            fg_color: ASTColor::Rgb(171, 204, 242),
-            bg_color: ASTColor::Rgb(31, 36, 46),
+            fg_color: ASTColor::Rgb((171, 204, 242).into()),
+            bg_color: ASTColor::Rgb((31, 36, 46).into()),
             ..Style::default()
       },
    };

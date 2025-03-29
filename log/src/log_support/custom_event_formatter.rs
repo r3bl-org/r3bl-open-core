@@ -32,7 +32,6 @@
 //! So in order to be able to create "dynamic" headings or field names, you have to
 //! explicitly use the `message` field name. Its value can then be any expression. There
 //! are lots of examples in the tests below.
-
 use std::fmt::{self};
 
 use chrono::Local;
@@ -47,6 +46,7 @@ use r3bl_core::{ASTColor,
                 InlineString,
                 InlineVecASTStyles,
                 OrderedMap,
+                RgbValue,
                 fg_rgb_color,
                 get_terminal_width,
                 glyphs,
@@ -54,7 +54,7 @@ use r3bl_core::{ASTColor,
                 new_style,
                 pad_fmt,
                 remove_escaped_quotes,
-                rgb_color,
+                rgb_value,
                 truncate_from_right,
                 usize,
                 width};
@@ -77,10 +77,11 @@ pub fn build_spacer(max_display_width: ColWidth) -> InlineString {
     );
 
     // Format spacer.
-    fg_rgb_color(rgb_color!(dark_lizard_green), &acc_padding).to_small_str()
+    fg_rgb_color(rgb_value!(dark_lizard_green), &acc_padding).to_small_str()
 }
 
 // Colors: <https://en.wikipedia.org/wiki/ANSI_escape_code>
+#[rustfmt::skip]
 pub mod custom_event_formatter_constants {
     use super::*;
 
@@ -101,15 +102,14 @@ pub mod custom_event_formatter_constants {
     pub const ENTRY_SEPARATOR_CHAR: &str =
         formatcp!("{ch}", ch = glyphs::TOP_UNDERLINE_GLYPH);
 
-    pub const BODY_FG_COLOR: ASTColor = ASTColor::Rgb(175, 175, 175);
-    pub const BODY_FG_COLOR_BRIGHT: ASTColor = ASTColor::Rgb(200, 200, 200);
-    pub const HEADING_BG_COLOR: ASTColor = ASTColor::Rgb(70, 70, 90);
-
-    pub const INFO_FG_COLOR: ASTColor = ASTColor::Rgb(233, 150, 122);
-    pub const ERROR_FG_COLOR: ASTColor = ASTColor::Rgb(255, 182, 193); //Color::Rgb(220, 92, 92);
-    pub const WARN_FG_COLOR: ASTColor = ASTColor::Rgb(255, 140, 0);
-    pub const DEBUG_FG_COLOR: ASTColor = ASTColor::Rgb(255, 255, 0);
-    pub const TRACE_FG_COLOR: ASTColor = ASTColor::Rgb(186, 85, 211);
+    pub const BODY_FG_COLOR: ASTColor =         ASTColor::Rgb(RgbValue{red:175,green: 175,blue: 175});
+    pub const BODY_FG_COLOR_BRIGHT: ASTColor =  ASTColor::Rgb(RgbValue{red:200,green: 200,blue: 200});
+    pub const HEADING_BG_COLOR: ASTColor =      ASTColor::Rgb(RgbValue{red:70,green: 70,blue: 90});
+    pub const INFO_FG_COLOR: ASTColor =         ASTColor::Rgb(RgbValue{red:233,green: 150,blue: 122});
+    pub const ERROR_FG_COLOR: ASTColor =        ASTColor::Rgb(RgbValue{red:255,green: 182,blue: 193});
+    pub const WARN_FG_COLOR: ASTColor =         ASTColor::Rgb(RgbValue{red:255,green: 140,blue: 0});
+    pub const DEBUG_FG_COLOR: ASTColor =        ASTColor::Rgb(RgbValue{red:255,green: 255,blue: 0});
+    pub const TRACE_FG_COLOR: ASTColor =        ASTColor::Rgb(RgbValue{red:186,green: 85,blue: 211});
 }
 
 impl<S, N> FormatEvent<S, N> for CustomEventFormatter

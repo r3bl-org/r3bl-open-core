@@ -388,10 +388,9 @@ mod rgb_value_impl_block {
     }
 }
 
-// REVIEW: rename this to rgb_value!
 /// Very similar to `tui_color!` in `r3bl_tui` crate.
 #[macro_export]
-macro_rules! rgb_color {
+macro_rules! rgb_value {
     (dark_pink) => {
         $crate::RgbValue::from((203, 85, 121))
     };
@@ -528,13 +527,11 @@ mod ansi_value_impl_block {
             let rgb = ANSI_COLOR_PALETTE[index];
             let rgb = RgbValue::from(rgb);
             let rgb = color_utils::convert_grayscale((rgb.red, rgb.green, rgb.blue));
-            let it = convert_rgb_into_ansi256(RgbValue {
+            convert_rgb_into_ansi256(RgbValue {
                 red: rgb.0,
                 green: rgb.1,
                 blue: rgb.2,
             })
-            .into();
-            it
         }
 
         fn as_rgb(&self) -> RgbValue {
