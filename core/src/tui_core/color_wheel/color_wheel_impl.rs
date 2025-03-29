@@ -43,7 +43,6 @@ use crate::{Ansi256GradientIndex,
             TuiStyledTexts,
             ch,
             color_helpers,
-            convert_to_ansi_color_styles,
             generate_random_truecolor_gradient,
             generate_truecolor_gradient,
             get_gradient_array_for,
@@ -397,14 +396,11 @@ impl ColorWheel {
             if let Some(default_style) = maybe_default_style {
                 style += default_style;
             }
-
-            let acc_style = convert_to_ansi_color_styles::from_tui_style(style);
-
+            let acc_style = style.into();
             let ansi_styled_text = AnsiStyledText {
                 style: acc_style,
                 text: &text,
             };
-
             _ = write!(acc, "{}", ansi_styled_text);
         }
 

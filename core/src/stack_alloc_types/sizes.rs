@@ -28,8 +28,6 @@ pub const DEFAULT_STRING_STORAGE_SIZE: usize = 16;
 use smallstr::SmallString;
 use smallvec::SmallVec;
 
-use crate::ASTStyle;
-
 /// Intermediate struct used to insert a grapheme cluster segment into an existing unicode
 /// string. When this gets larger than [INLINE_VEC_SIZE], it will be
 /// [smallvec::SmallVec::spilled] on the heap.
@@ -61,9 +59,3 @@ pub const DEFAULT_READ_BUFFER_SIZE: usize = 16384;
 /// larger than [INLINE_VEC_SIZE].
 pub type InlineVec<T> = SmallVec<[T; INLINE_VEC_SIZE]>;
 pub const INLINE_VEC_SIZE: usize = 8;
-
-/// Attributes are: color_fg, color_bg, bold, dim, italic, underline, reverse, hidden,
-/// etc. which are in [crate::ASTStyle].
-pub const MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE: usize = 12;
-pub type InlineVecASTStyles =
-    SmallVec<[ASTStyle; MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE]>;

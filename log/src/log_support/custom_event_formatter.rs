@@ -37,16 +37,14 @@ use std::fmt::{self};
 use chrono::Local;
 use const_format::formatcp;
 use custom_event_formatter_constants::*;
-use r3bl_core::{ASTColor,
-                ASTStyle,
-                AnsiStyledText,
+use r3bl_core::{AnsiStyledText,
                 ColWidth,
                 ColorWheel,
                 GCString,
                 InlineString,
-                InlineVecASTStyles,
                 OrderedMap,
                 RgbValue,
+                TuiColor,
                 fg_rgb_color,
                 get_terminal_width,
                 glyphs,
@@ -102,14 +100,14 @@ pub mod custom_event_formatter_constants {
     pub const ENTRY_SEPARATOR_CHAR: &str =
         formatcp!("{ch}", ch = glyphs::TOP_UNDERLINE_GLYPH);
 
-    pub const BODY_FG_COLOR: ASTColor =         ASTColor::Rgb(RgbValue{red:175,green: 175,blue: 175});
-    pub const BODY_FG_COLOR_BRIGHT: ASTColor =  ASTColor::Rgb(RgbValue{red:200,green: 200,blue: 200});
-    pub const HEADING_BG_COLOR: ASTColor =      ASTColor::Rgb(RgbValue{red:70,green: 70,blue: 90});
-    pub const INFO_FG_COLOR: ASTColor =         ASTColor::Rgb(RgbValue{red:233,green: 150,blue: 122});
-    pub const ERROR_FG_COLOR: ASTColor =        ASTColor::Rgb(RgbValue{red:255,green: 182,blue: 193});
-    pub const WARN_FG_COLOR: ASTColor =         ASTColor::Rgb(RgbValue{red:255,green: 140,blue: 0});
-    pub const DEBUG_FG_COLOR: ASTColor =        ASTColor::Rgb(RgbValue{red:255,green: 255,blue: 0});
-    pub const TRACE_FG_COLOR: ASTColor =        ASTColor::Rgb(RgbValue{red:186,green: 85,blue: 211});
+    pub const BODY_FG_COLOR: RgbValue =        RgbValue{red:175,green: 175,blue: 175};
+    pub const BODY_FG_COLOR_BRIGHT: RgbValue = RgbValue{red:200,green: 200,blue: 200};
+    pub const HEADING_BG_COLOR: RgbValue =     RgbValue{red:70,green: 70,blue: 90};
+    pub const INFO_FG_COLOR: RgbValue =        RgbValue{red:233,green: 150,blue: 122};
+    pub const ERROR_FG_COLOR: RgbValue =       RgbValue{red:255,green: 182,blue: 193};
+    pub const WARN_FG_COLOR: RgbValue =        RgbValue{red:255,green: 140,blue: 0};
+    pub const DEBUG_FG_COLOR: RgbValue =       RgbValue{red:255,green: 255,blue: 0};
+    pub const TRACE_FG_COLOR: RgbValue =       RgbValue{red:186,green: 85,blue: 211};
 }
 
 impl<S, N> FormatEvent<S, N> for CustomEventFormatter
@@ -155,10 +153,12 @@ where
         line_width_used += GCString::width(&timestamp_str);
         let timestamp_str_fmt = AnsiStyledText {
             text: &timestamp_str,
-            style: smallvec::smallvec![
-                ASTStyle::Foreground(BODY_FG_COLOR_BRIGHT),
-                ASTStyle::Background(HEADING_BG_COLOR),
-            ],
+            style: new_style!(
+                italic
+                color_fg: {TuiColor::Rgb(BODY_FG_COLOR_BRIGHT)}
+                color_bg: {TuiColor::Rgb(HEADING_BG_COLOR)}
+            )
+            .into(),
         };
         write!(f, "\n{timestamp_str_fmt}")?;
 
@@ -168,11 +168,12 @@ where
             line_width_used += GCString::width(&scope_str);
             let scope_str_fmt = AnsiStyledText {
                 text: &scope_str,
-                style: smallvec::smallvec![
-                    ASTStyle::Foreground(BODY_FG_COLOR_BRIGHT),
-                    ASTStyle::Background(HEADING_BG_COLOR),
-                    ASTStyle::Italic,
-                ],
+                style: new_style!(
+                    italic
+                    color_fg: {TuiColor::Rgb(BODY_FG_COLOR_BRIGHT)}
+                    color_bg: {TuiColor::Rgb(HEADING_BG_COLOR)}
+                )
+                .into(),
             };
             write!(f, "{scope_str_fmt}")?;
         }
@@ -192,34 +193,35 @@ where
         //     kind: Kind(EVENT),
         // }
 
-        let mut style_acc = InlineVecASTStyles::new();
+        let mut style = new_style!();
         let level_str = match *event.metadata().level() {
             tracing::Level::ERROR => {
-                style_acc.push(ASTStyle::Foreground(ERROR_FG_COLOR));
+                style.color_fg = Some(TuiColor::Rgb(ERROR_FG_COLOR));
                 inline_string!("{ERROR_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::WARN => {
-                style_acc.push(ASTStyle::Foreground(WARN_FG_COLOR));
+                style.color_fg = Some(TuiColor::Rgb(WARN_FG_COLOR));
                 inline_string!("{WARN_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::INFO => {
-                style_acc.push(ASTStyle::Foreground(INFO_FG_COLOR));
+                style.color_fg = Some(TuiColor::Rgb(INFO_FG_COLOR));
                 inline_string!("{INFO_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::DEBUG => {
-                style_acc.push(ASTStyle::Foreground(DEBUG_FG_COLOR));
+                style.color_fg = Some(TuiColor::Rgb(DEBUG_FG_COLOR));
                 inline_string!("{DEBUG_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
             tracing::Level::TRACE => {
-                style_acc.push(ASTStyle::Foreground(TRACE_FG_COLOR));
+                style.color_fg = Some(TuiColor::Rgb(TRACE_FG_COLOR));
                 inline_string!("{TRACE_SIGIL}{LEVEL_SUFFIX}{spacer}")
             }
         };
-        style_acc.push(ASTStyle::Background(HEADING_BG_COLOR));
-        style_acc.push(ASTStyle::Bold);
+        style.color_bg = Some(TuiColor::Rgb(HEADING_BG_COLOR));
+        style.bold = true;
+
         let level_str_fmt = AnsiStyledText {
             text: &level_str,
-            style: style_acc,
+            style: style.into(),
         };
 
         let level_str_display_width = GCString::width(&level_str);
@@ -277,7 +279,10 @@ where
                         truncate_from_right(body_line, max_display_width, true);
                     let body_line_fmt = AnsiStyledText {
                         text: &body_line,
-                        style: smallvec::smallvec![ASTStyle::Foreground(BODY_FG_COLOR)],
+                        style: new_style!(
+                            color_fg: {TuiColor::Rgb(BODY_FG_COLOR)}
+                        )
+                        .into(),
                     };
                     writeln!(f, "{body_line_fmt}")?;
                 }
