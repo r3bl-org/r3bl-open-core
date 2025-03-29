@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{ok, Dim, Pos, ReqSizePc, TuiStyle};
+use r3bl_core::{ok, Pos, ReqSizePc, Size, TuiStyle};
 
 use super::FlexBoxId;
 
@@ -37,9 +37,9 @@ pub struct FlexBox {
     pub id: FlexBoxId,
     pub dir: LayoutDirection,
     pub origin_pos: Pos,
-    pub bounds_size: Dim,
+    pub bounds_size: Size,
     pub style_adjusted_origin_pos: Pos,
-    pub style_adjusted_bounds_size: Dim,
+    pub style_adjusted_bounds_size: Size,
     pub requested_size_percent: ReqSizePc,
     pub insertion_pos_for_next_box: Option<Pos>,
     pub maybe_computed_style: Option<TuiStyle>,
@@ -105,7 +105,7 @@ impl std::fmt::Display for FlexBox {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{col, height, ok, req_size_pc, row, width, CommonResult, Dim, Pos};
+    use r3bl_core::{col, height, ok, req_size_pc, row, width, CommonResult, Pos, Size};
 
     use super::*;
 
@@ -115,9 +115,9 @@ mod tests {
         assert_eq!(flex_box.id, FlexBoxId::default());
         assert_eq!(flex_box.dir, LayoutDirection::Horizontal);
         assert_eq!(flex_box.origin_pos, Pos::default());
-        assert_eq!(flex_box.bounds_size, Dim::default());
+        assert_eq!(flex_box.bounds_size, Size::default());
         assert_eq!(flex_box.style_adjusted_origin_pos, Pos::default());
-        assert_eq!(flex_box.style_adjusted_bounds_size, Dim::default());
+        assert_eq!(flex_box.style_adjusted_bounds_size, Size::default());
         assert_eq!(flex_box.requested_size_percent, ReqSizePc::default());
         assert!(flex_box.insertion_pos_for_next_box.is_none());
         assert!(flex_box.maybe_computed_style.is_none());

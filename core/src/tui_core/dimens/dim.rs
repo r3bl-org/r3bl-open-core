@@ -15,11 +15,11 @@
  *   limitations under the License.
  */
 
-//! [Dim] is a struct that holds the `width` and `height` of a text buffer.
+//! [Size] is a struct that holds the `width` and `height` of a text buffer.
 //! [ColWidth] (aka [Width]) and [RowHeight] (aka [Height]) are the types of the
 //! `width` and `height` respectively. This ensures that it isn't possible to use a
 //! `width` when you intended to use a `height` and vice versa. Also [Size] is an alias
-//! for [Dim].
+//! for [Size].
 //!
 //! Here is a visual representation of how position and sizing works for the layout
 //! engine.
@@ -41,35 +41,35 @@
 //! # The many ways to create one
 //!
 //! - This API uses the `impl Into<struct>` pattern and [Add] `+` operator overloading to
-//!   allow for easy construction of [Dim] by [ColWidth] with [RowHeight] in any
+//!   allow for easy construction of [Size] by [ColWidth] with [RowHeight] in any
 //!   order.
-//! - You can use the [crate::dim()] to create a [Dim] struct. This function can take a
+//! - You can use the [crate::size()] to create a [Size] struct. This function can take a
 //!   sequence of [Add]ed [ColWidth] and [RowHeight] in any order, or tuples of
 //!   them in any order.
 //! - Just using the [Add] `+` operator ([RowHeight] and [ColWidth] can be in
 //!   any order):
-//!     - You can use [Add] to convert: [ColWidth] + [RowHeight], into: a [Dim].
+//!     - You can use [Add] to convert: [ColWidth] + [RowHeight], into: a [Size].
 //!
 //! # Examples
 //!
 //! ```rust
 //! use r3bl_core::{
-//!     ch, Dim, ColWidth, RowHeight,
-//!     width, height, Width, Height, dim
+//!     ch, Size, ColWidth, RowHeight,
+//!     width, height, Width, Height, size
 //! };
 //!
 //! // Note the order of the arguments don't matter below.
-//! let size: Dim = dim( width(1) + height(2) );
+//! let size: Size = size( width(1) + height(2) );
 //! assert_eq!(size.col_width, ch(1).into());
 //! assert_eq!(*size.row_height, ch(2));
 //!
 //! // Note the order of the arguments don't matter below.
-//! let size_2: Dim = ( height(2), width(1) ).into();
+//! let size_2: Size = ( height(2), width(1) ).into();
 //! assert_eq!(*size_2.col_width, ch(1));
 //! assert_eq!(*size_2.row_height, ch(2));
 //!
 //! // Note the order of the arguments don't matter below.
-//! let size_3 = Dim::new(
+//! let size_3 = Size::new(
 //!     ( height(2), width(1) )
 //! );
 //! assert!(matches!(size_3.col_width, ColWidth(_)));
@@ -92,17 +92,16 @@ use crate::{ChUnit, ColWidth, RowHeight};
 
 // Type aliases for better code readability.
 
-pub type Size = Dim;
 pub type Width = ColWidth;
 pub type Height = RowHeight;
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
-pub struct Dim {
+pub struct Size {
     pub col_width: ColWidth,
     pub row_height: RowHeight,
 }
 
-pub fn dim(arg_dim: impl Into<Dim>) -> Dim { arg_dim.into() }
+pub fn size(arg_size: impl Into<Size>) -> Size { arg_size.into() }
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Ord, Eq, Hash)]
 pub enum SufficientSize {
@@ -113,22 +112,22 @@ pub enum SufficientSize {
 mod constructor {
     use super::*;
 
-    impl Dim {
-        pub fn new(arg_dim: impl Into<Dim>) -> Self { arg_dim.into() }
+    impl Size {
+        pub fn new(arg_dim: impl Into<Size>) -> Self { arg_dim.into() }
     }
 
-    impl From<(ColWidth, RowHeight)> for Dim {
+    impl From<(ColWidth, RowHeight)> for Size {
         fn from((width, height): (ColWidth, RowHeight)) -> Self {
-            Dim {
+            Size {
                 col_width: width,
                 row_height: height,
             }
         }
     }
 
-    impl From<(RowHeight, ColWidth)> for Dim {
+    impl From<(RowHeight, ColWidth)> for Size {
         fn from((height, width): (RowHeight, ColWidth)) -> Self {
-            Dim {
+            Size {
                 col_width: width,
                 row_height: height,
             }
@@ -136,10 +135,10 @@ mod constructor {
     }
 
     impl Add<RowHeight> for ColWidth {
-        type Output = Dim;
+        type Output = Size;
 
         fn add(self, rhs: RowHeight) -> Self::Output {
-            Dim {
+            Size {
                 col_width: self,
                 row_height: rhs,
             }
@@ -147,10 +146,10 @@ mod constructor {
     }
 
     impl Add<ColWidth> for RowHeight {
-        type Output = Dim;
+        type Output = Size;
 
         fn add(self, rhs: ColWidth) -> Self::Output {
-            Dim {
+            Size {
                 col_width: rhs,
                 row_height: self,
             }
@@ -161,21 +160,21 @@ mod constructor {
 mod convert {
     use super::*;
 
-    impl From<Dim> for ColWidth {
-        fn from(size: Dim) -> Self { size.col_width }
+    impl From<Size> for ColWidth {
+        fn from(size: Size) -> Self { size.col_width }
     }
 
-    impl From<Dim> for RowHeight {
-        fn from(size: Dim) -> Self { size.row_height }
+    impl From<Size> for RowHeight {
+        fn from(size: Size) -> Self { size.row_height }
     }
 }
 
 mod api {
     use super::*;
 
-    impl Dim {
-        pub fn fits_min_size(&self, arg_min_size: impl Into<Dim>) -> SufficientSize {
-            let size: Dim = arg_min_size.into();
+    impl Size {
+        pub fn fits_min_size(&self, arg_min_size: impl Into<Size>) -> SufficientSize {
+            let size: Size = arg_min_size.into();
             let min_width = size.col_width;
             let min_height = size.row_height;
 
@@ -190,7 +189,7 @@ mod api {
 mod debug {
     use super::*;
 
-    impl Debug for Dim {
+    impl Debug for Size {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
@@ -205,10 +204,10 @@ mod debug {
 mod ops {
     use super::*;
 
-    impl Sub<Dim> for Dim {
-        type Output = Dim;
+    impl Sub<Size> for Size {
+        type Output = Size;
 
-        fn sub(self, rhs: Dim) -> Self::Output {
+        fn sub(self, rhs: Size) -> Self::Output {
             let mut self_copy = self;
             *self_copy.col_width -= *rhs.col_width;
             *self_copy.row_height -= *rhs.row_height;
@@ -216,10 +215,10 @@ mod ops {
         }
     }
 
-    impl Add<Dim> for Dim {
-        type Output = Dim;
+    impl Add<Size> for Size {
+        type Output = Size;
 
-        fn add(self, rhs: Dim) -> Self::Output {
+        fn add(self, rhs: Size) -> Self::Output {
             let mut self_copy = self;
             *self_copy.col_width += *rhs.col_width;
             *self_copy.row_height += *rhs.row_height;
@@ -227,15 +226,15 @@ mod ops {
         }
     }
 
-    impl SubAssign<ChUnit> for Dim {
+    impl SubAssign<ChUnit> for Size {
         fn sub_assign(&mut self, other: ChUnit) {
             *self.col_width -= other;
             *self.row_height -= other;
         }
     }
 
-    impl Sub<ChUnit> for Dim {
-        type Output = Dim;
+    impl Sub<ChUnit> for Size {
+        type Output = Size;
 
         fn sub(self, other: ChUnit) -> Self::Output {
             let mut self_copy = self;
@@ -244,15 +243,15 @@ mod ops {
         }
     }
 
-    impl AddAssign<ChUnit> for Dim {
+    impl AddAssign<ChUnit> for Size {
         fn add_assign(&mut self, other: ChUnit) {
             *self.col_width += other;
             *self.row_height += other;
         }
     }
 
-    impl Add<ChUnit> for Dim {
-        type Output = Dim;
+    impl Add<ChUnit> for Size {
+        type Output = Size;
 
         fn add(self, other: ChUnit) -> Self::Output {
             let mut self_copy = self;
@@ -269,12 +268,12 @@ mod tests {
 
     #[test]
     fn test_dim() {
-        let size = dim(width(5) + height(10));
-        assert_eq!(size.col_width, ColWidth(ch(5)));
-        assert_eq!(*size.col_width, ch(5));
-        assert_eq!(size.row_height, RowHeight(ch(10)));
-        assert_eq!(*size.row_height, ch(10));
-        let size_2 = dim(height(10) + width(5));
+        let size_1 = size(width(5) + height(10));
+        assert_eq!(size_1.col_width, ColWidth(ch(5)));
+        assert_eq!(*size_1.col_width, ch(5));
+        assert_eq!(size_1.row_height, RowHeight(ch(10)));
+        assert_eq!(*size_1.row_height, ch(10));
+        let size_2 = size(height(10) + width(5));
 
         assert!(matches!(size_2.col_width, ColWidth(_)));
         assert!(matches!(size_2.row_height, RowHeight(_)));
@@ -283,14 +282,14 @@ mod tests {
     #[test]
     fn test_size_new() {
         // Order does not matter.
-        let size = Dim::new((ColWidth::new(5), RowHeight::new(10)));
+        let size = Size::new((ColWidth::new(5), RowHeight::new(10)));
         assert_eq!(size.col_width, ColWidth(ch(5)));
         assert_eq!(*size.col_width, 5.into());
         assert_eq!(size.row_height, RowHeight(10.into()));
         assert_eq!(*size.row_height, ch(10));
 
         // Order does not matter.
-        let size_2 = Dim::new((width(5), height(10)));
+        let size_2 = Size::new((width(5), height(10)));
         assert!(matches!(size_2.col_width, ColWidth(_)));
         assert!(matches!(size_2.row_height, RowHeight(_)));
     }
@@ -298,8 +297,8 @@ mod tests {
     #[test]
     fn test_size_from() {
         // Order does not matter!
-        let size: Dim = (ColWidth(ch(5)), RowHeight(ch(10))).into();
-        let size_2: Dim = (RowHeight(ch(10)), ColWidth(ch(5))).into();
+        let size: Size = (ColWidth(ch(5)), RowHeight(ch(10))).into();
+        let size_2: Size = (RowHeight(ch(10)), ColWidth(ch(5))).into();
 
         assert_eq!(size.col_width, ColWidth(ch(5)));
         assert_eq!(*size.col_width, ch(5));
@@ -311,8 +310,8 @@ mod tests {
 
     #[test]
     fn test_size_add() {
-        let size1 = Dim::new((ColWidth(5.into()), RowHeight(10.into())));
-        let size2 = Dim::new((ColWidth::from(ch(3)), RowHeight::from(ch(4))));
+        let size1 = Size::new((ColWidth(5.into()), RowHeight(10.into())));
+        let size2 = Size::new((ColWidth::from(ch(3)), RowHeight::from(ch(4))));
         let result = size1 + size2;
         assert_eq!(result.col_width, ColWidth(8.into()));
         assert_eq!(*result.col_width, ch(8));
@@ -322,8 +321,8 @@ mod tests {
 
     #[test]
     fn test_size_sub() {
-        let size1 = Dim::new((ColWidth(5.into()), RowHeight(10.into())));
-        let size2 = Dim::new((ColWidth(3.into()), RowHeight(4.into())));
+        let size1 = Size::new((ColWidth(5.into()), RowHeight(10.into())));
+        let size2 = Size::new((ColWidth(3.into()), RowHeight(4.into())));
         let result = size1 - size2;
         assert_eq!(result.col_width, ColWidth(ch(2)));
         assert_eq!(result.row_height, RowHeight(ch(6)));
@@ -333,24 +332,24 @@ mod tests {
     fn test_fits_min_size() {
         let size = width(5) + height(10);
         assert_eq!(
-            size.fits_min_size(Dim::new((width(3), height(4)))),
+            size.fits_min_size(Size::new((width(3), height(4)))),
             SufficientSize::IsLargeEnough
         );
         assert_eq!(
-            size.fits_min_size(Dim::new((width(100), height(100)))),
+            size.fits_min_size(Size::new((width(100), height(100)))),
             SufficientSize::IsTooSmall
         );
     }
 
     #[test]
     fn test_debug_fmt() {
-        let size = Dim::new((width(5), height(10)));
+        let size = Size::new((width(5), height(10)));
         assert_eq!(format!("{:?}", size), "[w: 5, h: 10]");
     }
 
     #[test]
     fn test_ch_unit_sub_and_sub_assign() {
-        let mut size0 = Dim::new((width(5), height(10)));
+        let mut size0 = Size::new((width(5), height(10)));
         size0 -= ch(3);
         assert_eq!(size0.col_width, ColWidth(ch(2)));
         assert_eq!(size0.row_height, RowHeight(ch(7)));
@@ -362,7 +361,7 @@ mod tests {
 
     #[test]
     fn test_ch_unit_add_and_add_assign() {
-        let mut size0 = Dim::new((width(5), height(10)));
+        let mut size0 = Size::new((width(5), height(10)));
         size0 += ch(3);
         assert_eq!(size0.col_width, ColWidth(ch(8)));
         assert_eq!(size0.row_height, RowHeight(ch(13)));

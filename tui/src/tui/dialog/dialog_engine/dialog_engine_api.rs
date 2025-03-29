@@ -31,11 +31,11 @@ use r3bl_core::{ch,
                 CommonError,
                 CommonErrorType,
                 CommonResult,
-                Dim,
                 GCStringExt as _,
                 GradientGenerationPolicy,
                 InlineString,
                 Pos,
+                Size,
                 TextColorizationPolicy,
                 TuiStyle};
 
@@ -292,7 +292,7 @@ mod internal_impl {
     pub fn make_flex_box_for_dialog(
         dialog_id: FlexBoxId,
         dialog_options: DialogEngineConfigOptions,
-        window_size: Dim,
+        window_size: Size,
         maybe_surface_bounds: Option<SurfaceBounds>,
     ) -> CommonResult<PartialFlexBox> {
         let surface_size = if let Some(surface_bounds) = maybe_surface_bounds {
@@ -394,7 +394,7 @@ mod internal_impl {
 
     pub fn render_editor<S, AS>(
         origin_pos: Pos,
-        bounds_size: Dim,
+        bounds_size: Size,
         args: DialogEngineArgs<'_, S, AS>,
     ) -> CommonResult<RenderPipeline>
     where
@@ -495,7 +495,7 @@ mod internal_impl {
 
     pub fn render_results_panel<S>(
         origin_pos: Pos,
-        bounds_size: Dim,
+        bounds_size: Size,
         dialog_engine: &DialogEngine,
         self_id: FlexBoxId,
         state: &mut S,
@@ -524,7 +524,7 @@ mod internal_impl {
         pub fn paint_results(
             ops: &mut RenderOps,
             origin_pos: Pos,
-            bounds_size: Dim,
+            bounds_size: Size,
             results: &[InlineString],
             dialog_engine: &DialogEngine,
         ) {
@@ -635,7 +635,7 @@ mod internal_impl {
 
     pub fn render_title(
         origin_pos: Pos,
-        bounds_size: Dim,
+        bounds_size: Size,
         title: &str,
         dialog_engine: &mut DialogEngine,
     ) -> RenderOps {
@@ -696,7 +696,7 @@ mod internal_impl {
 
     pub fn render_border(
         origin_pos: Pos,
-        bounds_size: Dim,
+        bounds_size: Size,
         dialog_engine: &mut DialogEngine,
     ) -> RenderOps {
         let mut ops = render_ops!();
@@ -1002,7 +1002,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
     #[test]
     fn make_flex_box_for_dialog_simple_display_size_too_small() {
         let surface = Surface::default();
-        let window_size = Dim::default();
+        let window_size = Size::default();
         let dialog_id: FlexBoxId = FlexBoxId::from(0);
 
         // The window size is too small and will result in this error.
@@ -1046,7 +1046,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
     #[test]
     fn make_flex_box_for_dialog_autocomplete_display_size_too_small() {
         let surface = Surface::default();
-        let window_size = Dim::default();
+        let window_size = Size::default();
         let dialog_id: FlexBoxId = FlexBoxId::from(0);
 
         // The window size is too small and will result in this error.

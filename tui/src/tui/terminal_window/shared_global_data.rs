@@ -18,22 +18,19 @@
 use std::fmt::{Debug, Formatter};
 
 use r3bl_core::{ok,
-                sizing::TelemetryReportLineStorage,
+                spinner_impl,
+                telemetry::sizing::TelemetryReportLineStorage,
                 ChUnit,
                 CommonResult,
                 InlineString,
                 OutputDevice,
                 Size,
+                SpinnerStyle,
                 TelemetryHudReport};
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{spinner_impl,
-            OffscreenBuffer,
-            OffscreenBufferPool,
-            SpinnerStyle,
-            DEBUG_TUI_COMPOSITOR,
-            DEBUG_TUI_MOD};
+use crate::{OffscreenBuffer, OffscreenBufferPool, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD};
 
 /// This is a global data structure that holds state for the entire application
 /// [crate::App] and the terminal window [crate::TerminalWindow] itself.

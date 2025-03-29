@@ -19,8 +19,9 @@ use std::process::Command;
 use branch_checkout_formatting::{add_spaces_to_end_of_string,
                                  display_correct_message_after_user_tried_to_checkout,
                                  get_formatted_modified_files};
-use r3bl_ansi_color::{ASTStyle, AnsiStyledText};
-use r3bl_core::{ChUnit,
+use r3bl_core::{ASTStyle,
+                AnsiStyledText,
+                ChUnit,
                 CommonResult,
                 GCString,
                 InlineString,

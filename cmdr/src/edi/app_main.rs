@@ -14,26 +14,28 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_ansi_color::{green, magenta, red};
 use r3bl_core::{Ansi256GradientIndex,
                 ColorWheel,
                 ColorWheelConfig,
                 ColorWheelSpeed,
                 CommonError,
                 CommonResult,
-                Dim,
                 GCStringExt as _,
                 GradientGenerationPolicy,
                 InlineString,
+                Size,
                 TextColorizationPolicy,
                 TuiStyledTexts,
                 TuiStylesheet,
                 col,
                 get_tui_style,
                 glyphs,
+                green,
                 height,
                 inline_string,
+                magenta,
                 new_style,
+                red,
                 req_size_pc,
                 row,
                 send_signal,
@@ -688,7 +690,7 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Dim) {
+    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
         let separator_style = new_style!(dim color_fg: {tui_color!(dark_grey)});
 
         let app_text = "edi 🦜 ✶early access✶";

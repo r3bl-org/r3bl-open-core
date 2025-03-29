@@ -17,8 +17,7 @@
 
 use std::{fmt::Display, io::Result};
 
-use r3bl_ansi_color::{self, ASTColor, AnsiStyledText};
-use r3bl_core::{get_terminal_width, usize};
+use r3bl_core::{self, get_terminal_width, usize, ASTColor, ASTStyle, AnsiStyledText};
 use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet};
 use serde::{Deserialize, Serialize};
 
@@ -41,8 +40,8 @@ pub fn main() -> Result<()> {
     let max_height_row_count: usize = 5;
 
     let mut score = 0;
-    let correct_answer_color = ASTColor::Rgb(255, 216, 9);
-    let incorrect_answer_color = ASTColor::Rgb(255, 70, 30);
+    let correct_answer_color = ASTColor::Rgb((255, 216, 9).into());
+    let incorrect_answer_color = ASTColor::Rgb((255, 70, 30).into());
     let line_length = 60;
 
     display_header(line_length);
@@ -95,8 +94,8 @@ enum Answer {
 impl Display for Answer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let color = match self {
-            Answer::Correct => ASTColor::Rgb(5, 236, 0),
-            Answer::Incorrect => ASTColor::Rgb(234, 0, 196),
+            Answer::Correct => ASTColor::Rgb((5, 236, 0).into()),
+            Answer::Incorrect => ASTColor::Rgb((234, 0, 196).into()),
         };
 
         let text = match self {
@@ -109,7 +108,7 @@ impl Display for Answer {
             "{}",
             AnsiStyledText {
                 text,
-                style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+                style: smallvec::smallvec![ASTStyle::Foreground(color)],
             }
         )
     }
@@ -137,24 +136,24 @@ fn check_answer(guess: &QuestionData, maybe_user_input: &Option<Vec<String>>) ->
 }
 
 fn display_header(line_length: usize) {
-    let color = ASTColor::Rgb(9, 183, 238);
+    let color = ASTColor::Rgb((9, 183, 238).into());
     println!();
     println!();
     AnsiStyledText {
         text: "👋 Welcome to the Simple Quiz with Tuify",
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 
     AnsiStyledText {
         text: "To exit the game, press 'Esc'",
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 
     AnsiStyledText {
         text: "─".to_string().as_str().repeat(line_length).as_str(),
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 }
@@ -165,11 +164,11 @@ fn display_footer(
     line_length: usize,
 ) {
     let line = "─".to_string().as_str().repeat(line_length - 2);
-    let color = ASTColor::Rgb(9, 183, 238);
+    let color = ASTColor::Rgb((9, 183, 238).into());
 
     AnsiStyledText {
         text: format!("╭{}╮", line).as_str(),
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 
@@ -189,13 +188,13 @@ fn display_footer(
 
     AnsiStyledText {
         text: score_text.join("").as_str(),
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 
     AnsiStyledText {
         text: format!("╰{}╯", line).as_str(),
-        style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(color)],
+        style: smallvec::smallvec![ASTStyle::Foreground(color)],
     }
     .println();
 }
@@ -235,9 +234,7 @@ fn check_user_input_and_display_result(
         "{} {} {}",
         AnsiStyledText {
             text: format!("{}. {}", question_number, &question_data.question).as_str(),
-            style: smallvec::smallvec![r3bl_ansi_color::ASTStyle::Foreground(
-                background_color
-            )],
+            style: smallvec::smallvec![ASTStyle::Foreground(background_color)],
         },
         input[0],
         correct_or_incorrect

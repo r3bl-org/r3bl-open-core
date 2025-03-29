@@ -2,7 +2,6 @@
 [workspace]
 members = [
   "analytics_schema",
-  "ansi_color",
   "cmdr",
   "core",
   "terminal_async",

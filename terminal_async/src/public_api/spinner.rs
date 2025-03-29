@@ -19,12 +19,13 @@ use std::{sync::Arc, time::Duration};
 
 use r3bl_core::{LineStateControlSignal,
                 SharedWriter,
+                SpinnerStyle,
                 StdoutIsPipedResult,
                 TTYResult,
                 get_terminal_width,
                 is_fully_uninteractive_terminal,
-                is_stdout_piped};
-use r3bl_tui::{SpinnerStyle, spinner_render};
+                is_stdout_piped,
+                spinner_render};
 use tokio::time::interval;
 
 use crate::{SafeBool, SafeRawTerminal, StdMutex};
@@ -204,9 +205,8 @@ impl Spinner {
 mod tests {
     use std::sync::Arc;
 
-    use r3bl_core::StdMutex;
+    use r3bl_core::{SpinnerColor, SpinnerTemplate, StdMutex};
     use r3bl_test_fixtures::StdoutMock;
-    use r3bl_tui::{SpinnerColor, SpinnerTemplate};
     use smallvec::SmallVec;
 
     use super::{Duration,

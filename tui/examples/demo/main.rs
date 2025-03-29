@@ -36,16 +36,20 @@ mod ex_rc;
 use std::str::FromStr as _;
 
 use miette::IntoDiagnostic as _;
-use r3bl_ansi_color::{bold, fg_rgb_color, frozen_blue, rgb_color, ASTColor};
-use r3bl_core::{get_size,
+use r3bl_core::{bold,
+                fg_rgb_color,
+                frozen_blue,
+                get_size,
                 inline_string,
                 ok,
+                rgb_value,
                 throws,
                 tui_color,
+                ASTColor,
                 CommonError,
                 CommonResult};
 use r3bl_log::log_support::try_initialize_logging_global;
-use r3bl_terminal_async::{ReadlineEvent, TerminalAsync};
+use r3bl_terminal_async::{ta_println, ReadlineEvent, TerminalAsync};
 use r3bl_tui::{keypress, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
 use strum::IntoEnumIterator as _;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
@@ -73,7 +77,7 @@ async fn main() -> CommonResult<()> {
     let msg = inline_string!("{}", &generate_help_msg());
 
     let msg_fmt = fg_rgb_color(ASTColor::from(tui_color!(lizard_green)), &msg);
-    terminal_async.println(msg_fmt).await;
+    ta_println!(terminal_async, "{}", msg_fmt.to_string());
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
     if no_log_arg_passed {
@@ -83,7 +87,7 @@ async fn main() -> CommonResult<()> {
     }
 
     loop {
-        let result_readline_event = terminal_async.get_readline_event().await;
+        let result_readline_event = terminal_async.read_line().await;
         match result_readline_event {
             Ok(readline_event) => match readline_event {
                 ReadlineEvent::Line(input) => {
@@ -138,13 +142,12 @@ async fn run_user_selected_example(
             Exit => CommonError::new_error_result_with_only_msg("Exiting..."),
         },
         Err(_) => {
-            terminal_async
-                .println(format!(
-                    "{a} {b}",
-                    a = frozen_blue("Invalid selection:"),
-                    b = bold(&selection).fg_rgb_color(rgb_color!(pink))
-                ))
-                .await;
+            ta_println!(
+                terminal_async,
+                "{a} {b}",
+                a = frozen_blue("Invalid selection:"),
+                b = bold(&selection).fg_rgb_color(rgb_value!(pink))
+            );
             Ok(())
         }
     }

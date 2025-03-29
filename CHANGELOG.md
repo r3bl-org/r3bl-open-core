@@ -84,12 +84,6 @@
   - [v0.4.0 2024-04-21](#v040-2024-04-21)
   - [v0.3.1 2024-04-17](#v031-2024-04-17)
   - [v0.3.0 2024-04-15](#v030-2024-04-15)
-- [r3bl_ansi_color](#r3bl_ansi_color)
-  - [v0.7.0 2024-10-18](#v070-2024-10-18)
-  - [v0.6.10 2024-09-12](#v0610-2024-09-12)
-  - [v0.6.9 2023-10-21](#v069-2023-10-21)
-  - [v0.6.8 2023-10-16](#v068-2023-10-16)
-  - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
   - [Rename to r3bl_macro](#rename-to-r3bl_macro)
   - [v0.9.10 2024-09-12](#v0910-2024-09-12)
@@ -144,6 +138,7 @@
   - [r3bl_simple_logger](#r3bl_simple_logger)
   - [r3bl_redux](#r3bl_redux)
   - [r3bl_rs_utils](#r3bl_rs_utils)
+  - [r3bl_ansi_color](#r3bl_ansi_color)
 - [More info on changelogs](#more-info-on-changelogs)
 
 <!-- Global config section -->
@@ -216,6 +211,9 @@ increase performance, and ensure that performance is stable over time. `ch_unit.
 also heavily refactored and the entire codebase updated so that a the more ergonomic
 `ChUnit` API is now used throughout the codebase. No new functionality is added in this
 release.
+
+- Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
 
 - Updated:
   - Use the latest Rust 2024 edition.
@@ -362,6 +360,7 @@ change for almost every crate in the repo. This
     just the imports.
 
 - Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
   - Move some of `term.rs` into:
     - `r3bl_core` - The functions to get the terminal window size and width.
     - `r3bl_ansi_color` - The functions to detect whether the current process is running
@@ -482,6 +481,15 @@ These videos have been an inspiration for many of these changes:
 - [Data oriented design](https://youtu.be/WwkuAqObplU)
 - [Memory alloc](https://youtu.be/pJ-FRRB5E84)
 
+Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
+  - Remove `size-of` crate from `Cargo.toml`.
+  - Delete `static_global_data.rs` file and `telemetry_global_static` module.
+    - Move the `vscode` terminal color detection code to `r3bl_ansi_color`, which is where
+      it belongs.
+    - Move the telemetry functions from `telemetry_global_static` to  `Telemetry` module
+      (and its dependencies `RateLimiter` and `RingBuffer`) in `r3bl_core`.
+
 Updated:
   - Use the latest Rust 2024 edition.
   - The `Display` and `Debug` implementations for all the structs in this crate have been
@@ -505,7 +513,7 @@ Added:
     terminal output for log formatting or a welcome message. You can see this in the demo
     example for `r3bl_tui` which uses this
     `let msg_fmt = fg_rgb_color(ASTColor::from(tui_color!(lizard_green)), &msg);`. Also `r3bl_ansi_color`
-    has an equivalent macro to this called `rgb_color!`.
+    has an equivalent macro to this called `rgb_value!`.
   - Add new target in `run` Nushell script called `nu run release-examples-no-log` to run
     the examples without logging. This is useful for performance testing. Now that HUD is
     displayed in the examples, there is no need to enable logging just to see this
@@ -516,14 +524,6 @@ Added:
     uses a fixed backing store (`RingBuffer`) and a rate limiter (`RateLimiter`) to ensure
     that the report is not computed too frequently (since this might be an expensive
     operation that is called in a hot loop, the main event loop).
-
-Removed:
-  - Remove `size-of` crate from `Cargo.toml`.
-  - Delete `static_global_data.rs` file and `telemetry_global_static` module.
-    - Move the `vscode` terminal color detection code to `r3bl_ansi_color`, which is where
-      it belongs.
-    - Move the telemetry functions from `telemetry_global_static` to  `Telemetry` module
-      (and its dependencies `RateLimiter` and `RingBuffer`) in `r3bl_core`.
 
 Changed:
   - Update all the demo examples in the `examples` folder to use the new telemetry API and
@@ -966,13 +966,20 @@ Here are the highlights:
      allow for an optional default style to be passed in, that will be applied to the
      generated lolcat output.
 
-Removed:
-  - Remove `size-of` crate from `Cargo.toml`.
-  - The `ch!` macro was confusing. It is now removed, and `ch_unit.rs` has clean
-    conversions to and from other types. There are easy to use, typed checked functions,
-    like `ch()`, `usize()`, `f64()`, etc.
+Moved:
+  - Move the contents of `r3bl_ansi_term` crate into `r3bl_core`. There is no need to have
+    that crate as an external dependency. Moving it where it belongs. It was developed as
+    a separate crate at the start, since the `r3bl_tui` codebase was in a much earlier stage
+    when it wasn't clear where `r3bl_ansi_term` fits with `r3bl_tui` and `r3bl_tuify`, etc.
 
 Changed:
+  - Consolidate the color structs from `r3bl_core` and `r3bl_ansi_color`, since
+    `r3bl_ansi_color` is deprecated and its functionality has been moved into `r3bl_core`.
+    The `ASTColor` and `TuiColor` structs have the same underpinning structs, which
+    they're composed on top of. The reason for the distinction is just to make it clear
+    the differences between TUI output and console output (directly to stdout or colorful
+    log message) use cases. The conversion functions and traits are also consolidated in
+    one place.
   - In `decl_macros/macros.rs` change the semantics of the `with!` macro, so that the
     `$id` is only contained to the `run` block and doesn't get added to the caller's scope
     / block.
@@ -1096,7 +1103,11 @@ Changed:
       the generated code itself and these docs include references to the types and static
       variables that are generated.
 
-- Removed:
+Removed:
+  - Remove `size-of` crate from `Cargo.toml`.
+  - The `ch!` macro was confusing. It is now removed, and `ch_unit.rs` has clean
+    conversions to and from other types. There are easy to use, typed checked functions,
+    like `ch()`, `usize()`, `f64()`, etc.
   - Remove the following declarative macros that were not being used anywhere, and there
     are suitable candidates in the standard library that can be used instead:
     - `unwrap_option_or_run_fn_returning_err!`
@@ -1265,6 +1276,9 @@ performance, and ensure that performance is stable over time. `ch_unit.rs` is al
 refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
 now used throughout the codebase.
 
+- Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
+
 Added:
   - Moved all the tracing and logging functionality from `r3bl_core` in here.
   - Make the public API more ergonomic and use the `options: impl Into<TracingConfig>`
@@ -1294,6 +1308,9 @@ that is meant to hold all the scripting related functionality for all the other 
 this monorepo. It provides a way to run scripts in a safe and secure way, that is meant to
 be a replacement for writing scripts in `fish` or `bash` or `nushell` syntax.
 
+- Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
+
 ## `r3bl_terminal_async`
 
 ### v_next_release_r3bl_terminal_async
@@ -1303,10 +1320,23 @@ performance, and ensure that performance is stable over time. `ch_unit.rs` is al
 refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
 now used throughout the codebase. No new functionality is added in this release.
 
+- Changed:
+  - Rename `get_readline_event()` to `read_line()`. This is an async replacement for
+    `std::io::Stdin::read_line()`.
+
 - Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
   - Move `spinner_impl` to `r3bl_tui` crate. This code is also used in
     `shared_global_data.rs` in `r3bl_tui` crate.
   - Drop the dependency on `r3bl_tuify` crate in `Cargo.toml`.
+  - Drop the dependency on `r3bl_tui` crate in `Cargo.toml`.
+  - Remove the `println()` and `println_prefixed()` methods.
+
+- Added:
+  - Add `ta_println!`, `ta_print!`, `ta_println_prefixed` macros that use `format_args!`
+    style (just like `println!`, `write!`, etc). This makes the API more familiar with
+    Rust standard library. This style of declarative macro is used in other crates in this
+    monorepo, like `r3bl_core`'s `into_existing.rs` module.
 
 ### v0.6.0 (2024-10-21)
 
@@ -1524,89 +1554,6 @@ This is the first release of this crate.
     and REPLs that are fully async and multithreaded (with input and output) with a really
     powerful (multi) line editor and prompt.
 
-## `r3bl_ansi_color`
-
-### v_next_release_r3bl_ansi_color
-
-This is a minor change that adds `vscode` to the list of environment variables that mean
-that `truecolor` is supported. It removes duplication of `term.rs` in the `r3bl-open-core`
-repo and workspace. The names are also cleaned up so there's no confusion about using
-`Color` or `Style` which are so generic and used in many other crates.
-
-- Updated:
-  - Use the latest Rust 2024 edition.
-
-- Added:
-  - Support for inline (stack allocated) data structures (`InlineVecASTStyles` and
-    `AnsiStyledText::to_small_str()`). Please note that if you make the
-    `r3bl_ansi_color::sizing::DEFAULT_STRING_STORAGE_SIZE` number too large, eg: more than
-    `16`, then it will slow down the TUI editor performance use.
-  - Lots of new easy constructor functions to make it easy to colorize `&str` like
-    `red("hello")`, `green("world")`, etc. This removes the requirement to depend on
-    `crossterm::Stylize` for colorizing strings that are intended to be displayed in
-    console stdout / stderr. Methods are provided to add background colors as well
-    `AnsiStyledText::bg_dark_grey()`.
-  - Easy constructor functions are provided `fg_rgb_color()` and
-    `AnsiStyledText::bg_rgb_color()`. Together they allow easy integration with
-    `tui_color!` and make it trivial to write code that uses styles / colors from the
-    `r3bl_tui` crate and apply them to `AnsiStyledText` which is a very common pattern
-    when colorizing log output.
-  - Easy macro `rgb_color!` to create lots of beautiful colors with ease. This is similar
-    to `r3bl_tui` crate's `tui_color!` macro.
-
-- Removed:
-  - `term.rs` is now in `r3bl_core`. Support for `$TERM_PROGRAM` = `vscode` to the list of
-    environment variables that mean that `truecolor` is supported. This is in
-    `check_ansi_color.rs` file.
-
-- Changed:
-  - `Color` is now `ASTColor`.
-  - `Style` is now `ASTStyle`.
-  - Proper converters `From` implementations are provided to convert between `ASTColor`
-    and `RGBColor`, and `Ansi256Color`.
-
-### v0.7.0 (2024-10-18)
-
-This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
-change for almost every crate in the repo. This
-[PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
-
-- Added:
-  - Move code from `r3bl_core`'s `term.rs` to detect whether `stdin`, `stdout`, `stderr`
-    is interactive. This has a dependency on the standard library, and not `crossterm`
-    anymore. The API exposed here is ergonomic, and returns an `enum` rather than `bool`,
-    which make it easier to use and understand.
-
-### v0.6.10 (2024-09-12)
-
-- Updated:
-  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
-  - Improve docs in `lib.rs` and `README.md`.
-
-### v0.6.9 (2023-10-21)
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.6.8 (2023-10-16)
-
-- Added:
-  - Support for `Grayscale` color output. This is in preparation of making the color
-    support work across all platforms (MacOS, Linux, Windows). And use this in the
-    `r3bl_tui` crate. Update tests to reflect this.
-
-- Removed:
-  - Dependency on `once-cell` removed by replacing `Arc<Mutex<_>>` with `unsafe` and
-    `AtomicI8`.
-
-### v0.6.7 (2023-09-12)
-
-- Added:
-  - Tests.
-
-- Replaced:
-  - `justfile` is now replaced with `nu` script `run.nu`.
-
 # Renamed
 
 <!-- Renamed section -->
@@ -1781,6 +1728,100 @@ the `ok!()` macro.
 # Archived
 
 <!-- Archived section -->
+
+You can find all these archived crates in the
+[archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo.
+
+## `r3bl_ansi_color`
+
+### Archived (2025-03-28)
+
+Move the contents of `r3bl_ansi_term` crate into `r3bl_core`. There is no need to have
+that crate as an external dependency. Moving it where it belongs. It was developed as a
+separate crate at the start, since the `r3bl_tui` codebase was in a much earlier stage
+when it wasn't clear where `r3bl_ansi_term` fits with `r3bl_tui` and `r3bl_tuify`, etc.
+
+Here are the changes that were made before moving it to `r3bl_core` and archiving this
+repo.
+
+This is a minor change that adds `vscode` to the list of environment variables that mean
+that `truecolor` is supported. It removes duplication of `term.rs` in the `r3bl-open-core`
+repo and workspace. The names are also cleaned up so there's no confusion about using
+`Color` or `Style` which are so generic and used in many other crates.
+
+- Updated:
+  - Use the latest Rust 2024 edition.
+
+- Added:
+  - Support for inline (stack allocated) data structures (`InlineVecASTStyles` and
+    `AnsiStyledText::to_small_str()`). Please note that if you make the
+    `r3bl_ansi_color::sizing::DEFAULT_STRING_STORAGE_SIZE` number too large, eg: more than
+    `16`, then it will slow down the TUI editor performance use.
+  - Lots of new easy constructor functions to make it easy to colorize `&str` like
+    `red("hello")`, `green("world")`, etc. This removes the requirement to depend on
+    `crossterm::Stylize` for colorizing strings that are intended to be displayed in
+    console stdout / stderr. Methods are provided to add background colors as well
+    `AnsiStyledText::bg_dark_grey()`.
+  - Easy constructor functions are provided `fg_rgb_color()` and
+    `AnsiStyledText::bg_rgb_color()`. Together they allow easy integration with
+    `tui_color!` and make it trivial to write code that uses styles / colors from the
+    `r3bl_tui` crate and apply them to `AnsiStyledText` which is a very common pattern
+    when colorizing log output.
+  - Easy macro `rgb_value!` to create lots of beautiful colors with ease. This is similar
+    to `r3bl_tui` crate's `tui_color!` macro.
+
+- Removed:
+  - `term.rs` is now in `r3bl_core`. Support for `$TERM_PROGRAM` = `vscode` to the list of
+    environment variables that mean that `truecolor` is supported. This is in
+    `check_ansi_color.rs` file.
+
+- Changed:
+  - `Color` is now `ASTColor`.
+  - `Style` is now `ASTStyle`.
+  - Proper converters `From` implementations are provided to convert between `ASTColor`
+    and `RGBColor`, and `Ansi256Color`.
+
+### v0.7.0 (2024-10-18)
+
+This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
+change for almost every crate in the repo. This
+[PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
+
+- Added:
+  - Move code from `r3bl_core`'s `term.rs` to detect whether `stdin`, `stdout`, `stderr`
+    is interactive. This has a dependency on the standard library, and not `crossterm`
+    anymore. The API exposed here is ergonomic, and returns an `enum` rather than `bool`,
+    which make it easier to use and understand.
+
+### v0.6.10 (2024-09-12)
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
+
+### v0.6.9 (2023-10-21)
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.6.8 (2023-10-16)
+
+- Added:
+  - Support for `Grayscale` color output. This is in preparation of making the color
+    support work across all platforms (MacOS, Linux, Windows). And use this in the
+    `r3bl_tui` crate. Update tests to reflect this.
+
+- Removed:
+  - Dependency on `once-cell` removed by replacing `Arc<Mutex<_>>` with `unsafe` and
+    `AtomicI8`.
+
+### v0.6.7 (2023-09-12)
+
+- Added:
+  - Tests.
+
+- Replaced:
+  - `justfile` is now replaced with `nu` script `run.nu`.
 
 ## `r3bl_macro`
 

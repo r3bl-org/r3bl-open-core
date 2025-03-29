@@ -16,8 +16,7 @@
  */
 
 use miette::IntoDiagnostic;
-use r3bl_ansi_color::magenta;
-use r3bl_core::ok;
+use r3bl_core::{magenta, ok};
 
 use crate::{SCRIPT_MOD_DEBUG, http_client};
 

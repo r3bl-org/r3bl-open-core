@@ -140,7 +140,9 @@
 //! Here's an example.
 //!
 //! ```rust
-//! use r3bl_ansi_color::*;
+//! use r3bl_core::{
+//!     red, dim, fg_rgb_color, RgbValue, ASTStyle, AnsiStyledText, ASTColor
+//! };
 //!
 //! // Using the constructor functions.
 //! let red_text = red("This is red text.");
@@ -154,7 +156,7 @@
 //! dim_red_text_on_dark_grey.println();
 //!
 //! // Flexible construction using RGB color codes.
-//! let blue_text = fg_rgb_color(RgbColor::from((0, 0, 255)), "This is blue text.");
+//! let blue_text = fg_rgb_color(RgbValue::from((0, 0, 255)), "This is blue text.");
 //! let blue_text_on_white = blue_text.bg_rgb_color((255, 255, 255));
 //! println!("{blue_text_on_white}");
 //! blue_text_on_white.println();
@@ -166,8 +168,8 @@
 //!         ASTStyle::Bold,
 //!         ASTStyle::Italic,
 //!         ASTStyle::Underline,
-//!         ASTStyle::Foreground(ASTColor::Rgb(50, 50, 50)),
-//!         ASTStyle::Background(ASTColor::Rgb(100, 200, 1)),
+//!         ASTStyle::Foreground(ASTColor::Rgb((50, 50, 50).into())),
+//!         ASTStyle::Background(ASTColor::Rgb((100, 200, 1).into())),
 //!     ],
 //! }
 //! .println();
@@ -268,8 +270,3 @@ pub use ast_color::*;
 pub use convert::*;
 pub use detect_color_support::*;
 pub use transform_color::*;
-
-/// This is copied from `r3bl_core` crate's `common_type_aliases.rs` file.
-pub const DEFAULT_TINY_VEC_SIZE: usize = 16;
-/// This is copied from `r3bl_core` create's `common_type_aliases.rs` file.
-pub type TinyVecBackingStore<T> = smallvec::SmallVec<[T; DEFAULT_TINY_VEC_SIZE]>;

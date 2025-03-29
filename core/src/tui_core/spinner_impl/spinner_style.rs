@@ -15,8 +15,9 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{ColorWheel, ColorWheelConfig, ColorWheelSpeed};
 use smallvec::smallvec;
+
+use crate::{ColorWheel, ColorWheelConfig, ColorWheelSpeed};
 
 #[derive(Debug, Clone, Copy)]
 pub enum SpinnerTemplate {

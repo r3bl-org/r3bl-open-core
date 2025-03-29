@@ -22,7 +22,7 @@ use crate::{ChUnit, RowHeight, height, usize};
 
 /// The vertical index in a grid of characters, starting at 0, which is the first row.
 /// This is one part of a [crate::Pos] (position), and is not the same as
-/// [crate::RowHeight], which is one part of a [crate::Dim] (size). You can simply
+/// [crate::RowHeight], which is one part of a [crate::Size]. You can simply
 /// use the [crate::row()] to create a new instance.
 ///
 /// # Examples

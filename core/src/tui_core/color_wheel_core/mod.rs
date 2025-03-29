@@ -17,7 +17,7 @@
 
 // Attach sources.
 pub mod ansi_256_color_gradients;
-pub mod color_utils;
+pub mod color_helpers;
 pub mod color_wheel_control;
 pub mod converter;
 pub mod policies;
@@ -25,7 +25,6 @@ pub mod truecolor_gradient;
 
 // Re-export.
 pub use ansi_256_color_gradients::*;
-pub use color_utils::*;
 pub use color_wheel_control::*;
 pub use converter::*;
 pub use policies::*;

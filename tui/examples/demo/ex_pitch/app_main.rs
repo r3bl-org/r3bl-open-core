@@ -29,7 +29,7 @@ use r3bl_core::{col,
                 tui_styled_texts,
                 tui_stylesheet,
                 CommonResult,
-                Dim,
+                Size,
                 TuiStylesheet,
                 SPACER_GLYPH};
 use r3bl_tui::{box_end,
@@ -381,7 +381,7 @@ mod stylesheet {
 mod hud {
     use super::*;
 
-    pub fn create_hud(pipeline: &mut RenderPipeline, size: Dim, hud_report_str: &str) {
+    pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
         let color_fg = tui_color!(hex "#942997");
         let styled_texts = tui_styled_texts! {
@@ -414,7 +414,7 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Dim, state: &State) {
+    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size, state: &State) {
         let color_bg = tui_color!(hex "#076DEB");
         let color_fg = tui_color!(hex "#E9C940");
 

@@ -23,7 +23,8 @@
 //! that they actually speed things up and cause performance regressions.
 
 // PERF: If you make this number too large, eg: more than 16, then it will slow down the editor performance
-use r3bl_ansi_color::sizing::DEFAULT_STRING_STORAGE_SIZE;
+pub const DEFAULT_STRING_STORAGE_SIZE: usize = 16;
+
 use smallstr::SmallString;
 use smallvec::SmallVec;
 

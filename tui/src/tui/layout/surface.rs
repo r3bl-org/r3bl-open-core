@@ -19,10 +19,10 @@ use r3bl_core::{height,
                 throws,
                 width,
                 CommonResult,
-                Dim,
                 InlineVec,
                 Pos,
                 ReqSizePc,
+                Size,
                 TuiStyle,
                 TuiStylesheet};
 
@@ -39,7 +39,7 @@ use crate::{unwrap_or_err, LayoutError, LayoutErrorType, RenderPipeline};
 #[derive(Clone, Debug, Default)]
 pub struct Surface {
     pub origin_pos: Pos,
-    pub box_size: Dim,
+    pub box_size: Size,
     pub stack_of_boxes: Vec<FlexBox>,
     pub stylesheet: TuiStylesheet,
     pub render_pipeline: RenderPipeline,
@@ -48,7 +48,7 @@ pub struct Surface {
 #[derive(Copy, Clone, Debug, Default)]
 pub struct SurfaceBounds {
     pub origin_pos: Pos,
-    pub box_size: Dim,
+    pub box_size: Size,
 }
 
 mod surface_bounds_impl {
@@ -179,7 +179,7 @@ impl PerformPositioningAndSizing for Surface {
     /// Returns the [Pos] where the next [FlexBox] can be added to the stack of boxes.
     fn update_insertion_pos_for_next_box(
         &mut self,
-        allocated_size: Dim,
+        allocated_size: Size,
     ) -> CommonResult<Pos> {
         let current_box = self.current_box()?;
         let current_insertion_pos = current_box.insertion_pos_for_next_box;
@@ -203,7 +203,7 @@ impl PerformPositioningAndSizing for Surface {
         Ok(new_pos)
     }
 
-    /// 🍀 Handle non-root box to add to stack of boxes. [Pos] and [Dim] will be
+    /// 🍀 Handle non-root box to add to stack of boxes. [Pos] and [Size] will be
     /// calculated. `insertion_pos_for_next_box` will also be updated.
     fn add_non_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
         throws!({
@@ -280,7 +280,7 @@ fn make_non_root_box_with_style(
         maybe_styles: _,
     }: FlexBoxProps,
     origin_pos: Pos,
-    container_bounds: Dim,
+    container_bounds: Size,
     maybe_cascaded_style: Option<TuiStyle>,
 ) -> FlexBox {
     let bounds_size = {
@@ -317,7 +317,7 @@ fn make_root_box_with_style(
         maybe_styles,
     }: FlexBoxProps,
     origin_pos: Pos,
-    bounds_size: Dim,
+    bounds_size: Size,
 ) -> FlexBox {
     let computed_style = TuiStylesheet::compute(&maybe_styles);
 
@@ -342,8 +342,8 @@ fn make_root_box_with_style(
 fn adjust_with_style(
     maybe_computed_style: &Option<TuiStyle>,
     origin_pos: Pos,
-    bounds_size: Dim,
-) -> (Pos, Dim) {
+    bounds_size: Size,
+) -> (Pos, Size) {
     let mut style_adjusted_origin_pos = origin_pos;
     let mut style_adjusted_bounds_size = bounds_size;
 

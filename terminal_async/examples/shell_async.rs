@@ -95,8 +95,13 @@
 use std::io::Write as _;
 
 use miette::IntoDiagnostic as _;
-use r3bl_ansi_color::{fg_rgb_color, guards_red, lizard_green, rgb_color};
-use r3bl_core::{SharedWriter, inline_string, ok};
+use r3bl_core::{SharedWriter,
+                fg_rgb_color,
+                guards_red,
+                inline_string,
+                lizard_green,
+                ok,
+                rgb_value};
 use r3bl_terminal_async::{ReadlineEvent,
                           ReadlineEvent::{Eof, Interrupted, Line, Resized},
                           TerminalAsync};
@@ -197,7 +202,7 @@ pub mod monitor_user_input_and_send_to_child {
 
                 // Branch: Monitor terminal_async for user input. This is cancel safe as
                 // `get_readline_event()` is cancel safe.
-                result_readline_event = terminal_async.get_readline_event() => {
+                result_readline_event = terminal_async.read_line() => {
                     match ControlFlow::from(result_readline_event) {
                         ControlFlow::ShutdownKillChild => {
                             _ = child.kill().await;
@@ -282,8 +287,8 @@ pub mod terminal_async_constructor {
 
     pub async fn new(pid: u32) -> miette::Result<TerminalAsyncHandle> {
         let prompt = {
-            let fg = rgb_color!(slate_grey);
-            let bg = rgb_color!(moonlight_blue);
+            let fg = rgb_value!(slate_grey);
+            let bg = rgb_value!(moonlight_blue);
             let prompt_str = inline_string!("┤{pid}├");
             let prompt_seg_1 = fg_rgb_color(fg, &prompt_str).bg_rgb_color(bg);
             let prompt_seg_2 = " ";

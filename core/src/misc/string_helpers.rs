@@ -29,9 +29,7 @@ pub fn contains_ansi_escape_sequence(text: &str) -> bool {
 
 #[test]
 fn test_contains_ansi_escape_sequence() {
-    use r3bl_ansi_color::{ASTColor, ASTStyle, AnsiStyledText};
-
-    use crate::assert_eq2;
+    use crate::{ASTColor, ASTStyle, AnsiStyledText, assert_eq2};
 
     assert_eq2!(
         contains_ansi_escape_sequence(
@@ -50,8 +48,8 @@ fn test_contains_ansi_escape_sequence() {
                       ASTStyle::Bold,
                       ASTStyle::Italic,
                       ASTStyle::Underline,
-                      ASTStyle::Foreground(ASTColor::Rgb(50, 50, 50)),
-                      ASTStyle::Background(ASTColor::Rgb(100, 200, 1)),
+                      ASTStyle::Foreground(ASTColor::Rgb((50, 50, 50).into())),
+                      ASTStyle::Background(ASTColor::Rgb((100, 200, 1).into())),
                   ],
               }
               .to_string()

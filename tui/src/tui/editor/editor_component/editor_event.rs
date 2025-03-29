@@ -17,8 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_ansi_color::green;
-use r3bl_core::{inline_string, Size};
+use r3bl_core::{green, inline_string, Size};
 
 use crate::{clipboard_support::ClipboardService,
             editor_buffer::EditorBuffer,

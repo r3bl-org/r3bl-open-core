@@ -17,7 +17,6 @@
 
 use std::fmt::Write;
 
-use r3bl_ansi_color::AnsiStyledText;
 use sizing::VecConfigs;
 use smallvec::SmallVec;
 
@@ -30,8 +29,8 @@ use super::{ColorWheelConfig,
             config::sizing::VecSteps,
             defaults::{Defaults, get_default_gradient_stops}};
 use crate::{Ansi256GradientIndex,
+            AnsiStyledText,
             ChUnit,
-            ColorUtils,
             GCString,
             GCStringExt as _,
             GradientGenerationPolicy,
@@ -43,7 +42,7 @@ use crate::{Ansi256GradientIndex,
             TuiStyledText,
             TuiStyledTexts,
             ch,
-            convert_to_ansi_color_styles,
+            color_helpers,
             generate_random_truecolor_gradient,
             generate_truecolor_gradient,
             get_gradient_array_for,
@@ -112,7 +111,7 @@ impl ColorWheel {
     ///    important. However, at the very least, one Truecolor config & one ANSI 256
     ///    config should be provided. The fallback is always grayscale. See
     ///    [ColorWheelConfig::narrow_config_based_on_color_support],
-    ///    [r3bl_ansi_color::global_color_support::detect] for more info.
+    ///    [crate::global_color_support::detect] for more info.
     pub fn new(configs: VecConfigs) -> Self {
         Self {
             configs,
@@ -246,7 +245,8 @@ impl ColorWheel {
         // Early return if lolcat.
         if let ColorWheelConfig::Lolcat(_) = &my_config {
             return if let GradientKind::Lolcat(lolcat) = &mut self.gradient_kind {
-                let new_color = ColorUtils::get_color_tuple(&lolcat.color_wheel_control);
+                let new_color =
+                    color_helpers::get_color_tuple(&lolcat.color_wheel_control);
                 lolcat.color_wheel_control.seed +=
                     Seed::from(lolcat.color_wheel_control.color_change_speed);
                 Some(tui_color!(new_color.0, new_color.1, new_color.2))
@@ -396,14 +396,11 @@ impl ColorWheel {
             if let Some(default_style) = maybe_default_style {
                 style += default_style;
             }
-
-            let acc_style = convert_to_ansi_color_styles::from_tui_style(style);
-
+            let acc_style = style.into();
             let ansi_styled_text = AnsiStyledText {
                 style: acc_style,
                 text: &text,
             };
-
             _ = write!(acc, "{}", ansi_styled_text);
         }
 
@@ -411,7 +408,7 @@ impl ColorWheel {
     }
 
     /// This method gives you fine grained control over the color wheel. It returns a
-    /// gradient-colored string. It respects the [r3bl_ansi_color::ColorSupport]
+    /// gradient-colored string. It respects the [crate::ColorSupport]
     /// restrictions for the terminal.
     ///
     /// # Colorization Policy
@@ -511,7 +508,7 @@ impl ColorWheel {
 
                     if let Some((bg_red, bg_green, bg_blue)) = maybe_bg_color {
                         let (fg_red, fg_green, fg_blue) =
-                            ColorUtils::calc_fg_color((bg_red, bg_green, bg_blue));
+                            color_helpers::calc_fg_color((bg_red, bg_green, bg_blue));
                         acc += tui_styled_text!(
                             @style: inner::gen_style_fg_bg_color_for(
                                 maybe_style,
@@ -614,11 +611,10 @@ impl ColorWheel {
 
 #[cfg(test)]
 mod tests_color_wheel_rgb {
-    use r3bl_ansi_color::{ColorSupport, global_color_support};
     use serial_test::serial;
 
     use super::*;
-    use crate::assert_eq2;
+    use crate::{ColorSupport, assert_eq2, global_color_support};
 
     mod test_helpers {
         use smallvec::smallvec;

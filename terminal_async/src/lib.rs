@@ -297,14 +297,14 @@
 //!
 //! ## [`TerminalAsync::try_new()`], which is the main entry point for most use cases
 //!
-//! 1. To read user input, call [`TerminalAsync::get_readline_event()`].
+//! 1. To read user input, call [`TerminalAsync::read_line()`].
 //! 2. You can call [`TerminalAsync::clone_shared_writer()`] to get a
 //!    [`r3bl_core::SharedWriter`] instance that you can use to write to `stdout`
 //!    concurrently, using [`std::write!`] or [`std::writeln!`].
 //! 3. If you use [`std::writeln!`] then there's no need to [`TerminalAsync::flush()`]
 //!    because the `\n` will flush the buffer. When there's no `\n` in the buffer, or you
 //!    are using [`std::write!`] then you might need to call [`TerminalAsync::flush()`].
-//! 4. You can use the [`TerminalAsync::println`] and [`TerminalAsync::println_prefixed`]
+//! 4. You can use the [`ta_println!`] and [`ta_println_prefixed!`]
 //!    methods to easily write concurrent output to the `stdout`
 //!    ([`r3bl_core::SharedWriter`]).
 //! 5. You can also get access to the underlying [`Readline`] via the
@@ -366,7 +366,7 @@
 //!
 //! ```
 //! # use r3bl_terminal_async::TerminalAsync;
-//! # use r3bl_ansi_color::{magenta};
+//! # use r3bl_core::{magenta};
 //! # pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
 //!         let user = "naz";

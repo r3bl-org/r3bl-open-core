@@ -26,7 +26,6 @@ use r3bl_core::{format_as_kilobytes_with_commas,
                 CaretRaw,
                 CaretScrAdj,
                 ColWidth,
-                Dim,
                 GCString,
                 GCStringExt,
                 InlineString,
@@ -34,6 +33,7 @@ use r3bl_core::{format_as_kilobytes_with_commas,
                 RowIndex,
                 ScrOfs,
                 SegString,
+                Size,
                 TinyInlineString};
 use smallvec::smallvec;
 
@@ -579,7 +579,7 @@ pub mod access_and_mutate {
         /// [r3bl_core::ChUnitPrimitiveType::MAX] that means that the viewport argument
         /// was not passed in from an [crate::EditorEngine], since this method can be called
         /// without having an instance of that type.
-        pub fn get_mut(&mut self, vp: Dim) -> EditorBufferMutWithDrop<'_> {
+        pub fn get_mut(&mut self, vp: Size) -> EditorBufferMutWithDrop<'_> {
             EditorBufferMutWithDrop::new(
                 &mut self.content.lines,
                 &mut self.content.caret_raw,
@@ -593,7 +593,7 @@ pub mod access_and_mutate {
         /// not used to perform validation checks after mutation. This is useful when you
         /// don't want to run validation checks after mutation, which happens when the
         /// window is resized using [mod@crate::validate_scroll_on_resize].
-        pub fn get_mut_no_drop(&mut self, vp: Dim) -> EditorBufferMutNoDrop<'_> {
+        pub fn get_mut_no_drop(&mut self, vp: Size) -> EditorBufferMutNoDrop<'_> {
             EditorBufferMutNoDrop::new(
                 &mut self.content.lines,
                 &mut self.content.caret_raw,

@@ -20,7 +20,7 @@ use nom::{bytes::complete::{tag, take_until},
           error::ErrorKind,
           sequence::tuple,
           IResult};
-use r3bl_ansi_color::{green, red};
+use r3bl_core::{green, red};
 
 use crate::{constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
 

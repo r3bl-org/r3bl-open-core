@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{Dim, LockedOutputDevice, Pos};
+use r3bl_core::{LockedOutputDevice, Pos, Size};
 
 use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
 use crate::{diff_chunks::PixelCharDiffChunks,
@@ -35,7 +35,7 @@ pub trait PaintRenderOp {
         &mut self,
         skip_flush: &mut bool,
         render_op: &RenderOp,
-        window_size: Dim,
+        window_size: Size,
         local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
@@ -115,7 +115,7 @@ pub fn paint<S, AS>(
 
     fn perform_diff_paint(
         diff_chunks: &PixelCharDiffChunks,
-        window_size: Dim,
+        window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) {
@@ -137,7 +137,7 @@ pub fn paint<S, AS>(
     fn perform_full_paint(
         offscreen_buffer: &OffscreenBuffer,
         flush_kind: FlushKind,
-        window_size: Dim,
+        window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) {
@@ -175,10 +175,10 @@ pub fn paint<S, AS>(
 /// function.
 pub fn sanitize_and_save_abs_pos(
     orig_abs_pos: Pos,
-    window_size: Dim,
+    window_size: Size,
     local_data: &mut RenderOpsLocalData,
 ) -> Pos {
-    let Dim {
+    let Size {
         col_width: window_width,
         row_height: window_height,
     } = window_size;

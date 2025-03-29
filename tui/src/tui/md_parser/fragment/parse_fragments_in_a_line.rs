@@ -28,8 +28,7 @@
 //! the tests in this file.
 
 use nom::{branch::alt, combinator::map, IResult};
-use r3bl_ansi_color::{green, red};
-use r3bl_core::inline_string;
+use r3bl_core::{green, inline_string, red};
 
 use crate::{parse_fragment_plain_text_no_new_line,
             parse_fragment_starts_with_backtick_err_on_new_line,

@@ -57,8 +57,9 @@ use std::fmt::{Debug, Display};
 
 use kv::{Bincode, Config, Store};
 use miette::{Context, IntoDiagnostic};
-use r3bl_ansi_color::{bold, rgb_color};
 use serde::{Deserialize, Serialize};
+
+use crate::{bold, rgb_value};
 
 /// Convenience type alias for the [kv::Bucket] type.
 /// 1. A [kv::Bucket] is created from a [Store].
@@ -172,7 +173,7 @@ pub fn insert_into_bucket<
     value: ValueT,
 ) -> miette::Result<()> {
     let value_str = inline_string!("{:?}", value);
-    let value_str_fmt = bold(&value_str).fg_rgb_color(rgb_color!(cyan));
+    let value_str_fmt = bold(&value_str).fg_rgb_color(rgb_value!(cyan));
 
     // Serialize the Rust struct into a binary payload.
     bucket

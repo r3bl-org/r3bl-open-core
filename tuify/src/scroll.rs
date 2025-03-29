@@ -60,8 +60,7 @@
 //!    ╰─────────────────────╯ <- AtAbsoluteBottom
 //! ```
 
-use r3bl_ansi_color::green;
-use r3bl_core::{ch, inline_string, ChUnit};
+use r3bl_core::{ch, green, inline_string, ChUnit};
 
 use crate::DEVELOPMENT_MODE;
 

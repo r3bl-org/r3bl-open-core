@@ -18,11 +18,11 @@
 use std::fmt::{Debug, Formatter, Result};
 
 use super::{Colorize, LolcatBuilder, Seed, SeedDelta};
-use crate::{ColorUtils,
-            ColorWheelControl,
+use crate::{ColorWheelControl,
             GCString,
             TuiStyle,
             TuiStyledTexts,
+            color_helpers,
             tui_color,
             tui_styled_text};
 
@@ -54,16 +54,16 @@ impl Debug for Lolcat {
 }
 
 impl Lolcat {
-    /// This function does not respect [r3bl_ansi_color::global_color_support::detect()]
+    /// This function does not respect [crate::global_color_support::detect()]
     /// (it will always colorize to truecolor regardless of terminal limitations). Use
     /// [crate::ColorWheel] if you want to respect
-    /// [r3bl_ansi_color::global_color_support::detect].
+    /// [crate::global_color_support::detect].
     pub fn colorize_to_styled_texts(&mut self, us: &GCString) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
 
         for seg_str in us.iter() {
-            let new_color = ColorUtils::get_color_tuple(&self.color_wheel_control);
-            let derived_from_new_color = ColorUtils::calc_fg_color(new_color);
+            let new_color = color_helpers::get_color_tuple(&self.color_wheel_control);
+            let derived_from_new_color = color_helpers::calc_fg_color(new_color);
 
             let style = if self.color_wheel_control.background_mode
                 == Colorize::BothBackgroundAndForeground

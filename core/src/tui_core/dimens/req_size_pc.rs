@@ -30,9 +30,9 @@ use super::Pc;
 ///    returns a [Result] type, since the `?` operator is used here.
 /// 2. Directly create it using the [ReqSizePc] struct with [crate::Pc] values.
 ///
-/// Note that [crate::Dim], defined as:
-/// - height or [crate::Dim::row_height],
-/// - width or [crate::Dim::col_width].
+/// Note that [crate::Size], defined as:
+/// - height or [crate::Size::row_height],
+/// - width or [crate::Size::col_width].
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct ReqSizePc {
     pub width_pc: Pc,

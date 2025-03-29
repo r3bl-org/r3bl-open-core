@@ -28,7 +28,7 @@
 //! 2. If you don't want the buffer to be mutated, then you can use
 //!    [EditorBufferMutNoDrop] by calling [EditorBuffer::get_mut_no_drop()].
 
-use r3bl_core::{col, usize, width, CaretRaw, ColWidth, Dim, ScrOfs};
+use r3bl_core::{col, usize, width, CaretRaw, ColWidth, ScrOfs, Size};
 
 use super::scroll_editor_content;
 use crate::{editor::sizing::VecEditorContentLines, EditorBuffer, SelectionList};
@@ -44,7 +44,7 @@ pub struct EditorBufferMut<'a> {
     /// - Viewport height is optional because it's only needed for caret validation.
     ///   And you can get it from [crate::EditorEngine]. You can pass `0` if you don't have
     ///   it.
-    pub vp: Dim,
+    pub vp: Size,
 }
 
 mod editor_buffer_mut_impl_block {
@@ -66,7 +66,7 @@ mod editor_buffer_mut_impl_block {
             caret_raw: &'a mut CaretRaw,
             scr_ofs: &'a mut ScrOfs,
             sel_list: &'a mut SelectionList,
-            vp: Dim,
+            vp: Size,
         ) -> EditorBufferMut<'a> {
             EditorBufferMut {
                 lines,
@@ -92,7 +92,7 @@ mod editor_buffer_mut_no_drop_impl_block {
             caret_raw: &'a mut CaretRaw,
             scr_ofs: &'a mut ScrOfs,
             sel_list: &'a mut SelectionList,
-            vp: Dim,
+            vp: Size,
         ) -> EditorBufferMutNoDrop<'a> {
             EditorBufferMutNoDrop {
                 inner: EditorBufferMut::new(lines, caret_raw, scr_ofs, sel_list, vp),
@@ -124,7 +124,7 @@ mod editor_buffer_mut_with_drop_impl_block {
             caret_raw: &'a mut CaretRaw,
             scr_ofs: &'a mut ScrOfs,
             sel_list: &'a mut SelectionList,
-            vp: Dim,
+            vp: Size,
         ) -> EditorBufferMutWithDrop<'a> {
             EditorBufferMutWithDrop {
                 inner: EditorBufferMut::new(lines, caret_raw, scr_ofs, sel_list, vp),
