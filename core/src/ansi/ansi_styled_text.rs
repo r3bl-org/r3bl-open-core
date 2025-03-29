@@ -18,20 +18,16 @@
 use std::fmt::{Display, Formatter, Result};
 
 use smallstr::SmallString;
-use smallvec::smallvec;
+use smallvec::{SmallVec, smallvec};
 use strum_macros::EnumCount;
 
-use crate::{ASTColor,
-            DEFAULT_STRING_STORAGE_SIZE,
-            InlineVecASTStyles,
-            RgbValue,
-            SgrCode};
+use crate::{ASTColor, DEFAULT_STRING_STORAGE_SIZE, RgbValue, SgrCode, TuiStyle};
 
 /// The main struct that we have to consider is `AnsiStyledText`. It has two fields:
 /// - `text` - the text to print.
 /// - `style` - a list of [ASTStyle] to apply to the text. This is owned in a stack
-///   allocated buffer (which can spill to the heap if it gets larger than
-///   [crate::MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE]).
+///   allocated buffer, which can spill to the heap if it gets larger than
+///   `sizing::MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE`.
 /// - Once created, either directly or using constructor functions like [super::red()],
 ///   you can then use [Self::bg_dark_grey()] to add a background color to the text.
 /// - If you want even more flexibility you can use constructor function
@@ -42,6 +38,7 @@ use crate::{ASTColor,
 ///
 /// ```rust
 /// use r3bl_core::{
+///     TuiStyle,
 ///     red, rgb_value, dim, AnsiStyledText, fg_rgb_color, ASTStyle, ASTColor
 /// };
 ///
@@ -74,11 +71,36 @@ use crate::{ASTColor,
 ///     ],
 /// }
 /// .println();
+///
+/// // Use TuiStyle to create a styled text.
+/// let tui_style = TuiStyle {
+///    bold: true,
+///    dim: false,
+///    ..Default::default()
+/// };
+/// let styled_text = AnsiStyledText {
+///    text: "Hello",
+///    style: tui_style.into(),
+/// };
+/// println!("{styled_text}");
+/// styled_text.println();
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AnsiStyledText<'a> {
     pub text: &'a str,
-    pub style: InlineVecASTStyles,
+    /// You can supply this directly, or use [crate::new_style!] to create a
+    /// [crate::TuiStyle] and convert it to this type using `.into()`.
+    pub style: sizing::InlineVecASTStyles,
+}
+
+pub(in crate::ansi) mod sizing {
+    use super::*;
+
+    /// Attributes are: color_fg, color_bg, bold, dim, italic, underline, reverse, hidden,
+    /// etc. which are in [crate::ASTStyle].
+    pub const MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE: usize = 12;
+    pub type InlineVecASTStyles =
+        SmallVec<[ASTStyle; MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE]>;
 }
 
 mod ansi_styled_text_impl {
@@ -281,6 +303,48 @@ pub enum ASTStyle {
     Strikethrough,
 }
 
+mod convert_tui_style_to_vec_ast_style {
+    use super::{sizing::InlineVecASTStyles, *};
+
+    impl From<TuiStyle> for sizing::InlineVecASTStyles {
+        fn from(tui_style: TuiStyle) -> Self {
+            let mut styles = InlineVecASTStyles::new();
+            if tui_style.bold {
+                styles.push(ASTStyle::Bold);
+            }
+            if tui_style.dim {
+                styles.push(ASTStyle::Dim);
+            }
+            if tui_style.italic {
+                styles.push(ASTStyle::Italic);
+            }
+            if tui_style.underline {
+                styles.push(ASTStyle::Underline);
+            }
+            if tui_style.reverse {
+                styles.push(ASTStyle::Invert);
+            }
+            // Not supported:
+            // Overline,
+            // RapidBlink,
+            // SlowBlink,
+            if tui_style.hidden {
+                styles.push(ASTStyle::Hidden);
+            }
+            if tui_style.strikethrough {
+                styles.push(ASTStyle::Strikethrough);
+            }
+            if let Some(color_fg) = tui_style.color_fg {
+                styles.push(ASTStyle::Foreground(color_fg.into()));
+            }
+            if let Some(color_bg) = tui_style.color_bg {
+                styles.push(ASTStyle::Background(color_bg.into()));
+            }
+            styles
+        }
+    }
+}
+
 mod style_impl {
     use std::fmt::{Display, Formatter, Result};
 
@@ -391,7 +455,92 @@ mod tests {
     use smallvec::smallvec;
 
     use super::dim;
-    use crate::{ASTColor, ASTStyle, AnsiStyledText, ColorSupport, global_color_support};
+    use crate::{ASTColor,
+                ASTStyle,
+                AnsiStyledText,
+                ColorSupport,
+                TuiStyle,
+                ansi::sizing::InlineVecASTStyles,
+                global_color_support};
+
+    #[serial]
+    #[test]
+    fn test_convert_tui_style_to_vec_ast_style() {
+        {
+            let tui_style = TuiStyle {
+                bold: true,
+                dim: false,
+                italic: true,
+                underline: false,
+                reverse: false,
+                hidden: false,
+                strikethrough: true,
+                ..Default::default()
+            };
+            let ast_styles: InlineVecASTStyles = tui_style.into();
+            assert_eq!(
+                ast_styles.as_ref(),
+                &[ASTStyle::Bold, ASTStyle::Italic, ASTStyle::Strikethrough]
+            );
+        }
+
+        {
+            let tui_style = TuiStyle {
+                bold: false,
+                dim: true,
+                italic: false,
+                underline: true,
+                reverse: true,
+                hidden: true,
+                strikethrough: false,
+                ..Default::default()
+            };
+            let ast_styles: InlineVecASTStyles = tui_style.into();
+            assert_eq!(
+                ast_styles.as_ref(),
+                &[
+                    ASTStyle::Dim,
+                    ASTStyle::Underline,
+                    ASTStyle::Invert,
+                    ASTStyle::Hidden
+                ]
+            );
+        }
+
+        {
+            let tui_style = TuiStyle {
+                bold: true,
+                dim: true,
+                italic: true,
+                underline: true,
+                reverse: true,
+                hidden: true,
+                strikethrough: true,
+                ..Default::default()
+            };
+            let ast_styles: InlineVecASTStyles = tui_style.into();
+            assert_eq!(
+                ast_styles.as_ref(),
+                &[
+                    ASTStyle::Bold,
+                    ASTStyle::Dim,
+                    ASTStyle::Italic,
+                    ASTStyle::Underline,
+                    ASTStyle::Invert,
+                    ASTStyle::Hidden,
+                    ASTStyle::Strikethrough
+                ]
+            );
+        }
+
+        {
+            let tui_style = TuiStyle {
+                ..Default::default()
+            };
+            let ast_styles: InlineVecASTStyles = tui_style.into();
+            assert!(ast_styles.is_empty());
+        }
+    }
 
     #[serial]
     #[test]
