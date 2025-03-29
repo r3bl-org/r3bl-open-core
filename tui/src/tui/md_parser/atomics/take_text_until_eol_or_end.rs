@@ -59,7 +59,7 @@ pub fn take_text_until_new_line_or_end<'input>() ->
 
 #[cfg(test)]
 mod test_text_until_opt_eol {
-    use r3bl_core::{assert_eq2, bold, rgb_color};
+    use r3bl_core::{assert_eq2, bold, rgb_value};
 
     use super::*;
 
@@ -70,7 +70,7 @@ mod test_text_until_opt_eol {
             format_args!(
                 "{}",
                 bold("test_text_until_opt_eol()")
-                    .fg_rgb_color(rgb_color!(lizard_green))
+                    .fg_rgb_color(rgb_value!(lizard_green))
                     .bg_dark_grey()
             )
         );

@@ -39,7 +39,7 @@ pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
         text: " Up or down:     navigate",
         style: smallvec::smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
@@ -47,7 +47,7 @@ pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
         text: " Space:          select or deselect item",
         style: smallvec::smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
@@ -55,7 +55,7 @@ pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
         text: " Esc or Ctrl+C:  exit program",
         style: smallvec::smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
@@ -63,7 +63,7 @@ pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
         text: " Return:         confirm selection",
         style: smallvec::smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
@@ -75,14 +75,14 @@ pub fn single_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
         text: " Up or down:     navigate",
         style: smallvec::smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:  exit program",
         style: smallvec::smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
@@ -90,7 +90,7 @@ pub fn single_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
         text: " Return:         confirm selection",
         style: smallvec::smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb(14, 17, 23)),
+            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 

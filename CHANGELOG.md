@@ -513,7 +513,7 @@ Added:
     terminal output for log formatting or a welcome message. You can see this in the demo
     example for `r3bl_tui` which uses this
     `let msg_fmt = fg_rgb_color(ASTColor::from(tui_color!(lizard_green)), &msg);`. Also `r3bl_ansi_color`
-    has an equivalent macro to this called `rgb_color!`.
+    has an equivalent macro to this called `rgb_value!`.
   - Add new target in `run` Nushell script called `nu run release-examples-no-log` to run
     the examples without logging. This is useful for performance testing. Now that HUD is
     displayed in the examples, there is no need to enable logging just to see this
@@ -973,6 +973,13 @@ Moved:
     when it wasn't clear where `r3bl_ansi_term` fits with `r3bl_tui` and `r3bl_tuify`, etc.
 
 Changed:
+  - Consolidate the color structs from `r3bl_core` and `r3bl_ansi_color`, since
+    `r3bl_ansi_color` is deprecated and its functionality has been moved into `r3bl_core`.
+    The `ASTColor` and `TuiColor` structs have the same underpinning structs, which
+    they're composed on top of. The reason for the distinction is just to make it clear
+    the differences between TUI output and console output (directly to stdout or colorful
+    log message) use cases. The conversion functions and traits are also consolidated in
+    one place.
   - In `decl_macros/macros.rs` change the semantics of the `with!` macro, so that the
     `$id` is only contained to the `run` block and doesn't get added to the caller's scope
     / block.
@@ -1760,7 +1767,7 @@ repo and workspace. The names are also cleaned up so there's no confusion about 
     `tui_color!` and make it trivial to write code that uses styles / colors from the
     `r3bl_tui` crate and apply them to `AnsiStyledText` which is a very common pattern
     when colorizing log output.
-  - Easy macro `rgb_color!` to create lots of beautiful colors with ease. This is similar
+  - Easy macro `rgb_value!` to create lots of beautiful colors with ease. This is similar
     to `r3bl_tui` crate's `tui_color!` macro.
 
 - Removed:

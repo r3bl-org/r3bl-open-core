@@ -42,7 +42,7 @@ use crate::{ASTColor,
 ///
 /// ```rust
 /// use r3bl_core::{
-///     red, rgb_color, dim, AnsiStyledText, fg_rgb_color, ASTStyle, ASTColor
+///     red, rgb_value, dim, AnsiStyledText, fg_rgb_color, ASTStyle, ASTColor
 /// };
 ///
 /// // Using the constructor functions.
@@ -57,8 +57,8 @@ use crate::{ASTColor,
 /// dim_red_text_on_dark_grey.println();
 ///
 /// // Flexible construction using RGB color codes.
-/// let blue_text = fg_rgb_color(rgb_color!(blue), "This is blue text.");
-/// let blue_text_on_white = blue_text.bg_rgb_color(rgb_color!(white));
+/// let blue_text = fg_rgb_color(rgb_value!(blue), "This is blue text.");
+/// let blue_text_on_white = blue_text.bg_rgb_color(rgb_value!(white));
 /// println!("{blue_text_on_white}");
 /// blue_text_on_white.println();
 ///
@@ -69,8 +69,8 @@ use crate::{ASTColor,
 ///         ASTStyle::Bold,
 ///         ASTStyle::Italic,
 ///         ASTStyle::Underline,
-///         ASTStyle::Foreground(ASTColor::Rgb(50, 50, 50)),
-///         ASTStyle::Background(ASTColor::Rgb(100, 200, 1)),
+///         ASTStyle::Foreground(ASTColor::Rgb((50, 50, 50).into())),
+///         ASTStyle::Background(ASTColor::Rgb((100, 200, 1).into())),
 ///     ],
 /// }
 /// .println();
@@ -161,35 +161,35 @@ pub fn magenta(text: &str) -> AnsiStyledText<'_> {
 pub fn lizard_green(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(crate::rgb_color!(lizard_green).into())),
+        style: smallvec!(ASTStyle::Foreground(crate::rgb_value!(lizard_green).into())),
     }
 }
 
 pub fn pink(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(crate::rgb_color!(pink).into())),
+        style: smallvec!(ASTStyle::Foreground(crate::rgb_value!(pink).into())),
     }
 }
 
 pub fn dark_pink(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(crate::rgb_color!(dark_pink).into())),
+        style: smallvec!(ASTStyle::Foreground(crate::rgb_value!(dark_pink).into())),
     }
 }
 
 pub fn frozen_blue(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(crate::rgb_color!(frozen_blue).into())),
+        style: smallvec!(ASTStyle::Foreground(crate::rgb_value!(frozen_blue).into())),
     }
 }
 
 pub fn guards_red(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(crate::rgb_color!(guards_red).into())),
+        style: smallvec!(ASTStyle::Foreground(crate::rgb_value!(guards_red).into())),
     }
 }
 
@@ -407,7 +407,7 @@ mod tests {
         println!("{}", eg_1);
         assert_eq!(
             format!("{:?}", eg_1),
-            r#"AnsiStyledText { text: "Hello", style: [Bold, Foreground(Rgb(0, 0, 0))] }"#
+            r#"AnsiStyledText { text: "Hello", style: [Bold, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 }))] }"#
         );
 
         let eg_2 = eg_1.bg_dark_grey();
@@ -415,7 +415,7 @@ mod tests {
         println!("{}", eg_2);
         assert_eq!(
             format!("{:?}", eg_2),
-            r#"AnsiStyledText { text: "Hello", style: [Bold, Foreground(Rgb(0, 0, 0)), Background(Ansi256(236))] }"#
+            r#"AnsiStyledText { text: "Hello", style: [Bold, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 })), Background(Ansi(AnsiValue { index: 236 }))] }"#
         );
     }
 
@@ -427,7 +427,7 @@ mod tests {
         println!("{}", eg_1);
         assert_eq!(
             format!("{:?}", eg_1),
-            r#"AnsiStyledText { text: "hello", style: [Dim, Foreground(Rgb(0, 0, 0)), Background(Rgb(1, 1, 1))] }"#
+            r#"AnsiStyledText { text: "hello", style: [Dim, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 })), Background(Rgb(RgbValue { red: 1, green: 1, blue: 1 }))] }"#
         );
     }
 
