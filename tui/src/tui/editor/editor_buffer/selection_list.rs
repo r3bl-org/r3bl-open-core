@@ -25,7 +25,7 @@ use r3bl_core::{caret_scr_adj,
                          VERT_LINE_DASHED_GLYPH},
                 inline_string,
                 join,
-                rgb_color,
+                rgb_value,
                 usize,
                 CaretScrAdj,
                 GetMemSize,
@@ -295,9 +295,9 @@ mod impl_debug_format {
             // Format the output.
             for line in selection_list_string.iter_mut() {
                 let (fg_color, bg_color) = if is_empty {
-                    (rgb_color!(frozen_blue), rgb_color!(dark_grey))
+                    (rgb_value!(frozen_blue), rgb_value!(dark_grey))
                 } else {
-                    (rgb_color!(lizard_green), rgb_color!(dark_grey))
+                    (rgb_value!(lizard_green), rgb_value!(dark_grey))
                 };
                 let fmt_line = fg_rgb_color(fg_color, line)
                     .bg_rgb_color(bg_color)

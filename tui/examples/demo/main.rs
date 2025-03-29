@@ -42,7 +42,7 @@ use r3bl_core::{bold,
                 get_size,
                 inline_string,
                 ok,
-                rgb_color,
+                rgb_value,
                 throws,
                 tui_color,
                 ASTColor,
@@ -146,7 +146,7 @@ async fn run_user_selected_example(
                 terminal_async,
                 "{a} {b}",
                 a = frozen_blue("Invalid selection:"),
-                b = bold(&selection).fg_rgb_color(rgb_color!(pink))
+                b = bold(&selection).fg_rgb_color(rgb_value!(pink))
             );
             Ok(())
         }

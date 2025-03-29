@@ -80,8 +80,7 @@ mod ast_color_impl_block {
                     red: rgb_value.red,
                     green: rgb_value.green,
                     blue: rgb_value.blue,
-                })
-                .into(),
+                }),
                 ASTColor::Ansi(ansi_value) => *ansi_value,
             }
         }
@@ -93,13 +92,10 @@ mod ast_color_impl_block {
                     green: rgb_value.green,
                     blue: rgb_value.blue,
                 })
-                .as_grayscale()
-                .into(),
-                ASTColor::Ansi(ansi_value) => {
-                    let ansi256_color = AnsiValue {
-                        index: ansi_value.index,
-                    };
-                    ansi256_color.as_grayscale().into()
+                .as_grayscale(),
+                ASTColor::Ansi(ansi) => {
+                    let ansi = *ansi;
+                    ansi.as_grayscale()
                 }
             }
         }

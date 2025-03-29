@@ -17,29 +17,32 @@
 
 use crate::{ANSIBasicColor, ASTColor, RgbValue, TuiColor};
 
+#[rustfmt::skip]
 pub fn convert_tui_color_into_r3bl_ansi_color(color: TuiColor) -> ASTColor {
     match color {
-        TuiColor::Rgb(RgbValue { red, green, blue }) => ASTColor::Rgb(red, green, blue),
-        TuiColor::Ansi(ansi_value) => ASTColor::Ansi256(ansi_value.index),
-        TuiColor::Basic(basic_color) => match basic_color {
-            ANSIBasicColor::Black => ASTColor::Rgb(0, 0, 0),
-            ANSIBasicColor::White => ASTColor::Rgb(255, 255, 255),
-            ANSIBasicColor::Grey => ASTColor::Rgb(128, 128, 128),
-            ANSIBasicColor::DarkGrey => ASTColor::Rgb(64, 64, 64),
-            ANSIBasicColor::Red => ASTColor::Rgb(255, 0, 0),
-            ANSIBasicColor::DarkRed => ASTColor::Rgb(128, 0, 0),
-            ANSIBasicColor::Green => ASTColor::Rgb(0, 255, 0),
-            ANSIBasicColor::DarkGreen => ASTColor::Rgb(0, 128, 0),
-            ANSIBasicColor::Yellow => ASTColor::Rgb(255, 255, 0),
-            ANSIBasicColor::DarkYellow => ASTColor::Rgb(128, 128, 0),
-            ANSIBasicColor::Blue => ASTColor::Rgb(0, 0, 255),
-            ANSIBasicColor::DarkBlue => ASTColor::Rgb(0, 0, 128),
-            ANSIBasicColor::Magenta => ASTColor::Rgb(255, 0, 255),
-            ANSIBasicColor::DarkMagenta => ASTColor::Rgb(128, 0, 128),
-            ANSIBasicColor::Cyan => ASTColor::Rgb(0, 255, 255),
-            ANSIBasicColor::DarkCyan => ASTColor::Rgb(0, 128, 128),
-        },
         TuiColor::Reset => ASTColor::default(),
+        TuiColor::Basic(basic_color) => match basic_color {
+            ANSIBasicColor::Black       => ASTColor::Rgb((0, 0, 0).into()),
+            ANSIBasicColor::White       => ASTColor::Rgb((255, 255, 255).into()),
+            ANSIBasicColor::Grey        => ASTColor::Rgb((128, 128, 128).into()),
+            ANSIBasicColor::DarkGrey    => ASTColor::Rgb((64, 64, 64).into()),
+            ANSIBasicColor::Red         => ASTColor::Rgb((255, 0, 0).into()),
+            ANSIBasicColor::DarkRed     => ASTColor::Rgb((128, 0, 0).into()),
+            ANSIBasicColor::Green       => ASTColor::Rgb((0, 255, 0).into()),
+            ANSIBasicColor::DarkGreen   => ASTColor::Rgb((0, 128, 0).into()),
+            ANSIBasicColor::Yellow      => ASTColor::Rgb((255, 255, 0).into()),
+            ANSIBasicColor::DarkYellow  => ASTColor::Rgb((128, 128, 0).into()),
+            ANSIBasicColor::Blue        => ASTColor::Rgb((0, 0, 255).into()),
+            ANSIBasicColor::DarkBlue    => ASTColor::Rgb((0, 0, 128).into()),
+            ANSIBasicColor::Magenta     => ASTColor::Rgb((255, 0, 255).into()),
+            ANSIBasicColor::DarkMagenta => ASTColor::Rgb((128, 0, 128).into()),
+            ANSIBasicColor::Cyan        => ASTColor::Rgb((0, 255, 255).into()),
+            ANSIBasicColor::DarkCyan    => ASTColor::Rgb((0, 128, 128).into()),
+        },
+        TuiColor::Ansi(ansi_value) => ASTColor::Ansi(ansi_value),
+        TuiColor::Rgb(RgbValue { red, green, blue }) => {
+            ASTColor::Rgb((red, green, blue).into())
+        },
     }
 }
 
@@ -51,7 +54,7 @@ mod tests_color_converter {
     #[test]
     fn test_convert_tui_color_into_r3bl_ansi_color_rgb() {
         let tui_color = tui_color!(255, 0, 0);
-        let expected_color = ASTColor::Rgb(255, 0, 0);
+        let expected_color = ASTColor::Rgb((255, 0, 0).into());
         let converted_color = convert_tui_color_into_r3bl_ansi_color(tui_color);
         assert_eq!(converted_color, expected_color);
     }
@@ -59,7 +62,7 @@ mod tests_color_converter {
     #[test]
     fn test_convert_tui_color_into_r3bl_ansi_color_ansi() {
         let tui_color = tui_color!(ansi 42);
-        let expected_color = ASTColor::Ansi256(42);
+        let expected_color = ASTColor::Ansi(42.into());
         let converted_color = convert_tui_color_into_r3bl_ansi_color(tui_color);
         assert_eq!(converted_color, expected_color);
     }
@@ -67,7 +70,7 @@ mod tests_color_converter {
     #[test]
     fn test_convert_tui_color_into_r3bl_ansi_color_basic() {
         let tui_color = tui_color!(red);
-        let expected_color = ASTColor::Rgb(255, 0, 0);
+        let expected_color = ASTColor::Rgb((255, 0, 0).into());
         let converted_color = convert_tui_color_into_r3bl_ansi_color(tui_color);
         assert_eq!(converted_color, expected_color);
     }
@@ -75,7 +78,7 @@ mod tests_color_converter {
     #[test]
     fn test_convert_tui_color_into_r3bl_ansi_color_reset() {
         let tui_color = tui_color!(reset);
-        let expected_color = ASTColor::Rgb(0, 0, 0);
+        let expected_color = ASTColor::Rgb((0, 0, 0).into());
         let converted_color = convert_tui_color_into_r3bl_ansi_color(tui_color);
         assert_eq!(converted_color, expected_color);
     }

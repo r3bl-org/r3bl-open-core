@@ -15,10 +15,26 @@
  *   limitations under the License.
  */
 
-use r3bl_core::ASTColor;
+use r3bl_core::{ASTColor, RgbValue};
 
 // Colors.
-pub const LIZARD_GREEN: ASTColor = ASTColor::Rgb(20, 244, 0);
-pub const SLATE_GRAY: ASTColor = ASTColor::Rgb(94, 103, 111);
-pub const FROZEN_BLUE: ASTColor = ASTColor::Rgb(171, 204, 242);
-pub const GUARDS_RED: ASTColor = ASTColor::Rgb(200, 1, 1);
+pub const LIZARD_GREEN: ASTColor = ASTColor::Rgb(RgbValue {
+    red: 20,
+    green: 244,
+    blue: 0,
+});
+pub const SLATE_GRAY: ASTColor = ASTColor::Rgb(RgbValue {
+    red: 94,
+    green: 103,
+    blue: 111,
+});
+pub const FROZEN_BLUE: ASTColor = ASTColor::Rgb(RgbValue {
+    red: 171,
+    green: 204,
+    blue: 242,
+});
+pub const GUARDS_RED: ASTColor = ASTColor::Rgb(RgbValue {
+    red: 200,
+    green: 1,
+    blue: 1,
+});

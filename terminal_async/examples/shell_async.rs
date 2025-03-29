@@ -101,7 +101,7 @@ use r3bl_core::{SharedWriter,
                 inline_string,
                 lizard_green,
                 ok,
-                rgb_color};
+                rgb_value};
 use r3bl_terminal_async::{ReadlineEvent,
                           ReadlineEvent::{Eof, Interrupted, Line, Resized},
                           TerminalAsync};
@@ -287,8 +287,8 @@ pub mod terminal_async_constructor {
 
     pub async fn new(pid: u32) -> miette::Result<TerminalAsyncHandle> {
         let prompt = {
-            let fg = rgb_color!(slate_grey);
-            let bg = rgb_color!(moonlight_blue);
+            let fg = rgb_value!(slate_grey);
+            let bg = rgb_value!(moonlight_blue);
             let prompt_str = inline_string!("┤{pid}├");
             let prompt_seg_1 = fg_rgb_color(fg, &prompt_str).bg_rgb_color(bg);
             let prompt_seg_2 = " ";

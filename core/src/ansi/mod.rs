@@ -141,7 +141,7 @@
 //!
 //! ```rust
 //! use r3bl_core::{
-//!     red, dim, fg_rgb_color, RgbColor, ASTStyle, AnsiStyledText, ASTColor
+//!     red, dim, fg_rgb_color, RgbValue, ASTStyle, AnsiStyledText, ASTColor
 //! };
 //!
 //! // Using the constructor functions.
@@ -156,7 +156,7 @@
 //! dim_red_text_on_dark_grey.println();
 //!
 //! // Flexible construction using RGB color codes.
-//! let blue_text = fg_rgb_color(RgbColor::from((0, 0, 255)), "This is blue text.");
+//! let blue_text = fg_rgb_color(RgbValue::from((0, 0, 255)), "This is blue text.");
 //! let blue_text_on_white = blue_text.bg_rgb_color((255, 255, 255));
 //! println!("{blue_text_on_white}");
 //! blue_text_on_white.println();
@@ -168,8 +168,8 @@
 //!         ASTStyle::Bold,
 //!         ASTStyle::Italic,
 //!         ASTStyle::Underline,
-//!         ASTStyle::Foreground(ASTColor::Rgb(50, 50, 50)),
-//!         ASTStyle::Background(ASTColor::Rgb(100, 200, 1)),
+//!         ASTStyle::Foreground(ASTColor::Rgb((50, 50, 50).into())),
+//!         ASTStyle::Background(ASTColor::Rgb((100, 200, 1).into())),
 //!     ],
 //! }
 //! .println();

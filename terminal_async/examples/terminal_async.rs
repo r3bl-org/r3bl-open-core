@@ -32,7 +32,7 @@ use r3bl_core::{InlineVec,
                 fg_rgb_color,
                 inline_string,
                 red,
-                rgb_color};
+                rgb_value};
 use r3bl_log::{DisplayPreference, try_initialize_logging_global};
 use r3bl_terminal_async::{Readline, ReadlineEvent, Spinner, TerminalAsync, ta_println};
 use smallvec::smallvec;
@@ -82,7 +82,7 @@ fn get_info_message() -> String {
         let commands = Command::iter()
             .map(|it| it.to_string())
             .collect::<Vec<String>>();
-        fg_rgb_color(rgb_color!(lizard_green), &format!("{:?}", commands)).to_string()
+        fg_rgb_color(rgb_value!(lizard_green), &format!("{:?}", commands)).to_string()
     };
 
     let info_message = &format!(
@@ -98,7 +98,7 @@ fn get_info_message() -> String {
         "{a}: \n{b}\n{c}",
         a = bold("Available commands"),
         b = available_commands,
-        c = fg_rgb_color(rgb_color!(frozen_blue), info_message)
+        c = fg_rgb_color(rgb_value!(frozen_blue), info_message)
     )
 }
 
@@ -136,8 +136,8 @@ impl Default for State {
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     let prompt = {
-        let fg = rgb_color!(slate_grey);
-        let bg = rgb_color!(moonlight_blue);
+        let fg = rgb_value!(slate_grey);
+        let bg = rgb_value!(moonlight_blue);
         let prompt_seg_1 = fg_rgb_color(fg, "╭>╮").bg_rgb_color(bg);
         let prompt_seg_2 = " ";
         format!("{}{}", prompt_seg_1, prompt_seg_2)
@@ -198,7 +198,7 @@ async fn main() -> miette::Result<()> {
                                 writeln!(
                                     shared_writer,
                                     "{}",
-                                    fg_rgb_color(rgb_color!(frozen_blue), "Terminal resized!")
+                                    fg_rgb_color(rgb_value!(frozen_blue), "Terminal resized!")
                                 ).into_diagnostic()?;
                             }
                             // Ctrl+D, Ctrl+C.
