@@ -65,7 +65,6 @@ smallvec = { version = "1.6.1", features = [
 
 [dev-dependencies]
 # Testing - r3bl-open-core.
-r3bl_test_fixtures = { path = "../test_fixtures" }
 
 [features]
 default = ["emacs"]

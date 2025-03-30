@@ -1747,12 +1747,14 @@ dependencies = [
  "smallstr",
  "smallvec",
  "strip-ansi",
+ "strip-ansi-escapes",
  "strum",
  "strum_macros",
  "test-case",
  "thiserror 1.0.64",
  "time",
  "tokio",
+ "tokio-test",
  "tracing",
  "tracing-appender",
  "tracing-core",
@@ -1773,7 +1775,6 @@ dependencies = [
  "miette",
  "pretty_assertions",
  "r3bl_core",
- "r3bl_test_fixtures",
  "serial_test",
  "smallstr",
  "smallvec",
@@ -1820,7 +1821,6 @@ dependencies = [
  "pretty_assertions",
  "r3bl_core",
  "r3bl_log",
- "r3bl_test_fixtures",
  "smallstr",
  "smallvec",
  "strum",
@@ -1833,31 +1833,6 @@ dependencies = [
  "tracing-subscriber",
  "unicode-segmentation",
  "unicode-width 0.2.0",
-]
-
-[[package]]
-name = "r3bl_test_fixtures"
-version = "0.1.0"
-dependencies = [
- "async-stream",
- "crossterm",
- "futures-core",
- "futures-util",
- "miette",
- "pretty_assertions",
- "r3bl_core",
- "smallstr",
- "smallvec",
- "strip-ansi-escapes",
- "strum",
- "strum_macros",
- "thiserror 1.0.64",
- "tokio",
- "tokio-test",
- "tracing",
- "tracing-appender",
- "tracing-core",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1875,7 +1850,6 @@ dependencies = [
  "r3bl_core",
  "r3bl_log",
  "r3bl_terminal_async",
- "r3bl_test_fixtures",
  "rand",
  "serde",
  "serde_json",
@@ -2001,9 +1975,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.11.0"
+version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38200e5ee88914975b69f657f0801b6f6dccafd44fd9326302a4aaeecfacb1d8"
+checksum = "b544ef1b4eac5dc2db33ea63606ae9ffcfac26c1416a2806ae0bf5f56b201191"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -2460,9 +2434,9 @@ dependencies = [
 
 [[package]]
 name = "strip-ansi-escapes"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55ff8ef943b384c414f54aefa961dd2bd853add74ec75e7ac74cf91dba62bcfa"
+checksum = "2a8f8038e7e7969abb3f1b7c2a811225e9296da208539e0f79c5251d6cac0025"
 dependencies = [
  "vte",
 ]
@@ -2803,9 +2777,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.16"
+version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f4e6ce100d0eb49a2734f8c0812bcd324cf357d21810932c5df6b96ef2b86f1"
+checksum = "eca58d7bba4a75707817a2c44174253f9236b2d5fbd055602e9d5c07c139a047"
 dependencies = [
  "futures-core",
  "pin-project-lite",
@@ -3050,22 +3024,11 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vte"
-version = "0.11.1"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5022b5fbf9407086c180e9557be968742d839e68346af7792b8592489732197"
+checksum = "231fdcd7ef3037e8330d8e17e61011a2c244126acc0a982f4040ac3f9f0bc077"
 dependencies = [
- "utf8parse",
- "vte_generate_state_changes",
-]
-
-[[package]]
-name = "vte_generate_state_changes"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e369bee1b05d510a7b4ed645f5faa90619e05437111783ea5848f28d97d3c2e"
-dependencies = [
- "proc-macro2",
- "quote",
+ "memchr",
 ]
 
 [[package]]

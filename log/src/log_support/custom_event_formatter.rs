@@ -343,8 +343,7 @@ mod tests_tracing_custom_event_formatter {
     use std::sync::Mutex;
 
     use chrono::Local;
-    use r3bl_core::glyphs::SPACER_GLYPH as SPACER;
-    use r3bl_test_fixtures::StdoutMock;
+    use r3bl_core::{glyphs::SPACER_GLYPH as SPACER, test_fixtures::StdoutMock};
     use tracing::{info, subscriber::set_default};
     use tracing_subscriber::fmt::SubscriberBuilder;
 

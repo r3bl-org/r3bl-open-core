@@ -18,7 +18,8 @@
 use std::time::Duration;
 
 use async_stream::stream;
-use r3bl_core::{InlineVec, PinnedInputStream};
+
+use crate::{InlineVec, PinnedInputStream};
 
 /// The main constructors are:
 /// - [super::InputDeviceExt::new_mock()]

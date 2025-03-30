@@ -205,8 +205,7 @@ impl Spinner {
 mod tests {
     use std::sync::Arc;
 
-    use r3bl_core::{SpinnerColor, SpinnerTemplate, StdMutex};
-    use r3bl_test_fixtures::StdoutMock;
+    use r3bl_core::{SpinnerColor, SpinnerTemplate, StdMutex, test_fixtures::StdoutMock};
     use smallvec::SmallVec;
 
     use super::{Duration,

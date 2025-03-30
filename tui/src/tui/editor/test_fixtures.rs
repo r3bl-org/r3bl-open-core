@@ -23,10 +23,11 @@ pub mod mock_real_objects_for_editor {
                     height,
                     row,
                     telemetry::sizing::TelemetryReportLineStorage,
+                    test_fixtures::{output_device_ext::OutputDeviceExt as _,
+                                    StdoutMock},
                     width,
                     OutputDevice,
                     Size};
-    use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, StdoutMock};
     use tokio::sync::mpsc;
 
     use crate::{EditorEngine,
