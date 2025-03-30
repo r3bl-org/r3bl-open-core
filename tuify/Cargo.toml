@@ -31,7 +31,6 @@ path = "src/bin/rt.rs"
 [dependencies]
 # r3bl-open-core.
 r3bl_core = { path = "../core", version = "0.10.0" } # version is required to publish to crates.io
-r3bl_log = { path = "../log", version = "0.1.0" }    # version is required to publish to crates.io
 
 # For smallstr & smallvec.
 smallstr = { version = "0.3.0", features = ["std", "union"] }

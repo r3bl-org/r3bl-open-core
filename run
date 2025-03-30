@@ -24,7 +24,6 @@ let workspace_folders = [
     "tuify",
     "terminal_async",
     "script",
-    "log",
     "core",
     "cmdr",
     "analytics_schema",

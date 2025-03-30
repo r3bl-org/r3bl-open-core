@@ -30,12 +30,12 @@ use r3bl_core::{blue,
                 is_stdin_piped,
                 is_stdout_piped,
                 lizard_green,
+                log_support::try_initialize_logging_global,
                 pink,
                 throws,
                 usize,
                 StdinIsPipedResult,
                 StdoutIsPipedResult};
-use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, DEVELOPMENT_MODE};
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 use StdinIsPipedResult::{StdinIsNotPiped, StdinIsPiped};

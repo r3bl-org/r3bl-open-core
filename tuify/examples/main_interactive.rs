@@ -19,12 +19,12 @@ use std::vec;
 
 use r3bl_core::{get_size,
                 get_terminal_width,
+                log_support::try_initialize_logging_global,
                 throws,
                 usize,
                 ASTColor,
                 ASTStyle,
                 AnsiStyledText};
-use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{components::style::StyleSheet,
                  select_from_list,
                  select_from_list_with_multi_line_header,

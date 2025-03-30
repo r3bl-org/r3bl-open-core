@@ -31,9 +31,9 @@ use r3bl_core::{InlineVec,
                 bold,
                 fg_rgb_color,
                 inline_string,
+                log_support::{DisplayPreference, try_initialize_logging_global},
                 red,
                 rgb_value};
-use r3bl_log::{DisplayPreference, try_initialize_logging_global};
 use r3bl_terminal_async::{Readline, ReadlineEvent, Spinner, TerminalAsync, ta_println};
 use smallvec::smallvec;
 use strum::IntoEnumIterator;

@@ -7,7 +7,6 @@ members = [
   "terminal_async",
   "tui",
   "tuify",
-  "log",
   "script",
 ] # Make sure to keep these in sync with `run` nushell script `workspace_folders`.
 

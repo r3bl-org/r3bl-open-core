@@ -17,10 +17,9 @@
 
 use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
 
-use r3bl_core::ok;
 use tracing::dispatcher;
 
-use crate::{DisplayPreference, TracingConfig, WriterConfig};
+use crate::{DisplayPreference, TracingConfig, WriterConfig, ok};
 
 // XMARK: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config options.
 /// This module makes it easier to configure the logging system. Instead of having lots of
@@ -31,7 +30,7 @@ use crate::{DisplayPreference, TracingConfig, WriterConfig};
 /// retaining a simple function signature. Here are some examples of what is possible:
 ///
 /// ```no_run
-/// use r3bl_log::{
+/// use r3bl_core::log_support::{
 ///     TracingConfig, DisplayPreference, WriterConfig,
 ///     try_initialize_logging_global, try_initialize_logging_thread_local
 /// };
@@ -171,7 +170,7 @@ pub mod tracing_config_options {
 
     #[cfg(test)]
     mod tests_add_writer_configs {
-        use r3bl_core::SharedWriter;
+        use crate::SharedWriter;
 
         #[test]
         fn test_add_writer_configs() {
@@ -333,10 +332,10 @@ pub mod tracing_config_options {
 /// [tracing::info!], [tracing::debug!], etc. macros.
 ///
 /// This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as
-/// the output destination. This method also ensures that the [`r3bl_core::SharedWriter`]
+/// the output destination. This method also ensures that the [`crate::SharedWriter`]
 /// is used for concurrent writes to `stdout`. You can also use the [`TracingConfig`]
 /// struct to customize the behavior of the tracing setup, by choosing whether to display
-/// output to `stdout`, `stderr`, or a [`r3bl_core::SharedWriter`]. By default, both
+/// output to `stdout`, `stderr`, or a [`crate::SharedWriter`]. By default, both
 /// display and file logging are enabled. You can also customize the log level, and the
 /// file path and prefix for the log file.
 ///
