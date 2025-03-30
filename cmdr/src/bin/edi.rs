@@ -25,8 +25,8 @@ use r3bl_core::{ASTStyle,
                 CommonResult,
                 GradientGenerationPolicy,
                 TextColorizationPolicy,
+                log_support::try_initialize_logging_global,
                 throws};
-use r3bl_log::try_initialize_logging_global;
 use r3bl_tuify::{LIZARD_GREEN, SLATE_GRAY, SelectionMode, StyleSheet, select_from_list};
 
 use crate::clap_config::CLIArg;

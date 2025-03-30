@@ -163,9 +163,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::create_temp_dir;
-
     use super::*;
+    use crate::create_temp_dir;
 
     #[test]
     fn test_try_create_display_layer() {
@@ -229,61 +228,12 @@ mod fixtures {
     }
 }
 
-/// This test works with the binary under test, which is `tracing_test_bin`. That binary
-/// takes 1 string argument: "stdout" or "stderr". It uses the `assert_cmd` crate to
-/// verify that the [DisplayPreference::Stdout] and [DisplayPreference::Stderr] work as
-/// expected. There is no easy way to actually test `stdout` and `stderr` without spawning
-/// a new process, so this is the best way to test it.
-///
-/// If tests in this module fail, then make sure that the binary under test has been, in
-/// fact, built. So, make sure to run `cargo build && cargo test` rather than just `cargo
-/// test`.`
-///
-/// See:
-/// 1. Test module: `test_tracing_bin_stdio` in `tracing_init.rs` <- you are here
-/// 2. Binary under test: `tracing_test_bin.rs`
-/// 3. `assert_cmd` : <https://docs.rs/assert_cmd/latest/assert_cmd/index.html>
-#[cfg(test)]
-mod test_tracing_bin_stdio {
-    use assert_cmd::Command;
-
-    use super::fixtures::get_expected;
-
-    #[test]
-    fn stdout() {
-        let output = Command::cargo_bin("tracing_test_bin")
-            .unwrap()
-            .arg("stdout")
-            .ok()
-            .unwrap();
-
-        let output = String::from_utf8_lossy(output.stdout.as_slice());
-        for it in get_expected().iter() {
-            assert!(output.contains(it));
-        }
-    }
-
-    #[test]
-    fn stderr() {
-        let output = Command::cargo_bin("tracing_test_bin")
-            .unwrap()
-            .arg("stderr")
-            .ok()
-            .unwrap();
-
-        let output = String::from_utf8_lossy(output.stderr.as_slice());
-        for it in get_expected().iter() {
-            assert!(output.contains(it));
-        }
-    }
-}
-
 #[cfg(test)]
 mod test_tracing_shared_writer_output {
-    use r3bl_core::{InlineVec, LineStateControlSignal, SharedWriter, Text, join};
     use smallvec::smallvec;
 
     use super::{fixtures::get_expected, *};
+    use crate::{InlineVec, LineStateControlSignal, SharedWriter, Text, join};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]

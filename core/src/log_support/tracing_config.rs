@@ -17,12 +17,12 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::SharedWriter;
 use tracing::dispatcher;
 use tracing_core::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use super::try_create_layers;
+use crate::SharedWriter;
 
 /// - `tracing_log_file_path_and_prefix`: [String] is the file path and prefix to use for
 ///   the log file. Eg: `/tmp/tcp_api_server` or `tcp_api_server`.

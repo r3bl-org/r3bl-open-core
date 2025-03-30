@@ -900,11 +900,12 @@ exhaustively tested and is able to handle many more corner cases.
 
 ### v_next_release_r3bl_core
 
-This release has **lots** of major breaking changes. The codebase has roughly 140K lines of
-code. And about 25K lines of code have been added, and 14K lines have been removed. This
-is a major release that is part of a total reorganization of the `r3bl-open-core` repo.
-These changes pay down all the technical debt accrued over the past 2 years of
-development.
+This release has **lots** of major breaking changes. Lots of crates in the monorepo have
+of code. The codebase has roughly 48K lines _not counting comment lines_. And about 25K
+lines of code have been added, and 14K lines have been removed. been moved into this crate
+(and then been archived). This is a major release that is part of a total reorganization
+of the `r3bl-open-core` repo. These changes pay down all the technical debt accrued over
+the past 2 years of development.
 
 Our goal is to ensure a clean and maintainable codebase that is easy to understand and
 easy to add new features to in the future. And also a codebase that does not require
@@ -951,6 +952,16 @@ idioms and design patterns are used in this release.
 - `new_style!` (decl macro) replaces `tui_style!` (proc macro). `tui_color!` also replaces
   `color!`. You are not expected to work with `TuiStyle` or `TuiColor` directly. Instead,
   you are expected to work with these decl macros.
+- `log_support` moves from `r3bl_log` (which never got published after getting created).
+  This was meant to be the first release of this crate, but it is moved into `r3bl_core`
+  now. It is a top level crate in the `r3bl-open-core` that is meant to hold all the
+  logging related functionality for all the other crates in this monorepo. It uses
+  `tracing` under the covers to provide structured logging. It also provides a custom
+  formatter that is a `tracing-subscriber` crate plugin. This release contains changes
+  that are part of optimizing memory allocation to increase performance, and ensure that
+  performance is stable over time. `ch_unit.rs` is also heavily refactored and the entire
+  codebase updated so that a the more ergonomic `ChUnit` API is now used throughout the
+  codebase.
 
 These videos have been an inspiration for many of these changes:
 - [Data oriented design](https://youtu.be/WwkuAqObplU)
@@ -970,15 +981,15 @@ Here are the highlights:
      allow for an optional default style to be passed in, that will be applied to the
      generated lolcat output.
 
-Moved:
+- Moved:
   - Move the contents of `r3bl_ansi_term` crate into `r3bl_core`. There is no need to have
     that crate as an external dependency. Moving it where it belongs. It was developed as
     a separate crate at the start, since the `r3bl_tui` codebase was in a much earlier stage
     when it wasn't clear where `r3bl_ansi_term` fits with `r3bl_tui` and `r3bl_tuify`, etc.
 
-Changed:
+- Changed:
   - Consolidate the color structs from `r3bl_core` and `r3bl_ansi_color`, since
-    `r3bl_ansi_color` is deprecated and its functionality has been moved into `r3bl_core`.
+  `r3bl_ansi_color` is deprecated and its functionality has been moved into `r3bl_core`.
     The `ASTColor` and `TuiColor` structs have the same underpinning structs, which
     they're composed on top of. The reason for the distinction is just to make it clear
     the differences between TUI output and console output (directly to stdout or colorful
@@ -1034,6 +1045,12 @@ Changed:
   - Replace the use of `bool` with meaningful enums to enhance code readability.
 
 - Added:
+  - Moved all the tracing and logging functionality from `r3bl_core` in here.
+  - Make the public API more ergonomic and use the `options: impl Into<TracingConfig>`
+    pattern for all the functions that need to be configured. This makes it easy to define
+    simple configuration options, while allowing for easy composition of more complex
+    options. We really like this pattern and intend to refactor the entire codebase over
+    time to use this.
   - Move `term.rs` from `r3bl_ansi_color` to `r3bl_core` crate. This is where the functions
     to get the terminal window size and width belong, and whether the terminal is
     interactive or not. Terminal color detection capabilities and low level color output
@@ -1107,7 +1124,8 @@ Changed:
       the generated code itself and these docs include references to the types and static
       variables that are generated.
 
-Removed:
+- Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
   - Remove `size-of` crate from `Cargo.toml`.
   - The `ch!` macro was confusing. It is now removed, and `ch_unit.rs` has clean
     conversions to and from other types. There are easy to use, typed checked functions,
@@ -1141,6 +1159,16 @@ in the real world.
     tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
 
 - Changed:
+  - `WriterConfig` can now be merged with other instances. This was a requirement for the
+    `TracingConfig` to be able to merge multiple `WriterConfig` instances into a single
+    `WriterConfig` instance. The code is in `src/log_support/public_api.rs` since this
+    functionality is related to making the API easier to use by callers. This is in
+    support of the `options: impl Into<TracingConfig>` pattern.
+  - Two `TracingConfig` instances can be added together to create a new `TracingConfig`
+    instance. This is needed for composability and an easy to use API for callers. Lots of
+    converts are provide to make it easy to convert from a variety of configuration types
+    into a `TracingConfig` instance. The code is in `src/log_support/public_api.rs`. This
+    is in support of the `options: impl Into<TracingConfig>` pattern.
   - Rename the `debug!` macro, which is confusing, since it clashes with logging, to
     `console_log!`. This macro is used in many places in the codebase for quick formatted
     output to console (via `eprintln!`). The code to format the output is in the
@@ -1196,43 +1224,6 @@ in the real world.
 
 - Added:
   - Initial support structs for use by `r3bl-base` and `r3bl-cmdr`.
-
-## `r3bl_log`
-
-### v_next_release_r3bl_log
-
-This is the first release of this crate. It is a top level crate in the `r3bl-open-core`
-that is meant to hold all the logging related functionality for all the other crates in
-this monorepo. It uses `tracing` under the covers to provide structured logging. It also
-provides a custom formatter that is a `tracing-subscriber` crate plugin.
-
-This release contains changes that are part of optimizing memory allocation to increase
-performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
-refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
-now used throughout the codebase.
-
-- Removed:
-  - Drop the dependency on `r3bl_ansi_color`.
-
-Added:
-  - Moved all the tracing and logging functionality from `r3bl_core` in here.
-  - Make the public API more ergonomic and use the `options: impl Into<TracingConfig>`
-    pattern for all the functions that need to be configured. This makes it easy to define
-    simple configuration options, while allowing for easy composition of more complex
-    options. We really like this pattern and intend to refactor the entire codebase over
-    time to use this.
-
-Changed:
-  - `WriterConfig` can now be merged with other instances. This was a requirement for the
-    `TracingConfig` to be able to merge multiple `WriterConfig` instances into a single
-    `WriterConfig` instance. The code is in `src/log_support/public_api.rs` since this
-    functionality is related to making the API easier to use by callers. This is in
-    support of the `options: impl Into<TracingConfig>` pattern.
-  - Two `TracingConfig` instances can be added together to create a new `TracingConfig`
-    instance. This is needed for composability and an easy to use API for callers. Lots of
-    converts are provide to make it easy to convert from a variety of configuration types
-    into a `TracingConfig` instance. The code is in `src/log_support/public_api.rs`. This
-    is in support of the `options: impl Into<TracingConfig>` pattern.
 
 ## `r3bl_script`
 
@@ -1668,6 +1659,12 @@ You can find all these archived crates in the
 [archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo.
 
 ## `r3bl_test_fixtures`
+
+## `r3bl_log`
+
+### Archived (2025-03-30)
+
+This crate never got published. And it was absorbed into `r3bl_core` and archived.
 
 ### Archived (2025-03-29)
 

@@ -33,8 +33,11 @@ use r3bl_cmdr::{AnalyticsAction,
                        try_make_new_branch},
                 report_analytics,
                 upgrade_check};
-use r3bl_core::{ASTStyle, AnsiStyledText, CommonResult, throws};
-use r3bl_log::try_initialize_logging_global;
+use r3bl_core::{ASTStyle,
+                AnsiStyledText,
+                CommonResult,
+                log_support::try_initialize_logging_global,
+                throws};
 use r3bl_tuify::{SelectionMode, StyleSheet, select_from_list_with_multi_line_header};
 
 #[tokio::main]
