@@ -22,7 +22,6 @@
 let workspace_folders = [
     "tui",
     "tuify",
-    "test_fixtures",
     "terminal_async",
     "script",
     "log",

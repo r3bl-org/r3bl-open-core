@@ -696,9 +696,10 @@ pub mod test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use r3bl_core::{TTYResult, is_fully_uninteractive_terminal};
-    use r3bl_test_fixtures::{InputDeviceExt as _,
-                             output_device_ext::OutputDeviceExt as _};
+    use r3bl_core::{TTYResult,
+                    is_fully_uninteractive_terminal,
+                    test_fixtures::{InputDeviceExt as _,
+                                    output_device_ext::OutputDeviceExt as _}};
     use test_fixtures::get_input_vec;
 
     use super::*;
@@ -889,7 +890,7 @@ mod test_readline {
 
 #[cfg(test)]
 mod test_streams {
-    use r3bl_test_fixtures::gen_input_stream;
+    use r3bl_core::test_fixtures::gen_input_stream;
     use test_streams::test_fixtures::get_input_vec;
 
     use super::*;
@@ -915,7 +916,7 @@ mod test_pause_and_resume_support {
     use std::sync::Mutex;
 
     use manage_shared_writer_output::flush_internal;
-    use r3bl_test_fixtures::StdoutMock;
+    use r3bl_core::test_fixtures::StdoutMock;
 
     use super::*;
     use crate::LineStateLiveness;

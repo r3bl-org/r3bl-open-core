@@ -17,9 +17,8 @@
 
 use std::time::Duration;
 
-use r3bl_core::{CrosstermEventResult, InlineVec, InputDevice};
-
 use super::{gen_input_stream, gen_input_stream_with_delay};
+use crate::{CrosstermEventResult, InlineVec, InputDevice};
 
 pub trait InputDeviceExt {
     fn new_mock(generator_vec: InlineVec<CrosstermEventResult>) -> InputDevice;

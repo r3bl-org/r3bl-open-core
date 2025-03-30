@@ -133,6 +133,7 @@ pub mod stack_alloc_types;
 pub mod storage;
 pub mod term;
 pub mod terminal_io;
+pub mod test_fixtures;
 pub mod tui_core;
 
 // Re-export.
@@ -145,4 +146,5 @@ pub use stack_alloc_types::*;
 pub use storage::*;
 pub use term::*;
 pub use terminal_io::*;
+pub use test_fixtures::*;
 pub use tui_core::*;

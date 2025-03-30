@@ -636,7 +636,7 @@ impl LineState {
 mod tests {
     use std::sync::Arc;
 
-    use r3bl_test_fixtures::StdoutMock;
+    use r3bl_core::test_fixtures::StdoutMock;
 
     use super::*;
     use crate::{History, StdMutex};
