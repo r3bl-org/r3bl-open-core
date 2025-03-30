@@ -41,6 +41,7 @@ use r3bl_core::{bold,
                 frozen_blue,
                 get_size,
                 inline_string,
+                log_support::try_initialize_logging_global,
                 ok,
                 rgb_value,
                 throws,
@@ -48,7 +49,6 @@ use r3bl_core::{bold,
                 ASTColor,
                 CommonError,
                 CommonResult};
-use r3bl_log::log_support::try_initialize_logging_global;
 use r3bl_terminal_async::{ta_println, ReadlineEvent, TerminalAsync};
 use r3bl_tui::{keypress, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
 use strum::IntoEnumIterator as _;

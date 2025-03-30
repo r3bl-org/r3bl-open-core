@@ -21,7 +21,7 @@
 //! lines) is that we wanted to be able to have a `message` field where a String can be
 //! used instead of "stringify!" which just dumps the string literal. This does not allow
 //! the message to be a variable, which means it can't be composed using other glyphs,
-//! such as the ones from [r3bl_core::glyphs]. To get around this limitation, the
+//! such as the ones from [crate::glyphs]. To get around this limitation, the
 //! following logic was implemented.
 //!
 //! The tracing crate deals with records that have fields. Each field has a name and
@@ -37,31 +37,32 @@ use std::fmt::{self};
 use chrono::Local;
 use const_format::formatcp;
 use custom_event_formatter_constants::*;
-use r3bl_core::{AnsiStyledText,
-                ColWidth,
-                ColorWheel,
-                GCString,
-                InlineString,
-                OrderedMap,
-                RgbValue,
-                TuiColor,
-                fg_rgb_color,
-                get_terminal_width,
-                glyphs,
-                inline_string,
-                new_style,
-                pad_fmt,
-                remove_escaped_quotes,
-                rgb_value,
-                truncate_from_right,
-                usize,
-                width};
 use textwrap::{Options, WordSeparator, wrap};
 use tracing::{Event,
               Subscriber,
               field::{Field, Visit}};
 use tracing_subscriber::{fmt::{FormatEvent, FormatFields},
                          registry::LookupSpan};
+
+use crate::{AnsiStyledText,
+            ColWidth,
+            ColorWheel,
+            GCString,
+            InlineString,
+            OrderedMap,
+            RgbValue,
+            TuiColor,
+            fg_rgb_color,
+            get_terminal_width,
+            glyphs,
+            inline_string,
+            new_style,
+            pad_fmt,
+            remove_escaped_quotes,
+            rgb_value,
+            truncate_from_right,
+            usize,
+            width};
 
 #[derive(Debug, Default)]
 pub struct CustomEventFormatter;
@@ -128,7 +129,7 @@ where
     /// wanted to be able to have a `message` field where a String can be used instead of
     /// "stringify!" which just dumps the string literal. This does not allow the message
     /// to be a variable, which means it can't be composed using other glyphs, such as the
-    /// ones from [r3bl_core::glyphs]. To get around this limitation, the following logic
+    /// ones from [crate::glyphs]. To get around this limitation, the following logic
     /// was implemented.
     fn format_event(
         &self,
@@ -137,7 +138,7 @@ where
         event: &Event<'_>,
     ) -> fmt::Result {
         // Get spacer.
-        let spacer = r3bl_core::glyphs::SPACER_GLYPH;
+        let spacer = glyphs::SPACER_GLYPH;
         let spacer_display_width = GCString::width(spacer);
 
         // Length accumulator (for line width calculations).
@@ -305,7 +306,7 @@ impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
     /// wanted to be able to have a `message` field where a String can be used instead of
     /// "stringify!" which just dumps the string literal. This does not allow the message
     /// to be a variable, which means it can't be composed using other glyphs, such as the
-    /// ones from [r3bl_core::glyphs]. To get around this limitation, the following logic
+    /// ones from [crate::glyphs]. To get around this limitation, the following logic
     /// was implemented.
     ///
     /// There is some strange logic in here to handle the `message` field. The `message`
@@ -343,11 +344,11 @@ mod tests_tracing_custom_event_formatter {
     use std::sync::Mutex;
 
     use chrono::Local;
-    use r3bl_core::{glyphs::SPACER_GLYPH as SPACER, test_fixtures::StdoutMock};
     use tracing::{info, subscriber::set_default};
     use tracing_subscriber::fmt::SubscriberBuilder;
 
     use super::*;
+    use crate::{glyphs::SPACER_GLYPH as SPACER, test_fixtures::StdoutMock};
 
     #[test]
     fn test_custom_formatter_with_special_message_field_handling() {

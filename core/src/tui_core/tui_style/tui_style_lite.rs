@@ -37,6 +37,7 @@
 #[macro_export]
 macro_rules! new_style {
     ($($rem:tt)*) => {{
+        #[allow(unused_mut)]
         let mut style = $crate::TuiStyle::default();
         $crate::apply_style!(style, $($rem)*);
         style
