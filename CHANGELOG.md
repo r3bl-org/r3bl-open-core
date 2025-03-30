@@ -57,15 +57,6 @@
 - [r3bl_analytics_schema](#r3bl_analytics_schema)
   - [v0.0.2 2024-09-12](#v002-2024-09-12)
   - [v0.0.1 2023-12-31](#v001-2023-12-31)
-- [r3bl_macro](#r3bl_macro)
-  - [v_next_release_macro](#v_next_release_r3bl_macro)
-  - [v0.10.0 2024-10-20](#v0100-2024-10-20)
-- [r3bl_test_fixtures](#r3bl_test_fixtures)
-  - [next](#v_next_release_r3bl_test_fixtures)
-  - [v0.1.0 2024-10-21](#v010-2024-10-21)
-  - [v0.0.3 2024-09-12](#v003-2024-09-12)
-  - [v0.0.2 2024-07-13](#v002-2024-07-13)
-  - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_log](#r3bl_log)
   - [v_next_release_log](#v_next_release_r3bl_log)
 - [r3bl_script](#r3bl_script)
@@ -84,61 +75,68 @@
   - [v0.4.0 2024-04-21](#v040-2024-04-21)
   - [v0.3.1 2024-04-17](#v031-2024-04-17)
   - [v0.3.0 2024-04-15](#v030-2024-04-15)
-- [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
-  - [Rename to r3bl_macro](#rename-to-r3bl_macro)
-  - [v0.9.10 2024-09-12](#v0910-2024-09-12)
-  - [v0.9.9 2024-04-16](#v099-2024-04-16)
-  - [v0.9.8 2023-12-22](#v098-2023-12-22)
-  - [v0.9.7 2023-10-21](#v097-2023-10-21)
-  - [v0.9.6 2023-10-17](#v096-2023-10-17)
-  - [v0.9.5 2023-10-14](#v095-2023-10-14)
-- [r3bl_rs_utils_core](#r3bl_rs_utils_core)
-  - [Rename to r3bl_core](#rename-to-r3bl_core)
-  - [v0.9.16 2024-09-12](#v0916-2024-09-12)
-  - [v0.9.15 2024-09-07](#v0915-2024-09-07)
-  - [v0.9.14 2024-08-13](#v0914-2024-08-13)
-  - [v0.9.13 2024-04-15](#v0913-2024-04-15)
-  - [v0.9.12 2024-01-07](#v0912-2024-01-07)
-  - [v0.9.11 2024-01-02](#v0911-2024-01-02)
-  - [v0.9.10 2023-12-22](#v0910-2023-12-22)
-  - [v0.9.9 2023-10-21](#v099-2023-10-21)
-  - [v0.9.8 2023-10-21](#v098-2023-10-21)
-  - [v0.9.7 2023-10-17](#v097-2023-10-17)
-  - [v0.9.6 2023-10-17](#v096-2023-10-17)
-  - [v0.9.5 2023-10-14](#v095-2023-10-14)
-  - [v0.9.1 2023-03-06](#v091-2023-03-06)
-- [r3bl_simple_logger](#r3bl_simple_logger)
-  - [Archived 2024-09-27](#archived-2024-09-27)
-  - [v0.1.4 2024-09-12](#v014-2024-09-12)
-  - [v0.1.3 2023-10-21](#v013-2023-10-21)
-  - [v0.1.2 2023-10-21](#v012-2023-10-21)
-  - [v0.1.1 2023-10-17](#v011-2023-10-17)
-  - [v0.1.0 2023-10-14](#v010-2023-10-14)
-- [r3bl_redux](#r3bl_redux)
-  - [Archived 2024-09-29](#archived-2024-09-29)
-  - [v0.2.8 2024-09-12](#v028-2024-09-12)
-  - [v0.2.7 2024-09-07](#v027-2024-09-07)
-  - [v0.2.6 2023-10-21](#v026-2023-10-21)
-  - [v0.2.5 2023-10-17](#v025-2023-10-17)
-  - [v0.2.4 2023-10-14](#v024-2023-10-14)
-- [r3bl_rs_utils](#r3bl_rs_utils)
-  - [Archived 2024-09-30](#archived-2024-09-30)
-  - [v0.9.16 2024-09-12](#v0916-2024-09-12)
-  - [v0.9.15 2023-12-22](#v0915-2023-12-22)
-  - [v0.9.14 2023-10-29](#v0914-2023-10-29)
-  - [v0.9.13 2023-10-29](#v0913-2023-10-29)
-  - [v0.9.12 2023-10-29](#v0912-2023-10-29)
-  - [v0.9.11 2023-10-28](#v0911-2023-10-28)
-  - [v0.9.10 2023-10-21](#v0910-2023-10-21)
-  - [v0.9.9](#v099)
 - [Renamed](#renamed)
   - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
+      - [Rename to r3bl_macro](#rename-to-r3bl_macro)
+      - [v0.9.10 2024-09-12](#v0910-2024-09-12)
+      - [v0.9.9 2024-04-16](#v099-2024-04-16)
+      - [v0.9.8 2023-12-22](#v098-2023-12-22)
+      - [v0.9.7 2023-10-21](#v097-2023-10-21)
+      - [v0.9.6 2023-10-17](#v096-2023-10-17)
+      - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+      - [Rename to r3bl_core](#rename-to-r3bl_core)
+      - [v0.9.16 2024-09-12](#v0916-2024-09-12)
+      - [v0.9.15 2024-09-07](#v0915-2024-09-07)
+      - [v0.9.14 2024-08-13](#v0914-2024-08-13)
+      - [v0.9.13 2024-04-15](#v0913-2024-04-15)
+      - [v0.9.12 2024-01-07](#v0912-2024-01-07)
+      - [v0.9.11 2024-01-02](#v0911-2024-01-02)
+      - [v0.9.10 2023-12-22](#v0910-2023-12-22)
+      - [v0.9.9 2023-10-21](#v099-2023-10-21)
+      - [v0.9.8 2023-10-21](#v098-2023-10-21)
+      - [v0.9.7 2023-10-17](#v097-2023-10-17)
+      - [v0.9.6 2023-10-17](#v096-2023-10-17)
+      - [v0.9.5 2023-10-14](#v095-2023-10-14)
+      - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [Archived](#archived)
-  - [r3bl_simple_logger](#r3bl_simple_logger)
-  - [r3bl_redux](#r3bl_redux)
-  - [r3bl_rs_utils](#r3bl_rs_utils)
+  - [r3bl_test_fixtures](#r3bl_test_fixtures)
+    - [Archived 2024-09-30](#archived-2025-03-29)
+    - [v0.1.0 2024-10-21](#v010-2024-10-21)
   - [r3bl_ansi_color](#r3bl_ansi_color)
+    - [Archived 2025-03-28](#archived-2025-03-28)
+    - [v0.7.0 2024-10-18](#v070-2024-10-18)
+    - [v0.6.10 2024-09-12](#v0610-2024-09-12)
+    - [v0.6.9 2023-10-21](#v069-2023-10-21)
+    - [v0.6.8 2023-10-16](#v068-2023-10-16)
+    - [v0.6.7 2023-09-12](#v067-2023-09-12)
+  - [r3bl_macro](#r3bl_macro)
+    - [Archived 2025-03-11](#archived-2025-03-11)
+    - [v0.10.0 2024-10-20](#v0100-2024-10-20)
+  - [r3bl_simple_logger](#r3bl_simple_logger)
+    - [Archived 2024-09-27](#archived-2024-09-27)
+    - [v0.1.4 2024-09-12](#v014-2024-09-12)
+    - [v0.1.3 2023-10-21](#v013-2023-10-21)
+    - [v0.1.2 2023-10-21](#v012-2023-10-21)
+    - [v0.1.1 2023-10-17](#v011-2023-10-17)
+    - [v0.1.0 2023-10-14](#v010-2023-10-14)
+  - [r3bl_redux](#r3bl_redux)
+    - [Archived 2024-09-29](#archived-2024-09-29)
+    - [v0.2.8 2024-09-12](#v028-2024-09-12)
+    - [v0.2.7 2024-09-07](#v027-2024-09-07)
+    - [v0.2.6 2023-10-21](#v026-2023-10-21)
+    - [v0.2.5 2023-10-17](#v025-2023-10-17)
+    - [v0.2.4 2023-10-14](#v024-2023-10-14)
+  - [r3bl_rs_utils](#r3bl_rs_utils)
+    - [Archived 2024-09-30](#archived-2024-09-30)
+    - [v0.9.16 (2024-09-12)](#v0916-2024-09-12-1)
+    - [v0.9.15 (2023-12-22)](#v0915-2023-12-22)
+    - [v0.9.14 (2023-10-29)](#v0914-2023-10-29)
+    - [v0.9.13 (2023-10-29)](#v0913-2023-10-29)
+    - [v0.9.12 (2023-10-29)](#v0912-2023-10-29)
+    - [v0.9.11 (2023-10-28)](#v0911-2023-10-28)
+    - [v0.9.10 (2023-10-21)](#v0910-2023-10-21)
+    - [v0.9.9](#v099)
 - [More info on changelogs](#more-info-on-changelogs)
 
 <!-- Global config section -->
@@ -151,6 +149,12 @@ contained in the monorepo, along with the top level `run` script. Things like RU
 advisory whitelist and which tasks are run in CICD are included here.
 
 ### Global config (2025-03-24)
+
+- Removed:
+  - Update the `run` script at the top level, and `Cargo.toml` at the top level to remove
+    the crates: `r3bl_test_fixtures` and `r3bl_ansi_color`. Move these crates to
+    [archived](#archived). `r3bl_core` now contains all the functionality that was in
+    `r3bl_ansi_color` and `r3bl_test_fixtures`.
 
 - Added:
   - Add a new target to the `run` script in the workspace (root) folder that allows the
@@ -1193,75 +1197,6 @@ in the real world.
 - Added:
   - Initial support structs for use by `r3bl-base` and `r3bl-cmdr`.
 
-## `r3bl_test_fixtures`
-
-### v_next_release_r3bl_test_fixtures
-
-This release adds a new fixture to make it easy to create temporary directories for tests.
-
-- Updated:
-  - Use the latest Rust 2024 edition.
-
-### v0.1.0 (2024-10-21)
-
-This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
-change for almost every crate in the repo. This
-[PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
-
-- Changed:
-  - Some type aliases were defined here redundantly, since they were also defined in
-    `r3bl_core` crate. Remove these duplicate types and add a dependency to `r3bl_core`
-    crate.
-
-- Added:
-  - Add ability for `StdoutMock` to be turned into an `OutputDevice` struct for mocks that
-    are needed in tests. This is done via the `OutputDeviceExt` trait that is implemented
-    for `OutputDevice`, which adds this method: `OutputDevice::new_mock()`.
-  - Add ability for `mod@async_input_stream` to be turned into an `InputDevice` struct for
-    mocks that are needed in tests. This is done via the `InputDeviceExt` trait that is implemented
-    for `InputDevice`, which adds this method: `InputDevice::new_mock(vec![])`.
-
-### v0.0.3 (2024-09-12)
-
-- Updated:
-  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
-  - Improve docs in `lib.rs` and `README.md`.
-
-### v0.0.2 (2024-07-13)
-
-This release adds a new function to create an async stream that yields results (from a
-vec) at a specified interval. This is useful for testing async functions that need to
-simulate a stream of events with a delay.
-
-- Added:
-  - Add `gen_input_stream_with_delay()` to create an async stream that yields results (from
-    a vec) at a specified interval. This is useful for testing async functions that need to
-    simulate a stream of events with a delay.
-  - Add more tests.
-
-- Misc:
-  - The
-    [async_cancel_safe](https://github.com/nazmulidris/rust-scratch/tree/main/async_cancel_safe)
-    example repo now uses this crate. Here's a
-    [tutorial](https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/)
-    about it.
-
-### v0.0.1 (2024-07-12)
-
-This is the first release of this crate. It is a top level crate in the `r3bl-open-core`
-that is meant to hold all the test fixtures for all the other crates in this monorepo. It
-primarily tests input events coming from user input via keyboard and mouse (eg: crossterm
-events). And it tests output that is sent to `stdout` which it mocks. Here are all the
-links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures),
-[docs.rs](https://docs.rs/r3bl_test_fixtures),
-[GitHub](https://github.com/r3bl-org/r3bl-open-core/tree/main/test_fixtures).
-
-- Added:
-  - Add a new top level crate in the `r3bl-open-core` monorepo called `r3bl_test_fixtures`.
-    This is to make it easier to maintain and test the fixtures and allow all the other
-    crates in this monorepo to use them. These fixtures are migrated from `r3bl_terminal_async`
-    crate, where they were gestated, before being graduated for use by the entire monorepo.
-
 ## `r3bl_log`
 
 ### v_next_release_r3bl_log
@@ -1731,6 +1666,76 @@ the `ok!()` macro.
 
 You can find all these archived crates in the
 [archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo.
+
+## `r3bl_test_fixtures`
+
+### Archived (2025-03-29)
+
+This crate has been absorbed into `r3bl_core`. It is now archived. The copy in `r3bl_core`
+adds a new fixture to make it easy to create temporary directories for tests.
+
+- Updated:
+  - Use the latest Rust 2024 edition.
+
+### v0.1.0 (2024-10-21)
+
+This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
+change for almost every crate in the repo. This
+[PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
+
+- Changed:
+  - Some type aliases were defined here redundantly, since they were also defined in
+    `r3bl_core` crate. Remove these duplicate types and add a dependency to `r3bl_core`
+    crate.
+
+- Added:
+  - Add ability for `StdoutMock` to be turned into an `OutputDevice` struct for mocks that
+    are needed in tests. This is done via the `OutputDeviceExt` trait that is implemented
+    for `OutputDevice`, which adds this method: `OutputDevice::new_mock()`.
+  - Add ability for `mod@async_input_stream` to be turned into an `InputDevice` struct for
+    mocks that are needed in tests. This is done via the `InputDeviceExt` trait that is implemented
+    for `InputDevice`, which adds this method: `InputDevice::new_mock(vec![])`.
+
+### v0.0.3 (2024-09-12)
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
+
+### v0.0.2 (2024-07-13)
+
+This release adds a new function to create an async stream that yields results (from a
+vec) at a specified interval. This is useful for testing async functions that need to
+simulate a stream of events with a delay.
+
+- Added:
+  - Add `gen_input_stream_with_delay()` to create an async stream that yields results (from
+    a vec) at a specified interval. This is useful for testing async functions that need to
+    simulate a stream of events with a delay.
+  - Add more tests.
+
+- Misc:
+  - The
+    [async_cancel_safe](https://github.com/nazmulidris/rust-scratch/tree/main/async_cancel_safe)
+    example repo now uses this crate. Here's a
+    [tutorial](https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/)
+    about it.
+
+### v0.0.1 (2024-07-12)
+
+This is the first release of this crate. It is a top level crate in the `r3bl-open-core`
+that is meant to hold all the test fixtures for all the other crates in this monorepo. It
+primarily tests input events coming from user input via keyboard and mouse (eg: crossterm
+events). And it tests output that is sent to `stdout` which it mocks. Here are all the
+links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures),
+[docs.rs](https://docs.rs/r3bl_test_fixtures),
+[GitHub](https://github.com/r3bl-org/r3bl-open-core/tree/main/test_fixtures).
+
+- Added:
+  - Add a new top level crate in the `r3bl-open-core` monorepo called `r3bl_test_fixtures`.
+    This is to make it easier to maintain and test the fixtures and allow all the other
+    crates in this monorepo to use them. These fixtures are migrated from `r3bl_terminal_async`
+    crate, where they were gestated, before being graduated for use by the entire monorepo.
 
 ## `r3bl_ansi_color`
 

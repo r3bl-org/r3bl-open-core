@@ -621,6 +621,8 @@ mod tests {
                     new_style,
                     ok,
                     send_signal,
+                    test_fixtures::{output_device_ext::OutputDeviceExt as _,
+                                    InputDeviceExt},
                     throws_with_return,
                     tui_color,
                     tui_styled_text,
@@ -640,7 +642,6 @@ mod tests {
                     TTYResult,
                     TextColorizationPolicy,
                     TuiStyle};
-    use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, InputDeviceExt};
     use smallvec::smallvec;
     use test_fixture_app::AppMainTest;
     use test_fixture_state::{AppSignal, State};

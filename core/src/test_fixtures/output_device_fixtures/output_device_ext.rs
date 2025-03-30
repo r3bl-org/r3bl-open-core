@@ -17,9 +17,7 @@
 
 use std::sync::Arc;
 
-use r3bl_core::{OutputDevice, StdMutex};
-
-use crate::StdoutMock;
+use crate::{OutputDevice, StdMutex, StdoutMock};
 
 pub trait OutputDeviceExt {
     fn new_mock() -> (OutputDevice, StdoutMock);
@@ -38,9 +36,8 @@ impl OutputDeviceExt for OutputDevice {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{LockedOutputDevice, OutputDevice, output_device_as_mut};
-
     use super::OutputDeviceExt;
+    use crate::{LockedOutputDevice, OutputDevice, output_device_as_mut};
 
     #[test]
     fn test_mock_output_device() {

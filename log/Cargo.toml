@@ -40,7 +40,6 @@ pretty_assertions = "1.4.1"
 
 # r3bl-open-core.
 r3bl_core = { path = "../core", version = "0.10.0" }                  # Core functionality.
-r3bl_test_fixtures = { path = "../test_fixtures", version = "0.1.0" } # Test fixtures.
 
 # Terminal color output.
 crossterm = "0.28.1"
