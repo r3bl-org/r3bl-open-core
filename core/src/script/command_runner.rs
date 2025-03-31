@@ -18,9 +18,10 @@
 use std::process::Stdio;
 
 use miette::{Context, IntoDiagnostic};
-use r3bl_core::ok;
 use tokio::{io::AsyncWriteExt as _,
             process::{Child, Command}};
+
+use crate::ok;
 
 /// This macro to create a [std::process::Command] that receives a set of arguments and
 /// returns it.
@@ -28,7 +29,7 @@ use tokio::{io::AsyncWriteExt as _,
 /// # Example of command and args
 ///
 /// ```
-/// use r3bl_script::command;
+/// use r3bl_core::command;
 /// use std::process::Command;
 ///
 /// async fn run_command() {
@@ -45,8 +46,8 @@ use tokio::{io::AsyncWriteExt as _,
 /// # Example of command, env, and args
 ///
 /// ```
-/// use r3bl_script::command;
-/// use r3bl_script::environment::{self, EnvKeys};
+/// use r3bl_core::command;
+/// use r3bl_core::environment::{self, EnvKeys};
 /// use std::process::Command;
 ///
 /// async fn run_command() {
@@ -66,8 +67,8 @@ use tokio::{io::AsyncWriteExt as _,
 /// # Examples of using the [Run] trait, and [std::process::Output].
 ///
 /// ```
-/// use r3bl_script::command;
-/// use r3bl_script::command_runner::Run;
+/// use r3bl_core::command;
+/// use r3bl_core::command_runner::Run;
 ///
 /// async fn run_command() {
 ///     let output = command!(
@@ -133,7 +134,7 @@ impl Run for Command {
 #[macro_export]
 macro_rules! bail_command_ran_and_failed {
         ($command:expr, $status:expr, $stderr:expr) => {
-            use r3bl_core::{lizard_green, frozen_blue, magenta};
+            use $crate::{lizard_green, frozen_blue, magenta};
             miette::bail!(
                 "{name} failed\n{cmd_label}: '{cmd:?}'\n{status_label}: '{status}'\n{stderr_label}: '{stderr}'",
                 cmd_label = lizard_green("[command]"),
@@ -179,7 +180,7 @@ pub async fn run(command: &mut Command) -> miette::Result<Vec<u8>> {
 /// executed:
 ///
 /// ```
-/// use r3bl_script::command;
+/// use r3bl_core::command;
 ///
 /// let mut command_one = command!(
 ///     program => "/usr/bin/bash",
@@ -216,7 +217,7 @@ pub async fn run_interactive(command: &mut Command) -> miette::Result<Vec<u8>> {
 /// example which will block on user input from an interactive terminal if executed:
 ///
 /// ```
-/// use r3bl_script::command;
+/// use r3bl_core::command;
 ///
 /// let mut command_one = command!(
 ///     program => "/usr/bin/bash",

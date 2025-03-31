@@ -1,14 +1,8 @@
 # https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html#creating-the-second-package-in-the-workspace
+
+# Make sure to keep this in sync with `run` nushell script `$workspace_folders`.
 [workspace]
-members = [
-  "analytics_schema",
-  "cmdr",
-  "core",
-  "terminal_async",
-  "tui",
-  "tuify",
-  "script",
-] # Make sure to keep these in sync with `run` nushell script `workspace_folders`.
+members = ["analytics_schema", "cmdr", "core", "terminal_async", "tui", "tuify"]
 
 # https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
 resolver = "3"

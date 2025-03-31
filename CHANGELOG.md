@@ -57,10 +57,6 @@
 - [r3bl_analytics_schema](#r3bl_analytics_schema)
   - [v0.0.2 2024-09-12](#v002-2024-09-12)
   - [v0.0.1 2023-12-31](#v001-2023-12-31)
-- [r3bl_log](#r3bl_log)
-  - [v_next_release_log](#v_next_release_r3bl_log)
-- [r3bl_script](#r3bl_script)
-  - [v_next_release_script](#v_next_release_r3bl_script)
 - [r3bl_terminal_async](#r3bl_terminal_async)
   - [v_next_release_terminal_async](#v_next_release_r3bl_terminal_async)
   - [v0.6.0 2024-10-21](#v060-2024-10-21)
@@ -100,6 +96,10 @@
       - [v0.9.5 2023-10-14](#v095-2023-10-14)
       - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [Archived](#archived)
+  - [r3bl_script](#r3bl_script)
+    - [Archived 2025-03-31](#archived-2025-03-31)
+  - [r3bl_log](#r3bl_log)
+    - [Archived 2025-03-30](#archived-2025-03-30)
   - [r3bl_test_fixtures](#r3bl_test_fixtures)
     - [Archived 2024-09-30](#archived-2025-03-29)
     - [v0.1.0 2024-10-21](#v010-2024-10-21)
@@ -981,15 +981,29 @@ Here are the highlights:
      allow for an optional default style to be passed in, that will be applied to the
      generated lolcat output.
 
+
 - Moved:
-  - Move the contents of `r3bl_ansi_term` crate into `r3bl_core`. There is no need to have
-    that crate as an external dependency. Moving it where it belongs. It was developed as
-    a separate crate at the start, since the `r3bl_tui` codebase was in a much earlier stage
-    when it wasn't clear where `r3bl_ansi_term` fits with `r3bl_tui` and `r3bl_tuify`, etc.
+  - Move the contents of `r3bl_ansi_color` crate into `r3bl_core`. There is no need to
+    have that crate as an external dependency. Moving it where it belongs. It was
+    developed as a separate crate at the start, since the `r3bl_tui` codebase was in a
+    much earlier stage when it wasn't clear where `r3bl_ansi_term` fits with `r3bl_tui`
+    and `r3bl_tuify`, etc. `term.rs` is now in `r3bl_core` where it belongs. This is where
+    the functions to get the terminal window size and width belong, and whether the
+    terminal is interactive or not. Terminal color detection capabilities and low level
+    color output manipulation are now all in `r3bl_core`.
+  - Move the contents of `r3bl_test_fixtures` into `r3bl_core`. This is a top level crate
+    in the `r3bl-open-core` that is meant to hold all the test fixtures related
+    functionality for all the other crates in this monorepo.
+  - Move the contents of `r3bl_log` (all the tracing and logging functionality) in here.
+  - Move the contents of the `r3bl_script` here. It is a top level crate in the
+    `r3bl-open-core` that is meant to hold all the scripting related functionality for all
+    the other crates in this monorepo. It provides a way to run scripts in a safe and
+    secure way, that is meant to be a replacement for writing scripts in `fish` or `bash`
+    or `nushell` syntax.
 
 - Changed:
   - Consolidate the color structs from `r3bl_core` and `r3bl_ansi_color`, since
-  `r3bl_ansi_color` is deprecated and its functionality has been moved into `r3bl_core`.
+    `r3bl_ansi_color` is deprecated and its functionality has been moved into `r3bl_core`.
     The `ASTColor` and `TuiColor` structs have the same underpinning structs, which
     they're composed on top of. The reason for the distinction is just to make it clear
     the differences between TUI output and console output (directly to stdout or colorful
@@ -1045,16 +1059,11 @@ Here are the highlights:
   - Replace the use of `bool` with meaningful enums to enhance code readability.
 
 - Added:
-  - Moved all the tracing and logging functionality from `r3bl_core` in here.
   - Make the public API more ergonomic and use the `options: impl Into<TracingConfig>`
     pattern for all the functions that need to be configured. This makes it easy to define
     simple configuration options, while allowing for easy composition of more complex
     options. We really like this pattern and intend to refactor the entire codebase over
     time to use this.
-  - Move `term.rs` from `r3bl_ansi_color` to `r3bl_core` crate. This is where the functions
-    to get the terminal window size and width belong, and whether the terminal is
-    interactive or not. Terminal color detection capabilities and low level color output
-    manipulation are still in `r3bl_ansi_color`.
   - [Archive](#archived-2025-03-11) the `tui_style!` proc macro. Replace it with an easier
     to use decl macro `new_style!`. This allows the `r3bl_macro` crate to be removed from
     the workspace, and all the crates in it. `new_style!` makes it a breeze to work with
@@ -1126,6 +1135,9 @@ Here are the highlights:
 
 - Removed:
   - Drop the dependency on `r3bl_ansi_color`.
+  - Drop the dependency on `r3bl_log`.
+  - Drop the dependency on `r3bl_script`.
+  - Drop the dependency on `r3bl_test_fixtures`.
   - Remove `size-of` crate from `Cargo.toml`.
   - The `ch!` macro was confusing. It is now removed, and `ch_unit.rs` has clean
     conversions to and from other types. There are easy to use, typed checked functions,
@@ -1224,18 +1236,6 @@ in the real world.
 
 - Added:
   - Initial support structs for use by `r3bl-base` and `r3bl-cmdr`.
-
-## `r3bl_script`
-
-### v_next_release_r3bl_script
-
-This is the first release of this crate. It is a top level crate in the `r3bl-open-core`
-that is meant to hold all the scripting related functionality for all the other crates in
-this monorepo. It provides a way to run scripts in a safe and secure way, that is meant to
-be a replacement for writing scripts in `fish` or `bash` or `nushell` syntax.
-
-- Removed:
-  - Drop the dependency on `r3bl_ansi_color`.
 
 ## `r3bl_terminal_async`
 
@@ -1658,13 +1658,19 @@ the `ok!()` macro.
 You can find all these archived crates in the
 [archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo.
 
-## `r3bl_test_fixtures`
+## `r3bl_script`
+
+### Archived (2025-03-31)
+
+This crate never got published. And it was absorbed into `r3bl_core` and archived.
 
 ## `r3bl_log`
 
 ### Archived (2025-03-30)
 
 This crate never got published. And it was absorbed into `r3bl_core` and archived.
+
+## `r3bl_test_fixtures`
 
 ### Archived (2025-03-29)
 

@@ -16,9 +16,8 @@
  */
 
 use miette::IntoDiagnostic;
-use r3bl_core::{magenta, ok};
 
-use crate::{SCRIPT_MOD_DEBUG, http_client};
+use crate::{SCRIPT_MOD_DEBUG, http_client, magenta, ok};
 
 mod constants {
     pub const TAG_NAME: &str = "tag_name";
@@ -63,10 +62,10 @@ pub async fn try_get_latest_release_tag_from_github(
 mod tests_github_api {
     use std::time::Duration;
 
-    use r3bl_core::{TTYResult, is_fully_uninteractive_terminal};
     use tokio::time::timeout;
 
     use super::*;
+    use crate::{TTYResult, is_fully_uninteractive_terminal};
 
     const TIMEOUT: Duration = Duration::from_secs(1);
 

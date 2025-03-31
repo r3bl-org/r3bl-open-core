@@ -18,9 +18,8 @@
 use std::{fs, io::Write as _, path::Path};
 
 use miette::IntoDiagnostic;
-use r3bl_core::ok;
 
-use crate::http_client::create_client_with_user_agent;
+use crate::{http_client::create_client_with_user_agent, ok};
 
 pub async fn try_download_file_overwrite_existing(
     source_url: &str,
@@ -45,10 +44,10 @@ mod tests_download {
 
     use std::time::Duration;
 
-    use r3bl_core::create_temp_dir;
     use tokio::time::timeout;
 
     use super::*;
+    use crate::create_temp_dir;
 
     const TIMEOUT: Duration = Duration::from_secs(1);
 
