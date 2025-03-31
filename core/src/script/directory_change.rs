@@ -17,9 +17,8 @@
 
 use std::{env, io::ErrorKind, path::Path};
 
-use r3bl_core::ok;
-
-use crate::fs_path::{FsOpError, FsOpResult};
+use crate::{fs_path::{FsOpError, FsOpResult},
+            ok};
 
 /// This macro is used to wrap a block with code that saves the current working directory,
 /// runs the block of code for the test, and then restores the original working directory.
@@ -41,9 +40,11 @@ macro_rules! serial_preserve_pwd_test {
 /// This macro is used to wrap a block with code that saves the current working directory,
 /// runs the block of code for the test, and then restores the original working directory.
 ///
-/// Use this in conjunction with [serial_test::serial] in order to make sure that multiple
-/// threads are not changing the current working directory at the same time (even with
-/// this macro). In other words, use this macro [serial_preserve_pwd_test!] for tests.
+/// Use this in conjunction with
+/// [serial_test::serial](https://docs.rs/serial_test/latest/serial_test/) in order to
+/// make sure that multiple threads are not changing the current working directory at the
+/// same time (even with this macro). In other words, use this macro
+/// [serial_preserve_pwd_test!] for tests.
 #[macro_export]
 macro_rules! with_saved_pwd {
     ($block:block) => {{
@@ -77,10 +78,11 @@ pub fn try_cd(new_dir: impl AsRef<Path>) -> FsOpResult<()> {
 mod tests_directory_change {
     use std::{fs, os::unix::fs::PermissionsExt as _};
 
-    use r3bl_core::create_temp_dir;
-
     use super::*;
-    use crate::{directory_change::try_cd, fs_path::FsOpError, fs_paths};
+    use crate::{create_temp_dir,
+                directory_change::try_cd,
+                fs_path::FsOpError,
+                fs_paths};
 
     serial_preserve_pwd_test!(test_try_change_directory_permissions_errors, {
         with_saved_pwd!({

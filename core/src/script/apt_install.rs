@@ -16,9 +16,8 @@
  */
 
 use miette::IntoDiagnostic;
-use r3bl_core::ok;
 
-use crate::command;
+use crate::{command, ok};
 
 /// Here are some examples of using `dpkg-query` to check if a package is installed:
 ///
@@ -36,7 +35,7 @@ use crate::command;
 /// # Example
 ///
 /// ```no_run
-/// use r3bl_script::apt_install::check_if_package_is_installed;
+/// use r3bl_core::script::apt_install::check_if_package_is_installed;
 ///
 /// async fn check() {
 ///     let package_name = "bash";
@@ -46,7 +45,7 @@ use crate::command;
 /// ```
 ///
 /// ```no_run
-/// use r3bl_script::apt_install::install_package;
+/// use r3bl_core::script::apt_install::install_package;
 ///
 /// async fn install() {
 ///     let package_name = "does_not_exist";
@@ -84,9 +83,8 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
 
 #[cfg(test)]
 mod tests_apt_install {
-    use r3bl_core::{TTYResult, is_fully_uninteractive_terminal};
-
     use super::*;
+    use crate::{TTYResult, is_fully_uninteractive_terminal};
 
     #[tokio::test]
     async fn test_check_if_package_is_installed() {

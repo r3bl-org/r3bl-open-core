@@ -27,11 +27,6 @@ path = "src/lib.rs"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-# kv.rs needs this to serialize and deserialize Bincode to/from the KV store.
-# https://github.com/serde-rs/serde.
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.132"
-
 # Unicode, grapheme clusters.
 unicode-width = "0.2.0"
 unicode-segmentation = "1.12.0"
@@ -107,6 +102,14 @@ smallvec = { version = "1.6.1", features = [
 ] }
 
 is_ci = "1.2.0"
+
+# HTTP client library (for r3bl_script).
+reqwest = { version = "0.12.9", features = ["json"] }
+serde_json = "1.0.132"
+
+# kv.rs needs this to serialize and deserialize Bincode to/from the KV store.
+# https://github.com/serde-rs/serde.
+serde = { version = "1.0.210", features = ["derive"] }
 
 [dev-dependencies]
 # for assert_eq! macro

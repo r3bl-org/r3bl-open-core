@@ -17,11 +17,11 @@
 
 use std::{fs, io::ErrorKind, path::Path};
 
-use r3bl_core::ok;
 use strum_macros::Display;
 
 use crate::{fs_path,
-            fs_path::{FsOpError, FsOpResult}};
+            fs_path::{FsOpError, FsOpResult},
+            ok};
 
 #[derive(Debug, Display, Default)]
 pub enum MkdirOptions {
@@ -102,10 +102,9 @@ fn create_dir_all(new_path: &Path) -> FsOpResult<()> {
 
 #[cfg(test)]
 mod tests_directory_create {
-    use r3bl_core::create_temp_dir;
-
     use super::*;
-    use crate::{directory_create::{MkdirOptions::*, try_mkdir},
+    use crate::{create_temp_dir,
+                directory_create::{MkdirOptions::*, try_mkdir},
                 fs_paths,
                 serial_preserve_pwd_test,
                 with_saved_pwd};

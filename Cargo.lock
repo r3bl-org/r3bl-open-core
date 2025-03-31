@@ -1042,7 +1042,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sled",
- "thiserror 1.0.64",
+ "thiserror",
  "toml",
 ]
 
@@ -1161,7 +1161,7 @@ dependencies = [
  "supports-unicode",
  "terminal_size",
  "textwrap",
- "thiserror 1.0.64",
+ "thiserror",
  "unicode-width 0.1.14",
 ]
 
@@ -1636,7 +1636,7 @@ dependencies = [
  "serial_test",
  "smallstr",
  "smallvec",
- "thiserror 1.0.64",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-appender",
@@ -1674,6 +1674,7 @@ dependencies = [
  "paste",
  "pretty_assertions",
  "rand",
+ "reqwest",
  "serde",
  "serde_json",
  "serial_test",
@@ -1686,7 +1687,7 @@ dependencies = [
  "strum_macros",
  "test-case",
  "textwrap",
- "thiserror 1.0.64",
+ "thiserror",
  "time",
  "tokio",
  "tokio-test",
@@ -1697,28 +1698,6 @@ dependencies = [
  "unicode-segmentation",
  "unicode-width 0.2.0",
  "uuid",
-]
-
-[[package]]
-name = "r3bl_script"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "crossterm",
- "futures-util",
- "miette",
- "r3bl_core",
- "reqwest",
- "serde_json",
- "serial_test",
- "strum",
- "strum_macros",
- "textwrap",
- "thiserror 2.0.7",
- "tokio",
- "tracing",
- "tracing-core",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1736,7 +1715,7 @@ dependencies = [
  "smallvec",
  "strum",
  "strum_macros",
- "thiserror 1.0.64",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-appender",
@@ -1770,7 +1749,7 @@ dependencies = [
  "strum_macros",
  "syntect",
  "textwrap",
- "thiserror 1.0.64",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-appender",
@@ -1795,7 +1774,7 @@ dependencies = [
  "serial_test",
  "smallstr",
  "smallvec",
- "thiserror 1.0.64",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-appender",
@@ -1859,7 +1838,7 @@ checksum = "ba009ff324d1fc1b900bd1fdb31564febe58a8ccc8a6fdbb93b543d33b13ca43"
 dependencies = [
  "getrandom",
  "libredox",
- "thiserror 1.0.64",
+ "thiserror",
 ]
 
 [[package]]
@@ -1877,7 +1856,7 @@ dependencies = [
  "strip-ansi-escapes",
  "strum",
  "strum_macros",
- "thiserror 1.0.64",
+ "thiserror",
  "unicode-segmentation",
  "unicode-width 0.1.14",
 ]
@@ -2439,7 +2418,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "thiserror 1.0.64",
+ "thiserror",
  "walkdir",
  "yaml-rust",
 ]
@@ -2538,16 +2517,7 @@ version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d50af8abc119fb8bb6dbabcfa89656f46f84aa0ac7688088608076ad2b459a84"
 dependencies = [
- "thiserror-impl 1.0.64",
-]
-
-[[package]]
-name = "thiserror"
-version = "2.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93605438cbd668185516ab499d589afb7ee1859ea3d5fc8f6b0755e1c7443767"
-dependencies = [
- "thiserror-impl 2.0.7",
+ "thiserror-impl",
 ]
 
 [[package]]
@@ -2555,17 +2525,6 @@ name = "thiserror-impl"
 version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08904e7672f5eb876eaaf87e0ce17857500934f4981c4a0ab2b4aa98baac7fc3"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "2.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1d8749b4531af2117677a5fcd12b1348a3fe2b81e36e61ffeac5c4aa3273e36"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2748,7 +2707,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3566e8ce28cc0a3fe42519fc80e6b4c943cc4c8cef275620eb8dac2d3d4e06cf"
 dependencies = [
  "crossbeam-channel",
- "thiserror 1.0.64",
+ "thiserror",
  "time",
  "tracing-subscriber",
 ]

@@ -40,9 +40,8 @@ pub fn try_set_file_executable(file: impl AsRef<Path>) -> miette::Result<()> {
 
 #[cfg(test)]
 mod tests_permissions {
-    use r3bl_core::create_temp_dir;
-
     use super::*;
+    use crate::create_temp_dir;
 
     #[test]
     fn test_set_file_executable() {
