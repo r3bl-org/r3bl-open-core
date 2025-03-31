@@ -18,10 +18,9 @@
 use std::{env, path::Path};
 
 use miette::IntoDiagnostic;
-use r3bl_core::{InlineString, inline_string, ok};
 use strum_macros::{Display, EnumString};
 
-use crate::SCRIPT_MOD_DEBUG;
+use crate::{InlineString, SCRIPT_MOD_DEBUG, inline_string, ok};
 
 #[cfg(target_os = "windows")]
 const OS_SPECIFIC_ENV_PATH_SEPARATOR: &str = ";";
@@ -42,7 +41,7 @@ pub type EnvVarsSlice<'a> = &'a [(String, String)];
 /// # Example
 ///
 /// ```
-/// use r3bl_script::environment::{gen_path_env_vars, EnvKeys};
+/// use r3bl_core::environment::{gen_path_env_vars, EnvKeys};
 ///
 /// let path_envs = gen_path_env_vars("/usr/bin");
 /// let expected = vec![
@@ -56,7 +55,7 @@ pub type EnvVarsSlice<'a> = &'a [(String, String)];
 /// The returned value can also be passed around as a `&[(String, String)]`.
 ///
 /// ```
-/// use r3bl_script::environment::{gen_path_env_vars, EnvVars, EnvVarsSlice, EnvKeys};
+/// use r3bl_core::environment::{gen_path_env_vars, EnvVars, EnvVarsSlice, EnvKeys};
 ///
 /// let path_envs: EnvVars = gen_path_env_vars("/usr/bin");
 /// let path_envs_ref: EnvVarsSlice = &path_envs;

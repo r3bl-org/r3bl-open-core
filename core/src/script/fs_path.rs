@@ -26,15 +26,16 @@ use std::{env,
           path::{Path, PathBuf}};
 
 use miette::Diagnostic;
-use r3bl_core::ok;
 use thiserror::Error;
+
+use crate::ok;
 
 /// Use this macro to make it more ergonomic to work with [PathBuf]s.
 ///
 /// # Example - create a new path
 ///
 /// ```
-/// use r3bl_script::fs_paths;
+/// use r3bl_core::fs_paths;
 /// use std::path::{PathBuf, Path};
 ///
 /// let my_path = fs_paths![with_empty_root => "usr/bin" => "bash"];
@@ -47,7 +48,7 @@ use thiserror::Error;
 /// # Example - join to an existing path
 ///
 /// ```
-/// use r3bl_script::fs_paths;
+/// use r3bl_core::fs_paths;
 /// use std::path::{PathBuf, Path};
 ///
 /// let root = PathBuf::from("/home/user");
@@ -88,8 +89,8 @@ macro_rules! fs_paths {
 /// # Example
 ///
 /// ```
-/// use r3bl_script::fs_paths_exist;
-/// use r3bl_script::fs_paths;
+/// use r3bl_core::fs_paths_exist;
+/// use r3bl_core::fs_paths;
 /// use r3bl_core::create_temp_dir;
 ///
 /// let temp_dir = create_temp_dir().unwrap();
@@ -219,10 +220,9 @@ mod tests_fs_path {
     use std::os::unix::fs::PermissionsExt as _;
 
     use fs_path::try_pwd;
-    use r3bl_core::create_temp_dir;
 
     use super::*;
-    use crate::{fs_path, serial_preserve_pwd_test, with_saved_pwd};
+    use crate::{create_temp_dir, fs_path, serial_preserve_pwd_test, with_saved_pwd};
 
     serial_preserve_pwd_test!(test_try_pwd, {
         with_saved_pwd!({
