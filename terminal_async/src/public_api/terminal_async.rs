@@ -86,7 +86,7 @@ impl TerminalAsync {
     /// ```
     /// async fn foo() -> miette::Result<()> {
     ///     use r3bl_terminal_async::TerminalAsync;
-    ///     let terminal_async = TerminalAsync::try_new("> ")
+    ///     let terminal_async = TerminalAsync::try_new(None)
     ///         .await?
     ///         .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
     ///     r3bl_core::ok!()
@@ -98,7 +98,7 @@ impl TerminalAsync {
     /// ```
     /// async fn foo() -> miette::Result<()> {
     ///     use r3bl_terminal_async::TerminalAsync;
-    ///     let Some(mut terminal_async) = TerminalAsync::try_new("> ").await? else {
+    ///     let Some(mut terminal_async) = TerminalAsync::try_new(Some("> ")).await? else {
     ///         return Err(miette::miette!("Failed to create terminal"));
     ///     };
     ///     r3bl_core::ok!()
@@ -118,7 +118,9 @@ impl TerminalAsync {
     ///
     /// More info on terminal piping:
     /// - <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
-    pub async fn try_new(prompt: &str) -> miette::Result<Option<TerminalAsync>> {
+    pub fn try_new(
+        read_line_prompt: Option<impl AsRef<str>>,
+    ) -> miette::Result<Option<TerminalAsync>> {
         if let StdinIsPipedResult::StdinIsPiped = is_stdin_piped() {
             return Ok(None);
         }
@@ -132,6 +134,10 @@ impl TerminalAsync {
         let output_device = OutputDevice::new_stdout();
         let input_device = InputDevice::new_event_stream();
 
+        let prompt = read_line_prompt
+            .map(|p| p.as_ref().to_string())
+            .unwrap_or_else(|| "> ".to_owned());
+
         let (readline, stdout) =
             Readline::new(prompt.to_owned(), output_device, input_device)
                 .into_diagnostic()?;
@@ -143,6 +149,14 @@ impl TerminalAsync {
     }
 
     pub fn clone_shared_writer(&self) -> SharedWriter { self.shared_writer.clone() }
+
+    pub fn mut_input_device(&mut self) -> &mut InputDevice {
+        &mut self.readline.input_device
+    }
+
+    pub fn clone_output_device(&mut self) -> OutputDevice {
+        self.readline.output_device.clone()
+    }
 
     /// Replacement for [std::io::Stdin::read_line()] (this is async and non blocking).
     pub async fn read_line(&mut self) -> miette::Result<ReadlineEvent> {

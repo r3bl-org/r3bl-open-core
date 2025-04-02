@@ -295,7 +295,7 @@ pub mod terminal_async_constructor {
             format!("{}{}", prompt_seg_1, prompt_seg_2)
         };
 
-        let Ok(Some(terminal_async)) = TerminalAsync::try_new(prompt.as_str()).await
+        let Ok(Some(terminal_async)) = TerminalAsync::try_new(Some(prompt))
         else {
             miette::bail!("Failed to create TerminalAsync instance");
         };
