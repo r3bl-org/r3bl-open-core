@@ -14,6 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+use r3bl_core::join;
 
 use std::{io::{self, Write},
           sync::Arc};
@@ -258,8 +259,6 @@ pub enum ControlFlowLimited<E> {
 /// [`PauseBuffer`]. When the terminal is resumed, the buffer is drained and the output is
 /// written to the terminal.
 pub mod manage_shared_writer_output {
-    use r3bl_core::join;
-
     use super::*;
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.

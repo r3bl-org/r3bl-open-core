@@ -21,6 +21,8 @@ use miette::IntoDiagnostic;
 
 use crate::{CrosstermEventResult, PinnedInputStream};
 
+/// This struct represents an input device that can be used to read from the terminal. See
+/// [crate::InputDeviceExt] for testing features.
 pub struct InputDevice {
     pub resource: PinnedInputStream<CrosstermEventResult>,
 }

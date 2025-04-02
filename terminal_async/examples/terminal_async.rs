@@ -143,7 +143,7 @@ async fn main() -> miette::Result<()> {
         format!("{}{}", prompt_seg_1, prompt_seg_2)
     };
 
-    let maybe_terminal_async = TerminalAsync::try_new(prompt.as_str()).await?;
+    let maybe_terminal_async = TerminalAsync::try_new(Some(prompt))?;
 
     // If the terminal is not fully interactive, then return early.
     let Some(mut terminal_async) = maybe_terminal_async else {
@@ -621,13 +621,14 @@ async fn test_display_tree() -> miette::Result<()> {
     assert_eq!(shared_writer.buffer.len(), 0);
 
     // Print everything in line_receiver.
-    let mut output_lines: MicroVecBackingStore<String> = smallvec![];
+    let mut output_lines: Vec<String> = vec![];
     loop {
         let it = line_receiver.try_recv().into_diagnostic();
         match it {
             Ok(r3bl_core::LineStateControlSignal::Line(it)) => {
-                output_lines.push(String::from_utf8_lossy(&it).to_string());
-                print!("{}", String::from_utf8_lossy(&it));
+                let string = String::from_utf8_lossy(it.as_ref()).to_string();
+                print!("{string}");
+                output_lines.push(string);
             }
             _ => break,
         }
