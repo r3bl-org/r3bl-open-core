@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2024-2025 R3BL LLC
+ *   Copyright (c) 2025 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,4 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod spinner;
-pub mod terminal_async;
-pub mod choose;
-
-// Re-export.
-pub use spinner::*;
-pub use terminal_async::*;
-pub use choose::*;
+// 00: copy the tuify code here

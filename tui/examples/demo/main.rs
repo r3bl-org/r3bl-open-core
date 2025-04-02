@@ -61,13 +61,21 @@ async fn main() -> CommonResult<()> {
     let no_log_arg_passed = args.contains(&"--no-log".to_string());
 
     // If the terminal is not fully interactive, then return early.
-    let Some(mut terminal_async) = TerminalAsync::try_new("> ").await? else {
+    let Some(mut terminal_async) = TerminalAsync::try_new({
+        // Generate prompt.
+        let fg = rgb_value!(slate_grey);
+        let bg = rgb_value!(moonlight_blue);
+        let prompt_seg_1 = fg_rgb_color(fg, "╭>╮").bg_rgb_color(bg);
+        let prompt_seg_2 = " ";
+        Some(format!("{}{}", prompt_seg_1, prompt_seg_2))
+    })?
+    else {
         return CommonError::new_error_result_with_only_msg(
             "Terminal is not fully interactive",
         );
     };
 
-    // Pre-populate the readline's history with some entries.
+    // Pre-populate the read_line's history with some entries.
     for command in AutoCompleteCommand::iter() {
         terminal_async
             .readline
