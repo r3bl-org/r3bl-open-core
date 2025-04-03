@@ -15,10 +15,9 @@
  *   limitations under the License.
  */
 
-use std::io::{Result, Write};
+use std::io::Result;
 
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
-                queue,
                 style::{Attribute,
                         Print,
                         ResetColor,
@@ -30,25 +29,28 @@ use r3bl_core::{blue,
                 col,
                 get_terminal_width,
                 inline_string,
+                output_device_as_mut,
                 throws,
                 usize,
                 width,
                 AnsiStyledText,
                 ChUnit,
-                GCStringExt};
+                GCStringExt,
+                OutputDevice};
 
 use crate::{apply_style,
             get_crossterm_color_based_on_terminal_capabilities,
+            queue_commands,
             set_attribute,
             FunctionComponent,
             Header,
-            SelectionMode,
+            HowToChoose,
             State,
             StyleSheet,
             DEVELOPMENT_MODE};
 
-pub struct SelectComponent<W: Write> {
-    pub write: W,
+pub struct SelectComponent {
+    pub output_device: OutputDevice,
     pub style: StyleSheet,
 }
 
@@ -59,14 +61,14 @@ const MULTI_SELECT_IS_NOT_SELECTED: &str = "☐";
 const SINGLE_SELECT_IS_SELECTED: &str = "◉";
 const SINGLE_SELECT_IS_NOT_SELECTED: &str = "◌";
 
-impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
-    fn get_write(&mut self) -> &mut W { &mut self.write }
+impl FunctionComponent<State<'_>> for SelectComponent {
+    fn get_output_device(&mut self) -> OutputDevice { self.output_device.clone() }
 
     // Header can be either a single line or a multi line.
     fn calculate_header_viewport_height(&self, state: &mut State<'_>) -> ChUnit {
-        match state.get_header() {
-            Header::Single => ch(1),
-            Header::Multiple => ch(state.multi_line_header.len()),
+        match state.header {
+            Header::SingleLine(_) => ch(1),
+            Header::MultiLine(ref lines) => ch(lines.len()),
         }
     }
 
@@ -139,21 +141,19 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
 
             let data_row_index_start = *state.scroll_offset_row_index;
 
-            let writer = self.get_write();
-
-            match state.get_header() {
-                Header::Single => {
+            match state.header {
+                Header::SingleLine(ref header_text) => {
                     let mut header_text = format!(
                         "{}{}",
                         " ".repeat(start_display_col_offset),
-                        state.header
+                        header_text
                     );
 
                     header_text =
                         clip_string_to_width_with_ellipsis(header_text, viewport_width);
 
-                    queue! {
-                        writer,
+                    queue_commands! {
+                        self.output_device,
                         // Bring the caret back to the start of line.
                         MoveToColumn(0),
                         // Reset the colors that may have been set by the previous command.
@@ -177,9 +177,9 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                         MoveToNextLine(1),
                         // Reset the colors.
                         ResetColor,
-                    }?;
+                    };
                 }
-                Header::Multiple => {
+                Header::MultiLine(ref header_lines) => {
                     // Subtract 3 from viewport width because we need to add "..." to the
                     // end of the line.
                     let mut available_space_col_count: ChUnit = viewport_width - 3;
@@ -189,7 +189,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                         vec![];
                     let mut maybe_clipped_text_vec: Vec<Vec<String>> = vec![];
 
-                    for header_line in state.multi_line_header.iter() {
+                    for header_line in header_lines.iter() {
                         let mut header_line_modified = vec![];
 
                         'inner: for last_span in header_line.iter() {
@@ -238,9 +238,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
 
                     // Replace the text inside vector of vectors of AnsiStyledText with
                     // the clipped text.
-                    let zipped = maybe_clipped_text_vec
-                        .iter()
-                        .zip(state.multi_line_header.iter());
+                    let zipped = maybe_clipped_text_vec.iter().zip(header_lines.iter());
                     zipped.for_each(|(clipped_text_vec, header_span_vec)| {
                         let mut ansi_styled_text_vec: Vec<AnsiStyledText<'_>> = vec![];
                         let zipped = clipped_text_vec.iter().zip(header_span_vec.iter());
@@ -265,8 +263,8 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                         .collect::<Vec<String>>()
                         .join("\r\n");
 
-                    queue! {
-                        writer,
+                    queue_commands! {
+                        self.output_device,
                         // Bring the caret back to the start of line.
                         MoveToColumn(0),
                         // Reset the colors that may have been set by the previous command.
@@ -279,7 +277,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                         MoveToNextLine(1),
                         // Reset the colors.
                         ResetColor,
-                    }?;
+                    };
                 }
             }
 
@@ -312,11 +310,12 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                     No,
                 }
 
-                let selected = if state.selected_items.contains(data_item) {
-                    Select::Yes
-                } else {
-                    Select::No
-                };
+                let selected =
+                    if state.selected_items.iter().any(|item| item == data_item) {
+                        Select::Yes
+                    } else {
+                        Select::No
+                    };
 
                 let focused = if ch(caret_row_scroll_adj) == state.get_focused_index() {
                     Focus::Yes
@@ -339,7 +338,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 };
 
                 let row_prefix = match state.selection_mode {
-                    SelectionMode::Single => {
+                    HowToChoose::Single => {
                         let padding_left = " ".repeat(start_display_col_offset);
                         if let Focus::Yes = focused {
                             format!("{padding_left} {SINGLE_SELECT_IS_SELECTED} ")
@@ -347,7 +346,7 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                             format!("{padding_left} {SINGLE_SELECT_IS_NOT_SELECTED} ")
                         }
                     }
-                    SelectionMode::Multiple => {
+                    HowToChoose::Multiple => {
                         let padding_left = " ".repeat(start_display_col_offset);
                         match (focused, selected) {
                             (Focus::Yes, Select::Yes) => {
@@ -377,8 +376,8 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                     "".to_string()
                 };
 
-                queue! {
-                    writer,
+                queue_commands! {
+                    self.output_device,
                     // Bring the caret back to the start of line.
                     MoveToColumn(0),
                     // Reset the colors that may have been set by the previous command.
@@ -404,16 +403,16 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                     MoveToNextLine(1),
                     // Reset the colors.
                     ResetColor,
-                }?;
+                };
             }
 
             // Move the cursor back up.
-            queue! {
-                writer,
+            queue_commands! {
+                self.output_device,
                 MoveToPreviousLine(*items_viewport_height + *header_viewport_height),
-            }?;
+            };
 
-            writer.flush()?;
+            output_device_as_mut!(self.output_device).flush()?;
         });
     }
 }
@@ -439,11 +438,13 @@ fn clip_string_to_width_with_ellipsis(
 mod tests {
     use pretty_assertions::assert_eq;
     use r3bl_core::{global_color_support::{clear_override, set_override},
-                    ColorSupport};
+                    to_inline_vec,
+                    ColorSupport,
+                    OutputDeviceExt};
     use serial_test::serial;
+    use smallvec::smallvec;
 
     use super::*;
-    use crate::TestStringWriter;
 
     #[test]
     fn test_clip_string_to_width_with_ellipsis() {
@@ -462,34 +463,30 @@ mod tests {
     #[test]
     fn test_select_component() {
         let mut state = State {
-            header: "Header".to_string(),
-            items: vec![
-                "Item 1".to_string(),
-                "Item 2".to_string(),
-                "Item 3".to_string(),
-            ],
+            header: Header::SingleLine("Header".into()),
+            items: to_inline_vec(&["Item 1", "Item 2", "Item 3"]),
             max_display_height: ch(5),
             max_display_width: ch(40),
             raw_caret_row_index: ch(0),
             scroll_offset_row_index: ch(0),
-            selected_items: vec![],
-            selection_mode: SelectionMode::Single,
+            selected_items: smallvec![],
+            selection_mode: HowToChoose::Single,
             ..Default::default()
         };
 
         state.scroll_offset_row_index = ch(0);
 
-        let mut writer = TestStringWriter::new();
+        let (output_device, stdout_mock) = OutputDevice::new_mock();
 
         let mut component = SelectComponent {
-            write: &mut writer,
+            output_device,
             style: StyleSheet::default(),
         };
 
         set_override(ColorSupport::Ansi256);
         component.render(&mut state).unwrap();
 
-        let generated_output = writer.get_buffer().to_string();
+        let generated_output = stdout_mock.get_copy_of_buffer_as_string();
 
         println!(
             "generated_output = writer.get_buffer(): \n\n{:#?}\n\n",

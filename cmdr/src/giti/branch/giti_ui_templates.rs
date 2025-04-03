@@ -25,8 +25,10 @@ use r3bl_core::{ASTColor,
                 CommonErrorType,
                 CommonResult,
                 GradientGenerationPolicy,
+                InlineVec,
                 TextColorizationPolicy};
 use r3bl_tuify::SLATE_GRAY;
+use smallvec::smallvec;
 
 use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
                                           GoodbyeThanksForUsingGiti,
@@ -34,10 +36,10 @@ use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
                                           PleaseStarUs},
             upgrade_check};
 
-pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
+pub fn multi_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:     navigate",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
@@ -45,7 +47,7 @@ pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
 
     let space = AnsiStyledText {
         text: " Space:          select or deselect item",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
@@ -53,7 +55,7 @@ pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
 
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:  exit program",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
@@ -61,26 +63,32 @@ pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
 
     let return_key = AnsiStyledText {
         text: " Return:         confirm selection",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
-    vec![vec![up_and_down], vec![space], vec![esc], vec![return_key]]
+    smallvec![
+        smallvec![up_and_down],
+        smallvec![space],
+        smallvec![esc],
+        smallvec![return_key]
+    ]
 }
 
-pub fn single_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
+pub fn single_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>>
+{
     let up_or_down = AnsiStyledText {
         text: " Up or down:     navigate",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:  exit program",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
@@ -88,13 +96,13 @@ pub fn single_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
 
     let return_key = AnsiStyledText {
         text: " Return:         confirm selection",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(SLATE_GRAY),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
-    vec![vec![up_or_down], vec![esc], vec![return_key]]
+    smallvec![smallvec![up_or_down], smallvec![esc], smallvec![return_key]]
 }
 
 pub fn show_exit_message() {

@@ -15,23 +15,24 @@
  *   limitations under the License.
  */
 
-use std::vec;
-
 use r3bl_core::{get_size,
                 get_terminal_width,
                 log_support::try_initialize_logging_global,
                 throws,
+                to_inline_vec,
                 usize,
                 ASTColor,
                 ASTStyle,
-                AnsiStyledText};
+                AnsiStyledText,
+                InlineVec};
 use r3bl_tuify::{components::style::StyleSheet,
                  select_from_list,
                  select_from_list_with_multi_line_header,
-                 SelectionMode,
+                 HowToChoose,
                  DEVELOPMENT_MODE};
 mod single_select_quiz_game;
 use single_select_quiz_game::main as single_select_quiz_game;
+use smallvec::smallvec;
 
 fn main() -> miette::Result<()> {
     throws!({
@@ -80,11 +81,11 @@ fn main() -> miette::Result<()> {
                 SINGLE_SELECT_QUIZ_GAME,
             ]
             .iter()
-            .map(|it| it.to_string())
+            .map(|it| (*it).into())
             .collect(),
             6, /* height of the tuify component */
             0, /* width of the tuify component. 0 means it will use the full terminal width */
-            SelectionMode::Single,
+            HowToChoose::Single,
             StyleSheet::default(),
         );
 
@@ -150,19 +151,19 @@ fn main() -> miette::Result<()> {
 fn multi_line_header() {
     let header = AnsiStyledText {
         text: " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((171, 204, 242).into())),
             ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
         ],
     };
-    let line_5 = vec![header];
+    let line_5 = smallvec![header];
 
-    let mut instructions: Vec<Vec<AnsiStyledText>> = multi_select_instructions();
+    let mut instructions = multi_select_instructions();
     instructions.push(line_5);
 
     let user_input = select_from_list_with_multi_line_header(
         instructions,
-        [
+        to_inline_vec(&[
             "item 1 of 13",
             "item 2 of 13",
             "item 3 of 13",
@@ -176,13 +177,10 @@ fn multi_line_header() {
             "item 11 of 13",
             "item 12 of 13",
             "item 13 of 13",
-        ]
-        .iter()
-        .map(|it| it.to_string())
-        .collect(),
+        ]),
         Some(6),
         None,
-        SelectionMode::Multiple,
+        HowToChoose::Multiple,
         StyleSheet::default(),
     );
     match &user_input {
@@ -213,11 +211,11 @@ fn single_line_header() {
             "item 13 of 13",
         ]
         .iter()
-        .map(|it| it.to_string())
+        .map(|it| (*it).into())
         .collect(),
         5,
         max_width_col_count,
-        SelectionMode::Multiple,
+        HowToChoose::Multiple,
         StyleSheet::default(),
     );
     match &user_input {
@@ -240,19 +238,19 @@ fn multiple_select_single_item() {
     let mut instructions = multi_select_instructions();
     let header = AnsiStyledText {
         text: " Please select one or more items",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((171, 204, 242).into())),
             ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
         ],
     };
-    instructions.push(vec![header]);
-    let list = vec![format!("one element")];
+    instructions.push(smallvec![header]);
+    let list = smallvec!["one element".into()];
     let user_input = select_from_list_with_multi_line_header(
         instructions,
         list,
         Some(6),
         None,
-        SelectionMode::Multiple,
+        HowToChoose::Multiple,
         StyleSheet::default(),
     );
     match &user_input {
@@ -272,16 +270,16 @@ fn multiple_select_13_items_vph_5(
     let mut instructions = multi_select_instructions();
     let header = AnsiStyledText {
         text: " Please select one or more items",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((229, 239, 123).into())),
             ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
         ],
     };
-    instructions.push(vec![header]);
+    instructions.push(smallvec![header]);
 
     let user_input = select_from_list_with_multi_line_header(
         instructions,
-        [
+        to_inline_vec(&[
             "item 1 of 13",
             "item 2 of 13",
             "item 3 of 13",
@@ -295,13 +293,10 @@ fn multiple_select_13_items_vph_5(
             "item 11 of 13",
             "item 12 of 13",
             "item 13 of 13",
-        ]
-        .iter()
-        .map(|it| it.to_string())
-        .collect(),
+        ]),
         Some(max_height_row_count),
         Some(max_width_col_count),
-        SelectionMode::Multiple,
+        HowToChoose::Multiple,
         style,
     );
     match &user_input {
@@ -328,23 +323,20 @@ fn multiple_select_2_items_vph_5(
     let mut instructions = multi_select_instructions();
     let header = AnsiStyledText {
         text: " Please select one or more items",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((229, 239, 123).into())),
             ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
         ],
     };
 
-    instructions.push(vec![header]);
+    instructions.push(smallvec![header]);
 
     let user_input = select_from_list_with_multi_line_header(
         instructions,
-        ["item 1 of 2", "item 2 of 2"]
-            .iter()
-            .map(|it| it.to_string())
-            .collect(),
+        to_inline_vec(&["item 1 of 2", "item 2 of 2"]),
         Some(max_height_row_count),
         Some(max_width_col_count),
-        SelectionMode::Multiple,
+        HowToChoose::Multiple,
         style,
     );
     match &user_input {
@@ -370,7 +362,7 @@ fn single_select_13_items_vph_5(
 ) {
     let user_input = select_from_list(
         "Single select".to_string(),
-        [
+        to_inline_vec(&[
             "item 1 of 13",
             "item 2 of 13",
             "item 3 of 13",
@@ -384,13 +376,10 @@ fn single_select_13_items_vph_5(
             "item 11 of 13",
             "item 12 of 13",
             "item 13 of 13",
-        ]
-        .iter()
-        .map(|it| it.to_string())
-        .collect(),
+        ]),
         max_height_row_count,
         max_width_col_count,
-        SelectionMode::Single,
+        HowToChoose::Single,
         style,
     );
     match &user_input {
@@ -417,22 +406,19 @@ fn single_select_2_items_vph_5(
     let mut instructions = single_select_instruction();
     let header = AnsiStyledText {
         text: " Please select one item",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((171, 204, 242).into())),
             ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
         ],
     };
-    instructions.push(vec![header]);
+    instructions.push(smallvec![header]);
 
     let user_input = select_from_list_with_multi_line_header(
         instructions,
-        ["item 1 of 2", "item 2 of 2"]
-            .iter()
-            .map(|it| it.to_string())
-            .collect(),
+        to_inline_vec(&["item 1 of 2", "item 2 of 2"]),
         Some(max_height_row_count),
         Some(max_width_col_count),
-        SelectionMode::Single,
+        HowToChoose::Single,
         style,
     );
     match &user_input {
@@ -450,123 +436,123 @@ fn single_select_2_items_vph_5(
     });
 }
 
-fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
+fn multi_select_instructions() -> InlineVec<InlineVec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((9, 238, 211).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let navigate = AnsiStyledText {
         text: "     navigate",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
-    let line_1 = vec![up_and_down, navigate];
+    let line_1 = smallvec![up_and_down, navigate];
 
     let space = AnsiStyledText {
         text: " Space:",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((255, 216, 9).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let select = AnsiStyledText {
         text: "          select or deselect item",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
-    let line_2 = vec![space, select];
+    let line_2 = smallvec![space, select];
 
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((255, 132, 18).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let exit = AnsiStyledText {
         text: "  exit program",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
-    let line_3 = vec![esc, exit];
+    let line_3 = smallvec![esc, exit];
     let return_key = AnsiStyledText {
         text: " Return:",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((234, 0, 196).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let confirm = AnsiStyledText {
         text: "         confirm selection",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
-    let line_4 = vec![return_key, confirm];
-    vec![line_1, line_2, line_3, line_4]
+    let line_4 = smallvec![return_key, confirm];
+    smallvec![line_1, line_2, line_3, line_4]
 }
 
-fn single_select_instruction() -> Vec<Vec<AnsiStyledText<'static>>> {
+fn single_select_instruction() -> InlineVec<InlineVec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((9, 238, 211).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let navigate = AnsiStyledText {
         text: "     navigate",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
-    let line_1 = vec![up_and_down, navigate];
+    let line_1 = smallvec![up_and_down, navigate];
 
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((255, 132, 18).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let exit = AnsiStyledText {
         text: "  exit program",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
-    let line_2 = vec![esc, exit];
+    let line_2 = smallvec![esc, exit];
     let return_key = AnsiStyledText {
         text: " Return:",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((234, 0, 196).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let confirm = AnsiStyledText {
         text: "         confirm selection",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
-    let line_3 = vec![return_key, confirm];
-    vec![line_1, line_2, line_3]
+    let line_3 = smallvec![return_key, confirm];
+    smallvec![line_1, line_2, line_3]
 }
