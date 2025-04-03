@@ -34,10 +34,13 @@ use r3bl_core::{blue,
                 pink,
                 throws,
                 usize,
+                InlineString,
+                InlineVec,
                 StdinIsPipedResult,
                 StdoutIsPipedResult};
-use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, DEVELOPMENT_MODE};
+use r3bl_tuify::{select_from_list, HowToChoose, StyleSheet, DEVELOPMENT_MODE};
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
+use smallvec::smallvec;
 use StdinIsPipedResult::{StdinIsNotPiped, StdinIsPiped};
 use StdoutIsPipedResult::{StdoutIsNotPiped, StdoutIsPiped};
 
@@ -80,7 +83,7 @@ enum CLICommand {
     SelectFromList {
         /// Would you like to select one or more items?
         #[arg(value_name = "mode", long, short = 's')]
-        selection_mode: Option<SelectionMode>,
+        selection_mode: Option<HowToChoose>,
 
         /// Each selected item is passed to this command as `%` and executed in your shell.
         /// For eg: "echo %". Please wrap the command in quotes 💡
@@ -190,17 +193,18 @@ fn show_error_do_not_pipe_stdout(bin_name: &str) {
 }
 
 fn show_tui(
-    maybe_selection_mode: Option<SelectionMode>,
+    maybe_selection_mode: Option<HowToChoose>,
     maybe_command_to_run_with_each_selection: Option<String>,
     tui_height: Option<usize>,
     tui_width: Option<usize>,
     enable_logging: bool,
 ) {
-    let lines: Vec<String> = stdin()
+    let lines: InlineVec<InlineString> = stdin()
         .lock()
         .lines()
         .map_while(Result::ok)
-        .collect::<Vec<String>>();
+        .map(|s| s.into())
+        .collect::<InlineVec<_>>();
 
     enable_logging.then(|| {
         // % is Display, ? is Debug.
@@ -235,14 +239,14 @@ fn show_tui(
             possible_values_for_selection_mode,
             max_height_row_count,
             max_width_col_count,
-            SelectionMode::Single,
+            HowToChoose::Single,
             StyleSheet::default(),
         );
 
         let it = if let Some(user_selection) = user_selection {
             if let Some(it) = user_selection.first() {
                 println!("selection-mode: {}", it);
-                SelectionMode::from_str(it, true).unwrap_or(SelectionMode::Single)
+                HowToChoose::from_str(it, true).unwrap_or(HowToChoose::Single)
             } else {
                 print_help_for("select-from-list").ok();
                 return;
@@ -301,7 +305,7 @@ fn show_tui(
             selection_mode,
             StyleSheet::default(),
         );
-        convert_user_input_into_vec_of_strings(it)
+        it.unwrap_or_default()
     };
 
     enable_logging.then(|| {
@@ -317,12 +321,6 @@ fn show_tui(
             .replace(SELECTED_ITEM_SYMBOL, &selected_item);
         execute_command(actual_command_to_run);
     }
-}
-
-fn convert_user_input_into_vec_of_strings(
-    user_input: Option<Vec<String>>,
-) -> Vec<String> {
-    user_input.unwrap_or_default()
 }
 
 /// More info: <https://docs.rs/execute/latest/execute/#run-a-command-string-in-the-current-shell>
@@ -391,7 +389,7 @@ fn print_help_for_subcommand_and_option(subcommand: &str, option: &str) -> Resul
 fn get_possible_values_for_subcommand_and_option(
     subcommand: &str,
     option: &str,
-) -> Vec<String> {
+) -> InlineVec<InlineString> {
     let app_args_binding = AppArgs::command();
 
     if let Some(it) = app_args_binding.find_subcommand(subcommand) {
@@ -400,8 +398,8 @@ fn get_possible_values_for_subcommand_and_option(
                 let possible_values = arg.get_possible_values();
                 let possible_values = possible_values
                     .iter()
-                    .map(|it| it.get_name().to_string())
-                    .collect::<Vec<_>>();
+                    .map(|it| it.get_name().into())
+                    .collect::<InlineVec<_>>();
 
                 DEVELOPMENT_MODE.then(|| {
                     // % is Display, ? is Debug.
@@ -416,5 +414,5 @@ fn get_possible_values_for_subcommand_and_option(
         }
     }
 
-    vec![]
+    smallvec![]
 }

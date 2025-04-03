@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+// 00: delete this file and replace with the version in tuify
+
 use miette::IntoDiagnostic;
 use r3bl_core::{AnsiStyledText,
                 InlineVec,
@@ -55,8 +57,6 @@ pub enum Header<'a> {
     MultiLine(InlineVec<InlineVec<AnsiStyledText<'a>>>),
 }
 
-// 00: add State (migrate tuify::State)
-
 /// Choose an item from a list of items.
 ///
 /// # Arguments
@@ -80,12 +80,12 @@ pub enum Header<'a> {
 ///       defaults will be used.
 ///     - `1`: The style sheet to use for the list of items.
 pub async fn choose<'a>(
-    header: Header<'a>,
+    _header: Header<'a>,
     from: &'a [&'a str],
-    how: HowToChoose,
-    io: (&'a mut OutputDevice, &'a mut InputDevice),
+    _how: HowToChoose,
+    _io: (&'a mut OutputDevice, &'a mut InputDevice),
     maybe_shared_writer: Option<SharedWriter>,
-    styling: (Option<Size>, StyleSheet),
+    _styling: (Option<Size>, StyleSheet),
 ) -> miette::Result<Chosen<'a>> {
     if from.is_empty() {
         return Ok(Chosen::None);
@@ -101,8 +101,6 @@ pub async fn choose<'a>(
             .into_diagnostic()?;
     }
 
-    // 00: impl this
-
     // For compatibility with ReadlineAsync (if it is in use).
     if let Some(ref shared_writer) = maybe_shared_writer {
         // Resume the shared writer after the user has made their choice.
@@ -113,6 +111,5 @@ pub async fn choose<'a>(
             .into_diagnostic()?;
     }
 
-    // 00: remove this after impl above (just for testing)
     Ok(Chosen::Many(smallvec::smallvec![1], &from[0..1]))
 }

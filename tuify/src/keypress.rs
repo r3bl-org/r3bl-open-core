@@ -22,13 +22,10 @@ use crossterm::event::{read,
                        KeyEventKind,
                        KeyEventState,
                        KeyModifiers};
-use r3bl_core::{height, width, Size};
+use miette::IntoDiagnostic;
+use r3bl_core::{height, width, InputDevice, Size};
 
 use crate::DEVELOPMENT_MODE;
-
-pub trait KeyPressReader {
-    fn read_key_press(&mut self) -> KeyPress;
-}
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum KeyPress {
@@ -44,23 +41,34 @@ pub enum KeyPress {
     CtrlC,
 }
 
-pub struct CrosstermKeyPressReader {}
-impl KeyPressReader for CrosstermKeyPressReader {
-    fn read_key_press(&mut self) -> KeyPress { read_key_press() }
+pub async fn get_key_press_from_input_device(input_device: &mut InputDevice) -> KeyPress {
+    let result_event = input_device.next().await;
+    read_key_press(result_event)
 }
 
-fn read_key_press() -> KeyPress {
-    if cfg!(windows) {
-        // Windows.
-        read_key_press_windows()
-    } else {
-        // Unix.
-        read_key_press_unix()
+pub trait KeyPressReader {
+    fn read_key_press(&mut self) -> KeyPress;
+}
+
+pub struct CrosstermKeyPressReader {}
+impl KeyPressReader for CrosstermKeyPressReader {
+    fn read_key_press(&mut self) -> KeyPress {
+        let result_event = read();
+        read_key_press(result_event.into_diagnostic())
     }
 }
 
-fn read_key_press_unix() -> KeyPress {
-    let result_event = read();
+fn read_key_press(result_event: miette::Result<Event>) -> KeyPress {
+    if cfg!(windows) {
+        // Windows.
+        read_key_press_windows(result_event)
+    } else {
+        // Unix.
+        read_key_press_unix(result_event)
+    }
+}
+
+fn read_key_press_unix(result_event: miette::Result<Event>) -> KeyPress {
     match result_event {
         Ok(event) => {
             DEVELOPMENT_MODE.then(|| {
@@ -109,8 +117,7 @@ fn read_key_press_unix() -> KeyPress {
 /// - Unix: [`KeyboardEnhancementFlags::REPORT_EVENT_TYPES`] has been enabled with
 ///   [`PushKeyboardEnhancementFlags`].
 /// - Windows: always.
-fn read_key_press_windows() -> KeyPress {
-    let result_event = read();
+fn read_key_press_windows(result_event: miette::Result<Event>) -> KeyPress {
     match result_event {
         Ok(event) => {
             DEVELOPMENT_MODE.then(|| {

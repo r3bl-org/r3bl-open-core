@@ -19,12 +19,12 @@
 pub mod choose;
 pub mod readline_async;
 pub mod spinner;
-pub mod styling;
 pub mod state;
+pub mod styling;
 
 // Re-export.
 pub use choose::*;
 pub use readline_async::*;
 pub use spinner::*;
-pub use styling::*;
 pub use state::*;
+pub use styling::*;

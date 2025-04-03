@@ -15,16 +15,29 @@
  *   limitations under the License.
  */
 
-use std::io::stdout;
-
 use clap::ValueEnum;
-use r3bl_core::{ch, get_size, green, inline_string, usize, AnsiStyledText};
+use miette::IntoDiagnostic as _;
+use r3bl_core::{ch,
+                get_size,
+                green,
+                inline_string,
+                usize,
+                AnsiStyledText,
+                InlineString,
+                InlineVec,
+                InputDevice,
+                LineStateControlSignal,
+                OutputDevice,
+                SharedWriter};
+use smallvec::smallvec;
 
 use crate::{enter_event_loop,
+            enter_event_loop_async,
             CalculateResizeHint,
             CaretVerticalViewportLocation,
             CrosstermKeyPressReader,
             EventLoopResult,
+            Header,
             KeyPress,
             SelectComponent,
             State,
@@ -32,6 +45,83 @@ use crate::{enter_event_loop,
             DEVELOPMENT_MODE};
 
 pub const DEFAULT_HEIGHT: usize = 5;
+
+// 00: different function for async variant
+pub async fn choose<'a>(
+    arg_header: impl Into<Header<'a>>,
+    from: InlineVec<InlineString>,
+    max_height_row_count: usize,
+    // If you pass 0, then the width of your terminal gets set as max_width_col_count.
+    max_width_col_count: usize,
+    how: HowToChoose,
+    style: StyleSheet,
+    io: (
+        &'a mut OutputDevice,
+        &'a mut InputDevice,
+        Option<SharedWriter>,
+    ),
+) -> miette::Result<InlineVec<InlineString>> {
+    // Destructure the tuple.
+    let (output_device, input_device, maybe_shared_writer) = io;
+
+    // For compatibility with ReadlineAsync (if it is in use).
+    if let Some(ref shared_writer) = maybe_shared_writer {
+        // Pause the shared writer while the user is choosing an item.
+        shared_writer
+            .line_state_control_channel_sender
+            .send(LineStateControlSignal::Pause)
+            .await
+            .into_diagnostic()?;
+    }
+
+    // There are fewer items than viewport height. So make viewport shorter.
+    let max_height_row_count = if from.len() <= max_height_row_count {
+        from.len()
+    } else {
+        max_height_row_count
+    };
+
+    let mut state = State {
+        max_display_height: ch(max_height_row_count),
+        max_display_width: ch(max_width_col_count),
+        items: from,
+        header: arg_header.into(),
+        selection_mode: how,
+        ..Default::default()
+    };
+
+    let mut function_component = SelectComponent {
+        output_device: output_device.clone(),
+        style,
+    };
+
+    if let Ok(size) = get_size() {
+        state.set_size(size);
+    }
+
+    let result_user_input = enter_event_loop_async(
+        &mut state,
+        &mut function_component,
+        |state, key_press| keypress_handler(state, key_press),
+        input_device,
+    )
+    .await;
+
+    // For compatibility with ReadlineAsync (if it is in use).
+    if let Some(ref shared_writer) = maybe_shared_writer {
+        // Resume the shared writer after the user has made their choice.
+        shared_writer
+            .line_state_control_channel_sender
+            .send(LineStateControlSignal::Resume)
+            .await
+            .into_diagnostic()?;
+    }
+
+    match result_user_input {
+        Ok(EventLoopResult::ExitWithResult(it)) => Ok(it),
+        _ => Ok(smallvec![]),
+    }
+}
 
 /// This function does the work of rendering the TUI.
 ///
@@ -44,13 +134,13 @@ pub const DEFAULT_HEIGHT: usize = 5;
 /// won't block `cargo test` or when run in non-interactive CI/CD environments.
 pub fn select_from_list(
     header: String,
-    items: Vec<String>,
+    items: InlineVec<InlineString>,
     max_height_row_count: usize,
     // If you pass 0, then the width of your terminal gets set as max_width_col_count.
     max_width_col_count: usize,
-    selection_mode: SelectionMode,
+    how: HowToChoose,
     style: StyleSheet,
-) -> Option<Vec<String>> {
+) -> Option<InlineVec<InlineString>> {
     // There are fewer items than viewport height. So make viewport shorter.
     let max_height_row_count = if items.len() <= max_height_row_count {
         items.len()
@@ -62,13 +152,13 @@ pub fn select_from_list(
         max_display_height: ch(max_height_row_count),
         max_display_width: ch(max_width_col_count),
         items,
-        header,
-        selection_mode,
+        header: Header::SingleLine(header.into()),
+        selection_mode: how,
         ..Default::default()
     };
 
     let mut function_component = SelectComponent {
-        write: stdout(),
+        output_device: OutputDevice::new_stdout(),
         style,
     };
 
@@ -90,14 +180,14 @@ pub fn select_from_list(
 }
 
 pub fn select_from_list_with_multi_line_header(
-    multi_line_header: Vec<Vec<AnsiStyledText<'_>>>,
-    items: Vec<String>,
+    multi_line_header: InlineVec<InlineVec<AnsiStyledText<'_>>>,
+    items: InlineVec<InlineString>,
     maybe_max_height_row_count: Option<usize>,
     // If you pass None, then the width of your terminal gets used.
     maybe_max_width_col_count: Option<usize>,
-    selection_mode: SelectionMode,
+    how: HowToChoose,
     style: StyleSheet,
-) -> Option<Vec<String>> {
+) -> Option<InlineVec<InlineString>> {
     // There are fewer items than viewport height. So make viewport shorter.
     let max_height_row_count = match maybe_max_height_row_count {
         Some(requested_height) => sanitize_height(&items, requested_height),
@@ -110,13 +200,13 @@ pub fn select_from_list_with_multi_line_header(
         max_display_height: ch(max_height_row_count),
         max_display_width: ch(max_width_col_count),
         items,
-        multi_line_header,
-        selection_mode,
+        header: multi_line_header.into(),
+        selection_mode: how,
         ..Default::default()
     };
 
     let mut function_component = SelectComponent {
-        write: stdout(),
+        output_device: OutputDevice::new_stdout(),
         style,
     };
 
@@ -137,7 +227,7 @@ pub fn select_from_list_with_multi_line_header(
     }
 }
 
-fn sanitize_height(items: &[String], requested_height: usize) -> usize {
+fn sanitize_height(items: &InlineVec<InlineString>, requested_height: usize) -> usize {
     let num_items = items.len();
     if num_items > requested_height {
         requested_height
@@ -244,7 +334,7 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
         }
 
         // Enter on multi-select.
-        KeyPress::Enter if selection_mode == SelectionMode::Multiple => {
+        KeyPress::Enter if selection_mode == HowToChoose::Multiple => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
@@ -269,9 +359,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
                 );
             });
             let selection_index = usize(state.get_focused_index());
-            let maybe_item: Option<&String> = state.items.get(selection_index);
+            let maybe_item = state.items.get(selection_index);
             match maybe_item {
-                Some(it) => EventLoopResult::ExitWithResult(vec![it.to_string()]),
+                Some(it) => EventLoopResult::ExitWithResult(smallvec![it.clone()]),
                 None => EventLoopResult::ExitWithoutResult,
             }
         }
@@ -286,7 +376,7 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
         }
 
         // Space on multi-select.
-        KeyPress::Space if selection_mode == SelectionMode::Multiple => {
+        KeyPress::Space if selection_mode == HowToChoose::Multiple => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
@@ -295,11 +385,11 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
                 );
             });
             let selection_index = usize(state.get_focused_index());
-            let maybe_item: Option<&String> = state.items.get(selection_index);
-            let maybe_index: Option<usize> = state
+            let maybe_item = state.items.get(selection_index);
+            let maybe_index = state
                 .selected_items
                 .iter()
-                .position(|x| Some(x) == maybe_item);
+                .position(|item| Some(item) == maybe_item);
             match (maybe_item, maybe_index) {
                 // No selected_item.
                 (None, _) => (),
@@ -308,7 +398,7 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
                     state.selected_items.remove(it);
                 }
                 // Item not found in selected_items so add it.
-                (Some(it), None) => state.selected_items.push(it.to_string()),
+                (Some(it), None) => state.selected_items.push(it.clone()),
             };
 
             EventLoopResult::ContinueAndRerender
@@ -347,7 +437,7 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
 #[derive(
     Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default, Hash,
 )]
-pub enum SelectionMode {
+pub enum HowToChoose {
     /// Select only one option from list.
     #[default]
     Single,
@@ -357,15 +447,19 @@ pub enum SelectionMode {
 
 #[cfg(test)]
 mod test_select_from_list {
-    use r3bl_core::{assert_eq2, is_fully_uninteractive_terminal, TTYResult};
+    use r3bl_core::{assert_eq2,
+                    is_fully_uninteractive_terminal,
+                    to_inline_vec,
+                    OutputDeviceExt,
+                    TTYResult};
 
     use super::*;
-    use crate::{TestStringWriter, TestVecKeyPressReader};
+    use crate::TestVecKeyPressReader;
 
     fn create_state<'a>() -> State<'a> {
         State {
             max_display_height: ch(10),
-            items: ["a", "b", "c"].iter().map(|it| it.to_string()).collect(),
+            items: to_inline_vec(&["a", "b", "c"]),
             ..Default::default()
         }
     }
@@ -373,11 +467,11 @@ mod test_select_from_list {
     #[test]
     fn enter_pressed() {
         let mut state = create_state();
-        let string_writer = TestStringWriter::new();
+        let (output_device, _stdout_mock) = OutputDevice::new_mock();
         let style_sheet = StyleSheet::default();
 
         let mut function_component = SelectComponent {
-            write: string_writer,
+            output_device,
             style: style_sheet,
         };
 
@@ -398,7 +492,7 @@ mod test_select_from_list {
             if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
                 EventLoopResult::ExitWithError
             } else {
-                EventLoopResult::ExitWithResult(vec!["c".to_string()])
+                EventLoopResult::ExitWithResult(to_inline_vec(&["c"]))
             }
         );
     }
@@ -406,11 +500,11 @@ mod test_select_from_list {
     #[test]
     fn ctrl_c_pressed() {
         let mut state = create_state();
-        let string_writer = TestStringWriter::new();
+        let (output_device, _stdout_mock) = OutputDevice::new_mock();
         let style_sheet = StyleSheet::default();
 
         let mut function_component = SelectComponent {
-            write: string_writer,
+            output_device,
             style: style_sheet,
         };
 
