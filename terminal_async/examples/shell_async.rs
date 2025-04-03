@@ -31,7 +31,7 @@
 //!
 //! - A broadcast channel to signal shutdown to the child process, and all the spawned
 //!   tasks.
-//! - [r3bl_terminal_async::TerminalAsync] to write to the terminal. This provides the
+//! - [r3bl_terminal_async::ReadlineAsync] to write to the terminal. This provides the
 //!   mechanism to collect user input and display output.
 //! - [tokio::process::Child] to spawn the child process (`bash`) and interact with it.
 //!   This child process lives as long as the `main` function and exits when the user
@@ -43,7 +43,7 @@
 //!
 //! - Start a main event loop (on the current thread) that does the following:
 //!   - Monitor the shutdown signal from the broadcast channel
-//!   - Monitor the [r3bl_terminal_async::TerminalAsync] for user input and write any
+//!   - Monitor the [r3bl_terminal_async::ReadlineAsync] for user input and write any
 //!     input (the user provides interactively) to to the [tokio::process::ChildStdin].
 //!   - Any exit inputs (when the user types "exit" or "Ctrl+D") from the user are
 //!     captured here and sent to the shutdown broadcast channel. It also listens to the
@@ -102,9 +102,9 @@ use r3bl_core::{SharedWriter,
                 lizard_green,
                 ok,
                 rgb_value};
-use r3bl_terminal_async::{ReadlineEvent,
-                          ReadlineEvent::{Eof, Interrupted, Line, Resized},
-                          TerminalAsync};
+use r3bl_terminal_async::{ReadlineAsync,
+                          ReadlineEvent,
+                          ReadlineEvent::{Eof, Interrupted, Line, Resized}};
 use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};
 
 #[tokio::main]
@@ -124,7 +124,7 @@ async fn main() -> miette::Result<()> {
 
     // Create a `r3bl_terminal_async` instance.
     let terminal_async_constructor::TerminalAsyncHandle {
-        terminal_async,
+        readline_async,
         shared_writer,
     } = terminal_async_constructor::new(pid).await?;
 
@@ -142,7 +142,7 @@ async fn main() -> miette::Result<()> {
         // Current thread.
         monitor_user_input_and_send_to_child::start_event_loop(
             stdin,
-            terminal_async,
+            readline_async,
             child,
             shutdown_sender.clone()
         )
@@ -186,7 +186,7 @@ pub mod monitor_user_input_and_send_to_child {
 
     pub async fn start_event_loop(
         mut stdin: tokio::process::ChildStdin,
-        mut terminal_async: TerminalAsync,
+        mut readline_async: ReadlineAsync,
         mut child: tokio::process::Child,
         shutdown_sender: tokio::sync::broadcast::Sender<()>,
     ) {
@@ -200,9 +200,9 @@ pub mod monitor_user_input_and_send_to_child {
                     break;
                 }
 
-                // Branch: Monitor terminal_async for user input. This is cancel safe as
+                // Branch: Monitor readline_async for user input. This is cancel safe as
                 // `get_readline_event()` is cancel safe.
-                result_readline_event = terminal_async.read_line() => {
+                result_readline_event = readline_async.read_line() => {
                     match ControlFlow::from(result_readline_event) {
                         ControlFlow::ShutdownKillChild => {
                             _ = child.kill().await;
@@ -281,7 +281,7 @@ pub mod terminal_async_constructor {
     use super::*;
 
     pub struct TerminalAsyncHandle {
-        pub terminal_async: TerminalAsync,
+        pub readline_async: ReadlineAsync,
         pub shared_writer: SharedWriter,
     }
 
@@ -295,15 +295,14 @@ pub mod terminal_async_constructor {
             format!("{}{}", prompt_seg_1, prompt_seg_2)
         };
 
-        let Ok(Some(terminal_async)) = TerminalAsync::try_new(Some(prompt))
-        else {
-            miette::bail!("Failed to create TerminalAsync instance");
+        let Ok(Some(readline_async)) = ReadlineAsync::try_new(Some(prompt)) else {
+            miette::bail!("Failed to create ReadlineAsync instance");
         };
 
-        let shared_writer = terminal_async.clone_shared_writer();
+        let shared_writer = readline_async.clone_shared_writer();
 
         ok!(TerminalAsyncHandle {
-            terminal_async,
+            readline_async,
             shared_writer
         })
     }

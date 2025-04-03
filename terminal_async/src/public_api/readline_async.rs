@@ -35,13 +35,13 @@ use r3bl_core::{InputDevice,
 
 use crate::{Readline, ReadlineEvent};
 
-pub struct TerminalAsync {
+pub struct ReadlineAsync {
     pub readline: Readline,
     pub shared_writer: SharedWriter,
 }
 
 /// Don't change the `content`. Print it as is. And it is compatible w/ the
-/// [TerminalAsync::read_line] method.
+/// [ReadlineAsync::read_line] method.
 #[macro_export]
 macro_rules! ta_println {
     (
@@ -76,8 +76,8 @@ macro_rules! ta_println_prefixed {
     }};
 }
 
-impl TerminalAsync {
-    /// Create a new instance of [TerminalAsync]. Example of `prompt` is `"> "`.
+impl ReadlineAsync {
+    /// Create a new instance of [ReadlineAsync]. Example of `prompt` is `"> "`.
     ///
     /// # Example
     ///
@@ -85,9 +85,8 @@ impl TerminalAsync {
     ///
     /// ```
     /// async fn foo() -> miette::Result<()> {
-    ///     use r3bl_terminal_async::TerminalAsync;
-    ///     let terminal_async = TerminalAsync::try_new(None)
-    ///         .await?
+    ///     use r3bl_terminal_async::ReadlineAsync;
+    ///     let readline_async = ReadlineAsync::try_new(None::<String>)?
     ///         .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
     ///     r3bl_core::ok!()
     /// }
@@ -97,8 +96,8 @@ impl TerminalAsync {
     ///
     /// ```
     /// async fn foo() -> miette::Result<()> {
-    ///     use r3bl_terminal_async::TerminalAsync;
-    ///     let Some(mut terminal_async) = TerminalAsync::try_new(Some("> ")).await? else {
+    ///     use r3bl_terminal_async::ReadlineAsync;
+    ///     let Some(mut readline_async) = ReadlineAsync::try_new(Some("> "))? else {
     ///         return Err(miette::miette!("Failed to create terminal"));
     ///     };
     ///     r3bl_core::ok!()
@@ -112,7 +111,7 @@ impl TerminalAsync {
     ///    - `stdout` is piped, eg: `echo "foo" | cargo run --example spinner`.
     ///    - or all three `stdin`, `stdout`, `stderr` are not `is_tty`, eg when running in
     ///      `cargo test`.
-    /// 2. Otherwise, it will return a [TerminalAsync] instance.
+    /// 2. Otherwise, it will return a [ReadlineAsync] instance.
     /// 3. In case there are any issues putting the terminal into raw mode, or getting the
     ///    terminal size, it will return an error.
     ///
@@ -120,7 +119,7 @@ impl TerminalAsync {
     /// - <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
     pub fn try_new(
         read_line_prompt: Option<impl AsRef<str>>,
-    ) -> miette::Result<Option<TerminalAsync>> {
+    ) -> miette::Result<Option<ReadlineAsync>> {
         if let StdinIsPipedResult::StdinIsPiped = is_stdin_piped() {
             return Ok(None);
         }
@@ -142,7 +141,7 @@ impl TerminalAsync {
             Readline::new(prompt.to_owned(), output_device, input_device)
                 .into_diagnostic()?;
 
-        Ok(Some(TerminalAsync {
+        Ok(Some(ReadlineAsync {
             readline,
             shared_writer: stdout,
         }))

@@ -49,7 +49,7 @@ use r3bl_core::{bold,
                 ASTColor,
                 CommonError,
                 CommonResult};
-use r3bl_terminal_async::{ta_println, ReadlineEvent, TerminalAsync};
+use r3bl_terminal_async::{ta_println, ReadlineAsync, ReadlineEvent};
 use r3bl_tui::{keypress, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
 use strum::IntoEnumIterator as _;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
@@ -61,7 +61,7 @@ async fn main() -> CommonResult<()> {
     let no_log_arg_passed = args.contains(&"--no-log".to_string());
 
     // If the terminal is not fully interactive, then return early.
-    let Some(mut terminal_async) = TerminalAsync::try_new({
+    let Some(mut readline_async) = ReadlineAsync::try_new({
         // Generate prompt.
         let fg = rgb_value!(slate_grey);
         let bg = rgb_value!(moonlight_blue);
@@ -77,7 +77,7 @@ async fn main() -> CommonResult<()> {
 
     // Pre-populate the read_line's history with some entries.
     for command in AutoCompleteCommand::iter() {
-        terminal_async
+        readline_async
             .readline
             .add_history_entry(command.to_string());
     }
@@ -85,7 +85,7 @@ async fn main() -> CommonResult<()> {
     let msg = inline_string!("{}", &generate_help_msg());
 
     let msg_fmt = fg_rgb_color(ASTColor::from(tui_color!(lizard_green)), &msg);
-    ta_println!(terminal_async, "{}", msg_fmt.to_string());
+    ta_println!(readline_async, "{}", msg_fmt.to_string());
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
     if no_log_arg_passed {
@@ -95,11 +95,11 @@ async fn main() -> CommonResult<()> {
     }
 
     loop {
-        let result_readline_event = terminal_async.read_line().await;
+        let result_readline_event = readline_async.read_line().await;
         match result_readline_event {
             Ok(readline_event) => match readline_event {
                 ReadlineEvent::Line(input) => {
-                    if run_user_selected_example(input, &mut terminal_async)
+                    if run_user_selected_example(input, &mut readline_async)
                         .await
                         .is_err()
                     {
@@ -132,7 +132,7 @@ async fn main() -> CommonResult<()> {
 /// alt screen, and then restore it all when it exits.
 async fn run_user_selected_example(
     selection: String,
-    terminal_async: &mut TerminalAsync,
+    readline_async: &mut ReadlineAsync,
 ) -> CommonResult<()> {
     let result_command /* Eg: Ok(Exit) */ =
         AutoCompleteCommand::from_str(&selection /* eg: "0" */);
@@ -151,7 +151,7 @@ async fn run_user_selected_example(
         },
         Err(_) => {
             ta_println!(
-                terminal_async,
+                readline_async,
                 "{a} {b}",
                 a = frozen_blue("Invalid selection:"),
                 b = bold(&selection).fg_rgb_color(rgb_value!(pink))
