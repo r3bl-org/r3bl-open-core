@@ -14,8 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_core::join;
-
 use std::{io::{self, Write},
           sync::Arc};
 
@@ -26,6 +24,7 @@ use r3bl_core::{InputDevice,
                 OutputDevice,
                 SendRawTerminal,
                 SharedWriter,
+                join,
                 output_device_as_mut};
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
@@ -81,7 +80,7 @@ const CTRL_D: crossterm::event::Event =
 /// one off. Each time this function is called, you have to `await` it to return the user
 /// input or `Interrupted` or `Eof` signal.
 ///
-/// When creating a new [`crate::TerminalAsync`] instance, you can use this repeatedly
+/// When creating a new [`crate::ReadlineAsync`] instance, you can use this repeatedly
 /// before dropping it. This is because the [`r3bl_core::SharedWriter`] is cloned, and the
 /// terminal is kept in raw mode until the associated [`crate::Readline`] is dropped.
 ///
@@ -119,7 +118,7 @@ const CTRL_D: crossterm::event::Event =
 /// that the user can't enter any input while the terminal is paused. And output from a
 /// [`crate::Spinner`] won't clobber the output from the [`SharedWriter`]s or from the
 /// user input prompt while [`crate::Readline::readline()`] (or
-/// [`crate::TerminalAsync::read_line`]) is being awaited.
+/// [`crate::ReadlineAsync::read_line`]) is being awaited.
 ///
 /// When the terminal is resumed, then the output from the [`SharedWriter`]s will be
 /// printed to the terminal by the [`manage_shared_writer_output::flush_internal()`]
@@ -138,7 +137,7 @@ const CTRL_D: crossterm::event::Event =
 /// paused and resumed, when it comes to accepting or rejecting user input, and rendering
 /// output or not.
 ///
-/// See the [`crate::TerminalAsync`] module docs for more information on the mental mode
+/// See the [`crate::ReadlineAsync`] module docs for more information on the mental mode
 /// and architecture of this.
 ///
 /// # Usage details
@@ -557,7 +556,7 @@ impl Readline {
     /// <kbd>Enter</kbd> is pressed with some user input.
     ///
     /// Note that this function can be called repeatedly in a loop. It will return each
-    /// line of input as it is entered (and return / exit). The [crate::TerminalAsync] can
+    /// line of input as it is entered (and return / exit). The [crate::ReadlineAsync] can
     /// be re-used, since the [r3bl_core::SharedWriter] is cloned and the terminal is kept
     /// in raw mode until the associated [crate::Readline] is dropped.
     ///

@@ -51,13 +51,13 @@ pub enum Chosen<'a> {
 /// - `how`: How to choose the item(s).
 /// - `output_device`: The output device to use.
 /// - `input_device`: The input device to use.
-/// - `maybe_shared_writer`: An optional shared writer, if [super::TerminalAsync] is in
+/// - `maybe_shared_writer`: An optional shared writer, if [super::ReadlineAsync] is in
 ///   use when this function is called. This is provided for compatibility with
-///   [super::TerminalAsync]. If passed:
+///   [super::ReadlineAsync]. If passed:
 ///     - It will be paused while the user is choosing and item, and will be resumed after
 ///       the user has made their choice.
 ///     - This is useful for preventing the shared writer from printing while the user is
-///       choosing an item, when [super::TerminalAsync] is in use.
+///       choosing an item, when [super::ReadlineAsync] is in use.
 pub async fn choose<'a>(
     from: &'a [&'a str],
     how: HowToChoose,
@@ -72,7 +72,7 @@ pub async fn choose<'a>(
         return Ok(Chosen::None);
     }
 
-    // For compatibility with TerminalAsync (if it is in use).
+    // For compatibility with ReadlineAsync (if it is in use).
     if let Some(ref shared_writer) = maybe_shared_writer {
         // Pause the shared writer while the user is choosing an item.
         shared_writer
@@ -84,7 +84,7 @@ pub async fn choose<'a>(
 
     // 00: impl this
 
-    // For compatibility with TerminalAsync (if it is in use).
+    // For compatibility with ReadlineAsync (if it is in use).
     if let Some(ref shared_writer) = maybe_shared_writer {
         // Resume the shared writer after the user has made their choice.
         shared_writer

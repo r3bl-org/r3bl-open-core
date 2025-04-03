@@ -24,7 +24,7 @@ use r3bl_core::{SpinnerColor,
                 SpinnerTemplate,
                 StdMutex,
                 spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT}};
-use r3bl_terminal_async::{Spinner, TerminalAsync};
+use r3bl_terminal_async::{ReadlineAsync, Spinner};
 use tokio::{time::Instant, try_join};
 
 #[tokio::main]
@@ -56,15 +56,15 @@ pub async fn main() -> miette::Result<()> {
 
 #[allow(unused_assignments)]
 async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<()> {
-    let terminal_async = TerminalAsync::try_new(Some("$ "))?;
-    let terminal_async = terminal_async.expect("terminal is not fully interactive");
+    let readline_async = ReadlineAsync::try_new(Some("$ "))?;
+    let readline_async = readline_async.expect("terminal is not fully interactive");
     let address = "127.0.0.1:8000";
     let message_trying_to_connect = format!(
         "This is a sample indeterminate progress message: trying to connect to server on {}",
         &address
     );
 
-    let mut shared_writer = terminal_async.clone_shared_writer();
+    let mut shared_writer = readline_async.clone_shared_writer();
 
     // Start spinner. Automatically pauses the terminal.
     let mut maybe_spinner = Spinner::try_start(
@@ -77,7 +77,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
     .await?;
 
     // Start another task, to simulate some async work, that uses a interval to display
-    // output, for a fixed amount of time, using `terminal_async.println_prefixed()`.
+    // output, for a fixed amount of time, using `readline_async.println_prefixed()`.
     let _ = try_join!(tokio::spawn(async move {
         // To calculate the delay.
         let duration = ARTIFICIAL_UI_DELAY;

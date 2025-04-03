@@ -34,7 +34,7 @@ use r3bl_core::{InlineVec,
                 log_support::{DisplayPreference, try_initialize_logging_global},
                 red,
                 rgb_value};
-use r3bl_terminal_async::{Readline, ReadlineEvent, Spinner, TerminalAsync, ta_println};
+use r3bl_terminal_async::{Readline, ReadlineAsync, ReadlineEvent, Spinner, ta_println};
 use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
@@ -143,23 +143,23 @@ async fn main() -> miette::Result<()> {
         format!("{}{}", prompt_seg_1, prompt_seg_2)
     };
 
-    let maybe_terminal_async = TerminalAsync::try_new(Some(prompt))?;
+    let maybe_readline_async = ReadlineAsync::try_new(Some(prompt))?;
 
     // If the terminal is not fully interactive, then return early.
-    let Some(mut terminal_async) = maybe_terminal_async else {
+    let Some(mut readline_async) = maybe_readline_async else {
         return Ok(());
     };
 
     // Pre-populate the readline's history with some entries.
     for command in Command::iter() {
-        terminal_async
+        readline_async
             .readline
             .add_history_entry(command.to_string());
     }
 
     // Initialize tracing w/ the "async stdout" (SharedWriter), and file writer.
     try_initialize_logging_global(DisplayPreference::SharedWriter(
-        terminal_async.clone_shared_writer(),
+        readline_async.clone_shared_writer(),
     ))?;
 
     // Start tasks.
@@ -167,25 +167,25 @@ async fn main() -> miette::Result<()> {
     let mut interval_1_task = interval(state.task_1_state.interval_delay);
     let mut interval_2_task = interval(state.task_2_state.interval_delay);
 
-    ta_println!(terminal_async, "{}", get_info_message());
+    ta_println!(readline_async, "{}", get_info_message());
 
     loop {
         select! {
             _ = interval_1_task.tick() => {
-                task_1::tick(&mut state, &mut terminal_async.clone_shared_writer())?;
+                task_1::tick(&mut state, &mut readline_async.clone_shared_writer())?;
             },
             _ = interval_2_task.tick() => {
-                task_2::tick(&mut state, &mut terminal_async.clone_shared_writer())?;
+                task_2::tick(&mut state, &mut readline_async.clone_shared_writer())?;
             },
-            result_readline_event = terminal_async.read_line() => {
+            result_readline_event = readline_async.read_line() => {
                 match result_readline_event {
                     Ok(readline_event) => {
                         match readline_event {
                             // User input event.
                             ReadlineEvent::Line(user_input) => {
                                 let mut_state = &mut state;
-                                let shared_writer = &mut terminal_async.clone_shared_writer();
-                                let readline = &mut terminal_async.readline;
+                                let shared_writer = &mut readline_async.clone_shared_writer();
+                                let readline = &mut readline_async.readline;
                                 let control_flow = process_input_event::process(
                                     user_input, mut_state, shared_writer, readline)?;
                                 if let ControlFlow::Break(_) = control_flow {
@@ -194,7 +194,7 @@ async fn main() -> miette::Result<()> {
                             }
                             // Resize event.
                             ReadlineEvent::Resized => {
-                                let shared_writer = &mut terminal_async.clone_shared_writer();
+                                let shared_writer = &mut readline_async.clone_shared_writer();
                                 writeln!(
                                     shared_writer,
                                     "{}",
@@ -210,8 +210,8 @@ async fn main() -> miette::Result<()> {
                     Err(err) => {
                         let msg_1 = format!("Received err: {}", red(&format!("{err:?}")));
                         let msg_2 = format!("{}", red("Exiting..."));
-                        ta_println!(terminal_async, "{msg_1}");
-                        ta_println!(terminal_async, "{msg_2}");
+                        ta_println!(readline_async, "{msg_1}");
+                        ta_println!(readline_async, "{msg_2}");
                         break;
                     },
                 }
@@ -219,7 +219,7 @@ async fn main() -> miette::Result<()> {
         }
     }
 
-    // There's no need to close terminal_async or readline. Drop will take care of
+    // There's no need to close readline_async or readline. Drop will take care of
     // cleaning up (closing raw mode).
 
     Ok(())
