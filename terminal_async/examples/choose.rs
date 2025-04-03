@@ -21,7 +21,7 @@ use r3bl_core::{InputDevice,
                 ok,
                 rgb_value,
                 try_initialize_logging_global};
-use r3bl_terminal_async::{TerminalAsync,
+use r3bl_terminal_async::{ReadlineAsync,
                           choose::{HowToChoose, choose}};
 
 #[tokio::main]
@@ -30,13 +30,13 @@ async fn main() -> miette::Result<()> {
     // Initialize tracing w/ file writer.
     try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
 
-    without_terminal_async().await?;
-    with_terminal_async().await?;
+    without_readline_async().await?;
+    with_readline_async().await?;
 
     ok!()
 }
 
-async fn without_terminal_async() -> miette::Result<()> {
+async fn without_readline_async() -> miette::Result<()> {
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::new_event_stream();
 
@@ -50,15 +50,15 @@ async fn without_terminal_async() -> miette::Result<()> {
     )
     .await;
 
-    let message = format!(">>> Chosen (🛑 terminal_async): {:?}", chosen);
-    TerminalAsync::print_exit_message(&message)?;
+    let message = format!(">>> Chosen (🛑 readline_async): {:?}", chosen);
+    ReadlineAsync::print_exit_message(&message)?;
 
     ok!()
 }
 
-async fn with_terminal_async() -> miette::Result<()> {
+async fn with_readline_async() -> miette::Result<()> {
     // If the terminal is not fully interactive, then return early.
-    let Some(mut terminal_async) = TerminalAsync::try_new({
+    let Some(mut readline_async) = ReadlineAsync::try_new({
         // Generate prompt.
         let fg = rgb_value!(slate_grey);
         let bg = rgb_value!(moonlight_blue);
@@ -70,9 +70,9 @@ async fn with_terminal_async() -> miette::Result<()> {
         return ok!();
     };
 
-    let shared_writer = terminal_async.clone_shared_writer();
-    let mut output_device = terminal_async.clone_output_device();
-    let input_device = terminal_async.mut_input_device();
+    let shared_writer = readline_async.clone_shared_writer();
+    let mut output_device = readline_async.clone_output_device();
+    let input_device = readline_async.mut_input_device();
 
     // 00: actually call choose() with various options
     let chosen = choose(
@@ -84,8 +84,8 @@ async fn with_terminal_async() -> miette::Result<()> {
     )
     .await;
 
-    let message = format!(">>> Chosen (✅ terminal_async): {:?}", chosen);
-    TerminalAsync::print_exit_message(&message)?;
+    let message = format!(">>> Chosen (✅ readline_async): {:?}", chosen);
+    ReadlineAsync::print_exit_message(&message)?;
 
     ok!()
 }

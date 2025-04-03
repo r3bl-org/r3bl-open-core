@@ -114,7 +114,7 @@ impl LineState {
     ///   paused nothing is rendered from them, and things like the [crate::Spinner] can
     ///   be active.
     /// - Handling user input while the [crate::Readline::readline] is awaiting user input
-    ///   (which is equivalent to awaiting [crate::TerminalAsync::read_line]).
+    ///   (which is equivalent to awaiting [crate::ReadlineAsync::read_line]).
     ///
     /// This should not be called directly. Instead use the mechanism provided by the
     /// [r3bl_core::SharedWriter::line_state_control_channel_sender]

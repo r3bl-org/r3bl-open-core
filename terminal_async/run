@@ -153,23 +153,23 @@ def clean [] {
 }
 
 def examples [] {
-    cargo run --example terminal_async -q
+    cargo run --example readline_async -q
 }
 
 def release-examples [] {
-    cargo run --release --example terminal_async -q
+    cargo run --release --example readline_async -q
 }
 
 def piped [] {
-    bat Cargo.toml | cargo run --example terminal_async -q
+    bat Cargo.toml | cargo run --example readline_async -q
 }
 
 def examples-with-flamegraph-profiling [] {
-    cargo flamegraph --example terminal_async
+    cargo flamegraph --example readline_async
 }
 
 def watch-examples [] {
-    cargo watch -- cargo run --example terminal_async
+    cargo watch -- cargo run --example readline_async
 }
 
 def test [] {

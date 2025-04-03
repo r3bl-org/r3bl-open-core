@@ -1313,7 +1313,7 @@ and <kbd>Ctrl+D</kbd> are directed to the spinner, to cancel it. Spinners can al
 for completion or cancellation by long running tasks, to ensure that they exit as a response
 to user cancellation.
 
-The third (and final) change is that `TerminalAsync::try_new()` now accepts prompts that
+The third (and final) change is that `ReadlineAsync::try_new()` now accepts prompts that
 can have ANSI escape sequences in them. By using `r3bl_rs_utils_core::StringLength` to
 calculate the display width of strings containing ANSI escape sequences (by memoizing the
 results of the calculations), the cost of repeatedly calculating this display width is
@@ -1332,14 +1332,14 @@ related to this release.
     Spinners can also be checked for completion or cancellation by long running tasks, to
     ensure that they exit as a response to user cancellation. Update the
     `examples/terminal_async.rs` to show how to best use this new feature.
-  - Add better examples for how to use `TerminalAsync::try_new()` in Rust docs.
-  - Add a new example `async_shell.rs` to demonstrate how to use `TerminalAsync` to create
+  - Add better examples for how to use `ReadlineAsync::try_new()` in Rust docs.
+  - Add a new example `async_shell.rs` to demonstrate how to use `ReadlineAsync` to create
     an interactive shell (with `bash` under the covers) that can orchestrate a shell
     asynchronously using
     [`tokio::process`](https://docs.rs/tokio/latest/tokio/process/struct.Child.html).
 
 - Changed:
-  - Clean up the shutdown mechanism for `TerminalAsync` and `Readline` so that it is
+  - Clean up the shutdown mechanism for `ReadlineAsync` and `Readline` so that it is
     automatic, and doesn't require the use of `close()` anymore. By simply dropping the
     `Readline` instance, it will automatically clean up after itself (and correctly handle
     raw mode entry and exit).
@@ -1383,7 +1383,7 @@ version of Jaeger and OpenTelemetry.
   - New module to check for port availability on a host called `port_availability`. This
     is useful for checking if a port is available before starting a server (which is a
     common use case for interactive CLI programs).
-  - Add `TerminalAsync::print_exit_message()` - This cleans the prompt so it doesn't
+  - Add `ReadlineAsync::print_exit_message()` - This cleans the prompt so it doesn't
     linger in the display output. This is intended to be used as the final display message
     when the CLI exits.
   - For greater flexibility `tracing_setup.rs` `try_create_layers(..)` now returns a

@@ -16,11 +16,11 @@
  */
 
 // Attach sources.
-pub mod spinner;
-pub mod terminal_async;
 pub mod choose;
+pub mod readline_async;
+pub mod spinner;
 
 // Re-export.
-pub use spinner::*;
-pub use terminal_async::*;
 pub use choose::*;
+pub use readline_async::*;
+pub use spinner::*;

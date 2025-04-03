@@ -98,7 +98,7 @@ niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
   - [Input Editing Behavior](#input-editing-behavior)
 - [Examples](#examples)
 - [How to use this crate](#how-to-use-this-crate)
-  - [TerminalAsync::try_new, which is the main entry point for most use
+  - [ReadlineAsync::try_new, which is the main entry point for most use
     cases](#terminalasynctry_new-which-is-the-main-entry-point-for-most-use-cases)
   - [Readline overview please see the docs for this struct for
     details](#readline-overview-please-see-the-docs-for-this-struct-for-details)
@@ -148,10 +148,10 @@ beautiful, powerful, and interactive REPLs (read execute print loops) with ease.
       `read_line()` output, which assumes that no other output will be produced, while
       is blocking for user input, resulting in a bad user experience.
 
-Here is a video of the `terminal_async` and `spinner` examples in this crate, in
+Here is a video of the `readline_async` and `spinner` examples in this crate, in
 action:
 
-![terminal_async_video](https://github.com/r3bl-org/r3bl-open-core/blob/main/terminal_async/docs/r3bl_terminal_async_clip_ffmpeg.gif?raw=true)
+![readline_async_video](https://github.com/r3bl-org/r3bl-open-core/blob/main/terminal_async/docs/r3bl_terminal_async_clip_ffmpeg.gif?raw=true)
 
 ## Changelog
 
@@ -176,11 +176,11 @@ To learn how we built this crate, please take a look at the following resources.
 1. Read user input from the terminal line by line, while your program concurrently
    writes lines to the same terminal. One [`Readline`] instance can be used to spawn
    many async `stdout` writers ([r3bl_core::SharedWriter]) that can write to the
-   terminal concurrently. For most users the [`TerminalAsync`] struct is the simplest
+   terminal concurrently. For most users the [`ReadlineAsync`] struct is the simplest
    way to use this crate. You rarely have to access the underlying [`Readline`] or
    [`r3bl_core::SharedWriter`] directly. But you can if you need to.
    [`r3bl_core::SharedWriter`] can be cloned and is thread-safe. However, there is
-   only one instance of [`Readline`] per [`TerminalAsync`] instance.
+   only one instance of [`Readline`] per [`ReadlineAsync`] instance.
 
 2. Generate a spinner (indeterminate progress indicator). This spinner works
    concurrently with the rest of your program. When the [`Spinner`] is active it
@@ -189,7 +189,7 @@ To learn how we built this crate, please take a look at the following resources.
    own [`r3bl_core::SharedWriter`] to generate its output. This is useful when you
    want to show a spinner while waiting for a long-running task to complete. Please
    look at the example to see this in action, by running `cargo run --example
-   terminal_async`. Then type `starttask1`, press Enter. Then type `spinner`, press
+   readline_async`. Then type `starttask1`, press Enter. Then type `spinner`, press
    Enter.
 
 3. Use tokio tracing with support for concurrent `stout` writes. If you choose to log
@@ -202,7 +202,7 @@ To learn how we built this crate, please take a look at the following resources.
 
 This crate can detect when your terminal is not in interactive mode. Eg: when you pipe
 the output of your program to another program. In this case, the `readline` feature is
-disabled. Both the [`TerminalAsync`] and [`Spinner`] support this functionality. So if
+disabled. Both the [`ReadlineAsync`] and [`Spinner`] support this functionality. So if
 you run the examples in this crate, and pipe something into them, they won't do
 anything.
 
@@ -210,10 +210,10 @@ Here's an example:
 
 ```bash
 # This will work.
-cargo run --examples terminal_async
+cargo run --examples readline_async
 
 # This won't do anything. Just exits with no error.
-echo "hello" | cargo run --examples terminal_async
+echo "hello" | cargo run --examples readline_async
 ```
 
 ### Pause and resume support
@@ -227,14 +227,14 @@ The pause and resume functionality is implemented using:
 - [r3bl_core::SharedWriter::line_state_control_channel_sender] - Mechanism used to
   manipulate the paused state.
 
-The [Readline::new] or [TerminalAsync::try_new] create a `line_channel` to send and
+The [Readline::new] or [ReadlineAsync::try_new] create a `line_channel` to send and
 receive [r3bl_core::LineStateControlSignal]:
 1. The sender end of this channel is moved to the [r3bl_core::SharedWriter]. So any
    [r3bl_core::SharedWriter] can be used to send [r3bl_core::LineStateControlSignal]s
    to the channel, which will be processed in the task started, just for this, in
    [Readline::new]. This is the primary mechanism to switch between pause and resume.
-   Some helper functions are provided in [TerminalAsync::pause] and
-   [TerminalAsync::resume], though you can just send the signals directly to the
+   Some helper functions are provided in [ReadlineAsync::pause] and
+   [ReadlineAsync::resume], though you can just send the signals directly to the
    channel's sender via the
    [r3bl_core::SharedWriter::line_state_control_channel_sender].
 2. The receiver end of this [tokio::sync::mpsc::channel] is moved to the task that is
@@ -273,22 +273,22 @@ with the following key bindings:
 ## Examples
 
 ```bash
-cargo run --example terminal_async
+cargo run --example readline_async
 cargo run --example spinner
 cargo run --example shell_async
 ```
 
 ## How to use this crate
 
-### [`TerminalAsync::try_new()`], which is the main entry point for most use cases
+### [`ReadlineAsync::try_new()`], which is the main entry point for most use cases
 
-1. To read user input, call [`TerminalAsync::read_line()`].
-2. You can call [`TerminalAsync::clone_shared_writer()`] to get a
+1. To read user input, call [`ReadlineAsync::read_line()`].
+2. You can call [`ReadlineAsync::clone_shared_writer()`] to get a
    [`r3bl_core::SharedWriter`] instance that you can use to write to `stdout`
    concurrently, using [`std::write!`] or [`std::writeln!`].
-3. If you use [`std::writeln!`] then there's no need to [`TerminalAsync::flush()`]
+3. If you use [`std::writeln!`] then there's no need to [`ReadlineAsync::flush()`]
    because the `\n` will flush the buffer. When there's no `\n` in the buffer, or you
-   are using [`std::write!`] then you might need to call [`TerminalAsync::flush()`].
+   are using [`std::write!`] then you might need to call [`ReadlineAsync::flush()`].
 4. You can use the [`ta_println!`] and [`ta_println_prefixed!`]
    methods to easily write concurrent output to the `stdout`
    ([`r3bl_core::SharedWriter`]).
@@ -337,16 +337,16 @@ that the program is still running and hasn't hung up or become unresponsive. Whe
 other tasks produce output concurrently, this spinner's output will not be clobbered.
 Neither will the spinner output clobber the output from other tasks. It suspends the
 output from all the [`r3bl_core::SharedWriter`] instances that are associated with one
-[`Readline`] instance. Both the `terminal_async.rs` and `spinner.rs` examples shows
-this (`cargo run --example terminal_async` and `cargo run --example spinner`).
+[`Readline`] instance. Both the `readline_async.rs` and `spinner.rs` examples shows
+this (`cargo run --example readline_async` and `cargo run --example spinner`).
 
 [`Spinner`]s also has cancellation support. Once a spinner is started,
 <kbd>Ctrl+C</kbd> and <kbd>Ctrl+D</kbd> are directed to the spinner, to cancel it.
 Spinners can also be checked for completion or cancellation by long running tasks, to
 ensure that they exit as a response to user cancellation. Take a look at the
-`examples/terminal_async.rs` file to get an understanding of how to use this API.
+`examples/readline_async.rs` file to get an understanding of how to use this API.
 
-The third change is that [`TerminalAsync::try_new()`] now accepts prompts that can
+The third change is that [`ReadlineAsync::try_new()`] now accepts prompts that can
 have ANSI escape sequences in them. Here's an example of this.
 
 ```rust
@@ -355,10 +355,10 @@ have ANSI escape sequences in them. Here's an example of this.
         let prompt_seg_1 = magenta("╭").bg_dark_grey().to_string();
         let prompt_seg_2 = magenta(&format!("┤{user}├")).bg_dark_grey().to_string();
         let prompt_seg_3 = magenta("╮").bg_dark_grey().to_string();
-        format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3)
+        Some(format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3))
     };
-    let maybe_terminal_async = TerminalAsync::try_new(prompt.as_str()).await?;
-    let Some(mut terminal_async) = maybe_terminal_async else {
+    let readline_async = ReadlineAsync::try_new(prompt)?;
+    let Some(mut readline_async) = readline_async else {
         return Err(miette::miette!("Failed to create terminal").into());
     };
     Ok(())
