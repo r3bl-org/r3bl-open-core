@@ -17,8 +17,16 @@
 
 use std::{fmt::Display, io::Result};
 
-use r3bl_core::{self, get_terminal_width, usize, ASTColor, ASTStyle, AnsiStyledText};
-use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet};
+use r3bl_core::{self,
+                get_terminal_width,
+                to_inline_vec,
+                usize,
+                ASTColor,
+                ASTStyle,
+                AnsiStyledText,
+                InlineString,
+                InlineVec};
+use r3bl_tuify::{select_from_list, HowToChoose, StyleSheet};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -49,13 +57,12 @@ pub fn main() -> Result<()> {
     for question_data in &all_questions_and_answers {
         let question = question_data.question.clone();
         let options = question_data.options.clone();
-
         let user_input = select_from_list(
             question,
-            options,
+            to_inline_vec(&options),
             max_height_row_count,
             max_width_col_count,
-            SelectionMode::Single,
+            HowToChoose::Single,
             StyleSheet::default(),
         );
 
@@ -114,7 +121,10 @@ impl Display for Answer {
     }
 }
 
-fn check_answer(guess: &QuestionData, maybe_user_input: &Option<Vec<String>>) -> Answer {
+fn check_answer(
+    guess: &QuestionData,
+    maybe_user_input: &Option<InlineVec<InlineString>>,
+) -> Answer {
     // If the maybe_user_input has 1 item then proceed. Otherwise return incorrect.
     match maybe_user_input {
         Some(user_input) => {
@@ -200,9 +210,9 @@ fn display_footer(
 }
 
 fn check_user_input_and_display_result(
-    input: &[String],
+    input: &InlineVec<InlineString>,
     question_data: &QuestionData,
-    user_input: &Option<Vec<String>>,
+    user_input: &Option<InlineVec<InlineString>>,
     correct_answer_color: ASTColor,
     incorrect_answer_color: ASTColor,
     score: &mut i32,

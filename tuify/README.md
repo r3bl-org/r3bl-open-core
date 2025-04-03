@@ -150,16 +150,13 @@ fn main() -> Result<()> {
 
     let user_input = select_from_list(
         "Select an item".to_string(),
-        [
+        to_inline_vec(&[
             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
             "item 9", "item 10",
-        ]
-        .iter()
-        .map(|it| it.to_string())
-        .collect(),
+        ]),
         max_height_row_count,
         max_width_col_count,
-        SelectionMode::Single,
+        HowToChoose::Single,
         StyleSheet::default(),
     );
 
@@ -200,16 +197,13 @@ fn main() -> Result<()> {
     let max_height_row_count: usize = 5;
     let user_input = select_from_list(
         "Select an item".to_string(),
-        [
+        to_inline_vec(&[
             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
             "item 9", "item 10",
-        ]
-        .iter()
-        .map(|it| it.to_string())
-        .collect(),
+        ]),
         max_height_row_count,
         0,
-        SelectionMode::Single,
+        HowToChoose::Single,
         StyleSheet::default(),
     );
 
@@ -235,98 +229,100 @@ multi line header. The first 5 lines are all part of the multi line header.
 
 ```rust
 use std::{io::Result, vec};
-
-use r3bl_core::{AnsiStyledText, ASTColor, ASTStyle};
+use smallvec::smallvec;
+use r3bl_core::{
+    to_inline_vec, InlineVec, AnsiStyledText, ASTColor, ASTStyle
+};
 use r3bl_tuify::{
-    components::style::StyleSheet,
+    components::style::StyleSheet, State,
     select_from_list_with_multi_line_header,
-    SelectionMode,
+    HowToChoose,
 };
 
-fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
+fn multi_select_instructions() -> InlineVec<InlineVec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((9, 238, 211).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let navigate = AnsiStyledText {
         text: "     navigate",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
-    let line_1 = vec![up_and_down, navigate];
+    let line_1 = smallvec![up_and_down, navigate];
 
     let space = AnsiStyledText {
         text: " Space:",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((255, 216, 9).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let select = AnsiStyledText {
         text: "          select or deselect item",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
-    let line_2 = vec![space, select];
+    let line_2 = smallvec![space, select];
 
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((255, 132, 18).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let exit = AnsiStyledText {
         text: "  exit program",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
 
-    let line_3 = vec![esc, exit];
+    let line_3 = smallvec![esc, exit];
     let return_key = AnsiStyledText {
         text: " Return:",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((234, 0, 196).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
     let confirm = AnsiStyledText {
         text: "         confirm selection",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
         ],
     };
-    let line_4 = vec![return_key, confirm];
-    vec![line_1, line_2, line_3, line_4]
+    let line_4 = smallvec![return_key, confirm];
+    smallvec![line_1, line_2, line_3, line_4]
 }
 
 fn main() -> Result<()> {
    let header = AnsiStyledText {
         text: " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
-        style: smallvec::smallvec![
+        style: smallvec![
             ASTStyle::Foreground(ASTColor::Rgb((171, 204, 242).into())),
             ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
         ],
     };
 
-    let mut instructions_and_header: Vec<Vec<AnsiStyledText>> = multi_select_instructions();
-    instructions_and_header.push(vec![header]);
+    let mut instructions_and_header: InlineVec<InlineVec<AnsiStyledText>> = multi_select_instructions();
+    instructions_and_header.push(smallvec![header]);
 
     let user_input = select_from_list_with_multi_line_header(
         instructions_and_header,
-        [
+        to_inline_vec(&[
             "item 1 of 13",
             "item 2 of 13",
             "item 3 of 13",
@@ -340,13 +336,10 @@ fn main() -> Result<()> {
             "item 11 of 13",
             "item 12 of 13",
             "item 13 of 13",
-        ]
-        .iter()
-        .map(|it| it.to_string())
-        .collect(),
+        ]),
         Some(6),
         None,
-        SelectionMode::Multiple,
+        HowToChoose::Multiple,
         StyleSheet::default(),
     );
     match &user_input {
@@ -539,16 +532,13 @@ fn main() -> Result<()> {
 
     let user_input = select_from_list(
         "Select an item".to_string(),
-        [
+        to_inline_vec(&[
             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
             "item 9", "item 10",
-        ]
-        .iter()
-        .map(|it| it.to_string())
-        .collect(),
+        ]),
         max_height_row_count,
         max_width_col_count,
-        SelectionMode::Single,
+        HowToChoose::Single,
         sea_foam_style,  // 🖌️ or default_style or hot_pink_style
     );
 
@@ -569,10 +559,10 @@ To create your style, you need to create a `StyleSheet` struct and pass it as an
 
 ```rust
 use std::io::Result;
-use r3bl_core::{AnsiStyledText, ASTColor};
-use r3bl_tuify::{components::style::{Style, StyleSheet},
+use r3bl_core::{AnsiStyledText, ASTColor, to_inline_vec};
+use r3bl_tuify::{State, components::style::{Style, StyleSheet},
                 select_from_list,
-                SelectionMode};
+                HowToChoose};
 
 fn main() -> Result<()> {
    // This is how you can define your custom style.
@@ -604,13 +594,10 @@ fn main() -> Result<()> {
    // Then pass `my_custom_style` as the last argument to the `select_from_list` function.
    let user_input = select_from_list(
       "Multiple select".to_string(),
-      ["item 1 of 3", "item 2 of 3", "item 3 of 3"]
-         .iter()
-         .map(|it| it.to_string())
-         .collect(),
+      to_inline_vec(&["item 1 of 3", "item 2 of 3", "item 3 of 3"]),
       6, // max_height_row_count
       80, // max_width_col_count
-      SelectionMode::Multiple,
+      HowToChoose::Multiple,
       my_custom_style,
    );
 

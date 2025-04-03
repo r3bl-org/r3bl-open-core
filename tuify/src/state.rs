@@ -15,13 +15,13 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{AnsiStyledText, ChUnit, Size};
+use r3bl_core::{AnsiStyledText, ChUnit, InlineString, InlineVec, Size};
 
 use crate::{get_scroll_adjusted_row_index,
             locate_cursor_in_viewport,
             CalculateResizeHint,
             CaretVerticalViewportLocation,
-            SelectionMode};
+            HowToChoose};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct State<'a> {
@@ -31,53 +31,76 @@ pub struct State<'a> {
     /// This is not adjusted for [scroll_offset_row_index](State::scroll_offset_row_index).
     pub raw_caret_row_index: ChUnit,
     pub scroll_offset_row_index: ChUnit,
-    pub items: Vec<String>,
-    pub selected_items: Vec<String>,
-    pub header: String,
-    pub multi_line_header: Vec<Vec<AnsiStyledText<'a>>>,
-    pub selection_mode: SelectionMode,
+    pub items: InlineVec<InlineString>,
+    pub selected_items: InlineVec<InlineString>,
+    pub header: Header<'a>,
+    pub selection_mode: HowToChoose,
     /// This is used to determine if the terminal has been resized.
     pub resize_hint: Option<ResizeHint>,
     /// This is used to determine if the terminal has been resized.
     pub window_size: Option<Size>,
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
-pub enum Header {
-    Single,
-    Multiple,
+#[derive(Debug, PartialEq, Clone, Eq)]
+#[allow(clippy::large_enum_variant)]
+pub enum Header<'a> {
+    /// Single line header.
+    SingleLine(InlineString),
+    /// Multi line header.
+    MultiLine(InlineVec<InlineVec<AnsiStyledText<'a>>>),
 }
 
-impl State<'_> {
-    pub fn get_header(&self) -> Header {
-        match self.multi_line_header.is_empty() {
-            true => Header::Single,
-            false => Header::Multiple,
+/// Convert various types to a header: `Vec<Vec<AnsiStyledText<'a>>>`, `InlineString`, `String`, etc.
+mod convert_to_header {
+    use super::*;
+
+    impl<'a> From<Vec<Vec<AnsiStyledText<'a>>>> for Header<'a> {
+        fn from(header: Vec<Vec<AnsiStyledText<'a>>>) -> Self {
+            Header::MultiLine(header.into_iter().map(InlineVec::from).collect())
         }
+    }
+
+    impl<'a> From<InlineVec<InlineVec<AnsiStyledText<'a>>>> for Header<'a> {
+        fn from(header: InlineVec<InlineVec<AnsiStyledText<'a>>>) -> Self {
+            Header::MultiLine(header)
+        }
+    }
+
+    impl<'a> From<InlineString> for Header<'a> {
+        fn from(header: InlineString) -> Self { Header::SingleLine(header) }
+    }
+
+    impl<'a> From<String> for Header<'a> {
+        fn from(header: String) -> Self { Header::SingleLine(InlineString::from(header)) }
+    }
+
+    impl Default for Header<'_> {
+        fn default() -> Self { Header::SingleLine(InlineString::new()) }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use r3bl_core::assert_eq2;
+    use smallvec::smallvec;
 
     use super::*;
 
     #[test]
     fn test_header_enum() {
-        let mut state = State {
-            multi_line_header: vec![vec![AnsiStyledText {
+        let state = State {
+            header: Header::MultiLine(smallvec![smallvec![AnsiStyledText {
                 text: "line1",
                 style: smallvec::smallvec![],
-            }]],
+            }]]),
             ..Default::default()
         };
-        let lhs = state.get_header();
-        let rhs = Header::Multiple;
+        let lhs = state.header;
+        let rhs = Header::MultiLine(smallvec![smallvec![AnsiStyledText {
+            text: "line1",
+            style: smallvec::smallvec![],
+        }]]);
         assert_eq2!(lhs, rhs);
-
-        state.multi_line_header = vec![];
-        assert_eq2!(state.get_header(), Header::Single);
     }
 }
 

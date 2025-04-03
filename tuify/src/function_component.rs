@@ -15,14 +15,13 @@
  *   limitations under the License.
  */
 
-use std::io::{Result, Write};
+use std::io::Result;
 
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
-                queue,
                 terminal::{Clear, ClearType}};
-use r3bl_core::{throws, ChUnit, Size};
+use r3bl_core::{throws, ChUnit, OutputDevice, Size};
 
-use crate::{ResizeHint, DEVELOPMENT_MODE};
+use crate::{queue_commands, ResizeHint, DEVELOPMENT_MODE};
 
 pub trait CalculateResizeHint {
     fn set_size(&mut self, new_size: Size);
@@ -31,8 +30,8 @@ pub trait CalculateResizeHint {
     fn clear_resize_hint(&mut self);
 }
 
-pub trait FunctionComponent<W: Write, S: CalculateResizeHint> {
-    fn get_write(&mut self) -> &mut W;
+pub trait FunctionComponent<S: CalculateResizeHint> {
+    fn get_output_device(&mut self) -> OutputDevice;
 
     fn calculate_header_viewport_height(&self, state: &mut S) -> ChUnit;
 
@@ -53,11 +52,10 @@ pub trait FunctionComponent<W: Write, S: CalculateResizeHint> {
             }
 
             // Move the cursor back up.
-            let writer = self.get_write();
-            queue! {
-                writer,
+            queue_commands! {
+                self.get_output_device(),
                 MoveToPreviousLine(*viewport_height),
-            }?;
+            };
         });
     }
 
@@ -85,22 +83,20 @@ pub trait FunctionComponent<W: Write, S: CalculateResizeHint> {
                 None => return Ok(()),
             };
 
-            let writer = self.get_write();
-
             // Clear the viewport.
             for _ in 0..*viewport_height {
-                queue! {
-                    writer,
+                queue_commands! {
+                    self.get_output_device(),
                     Clear(ClearType::FromCursorDown),
                     MoveToNextLine(1),
-                }?;
+                };
             }
 
             // Move the cursor back up.
-            queue! {
-                writer,
+            queue_commands! {
+                self.get_output_device(),
                 MoveToPreviousLine(*viewport_height),
-            }?;
+            };
 
             // Clear resize hint.
             state.clear_resize_hint();
@@ -113,22 +109,20 @@ pub trait FunctionComponent<W: Write, S: CalculateResizeHint> {
                 /* not including the header */ self.calculate_items_viewport_height(state) +
                 /* for header row(s) */ self.calculate_header_viewport_height(state);
 
-            let writer = self.get_write();
-
             // Clear the viewport.
             for _ in 0..*viewport_height {
-                queue! {
-                    writer,
+                queue_commands! {
+                    self.get_output_device(),
                     Clear(ClearType::CurrentLine),
                     MoveToNextLine(1),
-                }?;
+                };
             }
 
             // Move the cursor back up.
-            queue! {
-                writer,
+            queue_commands! {
+                self.get_output_device(),
                 MoveToPreviousLine(*viewport_height),
-            }?;
+            };
         });
     }
 }

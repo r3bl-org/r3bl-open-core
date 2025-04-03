@@ -16,12 +16,13 @@
  */
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use r3bl_core::{InlineString, InlineVec};
 
-pub fn get_giti_command_subcommand_names(arg: CLICommand) -> Vec<String> {
+pub fn get_giti_command_subcommand_names(arg: CLICommand) -> InlineVec<InlineString> {
     match arg {
         CLICommand::Branch { .. } => BranchSubcommand::value_variants()
             .iter()
-            .map(|subcommand| format!("{:?}", subcommand).to_ascii_lowercase())
+            .map(|subcommand| format!("{:?}", subcommand).to_ascii_lowercase().into())
             .collect(),
         _ => unimplemented!(),
     }

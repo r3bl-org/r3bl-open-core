@@ -38,7 +38,8 @@ use r3bl_core::{ASTStyle,
                 CommonResult,
                 log_support::try_initialize_logging_global,
                 throws};
-use r3bl_tuify::{SelectionMode, StyleSheet, select_from_list_with_multi_line_header};
+use r3bl_tuify::{HowToChoose, StyleSheet, select_from_list_with_multi_line_header};
+use smallvec::smallvec;
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -115,9 +116,7 @@ pub fn launch_giti(cli_arg: CLIArg) {
                     " Could not run giti due to the following problem.\n{:#?}",
                     error
                 ),
-                style: smallvec::smallvec![ASTStyle::Foreground(
-                    GuardsRed.as_ansi_color()
-                )],
+                style: smallvec![ASTStyle::Foreground(GuardsRed.as_ansi_color())],
             }
             .println();
         }
@@ -152,7 +151,7 @@ fn user_typed_giti_branch() -> CommonResult<CommandSuccessfulResponse> {
         command_to_run_with_each_selection: None,
         maybe_branch_name: None,
     });
-    let default_header_style = smallvec::smallvec![
+    let default_header_style = smallvec![
         ASTStyle::Foreground(FrozenBlue.as_ansi_color()),
         ASTStyle::Background(MoonlightBlue.as_ansi_color()),
     ];
@@ -163,7 +162,7 @@ fn user_typed_giti_branch() -> CommonResult<CommandSuccessfulResponse> {
             text: "Please select a branch subcommand",
             style: default_header_style,
         };
-        instructions_and_select_branch_subcommand.push(vec![header]);
+        instructions_and_select_branch_subcommand.push(smallvec![header]);
         instructions_and_select_branch_subcommand
     };
     let maybe_selected = select_from_list_with_multi_line_header(
@@ -171,7 +170,7 @@ fn user_typed_giti_branch() -> CommonResult<CommandSuccessfulResponse> {
         branch_subcommands,
         Some(20),
         None,
-        SelectionMode::Single,
+        HowToChoose::Single,
         StyleSheet::default(),
     );
     if let Some(selected) = maybe_selected {
