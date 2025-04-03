@@ -287,6 +287,10 @@ impl AnsiStyledText<'_> {
     }
 }
 
+/// This enum isn't the same as the [TuiStyle] struct. This enum can only hold a single
+/// variant. The [TuiStyle] struct can hold multiple variants. This is a low level enum
+/// that shouldn't be used directly. It is best to use [TuiStyle] and [crate::new_style!]
+/// to create a [TuiStyle] and convert it to this type using `.into()`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumCount)]
 pub enum ASTStyle {
     Foreground(ASTColor),

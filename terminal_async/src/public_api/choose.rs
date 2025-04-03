@@ -15,17 +15,20 @@
  *   limitations under the License.
  */
 
-// 00: define the top level function here (public API)
-
 use miette::IntoDiagnostic;
-use r3bl_core::{InlineVec,
+use r3bl_core::{AnsiStyledText,
+                InlineVec,
                 InputDevice,
                 LineStateControlSignal,
                 OutputDevice,
-                SharedWriter};
+                SharedWriter,
+                Size};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+use super::StyleSheet;
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum HowToChoose {
+    #[default]
     Single,
     Multiple,
 }
@@ -40,17 +43,30 @@ pub enum Chosen<'a> {
     Many(InlineVec<usize>, &'a [&'a str]),
 }
 
-// 00: add StyleSheet (migrate tuify::StyleSheet)
+#[derive(Debug, Clone, PartialEq, Default)]
+#[allow(clippy::large_enum_variant)]
+pub enum Header<'a> {
+    /// No header.
+    #[default]
+    None,
+    /// Single line header.
+    SingleLine(AnsiStyledText<'a>),
+    /// Multi line header.
+    MultiLine(InlineVec<InlineVec<AnsiStyledText<'a>>>),
+}
+
 // 00: add State (migrate tuify::State)
 
 /// Choose an item from a list of items.
 ///
 /// # Arguments
 ///
+/// - `header`: The header to display above the list of items.
 /// - `from`: A slice of strings to choose from.
 /// - `how`: How to choose the item(s).
-/// - `output_device`: The output device to use.
-/// - `input_device`: The input device to use.
+/// - `io`: A tuple of the output and input devices to use.
+///     - `0`: The output device to use.
+///     - `1`: The input device to use.
 /// - `maybe_shared_writer`: An optional shared writer, if [super::ReadlineAsync] is in
 ///   use when this function is called. This is provided for compatibility with
 ///   [super::ReadlineAsync]. If passed:
@@ -58,15 +74,18 @@ pub enum Chosen<'a> {
 ///       the user has made their choice.
 ///     - This is useful for preventing the shared writer from printing while the user is
 ///       choosing an item, when [super::ReadlineAsync] is in use.
+/// - `styling`: A tuple of the header, max size, and style sheet to use.
+///     - `0`: The maximum display height and width the list of items can take up.
+///       If the height or width is `0` then defaults will be used. If `None` then the
+///       defaults will be used.
+///     - `1`: The style sheet to use for the list of items.
 pub async fn choose<'a>(
+    header: Header<'a>,
     from: &'a [&'a str],
     how: HowToChoose,
-    output_device: &mut OutputDevice,
-    input_device: &mut InputDevice,
+    io: (&'a mut OutputDevice, &'a mut InputDevice),
     maybe_shared_writer: Option<SharedWriter>,
-    // 00: add header: String
-    // 00: add max_size: Size
-    // 00: stylesheet: StyleSheet
+    styling: (Option<Size>, StyleSheet),
 ) -> miette::Result<Chosen<'a>> {
     if from.is_empty() {
         return Ok(Chosen::None);
