@@ -18,10 +18,12 @@
 use r3bl_core::{InputDevice,
                 OutputDevice,
                 fg_rgb_color,
+                lizard_green,
                 ok,
                 rgb_value,
                 try_initialize_logging_global};
-use r3bl_terminal_async::{ReadlineAsync,
+use r3bl_terminal_async::{Header,
+                          ReadlineAsync,
                           choose::{HowToChoose, choose}};
 
 #[tokio::main]
@@ -40,17 +42,20 @@ async fn without_readline_async() -> miette::Result<()> {
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::new_event_stream();
 
-    // 00: actually call choose() with various options
     let chosen = choose(
+        Header::SingleLine(lizard_green("Choose one:")),
         &["one", "two", "three"],
         HowToChoose::Single,
-        &mut output_device,
-        &mut input_device,
+        (&mut output_device, &mut input_device),
         None,
+        (None, Default::default()),
     )
     .await;
 
-    let message = format!(">>> Chosen (🛑 readline_async): {:?}", chosen);
+    let message = format!(
+        ">>> Chosen {:<25}: {:?}",
+        "(without readline_async)", chosen
+    );
     ReadlineAsync::print_exit_message(&message)?;
 
     ok!()
@@ -74,17 +79,17 @@ async fn with_readline_async() -> miette::Result<()> {
     let mut output_device = readline_async.clone_output_device();
     let input_device = readline_async.mut_input_device();
 
-    // 00: actually call choose() with various options
     let chosen = choose(
+        Header::SingleLine(lizard_green("Choose one:")),
         &["one", "two", "three"],
         HowToChoose::Single,
-        &mut output_device,
-        input_device,
+        (&mut output_device, input_device),
         Some(shared_writer),
+        (None, Default::default()),
     )
     .await;
 
-    let message = format!(">>> Chosen (✅ readline_async): {:?}", chosen);
+    let message = format!(">>> Chosen {:<25}: {:?}", "(with readline_async)", chosen);
     ReadlineAsync::print_exit_message(&message)?;
 
     ok!()
