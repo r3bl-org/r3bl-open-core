@@ -151,7 +151,21 @@ def clean [] {
 }
 
 def examples [] {
-    cargo run --example main_interactive -q
+    let options = [
+        "choose_async",
+        "main_interactive",
+        "single_select_quiz_game"
+    ]
+
+    let selection = $options | input list --fuzzy 'Select an example to run: '
+    echo $selection
+
+    if $selection == "" {
+        echo "No example selected."
+    } else  {
+        echo $"Running: $selection"
+        cargo run --example $selection
+    }
 }
 
 def piped [] {
