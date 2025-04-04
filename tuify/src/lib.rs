@@ -154,9 +154,9 @@
 //! keyboard input. And on macOS Terminal.app it restricts color output to a 256 color palette.
 //!
 //! ```rust
-//! use r3bl_core::*;
-//! use r3bl_tuify::*;
-//! use std::io::Result;
+//! # use r3bl_core::*;
+//! # use r3bl_tuify::*;
+//! # use std::io::Result;
 //!
 //! fn main() -> Result<()> {
 //!     // Get display size.
@@ -165,10 +165,10 @@
 //!
 //!     let user_input = select_from_list(
 //!         "Select an item".to_string(),
-//!         to_inline_vec(&[
+//!         ItemsBorrowed(&[
 //!             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
 //!             "item 9", "item 10",
-//!         ]),
+//!         ]).into(),
 //!         max_height_row_count,
 //!         max_width_col_count,
 //!         HowToChoose::Single,
@@ -203,19 +203,19 @@
 //! [select_from_list] code example:
 //!
 //! ```rust
-//! use r3bl_core::*;
-//! use r3bl_tuify::*;
-//! use std::io::Result;
+//! # use r3bl_core::*;
+//! # use r3bl_tuify::*;
+//! # use std::io::Result;
 //!
 //! fn main() -> Result<()> {
 //!     // Get display size.
 //!     let max_height_row_count: usize = 5;
 //!     let user_input = select_from_list(
 //!         "Select an item".to_string(),
-//!         to_inline_vec(&[
+//!         ItemsBorrowed(&[
 //!             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
 //!             "item 9", "item 10",
-//!         ]),
+//!         ]).into(),
 //!         max_height_row_count,
 //!         0,
 //!         HowToChoose::Single,
@@ -243,16 +243,16 @@
 //! [select_from_list_with_multi_line_header] code example:
 //!
 //! ```rust
-//! use std::{io::Result, vec};
-//! use smallvec::smallvec;
-//! use r3bl_core::{
-//!     to_inline_vec, InlineVec, AnsiStyledText, ASTColor, ASTStyle
-//! };
-//! use r3bl_tuify::{
-//!     components::style::StyleSheet, State,
-//!     select_from_list_with_multi_line_header,
-//!     HowToChoose,
-//! };
+//! # use std::{io::Result, vec};
+//! # use smallvec::smallvec;
+//! # use r3bl_core::{
+//! #     ItemsBorrowed, InlineVec, AnsiStyledText, ASTColor, ASTStyle
+//! # };
+//! # use r3bl_tuify::{
+//! #     components::style::StyleSheet, State,
+//! #     select_from_list_with_multi_line_header,
+//! #     HowToChoose,
+//! # };
 //!
 //! fn multi_select_instructions() -> InlineVec<InlineVec<AnsiStyledText<'static>>> {
 //!     let up_and_down = AnsiStyledText {
@@ -337,7 +337,7 @@
 //!
 //!     let user_input = select_from_list_with_multi_line_header(
 //!         instructions_and_header,
-//!         to_inline_vec(&[
+//!         ItemsBorrowed(&[
 //!             "item 1 of 13",
 //!             "item 2 of 13",
 //!             "item 3 of 13",
@@ -351,7 +351,7 @@
 //!             "item 11 of 13",
 //!             "item 12 of 13",
 //!             "item 13 of 13",
-//!         ]),
+//!         ]).into(),
 //!         Some(6),
 //!         None,
 //!         HowToChoose::Multiple,
@@ -532,9 +532,9 @@
 //! To use one of the built-in styles, simply pass it as an argument to the `select_from_list` function.
 //!
 //! ```rust
-//! use r3bl_core::*;
-//! use r3bl_tuify::*;
-//! use std::io::Result;
+//! # use r3bl_core::*;
+//! # use r3bl_tuify::*;
+//! # use std::io::Result;
 //!
 //! fn main() -> Result<()> {
 //!     // 🎨 Uncomment the lines below to choose the other 2 built-in styles.
@@ -547,10 +547,10 @@
 //!
 //!     let user_input = select_from_list(
 //!         "Select an item".to_string(),
-//!         to_inline_vec(&[
+//!         ItemsBorrowed(&[
 //!             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
 //!             "item 9", "item 10",
-//!         ]),
+//!         ]).into(),
 //!         max_height_row_count,
 //!         max_width_col_count,
 //!         HowToChoose::Single,
@@ -574,7 +574,7 @@
 //!
 //! ```rust
 //! use std::io::Result;
-//! use r3bl_core::{AnsiStyledText, ASTColor, to_inline_vec};
+//! use r3bl_core::{AnsiStyledText, ASTColor, ItemsBorrowed};
 //! use r3bl_tuify::{State, components::style::{Style, StyleSheet},
 //!                 select_from_list,
 //!                 HowToChoose};
@@ -609,7 +609,7 @@
 //!    // Then pass `my_custom_style` as the last argument to the `select_from_list` function.
 //!    let user_input = select_from_list(
 //!       "Multiple select".to_string(),
-//!       to_inline_vec(&["item 1 of 3", "item 2 of 3", "item 3 of 3"]),
+//!       ItemsBorrowed(&["item 1 of 3", "item 2 of 3", "item 3 of 3"]).into(),
 //!       6, // max_height_row_count
 //!       80, // max_width_col_count
 //!       HowToChoose::Multiple,

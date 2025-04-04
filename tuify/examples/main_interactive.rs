@@ -19,12 +19,12 @@ use r3bl_core::{get_size,
                 get_terminal_width,
                 log_support::try_initialize_logging_global,
                 throws,
-                to_inline_vec,
                 usize,
                 ASTColor,
                 ASTStyle,
                 AnsiStyledText,
-                InlineVec};
+                InlineVec,
+                ItemsBorrowed};
 use r3bl_tuify::{components::style::StyleSheet,
                  select_from_list,
                  select_from_list_with_multi_line_header,
@@ -163,7 +163,7 @@ fn multi_line_header() {
 
     let user_input = select_from_list_with_multi_line_header(
         instructions,
-        to_inline_vec(&[
+        ItemsBorrowed(&[
             "item 1 of 13",
             "item 2 of 13",
             "item 3 of 13",
@@ -177,7 +177,8 @@ fn multi_line_header() {
             "item 11 of 13",
             "item 12 of 13",
             "item 13 of 13",
-        ]),
+        ])
+        .into(),
         Some(6),
         None,
         HowToChoose::Multiple,
@@ -279,7 +280,7 @@ fn multiple_select_13_items_vph_5(
 
     let user_input = select_from_list_with_multi_line_header(
         instructions,
-        to_inline_vec(&[
+        ItemsBorrowed(&[
             "item 1 of 13",
             "item 2 of 13",
             "item 3 of 13",
@@ -293,7 +294,8 @@ fn multiple_select_13_items_vph_5(
             "item 11 of 13",
             "item 12 of 13",
             "item 13 of 13",
-        ]),
+        ])
+        .into(),
         Some(max_height_row_count),
         Some(max_width_col_count),
         HowToChoose::Multiple,
@@ -333,7 +335,7 @@ fn multiple_select_2_items_vph_5(
 
     let user_input = select_from_list_with_multi_line_header(
         instructions,
-        to_inline_vec(&["item 1 of 2", "item 2 of 2"]),
+        ItemsBorrowed(&["item 1 of 2", "item 2 of 2"]).into(),
         Some(max_height_row_count),
         Some(max_width_col_count),
         HowToChoose::Multiple,
@@ -362,7 +364,7 @@ fn single_select_13_items_vph_5(
 ) {
     let user_input = select_from_list(
         "Single select".to_string(),
-        to_inline_vec(&[
+        ItemsBorrowed(&[
             "item 1 of 13",
             "item 2 of 13",
             "item 3 of 13",
@@ -376,7 +378,8 @@ fn single_select_13_items_vph_5(
             "item 11 of 13",
             "item 12 of 13",
             "item 13 of 13",
-        ]),
+        ])
+        .into(),
         max_height_row_count,
         max_width_col_count,
         HowToChoose::Single,
@@ -415,7 +418,7 @@ fn single_select_2_items_vph_5(
 
     let user_input = select_from_list_with_multi_line_header(
         instructions,
-        to_inline_vec(&["item 1 of 2", "item 2 of 2"]),
+        ItemsBorrowed(&["item 1 of 2", "item 2 of 2"]).into(),
         Some(max_height_row_count),
         Some(max_width_col_count),
         HowToChoose::Single,
