@@ -438,8 +438,8 @@ fn clip_string_to_width_with_ellipsis(
 mod tests {
     use pretty_assertions::assert_eq;
     use r3bl_core::{global_color_support::{clear_override, set_override},
-                    to_inline_vec,
                     ColorSupport,
+                    ItemsBorrowed,
                     OutputDeviceExt};
     use serial_test::serial;
     use smallvec::smallvec;
@@ -464,7 +464,7 @@ mod tests {
     fn test_select_component() {
         let mut state = State {
             header: Header::SingleLine("Header".into()),
-            items: to_inline_vec(&["Item 1", "Item 2", "Item 3"]),
+            items: ItemsBorrowed(&["Item 1", "Item 2", "Item 3"]).into(),
             max_display_height: ch(5),
             max_display_width: ch(40),
             raw_caret_row_index: ch(0),

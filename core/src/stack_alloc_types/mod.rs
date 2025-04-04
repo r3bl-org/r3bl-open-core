@@ -18,10 +18,12 @@
 // Attach.
 pub mod constructors;
 pub mod into_existing;
+pub mod items;
 pub mod make_new;
 pub mod sizes;
 pub mod usize_fmt;
 
 // Re-export.
+pub use items::*;
 pub use sizes::*;
 pub use usize_fmt::*;

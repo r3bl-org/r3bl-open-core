@@ -449,7 +449,7 @@ pub enum HowToChoose {
 mod test_select_from_list {
     use r3bl_core::{assert_eq2,
                     is_fully_uninteractive_terminal,
-                    to_inline_vec,
+                    ItemsBorrowed,
                     OutputDeviceExt,
                     TTYResult};
 
@@ -459,7 +459,7 @@ mod test_select_from_list {
     fn create_state<'a>() -> State<'a> {
         State {
             max_display_height: ch(10),
-            items: to_inline_vec(&["a", "b", "c"]),
+            items: ItemsBorrowed(&["a", "b", "c"]).into(),
             ..Default::default()
         }
     }
@@ -492,7 +492,7 @@ mod test_select_from_list {
             if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
                 EventLoopResult::ExitWithError
             } else {
-                EventLoopResult::ExitWithResult(to_inline_vec(&["c"]))
+                EventLoopResult::ExitWithResult(ItemsBorrowed(&["c"]).into())
             }
         );
     }

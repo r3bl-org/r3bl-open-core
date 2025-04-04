@@ -19,13 +19,13 @@ use std::{fmt::Display, io::Result};
 
 use r3bl_core::{self,
                 get_terminal_width,
-                to_inline_vec,
                 usize,
                 ASTColor,
                 ASTStyle,
                 AnsiStyledText,
                 InlineString,
-                InlineVec};
+                InlineVec,
+                ItemsBorrowed};
 use r3bl_tuify::{select_from_list, HowToChoose, StyleSheet};
 use serde::{Deserialize, Serialize};
 
@@ -59,7 +59,7 @@ pub fn main() -> Result<()> {
         let options = question_data.options.clone();
         let user_input = select_from_list(
             question,
-            to_inline_vec(&options),
+            ItemsBorrowed(&options).into(),
             max_height_row_count,
             max_width_col_count,
             HowToChoose::Single,
