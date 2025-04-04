@@ -15,7 +15,40 @@
  *   limitations under the License.
  */
 
+use r3bl_core::{console_log,
+                height,
+                items_owned,
+                width,
+                InputDevice,
+                ItemsBorrowed,
+                ItemsOwned,
+                OutputDevice,
+                SharedWriter};
+use r3bl_tuify::{choose, Header, HowToChoose, StyleSheet};
+
 #[tokio::main]
 async fn main() {
     println!("This is a placeholder for the async choose function.");
+
+    let id = &mut InputDevice::new_event_stream();
+    let od = &mut OutputDevice::new_stdout();
+    let msw: Option<SharedWriter> = None;
+
+    let header = Header::SingleLine("Header".into());
+    let inline_vec: ItemsOwned = items_owned(ItemsBorrowed(&["one", "two", "three"]));
+    let max_size = height(5) + width(0);
+    let how = HowToChoose::Single;
+    let style_sheet = StyleSheet::hot_pink_style();
+
+    let res_user_chose = choose(
+        header,
+        inline_vec,
+        max_size,
+        how,
+        style_sheet,
+        (od, id, msw),
+    )
+    .await;
+
+    console_log!(res_user_chose);
 }
