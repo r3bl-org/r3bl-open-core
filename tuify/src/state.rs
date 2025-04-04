@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{AnsiStyledText, ChUnit, InlineString, InlineVec, Size};
+use r3bl_core::{AnsiStyledText, ChUnit, InlineString, InlineVec, ItemsOwned, Size};
 
 use crate::{get_scroll_adjusted_row_index,
             locate_cursor_in_viewport,
@@ -31,8 +31,8 @@ pub struct State<'a> {
     /// This is not adjusted for [scroll_offset_row_index](State::scroll_offset_row_index).
     pub raw_caret_row_index: ChUnit,
     pub scroll_offset_row_index: ChUnit,
-    pub items: InlineVec<InlineString>,
-    pub selected_items: InlineVec<InlineString>,
+    pub items: ItemsOwned,
+    pub selected_items: ItemsOwned,
     pub header: Header<'a>,
     pub selection_mode: HowToChoose,
     /// This is used to determine if the terminal has been resized.
