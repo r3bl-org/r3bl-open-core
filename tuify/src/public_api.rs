@@ -23,12 +23,13 @@ use r3bl_core::{ch,
                 inline_string,
                 usize,
                 AnsiStyledText,
-                InlineString,
                 InlineVec,
                 InputDevice,
+                ItemsOwned,
                 LineStateControlSignal,
                 OutputDevice,
-                SharedWriter};
+                SharedWriter,
+                Size};
 use smallvec::smallvec;
 
 use crate::{enter_event_loop,
@@ -47,77 +48,87 @@ use crate::{enter_event_loop,
 pub const DEFAULT_HEIGHT: usize = 5;
 
 // 00: different function for async variant
+/// Choose an item from a list of items.
+///
+/// # Arguments
+///
+/// * `arg_header` - The header to display above the list.
+/// * `from` - The list of items to choose from.
+/// * `max_size` - The maximum size of the list.
+///   * If `row_height` is 0, then the height is set to the number of items in the list.
+///   * If `col_width` is 0, then the width is set to the width of your terminal.
+/// * `how` - The selection mode.
+/// * `stylesheet` - The style to use for the list.
+/// * `io` - The input and output devices to use.
+///   * `output_device` - The output device to use.
+///   * `input_device` - The input device to use.
+///   * `maybe_shared_writer` - The shared writer to use, if ReadlineAsync is in use, and
+///     the async stdout needs to be paused when this function is running.
 pub async fn choose<'a>(
     arg_header: impl Into<Header<'a>>,
-    from: InlineVec<InlineString>,
-    max_height_row_count: usize,
-    // If you pass 0, then the width of your terminal gets set as max_width_col_count.
-    max_width_col_count: usize,
+    from: ItemsOwned,
+    max_size: Size,
     how: HowToChoose,
-    style: StyleSheet,
+    stylesheet: StyleSheet,
     io: (
         &'a mut OutputDevice,
         &'a mut InputDevice,
         Option<SharedWriter>,
     ),
-) -> miette::Result<InlineVec<InlineString>> {
-    // Destructure the tuple.
-    let (output_device, input_device, maybe_shared_writer) = io;
+) -> miette::Result<ItemsOwned> {
+    // Destructure the io tuple.
+    let (od, id, msw) = io;
 
     // For compatibility with ReadlineAsync (if it is in use).
-    if let Some(ref shared_writer) = maybe_shared_writer {
+    if let Some(ref sw) = msw {
         // Pause the shared writer while the user is choosing an item.
-        shared_writer
-            .line_state_control_channel_sender
+        sw.line_state_control_channel_sender
             .send(LineStateControlSignal::Pause)
             .await
             .into_diagnostic()?;
     }
 
-    // There are fewer items than viewport height. So make viewport shorter.
-    let max_height_row_count = if from.len() <= max_height_row_count {
-        from.len()
-    } else {
-        max_height_row_count
-    };
-
     let mut state = State {
-        max_display_height: ch(max_height_row_count),
-        max_display_width: ch(max_width_col_count),
+        max_display_height: ch(match max_size.row_height.as_usize() {
+            // If the height is 0, then set it to the number of items in the list.
+            0 => from.len(),
+            // There are fewer items than viewport height. So make viewport shorter.
+            height => height.min(from.len()),
+        }),
+        max_display_width: ch(max_size.col_width.as_usize()),
         items: from,
         header: arg_header.into(),
         selection_mode: how,
         ..Default::default()
     };
 
-    let mut function_component = SelectComponent {
-        output_device: output_device.clone(),
-        style,
+    let mut fc = SelectComponent {
+        output_device: od.clone(),
+        style: stylesheet,
     };
 
     if let Ok(size) = get_size() {
         state.set_size(size);
     }
 
-    let result_user_input = enter_event_loop_async(
+    let res_user_input = enter_event_loop_async(
         &mut state,
-        &mut function_component,
+        &mut fc,
         |state, key_press| keypress_handler(state, key_press),
-        input_device,
+        id,
     )
     .await;
 
     // For compatibility with ReadlineAsync (if it is in use).
-    if let Some(ref shared_writer) = maybe_shared_writer {
+    if let Some(ref sw) = msw {
         // Resume the shared writer after the user has made their choice.
-        shared_writer
-            .line_state_control_channel_sender
+        sw.line_state_control_channel_sender
             .send(LineStateControlSignal::Resume)
             .await
             .into_diagnostic()?;
     }
 
-    match result_user_input {
+    match res_user_input {
         Ok(EventLoopResult::ExitWithResult(it)) => Ok(it),
         _ => Ok(smallvec![]),
     }
@@ -134,13 +145,13 @@ pub async fn choose<'a>(
 /// won't block `cargo test` or when run in non-interactive CI/CD environments.
 pub fn select_from_list(
     header: String,
-    items: InlineVec<InlineString>,
+    items: ItemsOwned,
     max_height_row_count: usize,
     // If you pass 0, then the width of your terminal gets set as max_width_col_count.
     max_width_col_count: usize,
     how: HowToChoose,
     style: StyleSheet,
-) -> Option<InlineVec<InlineString>> {
+) -> Option<ItemsOwned> {
     // There are fewer items than viewport height. So make viewport shorter.
     let max_height_row_count = if items.len() <= max_height_row_count {
         items.len()
@@ -181,13 +192,13 @@ pub fn select_from_list(
 
 pub fn select_from_list_with_multi_line_header(
     multi_line_header: InlineVec<InlineVec<AnsiStyledText<'_>>>,
-    items: InlineVec<InlineString>,
+    items: ItemsOwned,
     maybe_max_height_row_count: Option<usize>,
     // If you pass None, then the width of your terminal gets used.
     maybe_max_width_col_count: Option<usize>,
     how: HowToChoose,
     style: StyleSheet,
-) -> Option<InlineVec<InlineString>> {
+) -> Option<ItemsOwned> {
     // There are fewer items than viewport height. So make viewport shorter.
     let max_height_row_count = match maybe_max_height_row_count {
         Some(requested_height) => sanitize_height(&items, requested_height),
@@ -227,7 +238,7 @@ pub fn select_from_list_with_multi_line_header(
     }
 }
 
-fn sanitize_height(items: &InlineVec<InlineString>, requested_height: usize) -> usize {
+fn sanitize_height(items: &ItemsOwned, requested_height: usize) -> usize {
     let num_items = items.len();
     if num_items > requested_height {
         requested_height
