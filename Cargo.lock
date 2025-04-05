@@ -1626,8 +1626,8 @@ dependencies = [
  "pretty_assertions",
  "r3bl_analytics_schema",
  "r3bl_core",
+ "r3bl_terminal_async",
  "r3bl_tui",
- "r3bl_tuify",
  "rand",
  "reedline",
  "reqwest",
@@ -1705,13 +1705,16 @@ name = "r3bl_terminal_async"
 version = "0.6.0"
 dependencies = [
  "async-stream",
+ "clap",
  "crossterm",
  "futures-core",
  "futures-util",
  "miette",
  "pretty_assertions",
  "r3bl_core",
- "r3bl_tuify",
+ "serde",
+ "serde_json",
+ "serial_test",
  "smallstr",
  "smallvec",
  "strum",
@@ -1758,29 +1761,6 @@ dependencies = [
  "tracing-subscriber",
  "unicode-segmentation",
  "unicode-width 0.2.0",
-]
-
-[[package]]
-name = "r3bl_tuify"
-version = "0.2.0"
-dependencies = [
- "clap",
- "crossterm",
- "miette",
- "pretty_assertions",
- "r3bl_core",
- "reedline",
- "serde",
- "serde_json",
- "serial_test",
- "smallstr",
- "smallvec",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-appender",
- "tracing-core",
- "tracing-subscriber",
 ]
 
 [[package]]

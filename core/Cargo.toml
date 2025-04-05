@@ -5,7 +5,7 @@ edition = "2024"
 # https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
 resolver = "3"
 description = """
-Helper crate for r3bl_tui and r3bl_tuify crates.
+Helper crate for r3bl_tui crate.
 Used by workspace in https://github.com/r3bl-org/r3bl-open-core.
 """
 # Email address(es) has to be verified at https://crates.io/me/

@@ -18,7 +18,7 @@
 use std::process::Command;
 
 use r3bl_core::{ASTStyle, AnsiStyledText, CommonResult, InlineString, InlineVec};
-use r3bl_tuify::{HowToChoose, StyleSheet, choose};
+use r3bl_terminal_async::{HowToChoose, StyleSheet, choose};
 use smallvec::smallvec;
 use try_delete_branch_user_choice::Selection::{self, Delete, ExitProgram};
 

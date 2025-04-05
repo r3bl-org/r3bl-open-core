@@ -15,17 +15,20 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{get_size,
-                get_terminal_width,
-                log_support::try_initialize_logging_global,
-                throws,
-                usize,
-                ASTColor,
+use r3bl_core::{ASTColor,
                 ASTStyle,
                 AnsiStyledText,
                 InlineVec,
-                ItemsBorrowed};
-use r3bl_tuify::{choose, components::style::StyleSheet, HowToChoose, DEVELOPMENT_MODE};
+                ItemsBorrowed,
+                get_size,
+                get_terminal_width,
+                log_support::try_initialize_logging_global,
+                throws,
+                usize};
+use r3bl_terminal_async::{DEVELOPMENT_MODE,
+                          HowToChoose,
+                          choose,
+                          components::style::StyleSheet};
 mod single_select_quiz_game;
 use single_select_quiz_game::main as single_select_quiz_game;
 use smallvec::smallvec;

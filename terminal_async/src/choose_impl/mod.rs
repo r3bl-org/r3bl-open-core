@@ -101,17 +101,13 @@
 //!
 //! # Introduction
 //!
-//! `r3bl_tuify` is a Rust crate that allows you to add simple interactivity to your CLI app.
+//! `choose_impl` allows you to add simple interactivity to your CLI app. It is not a full TUI, neither
+//! is it like [crate::ReadlineAsync]. It simply allows you to provide a list of items, and ask
+//! the user to choose one or more of them.
 //!
-//! `r3bl_tuify` crate can be used in two ways:
+//! # Examples
 //!
-//! 1. **As a library**. This is useful if you want to add simple interactivity to your CLI
-//!    app written in Rust. You can see an example of this in the `examples` folder in the
-//!    `main_interactive.rs` file. You can run it using `cargo run --example
-//!    main_interactive`.
-//!
-//! 1. **As a binary**. This is useful if you want to use this crate as a command line tool.
-//!    The binary target is called `rt`.
+//! To run the examples, you can run `nu run examples` in the `terminal_async` folder.
 //!
 //! # Changelog
 //!
@@ -143,18 +139,19 @@
 //! ```
 //!
 //! The following example illustrates how you can use this as a library. The function that
-//! does the work of rendering the UI is called [`choose()`]. It takes a list of items and
-//! returns the selected item or items (depending on the selection mode). If the user does
-//! not select anything, it returns `None`. The function also takes the maximum height and
-//! width of the display, and the selection mode (single select or multiple select).
+//! does the work of rendering the UI is called [crate::choose()]. It takes a list of
+//! items and returns the selected item or items (depending on the selection mode). If the
+//! user does not select anything, it returns `None`. The function also takes the maximum
+//! height and width of the display, and the selection mode (single select or multiple
+//! select).
 //!
-//! It works on macOS, Linux, and Windows. And is aware
-//! of the terminal color output limitations of each. For eg, it uses Windows API on Windows for
-//! keyboard input. And on macOS Terminal.app it restricts color output to a 256 color palette.
+//! It works on macOS, Linux, and Windows. And is aware of the terminal color output
+//! limitations of each. For eg, it uses Windows API on Windows for keyboard input. And on
+//! macOS Terminal.app it restricts color output to a 256 color palette.
 //!
 //! ```rust
 //! # use r3bl_core::*;
-//! # use r3bl_tuify::*;
+//! # use r3bl_terminal_async::*;
 //! # use std::io::Result;
 //!
 //! fn main() -> Result<()> {
@@ -189,10 +186,10 @@
 //!
 //! We provide 2 APIs:
 //!
-//! - [`choose_async`]: Use this API if you want to display a list of items in an async
-//!   context.
-//! - [`choose`]: Use this API if you want to display a list of items with a single or
-//!   multi line header.
+//! - [crate::choose_async()]: Use this API if you want to display a list of items in an
+//!   async context.
+//! - [crate::choose()]: Use this API if you want to display a list of items with a single
+//!   or multi line header.
 //!
 //! ## choose_async
 //!
@@ -200,11 +197,11 @@
 //!
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/0ae722bb-8cd1-47b1-a293-1a96e84d24d0)
 //!
-//! [choose_async] code example:
+//! [crate::choose_async()] code example:
 //!
 //! ```rust
 //! # use r3bl_core::*;
-//! # use r3bl_tuify::*;
+//! # use r3bl_terminal_async::*;
 //! # use std::io::Result;
 //!
 //! #[tokio::main]
@@ -242,7 +239,7 @@
 //!
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/2f82a42c-f720-4bcb-925d-0d5ad0b0a3c9)
 //!
-//! [choose] code example:
+//! [crate::choose] code example:
 //!
 //! ```rust
 //! # use std::{io::Result, vec};
@@ -250,7 +247,7 @@
 //! # use r3bl_core::{
 //! #     ItemsBorrowed, InlineVec, AnsiStyledText, ASTColor, ASTStyle
 //! # };
-//! # use r3bl_tuify::{
+//! # use r3bl_terminal_async::{
 //! #     components::style::StyleSheet, State,
 //! #     choose,
 //! #     HowToChoose,
@@ -535,7 +532,7 @@
 //!
 //! ```rust
 //! # use r3bl_core::*;
-//! # use r3bl_tuify::*;
+//! # use r3bl_terminal_async::*;
 //! # use std::io::Result;
 //!
 //! fn main() -> Result<()> {
@@ -577,7 +574,7 @@
 //! ```rust
 //! use std::io::Result;
 //! use r3bl_core::{AnsiStyledText, ASTColor, ItemsBorrowed, tui_color, TuiStyle};
-//! use r3bl_tuify::{
+//! use r3bl_terminal_async::{
 //!     State, components::style::StyleSheet,
 //!     choose,
 //!     HowToChoose
@@ -718,7 +715,6 @@ pub mod crossterm_macros;
 pub mod event_loop;
 pub mod function_component;
 pub mod keypress;
-pub mod public_api;
 pub mod scroll;
 pub mod state;
 pub mod test_utils;
@@ -728,7 +724,6 @@ pub use constants::*;
 pub use event_loop::*;
 pub use function_component::*;
 pub use keypress::*;
-pub use public_api::*;
 pub use scroll::*;
 pub use state::*;
 pub use test_utils::*;

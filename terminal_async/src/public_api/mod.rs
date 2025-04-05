@@ -18,7 +18,9 @@
 // Attach sources.
 pub mod readline_async;
 pub mod spinner;
+pub mod choose_async;
 
 // Re-export.
 pub use readline_async::*;
 pub use spinner::*;
+pub use choose_async::*;

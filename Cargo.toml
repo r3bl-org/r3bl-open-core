@@ -2,7 +2,7 @@
 
 # Make sure to keep this in sync with `run` nushell script `$workspace_folders`.
 [workspace]
-members = ["analytics_schema", "cmdr", "core", "terminal_async", "tui", "tuify"]
+members = ["analytics_schema", "cmdr", "core", "terminal_async", "tui"]
 
 # https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
 resolver = "3"
