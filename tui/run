@@ -18,6 +18,8 @@
 #     - coming from bash: https://www.nushell.sh/book/coming_from_bash.html
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
+source ../script_lib.nu
+
 # Main entry point for the script.
 def main [...args: string] {
     let num_args = $args | length

@@ -200,4 +200,8 @@ impl ReadlineAsync {
         .into_diagnostic()?;
         Ok(())
     }
+
+    pub async fn pause_for_output_to_flush() {
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    }
 }
