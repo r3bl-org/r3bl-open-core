@@ -26,7 +26,7 @@ use r3bl_core::{self,
                 InlineString,
                 InlineVec,
                 ItemsBorrowed};
-use r3bl_tuify::{select_from_list, HowToChoose, StyleSheet};
+use r3bl_tuify::{choose, HowToChoose, StyleSheet};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -57,11 +57,11 @@ pub fn main() -> Result<()> {
     for question_data in &all_questions_and_answers {
         let question = question_data.question.clone();
         let options = question_data.options.clone();
-        let user_input = select_from_list(
+        let user_input = choose(
             question,
             ItemsBorrowed(&options).into(),
-            max_height_row_count,
-            max_width_col_count,
+            Some(max_height_row_count),
+            Some(max_width_col_count),
             HowToChoose::Single,
             StyleSheet::default(),
         );

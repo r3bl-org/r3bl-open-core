@@ -22,14 +22,13 @@ use r3bl_core::{ch,
                 green,
                 inline_string,
                 usize,
-                AnsiStyledText,
-                InlineVec,
+                Height,
                 InputDevice,
                 ItemsOwned,
                 LineStateControlSignal,
                 OutputDevice,
                 SharedWriter,
-                Size};
+                Width};
 use smallvec::smallvec;
 
 use crate::{enter_event_loop,
@@ -47,15 +46,21 @@ use crate::{enter_event_loop,
 
 pub const DEFAULT_HEIGHT: usize = 5;
 
-/// Choose an item from a list of items.
+/// Async function to choose an item from a list of items.
 ///
+/// It takes a list of items, and returns the selected item or items (depending on the
+/// selection mode). If the user does not select anything, it returns `None`. The function
+/// also takes the maximum height and width of the display, and the selection mode (single
+/// select or multiple select).
+///
+/// If the terminal is *fully* uninteractive, it returns `None`. This is useful so that it
+/// won't block `cargo test` or when run in non-interactive CI/CD environments.///
 /// # Arguments
 ///
 /// * `arg_header` - The header to display above the list.
 /// * `from` - The list of items to choose from.
-/// * `max_size` - The maximum size of the list.
-///   * If `row_height` is 0, then the height is set to the number of items in the list.
-///   * If `col_width` is 0, then the width is set to the width of your terminal.
+/// * `maybe_max_height` - Optional: the maximum height of the list.
+/// * `maybe_max_width` - Optional: the maximum width of the list.
 /// * `how` - The selection mode.
 /// * `stylesheet` - The style to use for the list.
 /// * `io` - The input and output devices to use.
@@ -63,10 +68,11 @@ pub const DEFAULT_HEIGHT: usize = 5;
 ///   * `input_device` - The input device to use.
 ///   * `maybe_shared_writer` - The shared writer to use, if ReadlineAsync is in use, and
 ///     the async stdout needs to be paused when this function is running.
-pub async fn choose<'a>(
+pub async fn choose_async<'a>(
     arg_header: impl Into<Header<'a>>,
     from: ItemsOwned,
-    max_size: Size,
+    maybe_max_height: Option<Height>,
+    maybe_max_width: Option<Width>,
     how: HowToChoose,
     stylesheet: StyleSheet,
     io: (
@@ -87,14 +93,35 @@ pub async fn choose<'a>(
             .into_diagnostic()?;
     }
 
+    // - If the max size is None, then set it to DEFAULT_HEIGHT.
+    // - If the max size is Some, then this is the max height of the viewport.
+    //   - However, if this is 0, then set to DEFAULT_HEIGHT.
+    //   - Otherwise, check whether the number of items is less than this max height and
+    //     set the max height to the number of items.
+    //   - Otherwise, if there are more items than the max height, then clamp it to the
+    //     max height.
+    let max_display_height = ch({
+        match maybe_max_height {
+            None => DEFAULT_HEIGHT,
+            Some(row_height) => {
+                let row_height = row_height.as_usize();
+                if row_height == 0 {
+                    DEFAULT_HEIGHT
+                } else {
+                    std::cmp::min(row_height, from.len())
+                }
+            }
+        }
+    });
+
+    let max_display_width = ch(match maybe_max_width {
+        None => 0,
+        Some(col_width) => col_width.as_usize(),
+    });
+
     let mut state = State {
-        max_display_height: ch(match max_size.row_height.as_usize() {
-            // If the height is 0, then set it to the number of items in the list.
-            0 => from.len(),
-            // There are fewer items than viewport height. So make viewport shorter.
-            height => height.min(from.len()),
-        }),
-        max_display_width: ch(max_size.col_width.as_usize()),
+        max_display_height,
+        max_display_width,
         items: from,
         header: arg_header.into(),
         selection_mode: how,
@@ -133,7 +160,7 @@ pub async fn choose<'a>(
     }
 }
 
-/// This function does the work of rendering the TUI.
+/// Async function to choose an item from a list of items.
 ///
 /// It takes a list of items, and returns the selected item or items (depending on the
 /// selection mode). If the user does not select anything, it returns `None`. The function
@@ -141,64 +168,23 @@ pub async fn choose<'a>(
 /// select or multiple select).
 ///
 /// If the terminal is *fully* uninteractive, it returns `None`. This is useful so that it
-/// won't block `cargo test` or when run in non-interactive CI/CD environments.
-pub fn select_from_list(
-    header: String,
-    items: ItemsOwned,
-    max_height_row_count: usize,
-    // If you pass 0, then the width of your terminal gets set as max_width_col_count.
-    max_width_col_count: usize,
-    how: HowToChoose,
-    style: StyleSheet,
-) -> Option<ItemsOwned> {
-    // There are fewer items than viewport height. So make viewport shorter.
-    let max_height_row_count = if items.len() <= max_height_row_count {
-        items.len()
-    } else {
-        max_height_row_count
-    };
-
-    let mut state = State {
-        max_display_height: ch(max_height_row_count),
-        max_display_width: ch(max_width_col_count),
-        items,
-        header: Header::SingleLine(header.into()),
-        selection_mode: how,
-        ..Default::default()
-    };
-
-    let mut function_component = SelectComponent {
-        output_device: OutputDevice::new_stdout(),
-        style,
-    };
-
-    if let Ok(size) = get_size() {
-        state.set_size(size);
-    }
-
-    let result_user_input = enter_event_loop(
-        &mut state,
-        &mut function_component,
-        |state, key_press| keypress_handler(state, key_press),
-        &mut CrosstermKeyPressReader {},
-    );
-
-    match result_user_input {
-        Ok(EventLoopResult::ExitWithResult(it)) => Some(it),
-        _ => None,
-    }
-}
-
-pub fn select_from_list_with_multi_line_header(
-    multi_line_header: InlineVec<InlineVec<AnsiStyledText<'_>>>,
+/// won't block `cargo test` or when run in non-interactive CI/CD environments.///
+/// # Arguments
+///
+/// * `arg_header` - The header to display above the list.
+/// * `from` - The list of items to choose from.
+/// * `maybe_max_height` - Optional: the maximum height of the list.
+/// * `maybe_max_width` - Optional: the maximum width of the list.
+/// * `how` - The selection mode.
+/// * `stylesheet` - The style to use for the list.
+pub fn choose<'a>(
+    header: impl Into<Header<'a>>,
     items: ItemsOwned,
     maybe_max_height_row_count: Option<usize>,
-    // If you pass None, then the width of your terminal gets used.
     maybe_max_width_col_count: Option<usize>,
     how: HowToChoose,
     style: StyleSheet,
 ) -> Option<ItemsOwned> {
-    // There are fewer items than viewport height. So make viewport shorter.
     let max_height_row_count = match maybe_max_height_row_count {
         Some(requested_height) => sanitize_height(&items, requested_height),
         None => sanitize_height(&items, DEFAULT_HEIGHT),
@@ -210,7 +196,7 @@ pub fn select_from_list_with_multi_line_header(
         max_display_height: ch(max_height_row_count),
         max_display_width: ch(max_width_col_count),
         items,
-        header: multi_line_header.into(),
+        header: header.into(),
         selection_mode: how,
         ..Default::default()
     };
@@ -459,9 +445,7 @@ pub enum HowToChoose {
 mod test_choose_async {
     use std::{io::Write as _, time::Duration};
 
-    use r3bl_core::{height,
-                    width,
-                    CrosstermEventResult,
+    use r3bl_core::{CrosstermEventResult,
                     InlineVec,
                     InputDevice,
                     InputDeviceExt,
@@ -535,10 +519,11 @@ mod test_choose_async {
         // 1. should be paused.
         // 2. after 10ms, "data after 10ms delay\n" will be written to shared writer.
         // 3. after 30ms, the shared writer will be resumed (when choose() completes).
-        _ = choose(
+        _ = choose_async(
             Header::SingleLine("Choose one:".into()),
             ItemsBorrowed(&["one", "two", "three"]).into(),
-            height(5) + width(0),
+            None,
+            None,
             HowToChoose::Single,
             StyleSheet::default(),
             (

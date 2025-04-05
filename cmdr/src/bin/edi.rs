@@ -27,7 +27,7 @@ use r3bl_core::{ASTStyle,
                 TextColorizationPolicy,
                 log_support::try_initialize_logging_global,
                 throws};
-use r3bl_tuify::{HowToChoose, LIZARD_GREEN, SLATE_GRAY, StyleSheet, select_from_list};
+use r3bl_tuify::{HowToChoose, LIZARD_GREEN, SLATE_GRAY, StyleSheet};
 
 use crate::clap_config::CLIArg;
 
@@ -103,6 +103,7 @@ async fn main() -> CommonResult<()> {
 
 pub mod edi_ui_templates {
     use r3bl_core::InlineString;
+    use r3bl_tuify::choose;
 
     use super::*;
 
@@ -110,16 +111,15 @@ pub mod edi_ui_templates {
         cli_arg: CLIArg,
     ) -> Option<InlineString> {
         // Ask the user to select a file to edit.
-        let maybe_user_choices = select_from_list(
-            "edi currently only allows you to edit one file at a time. Select one:"
-                .to_string(),
+        let maybe_user_choices = choose(
+            "edi currently only allows you to edit one file at a time. Select one:",
             cli_arg
                 .file_paths
                 .iter()
                 .map(|s| s.to_string().into())
                 .collect(),
-            5,
-            0,
+            Some(5),
+            Some(0),
             HowToChoose::Single,
             StyleSheet::default(),
         );

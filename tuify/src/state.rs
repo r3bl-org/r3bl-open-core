@@ -74,6 +74,12 @@ mod convert_to_header {
         fn from(header: String) -> Self { Header::SingleLine(InlineString::from(header)) }
     }
 
+    impl<'a> From<&'a str> for Header<'a> {
+        fn from(header: &'a str) -> Self {
+            Header::SingleLine(InlineString::from(header))
+        }
+    }
+
     impl Default for Header<'_> {
         fn default() -> Self { Header::SingleLine(InlineString::new()) }
     }
