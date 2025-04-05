@@ -155,21 +155,27 @@ def clean [] {
 }
 
 def examples [] {
-    let example_binaries = get_example_binaries
-    run_example $example_binaries false
+    let example_binaries: list<string> = get_example_binaries
+    run_example $example_binaries false false
 }
 
 def release-examples [] {
-    let example_binaries = get_example_binaries
-    run_example $example_binaries true
+    let example_binaries: list<string> = get_example_binaries
+    run_example $example_binaries true false
+}
+
+def release-examples-no-log [] {
+    let example_binaries: list<string> = get_example_binaries
+    run_example $example_binaries true true
+}
+
+def examples-with-flamegraph-profiling [] {
+    let example_binaries: list<string> = get_example_binaries
+    run_example_with_flamegraph_profiling $example_binaries
 }
 
 def piped [] {
     bat Cargo.toml | cargo run --example readline_async -q
-}
-
-def examples-with-flamegraph-profiling [] {
-    cargo flamegraph --example readline_async
 }
 
 def watch-examples [] {
