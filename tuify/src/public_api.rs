@@ -457,6 +457,14 @@ pub enum HowToChoose {
 }
 
 #[cfg(test)]
+mod test_choose_async {
+    #[test]
+    fn test_shared_writer_pause_works() {
+        // 00: implement this test
+    }
+}
+
+#[cfg(test)]
 mod test_select_from_list {
     use r3bl_core::{assert_eq2,
                     is_fully_uninteractive_terminal,
