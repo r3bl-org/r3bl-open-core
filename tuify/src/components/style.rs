@@ -15,38 +15,48 @@
  *   limitations under the License.
  */
 
-use r3bl_core::ASTColor;
+use r3bl_core::{new_style, tui_color, TuiStyle};
 
-#[derive(Copy, Clone, Debug)]
+/// This is not the same as [r3bl_core::TuiStylesheet], since this encapsulates
+/// information that is specific to [crate::choose()] that are not generalized.
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StyleSheet {
-    pub focused_and_selected_style: Style,
-    pub focused_style: Style,
-    pub unselected_style: Style,
-    pub selected_style: Style,
-    pub header_style: Style,
+    pub focused_and_selected_style: TuiStyle,
+    pub focused_style: TuiStyle,
+    pub unselected_style: TuiStyle,
+    pub selected_style: TuiStyle,
+    pub header_style: TuiStyle,
+}
+
+pub fn get_default_style() -> TuiStyle {
+    new_style!(
+        color_fg: {tui_color!(193, 193, 193)} color_bg: {tui_color!(14, 17, 23)}
+    )
 }
 
 impl Default for StyleSheet {
     fn default() -> Self {
-        let focused_and_selected_style = Style {
-            fg_color: ASTColor::Rgb((20, 244, 0).into()),
-            bg_color: ASTColor::Rgb((51, 32, 66).into()),
-            ..Style::default()
+        let focused_and_selected_style = TuiStyle {
+            color_fg: tui_color!(20, 244, 0).into(),
+            color_bg: tui_color!(51, 32, 66).into(),
+            ..TuiStyle::default()
         };
-        let focused_style = Style {
-            fg_color: ASTColor::Rgb((20, 244, 0).into()),
-            ..Style::default()
+        let focused_style = TuiStyle {
+            color_fg: tui_color!(20, 244, 0).into(),
+            ..TuiStyle::default()
         };
-        let unselected_style = Style { ..Style::default() };
-        let selected_style = Style {
-            fg_color: ASTColor::Rgb((203, 170, 250).into()),
-            bg_color: ASTColor::Rgb((51, 32, 66).into()),
-            ..Style::default()
+        let unselected_style = TuiStyle {
+            ..TuiStyle::default()
         };
-        let header_style = Style {
-            fg_color: ASTColor::Rgb((171, 204, 242).into()),
-            bg_color: ASTColor::Rgb((31, 36, 46).into()),
-            ..Style::default()
+        let selected_style = TuiStyle {
+            color_fg: tui_color!(203, 170, 250).into(),
+            color_bg: tui_color!(51, 32, 66).into(),
+            ..TuiStyle::default()
+        };
+        let header_style = TuiStyle {
+            color_fg: tui_color!(171, 204, 242).into(),
+            color_bg: tui_color!(31, 36, 46).into(),
+            ..TuiStyle::default()
         };
         StyleSheet {
             focused_and_selected_style,
@@ -60,30 +70,30 @@ impl Default for StyleSheet {
 
 impl StyleSheet {
     pub fn sea_foam_style() -> Self {
-        let focused_and_selected_style = Style {
-            fg_color: ASTColor::Rgb((19, 227, 255).into()),
-            bg_color: ASTColor::Rgb((6, 41, 52).into()),
-            ..Style::default()
+        let focused_and_selected_style = TuiStyle {
+            color_fg: tui_color!(19, 227, 255).into(),
+            color_bg: tui_color!(6, 41, 52).into(),
+            ..TuiStyle::default()
         };
-        let focused_style = Style {
-            fg_color: ASTColor::Rgb((19, 227, 255).into()),
-            bg_color: ASTColor::Rgb((14, 17, 23).into()),
-            ..Style::default()
+        let focused_style = TuiStyle {
+            color_fg: tui_color!(19, 227, 255).into(),
+            color_bg: tui_color!(14, 17, 23).into(),
+            ..TuiStyle::default()
         };
-        let unselected_style = Style {
-            fg_color: ASTColor::Rgb((241, 241, 241).into()),
-            bg_color: ASTColor::Rgb((14, 17, 23).into()),
-            ..Style::default()
+        let unselected_style = TuiStyle {
+            color_fg: tui_color!(241, 241, 241).into(),
+            color_bg: tui_color!(14, 17, 23).into(),
+            ..TuiStyle::default()
         };
-        let selected_style = Style {
-            fg_color: ASTColor::Rgb((209, 244, 255).into()),
-            bg_color: ASTColor::Rgb((6, 41, 52).into()),
-            ..Style::default()
+        let selected_style = TuiStyle {
+            color_fg: tui_color!(209, 244, 255).into(),
+            color_bg: tui_color!(6, 41, 52).into(),
+            ..TuiStyle::default()
         };
-        let header_style = Style {
-            fg_color: ASTColor::Rgb((229, 239, 123).into()),
-            bg_color: ASTColor::Rgb((31, 36, 46).into()),
-            ..Style::default()
+        let header_style = TuiStyle {
+            color_fg: tui_color!(229, 239, 123).into(),
+            color_bg: tui_color!(31, 36, 46).into(),
+            ..TuiStyle::default()
         };
         StyleSheet {
             focused_and_selected_style,
@@ -95,30 +105,30 @@ impl StyleSheet {
     }
 
     pub fn hot_pink_style() -> Self {
-        let focused_and_selected_style = Style {
-            fg_color: ASTColor::Rgb((255, 0, 214).into()),
-            bg_color: ASTColor::Rgb((62, 14, 74).into()),
-            ..Style::default()
+        let focused_and_selected_style = TuiStyle {
+            color_fg: tui_color!(255, 0, 214).into(),
+            color_bg: tui_color!(62, 14, 74).into(),
+            ..TuiStyle::default()
         };
-        let focused_style = Style {
-            fg_color: ASTColor::Rgb((255, 0, 214).into()),
-            bg_color: ASTColor::Rgb((14, 17, 23).into()),
-            ..Style::default()
+        let focused_style = TuiStyle {
+            color_fg: tui_color!(255, 0, 214).into(),
+            color_bg: tui_color!(14, 17, 23).into(),
+            ..TuiStyle::default()
         };
-        let unselected_style = Style {
-            fg_color: ASTColor::Rgb((219, 202, 232).into()),
-            bg_color: ASTColor::Rgb((14, 17, 23).into()),
-            ..Style::default()
+        let unselected_style = TuiStyle {
+            color_fg: tui_color!(219, 202, 232).into(),
+            color_bg: tui_color!(14, 17, 23).into(),
+            ..TuiStyle::default()
         };
-        let selected_style = Style {
-            fg_color: ASTColor::Rgb((255, 181, 234).into()),
-            bg_color: ASTColor::Rgb((62, 14, 74).into()),
-            ..Style::default()
+        let selected_style = TuiStyle {
+            color_fg: tui_color!(255, 181, 234).into(),
+            color_bg: tui_color!(62, 14, 74).into(),
+            ..TuiStyle::default()
         };
-        let header_style = Style {
-            fg_color: ASTColor::Rgb((190, 253, 249).into()),
-            bg_color: ASTColor::Rgb((31, 36, 46).into()),
-            ..Style::default()
+        let header_style = TuiStyle {
+            color_fg: tui_color!(190, 253, 249).into(),
+            color_bg: tui_color!(31, 36, 46).into(),
+            ..TuiStyle::default()
         };
         StyleSheet {
             focused_and_selected_style,
@@ -130,82 +140,55 @@ impl StyleSheet {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct Style {
-    pub bold: bool,
-    pub italic: bool,
-    pub dim: bool,
-    pub underline: bool,
-    pub reverse: bool,
-    pub hidden: bool,
-    pub strikethrough: bool,
-    pub fg_color: ASTColor,
-    pub bg_color: ASTColor,
-}
-
-impl Default for Style {
-    fn default() -> Self {
-        Style {
-            bold: false,
-            italic: false,
-            dim: false,
-            underline: false,
-            reverse: false,
-            hidden: false,
-            strikethrough: false,
-            fg_color: ASTColor::Rgb((193, 193, 193).into()),
-            bg_color: ASTColor::Rgb((14, 17, 23).into()),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_default_style() {
+        let style = get_default_style();
+        assert_eq!(style.color_fg, tui_color!(193, 193, 193).into());
+        assert_eq!(style.color_bg, tui_color!(14, 17, 23).into());
+    }
 
     #[test]
     fn test_default_theme() {
         let stylesheet = StyleSheet::default();
 
         assert_eq!(
-            stylesheet.focused_and_selected_style.fg_color,
-            ASTColor::Rgb((20, 244, 0).into())
+            stylesheet.focused_and_selected_style.color_fg,
+            tui_color!(20, 244, 0).into()
         );
         assert_eq!(
-            stylesheet.focused_and_selected_style.bg_color,
-            ASTColor::Rgb((51, 32, 66).into())
-        );
-
-        assert_eq!(
-            stylesheet.focused_style.fg_color,
-            ASTColor::Rgb((20, 244, 0).into())
+            stylesheet.focused_and_selected_style.color_bg,
+            tui_color!(51, 32, 66).into()
         );
 
         assert_eq!(
-            stylesheet.unselected_style.fg_color,
-            ASTColor::Rgb((193, 193, 193).into())
+            stylesheet.focused_style.color_fg,
+            tui_color!(20, 244, 0).into()
+        );
+        assert_eq!(stylesheet.focused_style.color_bg, None);
+
+        assert_eq!(stylesheet.unselected_style.color_fg, None);
+        assert_eq!(stylesheet.unselected_style.color_bg, None);
+
+        assert_eq!(
+            stylesheet.selected_style.color_fg,
+            tui_color!(203, 170, 250).into()
         );
         assert_eq!(
-            stylesheet.unselected_style.bg_color,
-            ASTColor::Rgb((14, 17, 23).into())
+            stylesheet.selected_style.color_bg,
+            tui_color!(51, 32, 66).into()
         );
 
         assert_eq!(
-            stylesheet.selected_style.fg_color,
-            ASTColor::Rgb((203, 170, 250).into())
+            stylesheet.header_style.color_fg,
+            tui_color!(171, 204, 242).into()
         );
         assert_eq!(
-            stylesheet.selected_style.bg_color,
-            ASTColor::Rgb((51, 32, 66).into())
-        );
-
-        assert_eq!(
-            stylesheet.header_style.fg_color,
-            ASTColor::Rgb((171, 204, 242).into())
-        );
-        assert_eq!(
-            stylesheet.header_style.bg_color,
-            ASTColor::Rgb((31, 36, 46).into())
+            stylesheet.header_style.color_bg,
+            tui_color!(31, 36, 46).into()
         );
     }
 
@@ -214,48 +197,48 @@ mod tests {
         let stylesheet = StyleSheet::sea_foam_style();
 
         assert_eq!(
-            stylesheet.focused_and_selected_style.fg_color,
-            ASTColor::Rgb((19, 227, 255).into())
+            stylesheet.focused_and_selected_style.color_fg,
+            tui_color!(19, 227, 255).into()
         );
         assert_eq!(
-            stylesheet.focused_and_selected_style.bg_color,
-            ASTColor::Rgb((6, 41, 52).into())
-        );
-
-        assert_eq!(
-            stylesheet.focused_style.fg_color,
-            ASTColor::Rgb((19, 227, 255).into())
-        );
-        assert_eq!(
-            stylesheet.focused_style.bg_color,
-            ASTColor::Rgb((14, 17, 23).into())
+            stylesheet.focused_and_selected_style.color_bg,
+            tui_color!(6, 41, 52).into()
         );
 
         assert_eq!(
-            stylesheet.unselected_style.fg_color,
-            ASTColor::Rgb((241, 241, 241).into())
+            stylesheet.focused_style.color_fg,
+            tui_color!(19, 227, 255).into()
         );
         assert_eq!(
-            stylesheet.unselected_style.bg_color,
-            ASTColor::Rgb((14, 17, 23).into())
-        );
-
-        assert_eq!(
-            stylesheet.selected_style.fg_color,
-            ASTColor::Rgb((209, 244, 255).into())
-        );
-        assert_eq!(
-            stylesheet.selected_style.bg_color,
-            ASTColor::Rgb((6, 41, 52).into())
+            stylesheet.focused_style.color_bg,
+            tui_color!(14, 17, 23).into()
         );
 
         assert_eq!(
-            stylesheet.header_style.fg_color,
-            ASTColor::Rgb((229, 239, 123).into())
+            stylesheet.unselected_style.color_fg,
+            tui_color!(241, 241, 241).into()
         );
         assert_eq!(
-            stylesheet.header_style.bg_color,
-            ASTColor::Rgb((31, 36, 46).into())
+            stylesheet.unselected_style.color_bg,
+            tui_color!(14, 17, 23).into()
+        );
+
+        assert_eq!(
+            stylesheet.selected_style.color_fg,
+            tui_color!(209, 244, 255).into()
+        );
+        assert_eq!(
+            stylesheet.selected_style.color_bg,
+            tui_color!(6, 41, 52).into()
+        );
+
+        assert_eq!(
+            stylesheet.header_style.color_fg,
+            tui_color!(229, 239, 123).into()
+        );
+        assert_eq!(
+            stylesheet.header_style.color_bg,
+            tui_color!(31, 36, 46).into()
         );
     }
 
@@ -264,44 +247,44 @@ mod tests {
         let style_sheet = StyleSheet::hot_pink_style();
 
         assert_eq!(
-            style_sheet.focused_and_selected_style.fg_color,
-            ASTColor::Rgb((255, 0, 214).into())
+            style_sheet.focused_and_selected_style.color_fg,
+            tui_color!(255, 0, 214).into()
         );
         assert_eq!(
-            style_sheet.focused_and_selected_style.bg_color,
-            ASTColor::Rgb((62, 14, 74).into())
+            style_sheet.focused_and_selected_style.color_bg,
+            tui_color!(62, 14, 74).into()
         );
         assert_eq!(
-            style_sheet.focused_style.fg_color,
-            ASTColor::Rgb((255, 0, 214).into())
+            style_sheet.focused_style.color_fg,
+            tui_color!(255, 0, 214).into()
         );
         assert_eq!(
-            style_sheet.focused_style.bg_color,
-            ASTColor::Rgb((14, 17, 23).into())
+            style_sheet.focused_style.color_bg,
+            tui_color!(14, 17, 23).into()
         );
         assert_eq!(
-            style_sheet.unselected_style.fg_color,
-            ASTColor::Rgb((219, 202, 232).into())
+            style_sheet.unselected_style.color_fg,
+            tui_color!(219, 202, 232).into()
         );
         assert_eq!(
-            style_sheet.unselected_style.bg_color,
-            ASTColor::Rgb((14, 17, 23).into())
+            style_sheet.unselected_style.color_bg,
+            tui_color!(14, 17, 23).into()
         );
         assert_eq!(
-            style_sheet.selected_style.fg_color,
-            ASTColor::Rgb((255, 181, 234).into())
+            style_sheet.selected_style.color_fg,
+            tui_color!(255, 181, 234).into()
         );
         assert_eq!(
-            style_sheet.selected_style.bg_color,
-            ASTColor::Rgb((62, 14, 74).into())
+            style_sheet.selected_style.color_bg,
+            tui_color!(62, 14, 74).into()
         );
         assert_eq!(
-            style_sheet.header_style.fg_color,
-            ASTColor::Rgb((190, 253, 249).into())
+            style_sheet.header_style.color_fg,
+            tui_color!(190, 253, 249).into()
         );
         assert_eq!(
-            style_sheet.header_style.bg_color,
-            ASTColor::Rgb((31, 36, 46).into())
+            style_sheet.header_style.color_bg,
+            tui_color!(31, 36, 46).into()
         );
     }
 }

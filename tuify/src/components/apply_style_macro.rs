@@ -15,60 +15,40 @@
  *   limitations under the License.
  */
 
-use crossterm::style::{Attribute, Color, SetAttribute};
-use r3bl_core::{global_color_support, ASTColor, ColorSupport, TransformColor};
-
-pub fn get_crossterm_color_based_on_terminal_capabilities(color: ASTColor) -> Color {
-    let detect_color_support = global_color_support::detect();
-    match detect_color_support {
-        ColorSupport::Truecolor => {
-            let rgb_color = color.as_rgb();
-            Color::Rgb {
-                r: rgb_color.red,
-                g: rgb_color.green,
-                b: rgb_color.blue,
-            }
-        }
-        _ => Color::AnsiValue(color.as_ansi().index),
-    }
-}
+use crossterm::style::{Attribute, SetAttribute};
 
 #[macro_export]
 macro_rules! apply_style {
-    ($style: expr => bg_color) => {
-        SetBackgroundColor(get_crossterm_color_based_on_terminal_capabilities(
-            $style.bg_color,
-        ))
+    ($fg: expr => fg) => {
+        SetForegroundColor(::r3bl_core::convert_from_tui_color_to_crossterm_color($fg))
     };
-    ($style: expr => fg_color) => {
-        SetForegroundColor(get_crossterm_color_based_on_terminal_capabilities(
-            $style.fg_color,
-        ))
+    ($bg: expr => bg) => {
+        SetBackgroundColor(::r3bl_core::convert_from_tui_color_to_crossterm_color($bg))
     };
     ($style: expr => bold) => {
-        set_attribute($style.bold, Attribute::Bold, Attribute::NoBold)
+        $crate::set_attribute($style.bold, Attribute::Bold, Attribute::NoBold)
     };
     ($style: expr => italic) => {
-        set_attribute($style.italic, Attribute::Italic, Attribute::NoItalic)
+        $crate::set_attribute($style.italic, Attribute::Italic, Attribute::NoItalic)
     };
     ($style: expr => dim) => {
-        set_attribute($style.dim, Attribute::Dim, Attribute::NormalIntensity)
+        $crate::set_attribute($style.dim, Attribute::Dim, Attribute::NormalIntensity)
     };
     ($style: expr => underline) => {
-        set_attribute(
+        $crate::set_attribute(
             $style.underline,
             Attribute::Underlined,
             Attribute::NoUnderline,
         )
     };
     ($style: expr => reverse) => {
-        set_attribute($style.reverse, Attribute::Reverse, Attribute::NoReverse)
+        $crate::set_attribute($style.reverse, Attribute::Reverse, Attribute::NoReverse)
     };
     ($style: expr => hidden) => {
-        set_attribute($style.hidden, Attribute::Hidden, Attribute::NoHidden)
+        $crate::set_attribute($style.hidden, Attribute::Hidden, Attribute::NoHidden)
     };
     ($style: expr => strikethrough) => {
-        set_attribute(
+        $crate::set_attribute(
             $style.strikethrough,
             Attribute::CrossedOut,
             Attribute::NotCrossedOut,

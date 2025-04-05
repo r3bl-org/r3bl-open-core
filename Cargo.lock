@@ -1711,6 +1711,7 @@ dependencies = [
  "miette",
  "pretty_assertions",
  "r3bl_core",
+ "r3bl_tuify",
  "smallstr",
  "smallvec",
  "strum",
