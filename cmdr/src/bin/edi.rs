@@ -16,6 +16,8 @@
  */
 
 use std::env::var;
+use r3bl_core::InlineString;
+use r3bl_terminal_async::choose;
 
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction, edi::launcher, report_analytics, upgrade_check};
@@ -27,7 +29,7 @@ use r3bl_core::{ASTStyle,
                 TextColorizationPolicy,
                 log_support::try_initialize_logging_global,
                 throws};
-use r3bl_tuify::{HowToChoose, LIZARD_GREEN, SLATE_GRAY, StyleSheet};
+use r3bl_terminal_async::{HowToChoose, LIZARD_GREEN, SLATE_GRAY, StyleSheet};
 
 use crate::clap_config::CLIArg;
 
@@ -102,9 +104,6 @@ async fn main() -> CommonResult<()> {
 }
 
 pub mod edi_ui_templates {
-    use r3bl_core::InlineString;
-    use r3bl_tuify::choose;
-
     use super::*;
 
     pub fn handle_multiple_files_not_supported_yet(
