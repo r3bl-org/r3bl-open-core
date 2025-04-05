@@ -18,13 +18,12 @@
 use r3bl_core::{console_log,
                 height,
                 items_owned,
-                width,
                 InputDevice,
                 ItemsBorrowed,
                 ItemsOwned,
                 OutputDevice,
                 SharedWriter};
-use r3bl_tuify::{choose, Header, HowToChoose, StyleSheet};
+use r3bl_tuify::{choose_async, Header, HowToChoose, StyleSheet};
 
 #[tokio::main]
 async fn main() {
@@ -36,14 +35,14 @@ async fn main() {
 
     let header = Header::SingleLine("Header".into());
     let inline_vec: ItemsOwned = items_owned(ItemsBorrowed(&["one", "two", "three"]));
-    let max_size = height(5) + width(0);
     let how = HowToChoose::Single;
     let style_sheet = StyleSheet::hot_pink_style();
 
-    let res_user_chose = choose(
+    let res_user_chose = choose_async(
         header,
         inline_vec,
-        max_size,
+        height(5).into(),
+        None,
         how,
         style_sheet,
         (od, id, msw),

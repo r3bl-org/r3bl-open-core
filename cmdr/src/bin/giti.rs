@@ -38,7 +38,7 @@ use r3bl_core::{ASTStyle,
                 CommonResult,
                 log_support::try_initialize_logging_global,
                 throws};
-use r3bl_tuify::{HowToChoose, StyleSheet, select_from_list_with_multi_line_header};
+use r3bl_tuify::{HowToChoose, StyleSheet, choose};
 use smallvec::smallvec;
 
 #[tokio::main]
@@ -165,7 +165,7 @@ fn user_typed_giti_branch() -> CommonResult<CommandSuccessfulResponse> {
         instructions_and_select_branch_subcommand.push(smallvec![header]);
         instructions_and_select_branch_subcommand
     };
-    let maybe_selected = select_from_list_with_multi_line_header(
+    let maybe_selected = choose(
         instructions_and_select_branch_subcommand,
         branch_subcommands,
         Some(20),
