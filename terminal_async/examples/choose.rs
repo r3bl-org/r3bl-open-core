@@ -24,8 +24,7 @@ use r3bl_core::{InputDevice,
                 ok,
                 rgb_value,
                 try_initialize_logging_global};
-use r3bl_terminal_async::ReadlineAsync;
-use r3bl_tuify::{Header, HowToChoose, StyleSheet, choose_async};
+use r3bl_terminal_async::{Header, HowToChoose, ReadlineAsync, StyleSheet, choose_async};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]

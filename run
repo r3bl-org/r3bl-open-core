@@ -19,7 +19,7 @@
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
 # Make sure to keep this in sync with `Cargo.toml` workspace members.
-let workspace_folders = ["analytics_schema", "cmdr", "core", "terminal_async", "tui", "tuify"]
+let workspace_folders = ["analytics_schema", "cmdr", "core", "terminal_async", "tui"]
 
 # Main entry point for the script.
 def main [...args: string] {

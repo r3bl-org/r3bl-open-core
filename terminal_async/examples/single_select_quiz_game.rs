@@ -18,15 +18,15 @@
 use std::{fmt::Display, io::Result};
 
 use r3bl_core::{self,
-                get_terminal_width,
-                usize,
                 ASTColor,
                 ASTStyle,
                 AnsiStyledText,
                 InlineString,
                 InlineVec,
-                ItemsBorrowed};
-use r3bl_tuify::{choose, HowToChoose, StyleSheet};
+                ItemsBorrowed,
+                get_terminal_width,
+                usize};
+use r3bl_terminal_async::{HowToChoose, StyleSheet, choose};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]

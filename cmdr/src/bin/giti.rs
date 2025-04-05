@@ -38,7 +38,7 @@ use r3bl_core::{ASTStyle,
                 CommonResult,
                 log_support::try_initialize_logging_global,
                 throws};
-use r3bl_tuify::{HowToChoose, StyleSheet, choose};
+use r3bl_terminal_async::{HowToChoose, StyleSheet, choose};
 use smallvec::smallvec;
 
 #[tokio::main]

@@ -457,10 +457,12 @@
 // Attach sources.
 pub mod public_api;
 pub mod read_line_impl;
+pub mod choose_impl;
 
 // Re-export the public API.
 pub use public_api::*;
 pub use read_line_impl::*;
+pub use choose_impl::*;
 
 // r3bl-open-core crates.
 use r3bl_core::{SafeRawTerminal, StdMutex, Text};

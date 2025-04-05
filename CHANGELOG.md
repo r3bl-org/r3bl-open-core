@@ -15,20 +15,6 @@
   - [v0.0.10 2024-01-02](#v0010-2024-01-02)
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
-- [r3bl_tuify](#r3bl_tuify)
-  - [v_next_release_tuify](#v_next_release_tuify)
-  - [v0.2.0 2024-10-21](#v020-2024-10-21)
-  - [v0.1.27 2024-09-12](#v0127-2024-09-12)
-  - [v0.1.26 2024-04-15](#v0126-2024-04-15)
-  - [v0.1.25 2024-01-14](#v0125-2024-01-14)
-  - [v0.1.24 2023-12-31](#v0124-2023-12-31)
-  - [v0.1.23 2023-12-22](#v0123-2023-12-22)
-  - [v0.1.22 2023-12-20](#v0122-2023-12-20)
-  - [v0.1.21 2023-10-21](#v0121-2023-10-21)
-  - [v0.1.20 2023-10-21](#v0120-2023-10-21)
-  - [v0.1.19 2023-10-17](#v0119-2023-10-17)
-  - [v0.1.18 2023-10-17](#v0118-2023-10-17)
-  - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
   - [v_next_release_r3bl_tui](#v_next_release_r3bl_tui)
   - [v0.6.0 2024-10-21](#v060-2024-10-21)
@@ -96,6 +82,20 @@
       - [v0.9.5 2023-10-14](#v095-2023-10-14)
       - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [Archived](#archived)
+  - [r3bl_tuify](#r3bl_tuify)
+    - [Archived 2025-04-05](#archived-2025-04-05)
+    - [v0.2.0 2024-10-21](#v020-2024-10-21)
+    - [v0.1.27 2024-09-12](#v0127-2024-09-12)
+    - [v0.1.26 2024-04-15](#v0126-2024-04-15)
+    - [v0.1.25 2024-01-14](#v0125-2024-01-14)
+    - [v0.1.24 2023-12-31](#v0124-2023-12-31)
+    - [v0.1.23 2023-12-22](#v0123-2023-12-22)
+    - [v0.1.22 2023-12-20](#v0122-2023-12-20)
+    - [v0.1.21 2023-10-21](#v0121-2023-10-21)
+    - [v0.1.20 2023-10-21](#v0120-2023-10-21)
+    - [v0.1.19 2023-10-17](#v0119-2023-10-17)
+    - [v0.1.18 2023-10-17](#v0118-2023-10-17)
+    - [v0.1.17 2023-10-14](#v0117-2023-10-14)
   - [r3bl_script](#r3bl_script)
     - [Archived 2025-03-31](#archived-2025-03-31)
   - [r3bl_log](#r3bl_log)
@@ -150,13 +150,12 @@ advisory whitelist and which tasks are run in CICD are included here.
 
 ### Global config (2025-03-24)
 
-- Removed:
-  - Update the `run` script at the top level, and `Cargo.toml` at the top level to remove
-    the crates: `r3bl_test_fixtures` and `r3bl_ansi_color`. Move these crates to
-    [archived](#archived). `r3bl_core` now contains all the functionality that was in
-    `r3bl_ansi_color` and `r3bl_test_fixtures`.
-
 - Added:
+  - Add a new `script_lib.nu` file in the workspace (root) folder that contains functions
+    that are used in the `run` scripts in all the contained inside of it. This provides
+    the ability to easy run examples by providing the user with an interactive list of
+    examples to run. See `terminal_async`'s `run` script for an example of how to use
+    this.
   - Add a new target to the `run` script in the workspace (root) folder that allows the
     use of a "build server". This target is called `nu run build-server`. This sets up a
     watcher using `inotifywait` to watch for changes in the source folders in
@@ -168,6 +167,12 @@ advisory whitelist and which tasks are run in CICD are included here.
     sharing is that a lot of locking occurs (when the remote process generates artifacts
     on changes) that slow down the local machine's rust-analyzer from being interactive
     (and it becomes really laggy and unusable).
+
+- Removed:
+  - Update the `run` script at the top level, and `Cargo.toml` at the top level to remove
+    the crates: `r3bl_test_fixtures` and `r3bl_ansi_color`. Move these crates to
+    [archived](#archived). `r3bl_core` now contains all the functionality that was in
+    `r3bl_ansi_color` and `r3bl_test_fixtures`.
 
 ### Global config (2025-03-19)
 
@@ -341,134 +346,6 @@ in a text editor.
     create new MD files, or edit any type of text file. It supports syntax highlighting
     for most file formats (though `.toml` and `.todo` are missing).
   - Add binary target `rc` aka `r3bl-cmdr`.
-
-## `r3bl_tuify`
-
-### v_next_release_tuify
-
-This release contains changes that are part of optimizing memory allocation to increase
-performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
-refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
-now used throughout the codebase. No new functionality is added in this release.
-
-### v0.2.0 (2024-10-21)
-
-This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
-change for almost every crate in the repo. This
-[PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
-
-- Updated:
-  - Use the latest Rust 2024 edition.
-  - This release just uses the latest deps from `r3bl-open-core` repo, since so many
-    crates have been reorganized and renamed. The functionality has not changed at all,
-    just the imports.
-
-- Removed:
-  - Drop the dependency on `r3bl_ansi_color`.
-  - Move some of `term.rs` into:
-    - `r3bl_core` - The functions to get the terminal window size and width.
-    - `r3bl_ansi_color` - The functions to detect whether the current process is running
-      in an interactive TTY or not.
-
-### v0.1.27 (2024-09-12)
-
-- Updated:
-  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
-  - Improve docs in `lib.rs` and `README.md`.
-
-### v0.1.26 (2024-04-15)
-
-- Updated:
-  - Make `clip_string_to_width_with_ellipsis` pub so that other crates can use it (eg:
-    `r3bl_terminal_async`).
-  - Change the names of enums to be more readable.
-    - `IsTTYResult::IsTTY` -> `TTYResult::IsInteractive`.
-    - `IsTTYResult::IsNotTTY` -> `TTYResult::IsNotInteractive`.
-  - Using latest deps for `r3bl_rs_utils_core` version `0.9.13`, and `r3bl_rs_utils_macro`
-    version `0.9.9`.
-
-### v0.1.25 (2024-01-14)
-
-- Updated:
-  - Dependency updated `reedline` version `0.28.0`, `r3bl_rs_utils_core` version `0.9.12`.
-- Added:
-  - Add `tuify/src/constants.rs` with color constants.
-
-### v0.1.24 (2023-12-31)
-
-- Changed:
-  - Rename `run.nu` to `run`. This simplifies commands to run it, eg: `nu run build`, or
-    `./run build`.
-  - Replace the `run` command with `examples` in the `run` nushell script. To run an
-    example you use `nu run examples`. and provide instructions on the `run` script at the
-    top level folder of this monorepo. Update `lib.rs` and `README.md` to reflect this
-    change. The behavior of the `run` nushell script is more uniform across all crates in
-    this repo.
-
-- Added:
-  - Add a new top level function `select_from_list_with_multi_line_header()` in
-    `public_api.rs` to allow for multi-line headers in the list selection menu. This
-    allows ANSI formatted strings to be used in each header line.
-
-- Fixed:
-  - In `select_from_list()`, the `max_width_col_count` is now respected to limit the max
-    width of the terminal window that is used.
-
-### v0.1.23 (2023-12-22)
-
-- Updated:
-  - Update dependency on `r3bl_rs_utils_core` to `0.9.10`.
-
-### v0.1.22 (2023-12-20)
-
-- Updated:
-  - Update dependency on `reedline` crate to `0.27.1`.
-  - Update dependency on `r3bl_rs_utils_core` to `0.9.9`.
-
-- Removed:
-  - Remove dependency on `r3bl_tui` crate.
-
-- Changed:
-  - Change the default theme so that it is better looking and more readable on Mac, Linux,
-    and Windows. Add many different themes to choose from.
-
-- Added:
-  - `Ctrl + c` now behaves just like the `Escape` key. In the past, pressing `Ctrl + c`
-    would do nothing the user could not exit the app by pressing this shortcut.
-  - More code quality and ability to test the main event loop, by creating a new
-    `TestVecKeyPressReader` struct, and abstracting the `read()` (from `stdin`) into a
-    `KeyPressReader` trait. This is similar to what is done for `TestStringWriter` (to
-    `stdout`).
-
-### v0.1.21 (2023-10-21)
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.1.20 (2023-10-21)
-
-- Updated:
-  - Bug fix: <https://github.com/r3bl-org/r3bl-open-core/issues/170>
-
-### v0.1.19 (2023-10-17)
-
-- Updated:
-  - Use the latest `r3bl_rs_utils_core` crate due to
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
-    maintained anymore.
-
-### v0.1.18 (2023-10-17)
-
-- Updated:
-  - Use the latest `r3bl_rs_utils_core` crate due to
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
-    maintained anymore.
-
-### v0.1.17 (2023-10-14)
-
-- Updated:
-  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
-    `r3bl_rs_utils` repo workspace as `simple_logger`).
 
 ## `r3bl_tui`
 
@@ -981,7 +858,6 @@ Here are the highlights:
      allow for an optional default style to be passed in, that will be applied to the
      generated lolcat output.
 
-
 - Moved:
   - Move the contents of `r3bl_ansi_color` crate into `r3bl_core`. There is no need to
     have that crate as an external dependency. Moving it where it belongs. It was
@@ -1245,6 +1121,11 @@ This release contains changes that are part of optimizing memory allocation to i
 performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
 refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
 now used throughout the codebase. No new functionality is added in this release.
+
+- Moved:
+  - Move the contents of `r3bl_tuify` crate into `r3bl_terminal_async`. Consolidate the
+    `select_*` functions into a single `choose()` function. And a new `choose_async()`
+    function that works in async context. The `r3bl_tuify` crate is now archived.
 
 - Changed:
   - Rename `get_readline_event()` to `read_line()`. This is an async replacement for
@@ -1657,6 +1538,132 @@ the `ok!()` macro.
 
 You can find all these archived crates in the
 [archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo.
+
+## `r3bl_tuify`
+
+### Archived (2025-04-05)
+
+This crate is now archived and is no longer maintained. All its functionality has been moved into
+the `r3bl_terminal_async` crate.
+
+### v0.2.0 (2024-10-21)
+
+This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
+change for almost every crate in the repo. This
+[PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
+
+- Updated:
+  - Use the latest Rust 2024 edition.
+  - This release just uses the latest deps from `r3bl-open-core` repo, since so many
+    crates have been reorganized and renamed. The functionality has not changed at all,
+    just the imports.
+
+- Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
+  - Move some of `term.rs` into:
+    - `r3bl_core` - The functions to get the terminal window size and width.
+    - `r3bl_ansi_color` - The functions to detect whether the current process is running
+      in an interactive TTY or not.
+
+### v0.1.27 (2024-09-12)
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
+
+### v0.1.26 (2024-04-15)
+
+- Updated:
+  - Make `clip_string_to_width_with_ellipsis` pub so that other crates can use it (eg:
+    `r3bl_terminal_async`).
+  - Change the names of enums to be more readable.
+    - `IsTTYResult::IsTTY` -> `TTYResult::IsInteractive`.
+    - `IsTTYResult::IsNotTTY` -> `TTYResult::IsNotInteractive`.
+  - Using latest deps for `r3bl_rs_utils_core` version `0.9.13`, and `r3bl_rs_utils_macro`
+    version `0.9.9`.
+
+### v0.1.25 (2024-01-14)
+
+- Updated:
+  - Dependency updated `reedline` version `0.28.0`, `r3bl_rs_utils_core` version `0.9.12`.
+- Added:
+  - Add `tuify/src/constants.rs` with color constants.
+
+### v0.1.24 (2023-12-31)
+
+- Changed:
+  - Rename `run.nu` to `run`. This simplifies commands to run it, eg: `nu run build`, or
+    `./run build`.
+  - Replace the `run` command with `examples` in the `run` nushell script. To run an
+    example you use `nu run examples`. and provide instructions on the `run` script at the
+    top level folder of this monorepo. Update `lib.rs` and `README.md` to reflect this
+    change. The behavior of the `run` nushell script is more uniform across all crates in
+    this repo.
+
+- Added:
+  - Add a new top level function `select_from_list_with_multi_line_header()` in
+    `public_api.rs` to allow for multi-line headers in the list selection menu. This
+    allows ANSI formatted strings to be used in each header line.
+
+- Fixed:
+  - In `select_from_list()`, the `max_width_col_count` is now respected to limit the max
+    width of the terminal window that is used.
+
+### v0.1.23 (2023-12-22)
+
+- Updated:
+  - Update dependency on `r3bl_rs_utils_core` to `0.9.10`.
+
+### v0.1.22 (2023-12-20)
+
+- Updated:
+  - Update dependency on `reedline` crate to `0.27.1`.
+  - Update dependency on `r3bl_rs_utils_core` to `0.9.9`.
+
+- Removed:
+  - Remove dependency on `r3bl_tui` crate.
+
+- Changed:
+  - Change the default theme so that it is better looking and more readable on Mac, Linux,
+    and Windows. Add many different themes to choose from.
+
+- Added:
+  - `Ctrl + c` now behaves just like the `Escape` key. In the past, pressing `Ctrl + c`
+    would do nothing the user could not exit the app by pressing this shortcut.
+  - More code quality and ability to test the main event loop, by creating a new
+    `TestVecKeyPressReader` struct, and abstracting the `read()` (from `stdin`) into a
+    `KeyPressReader` trait. This is similar to what is done for `TestStringWriter` (to
+    `stdout`).
+
+### v0.1.21 (2023-10-21)
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.1.20 (2023-10-21)
+
+- Updated:
+  - Bug fix: <https://github.com/r3bl-org/r3bl-open-core/issues/170>
+
+### v0.1.19 (2023-10-17)
+
+- Updated:
+  - Use the latest `r3bl_rs_utils_core` crate due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
+### v0.1.18 (2023-10-17)
+
+- Updated:
+  - Use the latest `r3bl_rs_utils_core` crate due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
+### v0.1.17 (2023-10-14)
+
+- Updated:
+  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
+    `r3bl_rs_utils` repo workspace as `simple_logger`).
 
 ## `r3bl_script`
 
