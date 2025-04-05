@@ -39,9 +39,7 @@ use r3bl_core::{blue,
                 OutputDevice};
 
 use crate::{apply_style,
-            get_crossterm_color_based_on_terminal_capabilities,
             queue_commands,
-            set_attribute,
             FunctionComponent,
             Header,
             HowToChoose,
@@ -158,9 +156,26 @@ impl FunctionComponent<State<'_>> for SelectComponent {
                         MoveToColumn(0),
                         // Reset the colors that may have been set by the previous command.
                         ResetColor,
-                        // Set the colors for the text.
-                        apply_style!(single_line_header_style => fg_color),
-                        apply_style!(single_line_header_style => bg_color),
+                    };
+
+                    if let Some(fg) = single_line_header_style.color_fg {
+                        queue_commands! {
+                            self.output_device,
+                            // Set the fg color for the text.
+                            apply_style!(fg => fg),
+                        };
+                    }
+
+                    if let Some(bg) = single_line_header_style.color_bg {
+                        queue_commands! {
+                            self.output_device,
+                            // Set the bg color for the text.
+                            apply_style!(bg => bg),
+                        };
+                    }
+
+                    queue_commands! {
+                        self.output_device,
                         // Style the text.
                         apply_style!(single_line_header_style => bold),
                         apply_style!(single_line_header_style => italic),
@@ -384,9 +399,26 @@ impl FunctionComponent<State<'_>> for SelectComponent {
                     ResetColor,
                     // Clear the current line.
                     Clear(ClearType::CurrentLine),
-                    // Set the colors for the text.
-                    apply_style!(data_style => fg_color),
-                    apply_style!(data_style => bg_color),
+                };
+
+                if let Some(fg) = data_style.color_fg {
+                    queue_commands! {
+                        self.output_device,
+                        // Set the fg color for the text.
+                        apply_style!(fg => fg),
+                    };
+                }
+
+                if let Some(bg) = data_style.color_bg {
+                    queue_commands! {
+                        self.output_device,
+                        // Set the bg color for the text.
+                        apply_style!(bg => bg),
+                    };
+                }
+
+                queue_commands! {
+                    self.output_device,
                     // Style the text.
                     apply_style!(data_style => bold),
                     apply_style!(data_style => italic),
@@ -493,7 +525,7 @@ mod tests {
             generated_output
         );
 
-        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;5;153m\u{1b}[48;5;235m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;46m\u{1b}[48;5;233m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◉ Item 1                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;250m\u{1b}[48;5;233m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 2                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;250m\u{1b}[48;5;233m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 3                              \u{1b}[1E\u{1b}[0m\u{1b}[4F";
+        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;5;153m\u{1b}[48;5;235m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;46m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◉ Item 1                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 2                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 3                              \u{1b}[1E\u{1b}[0m\u{1b}[4F";
         assert_eq!(generated_output, expected_output);
 
         clear_override();

@@ -25,7 +25,8 @@ crossterm = { version = "0.28.1", features = ["event-stream"] } # EventStream
 futures-util = "0.3.31"                                         # Needed for crossterm EventStream
 
 # r3bl-open-core.
-r3bl_core = { path = "../core", version = "0.10.0" } # version is required to publish to crates.io
+r3bl_core = { path = "../core", version = "0.10.0" }  # version is required to publish to crates.io
+r3bl_tuify = { path = "../tuify", version = "0.2.0" } # version is required to publish to crates.io
 
 # Unicode support.
 unicode-segmentation = "1.12.0"
