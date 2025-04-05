@@ -18,6 +18,8 @@
 #     - coming from bash: https://www.nushell.sh/book/coming_from_bash.html
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
+source ../script_lib.nu
+
 # Main entry point for the script.
 def main [...args: string] {
     let num_args = $args | length
@@ -33,6 +35,7 @@ def main [...args: string] {
         "build" => {build}
         "clean" => {clean}
         "examples" => {examples}
+        "release-examples" => {release-examples}
         "watch-examples" => {watch-examples}
         "examples-with-flamegraph-profiling" => {examples-with-flamegraph-profiling}
         "piped" => {piped}
@@ -117,6 +120,7 @@ def print-help [command: string] {
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)examples(ansi reset)'
+        print $'    (ansi green)release-examples(ansi reset)'
         print $'    (ansi green)piped(ansi reset)'
         print $'    (ansi green)log(ansi reset)'
         print $'    (ansi green)examples-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://www.youtube.com/watch?v=Sy26IMkOEiM(ansi reset)'
@@ -151,21 +155,13 @@ def clean [] {
 }
 
 def examples [] {
-    let options = [
-        "choose_async",
-        "main_interactive",
-        "single_select_quiz_game"
-    ]
+    let example_binaries = get_example_binaries
+    run_example $example_binaries false
+}
 
-    let selection = $options | input list --fuzzy 'Select an example to run: '
-    echo $selection
-
-    if $selection == "" {
-        echo "No example selected."
-    } else  {
-        echo $"Running: $selection"
-        cargo run --example $selection
-    }
+def release-examples [] {
+    let example_binaries = get_example_binaries
+    run_example $example_binaries true
 }
 
 def piped [] {
