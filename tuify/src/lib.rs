@@ -574,35 +574,37 @@
 //!
 //! ```rust
 //! use std::io::Result;
-//! use r3bl_core::{AnsiStyledText, ASTColor, ItemsBorrowed};
-//! use r3bl_tuify::{State, components::style::{Style, StyleSheet},
-//!                 select_from_list,
-//!                 HowToChoose};
+//! use r3bl_core::{AnsiStyledText, ASTColor, ItemsBorrowed, tui_color, TuiStyle};
+//! use r3bl_tuify::{
+//!     State, components::style::StyleSheet,
+//!     select_from_list,
+//!     HowToChoose
+//! };
 //!
 //! fn main() -> Result<()> {
 //!    // This is how you can define your custom style.
 //!    // For each Style struct, you can define different style overrides.
 //!    // Please take a look at the Style struct to see what you can override.
 //!    let my_custom_style = StyleSheet {
-//!       focused_and_selected_style: Style {
-//!             fg_color: ASTColor::Rgb((255, 244, 0).into()),
-//!             bg_color: ASTColor::Rgb((15, 32, 66).into()),
-//!             ..Style::default()
+//!       focused_and_selected_style: TuiStyle {
+//!             color_fg: tui_color!(255, 244, 0).into(),
+//!             color_bg: tui_color!(15, 32, 66).into(),
+//!             ..TuiStyle::default()
 //!       },
-//!       focused_style: Style {
-//!             fg_color: ASTColor::Rgb((255, 244, 0).into()),
-//!             ..Style::default()
+//!       focused_style: TuiStyle {
+//!             color_fg: tui_color!(255, 244, 0).into(),
+//!             ..TuiStyle::default()
 //!       },
-//!       unselected_style: Style { ..Style::default() },
-//!       selected_style: Style {
-//!             fg_color: ASTColor::Rgb((203, 170, 250).into()),
-//!             bg_color: ASTColor::Rgb((15, 32, 66).into()),
-//!             ..Style::default()
+//!       unselected_style: TuiStyle { ..TuiStyle::default() },
+//!       selected_style: TuiStyle {
+//!             color_fg: tui_color!(203, 170, 250).into(),
+//!             color_bg: tui_color!(15, 32, 66).into(),
+//!             ..TuiStyle::default()
 //!       },
-//!       header_style: Style {
-//!             fg_color: ASTColor::Rgb((171, 204, 242).into()),
-//!             bg_color: ASTColor::Rgb((31, 36, 46).into()),
-//!             ..Style::default()
+//!       header_style: TuiStyle {
+//!             color_fg: tui_color!(171, 204, 242).into(),
+//!             color_bg: tui_color!(31, 36, 46).into(),
+//!             ..TuiStyle::default()
 //!       },
 //!    };
 //!

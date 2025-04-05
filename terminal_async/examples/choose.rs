@@ -16,15 +16,18 @@
  */
 
 use r3bl_core::{InputDevice,
+                ItemsBorrowed,
                 OutputDevice,
                 fg_rgb_color,
-                lizard_green,
+                height,
                 ok,
                 rgb_value,
-                try_initialize_logging_global};
-use r3bl_terminal_async::{Header,
-                          ReadlineAsync,
-                          choose::{HowToChoose, choose}};
+                try_initialize_logging_global,
+                width};
+use r3bl_terminal_async::ReadlineAsync;
+use r3bl_tuify::{Header, HowToChoose, StyleSheet, choose};
+
+// 00: actually test this to see if works
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -43,12 +46,12 @@ async fn without_readline_async() -> miette::Result<()> {
     let mut input_device = InputDevice::new_event_stream();
 
     let chosen = choose(
-        Header::SingleLine(lizard_green("Choose one:")),
-        &["one", "two", "three"],
+        Header::SingleLine("Choose one:".into()),
+        ItemsBorrowed(&["one", "two", "three"]).into(),
+        width(0) + height(0),
         HowToChoose::Single,
-        (&mut output_device, &mut input_device),
-        None,
-        (None, Default::default()),
+        StyleSheet::hot_pink_style(),
+        (&mut output_device, &mut input_device, None),
     )
     .await;
 
@@ -80,12 +83,12 @@ async fn with_readline_async() -> miette::Result<()> {
     let input_device = readline_async.mut_input_device();
 
     let chosen = choose(
-        Header::SingleLine(lizard_green("Choose one:")),
-        &["one", "two", "three"],
+        Header::SingleLine("Choose one:".into()),
+        ItemsBorrowed(&["one", "two", "three"]).into(),
+        width(0) + height(0),
         HowToChoose::Single,
-        (&mut output_device, input_device),
-        Some(shared_writer),
-        (None, Default::default()),
+        StyleSheet::default(),
+        (&mut output_device, input_device, Some(shared_writer)),
     )
     .await;
 
