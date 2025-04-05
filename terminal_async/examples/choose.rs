@@ -21,13 +21,11 @@ use r3bl_core::{InputDevice,
                 ItemsBorrowed,
                 OutputDevice,
                 fg_rgb_color,
-                height,
                 ok,
                 rgb_value,
-                try_initialize_logging_global,
-                width};
+                try_initialize_logging_global};
 use r3bl_terminal_async::ReadlineAsync;
-use r3bl_tuify::{Header, HowToChoose, StyleSheet, choose};
+use r3bl_tuify::{Header, HowToChoose, StyleSheet, choose_async};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -45,10 +43,11 @@ async fn without_readline_async() -> miette::Result<()> {
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::new_event_stream();
 
-    let chosen = choose(
+    let chosen = choose_async(
         Header::SingleLine("Choose one:".into()),
         ItemsBorrowed(&["one", "two", "three"]).into(),
-        width(0) + height(0),
+        None,
+        None,
         HowToChoose::Single,
         StyleSheet::sea_foam_style(),
         (&mut output_device, &mut input_device, None),
@@ -95,10 +94,11 @@ async fn with_readline_async() -> miette::Result<()> {
         }
     });
 
-    let chosen = choose(
+    let chosen = choose_async(
         Header::SingleLine("Choose one:".into()),
         ItemsBorrowed(&["one", "two", "three"]).into(),
-        width(0) + height(0),
+        None,
+        None,
         HowToChoose::Single,
         StyleSheet::hot_pink_style(),
         (&mut output_device, input_device, Some(sw_2)),

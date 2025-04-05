@@ -18,7 +18,7 @@
 use std::process::Command;
 
 use r3bl_core::{ASTStyle, AnsiStyledText, CommonResult, InlineString, InlineVec};
-use r3bl_tuify::{HowToChoose, StyleSheet, select_from_list_with_multi_line_header};
+use r3bl_tuify::{HowToChoose, StyleSheet, choose};
 use smallvec::smallvec;
 use try_delete_branch_user_choice::Selection::{self, Delete, ExitProgram};
 
@@ -75,7 +75,7 @@ pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
     };
 
     if let Ok(branches) = get_branches() {
-        let maybe_selected_branches = select_from_list_with_multi_line_header(
+        let maybe_selected_branches = choose(
             instructions_and_branches_to_delete,
             branches,
             Some(20),
@@ -125,7 +125,7 @@ pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
                 instructions_and_confirm_deletion_header
             };
 
-            let maybe_selected_delete_or_exit = select_from_list_with_multi_line_header(
+            let maybe_selected_delete_or_exit = choose(
                 instructions_and_confirm_deletion_options,
                 confirm_deletion_options,
                 Some(20),

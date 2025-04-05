@@ -28,7 +28,7 @@ use r3bl_core::{ASTStyle,
                 InlineVec,
                 get_terminal_width,
                 usize};
-use r3bl_tuify::{HowToChoose, StyleSheet, select_from_list_with_multi_line_header};
+use r3bl_tuify::{HowToChoose, StyleSheet, choose};
 use smallvec::smallvec;
 
 use super::{get_branches, try_get_current_branch};
@@ -251,7 +251,7 @@ pub fn try_checkout_branch(
 
             if let Ok(branches) = get_branches() {
                 // Ask user to select a branch to check out to.
-                let maybe_selected_branch = select_from_list_with_multi_line_header(
+                let maybe_selected_branch = choose(
                     instructions_and_branches,
                     branches,
                     Some(20),

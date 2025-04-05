@@ -38,7 +38,7 @@ use r3bl_core::{blue,
                 InlineVec,
                 StdinIsPipedResult,
                 StdoutIsPipedResult};
-use r3bl_tuify::{select_from_list, HowToChoose, StyleSheet, DEVELOPMENT_MODE};
+use r3bl_tuify::{choose, HowToChoose, StyleSheet, DEVELOPMENT_MODE};
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 use smallvec::smallvec;
 use StdinIsPipedResult::{StdinIsNotPiped, StdinIsPiped};
@@ -234,11 +234,11 @@ fn show_tui(
             );
         print_help_for_subcommand_and_option("select-from-list", "selection-mode").ok();
 
-        let user_selection = select_from_list(
-            "Choose selection-mode".to_string(),
+        let user_selection = choose(
+            "Choose selection-mode",
             possible_values_for_selection_mode,
-            max_height_row_count,
-            max_width_col_count,
+            Some(max_height_row_count),
+            Some(max_width_col_count),
             HowToChoose::Single,
             StyleSheet::default(),
         );
@@ -297,11 +297,11 @@ fn show_tui(
 
     // Actually get input from the user.
     let selected_items = {
-        let it = select_from_list(
-            "Select one line".to_string(),
+        let it = choose(
+            "Select one line",
             lines,
-            max_height_row_count,
-            max_width_col_count,
+            Some(max_height_row_count),
+            Some(max_width_col_count),
             selection_mode,
             StyleSheet::default(),
         );

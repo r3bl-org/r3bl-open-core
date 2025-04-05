@@ -25,11 +25,7 @@ use r3bl_core::{get_size,
                 AnsiStyledText,
                 InlineVec,
                 ItemsBorrowed};
-use r3bl_tuify::{components::style::StyleSheet,
-                 select_from_list,
-                 select_from_list_with_multi_line_header,
-                 HowToChoose,
-                 DEVELOPMENT_MODE};
+use r3bl_tuify::{choose, components::style::StyleSheet, HowToChoose, DEVELOPMENT_MODE};
 mod single_select_quiz_game;
 use single_select_quiz_game::main as single_select_quiz_game;
 use smallvec::smallvec;
@@ -68,8 +64,8 @@ fn main() -> miette::Result<()> {
         const SINGLE_SELECT_QUIZ_GAME: &str = "Single select, quiz game";
 
         // Add tuify to select which example to run.
-        let maybe_user_input = select_from_list(
-            "Select which example to run".to_string(),
+        let maybe_user_input = choose(
+            "Select which example to run",
             [
                 MULTI_LINE_HEADER,
                 SINGLE_LINE_HEADER,
@@ -83,8 +79,8 @@ fn main() -> miette::Result<()> {
             .iter()
             .map(|it| (*it).into())
             .collect(),
-            6, /* height of the tuify component */
-            0, /* width of the tuify component. 0 means it will use the full terminal width */
+            Some(6), /* height of the tuify component */
+            Some(0), /* width of the tuify component. 0 means it will use the full terminal width */
             HowToChoose::Single,
             StyleSheet::default(),
         );
@@ -161,7 +157,7 @@ fn multi_line_header() {
     let mut instructions = multi_select_instructions();
     instructions.push(line_5);
 
-    let user_input = select_from_list_with_multi_line_header(
+    let user_input = choose(
         instructions,
         ItemsBorrowed(&[
             "item 1 of 13",
@@ -194,7 +190,7 @@ fn multi_line_header() {
 
 fn single_line_header() {
     let max_width_col_count = usize(*get_terminal_width());
-    let user_input = select_from_list(
+    let user_input = choose(
         "🦜 Please select one or more items. This is an example of a very long header text 🐧. You can pass emoji here 🐥 and text gets clipped off correctly 🐒, based on terminal size".to_string(),
         [
             "item 1 of 13",
@@ -214,8 +210,8 @@ fn single_line_header() {
         .iter()
         .map(|it| (*it).into())
         .collect(),
-        5,
-        max_width_col_count,
+        Some(5),
+        Some(max_width_col_count),
         HowToChoose::Multiple,
         StyleSheet::default(),
     );
@@ -246,7 +242,7 @@ fn multiple_select_single_item() {
     };
     instructions.push(smallvec![header]);
     let list = smallvec!["one element".into()];
-    let user_input = select_from_list_with_multi_line_header(
+    let user_input = choose(
         instructions,
         list,
         Some(6),
@@ -278,7 +274,7 @@ fn multiple_select_13_items_vph_5(
     };
     instructions.push(smallvec![header]);
 
-    let user_input = select_from_list_with_multi_line_header(
+    let user_input = choose(
         instructions,
         ItemsBorrowed(&[
             "item 1 of 13",
@@ -333,7 +329,7 @@ fn multiple_select_2_items_vph_5(
 
     instructions.push(smallvec![header]);
 
-    let user_input = select_from_list_with_multi_line_header(
+    let user_input = choose(
         instructions,
         ItemsBorrowed(&["item 1 of 2", "item 2 of 2"]).into(),
         Some(max_height_row_count),
@@ -362,8 +358,8 @@ fn single_select_13_items_vph_5(
     max_width_col_count: usize,
     style: StyleSheet,
 ) {
-    let user_input = select_from_list(
-        "Single select".to_string(),
+    let user_input = choose(
+        "Single select",
         ItemsBorrowed(&[
             "item 1 of 13",
             "item 2 of 13",
@@ -380,8 +376,8 @@ fn single_select_13_items_vph_5(
             "item 13 of 13",
         ])
         .into(),
-        max_height_row_count,
-        max_width_col_count,
+        Some(max_height_row_count),
+        Some(max_width_col_count),
         HowToChoose::Single,
         style,
     );
@@ -416,7 +412,7 @@ fn single_select_2_items_vph_5(
     };
     instructions.push(smallvec![header]);
 
-    let user_input = select_from_list_with_multi_line_header(
+    let user_input = choose(
         instructions,
         ItemsBorrowed(&["item 1 of 2", "item 2 of 2"]).into(),
         Some(max_height_row_count),

@@ -128,10 +128,9 @@ r3bl_core = "*" # Get the latest version at the time you get this.
 ```
 
 The following example illustrates how you can use this as a library. The function that
-does the work of rendering the UI is called
-[`select_from_list`]. It takes a list of items and returns
-the selected item or items (depending on the selection mode). If the user does not
-select anything, it returns `None`. The function also takes the maximum height and
+does the work of rendering the UI is called [`choose()`]. It takes a list of items and
+returns the selected item or items (depending on the selection mode). If the user does
+not select anything, it returns `None`. The function also takes the maximum height and
 width of the display, and the selection mode (single select or multiple select).
 
 It works on macOS, Linux, and Windows. And is aware
@@ -145,14 +144,14 @@ fn main() -> Result<()> {
     let max_width_col_count: usize = (get_size().map(|it| *it.col_width).unwrap_or(ch(80))).into();
     let max_height_row_count: usize = 5;
 
-    let user_input = select_from_list(
-        "Select an item".to_string(),
+    let user_input = choose(
+        "Select an item",
         ItemsBorrowed(&[
             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
             "item 9", "item 10",
         ]).into(),
-        max_height_row_count,
-        max_width_col_count,
+        Some(max_height_row_count),
+        Some(max_width_col_count),
         HowToChoose::Single,
         StyleSheet::default(),
     );
@@ -172,54 +171,57 @@ fn main() -> Result<()> {
 
 We provide 2 APIs:
 
-- [`select_from_list`]: Use this API if you want to display a list of items with a single line header.
-- [`select_from_list_with_multi_line_header`]: Use this API if you want to display a list of items
-  with a multi line header.
+- [`choose_async`]: Use this API if you want to display a list of items in an async
+  context.
+- [`choose`]: Use this API if you want to display a list of items with a single or
+  multi line header.
 
-### select_from_list
+### choose_async
 
-Use this API if you want to display a list of items with a single line header.
+Use this async API if you want to display a list of items with a single or multi line header.
 
 ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/0ae722bb-8cd1-47b1-a293-1a96e84d24d0)
 
-[select_from_list] code example:
+[choose_async] code example:
 
 ```rust
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     // Get display size.
     let max_height_row_count: usize = 5;
-    let user_input = select_from_list(
-        "Select an item".to_string(),
+    let user_input = choose_async(
+        "Select an item",
         ItemsBorrowed(&[
             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
             "item 9", "item 10",
         ]).into(),
-        max_height_row_count,
-        0,
+        None,
+        None,
         HowToChoose::Single,
         StyleSheet::default(),
-    );
+             (&mut OutputDevice::new_stdout(), &mut InputDevice::new_event_stream(), None),
+    ).await;
 
-    match &user_input {
-        Some(it) => {
+    match user_input {
+        Ok(it) => {
             println!("User selected: {:?}", it);
         }
-        None => println!("User did not select anything"),
+        _ => println!("User did not select anything"),
     }
 
     Ok(())
 }
 ```
 
-### select_from_list_with_multi_line_header
+### choose
 
-Use the `select_from_list_with_multi_line_header` API if you want to display a list of items with a
+Use the sync `choose` API if you want to display a list of items with a single or
 multi line header. The first 5 lines are all part of the multi line header.
 
 ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/2f82a42c-f720-4bcb-925d-0d5ad0b0a3c9)
 
-[select_from_list_with_multi_line_header] code example:
+[choose] code example:
 
 ```rust
 
@@ -304,7 +306,7 @@ fn main() -> Result<()> {
     let mut instructions_and_header: InlineVec<InlineVec<AnsiStyledText>> = multi_select_instructions();
     instructions_and_header.push(smallvec![header]);
 
-    let user_input = select_from_list_with_multi_line_header(
+    let user_input = choose(
         instructions_and_header,
         ItemsBorrowed(&[
             "item 1 of 13",
@@ -511,14 +513,14 @@ fn main() -> Result<()> {
     let max_width_col_count: usize = get_size().map(|it| *it.col_width).unwrap_or(ch(80)).into();
     let max_height_row_count: usize = 5;
 
-    let user_input = select_from_list(
-        "Select an item".to_string(),
+    let user_input = choose(
+        "Select an item",
         ItemsBorrowed(&[
             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
             "item 9", "item 10",
         ]).into(),
-        max_height_row_count,
-        max_width_col_count,
+        Some(max_height_row_count),
+        Some(max_width_col_count),
         HowToChoose::Single,
         sea_foam_style,  // 🖌️ or default_style or hot_pink_style
     );
@@ -543,7 +545,7 @@ use std::io::Result;
 use r3bl_core::{AnsiStyledText, ASTColor, ItemsBorrowed, tui_color, TuiStyle};
 use r3bl_tuify::{
     State, components::style::StyleSheet,
-    select_from_list,
+    choose,
     HowToChoose
 };
 
@@ -575,11 +577,11 @@ fn main() -> Result<()> {
    };
 
    // Then pass `my_custom_style` as the last argument to the `select_from_list` function.
-   let user_input = select_from_list(
-      "Multiple select".to_string(),
+   let user_input = choose(
+      "Multiple select",
       ItemsBorrowed(&["item 1 of 3", "item 2 of 3", "item 3 of 3"]).into(),
-      6, // max_height_row_count
-      80, // max_width_col_count
+      Some(6), // max_height_row_count
+      Some(80), // max_width_col_count
       HowToChoose::Multiple,
       my_custom_style,
    );
