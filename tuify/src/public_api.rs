@@ -47,7 +47,6 @@ use crate::{enter_event_loop,
 
 pub const DEFAULT_HEIGHT: usize = 5;
 
-// 00: different function for async variant
 /// Choose an item from a list of items.
 ///
 /// # Arguments
@@ -458,9 +457,113 @@ pub enum HowToChoose {
 
 #[cfg(test)]
 mod test_choose_async {
-    #[test]
-    fn test_shared_writer_pause_works() {
-        // 00: implement this test
+    use std::{io::Write as _, time::Duration};
+
+    use r3bl_core::{height,
+                    width,
+                    CrosstermEventResult,
+                    InlineVec,
+                    InputDevice,
+                    InputDeviceExt,
+                    ItemsBorrowed,
+                    OutputDevice,
+                    OutputDeviceExt as _,
+                    SharedWriter};
+    use smallvec::smallvec;
+
+    use super::*;
+
+    /// Simulated key inputs: Down, Down, Enter.
+    fn generated_key_events() -> InlineVec<CrosstermEventResult> {
+        // Simulated key inputs.
+        let generator_vec: InlineVec<CrosstermEventResult> = smallvec![
+            Ok(crossterm::event::Event::Key(
+                crossterm::event::KeyEvent::new(
+                    crossterm::event::KeyCode::Down,
+                    crossterm::event::KeyModifiers::empty(),
+                ),
+            )),
+            Ok(crossterm::event::Event::Key(
+                crossterm::event::KeyEvent::new(
+                    crossterm::event::KeyCode::Down,
+                    crossterm::event::KeyModifiers::empty(),
+                ),
+            )),
+            Ok(crossterm::event::Event::Key(
+                crossterm::event::KeyEvent::new(
+                    crossterm::event::KeyCode::Enter,
+                    crossterm::event::KeyModifiers::empty(),
+                ),
+            )),
+        ];
+        generator_vec
+    }
+
+    /// This test verifies that the `SharedWriter` pauses and resumes correctly when
+    /// `choose()` is called. It does not verify the actual output of the `SharedWriter`.
+    /// When this test is run in an interactive vs non-interactive terminal, the
+    /// assertions might be different, which is why the test is vague intentionally.
+    #[tokio::test]
+    async fn test_shared_writer_pause_works() {
+        // Set up the io devices.
+        let (mut line_receiver, shared_writer) = SharedWriter::new_mock();
+        let (mut output_device, stdout_mock) = OutputDevice::new_mock();
+        let mut input_device = InputDevice::new_mock_with_delay(
+            generated_key_events(), /* Down, Down, Enter */
+            Duration::from_millis(10),
+        );
+
+        // Spawn a task to write something to SharedWriter with delays.
+        let mut sw_1 = shared_writer.clone();
+        tokio::spawn(async move {
+            // Wait 10ms then write something.
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            sw_1.write_all(b"data after 10ms delay\n").unwrap();
+
+            // Wait 100ms then write something. This should not show up since the test
+            // will be over in 30ms.
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            sw_1.write_all(b"data after 100ms delay\n").unwrap();
+        });
+
+        // Nothing should be written to the shared writer yet.
+        assert_eq!(shared_writer.buffer, "");
+        assert_eq!(stdout_mock.get_copy_of_buffer_as_string(), "");
+        assert!(line_receiver.is_empty());
+
+        // The following code waits for 30ms. In the meantime, the shared writer
+        // 1. should be paused.
+        // 2. after 10ms, "data after 10ms delay\n" will be written to shared writer.
+        // 3. after 30ms, the shared writer will be resumed (when choose() completes).
+        _ = choose(
+            Header::SingleLine("Choose one:".into()),
+            ItemsBorrowed(&["one", "two", "three"]).into(),
+            height(5) + width(0),
+            HowToChoose::Single,
+            StyleSheet::default(),
+            (
+                &mut output_device,
+                &mut input_device,
+                Some(shared_writer.clone()),
+            ),
+        )
+        .await
+        .unwrap();
+
+        let mut acc = vec![];
+        line_receiver.close();
+        while let Some(line) = line_receiver.recv().await {
+            acc.push(line);
+        }
+
+        assert!(matches!(
+            acc.first().unwrap(),
+            LineStateControlSignal::Pause
+        ));
+        assert!(matches!(
+            acc.last().unwrap(),
+            LineStateControlSignal::Resume
+        ));
     }
 }
 

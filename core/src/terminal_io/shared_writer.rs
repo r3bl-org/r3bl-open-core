@@ -66,6 +66,17 @@ pub struct SharedWriter {
     pub uuid: uuid::Uuid,
 }
 
+impl SharedWriter {
+    pub fn new_mock() -> (
+        tokio::sync::mpsc::Receiver<LineStateControlSignal>,
+        SharedWriter,
+    ) {
+        let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1_000);
+        let shared_writer = SharedWriter::new(line_sender);
+        (line_receiver, shared_writer)
+    }
+}
+
 impl PartialEq for SharedWriter {
     fn eq(&self, other: &Self) -> bool { self.uuid == other.uuid }
 }
