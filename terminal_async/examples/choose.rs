@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use std::io::Write as _;
+
 use r3bl_core::{InputDevice,
                 ItemsBorrowed,
                 OutputDevice,
@@ -26,8 +28,6 @@ use r3bl_core::{InputDevice,
                 width};
 use r3bl_terminal_async::ReadlineAsync;
 use r3bl_tuify::{Header, HowToChoose, StyleSheet, choose};
-
-// 00: actually test this to see if works
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -50,7 +50,7 @@ async fn without_readline_async() -> miette::Result<()> {
         ItemsBorrowed(&["one", "two", "three"]).into(),
         width(0) + height(0),
         HowToChoose::Single,
-        StyleSheet::hot_pink_style(),
+        StyleSheet::sea_foam_style(),
         (&mut output_device, &mut input_device, None),
     )
     .await;
@@ -78,22 +78,41 @@ async fn with_readline_async() -> miette::Result<()> {
         return ok!();
     };
 
-    let shared_writer = readline_async.clone_shared_writer();
+    let mut sw_1 = readline_async.clone_shared_writer();
+    let sw_2 = readline_async.clone_shared_writer();
     let mut output_device = readline_async.clone_output_device();
     let input_device = readline_async.mut_input_device();
+
+    // Start a task to write some output to the shared writer. This output should be
+    // paused (as long as choose() is active).
+    tokio::spawn({
+        tracing::debug!(">>> Starting task to write to shared writer");
+        async move {
+            for i in 0..5 {
+                _ = writeln!(sw_1, ">>> {i}");
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            }
+        }
+    });
 
     let chosen = choose(
         Header::SingleLine("Choose one:".into()),
         ItemsBorrowed(&["one", "two", "three"]).into(),
         width(0) + height(0),
         HowToChoose::Single,
-        StyleSheet::default(),
-        (&mut output_device, input_device, Some(shared_writer)),
+        StyleSheet::hot_pink_style(),
+        (&mut output_device, input_device, Some(sw_2)),
     )
     .await;
 
+    // The output to the shared writer should be visible now. Kill the task that was
+    // writing to the shared writer.
+
     let message = format!(">>> Chosen {:<25}: {:?}", "(with readline_async)", chosen);
     ReadlineAsync::print_exit_message(&message)?;
+
+    // Pause for a moment to let the output flush.
+    ReadlineAsync::pause_for_output_to_flush().await;
 
     ok!()
 }
