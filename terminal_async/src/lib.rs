@@ -457,7 +457,6 @@
 // Attach sources.
 pub mod public_api;
 pub mod read_line_impl;
-pub mod choose_impl;
 
 // Re-export the public API.
 pub use public_api::*;
