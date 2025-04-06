@@ -43,7 +43,6 @@ use r3bl_core::{bold,
                 inline_string,
                 log_support::try_initialize_logging_global,
                 ok,
-                rgb_value,
                 throws,
                 tui_color,
                 ASTColor,
@@ -67,8 +66,8 @@ async fn main() -> CommonResult<()> {
     // If the terminal is not fully interactive, then return early.
     let Some(mut readline_async) = ReadlineAsync::try_new({
         // Generate prompt.
-        let fg = rgb_value!(slate_grey);
-        let bg = rgb_value!(moonlight_blue);
+        let fg = tui_color!(slate_grey);
+        let bg = tui_color!(moonlight_blue);
         let prompt_seg_1 = fg_rgb_color(fg, "╭>╮").bg_rgb_color(bg);
         let prompt_seg_2 = " ";
         Some(format!("{}{}", prompt_seg_1, prompt_seg_2))
@@ -158,7 +157,7 @@ async fn run_user_selected_example(
                 readline_async,
                 "{a} {b}",
                 a = frozen_blue("Invalid selection:"),
-                b = bold(&selection).fg_rgb_color(rgb_value!(pink))
+                b = bold(&selection).fg_rgb_color(tui_color!(pink))
             );
             Ok(())
         }

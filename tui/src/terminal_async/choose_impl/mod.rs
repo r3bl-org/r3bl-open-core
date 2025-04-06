@@ -709,24 +709,20 @@
 #![warn(clippy::unwrap_in_result)]
 #![warn(rust_2018_idioms)]
 
-pub mod choose_constants;
-pub mod choose_keypress;
 pub mod components;
 pub mod crossterm_macros;
 pub mod event_loop;
 pub mod function_component;
+pub mod keypress_reader_sync;
 pub mod scroll;
 pub mod state;
-pub mod test_utils;
 
-pub use choose_constants::*;
-pub use choose_keypress::*;
 pub use components::*;
 pub use event_loop::*;
 pub use function_component::*;
+pub use keypress_reader_sync::*;
 pub use scroll::*;
 pub use state::*;
-pub use test_utils::*;
 
 /// Enable file logging. You can use `tail -f log.txt` to watch the logs.
 pub const DEVELOPMENT_MODE: bool = false;

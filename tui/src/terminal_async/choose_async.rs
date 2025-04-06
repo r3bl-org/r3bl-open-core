@@ -31,15 +31,20 @@ use r3bl_core::{ch,
                 Width};
 use smallvec::smallvec;
 
-use crate::{enter_event_loop,
-            enter_event_loop_async,
+use super::CrosstermKeyPressReader;
+use crate::{enter_event_loop_async,
+            enter_event_loop_sync,
             CalculateResizeHint,
             CaretVerticalViewportLocation,
-            ChooseKeyPress,
-            CrosstermKeyPressReader,
             EventLoopResult,
             Header,
+            InputEvent,
+            Key,
+            KeyPress,
+            KeyState,
+            ModifierKeysMask,
             SelectComponent,
+            SpecialKey,
             State,
             StyleSheet,
             DEVELOPMENT_MODE};
@@ -140,7 +145,7 @@ pub async fn choose_async<'a>(
     let res_user_input = enter_event_loop_async(
         &mut state,
         &mut fc,
-        |state, key_press| keypress_handler(state, key_press),
+        |state, maybe_input_event| keypress_handler(state, maybe_input_event),
         id,
     )
     .await;
@@ -210,11 +215,11 @@ pub fn choose<'a>(
         state.set_size(size);
     }
 
-    let result_user_input = enter_event_loop(
+    let result_user_input = enter_event_loop_sync(
         &mut state,
         &mut function_component,
         |state, key_press| keypress_handler(state, key_press),
-        &mut CrosstermKeyPressReader {},
+        &mut CrosstermKeyPressReader,
     );
 
     match result_user_input {
@@ -232,7 +237,7 @@ fn sanitize_height(items: &ItemsOwned, requested_height: usize) -> usize {
     }
 }
 
-fn keypress_handler(state: &mut State<'_>, key_press: ChooseKeyPress) -> EventLoopResult {
+fn keypress_handler(state: &mut State<'_>, ie: InputEvent) -> EventLoopResult {
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
@@ -243,9 +248,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: ChooseKeyPress) -> EventLo
 
     let selection_mode = state.selection_mode;
 
-    let return_it = match key_press {
+    let return_it = match ie {
         // Resize.
-        ChooseKeyPress::Resize(size) => {
+        InputEvent::Resize(size) => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
@@ -262,7 +267,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: ChooseKeyPress) -> EventLo
         }
 
         // Down.
-        ChooseKeyPress::Down => {
+        InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Down),
+        }) => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "Down");
@@ -298,7 +305,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: ChooseKeyPress) -> EventLo
         }
 
         // Up.
-        ChooseKeyPress::Up => {
+        InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Up),
+        }) => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "Up");
@@ -330,7 +339,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: ChooseKeyPress) -> EventLo
         }
 
         // Enter on multi-select.
-        ChooseKeyPress::Enter if selection_mode == HowToChoose::Multiple => {
+        InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Enter),
+        }) if selection_mode == HowToChoose::Multiple => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
@@ -346,7 +357,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: ChooseKeyPress) -> EventLo
         }
 
         // Enter.
-        ChooseKeyPress::Enter => {
+        InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Enter),
+        }) => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
@@ -363,7 +376,18 @@ fn keypress_handler(state: &mut State<'_>, key_press: ChooseKeyPress) -> EventLo
         }
 
         // Escape or Ctrl + c.
-        ChooseKeyPress::Esc | ChooseKeyPress::CtrlC => {
+        InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Esc),
+        })
+        | InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::Character('c'),
+            mask:
+                ModifierKeysMask {
+                    ctrl_key_state: KeyState::Pressed,
+                    shift_key_state: KeyState::NotPressed,
+                    alt_key_state: KeyState::NotPressed,
+                },
+        }) => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "Esc");
@@ -372,7 +396,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: ChooseKeyPress) -> EventLo
         }
 
         // Space on multi-select.
-        ChooseKeyPress::Space if selection_mode == HowToChoose::Multiple => {
+        InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::Character(' '),
+        }) if selection_mode == HowToChoose::Multiple => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
@@ -400,22 +426,24 @@ fn keypress_handler(state: &mut State<'_>, key_press: ChooseKeyPress) -> EventLo
             EventLoopResult::ContinueAndRerender
         }
 
-        // Noop, default behavior on Space
-        ChooseKeyPress::Noop | ChooseKeyPress::Space => {
+        // Default behavior on Space
+        InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::Character(' '),
+        }) => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
-                tracing::debug!(message = "Noop or Space");
+                tracing::debug!(message = "Space");
             });
             EventLoopResult::Continue
         }
 
-        // Error.
-        ChooseKeyPress::Error => {
+        // Ignore other keys.
+        _ => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
-                tracing::debug!(message = "Exit with error");
+                tracing::debug!(message = "Ignore key event");
             });
-            EventLoopResult::ExitWithError
+            EventLoopResult::Continue
         }
     };
 
@@ -584,14 +612,20 @@ mod test_select_from_list {
 
         let mut reader = TestVecKeyPressReader {
             key_press_vec: vec![
-                ChooseKeyPress::Down,
-                ChooseKeyPress::Down,
-                ChooseKeyPress::Enter,
+                InputEvent::Keyboard(KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Down),
+                }),
+                InputEvent::Keyboard(KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Down),
+                }),
+                InputEvent::Keyboard(KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Enter),
+                }),
             ],
             index: None,
         };
 
-        let result_event_loop_result = enter_event_loop(
+        let result_event_loop_result = enter_event_loop_sync(
             &mut state,
             &mut function_component,
             |state, key_press| keypress_handler(state, key_press),
@@ -600,10 +634,9 @@ mod test_select_from_list {
 
         assert_eq2!(
             result_event_loop_result.unwrap(),
-            if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-                EventLoopResult::ExitWithError
-            } else {
-                EventLoopResult::ExitWithResult(ItemsBorrowed(&["c"]).into())
+            match is_fully_uninteractive_terminal() {
+                TTYResult::IsNotInteractive => EventLoopResult::ExitWithError,
+                _ => EventLoopResult::ExitWithResult(ItemsBorrowed(&["c"]).into()),
             }
         );
     }
@@ -621,14 +654,25 @@ mod test_select_from_list {
 
         let mut reader = TestVecKeyPressReader {
             key_press_vec: vec![
-                ChooseKeyPress::Down,
-                ChooseKeyPress::Down,
-                ChooseKeyPress::CtrlC,
+                InputEvent::Keyboard(KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Down),
+                }),
+                InputEvent::Keyboard(KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Down),
+                }),
+                InputEvent::Keyboard(KeyPress::WithModifiers {
+                    key: Key::Character('c'),
+                    mask: ModifierKeysMask {
+                        ctrl_key_state: KeyState::Pressed,
+                        shift_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
+                }),
             ],
             index: None,
         };
 
-        let result_event_loop_result = enter_event_loop(
+        let result_event_loop_result = enter_event_loop_sync(
             &mut state,
             &mut function_component,
             |state, key_press| keypress_handler(state, key_press),
@@ -637,10 +681,9 @@ mod test_select_from_list {
 
         assert_eq2!(
             result_event_loop_result.unwrap(),
-            if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-                EventLoopResult::ExitWithError
-            } else {
-                EventLoopResult::ExitWithoutResult
+            match is_fully_uninteractive_terminal() {
+                TTYResult::IsNotInteractive => EventLoopResult::ExitWithError,
+                _ => EventLoopResult::ExitWithoutResult,
             }
         );
     }

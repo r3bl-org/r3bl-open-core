@@ -699,6 +699,7 @@ pub mod readline_test_fixtures {
 #[cfg(test)]
 mod test_readline {
     use r3bl_core::{is_fully_uninteractive_terminal,
+                    return_if_not_interactive_terminal,
                     test_fixtures::{output_device_ext::OutputDeviceExt as _,
                                     InputDeviceExt as _},
                     StdMutex,
@@ -716,10 +717,7 @@ mod test_readline {
 
         let prompt_str = "> ";
 
-        // This is for CI/CD.
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-            return;
-        }
+        return_if_not_interactive_terminal!();
 
         // We will get the `line_state` out of this to test.
         let (output_device, stdout_mock) = OutputDevice::new_mock();
@@ -761,10 +759,7 @@ mod test_readline {
     async fn test_readline() {
         let prompt_str = "> ";
 
-        // This is for CI/CD.
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-            return;
-        }
+        return_if_not_interactive_terminal!();
 
         // We will get the `line_state` out of this to test.
         let (output_device, stdout_mock) = OutputDevice::new_mock();
@@ -794,10 +789,7 @@ mod test_readline {
     async fn test_pause_resume() {
         let prompt_str = "> ";
 
-        // This is for CI/CD.
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-            return;
-        }
+        return_if_not_interactive_terminal!();
 
         // We will get the `line_state` out of this to test.
         let (output_device, _) = OutputDevice::new_mock();
@@ -839,10 +831,7 @@ mod test_readline {
     async fn test_pause_resume_with_output() {
         let prompt_str = "> ";
 
-        // This is for CI/CD.
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-            return;
-        }
+        return_if_not_interactive_terminal!();
 
         // We will get the `line_state` out of this to test.
         let (output_device, _) = OutputDevice::new_mock();

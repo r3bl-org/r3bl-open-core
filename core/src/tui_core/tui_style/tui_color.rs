@@ -25,9 +25,20 @@ use crate::{ANSI_COLOR_PALETTE,
             common::{CommonError, CommonErrorType, CommonResult},
             convert_rgb_into_ansi256};
 
-/// Very similar to `rgb_color!` in `r3bl_ansi_color` crate.
 #[macro_export]
 macro_rules! tui_color {
+    (pink) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(195, 106, 138))
+    };
+
+    (dark_pink) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(203, 85, 121))
+    };
+
+    (dark_lizard_green) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(10, 122, 0))
+    };
+
     (lizard_green) => {
         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(20, 244, 0))
     };
@@ -388,127 +399,6 @@ mod rgb_value_impl_block {
     }
 }
 
-/// Very similar to `tui_color!` in `r3bl_tui` crate.
-#[macro_export]
-macro_rules! rgb_value {
-    (dark_pink) => {
-        $crate::RgbValue::from((203, 85, 121))
-    };
-
-    (pink) => {
-        $crate::RgbValue::from((195, 106, 138))
-    };
-
-    (lizard_green) => {
-        $crate::RgbValue::from((20, 244, 0))
-    };
-
-    (dark_lizard_green) => {
-        $crate::RgbValue::from((10, 122, 0))
-    };
-
-    (slate_grey) => {
-        $crate::RgbValue::from((94, 103, 111))
-    };
-
-    (silver_metallic) => {
-        $crate::RgbValue::from((213, 217, 220))
-    };
-
-    (frozen_blue) => {
-        $crate::RgbValue::from((171, 204, 242))
-    };
-
-    (moonlight_blue) => {
-        $crate::RgbValue::from((31, 36, 46))
-    };
-
-    (night_blue) => {
-        $crate::RgbValue::from((14, 17, 23))
-    };
-
-    (guards_red) => {
-        $crate::RgbValue::from((200, 1, 1))
-    };
-
-    (orange) => {
-        $crate::RgbValue::from((255, 132, 18))
-    };
-
-    (black) => {
-        $crate::RgbValue::from((0, 0, 0))
-    };
-
-    (dark_grey) => {
-        $crate::RgbValue::from((64, 64, 64))
-    };
-
-    (red) => {
-        $crate::RgbValue::from((255, 0, 0))
-    };
-
-    (dark_red) => {
-        $crate::RgbValue::from((139, 0, 0))
-    };
-
-    (green) => {
-        $crate::RgbValue::from((0, 255, 0))
-    };
-
-    (dark_green) => {
-        $crate::RgbValue::from((0, 100, 0))
-    };
-
-    (yellow) => {
-        $crate::RgbValue::from((255, 255, 0))
-    };
-
-    (dark_yellow) => {
-        $crate::RgbValue::from((204, 204, 0))
-    };
-
-    (blue) => {
-        $crate::RgbValue::from((0, 0, 255))
-    };
-
-    (dark_blue) => {
-        $crate::RgbValue::from((0, 0, 139))
-    };
-
-    (magenta) => {
-        $crate::RgbValue::from((255, 0, 255))
-    };
-
-    (dark_magenta) => {
-        $crate::RgbValue::from((139, 0, 139))
-    };
-
-    (cyan) => {
-        $crate::RgbValue::from((0, 255, 255))
-    };
-
-    (dark_cyan) => {
-        $crate::RgbValue::from((0, 139, 139))
-    };
-
-    (white) => {
-        $crate::RgbValue::from((255, 255, 255))
-    };
-
-    (grey) => {
-        $crate::RgbValue::from((192, 192, 192))
-    };
-
-    (
-        $arg_r : expr,
-        $arg_g : expr,
-        $arg_b : expr
-        $(,)? /* optional trailing comma */
-    ) => {
-        $crate::RgbValue::from(($arg_r, $arg_g, $arg_b))
-    };
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
 pub struct AnsiValue {
     pub index: u8,
@@ -604,12 +494,54 @@ mod convert_between_variants {
             Self::from_u8(red, green, blue)
         }
     }
+
+    impl From<TuiColor> for RgbValue {
+        fn from(tui_color: TuiColor) -> Self {
+            match tui_color {
+                TuiColor::Rgb(rgb) => rgb,
+                TuiColor::Ansi(ansi) => RgbValue::from(ansi),
+                TuiColor::Basic(basic) => {
+                    RgbValue::try_from_tui_color(TuiColor::Basic(basic))
+                        .unwrap_or_default()
+                }
+                TuiColor::Reset => RgbValue::default(),
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::assert_eq2;
+
+    #[test]
+    fn test_convert_tui_color_to_ast_color() {
+        {
+            let tui_color = tui_color!(255, 0, 0);
+            let expected_color = ASTColor::Rgb((255, 0, 0).into());
+            let converted_color = ASTColor::from(tui_color);
+            assert_eq!(converted_color, expected_color);
+        }
+        {
+            let tui_color = tui_color!(ansi 42);
+            let expected_color = ASTColor::Ansi(42.into());
+            let converted_color = ASTColor::from(tui_color);
+            assert_eq!(converted_color, expected_color);
+        }
+        {
+            let tui_color = tui_color!(red);
+            let expected_color = ASTColor::Rgb((255, 0, 0).into());
+            let converted_color = ASTColor::from(tui_color);
+            assert_eq!(converted_color, expected_color);
+        }
+        {
+            let tui_color = tui_color!(reset);
+            let expected_color = ASTColor::Rgb((0, 0, 0).into());
+            let converted_color = ASTColor::from(tui_color);
+            assert_eq!(converted_color, expected_color);
+        }
+    }
 
     /// https://www.ditig.com/256-colors-cheat-sheet
     /// ANSI: 57 BlueViolet

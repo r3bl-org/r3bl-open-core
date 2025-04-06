@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+// 00: remove the use of these constants & delete this file
+
 use r3bl_core::ASTColor;
 
 pub enum DefaultColors {

@@ -19,8 +19,8 @@ use std::io::Write as _;
 
 use r3bl_core::{fg_rgb_color,
                 ok,
-                rgb_value,
                 try_initialize_logging_global,
+                tui_color,
                 InputDevice,
                 ItemsBorrowed,
                 OutputDevice};
@@ -70,8 +70,8 @@ async fn with_readline_async() -> miette::Result<()> {
     // If the terminal is not fully interactive, then return early.
     let Some(mut readline_async) = ReadlineAsync::try_new({
         // Generate prompt.
-        let fg = rgb_value!(slate_grey);
-        let bg = rgb_value!(moonlight_blue);
+        let fg = tui_color!(slate_grey);
+        let bg = tui_color!(moonlight_blue);
         let prompt_seg_1 = fg_rgb_color(fg, "╭>╮").bg_rgb_color(bg);
         let prompt_seg_2 = " ";
         Some(format!("{}{}", prompt_seg_1, prompt_seg_2))
@@ -113,6 +113,8 @@ async fn with_readline_async() -> miette::Result<()> {
 
     let message = format!(">>> Chosen {:<25}: {:?}", "(with readline_async)", chosen);
     ReadlineAsync::print_exit_message(&message)?;
+
+    // 00: why is this needed? fix the underlying timing problems; perhaps need to flush on exit (internal threads) & why need `\n` to flush line?
 
     // Pause for a moment to let the output flush.
     ReadlineAsync::pause_for_output_to_flush().await;

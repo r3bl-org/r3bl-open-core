@@ -19,20 +19,16 @@ use std::env::var;
 
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction, edi::launcher, report_analytics, upgrade_check};
-use r3bl_core::{ASTStyle,
-                AnsiStyledText,
-                ColorWheel,
+use r3bl_core::{ColorWheel,
                 CommonResult,
                 GradientGenerationPolicy,
                 InlineString,
                 TextColorizationPolicy,
+                lizard_green,
                 log_support::try_initialize_logging_global,
+                slate_gray,
                 throws};
-use r3bl_tui::terminal_async::{HowToChoose,
-                               LIZARD_GREEN,
-                               SLATE_GRAY,
-                               StyleSheet,
-                               choose};
+use r3bl_tui::terminal_async::{HowToChoose, StyleSheet, choose};
 
 use crate::clap_config::CLIArg;
 
@@ -150,19 +146,12 @@ pub mod edi_ui_templates {
                 };
 
                 let msg_line_2 = {
-                    let chunk_1 = AnsiStyledText {
-                        text: "Run `",
-                        style: smallvec::smallvec![ASTStyle::Foreground(SLATE_GRAY)],
-                    };
-                    let chunk_2 = AnsiStyledText {
-                        text: "cargo install r3bl-cmdr",
-                        style: smallvec::smallvec![ASTStyle::Foreground(LIZARD_GREEN)],
-                    };
-                    let chunk_3 = AnsiStyledText {
-                        text: "` to upgrade 🚀.",
-                        style: smallvec::smallvec![ASTStyle::Foreground(SLATE_GRAY)],
-                    };
-                    format!("{}{}{}", chunk_1, chunk_2, chunk_3,)
+                    format!(
+                        "{a}{b}{c}",
+                        a = slate_gray("Run `"),
+                        b = lizard_green("cargo install r3bl-cmdr"),
+                        c = slate_gray("` to upgrade 🚀."),
+                    )
                 };
 
                 format!("{}\n{}", msg_line_1, msg_line_2)
