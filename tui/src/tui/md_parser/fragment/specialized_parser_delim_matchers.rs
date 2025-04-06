@@ -25,7 +25,7 @@
 use nom::{bytes::complete::tag, combinator::recognize, multi::many1, IResult};
 use r3bl_core::{blue, green, red};
 
-use crate::{constants::NEW_LINE,
+use crate::{md_parser::constants::NEW_LINE,
             take_text_between_delims_err_on_new_line,
             DEBUG_MD_PARSER_STDOUT};
 

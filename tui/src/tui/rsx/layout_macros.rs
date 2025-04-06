@@ -36,6 +36,7 @@ macro_rules! box_start {
         styles:                 [$($args:tt)*]                      // Eg: [ "style1" , "style2" ]
         $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) => {
+      use $crate::box_props;
       $arg_surface.box_start(box_props! {
             id:                     $arg_id,
             dir:                    $arg_dir,

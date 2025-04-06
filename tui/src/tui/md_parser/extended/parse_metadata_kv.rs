@@ -21,7 +21,7 @@ use nom::{bytes::complete::tag,
           IResult};
 use r3bl_core::tiny_inline_string;
 
-use crate::{constants::{COLON, NEW_LINE, SPACE},
+use crate::{md_parser::constants::{COLON, NEW_LINE, SPACE},
             take_text_until_new_line_or_end};
 
 /// - Sample parse input: `@title: Something` or `@date: Else`.
@@ -67,7 +67,7 @@ mod test_parse_title_no_eol {
     use r3bl_core::{assert_eq2, fg_rgb_color, inline_string, rgb_value};
 
     use super::*;
-    use crate::constants::TITLE;
+    use crate::md_parser::constants::TITLE;
 
     #[test]
     fn test_not_quoted_no_eol() {

@@ -27,7 +27,7 @@ use r3bl_core::{ASTColor,
                 GradientGenerationPolicy,
                 InlineVec,
                 TextColorizationPolicy};
-use r3bl_terminal_async::SLATE_GRAY;
+use r3bl_tui::terminal_async::SLATE_GRAY;
 use smallvec::smallvec;
 
 use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,

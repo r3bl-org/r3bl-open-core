@@ -23,7 +23,7 @@ use nom::{branch::alt,
           sequence::{preceded, terminated, tuple},
           IResult};
 
-use crate::{constants::{self, NEW_LINE},
+use crate::{md_parser::constants::{self, NEW_LINE},
             HeadingData,
             HeadingLevel};
 

@@ -18,8 +18,10 @@
 #     - coming from bash: https://www.nushell.sh/book/coming_from_bash.html
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
+source script_lib.nu
+
 # Make sure to keep this in sync with `Cargo.toml` workspace members.
-let workspace_folders = ["analytics_schema", "cmdr", "core", "terminal_async", "tui"]
+let workspace_folders = (get_cargo_projects)
 
 # Main entry point for the script.
 def main [...args: string] {

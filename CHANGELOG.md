@@ -43,20 +43,6 @@
 - [r3bl_analytics_schema](#r3bl_analytics_schema)
   - [v0.0.2 2024-09-12](#v002-2024-09-12)
   - [v0.0.1 2023-12-31](#v001-2023-12-31)
-- [r3bl_terminal_async](#r3bl_terminal_async)
-  - [v_next_release_terminal_async](#v_next_release_r3bl_terminal_async)
-  - [v0.6.0 2024-10-21](#v060-2024-10-21)
-  - [v0.5.7 2024-09-12](#v057-2024-09-12)
-  - [v0.5.6 2024-08-13](#v056-2024-08-13)
-  - [v0.5.5 2024-07-13](#v055-2024-07-13)
-  - [v0.5.4 2024-07-12](#v054-2024-07-12)
-  - [v0.5.3 2024-05-22](#v053-2024-05-22)
-  - [v0.5.2 2020-05-06](#v052-2020-05-06)
-  - [v0.5.1 2024-04-28](#v051-2024-04-28)
-  - [v0.5.0 2024-04-22](#v050-2024-04-22)
-  - [v0.4.0 2024-04-21](#v040-2024-04-21)
-  - [v0.3.1 2024-04-17](#v031-2024-04-17)
-  - [v0.3.0 2024-04-15](#v030-2024-04-15)
 - [Renamed](#renamed)
   - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
       - [Rename to r3bl_macro](#rename-to-r3bl_macro)
@@ -82,6 +68,20 @@
       - [v0.9.5 2023-10-14](#v095-2023-10-14)
       - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [Archived](#archived)
+  - [r3bl_terminal_async](#r3bl_terminal_async)
+    - [Archived 2025-04-05](#archived-2025-04-05)
+    - [v0.6.0 2024-10-21](#v060-2024-10-21)
+    - [v0.5.7 2024-09-12](#v057-2024-09-12)
+    - [v0.5.6 2024-08-13](#v056-2024-08-13)
+    - [v0.5.5 2024-07-13](#v055-2024-07-13)
+    - [v0.5.4 2024-07-12](#v054-2024-07-12)
+    - [v0.5.3 2024-05-22](#v053-2024-05-22)
+    - [v0.5.2 2020-05-06](#v052-2020-05-06)
+    - [v0.5.1 2024-04-28](#v051-2024-04-28)
+    - [v0.5.0 2024-04-22](#v050-2024-04-22)
+    - [v0.4.0 2024-04-21](#v040-2024-04-21)
+    - [v0.3.1 2024-04-17](#v031-2024-04-17)
+    - [v0.3.0 2024-04-15](#v030-2024-04-15)
   - [r3bl_tuify](#r3bl_tuify)
     - [Archived 2025-04-05](#archived-2025-04-05)
     - [v0.2.0 2024-10-21](#v020-2024-10-21)
@@ -155,7 +155,9 @@ advisory whitelist and which tasks are run in CICD are included here.
     that are used in the `run` scripts in all the contained inside of it. This provides
     the ability to easy run examples by providing the user with an interactive list of
     examples to run. See `terminal_async`'s `run` script for an example of how to use
-    this.
+    this. It also automatically detects all the crates that are contained in the
+    workspace. `Cargo.toml` still has to be updated manually when crates in this workspace
+    change.
   - Add a new target to the `run` script in the workspace (root) folder that allows the
     use of a "build server". This target is called `nu run build-server`. This sets up a
     watcher using `inotifywait` to watch for changes in the source folders in
@@ -362,7 +364,20 @@ These videos have been an inspiration for many of these changes:
 - [Data oriented design](https://youtu.be/WwkuAqObplU)
 - [Memory alloc](https://youtu.be/pJ-FRRB5E84)
 
+
+Moved:
+  - Move the contents of `r3bl_terminal_async` into `r3bl_tui` crate. Move the contents of
+    `r3bl_tuify` crate into `r3bl_terminal_async`. Consolidate the `select_*` functions
+    into a single `choose()` function. And a new `choose_async()` function that works in
+    async context. The `r3bl_tuify` crate is now archived.
+
 Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
+  - Move `spinner_impl` to `r3bl_tui` crate. This code is also used in
+    `shared_global_data.rs` in `r3bl_tui` crate.
+  - Drop the dependency on `r3bl_tuify` crate in `Cargo.toml`.
+  - Drop the dependency on `r3bl_tui` crate in `Cargo.toml`.
+  - Remove the `println()` and `println_prefixed()` methods.
   - Drop the dependency on `r3bl_ansi_color`.
   - Remove `size-of` crate from `Cargo.toml`.
   - Delete `static_global_data.rs` file and `telemetry_global_static` module.
@@ -379,6 +394,10 @@ Updated:
     the `write!` macro to write to a pre-existing buffer.
 
 Added:
+  - Add `ta_println!`, `ta_print!`, `ta_println_prefixed` macros that use `format_args!`
+    style (just like `println!`, `write!`, etc). This makes the API more familiar with
+    Rust standard library. This style of declarative macro is used in other crates in this
+    monorepo, like `r3bl_core`'s `into_existing.rs` module.
   - Introduce `EditorEngine::ast_cache` which allows the `StyleUSSpanLines` that are
     generated for any content loaded into the editor to be cached. This is a huge
     performance win since scrolling and rendering is now much faster! Since the
@@ -407,6 +426,8 @@ Added:
     operation that is called in a hot loop, the main event loop).
 
 Changed:
+  - Rename `get_readline_event()` to `read_line()`. This is an async replacement for
+    `std::io::Stdin::read_line()`.
   - Update all the demo examples in the `examples` folder to use the new telemetry API and
     display a HUD above the status bar to display FPS counter.
   - Use `smallvec` and `smallstr` crates to increase memory latency performance (for
@@ -1115,35 +1136,9 @@ in the real world.
 
 ## `r3bl_terminal_async`
 
-### v_next_release_r3bl_terminal_async
+### Archived (2025-04-05)
 
-This release contains changes that are part of optimizing memory allocation to increase
-performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
-refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is
-now used throughout the codebase. No new functionality is added in this release.
-
-- Moved:
-  - Move the contents of `r3bl_tuify` crate into `r3bl_terminal_async`. Consolidate the
-    `select_*` functions into a single `choose()` function. And a new `choose_async()`
-    function that works in async context. The `r3bl_tuify` crate is now archived.
-
-- Changed:
-  - Rename `get_readline_event()` to `read_line()`. This is an async replacement for
-    `std::io::Stdin::read_line()`.
-
-- Removed:
-  - Drop the dependency on `r3bl_ansi_color`.
-  - Move `spinner_impl` to `r3bl_tui` crate. This code is also used in
-    `shared_global_data.rs` in `r3bl_tui` crate.
-  - Drop the dependency on `r3bl_tuify` crate in `Cargo.toml`.
-  - Drop the dependency on `r3bl_tui` crate in `Cargo.toml`.
-  - Remove the `println()` and `println_prefixed()` methods.
-
-- Added:
-  - Add `ta_println!`, `ta_print!`, `ta_println_prefixed` macros that use `format_args!`
-    style (just like `println!`, `write!`, etc). This makes the API more familiar with
-    Rust standard library. This style of declarative macro is used in other crates in this
-    monorepo, like `r3bl_core`'s `into_existing.rs` module.
+Migrate the contents of `r3bl_terminal_async` crate into `r3bl_tui`.
 
 ### v0.6.0 (2024-10-21)
 

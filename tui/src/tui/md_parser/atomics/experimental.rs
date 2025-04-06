@@ -27,7 +27,7 @@ use nom::{character::complete::anychar,
           IResult,
           Parser};
 
-use crate::constants::NEW_LINE_CHAR;
+use crate::md_parser::constants::NEW_LINE_CHAR;
 
 #[allow(dead_code)]
 mod common_batch {

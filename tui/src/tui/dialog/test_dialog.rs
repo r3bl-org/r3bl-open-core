@@ -26,7 +26,7 @@ pub mod mock_real_objects_for_dialog {
                     Size};
     use tokio::sync::mpsc;
 
-    use crate::{test_fixtures::mock_real_objects_for_editor,
+    use crate::{editor::test_fixtures::mock_real_objects_for_editor,
                 DialogBuffer,
                 DialogEngine,
                 FlexBoxId,

@@ -42,12 +42,12 @@ use r3bl_core::{tiny_inline_string,
                 TuiStyle,
                 TuiStyledTexts};
 
-use crate::{constants::{COLON, COMMA, SPACE},
-            get_foreground_dim_style,
+use crate::{get_foreground_dim_style,
             get_metadata_tags_marker_style,
             get_metadata_tags_values_style,
             get_metadata_title_marker_style,
             get_metadata_title_value_style,
+            md_parser::constants::{COLON, COMMA, SPACE},
             CharacterMatchResult,
             List,
             PatternMatcherStateMachine};

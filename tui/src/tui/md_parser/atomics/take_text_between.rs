@@ -22,7 +22,7 @@ use nom::{bytes::complete::{tag, take_until},
           IResult};
 use r3bl_core::{green, red};
 
-use crate::{constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
+use crate::{md_parser::constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
 
 /// Takes the text between the start and end delimiters. Will error out if this text
 /// contains a new line.
