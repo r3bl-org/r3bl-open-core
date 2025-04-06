@@ -21,8 +21,8 @@ use nom::{bytes::complete::tag,
           IResult};
 use r3bl_core::InlineVec;
 
-use crate::{constants::{COLON, COMMA, NEW_LINE, SPACE},
-            list,
+use crate::{list,
+            md_parser::constants::{COLON, COMMA, NEW_LINE, SPACE},
             take_text_until_new_line_or_end,
             List};
 
@@ -118,7 +118,7 @@ mod test_parse_tags_opt_eol {
     use r3bl_core::assert_eq2;
 
     use super::*;
-    use crate::constants::TAGS;
+    use crate::md_parser::constants::TAGS;
 
     #[test]
     fn test_not_quoted_no_eol() {

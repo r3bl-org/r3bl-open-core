@@ -43,6 +43,7 @@ use crate::{editor_engine::engine_public_api,
             render_ops,
             render_pipeline,
             render_tui_styled_texts_into,
+            terminal_lib_backends::KeyPress,
             BorderGlyphCharacter,
             DialogBuffer,
             DialogChoice,
@@ -59,7 +60,6 @@ use crate::{editor_engine::engine_public_api,
             HasDialogBuffers,
             InputEvent,
             Key,
-            KeyPress,
             MinSize,
             PartialFlexBox,
             RenderOp,
@@ -1152,14 +1152,14 @@ mod test_dialog_engine_api_apply_event {
     use r3bl_core::assert_eq2;
 
     use super::*;
-    use crate::{keypress, test_dialog::mock_real_objects_for_dialog};
+    use crate::{key_press, test_dialog::mock_real_objects_for_dialog};
 
     #[test]
     fn apply_event_esc() {
         let self_id: FlexBoxId = FlexBoxId::from(0);
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let state = &mut mock_real_objects_for_dialog::create_state();
-        let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Esc));
+        let input_event = InputEvent::Keyboard(key_press!(@special SpecialKey::Esc));
         let response = dbg!(DialogEngineApi::apply_event::<_, ()>(
             state,
             self_id,
@@ -1178,7 +1178,7 @@ mod test_dialog_engine_api_apply_event {
         let self_id: FlexBoxId = FlexBoxId::from(0);
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let state = &mut mock_real_objects_for_dialog::create_state();
-        let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
+        let input_event = InputEvent::Keyboard(key_press!(@special SpecialKey::Enter));
         let response = dbg!(DialogEngineApi::apply_event::<
             mock_real_objects_for_dialog::State,
             (),
@@ -1200,7 +1200,7 @@ mod test_dialog_engine_api_apply_event {
         let self_id: FlexBoxId = FlexBoxId::from(0);
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let state = &mut mock_real_objects_for_dialog::create_state();
-        let input_event = InputEvent::Keyboard(keypress!(@char 'a'));
+        let input_event = InputEvent::Keyboard(key_press!(@char 'a'));
         let response = dbg!(DialogEngineApi::apply_event::<
             mock_real_objects_for_dialog::State,
             (),

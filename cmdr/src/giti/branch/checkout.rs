@@ -28,7 +28,7 @@ use r3bl_core::{ASTStyle,
                 InlineVec,
                 get_terminal_width,
                 usize};
-use r3bl_terminal_async::{HowToChoose, StyleSheet, choose};
+use r3bl_tui::terminal_async::{HowToChoose, StyleSheet, choose};
 use smallvec::smallvec;
 
 use super::{get_branches, try_get_current_branch};

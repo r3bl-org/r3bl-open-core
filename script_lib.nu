@@ -23,7 +23,8 @@ def get_example_binaries [] {
 
     let example_folders = (ls examples | where type == "dir" | get name)
     let cleaned_folders = $example_folders | each { str replace "examples/" "" }
-    let result: list<string> = ($cleaned_binaries | append $cleaned_folders)
+    # let result: list<string> = ($cleaned_binaries | append $cleaned_folders)
+    let result: list<string> = ($cleaned_folders | append $cleaned_binaries)
 
     $result
 }
@@ -46,4 +47,19 @@ def run_example_with_flamegraph_profiling [options: list<string>] {
         CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --example $selection
         firefox-beta --new-window flamegraph.svg
     }
+}
+
+def get_cargo_projects [] {
+    let sub_folders_with_cargo_toml = (
+        ls | where type == "dir" | each { |folder|
+            if (try { open $"($folder.name)/Cargo.toml" } | is-empty) == false {
+                # print $"Found Cargo.toml in ($folder.name)"
+                $folder.name
+            } else {
+                # print $"No Cargo.toml in ($folder.name)"
+                null
+            }
+        } | compact
+    )
+    $sub_folders_with_cargo_toml
 }

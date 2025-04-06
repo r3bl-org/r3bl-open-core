@@ -1626,7 +1626,6 @@ dependencies = [
  "pretty_assertions",
  "r3bl_analytics_schema",
  "r3bl_core",
- "r3bl_terminal_async",
  "r3bl_tui",
  "rand",
  "reedline",
@@ -1701,39 +1700,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "r3bl_terminal_async"
-version = "0.6.0"
-dependencies = [
- "async-stream",
- "clap",
- "crossterm",
- "futures-core",
- "futures-util",
- "miette",
- "pretty_assertions",
- "r3bl_core",
- "serde",
- "serde_json",
- "serial_test",
- "smallstr",
- "smallvec",
- "strum",
- "strum_macros",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-appender",
- "tracing-core",
- "tracing-subscriber",
- "unicode-segmentation",
- "unicode-width 0.2.0",
-]
-
-[[package]]
 name = "r3bl_tui"
 version = "0.6.0"
 dependencies = [
  "chrono",
+ "clap",
  "const_format",
  "copypasta-ext",
  "crossterm",
@@ -1742,7 +1713,6 @@ dependencies = [
  "nom",
  "pretty_assertions",
  "r3bl_core",
- "r3bl_terminal_async",
  "rand",
  "serde",
  "serde_json",

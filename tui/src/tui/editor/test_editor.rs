@@ -19,9 +19,9 @@
 mod test_config_options {
     use r3bl_core::{assert_eq2, caret_scr_adj, col, row, GCStringExt};
 
-    use crate::{editor_engine::engine_internal_api,
+    use crate::{editor::test_fixtures::mock_real_objects_for_editor,
+                editor_engine::engine_internal_api,
                 system_clipboard_service_provider::test_fixtures::TestClipboard,
-                test_fixtures::mock_real_objects_for_editor,
                 CaretDirection,
                 EditorBuffer,
                 EditorEngine,
@@ -139,10 +139,10 @@ mod test_editor_ops {
                     GCStringExt};
     use smallvec::smallvec;
 
-    use crate::{editor::sizing::VecEditorContentLines,
+    use crate::{editor::{sizing::VecEditorContentLines,
+                         test_fixtures::{assert, mock_real_objects_for_editor}},
                 editor_engine::engine_internal_api,
                 system_clipboard_service_provider::test_fixtures::TestClipboard,
-                test_fixtures::{assert, mock_real_objects_for_editor},
                 CaretDirection,
                 EditorArgsMut,
                 EditorBuffer,
@@ -1456,8 +1456,8 @@ mod selection_tests {
 
     type SelectionList = InlineVec<(RowIndex, SelectionRange)>;
 
-    use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
-                test_fixtures::mock_real_objects_for_editor,
+    use crate::{editor::test_fixtures::mock_real_objects_for_editor,
+                system_clipboard_service_provider::test_fixtures::TestClipboard,
                 CaretDirection,
                 EditorBuffer,
                 EditorEvent,
@@ -1736,9 +1736,9 @@ mod clipboard_tests {
     use r3bl_core::{assert_eq2, GCStringExt as _};
     use smallvec::smallvec;
 
-    use crate::{editor::sizing::VecEditorContentLines,
+    use crate::{editor::{sizing::VecEditorContentLines,
+                         test_fixtures::mock_real_objects_for_editor},
                 system_clipboard_service_provider::test_fixtures::TestClipboard,
-                test_fixtures::mock_real_objects_for_editor,
                 CaretDirection,
                 EditorBuffer,
                 EditorEvent,

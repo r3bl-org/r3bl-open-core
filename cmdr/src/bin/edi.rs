@@ -16,8 +16,6 @@
  */
 
 use std::env::var;
-use r3bl_core::InlineString;
-use r3bl_terminal_async::choose;
 
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction, edi::launcher, report_analytics, upgrade_check};
@@ -26,10 +24,15 @@ use r3bl_core::{ASTStyle,
                 ColorWheel,
                 CommonResult,
                 GradientGenerationPolicy,
+                InlineString,
                 TextColorizationPolicy,
                 log_support::try_initialize_logging_global,
                 throws};
-use r3bl_terminal_async::{HowToChoose, LIZARD_GREEN, SLATE_GRAY, StyleSheet};
+use r3bl_tui::terminal_async::{HowToChoose,
+                               LIZARD_GREEN,
+                               SLATE_GRAY,
+                               StyleSheet,
+                               choose};
 
 use crate::clap_config::CLIArg;
 

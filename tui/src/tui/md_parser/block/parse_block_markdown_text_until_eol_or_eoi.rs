@@ -17,7 +17,7 @@
 
 use nom::{bytes::complete::tag, multi::many0, sequence::terminated, IResult};
 
-use crate::{constants::NEW_LINE,
+use crate::{md_parser::constants::NEW_LINE,
             parse_inline_fragments_until_eol_or_eoi,
             List,
             MdLineFragments};

@@ -16,7 +16,7 @@
  */
 
 use r3bl_core::{CommonResult, throws};
-use r3bl_tui::{InputEvent, ModifierKeysMask, TerminalWindow, keypress};
+use r3bl_tui::{InputEvent, ModifierKeysMask, TerminalWindow, key_press};
 
 use crate::edi::{AppMain, constructor};
 
@@ -30,7 +30,7 @@ pub async fn run_app(maybe_file_path: Option<&str>) -> CommonResult<()> {
 
         // Exit if these keys are pressed.
         let exit_keys = &[InputEvent::Keyboard(
-            keypress! { @char ModifierKeysMask::new().with_ctrl(), 'q' },
+            key_press! { @char ModifierKeysMask::new().with_ctrl(), 'q' },
         )];
 
         // Create a window.

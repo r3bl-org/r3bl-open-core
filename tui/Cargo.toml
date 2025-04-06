@@ -27,7 +27,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_core = { path = "../core", version = "0.10.0" }            # version is required to publish to crates.io
+r3bl_core = { path = "../core", version = "0.10.0" } # version is required to publish to crates.io
 
 # Time
 chrono = "0.4.38"
@@ -86,18 +86,16 @@ smallvec = { version = "1.6.1", features = [
   "const_new",
 ] }
 
-[dev-dependencies]
-# - Async readline for running examples, with the source code checked out for
-#   r3bl-open-core repo.
-# - This is not a dependency for the library, and is not used when the library is
-#   published or used as a dependency.
-r3bl_terminal_async = { path = "../terminal_async" }
+# Clap.
+# More info: https://stackoverflow.com/a/76131914/2085356
+clap = { version = "4.5.20", features = ["derive", "wrap_help", "help"] }
 
+[dev-dependencies]
 # For assert_eq2! macro.
 pretty_assertions = "1.4.1"
 textwrap = "0.16.1"
 serial_test = "3.1.1"
 
-# Enum to string generation.
-strum = "0.26.3"
-strum_macros = "0.26.4"
+[features]
+default = ["emacs"]
+emacs = []
