@@ -15,50 +15,29 @@
  *   limitations under the License.
  */
 
-use std::io::{Result, Write};
+use crate::InputEvent;
 
-use crate::{ChooseKeyPress, KeyPressReader};
-
-pub struct TestStringWriter {
-    buffer: String,
+pub trait KeyPressReader {
+    fn read_key_press(&mut self) -> Option<InputEvent>;
 }
 
-impl Default for TestStringWriter {
-    fn default() -> Self { Self::new() }
-}
+pub struct CrosstermKeyPressReader;
 
-impl TestStringWriter {
-    pub fn new() -> Self {
-        TestStringWriter {
-            buffer: String::new(),
-        }
+impl KeyPressReader for CrosstermKeyPressReader {
+    fn read_key_press(&mut self) -> Option<InputEvent> {
+        let maybe_read = crossterm::event::read().ok()?;
+        InputEvent::try_from(maybe_read).ok()
     }
-
-    pub fn get_buffer(&self) -> &str { &self.buffer }
-}
-
-impl Write for TestStringWriter {
-    fn write(&mut self, buf: &[u8]) -> Result<usize> {
-        let result = std::str::from_utf8(buf);
-        match result {
-            Ok(value) => {
-                self.buffer.push_str(value);
-                Ok(buf.len())
-            }
-            Err(_) => Ok(0),
-        }
-    }
-
-    fn flush(&mut self) -> Result<()> { Ok(()) }
 }
 
 pub struct TestVecKeyPressReader {
-    pub key_press_vec: Vec<ChooseKeyPress>,
+    pub key_press_vec: Vec<InputEvent>,
     pub index: Option<usize>,
 }
 
 impl KeyPressReader for TestVecKeyPressReader {
-    fn read_key_press(&mut self) -> ChooseKeyPress {
+    #[allow(clippy::unwrap_in_result)] /* This is only used in tests */
+    fn read_key_press(&mut self) -> Option<InputEvent> {
         // Increment index every time this function is called until the end of the vector
         // and then wrap around.
         match self.index {
@@ -76,6 +55,6 @@ impl KeyPressReader for TestVecKeyPressReader {
 
         let index = self.index.unwrap();
 
-        self.key_press_vec[index]
+        Some(self.key_press_vec[index])
     }
 }

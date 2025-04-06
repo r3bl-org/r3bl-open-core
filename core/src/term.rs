@@ -75,7 +75,7 @@ pub fn is_stdout_piped() -> StdoutIsPipedResult {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TTYResult {
     IsInteractive,
     IsNotInteractive,
@@ -107,4 +107,31 @@ pub fn is_fully_uninteractive_terminal() -> TTYResult {
         true => TTYResult::IsNotInteractive,
         false => TTYResult::IsInteractive,
     }
+}
+
+/// Return early if the terminal is not interactive.
+///
+/// This is primarily meant to be used in tests that run in a CI/CD environments, where
+/// tests are run in a non-interactive terminal. It is meant to skip tests that require
+/// user interaction. Tests marked with this should run on a local machine during
+/// development.
+///
+/// However, it is also useful in other situations where you want to skip code that
+/// requires user interaction.
+#[macro_export]
+macro_rules! return_if_not_interactive_terminal {
+    ($result:expr) => {
+        if let TTYResult::IsNotInteractive =
+            $crate::term::is_fully_uninteractive_terminal()
+        {
+            return $result;
+        }
+    };
+    () => {
+        if let TTYResult::IsNotInteractive =
+            $crate::term::is_fully_uninteractive_terminal()
+        {
+            return;
+        }
+    };
 }

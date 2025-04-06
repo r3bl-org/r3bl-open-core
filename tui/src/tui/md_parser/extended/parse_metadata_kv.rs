@@ -64,7 +64,7 @@ pub fn parse_unique_kv_opt_eol<'a>(
 
 #[cfg(test)]
 mod test_parse_title_no_eol {
-    use r3bl_core::{assert_eq2, fg_rgb_color, inline_string, rgb_value};
+    use r3bl_core::{assert_eq2, fg_rgb_color, inline_string, tui_color};
 
     use super::*;
     use crate::md_parser::constants::TITLE;
@@ -75,8 +75,8 @@ mod test_parse_title_no_eol {
         let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{i}', output: '{o}'",
-            i = fg_rgb_color(rgb_value!(black), input).bg_rgb_color(rgb_value!(yellow)),
-            o = fg_rgb_color(rgb_value!(black), output).bg_rgb_color(rgb_value!(green)),
+            i = fg_rgb_color(tui_color!(black), input).bg_rgb_color(tui_color!(yellow)),
+            o = fg_rgb_color(tui_color!(black), output).bg_rgb_color(tui_color!(green)),
         );
         assert_eq2!(input, "");
         assert_eq2!(output, "Something");
@@ -88,8 +88,8 @@ mod test_parse_title_no_eol {
         let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{i}', output: '{o}'",
-            i = fg_rgb_color(rgb_value!(black), input).bg_rgb_color(rgb_value!(yellow)),
-            o = fg_rgb_color(rgb_value!(black), output).bg_rgb_color(rgb_value!(green)),
+            i = fg_rgb_color(tui_color!(black), input).bg_rgb_color(tui_color!(yellow)),
+            o = fg_rgb_color(tui_color!(black), output).bg_rgb_color(tui_color!(green)),
         );
         assert_eq2!(input, "");
         assert_eq2!(output, "Something");
@@ -109,10 +109,10 @@ mod test_parse_title_no_eol {
         println!(
             "err: '{}'",
             fg_rgb_color(
-                rgb_value!(black),
+                tui_color!(black),
                 &inline_string!("{:?}", it.err().unwrap())
             )
-            .bg_rgb_color(rgb_value!(yellow)),
+            .bg_rgb_color(tui_color!(yellow)),
         );
     }
 
@@ -130,10 +130,10 @@ mod test_parse_title_no_eol {
         println!(
             "err: '{}'",
             fg_rgb_color(
-                rgb_value!(black),
+                tui_color!(black),
                 &inline_string!("{:?}", it.err().unwrap())
             )
-            .bg_rgb_color(rgb_value!(yellow)),
+            .bg_rgb_color(tui_color!(yellow)),
         );
     }
 
@@ -142,14 +142,14 @@ mod test_parse_title_no_eol {
         let input = "@title: \nfoo\nbar";
         println!(
             "input: '{}'",
-            fg_rgb_color(rgb_value!(black), input).bg_rgb_color(rgb_value!(cyan)),
+            fg_rgb_color(tui_color!(black), input).bg_rgb_color(tui_color!(cyan)),
         );
 
         let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{i}', output: '{o}'",
-            i = fg_rgb_color(rgb_value!(black), input).bg_rgb_color(rgb_value!(yellow)),
-            o = fg_rgb_color(rgb_value!(black), output).bg_rgb_color(rgb_value!(green)),
+            i = fg_rgb_color(tui_color!(black), input).bg_rgb_color(tui_color!(yellow)),
+            o = fg_rgb_color(tui_color!(black), output).bg_rgb_color(tui_color!(green)),
         );
         assert_eq2!(input, "foo\nbar");
         assert_eq2!(output, "");
@@ -160,14 +160,14 @@ mod test_parse_title_no_eol {
         let input = "@title:  a\nfoo\nbar";
         println!(
             "input: '{}'",
-            fg_rgb_color(rgb_value!(black), input).bg_rgb_color(rgb_value!(cyan)),
+            fg_rgb_color(tui_color!(black), input).bg_rgb_color(tui_color!(cyan)),
         );
 
         let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{i}', output: '{o}'",
-            i = fg_rgb_color(rgb_value!(black), input).bg_rgb_color(rgb_value!(yellow)),
-            o = fg_rgb_color(rgb_value!(black), output).bg_rgb_color(rgb_value!(green)),
+            i = fg_rgb_color(tui_color!(black), input).bg_rgb_color(tui_color!(yellow)),
+            o = fg_rgb_color(tui_color!(black), output).bg_rgb_color(tui_color!(green)),
         );
         assert_eq2!(input, "foo\nbar");
         assert_eq2!(output, " a");
@@ -178,15 +178,15 @@ mod test_parse_title_no_eol {
         let input = "@title: \n\n# heading1\n## heading2";
         println!(
             "❯ input: \n'{}'",
-            fg_rgb_color(rgb_value!(black), input).bg_rgb_color(rgb_value!(cyan))
+            fg_rgb_color(tui_color!(black), input).bg_rgb_color(tui_color!(cyan))
         );
 
         let (remainder, title) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "❯ remainder: \n'{r}'\n❯ title: \n'{t}'",
-            r = fg_rgb_color(rgb_value!(black), remainder)
-                .bg_rgb_color(rgb_value!(yellow)),
-            t = fg_rgb_color(rgb_value!(black), title).bg_rgb_color(rgb_value!(green)),
+            r = fg_rgb_color(tui_color!(black), remainder)
+                .bg_rgb_color(tui_color!(yellow)),
+            t = fg_rgb_color(tui_color!(black), title).bg_rgb_color(tui_color!(green)),
         );
         assert_eq2!(remainder, "\n# heading1\n## heading2");
         assert_eq2!(title, "");

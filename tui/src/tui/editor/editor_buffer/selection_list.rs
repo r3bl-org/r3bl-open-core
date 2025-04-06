@@ -25,7 +25,6 @@ use r3bl_core::{caret_scr_adj,
                          VERT_LINE_DASHED_GLYPH},
                 inline_string,
                 join,
-                rgb_value,
                 usize,
                 CaretScrAdj,
                 GetMemSize,
@@ -277,6 +276,8 @@ pub enum RowLocationInSelectionList {
 
 // Formatter for Debug and Display.
 mod impl_debug_format {
+    use r3bl_core::tui_color;
+
     use super::*;
 
     const PAD_LEFT: &str = "      ";
@@ -295,9 +296,9 @@ mod impl_debug_format {
             // Format the output.
             for line in selection_list_string.iter_mut() {
                 let (fg_color, bg_color) = if is_empty {
-                    (rgb_value!(frozen_blue), rgb_value!(dark_grey))
+                    (tui_color!(frozen_blue), tui_color!(dark_grey))
                 } else {
-                    (rgb_value!(lizard_green), rgb_value!(dark_grey))
+                    (tui_color!(lizard_green), tui_color!(dark_grey))
                 };
                 let fmt_line = fg_rgb_color(fg_color, line)
                     .bg_rgb_color(bg_color)

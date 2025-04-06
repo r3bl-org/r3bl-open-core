@@ -207,11 +207,14 @@ impl Spinner {
 mod tests {
     use std::sync::Arc;
 
-    use r3bl_core::{test_fixtures::StdoutMock, SpinnerColor, SpinnerTemplate, StdMutex};
+    use r3bl_core::{return_if_not_interactive_terminal,
+                    test_fixtures::StdoutMock,
+                    SpinnerColor,
+                    SpinnerTemplate,
+                    StdMutex};
     use smallvec::SmallVec;
 
-    use super::{is_fully_uninteractive_terminal,
-                Duration,
+    use super::{Duration,
                 LineStateControlSignal,
                 SharedWriter,
                 Spinner,
@@ -244,10 +247,7 @@ mod tests {
         )
         .await;
 
-        // This is for CI/CD.
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-            return;
-        }
+        return_if_not_interactive_terminal!();
 
         let mut spinner = spinner.unwrap().unwrap();
 
@@ -284,6 +284,7 @@ mod tests {
             }
             acc
         };
+
         // println!("{:?}", line_control_signal_sink);
 
         assert_eq!(line_control_signal_sink.len(), 4);
@@ -322,10 +323,7 @@ mod tests {
         )
         .await;
 
-        // This is for CI/CD.
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-            return;
-        }
+        return_if_not_interactive_terminal!();
 
         let mut spinner = spinner.unwrap().unwrap();
 

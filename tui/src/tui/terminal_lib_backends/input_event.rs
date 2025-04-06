@@ -38,7 +38,6 @@ pub enum FocusEvent {
 }
 
 mod helpers {
-
     use super::*;
 
     impl InputEvent {
