@@ -22,7 +22,7 @@ use nom::{branch::alt,
           multi::many0,
           sequence::preceded};
 
-use crate::constants::NEW_LINE;
+use crate::md_parser::constants::NEW_LINE;
 
 /// Take text until an optional EOL character is found, or end of input is reached. If an
 /// EOL character is found:

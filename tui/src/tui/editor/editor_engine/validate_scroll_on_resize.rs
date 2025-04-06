@@ -203,7 +203,7 @@ mod tests {
     use r3bl_core::{caret_raw, col, height, row, scr_ofs, width};
 
     use super::*;
-    use crate::{test_fixtures::mock_real_objects_for_editor,
+    use crate::{editor::test_fixtures::mock_real_objects_for_editor,
                 EditorBuffer,
                 EditorEngine,
                 EditorEngineConfig,

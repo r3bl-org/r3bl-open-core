@@ -41,13 +41,13 @@ use nom::{branch::alt,
           IResult};
 use r3bl_core::{blue, magenta, red};
 
-use crate::{constants::{BACK_TICK,
-                        LEFT_BRACKET,
-                        LEFT_IMAGE,
-                        NEW_LINE,
-                        NEW_LINE_CHAR,
-                        STAR,
-                        UNDERSCORE},
+use crate::{md_parser::constants::{BACK_TICK,
+                                   LEFT_BRACKET,
+                                   LEFT_IMAGE,
+                                   NEW_LINE,
+                                   NEW_LINE_CHAR,
+                                   STAR,
+                                   UNDERSCORE},
             specialized_parser_delim_matchers,
             DEBUG_MD_PARSER_STDOUT};
 

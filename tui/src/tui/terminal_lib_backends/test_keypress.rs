@@ -21,7 +21,7 @@ mod tests {
     use r3bl_core::{assert_eq2, throws};
 
     use crate::{crossterm_keyevent,
-                keypress,
+                key_press,
                 FunctionKey,
                 Key,
                 KeyPress,
@@ -32,7 +32,7 @@ mod tests {
     fn test_keypress_character_key() {
         // No modifier.
         {
-            let macro_syntax = keypress! { @char 'a' };
+            let macro_syntax = key_press! { @char 'a' };
             let struct_syntax = KeyPress::Plain {
                 key: Key::Character('a'),
             };
@@ -41,8 +41,7 @@ mod tests {
 
         // With modifier.
         {
-            let macro_syntax =
-                keypress! { @char ModifierKeysMask::new().with_shift().with_ctrl(), 'a' };
+            let macro_syntax = key_press! { @char ModifierKeysMask::new().with_shift().with_ctrl(), 'a' };
             let struct_syntax = KeyPress::WithModifiers {
                 key: Key::Character('a'),
                 mask: ModifierKeysMask::new().with_shift().with_ctrl(),
@@ -55,7 +54,7 @@ mod tests {
     fn test_keypress_special_key() {
         // No modifier.
         {
-            let macro_syntax = keypress! { @special SpecialKey::Left };
+            let macro_syntax = key_press! { @special SpecialKey::Left };
             let struct_syntax = KeyPress::Plain {
                 key: Key::SpecialKey(SpecialKey::Left),
             };
@@ -63,7 +62,7 @@ mod tests {
         }
         // With modifier.
         {
-            let macro_syntax = keypress! { @special ModifierKeysMask::new().with_alt().with_ctrl(), SpecialKey::Left };
+            let macro_syntax = key_press! { @special ModifierKeysMask::new().with_alt().with_ctrl(), SpecialKey::Left };
             let struct_syntax = KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Left),
                 mask: ModifierKeysMask::new().with_alt().with_ctrl(),
@@ -76,7 +75,7 @@ mod tests {
     fn test_keypress_function_key() {
         // No modifier.
         {
-            let macro_syntax = keypress! { @fn FunctionKey::F1 };
+            let macro_syntax = key_press! { @fn FunctionKey::F1 };
             let struct_syntax = KeyPress::Plain {
                 key: Key::FunctionKey(FunctionKey::F1),
             };
@@ -85,7 +84,7 @@ mod tests {
         // With modifier.
         {
             let macro_syntax =
-                keypress! { @fn ModifierKeysMask::new().with_shift(), FunctionKey::F1 };
+                key_press! { @fn ModifierKeysMask::new().with_shift(), FunctionKey::F1 };
             let struct_syntax = KeyPress::WithModifiers {
                 key: Key::FunctionKey(FunctionKey::F1),
                 mask: ModifierKeysMask::new().with_shift(),

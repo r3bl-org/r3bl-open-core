@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{InputEvent, Key, KeyPress, SpecialKey};
+use crate::terminal_lib_backends::{InputEvent, Key, KeyPress, SpecialKey};
 
 /// Provide a conversion from [crate::InputEvent] to [DialogEvent].
 ///
@@ -67,18 +67,18 @@ mod test_dialog_event {
     use r3bl_core::assert_eq2;
 
     use super::*;
-    use crate::keypress;
+    use crate::key_press;
 
     #[test]
     fn dialog_event_handles_enter() {
-        let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
+        let input_event = InputEvent::Keyboard(key_press!(@special SpecialKey::Enter));
         let dialog_event = DialogEvent::from(input_event);
         assert_eq2!(dialog_event, DialogEvent::EnterPressed);
     }
 
     #[test]
     fn dialog_event_handles_esc() {
-        let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Esc));
+        let input_event = InputEvent::Keyboard(key_press!(@special SpecialKey::Esc));
         let dialog_event = DialogEvent::from(input_event);
         assert_eq2!(dialog_event, DialogEvent::EscPressed);
     }

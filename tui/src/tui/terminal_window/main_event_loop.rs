@@ -646,7 +646,7 @@ mod tests {
     use test_fixture_app::AppMainTest;
     use test_fixture_state::{AppSignal, State};
 
-    use crate::{keypress,
+    use crate::{key_press,
                 main_event_loop_impl,
                 render_ops,
                 render_pipeline,
@@ -683,7 +683,7 @@ mod tests {
 
         // Exit if these keys are pressed.
         let exit_keys: InlineVec<InputEvent> =
-            smallvec![InputEvent::Keyboard(keypress! { @char 'x' })];
+            smallvec![InputEvent::Keyboard(key_press! { @char 'x' })];
 
         // Simulated key inputs.
         let generator_vec: InlineVec<CrosstermEventResult> = smallvec![

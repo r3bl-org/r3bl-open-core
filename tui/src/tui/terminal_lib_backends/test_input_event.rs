@@ -22,7 +22,7 @@ mod tests {
 
     use crate::{convert_key_event,
                 crossterm_keyevent,
-                keypress,
+                key_press,
                 try_convert_key_modifiers,
                 InputEvent,
                 Key,
@@ -51,8 +51,8 @@ mod tests {
             let ctrl_x_tw = InputEvent::try_from(ctrl_x);
 
             // Check that the conversion is correct.
-            assert_eq2!(x_tw, InputEvent::Keyboard(keypress! {@char 'x'}));
-            assert_eq2!(caps_x_tw, InputEvent::Keyboard(keypress! {@char 'X'}));
+            assert_eq2!(x_tw, InputEvent::Keyboard(key_press! {@char 'x'}));
+            assert_eq2!(caps_x_tw, InputEvent::Keyboard(key_press! {@char 'X'}));
             assert_eq2!(ctrl_x_tw, Ok(InputEvent::Keyboard(ctrl_x.try_into()?)));
         });
     }
@@ -60,8 +60,8 @@ mod tests {
     #[test]
     fn test_input_event_matches_correctly() -> Result<(), ()> {
         throws!({
-            let x = InputEvent::Keyboard(keypress! { @char 'x' });
-            let caps_x = InputEvent::Keyboard(keypress! {@char 'X'});
+            let x = InputEvent::Keyboard(key_press! { @char 'x' });
+            let caps_x = InputEvent::Keyboard(key_press! {@char 'X'});
             let ctrl_x = InputEvent::Keyboard(
                 crossterm_keyevent! {
                   code: KeyCode::Char('x'),

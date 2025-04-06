@@ -21,7 +21,7 @@ use nom::{branch::alt,
           sequence::{preceded, terminated, tuple},
           IResult};
 
-use crate::{constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
+use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
             CodeBlockLine,
             CodeBlockLineContent,
             List};

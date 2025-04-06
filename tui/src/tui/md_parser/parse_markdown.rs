@@ -17,7 +17,7 @@
 
 use nom::{branch::alt, combinator::map, multi::many0, IResult};
 
-use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
+use crate::{md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
             parse_block_code,
             parse_block_heading_opt_eol,
             parse_block_markdown_text_with_or_without_new_line,
