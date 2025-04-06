@@ -59,8 +59,8 @@ use crate::{AnsiStyledText,
             new_style,
             pad_fmt,
             remove_escaped_quotes,
-            rgb_value,
             truncate_from_right,
+            tui_color,
             usize,
             width};
 
@@ -76,7 +76,7 @@ pub fn build_spacer(max_display_width: ColWidth) -> InlineString {
     );
 
     // Format spacer.
-    fg_rgb_color(rgb_value!(dark_lizard_green), &acc_padding).to_small_str()
+    fg_rgb_color(tui_color!(dark_lizard_green), &acc_padding).to_small_str()
 }
 
 // Colors: <https://en.wikipedia.org/wiki/ANSI_escape_code>

@@ -18,7 +18,6 @@
 use std::{env::var, process::Command};
 
 use r3bl_core::{ASTColor,
-                ASTStyle,
                 AnsiStyledText,
                 ColorWheel,
                 CommonError,
@@ -26,8 +25,9 @@ use r3bl_core::{ASTColor,
                 CommonResult,
                 GradientGenerationPolicy,
                 InlineVec,
-                TextColorizationPolicy};
-use r3bl_tui::terminal_async::SLATE_GRAY;
+                TextColorizationPolicy,
+                fg_rgb_color,
+                tui_color};
 use smallvec::smallvec;
 
 use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
@@ -37,37 +37,18 @@ use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
             upgrade_check};
 
 pub fn multi_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
-    let up_and_down = AnsiStyledText {
-        text: " Up or down:     navigate",
-        style: smallvec![
-            ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
+    let slate_gray: ASTColor = tui_color!(slate_grey).into();
+    let night_blue: ASTColor = tui_color!(night_blue).into();
 
-    let space = AnsiStyledText {
-        text: " Space:          select or deselect item",
-        style: smallvec![
-            ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
+    let text_up_and_down = " Up or down:     navigate";
+    let text_space = " Space:          select or deselect item";
+    let text_esc = " Esc or Ctrl+C:  exit program";
+    let text_return_key = " Return:         confirm selection";
 
-    let esc = AnsiStyledText {
-        text: " Esc or Ctrl+C:  exit program",
-        style: smallvec![
-            ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
-
-    let return_key = AnsiStyledText {
-        text: " Return:         confirm selection",
-        style: smallvec![
-            ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
+    let up_and_down = fg_rgb_color(slate_gray, text_up_and_down).bg_rgb_color(night_blue);
+    let space = fg_rgb_color(slate_gray, text_space).bg_rgb_color(night_blue);
+    let esc = fg_rgb_color(slate_gray, text_esc).bg_rgb_color(night_blue);
+    let return_key = fg_rgb_color(slate_gray, text_return_key).bg_rgb_color(night_blue);
 
     smallvec![
         smallvec![up_and_down],
@@ -79,28 +60,16 @@ pub fn multi_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledTe
 
 pub fn single_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>>
 {
-    let up_or_down = AnsiStyledText {
-        text: " Up or down:     navigate",
-        style: smallvec![
-            ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
-    let esc = AnsiStyledText {
-        text: " Esc or Ctrl+C:  exit program",
-        style: smallvec![
-            ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
+    let slate_gray: ASTColor = tui_color!(slate_grey).into();
+    let night_blue: ASTColor = tui_color!(night_blue).into();
 
-    let return_key = AnsiStyledText {
-        text: " Return:         confirm selection",
-        style: smallvec![
-            ASTStyle::Foreground(SLATE_GRAY),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
+    let text_up_or_down = " Up or down:     navigate";
+    let text_esc = " Esc or Ctrl+C:  exit program";
+    let text_return_key = " Return:         confirm selection";
+
+    let up_or_down = fg_rgb_color(slate_gray, text_up_or_down).bg_rgb_color(night_blue);
+    let esc = fg_rgb_color(slate_gray, text_esc).bg_rgb_color(night_blue);
+    let return_key = fg_rgb_color(slate_gray, text_return_key).bg_rgb_color(night_blue);
 
     smallvec![smallvec![up_or_down], smallvec![esc], smallvec![return_key]]
 }

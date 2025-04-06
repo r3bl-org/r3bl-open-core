@@ -65,17 +65,15 @@ mod tests_github_api {
     use tokio::time::timeout;
 
     use super::*;
-    use crate::{TTYResult, is_fully_uninteractive_terminal};
+    use crate::{TTYResult, return_if_not_interactive_terminal};
 
     const TIMEOUT: Duration = Duration::from_secs(1);
 
     /// Do not run this in CI/CD since it makes API calls to github.com.
     #[tokio::test]
     async fn test_get_latest_tag_from_github() {
-        // This is for CI/CD.
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-            return;
-        }
+        return_if_not_interactive_terminal!();
+
         let org = "cloudflare";
         let repo = "cfssl";
 

@@ -39,7 +39,7 @@ use crate::{ASTColor, DEFAULT_STRING_STORAGE_SIZE, RgbValue, SgrCode, TuiStyle};
 /// ```rust
 /// use r3bl_core::{
 ///     TuiStyle,
-///     red, rgb_value, dim, AnsiStyledText, fg_rgb_color, ASTStyle, ASTColor
+///     red, tui_color, dim, AnsiStyledText, fg_rgb_color, ASTStyle, ASTColor
 /// };
 ///
 /// // Using the constructor functions.
@@ -54,8 +54,8 @@ use crate::{ASTColor, DEFAULT_STRING_STORAGE_SIZE, RgbValue, SgrCode, TuiStyle};
 /// dim_red_text_on_dark_grey.println();
 ///
 /// // Flexible construction using RGB color codes.
-/// let blue_text = fg_rgb_color(rgb_value!(blue), "This is blue text.");
-/// let blue_text_on_white = blue_text.bg_rgb_color(rgb_value!(white));
+/// let blue_text = fg_rgb_color(tui_color!(blue), "This is blue text.");
+/// let blue_text_on_white = blue_text.bg_rgb_color(tui_color!(white));
 /// println!("{blue_text_on_white}");
 /// blue_text_on_white.println();
 ///
@@ -183,35 +183,42 @@ pub fn magenta(text: &str) -> AnsiStyledText<'_> {
 pub fn lizard_green(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(crate::rgb_value!(lizard_green).into())),
+        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(lizard_green).into())),
     }
 }
 
 pub fn pink(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(crate::rgb_value!(pink).into())),
+        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(pink).into())),
     }
 }
 
 pub fn dark_pink(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(crate::rgb_value!(dark_pink).into())),
+        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_pink).into())),
     }
 }
 
 pub fn frozen_blue(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(crate::rgb_value!(frozen_blue).into())),
+        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(frozen_blue).into())),
     }
 }
 
 pub fn guards_red(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(crate::rgb_value!(guards_red).into())),
+        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(guards_red).into())),
+    }
+}
+
+pub fn slate_gray(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(slate_grey).into())),
     }
 }
 

@@ -29,8 +29,8 @@ use r3bl_tui::terminal_async::{choose,
                                components::style::StyleSheet,
                                HowToChoose,
                                DEVELOPMENT_MODE};
-mod single_select_quiz_game;
-use single_select_quiz_game::main as single_select_quiz_game;
+mod choose_sync_quiz_game;
+use choose_sync_quiz_game::main as single_select_quiz_game;
 use smallvec::smallvec;
 
 fn main() -> miette::Result<()> {
