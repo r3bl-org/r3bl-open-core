@@ -394,6 +394,13 @@ Updated:
     the `write!` macro to write to a pre-existing buffer.
 
 Added:
+  - Add the ability for `ReadlineAsync` to abort the `Readline` main event loop when it is
+    exited (by calling the `ReadlineAsync::exit()` method). This is one of the main
+    differentiators between a sync blocking `read_line()` and an async non-blocking one.
+    Further clean up is provided that are triggered by `exit()` method to ensure that all
+    the tasks that spin up are cleaned up: 1. task to listen to `InputDevice`, and 2.
+    another task to process
+    `crate::readline_impl::manage_shared_writer_output::spawn_task_to_monitor_line_state_signals`.
   - Add `ta_println!`, `ta_print!`, `ta_println_prefixed` macros that use `format_args!`
     style (just like `println!`, `write!`, etc). This makes the API more familiar with
     Rust standard library. This style of declarative macro is used in other crates in this
