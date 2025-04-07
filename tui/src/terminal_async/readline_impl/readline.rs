@@ -187,6 +187,9 @@ pub struct Readline {
     /// - Is [None] if no [crate::Spinner] is active. Also works with the
     ///   [LineStateControlSignal::Resume] signal.
     pub safe_spinner_is_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
+
+    /// Receiver for shutdown signal.
+    pub shutdown_receiver: UnboundedReceiver<()>,
 }
 
 /// Error returned from [`readline()`][Readline::readline]. Such errors generally require
@@ -270,6 +273,7 @@ pub mod manage_shared_writer_output {
         output_device: OutputDevice,
         safe_is_paused_buffer: SafePauseBuffer,
         safe_spinner_is_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
+        shutdown_sender: UnboundedSender<()>,
     ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             loop {
@@ -289,6 +293,7 @@ pub mod manage_shared_writer_output {
                     match control_flow {
                         ControlFlowLimited::ReturnError(_) => {
                             // Initiate shutdown.
+                            let _ = shutdown_sender.send(());
                             break;
                         }
                         ControlFlowLimited::Continue => {
@@ -299,6 +304,7 @@ pub mod manage_shared_writer_output {
                 // Channel is closed.
                 else {
                     // Initiate shutdown.
+                    let _ = shutdown_sender.send(());
                     break;
                 }
             }
@@ -317,6 +323,12 @@ pub mod manage_shared_writer_output {
         >,
     ) -> ControlFlowLimited<ReadlineError> {
         match line_control_signal {
+            LineStateControlSignal::ExitReadlineLoop => {
+                // This causes the readline loop to exit by using
+                // `Readline::shutdown_sender`.
+                return ControlFlowLimited::ReturnError(ReadlineError::Closed);
+            }
+
             // Handle a line of text from user input w/ support for pause & resume.
             LineStateControlSignal::Line(buf) => {
                 // Early return if paused. Push the line to pause_buffer, don't render
@@ -471,6 +483,9 @@ impl Readline {
         let is_paused_buffer = PauseBuffer::new();
         let safe_is_paused_buffer = Arc::new(StdMutex::new(is_paused_buffer));
 
+        // Create shutdown channel.
+        let (shutdown_sender, shutdown_receiver) = mpsc::unbounded_channel();
+
         // Start task to process line_receiver.
         let safe_spinner_is_active = Arc::new(StdMutex::new(None));
         manage_shared_writer_output::spawn_task_to_monitor_line_state_signals(
@@ -479,6 +494,7 @@ impl Readline {
             output_device.clone(),
             safe_is_paused_buffer.clone(),
             safe_spinner_is_active.clone(),
+            shutdown_sender,
         );
 
         // Create the instance with all the supplied components.
@@ -491,6 +507,7 @@ impl Readline {
             safe_history,
             safe_is_paused_buffer,
             safe_spinner_is_active,
+            shutdown_receiver,
         };
 
         // Print the prompt.
@@ -597,6 +614,11 @@ impl Readline {
                 // This branch is cancel safe because recv is cancel safe.
                 maybe_line = self.history_receiver.recv() => {
                     self.safe_history.lock().unwrap().update(maybe_line);
+                },
+
+                // Poll for shutdown signal.
+                _ = self.shutdown_receiver.recv() => {
+                    return Err(ReadlineError::Closed);
                 }
             }
         }

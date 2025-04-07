@@ -17,6 +17,7 @@
 
 use std::io::Write as _;
 
+use miette::IntoDiagnostic;
 use r3bl_core::{fg_slate_gray,
                 ok,
                 try_initialize_logging_global,
@@ -56,18 +57,17 @@ async fn without_readline_async() -> miette::Result<()> {
     )
     .await;
 
-    let message = format!(
+    println!(
         ">>> Chosen {:<25}: {:?}",
         "(without readline_async)", chosen
     );
-    ReadlineAsync::print_exit_message(&message)?;
 
     ok!()
 }
 
 async fn with_readline_async() -> miette::Result<()> {
     // If the terminal is not fully interactive, then return early.
-    let Some(mut readline_async) = ReadlineAsync::try_new({
+    let Some(mut rl_async) = ReadlineAsync::try_new({
         // Generate prompt.
         let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";
@@ -77,19 +77,21 @@ async fn with_readline_async() -> miette::Result<()> {
         return ok!();
     };
 
-    let mut sw_1 = readline_async.clone_shared_writer();
-    let sw_2 = readline_async.clone_shared_writer();
-    let mut output_device = readline_async.clone_output_device();
-    let input_device = readline_async.mut_input_device();
+    let mut sw_1 = rl_async.clone_shared_writer();
+    let sw_2 = rl_async.clone_shared_writer();
+    let mut output_device = rl_async.clone_output_device();
+    let input_device = rl_async.mut_input_device();
 
     // Start a task to write some output to the shared writer. This output should be
     // paused (as long as choose() is active).
     tokio::spawn({
-        tracing::debug!(">>> Starting task to write to shared writer");
         async move {
+            // Wait a moment to write to the shared writer. Give the main thread a chance
+            // to start the choose() task, which will pause the shared writer output.
+            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+            tracing::debug!(">>> Starting task to write to shared writer");
             for i in 0..5 {
                 _ = writeln!(sw_1, ">>> {i}");
-                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             }
         }
     });
@@ -105,16 +107,13 @@ async fn with_readline_async() -> miette::Result<()> {
     )
     .await;
 
-    // The output to the shared writer should be visible now. Kill the task that was
-    // writing to the shared writer.
-
     let message = format!(">>> Chosen {:<25}: {:?}", "(with readline_async)", chosen);
-    ReadlineAsync::print_exit_message(&message)?;
+    rl_async
+        .exit(Some(message.as_str()))
+        .await
+        .into_diagnostic()?;
 
-    // 00: why is this needed? fix the underlying timing problems; perhaps need to flush on exit (internal threads) & why need `\n` to flush line?
-
-    // Pause for a moment to let the output flush.
-    ReadlineAsync::pause_for_output_to_flush().await;
+    // The output to the shared writer should be visible now.
 
     ok!()
 }

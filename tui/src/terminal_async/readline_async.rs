@@ -15,11 +15,6 @@
  *   limitations under the License.
  */
 
-use std::io::stdout;
-
-use crossterm::{cursor::MoveToColumn,
-                style::{Print, ResetColor},
-                terminal::{Clear, ClearType}};
 use futures_util::FutureExt as _;
 use miette::IntoDiagnostic as _;
 use r3bl_core::{is_fully_uninteractive_terminal,
@@ -188,20 +183,50 @@ impl ReadlineAsync {
             .await;
     }
 
-    pub fn print_exit_message(message: &str) -> miette::Result<()> {
-        crossterm::queue!(
-            stdout(),
-            MoveToColumn(0),
-            ResetColor,
-            Clear(ClearType::CurrentLine),
-            Print(message),
-            Print("\n"),
-        )
-        .into_diagnostic()?;
-        Ok(())
-    }
+    /// Make sure to call this method when you are done with the [ReadlineAsync] instance.
+    /// It will flush the buffer and print the message if provided. This also consumes the
+    /// [ReadlineAsync] instance, so it can't be used after this method is called.
+    ///
+    /// A very important thing that this method does is it exits the readline loop
+    /// gracefully. Here's what it does:
+    /// 1. it sends a [LineStateControlSignal::ExitReadlineLoop] signal to the [Readline]
+    ///    instance's
+    ///    [crate::readline_impl::manage_shared_writer_output::spawn_task_to_monitor_line_state_signals]
+    ///    task (aka "actor"),
+    /// 2. which causes a message to be sent to the [Readline::shutdown_receiver],
+    /// 3. which causes the [Readline::readline()] method to exit (if it is currently
+    ///    running). It doesn't block, since it is `readline_async` after all). This is a
+    ///    very powerful feature that is not available in synchronous blocking `readline`.
+    ///
+    /// If you don't call this method, when the underlying [Readline] instance is dropped,
+    /// it's [Drop] implementation will perform (most of the) cleanup, but it won't print
+    /// any exit message or stop the readline loop.
+    pub async fn exit(self, message: Option<&str>) -> std::io::Result<()> {
+        if let Some(message) = message {
+            self.shared_writer
+                .line_state_control_channel_sender
+                .send(LineStateControlSignal::Line(message.into()))
+                .await
+                .map_err(std::io::Error::other)?;
 
-    pub async fn pause_for_output_to_flush() {
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            self.shared_writer
+                .line_state_control_channel_sender
+                .send(LineStateControlSignal::Flush)
+                .await
+                .map_err(std::io::Error::other)?;
+        }
+
+        self.shared_writer
+            .line_state_control_channel_sender
+            .send(LineStateControlSignal::ExitReadlineLoop)
+            .await
+            .map_err(std::io::Error::other)?;
+
+        // Pause to allow all the messages to be printed.
+        tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
+
+        drop(self);
+
+        Ok(())
     }
 }
