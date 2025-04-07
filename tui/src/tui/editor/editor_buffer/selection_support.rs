@@ -17,21 +17,21 @@
 
 use std::cmp;
 
-use r3bl_core::{blue,
-                caret_scr_adj,
+use r3bl_core::{caret_scr_adj,
                 col,
-                cyan,
                 dim,
-                green,
+                fg_blue,
+                fg_cyan,
+                fg_green,
+                fg_magenta,
+                fg_red,
+                fg_yellow,
                 height,
                 inline_string,
-                magenta,
-                red,
                 row,
                 underline,
                 usize,
                 width,
-                yellow,
                 CaretScrAdj,
                 ChUnitPrimitiveType,
                 Size};
@@ -114,7 +114,7 @@ pub fn handle_selection_single_line_caret_movement(
                     l = "current",
                     m = underline(&inline_string!("{:?}", range.locate_column(curr))),
                     n = "direction",
-                    o = green(&inline_string!("{:?}", SelectionRange::caret_movement_direction_left_right(prev, curr)))
+                    o = fg_green(&inline_string!("{:?}", SelectionRange::caret_movement_direction_left_right(prev, curr)))
                 )
     });
 
@@ -302,15 +302,15 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
             details = %inline_string!(
                 "\n{a}\n\t{b}, {c}, {d}, {e}",
                 /* 0 */
-                a = red("handle multiline caret movement hit top or bottom of document"),
+                a = fg_red("handle multiline caret movement hit top or bottom of document"),
                 /* 1: previous */
-                b = cyan(&inline_string!("previous: {:?}", prev)),
+                b = fg_cyan(&inline_string!("previous: {:?}", prev)),
                 /* 2: current */
-                c = yellow(&inline_string!("current: {:?}", curr)),
+                c = fg_yellow(&inline_string!("current: {:?}", curr)),
                 /* 3: row_index */
-                d = green(&inline_string!("row_index: {:?}", row_index)),
+                d = fg_green(&inline_string!("row_index: {:?}", row_index)),
                 /* 4: selection_map */
-                e = magenta(&inline_string!("{:?}", buffer_mut.inner.sel_list))
+                e = fg_magenta(&inline_string!("{:?}", buffer_mut.inner.sel_list))
             ),
         }
     });
@@ -411,24 +411,24 @@ mod multiline_select_helpers {
                 details = %inline_string!(
                     "\n📜📜📜 {a}\n\t{b}, {c}\n\t{d}\n\t{e}\n\t{f}\n\t{g}\n\t{h}",
                     /* heading */
-                    a = red("handle multiline caret movement"),
+                    a = fg_red("handle multiline caret movement"),
                     /* previous */
-                    b = cyan(&inline_string!("👈 previous: {:?}", prev)),
+                    b = fg_cyan(&inline_string!("👈 previous: {:?}", prev)),
                     /* current */
-                    c = magenta(&inline_string!("👉 current: {:?}", curr)),
+                    c = fg_magenta(&inline_string!("👉 current: {:?}", curr)),
                     /* selection_map */
-                    d = magenta(&inline_string!("{:?}", buffer.get_selection_list())),
+                    d = fg_magenta(&inline_string!("{:?}", buffer.get_selection_list())),
                     /* locate_previous_row_index */
-                    e = cyan(&inline_string!("locate_previous_row_index: {:?}", locate_previous_row_index)),
+                    e = fg_cyan(&inline_string!("locate_previous_row_index: {:?}", locate_previous_row_index)),
                     /* locate_current_row_index, */
-                    f = green(&inline_string!("locate_current_row_index: {:?}", locate_current_row_index)),
+                    f = fg_green(&inline_string!("locate_current_row_index: {:?}", locate_current_row_index)),
                     /* caret_vertical_movement_direction, */
-                    g = blue(&inline_string!(
+                    g = fg_blue(&inline_string!(
                         "caret_vertical_movement_direction: {:?}",
                         caret_vertical_movement_direction,
                     )),
                     /* has_caret_movement_direction_changed, */
-                    h = yellow(&inline_string!(
+                    h = fg_yellow(&inline_string!(
                         "has_caret_movement_direction_changed: {:?}",
                         has_caret_movement_direction_changed,
                     ))

@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use crate::{InlineString, fg_rgb_color, inline_string, tui_color};
+use crate::{InlineString, fg_color, fg_cyan, inline_string, tui_color};
 
 /// Marker trait to "remember" which types can be printed to the console w/ color. Any
 /// type that implements `Debug` can be printed to the console using this trait.
@@ -34,7 +34,7 @@ fn prepare_console_log_fg_output(this: &str) -> InlineString {
     } else {
         &inline_string!("{this}")
     };
-    let msg_fmt = fg_rgb_color(tui_color!(lizard_green), msg);
+    let msg_fmt = fg_color(tui_color!(lizard_green), msg);
     inline_string!("{}", msg_fmt)
 }
 
@@ -48,8 +48,7 @@ fn prepare_console_log_bg(this: &str) -> InlineString {
     } else {
         &inline_string!("{this}")
     };
-    let msg_fmt =
-        fg_rgb_color(tui_color!(cyan), msg).bg_rgb_color(tui_color!(slate_grey));
+    let msg_fmt = fg_cyan(msg).bg_slate_gray();
     inline_string!("{}", msg_fmt)
 }
 

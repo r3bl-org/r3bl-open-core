@@ -19,39 +19,36 @@ use std::process::Command;
 use branch_checkout_formatting::{add_spaces_to_end_of_string,
                                  display_correct_message_after_user_tried_to_checkout,
                                  get_formatted_modified_files};
-use r3bl_core::{ASTStyle,
-                AnsiStyledText,
-                ChUnit,
+use r3bl_core::{ChUnit,
                 CommonResult,
                 GCString,
-                InlineString,
                 InlineVec,
+                ast,
+                fg_frozen_blue,
+                fg_guards_red,
+                fg_lizard_green,
+                fg_slate_gray,
                 get_terminal_width,
+                new_style,
+                tui_color,
                 usize};
 use r3bl_tui::terminal_async::{HowToChoose, StyleSheet, choose};
 use smallvec::smallvec;
 
 use super::{get_branches, try_get_current_branch};
-use crate::{color_constants::DefaultColors::{FrozenBlue,
-                                             GuardsRed,
-                                             LizardGreen,
-                                             MoonlightBlue,
-                                             NightBlue,
-                                             Orange,
-                                             SlateGrey},
-            giti::{CommandSuccessfulResponse,
-                   clap_config::BranchSubcommand,
-                   report_unknown_error_and_propagate,
-                   single_select_instruction_header,
-                   ui_strings::UIStrings::{AlreadyOnCurrentBranch,
-                                           BranchDoesNotExist,
-                                           FailedToSwitchToBranch,
-                                           ModifiedFileOnCurrentBranch,
-                                           ModifiedFilesOnCurrentBranch,
-                                           NoBranchGotCheckedOut,
-                                           PleaseCommitChangesBeforeSwitchingBranches,
-                                           SelectBranchToSwitchTo,
-                                           SwitchedToBranch}}};
+use crate::giti::{CommandSuccessfulResponse,
+                  clap_config::BranchSubcommand,
+                  report_unknown_error_and_propagate,
+                  single_select_instruction_header,
+                  ui_strings::UIStrings::{AlreadyOnCurrentBranch,
+                                          BranchDoesNotExist,
+                                          FailedToSwitchToBranch,
+                                          ModifiedFileOnCurrentBranch,
+                                          ModifiedFilesOnCurrentBranch,
+                                          NoBranchGotCheckedOut,
+                                          PleaseCommitChangesBeforeSwitchingBranches,
+                                          SelectBranchToSwitchTo,
+                                          SwitchedToBranch}};
 
 pub fn try_checkout_branch(
     maybe_branch_name: Option<String>,
@@ -73,12 +70,7 @@ pub fn try_checkout_branch(
 
             // If branch_name doesn't match any of the branches, then the branch doesn't exist,  return early.
             if !branches_trimmed.contains(&branch_name) {
-                let ferrari_red = GuardsRed.as_ansi_color();
-                AnsiStyledText {
-                    text: &BranchDoesNotExist { branch_name }.to_string(),
-                    style: smallvec![ASTStyle::Foreground(ferrari_red)],
-                }
-                .println();
+                fg_guards_red(&BranchDoesNotExist { branch_name }.to_string()).println();
                 return Ok(try_run_command_result);
             };
 
@@ -86,16 +78,11 @@ pub fn try_checkout_branch(
 
             // Check if branch_name is the same as current branch. Then early return.
             if branch_name == current_branch {
-                let current_branch_name = AnsiStyledText {
-                    text: &current_branch,
-                    style: smallvec![ASTStyle::Foreground(LizardGreen.as_ansi_color())],
-                };
-                let slate_gray = SlateGrey.as_ansi_color();
-                let already_on_branch = AnsiStyledText {
-                    text: &AlreadyOnCurrentBranch.to_string(),
-                    style: smallvec![ASTStyle::Foreground(slate_gray)],
-                };
-                println!("{already_on_branch}{current_branch_name}");
+                println!(
+                    "{a}{b}",
+                    a = fg_slate_gray(&AlreadyOnCurrentBranch.to_string()),
+                    b = fg_lizard_green(&current_branch)
+                );
                 return Ok(try_run_command_result);
             }
 
@@ -127,37 +114,18 @@ pub fn try_checkout_branch(
                             terminal_width,
                         );
 
-                        let modified_filed_text_style = smallvec![
-                            ASTStyle::Foreground(Orange.as_ansi_color()),
-                            ASTStyle::Background(NightBlue.as_ansi_color()),
-                        ];
-
+                        let modified_files_style = new_style!(
+                            color_fg: {tui_color!(orange)} color_bg: {tui_color!(night_blue)}
+                        );
                         if modified_files.len() == 1 {
-                            AnsiStyledText {
-                                text: &one_modified_file,
-                                style: modified_filed_text_style,
-                            }
-                            .println();
+                            ast(&one_modified_file, modified_files_style).println();
                         } else {
-                            AnsiStyledText {
-                                text: &multiple_modified_files,
-                                style: modified_filed_text_style,
-                            }
-                            .println();
+                            ast(&multiple_modified_files, modified_files_style).println();
                         }
-
-                        let gray_text_style = smallvec![
-                            ASTStyle::Foreground(SlateGrey.as_ansi_color()),
-                            ASTStyle::Background(NightBlue.as_ansi_color()),
-                        ];
 
                         for file in modified_files {
                             let file = add_spaces_to_end_of_string(file, terminal_width);
-                            AnsiStyledText {
-                                text: &file,
-                                style: gray_text_style.clone(),
-                            }
-                            .println();
+                            fg_slate_gray(&file).bg_night_blue().println();
                         }
 
                         let please_commit_changes =
@@ -166,14 +134,8 @@ pub fn try_checkout_branch(
                             &please_commit_changes,
                             terminal_width,
                         );
-                        AnsiStyledText {
-                            text: &please_commit_changes,
-                            style: smallvec![
-                                ASTStyle::Foreground(Orange.as_ansi_color()),
-                                ASTStyle::Background(NightBlue.as_ansi_color()),
-                            ],
-                        }
-                        .println();
+                        ast(&please_commit_changes, modified_files_style).println();
+
                         return Ok(try_run_command_result);
                     }
                 }
@@ -187,26 +149,18 @@ pub fn try_checkout_branch(
             match branch_checkout_result_output {
                 Ok(branch_checkout_output) => {
                     if branch_checkout_output.status.success() {
-                        let branch_name_styled = AnsiStyledText {
-                            text: &branch_name,
-                            style: smallvec![ASTStyle::Foreground(
-                                LizardGreen.as_ansi_color()
-                            )],
-                        };
-                        let slate_gray = SlateGrey.as_ansi_color();
-
                         if branch_name == current_branch {
-                            let already_on_branch = AnsiStyledText {
-                                text: &AlreadyOnCurrentBranch.to_string(),
-                                style: smallvec![ASTStyle::Foreground(slate_gray)],
-                            };
-                            println!("{already_on_branch}{branch_name_styled}");
+                            println!(
+                                "{a}{b}",
+                                a = fg_slate_gray(&AlreadyOnCurrentBranch.to_string()),
+                                b = fg_lizard_green(&branch_name)
+                            );
                         } else {
-                            let switched_to = AnsiStyledText {
-                                text: &SwitchedToBranch.to_string(),
-                                style: smallvec![ASTStyle::Foreground(slate_gray)],
-                            };
-                            println!("{switched_to}{branch_name_styled}");
+                            println!(
+                                "{a}{b}",
+                                a = fg_slate_gray(&SwitchedToBranch.to_string()),
+                                b = fg_lizard_green(&branch_name)
+                            );
                         }
                     } else {
                         try_checkout_branch_error::display_error_message(
@@ -230,21 +184,13 @@ pub fn try_checkout_branch(
         // The code below will execute if branch_name is not passed as an argument. It displays user
         // all the local branches and asks them to select a branch to check out to.
         None => {
-            let default_header_style = smallvec![
-                ASTStyle::Foreground(FrozenBlue.as_ansi_color()),
-                ASTStyle::Background(MoonlightBlue.as_ansi_color()),
-            ];
-
-            let select_branch_to_switch_to = &SelectBranchToSwitchTo.to_string();
+            let header = SelectBranchToSwitchTo.to_string();
 
             let instructions_and_branches = {
-                let mut instructions_and_branches = single_select_instruction_header();
-                let header = AnsiStyledText {
-                    text: select_branch_to_switch_to,
-                    style: default_header_style,
-                };
-                instructions_and_branches.push(smallvec![header]);
-                instructions_and_branches
+                let mut lines = single_select_instruction_header();
+                let header_line = fg_frozen_blue(&header).bg_moonlight_blue();
+                lines.push(smallvec![header_line]);
+                lines
             };
 
             let current_branch = try_get_current_branch()?;
@@ -305,6 +251,8 @@ pub fn try_checkout_branch(
 }
 
 mod branch_checkout_formatting {
+    use r3bl_core::ItemsOwned;
+
     use super::*;
 
     pub fn add_spaces_to_end_of_string(string: &str, terminal_width: ChUnit) -> String {
@@ -315,9 +263,7 @@ mod branch_checkout_formatting {
         string
     }
 
-    pub fn get_formatted_modified_files(
-        output: std::process::Output,
-    ) -> InlineVec<InlineString> {
+    pub fn get_formatted_modified_files(output: std::process::Output) -> ItemsOwned {
         let mut return_vec = smallvec![];
 
         let modified_files = String::from_utf8_lossy(&output.stdout).to_string();
@@ -360,24 +306,18 @@ mod branch_checkout_formatting {
         selected_branch: &str,
         current_branch: String,
     ) {
-        let branch_name = AnsiStyledText {
-            text: selected_branch,
-            style: smallvec::smallvec![ASTStyle::Foreground(LizardGreen.as_ansi_color())],
-        };
-        let slate_gray = SlateGrey.as_ansi_color();
-
         if selected_branch == current_branch {
-            let already_on_branch = AnsiStyledText {
-                text: &AlreadyOnCurrentBranch.to_string(),
-                style: smallvec::smallvec![ASTStyle::Foreground(slate_gray)],
-            };
-            println!("{already_on_branch}{branch_name}");
+            println!(
+                "{a}{b}",
+                a = fg_slate_gray(&AlreadyOnCurrentBranch.to_string()),
+                b = fg_lizard_green(selected_branch)
+            );
         } else {
-            let switched_to = AnsiStyledText {
-                text: &SwitchedToBranch.to_string(),
-                style: smallvec::smallvec![ASTStyle::Foreground(slate_gray)],
-            };
-            println!("{switched_to}{branch_name}");
+            println!(
+                "{a}{b}",
+                a = fg_slate_gray(&SwitchedToBranch.to_string()),
+                b = fg_lizard_green(selected_branch)
+            );
         }
     }
 }
@@ -401,26 +341,20 @@ mod try_checkout_branch_error {
         branch: String,
         maybe_output: Option<std::process::Output>,
     ) {
-        let ferrari_red = GuardsRed.as_ansi_color();
         match maybe_output {
             Some(output) => {
-                AnsiStyledText {
-                    text: &FailedToSwitchToBranch {
+                fg_guards_red(
+                    &FailedToSwitchToBranch {
                         branch,
                         error_message: String::from_utf8_lossy(&output.stderr)
                             .to_string(),
                     }
                     .to_string(),
-                    style: smallvec::smallvec![ASTStyle::Foreground(ferrari_red)],
-                }
+                )
                 .println();
             }
             None => {
-                AnsiStyledText {
-                    text: &NoBranchGotCheckedOut { branch }.to_string(),
-                    style: smallvec::smallvec![ASTStyle::Foreground(ferrari_red)],
-                }
-                .println();
+                fg_guards_red(&NoBranchGotCheckedOut { branch }.to_string()).println();
             }
         }
     }

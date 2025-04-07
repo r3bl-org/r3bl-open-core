@@ -169,7 +169,7 @@ pub fn try_parse_and_highlight(
 
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
-    use r3bl_core::{assert_eq2, cyan, throws, tui_color};
+    use r3bl_core::{assert_eq2, fg_cyan, throws, tui_color};
 
     use super::*;
 
@@ -190,7 +190,7 @@ mod tests_try_parse_and_highlight {
 
             println!(
                 "result: \n{}",
-                cyan(&style_us_span_lines.pretty_print_debug())
+                fg_cyan(&style_us_span_lines.pretty_print_debug())
             );
 
             assert_eq2!(editor_text_lines.len(), style_us_span_lines.len());
@@ -1068,7 +1068,7 @@ mod tests_style_us_span_lines_from {
     /// Test each variant of [MdBlockElement] is converted by
     /// [StyleUSSpanLines::from_block](StyleUSSpanLines::from_block).
     mod from_block {
-        use r3bl_core::cyan;
+        use r3bl_core::fg_cyan;
 
         use super::*;
 
@@ -1250,7 +1250,7 @@ mod tests_style_us_span_lines_from {
                     color_bg: {tui_color!(red)}
                 );
                 let (_, doc) = parse_markdown("- Foo\n- Bar\n").into_diagnostic()?;
-                println!("{}", cyan(&format!("{:#?}", doc)));
+                println!("{}", fg_cyan(&format!("{:#?}", doc)));
 
                 // First smart list.
                 {

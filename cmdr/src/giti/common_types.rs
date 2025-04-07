@@ -15,12 +15,12 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{InlineString, InlineVec};
+use r3bl_core::ItemsOwned;
 
 use super::clap_config::BranchSubcommand;
 
 #[derive(Debug, Clone, Default)]
 pub struct CommandSuccessfulResponse {
-    pub maybe_deleted_branches: Option<InlineVec<InlineString>>,
+    pub maybe_deleted_branches: Option<ItemsOwned>,
     pub branch_subcommand: Option<BranchSubcommand>,
 }

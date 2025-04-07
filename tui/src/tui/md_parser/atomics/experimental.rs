@@ -89,7 +89,7 @@ mod exp_batch_1 {
 
     #[cfg(test)]
     pub mod new_nom_parser_code {
-        use r3bl_core::{assert_eq2, bold, tui_color};
+        use r3bl_core::{assert_eq2, fg_lizard_green};
 
         use super::*;
 
@@ -99,9 +99,7 @@ mod exp_batch_1 {
                 "\n\n{}",
                 format_args!(
                     "{}",
-                    bold("parse_opt_eol()")
-                        .fg_rgb_color(tui_color!(lizard_green))
-                        .bg_dark_grey()
+                    fg_lizard_green("parse_opt_eol()").bold().bg_dark_gray()
                 )
             );
 
@@ -131,9 +129,7 @@ mod exp_batch_1 {
                 "{}",
                 format_args!(
                     "\n\n{}",
-                    bold("parse_opt_eol_2()")
-                        .fg_rgb_color(tui_color!(lizard_green))
-                        .bg_dark_grey()
+                    fg_lizard_green("parse_opt_eol_2()").bold().bg_dark_gray()
                 )
             );
 
@@ -194,7 +190,7 @@ mod exp_batch_2 {
 
     #[cfg(test)]
     mod test_text_until_opt_eol {
-        use r3bl_core::{assert_eq2, bold, tui_color};
+        use r3bl_core::{assert_eq2, fg_lizard_green};
 
         use super::*;
 
@@ -204,9 +200,9 @@ mod exp_batch_2 {
                 "\n\n{}",
                 format_args!(
                     "{}",
-                    bold("test_text_until_opt_eol()")
-                        .fg_rgb_color(tui_color!(lizard_green))
-                        .bg_dark_grey()
+                    fg_lizard_green("test_text_until_opt_eol()")
+                        .bold()
+                        .bg_dark_gray()
                 )
             );
 

@@ -20,7 +20,7 @@ use nom::{bytes::complete::{tag, take_until},
           error::ErrorKind,
           sequence::tuple,
           IResult};
-use r3bl_core::{green, red};
+use r3bl_core::{fg_green, fg_red};
 
 use crate::{md_parser::constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
 
@@ -34,7 +34,7 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
     DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
             "\n{} specialized parser take text between delims err on new line: \ninput: {:?}, start_delim: {:?}, end_delim: {:?}",
-            green("■■"),
+            fg_green("■■"),
             input,
             start_delim,
             end_delim
@@ -46,7 +46,7 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
     if let Ok((_, output)) = &it {
         if output.contains(NEW_LINE) {
             DEBUG_MD_PARSER_STDOUT.then(|| {
-                println!("{} parser error out for input: {:?}", red("⬢⬢"), input);
+                println!("{} parser error out for input: {:?}", fg_red("⬢⬢"), input);
             });
             return Err(nom::Err::Error(nom::error::Error {
                 input: output,
@@ -57,7 +57,7 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
 
     if it.is_err() {
         DEBUG_MD_PARSER_STDOUT.then(|| {
-            println!("{} parser error out for input: {:?}", red("⬢⬢"), input);
+            println!("{} parser error out for input: {:?}", fg_red("⬢⬢"), input);
         });
     }
     it

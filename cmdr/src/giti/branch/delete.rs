@@ -17,17 +17,12 @@
 
 use std::process::Command;
 
-use r3bl_core::{ASTStyle, AnsiStyledText, CommonResult, InlineString, InlineVec};
+use r3bl_core::{CommonResult, InlineString, ItemsOwned, ast, new_style, tui_color};
 use r3bl_tui::terminal_async::{HowToChoose, StyleSheet, choose};
 use smallvec::smallvec;
 use try_delete_branch_user_choice::Selection::{self, Delete, ExitProgram};
 
 use crate::{AnalyticsAction,
-            color_constants::DefaultColors::{FrozenBlue,
-                                             GuardsRed,
-                                             LizardGreen,
-                                             MoonlightBlue,
-                                             SlateGrey},
             giti::{CommandSuccessfulResponse,
                    clap_config::BranchSubcommand,
                    giti_ui_templates::report_unknown_error_and_propagate,
@@ -57,21 +52,17 @@ pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
         ..Default::default()
     };
 
-    let default_header_style = smallvec::smallvec![
-        ASTStyle::Foreground(FrozenBlue.as_ansi_color()),
-        ASTStyle::Background(MoonlightBlue.as_ansi_color()),
-    ];
+    let default_header_style = new_style!(
+        color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
+    );
 
     let select_branches_header_text = &PleaseSelectBranchesYouWantToDelete.to_string();
 
     let instructions_and_branches_to_delete = {
-        let mut instructions_and_branches_to_delete = multi_select_instruction_header();
-        let header = AnsiStyledText {
-            text: select_branches_header_text,
-            style: default_header_style.clone(),
-        };
-        instructions_and_branches_to_delete.push(smallvec![header]);
-        instructions_and_branches_to_delete
+        let mut lines = multi_select_instruction_header();
+        let header_line = ast(select_branches_header_text, default_header_style);
+        lines.push(smallvec![header_line]);
+        lines
     };
 
     if let Ok(branches) = get_branches() {
@@ -89,7 +80,7 @@ pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
             let num_of_branches = branches.len();
 
             let (confirm_branch_deletion_header, confirm_deletion_options) = {
-                let mut confirm_deletion_options: InlineVec<InlineString> =
+                let mut confirm_deletion_options: ItemsOwned =
                     smallvec![Exit.to_string().into()];
                 if num_of_branches == 1 {
                     let branch_name = &branches[0];
@@ -115,14 +106,11 @@ pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
             };
 
             let instructions_and_confirm_deletion_options = {
-                let mut instructions_and_confirm_deletion_header =
-                    single_select_instruction_header();
-                let header = AnsiStyledText {
-                    text: &confirm_branch_deletion_header,
-                    style: default_header_style,
-                };
-                instructions_and_confirm_deletion_header.push(smallvec![header]);
-                instructions_and_confirm_deletion_header
+                let mut lines = single_select_instruction_header();
+                let header_line =
+                    ast(&confirm_branch_deletion_header, default_header_style);
+                lines.push(smallvec![header_line]);
+                lines
             };
 
             let maybe_selected_delete_or_exit = choose(
@@ -150,8 +138,7 @@ pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
                                     // Add branches to deleted branches.
                                     try_run_command_result.maybe_deleted_branches =
                                         Some({
-                                            let mut it: InlineVec<InlineString> =
-                                                smallvec![];
+                                            let mut it: ItemsOwned = smallvec![];
                                             for branch in &branches {
                                                 it.push(branch.clone());
                                             }
@@ -201,8 +188,8 @@ mod try_delete_branch_user_choice {
         ExitProgram,
     }
 
-    impl From<InlineVec<InlineString>> for Selection {
-        fn from(selected: InlineVec<InlineString>) -> Selection {
+    impl From<ItemsOwned> for Selection {
+        fn from(selected: ItemsOwned) -> Selection {
             let selected_to_delete_one_branch =
                 selected[0] == YesDeleteBranch.to_string();
             let selected_to_delete_multiple_branches =
@@ -221,55 +208,51 @@ mod try_delete_branch_user_choice {
 }
 
 mod try_delete_branch_inner {
+    use r3bl_core::{fg_guards_red, fg_lizard_green, fg_slate_gray};
+
     use super::*;
 
     pub fn display_error_message(
-        branches: InlineVec<InlineString>,
+        branches: ItemsOwned,
         maybe_output: Option<std::process::Output>,
     ) {
-        let ferrari_red = GuardsRed.as_ansi_color();
         match maybe_output {
             Some(output) => {
                 if branches.len() == 1 {
                     let branch = &branches[0];
-                    AnsiStyledText {
-                        text: &FailedToDeleteBranch {
+                    fg_guards_red(
+                        &FailedToDeleteBranch {
                             branch_name: branch.to_string(),
                             error_message: String::from_utf8_lossy(&output.stderr).into(),
                         }
                         .to_string(),
-                        style: smallvec::smallvec![ASTStyle::Foreground(ferrari_red)],
-                    }
+                    )
                     .println();
                 } else {
                     let branches = branches.join(",\n ╴");
-                    AnsiStyledText {
-                        text: &FailedToDeleteBranches {
+                    fg_guards_red(
+                        &FailedToDeleteBranches {
                             branches,
                             error_message: String::from_utf8_lossy(&output.stderr)
                                 .to_string(),
                         }
                         .to_string(),
-                        style: smallvec::smallvec![ASTStyle::Foreground(ferrari_red)],
-                    }
+                    )
                     .println();
                 }
             }
             None => {
                 let branches = branches.join(",\n ╴");
-                AnsiStyledText {
-                    text: &FailedToRunCommandToDeleteBranches { branches }.to_string(),
-                    style: smallvec::smallvec![ASTStyle::Foreground(ferrari_red)],
-                }
+                fg_guards_red(
+                    &FailedToRunCommandToDeleteBranches { branches }.to_string(),
+                )
                 .println();
             }
         }
     }
 
     /// Create a [Command] to delete all the given branches. Does not execute the command.
-    pub fn create_git_command_to_delete_branches(
-        branches: &InlineVec<InlineString>,
-    ) -> Command {
+    pub fn create_git_command_to_delete_branches(branches: &ItemsOwned) -> Command {
         let mut command = Command::new("git");
         command.args(["branch", "-D"]);
         for branch in branches {
@@ -279,35 +262,21 @@ mod try_delete_branch_inner {
     }
 
     pub fn display_one_branch_deleted_success_message(branches: &[InlineString]) {
-        let lizard_green = LizardGreen.as_ansi_color();
         let branch_name = &branches[0].to_string();
-        let deleted_branch = AnsiStyledText {
-            text: branch_name,
-            style: smallvec::smallvec![ASTStyle::Foreground(lizard_green)],
-        };
-        let deleted = AnsiStyledText {
-            text: &Deleted.to_string(),
-            style: smallvec::smallvec![ASTStyle::Foreground(SlateGrey.as_ansi_color())],
-        };
-        println!(" ✅ {deleted_branch} {deleted}");
+        println!(
+            " ✅ {a} {b}",
+            a = fg_lizard_green(branch_name),
+            b = fg_slate_gray(&Deleted.to_string()),
+        );
     }
 
-    pub fn display_all_branches_deleted_success_messages(
-        branches: &InlineVec<InlineString>,
-    ) {
-        let lizard_green = LizardGreen.as_ansi_color();
+    pub fn display_all_branches_deleted_success_messages(branches: &ItemsOwned) {
         for branch in branches {
-            let deleted_branch = AnsiStyledText {
-                text: branch,
-                style: smallvec::smallvec![ASTStyle::Foreground(lizard_green)],
-            };
-            let deleted = AnsiStyledText {
-                text: &Deleted.to_string(),
-                style: smallvec::smallvec![ASTStyle::Foreground(
-                    SlateGrey.as_ansi_color()
-                )],
-            };
-            println!(" ✅ {deleted_branch} {deleted}");
+            println!(
+                " ✅ {a} {b}",
+                a = fg_lizard_green(branch),
+                b = fg_slate_gray(&Deleted.to_string()),
+            );
         }
     }
 }
@@ -337,7 +306,7 @@ pub fn try_execute_git_command_to_get_branches() -> CommonResult<Vec<String>> {
 }
 
 // Get all the branches to check out to. prefix current branch with `(current)`.
-pub fn get_branches() -> CommonResult<InlineVec<InlineString>> {
+pub fn get_branches() -> CommonResult<ItemsOwned> {
     let branches = try_execute_git_command_to_get_branches()?;
     // If branch name is current_branch, then append `(current)` in front of it.
     // Create command.

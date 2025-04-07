@@ -232,8 +232,8 @@ pub fn get_metadata_title_value_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#444444"), // Very dark gray.
                 ColorSupport::Ansi256 => tui_color!(ansi 238), // Grey27.
-                ColorSupport::Grayscale => tui_color!(dark_grey),
-                _ => tui_color!(dark_grey),
+                ColorSupport::Grayscale => tui_color!(dark_gray),
+                _ => tui_color!(dark_gray),
             }
         }
     )
@@ -271,8 +271,8 @@ pub fn get_metadata_tags_values_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#303030"), // Very dark gray.
                 ColorSupport::Ansi256 => tui_color!(ansi 236), // Grey19.
-                ColorSupport::Grayscale => tui_color!(dark_grey),
-                _ => tui_color!(dark_grey)
+                ColorSupport::Grayscale => tui_color!(dark_gray),
+                _ => tui_color!(dark_gray)
             }
         }
     )

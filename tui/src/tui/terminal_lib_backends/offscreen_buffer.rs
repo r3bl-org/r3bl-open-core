@@ -20,10 +20,10 @@ use std::{fmt::{self, Debug, Write},
 use diff_chunks::PixelCharDiffChunks;
 use r3bl_core::{col,
                 dim_underline,
+                fg_green,
+                fg_magenta,
                 get_mem_size,
-                green,
                 inline_string,
-                magenta,
                 ok,
                 row,
                 tiny_inline_string,
@@ -135,7 +135,7 @@ mod offscreen_buffer_impl {
                     writeln!(
                         f,
                         "{}",
-                        green(&inline_string!("row_index: {}", row_index))
+                        fg_green(&inline_string!("row_index: {}", row_index))
                     )?;
 
                     // Print the row itself in the "next" line.
@@ -500,7 +500,7 @@ mod pixel_char_impl {
                         }
                     };
                     let trunc_output = truncate(&acc_tmp, WIDTH);
-                    write!(f, " {} {trunc_output: ^WIDTH$}", magenta("P"))?;
+                    write!(f, " {} {trunc_output: ^WIDTH$}", fg_magenta("P"))?;
                 }
             };
 

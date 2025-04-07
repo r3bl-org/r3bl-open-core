@@ -20,8 +20,8 @@
 //! API.
 use r3bl_core::{caret_scr_adj,
                 col,
+                fg_green,
                 glyphs,
-                green,
                 height,
                 inline_string,
                 new_style,
@@ -313,7 +313,7 @@ pub fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps)
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "🍉🍉🍉 selection_str_slice",
-                    selection = %green(&inline_string!("{}", selection_holder)),
+                    selection = %fg_green(&inline_string!("{}", selection_holder)),
                     range = ?sel_range,
                     scroll_offset = ?scroll_offset,
                 };
@@ -427,7 +427,7 @@ pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
                 content_cursor_pos,
             ),
             RenderOp::ApplyColors(
-                Some(new_style!(dim color_fg: {tui_color!(dark_grey)}))
+                Some(new_style!(dim color_fg: {tui_color!(dark_gray)}))
             ),
             RenderOp::PaintTextWithAttributes("🧭 Ctrl+S: Save your work. Ctrl+Q: Exit the app.".into(), None),
             RenderOp::ResetColor
