@@ -146,20 +146,18 @@ async fn main() -> miette::Result<()> {
     let maybe_readline_async = ReadlineAsync::try_new(Some(prompt))?;
 
     // If the terminal is not fully interactive, then return early.
-    let Some(mut readline_async) = maybe_readline_async else {
+    let Some(mut rl_async) = maybe_readline_async else {
         return Ok(());
     };
 
     // Pre-populate the readline's history with some entries.
     for command in Command::iter() {
-        readline_async
-            .readline
-            .add_history_entry(command.to_string());
+        rl_async.readline.add_history_entry(command.to_string());
     }
 
     // Initialize tracing w/ the "async stdout" (SharedWriter), and file writer.
     try_initialize_logging_global(DisplayPreference::SharedWriter(
-        readline_async.clone_shared_writer(),
+        rl_async.clone_shared_writer(),
     ))?;
 
     // Start tasks.
@@ -167,34 +165,35 @@ async fn main() -> miette::Result<()> {
     let mut interval_1_task = interval(state.task_1_state.interval_delay);
     let mut interval_2_task = interval(state.task_2_state.interval_delay);
 
-    ta_println!(readline_async, "{}", get_info_message());
+    ta_println!(rl_async, "{}", get_info_message());
 
     loop {
         select! {
             _ = interval_1_task.tick() => {
-                task_1::tick(&mut state, &mut readline_async.clone_shared_writer())?;
+                task_1::tick(&mut state, &mut rl_async.clone_shared_writer())?;
             },
             _ = interval_2_task.tick() => {
-                task_2::tick(&mut state, &mut readline_async.clone_shared_writer())?;
+                task_2::tick(&mut state, &mut rl_async.clone_shared_writer())?;
             },
-            result_readline_event = readline_async.read_line() => {
+            result_readline_event = rl_async.read_line() => {
                 match result_readline_event {
                     Ok(readline_event) => {
                         match readline_event {
                             // User input event.
                             ReadlineEvent::Line(user_input) => {
                                 let mut_state = &mut state;
-                                let shared_writer = &mut readline_async.clone_shared_writer();
-                                let readline = &mut readline_async.readline;
+                                let shared_writer = &mut rl_async.clone_shared_writer();
+                                let readline = &mut rl_async.readline;
                                 let control_flow = process_input_event::process(
                                     user_input, mut_state, shared_writer, readline)?;
                                 if let ControlFlow::Break(_) = control_flow {
+                                    rl_async.exit(Some("❪◕‿◕❫ Goodbye")).await.into_diagnostic()?;
                                     break;
                                 }
                             }
                             // Resize event.
                             ReadlineEvent::Resized => {
-                                let shared_writer = &mut readline_async.clone_shared_writer();
+                                let shared_writer = &mut rl_async.clone_shared_writer();
                                 writeln!(
                                     shared_writer,
                                     "{}",
@@ -203,6 +202,7 @@ async fn main() -> miette::Result<()> {
                             }
                             // Ctrl+D, Ctrl+C.
                             ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
+                                rl_async.exit(Some("❪◕‿◕❫ Goodbye")).await.into_diagnostic()?;
                                 break;
                             }
                         }
@@ -210,8 +210,8 @@ async fn main() -> miette::Result<()> {
                     Err(err) => {
                         let msg_1 = format!("Received err: {}", fg_red(&format!("{err:?}")));
                         let msg_2 = format!("{}", fg_red("Exiting..."));
-                        ta_println!(readline_async, "{msg_1}");
-                        ta_println!(readline_async, "{msg_2}");
+                        ta_println!(rl_async, "{msg_1}");
+                        ta_println!(rl_async, "{msg_2}");
                         break;
                     },
                 }

@@ -90,6 +90,7 @@ pub enum LineStateControlSignal {
     Resume,
     SpinnerActive(tokio::sync::broadcast::Sender<()>),
     SpinnerInactive,
+    ExitReadlineLoop,
 }
 
 impl SharedWriter {
