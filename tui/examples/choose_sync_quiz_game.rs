@@ -23,9 +23,8 @@ use r3bl_core::{self,
                 ASTColor,
                 ASTStyle,
                 AnsiStyledText,
-                InlineString,
-                InlineVec,
-                ItemsBorrowed};
+                ItemsBorrowed,
+                ItemsOwned};
 use r3bl_tui::terminal_async::{choose, HowToChoose, StyleSheet};
 use serde::{Deserialize, Serialize};
 
@@ -157,10 +156,7 @@ impl Display for Answer {
     }
 }
 
-fn check_answer(
-    guess: &QuestionData,
-    maybe_user_input: &Option<InlineVec<InlineString>>,
-) -> Answer {
+fn check_answer(guess: &QuestionData, maybe_user_input: &Option<ItemsOwned>) -> Answer {
     // If the maybe_user_input has 1 item then proceed. Otherwise return incorrect.
     match maybe_user_input {
         Some(user_input) => {
@@ -246,9 +242,9 @@ fn display_footer(
 }
 
 fn check_user_input_and_display_result(
-    input: &InlineVec<InlineString>,
+    input: &ItemsOwned,
     question_data: &QuestionData,
-    user_input: &Option<InlineVec<InlineString>>,
+    user_input: &Option<ItemsOwned>,
     correct_answer_color: ASTColor,
     incorrect_answer_color: ASTColor,
     score: &mut i32,

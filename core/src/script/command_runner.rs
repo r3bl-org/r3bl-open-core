@@ -134,16 +134,16 @@ impl Run for Command {
 #[macro_export]
 macro_rules! bail_command_ran_and_failed {
         ($command:expr, $status:expr, $stderr:expr) => {
-            use $crate::{lizard_green, frozen_blue, magenta};
+            use $crate::{fg_lizard_green, fg_frozen_blue, fg_magenta};
             miette::bail!(
                 "{name} failed\n{cmd_label}: '{cmd:?}'\n{status_label}: '{status}'\n{stderr_label}: '{stderr}'",
-                cmd_label = lizard_green("[command]"),
-                status_label = lizard_green("[status]"),
-                stderr_label = lizard_green("[stderr]"),
-                name = frozen_blue(stringify!($command)),
+                cmd_label = fg_lizard_green("[command]"),
+                status_label = fg_lizard_green("[status]"),
+                stderr_label = fg_lizard_green("[stderr]"),
+                name = fg_frozen_blue(stringify!($command)),
                 cmd = $command,
-                status = magenta(&format!("{:?}", $status)),
-                stderr = magenta(&String::from_utf8_lossy(&$stderr)),
+                status = fg_magenta(&format!("{:?}", $status)),
+                stderr = fg_magenta(&String::from_utf8_lossy(&$stderr)),
             );
         };
     }

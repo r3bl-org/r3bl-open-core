@@ -18,8 +18,8 @@
 use clap::ValueEnum;
 use miette::IntoDiagnostic as _;
 use r3bl_core::{ch,
+                fg_green,
                 get_size,
-                green,
                 inline_string,
                 usize,
                 Height,
@@ -257,8 +257,8 @@ fn keypress_handler(state: &mut State<'_>, ie: InputEvent) -> EventLoopResult {
                     message = "🍎🍎🍎 keypress_handler() resize",
                     details = %inline_string!(
                         "New size width:{w} x height:{h}",
-                        w = green(&inline_string!("{:?}", size.col_width)),
-                        h = green(&inline_string!("{:?}", size.row_height)),
+                        w = fg_green(&inline_string!("{:?}", size.col_width)),
+                        h = fg_green(&inline_string!("{:?}", size.row_height)),
                     )
                 };
             });

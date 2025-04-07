@@ -20,7 +20,7 @@ use nom::{branch::alt,
           combinator::{map, recognize},
           multi::many0,
           IResult};
-use r3bl_core::{blue, red};
+use r3bl_core::{fg_blue, fg_red};
 
 use super::specialized_parser_delim_matchers;
 use crate::{md_parser::constants::{BACK_TICK,
@@ -62,7 +62,7 @@ pub fn parse_fragment_starts_with_backtick_err_on_new_line(
         DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                 "\n{} specialized parser error out with backtick: \ninput: {:?}, delim: {:?}",
-                red("⬢⬢"),
+                fg_red("⬢⬢"),
                 input,
                 BACK_TICK
             );
@@ -71,7 +71,11 @@ pub fn parse_fragment_starts_with_backtick_err_on_new_line(
     let (_, output) = it?;
     if output.len() > 2 {
         DEBUG_MD_PARSER_STDOUT.then(|| {
-            println!("{} more than 2 backticks in input:{:?}", red("⬢⬢"), input);
+            println!(
+                "{} more than 2 backticks in input:{:?}",
+                fg_red("⬢⬢"),
+                input
+            );
         });
         return Err(nom::Err::Error(nom::error::Error {
             input: output,
@@ -95,7 +99,7 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line(
         DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                     "\n{} specialized parser error out with image: \ninput: {:?}, delim: {:?}",
-                    red("⬢⬢"),
+                    fg_red("⬢⬢"),
                     input,
                     LEFT_IMAGE
                 );
@@ -113,7 +117,7 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line(
         DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                     "\n{} specialized parser error out with image: \ninput: {:?}, delim: {:?}",
-                    red("⬢⬢"),
+                    fg_red("⬢⬢"),
                     rem,
                     LEFT_PARENTHESIS
                 );
@@ -129,9 +133,9 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line(
         println!(
             "{} specialized parser for image: {:?}",
             if it.is_err() {
-                red("⬢⬢")
+                fg_red("⬢⬢")
             } else {
-                blue("▲▲")
+                fg_blue("▲▲")
             },
             it
         );
@@ -149,7 +153,7 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line(
         DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                 "\n{} specialized parser error out with link: \ninput: {:?}, delim: {:?}",
-                red("⬢⬢"),
+                fg_red("⬢⬢"),
                 input,
                 LEFT_BRACKET
             );
@@ -167,7 +171,7 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line(
         DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                 "\n{} specialized parser error out with link: \ninput: {:?}, delim: {:?}",
-                red("⬢⬢"),
+                fg_red("⬢⬢"),
                 rem,
                 LEFT_PARENTHESIS
             );
@@ -183,9 +187,9 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line(
         println!(
             "{} specialized parser for link: {:?}",
             if it.is_err() {
-                red("⬢⬢")
+                fg_red("⬢⬢")
             } else {
-                blue("▲▲")
+                fg_blue("▲▲")
             },
             it
         );
@@ -204,9 +208,9 @@ pub fn parse_fragment_starts_with_checkbox_into_str(input: &str) -> IResult<&str
         println!(
             "{} specialized parser for checkbox: {:?}",
             if it.is_err() {
-                red("⬢⬢")
+                fg_red("⬢⬢")
             } else {
-                blue("▲▲")
+                fg_blue("▲▲")
             },
             it
         );
@@ -227,9 +231,9 @@ pub fn parse_fragment_starts_with_checkbox_checkbox_into_bool(
         println!(
             "{} specialized parser for checkbox: {:?}",
             if it.is_err() {
-                red("⬢⬢")
+                fg_red("⬢⬢")
             } else {
-                blue("▲▲")
+                fg_blue("▲▲")
             },
             it
         );

@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{green, inline_string, Size};
+use r3bl_core::{fg_green, inline_string, Size};
 
 use crate::{clipboard_support::ClipboardService,
             editor_buffer::EditorBuffer,
@@ -90,7 +90,7 @@ impl TryFrom<InputEvent> for EditorEvent {
             // % is Display, ? is Debug.
             tracing::debug! {
                 message = "🐥🐥🐥  EditorEvent::try_from",
-                details = %green(&inline_string!("{:?}", input_event))
+                details = %fg_green(&inline_string!("{:?}", input_event))
             };
         });
 

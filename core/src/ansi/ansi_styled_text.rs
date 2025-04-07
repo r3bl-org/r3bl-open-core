@@ -21,41 +21,50 @@ use smallstr::SmallString;
 use smallvec::{SmallVec, smallvec};
 use strum_macros::EnumCount;
 
-use crate::{ASTColor, DEFAULT_STRING_STORAGE_SIZE, RgbValue, SgrCode, TuiStyle};
+use crate::{ASTColor, DEFAULT_STRING_STORAGE_SIZE, SgrCode, TuiStyle, tui_color};
 
 /// The main struct that we have to consider is `AnsiStyledText`. It has two fields:
 /// - `text` - the text to print.
 /// - `style` - a list of [ASTStyle] to apply to the text. This is owned in a stack
 ///   allocated buffer, which can spill to the heap if it gets larger than
 ///   `sizing::MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE`.
-/// - Once created, either directly or using constructor functions like [super::red()],
-///   you can then use [Self::bg_dark_grey()] to add a background color to the text.
-/// - If you want even more flexibility you can use constructor function
-///   [super::fg_rgb_color()] and [Self::bg_rgb_color()] to create a styled text with a specific RGB
-///   color.
+/// - Once created, either directly or using constructor functions like [fg_red()], you
+///   can then use [Self::bg_dark_gray()] to add a background color to the text.
+/// - If you want even more flexibility you can use constructor function [fg_color()] and
+///   [Self::bg_color()] to create a styled text with a specific RGB color.
 ///
 /// # Example usage:
 ///
 /// ```rust
-/// use r3bl_core::{
-///     TuiStyle,
-///     red, tui_color, dim, AnsiStyledText, fg_rgb_color, ASTStyle, ASTColor
+/// # use r3bl_core::{
+/// #     TuiStyle, tui_color,
+/// #     ast, fg_red, dim, AnsiStyledText, fg_color, ASTStyle, ASTColor,
+/// # };
+///
+/// // Use TuiStyle and ast() to create a styled text.
+/// let tui_style = TuiStyle {
+///    bold: true,
+///    dim: false,
+///    ..Default::default()
 /// };
+/// let styled_text = ast("Hello",tui_style);
+/// println!("{styled_text}");
+/// styled_text.println();
 ///
 /// // Using the constructor functions.
-/// let red_text = red("This is red text.");
-/// let red_text_on_dark_grey = red_text.bg_dark_grey();
-/// println!("{red_text_on_dark_grey}");
-/// red_text_on_dark_grey.println();
+/// let red_text = fg_red("This is red text.");
+/// let red_text_on_dark_gray = red_text.bg_dark_gray();
+/// println!("{red_text_on_dark_gray}");
+/// red_text_on_dark_gray.println();
 ///
 /// // Combine constructor functions.
-/// let dim_red_text_on_dark_grey = dim("text").fg_rgb_color((255, 0, 0)).bg_rgb_color((50, 50, 50));
-/// println!("{dim_red_text_on_dark_grey}");
-/// dim_red_text_on_dark_grey.println();
+/// let dim_red_text_on_dark_gray = dim("text").fg_color(tui_color!(255, 0, 0)).bg_color(tui_color!(50, 50, 50));
+/// println!("{dim_red_text_on_dark_gray}");
+/// dim_red_text_on_dark_gray.println();
 ///
 /// // Flexible construction using RGB color codes.
-/// let blue_text = fg_rgb_color(tui_color!(blue), "This is blue text.");
-/// let blue_text_on_white = blue_text.bg_rgb_color(tui_color!(white));
+/// let blue_text = fg_color(tui_color!(blue), "This is blue text.");
+/// let blue_text_on_white = blue_text.bg_color(tui_color!(white));
 /// println!("{blue_text_on_white}");
 /// blue_text_on_white.println();
 ///
@@ -71,19 +80,6 @@ use crate::{ASTColor, DEFAULT_STRING_STORAGE_SIZE, RgbValue, SgrCode, TuiStyle};
 ///     ],
 /// }
 /// .println();
-///
-/// // Use TuiStyle to create a styled text.
-/// let tui_style = TuiStyle {
-///    bold: true,
-///    dim: false,
-///    ..Default::default()
-/// };
-/// let styled_text = AnsiStyledText {
-///    text: "Hello",
-///    style: tui_style.into(),
-/// };
-/// println!("{styled_text}");
-/// styled_text.println();
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AnsiStyledText<'a> {
@@ -91,6 +87,18 @@ pub struct AnsiStyledText<'a> {
     /// You can supply this directly, or use [crate::new_style!] to create a
     /// [crate::TuiStyle] and convert it to this type using `.into()`.
     pub style: sizing::InlineVecASTStyles,
+}
+
+/// Easy to use constructor function, instead of creating a new [AnsiStyledText] struct
+/// directly.
+pub fn ast<'a>(
+    text: &'a str,
+    arg_style: impl Into<sizing::InlineVecASTStyles>,
+) -> AnsiStyledText<'a> {
+    AnsiStyledText {
+        text,
+        style: arg_style.into(),
+    }
 }
 
 pub(in crate::ansi) mod sizing {
@@ -123,49 +131,31 @@ mod ansi_styled_text_impl {
     }
 }
 
-pub fn fg_rgb_color(arg_color: impl Into<RgbValue>, text: &str) -> AnsiStyledText<'_> {
-    let rgb_color = arg_color.into();
-    let ast_color = ASTColor::from(rgb_color);
+pub fn fg_color(arg_color: impl Into<ASTColor>, text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(ast_color)),
+        style: smallvec!(ASTStyle::Foreground(arg_color.into())),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn green(text: &str) -> AnsiStyledText<'_> {
+pub fn fg_dark_gray(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(34.into()))),
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(236.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn red(text: &str) -> AnsiStyledText<'_> {
+pub fn fg_black(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(196.into()))),
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(0.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn white(text: &str) -> AnsiStyledText<'_> {
-    AnsiStyledText {
-        text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(231.into()))),
-    }
-}
-
-/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn cyan(text: &str) -> AnsiStyledText<'_> {
-    AnsiStyledText {
-        text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(51.into()))),
-    }
-}
-
-/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn yellow(text: &str) -> AnsiStyledText<'_> {
+pub fn fg_yellow(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
         style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(226.into()))),
@@ -173,60 +163,101 @@ pub fn yellow(text: &str) -> AnsiStyledText<'_> {
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn magenta(text: &str) -> AnsiStyledText<'_> {
+pub fn fg_green(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(34.into()))),
+    }
+}
+
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn fg_blue(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(27.into()))),
+    }
+}
+
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn fg_red(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(196.into()))),
+    }
+}
+
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn fg_white(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(231.into()))),
+    }
+}
+
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn fg_cyan(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(51.into()))),
+    }
+}
+
+/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+pub fn fg_magenta(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
         style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(201.into()))),
     }
 }
 
-pub fn lizard_green(text: &str) -> AnsiStyledText<'_> {
+pub fn fg_silver_metallic(text: &str) -> AnsiStyledText<'_> {
+    AnsiStyledText {
+        text,
+        style: smallvec!(ASTStyle::Foreground(
+            crate::tui_color!(silver_metallic).into()
+        )),
+    }
+}
+
+pub fn fg_lizard_green(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
         style: smallvec!(ASTStyle::Foreground(crate::tui_color!(lizard_green).into())),
     }
 }
 
-pub fn pink(text: &str) -> AnsiStyledText<'_> {
+pub fn fg_pink(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
         style: smallvec!(ASTStyle::Foreground(crate::tui_color!(pink).into())),
     }
 }
 
-pub fn dark_pink(text: &str) -> AnsiStyledText<'_> {
+pub fn fg_dark_pink(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
         style: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_pink).into())),
     }
 }
 
-pub fn frozen_blue(text: &str) -> AnsiStyledText<'_> {
+pub fn fg_frozen_blue(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
         style: smallvec!(ASTStyle::Foreground(crate::tui_color!(frozen_blue).into())),
     }
 }
 
-pub fn guards_red(text: &str) -> AnsiStyledText<'_> {
+pub fn fg_guards_red(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
         style: smallvec!(ASTStyle::Foreground(crate::tui_color!(guards_red).into())),
     }
 }
 
-pub fn slate_gray(text: &str) -> AnsiStyledText<'_> {
+pub fn fg_slate_gray(text: &str) -> AnsiStyledText<'_> {
     AnsiStyledText {
         text,
-        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(slate_grey).into())),
-    }
-}
-
-/// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn blue(text: &str) -> AnsiStyledText<'_> {
-    AnsiStyledText {
-        text,
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(27.into()))),
+        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(slate_gray).into())),
     }
 }
 
@@ -273,23 +304,67 @@ pub fn dim_underline(text: &str) -> AnsiStyledText<'_> {
 }
 
 impl AnsiStyledText<'_> {
-    pub fn bg_dark_grey(mut self) -> Self {
+    pub fn dim(mut self) -> Self {
+        self.style.push(ASTStyle::Dim);
+        self
+    }
+
+    pub fn bold(mut self) -> Self {
+        self.style.push(ASTStyle::Bold);
+        self
+    }
+
+    pub fn bg_color(mut self, arg_color: impl Into<ASTColor>) -> Self {
+        let color: ASTColor = arg_color.into();
+        self.style.push(ASTStyle::Background(color));
+        self
+    }
+
+    pub fn fg_color(mut self, arg_color: impl Into<ASTColor>) -> Self {
+        let color: ASTColor = arg_color.into();
+        self.style.push(ASTStyle::Foreground(color));
+        self
+    }
+
+    pub fn bg_cyan(mut self) -> Self {
+        self.style
+            .push(ASTStyle::Background(ASTColor::Ansi(51.into())));
+        self
+    }
+
+    pub fn bg_yellow(mut self) -> Self {
+        self.style
+            .push(ASTStyle::Background(ASTColor::Ansi(226.into())));
+        self
+    }
+
+    pub fn bg_green(mut self) -> Self {
+        self.style
+            .push(ASTStyle::Background(ASTColor::Ansi(34.into())));
+        self
+    }
+
+    pub fn bg_slate_gray(mut self) -> Self {
+        self.style
+            .push(ASTStyle::Background(crate::tui_color!(slate_gray).into()));
+        self
+    }
+
+    pub fn bg_dark_gray(mut self) -> Self {
         self.style
             .push(ASTStyle::Background(ASTColor::Ansi(236.into())));
         self
     }
 
-    pub fn bg_rgb_color(mut self, arg_color: impl Into<RgbValue>) -> Self {
-        let color = arg_color.into();
-        let ast_color = ASTColor::from(color);
-        self.style.push(ASTStyle::Background(ast_color));
+    pub fn bg_night_blue(mut self) -> Self {
+        self.style
+            .push(ASTStyle::Background(tui_color!(night_blue).into()));
         self
     }
 
-    pub fn fg_rgb_color(mut self, arg_color: impl Into<RgbValue>) -> Self {
-        let color = arg_color.into();
-        let ast_color = ASTColor::from(color);
-        self.style.push(ASTStyle::Foreground(ast_color));
+    pub fn bg_moonlight_blue(mut self) -> Self {
+        self.style
+            .push(ASTStyle::Background(tui_color!(moonlight_blue).into()));
         self
     }
 }
@@ -472,7 +547,8 @@ mod tests {
                 ColorSupport,
                 TuiStyle,
                 ansi::sizing::InlineVecASTStyles,
-                global_color_support};
+                global_color_support,
+                tui_color};
 
     #[serial]
     #[test]
@@ -570,7 +646,7 @@ mod tests {
             r#"AnsiStyledText { text: "Hello", style: [Bold, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 }))] }"#
         );
 
-        let eg_2 = eg_1.bg_dark_grey();
+        let eg_2 = eg_1.bg_dark_gray();
         println!("{:?}", eg_2);
         println!("{}", eg_2);
         assert_eq!(
@@ -582,7 +658,9 @@ mod tests {
     #[serial]
     #[test]
     fn test_fg_bg_combo() {
-        let eg_1 = dim("hello").fg_rgb_color((0, 0, 0)).bg_rgb_color((1, 1, 1));
+        let eg_1 = dim("hello")
+            .fg_color(tui_color!(0, 0, 0))
+            .bg_color(tui_color!(1, 1, 1));
         println!("{:?}", eg_1);
         println!("{}", eg_1);
         assert_eq!(

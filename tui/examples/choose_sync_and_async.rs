@@ -17,10 +17,9 @@
 
 use std::io::Write as _;
 
-use r3bl_core::{fg_rgb_color,
+use r3bl_core::{fg_slate_gray,
                 ok,
                 try_initialize_logging_global,
-                tui_color,
                 InputDevice,
                 ItemsBorrowed,
                 OutputDevice};
@@ -70,9 +69,7 @@ async fn with_readline_async() -> miette::Result<()> {
     // If the terminal is not fully interactive, then return early.
     let Some(mut readline_async) = ReadlineAsync::try_new({
         // Generate prompt.
-        let fg = tui_color!(slate_grey);
-        let bg = tui_color!(moonlight_blue);
-        let prompt_seg_1 = fg_rgb_color(fg, "╭>╮").bg_rgb_color(bg);
+        let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";
         Some(format!("{}{}", prompt_seg_1, prompt_seg_2))
     })?

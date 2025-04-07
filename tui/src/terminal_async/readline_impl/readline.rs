@@ -698,8 +698,7 @@ pub mod readline_test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use r3bl_core::{is_fully_uninteractive_terminal,
-                    return_if_not_interactive_terminal,
+    use r3bl_core::{return_if_not_interactive_terminal,
                     test_fixtures::{output_device_ext::OutputDeviceExt as _,
                                     InputDeviceExt as _},
                     StdMutex,

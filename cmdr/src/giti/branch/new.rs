@@ -17,23 +17,23 @@
 
 use std::process::Command;
 
-use r3bl_core::{ASTStyle, AnsiStyledText, CommonResult};
+use r3bl_core::{CommonResult,
+                fg_frozen_blue,
+                fg_guards_red,
+                fg_lizard_green,
+                fg_silver_metallic,
+                fg_slate_gray};
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 
-use crate::{color_constants::DefaultColors::{FrozenBlue,
-                                             GuardsRed,
-                                             LizardGreen,
-                                             SilverMetallic,
-                                             SlateGrey},
-            giti::{self,
-                   CommandSuccessfulResponse,
-                   UIStrings::{BranchAlreadyExists,
-                               CreatedAndSwitchedToNewBranch,
-                               EnterBranchNameYouWantToCreate,
-                               FailedToCreateAndSwitchToBranch,
-                               NoNewBranchWasCreated},
-                   clap_config::BranchSubcommand,
-                   report_unknown_error_and_propagate}};
+use crate::giti::{self,
+                  CommandSuccessfulResponse,
+                  UIStrings::{BranchAlreadyExists,
+                              CreatedAndSwitchedToNewBranch,
+                              EnterBranchNameYouWantToCreate,
+                              FailedToCreateAndSwitchToBranch,
+                              NoNewBranchWasCreated},
+                  clap_config::BranchSubcommand,
+                  report_unknown_error_and_propagate};
 
 pub fn try_make_new_branch(
     maybe_branch_name: Option<String>,
@@ -52,15 +52,7 @@ pub fn try_make_new_branch(
                 .map(|branch| branch.trim_start_matches("(current) ").to_string())
                 .collect();
             if branches_trimmed.contains(&branch_name) {
-                let branch_already_exists =
-                    BranchAlreadyExists { branch_name }.to_string();
-                AnsiStyledText {
-                    text: &branch_already_exists,
-                    style: smallvec::smallvec![ASTStyle::Foreground(
-                        SlateGrey.as_ansi_color()
-                    )],
-                }
-                .println();
+                fg_slate_gray(&BranchAlreadyExists { branch_name }.to_string()).println();
                 return Ok(response);
             }
 
@@ -88,14 +80,10 @@ pub fn try_make_new_branch(
             }
         }
         None => {
+            // 00: replace use of Reedline with readline_async
             let mut line_editor = Reedline::create();
-            let prompt_text = AnsiStyledText {
-                text: &EnterBranchNameYouWantToCreate.to_string(),
-                style: smallvec::smallvec![ASTStyle::Foreground(
-                    FrozenBlue.as_ansi_color()
-                )],
-            }
-            .to_string();
+            let prompt_text =
+                fg_frozen_blue(&EnterBranchNameYouWantToCreate.to_string()).to_string();
             let prompt = DefaultPrompt::new(
                 DefaultPromptSegment::Basic(prompt_text),
                 DefaultPromptSegment::Empty,
@@ -129,13 +117,7 @@ pub fn try_make_new_branch(
                     }
                 }
                 Ok(Signal::CtrlC) => {
-                    AnsiStyledText {
-                        text: &NoNewBranchWasCreated.to_string(),
-                        style: smallvec::smallvec![ASTStyle::Foreground(
-                            SilverMetallic.as_ansi_color()
-                        )],
-                    }
-                    .println();
+                    fg_silver_metallic(&NoNewBranchWasCreated.to_string()).println();
                 }
                 _ => {}
             }
@@ -146,26 +128,21 @@ pub fn try_make_new_branch(
 }
 
 fn display_failed_to_create_new_branch(branch_name: &str) {
-    AnsiStyledText {
-        text: &FailedToCreateAndSwitchToBranch {
+    fg_guards_red(
+        &FailedToCreateAndSwitchToBranch {
             branch_name: branch_name.to_string(),
         }
         .to_string(),
-        style: smallvec::smallvec![ASTStyle::Foreground(GuardsRed.as_ansi_color())],
-    }
+    )
     .println();
 }
 
 fn display_successful_new_branch_creation(branch_name: &str) {
-    let created_and_switched_to_new_branch = AnsiStyledText {
-        text: &CreatedAndSwitchedToNewBranch.to_string(),
-        style: smallvec::smallvec![ASTStyle::Foreground(SlateGrey.as_ansi_color())],
-    };
-    let branch_name = AnsiStyledText {
-        text: &format!("✅ {branch_name}"),
-        style: smallvec::smallvec![ASTStyle::Foreground(LizardGreen.as_ansi_color())],
-    };
-    println!("{created_and_switched_to_new_branch}{branch_name}");
+    println!(
+        "{a}{b}",
+        a = fg_slate_gray(&CreatedAndSwitchedToNewBranch.to_string()),
+        b = fg_lizard_green(&format!("✅ {branch_name}"))
+    );
 }
 
 fn create_git_command_to_create_and_switch_to_branch(branch_name: &str) -> Command {

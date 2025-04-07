@@ -20,7 +20,6 @@
 
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
-                color_constants::DefaultColors::{FrozenBlue, GuardsRed, MoonlightBlue},
                 giti::{BranchSubcommand,
                        CLIArg,
                        CLICommand,
@@ -33,11 +32,13 @@ use r3bl_cmdr::{AnalyticsAction,
                        try_make_new_branch},
                 report_analytics,
                 upgrade_check};
-use r3bl_core::{ASTStyle,
-                AnsiStyledText,
-                CommonResult,
+use r3bl_core::{CommonResult,
+                ast,
+                fg_guards_red,
                 log_support::try_initialize_logging_global,
-                throws};
+                new_style,
+                throws,
+                tui_color};
 use r3bl_tui::terminal_async::{HowToChoose, StyleSheet, choose};
 use smallvec::smallvec;
 
@@ -111,13 +112,10 @@ pub fn launch_giti(cli_arg: CLIArg) {
                 error = ?error
             );
 
-            AnsiStyledText {
-                text: &format!(
-                    " Could not run giti due to the following problem.\n{:#?}",
-                    error
-                ),
-                style: smallvec![ASTStyle::Foreground(GuardsRed.as_ansi_color())],
-            }
+            fg_guards_red(&format!(
+                " Could not run giti due to the following problem.\n{:#?}",
+                error
+            ))
             .println();
         }
     }
@@ -151,19 +149,15 @@ fn user_typed_giti_branch() -> CommonResult<CommandSuccessfulResponse> {
         command_to_run_with_each_selection: None,
         maybe_branch_name: None,
     });
-    let default_header_style = smallvec![
-        ASTStyle::Foreground(FrozenBlue.as_ansi_color()),
-        ASTStyle::Background(MoonlightBlue.as_ansi_color()),
-    ];
+
+    let default_header_style = new_style!(
+        color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
+    );
     let instructions_and_select_branch_subcommand = {
-        let mut instructions_and_select_branch_subcommand =
-            single_select_instruction_header();
-        let header = AnsiStyledText {
-            text: "Please select a branch subcommand",
-            style: default_header_style,
-        };
-        instructions_and_select_branch_subcommand.push(smallvec![header]);
-        instructions_and_select_branch_subcommand
+        let mut lines = single_select_instruction_header();
+        let header_line = ast("Please select a branch subcommand", default_header_style);
+        lines.push(smallvec![header_line]);
+        lines
     };
     let maybe_selected = choose(
         instructions_and_select_branch_subcommand,

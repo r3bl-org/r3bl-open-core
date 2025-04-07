@@ -52,7 +52,7 @@ use crate::{AnsiStyledText,
             OrderedMap,
             RgbValue,
             TuiColor,
-            fg_rgb_color,
+            fg_color,
             get_terminal_width,
             glyphs,
             inline_string,
@@ -76,7 +76,7 @@ pub fn build_spacer(max_display_width: ColWidth) -> InlineString {
     );
 
     // Format spacer.
-    fg_rgb_color(tui_color!(dark_lizard_green), &acc_padding).to_small_str()
+    fg_color(tui_color!(dark_lizard_green), &acc_padding).to_small_str()
 }
 
 // Colors: <https://en.wikipedia.org/wiki/ANSI_escape_code>

@@ -366,13 +366,13 @@
 //!
 //! ```
 //! # use r3bl_tui::terminal_async::ReadlineAsync;
-//! # use r3bl_core::{magenta};
+//! # use r3bl_core::{fg_magenta, AnsiStyledText};
 //! # pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
 //!         let user = "naz";
-//!         let prompt_seg_1 = magenta("╭").bg_dark_grey().to_string();
-//!         let prompt_seg_2 = magenta(&format!("┤{user}├")).bg_dark_grey().to_string();
-//!         let prompt_seg_3 = magenta("╮").bg_dark_grey().to_string();
+//!         let prompt_seg_1 = fg_magenta("╭").bg_dark_gray().to_string();
+//!         let prompt_seg_2 = fg_magenta(&format!("┤{user}├")).bg_dark_gray().to_string();
+//!         let prompt_seg_3 = fg_magenta("╮").bg_dark_gray().to_string();
 //!         Some(format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3))
 //!     };
 //!     let readline_async = ReadlineAsync::try_new(prompt)?;

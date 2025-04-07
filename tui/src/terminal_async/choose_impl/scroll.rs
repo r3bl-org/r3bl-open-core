@@ -60,7 +60,7 @@
 //!    ╰─────────────────────╯ <- AtAbsoluteBottom
 //! ```
 
-use r3bl_core::{ch, green, inline_string, ChUnit};
+use r3bl_core::{ch, fg_green, inline_string, ChUnit};
 
 use crate::DEVELOPMENT_MODE;
 
@@ -98,11 +98,11 @@ pub fn locate_cursor_in_viewport(
             message = "locate_cursor_in_viewport()",
             details = %inline_string!(
                 "raw_caret_row_index: {a}, scroll_offset_row_index: {b}, abs_row_index: {c}, display_height: {d}, items_size: {e}",
-                a = green(&inline_string!("{raw_caret_row_index:?}")),
-                b = green(&inline_string!("{scroll_offset_row_index:?}")),
-                c = green(&inline_string!("{abs_row_index:?}")),
-                d = green(&inline_string!("{display_height:?}")),
-                e = green(&inline_string!("{items_size:?}")),
+                a = fg_green(&inline_string!("{raw_caret_row_index:?}")),
+                b = fg_green(&inline_string!("{scroll_offset_row_index:?}")),
+                c = fg_green(&inline_string!("{abs_row_index:?}")),
+                d = fg_green(&inline_string!("{display_height:?}")),
+                e = fg_green(&inline_string!("{items_size:?}")),
             )
         };
     });

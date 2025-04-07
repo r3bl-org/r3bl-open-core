@@ -39,7 +39,7 @@ use nom::{branch::alt,
           multi::many1,
           sequence::preceded,
           IResult};
-use r3bl_core::{blue, magenta, red};
+use r3bl_core::{fg_blue, fg_magenta, fg_red};
 
 use crate::{md_parser::constants::{BACK_TICK,
                                    LEFT_BRACKET,
@@ -83,7 +83,7 @@ use crate::{md_parser::constants::{BACK_TICK,
 /// See: [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()].
 pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str> {
     DEBUG_MD_PARSER_STDOUT.then(|| {
-        println!("\n{} plain parser, input: {:?}", magenta("██"), input);
+        println!("\n{} plain parser, input: {:?}", fg_magenta("██"), input);
     });
 
     if check_input_starts_with(input, &get_sp_char_set_2()).is_none() {
@@ -123,9 +123,9 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
             println!(
                 "{} normal case :: {:?}",
                 if it.is_err() {
-                    red("⬢⬢")
+                    fg_red("⬢⬢")
                 } else {
-                    blue("▲▲")
+                    fg_blue("▲▲")
                 },
                 it
             );
@@ -155,7 +155,7 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
             DEBUG_MD_PARSER_STDOUT.then(|| {
                 println!(
                     "{} edge case -> special case :: rem: {:?}, output: {:?}",
-                    blue("▲▲"),
+                    fg_blue("▲▲"),
                     rem,
                     output
                 );
@@ -173,9 +173,9 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
         println!(
             "{} edge case -> normal case :: {:?}",
             if it.is_err() {
-                red("⬢⬢")
+                fg_red("⬢⬢")
             } else {
-                blue("▲▲")
+                fg_blue("▲▲")
             },
             it
         );

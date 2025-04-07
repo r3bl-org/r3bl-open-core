@@ -43,7 +43,7 @@ macro_rules! tui_color {
         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(20, 244, 0))
     };
 
-    (slate_grey) => {
+    (slate_gray) => {
         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(94, 103, 111))
     };
 
@@ -79,8 +79,8 @@ macro_rules! tui_color {
         $crate::TuiColor::Basic($crate::ANSIBasicColor::Black)
     };
 
-    (dark_grey) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkGrey)
+    (dark_gray) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::DarkGray)
     };
 
     (red) => {
@@ -135,8 +135,8 @@ macro_rules! tui_color {
         $crate::TuiColor::Basic($crate::ANSIBasicColor::White)
     };
 
-    (grey) => {
-        $crate::TuiColor::Basic($crate::ANSIBasicColor::Grey)
+    (gray) => {
+        $crate::TuiColor::Basic($crate::ANSIBasicColor::Gray)
     };
 
     (
@@ -201,11 +201,11 @@ pub enum ANSIBasicColor {
     /// White color.
     White,
 
-    /// Grey color.
-    Grey,
+    /// Gray color.
+    Gray,
 
-    /// Dark grey color.
-    DarkGrey,
+    /// Dark gray color.
+    DarkGray,
 
     /// Light red color.
     Red,
@@ -308,7 +308,7 @@ mod rgb_value_impl_block {
                             green: 255,
                             blue: 255,
                         }),
-                        ANSIBasicColor::Grey => Ok(RgbValue {
+                        ANSIBasicColor::Gray => Ok(RgbValue {
                             red: 128,
                             green: 128,
                             blue: 128,
@@ -343,7 +343,7 @@ mod rgb_value_impl_block {
                             green: 0,
                             blue: 255,
                         }),
-                        ANSIBasicColor::DarkGrey => Ok(RgbValue {
+                        ANSIBasicColor::DarkGray => Ok(RgbValue {
                             red: 64,
                             green: 64,
                             blue: 64,
@@ -630,7 +630,7 @@ mod tests {
         );
 
         assert_eq2!(
-            RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Grey)).unwrap(),
+            RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Gray)).unwrap(),
             RgbValue {
                 red: 128,
                 green: 128,
@@ -660,7 +660,7 @@ mod tests {
     #[test]
     fn test_from_color_macro() {
         let black = tui_color!(black);
-        let dark_grey = tui_color!(dark_grey);
+        let dark_gray = tui_color!(dark_gray);
         let red = tui_color!(red);
         let dark_red = tui_color!(dark_red);
         let green = tui_color!(green);
@@ -674,11 +674,11 @@ mod tests {
         let cyan = tui_color!(cyan);
         let dark_cyan = tui_color!(dark_cyan);
         let white = tui_color!(white);
-        let grey = tui_color!(grey);
+        let gray = tui_color!(gray);
         let reset = tui_color!(reset);
 
         let lizard_green = tui_color!(lizard_green);
-        let slate_grey = tui_color!(slate_grey);
+        let slate_gray = tui_color!(slate_gray);
         let silver_metallic = tui_color!(silver_metallic);
         let frozen_blue = tui_color!(frozen_blue);
         let moonlight_blue = tui_color!(moonlight_blue);
@@ -696,7 +696,7 @@ mod tests {
         );
 
         assert_eq2!(
-            RgbValue::try_from_tui_color(dark_grey).unwrap(),
+            RgbValue::try_from_tui_color(dark_gray).unwrap(),
             RgbValue {
                 red: 64,
                 green: 64,
@@ -822,7 +822,7 @@ mod tests {
         );
 
         assert_eq2!(
-            RgbValue::try_from_tui_color(grey).unwrap(),
+            RgbValue::try_from_tui_color(gray).unwrap(),
             RgbValue {
                 red: 128,
                 green: 128,
@@ -842,7 +842,7 @@ mod tests {
         );
 
         assert_eq2!(
-            RgbValue::try_from_tui_color(slate_grey).unwrap(),
+            RgbValue::try_from_tui_color(slate_gray).unwrap(),
             RgbValue {
                 red: 94,
                 green: 103,
@@ -921,7 +921,7 @@ mod debug_helpers {
                 TuiColor::Reset => write!(f, "reset"),
                 TuiColor::Basic(basic_color) => match basic_color {
                     ANSIBasicColor::Black => write!(f, "black"),
-                    ANSIBasicColor::DarkGrey => write!(f, "dark_grey"),
+                    ANSIBasicColor::DarkGray => write!(f, "dark_gray"),
                     ANSIBasicColor::Red => write!(f, "red"),
                     ANSIBasicColor::DarkRed => write!(f, "dark_red"),
                     ANSIBasicColor::Green => write!(f, "green"),
@@ -939,7 +939,7 @@ mod debug_helpers {
                     ANSIBasicColor::Cyan => write!(f, "cyan"),
                     ANSIBasicColor::DarkCyan => write!(f, "dark_cyan"),
                     ANSIBasicColor::White => write!(f, "white"),
-                    ANSIBasicColor::Grey => write!(f, "grey"),
+                    ANSIBasicColor::Gray => write!(f, "gray"),
                 },
             }
         }

@@ -23,7 +23,7 @@
 //! in [crate::parse_fragments_in_a_line].
 
 use nom::{bytes::complete::tag, combinator::recognize, multi::many1, IResult};
-use r3bl_core::{blue, green, red};
+use r3bl_core::{fg_blue, fg_green, fg_red};
 
 use crate::{md_parser::constants::NEW_LINE,
             take_text_between_delims_err_on_new_line,
@@ -64,7 +64,7 @@ pub fn take_starts_with_delim_no_new_line<'i>(
     DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
             "\n{} specialized parser {}: \ninput: {:?}, delim: {:?}",
-            green("■■"),
+            fg_green("■■"),
             delim,
             input,
             delim
@@ -89,7 +89,7 @@ pub fn take_starts_with_delim_no_new_line<'i>(
     {
         DEBUG_MD_PARSER_STDOUT.then(|| {
             println!("{a} parser error out for input: {i:?}",
-                a = red("⬢⬢"),
+                a = fg_red("⬢⬢"),
                 i = input
             );
         });
@@ -104,7 +104,7 @@ pub fn take_starts_with_delim_no_new_line<'i>(
         let it = take_text_between_delims_err_on_new_line(input, delim, delim);
         DEBUG_MD_PARSER_STDOUT.then(|| {
             println!("{a} it: {b:?}",
-                a = blue("▲▲"),
+                a = fg_blue("▲▲"),
                 b = it
             );
         });
@@ -116,7 +116,7 @@ pub fn take_starts_with_delim_no_new_line<'i>(
 
     DEBUG_MD_PARSER_STDOUT.then(|| {
         println!("{a}, rem: {r:?}, output: {o:?}",
-            a = blue("▲▲"),
+            a = fg_blue("▲▲"),
             r = rem,
             o = output
         );

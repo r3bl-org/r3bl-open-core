@@ -24,10 +24,11 @@ use std::{fs,
 
 use miette::{miette, IntoDiagnostic as _};
 use r3bl_core::{bold,
-                fg_rgb_color,
+                fg_color,
+                fg_red,
+                fg_slate_gray,
                 inline_string,
                 log_support::{try_initialize_logging_global, DisplayPreference},
-                red,
                 tui_color,
                 InlineVec,
                 SendRawTerminal,
@@ -83,7 +84,7 @@ fn get_info_message() -> String {
         let commands = Command::iter()
             .map(|it| it.to_string())
             .collect::<Vec<String>>();
-        fg_rgb_color(tui_color!(lizard_green), &format!("{:?}", commands)).to_string()
+        fg_color(tui_color!(lizard_green), &format!("{:?}", commands)).to_string()
     };
 
     let info_message = &format!(
@@ -99,7 +100,7 @@ fn get_info_message() -> String {
         "{a}: \n{b}\n{c}",
         a = bold("Available commands"),
         b = available_commands,
-        c = fg_rgb_color(tui_color!(frozen_blue), info_message)
+        c = fg_color(tui_color!(frozen_blue), info_message)
     )
 }
 
@@ -137,9 +138,7 @@ impl Default for State {
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     let prompt = {
-        let fg = tui_color!(slate_grey);
-        let bg = tui_color!(moonlight_blue);
-        let prompt_seg_1 = fg_rgb_color(fg, "╭>╮").bg_rgb_color(bg);
+        let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";
         format!("{}{}", prompt_seg_1, prompt_seg_2)
     };
@@ -199,7 +198,7 @@ async fn main() -> miette::Result<()> {
                                 writeln!(
                                     shared_writer,
                                     "{}",
-                                    fg_rgb_color(tui_color!(frozen_blue), "Terminal resized!")
+                                    fg_color(tui_color!(frozen_blue), "Terminal resized!")
                                 ).into_diagnostic()?;
                             }
                             // Ctrl+D, Ctrl+C.
@@ -209,8 +208,8 @@ async fn main() -> miette::Result<()> {
                         }
                     },
                     Err(err) => {
-                        let msg_1 = format!("Received err: {}", red(&format!("{err:?}")));
-                        let msg_2 = format!("{}", red("Exiting..."));
+                        let msg_1 = format!("Received err: {}", fg_red(&format!("{err:?}")));
+                        let msg_2 = format!("{}", fg_red("Exiting..."));
                         ta_println!(readline_async, "{msg_1}");
                         ta_println!(readline_async, "{msg_2}");
                         break;

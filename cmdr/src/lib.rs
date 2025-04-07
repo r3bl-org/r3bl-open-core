@@ -245,7 +245,6 @@ pub const DEBUG_ANALYTICS_CLIENT_MOD: bool = true;
 
 // Attach sources.
 pub mod analytics_client;
-pub mod color_constants;
 pub mod edi;
 pub mod giti;
 pub mod rc;

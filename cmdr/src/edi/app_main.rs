@@ -28,14 +28,14 @@ use r3bl_core::{Ansi256GradientIndex,
                 TuiStyledTexts,
                 TuiStylesheet,
                 col,
+                fg_green,
+                fg_magenta,
+                fg_red,
                 get_tui_style,
                 glyphs,
-                green,
                 height,
                 inline_string,
-                magenta,
                 new_style,
-                red,
                 req_size_pc,
                 row,
                 send_signal,
@@ -206,7 +206,7 @@ mod app_main_impl_app_trait {
                             // % is Display, ? is Debug.
                             tracing::debug!(
                                 message = "📣 Opened feedback link",
-                                link = %green(&inline_string!("{link_url:?}"))
+                                link = %fg_green(&inline_string!("{link_url:?}"))
                             );
                         });
                     }
@@ -214,7 +214,7 @@ mod app_main_impl_app_trait {
                         // % is Display, ? is Debug.
                         tracing::error!(
                             message = "📣 Error opening feedback link",
-                            error = %red(&inline_string!("{err:?}"))
+                            error = %fg_red(&inline_string!("{err:?}"))
                         );
                     }
                 }
@@ -460,7 +460,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
                                 // % is Display, ? is Debug.
                                 tracing::debug!(
                                     message = "💾💾💾 About to save the new buffer with given filename",
-                                    file_path = %magenta(&inline_string!("{user_input_file_path}"))
+                                    file_path = %fg_magenta(&inline_string!("{user_input_file_path}"))
                                 );
                             });
 
@@ -690,7 +690,7 @@ mod status_bar {
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
-        let separator_style = new_style!(dim color_fg: {tui_color!(dark_grey)});
+        let separator_style = new_style!(dim color_fg: {tui_color!(dark_gray)});
 
         let app_text = "edi 🦜 ✶early access✶";
 

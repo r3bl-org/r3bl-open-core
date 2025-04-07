@@ -17,7 +17,7 @@
 use std::fmt::Debug;
 
 use r3bl_core::{caret_scr_adj,
-                fg_rgb_color,
+                fg_color,
                 glyphs::{CUT_GLYPH,
                          DIRECTION_GLYPH,
                          ELLIPSIS_GLYPH,
@@ -276,7 +276,7 @@ pub enum RowLocationInSelectionList {
 
 // Formatter for Debug and Display.
 mod impl_debug_format {
-    use r3bl_core::tui_color;
+    use r3bl_core::{tui_color, ItemsOwned};
 
     use super::*;
 
@@ -295,14 +295,12 @@ mod impl_debug_format {
 
             // Format the output.
             for line in selection_list_string.iter_mut() {
-                let (fg_color, bg_color) = if is_empty {
-                    (tui_color!(frozen_blue), tui_color!(dark_grey))
+                let (fg, bg) = if is_empty {
+                    (tui_color!(frozen_blue), tui_color!(dark_gray))
                 } else {
-                    (tui_color!(lizard_green), tui_color!(dark_grey))
+                    (tui_color!(lizard_green), tui_color!(dark_gray))
                 };
-                let fmt_line = fg_rgb_color(fg_color, line)
-                    .bg_rgb_color(bg_color)
-                    .to_small_str();
+                let fmt_line = fg_color(fg, line).bg_color(bg).to_small_str();
                 *line = fmt_line;
             }
             for line in selection_list_string.iter_mut() {
@@ -324,7 +322,7 @@ mod impl_debug_format {
         }
 
         /// Returns a [InlineVec] of [InlineString] that represent the selection map.
-        pub fn to_unformatted_string(&self) -> InlineVec<InlineString> {
+        pub fn to_unformatted_string(&self) -> ItemsOwned {
             let mut vec_output = {
                 let mut acc = smallvec![];
                 let sorted_indices = self.get_ordered_indices();

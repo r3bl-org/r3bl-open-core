@@ -24,9 +24,9 @@ use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                         SetBackgroundColor,
                         SetForegroundColor},
                 terminal::{Clear, ClearType}};
-use r3bl_core::{blue,
-                ch,
+use r3bl_core::{ch,
                 col,
+                fg_blue,
                 get_terminal_width,
                 inline_string,
                 output_device_as_mut,
@@ -126,11 +126,11 @@ impl FunctionComponent<State<'_>> for SelectComponent {
                     message = "🍎🍎🍎\n render()::state",
                     details = %inline_string!(
                         "\t[raw_caret_row_index: {a}, scroll_offset_row_index: {b}], \n\theader_viewport_height: {c}, items_viewport_height:{d}, viewport_width:{e}",
-                        a = blue(&inline_string!("{:?}", state.raw_caret_row_index)),
-                        b = blue(&inline_string!("{:?}", state.scroll_offset_row_index)),
-                        c = blue(&inline_string!("{:?}", header_viewport_height)),
-                        d = blue(&inline_string!("{:?}", items_viewport_height)),
-                        e = blue(&inline_string!("{:?}", viewport_width)),
+                        a = fg_blue(&inline_string!("{:?}", state.raw_caret_row_index)),
+                        b = fg_blue(&inline_string!("{:?}", state.scroll_offset_row_index)),
+                        c = fg_blue(&inline_string!("{:?}", header_viewport_height)),
+                        d = fg_blue(&inline_string!("{:?}", items_viewport_height)),
+                        e = fg_blue(&inline_string!("{:?}", viewport_width)),
                     )
                 };
             });
