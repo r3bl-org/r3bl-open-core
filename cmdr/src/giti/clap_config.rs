@@ -16,9 +16,9 @@
  */
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use r3bl_core::{InlineString, InlineVec};
+use r3bl_core::ItemsOwned;
 
-pub fn get_giti_command_subcommand_names(arg: CLICommand) -> InlineVec<InlineString> {
+pub fn get_giti_command_subcommand_names(arg: CLICommand) -> ItemsOwned {
     match arg {
         CLICommand::Branch { .. } => BranchSubcommand::value_variants()
             .iter()

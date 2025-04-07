@@ -24,9 +24,9 @@ use r3bl_core::{ColorWheel,
                 GradientGenerationPolicy,
                 InlineString,
                 TextColorizationPolicy,
-                lizard_green,
+                fg_lizard_green,
+                fg_slate_gray,
                 log_support::try_initialize_logging_global,
-                slate_gray,
                 throws};
 use r3bl_tui::terminal_async::{HowToChoose, StyleSheet, choose};
 
@@ -148,9 +148,9 @@ pub mod edi_ui_templates {
                 let msg_line_2 = {
                     format!(
                         "{a}{b}{c}",
-                        a = slate_gray("Run `"),
-                        b = lizard_green("cargo install r3bl-cmdr"),
-                        c = slate_gray("` to upgrade 🚀."),
+                        a = fg_slate_gray("Run `"),
+                        b = fg_lizard_green("cargo install r3bl-cmdr"),
+                        c = fg_slate_gray("` to upgrade 🚀."),
                     )
                 };
 

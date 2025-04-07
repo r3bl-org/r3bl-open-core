@@ -30,7 +30,7 @@ pub fn convert_from_crossterm_color_to_tui_color(value: crossterm::style::Color)
         // Basic colors.
         crossterm::style::Color::Reset       => TuiColor::Reset,
         crossterm::style::Color::Black       => TuiColor::Basic(ANSIBasicColor::Black),
-        crossterm::style::Color::DarkGrey    => TuiColor::Basic(ANSIBasicColor::DarkGrey),
+        crossterm::style::Color::DarkGrey    => TuiColor::Basic(ANSIBasicColor::DarkGray),
         crossterm::style::Color::Red         => TuiColor::Basic(ANSIBasicColor::Red),
         crossterm::style::Color::DarkRed     => TuiColor::Basic(ANSIBasicColor::DarkRed),
         crossterm::style::Color::Green       => TuiColor::Basic(ANSIBasicColor::Green),
@@ -44,7 +44,7 @@ pub fn convert_from_crossterm_color_to_tui_color(value: crossterm::style::Color)
         crossterm::style::Color::Cyan        => TuiColor::Basic(ANSIBasicColor::Cyan),
         crossterm::style::Color::DarkCyan    => TuiColor::Basic(ANSIBasicColor::DarkCyan),
         crossterm::style::Color::White       => TuiColor::Basic(ANSIBasicColor::White),
-        crossterm::style::Color::Grey        => TuiColor::Basic(ANSIBasicColor::Grey),
+        crossterm::style::Color::Grey        => TuiColor::Basic(ANSIBasicColor::Gray),
 
         // RGB colors.
         crossterm::style::Color::Rgb { r, g, b } => TuiColor::Rgb(RgbValue {
@@ -74,8 +74,8 @@ pub fn convert_from_tui_color_to_crossterm_color(
             ColorSupport::NoColor | ColorSupport::Grayscale => match from_basic_color {
                 ANSIBasicColor::Black =>       crossterm::style::Color::Black,
                 ANSIBasicColor::White =>       crossterm::style::Color::White,
-                ANSIBasicColor::Grey =>        convert_rgb_to_ansi_grayscale(192, 192, 192),
-                ANSIBasicColor::DarkGrey =>    convert_rgb_to_ansi_grayscale(128, 128, 128),
+                ANSIBasicColor::Gray =>        convert_rgb_to_ansi_grayscale(192, 192, 192),
+                ANSIBasicColor::DarkGray =>    convert_rgb_to_ansi_grayscale(128, 128, 128),
                 ANSIBasicColor::Red =>         convert_rgb_to_ansi_grayscale(255, 0,   0),
                 ANSIBasicColor::DarkRed =>     convert_rgb_to_ansi_grayscale(128, 0,   0),
                 ANSIBasicColor::Green =>       convert_rgb_to_ansi_grayscale(0,   255, 0),
@@ -95,8 +95,8 @@ pub fn convert_from_tui_color_to_crossterm_color(
             ColorSupport::Ansi256 | ColorSupport::Truecolor => match from_basic_color {
                 ANSIBasicColor::Black =>        crossterm::style::Color::Black,
                 ANSIBasicColor::White =>        crossterm::style::Color::White,
-                ANSIBasicColor::Grey =>         crossterm::style::Color::Grey,
-                ANSIBasicColor::DarkGrey =>     crossterm::style::Color::DarkGrey,
+                ANSIBasicColor::Gray =>         crossterm::style::Color::Grey,
+                ANSIBasicColor::DarkGray =>     crossterm::style::Color::DarkGrey,
                 ANSIBasicColor::Red =>          crossterm::style::Color::Red,
                 ANSIBasicColor::DarkRed =>      crossterm::style::Color::DarkRed,
                 ANSIBasicColor::Green =>        crossterm::style::Color::Green,

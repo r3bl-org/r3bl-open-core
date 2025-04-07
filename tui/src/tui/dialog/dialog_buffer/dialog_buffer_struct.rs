@@ -17,7 +17,7 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use r3bl_core::{ch, fmt_option, ChUnit, InlineString, InlineVec};
+use r3bl_core::{ch, fmt_option, ChUnit, InlineString, ItemsOwned};
 
 use crate::{EditorBuffer, DEFAULT_SYN_HI_FILE_EXT};
 
@@ -30,7 +30,7 @@ use crate::{EditorBuffer, DEFAULT_SYN_HI_FILE_EXT};
 pub struct DialogBuffer {
     pub editor_buffer: EditorBuffer,
     pub title: InlineString,
-    pub maybe_results: Option<InlineVec<InlineString>>,
+    pub maybe_results: Option<ItemsOwned>,
 }
 
 impl DialogBuffer {

@@ -22,10 +22,10 @@ use std::{collections::HashMap,
 use r3bl_core::{DocumentStorage,
                 InlineString,
                 TinyInlineString,
-                green,
+                fg_green,
+                fg_red,
                 inline_string,
-                into_existing,
-                red};
+                into_existing};
 use r3bl_tui::{DEBUG_TUI_MOD,
                DEFAULT_SYN_HI_FILE_EXT,
                DialogBuffer,
@@ -243,7 +243,7 @@ pub mod file_utils {
                         tracing::debug!(
                             message = "💾💾💾✅ Successfully read file",
                             file_path = ?file_path,
-                            details = %green(&inline_string!("{file_path:?}"))
+                            details = %fg_green(&inline_string!("{file_path:?}"))
                         );
                     });
                     return acc;
@@ -253,7 +253,7 @@ pub mod file_utils {
                     tracing::error!(
                         message = "💾💾💾❌ Failed to read file",
                         file_path = ?file_path,
-                        error = %red(&inline_string!("{error:?}"))
+                        error = %fg_red(&inline_string!("{error:?}"))
                     );
                 }
             }
@@ -278,7 +278,7 @@ pub mod file_utils {
                         // % is Display, ? is Debug.
                         tracing::debug!(
                             message = "💾💾💾❌ Successfully saved file",
-                            file_path = %green(&inline_string!("{file_path:?}"))
+                            file_path = %fg_green(&inline_string!("{file_path:?}"))
                         );
                     });
                 }
@@ -286,7 +286,7 @@ pub mod file_utils {
                     // % is Display, ? is Debug.
                     tracing::error!(
                         message = "💾💾💾✅ Failed to save file",
-                        file_path = %red(&inline_string!("{error:?}"))
+                        file_path = %fg_red(&inline_string!("{error:?}"))
                     );
                 }
             }

@@ -36,9 +36,10 @@ mod ex_rc;
 use std::str::FromStr as _;
 
 use miette::IntoDiagnostic as _;
-use r3bl_core::{bold,
-                fg_rgb_color,
-                frozen_blue,
+use r3bl_core::{fg_color,
+                fg_frozen_blue,
+                fg_pink,
+                fg_slate_gray,
                 get_size,
                 inline_string,
                 log_support::try_initialize_logging_global,
@@ -66,9 +67,7 @@ async fn main() -> CommonResult<()> {
     // If the terminal is not fully interactive, then return early.
     let Some(mut readline_async) = ReadlineAsync::try_new({
         // Generate prompt.
-        let fg = tui_color!(slate_grey);
-        let bg = tui_color!(moonlight_blue);
-        let prompt_seg_1 = fg_rgb_color(fg, "╭>╮").bg_rgb_color(bg);
+        let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";
         Some(format!("{}{}", prompt_seg_1, prompt_seg_2))
     })?
@@ -87,7 +86,7 @@ async fn main() -> CommonResult<()> {
 
     let msg = inline_string!("{}", &generate_help_msg());
 
-    let msg_fmt = fg_rgb_color(ASTColor::from(tui_color!(lizard_green)), &msg);
+    let msg_fmt = fg_color(ASTColor::from(tui_color!(lizard_green)), &msg);
     ta_println!(readline_async, "{}", msg_fmt.to_string());
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
@@ -156,8 +155,8 @@ async fn run_user_selected_example(
             ta_println!(
                 readline_async,
                 "{a} {b}",
-                a = frozen_blue("Invalid selection:"),
-                b = bold(&selection).fg_rgb_color(tui_color!(pink))
+                a = fg_frozen_blue("Invalid selection:"),
+                b = fg_pink(&selection).bold(),
             );
             Ok(())
         }

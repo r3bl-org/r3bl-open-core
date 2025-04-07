@@ -17,7 +17,7 @@
 
 use miette::IntoDiagnostic;
 
-use crate::{SCRIPT_MOD_DEBUG, http_client, magenta, ok};
+use crate::{SCRIPT_MOD_DEBUG, fg_magenta, http_client, ok};
 
 mod constants {
     pub const TAG_NAME: &str = "tag_name";
@@ -41,7 +41,7 @@ pub async fn try_get_latest_release_tag_from_github(
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "Fetching latest release tag from GitHub",
-            url = %magenta(&url)
+            url = %fg_magenta(&url)
         );
     });
 
@@ -85,7 +85,7 @@ mod tests_github_api {
         match timeout(TIMEOUT, try_get_latest_release_tag_from_github(org, repo)).await {
             Ok(Ok(tag)) => {
                 assert!(!tag.is_empty());
-                println!("Latest tag: {}", magenta(&tag));
+                println!("Latest tag: {}", fg_magenta(&tag));
             }
             Ok(Err(err)) => {
                 // Re-throw the error and fail the test.

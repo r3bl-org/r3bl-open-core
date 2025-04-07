@@ -84,8 +84,7 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
 #[cfg(test)]
 mod tests_apt_install {
     use super::*;
-    use crate::{TTYResult,
-                return_if_not_interactive_terminal};
+    use crate::{TTYResult, return_if_not_interactive_terminal};
 
     #[tokio::test]
     async fn test_check_if_package_is_installed() {

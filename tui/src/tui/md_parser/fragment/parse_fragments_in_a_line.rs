@@ -28,7 +28,7 @@
 //! the tests in this file.
 
 use nom::{branch::alt, combinator::map, IResult};
-use r3bl_core::{green, inline_string, red};
+use r3bl_core::{fg_green, fg_red, inline_string};
 
 use crate::{parse_fragment_plain_text_no_new_line,
             parse_fragment_starts_with_backtick_err_on_new_line,
@@ -103,14 +103,14 @@ pub fn parse_inline_fragments_until_eol_or_eoi(
                 // % is Display, ? is Debug.
                 tracing::debug!(
                     message = "✅✅✅ OK",
-                    element = %green(&inline_string!("{element:#?}"))
+                    element = %fg_green(&inline_string!("{element:#?}"))
                 );
             },
             Err(ref error) => {
                 // % is Display, ? is Debug.
                 tracing::debug!(
                     message = "🟥🟥🟥 NO",
-                    error = %red(&inline_string!("{error:#?}"))
+                    error = %fg_red(&inline_string!("{error:#?}"))
                 );
             },
         }

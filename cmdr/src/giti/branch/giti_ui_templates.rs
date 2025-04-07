@@ -17,8 +17,7 @@
 
 use std::{env::var, process::Command};
 
-use r3bl_core::{ASTColor,
-                AnsiStyledText,
+use r3bl_core::{AnsiStyledText,
                 ColorWheel,
                 CommonError,
                 CommonErrorType,
@@ -26,8 +25,7 @@ use r3bl_core::{ASTColor,
                 GradientGenerationPolicy,
                 InlineVec,
                 TextColorizationPolicy,
-                fg_rgb_color,
-                tui_color};
+                fg_slate_gray};
 use smallvec::smallvec;
 
 use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
@@ -37,18 +35,15 @@ use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
             upgrade_check};
 
 pub fn multi_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
-    let slate_gray: ASTColor = tui_color!(slate_grey).into();
-    let night_blue: ASTColor = tui_color!(night_blue).into();
-
     let text_up_and_down = " Up or down:     navigate";
     let text_space = " Space:          select or deselect item";
     let text_esc = " Esc or Ctrl+C:  exit program";
     let text_return_key = " Return:         confirm selection";
 
-    let up_and_down = fg_rgb_color(slate_gray, text_up_and_down).bg_rgb_color(night_blue);
-    let space = fg_rgb_color(slate_gray, text_space).bg_rgb_color(night_blue);
-    let esc = fg_rgb_color(slate_gray, text_esc).bg_rgb_color(night_blue);
-    let return_key = fg_rgb_color(slate_gray, text_return_key).bg_rgb_color(night_blue);
+    let up_and_down = fg_slate_gray(text_up_and_down).bg_night_blue();
+    let space = fg_slate_gray(text_space).bg_night_blue();
+    let esc = fg_slate_gray(text_esc).bg_night_blue();
+    let return_key = fg_slate_gray(text_return_key).bg_night_blue();
 
     smallvec![
         smallvec![up_and_down],
@@ -60,16 +55,13 @@ pub fn multi_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledTe
 
 pub fn single_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>>
 {
-    let slate_gray: ASTColor = tui_color!(slate_grey).into();
-    let night_blue: ASTColor = tui_color!(night_blue).into();
-
     let text_up_or_down = " Up or down:     navigate";
     let text_esc = " Esc or Ctrl+C:  exit program";
     let text_return_key = " Return:         confirm selection";
 
-    let up_or_down = fg_rgb_color(slate_gray, text_up_or_down).bg_rgb_color(night_blue);
-    let esc = fg_rgb_color(slate_gray, text_esc).bg_rgb_color(night_blue);
-    let return_key = fg_rgb_color(slate_gray, text_return_key).bg_rgb_color(night_blue);
+    let up_or_down = fg_slate_gray(text_up_or_down).bg_night_blue();
+    let esc = fg_slate_gray(text_esc).bg_night_blue();
+    let return_key = fg_slate_gray(text_return_key).bg_night_blue();
 
     smallvec![smallvec![up_or_down], smallvec![esc], smallvec![return_key]]
 }

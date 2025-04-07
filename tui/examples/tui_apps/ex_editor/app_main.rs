@@ -34,6 +34,7 @@ use r3bl_core::{col,
                 GCStringExt,
                 InlineString,
                 InlineVec,
+                ItemsOwned,
                 Size,
                 TuiStylesheet,
                 SPACER_GLYPH};
@@ -254,7 +255,7 @@ mod modal_dialogs {
     // This runs on every keystroke, so it should be fast.
     pub fn dialog_component_update_content(state: &mut State, id: FlexBoxId) {
         // This is Some only if the content has changed (ignoring caret movements).
-        let maybe_changed_results: Option<InlineVec<InlineString>> = {
+        let maybe_changed_results: Option<ItemsOwned> = {
             if let Some(dialog_buffer) = state.dialog_buffers.get_mut(&id) {
                 let vec_result = generate_random_results(
                     dialog_buffer
@@ -302,7 +303,7 @@ mod modal_dialogs {
         }
     }
 
-    fn generate_random_results(content: &str) -> InlineVec<InlineString> {
+    fn generate_random_results(content: &str) -> ItemsOwned {
         let start_rand_num = rand::random::<u8>() as usize;
         let max = 10;
         let mut it = InlineVec::with_capacity(max);

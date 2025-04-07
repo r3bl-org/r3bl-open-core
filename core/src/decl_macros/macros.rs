@@ -158,21 +158,21 @@ macro_rules! call_if_true {
 #[macro_export]
 macro_rules! console_log {
     (ERROR_RAW $msg:expr, $err:expr) => {{
-        use r3bl_core::{red, green, underline};
+        use r3bl_core::{fg_red, fg_green, underline};
         eprintln!(
             "{} {} {}\r",
-            red("▶"),
-            green($msg),
+            fg_red("▶"),
+            fg_green($msg),
             underline(&format!("{:#?}", $err))
         );
     }};
 
     (OK_RAW $msg:expr) => {{
-        use r3bl_core::{red, green};
+        use r3bl_core::{fg_red, fg_green};
         println!(
             "{} {}\r",
-            red("▶"),
-            green($msg)
+            fg_red("▶"),
+            fg_green($msg)
         );
     }};
 
@@ -186,15 +186,15 @@ macro_rules! console_log {
     ) => {
         /* Enclose the expansion in a block so that we can use multiple statements. */
         {
-            use r3bl_core::{red, green, underline};
+            use r3bl_core::{fg_red, fg_green, underline};
             /* Start a repetition. */
             $(
                 /* Each repeat will contain the following statement, with $element replaced. */
                 println!(
                     "{} {} <- {}",
-                    red("▶"),
+                    fg_red("▶"),
                     underline(&format!("{:#?}", $element)),
-                    green(stringify!($element))
+                    fg_green(stringify!($element))
                 );
             )*
         }

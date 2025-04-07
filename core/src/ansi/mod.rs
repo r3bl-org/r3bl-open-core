@@ -140,24 +140,28 @@
 //! Here's an example.
 //!
 //! ```rust
-//! use r3bl_core::{
-//!     red, dim, fg_rgb_color, RgbValue, ASTStyle, AnsiStyledText, ASTColor
-//! };
+//! # use r3bl_core::{
+//! #     fg_red, dim, fg_color, tui_color,
+//! #     RgbValue, ASTStyle, AnsiStyledText, ASTColor,
+//! # };
 //!
 //! // Using the constructor functions.
-//! let red_text = red("This is red text.");
-//! let red_text_on_dark_grey = red_text.bg_dark_grey();
-//! println!("{red_text_on_dark_grey}");
-//! red_text_on_dark_grey.println();
+//! let red_text = fg_red("This is red text.");
+//! let red_text_on_dark_gray = red_text.bg_dark_gray();
+//! println!("{red_text_on_dark_gray}");
+//! red_text_on_dark_gray.println();
 //!
 //! // Combine constructor functions.
-//! let dim_red_text_on_dark_grey = dim("text").fg_rgb_color((255, 0, 0)).bg_rgb_color((50, 50, 50));
-//! println!("{dim_red_text_on_dark_grey}");
-//! dim_red_text_on_dark_grey.println();
+//! let dim_red_text_on_dark_gray =
+//!     dim("text")
+//!     .fg_color(tui_color!(255, 0, 0))
+//!     .bg_color(tui_color!(50, 50, 50));
+//! println!("{dim_red_text_on_dark_gray}");
+//! dim_red_text_on_dark_gray.println();
 //!
 //! // Flexible construction using RGB color codes.
-//! let blue_text = fg_rgb_color(RgbValue::from((0, 0, 255)), "This is blue text.");
-//! let blue_text_on_white = blue_text.bg_rgb_color((255, 255, 255));
+//! let blue_text = fg_color(RgbValue::from((0, 0, 255)), "This is blue text.");
+//! let blue_text_on_white = blue_text.bg_color(tui_color!(255, 255, 255));
 //! println!("{blue_text_on_white}");
 //! blue_text_on_white.println();
 //!

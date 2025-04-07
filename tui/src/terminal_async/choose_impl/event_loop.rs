@@ -18,11 +18,7 @@ use std::io::Result;
 
 use crossterm::{cursor::{Hide, Show},
                 terminal::{disable_raw_mode, enable_raw_mode}};
-use r3bl_core::{return_if_not_interactive_terminal,
-                InlineString,
-                InlineVec,
-                InputDevice,
-                TTYResult};
+use r3bl_core::{return_if_not_interactive_terminal, InputDevice, ItemsOwned, TTYResult};
 
 use super::KeyPressReader;
 use crate::{execute_commands,
@@ -36,7 +32,7 @@ pub enum EventLoopResult {
     Continue,
     ContinueAndRerender,
     ContinueAndRerenderAndClear,
-    ExitWithResult(InlineVec<InlineString>),
+    ExitWithResult(ItemsOwned),
     ExitWithoutResult,
     ExitWithError,
     Select,

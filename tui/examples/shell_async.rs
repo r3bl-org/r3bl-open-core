@@ -95,12 +95,7 @@
 use std::io::Write as _;
 
 use miette::IntoDiagnostic as _;
-use r3bl_core::{fg_rgb_color,
-                guards_red,
-                inline_string,
-                lizard_green,
-                ok,
-                SharedWriter};
+use r3bl_core::{fg_guards_red, fg_lizard_green, inline_string, ok, SharedWriter};
 use r3bl_tui::terminal_async::{ReadlineAsync,
                                ReadlineEvent,
                                ReadlineEvent::{Eof, Interrupted, Line, Resized}};
@@ -248,7 +243,7 @@ pub mod monitor_child_output {
                     result_line = stdout_lines.next_line() => {
                         match result_line {
                             Ok(Some(line)) => {
-                                _ = writeln!(shared_writer, "{}", lizard_green(&line));
+                                _ = writeln!(shared_writer, "{}", fg_lizard_green(&line));
                             },
                             _ => {
                                 _ = shutdown_sender.send(());
@@ -262,7 +257,7 @@ pub mod monitor_child_output {
                     result_line = stderr_lines.next_line() => {
                         match result_line {
                             Ok(Some(line)) => {
-                                _ = writeln!(shared_writer, "{}", guards_red(&line));
+                                _ = writeln!(shared_writer, "{}", fg_guards_red(&line));
                             }
                             _ => {
                                 _= shutdown_sender.send(());
@@ -277,7 +272,7 @@ pub mod monitor_child_output {
 }
 
 pub mod terminal_async_constructor {
-    use r3bl_core::tui_color;
+    use r3bl_core::fg_slate_gray;
 
     use super::*;
 
@@ -288,10 +283,8 @@ pub mod terminal_async_constructor {
 
     pub async fn new(pid: u32) -> miette::Result<TerminalAsyncHandle> {
         let prompt = {
-            let fg = tui_color!(slate_grey);
-            let bg = tui_color!(moonlight_blue);
             let prompt_str = inline_string!("┤{pid}├");
-            let prompt_seg_1 = fg_rgb_color(fg, &prompt_str).bg_rgb_color(bg);
+            let prompt_seg_1 = fg_slate_gray(&prompt_str).bg_moonlight_blue();
             let prompt_seg_2 = " ";
             format!("{}{}", prompt_seg_1, prompt_seg_2)
         };
