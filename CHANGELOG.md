@@ -368,8 +368,8 @@ These videos have been an inspiration for many of these changes:
 Moved:
   - Move the contents of `r3bl_terminal_async` into `r3bl_tui` crate. Move the contents of
     `r3bl_tuify` crate into `r3bl_terminal_async`. Consolidate the `select_*` functions
-    into a single `choose()` function. And a new `choose_async()` function that works in
-    async context. The `r3bl_tuify` crate is now archived.
+    into a single `choose()` function and make it async. The `r3bl_tuify` crate is now
+    archived.
 
 Removed:
   - Drop the dependency on `r3bl_ansi_color`.

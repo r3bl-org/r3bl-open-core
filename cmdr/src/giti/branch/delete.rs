@@ -17,8 +17,16 @@
 
 use std::process::Command;
 
-use r3bl_core::{CommonResult, InlineString, ItemsOwned, ast, new_style, tui_color};
-use r3bl_tui::terminal_async::{HowToChoose, StyleSheet, choose};
+use r3bl_core::{CommonResult,
+                InlineString,
+                ItemsOwned,
+                ast,
+                height,
+                new_style,
+                tui_color};
+use r3bl_tui::{DefaultIoDevices,
+               choose,
+               terminal_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 use try_delete_branch_user_choice::Selection::{self, Delete, ExitProgram};
 
@@ -41,7 +49,7 @@ use crate::{AnalyticsAction,
                                   single_select_instruction_header}},
             report_analytics};
 
-pub fn try_delete_branch() -> CommonResult<SuccessReport> {
+pub async fn try_delete_branch() -> CommonResult<SuccessReport> {
     report_analytics::start_task_to_generate_event(
         "".to_string(),
         AnalyticsAction::GitiBranchDelete,
@@ -66,115 +74,111 @@ pub fn try_delete_branch() -> CommonResult<SuccessReport> {
     };
 
     if let Ok(branches) = get_branches() {
-        let maybe_selected_branches = choose(
+        let mut default_io_devices = DefaultIoDevices::default();
+        let branches = choose(
             instructions_and_branches_to_delete,
             branches,
-            Some(20),
+            Some(height(20)),
             None,
             HowToChoose::Multiple,
             StyleSheet::default(),
-        );
+            default_io_devices.as_mut_tuple(),
+        )
+        .await?;
 
-        if let Some(branches) = maybe_selected_branches {
-            let branches_to_delete = branches.join(", ");
-            let num_of_branches = branches.len();
+        let branches_to_delete = branches.join(", ");
+        let num_of_branches = branches.len();
 
-            let (confirm_branch_deletion_header, confirm_deletion_options) = {
-                let mut confirm_deletion_options: ItemsOwned =
-                    smallvec![Exit.to_string().into()];
-                if num_of_branches == 1 {
-                    let branch_name = &branches[0];
-                    let branch_name = branch_name.to_string();
-                    confirm_deletion_options
-                        .insert(0, YesDeleteBranch.to_string().into());
-                    (
-                        ConfirmDeletingOneBranch { branch_name }.to_string(),
-                        confirm_deletion_options,
-                    )
-                } else {
-                    confirm_deletion_options
-                        .insert(0, YesDeleteBranches.to_string().into());
-                    (
-                        ConfirmDeletingMultipleBranches {
-                            num_of_branches,
-                            branches_to_delete,
-                        }
-                        .to_string(),
-                        confirm_deletion_options,
-                    )
-                }
-            };
+        let (confirm_branch_deletion_header, confirm_deletion_options) = {
+            let mut confirm_deletion_options: ItemsOwned =
+                smallvec![Exit.to_string().into()];
+            if num_of_branches == 1 {
+                let branch_name = &branches[0];
+                let branch_name = branch_name.to_string();
+                confirm_deletion_options.insert(0, YesDeleteBranch.to_string().into());
+                (
+                    ConfirmDeletingOneBranch { branch_name }.to_string(),
+                    confirm_deletion_options,
+                )
+            } else {
+                confirm_deletion_options.insert(0, YesDeleteBranches.to_string().into());
+                (
+                    ConfirmDeletingMultipleBranches {
+                        num_of_branches,
+                        branches_to_delete,
+                    }
+                    .to_string(),
+                    confirm_deletion_options,
+                )
+            }
+        };
 
-            let instructions_and_confirm_deletion_options = {
-                let mut lines = single_select_instruction_header();
-                let header_line =
-                    ast(&confirm_branch_deletion_header, default_header_style);
-                lines.push(smallvec![header_line]);
-                lines
-            };
+        let instructions_and_confirm_deletion_options = {
+            let mut lines = single_select_instruction_header();
+            let header_line = ast(&confirm_branch_deletion_header, default_header_style);
+            lines.push(smallvec![header_line]);
+            lines
+        };
 
-            let maybe_selected_delete_or_exit = choose(
-                instructions_and_confirm_deletion_options,
-                confirm_deletion_options,
-                Some(20),
-                None,
-                HowToChoose::Single,
-                StyleSheet::default(),
-            );
+        let mut default_io_devices = DefaultIoDevices::default();
+        let selected_delete_or_exit = choose(
+            instructions_and_confirm_deletion_options,
+            confirm_deletion_options,
+            Some(height(20)),
+            None,
+            HowToChoose::Single,
+            StyleSheet::default(),
+            default_io_devices.as_mut_tuple(),
+        )
+        .await?;
 
-            if let Some(selected) = maybe_selected_delete_or_exit {
-                match Selection::from(selected) {
-                    Delete => {
-                        let command: &mut Command =
-                            &mut try_delete_branch_inner::create_git_command_to_delete_branches(
-                                &branches,
-                            );
-                        let result_output = command.output();
+        match Selection::from(selected_delete_or_exit) {
+            Delete => {
+                let command: &mut Command =
+                    &mut try_delete_branch_inner::create_git_command_to_delete_branches(
+                        &branches,
+                    );
+                let result_output = command.output();
 
-                        match result_output {
-                            Ok(output) => {
-                                // Got output, check exit code for success (known errors).
-                                if output.status.success() {
-                                    // Add branches to deleted branches.
-                                    try_run_command_result.maybe_deleted_branches =
-                                        Some({
-                                            let mut it: ItemsOwned = smallvec![];
-                                            for branch in &branches {
-                                                it.push(branch.clone());
-                                            }
-                                            it
-                                        });
-                                    if num_of_branches == 1 {
-                                        try_delete_branch_inner::display_one_branch_deleted_success_message(&branches);
-                                    } else {
-                                        try_delete_branch_inner::display_all_branches_deleted_success_messages(
-                                            &branches,
-                                        );
-                                    }
-                                } else {
-                                    try_delete_branch_inner::display_error_message(
-                                        branches,
-                                        Some(output),
-                                    );
+                match result_output {
+                    Ok(output) => {
+                        // Got output, check exit code for success (known errors).
+                        if output.status.success() {
+                            // Add branches to deleted branches.
+                            try_run_command_result.maybe_deleted_branches = Some({
+                                let mut it: ItemsOwned = smallvec![];
+                                for branch in &branches {
+                                    it.push(branch.clone());
                                 }
-                            }
-                            Err(error) => {
-                                // Can't even execute output(), something unknown has gone
-                                // wrong. Propagate the error.
-                                try_delete_branch_inner::display_error_message(
-                                    branches, None,
-                                );
-                                return report_unknown_error_and_propagate(
-                                    command,
-                                    miette::miette!(error),
+                                it
+                            });
+                            if num_of_branches == 1 {
+                                try_delete_branch_inner::display_one_branch_deleted_success_message(&branches);
+                            } else {
+                                try_delete_branch_inner::display_all_branches_deleted_success_messages(
+                                    &branches,
                                 );
                             }
+                        } else {
+                            try_delete_branch_inner::display_error_message(
+                                branches,
+                                Some(output),
+                            );
                         }
                     }
-
-                    ExitProgram => (),
+                    Err(error) => {
+                        // Can't even execute output(), something unknown has gone
+                        // wrong. Propagate the error.
+                        try_delete_branch_inner::display_error_message(branches, None);
+                        return report_unknown_error_and_propagate(
+                            command,
+                            miette::miette!(error),
+                        );
+                    }
                 }
             }
+
+            ExitProgram => (),
         }
     }
 

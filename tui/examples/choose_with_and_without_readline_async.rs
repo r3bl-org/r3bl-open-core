@@ -24,11 +24,7 @@ use r3bl_core::{fg_slate_gray,
                 InputDevice,
                 ItemsBorrowed,
                 OutputDevice};
-use r3bl_tui::terminal_async::{choose_async,
-                               Header,
-                               HowToChoose,
-                               ReadlineAsync,
-                               StyleSheet};
+use r3bl_tui::terminal_async::{choose, Header, HowToChoose, ReadlineAsync, StyleSheet};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -46,7 +42,7 @@ async fn without_readline_async() -> miette::Result<()> {
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::new_event_stream();
 
-    let chosen = choose_async(
+    let chosen = choose(
         Header::SingleLine("Choose one:".into()),
         ItemsBorrowed(&["one", "two", "three"]).into(),
         None,
@@ -96,7 +92,7 @@ async fn with_readline_async() -> miette::Result<()> {
         }
     });
 
-    let chosen = choose_async(
+    let chosen = choose(
         Header::SingleLine("Choose one:".into()),
         ItemsBorrowed(&["one", "two", "three"]).into(),
         None,

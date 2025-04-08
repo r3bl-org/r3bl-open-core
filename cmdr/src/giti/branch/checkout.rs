@@ -29,10 +29,13 @@ use r3bl_core::{ChUnit,
                 fg_lizard_green,
                 fg_slate_gray,
                 get_terminal_width,
+                height,
                 new_style,
                 tui_color,
                 usize};
-use r3bl_tui::terminal_async::{HowToChoose, StyleSheet, choose};
+use r3bl_tui::{DefaultIoDevices,
+               choose,
+               terminal_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 
 use super::{get_branches, try_get_current_branch};
@@ -50,7 +53,7 @@ use crate::giti::{SuccessReport,
                   ui_templates::{report_unknown_error_and_propagate,
                                  single_select_instruction_header}};
 
-pub fn try_checkout_branch(
+pub async fn try_checkout_branch(
     maybe_branch_name: Option<String>,
 ) -> CommonResult<SuccessReport> {
     let try_run_command_result = SuccessReport {
@@ -197,18 +200,20 @@ pub fn try_checkout_branch(
 
             if let Ok(branches) = get_branches() {
                 // Ask user to select a branch to check out to.
-                let maybe_selected_branch = choose(
+                let mut default_io_devices = DefaultIoDevices::default();
+                let selected_branch = choose(
                     instructions_and_branches,
                     branches,
-                    Some(20),
+                    Some(height(20)),
                     None,
                     HowToChoose::Single,
                     StyleSheet::default(),
-                );
+                    default_io_devices.as_mut_tuple(),
+                )
+                .await?;
 
                 // If user selected a branch, then check out to it.
-                if let Some(selected_branch) = maybe_selected_branch {
-                    let selected_branch = &selected_branch[0];
+                if let Some(selected_branch) = selected_branch.first() {
                     let selected_branch =
                         selected_branch.trim_start_matches("(current) ");
                     let checkout_branch_command: &mut Command =
