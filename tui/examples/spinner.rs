@@ -24,7 +24,7 @@ use r3bl_core::{spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
                 SpinnerStyle,
                 SpinnerTemplate,
                 StdMutex};
-use r3bl_tui::terminal_async::{ReadlineAsync, Spinner};
+use r3bl_tui::readline_async::{ReadlineAsync, Spinner};
 use tokio::{time::Instant, try_join};
 
 #[tokio::main]

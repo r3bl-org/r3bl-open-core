@@ -29,7 +29,7 @@ use r3bl_core::{get_size,
                 InlineVec,
                 ItemsBorrowed};
 use r3bl_tui::{choose,
-               terminal_async::{components::style::StyleSheet,
+               readline_async::{components::style::StyleSheet,
                                 HowToChoose,
                                 DEVELOPMENT_MODE},
                DefaultIoDevices};

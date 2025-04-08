@@ -32,7 +32,7 @@ use r3bl_core::{ColorWheel,
                 width};
 use r3bl_tui::{DefaultIoDevices,
                choose,
-               terminal_async::{HowToChoose, StyleSheet}};
+               readline_async::{HowToChoose, StyleSheet}};
 
 use crate::clap_config::CLIArg;
 

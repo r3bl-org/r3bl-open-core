@@ -101,7 +101,7 @@ use r3bl_core::{fg_guards_red,
                 inline_string,
                 ok,
                 SharedWriter};
-use r3bl_tui::terminal_async::{ReadlineAsync,
+use r3bl_tui::readline_async::{ReadlineAsync,
                                ReadlineEvent,
                                ReadlineEvent::{Eof, Interrupted, Line, Resized}};
 use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};

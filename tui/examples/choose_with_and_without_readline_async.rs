@@ -24,7 +24,7 @@ use r3bl_core::{fg_slate_gray,
                 InputDevice,
                 ItemsBorrowed,
                 OutputDevice};
-use r3bl_tui::terminal_async::{choose, Header, HowToChoose, ReadlineAsync, StyleSheet};
+use r3bl_tui::readline_async::{choose, Header, HowToChoose, ReadlineAsync, StyleSheet};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
