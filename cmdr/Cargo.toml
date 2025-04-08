@@ -58,47 +58,25 @@ clap = { version = "4.5.20", features = ["derive", "wrap_help", "help"] }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.132"
 
-# Time.
-chrono = "0.4.38"
-
-# Misc.
-rand = "0.8.5"
-
-# Crossterm styling.
-crossterm = { version = "0.28.1" }
-
 # Open URLs.
 open = "5.3.0"
 
 # Save config files.
 dirs = "5.0.1"
 
-# Reedline.
-reedline = "0.36.0"
-
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
 # https://tokio.rs/tokio/topics/tracing-next-steps
 tokio = { version = "1.40.0", features = ["full", "tracing"] }
 tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
-tracing-appender = "0.2.3"
 tracing-core = "0.1.32"
 
 # Error handling.
-thiserror = "1.0.64"
 miette = { version = "7.2.0", features = ["fancy"] }
-pretty_assertions = "1.4.1"
-
 
 # For smallstr & smallvec.
-smallstr = { version = "0.3.0", features = ["std", "union"] }
 smallvec = { version = "1.6.1", features = [
   "union",
   "const_generics",
   "const_new",
 ] }
-
-[dev-dependencies]
-pretty_assertions = "1.4.1"
-serial_test = "3.1.1"

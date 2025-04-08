@@ -19,8 +19,9 @@ use r3bl_core::ItemsOwned;
 
 use super::clap_config::BranchSubcommand;
 
+/// Detailed information about a command that has run successfully.
 #[derive(Debug, Clone, Default)]
-pub struct CommandSuccessfulResponse {
+pub struct SuccessReport {
     pub maybe_deleted_branches: Option<ItemsOwned>,
     pub branch_subcommand: Option<BranchSubcommand>,
 }

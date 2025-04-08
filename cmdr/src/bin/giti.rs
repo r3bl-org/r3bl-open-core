@@ -15,21 +15,22 @@
  *   limitations under the License.
  */
 
-//! For more information on how to use CLAP and Tuify, please read this tutorial:
-//! <https://developerlife.com/2023/09/17/tuify-clap/>
+//! For more information on how to use CLAP and Tuify, here are some resources:
+//! 1. [Tutorial](https://developerlife.com/2023/09/17/tuify-clap/)
+//! 2. [Video](https://youtu.be/lzMYDA6St0s)
 
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
                 giti::{BranchSubcommand,
                        CLIArg,
                        CLICommand,
-                       CommandSuccessfulResponse,
+                       SuccessReport,
                        get_giti_command_subcommand_names,
-                       giti_ui_templates,
-                       single_select_instruction_header,
                        try_checkout_branch,
                        try_delete_branch,
-                       try_make_new_branch},
+                       try_make_new_branch,
+                       ui_templates,
+                       ui_templates::single_select_instruction_header},
                 report_analytics,
                 upgrade_check};
 use r3bl_core::{CommonResult,
@@ -68,7 +69,7 @@ async fn main() -> CommonResult<()> {
             AnalyticsAction::GitiAppStart,
         );
 
-        launch_giti(cli_arg);
+        launch_giti(cli_arg).await;
 
         enable_logging.then(|| {
             tracing::debug!(message = "Stop logging...");
@@ -76,8 +77,9 @@ async fn main() -> CommonResult<()> {
     })
 }
 
-pub fn launch_giti(cli_arg: CLIArg) {
-    match try_run_command(&cli_arg) {
+pub async fn launch_giti(cli_arg: CLIArg) {
+    let res = try_run_command(&cli_arg).await;
+    match res {
         // Command ran successfully.
         Ok(try_run_command_result) => {
             if let CLICommand::Branch { .. } = cli_arg.command {
@@ -89,11 +91,11 @@ pub fn launch_giti(cli_arg: CLIArg) {
                     try_run_command_result.branch_subcommand,
                 ) {
                     (Some(_), Some(BranchSubcommand::Delete)) => {
-                        giti_ui_templates::show_exit_message();
+                        ui_templates::show_exit_message();
                     }
                     (None, Some(BranchSubcommand::Delete)) => {
                         println!(" You chose not to delete any branches.");
-                        giti_ui_templates::show_exit_message();
+                        ui_templates::show_exit_message();
                     }
                     _ => {}
                 }
@@ -121,9 +123,7 @@ pub fn launch_giti(cli_arg: CLIArg) {
     }
 }
 
-pub fn try_run_command(
-    giti_app_args: &CLIArg,
-) -> CommonResult<CommandSuccessfulResponse> {
+pub async fn try_run_command(giti_app_args: &CLIArg) -> CommonResult<SuccessReport> {
     match &giti_app_args.command {
         CLICommand::Branch {
             command_to_run_with_each_selection,
@@ -135,16 +135,18 @@ pub fn try_run_command(
                 BranchSubcommand::Checkout => {
                     try_checkout_branch(maybe_branch_name.clone())
                 }
-                BranchSubcommand::New => try_make_new_branch(maybe_branch_name.clone()),
+                BranchSubcommand::New => {
+                    try_make_new_branch(maybe_branch_name.clone()).await
+                }
             },
-            _ => user_typed_giti_branch(),
+            _ => user_typed_giti_branch().await,
         },
         CLICommand::Commit {} => unimplemented!(),
         CLICommand::Remote {} => unimplemented!(),
     }
 }
 
-fn user_typed_giti_branch() -> CommonResult<CommandSuccessfulResponse> {
+async fn user_typed_giti_branch() -> CommonResult<SuccessReport> {
     let branch_subcommands = get_giti_command_subcommand_names(CLICommand::Branch {
         command_to_run_with_each_selection: None,
         maybe_branch_name: None,
@@ -172,10 +174,10 @@ fn user_typed_giti_branch() -> CommonResult<CommandSuccessfulResponse> {
         match it {
             "delete" => return try_delete_branch(),
             "checkout" => return try_checkout_branch(None),
-            "new" => return try_make_new_branch(None),
+            "new" => return try_make_new_branch(None).await,
             _ => unimplemented!(),
         };
     };
 
-    Ok(CommandSuccessfulResponse::default())
+    Ok(SuccessReport::default())
 }

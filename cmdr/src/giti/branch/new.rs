@@ -17,114 +17,93 @@
 
 use std::process::Command;
 
+use miette::IntoDiagnostic;
 use r3bl_core::{CommonResult,
                 fg_frozen_blue,
                 fg_guards_red,
                 fg_lizard_green,
                 fg_silver_metallic,
                 fg_slate_gray};
-use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
+use r3bl_tui::{ReadlineAsync, ReadlineEvent};
 
 use crate::giti::{self,
-                  CommandSuccessfulResponse,
-                  UIStrings::{BranchAlreadyExists,
-                              CreatedAndSwitchedToNewBranch,
-                              EnterBranchNameYouWantToCreate,
-                              FailedToCreateAndSwitchToBranch,
-                              NoNewBranchWasCreated},
+                  SuccessReport,
                   clap_config::BranchSubcommand,
-                  report_unknown_error_and_propagate};
+                  ui_strings::UIStrings::{BranchAlreadyExists,
+                                          CreatedAndSwitchedToNewBranch,
+                                          EnterBranchNameYouWantToCreate,
+                                          FailedToCreateAndSwitchToBranch,
+                                          NoNewBranchWasCreated},
+                  ui_templates::report_unknown_error_and_propagate};
 
-pub fn try_make_new_branch(
+pub async fn try_make_new_branch(
     maybe_branch_name: Option<String>,
-) -> CommonResult<CommandSuccessfulResponse> {
-    let response = CommandSuccessfulResponse {
+) -> CommonResult<SuccessReport> {
+    match maybe_branch_name {
+        Some(branch_name) => handle_branch_creation(branch_name),
+        None => prompt_for_branch_name().await,
+    }
+}
+
+fn success_report() -> CommonResult<SuccessReport> {
+    Ok(SuccessReport {
         maybe_deleted_branches: None,
         branch_subcommand: Some(BranchSubcommand::New),
-    };
+    })
+}
 
-    match maybe_branch_name {
-        Some(branch_name) => {
-            // If this branch already exists, then show error message.
-            let branches = giti::get_branches()?;
-            let branches_trimmed: Vec<String> = branches
-                .iter()
-                .map(|branch| branch.trim_start_matches("(current) ").to_string())
-                .collect();
-            if branches_trimmed.contains(&branch_name) {
-                fg_slate_gray(&BranchAlreadyExists { branch_name }.to_string()).println();
-                return Ok(response);
-            }
+fn handle_branch_creation(branch_name: String) -> CommonResult<SuccessReport> {
+    let branches = giti::get_branches()?;
+    let branches_trimmed: Vec<String> = branches
+        .iter()
+        .map(|branch| branch.trim_start_matches("(current) ").to_string())
+        .collect();
 
-            // If this branch doesn't exist, then create it. Create a git command to
-            // create a new branch and check it out.
-            let git_command_to_create_and_switch_to_branch: &mut Command =
-                &mut create_git_command_to_create_and_switch_to_branch(&branch_name);
-            let result_create_new_branch =
-                git_command_to_create_and_switch_to_branch.output();
-            match result_create_new_branch {
-                Ok(new_branch_output) => {
-                    if new_branch_output.status.success() {
-                        display_successful_new_branch_creation(&branch_name);
-                    } else {
-                        display_failed_to_create_new_branch(&branch_name);
-                    }
-                }
-                Err(error) => {
-                    display_failed_to_create_new_branch(&branch_name);
-                    return report_unknown_error_and_propagate(
-                        git_command_to_create_and_switch_to_branch,
-                        error,
-                    );
-                }
-            }
+    if branches_trimmed.contains(&branch_name) {
+        fg_slate_gray(&BranchAlreadyExists { branch_name }.to_string()).println();
+        return success_report();
+    }
+
+    let git_command =
+        &mut create_git_command_to_create_and_switch_to_branch(&branch_name);
+    match git_command.output() {
+        Ok(output) if output.status.success() => {
+            display_successful_new_branch_creation(&branch_name)
         }
-        None => {
-            // 00: replace use of Reedline with readline_async
-            let mut line_editor = Reedline::create();
-            let prompt_text =
-                fg_frozen_blue(&EnterBranchNameYouWantToCreate.to_string()).to_string();
-            let prompt = DefaultPrompt::new(
-                DefaultPromptSegment::Basic(prompt_text),
-                DefaultPromptSegment::Empty,
+        Ok(_) | Err(_) => {
+            display_failed_to_create_new_branch(&branch_name);
+            return report_unknown_error_and_propagate(
+                git_command,
+                miette::miette!("Error creating branch"),
             );
-
-            // Ask the user to type in the name of the branch they want to create.
-            let result_signal = line_editor.read_line(&prompt);
-            match result_signal {
-                Ok(Signal::Success(branch_name)) => {
-                    let git_command_to_create_and_switch_to_branch: &mut Command =
-                        &mut create_git_command_to_create_and_switch_to_branch(
-                            &branch_name,
-                        );
-                    let result_create_new_branch =
-                        git_command_to_create_and_switch_to_branch.output();
-                    match result_create_new_branch {
-                        Ok(new_branch_output) => {
-                            if new_branch_output.status.success() {
-                                display_successful_new_branch_creation(&branch_name);
-                            } else {
-                                display_failed_to_create_new_branch(&branch_name);
-                            }
-                        }
-                        Err(error) => {
-                            display_failed_to_create_new_branch(&branch_name);
-                            return report_unknown_error_and_propagate(
-                                git_command_to_create_and_switch_to_branch,
-                                error,
-                            );
-                        }
-                    }
-                }
-                Ok(Signal::CtrlC) => {
-                    fg_silver_metallic(&NoNewBranchWasCreated.to_string()).println();
-                }
-                _ => {}
-            }
         }
     }
 
-    Ok(response)
+    success_report()
+}
+
+async fn prompt_for_branch_name() -> CommonResult<SuccessReport> {
+    let prompt_text =
+        fg_frozen_blue(&EnterBranchNameYouWantToCreate.to_string()).to_string();
+    let mut rl_async = ReadlineAsync::try_new(Some(&prompt_text))?
+        .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
+
+    // The loop is just to handle the resize event.
+    loop {
+        let evt = rl_async.read_line().await?;
+        match evt {
+            ReadlineEvent::Line(branch_name) => {
+                rl_async.exit(None).await.into_diagnostic()?;
+                return handle_branch_creation(branch_name);
+            }
+            ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
+                rl_async.exit(None).await.into_diagnostic()?;
+                fg_silver_metallic(&NoNewBranchWasCreated.to_string()).println();
+                return success_report();
+            }
+            ReadlineEvent::Resized => { /* Do nothing */ }
+        }
+    }
 }
 
 fn display_failed_to_create_new_branch(branch_name: &str) {
@@ -146,7 +125,7 @@ fn display_successful_new_branch_creation(branch_name: &str) {
 }
 
 fn create_git_command_to_create_and_switch_to_branch(branch_name: &str) -> Command {
-    let mut command_to_create_and_switch_to_branch = Command::new("git");
-    command_to_create_and_switch_to_branch.args(["checkout", "-b", branch_name]);
-    command_to_create_and_switch_to_branch
+    let mut command = Command::new("git");
+    command.args(["checkout", "-b", branch_name]);
+    command
 }

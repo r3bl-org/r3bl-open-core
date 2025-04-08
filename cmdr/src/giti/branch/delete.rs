@@ -23,11 +23,8 @@ use smallvec::smallvec;
 use try_delete_branch_user_choice::Selection::{self, Delete, ExitProgram};
 
 use crate::{AnalyticsAction,
-            giti::{CommandSuccessfulResponse,
+            giti::{SuccessReport,
                    clap_config::BranchSubcommand,
-                   giti_ui_templates::report_unknown_error_and_propagate,
-                   multi_select_instruction_header,
-                   single_select_instruction_header,
                    ui_strings::UIStrings::{ConfirmDeletingMultipleBranches,
                                            ConfirmDeletingOneBranch,
                                            CurrentBranch,
@@ -38,16 +35,19 @@ use crate::{AnalyticsAction,
                                            FailedToRunCommandToDeleteBranches,
                                            PleaseSelectBranchesYouWantToDelete,
                                            YesDeleteBranch,
-                                           YesDeleteBranches}},
+                                           YesDeleteBranches},
+                   ui_templates::{multi_select_instruction_header,
+                                  report_unknown_error_and_propagate,
+                                  single_select_instruction_header}},
             report_analytics};
 
-pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
+pub fn try_delete_branch() -> CommonResult<SuccessReport> {
     report_analytics::start_task_to_generate_event(
         "".to_string(),
         AnalyticsAction::GitiBranchDelete,
     );
 
-    let mut try_run_command_result = CommandSuccessfulResponse {
+    let mut try_run_command_result = SuccessReport {
         branch_subcommand: Some(BranchSubcommand::Delete),
         ..Default::default()
     };
@@ -165,7 +165,8 @@ pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
                                     branches, None,
                                 );
                                 return report_unknown_error_and_propagate(
-                                    command, error,
+                                    command,
+                                    miette::miette!(error),
                                 );
                             }
                         }
@@ -293,7 +294,7 @@ pub fn try_execute_git_command_to_get_branches() -> CommonResult<Vec<String>> {
     match result_output {
         // Can't even execute output(), something unknown has gone wrong. Propagate the
         // error.
-        Err(error) => report_unknown_error_and_propagate(command, error),
+        Err(error) => report_unknown_error_and_propagate(command, miette::miette!(error)),
         Ok(output) => {
             let output_string = String::from_utf8_lossy(&output.stdout);
             let mut branches = vec![];
@@ -326,7 +327,7 @@ pub fn get_branches() -> CommonResult<ItemsOwned> {
         Err(error) => {
             return report_unknown_error_and_propagate(
                 show_current_branch_command,
-                error,
+                miette::miette!(error),
             );
         }
     };
@@ -355,7 +356,7 @@ pub fn try_get_current_branch() -> CommonResult<String> {
         // Can't even execute output(), something unknown has gone wrong. Propagate the
         // error.
         Err(error) => {
-            return report_unknown_error_and_propagate(command, error);
+            return report_unknown_error_and_propagate(command, miette::miette!(error));
         }
         Ok(output) => {
             let output_string = String::from_utf8_lossy(&output.stdout);
