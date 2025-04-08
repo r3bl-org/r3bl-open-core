@@ -17,23 +17,28 @@
 
 use r3bl_core::{get_size,
                 get_terminal_width,
+                height,
                 log_support::try_initialize_logging_global,
+                ok,
                 throws,
                 usize,
+                width,
                 ASTColor,
                 ASTStyle,
                 AnsiStyledText,
                 InlineVec,
                 ItemsBorrowed};
-use r3bl_tui::terminal_async::{choose,
-                               components::style::StyleSheet,
-                               HowToChoose,
-                               DEVELOPMENT_MODE};
-mod choose_sync_quiz_game;
-use choose_sync_quiz_game::main as single_select_quiz_game;
+use r3bl_tui::{choose,
+               terminal_async::{components::style::StyleSheet,
+                                HowToChoose,
+                                DEVELOPMENT_MODE},
+               DefaultIoDevices};
+mod choose_quiz_game;
+use choose_quiz_game::main as single_select_quiz_game;
 use smallvec::smallvec;
 
-fn main() -> miette::Result<()> {
+#[tokio::main]
+async fn main() -> miette::Result<()> {
     throws!({
         DEVELOPMENT_MODE.then(|| {
             try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
@@ -67,7 +72,8 @@ fn main() -> miette::Result<()> {
         const SINGLE_SELECT_QUIZ_GAME: &str = "Single select, quiz game";
 
         // Add tuify to select which example to run.
-        let maybe_user_input = choose(
+        let mut default_io_devices = DefaultIoDevices::default();
+        let user_input = choose(
             "Select which example to run",
             [
                 MULTI_LINE_HEADER,
@@ -82,58 +88,62 @@ fn main() -> miette::Result<()> {
             .iter()
             .map(|it| (*it).into())
             .collect(),
-            Some(6), /* height of the tuify component */
-            Some(0), /* width of the tuify component. 0 means it will use the full terminal width */
+            Some(height(6)), /* height of the tuify component */
+            Some(width(0)), /* width of the tuify component. 0 means it will use the full terminal width */
             HowToChoose::Single,
             StyleSheet::default(),
-        );
+            default_io_devices.as_mut_tuple(),
+        ).await?;
 
-        match &maybe_user_input {
-            Some(input) => {
-                let first_line = input.first();
+        if user_input.is_empty() {
+            println!("User did not select anything");
+            // Exit the program.
+            return Ok(());
+        }
 
-                match first_line {
-                    Some(user_input) => {
-                        if user_input == MULTI_LINE_HEADER {
-                            multi_line_header();
-                        } else if user_input == SINGLE_LINE_HEADER {
-                            single_line_header();
-                        } else if user_input == MULTIPLE_SELECT_SINGLE_ITEM {
-                            // Multiple select, single item.
-                            multiple_select_single_item()
-                        } else if user_input == MULTIPLE_SELECT_13_ITEMS_VPH_5 {
-                            // Multiple select.
-                            multiple_select_13_items_vph_5(
-                                max_height_row_count,
-                                max_width_col_count,
-                                sea_foam_style,
-                            );
-                        } else if user_input == MULTIPLE_SELECT_2_ITEMS_VPH_5 {
-                            multiple_select_2_items_vph_5(
-                                max_height_row_count,
-                                max_width_col_count,
-                                sea_foam_style,
-                            );
-                        } else if user_input == SINGLE_SELECT_13_ITEMS_VPH_5 {
-                            // Single select.
-                            single_select_13_items_vph_5(
-                                max_height_row_count,
-                                max_width_col_count,
-                                hot_pink_style,
-                            );
-                        } else if user_input == SINGLE_SELECT_2_ITEMS_VPH_5 {
-                            single_select_2_items_vph_5(
-                                max_height_row_count,
-                                max_width_col_count,
-                                default_style,
-                            );
-                        } else if user_input == SINGLE_SELECT_QUIZ_GAME {
-                            let _ = single_select_quiz_game();
-                        } else {
-                            println!("User did not select anything")
-                        }
-                    }
-                    None => println!("User did not select anything"),
+        match user_input.first() {
+            Some(input_item) => {
+                if input_item == MULTI_LINE_HEADER {
+                    multi_line_header().await?;
+                } else if input_item == SINGLE_LINE_HEADER {
+                    single_line_header().await?;
+                } else if input_item == MULTIPLE_SELECT_SINGLE_ITEM {
+                    // Multiple select, single item.
+                    multiple_select_single_item().await?
+                } else if input_item == MULTIPLE_SELECT_13_ITEMS_VPH_5 {
+                    // Multiple select.
+                    multiple_select_13_items_vph_5(
+                        max_height_row_count,
+                        max_width_col_count,
+                        sea_foam_style,
+                    )
+                    .await?;
+                } else if input_item == MULTIPLE_SELECT_2_ITEMS_VPH_5 {
+                    multiple_select_2_items_vph_5(
+                        max_height_row_count,
+                        max_width_col_count,
+                        sea_foam_style,
+                    )
+                    .await?;
+                } else if input_item == SINGLE_SELECT_13_ITEMS_VPH_5 {
+                    // Single select.
+                    single_select_13_items_vph_5(
+                        max_height_row_count,
+                        max_width_col_count,
+                        hot_pink_style,
+                    )
+                    .await?;
+                } else if input_item == SINGLE_SELECT_2_ITEMS_VPH_5 {
+                    single_select_2_items_vph_5(
+                        max_height_row_count,
+                        max_width_col_count,
+                        default_style,
+                    )
+                    .await?;
+                } else if input_item == SINGLE_SELECT_QUIZ_GAME {
+                    let _ = single_select_quiz_game();
+                } else {
+                    println!("User did not select anything")
                 }
             }
             None => println!("User did not select anything"),
@@ -147,7 +157,7 @@ fn main() -> miette::Result<()> {
 }
 
 // Multi line header.
-fn multi_line_header() {
+async fn multi_line_header() -> miette::Result<()> {
     let header = AnsiStyledText {
         text: " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
         style: smallvec![
@@ -160,6 +170,7 @@ fn multi_line_header() {
     let mut instructions = multi_select_instructions();
     instructions.push(line_5);
 
+    let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         instructions,
         ItemsBorrowed(&[
@@ -178,21 +189,29 @@ fn multi_line_header() {
             "item 13 of 13",
         ])
         .into(),
-        Some(6),
+        Some(height(6)),
         None,
         HowToChoose::Multiple,
         StyleSheet::default(),
-    );
-    match &user_input {
-        Some(it) => {
-            println!("User selected: {:?}", it);
-        }
-        None => println!("User did not select anything"),
+        default_io_devices.as_mut_tuple(),
+    )
+    .await?;
+
+    if user_input.is_empty() {
+        println!("User did not select anything");
+        // Exit the program.
+        return Ok(());
     }
+
+    println!("User selected: {:?}", user_input);
+
+    ok!()
 }
 
-fn single_line_header() {
+async fn single_line_header() -> miette::Result<()> {
     let max_width_col_count = usize(*get_terminal_width());
+
+    let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         "🦜 Please select one or more items. This is an example of a very long header text 🐧. You can pass emoji here 🐥 and text gets clipped off correctly 🐒, based on terminal size".to_string(),
         [
@@ -213,17 +232,21 @@ fn single_line_header() {
         .iter()
         .map(|it| (*it).into())
         .collect(),
-        Some(5),
-        Some(max_width_col_count),
+        Some(height(5)),
+        Some(width(max_width_col_count)),
         HowToChoose::Multiple,
         StyleSheet::default(),
-    );
-    match &user_input {
-        Some(it) => {
-            println!("User selected: {:?}", it);
-        }
-        None => println!("User did not select anything"),
+        default_io_devices.as_mut_tuple(),
+    ).await?;
+
+    if user_input.is_empty() {
+        println!("User did not select anything");
+        // Exit the program.
+        return Ok(());
     }
+
+    println!("User selected: {:?}", user_input);
+
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
@@ -231,10 +254,12 @@ fn single_line_header() {
             user_input = ?user_input
         );
     });
+
+    ok!()
 }
 
 /// Multiple select, single item.
-fn multiple_select_single_item() {
+async fn multiple_select_single_item() -> miette::Result<()> {
     let mut instructions = multi_select_instructions();
     let header = AnsiStyledText {
         text: " Please select one or more items",
@@ -245,28 +270,36 @@ fn multiple_select_single_item() {
     };
     instructions.push(smallvec![header]);
     let list = smallvec!["one element".into()];
+
+    let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         instructions,
         list,
-        Some(6),
+        Some(height(6)),
         None,
         HowToChoose::Multiple,
         StyleSheet::default(),
-    );
-    match &user_input {
-        Some(it) => {
-            println!("User selected: {:?}", it);
-        }
-        None => println!("User did not select anything"),
+        default_io_devices.as_mut_tuple(),
+    )
+    .await?;
+
+    if user_input.is_empty() {
+        println!("User did not select anything");
+        // Exit the program.
+        return Ok(());
     }
+
+    println!("User selected: {:?}", user_input);
+
+    ok!()
 }
 
 /// 13 items & viewport height = 5.
-fn multiple_select_13_items_vph_5(
+async fn multiple_select_13_items_vph_5(
     max_height_row_count: usize,
     max_width_col_count: usize,
     style: StyleSheet,
-) {
+) -> miette::Result<()> {
     let mut instructions = multi_select_instructions();
     let header = AnsiStyledText {
         text: " Please select one or more items",
@@ -277,6 +310,7 @@ fn multiple_select_13_items_vph_5(
     };
     instructions.push(smallvec![header]);
 
+    let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         instructions,
         ItemsBorrowed(&[
@@ -295,17 +329,22 @@ fn multiple_select_13_items_vph_5(
             "item 13 of 13",
         ])
         .into(),
-        Some(max_height_row_count),
-        Some(max_width_col_count),
+        Some(height(max_height_row_count)),
+        Some(width(max_width_col_count)),
         HowToChoose::Multiple,
         style,
-    );
-    match &user_input {
-        Some(it) => {
-            println!("User selected: {:?}", it);
-        }
-        None => println!("User did not select anything"),
+        default_io_devices.as_mut_tuple(),
+    )
+    .await?;
+
+    if user_input.is_empty() {
+        println!("User did not select anything");
+        // Exit the program.
+        return Ok(());
     }
+
+    println!("User selected: {:?}", user_input);
+
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
@@ -313,14 +352,16 @@ fn multiple_select_13_items_vph_5(
             user_input = ?user_input
         );
     });
+
+    ok!()
 }
 
 /// 2 items & viewport height = 5.
-fn multiple_select_2_items_vph_5(
+async fn multiple_select_2_items_vph_5(
     max_height_row_count: usize,
     max_width_col_count: usize,
     style: StyleSheet,
-) {
+) -> miette::Result<()> {
     let mut instructions = multi_select_instructions();
     let header = AnsiStyledText {
         text: " Please select one or more items",
@@ -332,20 +373,26 @@ fn multiple_select_2_items_vph_5(
 
     instructions.push(smallvec![header]);
 
+    let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         instructions,
         ItemsBorrowed(&["item 1 of 2", "item 2 of 2"]).into(),
-        Some(max_height_row_count),
-        Some(max_width_col_count),
+        Some(height(max_height_row_count)),
+        Some(width(max_width_col_count)),
         HowToChoose::Multiple,
         style,
-    );
-    match &user_input {
-        Some(it) => {
-            println!("User selected: {:?}", it);
-        }
-        None => println!("User did not select anything"),
+        default_io_devices.as_mut_tuple(),
+    )
+    .await?;
+
+    if user_input.is_empty() {
+        println!("User did not select anything");
+        // Exit the program.
+        return Ok(());
     }
+
+    println!("User selected: {:?}", user_input);
+
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
@@ -353,14 +400,17 @@ fn multiple_select_2_items_vph_5(
             user_input = ?user_input
         );
     });
+
+    ok!()
 }
 
 /// 13 items & viewport height = 5.
-fn single_select_13_items_vph_5(
+async fn single_select_13_items_vph_5(
     max_height_row_count: usize,
     max_width_col_count: usize,
     style: StyleSheet,
-) {
+) -> miette::Result<()> {
+    let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         "Single select",
         ItemsBorrowed(&[
@@ -379,17 +429,22 @@ fn single_select_13_items_vph_5(
             "item 13 of 13",
         ])
         .into(),
-        Some(max_height_row_count),
-        Some(max_width_col_count),
+        Some(height(max_height_row_count)),
+        Some(width(max_width_col_count)),
         HowToChoose::Single,
         style,
-    );
-    match &user_input {
-        Some(it) => {
-            println!("User selected: {:?}", it);
-        }
-        None => println!("User did not select anything"),
+        default_io_devices.as_mut_tuple(),
+    )
+    .await?;
+
+    if user_input.is_empty() {
+        println!("User did not select anything");
+        // Exit the program.
+        return Ok(());
     }
+
+    println!("User selected: {:?}", user_input);
+
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
@@ -397,14 +452,16 @@ fn single_select_13_items_vph_5(
             user_input = ?user_input
         );
     });
+
+    ok!()
 }
 
 /// 2 items & viewport height = 5.
-fn single_select_2_items_vph_5(
+async fn single_select_2_items_vph_5(
     max_height_row_count: usize,
     max_width_col_count: usize,
     style: StyleSheet,
-) {
+) -> miette::Result<()> {
     let mut instructions = single_select_instruction();
     let header = AnsiStyledText {
         text: " Please select one item",
@@ -415,20 +472,26 @@ fn single_select_2_items_vph_5(
     };
     instructions.push(smallvec![header]);
 
+    let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         instructions,
         ItemsBorrowed(&["item 1 of 2", "item 2 of 2"]).into(),
-        Some(max_height_row_count),
-        Some(max_width_col_count),
+        Some(height(max_height_row_count)),
+        Some(width(max_width_col_count)),
         HowToChoose::Single,
         style,
-    );
-    match &user_input {
-        Some(it) => {
-            println!("User selected: {:?}", it);
-        }
-        None => println!("User did not select anything"),
+        default_io_devices.as_mut_tuple(),
+    )
+    .await?;
+
+    if user_input.is_empty() {
+        println!("User did not select anything");
+        // Exit the program.
+        return Ok(());
     }
+
+    println!("User selected: {:?}", user_input);
+
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
@@ -436,9 +499,11 @@ fn single_select_2_items_vph_5(
             user_input = ?user_input
         );
     });
+
+    ok!()
 }
 
-fn multi_select_instructions() -> InlineVec<InlineVec<AnsiStyledText<'static>>> {
+fn multi_select_instructions<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:",
         style: smallvec![
@@ -507,7 +572,7 @@ fn multi_select_instructions() -> InlineVec<InlineVec<AnsiStyledText<'static>>> 
     smallvec![line_1, line_2, line_3, line_4]
 }
 
-fn single_select_instruction() -> InlineVec<InlineVec<AnsiStyledText<'static>>> {
+fn single_select_instruction<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:",
         style: smallvec![

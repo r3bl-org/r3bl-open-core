@@ -31,9 +31,7 @@ use r3bl_core::{ch,
                 Width};
 use smallvec::smallvec;
 
-use super::CrosstermKeyPressReader;
 use crate::{enter_event_loop_async,
-            enter_event_loop_sync,
             CalculateResizeHint,
             CaretVerticalViewportLocation,
             EventLoopResult,
@@ -50,6 +48,40 @@ use crate::{enter_event_loop_async,
             DEVELOPMENT_MODE};
 
 pub const DEFAULT_HEIGHT: usize = 5;
+
+/// This struct is provided for convenience to create a default set of IO devices which
+/// can be used in the `choose_async()` function. The reason this has to be created
+/// outside of the `choose_async()` function is because mutable references to these
+/// devices are passed to it, and it can't take ownership of them.
+pub struct DefaultIoDevices {
+    pub output_device: OutputDevice,
+    pub input_device: InputDevice,
+    pub maybe_shared_writer: Option<SharedWriter>,
+}
+
+impl Default for DefaultIoDevices {
+    fn default() -> Self {
+        let output_device = OutputDevice::new_stdout();
+        let input_device = InputDevice::new_event_stream();
+        DefaultIoDevices {
+            output_device,
+            input_device,
+            maybe_shared_writer: None,
+        }
+    }
+}
+
+impl DefaultIoDevices {
+    pub fn as_mut_tuple(
+        &mut self,
+    ) -> (&mut OutputDevice, &mut InputDevice, Option<SharedWriter>) {
+        (
+            &mut self.output_device,
+            &mut self.input_device,
+            self.maybe_shared_writer.clone(),
+        )
+    }
+}
 
 /// Async function to choose an item from a list of items.
 ///
@@ -68,12 +100,13 @@ pub const DEFAULT_HEIGHT: usize = 5;
 /// * `maybe_max_width` - Optional: the maximum width of the list.
 /// * `how` - The selection mode.
 /// * `stylesheet` - The style to use for the list.
-/// * `io` - The input and output devices to use.
+/// * `io` - The input and output devices to use. Call [DefaultIoDevices::as_mut_tuple()]
+///   if you don't want to specify anything here.
 ///   * `output_device` - The output device to use.
 ///   * `input_device` - The input device to use.
 ///   * `maybe_shared_writer` - The shared writer to use, if ReadlineAsync is in use, and
 ///     the async stdout needs to be paused when this function is running.
-pub async fn choose_async<'a>(
+pub async fn choose<'a>(
     arg_header: impl Into<Header<'a>>,
     from: ItemsOwned,
     maybe_max_height: Option<Height>,
@@ -162,78 +195,6 @@ pub async fn choose_async<'a>(
     match res_user_input {
         Ok(EventLoopResult::ExitWithResult(it)) => Ok(it),
         _ => Ok(smallvec![]),
-    }
-}
-
-/// Async function to choose an item from a list of items.
-///
-/// It takes a list of items, and returns the selected item or items (depending on the
-/// selection mode). If the user does not select anything, it returns `None`. The function
-/// also takes the maximum height and width of the display, and the selection mode (single
-/// select or multiple select).
-///
-/// If the terminal is *fully* uninteractive, it returns `None`. This is useful so that it
-/// won't block `cargo test` or when run in non-interactive CI/CD environments.///
-/// # Arguments
-///
-/// * `arg_header` - The header to display above the list.
-/// * `from` - The list of items to choose from.
-/// * `maybe_max_height` - Optional: the maximum height of the list.
-/// * `maybe_max_width` - Optional: the maximum width of the list.
-/// * `how` - The selection mode.
-/// * `stylesheet` - The style to use for the list.
-pub fn choose<'a>(
-    header: impl Into<Header<'a>>,
-    items: ItemsOwned,
-    maybe_max_height_row_count: Option<usize>,
-    maybe_max_width_col_count: Option<usize>,
-    how: HowToChoose,
-    style: StyleSheet,
-) -> Option<ItemsOwned> {
-    let max_height_row_count = match maybe_max_height_row_count {
-        Some(requested_height) => sanitize_height(&items, requested_height),
-        None => sanitize_height(&items, DEFAULT_HEIGHT),
-    };
-
-    let max_width_col_count = maybe_max_width_col_count.unwrap_or(0);
-
-    let mut state = State {
-        max_display_height: ch(max_height_row_count),
-        max_display_width: ch(max_width_col_count),
-        items,
-        header: header.into(),
-        selection_mode: how,
-        ..Default::default()
-    };
-
-    let mut function_component = SelectComponent {
-        output_device: OutputDevice::new_stdout(),
-        style,
-    };
-
-    if let Ok(size) = get_size() {
-        state.set_size(size);
-    }
-
-    let result_user_input = enter_event_loop_sync(
-        &mut state,
-        &mut function_component,
-        |state, key_press| keypress_handler(state, key_press),
-        &mut CrosstermKeyPressReader,
-    );
-
-    match result_user_input {
-        Ok(EventLoopResult::ExitWithResult(it)) => Some(it),
-        _ => None,
-    }
-}
-
-fn sanitize_height(items: &ItemsOwned, requested_height: usize) -> usize {
-    let num_items = items.len();
-    if num_items > requested_height {
-        requested_height
-    } else {
-        num_items
     }
 }
 
@@ -547,7 +508,7 @@ mod test_choose_async {
         // 1. should be paused.
         // 2. after 10ms, "data after 10ms delay\n" will be written to shared writer.
         // 3. after 30ms, the shared writer will be resumed (when choose() completes).
-        _ = choose_async(
+        _ = choose(
             Header::SingleLine("Choose one:".into()),
             ItemsBorrowed(&["one", "two", "three"]).into(),
             None,
@@ -577,114 +538,5 @@ mod test_choose_async {
             acc.last().unwrap(),
             LineStateControlSignal::Resume
         ));
-    }
-}
-
-#[cfg(test)]
-mod test_select_from_list {
-    use r3bl_core::{assert_eq2,
-                    is_fully_uninteractive_terminal,
-                    ItemsBorrowed,
-                    OutputDeviceExt,
-                    TTYResult};
-
-    use super::*;
-    use crate::TestVecKeyPressReader;
-
-    fn create_state<'a>() -> State<'a> {
-        State {
-            max_display_height: ch(10),
-            items: ItemsBorrowed(&["a", "b", "c"]).into(),
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn enter_pressed() {
-        let mut state = create_state();
-        let (output_device, _stdout_mock) = OutputDevice::new_mock();
-        let style_sheet = StyleSheet::default();
-
-        let mut function_component = SelectComponent {
-            output_device,
-            style: style_sheet,
-        };
-
-        let mut reader = TestVecKeyPressReader {
-            key_press_vec: vec![
-                InputEvent::Keyboard(KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Down),
-                }),
-                InputEvent::Keyboard(KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Down),
-                }),
-                InputEvent::Keyboard(KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Enter),
-                }),
-            ],
-            index: None,
-        };
-
-        let result_event_loop_result = enter_event_loop_sync(
-            &mut state,
-            &mut function_component,
-            |state, key_press| keypress_handler(state, key_press),
-            &mut reader,
-        );
-
-        assert_eq2!(
-            result_event_loop_result.unwrap(),
-            match is_fully_uninteractive_terminal() {
-                TTYResult::IsNotInteractive => EventLoopResult::ExitWithError,
-                _ => EventLoopResult::ExitWithResult(ItemsBorrowed(&["c"]).into()),
-            }
-        );
-    }
-
-    #[test]
-    fn ctrl_c_pressed() {
-        let mut state = create_state();
-        let (output_device, _stdout_mock) = OutputDevice::new_mock();
-        let style_sheet = StyleSheet::default();
-
-        let mut function_component = SelectComponent {
-            output_device,
-            style: style_sheet,
-        };
-
-        let mut reader = TestVecKeyPressReader {
-            key_press_vec: vec![
-                InputEvent::Keyboard(KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Down),
-                }),
-                InputEvent::Keyboard(KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Down),
-                }),
-                InputEvent::Keyboard(KeyPress::WithModifiers {
-                    key: Key::Character('c'),
-                    mask: ModifierKeysMask {
-                        ctrl_key_state: KeyState::Pressed,
-                        shift_key_state: KeyState::NotPressed,
-                        alt_key_state: KeyState::NotPressed,
-                    },
-                }),
-            ],
-            index: None,
-        };
-
-        let result_event_loop_result = enter_event_loop_sync(
-            &mut state,
-            &mut function_component,
-            |state, key_press| keypress_handler(state, key_press),
-            &mut reader,
-        );
-
-        assert_eq2!(
-            result_event_loop_result.unwrap(),
-            match is_fully_uninteractive_terminal() {
-                TTYResult::IsNotInteractive => EventLoopResult::ExitWithError,
-                _ => EventLoopResult::ExitWithoutResult,
-            }
-        );
     }
 }

@@ -20,6 +20,12 @@ Open vscode connected to a remote machine via SSH:
 code --remote ssh-remote+nazmul-desktop.local /home/nazmul/github/r3bl-open-core/
 */
 
+/*
+Run cargo clippy & fix:
+cargo clippy --fix --no-deps --allow-dirty --allow-staged ; cargo fix --workspace
+--allow-dirty --allow-staged ; cargo fmt --all
+*/
+
 call_if_true!(DEBUG_TUI_COMPOSITOR, {
     let message = inline_string!(
         "print_plain_text() {ar} {ch}",

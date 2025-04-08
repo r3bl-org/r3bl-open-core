@@ -19,7 +19,7 @@
 //! 1. [Tutorial](https://developerlife.com/2023/09/17/tuify-clap/)
 //! 2. [Video](https://youtu.be/lzMYDA6St0s)
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use r3bl_cmdr::{AnalyticsAction,
                 giti::{BranchSubcommand,
                        CLIArg,
@@ -36,11 +36,14 @@ use r3bl_cmdr::{AnalyticsAction,
 use r3bl_core::{CommonResult,
                 ast,
                 fg_guards_red,
+                height,
                 log_support::try_initialize_logging_global,
                 new_style,
                 throws,
                 tui_color};
-use r3bl_tui::terminal_async::{HowToChoose, StyleSheet, choose};
+use r3bl_tui::{DefaultIoDevices,
+               choose,
+               terminal_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 
 #[tokio::main]
@@ -131,9 +134,9 @@ pub async fn try_run_command(giti_app_args: &CLIArg) -> CommonResult<SuccessRepo
             ..
         } => match command_to_run_with_each_selection {
             Some(subcommand) => match subcommand {
-                BranchSubcommand::Delete => try_delete_branch(),
+                BranchSubcommand::Delete => try_delete_branch().await,
                 BranchSubcommand::Checkout => {
-                    try_checkout_branch(maybe_branch_name.clone())
+                    try_checkout_branch(maybe_branch_name.clone()).await
                 }
                 BranchSubcommand::New => {
                     try_make_new_branch(maybe_branch_name.clone()).await
@@ -161,22 +164,29 @@ async fn user_typed_giti_branch() -> CommonResult<SuccessReport> {
         lines.push(smallvec![header_line]);
         lines
     };
-    let maybe_selected = choose(
+
+    let mut default_io_devices = DefaultIoDevices::default();
+    let selected = choose(
         instructions_and_select_branch_subcommand,
         branch_subcommands,
-        Some(20),
+        Some(height(20)),
         None,
         HowToChoose::Single,
         StyleSheet::default(),
-    );
-    if let Some(selected) = maybe_selected {
-        let it = selected[0].as_str();
-        match it {
-            "delete" => return try_delete_branch(),
-            "checkout" => return try_checkout_branch(None),
-            "new" => return try_make_new_branch(None).await,
-            _ => unimplemented!(),
-        };
+        default_io_devices.as_mut_tuple(),
+    )
+    .await?;
+
+    if let Some(selected) = selected.first() {
+        if let Ok(branch_subcommand) = BranchSubcommand::from_str(selected, true) {
+            match branch_subcommand {
+                BranchSubcommand::Delete => return try_delete_branch().await,
+                BranchSubcommand::Checkout => return try_checkout_branch(None).await,
+                BranchSubcommand::New => return try_make_new_branch(None).await,
+            }
+        } else {
+            unimplemented!();
+        }
     };
 
     Ok(SuccessReport::default())

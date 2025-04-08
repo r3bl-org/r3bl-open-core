@@ -15,17 +15,21 @@
  *   limitations under the License.
  */
 
-use std::{fmt::Display, io::Result};
+use std::fmt::Display;
 
 use r3bl_core::{self,
                 get_terminal_width,
+                height,
                 usize,
+                width,
                 ASTColor,
                 ASTStyle,
                 AnsiStyledText,
                 ItemsBorrowed,
                 ItemsOwned};
-use r3bl_tui::terminal_async::{choose, HowToChoose, StyleSheet};
+use r3bl_tui::{choose,
+               terminal_async::{HowToChoose, StyleSheet},
+               DefaultIoDevices};
 use serde::{Deserialize, Serialize};
 
 const JSON_DATA: &str = r#"[
@@ -74,7 +78,8 @@ struct QuestionData {
     correct_answer: String,
 }
 
-pub fn main() -> Result<()> {
+#[tokio::main]
+pub async fn main() -> miette::Result<()> {
     // Parse string into Vec<QuestionData>
     let all_questions_and_answers: Vec<QuestionData> =
         serde_json::from_str(JSON_DATA).unwrap();
@@ -89,36 +94,36 @@ pub fn main() -> Result<()> {
 
     display_header(line_length);
 
+    let mut io_devices = DefaultIoDevices::default();
+
     for question_data in &all_questions_and_answers {
         let question = question_data.question.clone();
         let options = question_data.options.clone();
         let user_input = choose(
             question,
             ItemsBorrowed(&options).into(),
-            Some(max_height_row_count),
-            Some(max_width_col_count),
+            Some(height(max_height_row_count)),
+            Some(width(max_width_col_count)),
             HowToChoose::Single,
             StyleSheet::default(),
-        );
+            io_devices.as_mut_tuple(),
+        )
+        .await?;
 
-        match &user_input {
-            Some(input) => {
-                check_user_input_and_display_result(
-                    input,
-                    question_data,
-                    &user_input,
-                    correct_answer_color,
-                    incorrect_answer_color,
-                    &mut score,
-                    &all_questions_and_answers,
-                );
-            }
-            None => {
-                println!("You did not select anything");
-                // Exit the game.
-                break;
-            }
-        };
+        if user_input.is_empty() {
+            println!("You did not select anything");
+            // Exit the game.
+            break;
+        }
+
+        check_user_input_and_display_result(
+            &user_input,
+            question_data,
+            correct_answer_color,
+            incorrect_answer_color,
+            &mut score,
+            &all_questions_and_answers,
+        );
     }
 
     display_footer(score, &all_questions_and_answers, line_length);
@@ -156,7 +161,7 @@ impl Display for Answer {
     }
 }
 
-fn check_answer(guess: &QuestionData, maybe_user_input: &Option<ItemsOwned>) -> Answer {
+fn check_answer(guess: &QuestionData, maybe_user_input: Option<&ItemsOwned>) -> Answer {
     // If the maybe_user_input has 1 item then proceed. Otherwise return incorrect.
     match maybe_user_input {
         Some(user_input) => {
@@ -242,15 +247,14 @@ fn display_footer(
 }
 
 fn check_user_input_and_display_result(
-    input: &ItemsOwned,
+    user_input: &ItemsOwned,
     question_data: &QuestionData,
-    user_input: &Option<ItemsOwned>,
     correct_answer_color: ASTColor,
     incorrect_answer_color: ASTColor,
     score: &mut i32,
     all_questions_and_answers: &[QuestionData],
 ) {
-    let answer = check_answer(question_data, user_input);
+    let answer = check_answer(question_data, Some(user_input));
 
     let background_color = match answer {
         Answer::Correct => correct_answer_color,
@@ -272,14 +276,19 @@ fn check_user_input_and_display_result(
         .unwrap()
         + 1;
 
+    let user_input_str = match user_input.first() {
+        Some(input) => input,
+        None => "No answer",
+    };
+
     println!(
-        "{} {} {}",
-        AnsiStyledText {
+        "{a} {b} {c}",
+        a = AnsiStyledText {
             text: format!("{}. {}", question_number, &question_data.question).as_str(),
             style: smallvec::smallvec![ASTStyle::Foreground(background_color)],
         },
-        input[0],
-        correct_or_incorrect
+        b = user_input_str,
+        c = correct_or_incorrect
     );
 }
 
