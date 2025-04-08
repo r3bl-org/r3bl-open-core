@@ -433,6 +433,8 @@ Added:
     operation that is called in a hot loop, the main event loop).
 
 Changed:
+  - In the `ReadlineAsync::read_line()` method, don't display the dangling prompt + `\n`
+    when the program exits, after calling `ReadlineAsync::exit()`.
   - Rename `get_readline_event()` to `read_line()`. This is an async replacement for
     `std::io::Stdin::read_line()`.
   - Update all the demo examples in the `examples` folder to use the new telemetry API and

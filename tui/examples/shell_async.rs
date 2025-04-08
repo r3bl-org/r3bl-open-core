@@ -95,7 +95,12 @@
 use std::io::Write as _;
 
 use miette::IntoDiagnostic as _;
-use r3bl_core::{fg_guards_red, fg_lizard_green, inline_string, ok, SharedWriter};
+use r3bl_core::{fg_guards_red,
+                fg_lizard_green,
+                fg_slate_gray,
+                inline_string,
+                ok,
+                SharedWriter};
 use r3bl_tui::terminal_async::{ReadlineAsync,
                                ReadlineEvent,
                                ReadlineEvent::{Eof, Interrupted, Line, Resized}};
@@ -180,7 +185,7 @@ pub mod monitor_user_input_and_send_to_child {
 
     pub async fn start_event_loop(
         mut stdin: tokio::process::ChildStdin,
-        mut readline_async: ReadlineAsync,
+        mut rl_async: ReadlineAsync,
         mut child: tokio::process::Child,
         shutdown_sender: tokio::sync::broadcast::Sender<()>,
     ) {
@@ -196,10 +201,11 @@ pub mod monitor_user_input_and_send_to_child {
 
                 // Branch: Monitor readline_async for user input. This is cancel safe as
                 // `get_readline_event()` is cancel safe.
-                result_readline_event = readline_async.read_line() => {
+                result_readline_event = rl_async.read_line() => {
                     match ControlFlow::from(result_readline_event) {
                         ControlFlow::ShutdownKillChild => {
                             _ = child.kill().await;
+                            _ = rl_async.exit(Some("❪◕‿◕❫ Goodbye")).await;
                             _= shutdown_sender.send(());
                             break;
                         }
@@ -272,8 +278,6 @@ pub mod monitor_child_output {
 }
 
 pub mod terminal_async_constructor {
-    use r3bl_core::fg_slate_gray;
-
     use super::*;
 
     pub struct TerminalAsyncHandle {
