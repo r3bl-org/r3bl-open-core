@@ -327,7 +327,9 @@ impl LineState {
     pub fn exit(&mut self, term: &mut dyn Write) -> Result<(), ReadlineError> {
         self.line.clear();
         self.clear(term)?;
-        self.render_new_line_from_beginning_and_flush(term)?;
+
+        term.queue(cursor::MoveToColumn(0))?;
+        term.flush()?;
 
         ok!()
     }
