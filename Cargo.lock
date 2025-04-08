@@ -183,9 +183,6 @@ name = "bitflags"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "block"
@@ -245,7 +242,6 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
- "serde",
  "wasm-bindgen",
  "windows-targets 0.52.6",
 ]
@@ -432,7 +428,6 @@ dependencies = [
  "mio",
  "parking_lot 0.12.3",
  "rustix",
- "serde",
  "signal-hook",
  "signal-hook-mio",
  "winapi",
@@ -563,17 +558,6 @@ name = "fastrand"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8c02a5121d4ea3eb16a80748c74f5549a5665e4c21333c6098f283870fbdea6"
-
-[[package]]
-name = "fd-lock"
-version = "4.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e5768da2206272c81ef0b5e951a41862938a6070da63bcea197899942d3b947"
-dependencies = [
- "cfg-if",
- "rustix",
- "windows-sys 0.52.0",
-]
 
 [[package]]
 name = "flate2"
@@ -1008,15 +992,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7943c866cc5cd64cbc25b2e01621d07fa8eb2a1a23160ee81ce38704e97b8ecf"
 
 [[package]]
-name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1257,15 +1232,6 @@ checksum = "77a8165726e8236064dbb45459242600304b42a5ea24ee2948e18e023bf7ba84"
 dependencies = [
  "overload",
  "winapi",
-]
-
-[[package]]
-name = "nu-ansi-term"
-version = "0.50.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4a28e057d01f97e61255210fcff094d74ed0466038633e95017f5beb68e4399"
-dependencies = [
- "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1617,30 +1583,20 @@ dependencies = [
 name = "r3bl-cmdr"
 version = "0.0.16"
 dependencies = [
- "chrono",
  "clap",
- "crossterm",
  "dirs",
  "miette",
  "open",
- "pretty_assertions",
  "r3bl_analytics_schema",
  "r3bl_core",
  "r3bl_tui",
- "rand",
- "reedline",
  "reqwest",
  "serde",
  "serde_json",
- "serial_test",
- "smallstr",
  "smallvec",
- "thiserror",
  "tokio",
  "tracing",
- "tracing-appender",
  "tracing-core",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1659,7 +1615,6 @@ name = "r3bl_core"
 version = "0.10.0"
 dependencies = [
  "async-stream",
- "bincode",
  "chrono",
  "colorgrad",
  "const_format",
@@ -1687,7 +1642,6 @@ dependencies = [
  "test-case",
  "textwrap",
  "thiserror",
- "time",
  "tokio",
  "tokio-test",
  "tracing",
@@ -1705,7 +1659,6 @@ version = "0.6.0"
 dependencies = [
  "chrono",
  "clap",
- "const_format",
  "copypasta-ext",
  "crossterm",
  "futures-util",
@@ -1722,15 +1675,11 @@ dependencies = [
  "strum",
  "strum_macros",
  "syntect",
- "textwrap",
  "thiserror",
  "tokio",
  "tracing",
- "tracing-appender",
  "tracing-core",
- "tracing-subscriber",
  "unicode-segmentation",
- "unicode-width 0.2.0",
 ]
 
 [[package]]
@@ -1790,26 +1739,6 @@ dependencies = [
  "getrandom",
  "libredox",
  "thiserror",
-]
-
-[[package]]
-name = "reedline"
-version = "0.36.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57016fc0ec4c651a05cb80fb1200b7c3518afcc2f769edffe15aca2363395c15"
-dependencies = [
- "chrono",
- "crossterm",
- "fd-lock",
- "itertools",
- "nu-ansi-term 0.50.1",
- "serde",
- "strip-ansi-escapes",
- "strum",
- "strum_macros",
- "thiserror",
- "unicode-segmentation",
- "unicode-width 0.1.14",
 ]
 
 [[package]]
@@ -2701,7 +2630,7 @@ version = "0.3.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8189decb5ac0fa7bc8b96b7cb9b2701d60d48805aca84a238004d665fcc4008"
 dependencies = [
- "nu-ansi-term 0.46.0",
+ "nu-ansi-term",
  "sharded-slab",
  "smallvec",
  "thread_local",
