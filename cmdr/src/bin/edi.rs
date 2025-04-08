@@ -26,9 +26,13 @@ use r3bl_core::{ColorWheel,
                 TextColorizationPolicy,
                 fg_lizard_green,
                 fg_slate_gray,
+                height,
                 log_support::try_initialize_logging_global,
-                throws};
-use r3bl_tui::terminal_async::{HowToChoose, StyleSheet, choose};
+                throws,
+                width};
+use r3bl_tui::{DefaultIoDevices,
+               choose,
+               terminal_async::{HowToChoose, StyleSheet}};
 
 use crate::clap_config::CLIArg;
 
@@ -82,6 +86,7 @@ async fn main() -> CommonResult<()> {
             _ => {
                 if let Some(ref file_path) =
                     edi_ui_templates::handle_multiple_files_not_supported_yet(cli_arg)
+                        .await
                 {
                     report_analytics::start_task_to_generate_event(
                         "".to_string(),
@@ -105,10 +110,11 @@ async fn main() -> CommonResult<()> {
 pub mod edi_ui_templates {
     use super::*;
 
-    pub fn handle_multiple_files_not_supported_yet(
+    pub async fn handle_multiple_files_not_supported_yet(
         cli_arg: CLIArg,
     ) -> Option<InlineString> {
         // Ask the user to select a file to edit.
+        let mut default_io_devices = DefaultIoDevices::default();
         let maybe_user_choices = choose(
             "edi currently only allows you to edit one file at a time. Select one:",
             cli_arg
@@ -116,11 +122,14 @@ pub mod edi_ui_templates {
                 .iter()
                 .map(|s| s.to_string().into())
                 .collect(),
-            Some(5),
-            Some(0),
+            Some(height(5)),
+            Some(width(0)),
             HowToChoose::Single,
             StyleSheet::default(),
-        );
+            default_io_devices.as_mut_tuple(),
+        )
+        .await
+        .ok();
 
         // Return the single user choice, if there is one.
         if let Some(user_choices) = maybe_user_choices {

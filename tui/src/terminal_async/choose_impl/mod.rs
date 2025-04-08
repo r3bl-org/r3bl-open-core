@@ -134,8 +134,8 @@
 //!
 //! ```toml
 //! [dependencies]
-//! r3bl_tuify = "*" # Get the latest version at the time you get this.
 //! r3bl_core = "*" # Get the latest version at the time you get this.
+//! r3bl_tui = "*" # Get the latest version at the time you get this.
 //! ```
 //!
 //! The following example illustrates how you can use this as a library. The function that
@@ -184,20 +184,18 @@
 //!
 //! # APIs
 //!
-//! We provide 2 APIs:
+//! We provide a single function:
 //!
-//! - [crate::choose_async()]: Use this API if you want to display a list of items in an
-//!   async context.
-//! - [crate::choose()]: Use this API if you want to display a list of items with a single
-//!   or multi line header.
+//! - [crate::choose()]: Use this API if you want to display a list of items in an async
+//!   context, with a single or multi line header.
 //!
-//! ## choose_async
+//! ## choose
 //!
 //! Use this async API if you want to display a list of items with a single or multi line header.
 //!
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/0ae722bb-8cd1-47b1-a293-1a96e84d24d0)
 //!
-//! [crate::choose_async()] code example:
+//! [crate::choose()] code example:
 //!
 //! ```rust
 //! # use r3bl_core::*;
@@ -208,7 +206,7 @@
 //! async fn main() -> Result<()> {
 //!     // Get display size.
 //!     let max_height_row_count: usize = 5;
-//!     let user_input = choose_async(
+//!     let user_input = choose(
 //!         "Select an item",
 //!         ItemsBorrowed(&[
 //!             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
@@ -231,287 +229,6 @@
 //!     Ok(())
 //! }
 //! ```
-//!
-//! ## choose
-//!
-//! Use the sync `choose` API if you want to display a list of items with a single or
-//! multi line header. The first 5 lines are all part of the multi line header.
-//!
-//! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/2f82a42c-f720-4bcb-925d-0d5ad0b0a3c9)
-//!
-//! [crate::choose] code example:
-//!
-//! ```rust
-//! # use std::{io::Result, vec};
-//! # use smallvec::smallvec;
-//! # use r3bl_core::{
-//! #     ItemsBorrowed, InlineVec, AnsiStyledText, ASTColor, ASTStyle
-//! # };
-//! # use r3bl_tui::terminal_async::{
-//! #     components::style::StyleSheet, State,
-//! #     choose,
-//! #     HowToChoose,
-//! # };
-//!
-//! fn multi_select_instructions() -> InlineVec<InlineVec<AnsiStyledText<'static>>> {
-//!     let up_and_down = AnsiStyledText {
-//!         text: " Up or down:",
-//!         style: smallvec![
-//!             ASTStyle::Foreground(ASTColor::Rgb((9, 238, 211).into())),
-//!             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-//!         ],
-//!     };
-//!     let navigate = AnsiStyledText {
-//!         text: "     navigate",
-//!         style: smallvec![
-//!             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-//!             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-//!         ],
-//!     };
-//!
-//!     let line_1 = smallvec![up_and_down, navigate];
-//!
-//!     let space = AnsiStyledText {
-//!         text: " Space:",
-//!         style: smallvec![
-//!             ASTStyle::Foreground(ASTColor::Rgb((255, 216, 9).into())),
-//!             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-//!         ],
-//!     };
-//!     let select = AnsiStyledText {
-//!         text: "          select or deselect item",
-//!         style: smallvec![
-//!             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-//!             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-//!         ],
-//!     };
-//!
-//!     let line_2 = smallvec![space, select];
-//!
-//!     let esc = AnsiStyledText {
-//!         text: " Esc or Ctrl+C:",
-//!         style: smallvec![
-//!             ASTStyle::Foreground(ASTColor::Rgb((255, 132, 18).into())),
-//!             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-//!         ],
-//!     };
-//!     let exit = AnsiStyledText {
-//!         text: "  exit program",
-//!         style: smallvec![
-//!             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-//!             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-//!         ],
-//!     };
-//!
-//!     let line_3 = smallvec![esc, exit];
-//!     let return_key = AnsiStyledText {
-//!         text: " Return:",
-//!         style: smallvec![
-//!             ASTStyle::Foreground(ASTColor::Rgb((234, 0, 196).into())),
-//!             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-//!         ],
-//!     };
-//!     let confirm = AnsiStyledText {
-//!         text: "         confirm selection",
-//!         style: smallvec![
-//!             ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-//!             ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-//!         ],
-//!     };
-//!     let line_4 = smallvec![return_key, confirm];
-//!     smallvec![line_1, line_2, line_3, line_4]
-//! }
-//!
-//! fn main() -> Result<()> {
-//!    let header = AnsiStyledText {
-//!         text: " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
-//!         style: smallvec![
-//!             ASTStyle::Foreground(ASTColor::Rgb((171, 204, 242).into())),
-//!             ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
-//!         ],
-//!     };
-//!
-//!     let mut instructions_and_header: InlineVec<InlineVec<AnsiStyledText>> = multi_select_instructions();
-//!     instructions_and_header.push(smallvec![header]);
-//!
-//!     let user_input = choose(
-//!         instructions_and_header,
-//!         ItemsBorrowed(&[
-//!             "item 1 of 13",
-//!             "item 2 of 13",
-//!             "item 3 of 13",
-//!             "item 4 of 13",
-//!             "item 5 of 13",
-//!             "item 6 of 13",
-//!             "item 7 of 13",
-//!             "item 8 of 13",
-//!             "item 9 of 13",
-//!             "item 10 of 13",
-//!             "item 11 of 13",
-//!             "item 12 of 13",
-//!             "item 13 of 13",
-//!         ]).into(),
-//!         Some(6),
-//!         None,
-//!         HowToChoose::Multiple,
-//!         StyleSheet::default(),
-//!     );
-//!     match &user_input {
-//!         Some(it) => {
-//!             println!("User selected: {:?}", it);
-//!         }
-//!         None => println!("User did not select anything"),
-//!     }
-//!    Ok(())
-//! }
-//! ```
-//!
-//! # How to use it as a binary?
-//!
-//! Here's a demo of the binary target of this crate in action.
-//!
-//! <video width="100%" controls>
-//!   <source src="https://github-production-user-asset-6210df.s3.amazonaws.com/2966499/267427392-2b42db72-cd62-4ea2-80ae-ccc01008190c.mp4" type="video/mp4"/>
-//! </video>
-//!
-//! You can install the binary using `cargo install r3bl_tuify` (from crates.io). Or
-//! `cargo install --path .` from source. `rt` is a command line tool that allows you to select one of the options from the list that is passed into it
-//! via `stdin`. It supports both `stdin` and `stdout` piping.
-//!
-//! Here are the command line arguments that it accepts:
-//! 1. `-s` or `--selection-mode` - Allows you to select the selection mode. There are two
-//!    options: `single` and `multiple`.
-//! 1. `-c` or `--command-to-run-with-selection` - Allows you to specify the command to
-//!    run with the selected item. For example `"echo foo \'%\'"` simply prints each
-//!    selected item.
-//! 1. `-t` or `--tui-height` - Optionally allows you to set the height of the TUI. The
-//!    default is 5.
-//!
-//! ## Interactive user experience
-//!
-//! Typically a CLI app is not interactive. You can pass commands, subcommands, options, and
-//! arguments to it, but if you get something wrong, then you get an error and have to start
-//! all over again. This "conversation" style interface might require a lot of trial and error
-//! to get the desired result.
-//!
-//! The following is an example of using the binary with many subcommands, options, and arguments.
-//!
-//! ```shell
-//! cat TODO.todo | cargo run -- select-from-list \
-//!     --selection-mode single \
-//!     --command-to-run-with-each-selection "echo %"
-//! ```
-//!
-//! Here's a video of this in action.
-//!
-//! <!-- tuify-long-command -->
-//! <video width="100%" controls>
-//!   <source src="https://github.com/r3bl-org/r3bl-open-core/assets/2966499/c9b49bfb-b811-460e-a844-fe260eaa860a" type="video/mp4"/>
-//! </video>
-//!
-//! What does this do?
-//!
-//! 1. `cat TODO.todo` - prints the contents of the `TODO.todo` file to `stdout`.
-//! 1. `|` - pipes the output of the previous command to the next command, which is `rt` (ie,
-//!    the binary target of this crate).
-//! 1. `cargo run --` - runs the `rt` debug binary in the target folder.
-//! 1. `select-from-list` - runs the `rt` binary with the `select-from-list`
-//!    subcommand. This subcommand requires 2 arguments: `--selection-mode` and
-//!    `--command-to-run-with-each-selection`. Whew! This is getting long!
-//! 1. `--selection-mode single` - sets the selection mode to `single`. This means that the
-//!    user can only select one item from the list. What list? The list that is piped in from
-//!    the previous command (ie, `cat TODO.todo`).
-//! 1. `--command-to-run-with-each-selection "echo %"` - sets the command to run with each
-//!    selection. In this case, it is `echo %`. The `%` is a placeholder for the selected
-//!    item. So if the user selects `item 1`, then the command that will be run is `echo item
-//!    1`. The `echo` command simply prints the selected item to `stdout`.
-//!
-//! Now that is a lot to remember. It is helpful to use `clap` to provide nice command line help but
-//! that are still quite a few things that you have to get right for this command to work.
-//!
-//! It doesn't have to be this way. The binary can be interactive along with
-//! the use of `clap` to specify some of the subcommands, and arguments. It doesn't
-//! have to be an all or nothing approach. We can have the best of both worlds. The following
-//! videos illustrate what happens when:
-//!
-//! 1. `--selection-mode` and `--command-to-run-with-each-selection` are *not* passed in the
-//!    command line.
-//!    ```shell
-//!    cat TODO.todo | cargo run -- select-from-list
-//!    ```
-//!
-//!    Here are the 3 scenarios that can happen:
-//!
-//!    - The user first chooses `single` selection mode (using a list selection component),
-//!      and then types in `echo %` in the terminal, as the command to run with each
-//!      selection. This is an
-//!      interactive scenario since the user has to provide 2 pieces of information:  the selection mode, and the command to run with each
-//!      selection. They didn't provide this upfront when they ran the command.
-//!      <!-- tuify-interactive-happy-path -->
-//!      <video width="100%" controls>
-//!        <source src="https://github.com/r3bl-org/r3bl-open-core/assets/2966499/51de8867-513b-429f-aff2-63dd25d71c82" type="video/mp4"/>
-//!      </video>
-//!
-//!    - Another scenario is that the user does not provide the required information even when
-//!      prompted interactively. In this scenario, the program exits with an error and help
-//!      message.
-//!
-//!      Here they don't provide what `selection-mode` they want. And they don't provide what
-//!      `command-to-run-with-each-selection` they want. Without this information the program
-//!      can't continue, so it exits and provides some help message.
-//!      <!-- tuify-interactive-unhappy-path -->
-//!      <video width="100%" controls>
-//!        <source src="https://github.com/r3bl-org/r3bl-open-core/assets/2966499/664d0367-90fd-4f0a-ad87-3f4745642ad0" type="video/mp4"/>
-//!      </video>
-//!
-//! 1. `--selection-mode` is *not* passed in the command line. So it only interactively
-//!    prompts the user for this piece of information. Similarly, if the user does not provide
-//!    this information, the app exits and provides a help message.
-//!    ```shell
-//!    cat TODO.todo | cargo run -- select-from-list --command-to-run-with-each-selection "echo %"
-//!    ```
-//!    <!-- tuify-interactive-selection-mode-not-provided -->
-//!      <video width="100%" controls>
-//!        <source src="https://github.com/r3bl-org/r3bl-open-core/assets/2966499/be65d9b2-575b-47c0-8291-110340bd2fe7" type="video/mp4"/>
-//!      </video>
-//!
-//! 1. `--command-to-run-with-each-selection` is *not* passed in the command line. So it only
-//!    interactively prompts the user for this piece of information. Similarly, if the user
-//!    does not provide this information, the app exits and provides a help message.
-//!    ```shell
-//!    cat TODO.todo | cargo run -- select-from-list --selection-mode single
-//!    ```
-//!    <!-- tuify-interactive-command-to-run-with-selection-not-provided -->
-//!      <video width="100%" controls>
-//!        <source src="https://github.com/r3bl-org/r3bl-open-core/assets/2966499/d8d7d419-c85e-4c10-bea5-345aa31a92a3" type="video/mp4"/>
-//!      </video>
-//!
-//! ## Paths
-//!
-//! There are a lot of different execution paths that you can take with this relatively
-//! simple program. Here is a list.
-//!
-//! - Happy paths:
-//!   1. `rt` - prints help.
-//!   1. `cat Cargo.toml | rt -s single -c "echo foo \'%\'"` - `stdin` is piped
-//!      in, and it prints the user selected option to `stdout`.
-//!   1. `cat Cargo.toml | rt -s multiple -c "echo foo \'%\'"` - `stdin` is piped
-//!      in, and it prints the user selected option to `stdout`.
-//!
-//! - Unhappy paths (`stdin` is _not_ piped in and, or `stdout` _is_ piped out):
-//!   1. `rt -s single` - expects `stdin` to be piped in, and prints help.
-//!   1. `rt -s multiple` - expects `stdin` to be piped in, and prints help.
-//!   1. `ls -la | rt -s single | xargs -0` - does not expect `stdout` to be piped out,
-//!      and prints help.
-//!   1. `ls -la | rt -s multiple | xargs -0` - does not expect `stdout` to be piped out,
-//!      and prints help.
-//!
-//! > Due to how unix pipes are implemented, it is not possible to pipe the
-//! > `stdout` of this command to anything else. Unix pipes are non-blocking. So there is no
-//! > way to stop the pipe "midway". This is why `rt` displays an error when the `stdout` is
-//! > piped out. It is not possible to pipe the `stdout` of `rt` to another command. Instead,
-//! > the `rt` binary simply takes a command that will run after the user has made their
-//! > selection. Using the selected item(s) and applying them to this command.
 //!
 //! # Style the components
 //!
