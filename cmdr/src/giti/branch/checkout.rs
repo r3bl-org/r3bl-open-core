@@ -36,10 +36,8 @@ use r3bl_tui::terminal_async::{HowToChoose, StyleSheet, choose};
 use smallvec::smallvec;
 
 use super::{get_branches, try_get_current_branch};
-use crate::giti::{CommandSuccessfulResponse,
+use crate::giti::{SuccessReport,
                   clap_config::BranchSubcommand,
-                  report_unknown_error_and_propagate,
-                  single_select_instruction_header,
                   ui_strings::UIStrings::{AlreadyOnCurrentBranch,
                                           BranchDoesNotExist,
                                           FailedToSwitchToBranch,
@@ -48,12 +46,14 @@ use crate::giti::{CommandSuccessfulResponse,
                                           NoBranchGotCheckedOut,
                                           PleaseCommitChangesBeforeSwitchingBranches,
                                           SelectBranchToSwitchTo,
-                                          SwitchedToBranch}};
+                                          SwitchedToBranch},
+                  ui_templates::{report_unknown_error_and_propagate,
+                                 single_select_instruction_header}};
 
 pub fn try_checkout_branch(
     maybe_branch_name: Option<String>,
-) -> CommonResult<CommandSuccessfulResponse> {
-    let try_run_command_result = CommandSuccessfulResponse {
+) -> CommonResult<SuccessReport> {
+    let try_run_command_result = SuccessReport {
         maybe_deleted_branches: None,
         branch_subcommand: Some(BranchSubcommand::Checkout),
     };
@@ -175,7 +175,7 @@ pub fn try_checkout_branch(
                     try_checkout_branch_error::display_error_message(branch_name, None);
                     return report_unknown_error_and_propagate(
                         checkout_branch_command,
-                        error,
+                        miette::miette!(error),
                     );
                 }
             }
@@ -238,7 +238,7 @@ pub fn try_checkout_branch(
                             );
                             return report_unknown_error_and_propagate(
                                 checkout_branch_command,
-                                error,
+                                miette::miette!(error),
                             );
                         }
                     }

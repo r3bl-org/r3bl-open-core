@@ -10,8 +10,8 @@ Used by workspace in https://github.com/r3bl-org/r3bl-open-core.
 """
 # Email address(es) has to be verified at https://crates.io/me/
 authors = [
-  "Nazmul Idris <idris@developerlife.com>",
-  "Nadia Idris <nadia@developerlife.com>",
+    "Nazmul Idris <idris@developerlife.com>",
+    "Nadia Idris <nadia@developerlife.com>",
 ]
 repository = "https://github.com/r3bl-org/r3bl-open-core/tree/main/core"
 documentation = "https://docs.rs/r3bl_core/"
@@ -33,7 +33,6 @@ unicode-segmentation = "1.12.0"
 
 # Time
 chrono = "0.4.38"
-time = "0.3.36"
 
 # CustomEventFormatter.
 textwrap = { version = "0.16.1", features = ["unicode-linebreak"] }
@@ -76,9 +75,6 @@ pretty_assertions = "1.4.1"
 strum = "0.26.3"
 strum_macros = "0.26.4"
 
-# Convert Rust structs to and from binary representation.
-bincode = { version = "1.3.3" }
-
 # Key Value store that can be used to store JSON or bincode encoded values. `kv` is built
 # on top of `sled` which currently does not support access across multiple processes.
 kv = { version = "0.24.0", features = ["json-value", "bincode-value"] }
@@ -96,9 +92,9 @@ uuid = { version = "1.11.0", features = ["v4"] }
 # For smallstr & smallvec.
 smallstr = { version = "0.3.0", features = ["std", "union"] }
 smallvec = { version = "1.6.1", features = [
-  "union",
-  "const_generics",
-  "const_new",
+    "union",
+    "const_generics",
+    "const_new",
 ] }
 
 is_ci = "1.2.0"

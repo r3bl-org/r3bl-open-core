@@ -104,7 +104,7 @@ pub fn show_exit_message() {
 /// be handled.
 pub fn report_unknown_error_and_propagate<T>(
     command: &mut Command,
-    command_output_error: std::io::Error,
+    command_output_error: miette::Report,
 ) -> CommonResult<T> {
     let program_name_to_string: String =
         command.get_program().to_string_lossy().to_string();

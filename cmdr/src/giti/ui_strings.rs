@@ -17,6 +17,8 @@
 
 use std::fmt::{Display, Formatter};
 
+use r3bl_core::{fg_lizard_green, fg_silver_metallic};
+
 pub enum UIStrings {
     PleaseSelectBranchesYouWantToDelete,
     ConfirmDeletingOneBranch {
@@ -62,7 +64,7 @@ pub enum UIStrings {
     ErrorExecutingCommand {
         program_name_to_string: String,
         command_args_to_string: String,
-        command_output_error: std::io::Error,
+        command_output_error: miette::Report,
     },
     BranchDoesNotExist {
         branch_name: String,
@@ -205,7 +207,13 @@ impl Display for UIStrings {
                 " Please commit your changes or stash them before you switch branches."
             ),
             UIStrings::BranchAlreadyExists { branch_name } => {
-                write!(f, " Branch {branch_name} already exists!")
+                write!(
+                    f,
+                    "{a}{b}{c}",
+                    a = fg_silver_metallic(" Branch "),
+                    b = fg_lizard_green(branch_name),
+                    c = fg_silver_metallic(" already exists!"),
+                )
             }
             UIStrings::CreatedAndSwitchedToNewBranch => {
                 write!(f, " You created and switched to branch ")
@@ -216,7 +224,7 @@ impl Display for UIStrings {
             UIStrings::EnterBranchNameYouWantToCreate => {
                 write!(
                     f,
-                    " Enter a branch name you want to create (Ctrl+C to exit) "
+                    " Enter a branch name you want to create (Ctrl+C to exit): "
                 )
             }
             UIStrings::NoNewBranchWasCreated => {
