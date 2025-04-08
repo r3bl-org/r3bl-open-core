@@ -151,27 +151,30 @@
 //!
 //! ```rust
 //! # use r3bl_core::*;
-//! # use r3bl_tui::terminal_async::*;
+//! # use r3bl_tui::readline_async::*;
 //! # use std::io::Result;
 //!
-//! fn main() -> Result<()> {
+//! #[tokio::main]
+//! async fn main() -> miette::Result<()> {
 //!     // Get display size.
 //!     let max_width_col_count: usize = (get_size().map(|it| *it.col_width).unwrap_or(ch(80))).into();
 //!     let max_height_row_count: usize = 5;
 //!
+//!     let mut default_io_devices = DefaultIoDevices::default();
 //!     let user_input = choose(
 //!         "Select an item",
 //!         ItemsBorrowed(&[
 //!             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
 //!             "item 9", "item 10",
 //!         ]).into(),
-//!         Some(max_height_row_count),
-//!         Some(max_width_col_count),
+//!         Some(height(max_height_row_count)),
+//!         Some(width(max_width_col_count)),
 //!         HowToChoose::Single,
 //!         StyleSheet::default(),
-//!     );
+//!         default_io_devices.as_mut_tuple(),
+//!     ).await?;
 //!
-//!     match &user_input {
+//!     match user_input.first() {
 //!         Some(it) => {
 //!             println!("User selected: {:?}", it);
 //!         }
@@ -199,7 +202,7 @@
 //!
 //! ```rust
 //! # use r3bl_core::*;
-//! # use r3bl_tui::terminal_async::*;
+//! # use r3bl_tui::readline_async::*;
 //! # use std::io::Result;
 //!
 //! #[tokio::main]
@@ -249,10 +252,11 @@
 //!
 //! ```rust
 //! # use r3bl_core::*;
-//! # use r3bl_tui::terminal_async::*;
+//! # use r3bl_tui::readline_async::*;
 //! # use std::io::Result;
 //!
-//! fn main() -> Result<()> {
+//! #[tokio::main]
+//! async fn main() -> miette::Result<()> {
 //!     // 🎨 Uncomment the lines below to choose the other 2 built-in styles.
 //!     // let default_style = StyleSheet::default();
 //!     // let hot_pink_style = StyleSheet::hot_pink_style();
@@ -261,19 +265,21 @@
 //!     let max_width_col_count: usize = get_size().map(|it| *it.col_width).unwrap_or(ch(80)).into();
 //!     let max_height_row_count: usize = 5;
 //!
+//!     let mut default_io_devices = DefaultIoDevices::default();
 //!     let user_input = choose(
 //!         "Select an item",
 //!         ItemsBorrowed(&[
 //!             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
 //!             "item 9", "item 10",
 //!         ]).into(),
-//!         Some(max_height_row_count),
-//!         Some(max_width_col_count),
+//!         Some(height(max_height_row_count)),
+//!         Some(width(max_width_col_count)),
 //!         HowToChoose::Single,
 //!         sea_foam_style,  // 🖌️ or default_style or hot_pink_style
-//!     );
+//!         default_io_devices.as_mut_tuple(),
+//!     ).await?;
 //!
-//!     match &user_input {
+//!     match user_input.first() {
 //!         Some(it) => {
 //!             println!("User selected: {:?}", it);
 //!         }
@@ -290,14 +296,17 @@
 //!
 //! ```rust
 //! use std::io::Result;
-//! use r3bl_core::{AnsiStyledText, ASTColor, ItemsBorrowed, tui_color, TuiStyle};
-//! use r3bl_tui::terminal_async::{
+//! use r3bl_core::{
+//!     AnsiStyledText, ASTColor, ItemsBorrowed, tui_color, TuiStyle,
+//!     height, width
+//! };
+//! use r3bl_tui::readline_async::{
 //!     State, components::style::StyleSheet,
-//!     choose,
-//!     HowToChoose
+//!     choose, HowToChoose, DefaultIoDevices
 //! };
 //!
-//! fn main() -> Result<()> {
+//! #[tokio::main]
+//! async fn main() -> miette::Result<()> {
 //!    // This is how you can define your custom style.
 //!    // For each Style struct, you can define different style overrides.
 //!    // Please take a look at the Style struct to see what you can override.
@@ -325,21 +334,24 @@
 //!    };
 //!
 //!    // Then pass `my_custom_style` as the last argument to the `select_from_list` function.
+//!    let mut default_io_devices = DefaultIoDevices::default();
 //!    let user_input = choose(
 //!       "Multiple select",
 //!       ItemsBorrowed(&["item 1 of 3", "item 2 of 3", "item 3 of 3"]).into(),
-//!       Some(6), // max_height_row_count
-//!       Some(80), // max_width_col_count
+//!       Some(height(6)), // max_height_row_count
+//!       Some(width(80)), // max_width_col_count
 //!       HowToChoose::Multiple,
 //!       my_custom_style,
-//!    );
+//!       default_io_devices.as_mut_tuple()
+//!    ).await?;
 //!
-//!    match &user_input {
+//!    match user_input.first() {
 //!       Some(it) => {
 //!          println!("User selected: {:?}", it);
 //!       }
 //!       None => println!("User did not select anything"),
 //!    }
+//!
 //!    Ok(())
 //! }
 //! ```

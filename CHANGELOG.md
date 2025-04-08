@@ -364,12 +364,13 @@ These videos have been an inspiration for many of these changes:
 - [Data oriented design](https://youtu.be/WwkuAqObplU)
 - [Memory alloc](https://youtu.be/pJ-FRRB5E84)
 
-
 Moved:
   - Move the contents of `r3bl_terminal_async` into `r3bl_tui` crate. Move the contents of
     `r3bl_tuify` crate into `r3bl_terminal_async`. Consolidate the `select_*` functions
     into a single `choose()` function and make it async. The `r3bl_tuify` crate is now
     archived.
+  - Rename `terminal_async` to `readline_async`. The `choose` (async) function is under
+    this folder.
 
 Removed:
   - Drop the dependency on `r3bl_ansi_color`.

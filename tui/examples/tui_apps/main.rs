@@ -50,8 +50,8 @@ use r3bl_core::{fg_color,
                 CommonError,
                 CommonResult};
 use r3bl_tui::{key_press,
-               ta_println,
-               terminal_async::{ReadlineAsync, ReadlineEvent},
+               ra_println,
+               readline_async::{ReadlineAsync, ReadlineEvent},
                InputEvent,
                TerminalWindow,
                DEBUG_TUI_MOD};
@@ -87,7 +87,7 @@ async fn main() -> CommonResult<()> {
     let msg = inline_string!("{}", &generate_help_msg());
 
     let msg_fmt = fg_color(ASTColor::from(tui_color!(lizard_green)), &msg);
-    ta_println!(readline_async, "{}", msg_fmt.to_string());
+    ra_println!(readline_async, "{}", msg_fmt.to_string());
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
     if no_log_arg_passed {
@@ -152,7 +152,7 @@ async fn run_user_selected_example(
             Exit => CommonError::new_error_result_with_only_msg("Exiting..."),
         },
         Err(_) => {
-            ta_println!(
+            ra_println!(
                 readline_async,
                 "{a} {b}",
                 a = fg_frozen_blue("Invalid selection:"),

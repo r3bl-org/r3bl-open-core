@@ -28,7 +28,7 @@ use r3bl_core::{self,
                 ItemsBorrowed,
                 ItemsOwned};
 use r3bl_tui::{choose,
-               terminal_async::{HowToChoose, StyleSheet},
+               readline_async::{HowToChoose, StyleSheet},
                DefaultIoDevices};
 use serde::{Deserialize, Serialize};
 

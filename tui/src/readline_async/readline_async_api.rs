@@ -38,7 +38,7 @@ pub struct ReadlineAsync {
 /// Don't change the `content`. Print it as is. And it is compatible w/ the
 /// [ReadlineAsync::read_line] method.
 #[macro_export]
-macro_rules! ta_println {
+macro_rules! ra_println {
     (
         $ta:ident,
         $($format:tt)*
@@ -49,7 +49,7 @@ macro_rules! ta_println {
 }
 
 #[macro_export]
-macro_rules! ta_print {
+macro_rules! ra_print {
     (
         $ta:ident,
         $($format:tt)*
@@ -61,7 +61,7 @@ macro_rules! ta_print {
 
 /// Prefix the `content` with a color and special characters, then print it.
 #[macro_export]
-macro_rules! ta_println_prefixed {
+macro_rules! ra_println_prefixed {
     (
         $ta:ident,
         $($format:tt)*
@@ -80,7 +80,7 @@ impl ReadlineAsync {
     ///
     /// ```
     /// async fn foo() -> miette::Result<()> {
-    ///     use r3bl_tui::terminal_async::ReadlineAsync;
+    ///     use r3bl_tui::readline_async::ReadlineAsync;
     ///     let readline_async = ReadlineAsync::try_new(None::<String>)?
     ///         .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
     ///     r3bl_core::ok!()
@@ -91,7 +91,7 @@ impl ReadlineAsync {
     ///
     /// ```
     /// async fn foo() -> miette::Result<()> {
-    ///     use r3bl_tui::terminal_async::ReadlineAsync;
+    ///     use r3bl_tui::readline_async::ReadlineAsync;
     ///     let Some(mut readline_async) = ReadlineAsync::try_new(Some("> "))? else {
     ///         return Err(miette::miette!("Failed to create terminal"));
     ///     };
@@ -191,7 +191,7 @@ impl ReadlineAsync {
     /// gracefully. Here's what it does:
     /// 1. it sends a [LineStateControlSignal::ExitReadlineLoop] signal to the [Readline]
     ///    instance's
-    ///    [crate::readline_impl::manage_shared_writer_output::spawn_task_to_monitor_line_state_signals]
+    ///    [crate::readline_async_impl::manage_shared_writer_output::spawn_task_to_monitor_line_state_signals]
     ///    task (aka "actor"),
     /// 2. which causes a message to be sent to the [Readline::shutdown_receiver],
     /// 3. which causes the [Readline::readline()] method to exit (if it is currently
