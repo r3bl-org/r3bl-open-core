@@ -43,7 +43,7 @@ use r3bl_core::{CommonResult,
                 tui_color};
 use r3bl_tui::{DefaultIoDevices,
                choose,
-               terminal_async::{HowToChoose, StyleSheet}};
+               readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 
 #[tokio::main]

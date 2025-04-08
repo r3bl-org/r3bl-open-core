@@ -35,8 +35,8 @@ use r3bl_core::{bold,
                 SharedWriter,
                 SpinnerStyle,
                 StdMutex};
-use r3bl_tui::{ta_println,
-               terminal_async::{Readline, ReadlineAsync, ReadlineEvent, Spinner}};
+use r3bl_tui::{ra_println,
+               readline_async::{Readline, ReadlineAsync, ReadlineEvent, Spinner}};
 use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
@@ -165,7 +165,7 @@ async fn main() -> miette::Result<()> {
     let mut interval_1_task = interval(state.task_1_state.interval_delay);
     let mut interval_2_task = interval(state.task_2_state.interval_delay);
 
-    ta_println!(rl_async, "{}", get_info_message());
+    ra_println!(rl_async, "{}", get_info_message());
 
     loop {
         select! {
@@ -210,8 +210,8 @@ async fn main() -> miette::Result<()> {
                     Err(err) => {
                         let msg_1 = format!("Received err: {}", fg_red(&format!("{err:?}")));
                         let msg_2 = format!("{}", fg_red("Exiting..."));
-                        ta_println!(rl_async, "{msg_1}");
-                        ta_println!(rl_async, "{msg_2}");
+                        ra_println!(rl_async, "{msg_1}");
+                        ra_println!(rl_async, "{msg_2}");
                         break;
                     },
                 }

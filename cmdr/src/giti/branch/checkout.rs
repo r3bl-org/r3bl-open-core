@@ -35,7 +35,7 @@ use r3bl_core::{ChUnit,
                 usize};
 use r3bl_tui::{DefaultIoDevices,
                choose,
-               terminal_async::{HowToChoose, StyleSheet}};
+               readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 
 use super::{get_branches, try_get_current_branch};

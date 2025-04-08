@@ -959,9 +959,9 @@
 #![allow(clippy::literal_string_with_formatting_args)]
 
 // Attach.
-pub mod terminal_async;
+pub mod readline_async;
 pub mod tui;
 
 // Re-export.
-pub use terminal_async::*;
+pub use readline_async::*;
 pub use tui::*;

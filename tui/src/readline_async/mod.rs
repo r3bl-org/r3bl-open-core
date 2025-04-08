@@ -130,11 +130,11 @@
 //!
 //! # Introduction
 //!
-//! The `terminal_async` library lets your CLI program be asynchronous and
-//! interactive without blocking the main thread. Your spawned tasks can use it to
-//! concurrently write to the display output, pause and resume it. You can also display of
-//! colorful animated spinners ⌛🌈 for long running tasks. With it, you can create
-//! beautiful, powerful, and interactive REPLs (read execute print loops) with ease.
+//! The `terminal_async` library lets your CLI program be asynchronous and interactive
+//! without blocking the main thread. Your spawned tasks can use it to concurrently write
+//! to the display output, pause and resume it. You can also display of colorful animated
+//! spinners ⌛🌈 for long running tasks. With it, you can create beautiful, powerful, and
+//! interactive REPLs (read execute print loops) with ease.
 //!
 //! 1. Because
 //!    [`read_line()`](https://doc.rust-lang.org/std/io/struct.Stdin.html#method.read_line)
@@ -304,9 +304,8 @@
 //! 3. If you use [`std::writeln!`] then there's no need to [`ReadlineAsync::flush()`]
 //!    because the `\n` will flush the buffer. When there's no `\n` in the buffer, or you
 //!    are using [`std::write!`] then you might need to call [`ReadlineAsync::flush()`].
-//! 4. You can use the [crate::ta_println!] and [crate::ta_println_prefixed!]
-//!    methods to easily write concurrent output to the `stdout`
-//!    ([`r3bl_core::SharedWriter`]).
+//! 4. You can use the [crate::ra_println!] and [crate::ra_println_prefixed!] methods to
+//!    easily write concurrent output to the `stdout` ([`r3bl_core::SharedWriter`]).
 //! 5. You can also get access to the underlying [`Readline`] via the
 //!    [`Readline::readline`] field. Details on this struct are listed below. For most use
 //!    cases you won't need to do this.
@@ -365,7 +364,7 @@
 //! have ANSI escape sequences in them. Here's an example of this.
 //!
 //! ```
-//! # use r3bl_tui::terminal_async::ReadlineAsync;
+//! # use r3bl_tui::readline_async::ReadlineAsync;
 //! # use r3bl_core::{fg_magenta, AnsiStyledText};
 //! # pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
@@ -455,18 +454,18 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 // Attach sources.
-pub mod choose_async;
-pub mod readline_async;
+pub mod choose_api;
+pub mod readline_async_api;
 pub mod spinner;
-pub mod readline_impl;
+pub mod readline_async_impl;
 pub mod choose_impl;
 
 // Re-export the public API.
 pub use choose_impl::*;
-pub use readline_async::*;
+pub use readline_async_api::*;
 pub use spinner::*;
-pub use readline_impl::*;
-pub use choose_async::*;
+pub use readline_async_impl::*;
+pub use choose_api::*;
 
 // r3bl-open-core crates.
 use r3bl_core::{StdMutex, Text};
