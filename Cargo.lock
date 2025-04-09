@@ -1594,6 +1594,8 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
+ "strum",
+ "strum_macros",
  "tokio",
  "tracing",
  "tracing-core",

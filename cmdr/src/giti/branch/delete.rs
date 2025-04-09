@@ -21,6 +21,7 @@ use r3bl_core::{CommonResult,
                 InlineString,
                 ItemsOwned,
                 ast,
+                ast_line,
                 height,
                 new_style,
                 tui_color};
@@ -64,19 +65,16 @@ pub async fn try_delete_branch() -> CommonResult<SuccessReport> {
         color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
     );
 
-    let select_branches_header_text = &PleaseSelectBranchesYouWantToDelete.to_string();
-
-    let instructions_and_branches_to_delete = {
-        let mut lines = multi_select_instruction_header();
-        let header_line = ast(select_branches_header_text, default_header_style);
-        lines.push(smallvec![header_line]);
-        lines
-    };
+    let _binding_header_text = &PleaseSelectBranchesYouWantToDelete.to_string();
+    let header = multi_select_instruction_header(ast_line![ast(
+        _binding_header_text,
+        default_header_style
+    )]);
 
     if let Ok(branches) = get_branches() {
         let mut default_io_devices = DefaultIoDevices::default();
         let branches = choose(
-            instructions_and_branches_to_delete,
+            header,
             branches,
             Some(height(20)),
             None,
@@ -113,16 +111,15 @@ pub async fn try_delete_branch() -> CommonResult<SuccessReport> {
             }
         };
 
-        let instructions_and_confirm_deletion_options = {
-            let mut lines = single_select_instruction_header();
-            let header_line = ast(&confirm_branch_deletion_header, default_header_style);
-            lines.push(smallvec![header_line]);
-            lines
+        let header = {
+            let last_line =
+                ast_line![ast(&confirm_branch_deletion_header, default_header_style)];
+            single_select_instruction_header(last_line)
         };
 
         let mut default_io_devices = DefaultIoDevices::default();
         let selected_delete_or_exit = choose(
-            instructions_and_confirm_deletion_options,
+            header,
             confirm_deletion_options,
             Some(height(20)),
             None,
