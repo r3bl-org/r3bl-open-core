@@ -24,6 +24,7 @@ use strum_macros::EnumCount;
 use crate::{ASTColor,
             DEFAULT_STRING_STORAGE_SIZE,
             InlineString,
+            InlineVec,
             SgrCode,
             TuiStyle,
             tui_color};
@@ -32,9 +33,10 @@ use crate::{ASTColor,
 /// [crate::ast_lines!] or the constructor functions like [fg_red()], [fg_green()],
 /// [fg_blue()], etc.
 ///
-/// The main struct that we have to consider is `AnsiStyledText`. It has two fields:
+/// The main struct that we have to consider is `AnsiStyledText` or `AST`. It has two
+/// fields:
 /// - `text` - the text to print.
-/// - `style` - a list of [ASTStyle] to apply to the text. This is owned in a stack
+/// - `styles` - a list of [ASTStyle] to apply to the text. This is owned in a stack
 ///   allocated buffer, which can spill to the heap if it gets larger than
 ///   `sizing::MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE`.
 /// - Once created, either directly or using constructor functions like [fg_red()], you
@@ -47,7 +49,7 @@ use crate::{ASTColor,
 /// ```rust
 /// # use r3bl_core::{
 /// #     TuiStyle, tui_color, new_style,
-/// #     ast, fg_red, dim, AnsiStyledText, fg_color,
+/// #     ast, fg_red, dim, AST, fg_color,
 /// #     ASTStyle, ASTColor,
 /// # };
 ///
@@ -74,9 +76,9 @@ use crate::{ASTColor,
 /// blue_text_on_white.println();
 ///
 /// // Verbose struct construction (don't use this).
-/// AnsiStyledText {
+/// AST {
 ///     text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.".into(),
-///     style: smallvec::smallvec![
+///     styles: smallvec::smallvec![
 ///         ASTStyle::Bold,
 ///         ASTStyle::Italic,
 ///         ASTStyle::Underline,
@@ -91,19 +93,33 @@ pub struct AnsiStyledText {
     pub text: InlineString,
     /// You can supply this directly, or use [crate::new_style!] to create a
     /// [crate::TuiStyle] and convert it to this type using `.into()`.
-    pub style: sizing::InlineVecASTStyles,
+    pub styles: ASTStyles,
+}
+
+// Type aliases for better readability.
+
+pub type AST = AnsiStyledText;
+pub type ASTLine = InlineVec<AnsiStyledText>;
+pub type ASTLines = InlineVec<ASTLine>;
+pub type ASTStyles = sizing::InlineVecASTStyles;
+
+pub(in crate::ansi) mod sizing {
+    use super::*;
+
+    /// Attributes are: color_fg, color_bg, bold, dim, italic, underline, reverse, hidden,
+    /// etc. which are in [crate::ASTStyle].
+    pub const MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE: usize = 12;
+    pub type InlineVecASTStyles =
+        SmallVec<[ASTStyle; MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE]>;
 }
 
 /// Easy to use constructor function, instead of creating a new [AnsiStyledText] struct
 /// directly. If you need to assemble a bunch of these together, you can use
 /// [crate::ast_line!] to create a list of them.
-pub fn ast(
-    arg_text: impl AsRef<str>,
-    arg_style: impl Into<sizing::InlineVecASTStyles>,
-) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn ast(arg_text: impl AsRef<str>, arg_styles: impl Into<ASTStyles>) -> AST {
+    AST {
         text: arg_text.as_ref().into(),
-        style: arg_style.into(),
+        styles: arg_styles.into(),
     }
 }
 
@@ -115,9 +131,8 @@ macro_rules! ast_line {
     (
         $( $ast_chunk:expr ),* $(,)?
     ) => {{
-        use $crate::InlineVec;
-        use $crate::AnsiStyledText;
-        let mut acc: InlineVec<AnsiStyledText> = InlineVec::new();
+        use $crate::{InlineVec, ASTLine};
+        let mut acc: ASTLine = InlineVec::new();
         $(
             acc.push($ast_chunk);
         )*
@@ -133,24 +148,13 @@ macro_rules! ast_lines {
     (
         $( $ast_line:expr ),* $(,)?
     ) => {{
-        use $crate::InlineVec;
-        use $crate::AnsiStyledText;
-        let mut acc: InlineVec<InlineVec<AnsiStyledText>> = InlineVec::new();
+        use $crate::{InlineVec, ASTLines};
+        let mut acc: ASTLines = InlineVec::new();
         $(
             acc.push($ast_line);
         )*
         acc
     }};
-}
-
-pub(in crate::ansi) mod sizing {
-    use super::*;
-
-    /// Attributes are: color_fg, color_bg, bold, dim, italic, underline, reverse, hidden,
-    /// etc. which are in [crate::ASTStyle].
-    pub const MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE: usize = 12;
-    pub type InlineVecASTStyles =
-        SmallVec<[ASTStyle; MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE]>;
 }
 
 mod ansi_styled_text_impl {
@@ -173,239 +177,239 @@ mod ansi_styled_text_impl {
     }
 }
 
-pub fn fg_color(arg_color: impl Into<ASTColor>, text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_color(arg_color: impl Into<ASTColor>, text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(arg_color.into())),
+        styles: smallvec!(ASTStyle::Foreground(arg_color.into())),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_dark_gray(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_dark_gray(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(236.into()))),
+        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(236.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_black(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_black(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(0.into()))),
+        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(0.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_yellow(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_yellow(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(226.into()))),
+        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(226.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_green(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_green(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(34.into()))),
+        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(34.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_blue(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_blue(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(27.into()))),
+        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(27.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_red(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_red(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(196.into()))),
+        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(196.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_white(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_white(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(231.into()))),
+        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(231.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_cyan(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_cyan(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(51.into()))),
+        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(51.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_magenta(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_magenta(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(201.into()))),
+        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(201.into()))),
     }
 }
 
-pub fn fg_silver_metallic(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_silver_metallic(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(
+        styles: smallvec!(ASTStyle::Foreground(
             crate::tui_color!(silver_metallic).into()
         )),
     }
 }
 
-pub fn fg_lizard_green(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_lizard_green(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(lizard_green).into())),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(lizard_green).into())),
     }
 }
 
-pub fn fg_pink(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_pink(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(pink).into())),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(pink).into())),
     }
 }
 
-pub fn fg_dark_pink(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_dark_pink(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_pink).into())),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_pink).into())),
     }
 }
 
-pub fn fg_frozen_blue(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_frozen_blue(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(frozen_blue).into())),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(frozen_blue).into())),
     }
 }
 
-pub fn fg_guards_red(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_guards_red(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(guards_red).into())),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(guards_red).into())),
     }
 }
 
-pub fn fg_slate_gray(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn fg_slate_gray(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Foreground(crate::tui_color!(slate_gray).into())),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(slate_gray).into())),
     }
 }
 
-pub fn bold(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn bold(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Bold),
+        styles: smallvec!(ASTStyle::Bold),
     }
 }
 
-pub fn italic(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn italic(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Italic),
+        styles: smallvec!(ASTStyle::Italic),
     }
 }
 
-pub fn underline(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn underline(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Underline),
+        styles: smallvec!(ASTStyle::Underline),
     }
 }
 
-pub fn strikethrough(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn strikethrough(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Strikethrough),
+        styles: smallvec!(ASTStyle::Strikethrough),
     }
 }
 
-pub fn dim(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn dim(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Dim),
+        styles: smallvec!(ASTStyle::Dim),
     }
 }
 
-pub fn dim_underline(text: &str) -> AnsiStyledText {
-    AnsiStyledText {
+pub fn dim_underline(text: &str) -> AST {
+    AST {
         text: text.into(),
-        style: smallvec!(ASTStyle::Dim, ASTStyle::Underline),
+        styles: smallvec!(ASTStyle::Dim, ASTStyle::Underline),
     }
 }
 
-impl AnsiStyledText {
+impl AST {
     pub fn dim(mut self) -> Self {
-        self.style.push(ASTStyle::Dim);
+        self.styles.push(ASTStyle::Dim);
         self
     }
 
     pub fn bold(mut self) -> Self {
-        self.style.push(ASTStyle::Bold);
+        self.styles.push(ASTStyle::Bold);
         self
     }
 
     pub fn bg_color(mut self, arg_color: impl Into<ASTColor>) -> Self {
         let color: ASTColor = arg_color.into();
-        self.style.push(ASTStyle::Background(color));
+        self.styles.push(ASTStyle::Background(color));
         self
     }
 
     pub fn fg_color(mut self, arg_color: impl Into<ASTColor>) -> Self {
         let color: ASTColor = arg_color.into();
-        self.style.push(ASTStyle::Foreground(color));
+        self.styles.push(ASTStyle::Foreground(color));
         self
     }
 
     pub fn bg_cyan(mut self) -> Self {
-        self.style
+        self.styles
             .push(ASTStyle::Background(ASTColor::Ansi(51.into())));
         self
     }
 
     pub fn bg_yellow(mut self) -> Self {
-        self.style
+        self.styles
             .push(ASTStyle::Background(ASTColor::Ansi(226.into())));
         self
     }
 
     pub fn bg_green(mut self) -> Self {
-        self.style
+        self.styles
             .push(ASTStyle::Background(ASTColor::Ansi(34.into())));
         self
     }
 
     pub fn bg_slate_gray(mut self) -> Self {
-        self.style
+        self.styles
             .push(ASTStyle::Background(crate::tui_color!(slate_gray).into()));
         self
     }
 
     pub fn bg_dark_gray(mut self) -> Self {
-        self.style
+        self.styles
             .push(ASTStyle::Background(ASTColor::Ansi(236.into())));
         self
     }
 
     pub fn bg_night_blue(mut self) -> Self {
-        self.style
+        self.styles
             .push(ASTStyle::Background(tui_color!(night_blue).into()));
         self
     }
 
     pub fn bg_moonlight_blue(mut self) -> Self {
-        self.style
+        self.styles
             .push(ASTStyle::Background(tui_color!(moonlight_blue).into()));
         self
     }
@@ -564,9 +568,9 @@ mod style_impl {
 mod display_trait_impl {
     use super::*;
 
-    impl Display for AnsiStyledText {
+    impl Display for AST {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            for style_item in &self.style {
+            for style_item in &self.styles {
                 write!(f, "{}", style_item)?;
             }
             write!(f, "{}", self.text)?;
@@ -583,9 +587,9 @@ mod tests {
     use smallvec::smallvec;
 
     use super::dim;
-    use crate::{ASTColor,
+    use crate::{AST,
+                ASTColor,
                 ASTStyle,
-                AnsiStyledText,
                 ColorSupport,
                 TuiStyle,
                 ansi::sizing::InlineVecASTStyles,
@@ -674,9 +678,9 @@ mod tests {
     #[serial]
     #[test]
     fn test_fg_color_on_bg_color() {
-        let eg_1 = AnsiStyledText {
+        let eg_1 = AST {
             text: "Hello".into(),
-            style: smallvec!(
+            styles: smallvec!(
                 ASTStyle::Bold,
                 ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
             ),
@@ -685,7 +689,7 @@ mod tests {
         println!("{}", eg_1);
         assert_eq!(
             format!("{:?}", eg_1),
-            r#"AnsiStyledText { text: "Hello", style: [Bold, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 }))] }"#
+            r#"AnsiStyledText { text: "Hello", styles: [Bold, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 }))] }"#
         );
 
         let eg_2 = eg_1.bg_dark_gray();
@@ -693,7 +697,7 @@ mod tests {
         println!("{}", eg_2);
         assert_eq!(
             format!("{:?}", eg_2),
-            r#"AnsiStyledText { text: "Hello", style: [Bold, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 })), Background(Ansi(AnsiValue { index: 236 }))] }"#
+            r#"AnsiStyledText { text: "Hello", styles: [Bold, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 })), Background(Ansi(AnsiValue { index: 236 }))] }"#
         );
     }
 
@@ -707,7 +711,7 @@ mod tests {
         println!("{}", eg_1);
         assert_eq!(
             format!("{:?}", eg_1),
-            r#"AnsiStyledText { text: "hello", style: [Dim, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 })), Background(Rgb(RgbValue { red: 1, green: 1, blue: 1 }))] }"#
+            r#"AnsiStyledText { text: "hello", styles: [Dim, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 })), Background(Rgb(RgbValue { red: 1, green: 1, blue: 1 }))] }"#
         );
     }
 
@@ -715,9 +719,9 @@ mod tests {
     #[test]
     fn test_formatted_string_creation_ansi256() -> Result<(), String> {
         global_color_support::set_override(ColorSupport::Ansi256);
-        let eg_1 = AnsiStyledText {
+        let eg_1 = AST {
             text: "Hello".into(),
-            style: smallvec!(
+            styles: smallvec!(
                 ASTStyle::Bold,
                 ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
                 ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
@@ -729,9 +733,9 @@ mod tests {
             "\x1b[1m\x1b[38;5;16m\x1b[48;5;16mHello\x1b[0m".to_string()
         );
 
-        let eg_2 = AnsiStyledText {
+        let eg_2 = AST {
             text: "World".into(),
-            style: smallvec!(
+            styles: smallvec!(
                 ASTStyle::Bold,
                 ASTStyle::Foreground(ASTColor::Ansi(150.into())),
                 ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
@@ -750,9 +754,9 @@ mod tests {
     #[test]
     fn test_formatted_string_creation_truecolor() -> Result<(), String> {
         global_color_support::set_override(ColorSupport::Truecolor);
-        let eg_1 = AnsiStyledText {
+        let eg_1 = AST {
             text: "Hello".into(),
-            style: smallvec!(
+            styles: smallvec!(
                 ASTStyle::Bold,
                 ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
                 ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
@@ -764,9 +768,9 @@ mod tests {
             "\x1b[1m\x1b[38;2;0;0;0m\x1b[48;2;1;1;1mHello\x1b[0m".to_string()
         );
 
-        let eg_2 = AnsiStyledText {
+        let eg_2 = AST {
             text: "World".into(),
-            style: smallvec!(
+            styles: smallvec!(
                 ASTStyle::Bold,
                 ASTStyle::Foreground(ASTColor::Ansi(150.into())),
                 ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
@@ -785,9 +789,9 @@ mod tests {
     #[test]
     fn test_formatted_string_creation_grayscale() -> Result<(), String> {
         global_color_support::set_override(ColorSupport::Grayscale);
-        let eg_1 = AnsiStyledText {
+        let eg_1 = AST {
             text: "Hello".into(),
-            style: smallvec!(
+            styles: smallvec!(
                 ASTStyle::Bold,
                 ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
                 ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
@@ -801,9 +805,9 @@ mod tests {
             "\u{1b}[1m\u{1b}[38;5;16m\u{1b}[48;5;16mHello\u{1b}[0m".to_string()
         );
 
-        let eg_2 = AnsiStyledText {
+        let eg_2 = AST {
             text: "World".into(),
-            style: smallvec!(
+            styles: smallvec!(
                 ASTStyle::Bold,
                 ASTStyle::Foreground(ASTColor::Ansi(150.into())),
                 ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),

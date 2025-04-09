@@ -25,7 +25,7 @@ use r3bl_cmdr::{AnalyticsAction,
                        CLIArg,
                        CLICommand,
                        SuccessReport,
-                       UIStrings::PleaseSelectBranchSubCommand,
+                       UIStrings,
                        get_giti_command_subcommand_names,
                        try_checkout_branch,
                        try_delete_branch,
@@ -82,22 +82,23 @@ async fn main() -> CommonResult<()> {
 
 pub async fn launch_giti(cli_arg: CLIArg) {
     let res = try_run_command(&cli_arg).await;
+
     match res {
         // Command ran successfully.
-        Ok(try_run_command_result) => {
+        Ok(success_report) => {
             if let CLICommand::Branch { .. } = cli_arg.command {
                 // If user selected to delete a branch, then show exit message. If user
                 // didn't select any branch, then show message that no branches were
                 // deleted.
                 match (
-                    try_run_command_result.maybe_deleted_branches,
-                    try_run_command_result.branch_subcommand,
+                    success_report.maybe_deleted_branches,
+                    success_report.branch_subcommand,
                 ) {
                     (Some(_), Some(BranchSubcommand::Delete)) => {
                         ui_templates::show_exit_message();
                     }
                     (None, Some(BranchSubcommand::Delete)) => {
-                        println!(" You chose not to delete any branches.");
+                        println!("{}", UIStrings::NoBranchGotDeleted);
                         ui_templates::show_exit_message();
                     }
                     _ => {}
@@ -131,7 +132,6 @@ pub async fn try_run_command(giti_app_args: &CLIArg) -> CommonResult<SuccessRepo
         CLICommand::Branch {
             command_to_run_with_each_selection,
             maybe_branch_name,
-            ..
         } => match command_to_run_with_each_selection {
             Some(subcommand) => match subcommand {
                 BranchSubcommand::Delete => try_delete_branch().await,
@@ -157,7 +157,7 @@ async fn user_typed_giti_branch() -> CommonResult<SuccessReport> {
 
     let header = {
         let last_line = ast_line![ast(
-            PleaseSelectBranchSubCommand.to_string(),
+            UIStrings::PleaseSelectBranchSubCommand.to_string(),
             new_style!(
                 color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
             )

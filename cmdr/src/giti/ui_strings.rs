@@ -81,6 +81,9 @@ pub enum UIStrings {
         error_message: String,
     },
 
+    #[strum(serialize = " You chose not to delete any branches.")]
+    NoBranchGotDeleted,
+
     #[strum(serialize = " No branch got checked out ... \n ╴{branch}!\n\n")]
     NoBranchGotCheckedOut { branch: String },
 
@@ -90,14 +93,12 @@ pub enum UIStrings {
     #[strum(serialize = "\n Goodbye 👋.\n\n 😺 giti!")]
     GoodbyeThanksForUsingGiti,
 
-    #[strum(
-        serialize = " Please star us and report issues on GitHub: 🌟 🐞 https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
-    )]
+    #[strum(serialize = " Please star us and report issues on GitHub: 🌟 🐞 \
+        https://github.com/r3bl-org/r3bl-open-core/issues/new/choose")]
     PleaseStarUs,
 
-    #[strum(
-        serialize = " Error executing command: '{program_name_to_string} {command_args_to_string}'. Error: {command_output_error}"
-    )]
+    #[strum(serialize = " Error executing command: '{program_name_to_string} \
+        {command_args_to_string}'. Error: {command_output_error}")]
     ErrorExecutingCommand {
         program_name_to_string: String,
         command_args_to_string: String,
