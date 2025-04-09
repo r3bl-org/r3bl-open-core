@@ -47,7 +47,7 @@ use crate::{ASTColor, DEFAULT_STRING_STORAGE_SIZE, SgrCode, TuiStyle, tui_color}
 ///    dim: false,
 ///    ..Default::default()
 /// };
-/// let styled_text = ast("Hello",tui_style);
+/// let styled_text = ast("Hello", tui_style);
 /// println!("{styled_text}");
 /// styled_text.println();
 ///
@@ -90,7 +90,8 @@ pub struct AnsiStyledText<'a> {
 }
 
 /// Easy to use constructor function, instead of creating a new [AnsiStyledText] struct
-/// directly.
+/// directly. If you need to assemble a bunch of these together, you can use [crate::ast_line!]
+/// to create a list of them.
 pub fn ast<'a>(
     text: &'a str,
     arg_style: impl Into<sizing::InlineVecASTStyles>,
@@ -99,6 +100,42 @@ pub fn ast<'a>(
         text,
         style: arg_style.into(),
     }
+}
+
+/// String together a bunch of [AnsiStyledText] structs into a single
+/// [`crate::InlineVec<AnsiStyledText>`]. This is useful for creating a list of
+/// [AnsiStyledText] structs that can be printed on a single line.
+#[macro_export]
+macro_rules! ast_line {
+    (
+        $( $ast_chunk:expr ),* $(,)?
+    ) => {{
+        use $crate::InlineVec;
+        use $crate::AnsiStyledText;
+        let mut acc: InlineVec<AnsiStyledText<'_>> = InlineVec::new();
+        $(
+            acc.push($ast_chunk);
+        )*
+        acc
+    }};
+}
+
+/// String together a bunch of formatted lines into a single
+/// [`crate::InlineVec<InlineVec<AnsiStyledText>>`]. This is useful for assembling
+/// multiline formatted text which is used in multi line headers, for example.
+#[macro_export]
+macro_rules! ast_lines {
+    (
+        $( $ast_line:expr ),* $(,)?
+    ) => {{
+        use $crate::InlineVec;
+        use $crate::AnsiStyledText;
+        let mut acc: InlineVec<InlineVec<AnsiStyledText<'_>>> = InlineVec::new();
+        $(
+            acc.push($ast_line);
+        )*
+        acc
+    }};
 }
 
 pub(in crate::ansi) mod sizing {

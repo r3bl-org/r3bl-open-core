@@ -25,8 +25,9 @@ use r3bl_core::{AnsiStyledText,
                 GradientGenerationPolicy,
                 InlineVec,
                 TextColorizationPolicy,
+                ast_line,
+                ast_lines,
                 fg_slate_gray};
-use smallvec::smallvec;
 
 use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
                                           GoodbyeThanksForUsingGiti,
@@ -34,7 +35,15 @@ use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
                                           PleaseStarUs},
             upgrade_check};
 
-pub fn multi_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
+/// This is the instruction header for the multi select list. It is used when the user can
+/// select multiple items from the list. The instructions are displayed at the top of the
+/// list. This is easily converted into a [r3bl_tui::choose_impl::Header::MultiLine].
+///
+/// The last line is passed in as a parameter to allow for customization. This is useful
+/// when the list is long and the instructions are at the top.
+pub fn multi_select_instruction_header<'a>(
+    last_line: InlineVec<AnsiStyledText<'a>>,
+) -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
     let text_up_and_down = " Up or down:     navigate";
     let text_space = " Space:          select or deselect item";
     let text_esc = " Esc or Ctrl+C:  exit program";
@@ -45,16 +54,21 @@ pub fn multi_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledTe
     let esc = fg_slate_gray(text_esc).bg_night_blue();
     let return_key = fg_slate_gray(text_return_key).bg_night_blue();
 
-    smallvec![
-        smallvec![up_and_down],
-        smallvec![space],
-        smallvec![esc],
-        smallvec![return_key]
+    ast_lines![
+        ast_line![up_and_down],
+        ast_line![space],
+        ast_line![esc],
+        ast_line![return_key],
+        last_line,
     ]
 }
 
-pub fn single_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>>
-{
+/// This is the instruction header for the single select list. It is used when the user
+/// can only select one item from the list. The instructions are displayed at the top of
+/// the list. This is easily converted into a [r3bl_tui::choose_impl::Header::MultiLine].
+pub fn single_select_instruction_header<'a>(
+    last_line: InlineVec<AnsiStyledText<'a>>,
+) -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
     let text_up_or_down = " Up or down:     navigate";
     let text_esc = " Esc or Ctrl+C:  exit program";
     let text_return_key = " Return:         confirm selection";
@@ -63,7 +77,12 @@ pub fn single_select_instruction_header<'a>() -> InlineVec<InlineVec<AnsiStyledT
     let esc = fg_slate_gray(text_esc).bg_night_blue();
     let return_key = fg_slate_gray(text_return_key).bg_night_blue();
 
-    smallvec![smallvec![up_or_down], smallvec![esc], smallvec![return_key]]
+    ast_lines![
+        ast_line![up_or_down],
+        ast_line![esc],
+        ast_line![return_key],
+        last_line,
+    ]
 }
 
 pub fn show_exit_message() {

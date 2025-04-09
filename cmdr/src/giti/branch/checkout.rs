@@ -24,6 +24,7 @@ use r3bl_core::{ChUnit,
                 GCString,
                 InlineVec,
                 ast,
+                ast_line,
                 fg_frozen_blue,
                 fg_guards_red,
                 fg_lizard_green,
@@ -184,16 +185,16 @@ pub async fn try_checkout_branch(
             }
         }
 
-        // The code below will execute if branch_name is not passed as an argument. It displays user
-        // all the local branches and asks them to select a branch to check out to.
+        // The code below will execute if branch_name is not passed as an argument. It
+        // displays user all the local branches and asks them to select a branch to check
+        // out to.
         None => {
-            let header = SelectBranchToSwitchTo.to_string();
-
-            let instructions_and_branches = {
-                let mut lines = single_select_instruction_header();
-                let header_line = fg_frozen_blue(&header).bg_moonlight_blue();
-                lines.push(smallvec![header_line]);
-                lines
+            let _binding_last_line_text = SelectBranchToSwitchTo.to_string();
+            let header = {
+                let line = ast_line![
+                    fg_frozen_blue(&_binding_last_line_text).bg_moonlight_blue()
+                ];
+                single_select_instruction_header(line)
             };
 
             let current_branch = try_get_current_branch()?;
@@ -202,7 +203,7 @@ pub async fn try_checkout_branch(
                 // Ask user to select a branch to check out to.
                 let mut default_io_devices = DefaultIoDevices::default();
                 let selected_branch = choose(
-                    instructions_and_branches,
+                    header,
                     branches,
                     Some(height(20)),
                     None,
