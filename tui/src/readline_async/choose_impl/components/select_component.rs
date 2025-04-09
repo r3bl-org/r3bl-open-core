@@ -24,18 +24,22 @@ use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                         SetBackgroundColor,
                         SetForegroundColor},
                 terminal::{Clear, ClearType}};
-use r3bl_core::{ch,
+use r3bl_core::{ast,
+                ch,
                 col,
                 fg_blue,
                 get_terminal_width,
                 inline_string,
                 output_device_as_mut,
+                pad_fmt,
                 throws,
                 usize,
                 width,
                 AnsiStyledText,
                 ChUnit,
                 GCStringExt,
+                InlineString,
+                InlineVec,
                 OutputDevice};
 
 use crate::{apply_style,
@@ -59,11 +63,11 @@ const MULTI_SELECT_IS_NOT_SELECTED: &str = "☐";
 const SINGLE_SELECT_IS_SELECTED: &str = "◉";
 const SINGLE_SELECT_IS_NOT_SELECTED: &str = "◌";
 
-impl FunctionComponent<State<'_>> for SelectComponent {
+impl FunctionComponent<State> for SelectComponent {
     fn get_output_device(&mut self) -> OutputDevice { self.output_device.clone() }
 
     // Header can be either a single line or a multi line.
-    fn calculate_header_viewport_height(&self, state: &mut State<'_>) -> ChUnit {
+    fn calculate_header_viewport_height(&self, state: &mut State) -> ChUnit {
         match state.header {
             Header::SingleLine(_) => ch(1),
             Header::MultiLine(ref lines) => ch(lines.len()),
@@ -73,7 +77,7 @@ impl FunctionComponent<State<'_>> for SelectComponent {
     /// If there are more items than the max display height, then we only use max display
     /// height. Otherwise we can shrink the display height to the number of items.
     /// This does NOT include the header.
-    fn calculate_items_viewport_height(&self, state: &mut State<'_>) -> ChUnit {
+    fn calculate_items_viewport_height(&self, state: &mut State) -> ChUnit {
         if state.items.len() > usize(state.max_display_height) {
             state.max_display_height
         } else {
@@ -83,7 +87,7 @@ impl FunctionComponent<State<'_>> for SelectComponent {
 
     /// Allocate space and print the lines. The bring the cursor back to the start of the
     /// lines.
-    fn render(&mut self, state: &mut State<'_>) -> Result<()> {
+    fn render(&mut self, state: &mut State) -> Result<()> {
         throws!({
             // Setup the required data.
             let focused_and_selected_style = self.style.focused_and_selected_style;
@@ -194,21 +198,27 @@ impl FunctionComponent<State<'_>> for SelectComponent {
                         ResetColor,
                     };
                 }
+
                 Header::MultiLine(ref header_lines) => {
                     // Subtract 3 from viewport width because we need to add "..." to the
                     // end of the line.
                     let mut available_space_col_count: ChUnit = viewport_width - 3;
+
                     // This is the vector of vectors of AnsiStyledText we want to print to
                     // the screen.
-                    let mut multi_line_header_clipped_vec: Vec<Vec<AnsiStyledText<'_>>> =
-                        vec![];
-                    let mut maybe_clipped_text_vec: Vec<Vec<String>> = vec![];
+                    let mut multi_line_header_clipped_vec =
+                        InlineVec::<InlineVec<AnsiStyledText>>::with_capacity(
+                            header_lines.len(),
+                        );
+
+                    let mut maybe_clipped_text_vec: InlineVec<InlineVec<InlineString>> =
+                        InlineVec::with_capacity(header_lines.len());
 
                     for header_line in header_lines.iter() {
-                        let mut header_line_modified = vec![];
+                        let mut header_line_modified = InlineVec::new();
 
                         'inner: for last_span in header_line.iter() {
-                            let span_text = last_span.text;
+                            let span_text = &last_span.text;
                             let span_text_gcs = span_text.grapheme_string();
                             let span_us_display_width = *span_text_gcs.display_width;
 
@@ -216,7 +226,8 @@ impl FunctionComponent<State<'_>> for SelectComponent {
                                 // Clip the text to available space.
                                 let clipped_text_str = span_text_gcs
                                     .clip(col(0), width(available_space_col_count));
-                                let clipped_text = format!("{clipped_text_str}...");
+                                let clipped_text =
+                                    inline_string!("{clipped_text_str}...");
                                 header_line_modified.push(clipped_text);
                                 break 'inner;
                             } else {
@@ -224,9 +235,8 @@ impl FunctionComponent<State<'_>> for SelectComponent {
 
                                 // If last item in the header, then fill the remaining
                                 // space with spaces.
-                                let maybe_header_line_last_span: Option<
-                                    &AnsiStyledText<'_>,
-                                > = header_line.last();
+                                let maybe_header_line_last_span: Option<&AnsiStyledText> =
+                                    header_line.last();
 
                                 if let Some(header_line_last_span) =
                                     maybe_header_line_last_span
@@ -236,8 +246,14 @@ impl FunctionComponent<State<'_>> for SelectComponent {
                                         // earlier for the "...".
                                         let num_of_spaces: ChUnit =
                                             available_space_col_count + ch(3);
-                                        let span_with_spaces = span_text.to_owned()
-                                            + &" ".repeat(num_of_spaces.into());
+
+                                        let mut span_with_spaces = span_text.to_owned();
+                                        pad_fmt!(
+                                            fmt: span_with_spaces,
+                                            pad_str: " ",
+                                            repeat_count: num_of_spaces.as_usize()
+                                        );
+
                                         header_line_modified.push(span_with_spaces);
                                     } else {
                                         header_line_modified.push(span_text.to_owned());
@@ -255,13 +271,12 @@ impl FunctionComponent<State<'_>> for SelectComponent {
                     // the clipped text.
                     let zipped = maybe_clipped_text_vec.iter().zip(header_lines.iter());
                     zipped.for_each(|(clipped_text_vec, header_span_vec)| {
-                        let mut ansi_styled_text_vec: Vec<AnsiStyledText<'_>> = vec![];
+                        let mut ansi_styled_text_vec: InlineVec<AnsiStyledText> =
+                            InlineVec::new();
                         let zipped = clipped_text_vec.iter().zip(header_span_vec.iter());
                         zipped.for_each(|(clipped_text, header_span)| {
-                            ansi_styled_text_vec.push(AnsiStyledText {
-                                text: clipped_text,
-                                style: header_span.style.clone(),
-                            });
+                            ansi_styled_text_vec
+                                .push(ast(clipped_text, header_span.style.to_owned()));
                         });
                         multi_line_header_clipped_vec.push(ansi_styled_text_vec);
                     });

@@ -27,37 +27,6 @@ pub fn contains_ansi_escape_sequence(text: &str) -> bool {
     text.chars().any(|it| it == '\x1b')
 }
 
-#[test]
-fn test_contains_ansi_escape_sequence() {
-    use crate::{ASTColor, ASTStyle, AnsiStyledText, assert_eq2};
-
-    assert_eq2!(
-        contains_ansi_escape_sequence(
-            "\x1b[31mThis is red text.\x1b[0m And this is normal text."
-        ),
-        true
-    );
-
-    assert_eq2!(contains_ansi_escape_sequence("This is normal text."), false);
-
-    assert_eq2!(
-          contains_ansi_escape_sequence(
-              &AnsiStyledText {
-                  text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
-                  style: smallvec::smallvec![
-                      ASTStyle::Bold,
-                      ASTStyle::Italic,
-                      ASTStyle::Underline,
-                      ASTStyle::Foreground(ASTColor::Rgb((50, 50, 50).into())),
-                      ASTStyle::Background(ASTColor::Rgb((100, 200, 1).into())),
-                  ],
-              }
-              .to_string()
-          ),
-          true
-      );
-}
-
 /// Replace escaped quotes with unescaped quotes. The escaped quotes are generated
 /// when [std::fmt::Debug] is used to format the output using [format!], eg:
 /// ```
@@ -137,9 +106,38 @@ pub fn truncate_from_left(
 }
 
 #[cfg(test)]
-mod tests_truncate_or_pad {
+mod tests {
     use super::*;
-    use crate::width;
+    use crate::{ast, new_style, tui_color, width};
+
+    #[test]
+    fn test_contains_ansi_escape_sequence() {
+        use crate::assert_eq2;
+
+        assert_eq2!(
+            contains_ansi_escape_sequence(
+                "\x1b[31mThis is red text.\x1b[0m And this is normal text."
+            ),
+            true
+        );
+
+        assert_eq2!(contains_ansi_escape_sequence("This is normal text."), false);
+
+        assert_eq2!(
+        contains_ansi_escape_sequence(
+            &ast(
+                "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
+                new_style!(
+                    bold italic underline
+                    color_fg: {tui_color!(50, 50, 50)}
+                    color_bg: {tui_color!(100, 200, 1)}
+                ),
+            )
+            .to_string()
+        ),
+        true
+    );
+    }
 
     #[test]
     fn test_truncate_or_pad_from_right() {

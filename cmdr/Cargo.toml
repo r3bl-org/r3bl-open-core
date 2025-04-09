@@ -10,7 +10,7 @@ description = """
 A TUI app suite for developers. Includes a Markdown editor `edi` and a git client `giti`.
 """
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
-keywords = ["tui", "editor", "git", "tuify"]
+keywords = ["tui", "editor", "git"]
 categories = ["command-line-interface", "command-line-utilities"]
 
 repository = "https://github.com/r3bl-org/r3bl-open-core"

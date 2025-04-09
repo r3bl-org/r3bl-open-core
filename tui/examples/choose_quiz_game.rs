@@ -18,13 +18,13 @@
 use std::fmt::Display;
 
 use r3bl_core::{self,
+                ast,
                 get_terminal_width,
                 height,
+                new_style,
                 usize,
                 width,
                 ASTColor,
-                ASTStyle,
-                AnsiStyledText,
                 ItemsBorrowed,
                 ItemsOwned};
 use r3bl_tui::{choose,
@@ -150,14 +150,7 @@ impl Display for Answer {
             Answer::Incorrect => "Incorrect",
         };
 
-        write!(
-            f,
-            "{}",
-            AnsiStyledText {
-                text,
-                style: smallvec::smallvec![ASTStyle::Foreground(color)],
-            }
-        )
+        write!(f, "{}", ast(text, new_style!(color_fg: {color.into()})))
     }
 }
 
@@ -186,22 +179,22 @@ fn display_header(line_length: usize) {
     let color = ASTColor::Rgb((9, 183, 238).into());
     println!();
     println!();
-    AnsiStyledText {
-        text: "👋 Welcome to the Simple Quiz with Tuify",
-        style: smallvec::smallvec![ASTStyle::Foreground(color)],
-    }
+    ast(
+        "👋 Welcome to the Simple Quiz with choose",
+        new_style!(color_fg: {color.into()}),
+    )
     .println();
 
-    AnsiStyledText {
-        text: "To exit the game, press 'Esc'",
-        style: smallvec::smallvec![ASTStyle::Foreground(color)],
-    }
+    ast(
+        "To exit the game, press 'Esc'",
+        new_style!(color_fg: {color.into()}),
+    )
     .println();
 
-    AnsiStyledText {
-        text: "─".to_string().as_str().repeat(line_length).as_str(),
-        style: smallvec::smallvec![ASTStyle::Foreground(color)],
-    }
+    ast(
+        "─".to_string().as_str().repeat(line_length).as_str(),
+        new_style!(color_fg: {color.into()}),
+    )
     .println();
 }
 
@@ -213,10 +206,10 @@ fn display_footer(
     let line = "─".to_string().as_str().repeat(line_length - 2);
     let color = ASTColor::Rgb((9, 183, 238).into());
 
-    AnsiStyledText {
-        text: format!("╭{}╮", line).as_str(),
-        style: smallvec::smallvec![ASTStyle::Foreground(color)],
-    }
+    ast(
+        format!("╭{}╮", line).as_str(),
+        new_style!(color_fg: {color.into()}),
+    )
     .println();
 
     let vertical_line = "│".to_string();
@@ -233,16 +226,16 @@ fn display_footer(
     score_text.push(" ".to_string().repeat(spaces_to_add));
     score_text.push(vertical_line.clone());
 
-    AnsiStyledText {
-        text: score_text.join("").as_str(),
-        style: smallvec::smallvec![ASTStyle::Foreground(color)],
-    }
+    ast(
+        score_text.join("").as_str(),
+        new_style!(color_fg: {color.into()}),
+    )
     .println();
 
-    AnsiStyledText {
-        text: format!("╰{}╯", line).as_str(),
-        style: smallvec::smallvec![ASTStyle::Foreground(color)],
-    }
+    ast(
+        format!("╰{}╯", line).as_str(),
+        new_style!(color_fg: {color.into()}),
+    )
     .println();
 }
 
@@ -283,10 +276,10 @@ fn check_user_input_and_display_result(
 
     println!(
         "{a} {b} {c}",
-        a = AnsiStyledText {
-            text: format!("{}. {}", question_number, &question_data.question).as_str(),
-            style: smallvec::smallvec![ASTStyle::Foreground(background_color)],
-        },
+        a = ast(
+            format!("{}. {}", question_number, &question_data.question),
+            new_style!(color_bg: {background_color.into()}),
+        ),
         b = user_input_str,
         c = correct_or_incorrect
     );

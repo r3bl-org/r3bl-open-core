@@ -112,7 +112,7 @@ pub fn generate_truecolor_gradient(stops: &[StringHexColor], steps: u8) -> VecSt
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ASTStyle, AnsiStyledText, TuiColor, assert_eq2, usize};
+    use crate::{TuiColor, assert_eq2, ast, new_style, usize};
 
     #[test]
     fn test_generate_random_truecolor_gradient() {
@@ -126,14 +126,14 @@ mod tests {
             .enumerate()
             .for_each(|(index, color)| match color {
                 TuiColor::Rgb(c) => {
-                    AnsiStyledText {
-                        text: &format!(
+                    ast(
+                        format!(
                             " {index}                                                   "
                         ),
-                        style: smallvec::smallvec![ASTStyle::Background(
-                            crate::ASTColor::Rgb((c.red, c.green, c.blue).into())
-                        )],
-                    }
+                        new_style!(
+                            color_bg: {tui_color!(c.red, c.green, c.blue)}
+                        ),
+                    )
                     .println();
                 }
                 _ => panic!("Unexpected color type"),
@@ -171,14 +171,14 @@ mod tests {
             .enumerate()
             .for_each(|(index, color)| match color {
                 TuiColor::Rgb(c) => {
-                    AnsiStyledText {
-                        text: &format!(
+                    ast(
+                        format!(
                             " {index}                                                   "
                         ),
-                        style: smallvec::smallvec![ASTStyle::Background(
-                            crate::ASTColor::Rgb((c.red, c.green, c.blue).into())
-                        )],
-                    }
+                        new_style!(
+                            color_bg: {tui_color!(c.red, c.green, c.blue)}
+                        ),
+                    )
                     .println();
                 }
                 _ => panic!("Unexpected color type"),

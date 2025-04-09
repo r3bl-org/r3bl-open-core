@@ -41,9 +41,9 @@ use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
 ///
 /// The last line is passed in as a parameter to allow for customization. This is useful
 /// when the list is long and the instructions are at the top.
-pub fn multi_select_instruction_header<'a>(
-    last_line: InlineVec<AnsiStyledText<'a>>,
-) -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
+pub fn multi_select_instruction_header(
+    last_line: InlineVec<AnsiStyledText>,
+) -> InlineVec<InlineVec<AnsiStyledText>> {
     let text_up_and_down = " Up or down:     navigate";
     let text_space = " Space:          select or deselect item";
     let text_esc = " Esc or Ctrl+C:  exit program";
@@ -66,9 +66,9 @@ pub fn multi_select_instruction_header<'a>(
 /// This is the instruction header for the single select list. It is used when the user
 /// can only select one item from the list. The instructions are displayed at the top of
 /// the list. This is easily converted into a [r3bl_tui::choose_impl::Header::MultiLine].
-pub fn single_select_instruction_header<'a>(
-    last_line: InlineVec<AnsiStyledText<'a>>,
-) -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
+pub fn single_select_instruction_header(
+    last_line: InlineVec<AnsiStyledText>,
+) -> InlineVec<InlineVec<AnsiStyledText>> {
     let text_up_or_down = " Up or down:     navigate";
     let text_esc = " Esc or Ctrl+C:  exit program";
     let text_return_key = " Return:         confirm selection";

@@ -65,11 +65,13 @@ pub async fn try_delete_branch() -> CommonResult<SuccessReport> {
         color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
     );
 
-    let _binding_header_text = &PleaseSelectBranchesYouWantToDelete.to_string();
-    let header = multi_select_instruction_header(ast_line![ast(
-        _binding_header_text,
-        default_header_style
-    )]);
+    let header = {
+        let last_line = ast_line![ast(
+            PleaseSelectBranchesYouWantToDelete.to_string(),
+            default_header_style
+        )];
+        multi_select_instruction_header(last_line)
+    };
 
     if let Ok(branches) = get_branches() {
         let mut default_io_devices = DefaultIoDevices::default();
@@ -113,7 +115,7 @@ pub async fn try_delete_branch() -> CommonResult<SuccessReport> {
 
         let header = {
             let last_line =
-                ast_line![ast(&confirm_branch_deletion_header, default_header_style)];
+                ast_line![ast(confirm_branch_deletion_header, default_header_style)];
             single_select_instruction_header(last_line)
         };
 
