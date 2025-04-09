@@ -29,7 +29,6 @@ use super::{ColorWheelConfig,
             config::sizing::VecSteps,
             defaults::{Defaults, get_default_gradient_stops}};
 use crate::{Ansi256GradientIndex,
-            AnsiStyledText,
             ChUnit,
             GCString,
             GCStringExt as _,
@@ -41,6 +40,7 @@ use crate::{Ansi256GradientIndex,
             TuiStyle,
             TuiStyledText,
             TuiStyledTexts,
+            ast,
             ch,
             color_helpers,
             generate_random_truecolor_gradient,
@@ -396,11 +396,7 @@ impl ColorWheel {
             if let Some(default_style) = maybe_default_style {
                 style += default_style;
             }
-            let acc_style = style.into();
-            let ansi_styled_text = AnsiStyledText {
-                style: acc_style,
-                text: &text,
-            };
+            let ansi_styled_text = ast(text, style);
             _ = write!(acc, "{}", ansi_styled_text);
         }
 

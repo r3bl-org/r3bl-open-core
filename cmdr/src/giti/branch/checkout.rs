@@ -25,7 +25,6 @@ use r3bl_core::{ChUnit,
                 InlineVec,
                 ast,
                 ast_line,
-                fg_frozen_blue,
                 fg_guards_red,
                 fg_lizard_green,
                 fg_slate_gray,
@@ -189,12 +188,15 @@ pub async fn try_checkout_branch(
         // displays user all the local branches and asks them to select a branch to check
         // out to.
         None => {
-            let _binding_last_line_text = SelectBranchToSwitchTo.to_string();
             let header = {
-                let line = ast_line![
-                    fg_frozen_blue(&_binding_last_line_text).bg_moonlight_blue()
-                ];
-                single_select_instruction_header(line)
+                let last_line = ast_line![ast(
+                    SelectBranchToSwitchTo.to_string(),
+                    new_style!(
+                        color_fg: {tui_color!(frozen_blue)}
+                        color_bg: {tui_color!(moonlight_blue)}
+                    )
+                )];
+                single_select_instruction_header(last_line)
             };
 
             let current_branch = try_get_current_branch()?;

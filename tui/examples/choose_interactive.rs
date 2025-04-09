@@ -15,12 +15,17 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{get_size,
+use r3bl_core::{ast,
+                ast_line,
+                ast_lines,
+                get_size,
                 get_terminal_width,
                 height,
                 log_support::try_initialize_logging_global,
+                new_style,
                 ok,
                 throws,
+                tui_color,
                 usize,
                 width,
                 ASTColor,
@@ -71,7 +76,7 @@ async fn main() -> miette::Result<()> {
             "Single select, 2 items, viewport height = 5";
         const SINGLE_SELECT_QUIZ_GAME: &str = "Single select, quiz game";
 
-        // Add tuify to select which example to run.
+        // Choose which example to run.
         let mut default_io_devices = DefaultIoDevices::default();
         let user_input = choose(
             "Select which example to run",
@@ -158,13 +163,13 @@ async fn main() -> miette::Result<()> {
 
 // Multi line header.
 async fn multi_line_header() -> miette::Result<()> {
-    let header = AnsiStyledText {
-        text: " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((171, 204, 242).into())),
-            ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
-        ],
-    };
+    let header = ast (
+        " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
+        new_style!(
+            color_fg: {tui_color!(171, 204, 242)}
+            color_bg: {tui_color!(31, 36, 46)}
+        ),
+    );
     let line_5 = smallvec![header];
 
     let mut instructions = multi_select_instructions();
@@ -261,13 +266,13 @@ async fn single_line_header() -> miette::Result<()> {
 /// Multiple select, single item.
 async fn multiple_select_single_item() -> miette::Result<()> {
     let mut instructions = multi_select_instructions();
-    let header = AnsiStyledText {
-        text: " Please select one or more items",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((171, 204, 242).into())),
-            ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
-        ],
-    };
+    let header = ast(
+        " Please select one or more items",
+        new_style!(
+            color_fg: {tui_color!(171, 204, 242)}
+            color_bg: {tui_color!(31, 36, 46)}
+        ),
+    );
     instructions.push(smallvec![header]);
     let list = smallvec!["one element".into()];
 
@@ -301,13 +306,13 @@ async fn multiple_select_13_items_vph_5(
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut instructions = multi_select_instructions();
-    let header = AnsiStyledText {
-        text: " Please select one or more items",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((229, 239, 123).into())),
-            ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
-        ],
-    };
+    let header = ast(
+        " Please select one or more items",
+        new_style!(
+            color_fg: {tui_color!(229, 239, 123)}
+            color_bg: {tui_color!(31, 36, 46)}
+        ),
+    );
     instructions.push(smallvec![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
@@ -363,13 +368,13 @@ async fn multiple_select_2_items_vph_5(
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut instructions = multi_select_instructions();
-    let header = AnsiStyledText {
-        text: " Please select one or more items",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((229, 239, 123).into())),
-            ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
-        ],
-    };
+    let header = ast(
+        " Please select one or more items",
+        new_style!(
+            color_fg: {tui_color!(229, 239, 123)}
+            color_bg: {tui_color!(31, 36, 46)}
+        ),
+    );
 
     instructions.push(smallvec![header]);
 
@@ -463,13 +468,13 @@ async fn single_select_2_items_vph_5(
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut instructions = single_select_instruction();
-    let header = AnsiStyledText {
-        text: " Please select one item",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((171, 204, 242).into())),
-            ASTStyle::Background(ASTColor::Rgb((31, 36, 46).into())),
-        ],
-    };
+    let header = ast(
+        " Please select one item",
+        new_style!(
+            color_fg: {tui_color!(171, 204, 242)}
+            color_bg: {tui_color!(31, 36, 46)}
+        ),
+    );
     instructions.push(smallvec![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
@@ -503,123 +508,150 @@ async fn single_select_2_items_vph_5(
     ok!()
 }
 
-fn multi_select_instructions<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
-    let up_and_down = AnsiStyledText {
-        text: " Up or down:",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((9, 238, 211).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
-    let navigate = AnsiStyledText {
-        text: "     navigate",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
+fn multi_select_instructions() -> InlineVec<InlineVec<AnsiStyledText>> {
+    let line_1 = {
+        let up_and_down = ast(
+            " Up or down:",
+            new_style!(
+                color_fg: {tui_color!(9, 238, 211)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
+
+        let navigate = ast(
+            "     navigate",
+            new_style!(
+                color_fg: {tui_color!(94, 103, 111)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
+
+        ast_line![up_and_down, navigate]
     };
 
-    let line_1 = smallvec![up_and_down, navigate];
+    let line_2 = {
+        let space = ast(
+            " Space:",
+            new_style!(
+                color_fg: {tui_color!(255, 216, 9)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
 
-    let space = AnsiStyledText {
-        text: " Space:",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((255, 216, 9).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
-    let select = AnsiStyledText {
-        text: "          select or deselect item",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
+        let select = ast(
+            "          select or deselect item",
+            new_style!(
+                color_fg: {tui_color!(94, 103, 111)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
 
-    let line_2 = smallvec![space, select];
-
-    let esc = AnsiStyledText {
-        text: " Esc or Ctrl+C:",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((255, 132, 18).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
-    let exit = AnsiStyledText {
-        text: "  exit program",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
+        ast_line![space, select]
     };
 
-    let line_3 = smallvec![esc, exit];
-    let return_key = AnsiStyledText {
-        text: " Return:",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((234, 0, 196).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
+    let line_3 = {
+        let esc = ast(
+            " Esc or Ctrl+C:",
+            new_style!(
+                color_fg: {tui_color!(255, 132, 18)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
+
+        let exit = ast(
+            "  exit program",
+            new_style!(
+                color_fg: {tui_color!(94, 103, 111)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
+
+        ast_line![esc, exit]
     };
-    let confirm = AnsiStyledText {
-        text: "         confirm selection",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
+
+    let line_4 = {
+        let return_key = ast(
+            " Return:",
+            new_style!(
+                color_fg: {tui_color!(234, 0, 196)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
+
+        let confirm = ast(
+            "         confirm selection",
+            new_style!(
+                color_fg: {tui_color!(94, 103, 111)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
+
+        ast_line![return_key, confirm]
     };
-    let line_4 = smallvec![return_key, confirm];
-    smallvec![line_1, line_2, line_3, line_4]
+
+    ast_lines![line_1, line_2, line_3, line_4]
 }
 
-fn single_select_instruction<'a>() -> InlineVec<InlineVec<AnsiStyledText<'a>>> {
-    let up_and_down = AnsiStyledText {
-        text: " Up or down:",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((9, 238, 211).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
-    let navigate = AnsiStyledText {
-        text: "     navigate",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
+fn single_select_instruction() -> InlineVec<InlineVec<AnsiStyledText>> {
+    let line_1 = {
+        let up_and_down = ast(
+            " Up or down:",
+            new_style!(
+                color_fg: {tui_color!(9, 238, 211)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
+
+        let navigate = ast(
+            "     navigate",
+            new_style!(
+                color_fg: {tui_color!(94, 103, 111)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
+
+        ast_line![up_and_down, navigate]
     };
 
-    let line_1 = smallvec![up_and_down, navigate];
+    let line_2 = {
+        let esc = ast(
+            " Esc or Ctrl+C:",
+            new_style!(
+                color_fg: {tui_color!(255, 132, 18)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
 
-    let esc = AnsiStyledText {
-        text: " Esc or Ctrl+C:",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((255, 132, 18).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
-    let exit = AnsiStyledText {
-        text: "  exit program",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
+        let exit = ast(
+            "  exit program",
+            new_style!(
+                color_fg: {tui_color!(94, 103, 111)}
+                color_bg: {tui_color!(14, 17, 23)}
+            ),
+        );
+
+        ast_line![esc, exit]
     };
 
-    let line_2 = smallvec![esc, exit];
-    let return_key = AnsiStyledText {
-        text: " Return:",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((234, 0, 196).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
+    let line_3 = {
+        let return_key = ast(
+            " Return:",
+            smallvec![
+                ASTStyle::Foreground(ASTColor::Rgb((234, 0, 196).into())),
+                ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
+            ],
+        );
+
+        let confirm = ast(
+            "         confirm selection",
+            smallvec![
+                ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
+                ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
+            ],
+        );
+
+        ast_line![return_key, confirm]
     };
-    let confirm = AnsiStyledText {
-        text: "         confirm selection",
-        style: smallvec![
-            ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-            ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
-        ],
-    };
-    let line_3 = smallvec![return_key, confirm];
-    smallvec![line_1, line_2, line_3]
+
+    ast_lines![line_1, line_2, line_3]
 }

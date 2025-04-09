@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-//! For more information on how to use CLAP and Tuify, here are some resources:
+//! For more information on how to use CLAP, here are some resources:
 //! 1. [Tutorial](https://developerlife.com/2023/09/17/tuify-clap/)
 //! 2. [Video](https://youtu.be/lzMYDA6St0s)
 
@@ -155,12 +155,13 @@ async fn user_typed_giti_branch() -> CommonResult<SuccessReport> {
         maybe_branch_name: None,
     });
 
-    let _binding_last_line_text = PleaseSelectBranchSubCommand.to_string();
     let header = {
-        let default_header_style = new_style!(
-            color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
-        );
-        let last_line = ast_line![ast(&_binding_last_line_text, default_header_style)];
+        let last_line = ast_line![ast(
+            PleaseSelectBranchSubCommand.to_string(),
+            new_style!(
+                color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
+            )
+        )];
         single_select_instruction_header(last_line)
     };
 

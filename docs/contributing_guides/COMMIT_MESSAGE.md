@@ -44,7 +44,7 @@ made to the codebase. They also help you keep track of what you've done.
 - The subject should be a short description of the change.
   - The subject should be **less than 50 characters**.
 - The subject should not end with a period.
-- The subject should have a component name like `[tui]`, `[tuify]`, etc.
+- The subject should have a component name like `[tui]`, `[core]`, etc.
   PTAL at the existing issues to get a sense of what some of these labels are.
 - Use **imperative mood**. Using the imperative mood means to phrase your commit description as an
   order or instruction. For example, instead of writing "Fixed bug in user login", you would write

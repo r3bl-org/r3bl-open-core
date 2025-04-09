@@ -44,14 +44,14 @@ use tracing::{Event,
 use tracing_subscriber::{fmt::{FormatEvent, FormatFields},
                          registry::LookupSpan};
 
-use crate::{AnsiStyledText,
-            ColWidth,
+use crate::{ColWidth,
             ColorWheel,
             GCString,
             InlineString,
             OrderedMap,
             RgbValue,
             TuiColor,
+            ast,
             fg_color,
             get_terminal_width,
             glyphs,
@@ -152,30 +152,28 @@ where
             sp = spacer
         );
         line_width_used += GCString::width(&timestamp_str);
-        let timestamp_str_fmt = AnsiStyledText {
-            text: &timestamp_str,
-            style: new_style!(
+        let timestamp_str_fmt = ast(
+            timestamp_str,
+            new_style!(
                 italic
                 color_fg: {TuiColor::Rgb(BODY_FG_COLOR_BRIGHT)}
                 color_bg: {TuiColor::Rgb(HEADING_BG_COLOR)}
-            )
-            .into(),
-        };
+            ),
+        );
         write!(f, "\n{timestamp_str_fmt}")?;
 
         // Custom span context.
         if let Some(scope) = ctx.lookup_current() {
             let scope_str = inline_string!("[{}] ", scope.name());
             line_width_used += GCString::width(&scope_str);
-            let scope_str_fmt = AnsiStyledText {
-                text: &scope_str,
-                style: new_style!(
+            let scope_str_fmt = ast(
+                scope_str,
+                new_style!(
                     italic
                     color_fg: {TuiColor::Rgb(BODY_FG_COLOR_BRIGHT)}
                     color_bg: {TuiColor::Rgb(HEADING_BG_COLOR)}
-                )
-                .into(),
-            };
+                ),
+            );
             write!(f, "{scope_str_fmt}")?;
         }
 
@@ -220,12 +218,8 @@ where
         style.color_bg = Some(TuiColor::Rgb(HEADING_BG_COLOR));
         style.bold = true;
 
-        let level_str_fmt = AnsiStyledText {
-            text: &level_str,
-            style: style.into(),
-        };
-
         let level_str_display_width = GCString::width(&level_str);
+        let level_str_fmt = ast(level_str, style);
         line_width_used += spacer_display_width;
         line_width_used += level_str_display_width;
         write!(f, "{level_str_fmt}")?;
@@ -278,13 +272,12 @@ where
                 for body_line in body.iter() {
                     let body_line =
                         truncate_from_right(body_line, max_display_width, true);
-                    let body_line_fmt = AnsiStyledText {
-                        text: &body_line,
-                        style: new_style!(
+                    let body_line_fmt = ast(
+                        body_line,
+                        new_style!(
                             color_fg: {TuiColor::Rgb(BODY_FG_COLOR)}
-                        )
-                        .into(),
-                    };
+                        ),
+                    );
                     writeln!(f, "{body_line_fmt}")?;
                 }
             }
