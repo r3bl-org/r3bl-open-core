@@ -29,11 +29,7 @@ use r3bl_core::{AnsiStyledText,
                 ast_lines,
                 fg_slate_gray};
 
-use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
-                                          GoodbyeThanksForUsingGiti,
-                                          GoodbyeThanksForUsingGitiUsername,
-                                          PleaseStarUs},
-            upgrade_check};
+use crate::{giti::ui_strings::UIStrings, upgrade_check};
 
 /// This is the instruction header for the multi select list. It is used when the user can
 /// select multiple items from the list. The instructions are displayed at the top of the
@@ -105,12 +101,12 @@ pub fn show_exit_message() {
         println!("{}", {
             let goodbye_to_user = match var("USER") {
                 Ok(username) => {
-                    GoodbyeThanksForUsingGitiUsername { username }.to_string()
+                    UIStrings::GoodbyeThanksForUsingGitiUsername { username }.to_string()
                 }
-                Err(_) => GoodbyeThanksForUsingGiti.to_string(),
+                Err(_) => UIStrings::GoodbyeThanksForUsingGiti.to_string(),
             };
 
-            let please_star_us = PleaseStarUs.to_string();
+            let please_star_us = UIStrings::PleaseStarUs.to_string();
             let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
 
             ColorWheel::lolcat_into_string(&plain_text_exit_msg, None)
@@ -136,7 +132,7 @@ pub fn report_unknown_error_and_propagate<T>(
         it.join(" ")
     };
 
-    let error_msg = ErrorExecutingCommand {
+    let error_msg = UIStrings::ErrorExecutingCommand {
         program_name_to_string,
         command_args_to_string,
         command_output_error,

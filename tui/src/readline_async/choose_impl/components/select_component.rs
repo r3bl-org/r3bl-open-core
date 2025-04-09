@@ -276,7 +276,7 @@ impl FunctionComponent<State> for SelectComponent {
                         let zipped = clipped_text_vec.iter().zip(header_span_vec.iter());
                         zipped.for_each(|(clipped_text, header_span)| {
                             ansi_styled_text_vec
-                                .push(ast(clipped_text, header_span.style.to_owned()));
+                                .push(ast(clipped_text, header_span.styles.to_owned()));
                         });
                         multi_line_header_clipped_vec.push(ansi_styled_text_vec);
                     });

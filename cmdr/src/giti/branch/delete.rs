@@ -34,17 +34,8 @@ use try_delete_branch_user_choice::Selection::{self, Delete, ExitProgram};
 use crate::{AnalyticsAction,
             giti::{SuccessReport,
                    clap_config::BranchSubcommand,
-                   ui_strings::UIStrings::{ConfirmDeletingMultipleBranches,
-                                           ConfirmDeletingOneBranch,
-                                           CurrentBranch,
-                                           Deleted,
-                                           Exit,
-                                           FailedToDeleteBranch,
-                                           FailedToDeleteBranches,
-                                           FailedToRunCommandToDeleteBranches,
-                                           PleaseSelectBranchesYouWantToDelete,
-                                           YesDeleteBranch,
-                                           YesDeleteBranches},
+                   git::try_get_local_branches,
+                   ui_strings::UIStrings,
                    ui_templates::{multi_select_instruction_header,
                                   report_unknown_error_and_propagate,
                                   single_select_instruction_header}},
@@ -67,13 +58,13 @@ pub async fn try_delete_branch() -> CommonResult<SuccessReport> {
 
     let header = {
         let last_line = ast_line![ast(
-            PleaseSelectBranchesYouWantToDelete.to_string(),
+            UIStrings::PleaseSelectBranchesYouWantToDelete.to_string(),
             default_header_style
         )];
         multi_select_instruction_header(last_line)
     };
 
-    if let Ok(branches) = get_branches() {
+    if let Ok(branches) = try_get_local_branches() {
         let mut default_io_devices = DefaultIoDevices::default();
         let branches = choose(
             header,
@@ -86,24 +77,31 @@ pub async fn try_delete_branch() -> CommonResult<SuccessReport> {
         )
         .await?;
 
-        let branches_to_delete = branches.join(", ");
         let num_of_branches = branches.len();
+
+        if num_of_branches == 0 {
+            return Ok(try_run_command_result);
+        }
+
+        let branches_to_delete = branches.join(", ");
 
         let (confirm_branch_deletion_header, confirm_deletion_options) = {
             let mut confirm_deletion_options: ItemsOwned =
-                smallvec![Exit.to_string().into()];
+                smallvec![UIStrings::Exit.to_string().into()];
             if num_of_branches == 1 {
                 let branch_name = &branches[0];
                 let branch_name = branch_name.to_string();
-                confirm_deletion_options.insert(0, YesDeleteBranch.to_string().into());
+                confirm_deletion_options
+                    .insert(0, UIStrings::YesDeleteBranch.to_string().into());
                 (
-                    ConfirmDeletingOneBranch { branch_name }.to_string(),
+                    UIStrings::ConfirmDeletingOneBranch { branch_name }.to_string(),
                     confirm_deletion_options,
                 )
             } else {
-                confirm_deletion_options.insert(0, YesDeleteBranches.to_string().into());
+                confirm_deletion_options
+                    .insert(0, UIStrings::YesDeleteBranches.to_string().into());
                 (
-                    ConfirmDeletingMultipleBranches {
+                    UIStrings::ConfirmDeletingMultipleBranches {
                         num_of_branches,
                         branches_to_delete,
                     }
@@ -195,10 +193,10 @@ mod try_delete_branch_user_choice {
     impl From<ItemsOwned> for Selection {
         fn from(selected: ItemsOwned) -> Selection {
             let selected_to_delete_one_branch =
-                selected[0] == YesDeleteBranch.to_string();
+                selected[0] == UIStrings::YesDeleteBranch.to_string();
             let selected_to_delete_multiple_branches =
-                selected[0] == YesDeleteBranches.to_string();
-            let selected_to_exit = selected[0] == Exit.to_string();
+                selected[0] == UIStrings::YesDeleteBranches.to_string();
+            let selected_to_exit = selected[0] == UIStrings::Exit.to_string();
 
             if selected_to_delete_one_branch || selected_to_delete_multiple_branches {
                 return Selection::Delete;
@@ -225,7 +223,7 @@ mod try_delete_branch_inner {
                 if branches.len() == 1 {
                     let branch = &branches[0];
                     fg_guards_red(
-                        &FailedToDeleteBranch {
+                        &UIStrings::FailedToDeleteBranch {
                             branch_name: branch.to_string(),
                             error_message: String::from_utf8_lossy(&output.stderr).into(),
                         }
@@ -235,7 +233,7 @@ mod try_delete_branch_inner {
                 } else {
                     let branches = branches.join(",\n ╴");
                     fg_guards_red(
-                        &FailedToDeleteBranches {
+                        &UIStrings::FailedToDeleteBranches {
                             branches,
                             error_message: String::from_utf8_lossy(&output.stderr)
                                 .to_string(),
@@ -248,7 +246,8 @@ mod try_delete_branch_inner {
             None => {
                 let branches = branches.join(",\n ╴");
                 fg_guards_red(
-                    &FailedToRunCommandToDeleteBranches { branches }.to_string(),
+                    &UIStrings::FailedToRunCommandToDeleteBranches { branches }
+                        .to_string(),
                 )
                 .println();
             }
@@ -270,7 +269,7 @@ mod try_delete_branch_inner {
         println!(
             " ✅ {a} {b}",
             a = fg_lizard_green(branch_name),
-            b = fg_slate_gray(&Deleted.to_string()),
+            b = fg_slate_gray(&UIStrings::Deleted.to_string()),
         );
     }
 
@@ -279,93 +278,8 @@ mod try_delete_branch_inner {
             println!(
                 " ✅ {a} {b}",
                 a = fg_lizard_green(branch),
-                b = fg_slate_gray(&Deleted.to_string()),
+                b = fg_slate_gray(&UIStrings::Deleted.to_string()),
             );
         }
     }
-}
-
-pub fn try_execute_git_command_to_get_branches() -> CommonResult<Vec<String>> {
-    // Create command.
-    let mut command = Command::new("git");
-    let command: &mut Command = command.args(["branch", "--format", "%(refname:short)"]);
-
-    // Execute command.
-    let result_output = command.output();
-
-    // Process command execution results.
-    match result_output {
-        // Can't even execute output(), something unknown has gone wrong. Propagate the
-        // error.
-        Err(error) => report_unknown_error_and_propagate(command, miette::miette!(error)),
-        Ok(output) => {
-            let output_string = String::from_utf8_lossy(&output.stdout);
-            let mut branches = vec![];
-            for line in output_string.lines() {
-                branches.push(line.to_string());
-            }
-            Ok(branches)
-        }
-    }
-}
-
-// Get all the branches to check out to. prefix current branch with `(current)`.
-pub fn get_branches() -> CommonResult<ItemsOwned> {
-    let branches = try_execute_git_command_to_get_branches()?;
-    // If branch name is current_branch, then append `(current)` in front of it.
-    // Create command.
-    let mut command = Command::new("git");
-    let show_current_branch_command: &mut Command =
-        command.args(["branch", "--show-current"]);
-
-    let current_branch_result_output = show_current_branch_command.output();
-
-    let current_branch = match current_branch_result_output {
-        Ok(output) => {
-            let output_string = String::from_utf8_lossy(&output.stdout);
-            output_string.to_string().trim_end_matches('\n').to_string()
-        }
-        // Can't even execute output(), something unknown has gone wrong. Propagate the
-        // error.
-        Err(error) => {
-            return report_unknown_error_and_propagate(
-                show_current_branch_command,
-                miette::miette!(error),
-            );
-        }
-    };
-
-    let mut branches_vec = smallvec![];
-    for branch in branches {
-        if branch == current_branch {
-            branches_vec.push(CurrentBranch { branch }.to_string().into());
-        } else {
-            branches_vec.push(branch.into());
-        }
-    }
-
-    Ok(branches_vec)
-}
-
-pub fn try_get_current_branch() -> CommonResult<String> {
-    // If branch name is current_branch, then append `(current)` in front of it.
-    // Create command.
-    let mut command = Command::new("git");
-    let command: &mut Command = command.args(["branch", "--show-current"]);
-
-    let result_output = command.output();
-
-    let current_branch = match result_output {
-        // Can't even execute output(), something unknown has gone wrong. Propagate the
-        // error.
-        Err(error) => {
-            return report_unknown_error_and_propagate(command, miette::miette!(error));
-        }
-        Ok(output) => {
-            let output_string = String::from_utf8_lossy(&output.stdout);
-            output_string.to_string().trim_end_matches('\n').to_string()
-        }
-    };
-
-    Ok(current_branch)
 }
