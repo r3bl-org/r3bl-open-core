@@ -76,7 +76,7 @@ emoji), text styling, and more.
 
 It is a dependency of the following crates:
 1. [`r3bl_tui`](https://crates.io/crates/r3bl_tui)
-1. [`r3bl_tuify`](https://crates.io/crates/ir3bl_tuify)
+1. [`r3bl_tuify`](https://crates.io/crates/r3bl_tuify)
 1. [`r3bl_terminal_async`](https://crates.io/crates/r3bl_terminal_async)
 1. [`r3bl_cmdr`](https://crates.io/crates/r3bl_cmdr)
 1. [`r3bl_macro`](https://crates.io/crates/r3bl_macro) (procedural macros)

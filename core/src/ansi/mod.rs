@@ -141,43 +141,21 @@
 //!
 //! ```rust
 //! # use r3bl_core::{
-//! #     fg_red, dim, fg_color, tui_color,
+//! #     fg_red, dim, fg_color, tui_color, new_style, ast,
 //! #     RgbValue, ASTStyle, AnsiStyledText, ASTColor,
 //! # };
 //!
-//! // Using the constructor functions.
-//! let red_text = fg_red("This is red text.");
-//! let red_text_on_dark_gray = red_text.bg_dark_gray();
-//! println!("{red_text_on_dark_gray}");
-//! red_text_on_dark_gray.println();
-//!
-//! // Combine constructor functions.
-//! let dim_red_text_on_dark_gray =
-//!     dim("text")
-//!     .fg_color(tui_color!(255, 0, 0))
-//!     .bg_color(tui_color!(50, 50, 50));
-//! println!("{dim_red_text_on_dark_gray}");
-//! dim_red_text_on_dark_gray.println();
-//!
-//! // Flexible construction using RGB color codes.
-//! let blue_text = fg_color(RgbValue::from((0, 0, 255)), "This is blue text.");
-//! let blue_text_on_white = blue_text.bg_color(tui_color!(255, 255, 255));
-//! println!("{blue_text_on_white}");
-//! blue_text_on_white.println();
-//!
-//! // Verbose struct construction.
-//! AnsiStyledText {
-//!     text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
-//!     style: smallvec::smallvec![
-//!         ASTStyle::Bold,
-//!         ASTStyle::Italic,
-//!         ASTStyle::Underline,
-//!         ASTStyle::Foreground(ASTColor::Rgb((50, 50, 50).into())),
-//!         ASTStyle::Background(ASTColor::Rgb((100, 200, 1).into())),
-//!     ],
-//! }
-//! .println();
+//! // Use ast() to create a styled text.
+//! let styled_text = ast("Hello", new_style!(bold));
+//! println!("{styled_text}");
+//! styled_text.println();
 //! ```
+//!
+//! For more examples, please read the documentation for [AnsiStyledText]. Please don't
+//! create this struct directly, use [crate::ast()], [crate::ast_line!],
+//! [crate::ast_lines!] or the constructor functions like [fg_red()], [fg_green()],
+//! [fg_blue()], etc.
+//!
 //!
 //! Please a look at the
 //! [`main` example](https://github.com/r3bl-org/r3bl_ansi_color/blob/main/examples/main.rs) to get a

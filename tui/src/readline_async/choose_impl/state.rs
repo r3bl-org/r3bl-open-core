@@ -24,7 +24,7 @@ use crate::{get_scroll_adjusted_row_index,
             HowToChoose};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
-pub struct State<'a> {
+pub struct State {
     /// Does not include the header row.
     pub max_display_height: ChUnit,
     pub max_display_width: ChUnit,
@@ -33,7 +33,7 @@ pub struct State<'a> {
     pub scroll_offset_row_index: ChUnit,
     pub items: ItemsOwned,
     pub selected_items: ItemsOwned,
-    pub header: Header<'a>,
+    pub header: Header,
     pub selection_mode: HowToChoose,
     /// This is used to determine if the terminal has been resized.
     pub resize_hint: Option<ResizeHint>,
@@ -43,51 +43,52 @@ pub struct State<'a> {
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 #[allow(clippy::large_enum_variant)]
-pub enum Header<'a> {
+pub enum Header {
     /// Single line header.
     SingleLine(InlineString),
     /// Multi line header.
-    MultiLine(InlineVec<InlineVec<AnsiStyledText<'a>>>),
+    MultiLine(InlineVec<InlineVec<AnsiStyledText>>),
 }
 
-/// Convert various types to a header: `Vec<Vec<AnsiStyledText<'a>>>`, `InlineString`, `String`, etc.
+/// Convert various types to a header:
+/// - `Vec<Vec<AnsiStyledText>>`,
+/// - `InlineString`,
+/// - `String`, etc.
 mod convert_to_header {
     use super::*;
 
-    impl<'a> From<Vec<Vec<AnsiStyledText<'a>>>> for Header<'a> {
-        fn from(header: Vec<Vec<AnsiStyledText<'a>>>) -> Self {
+    impl From<Vec<Vec<AnsiStyledText>>> for Header {
+        fn from(header: Vec<Vec<AnsiStyledText>>) -> Self {
             Header::MultiLine(header.into_iter().map(InlineVec::from).collect())
         }
     }
 
-    impl<'a> From<InlineVec<InlineVec<AnsiStyledText<'a>>>> for Header<'a> {
-        fn from(header: InlineVec<InlineVec<AnsiStyledText<'a>>>) -> Self {
+    impl From<InlineVec<InlineVec<AnsiStyledText>>> for Header {
+        fn from(header: InlineVec<InlineVec<AnsiStyledText>>) -> Self {
             Header::MultiLine(header)
         }
     }
 
-    impl<'a> From<InlineString> for Header<'a> {
+    impl From<InlineString> for Header {
         fn from(header: InlineString) -> Self { Header::SingleLine(header) }
     }
 
-    impl<'a> From<String> for Header<'a> {
+    impl From<String> for Header {
         fn from(header: String) -> Self { Header::SingleLine(InlineString::from(header)) }
     }
 
-    impl<'a> From<&'a str> for Header<'a> {
-        fn from(header: &'a str) -> Self {
-            Header::SingleLine(InlineString::from(header))
-        }
+    impl From<&str> for Header {
+        fn from(header: &str) -> Self { Header::SingleLine(InlineString::from(header)) }
     }
 
-    impl Default for Header<'_> {
+    impl Default for Header {
         fn default() -> Self { Header::SingleLine(InlineString::new()) }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::assert_eq2;
+    use r3bl_core::{assert_eq2, ast};
     use smallvec::smallvec;
 
     use super::*;
@@ -95,22 +96,20 @@ mod tests {
     #[test]
     fn test_header_enum() {
         let state = State {
-            header: Header::MultiLine(smallvec![smallvec![AnsiStyledText {
-                text: "line1",
-                style: smallvec::smallvec![],
-            }]]),
+            header: Header::MultiLine(smallvec![smallvec![ast(
+                "line1",
+                smallvec::smallvec![],
+            )]]),
             ..Default::default()
         };
         let lhs = state.header;
-        let rhs = Header::MultiLine(smallvec![smallvec![AnsiStyledText {
-            text: "line1",
-            style: smallvec::smallvec![],
-        }]]);
+        let rhs =
+            Header::MultiLine(smallvec![smallvec![ast("line1", smallvec::smallvec![])]]);
         assert_eq2!(lhs, rhs);
     }
 }
 
-impl CalculateResizeHint for State<'_> {
+impl CalculateResizeHint for State {
     fn set_size(&mut self, new_size: Size) {
         self.window_size = Some(new_size);
         self.clear_resize_hint();
@@ -155,7 +154,7 @@ pub enum ResizeHint {
     NoChange,
 }
 
-impl State<'_> {
+impl State {
     /// This the row index that currently has keyboard focus.
     pub fn get_focused_index(&self) -> ChUnit {
         get_scroll_adjusted_row_index(

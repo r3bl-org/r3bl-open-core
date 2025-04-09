@@ -107,7 +107,7 @@ impl DefaultIoDevices {
 ///   * `maybe_shared_writer` - The shared writer to use, if ReadlineAsync is in use, and
 ///     the async stdout needs to be paused when this function is running.
 pub async fn choose<'a>(
-    arg_header: impl Into<Header<'a>>,
+    arg_header: impl Into<Header>,
     from: ItemsOwned,
     maybe_max_height: Option<Height>,
     maybe_max_width: Option<Width>,
@@ -175,13 +175,8 @@ pub async fn choose<'a>(
         state.set_size(size);
     }
 
-    let res_user_input = enter_event_loop_async(
-        &mut state,
-        &mut fc,
-        |state, maybe_input_event| keypress_handler(state, maybe_input_event),
-        id,
-    )
-    .await;
+    let res_user_input =
+        enter_event_loop_async(&mut state, &mut fc, keypress_handler, id).await;
 
     // For compatibility with ReadlineAsync (if it is in use).
     if let Some(ref sw) = msw {
@@ -198,7 +193,7 @@ pub async fn choose<'a>(
     }
 }
 
-fn keypress_handler(state: &mut State<'_>, ie: InputEvent) -> EventLoopResult {
+fn keypress_handler(state: &mut State, ie: InputEvent) -> EventLoopResult {
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(

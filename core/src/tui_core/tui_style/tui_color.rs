@@ -466,6 +466,15 @@ mod convert_to_ast_color {
             }
         }
     }
+
+    impl From<ASTColor> for TuiColor {
+        fn from(ast_color: ASTColor) -> Self {
+            match ast_color {
+                ASTColor::Rgb(rgb) => TuiColor::Rgb(rgb),
+                ASTColor::Ansi(ansi) => TuiColor::Ansi(ansi),
+            }
+        }
+    }
 }
 
 /// This is useful when you want to go between different variants of the [TuiColor] enum.

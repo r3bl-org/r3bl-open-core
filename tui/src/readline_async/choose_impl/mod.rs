@@ -112,7 +112,7 @@
 //! # Changelog
 //!
 //! Please check out the
-//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tuify) to
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tui) to
 //! see how the library has evolved over time.
 //!
 //! # Learn how these crates are built, provide feedback
@@ -237,7 +237,9 @@
 //!
 //! ## Choose one of the 3 built-in styles
 //!
-//! Built-in styles are called `default`, `sea_foam_style`, and `hot_pink_style`. You can find them in the `style.rs` file (tuify/src/components/style.rs).
+//! Built-in styles are called [`default`](StyleSheet::default()),
+//! [`sea_foam_style`](StyleSheet::sea_foam_style()), and
+//! [`hot_pink_style`](StyleSheet::hot_pink_style()).
 //!
 //! Default style:
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/eaf990a4-1c33-4783-9f39-82af42568183)
@@ -373,7 +375,7 @@
 //!
 //! ## Nushell scripts to build, run, test, etc.
 //!
-//! Go to the `tuify` folder and run the commands below. These commands are defined in the `./run` folder.
+//! Go to the `tui` folder and run the commands below. These commands are defined in the `./run` folder.
 //!
 //! | Command                                | Description                                |
 //! | -------------------------------------- | ------------------------------------------ |
