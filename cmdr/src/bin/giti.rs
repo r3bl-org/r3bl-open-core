@@ -25,16 +25,17 @@ use r3bl_cmdr::{AnalyticsAction,
                        CLIArg,
                        CLICommand,
                        SuccessReport,
+                       UIStrings::PleaseSelectBranchSubCommand,
                        get_giti_command_subcommand_names,
                        try_checkout_branch,
                        try_delete_branch,
                        try_make_new_branch,
-                       ui_templates,
-                       ui_templates::single_select_instruction_header},
+                       ui_templates::{self, single_select_instruction_header}},
                 report_analytics,
                 upgrade_check};
 use r3bl_core::{CommonResult,
                 ast,
+                ast_line,
                 fg_guards_red,
                 height,
                 log_support::try_initialize_logging_global,
@@ -44,7 +45,6 @@ use r3bl_core::{CommonResult,
 use r3bl_tui::{DefaultIoDevices,
                choose,
                readline_async::{HowToChoose, StyleSheet}};
-use smallvec::smallvec;
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -155,19 +155,18 @@ async fn user_typed_giti_branch() -> CommonResult<SuccessReport> {
         maybe_branch_name: None,
     });
 
-    let default_header_style = new_style!(
-        color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
-    );
-    let instructions_and_select_branch_subcommand = {
-        let mut lines = single_select_instruction_header();
-        let header_line = ast("Please select a branch subcommand", default_header_style);
-        lines.push(smallvec![header_line]);
-        lines
+    let _binding_last_line_text = PleaseSelectBranchSubCommand.to_string();
+    let header = {
+        let default_header_style = new_style!(
+            color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
+        );
+        let last_line = ast_line![ast(&_binding_last_line_text, default_header_style)];
+        single_select_instruction_header(last_line)
     };
 
     let mut default_io_devices = DefaultIoDevices::default();
     let selected = choose(
-        instructions_and_select_branch_subcommand,
+        header,
         branch_subcommands,
         Some(height(20)),
         None,

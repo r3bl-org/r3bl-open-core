@@ -15,8 +15,8 @@ categories = ["command-line-interface", "command-line-utilities"]
 
 repository = "https://github.com/r3bl-org/r3bl-open-core"
 authors = [
-  "Nazmul Idris <idris@developerlife.com>",
-  "Nadia Idris <nadia@developerlife.com>",
+    "Nazmul Idris <idris@developerlife.com>",
+    "Nadia Idris <nadia@developerlife.com>",
 ]
 documentation = "https://docs.rs/r3bl-cmdr"
 
@@ -76,7 +76,11 @@ miette = { version = "7.2.0", features = ["fancy"] }
 
 # For smallstr & smallvec.
 smallvec = { version = "1.6.1", features = [
-  "union",
-  "const_generics",
-  "const_new",
+    "union",
+    "const_generics",
+    "const_new",
 ] }
+
+# Enum to string generation.
+strum = "0.26.3"
+strum_macros = "0.26.4"
