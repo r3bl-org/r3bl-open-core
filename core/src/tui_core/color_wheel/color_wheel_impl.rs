@@ -610,7 +610,10 @@ mod tests_color_wheel_rgb {
     use serial_test::serial;
 
     use super::*;
-    use crate::{ColorSupport, assert_eq2, global_color_support};
+    use crate::{ColorSupport,
+                assert_eq2,
+                global_color_support,
+                tui_style::tui_style_attrib::{Bold, Dim}};
 
     mod test_helpers {
         use smallvec::smallvec;
@@ -818,8 +821,8 @@ mod tests_color_wheel_rgb {
             styled_texts[0].get_style().color_fg,
             Some(tui_color!(0, 0, 0))
         );
-        assert_eq2!(styled_texts[0].get_style().dim, false);
-        assert_eq2!(styled_texts[0].get_style().bold, false);
+        assert!(styled_texts[0].get_style().dim.is_none());
+        assert!(styled_texts[0].get_style().bold.is_none());
 
         // [1]: " ", color_fg: None
         assert_eq2!(styled_texts[1].get_text(), " ");
@@ -853,8 +856,8 @@ mod tests_color_wheel_rgb {
         global_color_support::set_override(ColorSupport::Truecolor);
 
         let style = TuiStyle {
-            dim: true,
-            bold: true,
+            dim: Some(Dim),
+            bold: Some(Bold),
             ..Default::default()
         };
 
@@ -873,8 +876,8 @@ mod tests_color_wheel_rgb {
             styled_texts[0].get_style().color_fg,
             Some(tui_color!(0, 0, 0))
         );
-        assert_eq2!(styled_texts[0].get_style().dim, true);
-        assert_eq2!(styled_texts[0].get_style().bold, true);
+        assert!(styled_texts[0].get_style().dim.is_some());
+        assert!(styled_texts[0].get_style().bold.is_some());
 
         // [1]: "E", color_fg: Rgb(0, 0, 0)
         assert_eq2!(styled_texts[1].get_text(), "E");

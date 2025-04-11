@@ -121,6 +121,7 @@
 //! - If you like consuming written content, here's our developer [site](https://developerlife.com/). Please consider subscribing to our [newsletter](https://developerlife.com/subscribe.html).
 //! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 
+#![feature(let_chains)]
 #![feature(trivial_bounds)]
 
 // Connect to source file.

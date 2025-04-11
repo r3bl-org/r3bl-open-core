@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use super::TuiStyle;
+use super::{TuiStyle, tui_style_attrib};
 use crate::{CommonError, CommonResult, InlineVec, throws};
 
 #[derive(Default, Debug, Clone)]
@@ -70,7 +70,7 @@ impl TuiStylesheet {
 
     pub fn add_style(&mut self, style: TuiStyle) -> CommonResult<()> {
         throws!({
-            if style.id == u8::MAX {
+            if style.id.is_none() {
                 return CommonError::new_error_result_with_only_msg(
                     "Style id must be defined",
                 );
@@ -89,7 +89,10 @@ impl TuiStylesheet {
 
     pub fn find_style_by_id(&self, arg_id: impl Into<u8>) -> Option<TuiStyle> {
         let id: u8 = arg_id.into();
-        self.styles.iter().find(|style| style.id == id).cloned()
+        self.styles
+            .iter()
+            .find(|style| tui_style_attrib::Id::eq(style.id, id))
+            .cloned()
     }
 
     /// Returns [None] if no style in `ids` [Vec] is found.
@@ -129,25 +132,28 @@ impl TuiStylesheet {
 ///
 /// Here's an example.
 /// ```
-/// use r3bl_core::{ch, ChUnit, TuiColor, RgbValue, TuiStyle, TryAdd, tui_stylesheet, CommonResult, throws_with_return, TuiStylesheet};
+/// # use r3bl_core::{
+///     ch, ChUnit, TuiColor, RgbValue, TuiStyle, TryAdd, tui_stylesheet,
+///     CommonResult, throws_with_return, TuiStylesheet, tui_style_attrib
+/// };
 /// fn create_tui_stylesheet() -> CommonResult<TuiStylesheet> {
 ///   throws_with_return!({
 ///     tui_stylesheet! {
 ///         TuiStyle {
-///             id: 1,
+///             id: tui_style_attrib::id(1),
 ///             padding: Some(ch(1)),
 ///             color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(55, 55, 248))),
 ///             ..Default::default()
 ///         },
 ///         smallvec::smallvec![
 ///             TuiStyle {
-///                 id: 2,
+///                 id: tui_style_attrib::id(2),
 ///                 padding: Some(ch(1)),
 ///                 color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(155, 155, 48))),
 ///                 ..Default::default()
 ///             },
 ///             TuiStyle {
-///                 id: 3,
+///                 id: tui_style_attrib::id(3),
 ///                 padding: Some(ch(1)),
 ///                 color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(5, 5, 48))),
 ///                 ..Default::default()

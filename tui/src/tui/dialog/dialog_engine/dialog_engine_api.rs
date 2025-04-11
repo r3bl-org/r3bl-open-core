@@ -24,6 +24,7 @@ use r3bl_core::{ch,
                 pc,
                 row,
                 throws_with_return,
+                tui_style_attrib,
                 u16,
                 usize,
                 width,
@@ -478,10 +479,13 @@ mod internal_impl {
             ops.push(RenderOp::PaintTextWithAttributes(
                 msg.into(),
                 Some(if let Some(style) = maybe_style {
-                    TuiStyle { dim: true, ..style }
+                    TuiStyle {
+                        dim: Some(tui_style_attrib::Dim),
+                        ..style
+                    }
                 } else {
                     TuiStyle {
-                        dim: true,
+                        dim: Some(tui_style_attrib::Dim),
                         ..Default::default()
                     }
                 }),
@@ -600,12 +604,12 @@ mod internal_impl {
                         {
                             // Update existing style.
                             Some(style) => TuiStyle {
-                                underline: true,
+                                underline: Some(tui_style_attrib::Underline),
                                 ..style
                             },
                             // No existing style, so create a new style w/ only underline.
                             _ => TuiStyle {
-                                underline: true,
+                                underline: Some(tui_style_attrib::Underline),
                                 ..Default::default()
                             },
                         }
@@ -678,7 +682,7 @@ mod internal_impl {
     ) {
         // If lolcat is enabled, then colorize the text.
         if let Some(style) = maybe_style {
-            if style.lolcat {
+            if style.lolcat.is_some() {
                 let text_gcs = text.grapheme_string();
                 let texts = color_wheel.colorize_into_styled_texts(
                     &text_gcs,

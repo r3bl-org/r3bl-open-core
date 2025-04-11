@@ -28,8 +28,10 @@
 //! # Functions
 //!
 //! - `usize_to_u8_array`: Converts a [usize] to a fixed size [u8] array.
-//! - `convert_to_string_slice`: Converts a [u8] array to a string slice by removing leading zeros.
-//! - `debug_assert_usize_fits_20_digits`: Sanity check to ensure that the maximum value of [usize] can be represented with 20 decimal digits.
+//! - `convert_to_string_slice`: Converts a [u8] array to a string slice by removing
+//!   leading zeros.
+//! - `debug_assert_usize_fits_20_digits`: Sanity check to ensure that the maximum value
+//!   of [usize] can be represented with 20 decimal digits.
 //!
 //! # Examples
 //!
@@ -54,27 +56,28 @@
 //!
 //! # Panics
 //!
-//! - `convert_to_string_slice` will panic if the input [u8] array is not a valid UTF-8 sequence.
-
-/// 20 is needed for [std].
+//! - `convert_to_string_slice` will panic if the input [u8] array is not a valid UTF-8
+///   sequence. 20 is needed for [std].
 /// - <https://doc.rust-lang.org/std/primitive.u64.html>
 pub const USIZE_FMT_MAX_DIGITS: usize = 20;
 
-pub fn usize_to_u8_array(mut num: usize) -> [u8; USIZE_FMT_MAX_DIGITS] {
+pub fn usize_to_u8_array(num: usize) -> [u8; USIZE_FMT_MAX_DIGITS] {
     debug_assert_usize_fits_20_digits();
+
+    let mut num_copy = num;
 
     let mut result = [0; USIZE_FMT_MAX_DIGITS]; // Initialize with zeros
     let mut index = USIZE_FMT_MAX_DIGITS - 1;
 
-    if num == 0 {
+    if num_copy == 0 {
         result[index] = b'0';
         return result;
     }
 
-    while num > 0 && index > 0 {
-        let digit = (num % 10) as u8;
+    while num_copy > 0 && index > 0 {
+        let digit = (num_copy % 10) as u8;
         result[index] = b'0' + digit; // Convert digit to ASCII character
-        num /= 10;
+        num_copy /= 10;
         index -= 1;
     }
 
