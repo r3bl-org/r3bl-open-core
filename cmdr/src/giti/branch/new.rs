@@ -26,9 +26,9 @@ use r3bl_core::{CommonResult,
                 fg_slate_gray};
 use r3bl_tui::{ReadlineAsync, ReadlineEvent};
 
-use crate::giti::{self,
-                  SuccessReport,
+use crate::giti::{SuccessReport,
                   clap_config::BranchSubcommand,
+                  git,
                   ui_strings::UIStrings,
                   ui_templates::report_unknown_error_and_propagate};
 
@@ -49,7 +49,7 @@ fn success_report() -> CommonResult<SuccessReport> {
 }
 
 fn handle_branch_creation(branch_name: String) -> CommonResult<SuccessReport> {
-    let branches = giti::try_get_local_branches()?;
+    let branches = git::try_get_local_branches()?;
     let branches_trimmed: Vec<String> = branches
         .iter()
         .map(|branch| branch.trim_start_matches("(current) ").to_string())

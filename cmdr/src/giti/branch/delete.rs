@@ -15,27 +15,29 @@
  *   limitations under the License.
  */
 
-use std::process::Command;
-
-use r3bl_core::{CommonResult,
+use r3bl_core::{AST,
+                CommonResult,
                 InlineString,
+                InlineVec,
                 ItemsOwned,
                 ast,
                 ast_line,
                 height,
+                items_owned_to_vec_string,
                 new_style,
                 tui_color};
 use r3bl_tui::{DefaultIoDevices,
+               Header,
                choose,
                readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
-use try_delete_branch_user_choice::Selection::{self, Delete, ExitProgram};
+use try_delete_branch_user_choice::Selection::{self};
 
 use crate::{AnalyticsAction,
             giti::{SuccessReport,
                    clap_config::BranchSubcommand,
-                   git::try_get_local_branches,
-                   ui_strings::UIStrings,
+                   git::{self},
+                   ui_strings::{self, UIStrings},
                    ui_templates::{multi_select_instruction_header,
                                   report_unknown_error_and_propagate,
                                   single_select_instruction_header}},
@@ -47,139 +49,183 @@ pub async fn try_delete_branch() -> CommonResult<SuccessReport> {
         AnalyticsAction::GitiBranchDelete,
     );
 
-    let mut try_run_command_result = SuccessReport {
-        branch_subcommand: Some(BranchSubcommand::Delete),
-        ..Default::default()
-    };
-
-    let default_header_style = new_style!(
-        color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
-    );
-
-    let header = {
-        let last_line = ast_line![ast(
-            UIStrings::PleaseSelectBranchesYouWantToDelete.to_string(),
-            default_header_style
-        )];
-        multi_select_instruction_header(last_line)
-    };
-
-    if let Ok(branches) = try_get_local_branches() {
-        let mut default_io_devices = DefaultIoDevices::default();
-        let branches = choose(
-            header,
-            branches,
-            Some(height(20)),
-            None,
-            HowToChoose::Multiple,
-            StyleSheet::default(),
-            default_io_devices.as_mut_tuple(),
-        )
-        .await?;
-
-        let num_of_branches = branches.len();
-
-        if num_of_branches == 0 {
-            return Ok(try_run_command_result);
+    // Only proceed if some local branches exist (can't delete anything if there aren't
+    // any).
+    if let Ok(branches) = git::try_get_local_branches()
+        && !branches.is_empty()
+    {
+        let branches = select_branches_to_delete(branches).await?;
+        // If the user didn't select any branches, we don't need to do anything.
+        if branches.is_empty() {
+            return get_success_report();
         }
 
-        let branches_to_delete = branches.join(", ");
+        let (confirm_header, confirm_options) = create_confirmation_prompt(&branches);
+        let selected_action =
+            get_user_confirmation(confirm_header, confirm_options).await?;
 
-        let (confirm_branch_deletion_header, confirm_deletion_options) = {
-            let mut confirm_deletion_options: ItemsOwned =
-                smallvec![UIStrings::Exit.to_string().into()];
-            if num_of_branches == 1 {
-                let branch_name = &branches[0];
-                let branch_name = branch_name.to_string();
-                confirm_deletion_options
-                    .insert(0, UIStrings::YesDeleteBranch.to_string().into());
-                (
-                    UIStrings::ConfirmDeletingOneBranch { branch_name }.to_string(),
-                    confirm_deletion_options,
-                )
-            } else {
-                confirm_deletion_options
-                    .insert(0, UIStrings::YesDeleteBranches.to_string().into());
-                (
-                    UIStrings::ConfirmDeletingMultipleBranches {
-                        num_of_branches,
-                        branches_to_delete,
-                    }
-                    .to_string(),
-                    confirm_deletion_options,
-                )
-            }
-        };
-
-        let header = {
-            let last_line =
-                ast_line![ast(confirm_branch_deletion_header, default_header_style)];
-            single_select_instruction_header(last_line)
-        };
-
-        let mut default_io_devices = DefaultIoDevices::default();
-        let selected_delete_or_exit = choose(
-            header,
-            confirm_deletion_options,
-            Some(height(20)),
-            None,
-            HowToChoose::Single,
-            StyleSheet::default(),
-            default_io_devices.as_mut_tuple(),
-        )
-        .await?;
-
-        match Selection::from(selected_delete_or_exit) {
-            Delete => {
-                let command: &mut Command =
-                    &mut try_delete_branch_inner::create_git_command_to_delete_branches(
-                        &branches,
-                    );
-                let result_output = command.output();
-
-                match result_output {
-                    Ok(output) => {
-                        // Got output, check exit code for success (known errors).
-                        if output.status.success() {
-                            // Add branches to deleted branches.
-                            try_run_command_result.maybe_deleted_branches = Some({
-                                let mut it: ItemsOwned = smallvec![];
-                                for branch in &branches {
-                                    it.push(branch.clone());
-                                }
-                                it
-                            });
-                            if num_of_branches == 1 {
-                                try_delete_branch_inner::display_one_branch_deleted_success_message(&branches);
-                            } else {
-                                try_delete_branch_inner::display_all_branches_deleted_success_messages(
-                                    &branches,
-                                );
-                            }
-                        } else {
-                            try_delete_branch_inner::display_error_message(
-                                branches,
-                                Some(output),
-                            );
-                        }
-                    }
-                    Err(error) => {
-                        // Can't even execute output(), something unknown has gone
-                        // wrong. Propagate the error.
-                        try_delete_branch_inner::display_error_message(branches, None);
-                        return report_unknown_error_and_propagate(
-                            command,
-                            miette::miette!(error),
-                        );
-                    }
-                }
-            }
-
-            ExitProgram => (),
+        if let Selection::Delete = selected_action {
+            return delete_selected_branches(branches).await;
         }
     }
 
-    Ok(try_run_command_result)
+    get_success_report()
+}
+
+fn get_success_report() -> CommonResult<SuccessReport> {
+    Ok(SuccessReport {
+        maybe_deleted_branches: None,
+        branch_subcommand: Some(BranchSubcommand::Delete),
+    })
+}
+
+fn create_multi_select_header() -> impl Into<Header> {
+    let default_header_style = new_style!(
+        color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
+    );
+    let last_line = ast_line![ast(
+        UIStrings::PleaseSelectBranchesYouWantToDelete.to_string(),
+        default_header_style
+    )];
+    multi_select_instruction_header(last_line)
+}
+
+async fn select_branches_to_delete(branches: ItemsOwned) -> CommonResult<ItemsOwned> {
+    let header = create_multi_select_header();
+    let mut default_io_devices = DefaultIoDevices::default();
+    choose(
+        header,
+        branches,
+        Some(height(20)),
+        None,
+        HowToChoose::Multiple,
+        StyleSheet::default(),
+        default_io_devices.as_mut_tuple(),
+    )
+    .await
+}
+
+fn create_confirmation_prompt(branches: &ItemsOwned) -> (String, ItemsOwned) {
+    let num_of_branches = branches.len();
+
+    let mut confirm_deletion_options: ItemsOwned =
+        smallvec![UIStrings::Exit.to_string().into()];
+
+    if num_of_branches == 1 {
+        let branch_name = &branches[0];
+        confirm_deletion_options.insert(0, UIStrings::YesDeleteBranch.to_string().into());
+
+        // Return tuple.
+        (
+            UIStrings::ConfirmDeletingOneBranch {
+                branch_name: branch_name.to_string(),
+            }
+            .to_string(),
+            confirm_deletion_options,
+        )
+    } else {
+        confirm_deletion_options
+            .insert(0, UIStrings::YesDeleteBranches.to_string().into());
+
+        // Return tuple.
+        (
+            ui_strings::display_confirm_deleting_multiple_branches(
+                num_of_branches,
+                items_owned_to_vec_string(branches),
+            ),
+            confirm_deletion_options,
+        )
+    }
+}
+
+async fn get_user_confirmation(
+    header_text: String,
+    options: ItemsOwned,
+) -> CommonResult<Selection> {
+    // Define styles for the header first line, and subsequent lines (which are branches
+    // that are selected for deletion).
+    let default_header_style = new_style!(
+        color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
+    );
+    let branch_to_delete_style = new_style!(
+        color_fg: {tui_color!(yellow)} color_bg: {tui_color!(moonlight_blue)}
+    );
+
+    // Apply one style to the first line of the header, and another style to the rest of
+    // the lines. Then prefix with the instruction header.
+    let header = {
+        let mut header_last_lines = header_text.lines();
+        let mut header_last_lines_fmt: InlineVec<InlineVec<AST>> = smallvec![];
+
+        if let Some(first_line) = header_last_lines.next() {
+            let first_line = ast_line![ast(first_line, default_header_style)];
+            header_last_lines_fmt.push(first_line);
+        }
+
+        for line in header_last_lines {
+            let line = ast_line![ast(line, branch_to_delete_style)];
+            header_last_lines_fmt.push(line);
+        }
+
+        single_select_instruction_header(header_last_lines_fmt)
+    };
+
+    let mut default_io_devices = DefaultIoDevices::default();
+    let selected_option = choose(
+        header,
+        options,
+        Some(height(20)),
+        None,
+        HowToChoose::Single,
+        StyleSheet::default(),
+        default_io_devices.as_mut_tuple(),
+    )
+    .await?;
+
+    Ok(Selection::from(selected_option))
+}
+
+async fn delete_selected_branches(branches: ItemsOwned) -> CommonResult<SuccessReport> {
+    // Get an empty success report. This will be updated with the deleted branches (if
+    // that is successful).
+    let mut success_report = get_success_report()?;
+
+    // Delete the branches.
+    let (res_output, mut cmd) = git::try_delete_branches(&branches);
+
+    // Handle the result of the delete command.
+    match res_output {
+        Ok(output) if output.status.success() => {
+            // Update success report with deleted branches.
+            success_report.maybe_deleted_branches = Some({
+                let mut acc: ItemsOwned = smallvec![];
+                for branch in &branches {
+                    acc.push(branch.clone());
+                }
+                acc
+            });
+
+            // Display success message.
+            if branches.len() == 1 {
+                try_delete_branch_inner::display_one_branch_deleted_success_message(
+                    &branches,
+                );
+            } else {
+                try_delete_branch_inner::display_all_branches_deleted_success_messages(
+                    &branches,
+                );
+            }
+        }
+        Ok(output) => {
+            try_delete_branch_inner::display_error_message(branches, Some(output));
+        }
+        Err(error) => {
+            try_delete_branch_inner::display_error_message(branches, None);
+            return report_unknown_error_and_propagate(&mut cmd, miette::miette!(error));
+        }
+    }
+
+    Ok(success_report)
 }
 
 mod try_delete_branch_user_choice {
@@ -192,6 +238,10 @@ mod try_delete_branch_user_choice {
 
     impl From<ItemsOwned> for Selection {
         fn from(selected: ItemsOwned) -> Selection {
+            if selected.is_empty() {
+                return Selection::ExitProgram;
+            }
+
             let selected_to_delete_one_branch =
                 selected[0] == UIStrings::YesDeleteBranch.to_string();
             let selected_to_delete_multiple_branches =
@@ -201,9 +251,11 @@ mod try_delete_branch_user_choice {
             if selected_to_delete_one_branch || selected_to_delete_multiple_branches {
                 return Selection::Delete;
             }
+
             if selected_to_exit {
                 return Selection::ExitProgram;
             }
+
             Selection::ExitProgram
         }
     }
@@ -252,16 +304,6 @@ mod try_delete_branch_inner {
                 .println();
             }
         }
-    }
-
-    /// Create a [Command] to delete all the given branches. Does not execute the command.
-    pub fn create_git_command_to_delete_branches(branches: &ItemsOwned) -> Command {
-        let mut command = Command::new("git");
-        command.args(["branch", "-D"]);
-        for branch in branches {
-            command.arg(branch.to_string());
-        }
-        command
     }
 
     pub fn display_one_branch_deleted_success_message(branches: &[InlineString]) {

@@ -15,13 +15,23 @@
  *   limitations under the License.
  */
 
-use std::process::Command;
+use std::process::{Command, Output};
 
+use miette::IntoDiagnostic;
 use r3bl_core::{CommonResult, ItemsOwned};
 use smallvec::smallvec;
 
 use super::UIStrings;
 use crate::giti::report_unknown_error_and_propagate;
+
+pub fn try_delete_branches(branches: &ItemsOwned) -> (CommonResult<Output>, Command) {
+    let mut command = Command::new("git");
+    command.args(["branch", "-D"]);
+    for branch in branches {
+        command.arg(branch.to_string());
+    }
+    (command.output().into_diagnostic(), command)
+}
 
 // Get the current branch name.
 pub fn try_get_current_branch() -> CommonResult<String> {
@@ -49,7 +59,7 @@ pub fn try_get_current_branch() -> CommonResult<String> {
 pub fn try_get_local_branches() -> CommonResult<ItemsOwned> {
     let branches = try_execute_git_command_to_get_branches()?;
 
-    let current_branch = try_get_current_branch()?;
+    let current_branch = super::git::try_get_current_branch()?;
 
     let mut branches_vec = smallvec![];
     for branch in branches {
