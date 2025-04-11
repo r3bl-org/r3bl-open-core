@@ -1327,7 +1327,7 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(spans_in_line.len(), 7);
 
             // First span is the heading level `# ` in dim w/ Red bg color, and no fg color.
-            assert_eq2!(spans_in_line[0].style.dim, true);
+            assert!(spans_in_line[0].style.dim.is_some());
             assert_eq2!(spans_in_line[0].style.color_bg.unwrap(), tui_color!(red));
             assert_eq2!(spans_in_line[0].style.color_fg.is_some(), false);
             assert_eq2!(spans_in_line[0].text_gcs.as_ref(), "# ");
@@ -1335,7 +1335,7 @@ mod tests_style_us_span_lines_from {
             // The remainder of the spans are the heading text which are colorized with a color
             // wheel.
             for span in &spans_in_line[1..=6] {
-                assert_eq2!(span.style.dim, false);
+                assert!(span.style.dim.is_none());
                 assert_eq2!(span.style.color_bg.unwrap(), tui_color!(red));
                 assert_eq2!(span.style.color_fg.is_some(), true);
             }

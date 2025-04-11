@@ -69,6 +69,8 @@
 - [x] make `ui_templates.rs` fns return `Header` instead of
       `InlineVec<InlineVec<ASTStyledText<'_>>`. Fix all callers so they dont need `_binding*`
       anymore to the underlying text
+- [x] rewrite the `TuiStyle` by removing `bool` and use `Option<T>` where `T` are concrete marker
+      types
 - [ ] refactor `giti` code to be more readable (remove hard coded strings, make smaller functions)
   - [x] checkout.rs
   - [x] new.rs
@@ -102,6 +104,7 @@
 
 # merge tuifyasync branch into main
 
+- [ ] upgrade all the deps to the latest versions in all Cargo.toml files
 - [ ] crate a PR for tuifyasync & merge it into main
 
 # remove `analytics_schema` as a top level crate

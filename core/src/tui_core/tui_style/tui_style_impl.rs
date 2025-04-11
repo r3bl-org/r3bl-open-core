@@ -16,10 +16,17 @@
  */
 use core::fmt::Debug;
 use std::{fmt::{Display, Formatter},
-          ops::{Add, AddAssign}};
+          ops::{Add, AddAssign, Deref}};
 
 use super::TuiColor;
-use crate::{ChUnit, InlineVecStr, ch};
+use crate::{ChUnit,
+            InlineVecStr,
+            TinyInlineString,
+            ch,
+            join,
+            join_fmt,
+            ok,
+            tiny_inline_string};
 
 /// Please use [crate::new_style!] declarative macro to generate code for this struct.
 ///
@@ -31,7 +38,7 @@ use crate::{ChUnit, InlineVecStr, ch};
 /// Here's an example.
 ///
 /// ```rust
-/// use r3bl_core::{TuiStyle, TuiColor, TuiStylesheet, RgbValue};
+/// use r3bl_core::{TuiStyle, TuiColor, TuiStylesheet, RgbValue, tui_style_attrib};
 ///
 /// // Turquoise:  TuiColor::Rgb { r: 51, g: 255, b: 255 }
 /// // Pink:       TuiColor::Rgb { r: 252, g: 157, b: 248 }
@@ -41,16 +48,16 @@ use crate::{ChUnit, InlineVecStr, ch};
 ///
 /// let _ = stylesheet.add_styles(smallvec::smallvec![
 ///     TuiStyle {
-///         id: 1,
-///         bold: true,
-///         dim: true,
+///         id: Some(tui_style_attrib::Id(0)),
+///         bold: Some(tui_style_attrib::Bold),
+///         dim: Some(tui_style_attrib::Dim),
 ///         color_fg: Some(TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })),
 ///         .. Default::default()
 ///     },
 ///     TuiStyle {
-///         id: 1,
-///         bold: true,
-///         dim: true,
+///         id: Some(tui_style_attrib::Id(1)),
+///         bold: Some(tui_style_attrib::Bold),
+///         dim: Some(tui_style_attrib::Dim),
 ///         color_fg: Some(TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })),
 ///         .. Default::default()
 ///     },
@@ -59,45 +66,90 @@ use crate::{ChUnit, InlineVecStr, ch};
 ///
 /// Here are the [crossterm docs on
 /// attributes](https://docs.rs/crossterm/0.25.0/crossterm/style/enum.Attribute.html)
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Default)]
 pub struct TuiStyle {
-    pub id: u8,
-    pub bold: bool,
-    pub italic: bool,
-    pub dim: bool,
-    pub underline: bool,
-    pub reverse: bool,
-    pub hidden: bool,
-    pub strikethrough: bool,
-    pub computed: bool,
+    pub id: Option<tui_style_attrib::Id>,
+    pub bold: Option<tui_style_attrib::Bold>,
+    pub italic: Option<tui_style_attrib::Italic>,
+    pub dim: Option<tui_style_attrib::Dim>,
+    pub underline: Option<tui_style_attrib::Underline>,
+    pub reverse: Option<tui_style_attrib::Reverse>,
+    pub hidden: Option<tui_style_attrib::Hidden>,
+    pub strikethrough: Option<tui_style_attrib::Strikethrough>,
+    pub computed: Option<tui_style_attrib::Computed>,
     pub color_fg: Option<TuiColor>,
     pub color_bg: Option<TuiColor>,
     /// The semantics of this are the same as CSS. The padding is space that is taken up
     /// inside a `FlexBox`. This does not affect the size or position of a `FlexBox`, it
     /// only applies to the contents inside of that `FlexBox`.
-    /// - [`FlexBox` docs](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/layout/flex_box/struct.FlexBox.html).
+    /// - [`FlexBox`
+    ///   docs](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/layout/flex_box/struct.FlexBox.html).
     pub padding: Option<ChUnit>,
-    pub lolcat: bool,
+    pub lolcat: Option<tui_style_attrib::Lolcat>,
 }
 
-impl Default for TuiStyle {
-    fn default() -> Self {
-        TuiStyle {
-            id: u8::MAX,
-            bold: false,
-            italic: false,
-            dim: false,
-            underline: false,
-            reverse: false,
-            hidden: false,
-            strikethrough: false,
-            computed: false,
-            color_fg: None,
-            color_bg: None,
-            padding: None,
-            lolcat: false,
+pub mod tui_style_attrib {
+    use super::*;
+
+    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+    pub struct Id(pub u8);
+
+    impl Id {
+        pub fn eq(maybe_id: Option<Id>, other: u8) -> bool {
+            match maybe_id {
+                None => false,
+                Some(id) => id.0 == other,
+            }
+        }
+
+        pub fn fmt_id(maybe_id: Option<Id>) -> TinyInlineString {
+            let mut acc = TinyInlineString::new();
+            use std::fmt::Write as _;
+            match maybe_id {
+                None => _ = write!(acc, "id: N/A"),
+                Some(id) => _ = write!(acc, "id: {}", id.0),
+            };
+            acc
         }
     }
+
+    pub fn id(arg_val: impl Into<u8>) -> Option<Id> { Some(Id(arg_val.into())) }
+
+    impl From<u8> for Id {
+        fn from(id: u8) -> Self { Id(id) }
+    }
+
+    impl Deref for Id {
+        type Target = u8;
+        fn deref(&self) -> &Self::Target { &self.0 }
+    }
+
+    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+    pub struct Bold;
+
+    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+    pub struct Italic;
+
+    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+    pub struct Dim;
+
+    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+    pub struct Underline;
+
+    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+    pub struct Reverse;
+
+    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+    pub struct Hidden;
+
+    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+    pub struct Strikethrough;
+
+    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+    pub struct Computed;
+
+    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+    pub struct Lolcat;
 }
 
 mod addition {
@@ -111,8 +163,8 @@ mod addition {
     pub fn add_styles(lhs: TuiStyle, rhs: TuiStyle) -> TuiStyle {
         // Computed style has no id.
         let mut new_style: TuiStyle = TuiStyle {
-            id: u8::MAX,
-            computed: true,
+            id: None,
+            computed: Some(tui_style_attrib::Computed),
             ..TuiStyle::default()
         };
 
@@ -127,28 +179,28 @@ mod addition {
             if other.color_bg.is_some() {
                 new_style.color_bg = other.color_bg;
             }
-            if other.bold {
+            if other.bold.is_some() {
                 new_style.bold = other.bold;
             }
-            if other.italic {
+            if other.italic.is_some() {
                 new_style.italic = other.italic;
             }
-            if other.dim {
+            if other.dim.is_some() {
                 new_style.dim = other.dim;
             }
-            if other.underline {
+            if other.underline.is_some() {
                 new_style.underline = other.underline;
             }
             if other.padding.is_some() {
                 new_style.padding = other.padding;
             }
-            if other.reverse {
+            if other.reverse.is_some() {
                 new_style.reverse = other.reverse;
             }
-            if other.hidden {
+            if other.hidden.is_some() {
                 new_style.hidden = other.hidden;
             }
-            if other.strikethrough {
+            if other.strikethrough.is_some() {
                 new_style.strikethrough = other.strikethrough;
             }
         }
@@ -190,49 +242,46 @@ mod addition {
 
 mod style_helpers {
     use super::*;
-    use crate::{TinyInlineString, join, join_fmt, ok, tiny_inline_string};
 
     impl Debug for TuiStyle {
         fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-            let id = self.id.to_string();
+            let id_str = tui_style_attrib::Id::fmt_id(self.id);
 
             // This accumulator is needed in order to be able to add `+` delimiter between
             // attributes.
             let mut acc_attrs = InlineVecStr::new();
 
-            if self.computed {
+            if self.computed.is_some() {
                 acc_attrs.push("computed");
-            } else if self.id == u8::MAX {
-                acc_attrs.push("id: N/A");
             } else {
-                acc_attrs.push(id.as_str());
-            }
+                acc_attrs.push(&id_str);
+            };
 
-            if self.bold {
+            if self.bold.is_some() {
                 acc_attrs.push("bold");
             }
 
-            if self.italic {
+            if self.italic.is_some() {
                 acc_attrs.push("italic");
             }
 
-            if self.dim {
+            if self.dim.is_some() {
                 acc_attrs.push("dim");
             }
 
-            if self.underline {
+            if self.underline.is_some() {
                 acc_attrs.push("underline");
             }
 
-            if self.reverse {
+            if self.reverse.is_some() {
                 acc_attrs.push("reverse");
             }
 
-            if self.hidden {
+            if self.hidden.is_some() {
                 acc_attrs.push("hidden");
             }
 
-            if self.strikethrough {
+            if self.strikethrough.is_some() {
                 acc_attrs.push("strikethrough");
             }
 
@@ -263,31 +312,31 @@ mod style_helpers {
             // Need `acc` since we don't know how many attributes are set.
             let mut acc = InlineVecStr::new();
 
-            if self.bold {
+            if self.bold.is_some() {
                 acc.push("bld");
             }
 
-            if self.italic {
+            if self.italic.is_some() {
                 acc.push("itl");
             }
 
-            if self.dim {
+            if self.dim.is_some() {
                 acc.push("dim");
             }
 
-            if self.underline {
+            if self.underline.is_some() {
                 acc.push("und");
             }
 
-            if self.reverse {
+            if self.reverse.is_some() {
                 acc.push("rev");
             }
 
-            if self.hidden {
+            if self.hidden.is_some() {
                 acc.push("hid");
             }
 
-            if self.strikethrough {
+            if self.strikethrough.is_some() {
                 acc.push("str");
             }
 
@@ -330,27 +379,27 @@ mod test_style {
     #[test]
     fn test_all_fields_in_style() {
         let style = TuiStyle {
-            id: 1,
-            bold: true,
-            dim: true,
-            underline: true,
-            reverse: true,
-            hidden: true,
-            strikethrough: true,
+            id: Some(tui_style_attrib::Id(1)),
+            bold: Some(tui_style_attrib::Bold),
+            dim: Some(tui_style_attrib::Dim),
+            underline: Some(tui_style_attrib::Underline),
+            reverse: Some(tui_style_attrib::Reverse),
+            hidden: Some(tui_style_attrib::Hidden),
+            strikethrough: Some(tui_style_attrib::Strikethrough),
             color_fg: tui_color!(red).into(),
             color_bg: tui_color!(0, 0, 0).into(),
             padding: Some(ch(10)),
             ..TuiStyle::default()
         };
 
-        assert!(!style.computed);
-        assert_eq2!(style.id, 1);
-        assert!(style.bold);
-        assert!(style.dim);
-        assert!(style.underline);
-        assert!(style.reverse);
-        assert!(style.hidden);
-        assert!(style.strikethrough);
+        assert!(style.computed.is_none());
+        assert!(tui_style_attrib::Id::eq(style.id, 1));
+        assert!(style.bold.is_some());
+        assert!(style.dim.is_some());
+        assert!(style.underline.is_some());
+        assert!(style.reverse.is_some());
+        assert!(style.hidden.is_some());
+        assert!(style.strikethrough.is_some());
         assert_eq2!(style.color_fg, tui_color!(red).into());
         assert_eq2!(style.color_bg, tui_color!(0, 0, 0).into());
         assert_eq2!(style.padding, Some(ch(10)));
@@ -359,22 +408,24 @@ mod test_style {
     #[test]
     fn test_style() {
         let style = TuiStyle {
-            id: 1,
+            id: Some(tui_style_attrib::Id(1)),
             color_fg: tui_color!(0, 0, 0).into(),
             color_bg: tui_color!(0, 0, 0).into(),
-            bold: true,
-            dim: true,
-            italic: true,
+            bold: Some(tui_style_attrib::Bold),
+            dim: Some(tui_style_attrib::Dim),
+            italic: Some(tui_style_attrib::Italic),
             ..TuiStyle::default()
         };
 
         dbg!(&style);
 
-        assert!(style.bold);
-        assert!(style.dim);
-        assert!(style.italic);
-        assert!(!style.underline);
-        assert!(!style.strikethrough);
-        assert!(!style.reverse);
+        assert!(style.computed.is_none());
+        assert!(tui_style_attrib::Id::eq(style.id, 1));
+        assert!(style.bold.is_some());
+        assert!(style.dim.is_some());
+        assert!(style.italic.is_some());
+        assert!(style.underline.is_none());
+        assert!(style.strikethrough.is_none());
+        assert!(style.reverse.is_none());
     }
 }
