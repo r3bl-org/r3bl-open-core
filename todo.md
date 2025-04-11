@@ -71,17 +71,17 @@
       anymore to the underlying text
 - [x] rewrite the `TuiStyle` by removing `bool` and use `Option<T>` where `T` are concrete marker
       types
-- [ ] refactor `giti` code to be more readable (remove hard coded strings, make smaller functions)
+- [x] refactor `giti` code to be more readable (remove hard coded strings, make smaller functions)
   - [x] checkout.rs
   - [x] new.rs
-  - [ ] delete.rs
+  - [x] delete.rs
 - [ ] replace `SuccessReport` with an enum of valid variants (including user pressed ctrl+c)
 - [ ] collect all the git commands in a single module `git.rs`
   - [ ] use `r3bl_script` to run commands (and not directly using `Command::new`)
 - [ ] why does `show_exit_message()` not appear all the time
 - [ ] make sure that analytics calls are made consistent throughout the giti codebase (currently
       they do nothing but this will get things ready for the new `r3bl_base` that will be self
-      hosted in our homelab)
+      hosted in our homelab); currently `delete.rs` has analytics calls
 - [ ] rewrite giti code to use the newtypes, like width, height, etc.
 - [ ] use `r3bl_script` test fixtures to test `git` and `gh` adapters
 

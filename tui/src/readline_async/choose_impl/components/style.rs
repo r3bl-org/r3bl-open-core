@@ -49,7 +49,7 @@ impl Default for StyleSheet {
             ..TuiStyle::default()
         };
         let selected_style = TuiStyle {
-            color_fg: tui_color!(203, 170, 250).into(),
+            color_fg: tui_color!(lavender).into(),
             color_bg: tui_color!(51, 32, 66).into(),
             ..TuiStyle::default()
         };
@@ -175,7 +175,7 @@ mod tests {
 
         assert_eq!(
             stylesheet.selected_style.color_fg,
-            tui_color!(203, 170, 250).into()
+            tui_color!(lavender).into()
         );
         assert_eq!(
             stylesheet.selected_style.color_bg,

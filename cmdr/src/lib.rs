@@ -239,6 +239,7 @@
 #![warn(clippy::all)]
 #![warn(clippy::unwrap_in_result)]
 #![warn(rust_2018_idioms)]
+#![feature(let_chains)]
 
 pub const DEVELOPMENT_MODE: bool = true;
 pub const DEBUG_ANALYTICS_CLIENT_MOD: bool = true;

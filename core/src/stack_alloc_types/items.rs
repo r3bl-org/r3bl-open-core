@@ -65,6 +65,10 @@ impl<'a, T: AsRef<str>> From<ItemsBorrowed<'a, T>> for ItemsOwned {
     }
 }
 
+pub fn items_owned_to_vec_string(items_owned: &ItemsOwned) -> Vec<String> {
+    items_owned.iter().map(|s| s.to_string()).collect()
+}
+
 /// Convert `ItemsBorrowed` to `Vec<String>`.
 impl<'a, T: AsRef<str>> From<ItemsBorrowed<'a, T>> for Vec<String> {
     fn from(items: ItemsBorrowed<'a, T>) -> Self {

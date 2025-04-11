@@ -45,6 +45,7 @@ use r3bl_core::{CommonResult,
 use r3bl_tui::{DefaultIoDevices,
                choose,
                readline_async::{HowToChoose, StyleSheet}};
+use smallvec::smallvec;
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -162,7 +163,7 @@ async fn user_typed_giti_branch() -> CommonResult<SuccessReport> {
                 color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
             )
         )];
-        single_select_instruction_header(last_line)
+        single_select_instruction_header(smallvec![last_line])
     };
 
     let mut default_io_devices = DefaultIoDevices::default();
