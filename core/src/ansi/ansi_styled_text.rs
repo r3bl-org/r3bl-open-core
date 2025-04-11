@@ -441,29 +441,29 @@ mod convert_tui_style_to_vec_ast_style {
     impl From<TuiStyle> for sizing::InlineVecASTStyles {
         fn from(tui_style: TuiStyle) -> Self {
             let mut styles = InlineVecASTStyles::new();
-            if tui_style.bold {
+            if tui_style.bold.is_some() {
                 styles.push(ASTStyle::Bold);
             }
-            if tui_style.dim {
+            if tui_style.dim.is_some() {
                 styles.push(ASTStyle::Dim);
             }
-            if tui_style.italic {
+            if tui_style.italic.is_some() {
                 styles.push(ASTStyle::Italic);
             }
-            if tui_style.underline {
+            if tui_style.underline.is_some() {
                 styles.push(ASTStyle::Underline);
             }
-            if tui_style.reverse {
+            if tui_style.reverse.is_some() {
                 styles.push(ASTStyle::Invert);
             }
             // Not supported:
-            // Overline,
-            // RapidBlink,
-            // SlowBlink,
-            if tui_style.hidden {
+            // - Overline,
+            // - RapidBlink,
+            // - SlowBlink,
+            if tui_style.hidden.is_some() {
                 styles.push(ASTStyle::Hidden);
             }
-            if tui_style.strikethrough {
+            if tui_style.strikethrough.is_some() {
                 styles.push(ASTStyle::Strikethrough);
             }
             if let Some(color_fg) = tui_style.color_fg {
@@ -594,20 +594,27 @@ mod tests {
                 TuiStyle,
                 ansi::sizing::InlineVecASTStyles,
                 global_color_support,
-                tui_color};
+                tui_color,
+                tui_style::tui_style_attrib::{Bold,
+                                              Dim,
+                                              Hidden,
+                                              Italic,
+                                              Reverse,
+                                              Strikethrough,
+                                              Underline}};
 
     #[serial]
     #[test]
     fn test_convert_tui_style_to_vec_ast_style() {
         {
             let tui_style = TuiStyle {
-                bold: true,
-                dim: false,
-                italic: true,
-                underline: false,
-                reverse: false,
-                hidden: false,
-                strikethrough: true,
+                bold: Some(Bold),
+                dim: None,
+                italic: Some(Italic),
+                underline: None,
+                reverse: None,
+                hidden: None,
+                strikethrough: Some(Strikethrough),
                 ..Default::default()
             };
             let ast_styles: InlineVecASTStyles = tui_style.into();
@@ -619,13 +626,13 @@ mod tests {
 
         {
             let tui_style = TuiStyle {
-                bold: false,
-                dim: true,
-                italic: false,
-                underline: true,
-                reverse: true,
-                hidden: true,
-                strikethrough: false,
+                bold: None,
+                dim: Some(Dim),
+                italic: None,
+                underline: Some(Underline),
+                reverse: Some(Reverse),
+                hidden: Some(Hidden),
+                strikethrough: None,
                 ..Default::default()
             };
             let ast_styles: InlineVecASTStyles = tui_style.into();
@@ -642,13 +649,13 @@ mod tests {
 
         {
             let tui_style = TuiStyle {
-                bold: true,
-                dim: true,
-                italic: true,
-                underline: true,
-                reverse: true,
-                hidden: true,
-                strikethrough: true,
+                bold: Some(Bold),
+                dim: Some(Dim),
+                italic: Some(Italic),
+                underline: Some(Underline),
+                reverse: Some(Reverse),
+                hidden: Some(Hidden),
+                strikethrough: Some(Strikethrough),
                 ..Default::default()
             };
             let ast_styles: InlineVecASTStyles = tui_style.into();

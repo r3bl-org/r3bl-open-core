@@ -19,14 +19,14 @@
 pub mod branch;
 pub mod clap_config;
 pub mod common_types;
+pub mod git;
 pub mod ui_strings;
 pub mod ui_templates;
-pub mod git;
 
 // Re-export.
 pub use branch::*;
 pub use clap_config::*;
 pub use common_types::*;
+pub use git::*;
 pub use ui_strings::*;
 pub use ui_templates::*;
-pub use git::*;

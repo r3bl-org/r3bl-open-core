@@ -355,25 +355,25 @@ mod perform_paint {
 
     fn style_to_attribute(&style: &TuiStyle) -> InlineVec<Attribute> {
         let mut it = smallvec![];
-        if style.bold {
+        if style.bold.is_some() {
             it.push(Attribute::Bold);
         }
-        if style.italic {
+        if style.italic.is_some() {
             it.push(Attribute::Italic);
         }
-        if style.dim {
+        if style.dim.is_some() {
             it.push(Attribute::Dim);
         }
-        if style.underline {
+        if style.underline.is_some() {
             it.push(Attribute::Underlined);
         }
-        if style.reverse {
+        if style.reverse.is_some() {
             it.push(Attribute::Reverse);
         }
-        if style.hidden {
+        if style.hidden.is_some() {
             it.push(Attribute::Hidden);
         }
-        if style.strikethrough {
+        if style.strikethrough.is_some() {
             it.push(Attribute::Fraktur);
         }
         it

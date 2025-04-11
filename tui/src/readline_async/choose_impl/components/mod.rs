@@ -25,4 +25,3 @@ pub use style::*;
 
 // Attach sources & re-export.
 pub mod apply_style_macro;
-pub use apply_style_macro::*;

@@ -625,6 +625,7 @@ mod tests {
                                     InputDeviceExt},
                     throws_with_return,
                     tui_color,
+                    tui_style_attrib,
                     tui_styled_text,
                     tui_styled_texts,
                     width,
@@ -795,8 +796,8 @@ mod tests {
                     PixelChar::PlainText {
                         text: "H".into(),
                         maybe_style: Some(TuiStyle {
-                            id: u8::MAX,
-                            dim: true,
+                            id: None,
+                            dim: Some(tui_style_attrib::Dim),
                             ..Default::default()
                         }),
                     },

@@ -61,6 +61,7 @@ use crate::{ColWidth,
             remove_escaped_quotes,
             truncate_from_right,
             tui_color,
+            tui_style_attrib,
             usize,
             width};
 
@@ -216,7 +217,7 @@ where
             }
         };
         style.color_bg = Some(TuiColor::Rgb(HEADING_BG_COLOR));
-        style.bold = true;
+        style.bold = Some(tui_style_attrib::Bold);
 
         let level_str_display_width = GCString::width(&level_str);
         let level_str_fmt = ast(level_str, style);

@@ -18,11 +18,7 @@
 use std::io::Result;
 
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
-                style::{Attribute,
-                        Print,
-                        ResetColor,
-                        SetBackgroundColor,
-                        SetForegroundColor},
+                style::{Print, ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType}};
 use r3bl_core::{ast,
                 ch,
