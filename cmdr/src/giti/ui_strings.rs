@@ -28,12 +28,13 @@ pub enum UIStrings {
     #[strum(serialize = " Confirm deleting 1 branch: {branch_name}")]
     ConfirmDeletingOneBranch { branch_name: String },
 
+    /// See [`display_confirm_deleting_multiple_branches()`] for the actual string.
     #[strum(
-        serialize = " Confirm deleting {num_of_branches} branches: {branches_to_delete}?"
+        serialize = "Please display_confirm_deleting_multiple_branches() instead of this"
     )]
     ConfirmDeletingMultipleBranches {
         num_of_branches: usize,
-        branches_to_delete: String,
+        branches_to_delete: Vec<String>,
     },
 
     #[strum(serialize = "Yes, delete branch")]
@@ -145,4 +146,27 @@ pub enum UIStrings {
 
     #[strum(serialize = " No new branch was created")]
     NoNewBranchWasCreated,
+}
+
+/// This is for [`UIStrings::ConfirmDeletingMultipleBranches`].
+pub fn display_confirm_deleting_multiple_branches(
+    num_of_branches: usize,
+    branches_to_delete: Vec<String>,
+) -> String {
+    let prefixed_branches: Vec<String> = branches_to_delete
+        .into_iter()
+        .enumerate()
+        .map(|(index, branch)| format!(" {}. {}", index + 1, branch))
+        .collect();
+
+    let mut acc = String::new();
+    use std::fmt::Write as _;
+    _ = write!(
+        acc,
+        " Confirm deleting {a} branches:\n{b}",
+        a = num_of_branches,
+        b = prefixed_branches.join("\n")
+    );
+
+    acc
 }

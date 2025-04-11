@@ -27,6 +27,14 @@ use crate::{ANSI_COLOR_PALETTE,
 
 #[macro_export]
 macro_rules! tui_color {
+    (sky_blue) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(117, 215, 236))
+    };
+
+    (lavender) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(203, 170, 250))
+    };
+
     (pink) => {
         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(195, 106, 138))
     };

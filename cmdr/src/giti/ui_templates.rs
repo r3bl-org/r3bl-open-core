@@ -17,7 +17,8 @@
 
 use std::{env::var, process::Command};
 
-use r3bl_core::{AnsiStyledText,
+use r3bl_core::{AST,
+                AnsiStyledText,
                 ColorWheel,
                 CommonError,
                 CommonErrorType,
@@ -63,8 +64,8 @@ pub fn multi_select_instruction_header(
 /// can only select one item from the list. The instructions are displayed at the top of
 /// the list. This is easily converted into a [r3bl_tui::choose_impl::Header::MultiLine].
 pub fn single_select_instruction_header(
-    last_line: InlineVec<AnsiStyledText>,
-) -> InlineVec<InlineVec<AnsiStyledText>> {
+    last_lines: InlineVec<InlineVec<AST>>,
+) -> InlineVec<InlineVec<AST>> {
     let text_up_or_down = " Up or down:     navigate";
     let text_esc = " Esc or Ctrl+C:  exit program";
     let text_return_key = " Return:         confirm selection";
@@ -73,12 +74,12 @@ pub fn single_select_instruction_header(
     let esc = fg_slate_gray(text_esc).bg_night_blue();
     let return_key = fg_slate_gray(text_return_key).bg_night_blue();
 
-    ast_lines![
-        ast_line![up_or_down],
-        ast_line![esc],
-        ast_line![return_key],
-        last_line,
-    ]
+    let mut acc =
+        ast_lines![ast_line![up_or_down], ast_line![esc], ast_line![return_key],];
+
+    last_lines.iter().for_each(|line| acc.push(line.clone()));
+
+    acc
 }
 
 pub fn show_exit_message() {

@@ -42,7 +42,7 @@ use smallvec::smallvec;
 
 use crate::giti::{SuccessReport,
                   clap_config::BranchSubcommand,
-                  git::{try_get_current_branch, try_get_local_branches},
+                  git::{self},
                   ui_strings::UIStrings,
                   ui_templates::report_unknown_error_and_propagate};
 
@@ -63,7 +63,7 @@ pub async fn try_checkout_branch(
 }
 
 async fn handle_branch_checkout(branch_name: String) -> CommonResult<SuccessReport> {
-    let branches = try_get_local_branches()?;
+    let branches = git::try_get_local_branches()?;
 
     // Early return if the branch does not exist locally.
     match branch_existence::check(&branches, &branch_name) {
@@ -75,7 +75,7 @@ async fn handle_branch_checkout(branch_name: String) -> CommonResult<SuccessRepo
     }
 
     // Early return if the branch_name is already checked out.
-    let current_branch = try_get_current_branch()?;
+    let current_branch = git::try_get_current_branch()?;
     if branch_name == current_branch {
         display_already_on_branch(&current_branch);
         return success_report();
@@ -122,9 +122,9 @@ mod branch_existence {
 }
 
 async fn handle_branch_selection() -> CommonResult<SuccessReport> {
-    if let Ok(branches) = try_get_local_branches() {
+    if let Ok(branches) = git::try_get_local_branches() {
         let header = create_branch_selection_header();
-        let current_branch = try_get_current_branch()?;
+        let current_branch = git::try_get_current_branch()?;
 
         if let Some(selected_branch) =
             prompt_user_to_select_branch(header, branches).await?
