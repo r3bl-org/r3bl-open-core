@@ -75,6 +75,8 @@
   - [x] checkout.rs
   - [x] new.rs
   - [x] delete.rs
+- [x] add `XMARK` for `bool -> Option<T>` code in `TuiStyle`
+- [x] move all the colors in `choose` style to `tui_color!`
 - [ ] replace `SuccessReport` with an enum of valid variants (including user pressed ctrl+c)
 - [ ] collect all the git commands in a single module `git.rs`
   - [ ] use `r3bl_script` to run commands (and not directly using `Command::new`)
