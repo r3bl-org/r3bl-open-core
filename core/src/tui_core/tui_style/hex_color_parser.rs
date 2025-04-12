@@ -23,63 +23,30 @@ use std::num::ParseIntError;
 use nom::{IResult,
           Parser,
           bytes::complete::{tag, take_while_m_n},
-          combinator::map_res,
-          error::{FromExternalError, ParseError},
-          sequence::tuple};
+          combinator::map_res};
 
-use crate::RgbValue;
+use super::RgbValue;
 
 /// Parse function that generate an [RgbValue] struct from a valid hex color string.
 pub fn parse_hex_color(input: &str) -> IResult<&str, RgbValue> {
-    // This tuple contains 3 ways to do the same thing.
-    let it = (
-        helper_fns::parse_hex_seg, // This is preferred.
-        intermediate_parsers::gen_hex_seg_parser_fn(),
-        map_res(
-            take_while_m_n(2, 2, helper_fns::match_is_hex_digit),
-            helper_fns::parse_str_to_hex_num,
-        ),
-    );
     let (input, _) = tag("#")(input)?;
-    let (input, (red, green, blue)) = tuple(it)(input)?; // same as `it.parse(input)?`
+    let (input, (red, green, blue)) =
+        (hex_primary::parse, hex_primary::parse, hex_primary::parse).parse(input)?;
     Ok((input, RgbValue { red, green, blue }))
 }
 
-/// Helper functions to match and parse hex digits. These are not [Parser] implementations.
-mod helper_fns {
+mod hex_primary {
     use super::*;
 
-    /// This function is used by [map_res] and it returns a [Result], not [IResult].
-    pub fn parse_str_to_hex_num(input: &str) -> Result<u8, std::num::ParseIntError> {
+    pub fn parse(input: &str) -> IResult<&str, u8> {
+        map_res(take_while_m_n(2, 2, is_hex_digit), from_hex).parse(input)
+    }
+
+    fn from_hex(input: &str) -> Result<u8, ParseIntError> {
         u8::from_str_radix(input, 16)
     }
 
-    /// This function is used by [take_while_m_n] and as long as it returns `true` items will be
-    /// taken from the input.
-    pub fn match_is_hex_digit(c: char) -> bool { c.is_ascii_hexdigit() }
-
-    pub fn parse_hex_seg(input: &str) -> IResult<&str, u8> {
-        map_res(
-            take_while_m_n(2, 2, match_is_hex_digit),
-            parse_str_to_hex_num,
-        )(input)
-    }
-}
-
-/// These are [Parser] implementations that are used by [parse_hex_color].
-mod intermediate_parsers {
-    use super::*;
-
-    /// Call this to return function that implements the [Parser] trait.
-    pub fn gen_hex_seg_parser_fn<'input, E>() -> impl Parser<&'input str, u8, E>
-    where
-        E: FromExternalError<&'input str, ParseIntError> + ParseError<&'input str>,
-    {
-        map_res(
-            take_while_m_n(2, 2, helper_fns::match_is_hex_digit),
-            helper_fns::parse_str_to_hex_num,
-        )
-    }
+    fn is_hex_digit(c: char) -> bool { c.is_ascii_hexdigit() }
 }
 
 #[cfg(test)]
@@ -88,6 +55,21 @@ mod tests {
 
     #[test]
     fn parse_valid_color() {
+        assert_eq!(
+            parse_hex_color("#2F14DF"),
+            Ok((
+                "",
+                RgbValue {
+                    red: 47,
+                    green: 20,
+                    blue: 223,
+                }
+            ))
+        );
+    }
+
+    #[test]
+    fn parse_valid_color_with_rem() {
         let mut input = String::new();
         input.push_str("#2F14DF");
         input.push('🔅');

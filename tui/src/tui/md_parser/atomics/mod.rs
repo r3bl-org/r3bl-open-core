@@ -16,7 +16,6 @@
  */
 
 // Attach sources.
-pub mod experimental;
 pub mod take_text_between;
 pub mod take_text_until_eol_or_end;
 

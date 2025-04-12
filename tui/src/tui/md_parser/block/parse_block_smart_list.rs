@@ -19,8 +19,9 @@ use nom::{branch::alt,
           character::complete::{anychar, digit1, space0},
           combinator::{map, opt, recognize, verify},
           multi::{many0, many1},
-          sequence::{preceded, terminated, tuple},
-          IResult};
+          sequence::{preceded, terminated},
+          IResult,
+          Parser};
 use r3bl_core::{tiny_inline_string, InlineVec};
 use smallvec::smallvec;
 
@@ -560,7 +561,7 @@ pub fn parse_smart_list(
     let (input, indent) = map(
         space0,
         |it: &str| it.len()
-    )(input)?;
+    ).parse(input)?;
 
     // Indent has to be multiple of the base width, otherwise it's not a list item.
     if indent % LIST_PREFIX_BASE_WIDTH != 0 {
@@ -577,7 +578,7 @@ pub fn parse_smart_list(
                 tag(UNORDERED_LIST_PREFIX),
                 terminated(digit1, tag(ORDERED_LIST_PARTIAL_PREFIX)),
             ))
-        )(input)?;
+        ).parse(input)?;
 
     // Decide which kind of list item this is based on `bullet`.
     let bullet_kind = if bullet.starts_with(|c: char| c.is_ascii_digit()) {
@@ -614,7 +615,8 @@ mod verify_rest {
         let result: IResult<&str, &str> = recognize(alt((
             tag(UNORDERED_LIST_PREFIX),
             terminated(digit1, tag(ORDERED_LIST_PARTIAL_PREFIX)),
-        )))(it.trim_start());
+        )))
+        .parse(it.trim_start());
         let starts_with_list_prefix = result.is_ok();
         !starts_with_list_prefix
     }
@@ -657,7 +659,7 @@ pub fn parse_smart_list_content_lines<'a>(
 
             // Match the rest of the lines.
             let (remainder, rest) = many0(
-                tuple((
+                (
                     verify(
                         // FIRST STEP: Match the ul or ol list item line.
                         preceded(
@@ -687,8 +689,8 @@ pub fn parse_smart_list_content_lines<'a>(
                         }
                     ),
                     opt(tag(NEW_LINE)),
-                ))
-            )(input)?;
+                )
+            ).parse(input)?;
 
             // Convert `rest` into a Vec<&str> that contains the output lines.
             let output_lines: InlineVec<SmartListLine<'_>> = {

@@ -181,6 +181,7 @@ pub mod proxy_machine_id {
                                 contents = %contents
                             );
                         });
+
                         contents
                     }
                     Err(_) => {
@@ -209,11 +210,12 @@ pub mod proxy_machine_id {
                                 );
                             }
                         }
-                        new_id
+
+                        new_id.to_string()
                     }
                 }
             }
-            Err(_) => friendly_random_id::generate_friendly_random_id(),
+            Err(_) => friendly_random_id::generate_friendly_random_id().to_string(),
         }
     }
 }
@@ -241,7 +243,7 @@ pub mod report_analytics {
 
         tokio::spawn(async move {
             let proxy_machine_id =
-                proxy_machine_id::load_id_from_file_or_generate_and_save_it();
+                proxy_machine_id::load_id_from_file_or_generate_and_save_it().to_string();
 
             let event =
                 AnalyticsEvent::new(proxy_user_id, proxy_machine_id, action.to_string());

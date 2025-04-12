@@ -38,7 +38,7 @@ use nom::{branch::alt,
           combinator::{not, recognize},
           multi::many1,
           sequence::preceded,
-          IResult};
+          IResult, Parser};
 use r3bl_core::{fg_blue, fg_magenta, fg_red};
 
 use crate::{md_parser::constants::{BACK_TICK,
@@ -118,7 +118,7 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
                 /* output - keep char if it didn't error out above */
                 anychar,
             )),
-        )(input);
+        ).parse(input);
         DEBUG_MD_PARSER_STDOUT.then(|| {
             println!(
                 "{} normal case :: {:?}",
@@ -151,7 +151,7 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
         if count == 1 {
             // Split the input, by returning the first part as plain text, and the
             // remainder as the input to be parsed by the specialized parsers.
-            let (rem, output) = recognize(many1(tag(special_str)))(input)?;
+            let (rem, output) = recognize(many1(tag(special_str))).parse(input)?;
             DEBUG_MD_PARSER_STDOUT.then(|| {
                 println!(
                     "{} edge case -> special case :: rem: {:?}, output: {:?}",

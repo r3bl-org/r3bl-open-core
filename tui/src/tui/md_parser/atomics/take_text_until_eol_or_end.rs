@@ -20,7 +20,8 @@ use nom::{branch::alt,
           character::complete::anychar,
           combinator::{not, recognize},
           multi::many0,
-          sequence::preceded};
+          sequence::preceded,
+          Parser};
 
 use crate::md_parser::constants::NEW_LINE;
 
@@ -39,7 +40,7 @@ use crate::md_parser::constants::NEW_LINE;
 /// | `"Hello, world!"`   | `""`           | `"Hello, world!"` |
 #[rustfmt::skip]
 pub fn take_text_until_new_line_or_end<'input>() ->
-    impl FnMut(&'input str) -> Result<(&'input str, &'input str), nom::Err<nom::error::Error<&'input str>>>
+    impl Parser<&'input str, Output = &'input str, Error = nom::error::Error<&'input str>>
 {
     recognize( /* match anychar up until a denied string below is encountered */
         many0( /* may match nothing */
@@ -78,7 +79,7 @@ mod test_text_until_opt_eol {
         // With EOL.
         {
             let input = "Hello, world!\n";
-            let (rem, output) = take_text_until_new_line_or_end()(input).unwrap();
+            let (rem, output) = take_text_until_new_line_or_end().parse(input).unwrap();
             println!("{:8}: {:?}", "input", input);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
@@ -89,7 +90,7 @@ mod test_text_until_opt_eol {
         // Without EOL.
         {
             let input = "Hello, world!";
-            let (rem, output) = take_text_until_new_line_or_end()(input).unwrap();
+            let (rem, output) = take_text_until_new_line_or_end().parse(input).unwrap();
             println!("\n{:8}: {:?}", "input", input);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
@@ -100,7 +101,7 @@ mod test_text_until_opt_eol {
         // With EOL.
         {
             let input = "\nfoo\nbar";
-            let (rem, output) = take_text_until_new_line_or_end()(input).unwrap();
+            let (rem, output) = take_text_until_new_line_or_end().parse(input).unwrap();
             println!("\n{:8}: {:?}", "input", input);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);

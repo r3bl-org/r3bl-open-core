@@ -16,7 +16,7 @@
  */
 
 use colorgrad::Gradient;
-use rand::Rng;
+use rand::{Rng, rngs::ThreadRng};
 
 use crate::{config::sizing::{StringHexColor, VecSteps},
             tui_color};
@@ -27,33 +27,10 @@ use crate::{config::sizing::{StringHexColor, VecSteps},
 /// # Returns
 /// A vector of [crate::TuiColor] objects representing the gradient.
 pub fn generate_random_truecolor_gradient(steps: u8) -> VecSteps {
-    let mut rng = rand::thread_rng();
-
     let stops = [
-        colorgrad::Color::new(
-            rng.gen_range(0.0..1.0),
-            rng.gen_range(0.0..1.0),
-            rng.gen_range(0.0..1.0),
-            1.0,
-        )
-        .to_hex_string()
-        .into(),
-        colorgrad::Color::new(
-            rng.gen_range(0.0..1.0),
-            rng.gen_range(0.0..1.0),
-            rng.gen_range(0.0..1.0),
-            1.0,
-        )
-        .to_hex_string()
-        .into(),
-        colorgrad::Color::new(
-            rng.gen_range(0.0..1.0),
-            rng.gen_range(0.0..1.0),
-            rng.gen_range(0.0..1.0),
-            1.0,
-        )
-        .to_hex_string()
-        .into(),
+        random_color::generate(),
+        random_color::generate(),
+        random_color::generate(),
     ];
 
     generate_truecolor_gradient(&stops, steps)
@@ -106,6 +83,39 @@ pub fn generate_truecolor_gradient(stops: &[StringHexColor], steps: u8) -> VecSt
             .map(|(red, green, blue)| tui_color!(*red, *green, *blue))
             .collect::<VecSteps>()
         }
+    }
+}
+
+mod random_color {
+    use super::*;
+
+    pub fn generate() -> StringHexColor {
+        let mut rng: ThreadRng = rand::rng();
+
+        let random_color = colorgrad::Color::new(
+            rng.random_range(0.0..1.0),
+            rng.random_range(0.0..1.0),
+            rng.random_range(0.0..1.0),
+            1.0,
+        );
+
+        color_to_hex_string(random_color)
+    }
+
+    /// Copied from [colorgrad::Color::to_hex_string], and modified to return a
+    /// [StringHexColor] instead of a [String].
+    pub fn color_to_hex_string(color: colorgrad::Color) -> StringHexColor {
+        let [r, g, b, a] = color.to_rgba8();
+
+        let mut acc = StringHexColor::new();
+        use std::fmt::Write as _;
+        if a < 255 {
+            _ = write!(acc, "#{:02x}{:02x}{:02x}{:02x}", r, g, b, a);
+        } else {
+            _ = write!(acc, "#{:02x}{:02x}{:02x}", r, g, b);
+        }
+
+        acc
     }
 }
 
