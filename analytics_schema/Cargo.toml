@@ -12,11 +12,11 @@ license = "Apache-2.0"
 
 [dependencies]
 # serde-json.
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.132"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
 
 # Uuid.
-uuid = { version = "1.11.0", features = [
+uuid = { version = "1.16.0", features = [
   "v4",                # Lets you generate random UUIDs
   "fast-rng",          # Use a faster (but still sufficiently random) RNG
   "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
@@ -24,7 +24,7 @@ uuid = { version = "1.11.0", features = [
 
 # For smallstr & smallvec.
 smallstr = { version = "0.3.0", features = ["std", "union"] }
-smallvec = { version = "1.6.1", features = [
+smallvec = { version = "1.15.0", features = [
   "union",
   "const_generics",
   "const_new",

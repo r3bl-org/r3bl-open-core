@@ -27,7 +27,7 @@
 //! To see this in action, set the [crate::DEBUG_MD_PARSER_STDOUT] to true, and run all
 //! the tests in this file.
 
-use nom::{branch::alt, combinator::map, IResult};
+use nom::{branch::alt, combinator::map, IResult, Parser};
 use r3bl_core::{fg_green, fg_red, inline_string};
 
 use crate::{parse_fragment_plain_text_no_new_line,
@@ -79,7 +79,7 @@ pub fn parse_inline_fragments_until_eol_or_eoi(
             map(parse_fragment_starts_with_left_link_err_on_new_line,   MdLineFragment::Link),
             map(parse_fragment_starts_with_checkbox_into_str,           MdLineFragment::Plain), // This line is different.
             map(parse_fragment_plain_text_no_new_line,                  MdLineFragment::Plain),
-        ))(input),
+        )).parse(input),
         CheckboxParsePolicy::ParseCheckbox => alt((
             map(parse_fragment_starts_with_underscore_err_on_new_line,  MdLineFragment::Italic),
             map(parse_fragment_starts_with_star_err_on_new_line,        MdLineFragment::Bold),
@@ -88,7 +88,7 @@ pub fn parse_inline_fragments_until_eol_or_eoi(
             map(parse_fragment_starts_with_left_link_err_on_new_line,   MdLineFragment::Link),
             map(parse_fragment_starts_with_checkbox_checkbox_into_bool, MdLineFragment::Checkbox), // This line is different.
             map(parse_fragment_plain_text_no_new_line,                  MdLineFragment::Plain),
-        ))(input)
+        )).parse(input)
 
     };
 

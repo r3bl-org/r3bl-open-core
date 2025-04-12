@@ -35,6 +35,16 @@ pub enum Ansi256GradientIndex {
     BackgroundDarkGreenToDarkBlue,
 }
 
+impl From<u8> for Ansi256GradientIndex {
+    fn from(value: u8) -> Self {
+        use Ansi256GradientIndex::*;
+        match value {
+            0..=14 => unsafe { std::mem::transmute::<u8, Ansi256GradientIndex>(value) },
+            _ => GrayscaleMediumGrayToWhite, // Default fallback.
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ANSIColorArray(&'static [u8]);
 
@@ -85,21 +95,10 @@ mod ansi_256_gradients_test {
     use crate::assert_eq2;
 
     #[test]
-    fn test() {
-        use rand::Rng;
-
-        let mut rng = rand::thread_rng();
-        let index = rng.gen_range(0..ANSI_256_GRADIENTS.len());
-        let ansi_256_gradient = ANSI_256_GRADIENTS[index].0;
-        println!("ansi_256_gradient: {:?}", ansi_256_gradient);
-
-        ANSI_256_GRADIENTS.iter().for_each(|ansi_256_gradient| {
-            println!("ansi_256_gradient: {:?}", ansi_256_gradient.0);
-        });
-
-        assert_eq2!(
-            ANSI_256_GRADIENTS[0].0,
-            get_gradient_array_for(Ansi256GradientIndex::GrayscaleMediumGrayToWhite)
-        );
+    fn test_all() {
+        for (index, gradient) in ANSI_256_GRADIENTS.iter().enumerate() {
+            let gradient_index = Ansi256GradientIndex::from(index as u8);
+            assert_eq2!(gradient.0, get_gradient_array_for(gradient_index));
+        }
     }
 }

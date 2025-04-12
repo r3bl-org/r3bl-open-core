@@ -61,7 +61,7 @@
 
 - [x] rename `terminal_async` -> `readline_async`
 
-# 🚀 clean up giti
+# ✅ clean up giti phase 1
 
 - [x] make `AnsiStyledText` own the `text`, this is just a more ergonomic and useful API than using
       a `&str` which introduces needless lifetimes and lots of other unergonomic code writing, which
@@ -77,6 +77,13 @@
   - [x] delete.rs
 - [x] add `XMARK` for `bool -> Option<T>` code in `TuiStyle`
 - [x] move all the colors in `choose` style to `tui_color!`
+
+# ✅ update all deps
+
+- [x] upgrade all the deps to the latest versions in all Cargo.toml files
+
+# 🚀 clean up giti phase 2
+
 - [ ] replace `SuccessReport` with an enum of valid variants (including user pressed ctrl+c)
 - [ ] collect all the git commands in a single module `git.rs`
   - [ ] use `r3bl_script` to run commands (and not directly using `Command::new`)
@@ -106,7 +113,6 @@
 
 # merge tuifyasync branch into main
 
-- [ ] upgrade all the deps to the latest versions in all Cargo.toml files
 - [ ] crate a PR for tuifyasync & merge it into main
 
 # remove `analytics_schema` as a top level crate

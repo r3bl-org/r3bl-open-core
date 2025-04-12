@@ -15,10 +15,7 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::tag,
-          combinator::opt,
-          sequence::{preceded, tuple},
-          IResult};
+use nom::{bytes::complete::tag, combinator::opt, sequence::preceded, IResult, Parser};
 use r3bl_core::tiny_inline_string;
 
 use crate::{md_parser::constants::{COLON, NEW_LINE, SPACE},
@@ -33,9 +30,10 @@ pub fn parse_unique_kv_opt_eol<'a>(
     input: &'a str,
 ) -> IResult<&'a str, &'a str> {
     let (remainder, title_text) = preceded(
-        /* start */ tuple((tag(tag_name), tag(COLON), tag(SPACE))),
+        /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
         /* output */ take_text_until_new_line_or_end(),
-    )(input)?;
+    )
+    .parse(input)?;
 
     // Can't nest `tag_name` in `output`. Early return in this case.
     let tag_fragment = tiny_inline_string!("{tag_name}{COLON}{SPACE}");
@@ -50,7 +48,7 @@ pub fn parse_unique_kv_opt_eol<'a>(
 
     // If there is a newline, consume it since there may or may not be a newline at the
     // end.
-    let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
+    let (remainder, _) = opt(tag(NEW_LINE)).parse(remainder)?;
 
     // Special case: Early return when something like `@title: ` or `@title: \n` is found.
     if title_text.is_empty() {

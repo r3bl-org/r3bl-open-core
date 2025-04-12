@@ -30,28 +30,28 @@ path = "src/lib.rs"
 r3bl_core = { path = "../core", version = "0.10.0" } # version is required to publish to crates.io
 
 # Time
-chrono = "0.4.38"
+chrono = "0.4.40"
 
 # Misc
-rand = "0.8.5"
+rand = "0.9.0"
 
 # Crossterm & EventStream support.
-crossterm = { version = "0.28.1", features = ["event-stream"] }
+crossterm = { version = "0.29.0", features = ["event-stream"] }
 futures-util = "0.3.31"
 
 # https://github.com/serde-rs/serde.
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.132"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
 
 # strum.
-strum = "0.26.3"
-strum_macros = "0.26.4"
+strum = "0.27.1"
+strum_macros = "0.27.1"
 
 # Syntax highlighting.
 syntect = "5.2.0"
 
 # nom parser combinator.
-nom = "7.1.3"
+nom = "8.0.0"
 
 # For examples.
 # http://xion.io/post/code/rust-examples.html
@@ -62,13 +62,13 @@ copypasta-ext = "0.4.4"
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
 # https://tokio.rs/tokio/topics/tracing-next-steps
-tokio = { version = "1.40.0", features = ["full", "tracing"] }
-tracing = "0.1.40"
-tracing-core = "0.1.32"
+tokio = { version = "1.44.2", features = ["full", "tracing"] }
+tracing = "0.1.41"
+tracing-core = "0.1.33"
 
 # Error handling.
-thiserror = "1.0.64"
-miette = { version = "7.2.0", features = ["fancy"] }
+thiserror = "2.0.12"
+miette = { version = "7.5.0", features = ["fancy"] }
 pretty_assertions = "1.4.1"
 
 # Unicode, grapheme clusters.
@@ -76,7 +76,7 @@ unicode-segmentation = "1.12.0"
 
 # For smallstr & smallvec.
 smallstr = { version = "0.3.0", features = ["std", "union"] }
-smallvec = { version = "1.6.1", features = [
+smallvec = { version = "1.15.0", features = [
     "union",
     "const_generics",
     "const_new",
@@ -84,12 +84,12 @@ smallvec = { version = "1.6.1", features = [
 
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
-clap = { version = "4.5.20", features = ["derive", "wrap_help", "help"] }
+clap = { version = "4.5.36", features = ["derive", "wrap_help", "help"] }
 
 [dev-dependencies]
 # For assert_eq2! macro.
 pretty_assertions = "1.4.1"
-serial_test = "3.1.1"
+serial_test = "3.2.0"
 
 [features]
 default = ["emacs"]

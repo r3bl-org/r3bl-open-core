@@ -32,19 +32,19 @@ unicode-width = "0.2.0"
 unicode-segmentation = "1.12.0"
 
 # Time
-chrono = "0.4.38"
+chrono = "0.4.40"
 
 # CustomEventFormatter.
-textwrap = { version = "0.16.1", features = ["unicode-linebreak"] }
+textwrap = { version = "0.16.2", features = ["unicode-linebreak"] }
 
 # Allow const strings to be formatted with format!.
 const_format = "0.2.34"
 
 # nom parser combinator.
-nom = "7.1.3"
+nom = "8.0.0"
 
 # Misc.
-rand = "0.8.5"
+rand = "0.9.0"
 sha2 = "0.10.8"
 strip-ansi = "0.1.0"
 strip-ansi-escapes = "0.2.1"
@@ -52,28 +52,28 @@ strip-ansi-escapes = "0.2.1"
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
 # https://tokio.rs/tokio/topics/tracing-next-steps
-tokio = { version = "1.40.0", features = ["full", "tracing"] }
-tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
+tokio = { version = "1.44.2", features = ["full", "tracing"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
 tracing-appender = "0.2.3"
-tracing-core = "0.1.32"
+tracing-core = "0.1.33"
 tokio-test = "0.4.4"
 
 # Terminal output.
-crossterm = { version = "0.28.1", features = ["event-stream"] } # EventStream
+crossterm = { version = "0.29.0", features = ["event-stream"] } # EventStream
 futures-util = "0.3.31"                                         # Needed for crossterm EventStream
 
 # Color gradients.
-colorgrad = "0.7.0"
+colorgrad = "0.7.1"
 
 # Error handling.
-thiserror = "1.0.64"
-miette = { version = "7.2.0", features = ["fancy"] }
+thiserror = "2.0.12"
+miette = { version = "7.5.0", features = ["fancy"] }
 pretty_assertions = "1.4.1"
 
 # Enum to string generation.
-strum = "0.26.3"
-strum_macros = "0.26.4"
+strum = "0.27.1"
+strum_macros = "0.27.1"
 
 # Key Value store that can be used to store JSON or bincode encoded values. `kv` is built
 # on top of `sled` which currently does not support access across multiple processes.
@@ -87,11 +87,11 @@ async-stream = "0.3.6"
 paste = "1.0.15"
 
 # For SharedWriter ids.
-uuid = { version = "1.11.0", features = ["v4"] }
+uuid = { version = "1.16.0", features = ["v4"] }
 
 # For smallstr & smallvec.
 smallstr = { version = "0.3.0", features = ["std", "union"] }
-smallvec = { version = "1.6.1", features = [
+smallvec = { version = "1.15.0", features = [
     "union",
     "const_generics",
     "const_new",
@@ -100,15 +100,15 @@ smallvec = { version = "1.6.1", features = [
 is_ci = "1.2.0"
 
 # HTTP client library (for r3bl_script).
-reqwest = { version = "0.12.9", features = ["json"] }
-serde_json = "1.0.132"
+reqwest = { version = "0.12.15", features = ["json"] }
+serde_json = "1.0.140"
 
 # kv.rs needs this to serialize and deserialize Bincode to/from the KV store.
 # https://github.com/serde-rs/serde.
-serde = { version = "1.0.210", features = ["derive"] }
+serde = { version = "1.0.219", features = ["derive"] }
 
 [dev-dependencies]
 # for assert_eq! macro
 pretty_assertions = "1.4.1"
-serial_test = "3.1.1"
+serial_test = "3.2.0"
 test-case = "3.3.1"

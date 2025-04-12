@@ -17,8 +17,9 @@
 
 use nom::{bytes::complete::tag,
           combinator::opt,
-          sequence::{preceded, tuple},
-          IResult};
+          sequence::preceded,
+          IResult,
+          Parser as _};
 use r3bl_core::InlineVec;
 
 use crate::{list,
@@ -34,13 +35,14 @@ pub fn parse_csv_opt_eol<'a>(
     input: &'a str,
 ) -> IResult<&'a str, List<&'a str>> {
     let (remainder, tags_text) = preceded(
-        /* start */ tuple((tag(tag_name), tag(COLON), tag(SPACE))),
+        /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
         /* output */ take_text_until_new_line_or_end(),
-    )(input)?;
+    )
+    .parse(input)?;
 
     // If there is a newline, consume it since there may or may not be a newline at
     // the end.
-    let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
+    let (remainder, _) = opt(tag(NEW_LINE)).parse(remainder)?;
 
     // Special case: Early return when just a `@tags: ` or `@tags: \n` is found.
     if tags_text.is_empty() {

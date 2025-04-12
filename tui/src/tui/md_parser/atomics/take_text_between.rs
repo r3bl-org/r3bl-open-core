@@ -18,8 +18,8 @@
 use nom::{bytes::complete::{tag, take_until},
           combinator::map,
           error::ErrorKind,
-          sequence::tuple,
-          IResult};
+          IResult,
+          Parser};
 use r3bl_core::{fg_green, fg_red};
 
 use crate::{md_parser::constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
@@ -41,7 +41,7 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
         );
     });
 
-    let it = take_text_between(start_delim, end_delim)(input);
+    let it = take_text_between(start_delim, end_delim).parse(input);
 
     if let Ok((_, output)) = &it {
         if output.contains(NEW_LINE) {
@@ -68,12 +68,14 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
 fn take_text_between<'input>(
     start_tag: &'input str,
     end_tag: &'input str,
-) -> impl FnMut(&'input str) -> IResult<&'input str, &'input str> {
+) -> impl Parser<&'input str, Output = &'input str, Error = nom::error::Error<&'input str>> {
     map(
-        tuple(
-            (tag(start_tag), take_until(end_tag), tag(end_tag))
+        (
+            tag(start_tag),
+            take_until(end_tag),
+            tag(end_tag),
         ),
-        | (_start, middle, _end)| middle
+        |(_start, middle, _end)| middle,
     )
 }
 
@@ -88,12 +90,12 @@ mod tests_parse_take_between {
     #[test]
     fn test_fenced() {
         let input = "_foo bar baz_";
-        let it = take_text_between("_", "_")(input);
+        let it = take_text_between("_", "_").parse(input);
         println!("it: {:?}", it);
         assert_eq2!(it, Ok(("", "foo bar baz")));
 
         let input = "_foo bar baz";
-        let it = take_text_between("_", "_")(input);
+        let it = take_text_between("_", "_").parse(input);
         println!("it: {:?}", it);
         assert_eq2!(
             it,
@@ -104,7 +106,7 @@ mod tests_parse_take_between {
         );
 
         let input = "foo _bar_ baz";
-        let it = take_text_between("_", "_")(input);
+        let it = take_text_between("_", "_").parse(input);
         println!("it: {:?}", it);
         assert_eq2!(
             it,

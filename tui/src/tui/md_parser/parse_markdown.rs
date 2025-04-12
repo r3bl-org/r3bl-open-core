@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use nom::{branch::alt, combinator::map, multi::many0, IResult};
+use nom::{branch::alt, combinator::map, multi::many0, IResult, Parser};
 
 use crate::{md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
             parse_block_code,
@@ -62,7 +62,7 @@ pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument<'_>> {
             map(parse_block_code,                                   MdBlock::CodeBlock),
             map(parse_block_markdown_text_with_or_without_new_line, MdBlock::Text),
         )),
-    )(input)?;
+    ).parse(input)?;
 
     let it = List::from(output);
     Ok((input, it))

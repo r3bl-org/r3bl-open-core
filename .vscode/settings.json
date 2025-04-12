@@ -141,6 +141,7 @@
     "rescope",
     "RESZ",
     "retval",
+    "rngs",
     "RRGGBB",
     "runtimes",
     "rustflags",

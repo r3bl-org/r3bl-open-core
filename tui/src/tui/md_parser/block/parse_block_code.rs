@@ -18,8 +18,9 @@
 use nom::{branch::alt,
           bytes::complete::{is_not, tag, take_until},
           combinator::{map, opt},
-          sequence::{preceded, terminated, tuple},
-          IResult};
+          sequence::{preceded, terminated},
+          IResult,
+          Parser};
 
 use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
             CodeBlockLine,
@@ -38,14 +39,15 @@ use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW
 /// | No language, multi line   | `"```\npip install foobar\npip install foobar\n```\n"`     |
 #[rustfmt::skip]
 pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
-    let (remainder, (lang, code)) = tuple((
+    let (remainder, (lang, code)) = (
         parse_code_block_lang_to_eol,
         parse_code_block_body_to_code_block_end,
-    ))(input)?;
+    )
+        .parse(input)?;
 
     // Normal case: if there is a newline, consume it since there may or may not be a newline at the
     // end.
-    let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
+    let (remainder, _) = opt(tag(NEW_LINE)).parse(remainder)?;
 
     let acc = split_by_new_line(code);
 
@@ -69,10 +71,10 @@ fn parse_code_block_lang_to_eol(input: &str) -> IResult<&str, Option<&str>> {
         ),
         // Or - Fail to parse language, use unknown language instead.
         map(
-            tuple((tag(CODE_BLOCK_START_PARTIAL), tag(NEW_LINE))),
+            (tag(CODE_BLOCK_START_PARTIAL), tag(NEW_LINE)),
             |_| None,
         ),
-    ))(input)
+    )).parse(input)
 }
 
 #[rustfmt::skip]
@@ -80,7 +82,7 @@ fn parse_code_block_body_to_code_block_end(input: &str) -> IResult<&str, &str> {
     let (remainder, output) = terminated(
         take_until(CODE_BLOCK_END),
         /* end (discard) */ tag(CODE_BLOCK_END),
-    )(input)?;
+    ).parse(input)?;
     Ok((remainder, output))
 }
 
