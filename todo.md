@@ -117,3 +117,9 @@
 - [ ] `r3bl_core`
 - [ ] `r3bl_tui`
 - [ ] `r3bl_cmdr`
+
+# create new issues & sub-issues for giti features
+
+- [ ] `giti develop *` -> choose issues using TUI app as part of the flow
+- [ ] `giti commit`
+- [ ] `giti delete *` -> switch to main and pull (delete remotes)
