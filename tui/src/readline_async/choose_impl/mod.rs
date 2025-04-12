@@ -303,7 +303,7 @@
 //!     height, width
 //! };
 //! use r3bl_tui::readline_async::{
-//!     State, components::style::StyleSheet,
+//!     State, choose_impl::style::StyleSheet,
 //!     choose, HowToChoose, DefaultIoDevices
 //! };
 //!
@@ -447,6 +447,7 @@ pub mod function_component;
 pub mod keypress_reader_sync;
 pub mod scroll;
 pub mod state;
+pub mod style;
 
 pub use components::*;
 pub use event_loop::*;
@@ -454,6 +455,7 @@ pub use function_component::*;
 pub use keypress_reader_sync::*;
 pub use scroll::*;
 pub use state::*;
+pub use style::*;
 
 /// Enable file logging. You can use `tail -f log.txt` to watch the logs.
 pub const DEVELOPMENT_MODE: bool = false;

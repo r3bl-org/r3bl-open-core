@@ -30,19 +30,19 @@ pub struct StyleSheet {
 
 pub fn get_default_style() -> TuiStyle {
     new_style!(
-        color_fg: {tui_color!(193, 193, 193)} color_bg: {tui_color!(14, 17, 23)}
+        color_fg: {tui_color!(medium_gray)} color_bg: {tui_color!(night_blue)}
     )
 }
 
 impl Default for StyleSheet {
     fn default() -> Self {
         let focused_and_selected_style = TuiStyle {
-            color_fg: tui_color!(20, 244, 0).into(),
-            color_bg: tui_color!(51, 32, 66).into(),
+            color_fg: tui_color!(lizard_green).into(),
+            color_bg: tui_color!(dark_purple).into(),
             ..TuiStyle::default()
         };
         let focused_style = TuiStyle {
-            color_fg: tui_color!(20, 244, 0).into(),
+            color_fg: tui_color!(lizard_green).into(),
             ..TuiStyle::default()
         };
         let unselected_style = TuiStyle {
@@ -50,12 +50,12 @@ impl Default for StyleSheet {
         };
         let selected_style = TuiStyle {
             color_fg: tui_color!(lavender).into(),
-            color_bg: tui_color!(51, 32, 66).into(),
+            color_bg: tui_color!(dark_purple).into(),
             ..TuiStyle::default()
         };
         let header_style = TuiStyle {
-            color_fg: tui_color!(171, 204, 242).into(),
-            color_bg: tui_color!(31, 36, 46).into(),
+            color_fg: tui_color!(frozen_blue).into(),
+            color_bg: tui_color!(moonlight_blue).into(),
             ..TuiStyle::default()
         };
         StyleSheet {
@@ -71,28 +71,28 @@ impl Default for StyleSheet {
 impl StyleSheet {
     pub fn sea_foam_style() -> Self {
         let focused_and_selected_style = TuiStyle {
-            color_fg: tui_color!(19, 227, 255).into(),
-            color_bg: tui_color!(6, 41, 52).into(),
+            color_fg: tui_color!(bright_cyan).into(),
+            color_bg: tui_color!(dark_teal).into(),
             ..TuiStyle::default()
         };
         let focused_style = TuiStyle {
-            color_fg: tui_color!(19, 227, 255).into(),
-            color_bg: tui_color!(14, 17, 23).into(),
+            color_fg: tui_color!(bright_cyan).into(),
+            color_bg: tui_color!(night_blue).into(),
             ..TuiStyle::default()
         };
         let unselected_style = TuiStyle {
-            color_fg: tui_color!(241, 241, 241).into(),
-            color_bg: tui_color!(14, 17, 23).into(),
+            color_fg: tui_color!(light_gray).into(),
+            color_bg: tui_color!(night_blue).into(),
             ..TuiStyle::default()
         };
         let selected_style = TuiStyle {
-            color_fg: tui_color!(209, 244, 255).into(),
-            color_bg: tui_color!(6, 41, 52).into(),
+            color_fg: tui_color!(light_cyan).into(),
+            color_bg: tui_color!(dark_teal).into(),
             ..TuiStyle::default()
         };
         let header_style = TuiStyle {
-            color_fg: tui_color!(229, 239, 123).into(),
-            color_bg: tui_color!(31, 36, 46).into(),
+            color_fg: tui_color!(light_yellow_green).into(),
+            color_bg: tui_color!(moonlight_blue).into(),
             ..TuiStyle::default()
         };
         StyleSheet {
@@ -106,28 +106,28 @@ impl StyleSheet {
 
     pub fn hot_pink_style() -> Self {
         let focused_and_selected_style = TuiStyle {
-            color_fg: tui_color!(255, 0, 214).into(),
-            color_bg: tui_color!(62, 14, 74).into(),
+            color_fg: tui_color!(hot_pink).into(),
+            color_bg: tui_color!(deep_purple).into(),
             ..TuiStyle::default()
         };
         let focused_style = TuiStyle {
-            color_fg: tui_color!(255, 0, 214).into(),
-            color_bg: tui_color!(14, 17, 23).into(),
+            color_fg: tui_color!(hot_pink).into(),
+            color_bg: tui_color!(night_blue).into(),
             ..TuiStyle::default()
         };
         let unselected_style = TuiStyle {
-            color_fg: tui_color!(219, 202, 232).into(),
-            color_bg: tui_color!(14, 17, 23).into(),
+            color_fg: tui_color!(light_purple).into(),
+            color_bg: tui_color!(night_blue).into(),
             ..TuiStyle::default()
         };
         let selected_style = TuiStyle {
-            color_fg: tui_color!(255, 181, 234).into(),
-            color_bg: tui_color!(62, 14, 74).into(),
+            color_fg: tui_color!(soft_pink).into(),
+            color_bg: tui_color!(deep_purple).into(),
             ..TuiStyle::default()
         };
         let header_style = TuiStyle {
-            color_fg: tui_color!(190, 253, 249).into(),
-            color_bg: tui_color!(31, 36, 46).into(),
+            color_fg: tui_color!(light_cyan).into(),
+            color_bg: tui_color!(moonlight_blue).into(),
             ..TuiStyle::default()
         };
         StyleSheet {
@@ -147,8 +147,8 @@ mod tests {
     #[test]
     fn test_default_style() {
         let style = get_default_style();
-        assert_eq!(style.color_fg, tui_color!(193, 193, 193).into());
-        assert_eq!(style.color_bg, tui_color!(14, 17, 23).into());
+        assert_eq!(style.color_fg, tui_color!(medium_gray).into());
+        assert_eq!(style.color_bg, tui_color!(night_blue).into());
     }
 
     #[test]
@@ -157,16 +157,16 @@ mod tests {
 
         assert_eq!(
             stylesheet.focused_and_selected_style.color_fg,
-            tui_color!(20, 244, 0).into()
+            tui_color!(lizard_green).into()
         );
         assert_eq!(
             stylesheet.focused_and_selected_style.color_bg,
-            tui_color!(51, 32, 66).into()
+            tui_color!(dark_purple).into()
         );
 
         assert_eq!(
             stylesheet.focused_style.color_fg,
-            tui_color!(20, 244, 0).into()
+            tui_color!(lizard_green).into()
         );
         assert_eq!(stylesheet.focused_style.color_bg, None);
 
@@ -179,16 +179,16 @@ mod tests {
         );
         assert_eq!(
             stylesheet.selected_style.color_bg,
-            tui_color!(51, 32, 66).into()
+            tui_color!(dark_purple).into()
         );
 
         assert_eq!(
             stylesheet.header_style.color_fg,
-            tui_color!(171, 204, 242).into()
+            tui_color!(frozen_blue).into()
         );
         assert_eq!(
             stylesheet.header_style.color_bg,
-            tui_color!(31, 36, 46).into()
+            tui_color!(moonlight_blue).into()
         );
     }
 
@@ -198,47 +198,47 @@ mod tests {
 
         assert_eq!(
             stylesheet.focused_and_selected_style.color_fg,
-            tui_color!(19, 227, 255).into()
+            tui_color!(bright_cyan).into()
         );
         assert_eq!(
             stylesheet.focused_and_selected_style.color_bg,
-            tui_color!(6, 41, 52).into()
+            tui_color!(dark_teal).into()
         );
 
         assert_eq!(
             stylesheet.focused_style.color_fg,
-            tui_color!(19, 227, 255).into()
+            tui_color!(bright_cyan).into()
         );
         assert_eq!(
             stylesheet.focused_style.color_bg,
-            tui_color!(14, 17, 23).into()
+            tui_color!(night_blue).into()
         );
 
         assert_eq!(
             stylesheet.unselected_style.color_fg,
-            tui_color!(241, 241, 241).into()
+            tui_color!(light_gray).into()
         );
         assert_eq!(
             stylesheet.unselected_style.color_bg,
-            tui_color!(14, 17, 23).into()
+            tui_color!(night_blue).into()
         );
 
         assert_eq!(
             stylesheet.selected_style.color_fg,
-            tui_color!(209, 244, 255).into()
+            tui_color!(light_cyan).into()
         );
         assert_eq!(
             stylesheet.selected_style.color_bg,
-            tui_color!(6, 41, 52).into()
+            tui_color!(dark_teal).into()
         );
 
         assert_eq!(
             stylesheet.header_style.color_fg,
-            tui_color!(229, 239, 123).into()
+            tui_color!(light_yellow_green).into()
         );
         assert_eq!(
             stylesheet.header_style.color_bg,
-            tui_color!(31, 36, 46).into()
+            tui_color!(moonlight_blue).into()
         );
     }
 
@@ -248,43 +248,43 @@ mod tests {
 
         assert_eq!(
             style_sheet.focused_and_selected_style.color_fg,
-            tui_color!(255, 0, 214).into()
+            tui_color!(hot_pink).into()
         );
         assert_eq!(
             style_sheet.focused_and_selected_style.color_bg,
-            tui_color!(62, 14, 74).into()
+            tui_color!(deep_purple).into()
         );
         assert_eq!(
             style_sheet.focused_style.color_fg,
-            tui_color!(255, 0, 214).into()
+            tui_color!(hot_pink).into()
         );
         assert_eq!(
             style_sheet.focused_style.color_bg,
-            tui_color!(14, 17, 23).into()
+            tui_color!(night_blue).into()
         );
         assert_eq!(
             style_sheet.unselected_style.color_fg,
-            tui_color!(219, 202, 232).into()
+            tui_color!(light_purple).into()
         );
         assert_eq!(
             style_sheet.unselected_style.color_bg,
-            tui_color!(14, 17, 23).into()
+            tui_color!(night_blue).into()
         );
         assert_eq!(
             style_sheet.selected_style.color_fg,
-            tui_color!(255, 181, 234).into()
+            tui_color!(soft_pink).into()
         );
         assert_eq!(
             style_sheet.selected_style.color_bg,
-            tui_color!(62, 14, 74).into()
+            tui_color!(deep_purple).into()
         );
         assert_eq!(
             style_sheet.header_style.color_fg,
-            tui_color!(190, 253, 249).into()
+            tui_color!(light_cyan).into()
         );
         assert_eq!(
             style_sheet.header_style.color_bg,
-            tui_color!(31, 36, 46).into()
+            tui_color!(moonlight_blue).into()
         );
     }
 }
