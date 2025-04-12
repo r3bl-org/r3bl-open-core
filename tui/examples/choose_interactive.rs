@@ -34,9 +34,7 @@ use r3bl_core::{ast,
                 InlineVec,
                 ItemsBorrowed};
 use r3bl_tui::{choose,
-               readline_async::{components::style::StyleSheet,
-                                HowToChoose,
-                                DEVELOPMENT_MODE},
+               readline_async::{style::StyleSheet, HowToChoose, DEVELOPMENT_MODE},
                DefaultIoDevices};
 mod choose_quiz_game;
 use choose_quiz_game::main as single_select_quiz_game;

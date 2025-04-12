@@ -27,6 +27,54 @@ use crate::{ANSI_COLOR_PALETTE,
 
 #[macro_export]
 macro_rules! tui_color {
+    (medium_gray) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(193, 193, 193))
+    };
+
+    (light_cyan) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(190, 253, 249))
+    };
+
+    (light_purple) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(219, 202, 232))
+    };
+
+    (deep_purple) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(62, 14, 74))
+    };
+
+    (soft_pink) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(255, 181, 234))
+    };
+
+    (hot_pink) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(255, 0, 214))
+    };
+
+    (light_yellow_green) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(229, 239, 123))
+    };
+
+    (light_cyan) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(209, 244, 255))
+    };
+
+    (light_gray) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(241, 241, 241))
+    };
+
+    (dark_teal) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(6, 41, 52))
+    };
+
+    (bright_cyan) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(19, 227, 255))
+    };
+
+    (dark_purple) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8(51, 32, 66))
+    };
+
     (sky_blue) => {
         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(117, 215, 236))
     };

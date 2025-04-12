@@ -68,6 +68,7 @@ use crate::{ChUnit,
 /// attributes](https://docs.rs/crossterm/0.25.0/crossterm/style/enum.Attribute.html)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Default)]
 pub struct TuiStyle {
+    // XMARK: Use of newtype pattern `Option<T>` instead of `bool`
     pub id: Option<tui_style_attrib::Id>,
     pub bold: Option<tui_style_attrib::Bold>,
     pub italic: Option<tui_style_attrib::Italic>,

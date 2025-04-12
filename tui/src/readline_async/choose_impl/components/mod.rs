@@ -20,8 +20,4 @@ pub mod select_component;
 pub use select_component::*;
 
 // Attach sources & re-export.
-pub mod style;
-pub use style::*;
-
-// Attach sources & re-export.
 pub mod apply_style_macro;
