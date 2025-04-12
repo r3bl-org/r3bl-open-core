@@ -21,7 +21,7 @@ use std::{fmt::{Display, Formatter},
 
 use miette::IntoDiagnostic;
 
-use crate::friendly_random_id;
+use super::friendly_random_id::generate_friendly_random_id;
 
 pub struct TempDir {
     pub inner: std::path::PathBuf,
@@ -38,7 +38,7 @@ impl TempDir {
 /// [TempDir] struct is dropped.
 pub fn create_temp_dir() -> miette::Result<TempDir> {
     let root = std::env::temp_dir();
-    let new_temp_dir = root.join(friendly_random_id::generate_friendly_random_id());
+    let new_temp_dir = root.join(generate_friendly_random_id().as_str());
     std::fs::create_dir(&new_temp_dir).into_diagnostic()?;
     Ok(TempDir {
         inner: new_temp_dir,

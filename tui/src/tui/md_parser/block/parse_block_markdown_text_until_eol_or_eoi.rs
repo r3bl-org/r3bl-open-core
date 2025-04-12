@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::tag, multi::many0, sequence::terminated, IResult};
+use nom::{bytes::complete::tag, multi::many0, sequence::terminated, IResult, Parser};
 
 use crate::{md_parser::constants::NEW_LINE,
             parse_inline_fragments_until_eol_or_eoi,
@@ -45,7 +45,7 @@ fn parse_block_markdown_text_with_new_line(
             ),
             /* ends with (discarded) */
             tag(NEW_LINE),
-        )(input)?;
+        ).parse(input)?;
 
     let it = List::from(output);
 
@@ -65,7 +65,7 @@ fn parse_block_markdown_text_without_new_line(input: &str) -> IResult<&str, MdLi
 
     let (input, output) = many0(
         |it| parse_inline_fragments_until_eol_or_eoi(it, CheckboxParsePolicy::IgnoreCheckbox)
-    )(input)?;
+    ).parse(input)?;
 
     let it = List::from(output);
 
@@ -86,7 +86,7 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
 ) -> IResult<&str, MdLineFragments<'_>> {
     let (input, output) = many0(
         |it| parse_inline_fragments_until_eol_or_eoi(it, checkbox_policy)
-    )(input)?;
+    ).parse(input)?;
 
     let it = List::from(output);
 

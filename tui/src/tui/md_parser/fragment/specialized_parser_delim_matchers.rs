@@ -22,7 +22,7 @@
 //! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
 //! in [crate::parse_fragments_in_a_line].
 
-use nom::{bytes::complete::tag, combinator::recognize, multi::many1, IResult};
+use nom::{bytes::complete::tag, combinator::recognize, multi::many1, IResult, Parser as _};
 use r3bl_core::{fg_blue, fg_green, fg_red};
 
 use crate::{md_parser::constants::NEW_LINE,
@@ -112,7 +112,7 @@ pub fn take_starts_with_delim_no_new_line<'i>(
     }
 
     // Otherwise, we split the input at the first delim.
-    let (rem, output) = recognize(many1(tag(delim)))(input)?;
+    let (rem, output) = recognize(many1(tag(delim))).parse(input)?;
 
     DEBUG_MD_PARSER_STDOUT.then(|| {
         println!("{a}, rem: {r:?}, output: {o:?}",

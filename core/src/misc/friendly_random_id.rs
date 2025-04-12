@@ -15,55 +15,77 @@
  *   limitations under the License.
  */
 
-use rand::Rng;
+use rand::{Rng, rngs::ThreadRng};
+
+use crate::InlineString;
 
 const PET_NAMES: [&str; 20] = [
-    "Buddy", "Max", "Bella", "Charlie", "Lucy", "Daisy", "Molly", "Lola", "Sadie",
-    "Maggie", "Bailey", "Sophie", "Chloe", "Duke", "Lily", "Rocky", "Jack", "Cooper",
-    "Riley", "Zoey",
+    "buddy", "max", "bella", "charlie", "lucy", "daisy", "molly", "lola", "sadie",
+    "maggie", "bailey", "sophie", "chloe", "duke", "lily", "rocky", "jack", "cooper",
+    "riley", "zoey",
 ];
 
 const FRUIT_NAMES: [&str; 20] = [
-    "Apple",
-    "Banana",
-    "Orange",
-    "Pear",
-    "Peach",
-    "Strawberry",
-    "Grape",
-    "Kiwi",
-    "Mango",
-    "Pineapple",
-    "Watermelon",
-    "Cherry",
-    "Blueberry",
-    "Raspberry",
-    "Lemon",
-    "Lime",
-    "Grapefruit",
-    "Plum",
-    "Apricot",
-    "Pomegranate",
+    "apple",
+    "banana",
+    "orange",
+    "pear",
+    "peach",
+    "strawberry",
+    "grape",
+    "kiwi",
+    "mango",
+    "pineapple",
+    "watermelon",
+    "cherry",
+    "blueberry",
+    "raspberry",
+    "lemon",
+    "lime",
+    "grapefruit",
+    "plum",
+    "apricot",
+    "pomegranate",
 ];
 
-pub fn generate_friendly_random_id() -> String {
-    // Generate friendly pet and fruit name combination.
-    let pet = {
-        let mut rng = rand::thread_rng();
-        let pet = PET_NAMES[rng.gen_range(0..PET_NAMES.len())];
-        pet.to_lowercase()
-    };
+pub fn generate_friendly_random_id() -> InlineString {
+    let mut rng: ThreadRng = rand::rng();
 
-    let fruit = {
-        let mut rng = rand::thread_rng();
-        let fruit = FRUIT_NAMES[rng.gen_range(0..FRUIT_NAMES.len())];
-        fruit.to_lowercase()
-    };
+    let pet = PET_NAMES[rng.random_range(0..PET_NAMES.len())];
+    let fruit = FRUIT_NAMES[rng.random_range(0..FRUIT_NAMES.len())];
+    let number: u16 = rng.random_range(0..1000);
 
-    let random_number = {
-        let mut rng = rand::thread_rng();
-        rng.gen_range(0..1000)
-    };
+    let mut acc = InlineString::with_capacity(
+        pet.len() + fruit.len() + 3 + 2, // 3 for the number, 2 for the dashes
+    );
+    use std::fmt::Write as _;
+    _ = write!(acc, "{}-{}-{:03}", pet, fruit, number);
 
-    format!("{pet}-{fruit}-{random_number}")
+    acc
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_all_constants_are_lowercase() {
+        for name in PET_NAMES.iter() {
+            assert_eq!(name, &name.to_lowercase());
+        }
+        for name in FRUIT_NAMES.iter() {
+            assert_eq!(name, &name.to_lowercase());
+        }
+    }
+
+    #[test]
+    fn test_generate_friendly_random_id() {
+        let id = generate_friendly_random_id();
+        println!("Generated ID: {}", id);
+        let parts: Vec<&str> = id.split('-').collect();
+        assert_eq!(parts.len(), 3);
+        assert!(PET_NAMES.contains(&parts[0].to_lowercase().as_str()));
+        assert!(FRUIT_NAMES.contains(&parts[1].to_lowercase().as_str()));
+        assert!(parts[2].parse::<u16>().is_ok());
+    }
 }

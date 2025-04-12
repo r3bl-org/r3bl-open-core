@@ -20,8 +20,9 @@ use nom::{branch::alt,
           character::complete::anychar,
           combinator::{map, not, opt, recognize},
           multi::many1,
-          sequence::{preceded, terminated, tuple},
-          IResult};
+          sequence::{preceded, terminated},
+          IResult,
+          Parser};
 
 use crate::{md_parser::constants::{self, NEW_LINE},
             HeadingData,
@@ -37,11 +38,12 @@ pub fn parse_block_heading_opt_eol(input: &str) -> IResult<&str, HeadingData<'_>
 
 #[rustfmt::skip]
 fn parse(input: &str) -> IResult<&str, HeadingData<'_>> {
-    let (input, (level, text, _)) = tuple((
+    let (input, (level, text, _)) = (
         parse_heading_tag,
         parse_anychar_in_heading_no_new_line,
         opt(tag(NEW_LINE)),
-    ))(input)?;
+    )
+        .parse(input)?;
     Ok((input, HeadingData { heading_level: level, text }))
 }
 
@@ -61,7 +63,7 @@ pub fn parse_anychar_in_heading_no_new_line(input: &str) -> IResult<&str, &str> 
                 anychar,
             )
         )
-    )(input)
+    ).parse(input)
 }
 
 /// Matches one or more `#` chars, consumes it, and outputs [Level].
@@ -74,7 +76,7 @@ fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
         ),
         |it: &str|
         HeadingLevel::from(it.len())
-    )(input)
+    ).parse(input)
 }
 
 #[cfg(test)]

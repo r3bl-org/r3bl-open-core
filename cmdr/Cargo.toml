@@ -48,39 +48,39 @@ r3bl_core = { path = "../core", version = "0.10.0" }                        # ve
 r3bl_tui = { path = "../tui", version = "0.6.0" }                           # version is required to publish to crates.io
 
 # Reqwest (HTTP client).
-reqwest = { version = "0.12.8", features = ["json"] }
+reqwest = { version = "0.12.15", features = ["json"] }
 
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
-clap = { version = "4.5.20", features = ["derive", "wrap_help", "help"] }
+clap = { version = "4.5.36", features = ["derive", "wrap_help", "help"] }
 
 # serde-json.
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.132"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
 
 # Open URLs.
-open = "5.3.0"
+open = "5.3.2"
 
 # Save config files.
-dirs = "5.0.1"
+dirs = "6.0.0"
 
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
 # https://tokio.rs/tokio/topics/tracing-next-steps
-tokio = { version = "1.40.0", features = ["full", "tracing"] }
-tracing = "0.1.40"
-tracing-core = "0.1.32"
+tokio = { version = "1.44.2", features = ["full", "tracing"] }
+tracing = "0.1.41"
+tracing-core = "0.1.33"
 
 # Error handling.
-miette = { version = "7.2.0", features = ["fancy"] }
+miette = { version = "7.5.0", features = ["fancy"] }
 
 # For smallstr & smallvec.
-smallvec = { version = "1.6.1", features = [
+smallvec = { version = "1.15.0", features = [
     "union",
     "const_generics",
     "const_new",
 ] }
 
 # Enum to string generation.
-strum = "0.26.3"
-strum_macros = "0.26.4"
+strum = "0.27.1"
+strum_macros = "0.27.1"
