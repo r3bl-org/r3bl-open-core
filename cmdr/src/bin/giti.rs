@@ -19,33 +19,20 @@
 //! 1. [Tutorial](https://developerlife.com/2023/09/17/tuify-clap/)
 //! 2. [Video](https://youtu.be/lzMYDA6St0s)
 
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
-                giti::{BranchSubcommand,
-                       CLIArg,
+                giti::{CLIArg,
                        CLICommand,
-                       SuccessReport,
+                       CommandExecutionReport,
                        UIStrings,
-                       get_giti_command_subcommand_names,
-                       try_checkout_branch,
-                       try_delete_branch,
-                       try_make_new_branch,
-                       ui_templates::{self, single_select_instruction_header}},
+                       branch,
+                       ui_templates::{self}},
                 report_analytics,
                 upgrade_check};
 use r3bl_core::{CommonResult,
-                ast,
-                ast_line,
                 fg_guards_red,
-                height,
                 log_support::try_initialize_logging_global,
-                new_style,
-                throws,
-                tui_color};
-use r3bl_tui::{DefaultIoDevices,
-               choose,
-               readline_async::{HowToChoose, StyleSheet}};
-use smallvec::smallvec;
+                throws};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -82,31 +69,34 @@ async fn main() -> CommonResult<()> {
 }
 
 pub async fn launch_giti(cli_arg: CLIArg) {
-    let res = try_run_command(&cli_arg).await;
+    // Figure out which control path to take. Then execute the command for that path.
+    let res_cmd_exec = match cli_arg.command {
+        CLICommand::Branch {
+            command_to_run_with_each_selection,
+            maybe_branch_name,
+        } => {
+            branch::try_main(command_to_run_with_each_selection, maybe_branch_name).await
+        }
+        CLICommand::Commit {} | CLICommand::Remote {} => unimplemented!(),
+    };
 
-    match res {
+    // Handle the result of the command execution.
+    // 01: handle the output of the command execution, since no output has been printed yet
+    match res_cmd_exec {
         // Command ran successfully.
-        Ok(success_report) => {
-            if let CLICommand::Branch { .. } = cli_arg.command {
-                // If user selected to delete a branch, then show exit message. If user
-                // didn't select any branch, then show message that no branches were
-                // deleted.
-                match (
-                    success_report.maybe_deleted_branches,
-                    success_report.branch_subcommand,
-                ) {
-                    (Some(_), Some(BranchSubcommand::Delete)) => {
-                        ui_templates::show_exit_message();
-                    }
-                    (None, Some(BranchSubcommand::Delete)) => {
-                        println!("{}", UIStrings::NoBranchGotDeleted);
-                        ui_templates::show_exit_message();
-                    }
-                    _ => {}
+        Ok(cmd_exec_report) => {
+            if let CommandExecutionReport::BranchDelete(details) = cmd_exec_report {
+                // If user selected to delete a branch, then show exit message. If
+                // user didn't select any branch, then show message that no branches
+                // were deleted.
+                if details.maybe_deleted_branches.is_none() {
+                    println!("{}", UIStrings::NoBranchGotDeleted);
                 }
             }
+
+            ui_templates::show_exit_message();
         }
-        // Handle unrecoverable / unknown errors here.
+        // Handle unrecoverable / unknown errors.
         Err(error) => {
             report_analytics::start_task_to_generate_event(
                 "".to_string(),
@@ -119,6 +109,7 @@ pub async fn launch_giti(cli_arg: CLIArg) {
                 error = ?error
             );
 
+            // 01: don't print this to stdout, just log it (since it should have been printed already)
             fg_guards_red(&format!(
                 " Could not run giti due to the following problem.\n{:#?}",
                 error
@@ -126,69 +117,4 @@ pub async fn launch_giti(cli_arg: CLIArg) {
             .println();
         }
     }
-}
-
-pub async fn try_run_command(giti_app_args: &CLIArg) -> CommonResult<SuccessReport> {
-    match &giti_app_args.command {
-        CLICommand::Branch {
-            command_to_run_with_each_selection,
-            maybe_branch_name,
-        } => match command_to_run_with_each_selection {
-            Some(subcommand) => match subcommand {
-                BranchSubcommand::Delete => try_delete_branch().await,
-                BranchSubcommand::Checkout => {
-                    try_checkout_branch(maybe_branch_name.clone()).await
-                }
-                BranchSubcommand::New => {
-                    try_make_new_branch(maybe_branch_name.clone()).await
-                }
-            },
-            _ => user_typed_giti_branch().await,
-        },
-        CLICommand::Commit {} => unimplemented!(),
-        CLICommand::Remote {} => unimplemented!(),
-    }
-}
-
-async fn user_typed_giti_branch() -> CommonResult<SuccessReport> {
-    let branch_subcommands = get_giti_command_subcommand_names(CLICommand::Branch {
-        command_to_run_with_each_selection: None,
-        maybe_branch_name: None,
-    });
-
-    let header = {
-        let last_line = ast_line![ast(
-            UIStrings::PleaseSelectBranchSubCommand.to_string(),
-            new_style!(
-                color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
-            )
-        )];
-        single_select_instruction_header(smallvec![last_line])
-    };
-
-    let mut default_io_devices = DefaultIoDevices::default();
-    let selected = choose(
-        header,
-        branch_subcommands,
-        Some(height(20)),
-        None,
-        HowToChoose::Single,
-        StyleSheet::default(),
-        default_io_devices.as_mut_tuple(),
-    )
-    .await?;
-
-    if let Some(selected) = selected.first() {
-        if let Ok(branch_subcommand) = BranchSubcommand::from_str(selected, true) {
-            match branch_subcommand {
-                BranchSubcommand::Delete => return try_delete_branch().await,
-                BranchSubcommand::Checkout => return try_checkout_branch(None).await,
-                BranchSubcommand::New => return try_make_new_branch(None).await,
-            }
-        } else {
-            unimplemented!();
-        }
-    };
-
-    Ok(SuccessReport::default())
 }

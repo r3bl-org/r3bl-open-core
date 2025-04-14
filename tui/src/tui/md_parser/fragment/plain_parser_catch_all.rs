@@ -38,7 +38,8 @@ use nom::{branch::alt,
           combinator::{not, recognize},
           multi::many1,
           sequence::preceded,
-          IResult, Parser};
+          IResult,
+          Parser};
 use r3bl_core::{fg_blue, fg_magenta, fg_red};
 
 use crate::{md_parser::constants::{BACK_TICK,

@@ -22,9 +22,25 @@ use r3bl_core::{CommonResult, ItemsOwned};
 use smallvec::smallvec;
 
 use super::UIStrings;
-use crate::giti::report_unknown_error_and_propagate;
 
-pub fn try_delete_branches(branches: &ItemsOwned) -> (CommonResult<Output>, Command) {
+/// This is a type alias for the result of a git command. The tuple contains:
+/// 1. The result of the command.
+/// 2. The command itself.
+pub type ResultAndCommand<T> = (CommonResult<T>, Command);
+
+pub fn try_check_for_modified_unstaged_files() -> ResultAndCommand<Output> {
+    let mut command = Command::new("git");
+    command.args(["status", "--porcelain"]);
+    (command.output().into_diagnostic(), command)
+}
+
+pub fn try_create_and_switch_to_branch(branch_name: &str) -> ResultAndCommand<Output> {
+    let mut command = Command::new("git");
+    command.args(["checkout", "-b", branch_name]);
+    (command.output().into_diagnostic(), command)
+}
+
+pub fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<Output> {
     let mut command = Command::new("git");
     command.args(["branch", "-D"]);
     for branch in branches {
@@ -33,10 +49,11 @@ pub fn try_delete_branches(branches: &ItemsOwned) -> (CommonResult<Output>, Comm
     (command.output().into_diagnostic(), command)
 }
 
-// Get the current branch name.
-pub fn try_get_current_branch() -> CommonResult<String> {
+// Get the current branch name. It is returned in an [r3bl_core::InlineVec] with only a
+// single item.
+pub fn try_get_current_branch() -> ResultAndCommand<String> {
     let mut command = Command::new("git");
-    let command: &mut Command = command.args(["branch", "--show-current"]);
+    command.args(["branch", "--show-current"]);
 
     let result_output = command.output();
 
@@ -44,7 +61,7 @@ pub fn try_get_current_branch() -> CommonResult<String> {
         // Can't even execute output(), something unknown has gone wrong. Propagate the
         // error.
         Err(error) => {
-            return report_unknown_error_and_propagate(command, miette::miette!(error));
+            return (Err(miette::miette!(error)), command);
         }
         Ok(output) => {
             let output_string = String::from_utf8_lossy(&output.stdout);
@@ -52,47 +69,64 @@ pub fn try_get_current_branch() -> CommonResult<String> {
         }
     };
 
-    Ok(current_branch)
+    (Ok(current_branch), command)
 }
 
 // Get all the local branches. Prefix the current branch with `(current)`.
-pub fn try_get_local_branches() -> CommonResult<ItemsOwned> {
-    let branches = try_execute_git_command_to_get_branches()?;
+pub fn try_get_local_branches() -> ResultAndCommand<ItemsOwned> {
+    let (res, cmd) = try_execute_git_command_to_get_branches();
+    let Ok(branches) = res else {
+        return (res, cmd);
+    };
 
-    let current_branch = super::git::try_get_current_branch()?;
+    let (res, cmd) = try_get_current_branch();
+    let Ok(current_branch) = res else {
+        return (Err(miette::miette!(res.unwrap_err())), cmd);
+    };
 
-    let mut branches_vec = smallvec![];
+    let mut items_owned = smallvec![];
     for branch in branches {
-        if branch == current_branch {
-            branches_vec.push(UIStrings::CurrentBranch { branch }.to_string().into());
-        } else {
-            branches_vec.push(branch.into());
+        match branch == current_branch {
+            // If the branch is the current branch, prefix it with "(current)".
+            true => {
+                items_owned.push(
+                    UIStrings::CurrentBranch {
+                        branch: branch.to_string(),
+                    }
+                    .to_string()
+                    .into(),
+                );
+            }
+            // If the branch is not the current branch, just add it to the list.
+            false => {
+                items_owned.push(branch);
+            }
         }
     }
 
-    Ok(branches_vec)
+    (Ok(items_owned), cmd)
 }
 
-fn try_execute_git_command_to_get_branches() -> CommonResult<Vec<String>> {
+fn try_execute_git_command_to_get_branches() -> ResultAndCommand<ItemsOwned> {
     // Create command.
     let mut command = Command::new("git");
-    let command: &mut Command = command.args(["branch", "--format", "%(refname:short)"]);
+    command.args(["branch", "--format", "%(refname:short)"]);
 
     // Execute command.
-    let result_output = command.output();
+    let res_output = command.output();
 
     // Process command execution results.
-    match result_output {
+    match res_output {
         // Can't even execute output(), something unknown has gone wrong. Propagate the
         // error.
-        Err(error) => report_unknown_error_and_propagate(command, miette::miette!(error)),
+        Err(error) => (Err(miette::miette!(error)), command),
         Ok(output) => {
             let output_string = String::from_utf8_lossy(&output.stdout);
-            let mut branches = vec![];
+            let mut branches = smallvec![];
             for line in output_string.lines() {
-                branches.push(line.to_string());
+                branches.push(line.into());
             }
-            Ok(branches)
+            (Ok(branches), command)
         }
     }
 }

@@ -17,6 +17,11 @@
 
 use strum_macros::Display;
 
+// 00: use this constant in the `CurrentBranch` enum below after removing the enum
+pub const CURRENT_PREFIX: &str = "(current) ";
+
+// 00: remove the use of this UIStrings enum and just make these plain functions
+
 #[derive(Display)]
 pub enum UIStrings {
     #[strum(serialize = "Please select a branch subcommand")]
@@ -88,13 +93,16 @@ pub enum UIStrings {
     #[strum(serialize = " No branch got checked out ... \n ╴{branch}!\n\n")]
     NoBranchGotCheckedOut { branch: String },
 
+    #[strum(serialize = " No suitable branch is available for checkout.")]
+    NoSuitableBranchIsAvailableForCheckout,
+
     #[strum(serialize = "\n Goodbye, 👋 {username}. Thanks for using 😺 giti!")]
     GoodbyeThanksForUsingGitiUsername { username: String },
 
     #[strum(serialize = "\n Goodbye 👋.\n\n 😺 giti!")]
     GoodbyeThanksForUsingGiti,
 
-    #[strum(serialize = " Please star us and report issues on GitHub: 🌟 🐞 \
+    #[strum(serialize = " Please report issues & star us on GitHub: 🌟 🐞 \
         https://github.com/r3bl-org/r3bl-open-core/issues/new/choose")]
     PleaseStarUs,
 
@@ -140,6 +148,12 @@ pub enum UIStrings {
 
     #[strum(serialize = " Failed to create and switch to branch {branch_name}")]
     FailedToCreateAndSwitchToBranch { branch_name: String },
+
+    #[strum(serialize = " Failed to create new branch {branch_name}!\n\n{error_message}")]
+    FailedToRunCommandToCreateBranch {
+        branch_name: String,
+        error_message: String,
+    },
 
     #[strum(serialize = " Enter a branch name you want to create (Ctrl+C to exit): ")]
     EnterBranchNameYouWantToCreate,
