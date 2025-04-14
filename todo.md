@@ -82,17 +82,40 @@
 
 - [x] upgrade all the deps to the latest versions in all Cargo.toml files
 
-# 🚀 clean up giti phase 2
+# ✅ clean up giti phase 2
 
-- [ ] replace `SuccessReport` with an enum of valid variants (including user pressed ctrl+c)
-- [ ] collect all the git commands in a single module `git.rs`
-  - [ ] use `r3bl_script` to run commands (and not directly using `Command::new`)
+- [x] replace `SuccessReport` with an enum of valid variants (including user pressed ctrl+c)
+- [x] change how errors are reported using `miette`
+- [x] collect all the git commands in a single module `git.rs`
+
+# 🚀 clean up giti phase 3
+
+- [ ] introduce consistent error reporting, and output handling using `CompletionReport`. there is
+      no need for individual subcommands to do something specific to report command success, not
+      success, or failure to run command. centralize this and simplify ALL subcommands, and make it
+      easy to perform logging and analytics reporting.
+- [ ] make `git.rs` use `InlineString` and `ItemsOwned`. provide function arguments that can be
+      converted to these easily.
+- [ ] replace `UIStrings` enum with simple functions
+- [ ] introduce "control path" enums and "execution" modules.
+  - [ ] convert the clap args into an enum that can be matched, and that ends up resolving into a
+        concrete or specific "execution" module. and figure out how to bubble up errors or abortions
+        cleanly.
+  - [ ] modularize the code in `giti` so that functions are reusable inside of private (specific)
+        modules. An ex is `delete.rs` that accepts an optional `branch-name` and how that relates to
+        execution paths where the user has to be prompted for a branch name or names.
+- [ ] fix `giti branch delete <branch-name>` which currently does not work since this command
+      ignores branches that are passed as a command line arg
+- [ ] in `git.rs` use `r3bl_script` to run commands (and not directly using `Command::new`)
+- [ ] use `r3bl_script` test fixtures to test `git` and `gh` adapters
+- [ ] fix clap args using `color_print::cstr` instead of directly embedding ansi escape sequences in
+      the clap macro attributes `clap_config.rs`. see `rust_scratch/tcp-api-server` for examples
 - [ ] why does `show_exit_message()` not appear all the time
 - [ ] make sure that analytics calls are made consistent throughout the giti codebase (currently
       they do nothing but this will get things ready for the new `r3bl_base` that will be self
       hosted in our homelab); currently `delete.rs` has analytics calls
-- [ ] rewrite giti code to use the newtypes, like width, height, etc.
-- [ ] use `r3bl_script` test fixtures to test `git` and `gh` adapters
+- [ ] rewrite giti code to use the newtypes, like width, height, etc. and introduce newtypes, etc
+      where needed
 
 # fix lib.rs / README.md
 
@@ -131,3 +154,5 @@
 - [ ] `giti develop *` -> choose issues using TUI app as part of the flow
 - [ ] `giti commit`
 - [ ] `giti delete *` -> switch to main and pull (delete remotes)
+- [ ] `giti --manual` -> show the user guide for giti using the TUI MD component w/ search, jump to
+      headings, etc

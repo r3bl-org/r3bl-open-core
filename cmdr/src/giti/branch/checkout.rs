@@ -14,13 +14,15 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::process::Command;
+
+use std::process::Output;
 
 use branch_checkout_formatting::add_spaces_to_end_of_string;
 use r3bl_core::{AnsiStyledText,
                 ChUnit,
                 CommonResult,
                 GCString,
+                InlineString,
                 InlineVec,
                 ItemsOwned,
                 ast,
@@ -40,56 +42,102 @@ use r3bl_tui::{DefaultIoDevices,
                readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 
-use crate::giti::{SuccessReport,
-                  clap_config::BranchSubcommand,
+use crate::giti::{BranchCheckoutDetails,
+                  CommandExecutionReport,
+                  common_types::report_error_and_propagate,
                   git::{self},
-                  ui_strings::UIStrings,
-                  ui_templates::report_unknown_error_and_propagate};
+                  ui_strings::UIStrings};
 
-fn success_report() -> CommonResult<SuccessReport> {
-    Ok(SuccessReport {
-        maybe_deleted_branches: None,
-        branch_subcommand: Some(BranchSubcommand::Checkout),
-    })
+mod report {
+    use super::*;
+
+    pub fn empty() -> CommonResult<CommandExecutionReport> {
+        Ok(CommandExecutionReport::BranchCheckout(BranchCheckoutDetails {
+            maybe_checked_out_branch: None,
+        }))
+    }
+
+    pub fn with_details(branch_name: String) -> CommonResult<CommandExecutionReport> {
+        Ok(CommandExecutionReport::BranchCheckout(BranchCheckoutDetails {
+            maybe_checked_out_branch: Some(branch_name),
+        }))
+    }
 }
 
-pub async fn try_checkout_branch(
+/// The main function for `giti branch new` command.
+pub async fn try_checkout(
     maybe_branch_name: Option<String>,
-) -> CommonResult<SuccessReport> {
+) -> CommonResult<CommandExecutionReport> {
     match maybe_branch_name {
-        Some(branch_name) => handle_branch_checkout(branch_name).await,
-        None => handle_branch_selection().await,
+        Some(branch_name) => command_execute::checkout_branch_if_not_current(branch_name),
+        None => user_interaction::handle_branch_selection().await,
     }
 }
 
-async fn handle_branch_checkout(branch_name: String) -> CommonResult<SuccessReport> {
-    let branches = git::try_get_local_branches()?;
+mod command_execute {
+    use super::*;
 
-    // Early return if the branch does not exist locally.
-    match branch_existence::check(&branches, &branch_name) {
-        branch_existence::LocalBranch::DoesNotExist => {
-            branch_existence::display_branch_does_not_exist(&branch_name);
-            return success_report();
+    pub fn checkout_branch_if_not_current(
+        branch_name: String,
+    ) -> CommonResult<CommandExecutionReport> {
+        let (res, _cmd) = git::try_get_local_branches();
+        let branches = res?;
+
+        // Early return if the branch does not exist locally.
+        match branch_exists::check(&branches, &branch_name) {
+            branch_exists::LocalBranch::DoesNotExist => {
+                display_message_to_user::branch_does_not_exist(&branch_name);
+                return report::empty();
+            }
+            _ => { /* do nothing and continue */ }
         }
-        _ => { /* do nothing and continue */ }
+
+        // Early return if the branch_name is already checked out.
+        let (res, _cmd) = git::try_get_current_branch();
+        let current_branch = res?;
+
+        if branch_name == current_branch {
+            display_message_to_user::already_on_branch(&current_branch);
+            return report::empty();
+        }
+
+        // Early return if there are modified files.
+        if has_modified_files()? {
+            return report::empty();
+        }
+
+        checkout_branch(&branch_name, &current_branch)
     }
 
-    // Early return if the branch_name is already checked out.
-    let current_branch = git::try_get_current_branch()?;
-    if branch_name == current_branch {
-        display_already_on_branch(&current_branch);
-        return success_report();
+    pub fn checkout_branch(
+        branch_name: &str,
+        current_branch: &str,
+    ) -> CommonResult<CommandExecutionReport> {
+        let (res_output, mut cmd) = git::try_create_and_switch_to_branch(branch_name);
+        match res_output {
+            // Command executed successfully.
+            Ok(output) if output.status.success() => {
+                display_checkout_success_message(branch_name, current_branch);
+                report::with_details(branch_name.into())
+            }
+            // Command executed but failed.
+            Ok(output) => {
+                user_interaction::display_error_message(branch_name, Some(output));
+                report_error_and_propagate(
+                    &mut cmd,
+                    miette::miette!("Error checking out branch"),
+                )
+            }
+            // Command failed to execute.
+            Err(error) => {
+                user_interaction::display_error_message(branch_name, None);
+                report_error_and_propagate(&mut cmd, miette::miette!(error))
+            }
+        }
     }
-
-    // Early return if there are modified files.
-    if has_modified_files()? {
-        return success_report();
-    }
-
-    execute_branch_checkout(&branch_name, &current_branch)
 }
 
-mod branch_existence {
+mod branch_exists {
     use super::*;
 
     pub enum LocalBranch {
@@ -109,8 +157,20 @@ mod branch_existence {
             LocalBranch::DoesNotExist
         }
     }
+}
 
-    pub fn display_branch_does_not_exist(branch_name: &str) {
+mod display_message_to_user {
+    use super::*;
+
+    pub fn already_on_branch(current_branch: &str) {
+        println!(
+            "{a}{b}",
+            a = fg_slate_gray(&UIStrings::AlreadyOnCurrentBranch.to_string()),
+            b = fg_lizard_green(current_branch)
+        );
+    }
+
+    pub fn branch_does_not_exist(branch_name: &str) {
         fg_guards_red(
             &UIStrings::BranchDoesNotExist {
                 branch_name: branch_name.to_string(),
@@ -119,37 +179,109 @@ mod branch_existence {
         )
         .println();
     }
-}
 
-async fn handle_branch_selection() -> CommonResult<SuccessReport> {
-    if let Ok(branches) = git::try_get_local_branches() {
-        let header = create_branch_selection_header();
-        let current_branch = git::try_get_current_branch()?;
-
-        if let Some(selected_branch) =
-            prompt_user_to_select_branch(header, branches).await?
-        {
-            execute_branch_checkout(&selected_branch, &current_branch)
-        } else {
-            success_report()
-        }
-    } else {
-        success_report()
+    pub fn no_suitable_branch_is_available_for_checkout() {
+        fg_slate_gray(&UIStrings::NoSuitableBranchIsAvailableForCheckout.to_string())
+            .println();
     }
 }
 
-fn display_already_on_branch(current_branch: &str) {
-    println!(
-        "{a}{b}",
-        a = fg_slate_gray(&UIStrings::AlreadyOnCurrentBranch.to_string()),
-        b = fg_lizard_green(current_branch)
-    );
+mod user_interaction {
+    use super::*;
+
+    pub fn display_error_message(branch: &str, maybe_output: Option<Output>) {
+        match maybe_output {
+            Some(output) => {
+                fg_guards_red(
+                    &UIStrings::FailedToSwitchToBranch {
+                        branch: branch.to_string(),
+                        error_message: String::from_utf8_lossy(&output.stderr)
+                            .to_string(),
+                    }
+                    .to_string(),
+                )
+                .println();
+            }
+            None => {
+                fg_guards_red(
+                    &UIStrings::NoBranchGotCheckedOut {
+                        branch: branch.to_string(),
+                    }
+                    .to_string(),
+                )
+                .println();
+            }
+        }
+    }
+
+    pub async fn handle_branch_selection() -> CommonResult<CommandExecutionReport> {
+        let (res, _cmd) = git::try_get_local_branches();
+        if let Ok(branches) = res {
+            let header = create_branch_selection_header();
+
+            let (res, _cmd) = git::try_get_current_branch();
+            let current_branch = res?;
+
+            if let Some(selected_branch) =
+                prompt_user_to_select_branch(header, branches).await?
+            {
+                command_execute::checkout_branch(&selected_branch, &current_branch)
+            } else {
+                report::empty()
+            }
+        } else {
+            report::empty()
+        }
+    }
+
+    async fn prompt_user_to_select_branch(
+        arg_header: impl Into<Header>,
+        branches: ItemsOwned,
+    ) -> CommonResult<Option<String>> {
+        let mut default_io_devices = DefaultIoDevices::default();
+
+        // Remove the current branch from the list of branches.
+        let branches_with_current_removed = branches
+            .iter()
+            .filter(|branch| !branch.contains("(current)"))
+            .cloned()
+            .collect::<InlineVec<InlineString>>();
+
+        // There are no branches to select from, so return None.
+        if branches_with_current_removed.is_empty() {
+            display_message_to_user::no_suitable_branch_is_available_for_checkout();
+            return Ok(None);
+        }
+
+        let selected_branch = choose(
+            arg_header,
+            branches_with_current_removed,
+            Some(height(20)),
+            None,
+            HowToChoose::Single,
+            StyleSheet::default(),
+            default_io_devices.as_mut_tuple(),
+        )
+        .await?;
+
+        Ok(selected_branch.first().map(|branch| branch.to_string()))
+    }
+
+    fn create_branch_selection_header() -> InlineVec<InlineVec<AnsiStyledText>> {
+        ast_lines![ast_line![ast(
+            UIStrings::SelectBranchToSwitchTo.to_string(),
+            new_style!(
+                color_fg: {tui_color!(frozen_blue)}
+                color_bg: {tui_color!(moonlight_blue)}
+            )
+        )]]
+    }
 }
 
+// 00: [ ] move this to mod modified_files
 fn has_modified_files() -> CommonResult<bool> {
-    if let Ok(output) =
-        git_commands::create_git_command_to_check_for_modified_unstaged_files().output()
-    {
+    let (res_output, _cmd) = git::try_check_for_modified_unstaged_files();
+    if let Ok(output) = res_output {
         if output.status.success() {
             let modified_files =
                 branch_checkout_formatting::get_formatted_modified_files(output);
@@ -163,29 +295,7 @@ fn has_modified_files() -> CommonResult<bool> {
     Ok(false)
 }
 
-fn execute_branch_checkout(
-    branch_name: &str,
-    current_branch: &str,
-) -> CommonResult<SuccessReport> {
-    match git_commands::create_git_command_to_checkout_branch(branch_name).output() {
-        Ok(output) if output.status.success() => {
-            display_checkout_success_message(branch_name, current_branch);
-        }
-        Ok(output) => {
-            try_checkout_branch_error::display_error_message(branch_name, Some(output));
-        }
-        Err(error) => {
-            try_checkout_branch_error::display_error_message(branch_name, None);
-            return report_unknown_error_and_propagate(
-                &mut git_commands::create_git_command_to_checkout_branch(branch_name),
-                miette::miette!(error),
-            );
-        }
-    }
-
-    success_report()
-}
-
+// 00: [ ] move this to mod modified_files
 fn display_modified_files_warning(modified_files: &ItemsOwned) {
     let terminal_width = *get_terminal_width();
     let style = new_style!(
@@ -218,53 +328,7 @@ fn display_modified_files_warning(modified_files: &ItemsOwned) {
     ast(&warning, style).println();
 }
 
-fn display_checkout_success_message(branch_name: &str, current_branch: &str) {
-    if branch_name == current_branch {
-        println!(
-            "{a}{b}",
-            a = fg_slate_gray(&UIStrings::AlreadyOnCurrentBranch.to_string()),
-            b = fg_lizard_green(branch_name)
-        );
-    } else {
-        println!(
-            "{a}{b}",
-            a = fg_slate_gray(&UIStrings::SwitchedToBranch.to_string()),
-            b = fg_lizard_green(branch_name)
-        );
-    }
-}
-
-fn create_branch_selection_header() -> InlineVec<InlineVec<AnsiStyledText>> {
-    ast_lines![ast_line![ast(
-        UIStrings::SelectBranchToSwitchTo.to_string(),
-        new_style!(
-            color_fg: {tui_color!(frozen_blue)}
-            color_bg: {tui_color!(moonlight_blue)}
-        )
-    )]]
-}
-
-async fn prompt_user_to_select_branch(
-    arg_header: impl Into<Header>,
-    branches: ItemsOwned,
-) -> CommonResult<Option<String>> {
-    let mut default_io_devices = DefaultIoDevices::default();
-    let selected_branch = choose(
-        arg_header,
-        branches,
-        Some(height(20)),
-        None,
-        HowToChoose::Single,
-        StyleSheet::default(),
-        default_io_devices.as_mut_tuple(),
-    )
-    .await?;
-
-    Ok(selected_branch
-        .first()
-        .map(|branch| branch.trim_start_matches("(current) ").to_string()))
-}
-
+// 00: [ ] move this to mod modified_files
 mod branch_checkout_formatting {
     use super::*;
 
@@ -316,49 +380,19 @@ mod branch_checkout_formatting {
     }
 }
 
-mod git_commands {
-    use super::*;
-    pub fn create_git_command_to_check_for_modified_unstaged_files() -> Command {
-        let mut command = Command::new("git");
-        command.args(["status", "--porcelain"]);
-        command
-    }
-
-    pub fn create_git_command_to_checkout_branch(branch_name: &str) -> Command {
-        let mut command = Command::new("git");
-        command.args(["checkout", branch_name]);
-        command
-    }
-}
-
-mod try_checkout_branch_error {
-    use super::*;
-
-    pub fn display_error_message(
-        branch: &str,
-        maybe_output: Option<std::process::Output>,
-    ) {
-        match maybe_output {
-            Some(output) => {
-                fg_guards_red(
-                    &UIStrings::FailedToSwitchToBranch {
-                        branch: branch.to_string(),
-                        error_message: String::from_utf8_lossy(&output.stderr)
-                            .to_string(),
-                    }
-                    .to_string(),
-                )
-                .println();
-            }
-            None => {
-                fg_guards_red(
-                    &UIStrings::NoBranchGotCheckedOut {
-                        branch: branch.to_string(),
-                    }
-                    .to_string(),
-                )
-                .println();
-            }
-        }
+// 00: [ ] move this to mod display_message_to_user
+fn display_checkout_success_message(branch_name: &str, current_branch: &str) {
+    if branch_name == current_branch {
+        println!(
+            "{a}{b}",
+            a = fg_slate_gray(&UIStrings::AlreadyOnCurrentBranch.to_string()),
+            b = fg_lizard_green(branch_name)
+        );
+    } else {
+        println!(
+            "{a}{b}",
+            a = fg_slate_gray(&UIStrings::SwitchedToBranch.to_string()),
+            b = fg_lizard_green(branch_name)
+        );
     }
 }

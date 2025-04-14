@@ -15,14 +15,11 @@
  *   limitations under the License.
  */
 
-use std::{env::var, process::Command};
+use std::env::var;
 
 use r3bl_core::{AST,
                 AnsiStyledText,
                 ColorWheel,
-                CommonError,
-                CommonErrorType,
-                CommonResult,
                 GradientGenerationPolicy,
                 InlineVec,
                 TextColorizationPolicy,
@@ -113,34 +110,4 @@ pub fn show_exit_message() {
             ColorWheel::lolcat_into_string(&plain_text_exit_msg, None)
         });
     }
-}
-
-/// Call this function when you can't even execute [Command::output] and something unknown
-/// has gone wrong. Propagate the error to the caller since it is not recoverable and can't
-/// be handled.
-pub fn report_unknown_error_and_propagate<T>(
-    command: &mut Command,
-    command_output_error: miette::Report,
-) -> CommonResult<T> {
-    let program_name_to_string: String =
-        command.get_program().to_string_lossy().to_string();
-
-    let command_args_to_string: String = {
-        let mut it = vec![];
-        for item in command.get_args() {
-            it.push(item.to_string_lossy().to_string());
-        }
-        it.join(" ")
-    };
-
-    let error_msg = UIStrings::ErrorExecutingCommand {
-        program_name_to_string,
-        command_args_to_string,
-        command_output_error,
-    }
-    .to_string();
-
-    // % is Display, ? is Debug.
-    tracing::error!(message = error_msg);
-    CommonError::new_error_result::<T>(CommonErrorType::CommandExecutionError, &error_msg)
 }
