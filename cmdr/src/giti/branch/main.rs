@@ -25,8 +25,8 @@ use smallvec::smallvec;
 use crate::giti::{BranchDeleteDetails,
                   BranchSubcommand,
                   CLICommand,
-                  CommandExecutionReport,
-                  CompletionReport,
+                  CommandRunDetails,
+                  CommandRunResult,
                   UIStrings,
                   get_giti_command_subcommand_names,
                   try_checkout,
@@ -38,19 +38,19 @@ use crate::giti::{BranchDeleteDetails,
 pub async fn try_main(
     command_to_run_with_each_selection: Option<BranchSubcommand>,
     maybe_branch_name: Option<String>,
-) -> CommonResult<CompletionReport> {
+) -> CommonResult<CommandRunResult> {
     if let Some(subcommand) = command_to_run_with_each_selection {
         match subcommand {
             BranchSubcommand::Delete => try_delete().await,
-            BranchSubcommand::Checkout => try_checkout(maybe_branch_name.clone()).await,
-            BranchSubcommand::New => try_new(maybe_branch_name.clone()).await,
+            BranchSubcommand::Checkout => try_checkout(maybe_branch_name).await,
+            BranchSubcommand::New => try_new(maybe_branch_name).await,
         }
     } else {
         user_typed_giti_branch().await
     }
 }
 
-async fn user_typed_giti_branch() -> CommonResult<CompletionReport> {
+async fn user_typed_giti_branch() -> CommonResult<CommandRunResult> {
     let branch_subcommands = get_giti_command_subcommand_names(CLICommand::Branch {
         command_to_run_with_each_selection: None,
         maybe_branch_name: None,
@@ -90,10 +90,11 @@ async fn user_typed_giti_branch() -> CommonResult<CompletionReport> {
         }
     };
 
-    let it = CompletionReport::CommandDidNotRun(CommandExecutionReport::BranchDelete(
-        BranchDeleteDetails {
+    let it = CommandRunResult::DidNotRun(
+        None,
+        CommandRunDetails::BranchDelete(BranchDeleteDetails {
             maybe_deleted_branches: None,
-        },
-    ));
+        }),
+    );
     Ok(it)
 }

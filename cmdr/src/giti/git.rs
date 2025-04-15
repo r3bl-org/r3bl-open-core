@@ -18,7 +18,7 @@
 use std::process::{Command, Output};
 
 use miette::IntoDiagnostic;
-use r3bl_core::{CommonResult, ItemsOwned};
+use r3bl_core::{CommonResult, InlineString, ItemsOwned};
 use smallvec::smallvec;
 
 use super::UIStrings;
@@ -51,7 +51,7 @@ pub fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<Output> {
 
 // Get the current branch name. It is returned in an [r3bl_core::InlineVec] with only a
 // single item.
-pub fn try_get_current_branch() -> ResultAndCommand<String> {
+pub fn try_get_current_branch() -> ResultAndCommand<InlineString> {
     let mut command = Command::new("git");
     command.args(["branch", "--show-current"]);
 
@@ -69,7 +69,7 @@ pub fn try_get_current_branch() -> ResultAndCommand<String> {
         }
     };
 
-    (Ok(current_branch), command)
+    (Ok(current_branch.into()), command)
 }
 
 // Get all the local branches. Prefix the current branch with `(current)`.
