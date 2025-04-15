@@ -17,10 +17,10 @@
 
 use strum_macros::Display;
 
-// 00: use this constant in the `CurrentBranch` enum below after removing the enum
+// 01: use this constant in the `CurrentBranch` enum below after removing the enum
 pub const CURRENT_PREFIX: &str = "(current) ";
 
-// 00: remove the use of this UIStrings enum and just make these plain functions
+// 01: remove the use of this UIStrings enum and just make these plain functions
 
 #[derive(Display)]
 pub enum UIStrings {
@@ -113,6 +113,9 @@ pub enum UIStrings {
         command_args_to_string: String,
         command_output_error: miette::Report,
     },
+
+    #[strum(serialize = " Could not run giti due to the following problem.\n{report}")]
+    UnrecoverableErrorEncountered { report: String },
 
     #[strum(serialize = "Branch `{branch_name}` does not exist.")]
     BranchDoesNotExist { branch_name: String },

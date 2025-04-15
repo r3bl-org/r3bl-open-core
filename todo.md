@@ -1,4 +1,4 @@
-# ✅ tuify
+# ✔ tuify
 
 - [x] enhance `run examples` by presenting user with list to select from
 - [x] impl `tuify/examples/choose_async.rs` that calls `tuify/src/public_api.rs::choose()`
@@ -8,7 +8,7 @@
   - [x] `terminal_async/src/public_api/styling.rs`
   - [x] `terminal_async/src/choose_impl/`
 
-# ✅ terminal_async
+# ✔ terminal_async
 
 - [x] Fix `run` script to show menu for all examples in this crate.
 - [x] Ensure that the `terminal_async/examples/choose.rs` example pauses `ReadlineAsync` async
@@ -16,20 +16,20 @@
 - [x] Add test for paused `SharedWriter` in `tuify/src/public_api.rs::choose()`
 - [x] remove all the `00: ` todos
 
-# ✅ move tuify & terminal_async into tui
+# ✔ move tuify & terminal_async into tui
 
 - [x] rename `select*` -> `choose()`
 - [x] rename `choose()` -> `choose_async()`
 - [x] move `tuify` into `terminal_async` (now called `choose`, with both sync and async variants)
 - [x] archive `tuify`, update CHANGELOG
 
-# ✅ move terminal_async into tui
+# ✔ move terminal_async into tui
 
 - [x] move `terminal_async` into `tui` (now called `readline_async`)
 - [x] merge all the examples both crates into the `tui` crate & update the main example runner
 - [x] archive `terminal_async`, update CHANGELOG
 
-# ✅ clean up redundant code in terminal_async (from tuify)
+# ✔ clean up redundant code in terminal_async (from tuify)
 
 - [x] remove duplicate `keypress` mod (`key_press!`, `*KeyPress`)
 - [x] remove duplicate use of colors in `choose_constants.rs` and `color_constants.rs`
@@ -39,7 +39,7 @@
 - [x] use `return_if_not_interactive_terminal!()` consistently
 - [x] remove `DefaultColors` and `cmdr/src/color_constants.rs` file
 
-# ✅ investigate timing issues with SharedWriter flush
+# ✔ investigate timing issues with SharedWriter flush
 
 - [x] the patch to workaround is in `examples/choose_sync_and_async.rs` which does a sleep before
       the main function exits
@@ -47,21 +47,21 @@
       buffers.
 - [x] why does SharedWriter need to look for `'\n` before it writes / flushes buffers
 
-# ✅ clean up output from ReadlineAsync
+# ✔ clean up output from ReadlineAsync
 
 - [x] the last line of output has a prompt + "\n" ... this should be removed.
 
-# ✅ remove Reedline from giti and replace with readline_async
+# ✔ remove Reedline from giti and replace with readline_async
 
 - [x] remove Reedline from `cmdr/src/giti/branch/new.rs`
 - [x] remove `reedline` from `cmdr/Cargo.toml`
 - [x] remove the use of sync `choose()` from `giti`, replace with `choose_async()`
 
-# ✅ clean up names from changed crate names
+# ✔ clean up names from changed crate names
 
 - [x] rename `terminal_async` -> `readline_async`
 
-# ✅ clean up giti phase 1
+# ✔ clean up giti phase 1
 
 - [x] make `AnsiStyledText` own the `text`, this is just a more ergonomic and useful API than using
       a `&str` which introduces needless lifetimes and lots of other unergonomic code writing, which
@@ -78,32 +78,28 @@
 - [x] add `XMARK` for `bool -> Option<T>` code in `TuiStyle`
 - [x] move all the colors in `choose` style to `tui_color!`
 
-# ✅ update all deps
+# ✔ update all deps
 
 - [x] upgrade all the deps to the latest versions in all Cargo.toml files
 
-# ✅ clean up giti phase 2
+# ✔ clean up giti phase 2
 
 - [x] replace `SuccessReport` with an enum of valid variants (including user pressed ctrl+c)
 - [x] change how errors are reported using `miette`
 - [x] collect all the git commands in a single module `git.rs`
 
-# 🚀 clean up giti phase 3
+# 📌 clean up giti phase 3
 
-- [ ] introduce consistent error reporting, and output handling using `CompletionReport`. there is
+- [x] introduce consistent error reporting, and output handling using `CompletionReport`. there is
       no need for individual subcommands to do something specific to report command success, not
       success, or failure to run command. centralize this and simplify ALL subcommands, and make it
       easy to perform logging and analytics reporting.
-- [ ] make `git.rs` use `InlineString` and `ItemsOwned`. provide function arguments that can be
-      converted to these easily.
-- [ ] replace `UIStrings` enum with simple functions
-- [ ] introduce "control path" enums and "execution" modules.
-  - [ ] convert the clap args into an enum that can be matched, and that ends up resolving into a
-        concrete or specific "execution" module. and figure out how to bubble up errors or abortions
-        cleanly.
-  - [ ] modularize the code in `giti` so that functions are reusable inside of private (specific)
-        modules. An ex is `delete.rs` that accepts an optional `branch-name` and how that relates to
-        execution paths where the user has to be prompted for a branch name or names.
+- [ ] replace `UIStrings` enum
+  - [ ] with simple functions
+  - [ ] consider moving this functonality into `impl Display` for `CommandExecutionReport`, instead
+        of `giti.rs` -> `display_command_run_result()`
+- [ ] make `git.rs` use `InlineString` and `ItemsOwned` consistently. provide function arguments
+      that can be converted to these easily. or just use `String` if that is more appropriate.
 - [ ] fix `giti branch delete <branch-name>` which currently does not work since this command
       ignores branches that are passed as a command line arg
 - [ ] in `git.rs` use `r3bl_script` to run commands (and not directly using `Command::new`)

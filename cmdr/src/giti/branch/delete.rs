@@ -38,8 +38,8 @@ use smallvec::smallvec;
 
 use crate::{AnalyticsAction,
             giti::{BranchDeleteDetails,
-                   CommandExecutionReport,
-                   CompletionReport,
+                   CommandRunDetails,
+                   CommandRunResult,
                    git::{self},
                    ui_strings::{self, UIStrings},
                    ui_templates::{multi_select_instruction_header,
@@ -47,7 +47,7 @@ use crate::{AnalyticsAction,
             report_analytics};
 
 /// The main function for `giti branch delete` command.
-pub async fn try_delete() -> CommonResult<CompletionReport> {
+pub async fn try_delete() -> CommonResult<CommandRunResult> {
     report_analytics::start_task_to_generate_event(
         "".to_string(),
         AnalyticsAction::GitiBranchDelete,
@@ -63,7 +63,7 @@ pub async fn try_delete() -> CommonResult<CompletionReport> {
 
         // If the user didn't select any branches, we don't need to do anything.
         if branches.is_empty() {
-            return Ok(CompletionReport::CommandDidNotRun(report::empty()));
+            return Ok(CommandRunResult::DidNotRun(None, details::empty()));
         }
 
         let (confirm_header, confirm_options) =
@@ -77,27 +77,27 @@ pub async fn try_delete() -> CommonResult<CompletionReport> {
         }
     }
 
-    Ok(CompletionReport::CommandDidNotRun(report::empty()))
+    Ok(CommandRunResult::DidNotRun(None, details::empty()))
 }
 
-mod report {
+mod details {
     use super::*;
 
-    pub fn empty() -> CommandExecutionReport {
+    pub fn empty() -> CommandRunDetails {
         let it = BranchDeleteDetails {
             maybe_deleted_branches: None,
         };
-        CommandExecutionReport::BranchDelete(it)
+        CommandRunDetails::BranchDelete(it)
     }
 
-    pub fn with_details(branches: ItemsOwned) -> CommandExecutionReport {
+    pub fn with_details(branches: ItemsOwned) -> CommandRunDetails {
         if branches.is_empty() {
             empty()
         } else {
             let it = BranchDeleteDetails {
                 maybe_deleted_branches: Some(branches),
             };
-            CommandExecutionReport::BranchDelete(it)
+            CommandRunDetails::BranchDelete(it)
         }
     }
 }
@@ -220,25 +220,21 @@ mod command_execute {
 
     pub async fn delete_selected_branches(
         branches_to_delete: ItemsOwned,
-    ) -> CommonResult<CompletionReport> {
-        // Delete the branches.
+    ) -> CommonResult<CommandRunResult> {
         let (res_output, cmd) = git::try_delete_branches(&branches_to_delete);
-
-        // Handle the result of the delete command.
         match res_output {
             Ok(output) if output.status.success() => {
-                // Update success report with deleted branches.
-                let it = CompletionReport::CommandRanSuccessfully(
-                    display_message_for_user::fmt_branches_deleted_success_message(
+                let it = CommandRunResult::RanSuccessfully(
+                    user_message_display::fmt_branches_deleted_success_message(
                         &branches_to_delete,
                     ),
-                    report::with_details(branches_to_delete.clone()),
+                    details::with_details(branches_to_delete.clone()),
                 );
                 Ok(it)
             }
             Ok(output) => {
-                let it = CompletionReport::CommandRanUnsuccessfully(
-                    display_message_for_user::fmt_error_message(
+                let it = CommandRunResult::RanUnsuccessfully(
+                    user_message_display::fmt_error_message(
                         branches_to_delete,
                         Some(output.clone()),
                     ),
@@ -248,8 +244,8 @@ mod command_execute {
                 Ok(it)
             }
             Err(error) => {
-                let it = CompletionReport::CommandFailedToRun(
-                    display_message_for_user::fmt_error_message(branches_to_delete, None),
+                let it = CommandRunResult::FailedToRun(
+                    user_message_display::fmt_error_message(branches_to_delete, None),
                     cmd,
                     error,
                 );
@@ -292,7 +288,7 @@ mod parse_user_choice {
     }
 }
 
-mod display_message_for_user {
+mod user_message_display {
     use super::*;
 
     pub fn fmt_error_message(
@@ -343,9 +339,9 @@ mod display_message_for_user {
 
     pub fn fmt_branches_deleted_success_message(branches: &ItemsOwned) -> String {
         if branches.len() == 1 {
-            return fmt_one_branch_deleted_success_message(branches);
+            fmt_one_branch_deleted_success_message(branches)
         } else {
-            return fmt_all_branches_deleted_success_messages(branches);
+            fmt_all_branches_deleted_success_messages(branches)
         }
     }
 
