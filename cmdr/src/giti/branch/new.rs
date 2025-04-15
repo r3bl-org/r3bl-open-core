@@ -27,41 +27,41 @@ use r3bl_core::{CommonResult,
 use r3bl_tui::{ReadlineAsync, ReadlineEvent};
 
 use crate::giti::{BranchNewDetails,
-                  CommandExecutionReport,
-                  common_types::report_error_and_propagate,
+                  CommandRunDetails,
+                  CommandRunResult,
                   git,
                   ui_strings::UIStrings};
 
 /// The main function for `giti branch new` command.
 pub async fn try_new(
     maybe_branch_name: Option<String>,
-) -> CommonResult<CommandExecutionReport> {
+) -> CommonResult<CommandRunResult> {
     match maybe_branch_name {
         Some(branch_name) => command_execute::create_new_branch(branch_name),
         None => user_interaction::prompt_for_branch_name().await,
     }
 }
 
-mod report {
+mod details {
     use super::*;
 
-    pub fn empty() -> CommonResult<CommandExecutionReport> {
-        Ok(CommandExecutionReport::BranchNew(BranchNewDetails {
+    pub fn empty() -> CommandRunDetails {
+        CommandRunDetails::BranchNew(BranchNewDetails {
             maybe_created_branch: None,
-        }))
+        })
     }
 
-    pub fn with_details(created_branch: String) -> CommonResult<CommandExecutionReport> {
-        Ok(CommandExecutionReport::BranchNew(BranchNewDetails {
+    pub fn with_details(created_branch: String) -> CommandRunDetails {
+        CommandRunDetails::BranchNew(BranchNewDetails {
             maybe_created_branch: Some(created_branch),
-        }))
+        })
     }
 }
 
 mod command_execute {
     use super::*;
 
-    pub fn create_new_branch(branch_name: String) -> CommonResult<CommandExecutionReport> {
+    pub fn create_new_branch(branch_name: String) -> CommonResult<CommandRunResult> {
         let (res, _cmd) = git::try_get_local_branches();
         let branches = res?;
         let branches_trimmed: Vec<String> = branches
@@ -70,88 +70,113 @@ mod command_execute {
             .collect();
 
         if branches_trimmed.contains(&branch_name) {
-            fg_slate_gray(&UIStrings::BranchAlreadyExists { branch_name }.to_string())
-                .println();
-            return report::empty();
+            let string = user_message_display::fmt_branch_already_exists(&branch_name);
+            let it = CommandRunResult::DidNotRun(
+                Some(string),
+                details::with_details(branch_name),
+            );
+            return Ok(it);
         }
 
-        let (res_output, mut cmd) = git::try_create_and_switch_to_branch(&branch_name);
+        let (res_output, cmd) = git::try_create_and_switch_to_branch(&branch_name);
 
         match res_output {
-            // Command executed successfully.
             Ok(output) if output.status.success() => {
-                display_message_to_user::display_successful_new_branch_creation(
-                    &branch_name,
+                let it = CommandRunResult::RanSuccessfully(
+                    user_message_display::fmt_successful_new_branch_creation(
+                        &branch_name,
+                    ),
+                    details::with_details(branch_name),
                 );
-                report::with_details(branch_name)
+                Ok(it)
             }
-            // Command executed but failed.
             Ok(output) => {
-                display_message_to_user::display_failed_to_create_new_branch(
+                let string = user_message_display::fmt_failed_to_create_new_branch(
                     &branch_name,
-                    Some(output),
+                    Some(output.clone()),
                 );
-                report_error_and_propagate(
-                    &mut cmd,
-                    miette::miette!("Error creating branch"),
-                )
+                let it = CommandRunResult::RanUnsuccessfully(string, cmd, output);
+                Ok(it)
             }
-            // Command failed to execute.
             Err(error) => {
-                display_message_to_user::display_failed_to_create_new_branch(
+                let string = user_message_display::fmt_failed_to_create_new_branch(
                     &branch_name,
                     None,
                 );
-                report_error_and_propagate(&mut cmd, miette::miette!(error))
+                let it = CommandRunResult::FailedToRun(string, cmd, error);
+                Ok(it)
             }
         }
     }
 }
 
-mod display_message_to_user {
+mod user_message_display {
     use super::*;
 
-    pub fn display_failed_to_create_new_branch(
+    pub fn fmt_branch_already_exists(branch_name: &str) -> String {
+        format!(
+            "{}",
+            fg_slate_gray(
+                &UIStrings::BranchAlreadyExists {
+                    branch_name: branch_name.to_string(),
+                }
+                .to_string(),
+            )
+        )
+    }
+
+    pub fn fmt_failed_to_create_new_branch(
         branch_name: &str,
         maybe_output: Option<Output>,
-    ) {
+    ) -> String {
         // maybe_output is some.
         if let Some(output) = maybe_output {
             let output_string = String::from_utf8_lossy(&output.stderr).into();
-            fg_guards_red(
-                &UIStrings::FailedToRunCommandToCreateBranch {
-                    branch_name: branch_name.into(),
-                    error_message: output_string,
-                }
-                .to_string(),
+            format!(
+                "{}",
+                fg_guards_red(
+                    &UIStrings::FailedToRunCommandToCreateBranch {
+                        branch_name: branch_name.into(),
+                        error_message: output_string,
+                    }
+                    .to_string(),
+                )
             )
-            .println();
         }
         // maybe_output is none.
         else {
-            fg_guards_red(
-                &UIStrings::FailedToCreateAndSwitchToBranch {
-                    branch_name: branch_name.into(),
-                }
-                .to_string(),
+            format!(
+                "{}",
+                fg_guards_red(
+                    &UIStrings::FailedToCreateAndSwitchToBranch {
+                        branch_name: branch_name.into(),
+                    }
+                    .to_string(),
+                )
             )
-            .println();
         }
     }
 
-    pub fn display_successful_new_branch_creation(branch_name: &str) {
-        println!(
+    pub fn fmt_successful_new_branch_creation(branch_name: &str) -> String {
+        format!(
             "{a}{b}",
             a = fg_slate_gray(&UIStrings::CreatedAndSwitchedToNewBranch.to_string()),
             b = fg_lizard_green(&format!("✅ {branch_name}"))
-        );
+        )
+    }
+
+    pub fn fmt_no_new_branch_created() -> String {
+        format!(
+            "{}",
+            fg_silver_metallic(&UIStrings::NoNewBranchWasCreated.to_string())
+        )
     }
 }
 
 mod user_interaction {
     use super::*;
 
-    pub async fn prompt_for_branch_name() -> CommonResult<CommandExecutionReport> {
+    pub async fn prompt_for_branch_name() -> CommonResult<CommandRunResult> {
         let prompt_text =
             fg_frozen_blue(&UIStrings::EnterBranchNameYouWantToCreate.to_string())
                 .to_string();
@@ -168,9 +193,11 @@ mod user_interaction {
                 }
                 ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
                     rl_async.exit(None).await.into_diagnostic()?;
-                    fg_silver_metallic(&UIStrings::NoNewBranchWasCreated.to_string())
-                        .println();
-                    return report::empty();
+                    let it = CommandRunResult::DidNotRun(
+                        Some(user_message_display::fmt_no_new_branch_created()),
+                        details::empty(),
+                    );
+                    return Ok(it);
                 }
                 ReadlineEvent::Resized => { /* Do nothing */ }
             }
