@@ -19,8 +19,6 @@
 //! 1. [Tutorial](https://developerlife.com/2023/09/17/tuify-clap/)
 //! 2. [Video](https://youtu.be/lzMYDA6St0s)
 
-use std::process::Command;
-
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
                 giti::{CLIArg,
@@ -31,17 +29,12 @@ use r3bl_cmdr::{AnalyticsAction,
                                           FailedToRun,
                                           RanSuccessfully,
                                           RanUnsuccessfully},
-                       UIStrings,
                        branch,
+                       ui_str,
                        ui_templates::{self}},
                 report_analytics,
                 upgrade_check};
-use r3bl_core::{CommonError,
-                CommonErrorType,
-                CommonResult,
-                fg_guards_red,
-                log_support::try_initialize_logging_global,
-                throws};
+use r3bl_core::{CommonResult, log_support::try_initialize_logging_global, throws};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -101,7 +94,7 @@ pub async fn launch_giti(cli_arg: CLIArg) {
 }
 
 /// Unknown and unrecoverable errors: readline_async or choose not working.
-pub fn report_unrecoverable_errors(error: miette::Report) {
+pub fn report_unrecoverable_errors(report: miette::Report) {
     report_analytics::start_task_to_generate_event(
         "".to_string(),
         AnalyticsAction::GitiFailedToRun,
@@ -110,68 +103,23 @@ pub fn report_unrecoverable_errors(error: miette::Report) {
     // % is Display, ? is Debug.
     tracing::error!(
         message = "Could not run giti due to the following problem",
-        error = ?error
+        error = ?report
     );
 
-    // 01: don't print this to stdout, just log it (since it should have been printed already)
-    fg_guards_red(
-        &UIStrings::UnrecoverableErrorEncountered {
-            report: error.to_string(),
-        }
-        .to_string(),
-    )
-    .println();
-}
-
-/// Call this function when you can't execute [Command::output] and something unknown has
-/// gone wrong. Propagate the error to the caller since it is not recoverable and can't be
-/// handled.
-// 01: use parts of this in report_unrecoverable_errors()
-pub fn report_error_and_propagate<T>(
-    command: &mut Command,
-    command_output_error: miette::Report,
-) -> CommonResult<T> {
-    let program_name_to_string: String =
-        command.get_program().to_string_lossy().to_string();
-
-    let command_args_to_string: String = {
-        let mut it = vec![];
-        for item in command.get_args() {
-            it.push(item.to_string_lossy().to_string());
-        }
-        it.join(" ")
-    };
-
-    let error_msg = UIStrings::ErrorExecutingCommand {
-        program_name_to_string,
-        command_args_to_string,
-        command_output_error,
-    }
-    .to_string();
-
-    // % is Display, ? is Debug.
-    tracing::error!(
-        message = "report_unknown_error_and_propagate",
-        error_msg = %error_msg
-    );
-
-    CommonError::new_error_result::<T>(CommonErrorType::CommandExecutionError, &error_msg)
+    println!("{}", ui_str::unrecoverable_error_message(report));
 }
 
 /// Command ran and produced result: success, not success, fail, no-op.
 pub async fn display_command_run_result(cmd_run_result: CommandRunResult) {
-    // 01: handle the output of the command execution, since no output has been printed yet
+    // 01: no output printed yet; write impl Display for CommandRunResult and use it here
     match cmd_run_result {
-        DidNotRun(_maybe_message, command_run_details) => match command_run_details {
-            CommandRunDetails::BranchDelete(details) => {
-                if details.maybe_deleted_branches.is_none() {
-                    println!("{}", UIStrings::NoBranchGotDeleted);
-                }
-            }
+        DidNotRun(_message, command_run_details) => match command_run_details {
+            CommandRunDetails::BranchDelete(_branch_delete_details) => todo!(),
             CommandRunDetails::BranchNew(_branch_new_details) => todo!(),
             CommandRunDetails::BranchCheckout(_branch_checkout_details) => todo!(),
             CommandRunDetails::Commit => todo!(),
             CommandRunDetails::Remote => todo!(),
+            CommandRunDetails::Noop => todo!(),
         },
         RanSuccessfully(_success_message, _command_run_details) => todo!(),
         RanUnsuccessfully(_error_message, _command, _output) => todo!(),

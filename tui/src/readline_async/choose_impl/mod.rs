@@ -163,10 +163,10 @@
 //!     let mut default_io_devices = DefaultIoDevices::default();
 //!     let user_input = choose(
 //!         "Select an item",
-//!         ItemsBorrowed(&[
+//!         &[
 //!             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
 //!             "item 9", "item 10",
-//!         ]).into(),
+//!         ],
 //!         Some(height(max_height_row_count)),
 //!         Some(width(max_width_col_count)),
 //!         HowToChoose::Single,
@@ -211,10 +211,10 @@
 //!     let max_height_row_count: usize = 5;
 //!     let user_input = choose(
 //!         "Select an item",
-//!         ItemsBorrowed(&[
+//!         &[
 //!             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
 //!             "item 9", "item 10",
-//!         ]).into(),
+//!         ],
 //!         None,
 //!         None,
 //!         HowToChoose::Single,
@@ -270,10 +270,10 @@
 //!     let mut default_io_devices = DefaultIoDevices::default();
 //!     let user_input = choose(
 //!         "Select an item",
-//!         ItemsBorrowed(&[
+//!         &[
 //!             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
 //!             "item 9", "item 10",
-//!         ]).into(),
+//!         ],
 //!         Some(height(max_height_row_count)),
 //!         Some(width(max_width_col_count)),
 //!         HowToChoose::Single,
@@ -299,7 +299,7 @@
 //! ```rust
 //! use std::io::Result;
 //! use r3bl_core::{
-//!     AnsiStyledText, ASTColor, ItemsBorrowed, tui_color, TuiStyle,
+//!     AnsiStyledText, ASTColor, tui_color, TuiStyle,
 //!     height, width
 //! };
 //! use r3bl_tui::readline_async::{
@@ -339,7 +339,7 @@
 //!    let mut default_io_devices = DefaultIoDevices::default();
 //!    let user_input = choose(
 //!       "Multiple select",
-//!       ItemsBorrowed(&["item 1 of 3", "item 2 of 3", "item 3 of 3"]).into(),
+//!       &["item 1 of 3", "item 2 of 3", "item 3 of 3"],
 //!       Some(height(6)), // max_height_row_count
 //!       Some(width(80)), // max_width_col_count
 //!       HowToChoose::Multiple,

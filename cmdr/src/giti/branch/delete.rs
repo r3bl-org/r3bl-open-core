@@ -15,19 +15,14 @@
  *   limitations under the License.
  */
 
-use std::process::Output;
-
 use r3bl_core::{AST,
                 CommonResult,
+                InlineString,
                 InlineVec,
                 ItemsOwned,
                 ast,
                 ast_line,
-                fg_guards_red,
-                fg_lizard_green,
-                fg_slate_gray,
                 height,
-                items_owned_to_vec_string,
                 new_style,
                 tui_color};
 use r3bl_tui::{DefaultIoDevices,
@@ -41,7 +36,7 @@ use crate::{AnalyticsAction,
                    CommandRunDetails,
                    CommandRunResult,
                    git::{self},
-                   ui_strings::{self, UIStrings},
+                   ui_str::{self},
                    ui_templates::{multi_select_instruction_header,
                                   single_select_instruction_header}},
             report_analytics};
@@ -55,7 +50,7 @@ pub async fn try_delete() -> CommonResult<CommandRunResult> {
 
     // Only proceed if some local branches exist (can't delete anything if there aren't
     // any).
-    let (res, _cmd) = git::try_get_local_branches();
+    let (res, _cmd) = git::local_branch_ops::try_get_local_branches();
     if let Ok(branches) = res
         && !branches.is_empty()
     {
@@ -63,7 +58,10 @@ pub async fn try_delete() -> CommonResult<CommandRunResult> {
 
         // If the user didn't select any branches, we don't need to do anything.
         if branches.is_empty() {
-            return Ok(CommandRunResult::DidNotRun(None, details::empty()));
+            return Ok(CommandRunResult::DidNotRun(
+                ui_str::branch_delete_display::info_no_branches_deleted(),
+                details::empty(),
+            ));
         }
 
         let (confirm_header, confirm_options) =
@@ -77,7 +75,10 @@ pub async fn try_delete() -> CommonResult<CommandRunResult> {
         }
     }
 
-    Ok(CommandRunResult::DidNotRun(None, details::empty()))
+    Ok(CommandRunResult::DidNotRun(
+        ui_str::branch_delete_display::info_no_branches_deleted(),
+        details::empty(),
+    ))
 }
 
 mod details {
@@ -110,7 +111,7 @@ mod user_interaction {
             color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
         );
         let last_line = ast_line![ast(
-            UIStrings::PleaseSelectBranchesYouWantToDelete.to_string(),
+            ui_str::branch_delete_display::please_select_branches_you_want_to_delete(),
             default_header_style
         )];
         multi_select_instruction_header(last_line)
@@ -133,34 +134,39 @@ mod user_interaction {
         .await
     }
 
-    pub fn create_confirmation_prompt(branches: &ItemsOwned) -> (String, ItemsOwned) {
+    pub fn create_confirmation_prompt(
+        branches: &ItemsOwned,
+    ) -> (InlineString, ItemsOwned) {
+        debug_assert!(!branches.is_empty());
+
         let num_of_branches = branches.len();
 
         let mut confirm_deletion_options: ItemsOwned =
-            smallvec![UIStrings::Exit.to_string().into()];
+            ui_str::branch_delete_display::exit_message().into();
 
         if num_of_branches == 1 {
             let branch_name = &branches[0];
-            confirm_deletion_options
-                .insert(0, UIStrings::YesDeleteBranch.to_string().into());
+            confirm_deletion_options.insert(
+                0,
+                ui_str::branch_delete_display::yes_delete_branch_message().into(),
+            );
 
             // Return tuple.
             (
-                UIStrings::ConfirmDeletingOneBranch {
-                    branch_name: branch_name.to_string(),
-                }
-                .to_string(),
+                ui_str::branch_delete_display::confirm_delete_one_branch(branch_name),
                 confirm_deletion_options,
             )
         } else {
-            confirm_deletion_options
-                .insert(0, UIStrings::YesDeleteBranches.to_string().into());
+            confirm_deletion_options.insert(
+                0,
+                ui_str::branch_delete_display::yes_delete_branches_message().into(),
+            );
 
             // Return tuple.
             (
-                ui_strings::display_confirm_deleting_multiple_branches(
+                ui_str::branch_delete_display::confirm_deleting_multiple_branches(
                     num_of_branches,
-                    items_owned_to_vec_string(branches),
+                    branches,
                 ),
                 confirm_deletion_options,
             )
@@ -168,7 +174,7 @@ mod user_interaction {
     }
 
     pub async fn get_user_confirmation(
-        header_text: String,
+        header_text: InlineString,
         options: ItemsOwned,
     ) -> CommonResult<parse_user_choice::Selection> {
         // Define styles for the header first line, and subsequent lines (which are branches
@@ -219,23 +225,23 @@ mod command_execute {
     use super::*;
 
     pub async fn delete_selected_branches(
-        branches_to_delete: ItemsOwned,
+        branches: ItemsOwned,
     ) -> CommonResult<CommandRunResult> {
-        let (res_output, cmd) = git::try_delete_branches(&branches_to_delete);
+        debug_assert!(!branches.is_empty());
+
+        let (res_output, cmd) = git::try_delete_branches(&branches);
         match res_output {
             Ok(output) if output.status.success() => {
                 let it = CommandRunResult::RanSuccessfully(
-                    user_message_display::fmt_branches_deleted_success_message(
-                        &branches_to_delete,
-                    ),
-                    details::with_details(branches_to_delete.clone()),
+                    ui_str::branch_delete_display::info_delete_success(&branches),
+                    details::with_details(branches.clone()),
                 );
                 Ok(it)
             }
             Ok(output) => {
                 let it = CommandRunResult::RanUnsuccessfully(
-                    user_message_display::fmt_error_message(
-                        branches_to_delete,
+                    ui_str::branch_delete_display::error_failed_to_delete(
+                        branches,
                         Some(output.clone()),
                     ),
                     cmd,
@@ -245,7 +251,7 @@ mod command_execute {
             }
             Err(error) => {
                 let it = CommandRunResult::FailedToRun(
-                    user_message_display::fmt_error_message(branches_to_delete, None),
+                    ui_str::branch_delete_display::error_failed_to_delete(branches, None),
                     cmd,
                     error,
                 );
@@ -269,101 +275,17 @@ mod parse_user_choice {
                 return Selection::ExitProgram;
             }
 
-            let selected_to_delete_one_branch =
-                selected[0] == UIStrings::YesDeleteBranch.to_string();
-            let selected_to_delete_multiple_branches =
-                selected[0] == UIStrings::YesDeleteBranches.to_string();
-            let selected_to_exit = selected[0] == UIStrings::Exit.to_string();
+            let first = &selected[0];
 
-            if selected_to_delete_one_branch || selected_to_delete_multiple_branches {
-                return Selection::Delete;
-            }
-
-            if selected_to_exit {
-                return Selection::ExitProgram;
-            }
-
-            Selection::ExitProgram
-        }
-    }
-}
-
-mod user_message_display {
-    use super::*;
-
-    pub fn fmt_error_message(
-        branches: ItemsOwned,
-        maybe_output: Option<Output>,
-    ) -> String {
-        // maybe_output is some.
-        if let Some(output) = maybe_output {
-            if branches.len() == 1 {
-                let branch = &branches[0];
-                format!(
-                    "{}",
-                    fg_guards_red(
-                        &UIStrings::FailedToDeleteBranch {
-                            branch_name: branch.to_string(),
-                            error_message: String::from_utf8_lossy(&output.stderr).into(),
-                        }
-                        .to_string(),
-                    )
-                )
-            } else {
-                let branches = branches.join(",\n ╴");
-                format!(
-                    "{}",
-                    fg_guards_red(
-                        &UIStrings::FailedToDeleteBranches {
-                            branches,
-                            error_message: String::from_utf8_lossy(&output.stderr)
-                                .to_string(),
-                        }
-                        .to_string(),
-                    )
-                )
+            match (
+                first == ui_str::branch_delete_display::yes_delete_branch_message(),
+                first == ui_str::branch_delete_display::yes_delete_branches_message(),
+                first == ui_str::branch_delete_display::exit_message(),
+            ) {
+                (true, _, _) | (_, true, _) => Selection::Delete,
+                (_, _, true) => Selection::ExitProgram,
+                _ => Selection::ExitProgram,
             }
         }
-        // maybe_output is none.
-        else {
-            let branches = branches.join(",\n ╴");
-            format!(
-                "{}",
-                fg_guards_red(
-                    &UIStrings::FailedToRunCommandToDeleteBranches { branches }
-                        .to_string(),
-                )
-            )
-        }
-    }
-
-    pub fn fmt_branches_deleted_success_message(branches: &ItemsOwned) -> String {
-        if branches.len() == 1 {
-            fmt_one_branch_deleted_success_message(branches)
-        } else {
-            fmt_all_branches_deleted_success_messages(branches)
-        }
-    }
-
-    fn fmt_one_branch_deleted_success_message(branches: &ItemsOwned) -> String {
-        let branch_name = &branches[0].to_string();
-        format!(
-            " ✅ {a} {b}",
-            a = fg_lizard_green(branch_name),
-            b = fg_slate_gray(&UIStrings::Deleted.to_string()),
-        )
-    }
-
-    fn fmt_all_branches_deleted_success_messages(branches: &ItemsOwned) -> String {
-        branches
-            .iter()
-            .map(|branch| {
-                format!(
-                    " ✅ {a} {b}",
-                    a = fg_lizard_green(branch),
-                    b = fg_slate_gray(&UIStrings::Deleted.to_string()),
-                )
-            })
-            .collect::<String>()
     }
 }
