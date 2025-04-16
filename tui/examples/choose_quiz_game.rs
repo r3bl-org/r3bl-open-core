@@ -25,7 +25,6 @@ use r3bl_core::{self,
                 usize,
                 width,
                 ASTColor,
-                ItemsBorrowed,
                 ItemsOwned};
 use r3bl_tui::{choose,
                readline_async::{HowToChoose, StyleSheet},
@@ -101,7 +100,7 @@ pub async fn main() -> miette::Result<()> {
         let options = question_data.options.clone();
         let user_input = choose(
             question,
-            ItemsBorrowed(&options).into(),
+            options,
             Some(height(max_height_row_count)),
             Some(width(max_width_col_count)),
             HowToChoose::Single,

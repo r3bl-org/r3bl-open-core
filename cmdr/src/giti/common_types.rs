@@ -46,16 +46,16 @@ pub enum CommandRunDetails {
     BranchCheckout(BranchCheckoutDetails),
     Commit,
     Remote,
+    Noop,
 }
 
-// 01: apply this to all subcommands and eliminate one-off error and status reporting at the subcommand level
 /// A command is something that is run by `giti` in the underlying OS. This is meant to
 /// hold all the possible outcomes of executing a [std::process::Command].
 #[derive(Debug)]
 pub enum CommandRunResult {
     /// Command was not run (probably because the command would be a no-op).
     DidNotRun(
-        /* message */ Option<String>,
+        /* message */ String,
         /* command specific details */ CommandRunDetails,
     ),
 

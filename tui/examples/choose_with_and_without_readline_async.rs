@@ -22,7 +22,6 @@ use r3bl_core::{fg_slate_gray,
                 ok,
                 try_initialize_logging_global,
                 InputDevice,
-                ItemsBorrowed,
                 OutputDevice};
 use r3bl_tui::readline_async::{choose, Header, HowToChoose, ReadlineAsync, StyleSheet};
 
@@ -44,7 +43,7 @@ async fn without_readline_async() -> miette::Result<()> {
 
     let chosen = choose(
         Header::SingleLine("Choose one:".into()),
-        ItemsBorrowed(&["one", "two", "three"]).into(),
+        &["one", "two", "three"],
         None,
         None,
         HowToChoose::Single,
@@ -94,7 +93,7 @@ async fn with_readline_async() -> miette::Result<()> {
 
     let chosen = choose(
         Header::SingleLine("Choose one:".into()),
-        ItemsBorrowed(&["one", "two", "three"]).into(),
+        &["one", "two", "three"],
         None,
         None,
         HowToChoose::Single,

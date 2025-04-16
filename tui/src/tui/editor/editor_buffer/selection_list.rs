@@ -323,7 +323,7 @@ mod impl_debug_format {
 
         /// Returns a [InlineVec] of [InlineString] that represent the selection map.
         pub fn to_unformatted_string(&self) -> ItemsOwned {
-            let mut vec_output = {
+            let mut vec_output: InlineVec<InlineString> = {
                 let mut acc = smallvec![];
                 let sorted_indices = self.get_ordered_indices();
                 for row_index in sorted_indices.iter() {
@@ -354,7 +354,7 @@ mod impl_debug_format {
                 prev_dir = self.maybe_previous_direction
             ));
 
-            vec_output
+            vec_output.into()
         }
     }
 

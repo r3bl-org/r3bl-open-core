@@ -482,10 +482,9 @@ mod tests {
     use pretty_assertions::assert_eq;
     use r3bl_core::{global_color_support::{clear_override, set_override},
                     ColorSupport,
-                    ItemsBorrowed,
+                    ItemsOwned,
                     OutputDeviceExt};
     use serial_test::serial;
-    use smallvec::smallvec;
 
     use super::*;
 
@@ -507,12 +506,12 @@ mod tests {
     fn test_select_component() {
         let mut state = State {
             header: Header::SingleLine("Header".into()),
-            items: ItemsBorrowed(&["Item 1", "Item 2", "Item 3"]).into(),
+            items: ItemsOwned::from(&["Item 1", "Item 2", "Item 3"]),
             max_display_height: ch(5),
             max_display_width: ch(40),
             raw_caret_row_index: ch(0),
             scroll_offset_row_index: ch(0),
-            selected_items: smallvec![],
+            selected_items: ItemsOwned::new(),
             selection_mode: HowToChoose::Single,
             ..Default::default()
         };

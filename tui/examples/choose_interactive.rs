@@ -31,8 +31,7 @@ use r3bl_core::{ast,
                 ASTColor,
                 ASTStyle,
                 AnsiStyledText,
-                InlineVec,
-                ItemsBorrowed};
+                InlineVec};
 use r3bl_tui::{choose,
                readline_async::{style::StyleSheet, HowToChoose, DEVELOPMENT_MODE},
                DefaultIoDevices};
@@ -78,7 +77,7 @@ async fn main() -> miette::Result<()> {
         let mut default_io_devices = DefaultIoDevices::default();
         let user_input = choose(
             "Select which example to run",
-            [
+            &[
                 MULTI_LINE_HEADER,
                 SINGLE_LINE_HEADER,
                 MULTIPLE_SELECT_SINGLE_ITEM,
@@ -87,10 +86,7 @@ async fn main() -> miette::Result<()> {
                 SINGLE_SELECT_13_ITEMS_VPH_5,
                 SINGLE_SELECT_2_ITEMS_VPH_5,
                 SINGLE_SELECT_QUIZ_GAME,
-            ]
-            .iter()
-            .map(|it| (*it).into())
-            .collect(),
+            ],
             Some(height(6)), /* height of the tuify component */
             Some(width(0)), /* width of the tuify component. 0 means it will use the full terminal width */
             HowToChoose::Single,
@@ -176,7 +172,7 @@ async fn multi_line_header() -> miette::Result<()> {
     let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         instructions,
-        ItemsBorrowed(&[
+        &[
             "item 1 of 13",
             "item 2 of 13",
             "item 3 of 13",
@@ -190,8 +186,7 @@ async fn multi_line_header() -> miette::Result<()> {
             "item 11 of 13",
             "item 12 of 13",
             "item 13 of 13",
-        ])
-        .into(),
+        ],
         Some(height(6)),
         None,
         HowToChoose::Multiple,
@@ -217,7 +212,7 @@ async fn single_line_header() -> miette::Result<()> {
     let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         "🦜 Please select one or more items. This is an example of a very long header text 🐧. You can pass emoji here 🐥 and text gets clipped off correctly 🐒, based on terminal size".to_string(),
-        [
+        &[
             "item 1 of 13",
             "item 2 of 13",
             "item 3 of 13",
@@ -231,10 +226,7 @@ async fn single_line_header() -> miette::Result<()> {
             "item 11 of 13",
             "item 12 of 13",
             "item 13 of 13",
-        ]
-        .iter()
-        .map(|it| (*it).into())
-        .collect(),
+        ],
         Some(height(5)),
         Some(width(max_width_col_count)),
         HowToChoose::Multiple,
@@ -316,7 +308,7 @@ async fn multiple_select_13_items_vph_5(
     let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         instructions,
-        ItemsBorrowed(&[
+        &[
             "item 1 of 13",
             "item 2 of 13",
             "item 3 of 13",
@@ -330,8 +322,7 @@ async fn multiple_select_13_items_vph_5(
             "item 11 of 13",
             "item 12 of 13",
             "item 13 of 13",
-        ])
-        .into(),
+        ],
         Some(height(max_height_row_count)),
         Some(width(max_width_col_count)),
         HowToChoose::Multiple,
@@ -379,7 +370,7 @@ async fn multiple_select_2_items_vph_5(
     let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         instructions,
-        ItemsBorrowed(&["item 1 of 2", "item 2 of 2"]).into(),
+        &["item 1 of 2", "item 2 of 2"],
         Some(height(max_height_row_count)),
         Some(width(max_width_col_count)),
         HowToChoose::Multiple,
@@ -416,7 +407,7 @@ async fn single_select_13_items_vph_5(
     let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         "Single select",
-        ItemsBorrowed(&[
+        &[
             "item 1 of 13",
             "item 2 of 13",
             "item 3 of 13",
@@ -430,8 +421,7 @@ async fn single_select_13_items_vph_5(
             "item 11 of 13",
             "item 12 of 13",
             "item 13 of 13",
-        ])
-        .into(),
+        ],
         Some(height(max_height_row_count)),
         Some(width(max_width_col_count)),
         HowToChoose::Single,
@@ -478,7 +468,7 @@ async fn single_select_2_items_vph_5(
     let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
         instructions,
-        ItemsBorrowed(&["item 1 of 2", "item 2 of 2"]).into(),
+        &["item 1 of 2", "item 2 of 2"],
         Some(height(max_height_row_count)),
         Some(width(max_width_col_count)),
         HowToChoose::Single,

@@ -29,7 +29,6 @@ use r3bl_core::{ch,
                 OutputDevice,
                 SharedWriter,
                 Width};
-use smallvec::smallvec;
 
 use crate::{enter_event_loop_async,
             CalculateResizeHint,
@@ -108,7 +107,7 @@ impl DefaultIoDevices {
 ///     the async stdout needs to be paused when this function is running.
 pub async fn choose<'a>(
     arg_header: impl Into<Header>,
-    from: ItemsOwned,
+    arg_from: impl Into<ItemsOwned>,
     maybe_max_height: Option<Height>,
     maybe_max_width: Option<Width>,
     how: HowToChoose,
@@ -119,6 +118,8 @@ pub async fn choose<'a>(
         Option<SharedWriter>,
     ),
 ) -> miette::Result<ItemsOwned> {
+    let from = arg_from.into();
+
     // Destructure the io tuple.
     let (od, id, msw) = io;
 
@@ -189,7 +190,7 @@ pub async fn choose<'a>(
 
     match res_user_input {
         Ok(EventLoopResult::ExitWithResult(it)) => Ok(it),
-        _ => Ok(smallvec![]),
+        _ => Ok(ItemsOwned::default()),
     }
 }
 
@@ -326,7 +327,7 @@ fn keypress_handler(state: &mut State, ie: InputEvent) -> EventLoopResult {
             let selection_index = usize(state.get_focused_index());
             let maybe_item = state.items.get(selection_index);
             match maybe_item {
-                Some(it) => EventLoopResult::ExitWithResult(smallvec![it.clone()]),
+                Some(it) => EventLoopResult::ExitWithResult(it.into()),
                 None => EventLoopResult::ExitWithoutResult,
             }
         }
@@ -433,7 +434,6 @@ mod test_choose_async {
                     InlineVec,
                     InputDevice,
                     InputDeviceExt,
-                    ItemsBorrowed,
                     OutputDevice,
                     OutputDeviceExt as _,
                     SharedWriter};
@@ -505,7 +505,7 @@ mod test_choose_async {
         // 3. after 30ms, the shared writer will be resumed (when choose() completes).
         _ = choose(
             Header::SingleLine("Choose one:".into()),
-            ItemsBorrowed(&["one", "two", "three"]).into(),
+            &["one", "two", "three"],
             None,
             None,
             HowToChoose::Single,
