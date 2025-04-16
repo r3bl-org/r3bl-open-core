@@ -73,6 +73,7 @@ mod command_execute {
                 let it = CommandRunResult::RanSuccessfully(
                     ui_str::branch_create_display::info_create_success(&branch_name),
                     details::with_details(branch_name),
+                    cmd,
                 );
                 Ok(it)
             }
@@ -100,7 +101,6 @@ mod command_execute {
 
 mod user_interaction {
     use super::*;
-    use crate::giti::ui_str;
 
     pub async fn prompt_for_branch_name() -> CommonResult<CommandRunResult> {
         let prompt_text =

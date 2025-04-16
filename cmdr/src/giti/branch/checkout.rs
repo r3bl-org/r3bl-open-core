@@ -76,14 +76,12 @@ mod command_execute {
         let branches = res?;
 
         // Early return if the branch does not exist locally.
-        match git::local_branch_ops::exists_locally(branch_name, &branches) {
+        match git::local_branch_ops::exists_locally(branch_name, branches) {
             git::local_branch_ops::LocalBranch::DoesNotExist => {
                 let it = CommandRunResult::DidNotRun(
-
-                        ui_str::branch_checkout_display::error_branch_does_not_exist(
-                            branch_name,
-                        ),
-
+                    ui_str::branch_checkout_display::error_branch_does_not_exist(
+                        branch_name,
+                    ),
                     details::empty(),
                 );
                 return Ok(it);
@@ -97,19 +95,17 @@ mod command_execute {
 
         if branch_name == current_branch.as_str() {
             let it = CommandRunResult::DidNotRun(
-
-                    ui_str::branch_checkout_display::info_already_on_current_branch(
-                        &current_branch,
-                    ),
-
+                ui_str::branch_checkout_display::info_already_on_current_branch(
+                    &current_branch,
+                ),
                 details::empty(),
             );
             return Ok(it);
         }
 
         // Early return if there are modified files.
-        if let modified_unstaged_file_ops::ModifiedUnstagedFiles::Exist =
-            modified_unstaged_file_ops::try_check()?
+        if let (Ok(modified_unstaged_file_ops::ModifiedUnstagedFiles::Exist), _cmd) =
+            modified_unstaged_file_ops::try_check()
         {
             let it = CommandRunResult::DidNotRun(
 
@@ -138,6 +134,7 @@ mod command_execute {
                         current_branch,
                     ),
                     details::with_details(branch_name.into()),
+                    cmd,
                 );
                 Ok(it)
             }
@@ -179,7 +176,7 @@ mod user_interaction {
                     command_execute::checkout_branch(&selected_branch, &current_branch)
                 }
                 None => {
-                    let it = CommandRunResult::DidNotRun(
+                    let it: CommandRunResult = CommandRunResult::DidNotRun(
                         ui_str::branch_checkout_display::info_no_suitable_branch_is_available_for_checkout(),
                         details::empty(),
                     );
