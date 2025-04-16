@@ -71,7 +71,7 @@ pub async fn try_delete() -> CommonResult<CommandRunResult> {
                 .await?;
 
         if let parse_user_choice::Selection::Delete = selected_action {
-            return command_execute::delete_selected_branches(branches).await;
+            return command_execute::delete_selected_branches(&branches).await;
         }
     }
 
@@ -225,16 +225,17 @@ mod command_execute {
     use super::*;
 
     pub async fn delete_selected_branches(
-        branches: ItemsOwned,
+        branches: &ItemsOwned,
     ) -> CommonResult<CommandRunResult> {
         debug_assert!(!branches.is_empty());
 
-        let (res_output, cmd) = git::try_delete_branches(&branches);
+        let (res_output, cmd) = git::try_delete_branches(branches);
         match res_output {
             Ok(output) if output.status.success() => {
                 let it = CommandRunResult::RanSuccessfully(
-                    ui_str::branch_delete_display::info_delete_success(&branches),
+                    ui_str::branch_delete_display::info_delete_success(branches),
                     details::with_details(branches.clone()),
+                    cmd,
                 );
                 Ok(it)
             }

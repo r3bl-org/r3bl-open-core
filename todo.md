@@ -88,7 +88,7 @@
 - [x] change how errors are reported using `miette`
 - [x] collect all the git commands in a single module `git.rs`
 
-# 📌 clean up giti phase 3
+# ✔ clean up giti phase 3
 
 - [x] introduce consistent error reporting, and output handling using `CompletionReport`. there is
       no need for individual subcommands to do something specific to report command success, not
@@ -96,11 +96,19 @@
       easy to perform logging and analytics reporting.
 - [ ] replace `UIStrings` enum
   - [x] with simple functions
-  - [ ] consider moving this functionality into `impl Display` for `CommandExecutionReport`, instead
+  - [x] consider moving this functionality into `impl Display` for `CommandExecutionReport`, instead
         of `giti.rs` -> `display_command_run_result()`
-- [ ] make `git.rs` use `InlineString` and `ItemsOwned` consistently. provide function arguments
+- [x] make `git.rs` use `InlineString` and `ItemsOwned` consistently. provide function arguments
       that can be converted to these easily. use `String` everywhere, except for interfacing with
       `choose` and then convert `ItemsOwned` to `String` and `Vec<String>`
+
+# ✔ rewrite ItemsOwned to make choose() API simple to use
+
+- [x] Remove ItemsBorrowed, and rewrite and radically simplify `ItemsOwned` and `choose()`
+      API so that it is easy to use.
+
+# 📌 clean up giti phase 4
+
 - [ ] fix `giti branch delete <branch-name>` which currently does not work since this command
       ignores branches that are passed as a command line arg
 - [ ] in `git.rs` use `r3bl_script` to run commands (and not directly using `Command::new`)
@@ -113,11 +121,6 @@
       hosted in our homelab); currently `delete.rs` has analytics calls
 - [ ] rewrite giti code to use the newtypes, like width, height, etc. and introduce newtypes, etc
       where needed
-
-# ✔ rewrite ItemsOwned to make choose() API simple to use
-
-- [x] Remove ItemsBorrowed, and rewrite and radically simplify `ItemsOwned` and `choose()`
-      API so that it is easy to use.
 
 # replace HashMap with BTreeMap (better cache locality performance)
 
