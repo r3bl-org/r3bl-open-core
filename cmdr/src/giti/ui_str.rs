@@ -25,7 +25,7 @@ use r3bl_core::{ColorWheel,
                 fg_frozen_blue,
                 fg_lizard_green,
                 fg_pink,
-                fg_slate_gray,
+                fg_silver_metallic,
                 inline_string};
 
 pub const CURRENT_PREFIX: &str = "(current) ";
@@ -35,7 +35,7 @@ pub fn unrecoverable_error_message(report: miette::Report) -> String {
     fg_pink(&text).to_string()
 }
 
-pub fn noop_message() -> String { fg_slate_gray(" No command was run.").to_string() }
+pub fn noop_message() -> String { fg_silver_metallic(" No command was run.").to_string() }
 
 pub fn please_select_branch_sub_command() -> &'static str {
     "Please select a branch subcommand"
@@ -110,13 +110,13 @@ pub mod branch_checkout_display {
     }
 
     pub fn info_no_suitable_branch_is_available_for_checkout() -> String {
-        fg_slate_gray(" No suitable branch is available for checkout.").to_string()
+        fg_silver_metallic(" No suitable branch is available for checkout.").to_string()
     }
 
     pub fn info_already_on_current_branch(branch_name: &str) -> String {
         format!(
             "{a}{b}",
-            a = fg_slate_gray(" You are already on branch "),
+            a = fg_silver_metallic(" You are already on branch "),
             b = fg_lizard_green(branch_name)
         )
     }
@@ -124,7 +124,7 @@ pub mod branch_checkout_display {
     pub fn info_switched_to_branch(branch_name: &str) -> String {
         format!(
             "{a}{b}",
-            a = fg_slate_gray(" Switched to branch ✅ "),
+            a = fg_silver_metallic(" Switched to branch ✅ "),
             b = fg_lizard_green(branch_name)
         )
     }
@@ -164,20 +164,20 @@ pub mod branch_create_display {
 
     /// This is the [crate::giti::CommandRunResult::DidNotRun] message.
     pub fn info_no_branch_created() -> String {
-        fg_slate_gray(" No new branch was created").to_string()
+        fg_silver_metallic(" No new branch was created").to_string()
     }
 
     pub fn info_create_success(branch_name: &str) -> String {
         format!(
             "{a}{b}",
-            a = fg_slate_gray(" You created and switched to branch "),
+            a = fg_silver_metallic(" You created and switched to branch "),
             b = fg_lizard_green(&format!("✅ {branch_name}"))
         )
     }
 
     pub fn info_branch_already_exists(branch_name: &str) -> String {
         let text = format!(" Branch {branch_name} already exists!");
-        fg_slate_gray(&text).to_string()
+        fg_silver_metallic(&text).to_string()
     }
 
     pub fn error_failed_to_create_new_branch(
@@ -204,7 +204,7 @@ pub mod branch_delete_display {
     use super::*;
 
     pub fn info_no_branches_deleted() -> String {
-        fg_slate_gray(" You chose not to delete any branches.").to_string()
+        fg_silver_metallic(" You chose not to delete any branches.").to_string()
     }
 
     pub fn info_delete_success(branches: &ItemsOwned) -> String {
@@ -215,7 +215,7 @@ pub mod branch_delete_display {
             format!(
                 " ✅ {a} {b}",
                 a = fg_lizard_green(branch_name),
-                b = fg_slate_gray("deleted"),
+                b = fg_silver_metallic("deleted"),
             )
         } else {
             branches
@@ -224,7 +224,7 @@ pub mod branch_delete_display {
                     format!(
                         " ✅ {a} {b}",
                         a = fg_lizard_green(branch),
-                        b = fg_slate_gray("deleted"),
+                        b = fg_silver_metallic("deleted"),
                     )
                 })
                 .collect::<String>()
@@ -232,7 +232,7 @@ pub mod branch_delete_display {
     }
 
     pub fn error_failed_to_delete(
-        branches: ItemsOwned,
+        branches: &ItemsOwned,
         maybe_output: Option<Output>,
     ) -> String {
         debug_assert!(!branches.is_empty());

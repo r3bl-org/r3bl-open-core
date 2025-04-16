@@ -30,7 +30,23 @@ pub type ResultAndCommand<T> = (CommonResult<T>, Command);
 pub mod modified_unstaged_file_ops {
     use super::*;
 
-    pub fn try_check_for_modified_unstaged_files() -> ResultAndCommand<Output> {
+    pub fn try_check() -> ResultAndCommand<ModifiedUnstagedFiles> {
+        let (res_output, cmd) = try_check_for_modified_unstaged_files();
+        match res_output {
+            // Can't even execute output(), something unknown has gone wrong. Propagate the
+            // error.
+            Err(error) => (Err(miette::miette!(error)), cmd),
+            Ok(output) => {
+                if output.status.success() && output.stdout.is_empty() {
+                    (Ok(ModifiedUnstagedFiles::DoNotExist), cmd)
+                } else {
+                    (Ok(ModifiedUnstagedFiles::Exist), cmd)
+                }
+            }
+        }
+    }
+
+    fn try_check_for_modified_unstaged_files() -> ResultAndCommand<Output> {
         let mut command = Command::new("git");
         command.args(["status", "--porcelain"]);
         (command.output().into_diagnostic(), command)
@@ -40,16 +56,6 @@ pub mod modified_unstaged_file_ops {
     pub enum ModifiedUnstagedFiles {
         Exist,
         DoNotExist,
-    }
-
-    pub fn try_check() -> CommonResult<ModifiedUnstagedFiles> {
-        let (res_output, _cmd) = try_check_for_modified_unstaged_files();
-        let output = res_output?;
-        if output.status.success() && output.stdout.is_empty() {
-            Ok(ModifiedUnstagedFiles::DoNotExist)
-        } else {
-            Ok(ModifiedUnstagedFiles::Exist)
-        }
     }
 
     /// Parses the output of a Git command to extract a list of modified files.
@@ -207,7 +213,7 @@ pub mod local_branch_ops {
     ///   [super::local_branch_ops::try_get_local_branches()].
     /// - The current branch has a [CURRENT_PREFIX] at the start of it. So this prefix is
     ///   removed when the check is performed.
-    pub fn exists_locally(branch_name: &str, branches: &ItemsOwned) -> LocalBranch {
+    pub fn exists_locally(branch_name: &str, branches: ItemsOwned) -> LocalBranch {
         let branches_trimmed = branches
             .iter()
             .map(|branch| branch.trim_start_matches(CURRENT_PREFIX))

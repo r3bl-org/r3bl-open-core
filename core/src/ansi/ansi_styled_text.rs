@@ -177,12 +177,60 @@ mod ansi_styled_text_impl {
     }
 }
 
+// The following functions are convenience functions for providing ANSI attributes.
+
+pub fn bold(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Bold),
+    }
+}
+
+pub fn italic(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Italic),
+    }
+}
+
+pub fn underline(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Underline),
+    }
+}
+
+pub fn strikethrough(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Strikethrough),
+    }
+}
+
+pub fn dim(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Dim),
+    }
+}
+
+pub fn dim_underline(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Dim, ASTStyle::Underline),
+    }
+}
+
+// The following function is a convenience function for providing any color.
+
 pub fn fg_color(arg_color: impl Into<ASTColor>, text: &str) -> AST {
     AST {
         text: text.into(),
         styles: smallvec!(ASTStyle::Foreground(arg_color.into())),
     }
 }
+
+// The following functions are convenience functions for providing ANSI colors.
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
 pub fn fg_dark_gray(text: &str) -> AST {
@@ -256,6 +304,110 @@ pub fn fg_magenta(text: &str) -> AST {
     }
 }
 
+// The following colors are a convenience for using the [crate::tui_color!] macro.
+
+pub fn fg_medium_gray(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(medium_gray).into())),
+    }
+}
+
+pub fn fg_light_cyan(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(light_cyan).into())),
+    }
+}
+
+pub fn fg_light_purple(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(light_purple).into())),
+    }
+}
+
+pub fn fg_deep_purple(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(deep_purple).into())),
+    }
+}
+
+pub fn fg_soft_pink(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(soft_pink).into())),
+    }
+}
+
+pub fn fg_hot_pink(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(hot_pink).into())),
+    }
+}
+
+pub fn fg_light_yellow_green(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(
+            crate::tui_color!(light_yellow_green).into()
+        )),
+    }
+}
+
+pub fn fg_dark_teal(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_teal).into())),
+    }
+}
+
+pub fn fg_bright_cyan(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(bright_cyan).into())),
+    }
+}
+
+pub fn fg_dark_purple(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_purple).into())),
+    }
+}
+
+pub fn fg_sky_blue(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(sky_blue).into())),
+    }
+}
+
+pub fn fg_lavender(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(lavender).into())),
+    }
+}
+
+pub fn fg_dark_lizard_green(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(
+            crate::tui_color!(dark_lizard_green).into()
+        )),
+    }
+}
+
+pub fn fg_orange(text: &str) -> AST {
+    AST {
+        text: text.into(),
+        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(orange).into())),
+    }
+}
+
 pub fn fg_silver_metallic(text: &str) -> AST {
     AST {
         text: text.into(),
@@ -304,48 +456,6 @@ pub fn fg_slate_gray(text: &str) -> AST {
     AST {
         text: text.into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(slate_gray).into())),
-    }
-}
-
-pub fn bold(text: &str) -> AST {
-    AST {
-        text: text.into(),
-        styles: smallvec!(ASTStyle::Bold),
-    }
-}
-
-pub fn italic(text: &str) -> AST {
-    AST {
-        text: text.into(),
-        styles: smallvec!(ASTStyle::Italic),
-    }
-}
-
-pub fn underline(text: &str) -> AST {
-    AST {
-        text: text.into(),
-        styles: smallvec!(ASTStyle::Underline),
-    }
-}
-
-pub fn strikethrough(text: &str) -> AST {
-    AST {
-        text: text.into(),
-        styles: smallvec!(ASTStyle::Strikethrough),
-    }
-}
-
-pub fn dim(text: &str) -> AST {
-    AST {
-        text: text.into(),
-        styles: smallvec!(ASTStyle::Dim),
-    }
-}
-
-pub fn dim_underline(text: &str) -> AST {
-    AST {
-        text: text.into(),
-        styles: smallvec!(ASTStyle::Dim, ASTStyle::Underline),
     }
 }
 
