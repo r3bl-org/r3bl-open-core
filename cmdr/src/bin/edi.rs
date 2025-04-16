@@ -120,8 +120,8 @@ pub mod edi_ui_templates {
             cli_arg
                 .file_paths
                 .iter()
-                .map(|s| s.to_string().into())
-                .collect(),
+                .map(|s| s.as_str())
+                .collect::<Vec<_>>(),
             Some(height(5)),
             Some(width(0)),
             HowToChoose::Single,

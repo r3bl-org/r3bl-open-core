@@ -33,7 +33,6 @@ use r3bl_core::{col,
                 CommonResult,
                 GCStringExt,
                 InlineString,
-                InlineVec,
                 ItemsOwned,
                 Size,
                 TuiStylesheet,
@@ -306,7 +305,7 @@ mod modal_dialogs {
     fn generate_random_results(content: &str) -> ItemsOwned {
         let start_rand_num = rand::random::<u8>() as usize;
         let max = 10;
-        let mut it = InlineVec::with_capacity(max);
+        let mut it = ItemsOwned::with_capacity(max);
         for index in start_rand_num..(start_rand_num + max) {
             it.push(format!("{content}{index}").into());
         }

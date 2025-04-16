@@ -22,16 +22,15 @@ use r3bl_tui::{DefaultIoDevices,
                readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 
-use crate::giti::{BranchDeleteDetails,
-                  BranchSubcommand,
+use crate::giti::{BranchSubcommand,
                   CLICommand,
                   CommandRunDetails,
                   CommandRunResult,
-                  UIStrings,
                   get_giti_command_subcommand_names,
                   try_checkout,
                   try_delete,
                   try_new,
+                  ui_str,
                   ui_templates::single_select_instruction_header};
 
 /// The main function to for `giti branch` command.
@@ -58,7 +57,7 @@ async fn user_typed_giti_branch() -> CommonResult<CommandRunResult> {
 
     let header = {
         let last_line = ast_line![ast(
-            UIStrings::PleaseSelectBranchSubCommand.to_string(),
+            ui_str::please_select_branch_sub_command(),
             new_style!(
                 color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
             )
@@ -90,11 +89,7 @@ async fn user_typed_giti_branch() -> CommonResult<CommandRunResult> {
         }
     };
 
-    let it = CommandRunResult::DidNotRun(
-        None,
-        CommandRunDetails::BranchDelete(BranchDeleteDetails {
-            maybe_deleted_branches: None,
-        }),
-    );
+    // User did not select anything.
+    let it = CommandRunResult::DidNotRun(ui_str::noop_message(), CommandRunDetails::Noop);
     Ok(it)
 }

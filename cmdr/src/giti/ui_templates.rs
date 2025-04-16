@@ -15,19 +15,9 @@
  *   limitations under the License.
  */
 
-use std::env::var;
+use r3bl_core::{AST, AnsiStyledText, InlineVec, ast_line, ast_lines, fg_slate_gray};
 
-use r3bl_core::{AST,
-                AnsiStyledText,
-                ColorWheel,
-                GradientGenerationPolicy,
-                InlineVec,
-                TextColorizationPolicy,
-                ast_line,
-                ast_lines,
-                fg_slate_gray};
-
-use crate::{giti::ui_strings::UIStrings, upgrade_check};
+use crate::{giti::ui_str, upgrade_check};
 
 /// This is the instruction header for the multi select list. It is used when the user can
 /// select multiple items from the list. The instructions are displayed at the top of the
@@ -81,33 +71,10 @@ pub fn single_select_instruction_header(
 
 pub fn show_exit_message() {
     if upgrade_check::is_update_required() {
-        println!("{}", {
-            let plain_text_exit_msg = format!(
-                "{}\n{}",
-                "💿 A new version of giti is available.",
-                "Run `cargo install r3bl-cmdr` to upgrade 🙌."
-            );
-
-            ColorWheel::default().colorize_into_string(
-                &plain_text_exit_msg,
-                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                TextColorizationPolicy::ColorEachCharacter(None),
-                None,
-            )
-        });
+        let upgrade_reqd_msg = ui_str::upgrade_required_message();
+        println!("{upgrade_reqd_msg}");
     } else {
-        println!("{}", {
-            let goodbye_to_user = match var("USER") {
-                Ok(username) => {
-                    UIStrings::GoodbyeThanksForUsingGitiUsername { username }.to_string()
-                }
-                Err(_) => UIStrings::GoodbyeThanksForUsingGiti.to_string(),
-            };
-
-            let please_star_us = UIStrings::PleaseStarUs.to_string();
-            let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
-
-            ColorWheel::lolcat_into_string(&plain_text_exit_msg, None)
-        });
+        let exit_msg = ui_str::goodbye_thanks_for_using_giti();
+        println!("{exit_msg}");
     }
 }

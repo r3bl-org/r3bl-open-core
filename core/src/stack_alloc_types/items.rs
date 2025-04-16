@@ -15,70 +15,195 @@
  *   limitations under the License.
  */
 
+use std::{iter::FromIterator,
+          ops::{Deref, DerefMut}};
+
 use super::{InlineString, InlineVec};
 
-// XMARK: Clever Rust, use of newtype pattern to convert various types to InlineVec<InlineString>.
+// XMARK: Clever Rust, use of newtype pattern to convert various types to `ItemsOwned`.
 
-/// Use the ["newtype" pattern](https://youtu.be/3-Ika3mAOGQ?si=EgcSROsbgcM5hTIY) to
-/// handle conversions from various types to `InlineVec<InlineString>` aka [ItemsOwned].
-/// The motivation for building this struct is to allow the seamless conversion of
-/// various types into `InlineVec<InlineString>`.
+/// The primary reason this module exists is to be able to easily convert from a borrowed
+/// type to an owned type. This module is built to make it easy to use
+/// `[r3bl_tui::readline_async::choose()]`. The `choose()` needs a list of items to allow
+/// the user to choose from.
 ///
-/// `ItemsBorrowed` is a "newtype" that wraps a slice of items, which is now owned but
-/// borrowed. This allows us to implement lots of `From` traits on it, and gets around the
-/// orphan rule.
+/// This list of items can be easily constructed from:
+/// - Case 1: `vec!["one", "two", "three"]`
+/// - Case 2: `&["one", "two", "three"]`
+/// - Case 3: `vec!["one".to_string(), "two".to_string(), "three".to_string()]`
 ///
-/// Here are the types that can be converted (each one is an `ItemsBorrowed`) into
-/// [ItemsOwned]:
-/// 1. `Vec<&str>`: `vec!["one", "two", "three"]`
-/// 2. `&str`: &["one", "two", "three"]
-/// 3. `Vec<String>`: `vec!["one".to_string(), "two".to_string(), "three".to_string()]`
-/// 4. `InlineVec<&str>`: `smallvec::smallvec!["one", "two", "three"]`
-#[derive(Debug)]
-pub struct ItemsBorrowed<'a, T: AsRef<str>>(pub &'a [T]);
+/// The ["newtype" pattern](https://youtu.be/3-Ika3mAOGQ?si=EgcSROsbgcM5hTIY) is used here
+/// to facilitate the conversion of various types to `ItemsOwned`. The `ItemsOwned` type
+/// is a wrapper around `InlineVec<InlineString>`, which is a stack-allocated vector of
+/// strings. The `InlineVec` type is used to avoid heap allocations for small vectors,
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct ItemsOwned(pub InlineVec<InlineString>);
 
-/// Convert [ItemsBorrowed] to [ItemsOwned].
-pub fn items_owned<'a, T: AsRef<str>>(items: ItemsBorrowed<'a, T>) -> ItemsOwned {
-    let mut inline_vec = InlineVec::with_capacity(items.0.len());
-    for item in items.0 {
-        inline_vec.push(item.as_ref().into());
-    }
-    inline_vec
+pub fn items_owned(arg_owned_items: impl Into<ItemsOwned>) -> ItemsOwned {
+    let items: ItemsOwned = arg_owned_items.into();
+    items
 }
 
-/// Shorthand for the "output" type that [ItemsBorrowed] is converted into. As the name
-/// implies, this is owned, while the other is borrowed.
-pub type ItemsOwned = InlineVec<InlineString>;
+mod convert_to_vec_string {
+    use super::*;
 
-/// Convert `ItemsBorrowed` to `InlineVec<InlineString>` aka `ItemsOwned`.
-/// - Case 1: Convert `vec!["one", "two", "three"]` to `ItemsOwned`.
-/// - Case 2: Convert `&["one", "two", "three"]` to `ItemsOwned`.
-/// - Case 3: Convert `Vec<String>` to `ItemsOwned`.
-/// - Case 4: Convert `smallvec::smallvec!["one", "two", "three"]` to `ItemsOwned`.
-impl<'a, T: AsRef<str>> From<ItemsBorrowed<'a, T>> for ItemsOwned {
-    fn from(items: ItemsBorrowed<'a, T>) -> Self {
-        let mut inline_vec = InlineVec::new();
-        for item in items.0 {
-            inline_vec.push(item.as_ref().into());
+    impl ItemsOwned {
+        /// Convert `ItemsOwned` to `Vec<String>`.
+        pub fn to_vec(&self) -> Vec<String> { self.into() }
+    }
+
+    /// Convert `ItemsOwned` to `Vec<String>`. For compatibility with other Rust std lib types.
+    impl From<ItemsOwned> for Vec<String> {
+        fn from(items: ItemsOwned) -> Self {
+            items.0.iter().map(|s| s.to_string()).collect()
         }
-        inline_vec
+    }
+
+    /// Convert `&ItemsOwned` to `Vec<String>`. For compatibility with other Rust std lib types.
+    impl From<&ItemsOwned> for Vec<String> {
+        fn from(items: &ItemsOwned) -> Self {
+            items.0.iter().map(|s| s.to_string()).collect()
+        }
     }
 }
 
-pub fn items_owned_to_vec_string(items_owned: &ItemsOwned) -> Vec<String> {
-    items_owned.iter().map(|s| s.to_string()).collect()
-}
+mod constructors {
+    use super::*;
 
-/// Convert `ItemsBorrowed` to `Vec<String>`.
-impl<'a, T: AsRef<str>> From<ItemsBorrowed<'a, T>> for Vec<String> {
-    fn from(items: ItemsBorrowed<'a, T>) -> Self {
-        items.0.iter().map(|s| s.as_ref().to_string()).collect()
+    impl ItemsOwned {
+        pub fn new() -> Self { ItemsOwned(InlineVec::new()) }
+
+        pub fn with_capacity(capacity: usize) -> Self {
+            ItemsOwned(InlineVec::with_capacity(capacity))
+        }
     }
 }
 
-/// Convert `ItemsBorrowed` to `Vec<&str>`.
-impl<'a> From<ItemsBorrowed<'a, &'a str>> for Vec<&'a str> {
-    fn from(items: ItemsBorrowed<'a, &'a str>) -> Self { items.0.to_vec() }
+mod iter_impl {
+    use super::*;
+
+    /// FromIterator for [ItemsOwned] for `collect()`.
+    impl FromIterator<InlineString> for ItemsOwned {
+        fn from_iter<I: IntoIterator<Item = InlineString>>(iter: I) -> Self {
+            let inline_vec = iter.into_iter().collect::<InlineVec<InlineString>>();
+            ItemsOwned(inline_vec)
+        }
+    }
+
+    /// Iterate over a reference to [ItemsOwned].
+    impl<'a> IntoIterator for &'a ItemsOwned {
+        type Item = &'a InlineString;
+        type IntoIter = std::slice::Iter<'a, InlineString>;
+
+        fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+    }
+
+    /// Iterate over [ItemsOwned].
+    impl IntoIterator for ItemsOwned {
+        type Item = InlineString;
+
+        /// Use the IntoIter type that matches what InlineVec returns.
+        type IntoIter = <InlineVec<InlineString> as IntoIterator>::IntoIter;
+
+        fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+    }
+}
+
+mod convert_into_items_owned {
+    use super::*;
+
+    // XMARK: Clever Rust, to make it easy to work with arrays of any size, eg: `&["1", "2"]`, `vec!["1", "2"]`, `vec!["1".to_string(), "2".to_string()]`
+
+    impl<const N: usize> From<&[&str; N]> for ItemsOwned {
+        /// Handle arrays of any fixed size.
+        fn from(items: &[&str; N]) -> Self {
+            // Delegate to the slice implementation.
+            ItemsOwned::from(&items[..])
+        }
+    }
+
+    impl From<&[&str]> for ItemsOwned {
+        /// The slice implementation is used to convert from a slice of `&str` to
+        /// `ItemsOwned`.
+        fn from(items: &[&str]) -> Self {
+            let mut inline_vec = InlineVec::with_capacity(items.len());
+            for item in items {
+                inline_vec.push((*item).into());
+            }
+            ItemsOwned(inline_vec)
+        }
+    }
+
+    impl From<Vec<&str>> for ItemsOwned {
+        fn from(items: Vec<&str>) -> Self {
+            let mut inline_vec = InlineVec::with_capacity(items.len());
+            for item in items {
+                inline_vec.push(item.into());
+            }
+            ItemsOwned(inline_vec)
+        }
+    }
+
+    impl From<InlineVec<InlineString>> for ItemsOwned {
+        fn from(items: InlineVec<InlineString>) -> Self { ItemsOwned(items) }
+    }
+
+    impl From<&InlineString> for ItemsOwned {
+        fn from(item: &InlineString) -> Self {
+            let mut inline_vec = InlineVec::with_capacity(1);
+            inline_vec.push(item.clone());
+            ItemsOwned(inline_vec)
+        }
+    }
+
+    impl From<InlineString> for ItemsOwned {
+        fn from(item: InlineString) -> Self {
+            let mut inline_vec = InlineVec::with_capacity(1);
+            inline_vec.push(item);
+            ItemsOwned(inline_vec)
+        }
+    }
+
+    impl From<&str> for ItemsOwned {
+        fn from(item: &str) -> Self {
+            let mut inline_vec = InlineVec::with_capacity(1);
+            inline_vec.push(item.into());
+            ItemsOwned(inline_vec)
+        }
+    }
+
+    impl From<String> for ItemsOwned {
+        fn from(item: String) -> Self {
+            let mut inline_vec = InlineVec::with_capacity(1);
+            inline_vec.push(item.into());
+            ItemsOwned(inline_vec)
+        }
+    }
+
+    /// Convert `Vec<String>` to `ItemsOwned`.
+    impl From<Vec<String>> for ItemsOwned {
+        fn from(items: Vec<String>) -> Self {
+            let mut inline_vec = InlineVec::with_capacity(items.len());
+            for item in items {
+                inline_vec.push(item.into());
+            }
+            ItemsOwned(inline_vec)
+        }
+    }
+}
+
+mod deref_deref_mut_impl {
+    use super::*;
+
+    impl Deref for ItemsOwned {
+        type Target = InlineVec<InlineString>;
+
+        fn deref(&self) -> &Self::Target { &self.0 }
+    }
+
+    impl DerefMut for ItemsOwned {
+        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+    }
 }
 
 #[cfg(test)]
@@ -86,154 +211,82 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_items_output() {
+    fn test_use_with_choose() {
+        fn choose(arg: impl Into<ItemsOwned>) { let _items: ItemsOwned = arg.into(); }
+
         // Case 1: vec!["one", "two", "three"]
         {
             let items_vec = vec!["one", "two", "three"];
-            let inline_vec: ItemsOwned = items_owned(ItemsBorrowed(&items_vec));
-            assert_eq!(inline_vec.len(), 3);
-            assert_eq!(inline_vec[0], "one");
-            assert_eq!(inline_vec[1], "two");
-            assert_eq!(inline_vec[2], "three");
+            choose(items_vec);
         }
 
         // Case 2: &["one", "two", "three"]
         {
             let items_array = &["one", "two", "three"];
-            let items = ItemsBorrowed(items_array);
-            let inline_vec: ItemsOwned = items_owned(items);
-            assert_eq!(inline_vec.len(), 3);
-            assert_eq!(inline_vec[0], "one");
-            assert_eq!(inline_vec[1], "two");
-            assert_eq!(inline_vec[2], "three");
+            choose(items_array);
         }
-        // Case 3: Vec<String>
+
+        // Case 3: vec!["one".to_string(), "two".to_string(), "three".to_string()]
         {
-            let items_string_vec: Vec<String> =
+            let items_vec: Vec<String> =
                 vec!["one".to_string(), "two".to_string(), "three".to_string()];
-            let items = ItemsBorrowed(&items_string_vec);
-            let inline_vec: ItemsOwned = items_owned(items);
-            assert_eq!(inline_vec.len(), 3);
-            assert_eq!(inline_vec[0], "one");
-            assert_eq!(inline_vec[1], "two");
-            assert_eq!(inline_vec[2], "three");
-        }
-        // Case 4: smallvec::smallvec!["one", "two", "three"]
-        {
-            let items_smallvec: InlineVec<&str> =
-                smallvec::smallvec!["one", "two", "three"];
-            let items = ItemsBorrowed(&items_smallvec);
-            let inline_vec: ItemsOwned = items_owned(items);
-            assert_eq!(inline_vec.len(), 3);
-            assert_eq!(inline_vec[0], "one");
-            assert_eq!(inline_vec[1], "two");
-            assert_eq!(inline_vec[2], "three");
-        }
-        // Case 5: empty vec
-        {
-            let items_empty: Vec<&str> = vec![];
-            let items = ItemsBorrowed(&items_empty);
-            let inline_vec: ItemsOwned = items_owned(items);
-            assert_eq!(inline_vec.len(), 0);
+            choose(items_vec);
         }
     }
 
     #[test]
-    fn test_convert_items_to_vec_str() {
-        // Case 1: vec!["one", "two", "three"]
+    fn test_iterate_items_owned() {
+        // Iterate over a reference to ItemsOwned.
         {
             let items_vec = vec!["one", "two", "three"];
-            let items = ItemsBorrowed(&items_vec);
-            let vec_str: Vec<&str> = items.into();
-            assert_eq!(vec_str.len(), 3);
-            assert_eq!(vec_str[0], "one");
-            assert_eq!(vec_str[1], "two");
-            assert_eq!(vec_str[2], "three");
+            let inline_vec = items_owned(items_vec);
+            let mut acc = InlineVec::new();
+            for item in &inline_vec {
+                acc.push(item.clone());
+            }
+            assert_eq!(acc.len(), 3);
+            assert_eq!(acc[0], "one");
+            assert_eq!(acc[1], "two");
+            assert_eq!(acc[2], "three");
         }
 
-        // Case 2: &["one", "two", "three"]
+        // Iterate over ItemsOwned.
         {
-            let items_array = &["one", "two", "three"];
-            let items = ItemsBorrowed(items_array);
-            let vec_str: Vec<&str> = items.into();
-            assert_eq!(vec_str.len(), 3);
-            assert_eq!(vec_str[0], "one");
-            assert_eq!(vec_str[1], "two");
-            assert_eq!(vec_str[2], "three");
+            let items_vec = vec!["one", "two", "three"];
+            let inline_vec = items_owned(items_vec);
+            let mut acc = InlineVec::new();
+            for item in inline_vec {
+                acc.push(item);
+            }
+            assert_eq!(acc.len(), 3);
+            assert_eq!(acc[0], "one");
+            assert_eq!(acc[1], "two");
+            assert_eq!(acc[2], "three");
         }
     }
 
     #[test]
-    fn test_convert_items_to_vec_string() {
-        // Case 1: vec!["one", "two", "three"]
+    fn test_convert_to_vec() {
+        // Convert ItemsOwned to Vec<String> using .into().
         {
             let items_vec = vec!["one", "two", "three"];
-            let items = ItemsBorrowed(&items_vec);
-            let vec_string: Vec<String> = items.into();
-            assert_eq!(vec_string.len(), 3);
-            assert_eq!(vec_string[0], "one");
-            assert_eq!(vec_string[1], "two");
-            assert_eq!(vec_string[2], "three");
+            let inline_vec = items_owned(items_vec);
+            let vec: Vec<String> = inline_vec.into();
+            assert_eq!(vec.len(), 3);
+            assert_eq!(vec[0], "one");
+            assert_eq!(vec[1], "two");
+            assert_eq!(vec[2], "three");
         }
 
-        // Case 2: &["one", "two", "three"]
-        {
-            let items_array = &["one", "two", "three"];
-            let items = ItemsBorrowed(items_array);
-            let vec_string: Vec<String> = items.into();
-            assert_eq!(vec_string.len(), 3);
-            assert_eq!(vec_string[0], "one");
-            assert_eq!(vec_string[1], "two");
-            assert_eq!(vec_string[2], "three");
-        }
-    }
-
-    #[test]
-    fn test_convert_items_to_inline_vec() {
-        // Case 1: vec!["one", "two", "three"]
+        // Convert ItemsOwned to Vec<String> using .to_vec().
         {
             let items_vec = vec!["one", "two", "three"];
-            let items = ItemsBorrowed(&items_vec);
-            let inline_vec: ItemsOwned = items.into();
-            assert_eq!(inline_vec.len(), 3);
-            assert_eq!(inline_vec[0], "one");
-            assert_eq!(inline_vec[1], "two");
-            assert_eq!(inline_vec[2], "three");
-        }
-
-        // Case 2: &["one", "two", "three"]
-        {
-            let items_array = &["one", "two", "three"];
-            let items = ItemsBorrowed(items_array);
-            let inline_vec: ItemsOwned = items.into();
-            assert_eq!(inline_vec.len(), 3);
-            assert_eq!(inline_vec[0], "one");
-            assert_eq!(inline_vec[1], "two");
-            assert_eq!(inline_vec[2], "three");
-        }
-
-        // Case 3: Vec<String>
-        {
-            let items_string_vec: Vec<String> =
-                vec!["one".to_string(), "two".to_string(), "three".to_string()];
-            let items = ItemsBorrowed(&items_string_vec);
-            let inline_vec: ItemsOwned = items.into();
-            assert_eq!(inline_vec.len(), 3);
-            assert_eq!(inline_vec[0], "one");
-            assert_eq!(inline_vec[1], "two");
-            assert_eq!(inline_vec[2], "three");
-        }
-
-        // Case 4: smallvec::smallvec!["one", "two", "three"]
-        {
-            let items_smallvec: InlineVec<&str> =
-                smallvec::smallvec!["one", "two", "three"];
-            let items = ItemsBorrowed(&items_smallvec);
-            let inline_vec: ItemsOwned = items.into();
-            assert_eq!(inline_vec.len(), 3);
-            assert_eq!(inline_vec[0], "one");
-            assert_eq!(inline_vec[1], "two");
-            assert_eq!(inline_vec[2], "three");
+            let inline_vec = items_owned(items_vec);
+            let vec: Vec<String> = inline_vec.to_vec();
+            assert_eq!(vec.len(), 3);
+            assert_eq!(vec[0], "one");
+            assert_eq!(vec[1], "two");
+            assert_eq!(vec[2], "three");
         }
     }
 }
