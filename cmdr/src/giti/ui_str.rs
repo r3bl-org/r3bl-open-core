@@ -134,23 +134,9 @@ pub mod branch_checkout_display {
         fg_pink(&text).to_string()
     }
 
-    pub fn error_failed_to_checkout_branch(
-        branch_name: &str,
-        maybe_output: Option<Output>,
-    ) -> String {
-        match maybe_output {
-            Some(output) => {
-                let std_err = &String::from_utf8_lossy(&output.stderr);
-                let text =
-                    format!(" Failed to switch to branch '{branch_name}'!\n\n{std_err}");
-                fg_pink(&text).to_string()
-            }
-            None => {
-                let text =
-                    format!(" No branch got checked out ... \n ╴{branch_name}!\n\n");
-                fg_pink(&text).to_string()
-            }
-        }
+    pub fn error_failed_to_checkout_branch(branch_name: &str) -> String {
+        let text = format!(" Failed to switch to branch '{branch_name}'!");
+        fg_pink(&text).to_string()
     }
 }
 
@@ -180,23 +166,9 @@ pub mod branch_create_display {
         fg_silver_metallic(&text).to_string()
     }
 
-    pub fn error_failed_to_create_new_branch(
-        branch_name: &str,
-        maybe_output: Option<Output>,
-    ) -> String {
-        match maybe_output {
-            Some(output) => {
-                let std_err = &String::from_utf8_lossy(&output.stderr);
-                let text =
-                    format!(" Failed to create new branch {branch_name}!\n\n{std_err}");
-                fg_pink(&text).to_string()
-            }
-            None => {
-                let text =
-                    format!(" Failed to create and switch to branch {branch_name}");
-                fg_pink(&text).to_string()
-            }
-        }
+    pub fn error_failed_to_create_new_branch(branch_name: &str) -> String {
+        let text = format!(" Failed to create and switch to new branch {branch_name}!");
+        fg_pink(&text).to_string()
     }
 }
 

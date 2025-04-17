@@ -15,10 +15,14 @@
  *   limitations under the License.
  */
 
-use std::process::{Command, Output};
-
-use miette::IntoDiagnostic;
-use r3bl_core::{CommonResult, InlineString, InlineVec, ItemsOwned};
+use r3bl_core::{command,
+                inline_string,
+                CommonResult,
+                InlineString,
+                InlineVec,
+                ItemsOwned,
+                Run};
+use tokio::process::Command;
 
 use super::CURRENT_PREFIX;
 
@@ -30,94 +34,101 @@ pub type ResultAndCommand<T> = (CommonResult<T>, Command);
 pub mod modified_unstaged_file_ops {
     use super::*;
 
-    pub fn try_check() -> ResultAndCommand<ModifiedUnstagedFiles> {
-        let (res_output, cmd) = try_check_for_modified_unstaged_files();
-        match res_output {
-            // Can't even execute output(), something unknown has gone wrong. Propagate the
-            // error.
-            Err(error) => (Err(miette::miette!(error)), cmd),
-            Ok(output) => {
-                if output.status.success() && output.stdout.is_empty() {
-                    (Ok(ModifiedUnstagedFiles::DoNotExist), cmd)
-                } else {
-                    (Ok(ModifiedUnstagedFiles::Exist), cmd)
-                }
-            }
-        }
-    }
-
-    fn try_check_for_modified_unstaged_files() -> ResultAndCommand<Output> {
-        let mut command = Command::new("git");
-        command.args(["status", "--porcelain"]);
-        (command.output().into_diagnostic(), command)
-    }
-
     #[derive(Debug, Clone, Copy)]
     pub enum ModifiedUnstagedFiles {
         Exist,
-        DoNotExist,
+        None,
     }
 
-    /// Parses the output of a Git command to extract a list of modified files.
+    /// Similar to [try_get_modified_file_list()], but returns [ModifiedUnstagedFiles] state
+    /// indicating if there are any modified files.
+    pub async fn try_check_exists() -> ResultAndCommand<ModifiedUnstagedFiles> {
+        let mut cmd = command!(
+            program => "git",
+            args => "status", "--porcelain"
+        );
+
+        let res_output = cmd.run().await;
+        let Ok(output) = res_output else {
+            let report = res_output.unwrap_err();
+            let err = Err(report);
+            return (err, cmd);
+        };
+
+        let status = if output.is_empty() {
+            ModifiedUnstagedFiles::None
+        } else {
+            ModifiedUnstagedFiles::Exist
+        };
+
+        (Ok(status), cmd)
+    }
+
+    /// Similar to [try_check_exists()], but returns a list of modified files.
+    pub async fn try_get_modified_file_list() -> ResultAndCommand<InlineVec<InlineString>>
+    {
+        let mut cmd = command!(
+            program => "git",
+            args => "status", "--porcelain"
+        );
+
+        let res_output = cmd.run().await;
+        let Ok(output) = res_output else {
+            let report = res_output.unwrap_err();
+            let err = Err(report);
+            return (err, cmd);
+        };
+
+        let modified_files = get_modified_file_list_from_output(output);
+
+        (Ok(modified_files), cmd)
+    }
+
+    /// Parses the [std::process:Output]'s `stdout` of a git command to extract a list of
+    /// modified files.
     ///
-    /// # Example
-    /// ```rust
-    /// # use std::os::unix::process::ExitStatusExt;
-    /// # use std::process::Output;
-    /// # use std::process::ExitStatus;
-    /// # use r3bl_cmdr::giti::modified_unstaged_file_ops::get_modified_file_list;
-    ///
-    /// let output = Output {
-    ///     stdout: b"MM file1.txt\nM file2.txt\n file3.txt".to_vec(),
-    ///     stderr: vec![],
-    ///     status: std::process::ExitStatus::from_raw(0),
-    /// };
-    ///
-    /// let modified_files = get_modified_file_list(output);
-    /// assert_eq!(
-    ///     modified_files,
-    ///     vec![
-    ///         "    - file1.txt".to_string(),
-    ///         "    - file2.txt".to_string(),
-    ///         "    - file3.txt".to_string()
-    ///     ]
-    /// );
+    /// Here's output from this command `git status --porcelain`:
+    /// ```text
+    /// M  1.code-search
+    ///  M cmdr/src/giti/branch/checkout.rs
+    ///  M cmdr/src/giti/branch/delete.rs
+    ///  M cmdr/src/giti/branch/new.rs
+    /// MM cmdr/src/giti/common_types.rs
+    ///  M cmdr/src/giti/git.rs
+    ///  M core/src/script/command_runner.rs
+    /// MM todo.md
     /// ```
-    pub fn get_modified_file_list(output: Output) -> Vec<String> {
-        let modified_files = String::from_utf8_lossy(&output.stdout);
+    fn get_modified_file_list_from_output(output: Vec<u8>) -> InlineVec<InlineString> {
+        let modified_files = String::from_utf8_lossy(&output);
 
         // Early return if there are no modified files.
         if modified_files.is_empty() {
-            return vec![];
+            return InlineVec::new();
         }
 
         let mut acc =
-            Vec::with_capacity(/* size hint */ modified_files.lines().count());
+            InlineVec::with_capacity(/* size hint */ modified_files.lines().count());
 
-        // Remove all the spaces from start and end of each modified file.
-        let modified_files_vec = modified_files
-            .trim()
-            .split('\n')
-            .map(|line| line.trim())
-            .collect::<Vec<&str>>();
+        let lines = modified_files
+            .lines()
+            .map(|line| line.trim_start().trim())
+            .collect::<InlineVec<&str>>();
 
-        // Remove all the "MM" and " M" from modified files.
+        // Replace all the "MM " and "M " from modified filenames and replace with prefix.
         // "M" means unstaged files. "MM" means staged files.
-        for output in &modified_files_vec {
-            if output.starts_with("MM ") {
-                let modified_output = output.replace("MM", "");
-                let modified_output = modified_output.trim_start();
-                let modified_output = format!("    - {}", modified_output);
-                acc.push(modified_output);
-            } else if output.starts_with("M ") {
-                let modified_output = output.replace("M ", "");
-                let modified_output = modified_output.trim_start();
-                let modified_output = format!("    - {}", modified_output);
-                acc.push(modified_output);
+        for line in &lines {
+            if line.starts_with("MM ") {
+                acc.push(inline_string!(
+                    "    - {}",
+                    line.strip_prefix("MM ").unwrap()
+                ));
+            } else if line.starts_with("M ") {
+                acc.push(inline_string!(
+                    "    - {}",
+                    line.strip_prefix("M ").unwrap_or(line)
+                ));
             } else {
-                let modified_output = output.trim_start();
-                let modified_output = format!("    - {}", modified_output);
-                acc.push(modified_output);
+                acc.push(inline_string!("    - {}", line));
             }
         }
 
@@ -125,42 +136,57 @@ pub mod modified_unstaged_file_ops {
     }
 }
 
-pub fn try_create_and_switch_to_branch(branch_name: &str) -> ResultAndCommand<Output> {
-    let mut command = Command::new("git");
-    command.args(["checkout", "-b", branch_name]);
-    (command.output().into_diagnostic(), command)
-}
+pub async fn try_create_and_switch_to_branch(branch_name: &str) -> ResultAndCommand<()> {
+    let mut cmd = command!(
+        program => "git",
+        args => "checkout", "-b", branch_name
+    );
 
-pub fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<Output> {
-    let mut command = Command::new("git");
-    command.args(["branch", "-D"]);
-    for branch in branches {
-        command.arg(branch.to_string());
-    }
-    (command.output().into_diagnostic(), command)
-}
-
-// Get the current branch name. It is returned in an [r3bl_core::InlineVec] with only a
-// single item.
-pub fn try_get_current_branch() -> ResultAndCommand<InlineString> {
-    let mut command = Command::new("git");
-    command.args(["branch", "--show-current"]);
-
-    let result_output = command.output();
-
-    let current_branch = match result_output {
-        // Can't even execute output(), something unknown has gone wrong. Propagate the
-        // error.
-        Err(error) => {
-            return (Err(miette::miette!(error)), command);
-        }
-        Ok(output) => {
-            let output_string = String::from_utf8_lossy(&output.stdout);
-            output_string.to_string().trim_end_matches('\n').to_string()
-        }
+    let res_output = cmd.run().await;
+    let Ok(_) = res_output else {
+        let report = res_output.unwrap_err();
+        let err = Err(report);
+        return (err, cmd);
     };
 
-    (Ok(current_branch.into()), command)
+    (Ok(()), cmd)
+}
+
+pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> {
+    let mut cmd = command!(
+        program => "git",
+        args => "branch", "-D",
+        + items => branches
+    );
+
+    let res_output = cmd.run().await;
+    let Ok(_) = res_output else {
+        let report = res_output.unwrap_err();
+        let err = Err(report);
+        return (err, cmd);
+    };
+
+    (Ok(()), cmd)
+}
+
+pub async fn try_get_current_branch_name() -> ResultAndCommand<InlineString> {
+    let mut cmd = command!(
+        program => "git",
+        args => "branch", "--show-current",
+    );
+
+    let res_output = cmd.run().await;
+    let Ok(output) = res_output else {
+        let report = res_output.unwrap_err();
+        let err = Err(report);
+        return (err, cmd);
+    };
+
+    let current_branch = String::from_utf8_lossy(&output)
+        .trim_end_matches('\n')
+        .to_string();
+
+    (Ok(current_branch.into()), cmd)
 }
 
 pub mod local_branch_ops {
@@ -168,15 +194,21 @@ pub mod local_branch_ops {
 
     /// Get all the local branches. In the list of branches that are returned, the current
     /// branch is prefixed with [CURRENT_PREFIX].
-    pub fn try_get_local_branches() -> ResultAndCommand<ItemsOwned> {
-        let (res, cmd) = try_execute_git_command_to_get_branches();
+    pub async fn try_get_local_branch_names() -> ResultAndCommand<ItemsOwned> {
+        // Get branches.
+        let (res, cmd) = try_execute_git_command_to_get_branches().await;
         let Ok(branches) = res else {
-            return (res, cmd);
+            let report = res.unwrap_err();
+            let err = Err(report);
+            return (err, cmd);
         };
 
-        let (res, cmd) = try_get_current_branch();
+        // Get current branch.
+        let (res, cmd) = try_get_current_branch_name().await;
         let Ok(current_branch) = res else {
-            return (Err(miette::miette!(res.unwrap_err())), cmd);
+            let report = res.unwrap_err();
+            let err = Err(report);
+            return (err, cmd);
         };
 
         let mut items_owned = ItemsOwned::with_capacity(branches.len());
@@ -210,7 +242,7 @@ pub mod local_branch_ops {
 
     /// Checks if a given branch name exists in the list of branches.
     /// - The list of branches is produced by
-    ///   [super::local_branch_ops::try_get_local_branches()].
+    ///   [super::local_branch_ops::try_get_local_branch_names()].
     /// - The current branch has a [CURRENT_PREFIX] at the start of it. So this prefix is
     ///   removed when the check is performed.
     pub fn exists_locally(branch_name: &str, branches: ItemsOwned) -> LocalBranch {
@@ -227,26 +259,23 @@ pub mod local_branch_ops {
     }
 }
 
-fn try_execute_git_command_to_get_branches() -> ResultAndCommand<ItemsOwned> {
-    // Create command.
-    let mut command = Command::new("git");
-    command.args(["branch", "--format", "%(refname:short)"]);
+async fn try_execute_git_command_to_get_branches() -> ResultAndCommand<ItemsOwned> {
+    let mut cmd = command!(
+        program => "git",
+        args => "branch", "--format", "%(refname:short)",
+    );
 
-    // Execute command.
-    let res_output = command.output();
+    let res_output = cmd.run().await;
+    let Ok(output) = res_output else {
+        let report = res_output.unwrap_err();
+        let err = Err(report);
+        return (err, cmd);
+    };
 
-    // Process command execution results.
-    match res_output {
-        // Can't even execute output(), something unknown has gone wrong. Propagate the
-        // error.
-        Err(error) => (Err(miette::miette!(error)), command),
-        Ok(output) => {
-            let output_string = String::from_utf8_lossy(&output.stdout);
-            let mut branches = ItemsOwned::with_capacity(output_string.lines().count());
-            for line in output_string.lines() {
-                branches.push(line.into());
-            }
-            (Ok(branches), command)
-        }
+    let output_string = String::from_utf8_lossy(&output);
+    let mut branches = ItemsOwned::with_capacity(output_string.lines().count());
+    for line in output_string.lines() {
+        branches.push(line.into());
     }
+    (Ok(branches), cmd)
 }

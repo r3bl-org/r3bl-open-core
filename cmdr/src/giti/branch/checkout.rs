@@ -3,7 +3,7 @@
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
- *   You may not use this file except in compliance with the License.
+ *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -15,28 +15,28 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{AnsiStyledText,
-                CommonResult,
-                InlineString,
-                InlineVec,
-                ItemsOwned,
-                ast,
+use r3bl_core::{ast,
                 ast_line,
                 ast_lines,
                 height,
                 new_style,
-                tui_color};
-use r3bl_tui::{DefaultIoDevices,
-               Header,
-               choose,
-               readline_async::{HowToChoose, StyleSheet}};
+                tui_color,
+                AnsiStyledText,
+                CommonResult,
+                InlineString,
+                InlineVec,
+                ItemsOwned};
+use r3bl_tui::{choose,
+               readline_async::{HowToChoose, StyleSheet},
+               DefaultIoDevices,
+               Header};
 
-use crate::giti::{BranchCheckoutDetails,
-                  CommandRunDetails,
-                  CommandRunResult,
-                  git::{self},
+use crate::giti::{git::{self},
                   modified_unstaged_file_ops,
-                  ui_str};
+                  ui_str,
+                  BranchCheckoutDetails,
+                  CommandRunDetails,
+                  CommandRunResult};
 
 mod details {
     use super::*;
@@ -57,10 +57,10 @@ mod details {
 /// The main function for `giti branch new` command.
 pub async fn try_checkout(
     maybe_branch_name: Option<String>,
-) -> CommonResult<CommandRunResult> {
+) -> CommonResult<CommandRunResult<CommandRunDetails>> {
     match maybe_branch_name {
         Some(ref branch_name) => {
-            command_execute::checkout_branch_if_not_current(branch_name)
+            command_execute::checkout_branch_if_not_current(branch_name).await
         }
         None => user_interaction::handle_branch_selection().await,
     }
@@ -69,10 +69,10 @@ pub async fn try_checkout(
 mod command_execute {
     use super::*;
 
-    pub fn checkout_branch_if_not_current(
+    pub async fn checkout_branch_if_not_current(
         branch_name: &str,
-    ) -> CommonResult<CommandRunResult> {
-        let (res, _cmd) = git::local_branch_ops::try_get_local_branches();
+    ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
+        let (res, _cmd) = git::local_branch_ops::try_get_local_branch_names().await;
         let branches = res?;
 
         // Early return if the branch does not exist locally.
@@ -90,7 +90,7 @@ mod command_execute {
         }
 
         // Early return if the branch_name is already checked out.
-        let (res, _cmd) = git::try_get_current_branch();
+        let (res, _cmd) = git::try_get_current_branch_name().await;
         let current_branch = res?;
 
         if branch_name == current_branch.as_str() {
@@ -105,7 +105,7 @@ mod command_execute {
 
         // Early return if there are modified files.
         if let (Ok(modified_unstaged_file_ops::ModifiedUnstagedFiles::Exist), _cmd) =
-            modified_unstaged_file_ops::try_check()
+            modified_unstaged_file_ops::try_check_exists().await
         {
             let it = CommandRunResult::DidNotRun(
 
@@ -118,16 +118,16 @@ mod command_execute {
             return Ok(it);
         }
 
-        checkout_branch(branch_name, &current_branch)
+        checkout_branch(branch_name, &current_branch).await
     }
 
-    pub fn checkout_branch(
+    pub async fn checkout_branch(
         branch_name: &str,
         current_branch: &str,
-    ) -> CommonResult<CommandRunResult> {
-        let (res_output, cmd) = git::try_create_and_switch_to_branch(branch_name);
+    ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
+        let (res_output, cmd) = git::try_create_and_switch_to_branch(branch_name).await;
         match res_output {
-            Ok(output) if output.status.success() => {
+            Ok(_) => {
                 let it = CommandRunResult::RanSuccessfully(
                     ui_str::branch_checkout_display::info_checkout_success(
                         branch_name,
@@ -138,22 +138,14 @@ mod command_execute {
                 );
                 Ok(it)
             }
-            Ok(output) => {
-                let text =
+            Err(report) => {
+                let it = CommandRunResult::RanUnsuccessfullyOrFailedToRun(
                     ui_str::branch_checkout_display::error_failed_to_checkout_branch(
                         branch_name,
-                        Some(output.clone()),
-                    );
-                let it = CommandRunResult::RanUnsuccessfully(text, cmd, output);
-                Ok(it)
-            }
-            Err(error) => {
-                let string =
-                    ui_str::branch_checkout_display::error_failed_to_checkout_branch(
-                        branch_name,
-                        None,
-                    );
-                let it = CommandRunResult::FailedToRun(string, cmd, error);
+                    ),
+                    cmd,
+                    report,
+                );
                 Ok(it)
             }
         }
@@ -163,20 +155,22 @@ mod command_execute {
 mod user_interaction {
     use super::*;
 
-    pub async fn handle_branch_selection() -> CommonResult<CommandRunResult> {
-        let (res, _cmd) = git::local_branch_ops::try_get_local_branches();
+    pub async fn handle_branch_selection()
+    -> CommonResult<CommandRunResult<CommandRunDetails>> {
+        let (res, _cmd) = git::local_branch_ops::try_get_local_branch_names().await;
         if let Ok(branches) = res {
             let header = create_branch_selection_header();
 
-            let (res, _cmd) = git::try_get_current_branch();
+            let (res, _cmd) = git::try_get_current_branch_name().await;
             let current_branch = res?;
 
             match prompt_user_to_select_branch(header, branches).await? {
                 Some(selected_branch) => {
                     command_execute::checkout_branch(&selected_branch, &current_branch)
+                        .await
                 }
                 None => {
-                    let it: CommandRunResult = CommandRunResult::DidNotRun(
+                    let it = CommandRunResult::DidNotRun(
                         ui_str::branch_checkout_display::info_no_suitable_branch_is_available_for_checkout(),
                         details::empty(),
                     );
