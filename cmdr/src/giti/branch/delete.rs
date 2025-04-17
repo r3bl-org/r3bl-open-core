@@ -15,34 +15,34 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{AST,
+use r3bl_core::{ast,
+                ast_line,
+                height,
+                new_style,
+                tui_color,
                 CommonResult,
                 InlineString,
                 InlineVec,
                 ItemsOwned,
-                ast,
-                ast_line,
-                height,
-                new_style,
-                tui_color};
-use r3bl_tui::{DefaultIoDevices,
-               Header,
-               choose,
-               readline_async::{HowToChoose, StyleSheet}};
+                AST};
+use r3bl_tui::{choose,
+               readline_async::{HowToChoose, StyleSheet},
+               DefaultIoDevices,
+               Header};
 use smallvec::smallvec;
 
-use crate::{AnalyticsAction,
-            giti::{BranchDeleteDetails,
-                   CommandRunDetails,
-                   CommandRunResult,
-                   git::{self},
+use crate::{giti::{git::{self},
                    ui_str::{self},
                    ui_templates::{multi_select_instruction_header,
-                                  single_select_instruction_header}},
-            report_analytics};
+                                  single_select_instruction_header},
+                   BranchDeleteDetails,
+                   CommandRunDetails,
+                   CommandRunResult},
+            report_analytics,
+            AnalyticsAction};
 
 /// The main function for `giti branch delete` command.
-pub async fn try_delete() -> CommonResult<CommandRunResult> {
+pub async fn try_delete() -> CommonResult<CommandRunResult<CommandRunDetails>> {
     report_analytics::start_task_to_generate_event(
         "".to_string(),
         AnalyticsAction::GitiBranchDelete,
@@ -50,7 +50,7 @@ pub async fn try_delete() -> CommonResult<CommandRunResult> {
 
     // Only proceed if some local branches exist (can't delete anything if there aren't
     // any).
-    let (res, _cmd) = git::local_branch_ops::try_get_local_branches();
+    let (res, _cmd) = git::local_branch_ops::try_get_local_branch_names().await;
     if let Ok(branches) = res
         && !branches.is_empty()
     {
@@ -226,12 +226,11 @@ mod command_execute {
 
     pub async fn delete_selected_branches(
         branches: &ItemsOwned,
-    ) -> CommonResult<CommandRunResult> {
+    ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
         debug_assert!(!branches.is_empty());
-
-        let (res_output, cmd) = git::try_delete_branches(branches);
+        let (res_output, cmd) = git::try_delete_branches(branches).await;
         match res_output {
-            Ok(output) if output.status.success() => {
+            Ok(_) => {
                 let it = CommandRunResult::RanSuccessfully(
                     ui_str::branch_delete_display::info_delete_success(branches),
                     details::with_details(branches.clone()),
@@ -239,22 +238,11 @@ mod command_execute {
                 );
                 Ok(it)
             }
-            Ok(output) => {
-                let it = CommandRunResult::RanUnsuccessfully(
-                    ui_str::branch_delete_display::error_failed_to_delete(
-                        branches,
-                        Some(output.clone()),
-                    ),
-                    cmd,
-                    output,
-                );
-                Ok(it)
-            }
-            Err(error) => {
-                let it = CommandRunResult::FailedToRun(
+            Err(report) => {
+                let it = CommandRunResult::RanUnsuccessfullyOrFailedToRun(
                     ui_str::branch_delete_display::error_failed_to_delete(branches, None),
                     cmd,
-                    error,
+                    report,
                 );
                 Ok(it)
             }

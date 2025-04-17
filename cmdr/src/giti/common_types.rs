@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{Display, Error, Formatter, Result as FmtResult},
-          process::{Command, Output},
+use std::{fmt::{Debug, Display, Error, Formatter, Result as FmtResult},
           result::Result as StdResult};
 
 use r3bl_core::{InlineString,
@@ -27,6 +26,7 @@ use r3bl_core::{InlineString,
                 fg_pink,
                 fg_slate_gray,
                 inline_string};
+use tokio::process::Command;
 
 /// Detailed information about a sub command that has run successfully.
 #[derive(Debug, Clone, Default)]
@@ -59,31 +59,25 @@ pub enum CommandRunDetails {
 }
 
 /// A command is something that is run by `giti` in the underlying OS. This is meant to
-/// hold all the possible outcomes of executing a [std::process::Command].
+/// hold all the possible outcomes of executing a [tokio::process::Command].
 #[derive(Debug)]
-pub enum CommandRunResult {
+pub enum CommandRunResult<T: Debug> {
     /// Command was not run (probably because the command would be a no-op).
     DidNotRun(
-        /* message */ String,
-        /* command specific details */ CommandRunDetails,
+        /* no-op message */ String,
+        /* command specific details */ T,
     ),
 
     /// Command ran, and produced success exit code.
     RanSuccessfully(
         /* success message */ String,
-        /* command specific details */ CommandRunDetails,
+        /* command specific details */ T,
         /* command */ Command,
     ),
 
-    /// Command ran, and produced non-zero exit code.
-    RanUnsuccessfully(
-        /* error message */ String,
-        /* command */ Command,
-        /* stdout or stderr */ Output,
-    ),
-
-    /// Attempt to run the command failed. It never ran.
-    FailedToRun(
+    /// Command ran and produced non-zero exit code. Or it failed to run, and never got
+    /// the chance to generate an exit code.
+    RanUnsuccessfullyOrFailedToRun(
         /* error message */ String,
         /* command */ Command,
         /* error report */ miette::Report,
@@ -119,6 +113,9 @@ impl Display for CommandRunDetails {
 
 /// Format the command as a string for display.
 pub fn fmt_cmd_str(cmd: &Command) -> StdResult<InlineString, Error> {
+    // Convert the tokio::process::Command to a standard Command.
+    let cmd = cmd.as_std();
+
     use std::fmt::Write as _;
 
     let cmd_str = {
@@ -153,7 +150,7 @@ pub fn fmt_details_str(details: &CommandRunDetails) -> StdResult<InlineString, E
     Ok(fmt_details_str)
 }
 
-impl Display for CommandRunResult {
+impl Display for CommandRunResult<CommandRunDetails> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
             CommandRunResult::RanSuccessfully(message, details, cmd) => {
@@ -168,7 +165,6 @@ impl Display for CommandRunResult {
 
                 write!(f, "{A:?}", A = cmd)
             }
-
             CommandRunResult::DidNotRun(message, details) => {
                 write!(
                     f,
@@ -178,8 +174,7 @@ impl Display for CommandRunResult {
                     c = fmt_details_str(details)?
                 )
             }
-
-            CommandRunResult::RanUnsuccessfully(message, cmd, output) => {
+            CommandRunResult::RanUnsuccessfullyOrFailedToRun(message, cmd, output) => {
                 write!(
                     f,
                     "{a}\n{b}\n{c}\n{D:?}",
@@ -187,17 +182,6 @@ impl Display for CommandRunResult {
                     b = message,
                     c = fmt_cmd_str(cmd)?,
                     D = output
-                )
-            }
-
-            CommandRunResult::FailedToRun(message, cmd, report) => {
-                write!(
-                    f,
-                    "{a}\n{b}{c:?}\n{D:?}",
-                    a = fg_pink(" 🗴 Command failed to run").to_small_str(),
-                    b = message,
-                    c = fmt_cmd_str(cmd)?,
-                    D = report
                 )
             }
         }

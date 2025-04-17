@@ -29,13 +29,14 @@ use crate::ok;
 /// # Example of command and args
 ///
 /// ```
-/// use r3bl_core::command;
-/// use std::process::Command;
+/// # use r3bl_core::command;
+/// # use std::process::Command;
 ///
 /// async fn run_command() {
+///     let arg_2 = "world!";
 ///     let mut command = command!(
 ///         program => "echo",
-///         args => "Hello, world!",
+///         args => "Hello,", arg_2,
 ///     );
 ///     let output = command.output().await.expect("Failed to execute command");
 ///     assert!(output.status.success());
@@ -46,9 +47,9 @@ use crate::ok;
 /// # Example of command, env, and args
 ///
 /// ```
-/// use r3bl_core::command;
-/// use r3bl_core::environment::{self, EnvKeys};
-/// use std::process::Command;
+/// # use r3bl_core::command;
+/// # use r3bl_core::environment::{self, EnvKeys};
+/// # use std::process::Command;
 ///
 /// async fn run_command() {
 ///     let my_path = "/usr/bin";
@@ -67,52 +68,78 @@ use crate::ok;
 /// # Examples of using the [Run] trait, and [std::process::Output].
 ///
 /// ```
-/// use r3bl_core::command;
-/// use r3bl_core::command_runner::Run;
+/// # use r3bl_core::command;
+/// # use r3bl_core::command_runner::Run;
 ///
 /// async fn run_command() {
+///     // Example 1.
 ///     let output = command!(
 ///        program => "echo",
-///        args => "Hello, world!",
+///        args => "Hello,", "world!",
 ///     )
 ///     .output()
 ///     .await
 ///     .unwrap();
 ///     assert!(output.status.success());
 ///
+///     // Example 2.
+///     let arg_2 = "world!";
 ///     let run_bytes = command!(
 ///       program => "echo",
-///       args => "Hello, world!",
+///       args => "Hello,", arg_2,
 ///     )
 ///     .run()
 ///     .await
 ///     .unwrap();
 ///     assert_eq!(String::from_utf8_lossy(&run_bytes), "Hello, world!\n");
+///
+///     // Example 3.
+///     let items = vec!["item1", "item2"];
+///     let cmd = command!(
+///         program => "echo",
+///         args => "Hello, world!",
+///         + items => items
+///     );
+///     assert_eq!(String::from_utf8_lossy(&run_bytes), "Hello, world! item1 item2\n");
 /// }
 /// ```
 #[macro_export]
 macro_rules! command {
-        // Variant that receives a command and args.
-        (program=> $cmd:expr, args=> $($args:expr),* $(,)?) => {{
-            let mut it = tokio::process::Command::new($cmd);
-            $(
-                it.arg($args);
-            )*
-            it
-        }};
+    // Variant that receives a command and args & items.
+    (program=> $cmd:expr, args => $($args:expr,)* + items => $items:expr)
+    => {{
+        let mut it = tokio::process::Command::new($cmd);
+        $(
+            it.arg($args);
+        )*
+        for item in $items {
+            // The item must implement `AsRef<OsStr>` and `SmallString` does not, so convert it to a `String`.
+            it.arg(item.to_string());
+        }
+        it
+    }};
 
-        // Variant that receives a command, env (vec), and args.
-        (program=> $cmd:expr, envs=> $envs:expr, args=> $($args:expr),* $(,)?) => {{
-            let mut it = tokio::process::Command::new($cmd);
-            it.envs($envs.to_owned());
-            // The following is equivalent to the line above:
-            // it.envs($envs.iter().map(|(k, v)| (k.as_str(), v.as_str())));
-            $(
-                it.arg($args);
-            )*
-            it
-        }};
-    }
+    // Variant that receives a command and args.
+    (program=> $cmd:expr, args=> $($args:expr),* $(,)?) => {{
+        let mut it = tokio::process::Command::new($cmd);
+        $(
+            it.arg($args);
+        )*
+        it
+    }};
+
+    // Variant that receives a command, env (vec), and args.
+    (program=> $cmd:expr, envs=> $envs:expr, args=> $($args:expr),* $(,)?) => {{
+        let mut it = tokio::process::Command::new($cmd);
+        it.envs($envs.to_owned());
+        // The following is equivalent to the line above:
+        // it.envs($envs.iter().map(|(k, v)| (k.as_str(), v.as_str())));
+        $(
+            it.arg($args);
+        )*
+        it
+    }};
+}
 
 pub trait Run {
     fn run(
@@ -289,6 +316,18 @@ pub async fn pipe(
 #[cfg(test)]
 mod tests_command_runner {
     use super::*;
+    use crate::ItemsOwned;
+
+    #[tokio::test]
+    async fn test_command_with_list_of_args() {
+        let items: ItemsOwned = (&["item1", "item2"]).into();
+        let cmd = command!(
+            program => "echo",
+            args => "Hello, world!",
+            + items => items
+        );
+        println!("Command: {:?}", cmd);
+    }
 
     #[tokio::test]
     async fn test_run() {

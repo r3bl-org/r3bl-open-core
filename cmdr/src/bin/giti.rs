@@ -23,6 +23,7 @@ use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
                 giti::{CLIArg,
                        CLICommand,
+                       CommandRunDetails,
                        CommandRunResult::{self},
                        branch,
                        ui_str,
@@ -105,7 +106,9 @@ pub fn report_unrecoverable_errors(report: miette::Report) {
 }
 
 /// Command ran and produced result: success, not success, fail, no-op.
-pub async fn display_command_run_result(cmd_run_result: CommandRunResult) {
+pub async fn display_command_run_result(
+    cmd_run_result: CommandRunResult<CommandRunDetails>,
+) {
     println!("{}", cmd_run_result);
     ui_templates::show_exit_message();
 }
