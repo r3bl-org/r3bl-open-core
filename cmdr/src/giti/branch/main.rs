@@ -37,7 +37,7 @@ use crate::giti::{BranchSubcommand,
 pub async fn try_main(
     command_to_run_with_each_selection: Option<BranchSubcommand>,
     maybe_branch_name: Option<String>,
-) -> CommonResult<CommandRunResult> {
+) -> CommonResult<CommandRunResult<CommandRunDetails>> {
     if let Some(subcommand) = command_to_run_with_each_selection {
         match subcommand {
             BranchSubcommand::Delete => try_delete().await,
@@ -49,7 +49,7 @@ pub async fn try_main(
     }
 }
 
-async fn user_typed_giti_branch() -> CommonResult<CommandRunResult> {
+async fn user_typed_giti_branch() -> CommonResult<CommandRunResult<CommandRunDetails>> {
     let branch_subcommands = get_giti_command_subcommand_names(CLICommand::Branch {
         command_to_run_with_each_selection: None,
         maybe_branch_name: None,

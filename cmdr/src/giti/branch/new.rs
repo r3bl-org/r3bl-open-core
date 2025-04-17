@@ -24,9 +24,9 @@ use crate::giti::{BranchNewDetails, CommandRunDetails, CommandRunResult, git, ui
 /// The main function for `giti branch new` command.
 pub async fn try_new(
     maybe_branch_name: Option<String>,
-) -> CommonResult<CommandRunResult> {
+) -> CommonResult<CommandRunResult<CommandRunDetails>> {
     match maybe_branch_name {
-        Some(branch_name) => command_execute::create_new_branch(branch_name),
+        Some(branch_name) => command_execute::create_new_branch(branch_name).await,
         None => user_interaction::prompt_for_branch_name().await,
     }
 }
@@ -50,8 +50,10 @@ mod details {
 mod command_execute {
     use super::*;
 
-    pub fn create_new_branch(branch_name: String) -> CommonResult<CommandRunResult> {
-        let (res, _cmd) = git::local_branch_ops::try_get_local_branches();
+    pub async fn create_new_branch(
+        branch_name: String,
+    ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
+        let (res, _cmd) = git::local_branch_ops::try_get_local_branch_names().await;
         let branches = res?;
         let branches_trimmed: Vec<String> = branches
             .iter()
@@ -66,10 +68,9 @@ mod command_execute {
             return Ok(it);
         }
 
-        let (res_output, cmd) = git::try_create_and_switch_to_branch(&branch_name);
-
+        let (res_output, cmd) = git::try_create_and_switch_to_branch(&branch_name).await;
         match res_output {
-            Ok(output) if output.status.success() => {
+            Ok(_) => {
                 let it = CommandRunResult::RanSuccessfully(
                     ui_str::branch_create_display::info_create_success(&branch_name),
                     details::with_details(branch_name),
@@ -77,22 +78,13 @@ mod command_execute {
                 );
                 Ok(it)
             }
-            Ok(output) => {
+            Err(report) => {
                 let string =
                     ui_str::branch_create_display::error_failed_to_create_new_branch(
                         &branch_name,
-                        Some(output.clone()),
                     );
-                let it = CommandRunResult::RanUnsuccessfully(string, cmd, output);
-                Ok(it)
-            }
-            Err(error) => {
-                let string =
-                    ui_str::branch_create_display::error_failed_to_create_new_branch(
-                        &branch_name,
-                        None,
-                    );
-                let it = CommandRunResult::FailedToRun(string, cmd, error);
+                let it =
+                    CommandRunResult::RanUnsuccessfullyOrFailedToRun(string, cmd, report);
                 Ok(it)
             }
         }
@@ -102,7 +94,8 @@ mod command_execute {
 mod user_interaction {
     use super::*;
 
-    pub async fn prompt_for_branch_name() -> CommonResult<CommandRunResult> {
+    pub async fn prompt_for_branch_name()
+    -> CommonResult<CommandRunResult<CommandRunDetails>> {
         let prompt_text =
             ui_str::branch_create_display::enter_branch_name_you_want_to_create();
         let mut rl_async = ReadlineAsync::try_new(Some(&prompt_text))?
@@ -114,7 +107,7 @@ mod user_interaction {
             match evt {
                 ReadlineEvent::Line(branch_name) => {
                     rl_async.exit(None).await.into_diagnostic()?;
-                    return command_execute::create_new_branch(branch_name);
+                    return command_execute::create_new_branch(branch_name).await;
                 }
                 ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
                     rl_async.exit(None).await.into_diagnostic()?;

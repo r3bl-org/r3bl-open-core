@@ -3,11 +3,4 @@
 # Including: *.rs
 # ContextLines: 2
 
-1 result - 1 file
-
-cmdr/src/bin/giti.rs:
-  112  /// Command ran and produced result: success, not success, fail, no-op.
-  113  pub async fn display_command_run_result(cmd_run_result: CommandRunResult) {
-  114:     // 01: no output printed yet; write impl Display for CommandRunResult and use it here
-  115      match cmd_run_result {
-  116          DidNotRun(_message, command_run_details) => match command_run_details {
+No Results
