@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023-2025 R3BL LLC
+ *   Copyright (c) 2025 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,17 +20,19 @@
 //! 2. [Video](https://youtu.be/lzMYDA6St0s)
 
 use clap::Parser;
-use r3bl_cmdr::{AnalyticsAction,
-                giti::{CLIArg,
-                       CLICommand,
-                       CommandRunDetails,
-                       CommandRunResult::{self},
-                       branch,
+use r3bl_cmdr::{giti::{branch,
                        ui_str,
-                       ui_templates::{self}},
+                       ui_templates::{self},
+                       CLIArg,
+                       CLICommand,
+                       CommandRunDetails},
                 report_analytics,
-                upgrade_check};
-use r3bl_core::{CommonResult, log_support::try_initialize_logging_global, throws};
+                upgrade_check,
+                AnalyticsAction};
+use r3bl_core::{log_support::try_initialize_logging_global,
+                throws,
+                CommandRunResult,
+                CommonResult};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
