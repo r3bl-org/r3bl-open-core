@@ -15,28 +15,28 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{ast,
+use r3bl_core::{AnsiStyledText,
+                CommandRunResult,
+                CommonResult,
+                InlineString,
+                InlineVec,
+                ItemsOwned,
+                ast,
                 ast_line,
                 ast_lines,
                 height,
                 new_style,
-                tui_color,
-                AnsiStyledText,
-                CommonResult,
-                InlineString,
-                InlineVec,
-                ItemsOwned};
-use r3bl_tui::{choose,
-               readline_async::{HowToChoose, StyleSheet},
-               DefaultIoDevices,
-               Header};
+                tui_color};
+use r3bl_tui::{DefaultIoDevices,
+               Header,
+               choose,
+               readline_async::{HowToChoose, StyleSheet}};
 
-use crate::giti::{git::{self},
-                  modified_unstaged_file_ops,
-                  ui_str,
-                  BranchCheckoutDetails,
+use crate::giti::{BranchCheckoutDetails,
                   CommandRunDetails,
-                  CommandRunResult};
+                  git::{self},
+                  modified_unstaged_file_ops,
+                  ui_str};
 
 mod details {
     use super::*;

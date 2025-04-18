@@ -20,6 +20,7 @@ use r3bl_core::{ast,
                 height,
                 new_style,
                 tui_color,
+                CommandRunResult,
                 CommonResult,
                 InlineString,
                 InlineVec,
@@ -36,8 +37,7 @@ use crate::{giti::{git::{self},
                    ui_templates::{multi_select_instruction_header,
                                   single_select_instruction_header},
                    BranchDeleteDetails,
-                   CommandRunDetails,
-                   CommandRunResult},
+                   CommandRunDetails},
             report_analytics,
             AnalyticsAction};
 
@@ -222,6 +222,8 @@ mod user_interaction {
 }
 
 mod command_execute {
+    use r3bl_core::CommandRunResult;
+
     use super::*;
 
     pub async fn delete_selected_branches(
