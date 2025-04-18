@@ -87,3 +87,35 @@
 - [x] replace `SuccessReport` with an enum of valid variants (including user pressed ctrl+c)
 - [x] change how errors are reported using `miette`
 - [x] collect all the git commands in a single module `git.rs`
+
+# ✔ clean up giti phase 3
+
+- [x] introduce consistent error reporting, and output handling using `CompletionReport`. there is
+      no need for individual subcommands to do something specific to report command success, not
+      success, or failure to run command. centralize this and simplify ALL subcommands, and make it
+      easy to perform logging and analytics reporting.
+- [x] replace `UIStrings` enum
+  - [x] with simple functions
+  - [x] consider moving this functionality into `impl Display` for `CommandExecutionReport`, instead
+        of `giti.rs` -> `display_command_run_result()`
+- [x] make `git.rs` use `InlineString` and `ItemsOwned` consistently. provide function arguments
+      that can be converted to these easily. use `String` everywhere, except for interfacing with
+      `choose` and then convert `ItemsOwned` to `String` and `Vec<String>`
+
+# ✔ rewrite ItemsOwned to make choose() API simple to use
+
+- [x] Remove ItemsBorrowed, and rewrite and radically simplify `ItemsOwned` and `choose()` API so
+      that it is easy to use.
+
+# ✔ disable github actions from the repo
+
+- [x] undo all the github actions so they no longer run automatically
+- [x] create a github hook to run `nu run all` maybe?
+- [x] update all the deps for the crates in the workspace
+
+# ✔ clean up giti phase 4
+
+- [x] fix `show_exit_message()` does not appear all the time
+- [x] in `git.rs` use `r3bl_script` to run commands (and not directly using `Command::new`)
+- [x] in `Display` impl of `CommandRunResult` don't print everything, write some items log (eg:
+      `CommandRunDetails`, etc.); does this need to be in `r3bl_script`?
