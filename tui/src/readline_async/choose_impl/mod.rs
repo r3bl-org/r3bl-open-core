@@ -19,7 +19,7 @@
 //!
 //! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
 //!
-//! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
+//! <!-- R3BL TUI library and suite of apps focused on developer productivity -->
 //!
 //! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
 //! </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874">
@@ -34,7 +34,7 @@
 //! </span><span style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 //!
 //! We are working on building command line apps in Rust which have rich text user interfaces (TUI).
-//! We want to lean into the terminal as a place of productivity, and build all kinds of awesome
+//! We want to lean into the terminal as a place of productivity and build all kinds of awesome
 //! apps for it.
 //!
 //! 1. 🔮 Instead of just building one app, we are building a library to enable any kind of rich TUI
@@ -54,42 +54,39 @@
 //!      [CSS](https://www.w3.org/TR/CSS/#css) &
 //!      [JSX](https://ui.dev/imperative-vs-declarative-programming).
 //!
-//! 2. 🌎 We are building apps to enhance developer productivity & workflows.
+//! 2. 🌎 We are building apps to enhance developer productivity and workflows.
 //!
 //!    - The idea here is not to rebuild `tmux` in Rust (separate processes mux'd onto a
-//!      single terminal window). Rather it is to build a set of integrated "apps" (or
+//!      single terminal window). Rather, it is to build a set of integrated "apps" (or
 //!      "tasks") that run in the same process that renders to one terminal window.
 //!    - Inside of this terminal window, we can implement things like "app" switching,
 //!      routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI
-//!      apps (which are tightly integrated) that are running in the same process, in the
-//!      same window. So you can imagine that all these "app"s have shared application
+//!      "apps" (which are tightly integrated) that are running in the same process, in the
+//!      same window. So you can imagine that all these "apps" have shared application
 //!      state. Each "app" may also have its own local application state.
-//!    - Here are some examples of the types of "app"s we plan to build (for which this
+//!    - Here are some example "apps" we plan to build (for which this
 //!      infrastructure acts as the open source engine):
-//!      1. Multi user text editors w/ syntax highlighting.
-//!      2. Integrations w/ github issues.
+//!      1. Multi-user text editors w/ syntax highlighting.
+//!      2. Integrations w/ GitHub issues.
 //!      3. Integrations w/ calendar, email, contacts APIs.
 //!
 //! All the crates in the `r3bl-open-core`
 //! [repo](https://github.com/r3bl-org/r3bl-open-core/) provide lots of useful
-//! functionality to help you build TUI (text user interface) apps, along w/ general
-//! niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
+//! functionality to help you build TUI (text user interface) apps, along with general
+//! niceties and ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 //!
 //! # Table of contents
 //!
 //! <!-- TOC -->
 //!
 //! - [Introduction](#introduction)
+//! - [Examples](#examples)
 //! - [Changelog](#changelog)
 //! - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
 //! - [How to use it as a library?](#how-to-use-it-as-a-library)
 //! - [APIs](#apis)
-//!     - [select_from_list](#select_from_list)
-//!     - [select_from_list_with_multi_line_header](#select_from_list_with_multi_line_header)
-//! - [How to use it as a binary?](#how-to-use-it-as-a-binary)
-//!     - [Interactive user experience](#interactive-user-experience)
-//!     - [Paths](#paths)
-//! - [Style the components](#style-the-components)
+//!     - [choose](#choose)
+//! - [Component styling](#component-styling)
 //!     - [Choose one of the 3 built-in styles](#choose-one-of-the-3-built-in-styles)
 //!     - [Create your style](#create-your-style)
 //! - [Build, run, test tasks](#build-run-test-tasks)
@@ -102,12 +99,12 @@
 //! # Introduction
 //!
 //! `choose_impl` allows you to add simple interactivity to your CLI app. It is not a full TUI, neither
-//! is it like [crate::ReadlineAsync]. It simply allows you to provide a list of items, and ask
+//! is it like [crate::ReadlineAsync]. It simply allows you to provide a list of items and ask
 //! the user to choose one or more of them.
 //!
 //! # Examples
 //!
-//! To run the examples, you can run `nu run examples` in the `terminal_async` folder.
+//! To run the examples, you can run `nu run.nu examples` in the `terminal_async` folder.
 //!
 //! # Changelog
 //!
@@ -124,7 +121,7 @@
 //!
 //! # How to use it as a library?
 //!
-//! Here's a demo of the library target of this crate in action.
+//! Here's a demo of this library in action.
 //!
 //! <video width="100%" controls>
 //!   <source src="https://github.com/r3bl-org/r3bl-open-core/assets/22040032/46850043-4973-49fa-9824-58f32f21e96e" type="video/mp4"/>
@@ -146,11 +143,11 @@
 //! select).
 //!
 //! It works on macOS, Linux, and Windows. And is aware of the terminal color output
-//! limitations of each. For eg, it uses Windows API on Windows for keyboard input. And on
-//! macOS Terminal.app it restricts color output to a 256 color palette.
+//! limitations of each. For e.g., it uses Windows API on Windows for keyboard input. And on
+//! macOS Terminal.app it restricts color output to a 256-color palette.
 //!
 //! ```rust
-//! # use r3bl_core::*;
+//! # use r3bl_tui::*;
 //! # use r3bl_tui::readline_async::*;
 //! # use std::io::Result;
 //!
@@ -190,18 +187,18 @@
 //! We provide a single function:
 //!
 //! - [crate::choose()]: Use this API if you want to display a list of items in an async
-//!   context, with a single or multi line header.
+//!   context, with a single or multi-line header.
 //!
 //! ## choose
 //!
-//! Use this async API if you want to display a list of items with a single or multi line header.
+//! Use this async API if you want to display a list of items with a single or multi-line header.
 //!
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/0ae722bb-8cd1-47b1-a293-1a96e84d24d0)
 //!
 //! [crate::choose()] code example:
 //!
 //! ```rust
-//! # use r3bl_core::*;
+//! # use r3bl_tui::*;
 //! # use r3bl_tui::readline_async::*;
 //! # use std::io::Result;
 //!
@@ -233,7 +230,7 @@
 //! }
 //! ```
 //!
-//! # Style the components
+//! # Component styling
 //!
 //! ## Choose one of the 3 built-in styles
 //!
@@ -250,10 +247,10 @@
 //! `hot_pink_style`:
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/06c155f9-11a9-416d-8056-cb4c741ac3d7)
 //!
-//! To use one of the built-in styles, simply pass it as an argument to the `select_from_list` function.
+//! To use one of the built-in styles, pass it as an argument to the `choose` function.
 //!
 //! ```rust
-//! # use r3bl_core::*;
+//! # use r3bl_tui::*;
 //! # use r3bl_tui::readline_async::*;
 //! # use std::io::Result;
 //!
@@ -294,11 +291,12 @@
 //!
 //! ## Create your style
 //!
-//! To create your style, you need to create a `StyleSheet` struct and pass it as an argument to the `select_from_list` function.
+//! To create your style, you need to create a `StyleSheet` struct and pass it as an
+//! argument to the `choose` function.
 //!
 //! ```rust
 //! use std::io::Result;
-//! use r3bl_core::{
+//! use r3bl_tui::{
 //!     AnsiStyledText, ASTColor, tui_color, TuiStyle,
 //!     height, width
 //! };
@@ -335,7 +333,7 @@
 //!       },
 //!    };
 //!
-//!    // Then pass `my_custom_style` as the last argument to the `select_from_list` function.
+//!    // Then pass `my_custom_style` as the last argument to the `choose` function.
 //!    let mut default_io_devices = DefaultIoDevices::default();
 //!    let user_input = choose(
 //!       "Multiple select",
@@ -362,7 +360,7 @@
 //!
 //! ## Prerequisites
 //!
-//! 🌠 For these to work you have to install the Rust toolchain, `nu`, `cargo-watch`,
+//! 🌠 For these to work, you have to install the Rust toolchain, `nu`, `cargo-watch`,
 //! `bat`, and `flamegraph` on your system. Here are the instructions:
 //!
 //! 1. Install the Rust toolchain using `rustup` by following the instructions
@@ -379,28 +377,28 @@
 //!
 //! | Command                                | Description                                |
 //! | -------------------------------------- | ------------------------------------------ |
-//! | `nu run examples`                      | Run examples in the `./examples` folder    |
-//! | `nu run piped`                         | Run binary with piped input                |
-//! | `nu run build`                         | Build                                      |
-//! | `nu run clean`                         | Clean                                      |
-//! | `nu run all`                           | All                                        |
-//! | `nu run examples-with-flamegraph-profiling` | Run examples with flamegraph profiling |
-//! | `nu run test`                          | Run tests                                  |
-//! | `nu run clippy`                        | Run clippy                                 |
-//! | `nu run docs`                          | Build docs                                 |
-//! | `nu run serve-docs`                    | Serve docs over VSCode Remote SSH session. |
-//! | `nu run upgrade-deps`                  | Upgrade deps                               |
-//! | `nu run rustfmt`                       | Run rustfmt                                |
+//! | `nu run.nu examples`                      | Run examples in the `./examples` folder    |
+//! | `nu run.nu piped`                         | Run binary with piped input                |
+//! | `nu run.nu build`                         | Build                                      |
+//! | `nu run.nu clean`                         | Clean                                      |
+//! | `nu run.nu all`                           | All                                        |
+//! | `nu run.nu examples-with-flamegraph-profiling` | Run examples with flamegraph profiling |
+//! | `nu run.nu test`                          | Run tests                                  |
+//! | `nu run.nu clippy`                        | Run clippy                                 |
+//! | `nu run.nu docs`                          | Build docs                                 |
+//! | `nu run.nu serve-docs`                    | Serve docs over VSCode Remote SSH session. |
+//! | `nu run.nu upgrade-deps`                  | Upgrade deps                               |
+//! | `nu run.nu rustfmt`                       | Run rustfmt                                |
 //!
 //! The following commands will watch for changes in the source folder and re-run:
 //!
 //! | Command                                             | Description                        |
 //! | --------------------------------------------------- | ---------------------------------- |
-//! | `nu run watch-examples`                             | Watch run examples                 |
-//! | `nu run watch-all-tests`                            | Watch all test                     |
-//! | `nu run watch-one-test <test_name>`                 | Watch one test                     |
-//! | `nu run watch-clippy`                               | Watch clippy                       |
-//! | `nu run watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
+//! | `nu run.nu watch-examples`                             | Watch run examples                 |
+//! | `nu run.nu watch-all-tests`                            | Watch all test                     |
+//! | `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
+//! | `nu run.nu watch-clippy`                               | Watch clippy                       |
+//! | `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
 //!
 //! There's also a `run` script at the **top level folder** of the repo. It is intended to
 //! be used in a CI/CD environment w/ all the required arguments supplied or in
@@ -408,10 +406,10 @@
 //!
 //! | Command                       | Description                        |
 //! | ----------------------------- | ---------------------------------- |
-//! | `nu run all`                  | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD |
-//! | `nu run build-full`           | This will build all the crates in the Rust workspace. It will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
-//! | `nu run install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`,and `flamegraph` will all be installed in one go) |
-//! | `nu run check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace |
+//! | `nu run.nu all`                  | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD |
+//! | `nu run.nu build-full`           | This will build all the crates in the Rust workspace. It will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
+//! | `nu run.nu install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`,and `flamegraph` will all be installed in one go) |
+//! | `nu run.nu check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace |
 //!
 //! # References
 //!

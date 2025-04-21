@@ -14,8 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use r3bl_core::{CommonResult, ok};
+use r3bl_tui::{CommonResult, ok};
 
 pub async fn run_app() -> CommonResult<()> {
     println!("TODO: Implement the r3bl-cmdr shell app 🌞");

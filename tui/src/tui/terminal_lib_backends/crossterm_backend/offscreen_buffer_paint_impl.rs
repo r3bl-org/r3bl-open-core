@@ -14,27 +14,26 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_core::{ch,
-                col,
-                glyphs::SPACER_GLYPH,
-                row,
-                ColIndex,
-                GCString,
-                InlineString,
-                LockedOutputDevice,
-                RowIndex,
-                Size,
-                TuiStyle};
-
-use crate::{diff_chunks::PixelCharDiffChunks,
+use crate::{ch,
+            col,
+            diff_chunks::PixelCharDiffChunks,
+            glyphs::SPACER_GLYPH,
             render_ops,
+            row,
+            ColIndex,
             Flush as _,
             FlushKind,
+            GCString,
+            InlineString,
+            LockedOutputDevice,
             OffscreenBuffer,
             OffscreenBufferPaint,
             PixelChar,
             RenderOp,
             RenderOps,
+            RowIndex,
+            Size,
+            TuiStyle,
             DEBUG_TUI_COMPOSITOR,
             DEBUG_TUI_SHOW_PIPELINE};
 
@@ -324,11 +323,15 @@ mod render_helpers {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, height, new_style, tui_color, width, ColWidth};
-
     use super::*;
-    use crate::{offscreen_buffer_paint_impl::render_helpers::style_eq,
-                render_pipeline_to_offscreen_buffer::print_text_with_attributes};
+    use crate::{assert_eq2,
+                height,
+                new_style,
+                offscreen_buffer_paint_impl::render_helpers::style_eq,
+                render_pipeline_to_offscreen_buffer::print_text_with_attributes,
+                tui_color,
+                width,
+                ColWidth};
 
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {

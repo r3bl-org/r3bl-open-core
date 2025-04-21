@@ -17,14 +17,15 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{LockedOutputDevice, Pos, Size};
-
 use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
 use crate::{diff_chunks::PixelCharDiffChunks,
             GlobalData,
+            LockedOutputDevice,
             OffscreenBuffer,
             OffscreenBufferPaint,
             OffscreenBufferPaintImplCrossterm,
+            Pos,
+            Size,
             TerminalLibBackend,
             DEBUG_TUI_COMPOSITOR,
             DEBUG_TUI_SHOW_PIPELINE_EXPANDED,
@@ -160,11 +161,11 @@ pub fn paint<S, AS>(
 
 /// 1. Ensure that the [Pos] is within the bounds of the terminal window using
 ///    [RenderOpsLocalData].
-/// 2. If the [Pos] is outside of the bounds of the window then it is clamped to the
+/// 2. If the [Pos] is outside the bounds of the window then it is clamped to the
 ///    nearest edge of the window. This clamped [Pos] is returned.
 /// 3. This also saves the clamped [Pos] to [RenderOpsLocalData].
 ///
-/// Note that printing [r3bl_core::SPACER_GLYPH] by
+/// Note that printing [crate::SPACER_GLYPH] by
 /// [crate::render_pipeline_to_offscreen_buffer::process_render_op] will trigger clipping
 /// the [Pos] to the nearest edge of the window. This is OK. This is because the spacer is
 /// painted at the very last column of the terminal window due to the way in which the

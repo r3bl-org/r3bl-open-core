@@ -73,10 +73,9 @@
 //!     - <https://github.com/crossterm-rs/crossterm/blob/master/examples/event-stream-tokio.rs>
 
 use futures_util::FutureExt;
-use r3bl_core::InputDevice;
 
 use super::InputEvent;
-use crate::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+use crate::{InputDevice, DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 
 pub trait InputDeviceExt {
     #[allow(async_fn_in_trait)]

@@ -20,29 +20,29 @@ use std::io::Result;
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 style::{Print, ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType}};
-use r3bl_core::{ast,
-                ch,
-                col,
-                fg_blue,
-                get_terminal_width,
-                inline_string,
-                output_device_as_mut,
-                pad_fmt,
-                throws,
-                usize,
-                width,
-                AnsiStyledText,
-                ChUnit,
-                GCStringExt,
-                InlineString,
-                InlineVec,
-                OutputDevice};
 
-use crate::{apply_style,
+use crate::{ast,
+            ch,
+            choose_apply_style,
+            col,
+            fg_blue,
+            get_terminal_width,
+            inline_string,
+            output_device_as_mut,
+            pad_fmt,
             queue_commands,
+            throws,
+            usize,
+            width,
+            AnsiStyledText,
+            ChUnit,
             FunctionComponent,
+            GCStringExt,
             Header,
             HowToChoose,
+            InlineString,
+            InlineVec,
+            OutputDevice,
             State,
             StyleSheet,
             DEVELOPMENT_MODE};
@@ -162,7 +162,7 @@ impl FunctionComponent<State> for SelectComponent {
                         queue_commands! {
                             self.output_device,
                             // Set the fg color for the text.
-                            apply_style!(fg => fg),
+                            choose_apply_style!(fg => fg),
                         };
                     }
 
@@ -170,20 +170,20 @@ impl FunctionComponent<State> for SelectComponent {
                         queue_commands! {
                             self.output_device,
                             // Set the bg color for the text.
-                            apply_style!(bg => bg),
+                            choose_apply_style!(bg => bg),
                         };
                     }
 
                     queue_commands! {
                         self.output_device,
                         // Style the text.
-                        apply_style!(single_line_header_style => bold),
-                        apply_style!(single_line_header_style => italic),
-                        apply_style!(single_line_header_style => dim),
-                        apply_style!(single_line_header_style => underline),
-                        apply_style!(single_line_header_style => reverse),
-                        apply_style!(single_line_header_style => hidden),
-                        apply_style!(single_line_header_style => strikethrough),
+                        choose_apply_style!(single_line_header_style => bold),
+                        choose_apply_style!(single_line_header_style => italic),
+                        choose_apply_style!(single_line_header_style => dim),
+                        choose_apply_style!(single_line_header_style => underline),
+                        choose_apply_style!(single_line_header_style => reverse),
+                        choose_apply_style!(single_line_header_style => hidden),
+                        choose_apply_style!(single_line_header_style => strikethrough),
                         // Clear the current line.
                         Clear(ClearType::CurrentLine),
                         // Print the text.
@@ -416,7 +416,7 @@ impl FunctionComponent<State> for SelectComponent {
                     queue_commands! {
                         self.output_device,
                         // Set the fg color for the text.
-                        apply_style!(fg => fg),
+                        choose_apply_style!(fg => fg),
                     };
                 }
 
@@ -424,20 +424,20 @@ impl FunctionComponent<State> for SelectComponent {
                     queue_commands! {
                         self.output_device,
                         // Set the bg color for the text.
-                        apply_style!(bg => bg),
+                        choose_apply_style!(bg => bg),
                     };
                 }
 
                 queue_commands! {
                     self.output_device,
                     // Style the text.
-                    apply_style!(data_style => bold),
-                    apply_style!(data_style => italic),
-                    apply_style!(data_style => dim),
-                    apply_style!(data_style => underline),
-                    apply_style!(data_style => reverse),
-                    apply_style!(data_style => hidden),
-                    apply_style!(data_style => strikethrough),
+                    choose_apply_style!(data_style => bold),
+                    choose_apply_style!(data_style => italic),
+                    choose_apply_style!(data_style => dim),
+                    choose_apply_style!(data_style => underline),
+                    choose_apply_style!(data_style => reverse),
+                    choose_apply_style!(data_style => hidden),
+                    choose_apply_style!(data_style => strikethrough),
                     // Print the text.
                     Print(data_item),
                     // Print the padding text.
@@ -480,13 +480,16 @@ fn clip_string_to_width_with_ellipsis(
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
-    use r3bl_core::{global_color_support::{clear_override, set_override},
-                    ColorSupport,
-                    ItemsOwned,
-                    OutputDeviceExt};
     use serial_test::serial;
 
     use super::*;
+    use crate::{ch,
+                global_color_support::{clear_override, set_override},
+                ChUnit,
+                ColorSupport,
+                ItemsOwned,
+                OutputDevice,
+                OutputDeviceExt};
 
     #[test]
     fn test_clip_string_to_width_with_ellipsis() {

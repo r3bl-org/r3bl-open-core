@@ -142,9 +142,8 @@ impl From<KeyModifiers> for ModifierKeysMask {
 
 #[cfg(test)]
 mod tests_modifier_keys_mask {
-    use r3bl_core::assert_eq2;
-
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn test_empty_mask() {

@@ -19,11 +19,16 @@ use std::{collections::{hash_map::Entry, HashMap},
           fmt::Debug,
           ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_core::{ok, InlineVec, LockedOutputDevice};
 use smallvec::smallvec;
 
 use super::{paint::paint, render_op::RenderOp, ZOrder};
-use crate::{tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED, FlushKind, GlobalData, RenderOps};
+use crate::{ok,
+            tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED,
+            FlushKind,
+            GlobalData,
+            InlineVec,
+            LockedOutputDevice,
+            RenderOps};
 
 /// Macro to make it easier to create a [RenderPipeline]. It works w/ [RenderOp] items. It
 /// allows them to be added in sequence, and then flushed at the end.

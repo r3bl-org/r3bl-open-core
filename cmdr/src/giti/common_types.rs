@@ -17,7 +17,7 @@
 
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use r3bl_core::ItemsOwned;
+use r3bl_tui::ItemsOwned;
 
 /// Detailed information about a sub command that has run successfully.
 #[derive(Debug, Clone, Default)]

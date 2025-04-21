@@ -21,10 +21,11 @@ use nom::{branch::alt,
           multi::many0,
           IResult,
           Parser};
-use r3bl_core::{fg_blue, fg_red};
 
 use super::specialized_parser_delim_matchers;
-use crate::{md_parser::constants::{BACK_TICK,
+use crate::{fg_blue,
+            fg_red,
+            md_parser::constants::{BACK_TICK,
                                    CHECKED,
                                    LEFT_BRACKET,
                                    LEFT_IMAGE,

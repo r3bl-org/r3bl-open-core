@@ -24,15 +24,19 @@
 //!   content of the editor buffer to the screen.
 //!
 //! In the future, if there is a need to store multiple entries in the cache, the cache
-//! can be implemented as a [r3bl_core::RingBuffer] or [r3bl_core::InlineVec] of
+//! can be implemented as a [crate::RingBuffer] or [crate::InlineVec] of
 //! [CacheEntry] structs.
 
 use std::ops::{Deref, DerefMut};
 
-use r3bl_core::{ScrOfs, Size};
-
 use super::EditorBuffer;
-use crate::{engine_public_api, EditorEngine, HasFocus, RenderArgs, RenderOps};
+use crate::{engine_public_api,
+            EditorEngine,
+            HasFocus,
+            RenderArgs,
+            RenderOps,
+            ScrOfs,
+            Size};
 
 pub(in crate::tui::editor::editor_buffer) mod key {
     use super::*;
@@ -53,7 +57,8 @@ pub(in crate::tui::editor::editor_buffer) mod key {
         }
     }
 }
-pub use key::*; // Allow code below to all the symbols in this mod.
+pub use key::*;
+// Allow code below to all the symbols in this mod.
 
 pub(in crate::tui::editor::editor_buffer) mod cache_entry {
     use super::{key::Key, *};
@@ -68,7 +73,8 @@ pub(in crate::tui::editor::editor_buffer) mod cache_entry {
         }
     }
 }
-pub use cache_entry::*; // Allow code below to all the symbols in this mod.
+pub use cache_entry::*;
+// Allow code below to all the symbols in this mod.
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UseRenderCache {
@@ -167,10 +173,8 @@ mod render_cache_impl_block {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, col, height, row, scr_ofs, width};
-
     use super::*;
-    use crate::{render_ops, RenderOp};
+    use crate::{assert_eq2, col, height, render_ops, row, scr_ofs, width, RenderOp};
 
     /// Fake render_ops to be used in the tests.
     fn get_render_ops_og() -> RenderOps {

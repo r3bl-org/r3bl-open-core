@@ -17,25 +17,11 @@
 
 //! This module is responsible for converting a [MdDocument] into a [StyleUSSpanLines].
 
-use r3bl_core::{join,
-                new_style,
-                CommonError,
-                CommonErrorType,
-                CommonResult,
-                GCString,
-                GCStringExt,
-                GradientGenerationPolicy,
-                InlineString,
-                PrettyPrintDebug,
-                TextColorizationPolicy,
-                TuiStyle,
-                TuiStyledTexts};
 use smallvec::smallvec;
-use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
+use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
 use super::create_color_wheel_from_heading_data;
-use crate::{convert_syntect_to_styled_text,
-            generate_ordered_list_item_bullet,
+use crate::{generate_ordered_list_item_bullet,
             generate_unordered_list_item_bullet,
             get_bold_style,
             get_checkbox_checked_style,
@@ -49,40 +35,51 @@ use crate::{convert_syntect_to_styled_text,
             get_link_text_style,
             get_link_url_style,
             get_list_bullet_style,
-            md_parser::constants::{AUTHORS,
-                                   BACK_TICK,
-                                   CHECKED_OUTPUT,
-                                   CODE_BLOCK_START_PARTIAL,
-                                   DATE,
-                                   LEFT_BRACKET,
-                                   LEFT_IMAGE,
-                                   LEFT_PARENTHESIS,
-                                   NEW_LINE,
-                                   NEW_LINE_CHAR,
-                                   RIGHT_BRACKET,
-                                   RIGHT_IMAGE,
-                                   RIGHT_PARENTHESIS,
-                                   STAR,
-                                   TAGS,
-                                   TITLE,
-                                   UNCHECKED_OUTPUT,
-                                   UNDERSCORE},
+            join,
+            new_style,
             parse_markdown,
-            try_get_syntax_ref,
+            tui::md_parser::constants::{AUTHORS,
+                                        BACK_TICK,
+                                        CHECKED_OUTPUT,
+                                        DATE,
+                                        LEFT_BRACKET,
+                                        LEFT_IMAGE,
+                                        LEFT_PARENTHESIS,
+                                        NEW_LINE,
+                                        NEW_LINE_CHAR,
+                                        RIGHT_BRACKET,
+                                        RIGHT_IMAGE,
+                                        RIGHT_PARENTHESIS,
+                                        STAR,
+                                        TAGS,
+                                        TITLE,
+                                        UNCHECKED_OUTPUT,
+                                        UNDERSCORE},
             CodeBlockLineContent,
             CodeBlockLines,
+            CommonError,
+            CommonErrorType,
+            CommonResult,
             FragmentsInOneLine,
+            GCString,
+            GCStringExt,
+            GradientGenerationPolicy,
             HeadingData,
             HyperlinkData,
+            InlineString,
             Lines,
             List,
             MdBlock,
             MdDocument,
             MdLineFragment,
             ParserByteCache,
+            PrettyPrintDebug,
             StyleUSSpan,
             StyleUSSpanLine,
             StyleUSSpanLines,
+            TextColorizationPolicy,
+            TuiStyle,
+            TuiStyledTexts,
             PARSER_BYTE_CACHE_PAGE_SIZE};
 
 /// This is the main function that the [crate::editor] uses this in order to display the
@@ -169,9 +166,8 @@ pub fn try_parse_and_highlight(
 
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
-    use r3bl_core::{assert_eq2, fg_cyan, throws, tui_color};
-
     use super::*;
+    use crate::{assert_eq2, fg_cyan, throws, tui_color};
 
     #[test]
     fn from_vec_gcs() -> CommonResult<()> {
@@ -241,7 +237,7 @@ impl StyleUSSpanLines {
         lines
     }
 
-    /// Based on [r3bl_core::global_color_support::detect] & language we have the
+    /// Based on [crate::global_color_support::detect] & language we have the
     /// following:
     /// ```text
     /// |               | Truecolor      | ANSI           |
@@ -265,7 +261,12 @@ impl StyleUSSpanLines {
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         mod inner {
+            use syntect::easy::HighlightLines;
+
             use super::*;
+            use crate::{convert_syntect_to_styled_text,
+                        try_get_syntax_ref,
+                        tui::constants::CODE_BLOCK_START_PARTIAL};
 
             pub fn try_use_syntect(
                 code_block_lines: &CodeBlockLines<'_>,
@@ -760,14 +761,17 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
     use miette::IntoDiagnostic as _;
-    use r3bl_core::{assert_eq2, throws, tui_color};
 
     use super::*;
-    use crate::{get_metadata_tags_marker_style,
+    use crate::{assert_eq2,
+                fg_cyan,
+                get_metadata_tags_marker_style,
                 get_metadata_tags_values_style,
                 get_metadata_title_marker_style,
                 get_metadata_title_value_style,
                 list,
+                throws,
+                tui_color,
                 CodeBlockLine,
                 HeadingLevel};
 
@@ -1068,8 +1072,6 @@ mod tests_style_us_span_lines_from {
     /// Test each variant of [MdBlockElement] is converted by
     /// [StyleUSSpanLines::from_block](StyleUSSpanLines::from_block).
     mod from_block {
-        use r3bl_core::fg_cyan;
-
         use super::*;
 
         #[test]

@@ -17,29 +17,29 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{col,
-                new_style,
-                req_size_pc,
-                row,
-                send_signal,
-                throws,
-                throws_with_return,
-                tui_color,
-                tui_styled_text,
-                tui_styled_texts,
-                tui_stylesheet,
-                CommonResult,
-                Size,
-                TuiStylesheet,
-                SPACER_GLYPH};
 use r3bl_tui::{box_end,
                box_start,
+               col,
+               glyphs,
+               height,
+               inline_string,
+               new_style,
                render_component_in_current_box,
                render_ops,
                render_tui_styled_texts_into,
+               req_size_pc,
+               row,
+               send_signal,
                surface,
+               throws,
+               throws_with_return,
+               tui_color,
+               tui_styled_text,
+               tui_styled_texts,
+               tui_stylesheet,
                App,
                BoxedSafeApp,
+               CommonResult,
                ComponentRegistry,
                ComponentRegistryMap,
                EditMode,
@@ -58,12 +58,15 @@ use r3bl_tui::{box_end,
                PerformPositioningAndSizing,
                RenderOp,
                RenderPipeline,
+               Size,
                Surface,
                SurfaceProps,
                SurfaceRender,
                TerminalWindowMainThreadSignal,
+               TuiStylesheet,
                ZOrder,
-               DEBUG_TUI_MOD};
+               DEBUG_TUI_MOD,
+               SPACER_GLYPH};
 use tokio::sync::mpsc::Sender;
 
 use crate::ex_pitch::state::{state_mutator, AppSignal, State, FILE_CONTENT_ARRAY};
@@ -114,8 +117,6 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use r3bl_core::height;
-
     use super::*;
 
     impl App for AppMain {
@@ -300,8 +301,6 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use r3bl_core::{glyphs, inline_string};
-
     use super::*;
 
     pub fn create_components(

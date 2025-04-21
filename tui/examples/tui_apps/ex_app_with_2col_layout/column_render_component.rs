@@ -14,38 +14,39 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_core::{ch,
-                col,
-                glyphs,
-                inline_string,
-                row,
-                send_signal,
-                throws_with_return,
-                Ansi256GradientIndex,
-                ColorWheel,
-                ColorWheelConfig,
-                ColorWheelSpeed,
-                CommonResult,
-                GradientGenerationPolicy,
-                Pos,
-                TextColorizationPolicy};
-use r3bl_tui::{render_ops,
+use r3bl_tui::{ch,
+               col,
+               glyphs,
+               inline_string,
+               render_ops,
                render_pipeline,
+               row,
+               send_signal,
+               throws_with_return,
+               Ansi256GradientIndex,
                BoxedSafeComponent,
+               ColorWheel,
+               ColorWheelConfig,
+               ColorWheelSpeed,
+               CommonResult,
                Component,
                EventPropagation,
                FlexBox,
                FlexBoxId,
+               GCStringExt,
                GlobalData,
+               GradientGenerationPolicy,
                HasFocus,
                InputEvent,
                Key,
                KeyPress,
+               Pos,
                RenderOp,
                RenderPipeline,
                SpecialKey,
                SurfaceBounds,
                TerminalWindowMainThreadSignal,
+               TextColorizationPolicy,
                ZOrder,
                DEBUG_TUI_MOD};
 use smallvec::smallvec;
@@ -86,8 +87,6 @@ mod constructor {
 }
 
 mod column_render_component_impl_component_trait {
-    use r3bl_core::GCStringExt;
-
     use super::*;
 
     impl Component<State, AppSignal> for ColumnComponent {

@@ -60,9 +60,7 @@
 //!    ╰─────────────────────╯ <- AtAbsoluteBottom
 //! ```
 
-use r3bl_core::{ch, fg_green, inline_string, ChUnit};
-
-use crate::DEVELOPMENT_MODE;
+use crate::{ch, fg_green, inline_string, ChUnit, DEVELOPMENT_MODE};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum CaretVerticalViewportLocation {

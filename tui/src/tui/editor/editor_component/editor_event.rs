@@ -17,11 +17,11 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{fg_green, inline_string, Size};
-
 use crate::{clipboard_support::ClipboardService,
             editor_buffer::EditorBuffer,
             editor_engine::engine_internal_api,
+            fg_green,
+            inline_string,
             terminal_lib_backends::KeyPress,
             validate_scroll_on_resize,
             DeleteSelectionWith,
@@ -32,6 +32,7 @@ use crate::{clipboard_support::ClipboardService,
             KeyState,
             ModifierKeysMask,
             SelectMode,
+            Size,
             SpecialKey,
             DEBUG_TUI_COPY_PASTE};
 

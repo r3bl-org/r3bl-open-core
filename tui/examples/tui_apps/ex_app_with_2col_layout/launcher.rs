@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{throws, CommonResult};
-use r3bl_tui::{key_press, InputEvent, TerminalWindow};
+use r3bl_tui::{key_press, throws, CommonResult, InputEvent, TerminalWindow};
 
 use super::{AppMain, State};
 

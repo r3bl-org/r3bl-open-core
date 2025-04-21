@@ -16,36 +16,28 @@
  */
 use std::{borrow::Cow, fmt::Debug};
 
-use r3bl_core::{ch,
-                col,
-                glyphs::SPACER_GLYPH as SPACER,
-                height,
-                inline_string,
-                pc,
-                row,
-                throws_with_return,
-                tui_style_attrib,
-                u16,
-                usize,
-                width,
-                ColorWheel,
-                CommonError,
-                CommonErrorType,
-                CommonResult,
-                GCStringExt as _,
-                GradientGenerationPolicy,
-                InlineString,
-                Pos,
-                Size,
-                TextColorizationPolicy,
-                TuiStyle};
-
-use crate::{editor_engine::engine_public_api,
+use crate::{ch,
+            col,
+            editor_engine::engine_public_api,
+            glyphs::SPACER_GLYPH as SPACER,
+            height,
+            inline_string,
+            pc,
             render_ops,
             render_pipeline,
             render_tui_styled_texts_into,
+            row,
             terminal_lib_backends::KeyPress,
+            throws_with_return,
+            tui_style_attrib,
+            u16,
+            usize,
+            width,
             BorderGlyphCharacter,
+            ColorWheel,
+            CommonError,
+            CommonErrorType,
+            CommonResult,
             DialogBuffer,
             DialogChoice,
             DialogEngine,
@@ -57,18 +49,25 @@ use crate::{editor_engine::engine_public_api,
             EventPropagation,
             FlexBox,
             FlexBoxId,
+            GCStringExt as _,
             GlobalData,
+            GradientGenerationPolicy,
             HasDialogBuffers,
+            InlineString,
             InputEvent,
             Key,
             MinSize,
             PartialFlexBox,
+            Pos,
             RenderOp,
             RenderOps,
             RenderPipeline,
+            Size,
             SpecialKey,
             SurfaceBounds,
             SystemClipboard,
+            TextColorizationPolicy,
+            TuiStyle,
             ZOrder};
 
 #[derive(Debug)]
@@ -944,10 +943,9 @@ mod internal_impl {
 
 #[cfg(test)]
 mod test_dialog_engine_api_render_engine {
-    use r3bl_core::assert_eq2;
-
     use super::*;
-    use crate::{test_dialog::mock_real_objects_for_dialog::{self, make_global_data},
+    use crate::{assert_eq2,
+                test_dialog::mock_real_objects_for_dialog::{self, make_global_data},
                 HasFocus};
 
     #[test]
@@ -995,10 +993,8 @@ mod test_dialog_engine_api_render_engine {
 
 #[cfg(test)]
 mod test_dialog_api_make_flex_box_for_dialog {
-    use r3bl_core::assert_eq2;
-
     use super::*;
-    use crate::{dialog_engine_api::internal_impl, Surface};
+    use crate::{assert_eq2, dialog_engine_api::internal_impl, Surface};
 
     /// More info on `is` and downcasting:
     /// - https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any
@@ -1153,10 +1149,8 @@ mod test_dialog_api_make_flex_box_for_dialog {
 
 #[cfg(test)]
 mod test_dialog_engine_api_apply_event {
-    use r3bl_core::assert_eq2;
-
     use super::*;
-    use crate::{key_press, test_dialog::mock_real_objects_for_dialog};
+    use crate::{assert_eq2, key_press, test_dialog::mock_real_objects_for_dialog};
 
     #[test]
     fn apply_event_esc() {

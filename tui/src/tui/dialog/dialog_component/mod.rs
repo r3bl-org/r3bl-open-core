@@ -17,8 +17,10 @@
 
 // Attach.
 pub mod dialog_component_struct;
+pub mod dialog_component_traits;
 pub mod dialog_event;
 
 // Re-export.
 pub use dialog_component_struct::*;
+pub use dialog_component_traits::*;
 pub use dialog_event::*;

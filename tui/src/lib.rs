@@ -21,11 +21,66 @@
 // - <https://symbl.cc/en/collections/brackets/>
 // - <https://symbl.cc/en/collections/crosses/>
 
-//! # Why R3BL?
-//!
 //! <img
 //! src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true"
 //! height="256px">
+//!
+//! # Table of contents
+//!
+//! <!-- TOC -->
+//! - [Introduction](#introduction)
+//! - [Framework highlights](#framework-highlights)
+//! - [Full TUI, Partial TUI, and async
+//!   readline](#full-tui-partial-tui-and-async-readline)
+//!   - [Full TUI (async, raw mode, full screen) for immersive TUI
+//!     apps](#full-tui-async-raw-mode-full-screen-for-immersive-tui-apps)
+//!   - [Partial TUI (async, partial raw mode, async readline) for choice based user
+//!     interaction](#partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
+//!   - [Partial TUI (async, partial raw mode, async readline) for async
+//!     REPL](#partial-tui-async-partial-raw-mode-async-readline-for-async-repl)
+//!   - [Power via composition](#power-via-composition)
+//! - [Changelog](#changelog)
+//! - [Learn how these crates are built, provide
+//!   feedback](#learn-how-these-crates-are-built-provide-feedback)
+//! - [Run the demo locally](#run-the-demo-locally)
+//! - [Nushell scripts to build, run, test etc.](#nushell-scripts-to-build-run-test-etc)
+//! - [Examples to get you started](#examples-to-get-you-started)
+//!   - [Video of the demo in action](#video-of-the-demo-in-action)
+//! - [How does layout, rendering, and event handling work in
+//!   general?](#how-does-layout-rendering-and-event-handling-work-in-general)
+//! - [Switching from shared memory to message passing architecture after
+//!   v0.3.10](#switching-from-shared-memory-to-message-passing-architecture-after-v0310)
+//! - [Input and output devices](#input-and-output-devices)
+//! - [Life of an input event for a Full TUI
+//!   app](#life-of-an-input-event-for-a-full-tui-app)
+//! - [Life of a signal (aka "out of band
+//!   event")](#life-of-a-signal-aka-out-of-band-event)
+//! - [The window](#the-window)
+//! - [Layout and styling](#layout-and-styling)
+//! - [Component, ComponentRegistry, focus management, and event
+//!   routing](#component-componentregistry-focus-management-and-event-routing)
+//! - [Input event specificity](#input-event-specificity)
+//! - [Rendering and painting](#rendering-and-painting)
+//!   - [Offscreen buffer](#offscreen-buffer)
+//!   - [Render pipeline](#render-pipeline)
+//!   - [First render](#first-render)
+//!   - [Subsequent render](#subsequent-render)
+//! - [How does the editor component work?](#how-does-the-editor-component-work)
+//! - [Painting the caret](#painting-the-caret)
+//! - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
+//!   - [Two callback functions](#two-callback-functions)
+//!   - [How to use this dialog to make an HTTP request & pipe the results into a
+//!     selection
+//!     area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
+//! - [How to make HTTP requests](#how-to-make-http-requests)
+//! - [Custom Markdown MD parsing and custom syntax
+//!   highlighting](#custom-markdown-md-parsing-and-custom-syntax-highlighting)
+//! - [Grapheme support](#grapheme-support)
+//! - [Lolcat support](#lolcat-support)
+//! - [Issues and PRs](#issues-and-prs)
+//! <!-- /TOC -->
+//!
+//! # Introduction
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
@@ -37,121 +92,39 @@
 //! style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span
 //! style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span
 //! style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span
-//! style="color:#E10895"> </span><span style="color:#DE0799">&amp;</span><span
-//! style="color:#DB069E"> </span><span style="color:#D804A2">s</span><span
-//! style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span
-//! style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span
-//! style="color:#C801B6"> </span><span style="color:#C501B9">o</span><span
-//! style="color:#C101BD">f</span><span style="color:#BD01C1"> </span><span
-//! style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span
-//! style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span
-//! style="color:#AA03D2"> </span><span style="color:#A603D5">f</span><span
-//! style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span
-//! style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span
-//! style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span
-//! style="color:#890DE8"> </span><span style="color:#850FEB">o</span><span
-//! style="color:#8111ED">n</span><span style="color:#7C13EF"> </span><span
-//! style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span
-//! style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span
-//! style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span
-//! style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span
-//! style="color:#572CFC">r</span><span style="color:#532FFD"> </span><span
-//! style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span
-//! style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span
-//! style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span
-//! style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span
-//! style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span
-//! style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
-//!
-//! We are working on building command line apps in Rust which have rich text user
-//! interfaces (TUI). We want to lean into the terminal as a place of productivity, and
-//! build all kinds of awesome apps for it.
-//!
-//! 1. 🔮 Instead of just building one app, we are building a library to enable any kind
-//!    of rich TUI development w/ a twist: taking concepts that work really well for the
-//!    frontend mobile and web development world and re-imagining them for TUI & Rust.
-//!
-//!    - Taking inspiration from things like [React](https://react.dev/),
-//!      [SolidJS](https://www.solidjs.com/),
-//!      [Elm](https://guide.elm-lang.org/architecture/),
-//!      [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
-//!      Compose](https://developer.android.com/compose),
-//!      [JSX](https://ui.dev/imperative-vs-declarative-programming),
-//!      [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can
-//!      be run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
-//!    - Even the thread running the main event loop doesn't block since it is async.
-//!    - Using proc macros to create DSLs to implement something inspired by
-//!      [CSS](https://www.w3.org/TR/CSS/#css) &
-//!      [JSX](https://ui.dev/imperative-vs-declarative-programming).
-//!
-//! 2. 🌎 We are building apps to enhance developer productivity & workflows.
-//!
-//!    - The idea here is not to rebuild `tmux` in Rust (separate processes mux'd onto a
-//!      single terminal window). Rather it is to build a set of integrated "apps" (or
-//!      "tasks") that run in the same process that renders to one terminal window.
-//!    - Inside of this terminal window, we can implement things like "app" switching,
-//!      routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI
-//!      apps (which are tightly integrated) that are running in the same process, in the
-//!      same window. So you can imagine that all these "app"s have shared application
-//!      state. Each "app" may also have its own local application state.
-//!    - Here are some examples of the types of "app"s we plan to build (for which this
-//!      infrastructure acts as the open source engine):
-//!      1. Multi user text editors w/ syntax highlighting.
-//!      2. Integrations w/ github issues.
-//!      3. Integrations w/ calendar, email, contacts APIs.
-//!
-//! All the crates in the `r3bl-open-core`
-//! [repo](https://github.com/r3bl-org/r3bl-open-core/) provide lots of useful
-//! functionality to help you build TUI (text user interface) apps, along w/ general
-//! niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
-//!
-//! # Table of contents
-//!
-//! <!-- TOC -->
-//!
-//! - [Introduction](#introduction)
-//! - [Changelog](#changelog)
-//! - [Learn how these crates are built, provide
-//!   feedback](#learn-how-these-crates-are-built-provide-feedback)
-//! - [Run the demo locally](#run-the-demo-locally)
-//! - [Nushell scripts to build, run, test etc.](#nu-shell-scripts-to-build-run-test-etc)
-//!   - [Examples to get you started](#examples-to-get-you-started)
-//!     - [Video of the demo in action](#video-of-the-demo-in-action)
-//!   - [How does layout, rendering, and event handling work in
-//!     general?](#how-does-layout-rendering-and-event-handling-work-in-general)
-//!   - [Switching from shared memory to message passing architecture after
-//!     v0.3.10](#switching-from-shared-memory-to-message-passing-architecture-after-v0310)
-//! - [Input and output devices](#input-and-output-devices)
-//! - [Life of an input event](#life-of-an-input-event)
-//!   - [Life of a signal aka “out of band
-//!     event”](#life-of-a-signal-aka-out-of-band-event)
-//! - [The window](#the-window)
-//! - [Layout and styling](#layout-and-styling)
-//!   - [Component, ComponentRegistry, focus management, and event
-//!     routing](#component-componentregistry-focus-management-and-event-routing)
-//!   - [Input event specificity](#input-event-specificity)
-//!   - [Rendering and painting](#rendering-and-painting)
-//!     - [Offscreen buffer](#offscreen-buffer)
-//!     - [Render pipeline](#render-pipeline)
-//!   - [First render](#first-render)
-//!   - [Subsequent render](#subsequent-render)
-//!   - [How does the editor component work?](#how-does-the-editor-component-work)
-//!     - [Painting the caret](#painting-the-caret)
-//!   - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
-//!     - [Two callback functions](#two-callback-functions)
-//!     - [How to use this dialog to make an HTTP request & pipe the results into a
-//!       selection
-//!       area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
-//!     - [How to make HTTP requests](#how-to-make-http-requests)
-//!   - [Custom Markdown MD parsing and custom syntax
-//!     highlighting](#custom-markdown-md-parsing-and-custom-syntax-highlighting)
-//! - [Grapheme support](#grapheme-support)
-//! - [Lolcat support](#lolcat-support)
-//! - [Issues and PRs](#issues-and-prs)
-//!
-//! <!-- /TOC -->
-//!
-//! # Introduction
+//! style="color:#E10895"> </span><span style="color:#DE0799">a</span><span
+//! style="color:#DB069E">l</span><span style="color:#D804A2">l</span><span
+//! style="color:#D503A6">o</span><span style="color:#D203AA">w</span><span
+//! style="color:#CF02AE">s</span><span style="color:#CB01B2"> </span><span
+//! style="color:#C801B6">y</span><span style="color:#C501B9">o</span><span
+//! style="color:#C101BD">u</span><span style="color:#BD01C1"> </span><span
+//! style="color:#BA01C4">t</span><span style="color:#B601C8">o</span><span
+//! style="color:#B201CB"> </span><span style="color:#AE02CF">c</span><span
+//! style="color:#AA03D2">r</span><span style="color:#A603D5">e</span><span
+//! style="color:#A204D8">a</span><span style="color:#9E06DB">t</span><span
+//! style="color:#9A07DE">e</span><span style="color:#9608E1"> </span><span
+//! style="color:#910AE3">a</span><span style="color:#8D0BE6">p</span><span
+//! style="color:#890DE8">p</span><span style="color:#850FEB">s</span><span
+//! style="color:#8111ED"> </span><span style="color:#7C13EF">t</span><span
+//! style="color:#7815F1">o</span><span style="color:#7418F3"> </span><span
+//! style="color:#701AF5">e</span><span style="color:#6B1DF6">n</span><span
+//! style="color:#6720F8">h</span><span style="color:#6322F9">a</span><span
+//! style="color:#5F25FA">n</span><span style="color:#5B28FB">c</span><span
+//! style="color:#572CFC">e</span><span style="color:#532FFD"> </span><span
+//! style="color:#4F32FD">d</span><span style="color:#4B36FE">e</span><span
+//! style="color:#4739FE">v</span><span style="color:#443DFE">e</span><span
+//! style="color:#4040FE">l</span><span style="color:#3C44FE">o</span><span
+//! style="color:#3948FE">p</span><span style="color:#354CFE">e</span><span
+//! style="color:#324FFD">r</span><span style="color:#2E53FD"> </span><span
+//! style="color:#2B57FC">p</span><span style="color:#285BFB">r</span><span
+//! style="color:#245EFA">o</span><span style="color:#215FF9">d</span><span
+//! style="color:#1E63F8">u</span><span style="color:#1A67F7">c</span><span
+//! style="color:#176BF6">t</span><span style="color:#136FF5">i</span><span
+//! style="color:#1073F4">v</span><span style="color:#0C77F3">i</span><span
+//! style="color:#097BF2">t</span><span style="color:#057FF1">y</span>. Please read the
+//! main [README.md](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md) of
+//! the `r3bl-open-core` monorepo and workspace to get a better understanding of the
+//! context in which this crate is meant to exist.
 //!
 //! You can build fully async TUI (text user interface) apps with a modern API that brings
 //! the best of the web frontend development ideas to TUI apps written in Rust:
@@ -163,7 +136,7 @@
 //!    Compose](https://developer.android.com/compose)).
 //! 2. [Responsive
 //!    design](https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design)
-//!    w/ [CSS](https://www.w3.org/TR/CSS/#css),
+//!    with [CSS](https://www.w3.org/TR/CSS/#css),
 //!    [flexbox](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox)
 //!    like concepts.
 //! 3. [Declarative style](https://ui.dev/imperative-vs-declarative-programming) of
@@ -175,10 +148,133 @@
 //!
 //! This framework is [loosely coupled and strongly
 //! coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
-//! meaning that you can pick and choose whatever pieces you would like to use w/out
+//! meaning that you can pick and choose whatever pieces you would like to use without
 //! having the cognitive load of having to grok all the things in the codebase. Its more
-//! like a collection of mostly independent modules that work well w/ each other, but know
-//! very little about each other.
+//! like a collection of mostly independent modules that work well with each other, but
+//! know very little about each other.
+//!
+//! This is the main crate that contains the core functionality for building TUI apps. It
+//! allows you to build apps that range from "full" TUI to "partial" TUI, and everything
+//! in the middle.
+//!
+//! Here are some videos that you can watch to get a better understanding of TTY
+//! programming.
+//!
+//! - [Build with Naz: TTY
+//!   playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
+//! - [Build with Naz: async
+//!   readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
+//!
+//! # Framework highlights
+//!
+//! Here are some highlights of this library:
+//!
+//! - It works over SSH without flickering, since it uses double buffering to paint the
+//!   UI, and diffs the output of renders, to only paint the parts of the screen that
+//!   changed.
+//! - It automatically detects terminal capabilities and gracefully degrades to the lowest
+//!   common denominator.
+//! - Uses very few dependencies. Almost all the code required for the core functionality
+//!   is written in Rust in this crate. This ensures that over time, as open source
+//!   projects get unfunded, and abandoned, there's minimized risk of this crate being
+//!   affected. Any dependencies that are used are well maintained and supported.
+//! - It is a modern & easy to use and approachable API that is inspired by React, JSX,
+//!   CSS, Elm. Lots of components and things are provided for you so you don't have to
+//!   build them from scratch. This is a full featured component library including:
+//!   - Elm like architecture with unidirectional data flow. The state is mutable. Async
+//!     middleware functions are supported, and they communicate with the main thread and
+//!     the [App] using an async `tokio::mpsc` channel and signals.
+//!   - CSS like declarative styling engine.
+//!   - CSS like flexbox like declarative layout engine which is fully responsive. You can
+//!     resize your terminal window and everything will be laid out correctly.
+//!   - A terminal independent underlying rendering and painting engine (can use crossterm
+//!     or termion or whatever you want).
+//!   - Markdown text editor with syntax highlighting support, metadata (tags, title,
+//!     author, date), smart lists. This uses a custom Markdown parser and custom syntax
+//!     highlighter. Syntax highlighting for code blocks is provided by the syntect crate.
+//!   - Modal dialog boxes. And autocompletion dialog boxes.
+//!   - Lolcat (color gradients) implementation with a rainbow color-wheel palette. All
+//!     the color output is sensitive to the capabilities of the terminal. Colors are
+//!     gracefully downgraded from truecolor, to ANSI256, to grayscale.
+//!   - Support for Unicode grapheme clusters in strings. You can safely use emojis, and
+//!     other Unicode characters in your TUI apps.
+//!   - Support for mouse events.
+//! - The entire TUI framework itself supports concurrency & parallelism (user input,
+//!   rendering, etc. are generally non blocking).
+//! - It is fast! There are no needless re-renders, or flickering. Animations and color
+//!   changes are smooth (check this out for yourself by running the examples). You can
+//!   even build your TUI in layers (like z-order in a browser's DOM).
+//!
+//! # Full TUI, Partial TUI, and async readline
+//!
+//! This crate allows you to build apps that range from "full" TUI to "partial" TUI, and
+//! everything in the middle. Here are some videos that you can watch to get a better
+//! understanding of TTY programming.
+//!
+//! - [Build with Naz: TTY
+//!   playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
+//! - [Build with Naz: async
+//!   readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
+//!
+//! ## Partial TUI (async, partial raw mode, async readline) for choice based user interaction
+//!
+//! [mod@readline_async::choose_api] allows you to build less interactive apps that ask a
+//! user user to make choices from a list of options and then use a decision tree to
+//! perform actions.
+//!
+//! An example of this is this "Partial TUI" app `giti` in the
+//! [`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
+//! can install & run this with the following command:
+//!
+//! ```sh
+//! cargo install r3bl-cmdr
+//! giti
+//! ```
+//!
+//! ## Partial TUI (async, partial raw mode, async readline) for async REPL
+//!
+//! [mod@readline_async::readline_async_api] gives you the ability to easily ask for user
+//! input in a line editor. You can customize the prompt, and other behaviors, like input
+//! history.
+//!
+//! Using this, you can build your own async shell programs using "async readline &
+//! stdout". Use advanced features like showing indeterminate progress spinners, and even
+//! write to stdout in an async manner, without clobbering the prompt / async readline, or
+//! the spinner. When the spinner is active, it pauses output to stdout, and resumes it
+//! when the spinner is stopped.
+//!
+//! An example of this is this "Partial TUI" app `giti` in the
+//! [`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
+//! can install & run this with the following command:
+//!
+//! ```sh
+//! cargo install r3bl-cmdr
+//! giti
+//! ```
+//!
+//! Here are other examples of this:
+//!
+//! 1. <https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server>
+//! 2. <https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples>
+//!
+//! ## Full TUI (async, raw mode, full screen) for immersive TUI apps
+//!
+//! **The bulk of this document is about this**. [mod@tui::terminal_window_api] gives you
+//! "raw mode", "alternate screen" and "full screen" support, while being totally async.
+//! An example of this is the "Full TUI" app `edi` in the
+//! [`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
+//! can install & run this with the following command:
+//!
+//! ```sh
+//! cargo install r3bl-cmdr
+//! edi
+//! ```
+//!
+//! ## Power via composition
+//!
+//! You can mix and match "Full TUI" with "Partial TUI" to build for whatever use case you
+//! need. `r3bl_tui` allows you to create application state that can be moved between
+//! various "applets", where each "applet" can be "Full TUI" or "Partial TUI".//!
 //!
 //! # Changelog
 //!
@@ -193,8 +289,7 @@
 //!   channel](https://www.youtube.com/@developerlifecom). Please consider
 //!   [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
 //! - If you like consuming written content, here's our developer
-//!   [site](https://developerlife.com/). Please consider subscribing to our
-//!   [newsletter](https://developerlife.com/subscribe.html).
+//!   [site](https://developerlife.com/).
 //! - If you have questions, please join our [discord
 //!   server](https://discord.gg/8M2ePAevaM).
 //!
@@ -210,12 +305,12 @@
 //! ```
 //!
 //! These examples cover the entire surface area of the TUI API. You can also take a look
-//! at the tests in the source (`tui/src/`) as well. A single [`nu`
-//! shell](https://www.nushell.sh/) script `run` in **the `tui` sub folder** in the repo
-//! allows you to easily build, run, test, and do so much more with the repo.
+//! at the tests in the source (`tui/src/`) as well. A single
+//! [`nushell`](https://www.nushell.sh/) script `run.nu` in **the `tui` sub folder** in
+//! the repo allows you to easily build, run, test, and do so much more with the repo.
 //!
-//! > The `run` script works on Linux, macOS, and Windows. On Linux and macOS, you can
-//! > simply run `./run` instead of `nu run`.
+//! > The `run.nu` script works on Linux, macOS, and Windows. On Linux and macOS, you can
+//! > simply run `./run.nu` instead of `nu run.nu`.
 //!
 //! # Nushell scripts to build, run, test etc.
 //!
@@ -223,81 +318,52 @@
 //! each in a separate terminal window or pane.
 //!
 //! ```sh
-//! # Terminal 1, run this first.
+//! # Terminal 1, run this first. This will watch for log output.
 //! cd tui
-//! nu run log
+//! nu run.nu log
 //! ```
 //!
 //! ```sh
-//! # Terminal 2, run this second.
+//! # Terminal 2, run this second. This will run the examples with logging enabled.
 //! cd tui
-//! nu run release-examples
+//! nu run.nu release-examples
 //! ```
 //!
 //! | Command                                | Description                                       |
 //! | -------------------------------------- | ------------------------------------------------- |
-//! | `nu run log`                           | View the log output. This [video](https://youtu.be/Sy26IMkOEiM) has a walkthrough of how to use this. |
-//! | `nu run examples`                      | Run all the examples, with logging                    |
-//! | `nu run release-examples`              | Run all the examples with the release binary, with logging |
-//! | `nu run release-examples-no-log`       | Run all the examples with the release binary, no logging   |
-//! | `nu run help`                          | See all the commands you can pass to the `run` script |
-//! | `nu run examples-with-flamegraph-profiling` | This will run the examples and generate a flamegraph at the end so you can see profile the performance of the app. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this |
-//! | `nu run build`                         | Build                                             |
-//! | `nu run clean`                         | Clean                                             |
-//! | `nu run test`                          | Run tests                                         |
-//! | `nu run clippy`                        | Run clippy                                        |
-//! | `nu run docs`                          | Build docs                                        |
-//! | `nu run serve-docs`                    | Serve docs over VSCode Remote SSH session         |
-//! | `nu run rustfmt`                       | Run rustfmt                                       |
+//! | `nu run.nu log`                           | View the log output. This [video](https://youtu.be/Sy26IMkOEiM) has a walkthrough of how to use this. |
+//! | `nu run.nu examples`                      | Run all the examples, with logging                    |
+//! | `nu run.nu release-examples`              | Run all the examples with the release binary, with logging |
+//! | `nu run.nu release-examples-no-log`       | Run all the examples with the release binary, no logging   |
+//! | `nu run.nu help`                          | See all the commands you can pass to the `run` script |
+//! | `nu run.nu examples-with-flamegraph-profiling` | This will run the examples and generate a flamegraph at the end so you can see profile the performance of the app. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this |
+//! | `nu run.nu build`                         | Build                                             |
+//! | `nu run.nu clean`                         | Clean                                             |
+//! | `nu run.nu test`                          | Run tests                                         |
+//! | `nu run.nu clippy`                        | Run clippy                                        |
+//! | `nu run.nu docs`                          | Build docs                                        |
+//! | `nu run.nu serve-docs`                    | Serve docs over VSCode Remote SSH session         |
+//! | `nu run.nu rustfmt`                       | Run rustfmt                                       |
 //!
 //! The following commands will watch for changes in the source folder and re-run:
 //!
 //! | Command                                             | Description                        |
 //! | --------------------------------------------------- | ---------------------------------- |
-//! | `nu run watch-all-tests`                            | Watch all test                     |
-//! | `nu run watch-one-test <test_name>`                 | Watch one test                     |
-//! | `nu run watch-clippy`                               | Watch clippy                       |
-//! | `nu run watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
+//! | `nu run.nu watch-all-tests`                            | Watch all test                     |
+//! | `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
+//! | `nu run.nu watch-clippy`                               | Watch clippy                       |
+//! | `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
 //!
-//! There's also a `run` script at the **top level folder** of the repo. It is intended to
-//! be used in a CI/CD environment w/ all the required arguments supplied or in
+//! There's also a `run.nu` script at the **top level folder** of the repo. It is intended
+//! to be used in a CI/CD environment with all the required arguments supplied or in
 //! interactive mode, where the user will be prompted for input.
 //!
 //! | Command                       | Description                        |
 //! | ----------------------------- | ---------------------------------- |
-//! | `nu run all`                  | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD |
-//! | `nu run build-full`           | This will build all the crates in the Rust workspace. And it will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
-//! | `nu run install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go) |
-//! | `nu run check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace |
-//!
-//! Here are some framework highlights:
-//!
-//! - An easy to use and approachable API that is inspired by React, JSX, CSS, Elm. Lots
-//!   of components and things are provided for you so you don't have to build them from
-//!   scratch. This is a full featured component library including:
-//!   - Elm like architecture w/ unidirectional data flow. The state is mutable. Async
-//!     middleware functions are supported, and they communicate w/ the main thread and
-//!     the [App] using an async `tokio::mpsc` channel and signals.
-//!   - CSS like declarative styling engine.
-//!   - CSS like flexbox like declarative layout engine which is fully responsive. You can
-//!     resize your terminal window and everything will be laid out correctly.
-//!   - A terminal independent underlying rendering and painting engine (can use crossterm
-//!     or termion or whatever you want).
-//!   - Markdown text editor w/ syntax highlighting support, metadata (tags, title,
-//!     author, date), smart lists. This uses a custom Markdown parser and custom syntax
-//!     highlighter. Syntax highlighting for code blocks is provided by the syntect crate.
-//!   - Modal dialog boxes. And autocompletion dialog boxes.
-//!   - Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the
-//!     color output is sensitive to the capabilities of the terminal. Colors are
-//!     gracefully downgraded from truecolor, to ANSI256, to grayscale.
-//!   - Support for Unicode grapheme clusters in strings. You can safely use emojis, and
-//!     other Unicode characters in your TUI apps.
-//!   - Support for mouse events.
-//! - The entire TUI framework itself supports concurrency & parallelism (user input,
-//!   rendering, etc. are generally non blocking).
-//! - It is fast! There are no needless re-renders, or flickering. Animations and color
-//!   changes are smooth (check this out for yourself by running the examples). You can
-//!   even build your TUI in layers (like z-order in a browser's DOM).
+//! | `nu run.nu all`                  | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD |
+//! | `nu run.nu build-full`           | This will build all the crates in the Rust workspace. And it will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
+//! | `nu run.nu install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go) |
+//! | `nu run.nu check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace |
 //!
 //! # Examples to get you started
 //!
@@ -312,7 +378,7 @@
 //!
 //! ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 //!
-//! # How does layout, rendering, and event handling work in general?
+//! # How does layout, rendering, and event handling work in general for a Full TUI app?
 //!
 //! ```text
 //! ╭───────────────────────────────────────────────╮
@@ -387,33 +453,33 @@
 //! > 1. <https://rits.github-pages.ucl.ac.uk/intro-hpchtc/morea/lesson2/reading4.html>
 //! > 2. <https://www.javatpoint.com/shared-memory-vs-message-passing-in-operating-system>
 //!
-//! # Input and output devices
+//! # Input and output devices (for Full TUI, Partial TUI, and async readline)
 //!
 //! [Dependency injection](https://developerlife.com/category/DI) is used to inject the
 //! required resources into the `main_event_loop` function. This allows for easy testing
 //! and for modularity and extensibility in the codebase. The `r3bl_terminal_async` crate
 //! shares the same infrastructure for input and output devices. In fact the
-//! [r3bl_core::InputDevice] and [r3bl_core::OutputDevice] structs are in the `r3bl_core`
-//! crate.
+//! [crate::InputDevice] and [crate::OutputDevice] structs are in the `r3bl_core` crate.
 //!
 //! 1. The advantage of this approach is that for testing, test fixtures can be used to
-//!    perform end to end testing of the TUI.
+//!    perform end-to-end testing of the TUI.
 //! 2. This also facilitates some other interesting capabilities, such as preserving all
 //!    the state for an application and make it span multiple applets (smaller apps, and
 //!    their components). This makes the entire UI composable, and removes the monolithic
-//!    approaches to building complex UI and large apps that may be comprised of many
-//!    reusable components and applets.
+//!    approaches to building complex UI and large apps that may consist of many reusable
+//!    components and applets.
 //! 3. It is easy to swap out implementations of input and output devices away from
 //!    `stdin` and `stdout` while preserving all the existing code and functionality. This
 //!    can produce some interesting headless apps in the future, where the UI might be
 //!    delegated to a window using [eGUI](https://github.com/emilk/egui) or
 //!    [iced-rs](https://iced.rs/) or [wgpu](https://wgpu.rs/).
 //!
-//! # Life of an input event
+//! # Life of an input event for a Full TUI app
 //!
-//! There is a clear separation of concerns in this module. To illustrate what goes where,
-//! and how things work let's look at an example that puts the main event loop front and
-//! center & deals w/ how the system handles an input event (key press or mouse).
+//! There is a clear separation of concerns in this library. To illustrate what goes
+//! where, and how things work let's look at an example that puts the main event loop
+//! front and center & deals with how the system handles an input event (key press or
+//! mouse).
 //!
 //! - The diagram below shows an app that has 3 [Component]s for (flexbox like) layout &
 //!   (CSS like) styling.
@@ -459,6 +525,7 @@
 //! │                                        ╰────〉 [Component]s │
 //! │                                                            │
 //! ╰────────────────────────────────────────────────────────────╯
+//! ```
 //! <!-- https://asciiflow.com/#/share/eJzdls9OwjAcx1%2Fll565wEEiiQdjPHAwJv6JB7ZDtQWabF3TdgohZC9h9iAeiU%2FDk1gcY8AAXbdh5JdfmkGbT7%2Ff7te1E8SxT1GHh57XQB4eU4k6aOKgkYM65%2B2zhoPG5qnVbpsnTUfa%2FHDQ%2FP3z5NNxuGm7HJ4xJ8C4CDXQV8o12MUKGWVhicohAbrf%2Bpbi4xn0Hqj0GcfeE%2BMkeHOtwdeblufxx2pIGb35npS%2FA9u7CnwRcCPkjg6Y0nJ8g4ULSgeSqh%2BxUe9SCLdwBcSzbFpXAdbQVBok5YTKX7upaZGOgN23KMDIRROGWEE%2FeAlVBdNUqX9tA2QvL5Gcd1NmooNCa3HQKo8%2FEEWwhPZx6GlTBJx4y81QGpr2pN%2BXirRmPcfJosKsY4U8%2BTQ2k%2FxzJWUsmPbWnNBBP7lPYCFAsYE5oAu%2B7kpqBsAcieUh94mBpc3FJ2tx0lqhtv%2B3VFQTZkfGs0dBsKaR0qYtDE3Dx4xHeigpJpGka7eLIpBsmJXB2jD5NdtTIEWre89IC8y2vvUrX9W77p%2Bmg6Zo%2BgU42osD) -->
 //!
 //! Let's trace the journey through the diagram when an input even is generated by the
@@ -468,7 +535,7 @@
 //! When the user types something, this input is processed by the main loop of
 //! [TerminalWindow].
 //!
-//! 1. The [Component] that is in [FlexBox] w/ `id=1` currently has focus.
+//! 1. The [Component] that is in [FlexBox] with `id=1` currently has focus.
 //! 2. When an input event comes in from the user (key press or mouse input) it is routed
 //!    to the [App] first, before [TerminalWindow] looks at the event.
 //! 3. The specificity of the event handler in [App] is higher than the default input
@@ -516,7 +583,7 @@
 //! So far we have covered what happens when the [App] receives a signal. Who sends this
 //! signal? Who actually creates the `tokio::spawn` task that sends this signal? This can
 //! happen anywhere in the [App] and [Component]. Any code that has access to [GlobalData]
-//! can use the [r3bl_core::send_signal!] macro to send a signal in a background task.
+//! can use the [crate::send_signal!] macro to send a signal in a background task.
 //! However, only the [App] can receive the signal and do something with it, which is
 //! usually apply the signal to update the state and then tell the main thread to repaint
 //! the UI.
@@ -539,7 +606,7 @@
 //!    [TerminalWindow] to bootstrap your TUI app. You can just use [App] to build your
 //!    app, if it is a simple one & you don't really need any sophisticated layout or
 //!    styling. But if you want layout and styling, now we have to deal with [FlexBox],
-//!    [Component], and [r3bl_core::TuiStyle].
+//!    [Component], and [crate::TuiStyle].
 //!
 //! # Layout and styling
 //!
@@ -580,7 +647,7 @@
 //! The [HasFocus] struct takes care of this. This provides 2 things:
 //!
 //! 1.  It holds an `id` of a [FlexBox] / [Component] that has focus.
-//! 2.  It also holds a map that holds a [r3bl_core::Pos] for each `id`. This is used to
+//! 2.  It also holds a map that holds a [crate::Pos] for each `id`. This is used to
 //!     represent a cursor (whatever that means to your app & component). This cursor is
 //!     maintained for each `id`. This allows a separate cursor for each [Component] that
 //!     has focus. This is needed to build apps like editors and viewers that maintains a
@@ -642,7 +709,7 @@
 //! Each `PixelChar` can be one of 4 things:
 //!
 //! 1. **Space**. This is just an empty space. There is no flickering in the TUI engine.
-//!    When a new offscreen buffer is created, it is fulled w/ spaces. Then components
+//!    When a new offscreen buffer is created, it is fulled with spaces. Then components
 //!    paint over the spaces. Then the diffing algorithm only paints over the pixels that
 //!    have changed. You don't have to worry about clearing the screen and painting, which
 //!    typically will cause flickering in terminals. You also don't have to worry about
@@ -682,6 +749,7 @@
 //! │                                  │       │  OffscreenBuffer    │
 //! ╰──────────────────────────────────╯       │                     │
 //!                                            ╰─────────────────────╯
+//! ```
 //! <!-- https://asciiflow.com/#/share/eJyrVspLzE1VssorzcnRUcpJrEwtUrJSqo5RqohRsrK0MNaJUaoEsozMTYGsktSKEiAnRunRlD10QzExeUBSwTk%2FryQxMy%2B1SAEHQCglCBBKSXKJAonKUawBeiBHwRDhAAW4oBGSIKoWNDcrYBUkUgulETFtl0JQal5KalFAZkFqDjAicMYUKS4nJaJoaCgdkjExgUkLH9PK2Gl7FLRBJFWMpUqo0ilL4wpirOIklEg4BP3T0oqTi1JT85xK09IgpR%2FcXLohUv1M2MM49FIhFSjVKtUCAEVNQq0%3D) -->
 //!
 //! Each component produces a `RenderPipeline`, which is a map of `ZOrder` and
@@ -754,7 +822,7 @@
 //!       caret (insertion point) position and scroll position. And in the future can
 //!       contain lots of other information such as undo / redo history, etc.
 //!
-//! Here are the connection points w/ the impl of `Component<S, AS>` in `EditorComponent`:
+//! Here are the connection points with the impl of `Component<S, AS>` in `EditorComponent`:
 //!
 //! 1.  `handle_event(global_data: &mut GlobalData<S, AS>, input_event: InputEvent,
 //!     has_focus: &mut HasFocus)`
@@ -774,7 +842,7 @@
 //! 1. **`Caret`** - the block that is visually displayed in a terminal which represents
 //!    the insertion point for whatever is in focus. While only one insertion point is
 //!    editable for the local user, there may be multiple of them, in which case there has
-//!    to be a way to distinguish a local caret from a remote one (this can be done w/ bg
+//!    to be a way to distinguish a local caret from a remote one (this can be done with bg
 //!    color).
 //!
 //! 2. **`Cursor`** - the global "thing" provided in terminals that shows by blinking
@@ -782,7 +850,7 @@
 //!    are performed on various different areas in a terminal window to paint the output
 //!    of render operations.
 //!
-//! There are two ways of showing cursors which are quite different (each w/ very
+//! There are two ways of showing cursors which are quite different (each with very
 //! different constraints).
 //!
 //! 1. Using a global terminal cursor (we don't use this).
@@ -794,7 +862,7 @@
 //!      And this cursor is constantly moved around in order to paint anything (eg:
 //!      `MoveTo(col, row), SetColor, PaintText(...)` sequence).
 //!
-//! 2. Paint the character at the cursor w/ the colors inverted (or some other bg color)
+//! 2. Paint the character at the cursor with the colors inverted (or some other bg color)
 //!    giving the visual effect of a cursor.
 //!    - This has the benefit that we can display multiple cursors in the app, since this
 //!      is not global, rather it is component specific. For the use case requiring google
@@ -812,7 +880,7 @@
 //! 1. It paints on top of the entire screen (in front of all other components, in
 //!    ZOrder::Glass, and outside of any layouts using `FlexBox`es).
 //! 2. Is "activated" by a keyboard shortcut (hidden otherwise). Once activated, the user
-//!    can accept or cancel the dialog box. And this results in a callback being called w/
+//!    can accept or cancel the dialog box. And this results in a callback being called with
 //!    the result.
 //!
 //! So this activation trigger must be done at the `App` trait impl level (in the
@@ -821,7 +889,7 @@
 //! 1. When a trigger is detected, send a signal via the channel sender (out of band) so
 //!    that it will show when that signal is processed.
 //! 2. When the signal is handled, set the focus to the dialog box, and return a
-//!    `EventPropagation::ConsumedRerender` which will re-render the UI w/ the dialog box
+//!    `EventPropagation::ConsumedRerender` which will re-render the UI with the dialog box
 //!    on top.
 //!
 //! There is a question about where does the response from the user (once a dialog is
@@ -855,7 +923,7 @@
 //!
 //! When creating a new dialog box component, two callback functions are passed in:
 //!
-//! 1. `on_dialog_press_handler()` - this will be called if the user choose no, or yes (w/
+//! 1. `on_dialog_press_handler()` - this will be called if the user choose no, or yes (with
 //!    their typed text).
 //! 2. `on_dialog_editors_changed_handler()` - this will be called if the user types
 //!    something into the editor.
@@ -866,7 +934,7 @@
 //! auto-completion capabilities, via some kind of web service, there needs to be a
 //! slightly more complex version of this. This is where the `DialogEngineConfigOptions`
 //! struct comes in. It allows us to create a dialog component and engine to be configured
-//! w/ the appropriate mode - simple or autocomplete.
+//! with the appropriate mode - simple or autocomplete.
 //!
 //! In autocomplete mode, an extra "results panel" is displayed, and the layout of the
 //! dialog is different on the screen. Instead of being in the middle of the screen, it
@@ -898,8 +966,8 @@
 //! - The code for syntax highlighting is in [StyleUSSpanLines::from_document].
 //!
 //! Also, `syntect` crate is still used by the editor component
-//! [engine_event_based_api::render_engine] to syntax highlight the text inside code blocks of
-//! Markdown documents.
+//! [crate::editor_engine::engine_public_api::render_engine()] to syntax highlight the
+//! text inside code blocks of Markdown documents.
 //!
 //! An alternative approach to doing this was considered using the crate `markdown-rs`,
 //! but we decided to implement our own parser using
@@ -909,7 +977,7 @@
 //! # Grapheme support
 //!
 //! Unicode is supported (to an extent). There are some caveats. The
-//! [r3bl_core::UnicodeString] struct has lots of great information on this graphemes and
+//! [crate::GCString] struct has lots of great information on this graphemes and
 //! what is supported and what is not.
 //!
 //! # Lolcat support
@@ -917,7 +985,6 @@
 //! An implementation of lolcat color wheel is provided. Here's an example.
 //!
 //! ```rust
-//! use r3bl_core::*;
 //! use r3bl_tui::*;
 //!
 //! let mut lolcat = LolcatBuilder::new()
@@ -927,21 +994,21 @@
 //!   .build();
 //!
 //! let content = "Hello, world!";
-//! let content_gcs = UnicodeString::new(content);
+//! let content_gcs = GCString::new(content);
 //! let lolcat_mut = &mut lolcat;
 //! let st = lolcat_mut.colorize_to_styled_texts(&content_gcs);
 //! lolcat.next_color();
 //! ```
 //!
-//! This [r3bl_core::Lolcat] that is returned by `build()` is safe to re-use.
+//! This [crate::Lolcat] that is returned by `build()` is safe to re-use.
 //! - The colors it cycles through are "stable" meaning that once constructed via the
-//!   [builder](r3bl_core::LolcatBuilder) (which sets the speed, seed, and delta that
+//!   [builder](crate::LolcatBuilder) (which sets the speed, seed, and delta that
 //!   determine where the color wheel starts when it is used). For eg, when used in a
 //!   dialog box component that re-uses the instance, repeated calls to the `render()`
 //!   function of this component will produce the same generated colors over and over
 //!   again.
 //! - If you want to change where the color wheel "begins", you have to change the speed,
-//!   seed, and delta of this [r3bl_core::Lolcat] instance.
+//!   seed, and delta of this [crate::Lolcat] instance.
 //!
 //! # Issues and PRs
 //!
@@ -954,14 +1021,17 @@
 #![warn(clippy::all)]
 #![warn(clippy::unwrap_in_result)]
 #![warn(rust_2018_idioms)]
-#![feature(trivial_bounds)]
-#![feature(let_chains)]
 #![allow(clippy::literal_string_with_formatting_args)]
+#![feature(let_chains)]
+#![feature(trivial_bounds)]
 
 // Attach.
+pub mod core;
 pub mod readline_async;
 pub mod tui;
 
 // Re-export.
+pub use core::*;
+
 pub use readline_async::*;
 pub use tui::*;

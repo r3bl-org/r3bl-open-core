@@ -23,11 +23,7 @@ use std::{fmt::{Display, Formatter, Result},
 use dirs::config_dir;
 use miette::IntoDiagnostic as _;
 use r3bl_analytics_schema::AnalyticsEvent;
-use r3bl_core::{CommonError,
-                CommonErrorType,
-                CommonResult,
-                friendly_random_id,
-                inline_string};
+use r3bl_tui::inline_string;
 use reqwest::{Client, Response};
 
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;
@@ -64,7 +60,10 @@ impl std::fmt::Display for AnalyticsAction {
 }
 
 pub mod config_folder {
+    use r3bl_tui::{CommonError, CommonErrorType, CommonResult};
+
     use super::*;
+    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     pub enum ConfigPaths {
         R3BLTopLevelFolderName,
@@ -144,6 +143,8 @@ pub mod config_folder {
 }
 
 pub mod file_io {
+    use r3bl_tui::CommonResult;
+
     use super::*;
 
     pub fn try_read_file_contents(path: &PathBuf) -> CommonResult<String> {
@@ -162,7 +163,10 @@ pub mod file_io {
 }
 
 pub mod proxy_machine_id {
+    use r3bl_tui::friendly_random_id;
+
     use super::*;
+    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     /// Read the file contents from [config_folder::get_id_file_path] and return it as a
     /// string if it exists and can be read.
@@ -222,6 +226,7 @@ pub mod proxy_machine_id {
 
 pub mod report_analytics {
     use super::*;
+    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     static mut ANALYTICS_REPORTING_ENABLED: bool = true;
 
@@ -292,6 +297,7 @@ pub mod report_analytics {
 /// - from the value of `UPDATE_IF_NOT_THIS_VERSION` in the `r3bl_base` repo.
 pub mod upgrade_check {
     use super::*;
+    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     static UPDATE_REQUIRED: AtomicBool = AtomicBool::new(false);
 

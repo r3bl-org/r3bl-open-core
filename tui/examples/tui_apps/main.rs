@@ -36,22 +36,22 @@ mod ex_rc;
 use std::str::FromStr as _;
 
 use miette::IntoDiagnostic as _;
-use r3bl_core::{fg_color,
-                fg_frozen_blue,
-                fg_pink,
-                fg_slate_gray,
-                get_size,
-                inline_string,
-                log_support::try_initialize_logging_global,
-                ok,
-                throws,
-                tui_color,
-                ASTColor,
-                CommonError,
-                CommonResult};
-use r3bl_tui::{key_press,
-               ra_println,
+use r3bl_tui::{fg_color,
+               fg_frozen_blue,
+               fg_pink,
+               fg_slate_gray,
+               get_size,
+               inline_string,
+               key_press,
+               log::try_initialize_logging_global,
+               ok,
                readline_async::{ReadlineAsync, ReadlineEvent},
+               rla_println,
+               throws,
+               tui_color,
+               ASTColor,
+               CommonError,
+               CommonResult,
                InputEvent,
                TerminalWindow,
                DEBUG_TUI_MOD};
@@ -87,7 +87,7 @@ async fn main() -> CommonResult<()> {
     let msg = inline_string!("{}", &generate_help_msg());
 
     let msg_fmt = fg_color(ASTColor::from(tui_color!(lizard_green)), &msg);
-    ra_println!(readline_async, "{}", msg_fmt.to_string());
+    rla_println!(readline_async, "{}", msg_fmt.to_string());
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
     if no_log_arg_passed {
@@ -152,7 +152,7 @@ async fn run_user_selected_example(
             Exit => CommonError::new_error_result_with_only_msg("Exiting..."),
         },
         Err(_) => {
-            ra_println!(
+            rla_println!(
                 readline_async,
                 "{a} {b}",
                 a = fg_frozen_blue("Invalid selection:"),

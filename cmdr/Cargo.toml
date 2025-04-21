@@ -44,7 +44,6 @@ path = "src/lib.rs"
 [dependencies]
 # R3BL crates (from this mono repo).
 r3bl_analytics_schema = { path = "../analytics_schema", version = "0.0.2" } # version is required to publish to crates.io
-r3bl_core = { path = "../core", version = "0.10.0" }                        # version is required to publish to crates.io
 r3bl_tui = { path = "../tui", version = "0.6.0" }                           # version is required to publish to crates.io
 
 # Reqwest (HTTP client).

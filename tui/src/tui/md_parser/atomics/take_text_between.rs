@@ -20,9 +20,8 @@ use nom::{bytes::complete::{tag, take_until},
           error::ErrorKind,
           IResult,
           Parser};
-use r3bl_core::{fg_green, fg_red};
 
-use crate::{md_parser::constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
+use crate::{fg_green, fg_red, md_parser::constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
 
 /// Takes the text between the start and end delimiters. Will error out if this text
 /// contains a new line.
@@ -83,9 +82,9 @@ fn take_text_between<'input>(
 mod tests_parse_take_between {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
-    use r3bl_core::assert_eq2;
 
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn test_fenced() {

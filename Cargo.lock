@@ -403,9 +403,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-channel"
-version = "0.5.13"
+version = "0.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33480d6946193aa8033910124896ca395333cae7e2d1113d1fef6c3272217df2"
+checksum = "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2"
 dependencies = [
  "crossbeam-utils",
 ]
@@ -1388,9 +1388,9 @@ dependencies = [
 
 [[package]]
 name = "openssl"
-version = "0.10.70"
+version = "0.10.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61cfb4e166a8bb8c9b55c500bc2308550148ece889be90f609377e58140f42c6"
+checksum = "fedfea7d58a1f73118430a55da6a286e7b044961736ce96a16a17068ea25e5da"
 dependencies = [
  "bitflags 2.9.0",
  "cfg-if",
@@ -1420,9 +1420,9 @@ checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.105"
+version = "0.9.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b22d5b84be05a8d6947c7cb71f7c849aa0f112acd4bf51c2a7c1c988ac0a9dc"
+checksum = "8288979acd84749c744a9014b4382d42b8f7b2592847b5afb2ed29e5d16ede07"
 dependencies = [
  "cc",
  "libc",
@@ -1654,7 +1654,6 @@ dependencies = [
  "miette",
  "open",
  "r3bl_analytics_schema",
- "r3bl_core",
  "r3bl_tui",
  "reqwest",
  "serde",
@@ -1679,13 +1678,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "r3bl_core"
-version = "0.10.0"
+name = "r3bl_tui"
+version = "0.6.0"
 dependencies = [
  "async-stream",
  "chrono",
+ "clap",
  "colorgrad",
  "const_format",
+ "copypasta-ext",
  "crossterm",
  "futures-core",
  "futures-util",
@@ -1707,11 +1708,11 @@ dependencies = [
  "strip-ansi-escapes",
  "strum",
  "strum_macros",
+ "syntect",
  "test-case",
  "textwrap",
  "thiserror 2.0.12",
  "tokio",
- "tokio-test",
  "tracing",
  "tracing-appender",
  "tracing-core",
@@ -1719,35 +1720,6 @@ dependencies = [
  "unicode-segmentation",
  "unicode-width 0.2.0",
  "uuid",
-]
-
-[[package]]
-name = "r3bl_tui"
-version = "0.6.0"
-dependencies = [
- "chrono",
- "clap",
- "copypasta-ext",
- "crossterm",
- "futures-util",
- "miette",
- "nom",
- "pretty_assertions",
- "r3bl_core",
- "rand 0.9.0",
- "serde",
- "serde_json",
- "serial_test",
- "smallstr",
- "smallvec",
- "strum",
- "strum_macros",
- "syntect",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
- "tracing-core",
- "unicode-segmentation",
 ]
 
 [[package]]
@@ -2632,30 +2604,6 @@ checksum = "5f6d0975eaace0cf0fcadee4e4aaa5da15b5c079146f2cffb67c113be122bf37"
 dependencies = [
  "rustls",
  "tokio",
-]
-
-[[package]]
-name = "tokio-stream"
-version = "0.1.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eca58d7bba4a75707817a2c44174253f9236b2d5fbd055602e9d5c07c139a047"
-dependencies = [
- "futures-core",
- "pin-project-lite",
- "tokio",
-]
-
-[[package]]
-name = "tokio-test"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2468baabc3311435b55dd935f702f42cd1b8abb7e754fb7dfb16bd36aa88f9f7"
-dependencies = [
- "async-stream",
- "bytes",
- "futures-core",
- "tokio",
- "tokio-stream",
 ]
 
 [[package]]

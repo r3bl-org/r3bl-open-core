@@ -20,11 +20,11 @@ use nom::{bytes::complete::tag,
           sequence::preceded,
           IResult,
           Parser as _};
-use r3bl_core::InlineVec;
 
 use crate::{list,
             md_parser::constants::{COLON, COMMA, NEW_LINE, SPACE},
             take_text_until_new_line_or_end,
+            InlineVec,
             List};
 
 /// - Sample parse input: `@tags: tag1, tag2, tag3`, `@tags: tag1, tag2, tag3\n`,
@@ -117,10 +117,8 @@ fn parse_comma_separated_list(input: &str) -> IResult<&str, InlineVec<&str>> {
 
 #[cfg(test)]
 mod test_parse_tags_opt_eol {
-    use r3bl_core::assert_eq2;
-
     use super::*;
-    use crate::md_parser::constants::TAGS;
+    use crate::{assert_eq2, md_parser::constants::TAGS};
 
     #[test]
     fn test_not_quoted_no_eol() {

@@ -17,9 +17,7 @@
 
 use std::fmt::{Formatter, Result};
 
-use r3bl_core::TuiStyle;
-
-use crate::{DebugFormatRenderOp, RenderOp, RenderOp::*};
+use crate::{DebugFormatRenderOp, RenderOp, RenderOp::*, TuiStyle};
 
 pub struct CrosstermDebugFormatRenderOp;
 
