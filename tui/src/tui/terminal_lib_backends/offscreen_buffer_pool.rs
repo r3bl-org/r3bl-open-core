@@ -15,9 +15,8 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{RingBuffer, RingBufferStack, Size};
-
 use super::OffscreenBuffer;
+use crate::{RingBuffer, RingBufferStack, Size};
 
 const OFFSCREEN_BUFFER_POOL_SIZE: usize = 3;
 
@@ -90,9 +89,8 @@ impl OffscreenBufferPool {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{height, width};
-
     use super::*;
+    use crate::{height, width};
 
     #[test]
     fn test_offscreen_buffer_pool_new() {

@@ -26,14 +26,8 @@ path = "src/lib.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# r3bl-open-core.
-r3bl_core = { path = "../core", version = "0.10.0" } # version is required to publish to crates.io
-
 # Time
 chrono = "0.4.40"
-
-# Misc
-rand = "0.9.0"
 
 # Crossterm & EventStream support.
 crossterm = { version = "0.29.0", features = ["event-stream"] }
@@ -65,14 +59,13 @@ copypasta-ext = "0.4.4"
 tokio = { version = "1.44.2", features = ["full", "tracing"] }
 tracing = "0.1.41"
 tracing-core = "0.1.33"
+tracing-subscriber = "0.3.19"
+tracing-appender = "0.2.3"
 
 # Error handling.
 thiserror = "2.0.12"
 miette = { version = "7.5.0", features = ["fancy"] }
 pretty_assertions = "1.4.1"
-
-# Unicode, grapheme clusters.
-unicode-segmentation = "1.12.0"
 
 # For smallstr & smallvec.
 smallstr = { version = "0.3.0", features = ["std", "union"] }
@@ -86,10 +79,52 @@ smallvec = { version = "1.15.0", features = [
 # More info: https://stackoverflow.com/a/76131914/2085356
 clap = { version = "4.5.36", features = ["derive", "wrap_help", "help"] }
 
+# MISSING
+
+# Unicode, grapheme clusters.
+unicode-width = "0.2.0"
+unicode-segmentation = "1.12.0"
+
+# CustomEventFormatter.
+textwrap = { version = "0.16.2", features = ["unicode-linebreak"] }
+
+# Allow const strings to be formatted with format!.
+const_format = "0.2.34"
+
+# Misc.
+rand = "0.9.0"
+sha2 = "0.10.8"
+strip-ansi = "0.1.0"
+strip-ansi-escapes = "0.2.1"
+
+# Color gradients.
+colorgrad = "0.7.1"
+
+# Key Value store that can be used to store JSON or bincode encoded values. `kv` is built
+# on top of `sled` which currently does not support access across multiple processes.
+kv = { version = "0.24.0", features = ["json-value", "bincode-value"] }
+
+# Async stream for DI and testing.
+futures-core = "0.3.31"
+async-stream = "0.3.6"
+
+# Dynamically name variables in declarative macros.
+paste = "1.0.15"
+
+# For SharedWriter ids.
+uuid = { version = "1.16.0", features = ["v4"] }
+
+# For testing in CI CD environments where terminal is not interactive.
+is_ci = "1.2.0"
+
+# HTTP client library (for r3bl_script).
+reqwest = { version = "0.12.15", features = ["json"] }
+
 [dev-dependencies]
 # For assert_eq2! macro.
-pretty_assertions = "1.4.1"
 serial_test = "3.2.0"
+pretty_assertions = "1.4.1"
+test-case = "3.3.1"
 
 [features]
 default = ["emacs"]

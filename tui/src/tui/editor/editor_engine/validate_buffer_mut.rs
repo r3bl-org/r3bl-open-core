@@ -28,10 +28,17 @@
 //! 2. If you don't want the buffer to be mutated, then you can use
 //!    [EditorBufferMutNoDrop] by calling [EditorBuffer::get_mut_no_drop()].
 
-use r3bl_core::{col, usize, width, CaretRaw, ColWidth, ScrOfs, Size};
-
 use super::scroll_editor_content;
-use crate::{editor::sizing::VecEditorContentLines, EditorBuffer, SelectionList};
+use crate::{col,
+            editor::sizing::VecEditorContentLines,
+            usize,
+            width,
+            CaretRaw,
+            ColWidth,
+            EditorBuffer,
+            ScrOfs,
+            SelectionList,
+            Size};
 
 pub struct EditorBufferMut<'a> {
     pub lines: &'a mut VecEditorContentLines,

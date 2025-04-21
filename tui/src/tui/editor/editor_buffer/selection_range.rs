@@ -18,15 +18,15 @@
 use std::{cmp::{self},
           fmt::Debug};
 
-use r3bl_core::{caret_scr_adj,
-                row,
-                width,
-                CaretScrAdj,
-                ChUnitPrimitiveType,
-                ColIndex,
-                ColWidth,
-                GCString,
-                ScrOfs};
+use crate::{caret_scr_adj,
+            row,
+            width,
+            CaretScrAdj,
+            ChUnitPrimitiveType,
+            ColIndex,
+            ColWidth,
+            GCString,
+            ScrOfs};
 
 /// Represents a range of characters in a line. The col indices are scroll adjusted (and
 /// not raw). The row indices are not used, and clobbered with [ChUnitPrimitiveType::MAX].
@@ -50,31 +50,31 @@ use r3bl_core::{caret_scr_adj,
 ///
 /// This range can't be instantiated directly via the struct, you have to use the tuple
 /// conversion. Even though the struct holds two [CaretScrAdj] values, it does not use the
-/// [r3bl_core::RowIndex] fields.
+/// [crate::RowIndex] fields.
 #[derive(Default, Clone, PartialEq, Copy)]
 pub struct SelectionRange {
     /// This is not "raw", this is "scroll adjusted".
     /// - It represents the display width at which the selection starts.
-    /// - The [crate::RowIndex] field is not used (and is clobbered with
+    /// - The [crate::RowIndex] field is not used and is clobbered with
     ///   [ChUnitPrimitiveType::MAX] after initialization.
-    /// - The display width is used, in order to support variable width characters.
-    ///   `UTF-8` encoding uses between 1 and 4 bytes to encode a character, eg: `"H"` is
-    ///   1 byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces, eg
-    ///   `"H"` is 1 space wide, and `"😄"` is two spaces wide
-    ///   [r3bl_core::GCString::width()] and
-    ///   [r3bl_core::GCString::width_char()].
+    /// - The display width is used, to support variable width characters.
+    ///   `UTF-8` encoding uses between 1 and 4 bytes to encode a character, e.g.:
+    ///   `"H"` is 1 byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more
+    ///   spaces, e.g.: `"H"` is 1 space wide, and `"😄"` is two spaces wide
+    ///   [crate::GCString::width()] and
+    ///   [crate::GCString::width_char()].
     start: CaretScrAdj,
     /// This is not "raw", this is "scroll adjusted".
     /// - It represents the display width at which the selection ends. The display width
-    ///   is used, in order to support variable width characters.
+    ///   is used, to support variable width characters.
     /// - The end index is not inclusive when the selection range is resolved into a
     ///   result (string).
-    /// - The display width is used, in order to support variable width characters.
-    ///   `UTF-8` encoding uses between 1 and 4 bytes to encode a character, eg: `"H"` is
-    ///   1 byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces, eg
+    /// - The display width is used, to support variable width characters.
+    ///   `UTF-8` encoding uses between 1 and 4 bytes to encode a character, e.g.: `"H"` is
+    ///   1 byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces, e.g.
     ///   `"H"` is 1 space wide, and `"😄"` is two spaces wide
-    ///   [r3bl_core::GCString::width()] and
-    ///   [r3bl_core::GCString::width_char()].
+    ///   [crate::GCString::width()] and
+    ///   [crate::GCString::width_char()].
     end: CaretScrAdj,
 }
 
@@ -90,7 +90,7 @@ mod convert {
     use super::*;
 
     impl From<(CaretScrAdj, CaretScrAdj)> for SelectionRange {
-        /// The [r3bl_core::RowIndex] fields of each tuple value are not used. They are just
+        /// The [crate::RowIndex] fields of each tuple value are not used. They are just
         /// set to the maximum value of [ChUnitPrimitiveType].
         fn from((start, end): (CaretScrAdj, CaretScrAdj)) -> Self {
             let start = caret_scr_adj(start.col_index + row(ChUnitPrimitiveType::MAX));
@@ -106,21 +106,21 @@ impl SelectionRange {
     pub fn end(&self) -> ColIndex { self.end.col_index }
 
     /// Due to the nature of selection ranges, the index values are actually display
-    /// widths. And sometimes it is useful to type cast them as a width, eg: when using
+    /// widths. And sometimes it is useful to type cast them as a width, e.g.: when using
     /// with [crate::SelectionRange::clip_to_range()].
     pub fn get_start_display_col_index_as_width(&self) -> ColWidth {
         width(*self.start.col_index)
     }
 
-    /// Returns a tuple of the start and end display column indices. This is a just a
-    /// convenience function so you don't have to access the fields directly to get the
-    /// two [ColIndex] values.
+    /// Returns a tuple of the start and end display column indices. This is just a
+    /// convenience function that prevents the need to access the fields directly to get
+    /// the two [ColIndex] values.
     pub fn as_tuple(&self) -> (ColIndex, ColIndex) {
         (self.start.col_index, self.end.col_index)
     }
 
     /// Uses `SelectionRange` to calculate width and simply calls
-    /// [r3bl_core::GCString::clip()].
+    /// [crate::GCString::clip()].
     pub fn clip_to_range<'a>(&self, us: &'a GCString) -> &'a str {
         let (start_display_col_index, end_display_col_index) = self.as_tuple();
         let max_display_width_col_count =
@@ -217,8 +217,8 @@ impl SelectionRange {
     /// # Examples
     ///
     /// ```rust
-    /// use r3bl_tui::SelectionRange;
-    /// use r3bl_core::{col, row, caret_scr_adj};
+    /// # use r3bl_tui::SelectionRange;
+    /// # use r3bl_tui::{col, row, caret_scr_adj};
     /// let range_1: SelectionRange = (
     ///     caret_scr_adj(row(0) + col(1)),
     ///     caret_scr_adj(row(0) + col(4))
@@ -304,9 +304,8 @@ mod range_impl_debug_format {
 
 #[cfg(test)]
 mod tests_range {
-    use r3bl_core::{assert_eq2, caret_scr_adj, col, row};
-
     use super::*;
+    use crate::{assert_eq2, caret_scr_adj, col, row};
 
     /// ```text
     /// ╭0123456789╮

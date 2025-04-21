@@ -17,9 +17,13 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use r3bl_core::{ch, fmt_option, ChUnit, InlineString, ItemsOwned};
-
-use crate::{EditorBuffer, DEFAULT_SYN_HI_FILE_EXT};
+use crate::{ch,
+            fmt_option,
+            ChUnit,
+            EditorBuffer,
+            InlineString,
+            ItemsOwned,
+            DEFAULT_SYN_HI_FILE_EXT};
 
 /// Please do not construct this struct directly and use [new_empty](DialogBuffer::new_empty)
 /// instead.

@@ -17,25 +17,25 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{get_terminal_width_no_default,
-                row,
-                u8,
-                width,
-                Ansi256GradientIndex,
-                ColorWheel,
-                ColorWheelConfig,
-                ColorWheelSpeed,
-                RowHeight,
-                RowIndex,
-                Size,
-                TuiStyle};
 use smallvec::smallvec;
 
-use crate::{DisplayConstants,
+use crate::{get_terminal_width_no_default,
+            row,
+            u8,
+            width,
+            Ansi256GradientIndex,
+            ColorWheel,
+            ColorWheelConfig,
+            ColorWheelSpeed,
+            DisplayConstants,
             EditorEngine,
             EditorEngineConfig,
             PartialFlexBox,
-            SurfaceBounds};
+            RowHeight,
+            RowIndex,
+            Size,
+            SurfaceBounds,
+            TuiStyle};
 
 /// Please do not construct this struct directly, and use [new](DialogEngine::new)
 /// instead.
@@ -131,9 +131,8 @@ pub struct DialogEngineConfigOptions {
 }
 
 mod dialog_engine_config_options_impl {
-    use r3bl_core::height;
-
     use super::*;
+    use crate::height;
 
     impl Default for DialogEngineConfigOptions {
         fn default() -> Self {

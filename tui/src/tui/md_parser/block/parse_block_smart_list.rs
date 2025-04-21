@@ -22,7 +22,6 @@ use nom::{branch::alt,
           sequence::{preceded, terminated},
           IResult,
           Parser};
-use r3bl_core::{tiny_inline_string, InlineVec};
 use smallvec::smallvec;
 
 use super::{parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
@@ -36,6 +35,8 @@ use crate::{list,
                                    SPACE_CHAR,
                                    UNCHECKED,
                                    UNORDERED_LIST_PREFIX},
+            tiny_inline_string,
+            InlineVec,
             Lines,
             List,
             MdLineFragment};
@@ -107,9 +108,8 @@ pub fn parse_block_smart_list(
 /// Tests things that are final output (and not at the IR level).
 #[cfg(test)]
 mod tests_parse_block_smart_list {
-    use r3bl_core::assert_eq2;
-
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn test_with_unicode() {
@@ -305,9 +305,7 @@ mod tests_parse_block_smart_list {
 /// Tests things that are final output (and not at the IR level).
 #[cfg(test)]
 mod tests_parse_smart_lists_in_markdown {
-    use r3bl_core::{assert_eq2, ConsoleLogInColor, PrettyPrintDebug};
-
-    use crate::{parse_markdown, MdDocument};
+    use crate::{assert_eq2, parse_markdown, MdDocument, PrettyPrintDebug};
 
     #[test]
     fn test_parse_valid_md_ol_with_indent() {
@@ -376,8 +374,8 @@ mod tests_parse_smart_lists_in_markdown {
         let remainder = result.as_ref().unwrap().0;
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
-        // md_doc.console_log_fg();
-        // remainder.console_log_bg();
+        // console_log!(md_doc);
+        // console_log!(remainder);
 
         assert_eq2!(remainder, "");
         md_doc.inner.iter().zip(expected_output.iter()).for_each(
@@ -431,8 +429,8 @@ mod tests_parse_smart_lists_in_markdown {
         let remainder = result.as_ref().unwrap().0;
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
-        md_doc.console_log_fg();
-        remainder.console_log_bg();
+        // console_log!(md_doc);
+        // console_log!(remainder);
 
         assert_eq2!(remainder, "");
         md_doc.inner.iter().zip(expected_output.iter()).for_each(
@@ -474,8 +472,8 @@ mod tests_parse_smart_lists_in_markdown {
         let remainder = result.as_ref().unwrap().0;
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
-        // md_doc.console_log_fg();
-        // remainder.console_log_bg();
+        // console_log!(md_doc);
+        // console_log!(remainder);
 
         assert_eq2!(remainder, "");
         md_doc.inner.iter().zip(expected_output.iter()).for_each(
@@ -730,9 +728,8 @@ pub fn parse_smart_list_content_lines<'a>(
 
 #[cfg(test)]
 mod tests_parse_list_item {
-    use r3bl_core::assert_eq2;
-
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn test_invalid_ul_list() {
@@ -831,9 +828,8 @@ mod tests_parse_list_item {
 
 #[cfg(test)]
 mod tests_list_item_lines {
-    use r3bl_core::assert_eq2;
-
     use super::*;
+    use crate::assert_eq2;
 
     /// One line: "- foo".
     #[test]
@@ -945,9 +941,8 @@ mod tests_list_item_lines {
 
 #[cfg(test)]
 mod tests_bullet_kinds {
-    use r3bl_core::assert_eq2;
-
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn test_bullet_kinds() {
@@ -969,9 +964,8 @@ mod tests_bullet_kinds {
 
 #[cfg(test)]
 mod tests_parse_indents {
-    use r3bl_core::assert_eq2;
-
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn test_indent() {

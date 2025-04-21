@@ -19,20 +19,20 @@
 pub mod mock_real_objects_for_dialog {
     use std::{collections::HashMap, fmt::Debug};
 
-    use r3bl_core::{telemetry::sizing::TelemetryReportLineStorage,
-                    test_fixtures::{output_device_ext::OutputDeviceExt as _,
-                                    StdoutMock},
-                    OutputDevice,
-                    Size};
     use tokio::sync::mpsc;
 
-    use crate::{editor::test_fixtures::mock_real_objects_for_editor,
+    use crate::{core::test_fixtures::StdoutMock,
+                editor::editor_test_fixtures::mock_real_objects_for_editor,
+                telemetry::telemetry_sizing::TelemetryReportLineStorage,
                 DialogBuffer,
                 DialogEngine,
                 FlexBoxId,
                 GlobalData,
                 HasDialogBuffers,
                 OffscreenBufferPool,
+                OutputDevice,
+                OutputDeviceExt,
+                Size,
                 CHANNEL_WIDTH};
 
     pub fn make_global_data(

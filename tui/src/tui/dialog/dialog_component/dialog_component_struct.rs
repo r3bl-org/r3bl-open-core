@@ -17,9 +17,8 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::common::{CommonError, CommonErrorType, CommonResult};
-
-use crate::{Component,
+use crate::{common::{CommonError, CommonErrorType, CommonResult},
+            Component,
             DialogEngine,
             DialogEngineApi,
             DialogEngineApplyResponse,

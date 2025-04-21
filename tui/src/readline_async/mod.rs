@@ -91,7 +91,7 @@
 //!    - Here are some examples of the types of "app"s we plan to build (for which this
 //!      infrastructure acts as the open source engine):
 //!      1. Multi user text editors w/ syntax highlighting.
-//!      2. Integrations w/ github issues.
+//!      2. Integrations w/ GitHub issues.
 //!      3. Integrations w/ calendar, email, contacts APIs.
 //!
 //! All the crates in the `r3bl-open-core`
@@ -139,7 +139,7 @@
 //! 1. Because
 //!    [`read_line()`](https://doc.rust-lang.org/std/io/struct.Stdin.html#method.read_line)
 //!    is blocking. And there is no way to terminate an OS thread that is blocking in
-//!    Rust. To do this you have to exit the process (who's thread is blocked in
+//!    Rust. To do this, you have to exit the process (who's thread is blocked in
 //!    `read_line()`).
 //!
 //!     - There is no way to get `read_line()` unblocked once it is blocked.
@@ -189,33 +189,35 @@
 //! # Features
 //!
 //! 1. Read user input from the terminal line by line, while your program concurrently
-//!    writes lines to the same terminal. One [`Readline`] instance can be used to spawn
-//!    many async `stdout` writers ([r3bl_core::SharedWriter]) that can write to the
-//!    terminal concurrently. For most users the [`ReadlineAsync`] struct is the simplest
-//!    way to use this crate. You rarely have to access the underlying [`Readline`] or
-//!    [`r3bl_core::SharedWriter`] directly. But you can if you need to.
-//!    [`r3bl_core::SharedWriter`] can be cloned and is thread-safe. However, there is
-//!    only one instance of [`Readline`] per [`ReadlineAsync`] instance.
+//!    writes lines to the same terminal.
+//!    - One [`Readline`] instance can be used to spawn
+//!      many async `stdout` writers, [crate::SharedWriter], that can write to the
+//!      terminal concurrently.
+//!    - For most users the [`ReadlineAsync`] struct is the simplest
+//!      way to use this crate. You rarely have to access the underlying [`Readline`] or
+//!      [`crate::SharedWriter`] directly. But you can if you need to.
+//!    - [`crate::SharedWriter`] can be cloned and is thread-safe. However, there is
+//!      only one instance of [`Readline`] per [`ReadlineAsync`] instance.
 //!
 //! 2. Generate a spinner (indeterminate progress indicator). This spinner works
-//!    concurrently with the rest of your program. When the [`Spinner`] is active it
-//!    automatically pauses output from all the [`r3bl_core::SharedWriter`] instances that
+//!    concurrently with the rest of your program. When the [`Spinner`] is active, it
+//!    automatically pauses output from all the [`crate::SharedWriter`] instances that
 //!    are associated with one [`Readline`] instance. Typically a spawned task clones its
-//!    own [`r3bl_core::SharedWriter`] to generate its output. This is useful when you
+//!    own [`crate::SharedWriter`] to generate its output. This is useful when you
 //!    want to show a spinner while waiting for a long-running task to complete. Please
 //!    look at the example to see this in action, by running `cargo run --example
 //!    readline_async`. Then type `starttask1`, press Enter. Then type `spinner`, press
 //!    Enter.
 //!
-//! 3. Use tokio tracing with support for concurrent `stout` writes. If you choose to log
-//!    to `stdout` then the concurrent version ([`r3bl_core::SharedWriter`]) from this
-//!    crate will be used. This ensures that the concurrent output is supported even for
-//!    your tracing logs to `stdout`.
+//! 3. Use tokio tracing with support for concurrently writing to `stout`. If you
+//!    choose to log to `stdout` then the concurrent version
+//!    [`crate::SharedWriter`] from this crate will be used. This ensures that
+//!    the concurrent output is supported even for your tracing logs to `stdout`.
 //!
 //! 4. You can also plug in your own terminal, like `stdout`, or `stderr`, or any other
-//!    terminal that implements [r3bl_core::SendRawTerminal] trait for more details.
+//!    terminal that implements [crate::SendRawTerminal] trait for more details.
 //!
-//! This crate can detect when your terminal is not in interactive mode. Eg: when you pipe
+//! This crate can detect when your terminal is not in interactive mode. E.g.: when you pipe
 //! the output of your program to another program. In this case, the `readline` feature is
 //! disabled. Both the [`ReadlineAsync`] and [`Spinner`] support this functionality. So if
 //! you run the examples in this crate, and pipe something into them, they won't do
@@ -237,21 +239,21 @@
 //! - [LineState::is_paused] - Used to check if the line state is paused and affects
 //!   rendering and input.
 //! - [LineState::set_paused] - Use to set the paused state via the
-//!   [r3bl_core::SharedWriter] below. This can't be called directly (outside the crate
+//!   [crate::SharedWriter] below. This can't be called directly (outside the crate
 //!   itself).
-//! - [r3bl_core::SharedWriter::line_state_control_channel_sender] - Mechanism used to
+//! - [crate::SharedWriter::line_state_control_channel_sender] - Mechanism used to
 //!   manipulate the paused state.
 //!
 //! The [Readline::new] or [ReadlineAsync::try_new] create a `line_channel` to send and
-//! receive [r3bl_core::LineStateControlSignal]:
-//! 1. The sender end of this channel is moved to the [r3bl_core::SharedWriter]. So any
-//!    [r3bl_core::SharedWriter] can be used to send [r3bl_core::LineStateControlSignal]s
+//! receive [crate::LineStateControlSignal]:
+//! 1. The sender end of this channel is moved to the [crate::SharedWriter]. So any
+//!    [crate::SharedWriter] can be used to send [crate::LineStateControlSignal]s
 //!    to the channel, which will be processed in the task started, just for this, in
 //!    [Readline::new]. This is the primary mechanism to switch between pause and resume.
 //!    Some helper functions are provided in [ReadlineAsync::pause] and
 //!    [ReadlineAsync::resume], though you can just send the signals directly to the
 //!    channel's sender via the
-//!    [r3bl_core::SharedWriter::line_state_control_channel_sender].
+//!    [crate::SharedWriter::line_state_control_channel_sender].
 //! 2. The receiver end of this [tokio::sync::mpsc::channel] is moved to the task that is
 //!    spawned by [Readline::new]. This is where the actual work is done when signals are
 //!    sent via the sender (described above).
@@ -299,13 +301,13 @@
 //!
 //! 1. To read user input, call [`ReadlineAsync::read_line()`].
 //! 2. You can call [`ReadlineAsync::clone_shared_writer()`] to get a
-//!    [`r3bl_core::SharedWriter`] instance that you can use to write to `stdout`
+//!    [`crate::SharedWriter`] instance that you can use to write to `stdout`
 //!    concurrently, using [`std::write!`] or [`std::writeln!`].
 //! 3. If you use [`std::writeln!`] then there's no need to [`ReadlineAsync::flush()`]
 //!    because the `\n` will flush the buffer. When there's no `\n` in the buffer, or you
 //!    are using [`std::write!`] then you might need to call [`ReadlineAsync::flush()`].
-//! 4. You can use the [crate::ra_println!] and [crate::ra_println_prefixed!] methods to
-//!    easily write concurrent output to the `stdout` ([`r3bl_core::SharedWriter`]).
+//! 4. You can use the [crate::rla_println!] and [crate::rla_println_prefixed!] methods to
+//!    easily write concurrent output to the `stdout` ([`crate::SharedWriter`]).
 //! 5. You can also get access to the underlying [`Readline`] via the
 //!    [`Readline::readline`] field. Details on this struct are listed below. For most use
 //!    cases you won't need to do this.
@@ -323,11 +325,11 @@
 //!   complete line of input once the user presses Enter.
 //!
 //! - Each [`Readline`] instance is associated with one or more
-//!   [`r3bl_core::SharedWriter`] instances. Lines written to an associated
-//!   [`r3bl_core::SharedWriter`] are output to the raw terminal.
+//!   [`crate::SharedWriter`] instances. Lines written to an associated
+//!   [`crate::SharedWriter`] are output to the raw terminal.
 //!
 //! - Call [`Readline::new()`] to create a [`Readline`] instance and associated
-//!   [`r3bl_core::SharedWriter`].
+//!   [`crate::SharedWriter`].
 //!
 //! - Call [`Readline::readline()`] (most likely in a loop) to receive a line of input
 //!   from the terminal.  The user entering the line can edit their input using the key
@@ -337,11 +339,11 @@
 //!   the user can retrieve it while editing a later line), call
 //!   [`Readline::add_history_entry()`].
 //!
-//! - Lines written to the associated [`r3bl_core::SharedWriter`] while `readline()` is in
+//! - Lines written to the associated [`crate::SharedWriter`] while `readline()` is in
 //!   progress will be output to the screen above the input line.
 //!
 //! - When done, call [`crate::manage_shared_writer_output::flush_internal()`] to ensure
-//!   that all lines written to the [`r3bl_core::SharedWriter`] are output.
+//!   that all lines written to the [`crate::SharedWriter`] are output.
 //!
 //! ## [`Spinner::try_start()`]
 //!
@@ -350,7 +352,7 @@
 //! that the program is still running and hasn't hung up or become unresponsive. When
 //! other tasks produce output concurrently, this spinner's output will not be clobbered.
 //! Neither will the spinner output clobber the output from other tasks. It suspends the
-//! output from all the [`r3bl_core::SharedWriter`] instances that are associated with one
+//! output from all the [`crate::SharedWriter`] instances that are associated with one
 //! [`Readline`] instance. Both the `readline_async.rs` and `spinner.rs` examples shows
 //! this (`cargo run --example readline_async` and `cargo run --example spinner`).
 //!
@@ -365,7 +367,7 @@
 //!
 //! ```
 //! # use r3bl_tui::readline_async::ReadlineAsync;
-//! # use r3bl_core::{fg_magenta, AnsiStyledText};
+//! # use r3bl_tui::{fg_magenta, AnsiStyledText};
 //! # pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
 //!         let user = "naz";
@@ -400,11 +402,11 @@
 //!
 //! The following playlists are relevant to this crate:
 //!
-//! - [Build with Naz, async readline and spinner for CLI in
+//! - [Build with Naz: async readline and spinner for CLI in
 //!   Rust](https://www.youtube.com/watch?v=3vQJguti02I&list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
-//! - [Build with Naz : Explore Linux TTY, process, signals w/
+//! - [Build with Naz: Explore Linux TTY, process, signals w/
 //!   Rust](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
-//! - [Build with Naz, testing in
+//! - [Build with Naz: testing in
 //!   Rust](https://www.youtube.com/watch?v=Xt495QLrFFk&list=PLofhE49PEwmwLR_4Noa0dFOSPmSpIg_l8)
 //!
 //! # Why another async readline crate?
@@ -416,7 +418,7 @@
 //! - Rearchitect the entire crate from the ground up to operate in a totally different
 //!   manner than the original. All the underlying mental models are different, and
 //!   simpler. The main event loop is redone. And a task is used to monitor the line
-//!   channel for communication between multiple [`r3bl_core::SharedWriter`]s and the
+//!   channel for communication between multiple [`crate::SharedWriter`]s and the
 //!   [`Readline`], to properly support pause and resume, and other control functions.
 //! - Drop support for all async runtimes other than `tokio`. Rewrite all the code for
 //!   this.
@@ -460,15 +462,15 @@ pub mod spinner;
 pub mod readline_async_impl;
 pub mod choose_impl;
 
+pub use choose_api::*;
 // Re-export the public API.
 pub use choose_impl::*;
 pub use readline_async_api::*;
-pub use spinner::*;
 pub use readline_async_impl::*;
-pub use choose_api::*;
+pub use spinner::*;
 
 // r3bl-open-core crates.
-use r3bl_core::{StdMutex, Text};
+use crate::{StdMutex, Text};
 
 // External crates.
 use smallvec::SmallVec;
@@ -481,7 +483,7 @@ pub type SafeHistory = Arc<StdMutex<History>>;
 pub type SafeBool = Arc<StdMutex<bool>>;
 
 /// This is a buffer of [DEFAULT_PAUSE_BUFFER_SIZE] 80 rows x
-/// [r3bl_core::DEFAULT_TEXT_SIZE] 128 columns (chars). This buffer collects output while
+/// [crate::DEFAULT_TEXT_SIZE] 128 columns (chars). This buffer collects output while
 /// the async terminal is paused.
 pub type PauseBuffer = SmallVec<[Text; DEFAULT_PAUSE_BUFFER_SIZE]>;
 pub const DEFAULT_PAUSE_BUFFER_SIZE: usize = 128;

@@ -17,16 +17,16 @@
 
 use std::process::Output;
 
-use r3bl_core::{ColorWheel,
-                GradientGenerationPolicy,
-                InlineString,
-                ItemsOwned,
-                TextColorizationPolicy,
-                fg_frozen_blue,
-                fg_lizard_green,
-                fg_pink,
-                fg_silver_metallic,
-                inline_string};
+use r3bl_tui::{ColorWheel,
+               GradientGenerationPolicy,
+               InlineString,
+               ItemsOwned,
+               TextColorizationPolicy,
+               fg_frozen_blue,
+               fg_lizard_green,
+               fg_pink,
+               fg_silver_metallic,
+               inline_string};
 
 pub const CURRENT_PREFIX: &str = "(current) ";
 
@@ -148,7 +148,7 @@ pub mod branch_create_display {
             .to_string()
     }
 
-    /// This is the [crate::giti::CommandRunResult::DidNotRun] message.
+    /// This is the [r3bl_tui::CommandRunResult::DidNotRun] message.
     pub fn info_no_branch_created() -> String {
         fg_silver_metallic(" No new branch was created").to_string()
     }

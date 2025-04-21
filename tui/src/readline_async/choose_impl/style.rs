@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{new_style, tui_color, TuiStyle};
+use crate::{new_style, tui_color, TuiStyle};
 
-/// This is not the same as [r3bl_core::TuiStylesheet], since this encapsulates
+/// This is different from [crate::TuiStylesheet], since this encapsulates styling
 /// information that is specific to [crate::choose()] that are not generalized.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StyleSheet {

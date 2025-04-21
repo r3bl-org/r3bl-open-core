@@ -17,18 +17,19 @@
 
 use futures_util::FutureExt as _;
 use miette::IntoDiagnostic as _;
-use r3bl_core::{is_fully_uninteractive_terminal,
-                is_stdin_piped,
-                is_stdout_piped,
-                InputDevice,
-                LineStateControlSignal,
-                OutputDevice,
-                SharedWriter,
-                StdinIsPipedResult,
-                StdoutIsPipedResult,
-                TTYResult};
 
-use crate::{Readline, ReadlineEvent};
+use crate::{is_fully_uninteractive_terminal,
+            is_stdin_piped,
+            is_stdout_piped,
+            InputDevice,
+            LineStateControlSignal,
+            OutputDevice,
+            Readline,
+            ReadlineEvent,
+            SharedWriter,
+            StdinIsPipedResult,
+            StdoutIsPipedResult,
+            TTYResult};
 
 pub struct ReadlineAsync {
     pub readline: Readline,
@@ -38,36 +39,37 @@ pub struct ReadlineAsync {
 /// Don't change the `content`. Print it as is. And it is compatible w/ the
 /// [ReadlineAsync::read_line] method.
 #[macro_export]
-macro_rules! ra_println {
+macro_rules! rla_println {
     (
-        $ta:ident,
+        $rla:ident,
         $($format:tt)*
     ) => {{
         use std::io::Write as _;
-        _ = writeln!($ta.shared_writer, $($format)*);
+        _ = writeln!($rla.shared_writer, $($format)*);
     }};
 }
 
 #[macro_export]
-macro_rules! ra_print {
+macro_rules! rla_print {
     (
-        $ta:ident,
+        $rla:ident,
         $($format:tt)*
     ) => {{
         use std::io::Write as _;
-        _ = write!($ta.shared_writer, $($format)*);
+        _ = write!($rla.shared_writer, $($format)*);
     }};
 }
 
 /// Prefix the `content` with a color and special characters, then print it.
 #[macro_export]
-macro_rules! ra_println_prefixed {
+macro_rules! rla_println_prefixed {
     (
-        $ta:ident,
+        $rla:ident,
         $($format:tt)*
     ) => {{
         use std::io::Write as _;
-        _ = writeln!($ta.shared_writer, "{} {}", " > ".red().bold().on_dark_grey(), $($format)*);
+        _ = write!($rla.shared_writer, "{}", " > ".red().bold().on_dark_grey());
+        _ = writeln!($rla.shared_writer, $($format)*);
     }};
 }
 
@@ -77,37 +79,37 @@ impl ReadlineAsync {
     /// # Example
     ///
     /// Here's an example of how to use this method:
-    ///
-    /// ```
+    /// ```rust
     /// async fn foo() -> miette::Result<()> {
-    ///     use r3bl_tui::readline_async::ReadlineAsync;
+    ///     # use r3bl_tui::readline_async::ReadlineAsync;
+    ///     # use r3bl_tui::ok;
     ///     let readline_async = ReadlineAsync::try_new(None::<String>)?
     ///         .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
-    ///     r3bl_core::ok!()
+    ///     ok!()
     /// }
     /// ```
     ///
     /// Another example:
-    ///
-    /// ```
+    /// ```rust
     /// async fn foo() -> miette::Result<()> {
-    ///     use r3bl_tui::readline_async::ReadlineAsync;
+    ///     # use r3bl_tui::readline_async::ReadlineAsync;
+    ///     # use r3bl_tui::ok;
     ///     let Some(mut readline_async) = ReadlineAsync::try_new(Some("> "))? else {
     ///         return Err(miette::miette!("Failed to create terminal"));
     ///     };
-    ///     r3bl_core::ok!()
+    ///     ok!()
     /// }
     /// ```
     ///
     /// # Returns
-    /// 1. If the terminal is not fully interactive then it will return [None], and won't
+    /// 1. If the terminal is not fully interactive, then it will return [None], and won't
     ///    create the [Readline]. This is when the terminal is not considered fully
     ///    interactive:
-    ///    - `stdout` is piped, eg: `echo "foo" | cargo run --example spinner`.
-    ///    - or all three `stdin`, `stdout`, `stderr` are not `is_tty`, eg when running in
+    ///    - `stdout` is piped, e.g., `echo "foo" | cargo run --example spinner`.
+    ///    - or all three `stdin`, `stdout`, `stderr` are not `is_tty`, e.g., when running in
     ///      `cargo test`.
     /// 2. Otherwise, it will return a [ReadlineAsync] instance.
-    /// 3. In case there are any issues putting the terminal into raw mode, or getting the
+    /// 3. If any issues arise when putting the terminal into raw mode, or getting the
     ///    terminal size, it will return an error.
     ///
     /// More info on terminal piping:
@@ -152,13 +154,13 @@ impl ReadlineAsync {
         self.readline.output_device.clone()
     }
 
-    /// Replacement for [std::io::Stdin::read_line()] (this is async and non blocking).
+    /// Replacement for [std::io::Stdin::read_line()] (this is async and non-blocking).
     pub async fn read_line(&mut self) -> miette::Result<ReadlineEvent> {
         self.readline.readline().fuse().await.into_diagnostic()
     }
 
     /// Simply flush the buffer. If there's a newline in the buffer, it will be printed.
-    /// Otherwise it won't.
+    /// Otherwise, it won't.
     pub async fn flush(&mut self) {
         let _ = self
             .shared_writer
@@ -187,16 +189,18 @@ impl ReadlineAsync {
     /// It will flush the buffer and print the message if provided. This also consumes the
     /// [ReadlineAsync] instance, so it can't be used after this method is called.
     ///
-    /// A very important thing that this method does is it exits the readline loop
-    /// gracefully. Here's what it does:
+    /// This method performs an important task - it exits the readline loop gracefully.
+    /// Here are the details of how it does this:
+    ///
     /// 1. it sends a [LineStateControlSignal::ExitReadlineLoop] signal to the [Readline]
     ///    instance's
     ///    [crate::readline_async_impl::manage_shared_writer_output::spawn_task_to_monitor_line_state_signals]
     ///    task (aka "actor"),
     /// 2. which causes a message to be sent to the [Readline::shutdown_receiver],
-    /// 3. which causes the [Readline::readline()] method to exit (if it is currently
-    ///    running). It doesn't block, since it is `readline_async` after all). This is a
-    ///    very powerful feature that is not available in synchronous blocking `readline`.
+    /// 3. which causes the [Readline::readline()] method to exit (if it is
+    ///    currently running). It doesn't block, since it is `readline_async` after all.
+    ///    This is a very powerful feature that is not available in synchronous
+    ///    blocking `readline`.
     ///
     /// If you don't call this method, when the underlying [Readline] instance is dropped,
     /// it's [Drop] implementation will perform (most of the) cleanup, but it won't print

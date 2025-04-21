@@ -17,11 +17,9 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use r3bl_core::{format_as_kilobytes_with_commas, idx, RingBuffer as _};
-
 use super::{cur_index::{CurIndex, CurIndexLoc},
-            sizing,
             EditorContent};
+use crate::{format_as_kilobytes_with_commas, idx, RingBuffer as _};
 
 /// The `EditorHistory` struct manages the undo/redo functionality for the `EditorBuffer`.
 ///
@@ -61,7 +59,7 @@ use super::{cur_index::{CurIndex, CurIndexLoc},
 ///   editor events will trigger a new state to be added to the history buffer. See
 ///   [crate::editor_engine::engine_public_api::apply_event()] to see which events
 ///   actually get added to the editor history buffer.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Default)]
 pub struct EditorHistory {
     pub versions: super::sizing::HistoryBuffer,
     pub current_index: CurIndex,
@@ -165,21 +163,12 @@ impl EditorHistory {
     }
 }
 
-impl Default for EditorHistory {
-    fn default() -> Self {
-        Self {
-            versions: sizing::HistoryBuffer::new(),
-            current_index: CurIndex::default(),
-        }
-    }
-}
-
 mod impl_debug_format {
     use super::*;
 
     impl Debug for EditorHistory {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            use r3bl_core::GetMemSize as _;
+            use crate::GetMemSize as _;
             let self_mem_size = self.get_mem_size();
             let size_fmt = format_as_kilobytes_with_commas(self_mem_size);
 
@@ -196,9 +185,8 @@ mod impl_debug_format {
 
 #[cfg(test)]
 mod tests_editor_history_struct {
-    use r3bl_core::assert_eq2;
-
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn test_editor_history_struct_one_item() {
@@ -298,10 +286,13 @@ mod tests_editor_history_struct {
 
 #[cfg(test)]
 mod tests_history_functions {
-    use r3bl_core::{assert_eq2, GCStringExt as _, RingBuffer as _};
     use smallvec::smallvec;
 
-    use crate::{cur_index::CurIndex, EditorBuffer};
+    use crate::{assert_eq2,
+                cur_index::CurIndex,
+                EditorBuffer,
+                GCStringExt as _,
+                RingBuffer};
 
     #[test]
     fn test_push_default() {

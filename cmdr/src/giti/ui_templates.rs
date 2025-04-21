@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{AST, AnsiStyledText, InlineVec, ast_line, ast_lines, fg_slate_gray};
+use r3bl_tui::{AST, AnsiStyledText, InlineVec, ast_line, ast_lines, fg_slate_gray};
 
 use crate::{giti::ui_str, upgrade_check};
 

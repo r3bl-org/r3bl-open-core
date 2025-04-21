@@ -16,10 +16,9 @@
  */
 
 use copypasta_ext::{copypasta::ClipboardProvider, x11_fork::ClipboardContext};
-use r3bl_core::throws;
 
 use super::{ClipboardResult, ClipboardService};
-use crate::DEBUG_TUI_COPY_PASTE;
+use crate::{throws, DEBUG_TUI_COPY_PASTE};
 
 pub struct SystemClipboard;
 
@@ -50,7 +49,7 @@ impl ClipboardService for SystemClipboard {
     }
 }
 
-pub mod test_fixtures {
+pub mod clipboard_test_fixtures {
     use super::{ClipboardResult, ClipboardService};
 
     #[derive(Debug, Default)]

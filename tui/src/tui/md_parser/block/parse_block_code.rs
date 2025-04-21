@@ -140,10 +140,8 @@ pub fn convert_into_code_block_lines<'input>(
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::assert_eq2;
-
     use super::*;
-    use crate::list;
+    use crate::{assert_eq2, list};
 
     #[test]
     fn test_parse_codeblock_trailing_extra() {

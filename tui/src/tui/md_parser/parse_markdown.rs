@@ -90,10 +90,9 @@ fn parse_date_value(input: &str) -> IResult<&str, &str> {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::assert_eq2;
-
     use super::*;
-    use crate::{convert_into_code_block_lines,
+    use crate::{assert_eq2,
+                convert_into_code_block_lines,
                 list,
                 BulletKind,
                 HeadingData,

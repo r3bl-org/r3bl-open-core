@@ -17,20 +17,19 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_core::{ok,
-                InlineString,
-                InlineVec,
-                LockedOutputDevice,
-                Pos,
-                Size,
-                TuiColor,
-                TuiStyle};
-
 use super::TERMINAL_LIB_BACKEND;
-use crate::{CrosstermDebugFormatRenderOp,
+use crate::{ok,
+            CrosstermDebugFormatRenderOp,
+            InlineString,
+            InlineVec,
+            LockedOutputDevice,
             PaintRenderOp,
+            Pos,
             RenderOpImplCrossterm,
-            TerminalLibBackend};
+            Size,
+            TerminalLibBackend,
+            TuiColor,
+            TuiStyle};
 
 /// Here's an example. Refer to [RenderOps] for more details.
 ///

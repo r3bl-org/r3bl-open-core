@@ -15,9 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{ch, BoundsCheck as _, BoundsStatus};
-
-use crate::{caret_scroll_index, EditorArgsMut};
+use crate::{caret_scroll_index, ch, BoundsCheck as _, BoundsStatus, EditorArgsMut};
 
 // Unicode glyphs links (for the ASCII diagrams):
 // - https://symbl.cc/en/unicode/blocks/box-drawing/
@@ -200,10 +198,14 @@ fn validate_horizontal_scroll(args: EditorArgsMut<'_>) {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{caret_raw, col, height, row, scr_ofs, width};
-
     use super::*;
-    use crate::{editor::test_fixtures::mock_real_objects_for_editor,
+    use crate::{caret_raw,
+                col,
+                editor::editor_test_fixtures::mock_real_objects_for_editor,
+                height,
+                row,
+                scr_ofs,
+                width,
                 EditorBuffer,
                 EditorEngine,
                 EditorEngineConfig,

@@ -41,7 +41,7 @@ macro_rules! box_start {
             id:                     $arg_id,
             dir:                    $arg_dir,
             requested_size_percent: $arg_requested_size_percent,
-            maybe_styles:           r3bl_core::get_tui_styles! { @from: $arg_surface.stylesheet, [$($args)*.into()] }
+            maybe_styles:           $crate::get_tui_styles! { @from: $arg_surface.stylesheet, [$($args)*.into()] }
         })?
     };
 }

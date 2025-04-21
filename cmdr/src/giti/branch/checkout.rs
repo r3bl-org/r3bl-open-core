@@ -15,22 +15,22 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{AnsiStyledText,
-                CommandRunResult,
-                CommonResult,
-                InlineString,
-                InlineVec,
-                ItemsOwned,
-                ast,
-                ast_line,
-                ast_lines,
-                height,
-                new_style,
-                tui_color};
-use r3bl_tui::{DefaultIoDevices,
+use r3bl_tui::{AnsiStyledText,
+               CommandRunResult,
+               CommonResult,
+               DefaultIoDevices,
                Header,
+               InlineString,
+               InlineVec,
+               ItemsOwned,
+               ast,
+               ast_line,
+               ast_lines,
                choose,
-               readline_async::{HowToChoose, StyleSheet}};
+               height,
+               new_style,
+               readline_async::{HowToChoose, StyleSheet},
+               tui_color};
 
 use crate::giti::{BranchCheckoutDetails,
                   CommandRunDetails,

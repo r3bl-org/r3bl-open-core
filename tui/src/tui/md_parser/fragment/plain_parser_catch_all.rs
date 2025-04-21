@@ -40,9 +40,11 @@ use nom::{branch::alt,
           sequence::preceded,
           IResult,
           Parser};
-use r3bl_core::{fg_blue, fg_magenta, fg_red};
 
-use crate::{md_parser::constants::{BACK_TICK,
+use crate::{fg_blue,
+            fg_magenta,
+            fg_red,
+            md_parser::constants::{BACK_TICK,
                                    LEFT_BRACKET,
                                    LEFT_IMAGE,
                                    NEW_LINE,

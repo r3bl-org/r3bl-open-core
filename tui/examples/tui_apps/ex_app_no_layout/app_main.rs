@@ -14,49 +14,43 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_core::{ch,
-                col,
-                defaults::get_default_gradient_stops,
-                glyphs,
-                inline_string,
-                new_style,
-                row,
-                send_signal,
-                throws_with_return,
-                tui_color,
-                tui_styled_text,
-                tui_styled_texts,
-                width,
-                Ansi256GradientIndex,
-                ColorChangeSpeed,
-                ColorWheel,
-                ColorWheelConfig,
-                ColorWheelSpeed,
-                CommonResult,
-                GradientGenerationPolicy,
-                GradientLengthKind,
-                InlineVec,
-                LolcatBuilder,
-                Size,
-                TextColorizationPolicy,
-                SPACER_GLYPH};
-use r3bl_tui::{render_ops,
+use r3bl_tui::{ch,
+               col,
+               defaults::get_default_gradient_stops,
+               glyphs,
+               inline_string,
+               new_style,
+               render_ops,
                render_pipeline,
                render_tui_styled_texts_into,
+               row,
+               send_signal,
+               tui_styled_text,
+               width,
                Animator,
+               Ansi256GradientIndex,
                App,
                BoxedSafeApp,
+               ColorChangeSpeed,
+               ColorWheel,
+               ColorWheelConfig,
+               ColorWheelSpeed,
                ComponentRegistryMap,
                EventPropagation,
                GlobalData,
+               GradientGenerationPolicy,
+               GradientLengthKind,
                HasFocus,
+               InlineVec,
                InputEvent,
                Key,
                KeyPress,
+               LolcatBuilder,
                RenderOp,
                RenderPipeline,
                SpecialKey,
                TerminalWindowMainThreadSignal,
+               TextColorizationPolicy,
                ZOrder};
 use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
@@ -139,13 +133,237 @@ mod animator_task {
 }
 
 mod app_main_impl_trait_app {
-    use r3bl_core::{Colorize, GCStringExt};
+    use r3bl_tui::{throws_with_return, Colorize, CommonResult, GCStringExt};
 
     use super::{animator_task::start_animator_task, *};
 
     impl App for AppMain {
         type S = State;
         type AS = AppSignal;
+
+        fn app_init(
+            &mut self,
+            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+            _has_focus: &mut HasFocus,
+        ) {
+            let data = &mut self.data;
+
+            data.color_wheel_ansi_vec = smallvec![
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::GrayscaleMediumGrayToWhite,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::DarkRedToDarkMagenta,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::RedToBrightPink,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::OrangeToNeonPink,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightYellowToWhite,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::MediumGreenToMediumBlue,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::GreenToBlue,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightGreenToLightBlue,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightLimeToLightMint,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::RustToPurple,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::OrangeToPink,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightOrangeToLightPurple,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::DarkOliveGreenToDarkLavender,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::OliveGreenToLightLavender,
+                    ColorWheelSpeed::Fast,
+                )]),
+                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::BackgroundDarkGreenToDarkBlue,
+                    ColorWheelSpeed::Fast,
+                )]),
+            ];
+
+            data.color_wheel_rgb = ColorWheel::new(smallvec![ColorWheelConfig::Rgb(
+                get_default_gradient_stops(),
+                ColorWheelSpeed::Fast,
+                25,
+            )]);
+
+            data.lolcat_fg = ColorWheel::new(smallvec![
+                ColorWheelConfig::Lolcat(
+                    LolcatBuilder::new()
+                        .set_color_change_speed(ColorChangeSpeed::Rapid)
+                        .set_seed(0.5)
+                        .set_seed_delta(1.0),
+                ),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightOrangeToLightPurple,
+                    ColorWheelSpeed::Slow,
+                ),
+            ]);
+
+            data.lolcat_bg = ColorWheel::new(smallvec![
+                ColorWheelConfig::Lolcat(
+                    LolcatBuilder::new()
+                        .set_background_mode(Colorize::BothBackgroundAndForeground)
+                        .set_color_change_speed(ColorChangeSpeed::Rapid)
+                        .set_seed(0.5)
+                        .set_seed_delta(1.0),
+                ),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::BackgroundDarkGreenToDarkBlue,
+                    ColorWheelSpeed::Slow,
+                ),
+            ]);
+        }
+
+        fn app_handle_input_event(
+            &mut self,
+            input_event: InputEvent,
+            global_data: &mut GlobalData<State, AppSignal>,
+            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+            _has_focus: &mut HasFocus,
+        ) -> CommonResult<EventPropagation> {
+            // Things from the app scope.
+            let AppData { animator, .. } = &mut self.data;
+
+            throws_with_return!({
+                ENABLE_TRACE_EXAMPLES.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::info! {
+                        message = "AppNoLayout::handle_event",
+                        input_event = %inline_string!(
+                            "{a} {b:?}",
+                            a = glyphs::USER_INPUT_GLYPH,
+                            b = input_event
+                        )
+                    };
+                });
+
+                let mut event_consumed = false;
+
+                if let InputEvent::Keyboard(KeyPress::Plain { key }) = input_event {
+                    // Check for + or - key.
+                    if let Key::Character(typed_char) = key {
+                        match typed_char {
+                            '+' => {
+                                event_consumed = true;
+                                send_signal!(
+                                    global_data.main_thread_channel_sender,
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
+                                        AppSignal::Add,
+                                    )
+                                );
+                            }
+                            '-' => {
+                                event_consumed = true;
+                                send_signal!(
+                                    global_data.main_thread_channel_sender,
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
+                                        AppSignal::Sub,
+                                    )
+                                );
+                            }
+                            // Override default behavior of 'x' key.
+                            'x' => {
+                                event_consumed = false;
+                                let _ = animator.stop();
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    // Check for up or down arrow key.
+                    if let Key::SpecialKey(special_key) = key {
+                        match special_key {
+                            SpecialKey::Up => {
+                                event_consumed = true;
+                                send_signal!(
+                                    global_data.main_thread_channel_sender,
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
+                                        AppSignal::Add,
+                                    )
+                                );
+                            }
+                            SpecialKey::Down => {
+                                event_consumed = true;
+                                send_signal!(
+                                    global_data.main_thread_channel_sender,
+                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
+                                        AppSignal::Sub,
+                                    )
+                                );
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+
+                if event_consumed {
+                    EventPropagation::ConsumedRender
+                } else {
+                    EventPropagation::Propagate
+                }
+            });
+        }
+
+        fn app_handle_signal(
+            &mut self,
+            action: &AppSignal,
+            global_data: &mut GlobalData<State, AppSignal>,
+            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+            _has_focus: &mut HasFocus,
+        ) -> CommonResult<EventPropagation> {
+            throws_with_return!({
+                let GlobalData { state, .. } = global_data;
+
+                match action {
+                    AppSignal::Add => {
+                        state.counter += 1;
+                    }
+
+                    AppSignal::Sub => {
+                        state.counter -= 1;
+                    }
+
+                    AppSignal::Clear => {
+                        state.counter = 0;
+                    }
+
+                    _ => {}
+                }
+
+                EventPropagation::ConsumedRender
+            });
+        }
 
         fn app_render(
             &mut self,
@@ -306,234 +524,12 @@ mod app_main_impl_trait_app {
                 pipeline
             });
         }
-
-        fn app_handle_input_event(
-            &mut self,
-            input_event: InputEvent,
-            global_data: &mut GlobalData<State, AppSignal>,
-            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
-            _has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
-            // Things from the app scope.
-            let AppData { animator, .. } = &mut self.data;
-
-            throws_with_return!({
-                ENABLE_TRACE_EXAMPLES.then(|| {
-                    // % is Display, ? is Debug.
-                    tracing::info! {
-                        message = "AppNoLayout::handle_event",
-                        input_event = %inline_string!(
-                            "{a} {b:?}",
-                            a = glyphs::USER_INPUT_GLYPH,
-                            b = input_event
-                        )
-                    };
-                });
-
-                let mut event_consumed = false;
-
-                if let InputEvent::Keyboard(KeyPress::Plain { key }) = input_event {
-                    // Check for + or - key.
-                    if let Key::Character(typed_char) = key {
-                        match typed_char {
-                            '+' => {
-                                event_consumed = true;
-                                send_signal!(
-                                    global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
-                                        AppSignal::Add,
-                                    )
-                                );
-                            }
-                            '-' => {
-                                event_consumed = true;
-                                send_signal!(
-                                    global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
-                                        AppSignal::Sub,
-                                    )
-                                );
-                            }
-                            // Override default behavior of 'x' key.
-                            'x' => {
-                                event_consumed = false;
-                                let _ = animator.stop();
-                            }
-                            _ => {}
-                        }
-                    }
-
-                    // Check for up or down arrow key.
-                    if let Key::SpecialKey(special_key) = key {
-                        match special_key {
-                            SpecialKey::Up => {
-                                event_consumed = true;
-                                send_signal!(
-                                    global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
-                                        AppSignal::Add,
-                                    )
-                                );
-                            }
-                            SpecialKey::Down => {
-                                event_consumed = true;
-                                send_signal!(
-                                    global_data.main_thread_channel_sender,
-                                    TerminalWindowMainThreadSignal::ApplyAppSignal(
-                                        AppSignal::Sub,
-                                    )
-                                );
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-
-                if event_consumed {
-                    EventPropagation::ConsumedRender
-                } else {
-                    EventPropagation::Propagate
-                }
-            });
-        }
-
-        fn app_handle_signal(
-            &mut self,
-            action: &AppSignal,
-            global_data: &mut GlobalData<State, AppSignal>,
-            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
-            _has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
-            throws_with_return!({
-                let GlobalData { state, .. } = global_data;
-
-                match action {
-                    AppSignal::Add => {
-                        state.counter += 1;
-                    }
-
-                    AppSignal::Sub => {
-                        state.counter -= 1;
-                    }
-
-                    AppSignal::Clear => {
-                        state.counter = 0;
-                    }
-
-                    _ => {}
-                }
-
-                EventPropagation::ConsumedRender
-            });
-        }
-
-        fn app_init(
-            &mut self,
-            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
-            _has_focus: &mut HasFocus,
-        ) {
-            let data = &mut self.data;
-
-            data.color_wheel_ansi_vec = smallvec![
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::GrayscaleMediumGrayToWhite,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::DarkRedToDarkMagenta,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::RedToBrightPink,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::OrangeToNeonPink,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::LightYellowToWhite,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::MediumGreenToMediumBlue,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::GreenToBlue,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::LightGreenToLightBlue,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::LightLimeToLightMint,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::RustToPurple,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::OrangeToPink,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::LightOrangeToLightPurple,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::DarkOliveGreenToDarkLavender,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::OliveGreenToLightLavender,
-                    ColorWheelSpeed::Fast,
-                )]),
-                ColorWheel::new(smallvec![ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::BackgroundDarkGreenToDarkBlue,
-                    ColorWheelSpeed::Fast,
-                )]),
-            ];
-
-            data.color_wheel_rgb = ColorWheel::new(smallvec![ColorWheelConfig::Rgb(
-                get_default_gradient_stops(),
-                ColorWheelSpeed::Fast,
-                25,
-            )]);
-
-            data.lolcat_fg = ColorWheel::new(smallvec![
-                ColorWheelConfig::Lolcat(
-                    LolcatBuilder::new()
-                        .set_color_change_speed(ColorChangeSpeed::Rapid)
-                        .set_seed(0.5)
-                        .set_seed_delta(1.0),
-                ),
-                ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::LightOrangeToLightPurple,
-                    ColorWheelSpeed::Slow,
-                ),
-            ]);
-
-            data.lolcat_bg = ColorWheel::new(smallvec![
-                ColorWheelConfig::Lolcat(
-                    LolcatBuilder::new()
-                        .set_background_mode(Colorize::BothBackgroundAndForeground)
-                        .set_color_change_speed(ColorChangeSpeed::Rapid)
-                        .set_seed(0.5)
-                        .set_seed_delta(1.0),
-                ),
-                ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::BackgroundDarkGreenToDarkBlue,
-                    ColorWheelSpeed::Slow,
-                ),
-            ]);
-        }
     }
 }
 
 mod hud {
+    use r3bl_tui::{col, row, tui_color, tui_styled_texts, Size, SPACER_GLYPH};
+
     use super::*;
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
@@ -566,6 +562,8 @@ mod hud {
 }
 
 mod status_bar {
+    use r3bl_tui::{col, tui_color, tui_styled_texts, Size, SPACER_GLYPH};
+
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.

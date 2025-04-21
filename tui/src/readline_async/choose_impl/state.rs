@@ -15,13 +15,17 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{AnsiStyledText, ChUnit, InlineString, InlineVec, ItemsOwned, Size};
-
 use crate::{get_scroll_adjusted_row_index,
             locate_cursor_in_viewport,
+            AnsiStyledText,
             CalculateResizeHint,
             CaretVerticalViewportLocation,
-            HowToChoose};
+            ChUnit,
+            HowToChoose,
+            InlineString,
+            InlineVec,
+            ItemsOwned,
+            Size};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct State {
@@ -88,10 +92,10 @@ mod convert_to_header {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, ast};
     use smallvec::smallvec;
 
     use super::*;
+    use crate::{assert_eq2, ast};
 
     #[test]
     fn test_header_enum() {

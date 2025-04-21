@@ -1,0 +1,224 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="DuplicatedCode" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <Languages>
+        <language minSize="49" name="Rust" />
+      </Languages>
+    </inspection_tool>
+    <inspection_tool class="MissingFeatures" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsAbiLiteralMustBeString" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsApproxConstant" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsArgumentNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsArrayOutOfBounds" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsAssertEqual" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsAssignToImmutable" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsAssocTypeNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsAsyncMainFunction" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsAsyncNonMoveClosureWithParameters" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsAtLeastOneTraitForObjectType" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsAttrError" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsAttrWithoutParentheses" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsBareTraitObjects" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsBorrowChecker" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsCStringPointer" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsCallExpr" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsCannotImplForDynAutoTrait" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsChainedComparisonOperatorRequiresParentheses" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsCircularMods" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsCommaSeparatedTraitBounds" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsCompileErrorMacro" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsCompilerFeatureIsUnavailable" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsConstNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsConstReferStatic" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsConstSyntax" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsConstantConditionIf" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsConstantMissingType" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsControlFlowExprInWhileConditionWithoutLoop" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsCopyAndDropImpl" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsCrateName" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsCratesInPath" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsDanglingElse" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsDbgUsage" enabled="false" level="INFORMATION" enabled_by_default="false" />
+    <inspection_tool class="RsDefaultKeywordIsNotAllowed" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsDefaultTypeParametersSyntax" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsDefaultValue" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsDefaultsConstGenericNotAllowed" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsDeprecation" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsDerivableTraitMembers" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsDeriveOnUnsupportedItem" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsDetachedFile" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsDotDotDotMustBeLastInArgumentList" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsDotDotDotSyntaxIsDeprecated" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsDoubleMustUse" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsDoubleNeg" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsDropCopyType" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsDropRef" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsDuplicateDefinitionError" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsDuplicateEnumDiscriminant" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsDuplicateHashKey" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsDuplicateMacroPattern" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsDuplicatedTraitMethodBinding" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsDynOrImplInTraitBounds" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsEdition2018Keywords" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsEdition2024Keywords" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsEnumNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsEnumReprIntIsRequired" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsEnumVariantNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsExplicitDropCall" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsExternCrateSelfWithoutAsName" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsExternalLinter" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsFieldInitShorthand" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsFieldNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsFieldWithoutType" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsForbiddenSizedImpl" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsFormatMacroErrors" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsFormatMacroWithoutFormatArguments" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsFunctionCannotBeVariadic" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsFunctionCannotHaveAnonymousParameters" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsFunctionCannotHaveSelf" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsFunctionNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsFunctionParametersAreSized" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsFunctionSyntax" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsGenericArgumentsBeforeConstraints" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsGenericDefaultParamCannotUseForward" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsImplCopyForWrongType" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsImplDropForNonAdt" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsImplForNonAdtError" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsImplToString" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsImplTraitNotAllowed" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInclusiveRangeWithNoEnd" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsIncorrectFunctionArgumentCount" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsIncorrectVisibilityRestriction" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsIncorrectlyPlacedInlineAttr" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInherentImplDifferentCrate" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInvalidBreakContinue" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInvalidCharLiteralLength" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInvalidConstGenericArgument" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInvalidFieldsInStructLiteral" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInvalidLabelName" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInvalidLetExpression" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInvalidLifetimeName" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInvalidLiteralSuffix" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInvalidMacroCall" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInvalidMacroVariableType" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsInvalidReexport" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsItemCannotBeUnsafe" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsItemStructure" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsLifetimeBoundsInParentheses" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsLifetimeNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsLifetimeParametersBeforeTypeParameters" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsLift" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsLiteralOutOfRange" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsLiveness" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsLoopOnlyKeywordOutsideOfLoop" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsMacroNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsMainFunctionNotFound" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsMainWithGenerics" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsManualImplOfFnTrait" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsMethodNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsMissingElse" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsModuleInsideBlockWithoutPath" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsModuleNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsModuleNotFound" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsModuleNotInModRs" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsMultipleRelaxedBounds" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsNeedlessLifetimes" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsNestedImplTraitNotAllowed" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsNestedQualificationOfLifetimeBounds" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsNoIncDecOperator" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsNonConstantInConstant" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsNonExhaustiveMatch" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsNonExistentFieldAccess" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsNonShorthandFieldPatterns" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsNonStructuralMatchTypeAsConstGenericParameter" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsOnlyAutoTraitsInTraitObject" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsPatStructInvalidFields" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsPathStatements" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsPatternsAreNotAllowed" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsPlaceExpression" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsProcMacroAttrInNonProcMacroCrate" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsPublicItemsInProcMacroCrate" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsQuestionMarkOperator" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsReassignImmutable" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsRecursionInAsyncFunction" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsRedundantColonColon" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsRedundantElse" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsRedundantSemicolons" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsReferenceIsNotPublic" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsRepeatedIdentifierInPattern" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsReplaceCastWithSuffix" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsReplaceMatchExpr" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsReservedIdentifier" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsReservedLifetimeName" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsReturnMustHaveValue" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsSelfConvention" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsSelfImport" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsSelfInStaticMethod" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsSelfNotAtTheBeginning" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsSelfValueIsNotAvailable" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsSimplifyBooleanExpression" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsSimplifyPrint" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsSleepInsideAsyncFunction" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsSortImplTraitMembers" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsStaticConstNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsStructInheritance" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsStructNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsStructRestWithoutBaseExpression" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsSuperTraitIsNotImplemented" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsSuspiciousAssignment" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsTestFailedLine" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsThreadLocalStableMethodCanBeUsed" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsThreadRngGen" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsTooManyLifetimeBoundsOnTraitObject" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsTraitExpected" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsTraitImplOrphanRules" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsTraitImplementation" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsTraitNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsTraitObligations" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsTryMacro" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsTupleLikeUnion" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsTypeAliasNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsTypeAliasSyntax" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsTypeCannotBeIndexedBy" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsTypeCheck" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsTypeParameterNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsTypePlaceholderIsForbidden" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnclosedTextLiteral" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUndeclaredLabel" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUndeclaredLifetime" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUndeclaredTypeOrModule" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnderscoreInExpression" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnionExprFieldsCount" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnknownCrateTypes" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnlabeledControlFlowExpr" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnnecessaryCast" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsUnnecessaryParentheses" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsUnnecessaryQualifications" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsUnnecessaryReturn" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsUnnecessaryVisibilityQualifier" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnreachableCode" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsUnreachableLabel" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnreachablePatterns" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsUnresolvedMethod" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnresolvedPath" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnsafeError" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnsafeImpl" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnsafeInherentImpl" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnstableItemUsage" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsUnusedImport" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsUnusedLabels" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsUnusedMustUse" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsUnusedMut" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsUnwrap" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsVariableCaptureFromOuterFunction" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsVariableNaming" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsVariadicParametersUsedOnNonCABI" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsWhileTrueLoop" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="RsWrongAssocTypeArguments" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsWrongGenericArgumentsNumber" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsWrongGenericArgumentsOrder" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsWrongGenericParametersNumber" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="RsWrongLifetimeParametersNumber" enabled="false" level="ERROR" enabled_by_default="false" />
+  </profile>
+</component>

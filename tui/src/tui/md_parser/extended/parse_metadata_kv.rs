@@ -16,10 +16,10 @@
  */
 
 use nom::{bytes::complete::tag, combinator::opt, sequence::preceded, IResult, Parser};
-use r3bl_core::tiny_inline_string;
 
 use crate::{md_parser::constants::{COLON, NEW_LINE, SPACE},
-            take_text_until_new_line_or_end};
+            take_text_until_new_line_or_end,
+            tiny_inline_string};
 
 /// - Sample parse input: `@title: Something` or `@date: Else`.
 /// - There may or may not be a newline at the end. If there is, it is consumed.
@@ -62,10 +62,8 @@ pub fn parse_unique_kv_opt_eol<'a>(
 
 #[cfg(test)]
 mod test_parse_title_no_eol {
-    use r3bl_core::{assert_eq2, fg_black, inline_string};
-
     use super::*;
-    use crate::md_parser::constants::TITLE;
+    use crate::{assert_eq2, fg_black, inline_string, md_parser::constants::TITLE};
 
     #[test]
     fn test_not_quoted_no_eol() {

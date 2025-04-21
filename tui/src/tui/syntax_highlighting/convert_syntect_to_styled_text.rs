@@ -30,15 +30,15 @@
 //! 1. Convert the syntect [SyntectStyleStrSpanLine] into a [StyleUSSpanLine].
 //! 2. Then convert [StyleUSSpanLine] into a [TuiStyledTexts].
 
-use r3bl_core::{tui_color,
-                tui_style_attrib,
-                tui_styled_text,
-                TuiColor,
-                TuiStyle,
-                TuiStyledTexts};
 use syntect::parsing::SyntaxSet;
 
 use super::{StyleUSSpan, StyleUSSpanLine};
+use crate::{tui_color,
+            tui_style_attrib,
+            tui_styled_text,
+            TuiColor,
+            TuiStyle,
+            TuiStyledTexts};
 
 // Type aliases for syntect types.
 
@@ -121,14 +121,17 @@ pub fn convert_span_line_from_syntect_to_tui_styled_texts(
 
 #[cfg(test)]
 mod tests_simple_md_highlight {
-    use r3bl_core::{assert_eq2, tui_color, ConvertToPlainText, TuiStyledTexts};
     use syntect::{easy::HighlightLines,
                   highlighting::Style,
                   parsing::SyntaxSet,
                   util::LinesWithEndings};
 
-    use crate::{convert_span_line_from_syntect_to_tui_styled_texts,
-                try_load_r3bl_theme};
+    use crate::{assert_eq2,
+                convert_span_line_from_syntect_to_tui_styled_texts,
+                try_load_r3bl_theme,
+                tui_color,
+                ConvertToPlainText,
+                TuiStyledTexts};
 
     #[test]
     fn simple_md_highlight() {
@@ -207,9 +210,10 @@ mod tests_simple_md_highlight {
 
 #[cfg(test)]
 mod tests_convert_span_line_and_highlighted_line {
-    use r3bl_core::{assert_eq2, tui_color, TuiStyledTexts};
-
-    use crate::convert_span_line_from_syntect_to_tui_styled_texts;
+    use crate::{assert_eq2,
+                convert_span_line_from_syntect_to_tui_styled_texts,
+                tui_color,
+                TuiStyledTexts};
 
     #[test]
     fn syntect_conversion() {
@@ -311,23 +315,23 @@ mod tests_convert_span_line_and_highlighted_line {
 
 #[cfg(test)]
 mod tests_convert_style_and_color {
-    use r3bl_core::{assert_eq2,
-                    ch,
-                    console_log,
-                    get_tui_style,
-                    get_tui_styles,
-                    new_style,
-                    throws,
-                    tui_color,
-                    tui_style_attrib,
-                    tui_stylesheet,
-                    CommonResult,
-                    InlineVec,
-                    TuiStyle,
-                    TuiStylesheet};
     use smallvec::smallvec;
 
-    use crate::convert_style_from_syntect_to_tui;
+    use crate::{assert_eq2,
+                ch,
+                console_log,
+                convert_style_from_syntect_to_tui,
+                get_tui_style,
+                get_tui_styles,
+                new_style,
+                throws,
+                tui_color,
+                tui_style_attrib,
+                tui_stylesheet,
+                CommonResult,
+                InlineVec,
+                TuiStyle,
+                TuiStylesheet};
 
     #[test]
     fn syntect_style_conversion() {

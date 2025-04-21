@@ -18,10 +18,10 @@
 // Attach.
 pub mod caret_mut;
 pub mod content_mut;
+pub mod editor_macros;
 pub mod engine_internal_api;
 pub mod engine_public_api;
 pub mod engine_struct;
-pub mod macros;
 pub mod scroll_editor_content;
 pub mod select_mode;
 pub mod validate_buffer_mut;

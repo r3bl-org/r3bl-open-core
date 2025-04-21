@@ -17,10 +17,14 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{DocumentStorage, Size};
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox, StyleUSSpanLines};
+use crate::{load_default_theme,
+            try_load_r3bl_theme,
+            DocumentStorage,
+            PartialFlexBox,
+            Size,
+            StyleUSSpanLines};
 
 /// Do not create this struct directly. Please use [new()](EditorEngine::new) instead.
 ///

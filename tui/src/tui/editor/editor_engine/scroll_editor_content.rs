@@ -23,22 +23,24 @@
 
 use std::cmp::Ordering;
 
-use r3bl_core::{ch,
-                col,
-                height,
-                row,
-                width,
-                BoundsCheck,
-                BoundsStatus,
-                CaretRaw,
-                ColIndex,
-                ColWidth,
-                RowHeight,
-                RowIndex,
-                ScrOfs};
-
 use super::{caret_mut, SelectMode};
-use crate::{caret_scroll_index, CaretDirection, EditorArgsMut, EditorBuffer};
+use crate::{caret_scroll_index,
+            ch,
+            col,
+            height,
+            row,
+            width,
+            BoundsCheck,
+            BoundsStatus,
+            CaretDirection,
+            CaretRaw,
+            ColIndex,
+            ColWidth,
+            EditorArgsMut,
+            EditorBuffer,
+            RowHeight,
+            RowIndex,
+            ScrOfs};
 
 /// # Scrolling not active
 ///

@@ -17,9 +17,8 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{Pos, Size, TuiStyle};
-
 use super::{FlexBox, FlexBoxId};
+use crate::{Pos, Size, TuiStyle};
 
 /// Holds a subset of the fields in [FlexBox] that are required by the editor and dialog
 /// engines.
@@ -71,9 +70,8 @@ impl From<&FlexBox> for PartialFlexBox {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{col, height, row, width, Pos, Size};
-
     use super::*;
+    use crate::{col, height, row, width, Pos, Size};
 
     #[test]
     fn test_partial_flex_box_default() {

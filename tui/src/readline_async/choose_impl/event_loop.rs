@@ -3,7 +3,7 @@
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
- *   You may not use this file except in compliance with the License.
+ *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -18,14 +18,17 @@ use std::io::Result;
 
 use crossterm::{cursor::{Hide, Show},
                 terminal::{disable_raw_mode, enable_raw_mode}};
-use r3bl_core::{return_if_not_interactive_terminal, InputDevice, ItemsOwned, TTYResult};
 
 use super::KeyPressReader;
 use crate::{execute_commands,
+            return_if_not_interactive_terminal,
             CalculateResizeHint,
             FunctionComponent,
+            InputDevice,
             InputDeviceExt,
-            InputEvent};
+            InputEvent,
+            ItemsOwned,
+            TTYResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EventLoopResult {

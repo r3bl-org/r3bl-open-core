@@ -18,12 +18,16 @@
 use std::io::Write as _;
 
 use miette::IntoDiagnostic;
-use r3bl_core::{fg_slate_gray,
-                ok,
-                try_initialize_logging_global,
-                InputDevice,
-                OutputDevice};
-use r3bl_tui::readline_async::{choose, Header, HowToChoose, ReadlineAsync, StyleSheet};
+use r3bl_tui::{fg_slate_gray,
+               ok,
+               readline_async::{choose,
+                                Header,
+                                HowToChoose,
+                                ReadlineAsync,
+                                StyleSheet},
+               try_initialize_logging_global,
+               InputDevice,
+               OutputDevice};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]

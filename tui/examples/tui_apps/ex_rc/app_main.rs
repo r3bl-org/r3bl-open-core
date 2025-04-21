@@ -17,41 +17,36 @@
 use std::fmt::Debug;
 
 use chrono::{DateTime, Local};
-use r3bl_core::{col,
-                inline_string,
-                new_style,
-                req_size_pc,
-                row,
-                send_signal,
-                throws,
-                throws_with_return,
-                tui_color,
-                tui_styled_text,
-                tui_styled_texts,
-                tui_stylesheet,
-                Ansi256GradientIndex,
-                ColorChangeSpeed,
-                ColorWheel,
-                ColorWheelConfig,
-                ColorWheelSpeed,
-                CommonResult,
-                GCStringExt,
-                GradientGenerationPolicy,
-                LolcatBuilder,
-                Size,
-                TextColorizationPolicy,
-                TuiStyledTexts,
-                TuiStylesheet,
-                SPACER_GLYPH};
 use r3bl_tui::{box_end,
                box_start,
+               col,
+               glyphs,
+               height,
+               inline_string,
+               new_style,
                render_component_in_current_box,
                render_ops,
                render_tui_styled_texts_into,
+               req_size_pc,
+               row,
+               send_signal,
                surface,
+               throws,
+               throws_with_return,
+               tui_color,
+               tui_styled_text,
+               tui_styled_texts,
+               tui_stylesheet,
                Animator,
+               Ansi256GradientIndex,
                App,
                BoxedSafeApp,
+               ColorChangeSpeed,
+               ColorWheel,
+               ColorWheelConfig,
+               ColorWheelSpeed,
+               Colorize,
+               CommonResult,
                ComponentRegistry,
                ComponentRegistryMap,
                EditMode,
@@ -59,23 +54,31 @@ use r3bl_tui::{box_end,
                EditorEngineConfig,
                EventPropagation,
                FlexBoxId,
+               GCStringExt,
                GlobalData,
+               GradientGenerationPolicy,
                HasFocus,
                InputEvent,
                Key,
                KeyPress,
                LayoutDirection,
                LayoutManagement,
+               LolcatBuilder,
                ModifierKeysMask,
                PerformPositioningAndSizing,
                RenderOp,
                RenderPipeline,
+               Size,
                Surface,
                SurfaceProps,
                SurfaceRender,
                TerminalWindowMainThreadSignal,
+               TextColorizationPolicy,
+               TuiStyledTexts,
+               TuiStylesheet,
                ZOrder,
-               DEBUG_TUI_MOD};
+               DEBUG_TUI_MOD,
+               SPACER_GLYPH};
 use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
 
@@ -197,8 +200,6 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use r3bl_core::{height, Colorize};
-
     use super::*;
 
     impl App for AppMain {
@@ -419,8 +420,6 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use r3bl_core::glyphs;
-
     use super::*;
 
     pub fn create_components(

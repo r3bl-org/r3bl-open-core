@@ -16,12 +16,12 @@
  */
 
 #[macro_export]
-macro_rules! apply_style {
+macro_rules! choose_apply_style {
     ($fg: expr => fg) => {
-        SetForegroundColor(::r3bl_core::convert_from_tui_color_to_crossterm_color($fg))
+        SetForegroundColor($crate::convert_from_tui_color_to_crossterm_color($fg))
     };
     ($bg: expr => bg) => {
-        SetBackgroundColor(::r3bl_core::convert_from_tui_color_to_crossterm_color($bg))
+        SetBackgroundColor($crate::convert_from_tui_color_to_crossterm_color($bg))
     };
     ($style: expr => bold) => {{
         use crossterm::style::{Attribute, SetAttribute};

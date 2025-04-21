@@ -14,38 +14,13 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_core::{Ansi256GradientIndex,
-                ColorWheel,
-                ColorWheelConfig,
-                ColorWheelSpeed,
-                CommonError,
-                CommonResult,
-                GCStringExt as _,
-                GradientGenerationPolicy,
-                InlineString,
-                Size,
-                TextColorizationPolicy,
-                TuiStyledTexts,
-                TuiStylesheet,
-                col,
-                fg_green,
-                fg_magenta,
-                fg_red,
-                get_tui_style,
-                glyphs,
-                height,
-                inline_string,
-                new_style,
-                req_size_pc,
-                row,
-                send_signal,
-                throws,
-                throws_with_return,
-                tui_color,
-                tui_styled_text,
-                tui_stylesheet};
-use r3bl_tui::{App,
+
+use r3bl_tui::{Ansi256GradientIndex,
+               App,
                BoxedSafeApp,
+               ColorWheel,
+               ColorWheelConfig,
+               ColorWheelSpeed,
                ComponentRegistry,
                ComponentRegistryMap,
                DEBUG_TUI_MOD,
@@ -81,15 +56,27 @@ use r3bl_tui::{App,
                ZOrder,
                box_end,
                box_start,
+               col,
+               fg_green,
+               fg_magenta,
+               fg_red,
+               glyphs,
+               height,
+               inline_string,
+               new_style,
                render_component_in_current_box,
                render_component_in_given_box,
                render_ops,
                render_tui_styled_texts_into,
-               surface};
+               req_size_pc,
+               row,
+               surface,
+               tui_color,
+               tui_stylesheet};
 use smallvec::smallvec;
 use tokio::sync::mpsc::Sender;
 
-use crate::edi::{State, file_utils};
+use crate::edi::State;
 
 /// Signals that can be sent to the app.
 #[derive(Default, Clone, Debug)]
@@ -155,7 +142,10 @@ mod app_main_constructor {
 }
 
 mod app_main_impl_app_trait {
+    use r3bl_tui::{CommonError, CommonResult, send_signal, throws_with_return};
+
     use super::*;
+    use crate::edi::file_utils;
 
     impl App for AppMain {
         type S = State;
@@ -354,7 +344,10 @@ mod app_main_impl_app_trait {
 }
 
 mod modal_dialog_ask_for_filename_to_save_file {
+    use r3bl_tui::{CommonResult, InlineString, get_tui_style, send_signal, throws};
+
     use super::*;
+    use crate::edi::file_utils;
 
     pub fn initialize(
         state: &mut State,
@@ -532,6 +525,8 @@ mod modal_dialog_ask_for_filename_to_save_file {
 }
 
 mod perform_layout {
+    use r3bl_tui::{CommonResult, throws};
+
     use super::*;
 
     pub struct ContainerSurfaceRender<'a> {
@@ -586,6 +581,8 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
+    use r3bl_tui::send_signal;
+
     use super::*;
 
     pub fn create_components(
@@ -644,6 +641,8 @@ mod populate_component_registry {
 }
 
 mod stylesheet {
+    use r3bl_tui::{CommonResult, TuiStylesheet, throws_with_return};
+
     use super::*;
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
@@ -686,6 +685,15 @@ mod stylesheet {
 }
 
 mod status_bar {
+    use r3bl_tui::{GCStringExt,
+                   GradientGenerationPolicy,
+                   Size,
+                   TextColorizationPolicy,
+                   TuiStyledTexts,
+                   col,
+                   new_style,
+                   tui_styled_text};
+
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.

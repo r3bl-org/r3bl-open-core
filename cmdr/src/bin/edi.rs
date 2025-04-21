@@ -19,20 +19,20 @@ use std::env::var;
 
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction, edi::launcher, report_analytics, upgrade_check};
-use r3bl_core::{ColorWheel,
-                CommonResult,
-                GradientGenerationPolicy,
-                InlineString,
-                TextColorizationPolicy,
-                fg_lizard_green,
-                fg_slate_gray,
-                height,
-                log_support::try_initialize_logging_global,
-                throws,
-                width};
-use r3bl_tui::{DefaultIoDevices,
+use r3bl_tui::{ColorWheel,
+               CommonResult,
+               DefaultIoDevices,
+               GradientGenerationPolicy,
+               InlineString,
+               TextColorizationPolicy,
                choose,
-               readline_async::{HowToChoose, StyleSheet}};
+               fg_lizard_green,
+               fg_slate_gray,
+               height,
+               log::try_initialize_logging_global,
+               readline_async::{HowToChoose, StyleSheet},
+               throws,
+               width};
 
 use crate::clap_config::CLIArg;
 

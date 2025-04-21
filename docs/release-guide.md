@@ -4,7 +4,6 @@ Date: 2022-11-06
 ---
 
 ## Cut a release and publish it to crates.io
-<a id="markdown-cut-a-release-and-publish-it-to-crates.io" name="cut-a-release-and-publish-it-to-crates.io"></a>
 
 This is a lengthy and repetitive process. The following steps have to be applied repeatedly to all
 the crates in the project.
@@ -37,9 +36,99 @@ are applied to each crate (`ansi_color`, `core`, `macro`, `redux`, `tui`, `tuify
 Finally, push the git commit and tag to the remote repo: `git push ; git push --tags`.
 
 ## Example of full workflow
-<a id="markdown-example-of-full-workflow" name="example-of-full-workflow"></a>
 
 ```sh
+cd tui
+# Update version in Cargo.toml and this file
+# Update CHANGELOG.md
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
+git add -A
+git commit -S -m "v0.6.0-tui"
+git tag -a v0.6.0-tui -m "v0.6.0-tui"
+cargo publish
+git push ; git push --tags # Push tags & commits
+cd ..
+
+cd cmdr
+# Update version in Cargo.toml and this file
+# Update CHANGELOG.md
+# Don't forget to update `r3bl-base` to have the same `UPDATE_IF_NOT_THIS_VERSION`
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
+git add -A
+git commit -S -m "v0.0.16-cmdr"
+git tag -a v0.0.16-cmdr -m "v0.0.16-cmdr"
+cargo publish
+# 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
+# You can do this using `cd cmdr && nu run build-release-in-docker`
+git push ; git push --tags # Push tags & commits
+cd ..
+
+cd analytics_schema
+# Update version in Cargo.toml and this file
+# Update CHANGELOG.md
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
+git add -A
+git commit -S -m "v0.0.2-analytics_schema"
+git tag -a v0.0.2-analytics_schema -m "v0.0.2-analytics_schema"
+cargo publish
+git push ; git push --tags # Push tags & commits
+cd ..
+
+# Finally, push the git commit and tag to the remote repo
+git tag -l --sort=-creatordate # Check the tags
+git push ; git push --tags
+```
+
+## Deprecated workflow for crates moved to [r3bl-open-core-archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo
+
+```sh
+cd tuify
+# Update version in Cargo.toml and this file
+# Update CHANGELOG.md
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
+git add -A
+git commit -S -m "v0.2.0-tuify"
+git tag -a "v0.2.0-tuify" -m "v0.2.0-tuify"
+cargo publish
+git push ; git push --tags # Push tags & commits
+cd ..
+
+cd terminal_async
+# Update version in Cargo.toml and this file
+# Update CHANGELOG.md
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
+git add -A
+git commit -S -m "v0.6.0-terminal_async"
+git tag -a v0.6.0-terminal_async -m "v0.6.0-terminal_async"
+cargo publish
+git push ; git push --tags # Push tags & commits
+cd ..
+
 cd ansi_color
 # Update version in Cargo.toml and this file
 # Update CHANGELOG.md
@@ -104,97 +193,7 @@ cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
 
-cd tui
-# Update version in Cargo.toml and this file
-# Update CHANGELOG.md
-# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
-# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
-cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
-cargo readme > README.md
-git add -A
-git commit -S -m "v0.6.0-tui"
-git tag -a v0.6.0-tui -m "v0.6.0-tui"
-cargo publish
-git push ; git push --tags # Push tags & commits
-cd ..
 
-cd tuify
-# Update version in Cargo.toml and this file
-# Update CHANGELOG.md
-# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
-# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
-cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
-cargo readme > README.md
-git add -A
-git commit -S -m "v0.2.0-tuify"
-git tag -a "v0.2.0-tuify" -m "v0.2.0-tuify"
-cargo publish
-git push ; git push --tags # Push tags & commits
-cd ..
-
-cd terminal_async
-# Update version in Cargo.toml and this file
-# Update CHANGELOG.md
-# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
-# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
-cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
-cargo readme > README.md
-git add -A
-git commit -S -m "v0.6.0-terminal_async"
-git tag -a v0.6.0-terminal_async -m "v0.6.0-terminal_async"
-cargo publish
-git push ; git push --tags # Push tags & commits
-cd ..
-
-cd cmdr
-# Update version in Cargo.toml and this file
-# Update CHANGELOG.md
-# Don't forget to update `r3bl-base` to have the same `UPDATE_IF_NOT_THIS_VERSION`
-# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
-# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
-cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
-cargo readme > README.md
-git add -A
-git commit -S -m "v0.0.16-cmdr"
-git tag -a v0.0.16-cmdr -m "v0.0.16-cmdr"
-cargo publish
-# 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
-# You can do this using `cd cmdr && nu run build-release-in-docker`
-git push ; git push --tags # Push tags & commits
-cd ..
-
-cd analytics_schema
-# Update version in Cargo.toml and this file
-# Update CHANGELOG.md
-# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
-# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
-cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
-cargo readme > README.md
-git add -A
-git commit -S -m "v0.0.2-analytics_schema"
-git tag -a v0.0.2-analytics_schema -m "v0.0.2-analytics_schema"
-cargo publish
-git push ; git push --tags # Push tags & commits
-cd ..
-
-# Finally, push the git commit and tag to the remote repo
-git tag -l --sort=-creatordate # Check the tags
-git push ; git push --tags
-```
-
-## Deprecated workflow for crates moved to [r3bl-open-core-archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo
-
-```sh
 cd simple_logger
 # Update version in Cargo.toml and this file
 # Update CHANGELOG.md

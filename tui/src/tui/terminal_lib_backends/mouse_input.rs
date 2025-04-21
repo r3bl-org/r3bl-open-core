@@ -16,9 +16,9 @@
  */
 
 use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
-use r3bl_core::{col, row, Pos};
 
 use super::{try_convert_key_modifiers, ModifierKeysMask};
+use crate::{col, row, Pos};
 
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub struct MouseInput {

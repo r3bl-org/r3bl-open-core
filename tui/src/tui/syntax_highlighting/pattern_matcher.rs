@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{col, ColIndex, GCString};
+use crate::{col, ColIndex, GCString};
 
 #[derive(Debug)]
 pub enum CharacterMatchResult {
@@ -97,9 +97,8 @@ impl<'a> PatternMatcherStateMachine<'a> {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, ch};
-
     use super::*;
+    use crate::{assert_eq2, ch};
 
     #[test]
     fn test_with_emoji() {

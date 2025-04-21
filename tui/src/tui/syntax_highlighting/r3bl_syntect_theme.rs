@@ -47,9 +47,7 @@ pub fn load_default_theme() -> Theme {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::throws;
-
-    use crate::try_load_r3bl_theme;
+    use crate::{throws, try_load_r3bl_theme};
 
     /// Use a [std::io::Cursor] as a fake [std::fs::File]:
     /// <https://stackoverflow.com/a/41069910/2085356>

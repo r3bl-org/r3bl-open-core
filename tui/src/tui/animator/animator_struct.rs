@@ -17,10 +17,9 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{throws, CommonResult};
 use tokio::sync::mpsc::Sender;
 
-use crate::TerminalWindowMainThreadSignal;
+use crate::{throws, CommonResult, TerminalWindowMainThreadSignal};
 
 /// This is a simple animator that can be used to run a single animation task. Animators
 /// can be re-used (stopped, and restarted repeatedly).

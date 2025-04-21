@@ -17,14 +17,14 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{inline_string,
-                throws,
-                tiny_inline_string,
-                CommonError,
-                CommonResult,
-                InlineVec};
-
-use crate::{FlexBox, FlexBoxId};
+use crate::{inline_string,
+            throws,
+            tiny_inline_string,
+            CommonError,
+            CommonResult,
+            FlexBox,
+            FlexBoxId,
+            InlineVec};
 
 /// This is a global (scoped to an [crate::App]) struct that is used to store the `id` of
 /// the [FlexBox] that has keyboard focus.
@@ -143,9 +143,8 @@ impl HasFocus {
 
 #[cfg(test)]
 mod has_focus_tests {
-    use r3bl_core::assert_eq2;
-
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn works_with_normal_id() {

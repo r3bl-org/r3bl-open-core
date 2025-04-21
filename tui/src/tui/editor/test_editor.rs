@@ -17,16 +17,19 @@
 
 #[cfg(test)]
 mod test_config_options {
-    use r3bl_core::{assert_eq2, caret_scr_adj, col, row, GCStringExt};
-
-    use crate::{editor::test_fixtures::mock_real_objects_for_editor,
+    use crate::{assert_eq2,
+                caret_scr_adj,
+                col,
+                editor::editor_test_fixtures::mock_real_objects_for_editor,
                 editor_engine::engine_internal_api,
-                system_clipboard_service_provider::test_fixtures::TestClipboard,
+                row,
+                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
                 CaretDirection,
                 EditorBuffer,
                 EditorEngine,
                 EditorEngineConfig,
                 EditorEvent,
+                GCStringExt,
                 LineMode,
                 DEFAULT_SYN_HI_FILE_EXT};
 
@@ -127,26 +130,26 @@ mod test_config_options {
 
 #[cfg(test)]
 mod test_editor_ops {
-    use r3bl_core::{assert_eq2,
-                    caret_raw,
-                    caret_scr_adj,
-                    col,
-                    height,
-                    row,
-                    scr_ofs,
-                    width,
-                    GCString,
-                    GCStringExt};
     use smallvec::smallvec;
 
-    use crate::{editor::{sizing::VecEditorContentLines,
-                         test_fixtures::{assert, mock_real_objects_for_editor}},
+    use crate::{assert_eq2,
+                caret_raw,
+                caret_scr_adj,
+                col,
+                editor::{editor_test_fixtures::{assert, mock_real_objects_for_editor},
+                         sizing::VecEditorContentLines},
                 editor_engine::engine_internal_api,
-                system_clipboard_service_provider::test_fixtures::TestClipboard,
+                height,
+                row,
+                scr_ofs,
+                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
+                width,
                 CaretDirection,
                 EditorArgsMut,
                 EditorBuffer,
                 EditorEvent,
+                GCString,
+                GCStringExt,
                 DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
@@ -1443,21 +1446,21 @@ mod test_editor_ops {
 
 #[cfg(test)]
 mod selection_tests {
-    use r3bl_core::{assert_eq2,
-                    caret_scr_adj,
-                    col,
-                    row,
-                    CaretScrAdj,
-                    InlineVec,
-                    RowIndex};
     use smallvec::smallvec;
 
-    use crate::SelectionRange;
+    use crate::{assert_eq2,
+                caret_scr_adj,
+                col,
+                row,
+                CaretScrAdj,
+                InlineVec,
+                RowIndex,
+                SelectionRange};
 
     type SelectionList = InlineVec<(RowIndex, SelectionRange)>;
 
-    use crate::{editor::test_fixtures::mock_real_objects_for_editor,
-                system_clipboard_service_provider::test_fixtures::TestClipboard,
+    use crate::{editor::editor_test_fixtures::mock_real_objects_for_editor,
+                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
                 CaretDirection,
                 EditorBuffer,
                 EditorEvent,
@@ -1733,15 +1736,16 @@ mod selection_tests {
 
 #[cfg(test)]
 mod clipboard_tests {
-    use r3bl_core::{assert_eq2, GCStringExt as _};
     use smallvec::smallvec;
 
-    use crate::{editor::{sizing::VecEditorContentLines,
-                         test_fixtures::mock_real_objects_for_editor},
-                system_clipboard_service_provider::test_fixtures::TestClipboard,
+    use crate::{assert_eq2,
+                editor::{editor_test_fixtures::mock_real_objects_for_editor,
+                         sizing::VecEditorContentLines},
+                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
                 CaretDirection,
                 EditorBuffer,
                 EditorEvent,
+                GCStringExt as _,
                 SelectionAction,
                 DEFAULT_SYN_HI_FILE_EXT};
 
