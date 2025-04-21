@@ -22,10 +22,14 @@ use crossterm::{cursor,
                 terminal::{Clear,
                            ClearType::{All, FromCursorDown}},
                 QueueableCommand};
-use r3bl_core::{ok, MemoizedLenMap, StringLength};
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{ReadlineError, ReadlineEvent, SafeHistory};
+use crate::{ok,
+            MemoizedLenMap,
+            ReadlineError,
+            ReadlineEvent,
+            SafeHistory,
+            StringLength};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LineStateLiveness {
@@ -109,16 +113,17 @@ impl LineState {
         }
     }
 
-    /// Update the paused state which affects the following:
-    /// - Rendering the output from multiple [r3bl_core::SharedWriter]s. When
+    /// Update the paused state, which affects the following:
+    /// - Rendering the output from multiple [crate::SharedWriter]s. When
     ///   paused nothing is rendered from them, and things like the [crate::Spinner] can
     ///   be active.
     /// - Handling user input while the [crate::Readline::readline] is awaiting user input
     ///   (which is equivalent to awaiting [crate::ReadlineAsync::read_line]).
     ///
-    /// This should not be called directly. Instead use the mechanism provided by the
-    /// [r3bl_core::SharedWriter::line_state_control_channel_sender]
-    /// [tokio::sync::mpsc::channel].
+    /// This should not be called directly. Instead, use the mechanism provided by the
+    /// following:
+    /// - [crate::SharedWriter::line_state_control_channel_sender]
+    /// - [tokio::sync::mpsc::channel]
     pub fn set_paused(
         &mut self,
         is_paused: LineStateLiveness,
@@ -127,7 +132,7 @@ impl LineState {
         // Set the current value.
         self.is_paused = is_paused;
 
-        // When going from paused -> unpaused, we need to clear and render the line.
+        // When going from paused → unpaused, we need to clear and render the line.
         if !is_paused.is_paused() {
             self.clear_and_render_and_flush(term)?
         }
@@ -639,10 +644,8 @@ impl LineState {
 mod tests {
     use std::sync::Arc;
 
-    use r3bl_core::{test_fixtures::StdoutMock, StdMutex};
-
     use super::*;
-    use crate::History;
+    use crate::{core::test_fixtures::StdoutMock, History, StdMutex};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]

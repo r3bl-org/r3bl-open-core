@@ -17,7 +17,7 @@
 
 use std::fmt::{Debug, Formatter};
 
-use r3bl_core::InlineVec;
+use r3bl_tui::InlineVec;
 use smallvec::smallvec;
 
 /// Reducer.

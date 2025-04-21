@@ -17,10 +17,8 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::CommonResult;
-
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
-use crate::{InputEvent, RenderPipeline};
+use crate::{CommonResult, InputEvent, RenderPipeline};
 
 /// An app is typically a holder for [crate::ComponentRegistry].
 ///

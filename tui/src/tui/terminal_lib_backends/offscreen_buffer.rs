@@ -18,29 +18,29 @@ use std::{fmt::{self, Debug, Write},
           ops::{Deref, DerefMut}};
 
 use diff_chunks::PixelCharDiffChunks;
-use r3bl_core::{col,
-                dim_underline,
-                fg_green,
-                fg_magenta,
-                get_mem_size,
-                inline_string,
-                ok,
-                row,
-                tiny_inline_string,
-                ColWidth,
-                GetMemSize,
-                InlineString,
-                InlineVec,
-                LockedOutputDevice,
-                Pos,
-                Size,
-                TinyInlineString,
-                TuiColor,
-                TuiStyle};
 use smallvec::smallvec;
 
 use super::{FlushKind, RenderOps};
-use crate::List;
+use crate::{col,
+            dim_underline,
+            fg_green,
+            fg_magenta,
+            get_mem_size,
+            inline_string,
+            ok,
+            row,
+            tiny_inline_string,
+            ColWidth,
+            GetMemSize,
+            InlineString,
+            InlineVec,
+            List,
+            LockedOutputDevice,
+            Pos,
+            Size,
+            TinyInlineString,
+            TuiColor,
+            TuiStyle};
 
 /// Represents a grid of cells where the row/column index maps to the terminal screen.
 ///
@@ -324,8 +324,6 @@ mod pixel_char_line_impl {
         let mut acc_current_range: InlineVec<usize> = smallvec![];
 
         mod helpers {
-            use std::primitive::usize;
-
             pub enum Peek {
                 NextItemContinuesRange,
                 NextItemDoesNotContinueRange,
@@ -534,9 +532,8 @@ pub trait OffscreenBufferPaint {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, height, new_style, tui_color, width};
-
     use super::*;
+    use crate::{assert_eq2, height, new_style, tui_color, width};
 
     #[test]
     fn test_offscreen_buffer_construction() {

@@ -19,9 +19,14 @@ use std::io::Result;
 
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
                 terminal::{Clear, ClearType}};
-use r3bl_core::{throws, ChUnit, OutputDevice, Size};
 
-use crate::{queue_commands, ResizeHint, DEVELOPMENT_MODE};
+use crate::{queue_commands,
+            throws,
+            ChUnit,
+            OutputDevice,
+            ResizeHint,
+            Size,
+            DEVELOPMENT_MODE};
 
 pub trait CalculateResizeHint {
     fn set_size(&mut self, new_size: Size);

@@ -15,26 +15,26 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{ast,
-                ast_line,
-                ast_lines,
-                get_size,
-                get_terminal_width,
-                height,
-                log_support::try_initialize_logging_global,
-                new_style,
-                ok,
-                throws,
-                tui_color,
-                usize,
-                width,
-                ASTColor,
-                ASTStyle,
-                AnsiStyledText,
-                InlineVec};
-use r3bl_tui::{choose,
+use r3bl_tui::{ast,
+               ast_line,
+               ast_lines,
+               choose,
+               get_size,
+               get_terminal_width,
+               height,
+               log::try_initialize_logging_global,
+               new_style,
+               ok,
                readline_async::{style::StyleSheet, HowToChoose, DEVELOPMENT_MODE},
-               DefaultIoDevices};
+               throws,
+               tui_color,
+               usize,
+               width,
+               ASTColor,
+               ASTStyle,
+               AnsiStyledText,
+               DefaultIoDevices,
+               InlineVec};
 mod choose_quiz_game;
 use choose_quiz_game::main as single_select_quiz_game;
 use smallvec::smallvec;

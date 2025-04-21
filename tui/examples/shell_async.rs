@@ -95,15 +95,15 @@
 use std::io::Write as _;
 
 use miette::IntoDiagnostic as _;
-use r3bl_core::{fg_guards_red,
-                fg_lizard_green,
-                fg_slate_gray,
-                inline_string,
-                ok,
-                SharedWriter};
-use r3bl_tui::readline_async::{ReadlineAsync,
-                               ReadlineEvent,
-                               ReadlineEvent::{Eof, Interrupted, Line, Resized}};
+use r3bl_tui::{fg_guards_red,
+               fg_lizard_green,
+               fg_slate_gray,
+               inline_string,
+               ok,
+               readline_async::{ReadlineAsync,
+                                ReadlineEvent,
+                                ReadlineEvent::{Eof, Interrupted, Line, Resized}},
+               SharedWriter};
 use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};
 
 #[tokio::main]

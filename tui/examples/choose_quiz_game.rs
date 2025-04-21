@@ -17,18 +17,18 @@
 
 use std::fmt::Display;
 
-use r3bl_core::{self,
-                ast,
-                get_terminal_width,
-                height,
-                new_style,
-                usize,
-                width,
-                ASTColor,
-                ItemsOwned};
-use r3bl_tui::{choose,
+use r3bl_tui::{self,
+               ast,
+               choose,
+               get_terminal_width,
+               height,
+               new_style,
                readline_async::{HowToChoose, StyleSheet},
-               DefaultIoDevices};
+               usize,
+               width,
+               ASTColor,
+               DefaultIoDevices,
+               ItemsOwned};
 use serde::{Deserialize, Serialize};
 
 const JSON_DATA: &str = r#"[

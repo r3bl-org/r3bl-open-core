@@ -15,9 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{col, row, ColIndex, ColWidth, RowHeight, RowIndex};
-
-use crate::EditorBuffer;
+use crate::{col, row, ColIndex, ColWidth, EditorBuffer, RowHeight, RowIndex};
 
 #[derive(Clone, Eq, PartialEq)]
 pub enum CaretColLocationInLine {
@@ -136,7 +134,7 @@ pub mod caret_scroll_index {
 
     #[test]
     fn test_scroll_col_index_for_width() {
-        use r3bl_core::width;
+        use crate::width;
 
         let width = width(5);
         let scroll_col_index = col_index_for_width(width);
@@ -145,7 +143,7 @@ pub mod caret_scroll_index {
 
     #[test]
     fn test_scroll_row_index_for_height() {
-        use r3bl_core::height;
+        use crate::height;
 
         let height = height(5);
         let scroll_row_index = row_index_for_height(height);

@@ -17,10 +17,14 @@
 
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData};
 
-use r3bl_core::{CommonResult, ContainsResult};
-
 use super::HasFocus;
-use crate::{BoxedSafeComponent, EventPropagation, FlexBoxId, GlobalData, InputEvent};
+use crate::{BoxedSafeComponent,
+            CommonResult,
+            ContainsResult,
+            EventPropagation,
+            FlexBoxId,
+            GlobalData,
+            InputEvent};
 
 #[derive(Debug)]
 pub struct ComponentRegistry<S, AS>

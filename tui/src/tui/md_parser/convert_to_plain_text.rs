@@ -20,17 +20,12 @@
 
 use std::fmt::Write as _;
 
-use r3bl_core::{convert_to_string_slice,
-                inline_string,
-                join,
-                join_fmt,
-                join_with_index,
-                pad_fmt,
-                usize_to_u8_array,
-                InlineString,
-                PrettyPrintDebug};
-
-use crate::{md_parser::constants::{BACK_TICK,
+use crate::{convert_to_string_slice,
+            inline_string,
+            join,
+            join_fmt,
+            join_with_index,
+            md_parser::constants::{BACK_TICK,
                                    CHECKED,
                                    HEADING_CHAR,
                                    LEFT_BRACKET,
@@ -48,12 +43,16 @@ use crate::{md_parser::constants::{BACK_TICK,
                                    STAR,
                                    UNCHECKED,
                                    UNDERSCORE},
+            pad_fmt,
+            usize_to_u8_array,
             HeadingLevel,
             HyperlinkData,
+            InlineString,
             List,
             MdBlock,
             MdDocument,
-            MdLineFragment};
+            MdLineFragment,
+            PrettyPrintDebug};
 
 impl PrettyPrintDebug for MdDocument<'_> {
     fn pretty_print_debug(&self) -> InlineString {
@@ -258,9 +257,8 @@ pub fn generate_unordered_list_item_bullet(
 
 #[cfg(test)]
 mod to_plain_text_tests {
-    use r3bl_core::assert_eq2;
-
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn test_fragment_to_plain_text() {

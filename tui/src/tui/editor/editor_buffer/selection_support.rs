@@ -17,31 +17,30 @@
 
 use std::cmp;
 
-use r3bl_core::{caret_scr_adj,
-                col,
-                dim,
-                fg_blue,
-                fg_cyan,
-                fg_green,
-                fg_magenta,
-                fg_red,
-                fg_yellow,
-                height,
-                inline_string,
-                row,
-                underline,
-                usize,
-                width,
-                CaretScrAdj,
-                ChUnitPrimitiveType,
-                Size};
-
 use super::{selection_list::RowLocationInSelectionList, EditorBuffer};
-use crate::{caret_scroll_index,
+use crate::{caret_scr_adj,
+            caret_scroll_index,
+            col,
+            dim,
+            fg_blue,
+            fg_cyan,
+            fg_green,
+            fg_magenta,
+            fg_red,
+            fg_yellow,
+            height,
+            inline_string,
+            row,
+            underline,
+            usize,
+            width,
             CaretLocationInRange,
             CaretMovementDirection,
+            CaretScrAdj,
+            ChUnitPrimitiveType,
             DirectionChangeResult,
             SelectionRange,
+            Size,
             DEBUG_TUI_COPY_PASTE};
 
 /// Usually [EditorBuffer::get_mut()] and [EditorBuffer::get_mut_no_drop()] need a

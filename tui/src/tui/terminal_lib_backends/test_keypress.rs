@@ -18,10 +18,11 @@
 #[cfg(test)]
 mod tests {
     use crossterm::event::{KeyCode, KeyModifiers};
-    use r3bl_core::{assert_eq2, throws};
 
-    use crate::{crossterm_keyevent,
+    use crate::{assert_eq2,
+                crossterm_keyevent,
                 key_press,
+                throws,
                 FunctionKey,
                 Key,
                 KeyPress,

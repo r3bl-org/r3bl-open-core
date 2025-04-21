@@ -16,30 +16,30 @@
  */
 use std::fmt::{Debug, Formatter, Result};
 
-use r3bl_core::{format_as_kilobytes_with_commas,
-                glyphs,
-                height,
-                inline_string,
-                row,
-                width,
-                with_mut,
-                CaretRaw,
-                CaretScrAdj,
-                ColWidth,
-                GCString,
-                GCStringExt,
-                InlineString,
-                RowHeight,
-                RowIndex,
-                ScrOfs,
-                SegString,
-                Size,
-                TinyInlineString};
 use smallvec::smallvec;
 
 use super::{history::EditorHistory, render_cache::RenderCache, sizing, SelectionList};
 use crate::{caret_locate,
+            format_as_kilobytes_with_commas,
+            glyphs,
+            height,
+            inline_string,
+            row,
             validate_buffer_mut::{EditorBufferMutNoDrop, EditorBufferMutWithDrop},
+            width,
+            with_mut,
+            CaretRaw,
+            CaretScrAdj,
+            ColWidth,
+            GCString,
+            GCStringExt,
+            InlineString,
+            RowHeight,
+            RowIndex,
+            ScrOfs,
+            SegString,
+            Size,
+            TinyInlineString,
             DEBUG_TUI_COPY_PASTE,
             DEBUG_TUI_MOD,
             DEFAULT_SYN_HI_FILE_EXT};
@@ -82,7 +82,7 @@ use crate::{caret_locate,
 /// [crate::validate_buffer_mut::perform_validation_checks_after_mutation] operations to
 /// be applied post mutation.
 ///
-/// # Different kinds of caret positions
+/// # Kinds of caret positions
 ///
 /// There are two variants for the caret position value:
 /// 1. [CaretRaw] - this is the position of the caret (unadjusted for `scr_ofs`) and this
@@ -93,8 +93,7 @@ use crate::{caret_locate,
 /// # Fields
 ///
 /// Please don't mutate these fields directly, they are not marked `pub` to guard from
-/// unintentional mutation. To mutate or access access it, use
-/// [get_mut](EditorBuffer::get_mut).
+/// unintentional mutation. To mutate or access it, use [get_mut](EditorBuffer::get_mut).
 ///
 /// ## `lines`
 ///
@@ -102,22 +101,21 @@ use crate::{caret_locate,
 ///
 /// ## `caret_raw`
 ///
-/// This is the "display" col index (grapheme cluster based) and not "logical" col index
-/// (byte based) position (both are defined in [r3bl_core::tui_core::graphemes]).
+/// This is the "display" col index (grapheme-cluster-based) and not "logical" col index
+/// (byte-based) position (both are defined in [crate::tui_core::graphemes]).
 ///
-/// > Please take a look at [r3bl_core::tui_core::graphemes::GCString], specifically the
-/// > methods in [mod@r3bl_core::tui_core::graphemes::gc_string] for more details on how
+/// > Please review [crate::tui_core::graphemes::GCString], specifically the
+/// > methods in [mod@crate::tui_core::graphemes::gc_string] for more details on how
 /// > the conversion between "display" and "logical" indices is done.
 /// >
 /// > This results from the fact that `UTF-8` is a variable width text encoding scheme,
 /// > that can use between 1 and 4 bytes to represent a single character. So the width a
-/// > human perceives and it's byte size in RAM can be different.
+/// > human perceives, and it's byte size in RAM can be different.
 /// >
-/// >  Videos:
+/// > Videos:
 /// >
-/// >  - [Live coding video on Rust
-/// >    String](https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq)
-/// >  - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA?si=D9sTt_G7_mBJFLmc)
+/// > - [Live coding video on Rust String](https://youtu.be/7I11degAElQ?)
+/// > - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA)
 ///
 /// 1. It represents the current caret position (relative to the
 ///    [style_adjusted_origin_pos](crate::FlexBox::style_adjusted_origin_pos) of the
@@ -152,8 +150,8 @@ use crate::{caret_locate,
 ///
 /// ## `scr_ofs`
 ///
-/// The col and row offset for scrolling if active. This is not marked pub in order to
-/// guard mutation. In order to access it, use [get_mut](EditorBuffer::get_mut).
+/// The col and row offset for scrolling if active. This is not marked pub to guard
+/// against unintentional mutation. To access it, use [get_mut](EditorBuffer::get_mut).
 ///
 /// # Vertical scrolling and viewport
 ///
@@ -191,15 +189,15 @@ use crate::{caret_locate,
 ///
 /// ## `file_extension`
 ///
-/// This is used for syntax highlighting. It is a 2 character string, eg: `rs` or `md`
-/// that is used to lookup the syntax highlighting rules for the language in
+/// This is used for syntax highlighting. It is a 2-character string, eg: `rs` or `md`
+/// that is used to look up the syntax highlighting rules for the language in
 /// [find_syntax_by_extension[syntect::parsing::SyntaxSet::find_syntax_by_extension].
 ///
 /// ## `selection_map`
 ///
 /// The [SelectionList] is used to keep track of the selections in the buffer. Each entry
 /// in the list represents a row of text in the buffer.
-/// - The row index is the key [r3bl_core::RowIndex].
+/// - The row index is the key [crate::RowIndex].
 /// - The value is the [crate::SelectionRange].
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorBuffer {
@@ -575,10 +573,9 @@ pub mod access_and_mutate {
         /// [crate::EditorBufferMut] implements the [Drop] trait, which ensures that any
         /// validation changes are applied after making changes to the [EditorBuffer].
         ///
-        /// Note that if `vp` is [r3bl_core::ChUnitPrimitiveType::MAX] x
-        /// [r3bl_core::ChUnitPrimitiveType::MAX] that means that the viewport argument
-        /// was not passed in from an [crate::EditorEngine], since this method can be called
-        /// without having an instance of that type.
+        /// Note that if `vp` is [crate::dummy_viewport()] that means that the viewport
+        /// argument was not passed in from a [crate::EditorEngine], since this method can
+        /// be called without having an instance of that type.
         pub fn get_mut(&mut self, vp: Size) -> EditorBufferMutWithDrop<'_> {
             EditorBufferMutWithDrop::new(
                 &mut self.content.lines,
@@ -630,7 +627,7 @@ mod debug_format {
 
     impl Debug for EditorContent {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            use r3bl_core::GetMemSize as _;
+            use crate::GetMemSize as _;
             let mem_size = self.get_mem_size();
             let mem_size_fmt = format_as_kilobytes_with_commas(mem_size);
 

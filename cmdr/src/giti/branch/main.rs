@@ -16,27 +16,27 @@
  */
 
 use clap::ValueEnum;
-use r3bl_core::{ast,
-                ast_line,
-                height,
-                new_style,
-                tui_color,
-                CommandRunResult,
-                CommonResult};
-use r3bl_tui::{choose,
+use r3bl_tui::{CommandRunResult,
+               CommonResult,
+               DefaultIoDevices,
+               ast,
+               ast_line,
+               choose,
+               height,
+               new_style,
                readline_async::{HowToChoose, StyleSheet},
-               DefaultIoDevices};
+               tui_color};
 use smallvec::smallvec;
 
-use crate::giti::{get_giti_command_subcommand_names,
+use crate::giti::{BranchSubcommand,
+                  CLICommand,
+                  CommandRunDetails,
+                  get_giti_command_subcommand_names,
                   try_checkout,
                   try_delete,
                   try_new,
                   ui_str,
-                  ui_templates::single_select_instruction_header,
-                  BranchSubcommand,
-                  CLICommand,
-                  CommandRunDetails};
+                  ui_templates::single_select_instruction_header};
 
 /// The main function to for `giti branch` command.
 pub async fn try_main(

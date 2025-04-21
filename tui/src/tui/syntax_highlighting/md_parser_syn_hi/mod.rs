@@ -16,10 +16,10 @@
  */
 
 //! This module holds the integration or glue code that ties together:
-//! 1. [crate::md_parser] - Responsible for parsing markdown into a [crate::MdDocument] data
+//! 1. [crate::md_parser] - Responsible for parsing Markdown into a [crate::MdDocument] data
 //!    structure.
 //! 2. [crate::syntax_highlighting] - Responsible for converting a [crate::MdDocument] into a list
-//!    of tuples of [r3bl_core::TuiStyle] and [String].
+//!    of tuples of [crate::TuiStyle] and [String].
 //! 3. [crate::editor] - Responsible for displaying the [crate::MdDocument] to the user.
 
 // Attach.

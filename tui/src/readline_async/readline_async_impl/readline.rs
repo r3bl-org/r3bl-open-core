@@ -19,24 +19,24 @@ use std::{io::{self, Write},
 
 use crossterm::{terminal::{self, disable_raw_mode, Clear},
                 QueueableCommand};
-use r3bl_core::{join,
-                output_device_as_mut,
-                InputDevice,
-                LineStateControlSignal,
-                OutputDevice,
-                SendRawTerminal,
-                SharedWriter,
-                StdMutex};
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
-use crate::{History,
+use crate::{join,
+            output_device_as_mut,
+            History,
+            InputDevice,
             LineState,
+            LineStateControlSignal,
             LineStateLiveness,
+            OutputDevice,
             PauseBuffer,
             SafeHistory,
             SafeLineState,
             SafePauseBuffer,
+            SendRawTerminal,
+            SharedWriter,
+            StdMutex,
             CHANNEL_CAPACITY};
 
 const CTRL_C: crossterm::event::Event =
@@ -75,28 +75,28 @@ const CTRL_D: crossterm::event::Event =
 /// # When to terminate the session
 ///
 /// There is no `close()` function on [`Readline`]. You simply drop it. This will cause
-/// the the terminal to come out of raw mode. And all the buffers will be flushed.
+/// the terminal to come out of raw mode. And all the buffers will be flushed.
 /// However, there are 2 ways to use this [`Readline::readline()`] in a loop or just as a
-/// one off. Each time this function is called, you have to `await` it to return the user
+/// one-off. Each time this function is called, you have to `await` it to return the user
 /// input or `Interrupted` or `Eof` signal.
 ///
 /// When creating a new [`crate::ReadlineAsync`] instance, you can use this repeatedly
-/// before dropping it. This is because the [`r3bl_core::SharedWriter`] is cloned, and the
-/// terminal is kept in raw mode until the associated [`crate::Readline`] is dropped.
+/// before dropping it. This is because the [`crate::SharedWriter`] is cloned, and the
+/// terminal is kept in `raw mode` until the associated [`crate::Readline`] is dropped.
 ///
 /// # Inputs and dependency injection
 ///
 /// There are 2 main resources that must be passed into [`Self::new()`]:
 /// 1. [`InputDevice`] which contains a resource that implements
-///    [`r3bl_core::PinnedInputStream`] - This trait represents an async stream of events.
+///    [`crate::PinnedInputStream`] - This trait represents an async stream of events.
 ///    It is typically implemented by
 ///    [`crossterm::event::EventStream`](https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html).
-///    This is used to get input from the user. However for testing you can provide your
+///    This is used to get input from the user. However, for testing you can provide your
 ///    own implementation of this trait.
-/// 2. [`OutputDevice`] which contains a resources that implements
-///    [r3bl_core::SafeRawTerminal] - This trait represents a raw terminal. It is
+/// 2. [`OutputDevice`] which contains a resource that implements
+///    [crate::SafeRawTerminal] - This trait represents a raw terminal. It is
 ///    typically implemented by [`std::io::Stdout`]. This is used to write to the
-///    terminal. However for testing you can provide your own implementation of this
+///    terminal. However, for testing you can provide your own implementation of this
 ///    trait.
 ///
 /// # Support for testing
@@ -112,10 +112,10 @@ const CTRL_D: crossterm::event::Event =
 ///
 /// # Pause and resume
 ///
-/// When the terminal is paused, then any output from the [`SharedWriter`]s will not be
+/// If the terminal is paused, then any output from the [`SharedWriter`]s will not be
 /// printed to the terminal. This is useful when you want to display a spinner, or some
 /// other indeterminate progress indicator. The user input from the terminal is not going
-/// to be accepted either. Only Ctrl+C, and Ctrl+D are accepted while paused. This ensures
+/// to be accepted either. Only `Ctrl+C`, and `Ctrl+D` are accepted while paused. This ensures
 /// that the user can't enter any input while the terminal is paused. And output from a
 /// [`crate::Spinner`] won't clobber the output from the [`SharedWriter`]s or from the
 /// user input prompt while [`crate::Readline::readline()`] (or
@@ -134,20 +134,20 @@ const CTRL_D: crossterm::event::Event =
 /// [`PauseBuffer`] (if there are any messages in it, and prints them out) so nothing is
 /// lost!
 ///
-/// See the [`crate::LineState`] for more information on exactly how the terminal is
-/// paused and resumed, when it comes to accepting or rejecting user input, and rendering
-/// output or not.
-///
-/// See the [`crate::ReadlineAsync`] module docs for more information on the mental mode
-/// and architecture of this.
+/// References:
+/// 1. Review the [`crate::LineState`] struct for more information on exactly how the
+///    terminal is paused and resumed, when it comes to accepting or rejecting user
+///    input, and rendering output or not.
+/// 2. Review the [`crate::ReadlineAsync`] module docs for more information on the mental
+///    mode and architecture of this.
 ///
 /// # Usage details
 ///
-/// Struct for reading lines of input from a terminal while lines are output to the
-/// terminal concurrently.
+/// `Readline` struct allows reading lines of input from a terminal, without blocking
+/// the calling thread, while lines are output to the terminal concurrently.
 ///
 /// Terminal input is retrieved by calling [`Readline::readline()`], which returns each
-/// complete line of input once the user presses Enter.
+/// complete line of input once the user presses `Enter`.
 ///
 /// Each `Readline` instance is associated with one or more [`SharedWriter`] instances.
 ///
@@ -155,7 +155,7 @@ const CTRL_D: crossterm::event::Event =
 /// 1. While retrieving input with [`readline()`][Readline::readline].
 /// 2. By calling [`manage_shared_writer_output::flush_internal()`].
 ///
-/// You can provide your own implementation of [r3bl_core::SafeRawTerminal], like
+/// You can provide your own implementation of [crate::SafeRawTerminal], like
 /// [`OutputDevice`], via [dependency injection](https://developerlife.com/category/DI/),
 /// so that you can mock terminal output for testing. You can also extend this struct to
 /// adapt your own terminal output using this mechanism. Essentially anything that
@@ -578,8 +578,8 @@ impl Readline {
     ///
     /// Note that this function can be called repeatedly in a loop. It will return each
     /// line of input as it is entered (and return / exit). The [crate::ReadlineAsync] can
-    /// be re-used, since the [r3bl_core::SharedWriter] is cloned and the terminal is kept
-    /// in raw mode until the associated [crate::Readline] is dropped.
+    /// be re-used, since the [crate::SharedWriter] is cloned, and the terminal is kept
+    /// in `raw mode` until the associated [crate::Readline] is dropped.
     ///
     /// Polling function for [`Self::readline`], manages all input and output. Returns
     /// either an [ReadlineEvent] or an [ReadlineError].
@@ -591,7 +591,7 @@ impl Readline {
                 // future in the following block.
                 // - All the state comes from other variables (self.*).
                 // - So if this future is dropped, then the item in the
-                //   pinned_input_stream isn't used and the state isn't modified.
+                //   pinned_input_stream isn't used, and the state isn't modified.
                 result_crossterm_event = self.input_device.next() => {
                     match readline_internal::apply_event_to_line_state_and_render(
                         result_crossterm_event,
@@ -689,8 +689,9 @@ pub mod readline_internal {
 #[cfg(test)]
 pub mod readline_test_fixtures {
     use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-    use r3bl_core::{CrosstermEventResult, InlineVec};
     use smallvec::smallvec;
+
+    use crate::{CrosstermEventResult, InlineVec};
 
     pub(super) fn get_input_vec() -> InlineVec<CrosstermEventResult> {
         smallvec![
@@ -720,15 +721,15 @@ pub mod readline_test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use r3bl_core::{return_if_not_interactive_terminal,
-                    test_fixtures::{output_device_ext::OutputDeviceExt as _,
-                                    InputDeviceExt as _},
-                    StdMutex,
-                    TTYResult};
     use readline_test_fixtures::get_input_vec;
 
     use super::*;
-    use crate::LineStateLiveness;
+    use crate::{return_if_not_interactive_terminal,
+                InputDeviceExtMock,
+                LineStateLiveness,
+                OutputDeviceExt,
+                StdMutex,
+                TTYResult};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
@@ -903,10 +904,10 @@ mod test_readline {
 
 #[cfg(test)]
 mod test_streams {
-    use r3bl_core::test_fixtures::gen_input_stream;
     use test_streams::readline_test_fixtures::get_input_vec;
 
     use super::*;
+    use crate::core::test_fixtures::gen_input_stream;
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
@@ -929,10 +930,9 @@ mod test_pause_and_resume_support {
     use std::sync::Mutex;
 
     use manage_shared_writer_output::flush_internal;
-    use r3bl_core::test_fixtures::StdoutMock;
 
     use super::*;
-    use crate::LineStateLiveness;
+    use crate::{core::test_fixtures::StdoutMock, LineStateLiveness};
 
     #[test]
     fn test_flush_internal_paused() {

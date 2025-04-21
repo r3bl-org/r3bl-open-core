@@ -15,9 +15,8 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{InlineVec, Pos, ReqSizePc, Size, TuiStyle};
-
 use super::{FlexBoxId, LayoutDirection};
+use crate::{InlineVec, Pos, ReqSizePc, Size, TuiStyle};
 
 /// Properties that are needed to create a [crate::FlexBox].
 #[derive(Clone, Debug, Default)]
@@ -37,11 +36,19 @@ pub struct SurfaceProps {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{col, height, ok, req_size_pc, row, width, CommonResult, Pos, Size};
     use smallvec::smallvec;
 
     use super::*;
-    use crate::tui::layout::{FlexBoxId, LayoutDirection};
+    use crate::{col,
+                height,
+                ok,
+                req_size_pc,
+                row,
+                tui::layout::{FlexBoxId, LayoutDirection},
+                width,
+                CommonResult,
+                Pos,
+                Size};
 
     #[test]
     fn test_flex_box_props_default() {

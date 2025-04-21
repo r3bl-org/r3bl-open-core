@@ -14,32 +14,31 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use r3bl_core::{ast,
-                ast_line,
-                height,
-                new_style,
-                tui_color,
-                CommandRunResult,
-                CommonResult,
-                InlineString,
-                InlineVec,
-                ItemsOwned,
-                AST};
-use r3bl_tui::{choose,
-               readline_async::{HowToChoose, StyleSheet},
+use r3bl_tui::{AST,
+               CommandRunResult,
+               CommonResult,
                DefaultIoDevices,
-               Header};
+               Header,
+               InlineString,
+               InlineVec,
+               ItemsOwned,
+               ast,
+               ast_line,
+               choose,
+               height,
+               new_style,
+               readline_async::{HowToChoose, StyleSheet},
+               tui_color};
 use smallvec::smallvec;
 
-use crate::{giti::{git::{self},
+use crate::{AnalyticsAction,
+            giti::{BranchDeleteDetails,
+                   CommandRunDetails,
+                   git::{self},
                    ui_str::{self},
                    ui_templates::{multi_select_instruction_header,
-                                  single_select_instruction_header},
-                   BranchDeleteDetails,
-                   CommandRunDetails},
-            report_analytics,
-            AnalyticsAction};
+                                  single_select_instruction_header}},
+            report_analytics};
 
 /// The main function for `giti branch delete` command.
 pub async fn try_delete() -> CommonResult<CommandRunResult<CommandRunDetails>> {
@@ -222,8 +221,6 @@ mod user_interaction {
 }
 
 mod command_execute {
-    use r3bl_core::CommandRunResult;
-
     use super::*;
 
     pub async fn delete_selected_branches(

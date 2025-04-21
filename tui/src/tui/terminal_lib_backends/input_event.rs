@@ -17,9 +17,9 @@
 use crossterm::event::{Event::{self},
                        KeyEvent,
                        MouseEvent};
-use r3bl_core::{height, width, Size};
 
 use super::{KeyPress, MouseInput};
+use crate::{height, width, Size};
 
 /// Please see [KeyPress] for more information about handling keyboard input.
 #[non_exhaustive]

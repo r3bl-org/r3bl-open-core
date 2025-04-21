@@ -60,9 +60,8 @@ pub fn take_text_until_new_line_or_end<'input>() ->
 
 #[cfg(test)]
 mod test_text_until_opt_eol {
-    use r3bl_core::{assert_eq2, fg_lizard_green};
-
     use super::*;
+    use crate::{assert_eq2, fg_lizard_green};
 
     #[test]
     fn test_text_until_opt_eol() {

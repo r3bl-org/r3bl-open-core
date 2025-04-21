@@ -23,20 +23,20 @@ use std::{fs,
           time::Duration};
 
 use miette::{miette, IntoDiagnostic as _};
-use r3bl_core::{bold,
-                fg_color,
-                fg_red,
-                fg_slate_gray,
-                inline_string,
-                log_support::{try_initialize_logging_global, DisplayPreference},
-                tui_color,
-                InlineVec,
-                SendRawTerminal,
-                SharedWriter,
-                SpinnerStyle,
-                StdMutex};
-use r3bl_tui::{ra_println,
-               readline_async::{Readline, ReadlineAsync, ReadlineEvent, Spinner}};
+use r3bl_tui::{bold,
+               fg_color,
+               fg_red,
+               fg_slate_gray,
+               inline_string,
+               log::{try_initialize_logging_global, DisplayPreference},
+               readline_async::{Readline, ReadlineAsync, ReadlineEvent, Spinner},
+               rla_println,
+               tui_color,
+               InlineVec,
+               SendRawTerminal,
+               SharedWriter,
+               SpinnerStyle,
+               StdMutex};
 use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
@@ -165,7 +165,7 @@ async fn main() -> miette::Result<()> {
     let mut interval_1_task = interval(state.task_1_state.interval_delay);
     let mut interval_2_task = interval(state.task_2_state.interval_delay);
 
-    ra_println!(rl_async, "{}", get_info_message());
+    rla_println!(rl_async, "{}", get_info_message());
 
     loop {
         select! {
@@ -210,8 +210,8 @@ async fn main() -> miette::Result<()> {
                     Err(err) => {
                         let msg_1 = format!("Received err: {}", fg_red(&format!("{err:?}")));
                         let msg_2 = format!("{}", fg_red("Exiting..."));
-                        ra_println!(rl_async, "{msg_1}");
-                        ra_println!(rl_async, "{msg_2}");
+                        rla_println!(rl_async, "{msg_1}");
+                        rla_println!(rl_async, "{msg_2}");
                         break;
                     },
                 }

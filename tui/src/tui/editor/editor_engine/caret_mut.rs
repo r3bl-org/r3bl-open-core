@@ -15,22 +15,18 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{caret_scr_adj,
-                col,
-                row,
-                wide_segments::ContainsWideSegments,
-                width,
-                SegString};
-
 use super::{scroll_editor_content, SelectMode};
 use crate::{caret_locate::{self,
                            locate_col,
                            CaretColLocationInLine,
                            CaretRowLocationInBuffer},
             caret_mut,
+            caret_scr_adj,
             caret_scroll_index,
+            col,
             empty_check_early_return,
             multiline_disabled_check_early_return,
+            row,
             CaretDirection,
             EditorArgsMut,
             EditorBuffer,
@@ -350,6 +346,7 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
 
     mod inner {
         use super::*;
+        use crate::{wide_segments::ContainsWideSegments, width, SegString};
 
         /// 1. Check for wide unicode character to the right of the caret.
         /// 2. [validate::apply_change] checks for wide unicode character at the start of the

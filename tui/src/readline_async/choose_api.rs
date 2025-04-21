@@ -17,33 +17,33 @@
 
 use clap::ValueEnum;
 use miette::IntoDiagnostic as _;
-use r3bl_core::{ch,
-                fg_green,
-                get_size,
-                inline_string,
-                usize,
-                Height,
-                InputDevice,
-                ItemsOwned,
-                LineStateControlSignal,
-                OutputDevice,
-                SharedWriter,
-                Width};
 
-use crate::{enter_event_loop_async,
+use crate::{ch,
+            enter_event_loop_async,
+            fg_green,
+            get_size,
+            inline_string,
+            usize,
             CalculateResizeHint,
             CaretVerticalViewportLocation,
             EventLoopResult,
             Header,
+            Height,
+            InputDevice,
             InputEvent,
+            ItemsOwned,
             Key,
             KeyPress,
             KeyState,
+            LineStateControlSignal,
             ModifierKeysMask,
+            OutputDevice,
             SelectComponent,
+            SharedWriter,
             SpecialKey,
             State,
             StyleSheet,
+            Width,
             DEVELOPMENT_MODE};
 
 pub const DEFAULT_HEIGHT: usize = 5;
@@ -430,16 +430,16 @@ pub enum HowToChoose {
 mod test_choose_async {
     use std::{io::Write as _, time::Duration};
 
-    use r3bl_core::{CrosstermEventResult,
-                    InlineVec,
-                    InputDevice,
-                    InputDeviceExt,
-                    OutputDevice,
-                    OutputDeviceExt as _,
-                    SharedWriter};
     use smallvec::smallvec;
 
     use super::*;
+    use crate::{CrosstermEventResult,
+                InlineVec,
+                InputDevice,
+                InputDeviceExtMock,
+                OutputDevice,
+                OutputDeviceExt,
+                SharedWriter};
 
     /// Simulated key inputs: Down, Down, Enter.
     fn generated_key_events() -> InlineVec<CrosstermEventResult> {

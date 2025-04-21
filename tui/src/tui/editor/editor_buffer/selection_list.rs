@@ -16,25 +16,30 @@
  */
 use std::fmt::Debug;
 
-use r3bl_core::{caret_scr_adj,
-                fg_color,
-                glyphs::{CUT_GLYPH,
-                         DIRECTION_GLYPH,
-                         ELLIPSIS_GLYPH,
-                         TIRE_MARKS_GLYPH,
-                         VERT_LINE_DASHED_GLYPH},
-                inline_string,
-                join,
-                usize,
-                CaretScrAdj,
-                GetMemSize,
-                InlineString,
-                InlineVec,
-                RowIndex};
 use sizing::VecRowIndex;
 use smallvec::{smallvec, SmallVec};
 
-use crate::{CaretMovementDirection, DeleteSelectionWith, EditorBuffer, SelectionRange};
+use crate::{caret_scr_adj,
+            fg_color,
+            glyphs::{CUT_GLYPH,
+                     DIRECTION_GLYPH,
+                     ELLIPSIS_GLYPH,
+                     TIRE_MARKS_GLYPH,
+                     VERT_LINE_DASHED_GLYPH},
+            inline_string,
+            join,
+            tui_color,
+            usize,
+            CaretMovementDirection,
+            CaretScrAdj,
+            DeleteSelectionWith,
+            EditorBuffer,
+            GetMemSize,
+            InlineString,
+            InlineVec,
+            ItemsOwned,
+            RowIndex,
+            SelectionRange};
 
 mod sizing {
     use super::*;
@@ -58,8 +63,8 @@ mod sizing {
 /// range). This list is always sorted by row index.
 ///
 /// Note that both column indices are:
-/// - [r3bl_core::CaretScrAdj]
-/// - And not [r3bl_core::CaretRaw]
+/// - [crate::CaretScrAdj]
+/// - And not [crate::CaretRaw]
 #[derive(Clone, PartialEq, Default)]
 pub struct SelectionList {
     list: InlineVec<SelectionListItem>,
@@ -70,9 +75,8 @@ pub type SelectionListItem = (RowIndex, SelectionRange);
 
 #[test]
 fn test_selection_map_direction_change() {
-    use r3bl_core::assert_eq2;
-
     use super::*;
+    use crate::assert_eq2;
 
     // Not set.
     {
@@ -276,8 +280,6 @@ pub enum RowLocationInSelectionList {
 
 // Formatter for Debug and Display.
 mod impl_debug_format {
-    use r3bl_core::{tui_color, ItemsOwned};
-
     use super::*;
 
     const PAD_LEFT: &str = "      ";
@@ -343,9 +345,13 @@ mod impl_debug_format {
             };
 
             if vec_output.is_empty() {
-                vec_output.push(
-                    inline_string!("{TIRE_MARKS_GLYPH} {VERT_LINE_DASHED_GLYPH}{EMPTY_STR}{VERT_LINE_DASHED_GLYPH}")
-                );
+                vec_output.push(inline_string!(
+                    "{a} {b}{c}{d}",
+                    a = TIRE_MARKS_GLYPH,
+                    b = VERT_LINE_DASHED_GLYPH,
+                    c = EMPTY_STR,
+                    d = VERT_LINE_DASHED_GLYPH
+                ));
             }
 
             vec_output.push(inline_string!(

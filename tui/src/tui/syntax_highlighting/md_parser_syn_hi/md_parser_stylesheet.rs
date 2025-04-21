@@ -19,18 +19,18 @@
 //! [ColorSupport] constraints. You can find ANSI colors
 //! [here](https://www.ditig.com/256-colors-cheat-sheet).
 
-use r3bl_core::{global_color_support,
-                new_style,
-                tui_color,
-                Ansi256GradientIndex,
-                ColorSupport,
-                ColorWheel,
-                ColorWheelConfig,
-                ColorWheelSpeed,
-                TuiStyle};
 use smallvec::smallvec;
 
-use crate::HeadingData;
+use crate::{global_color_support,
+            new_style,
+            tui_color,
+            Ansi256GradientIndex,
+            ColorSupport,
+            ColorWheel,
+            ColorWheelConfig,
+            ColorWheelSpeed,
+            HeadingData,
+            TuiStyle};
 
 /// This style is for any selected range in the document.
 pub fn get_selection_style() -> TuiStyle {

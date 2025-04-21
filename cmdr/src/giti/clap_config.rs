@@ -16,7 +16,7 @@
  */
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use r3bl_core::ItemsOwned;
+use r3bl_tui::ItemsOwned;
 
 pub fn get_giti_command_subcommand_names(arg: CLICommand) -> ItemsOwned {
     match arg {

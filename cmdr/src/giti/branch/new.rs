@@ -16,10 +16,9 @@
  */
 
 use miette::IntoDiagnostic;
-use r3bl_core::{CommandRunResult, CommonResult};
-use r3bl_tui::{ReadlineAsync, ReadlineEvent};
+use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsync, ReadlineEvent};
 
-use crate::giti::{git, ui_str, BranchNewDetails, CommandRunDetails};
+use crate::giti::{BranchNewDetails, CommandRunDetails, git, ui_str};
 
 /// The main function for `giti branch new` command.
 pub async fn try_new(
@@ -48,8 +47,6 @@ mod details {
 }
 
 mod command_execute {
-    use r3bl_core::{CommandRunResult, CommonResult};
-
     use super::*;
 
     pub async fn create_new_branch(
@@ -94,8 +91,6 @@ mod command_execute {
 }
 
 mod user_interaction {
-    use r3bl_core::{CommandRunResult, CommonResult};
-
     use super::*;
 
     pub async fn prompt_for_branch_name()

@@ -30,11 +30,11 @@
 //!    [MdDocument]. The tests are provided alongside the code itself. And you can follow
 //!    along to see how other smaller parsers are used to build up this big one that
 //!    parses the whole of the Markdown document.
-//! 2. The [mod@types] contain all the types that are used to represent the Markdown
+//! 2. The [mod@md_parser_types] contain all the types that are used to represent the Markdown
 //!    document model, such as [MdDocument], [MdBlock], [MdLineFragment] and all the other
 //!    intermediate types & enums required for parsing.
 //! 3. All the parsers related to parsing metadata specific for [R3BL](https://r3bl.com)
-//!    applications which are not standard Markdown can be found in
+//!    applications, which are not standard Markdown can be found in
 //!    [mod@parse_metadata_kv] and [mod@parse_metadata_kcsv].
 //! 4. All the parsers that are related to parsing the main "blocks" of Markdown, such as
 //!    order lists, unordered lists, code blocks, text blocks, heading blocks, can be
@@ -165,13 +165,13 @@ pub mod block;
 pub mod convert_to_plain_text;
 pub mod extended;
 pub mod fragment;
+pub mod md_parser_types;
 pub mod parse_markdown;
-pub mod types;
 
 pub use atomics::*;
 pub use block::*;
 pub use convert_to_plain_text::*;
 pub use extended::*;
 pub use fragment::*;
+pub use md_parser_types::*;
 pub use parse_markdown::*;
-pub use types::*;

@@ -83,9 +83,9 @@ fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
 mod tests {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
-    use r3bl_core::assert_eq2;
 
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn test_parse_header_tag() {

@@ -16,52 +16,52 @@
  */
 use std::{fmt::Debug, marker::PhantomData};
 
-use r3bl_core::{ch,
-                col,
-                format_as_kilobytes_with_commas,
-                glyphs,
-                height,
-                inline_string,
-                new_style,
-                ok,
-                output_device_as_mut,
-                row,
-                telemetry::{telemetry_default_constants, Telemetry},
-                telemetry_record,
-                width,
-                Ansi256GradientIndex,
-                ColorWheel,
-                ColorWheelConfig,
-                ColorWheelSpeed,
-                CommonResult,
-                GCStringExt as _,
-                GetMemSize as _,
-                GradientGenerationPolicy,
-                InputDevice,
-                LockedOutputDevice,
-                OutputDevice,
-                Size,
-                SufficientSize,
-                TelemetryAtomHint,
-                TextColorizationPolicy};
 use smallvec::smallvec;
 use tokio::sync::mpsc;
 
 use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation};
-use crate::{render_pipeline,
+use crate::{ch,
+            col,
+            format_as_kilobytes_with_commas,
+            glyphs,
+            height,
+            inline_string,
+            new_style,
+            ok,
+            output_device_as_mut,
+            render_pipeline,
+            row,
+            telemetry::{telemetry_default_constants, Telemetry},
+            telemetry_record,
+            width,
+            Ansi256GradientIndex,
+            ColorWheel,
+            ColorWheelConfig,
+            ColorWheelSpeed,
+            CommonResult,
             ComponentRegistryMap,
             Flush as _,
             FlushKind,
+            GCStringExt as _,
+            GetMemSize as _,
             GlobalData,
+            GradientGenerationPolicy,
             HasFocus,
+            InputDevice,
             InputDeviceExt,
             InputEvent,
+            LockedOutputDevice,
             MinSize,
             OffscreenBufferPool,
+            OutputDevice,
             RawMode,
             RenderOp,
             RenderPipeline,
+            Size,
+            SufficientSize,
+            TelemetryAtomHint,
             TerminalWindowMainThreadSignal,
+            TextColorizationPolicy,
             ZOrder,
             DEBUG_TUI_MOD,
             DISPLAY_LOG_TELEMETRY};
@@ -611,60 +611,57 @@ mod tests {
     use std::{fmt::{Debug, Formatter},
               time::Duration};
 
-    use r3bl_core::{assert_eq2,
-                    ch,
-                    col,
-                    defaults::get_default_gradient_stops,
-                    height,
-                    inline_string,
-                    is_fully_uninteractive_terminal,
-                    new_style,
-                    ok,
-                    send_signal,
-                    test_fixtures::{output_device_ext::OutputDeviceExt as _,
-                                    InputDeviceExt},
-                    throws_with_return,
-                    tui_color,
-                    tui_style_attrib,
-                    tui_styled_text,
-                    tui_styled_texts,
-                    width,
-                    ColorWheel,
-                    ColorWheelConfig,
-                    ColorWheelSpeed,
-                    CommonResult,
-                    CrosstermEventResult,
-                    GradientGenerationPolicy,
-                    GradientLengthKind,
-                    InlineVec,
-                    InputDevice,
-                    OutputDevice,
-                    Size,
-                    TTYResult,
-                    TextColorizationPolicy,
-                    TuiStyle};
     use smallvec::smallvec;
     use test_fixture_app::AppMainTest;
     use test_fixture_state::{AppSignal, State};
 
-    use crate::{key_press,
+    use crate::{assert_eq2,
+                ch,
+                col,
+                defaults::get_default_gradient_stops,
+                height,
+                inline_string,
+                is_fully_uninteractive_terminal,
+                key_press,
                 main_event_loop_impl,
+                new_style,
+                ok,
                 render_ops,
                 render_pipeline,
                 render_tui_styled_texts_into,
+                send_signal,
+                tui_color,
+                tui_style_attrib,
+                tui_styled_text,
+                width,
                 App,
+                ColorWheel,
+                ColorWheelConfig,
+                ColorWheelSpeed,
+                CommonResult,
                 ComponentRegistryMap,
+                CrosstermEventResult,
                 EventPropagation,
                 GlobalData,
+                GradientGenerationPolicy,
+                GradientLengthKind,
                 HasFocus,
+                InlineVec,
+                InputDevice,
+                InputDeviceExtMock,
                 InputEvent,
                 Key,
                 KeyPress,
+                OutputDevice,
+                OutputDeviceExt,
                 PixelChar,
                 RenderOp,
                 RenderPipeline,
                 SpecialKey,
+                TTYResult,
                 TerminalWindowMainThreadSignal,
+                TextColorizationPolicy,
+                TuiStyle,
                 ZOrder};
 
     #[tokio::test]
@@ -838,7 +835,7 @@ mod tests {
     }
 
     mod test_fixture_app {
-        use super::*;
+        use crate::ColorWheel;
 
         #[derive(Default)]
         pub struct AppMainTest {
@@ -852,9 +849,8 @@ mod tests {
     }
 
     mod test_fixture_app_main_impl_trait_app {
-        use r3bl_core::{row, GCStringExt as _, Pos};
-
         use super::*;
+        use crate::{row, throws_with_return, CommonResult, GCStringExt as _, Pos};
 
         impl App for AppMainTest {
             type S = State;
@@ -1055,6 +1051,7 @@ mod tests {
 
     mod text_fixture_status_bar {
         use super::*;
+        use crate::{ch, col, tui_styled_texts, Size};
 
         /// Shows helpful messages at the bottom row of the screen.
         pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {

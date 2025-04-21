@@ -20,19 +20,19 @@
 //! 2. [Video](https://youtu.be/lzMYDA6St0s)
 
 use clap::Parser;
-use r3bl_cmdr::{giti::{branch,
-                       ui_str,
-                       ui_templates::{self},
-                       CLIArg,
+use r3bl_cmdr::{AnalyticsAction,
+                giti::{CLIArg,
                        CLICommand,
-                       CommandRunDetails},
+                       CommandRunDetails,
+                       branch,
+                       ui_str,
+                       ui_templates::{self}},
                 report_analytics,
-                upgrade_check,
-                AnalyticsAction};
-use r3bl_core::{log_support::try_initialize_logging_global,
-                throws,
-                CommandRunResult,
-                CommonResult};
+                upgrade_check};
+use r3bl_tui::{CommandRunResult,
+               CommonResult,
+               log::try_initialize_logging_global,
+               throws};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]

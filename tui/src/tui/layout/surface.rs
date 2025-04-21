@@ -15,24 +15,26 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{height,
-                throws,
-                width,
-                CommonResult,
-                InlineVec,
-                Pos,
-                ReqSizePc,
-                Size,
-                TuiStyle,
-                TuiStylesheet};
-
 use super::{FlexBox,
             FlexBoxProps,
             LayoutDirection,
             LayoutManagement,
             PerformPositioningAndSizing,
             SurfaceProps};
-use crate::{unwrap_or_err, LayoutError, LayoutErrorType, RenderPipeline};
+use crate::{height,
+            throws,
+            unwrap_or_err,
+            width,
+            CommonResult,
+            InlineVec,
+            LayoutError,
+            LayoutErrorType,
+            Pos,
+            RenderPipeline,
+            ReqSizePc,
+            Size,
+            TuiStyle,
+            TuiStylesheet};
 
 /// Represents a rectangular area of the terminal screen, and not necessarily the full terminal
 /// screen.

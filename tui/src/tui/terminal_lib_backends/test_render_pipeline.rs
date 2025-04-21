@@ -17,10 +17,15 @@
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, InlineVec};
     use smallvec::smallvec;
 
-    use crate::{render_ops, render_pipeline, RenderOp, RenderPipeline, ZOrder};
+    use crate::{assert_eq2,
+                render_ops,
+                render_pipeline,
+                InlineVec,
+                RenderOp,
+                RenderPipeline,
+                ZOrder};
 
     #[test]
     fn render_ops_macro() {

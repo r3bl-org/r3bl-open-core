@@ -15,9 +15,8 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{CommonResult, Pos, Size};
-
 use super::{FlexBox, FlexBoxProps, SurfaceProps};
+use crate::{CommonResult, Pos, Size};
 
 /// Public API interface to create nested & responsive layout based UIs.
 pub trait LayoutManagement {

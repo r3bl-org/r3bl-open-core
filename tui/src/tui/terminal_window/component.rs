@@ -17,10 +17,14 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::CommonResult;
-
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
-use crate::{FlexBox, FlexBoxId, InputEvent, RenderPipeline, Surface, SurfaceBounds};
+use crate::{CommonResult,
+            FlexBox,
+            FlexBoxId,
+            InputEvent,
+            RenderPipeline,
+            Surface,
+            SurfaceBounds};
 
 /// See [crate::App].
 pub trait Component<S, AS>

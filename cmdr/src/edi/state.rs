@@ -19,20 +19,20 @@ use std::{collections::HashMap,
           fmt::{Debug, Formatter, Result},
           path::Path};
 
-use r3bl_core::{DocumentStorage,
-                InlineString,
-                TinyInlineString,
-                fg_green,
-                fg_red,
-                inline_string,
-                into_existing};
 use r3bl_tui::{DEBUG_TUI_MOD,
                DEFAULT_SYN_HI_FILE_EXT,
                DialogBuffer,
+               DocumentStorage,
                EditorBuffer,
                FlexBoxId,
                HasDialogBuffers,
-               HasEditorBuffers};
+               HasEditorBuffers,
+               InlineString,
+               TinyInlineString,
+               fg_green,
+               fg_red,
+               inline_string,
+               into_existing};
 
 use crate::{AnalyticsAction, edi::Id, report_analytics};
 
@@ -44,8 +44,7 @@ pub struct State {
 
 #[cfg(test)]
 mod state_tests {
-    use r3bl_core::{InlineVec, friendly_random_id};
-    use r3bl_tui::FlexBoxId;
+    use r3bl_tui::{FlexBoxId, InlineVec, friendly_random_id};
 
     use super::*;
     use crate::edi::Id;

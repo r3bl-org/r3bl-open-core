@@ -17,25 +17,21 @@
 
 use std::collections::HashMap;
 
-use r3bl_core::{col,
-                inline_string,
-                row,
-                CaretScrAdj,
-                ColIndex,
-                GCString,
-                GCStringExt,
-                InlineString,
-                InlineVec,
-                RowIndex};
-
 use super::{scroll_editor_content, DeleteSelectionWith};
 use crate::{caret_locate::{locate_col, CaretColLocationInLine},
             caret_scroll_index,
+            col,
             empty_check_early_return,
             multiline_disabled_check_early_return,
+            CaretScrAdj,
             EditorArgsMut,
             EditorBuffer,
-            EditorEngine};
+            EditorEngine,
+            GCString,
+            GCStringExt,
+            InlineString,
+            InlineVec,
+            RowIndex};
 
 pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
     let EditorArgsMut { buffer, engine } = args;
@@ -209,6 +205,7 @@ pub fn delete_at_caret(
 
     mod inner {
         use super::*;
+        use crate::inline_string;
 
         /// ```text
         /// R ┌──────────┐
@@ -296,6 +293,7 @@ pub fn backspace_at_caret(
 
     mod inner {
         use super::*;
+        use crate::{inline_string, row, ColIndex};
 
         /// ```text
         /// R ┌──────────┐

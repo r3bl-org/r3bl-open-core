@@ -15,22 +15,24 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{ch,
-                glyphs::{self, SPACER_GLYPH},
-                inline_string,
-                usize,
-                width,
-                ColWidth,
-                CommonError,
-                CommonErrorType,
-                CommonResult,
-                GCStringExt,
-                Pos,
-                Size,
-                TuiStyle};
-
 use super::{sanitize_and_save_abs_pos, OffscreenBuffer, RenderOp, RenderPipeline};
-use crate::{PixelChar, RenderOpsLocalData, ZOrder, DEBUG_TUI_COMPOSITOR};
+use crate::{ch,
+            glyphs::{self, SPACER_GLYPH},
+            inline_string,
+            usize,
+            width,
+            ColWidth,
+            CommonError,
+            CommonErrorType,
+            CommonResult,
+            GCStringExt,
+            PixelChar,
+            Pos,
+            RenderOpsLocalData,
+            Size,
+            TuiStyle,
+            ZOrder,
+            DEBUG_TUI_COMPOSITOR};
 
 impl RenderPipeline {
     /// Convert the render pipeline to an offscreen buffer.
@@ -362,8 +364,8 @@ pub fn print_plain_text(
 
 /// Render plain to an offscreen buffer.
 ///
-/// This will modify the `my_offscreen_buffer` argument.  For plain text it supports
-/// counting [r3bl_core::Seg]s. The display width of each segment is
+/// This will modify the `my_offscreen_buffer` argument. For plain text it supports
+/// counting [crate::Seg]s. The display width of each segment is
 /// taken into account when filling the offscreen buffer.
 pub fn print_text_with_attributes(
     arg_text_ref: &str,
@@ -381,10 +383,8 @@ pub fn print_text_with_attributes(
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{assert_eq2, col, height, new_style, row, tui_color};
-
     use super::*;
-    use crate::render_pipeline;
+    use crate::{assert_eq2, col, height, new_style, render_pipeline, row, tui_color};
 
     #[test]
     fn test_print_plain_text_render_path_reuse_buffer() {

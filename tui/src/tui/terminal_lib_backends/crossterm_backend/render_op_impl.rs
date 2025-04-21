@@ -29,25 +29,25 @@ use crossterm::{self,
                            ClearType,
                            EnterAlternateScreen,
                            LeaveAlternateScreen}};
-use r3bl_core::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
-                GCString,
-                InlineVec,
-                LockedOutputDevice,
-                Pos,
-                Size,
-                TuiColor,
-                TuiStyle};
 use smallvec::smallvec;
 
-use crate::{disable_raw_mode_now,
+use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
+            disable_raw_mode_now,
             enable_raw_mode_now,
             flush_now,
             queue_render_op,
             sanitize_and_save_abs_pos,
             Flush,
+            GCString,
+            InlineVec,
+            LockedOutputDevice,
             PaintRenderOp,
+            Pos,
             RenderOp,
-            RenderOpsLocalData};
+            RenderOpsLocalData,
+            Size,
+            TuiColor,
+            TuiStyle};
 
 /// Struct representing the implementation of [RenderOp] for crossterm terminal backend.
 /// This empty struct is needed since the [Flush] trait needs to be implemented.
@@ -313,9 +313,7 @@ mod impl_self {
                 // Handle background color.
                 if let Some(tui_color_bg) = style.color_bg {
                     let color_bg: crossterm::style::Color =
-                        r3bl_core::convert_from_tui_color_to_crossterm_color(
-                            tui_color_bg,
-                        );
+                        crate::convert_from_tui_color_to_crossterm_color(tui_color_bg);
 
                     queue_render_op!(
                         locked_output_device,
@@ -327,9 +325,7 @@ mod impl_self {
                 // Handle foreground color.
                 if let Some(tui_color_fg) = style.color_fg {
                     let color_fg: crossterm::style::Color =
-                        r3bl_core::convert_from_tui_color_to_crossterm_color(
-                            tui_color_fg,
-                        );
+                        crate::convert_from_tui_color_to_crossterm_color(tui_color_fg);
 
                     queue_render_op!(
                         locked_output_device,

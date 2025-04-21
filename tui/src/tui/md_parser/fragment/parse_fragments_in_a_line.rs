@@ -28,9 +28,11 @@
 //! the tests in this file.
 
 use nom::{branch::alt, combinator::map, IResult, Parser};
-use r3bl_core::{fg_green, fg_red, inline_string};
 
-use crate::{parse_fragment_plain_text_no_new_line,
+use crate::{fg_green,
+            fg_red,
+            inline_string,
+            parse_fragment_plain_text_no_new_line,
             parse_fragment_starts_with_backtick_err_on_new_line,
             parse_fragment_starts_with_checkbox_checkbox_into_bool,
             parse_fragment_starts_with_checkbox_into_str,
@@ -123,10 +125,9 @@ pub fn parse_inline_fragments_until_eol_or_eoi(
 mod tests_parse_fragment {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
-    use r3bl_core::assert_eq2;
 
     use super::*;
-    use crate::HyperlinkData;
+    use crate::{assert_eq2, HyperlinkData};
 
     #[test]
     fn test_parse_plain_text_no_new_line1() {

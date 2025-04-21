@@ -56,12 +56,12 @@ pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
 
 // Attach sources.
 pub mod animator;
+pub mod cmd_line_args;
 pub mod dialog;
 pub mod editor;
 pub mod global_constants;
 pub mod layout;
 pub mod md_parser;
-pub mod misc;
 pub mod rsx;
 pub mod syntax_highlighting;
 pub mod terminal_lib_backends;
@@ -69,12 +69,12 @@ pub mod terminal_window;
 
 // Re-export.
 pub use animator::*;
+pub use cmd_line_args::*;
 pub use dialog::*;
 pub use editor::*;
 pub use global_constants::*;
 pub use layout::*;
 pub use md_parser::*;
-pub use misc::*;
 pub use rsx::*;
 pub use syntax_highlighting::*;
 pub use terminal_lib_backends::*;

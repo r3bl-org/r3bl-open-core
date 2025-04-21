@@ -18,9 +18,14 @@
 #[cfg(test)]
 mod tests {
     use crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
-    use r3bl_core::{assert_eq2, col, row};
 
-    use crate::{Button, ModifierKeysMask, MouseInput, MouseInputKind};
+    use crate::{assert_eq2,
+                col,
+                row,
+                Button,
+                ModifierKeysMask,
+                MouseInput,
+                MouseInputKind};
 
     #[test]
     fn test_convert_mouse_event_mouse_moved() {

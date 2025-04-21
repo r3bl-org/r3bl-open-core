@@ -18,9 +18,8 @@
 use std::{fmt::Debug,
           ops::{Deref, DerefMut}};
 
-use r3bl_core::{idx, Index, RingBuffer as _};
-
 use super::sizing;
+use crate::{idx, Index, RingBuffer as _};
 
 /// The current index in the history buffer.
 ///

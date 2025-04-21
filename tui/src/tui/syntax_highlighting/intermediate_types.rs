@@ -16,31 +16,19 @@
  */
 
 //! This module contains the intermediate types that are used in the process of converting
-//! source to syntax highlighted text.
+//! the source to syntax-highlighted text.
 //!
 //! These types are used for both:
 //! 1. Syntect parser.
-//! 2. md_parser_syn_hi, which is a custom R3BL highlighter for md_parser (custom R3BL
+//! 2. `md_parser_syn_hi`, which is a custom R3BL highlighter for `md_parser` (custom R3BL
 //!    Markdown parser).
 //!
 //! In both cases:
-//! 1. The source document comes from an [crate::editor] component which is a [Vec] of
-//!    [GCString] (unicode strings).
+//! 1. The source document comes from a [crate::editor] component, which is a [Vec] of
+//!    [GCString] (Unicode strings).
 //! 2. This intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area of
-//!    the editor component (based on scroll state in viewport). And finally that is
-//!    converted to a [r3bl_core::TuiStyledTexts].
-
-use r3bl_core::{tiny_inline_string,
-                tui_styled_text,
-                width,
-                ColIndex,
-                ColWidth,
-                GCString,
-                GCStringExt as _,
-                InlineString,
-                ScrOfs,
-                TuiStyle,
-                TuiStyledTexts};
+//!    the editor component (based on scroll state in the viewport). And finally that is
+//!    converted to a [crate::TuiStyledTexts].
 
 use crate::{get_foreground_dim_style,
             get_metadata_tags_marker_style,
@@ -48,9 +36,20 @@ use crate::{get_foreground_dim_style,
             get_metadata_title_marker_style,
             get_metadata_title_value_style,
             md_parser::constants::{COLON, COMMA, SPACE},
+            tiny_inline_string,
+            tui_styled_text,
+            width,
             CharacterMatchResult,
+            ColIndex,
+            ColWidth,
+            GCString,
+            GCStringExt as _,
+            InlineString,
             List,
-            PatternMatcherStateMachine};
+            PatternMatcherStateMachine,
+            ScrOfs,
+            TuiStyle,
+            TuiStyledTexts};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple
 /// spans in a line of text.
@@ -271,21 +270,21 @@ mod convert {
 /// list of styled unicode string represents a single line of text in an editor component.
 #[cfg(test)]
 mod tests_clip_styled_texts {
-    use r3bl_core::{assert_eq2,
-                    ch,
-                    col,
-                    new_style,
-                    row,
-                    scr_ofs,
-                    tui_color,
-                    ChUnitPrimitiveType,
-                    ConvertToPlainText};
-
     use super::*;
-    use crate::{list, List};
+    use crate::{assert_eq2,
+                ch,
+                col,
+                list,
+                row,
+                scr_ofs,
+                tui_color,
+                ChUnitPrimitiveType,
+                ConvertToPlainText,
+                List};
 
     mod fixtures {
         use super::*;
+        use crate::new_style;
 
         pub fn get_s1() -> TuiStyle {
             new_style!(

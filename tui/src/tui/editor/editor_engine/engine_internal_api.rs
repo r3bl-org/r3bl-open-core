@@ -19,14 +19,13 @@
 //! of the editor engine. See [mod@super::engine_public_api] for the public event based
 //! API.
 
-use r3bl_core::GCString;
-
 use super::{caret_mut, content_mut, DeleteSelectionWith, SelectMode};
 use crate::{clipboard_support,
             clipboard_support::ClipboardService,
             EditorArgsMut,
             EditorBuffer,
-            EditorEngine};
+            EditorEngine,
+            GCString};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     caret_mut::up(buffer, engine, sel_mod);

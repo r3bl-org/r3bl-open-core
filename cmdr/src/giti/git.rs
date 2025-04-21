@@ -15,13 +15,13 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{command,
-                inline_string,
-                CommonResult,
-                InlineString,
-                InlineVec,
-                ItemsOwned,
-                Run};
+use r3bl_tui::{CommonResult,
+               InlineString,
+               InlineVec,
+               ItemsOwned,
+               Run,
+               command,
+               inline_string};
 use tokio::process::Command;
 
 use super::CURRENT_PREFIX;
