@@ -1,18 +1,15 @@
-# remove `r3bl_core` as a top level crate
+# refactor protocol.rs out of `tcp-api-server` into `r3bl_tui`
 
-- [x] rename all the `run` nushell script files to `run.nu` so that syn-hi works in rustrover
-- [x] move this code into `r3bl_tui`
-- [x] update docs for the `r3bl_tui` crate (`mod.rs`, `lib.rs`); the `README.md` files are generated
-      from these. make the top level docs "mental model" level, and leave the specifics to each
-      underlying mod.
-  - [x] `README.md`
-  - [x] `tui/src/lib.rs`
-  - [x] `cmdr/src/lib.rs`
-- [x] update `CHANGELOG.md` and move `r3bl_core` to archive section
-- [x] deprecate the `r3bl_core` crate & move to `/home/nazmul/github/r3bl-open-core-archive`,
-- [ ] update all the projects in `rust_scratch` to work with the `tuifyasync` branch
-  - [x] `tls`
+- [x] refactor and move `protocol.rs` into `r3bl_tui`, but keep the specific server in
+      `tcp-api-server`, which showcases how this can be reused.
+- [ ] remove `use crossterm::style::Stylize;` from `tcp-api-server`
+
+# merge tuifyasync branch into main
+
+- [ ] update all the projects in `rust_scratch` to work with latest github version of `r3bl_tui`
+  - [ ] `tls`
   - [ ] `tcp-api-server`
+- [ ] crate a PR for tuifyasync & merge it into main
 
 # clean up giti phase 5
 
@@ -42,13 +39,6 @@
 # add fps counter row to bottom of edi
 
 - [ ] just like in the `tui/examples/demo/*` add an FPS/telemetry display to bottom of edi
-
-# merge tuifyasync branch into main
-
-- [ ] crate a PR for tuifyasync & merge it into main
-- [ ] update all the projects in `rust_scratch` to work with latest github version of `r3bl_tui`
-  - [ ] `tls`
-  - [ ] `tcp-api-server`
 
 # make a release
 
