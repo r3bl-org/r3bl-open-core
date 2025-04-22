@@ -119,3 +119,19 @@
 - [x] in `git.rs` use `r3bl_script` to run commands (and not directly using `Command::new`)
 - [x] in `Display` impl of `CommandRunResult` don't print everything, write some items log (eg:
       `CommandRunDetails`, etc.); does this need to be in `r3bl_script`?
+
+# remove `r3bl_core` as a top level crate
+
+- [x] rename all the `run` nushell script files to `run.nu` so that syn-hi works in rustrover
+- [x] move this code into `r3bl_tui`
+- [x] update docs for the `r3bl_tui` crate (`mod.rs`, `lib.rs`); the `README.md` files are generated
+      from these. make the top level docs "mental model" level, and leave the specifics to each
+      underlying mod.
+  - [x] `README.md`
+  - [x] `tui/src/lib.rs`
+  - [x] `cmdr/src/lib.rs`
+- [x] update `CHANGELOG.md` and move `r3bl_core` to archive section
+- [x] deprecate the `r3bl_core` crate & move to `/home/nazmul/github/r3bl-open-core-archive`,
+- [x] update all the projects in `rust_scratch` to work with the `tuifyasync` branch
+  - [x] `tls`
+  - [x] `tcp-api-server`

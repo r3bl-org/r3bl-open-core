@@ -446,6 +446,10 @@ Updated:
 
 Added:
 
+- New `network_io` module that contains support for length prefixed binary protocols
+  that can be used to create TCP API servers. Currently this does not include TLS
+  support, and that needs to be added later. The new module also supports easy to use
+  `bincode` and `serde` serialization and deserialization, in addition to compression.
 - Add the ability for `ReadlineAsync` to abort the `Readline` main event loop when it is
   exited (by calling the `ReadlineAsync::exit()` method). This is one of the main
   differentiators between a sync blocking `read_line()` and an async non-blocking one.
