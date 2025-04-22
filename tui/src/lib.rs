@@ -1027,11 +1027,13 @@
 
 // Attach.
 pub mod core;
+pub mod network_io;
 pub mod readline_async;
 pub mod tui;
 
 // Re-export.
 pub use core::*;
 
+pub use network_io::*;
 pub use readline_async::*;
 pub use tui::*;
