@@ -179,53 +179,53 @@ mod ansi_styled_text_impl {
 
 // The following functions are convenience functions for providing ANSI attributes.
 
-pub fn bold(text: &str) -> AST {
+pub fn bold(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Bold),
     }
 }
 
-pub fn italic(text: &str) -> AST {
+pub fn italic(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Italic),
     }
 }
 
-pub fn underline(text: &str) -> AST {
+pub fn underline(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Underline),
     }
 }
 
-pub fn strikethrough(text: &str) -> AST {
+pub fn strikethrough(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Strikethrough),
     }
 }
 
-pub fn dim(text: &str) -> AST {
+pub fn dim(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Dim),
     }
 }
 
-pub fn dim_underline(text: &str) -> AST {
+pub fn dim_underline(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Dim, ASTStyle::Underline),
     }
 }
 
 // The following function is a convenience function for providing any color.
 
-pub fn fg_color(arg_color: impl Into<ASTColor>, text: &str) -> AST {
+pub fn fg_color(arg_color: impl Into<ASTColor>, text: &impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(arg_color.into())),
     }
 }
@@ -233,228 +233,228 @@ pub fn fg_color(arg_color: impl Into<ASTColor>, text: &str) -> AST {
 // The following functions are convenience functions for providing ANSI colors.
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_dark_gray(text: &str) -> AST {
+pub fn fg_dark_gray(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(236.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_black(text: &str) -> AST {
+pub fn fg_black(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(0.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_yellow(text: &str) -> AST {
+pub fn fg_yellow(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(226.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_green(text: &str) -> AST {
+pub fn fg_green(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(34.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_blue(text: &str) -> AST {
+pub fn fg_blue(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(27.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_red(text: &str) -> AST {
+pub fn fg_red(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(196.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_white(text: &str) -> AST {
+pub fn fg_white(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(231.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_cyan(text: &str) -> AST {
+pub fn fg_cyan(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(51.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
-pub fn fg_magenta(text: &str) -> AST {
+pub fn fg_magenta(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(201.into()))),
     }
 }
 
 // The following colors are a convenience for using the [crate::tui_color!] macro.
 
-pub fn fg_medium_gray(text: &str) -> AST {
+pub fn fg_medium_gray(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(medium_gray).into())),
     }
 }
 
-pub fn fg_light_cyan(text: &str) -> AST {
+pub fn fg_light_cyan(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(light_cyan).into())),
     }
 }
 
-pub fn fg_light_purple(text: &str) -> AST {
+pub fn fg_light_purple(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(light_purple).into())),
     }
 }
 
-pub fn fg_deep_purple(text: &str) -> AST {
+pub fn fg_deep_purple(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(deep_purple).into())),
     }
 }
 
-pub fn fg_soft_pink(text: &str) -> AST {
+pub fn fg_soft_pink(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(soft_pink).into())),
     }
 }
 
-pub fn fg_hot_pink(text: &str) -> AST {
+pub fn fg_hot_pink(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(hot_pink).into())),
     }
 }
 
-pub fn fg_light_yellow_green(text: &str) -> AST {
+pub fn fg_light_yellow_green(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(
             crate::tui_color!(light_yellow_green).into()
         )),
     }
 }
 
-pub fn fg_dark_teal(text: &str) -> AST {
+pub fn fg_dark_teal(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_teal).into())),
     }
 }
 
-pub fn fg_bright_cyan(text: &str) -> AST {
+pub fn fg_bright_cyan(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(bright_cyan).into())),
     }
 }
 
-pub fn fg_dark_purple(text: &str) -> AST {
+pub fn fg_dark_purple(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_purple).into())),
     }
 }
 
-pub fn fg_sky_blue(text: &str) -> AST {
+pub fn fg_sky_blue(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(sky_blue).into())),
     }
 }
 
-pub fn fg_lavender(text: &str) -> AST {
+pub fn fg_lavender(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(lavender).into())),
     }
 }
 
-pub fn fg_dark_lizard_green(text: &str) -> AST {
+pub fn fg_dark_lizard_green(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(
             crate::tui_color!(dark_lizard_green).into()
         )),
     }
 }
 
-pub fn fg_orange(text: &str) -> AST {
+pub fn fg_orange(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(orange).into())),
     }
 }
 
-pub fn fg_silver_metallic(text: &str) -> AST {
+pub fn fg_silver_metallic(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(
             crate::tui_color!(silver_metallic).into()
         )),
     }
 }
 
-pub fn fg_lizard_green(text: &str) -> AST {
+pub fn fg_lizard_green(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(lizard_green).into())),
     }
 }
 
-pub fn fg_pink(text: &str) -> AST {
+pub fn fg_pink(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(pink).into())),
     }
 }
 
-pub fn fg_dark_pink(text: &str) -> AST {
+pub fn fg_dark_pink(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_pink).into())),
     }
 }
 
-pub fn fg_frozen_blue(text: &str) -> AST {
+pub fn fg_frozen_blue(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(frozen_blue).into())),
     }
 }
 
-pub fn fg_guards_red(text: &str) -> AST {
+pub fn fg_guards_red(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(guards_red).into())),
     }
 }
 
-pub fn fg_slate_gray(text: &str) -> AST {
+pub fn fg_slate_gray(text: impl AsRef<str>) -> AST {
     AST {
-        text: text.into(),
+        text: text.as_ref().into(),
         styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(slate_gray).into())),
     }
 }

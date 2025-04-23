@@ -197,7 +197,7 @@ async fn main() -> miette::Result<()> {
                                 writeln!(
                                     shared_writer,
                                     "{}",
-                                    fg_color(tui_color!(frozen_blue), "Terminal resized!")
+                                    fg_color(tui_color!(frozen_blue), &"Terminal resized!")
                                 ).into_diagnostic()?;
                             }
                             // Ctrl+D, Ctrl+C.
