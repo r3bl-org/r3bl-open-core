@@ -68,7 +68,8 @@ macro_rules! rla_println_prefixed {
         $($format:tt)*
     ) => {{
         use std::io::Write as _;
-        _ = write!($rla.shared_writer, "{}", " > ".red().bold().on_dark_grey());
+        use $crate::fg_pink;
+        _ = write!($rla.shared_writer, "{}", fg_pink(" > ").bold().bg_moonlight_blue());
         _ = writeln!($rla.shared_writer, $($format)*);
     }};
 }
