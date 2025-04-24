@@ -15,15 +15,19 @@
  *   limitations under the License.
  */
 use std::{io::{self, Write},
-          sync::Arc};
+          sync::Arc,
+          time::Duration};
 
-use crossterm::{terminal::{self, disable_raw_mode, Clear},
+use crossterm::{cursor,
+                terminal::{self, disable_raw_mode, Clear},
+                ExecutableCommand,
                 QueueableCommand};
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
-use crate::{join,
-            output_device_as_mut,
+use crate::{execute_commands,
+            join,
+            lock_output_device_as_mut,
             History,
             InputDevice,
             LineState,
@@ -38,6 +42,12 @@ use crate::{join,
             SharedWriter,
             StdMutex,
             CHANNEL_CAPACITY};
+
+/// This is an artificial delay amount that is added to hide the jank of displaying the
+/// cursor to the terminal when the prompt is first printed, after the terminal is put
+/// into raw mode.
+pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
+    Duration::from_millis(66);
 
 const CTRL_C: crossterm::event::Event =
     crossterm::event::Event::Key(crossterm::event::KeyEvent::new(
@@ -341,7 +351,7 @@ pub mod manage_shared_writer_output {
                 }
 
                 // Print the line to the terminal.
-                let term = output_device_as_mut!(output_device);
+                let term = lock_output_device_as_mut!(output_device);
                 if let Err(err) = line_state.print_data_and_flush(buf.as_ref(), term) {
                     return ControlFlowLimited::ReturnError(err);
                 }
@@ -353,7 +363,7 @@ pub mod manage_shared_writer_output {
             // Handle a flush signal.
             LineStateControlSignal::Flush => {
                 let is_paused = self_safe_line_state.lock().unwrap().is_paused;
-                let term = output_device_as_mut!(output_device);
+                let term = lock_output_device_as_mut!(output_device);
                 let line_state = self_safe_line_state.lock().unwrap();
                 let _ = flush_internal(
                     self_safe_is_paused_buffer,
@@ -366,7 +376,7 @@ pub mod manage_shared_writer_output {
             // Pause the terminal.
             LineStateControlSignal::Pause => {
                 let new_value = LineStateLiveness::Paused;
-                let term = output_device_as_mut!(output_device);
+                let term = lock_output_device_as_mut!(output_device);
                 let mut line_state = self_safe_line_state.lock().unwrap();
                 if line_state.set_paused(new_value, term).is_err() {
                     return ControlFlowLimited::ReturnError(ReadlineError::IO(
@@ -379,7 +389,7 @@ pub mod manage_shared_writer_output {
             LineStateControlSignal::Resume => {
                 let new_value = LineStateLiveness::NotPaused;
                 let mut line_state = self_safe_line_state.lock().unwrap();
-                let term = output_device_as_mut!(output_device);
+                let term = lock_output_device_as_mut!(output_device);
                 // Resume the terminal.
                 if line_state.set_paused(new_value, term).is_err() {
                     return ControlFlowLimited::ReturnError(ReadlineError::IO(
@@ -443,7 +453,7 @@ pub mod manage_shared_writer_output {
 
 impl Drop for Readline {
     fn drop(&mut self) {
-        let term = output_device_as_mut!(self.output_device);
+        let term = lock_output_device_as_mut!(self.output_device);
         _ = self.safe_line_state.lock().unwrap().exit(term);
         _ = disable_raw_mode();
     }
@@ -454,21 +464,34 @@ impl Readline {
     /// behavior of this instance, you can use the following methods:
     /// - [Self::should_print_line_on]
     /// - [Self::set_max_history]
+    ///
+    /// There is an artificial delay of
+    /// [READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY] added in this method so
+    /// that the initial display of the cursor does not appear janky. In turn this makes
+    /// the caller of this method [ReadlineAsync::try_new()] have to wait that amount as
+    /// well.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
-    pub fn new(
+    pub async fn new(
         prompt: String,
         output_device: OutputDevice,
         /* move */ input_device: InputDevice,
     ) -> Result<(Self, SharedWriter), ReadlineError> {
+        // Immediately hide the cursor. Then wait for
+        // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor
+        // (try to eliminate jank). It makes it appear as if the cursor is animated into
+        // place.
+        execute_commands!(output_device, cursor::Hide);
+        execute_commands!(output_device, terminal::EnableLineWrap);
+
+        // Enable raw mode. Drop will disable raw mode.
+        terminal::enable_raw_mode()?;
+
         // Line control channel - signals are send to this channel to control `LineState`.
         // A task is spawned to monitor this channel.
         let line_state_control_channel =
             mpsc::channel::<LineStateControlSignal>(CHANNEL_CAPACITY);
         let (line_control_channel_sender, line_state_control_channel_receiver) =
             line_state_control_channel;
-
-        // Enable raw mode. Drop will disable raw mode.
-        terminal::enable_raw_mode()?;
 
         // History setup.
         let (history, history_receiver) = History::new();
@@ -511,14 +534,27 @@ impl Readline {
         };
 
         // Print the prompt.
-        let term = output_device_as_mut!(output_device);
-        readline
-            .safe_line_state
-            .lock()
-            .unwrap()
-            .render_and_flush(term)?;
-        term.queue(terminal::EnableLineWrap)?;
-        term.flush()?;
+        {
+            let term = lock_output_device_as_mut!(output_device);
+            readline
+                .safe_line_state
+                .lock()
+                .unwrap()
+                .render_and_flush(term)?;
+        } // Drop the term lock.
+
+        // Wait for `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor (try to eliminate jank).
+        let output_device_clone = output_device.clone();
+        tokio::spawn({
+            async move {
+                tokio::time::sleep(
+                    READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY,
+                )
+                .await;
+                let term = lock_output_device_as_mut!(output_device_clone);
+                _ = term.execute(cursor::Show);
+            }
+        });
 
         // Create the shared writer.
         let shared_writer = SharedWriter::new(line_control_channel_sender);
@@ -530,7 +566,7 @@ impl Readline {
     /// Change the prompt.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn update_prompt(&mut self, prompt: &str) -> Result<(), ReadlineError> {
-        let term = output_device_as_mut!(self.output_device);
+        let term = lock_output_device_as_mut!(self.output_device);
         self.safe_line_state
             .lock()
             .unwrap()
@@ -541,7 +577,7 @@ impl Readline {
     /// Clear the screen.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn clear(&mut self) -> Result<(), ReadlineError> {
-        let term = output_device_as_mut!(self.output_device);
+        let term = lock_output_device_as_mut!(self.output_device);
         term.queue(Clear(terminal::ClearType::All))?;
         self.safe_line_state
             .lock()
@@ -596,7 +632,7 @@ impl Readline {
                     match readline_internal::apply_event_to_line_state_and_render(
                         result_crossterm_event,
                         self.safe_line_state.clone(),
-                        output_device_as_mut!(self.output_device),
+                        lock_output_device_as_mut!(self.output_device),
                         self.safe_history.clone(),
                         self.safe_spinner_is_active.clone(),
                     ) {
@@ -650,12 +686,12 @@ pub mod readline_internal {
                 // active). And early return!
                 let is_spinner_active =
                     self_safe_is_spinner_active.lock().unwrap().take();
-                if crossterm_event == CTRL_C || crossterm_event == CTRL_D {
-                    if let Some(spinner_shutdown_sender) = is_spinner_active {
-                        // Send signal to SharedWriter spinner shutdown channel.
-                        let _ = spinner_shutdown_sender.send(());
-                        return ControlFlowExtended::Continue;
-                    }
+                if (crossterm_event == CTRL_C || crossterm_event == CTRL_D)
+                    && let Some(spinner_shutdown_sender) = is_spinner_active
+                {
+                    // Send signal to SharedWriter spinner shutdown channel.
+                    let _ = spinner_shutdown_sender.send(());
+                    return ControlFlowExtended::Continue;
                 }
 
                 // Regular readline event handling.
@@ -749,6 +785,7 @@ mod test_readline {
             output_device.clone(),
             /* move */ input_device,
         )
+        .await
         .unwrap();
 
         let safe_is_spinner_active = Arc::new(StdMutex::new(None));
@@ -763,7 +800,7 @@ mod test_readline {
         let control_flow = readline_internal::apply_event_to_line_state_and_render(
             Ok(event.clone()),
             readline.safe_line_state.clone(),
-            output_device_as_mut!(output_device),
+            lock_output_device_as_mut!(output_device),
             safe_history.clone(),
             safe_is_spinner_active.clone(),
         );
@@ -791,6 +828,7 @@ mod test_readline {
             output_device.clone(),
             /* move */ input_device,
         )
+        .await
         .unwrap();
 
         let result = readline.readline().await;
@@ -821,6 +859,7 @@ mod test_readline {
             output_device.clone(),
             /* move */ input_device,
         )
+        .await
         .unwrap();
 
         shared_writer
@@ -828,7 +867,7 @@ mod test_readline {
             .send(LineStateControlSignal::Pause)
             .await
             .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        tokio::time::sleep(Duration::from_millis(1)).await;
 
         assert_eq!(
             readline.safe_line_state.lock().unwrap().is_paused,
@@ -840,7 +879,7 @@ mod test_readline {
             .send(LineStateControlSignal::Resume)
             .await
             .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        tokio::time::sleep(Duration::from_millis(1)).await;
 
         assert_eq!(
             readline.safe_line_state.lock().unwrap().is_paused,
@@ -863,6 +902,7 @@ mod test_readline {
             output_device.clone(),
             /* move */ input_device,
         )
+        .await
         .unwrap();
 
         shared_writer
@@ -870,7 +910,7 @@ mod test_readline {
             .send(LineStateControlSignal::Pause)
             .await
             .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        tokio::time::sleep(Duration::from_millis(1)).await;
 
         assert_eq!(
             readline.safe_line_state.lock().unwrap().is_paused,
@@ -882,7 +922,7 @@ mod test_readline {
             .send(LineStateControlSignal::Line("abc".into()))
             .await
             .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        tokio::time::sleep(Duration::from_millis(1)).await;
 
         let pause_buffer = readline.safe_is_paused_buffer.lock().unwrap().clone();
         assert_eq!(pause_buffer.len(), 1);
@@ -893,7 +933,7 @@ mod test_readline {
             .send(LineStateControlSignal::Resume)
             .await
             .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        tokio::time::sleep(Duration::from_millis(1)).await;
 
         assert_eq!(
             readline.safe_line_state.lock().unwrap().is_paused,

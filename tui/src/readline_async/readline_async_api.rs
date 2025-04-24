@@ -29,7 +29,8 @@ use crate::{is_fully_uninteractive_terminal,
             SharedWriter,
             StdinIsPipedResult,
             StdoutIsPipedResult,
-            TTYResult};
+            TTYResult,
+            READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY};
 
 pub struct ReadlineAsync {
     pub readline: Readline,
@@ -84,7 +85,7 @@ impl ReadlineAsync {
     /// async fn foo() -> miette::Result<()> {
     ///     # use r3bl_tui::readline_async::ReadlineAsync;
     ///     # use r3bl_tui::ok;
-    ///     let readline_async = ReadlineAsync::try_new(None::<String>)?
+    ///     let readline_async = ReadlineAsync::try_new(None::<String>).await?
     ///         .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
     ///     ok!()
     /// }
@@ -95,7 +96,8 @@ impl ReadlineAsync {
     /// async fn foo() -> miette::Result<()> {
     ///     # use r3bl_tui::readline_async::ReadlineAsync;
     ///     # use r3bl_tui::ok;
-    ///     let Some(mut readline_async) = ReadlineAsync::try_new(Some("> "))? else {
+    ///     let Some(mut readline_async) = ReadlineAsync::try_new(Some("> ")).await?
+    ///     else {
     ///         return Err(miette::miette!("Failed to create terminal"));
     ///     };
     ///     ok!()
@@ -115,7 +117,7 @@ impl ReadlineAsync {
     ///
     /// More info on terminal piping:
     /// - <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
-    pub fn try_new(
+    pub async fn try_new(
         read_line_prompt: Option<impl AsRef<str>>,
     ) -> miette::Result<Option<ReadlineAsync>> {
         if let StdinIsPipedResult::StdinIsPiped = is_stdin_piped() {
@@ -137,7 +139,11 @@ impl ReadlineAsync {
 
         let (readline, stdout) =
             Readline::new(prompt.to_owned(), output_device, input_device)
+                .await
                 .into_diagnostic()?;
+
+        // Sleep for READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY.
+        tokio::time::sleep(READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY).await;
 
         Ok(Some(ReadlineAsync {
             readline,

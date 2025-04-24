@@ -1,13 +1,3 @@
-# use `jemalloc` in `r3bl_tui` and `rust_scratch/tcp-api-server`
-
-- [x] use `jemalloc` in `r3bl-cmdr` and all the examples in `r3bl_tui`
-- [x] use `jemalloc` in `rust-scratch/tcp-api-server`
-
-# clean up jank in `readline_async`
-
-- [x] in `giti branch delete` you can really see the jank caused by the cursor moving across the
-      long prompt. clean this up and adjust all the existing examples to reflect this change.
-
 # merge tuifyasync branch into main
 
 - [ ] update all the projects in `rust_scratch` to work with latest github version of `r3bl_tui`
