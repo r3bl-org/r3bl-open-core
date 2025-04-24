@@ -141,3 +141,13 @@
 - [x] refactor and move `protocol.rs` into `r3bl_tui`, but keep the specific server in
       `tcp-api-server`, which showcases how this can be reused.
 - [x] remove `use crossterm::style::Stylize;` from `tcp-api-server`
+
+# use `jemalloc` in `r3bl_tui` and `rust_scratch/tcp-api-server`
+
+- [x] use `jemalloc` in `r3bl-cmdr` and all the examples in `r3bl_tui`
+- [x] use `jemalloc` in `rust-scratch/tcp-api-server`
+
+# clean up jank in `readline_async`
+
+- [x] in `giti branch delete` you can really see the jank caused by the cursor moving across the
+      long prompt. clean this up and adjust all the existing examples to reflect this change.
