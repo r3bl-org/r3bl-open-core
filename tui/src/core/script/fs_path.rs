@@ -283,7 +283,7 @@ mod tests_fs_path {
 
             env::set_current_dir(&root).unwrap();
 
-            println!("Current directory set to: {}", root);
+            println!("Current directory set to: {root}");
             println!("Current directory is    : {}", try_pwd().unwrap().display());
 
             let fq_path = fs_paths!(with_root: try_pwd().unwrap() => sub_path);

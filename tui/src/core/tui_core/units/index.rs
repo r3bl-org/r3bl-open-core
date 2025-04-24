@@ -301,7 +301,7 @@ mod tests {
     #[test]
     fn test_index_debug_fmt() {
         let index = idx(10);
-        let debug_string = format!("{:?}", index);
+        let debug_string = format!("{index:?}");
         assert_eq!(debug_string, "Index(10)");
     }
 

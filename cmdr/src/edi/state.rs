@@ -95,7 +95,7 @@ mod state_tests {
             "/tmp/{}_file.md",
             friendly_random_id::generate_friendly_random_id()
         );
-        println!("🍍🍎🍏filename: {}", filename);
+        println!("🍍🍎🍏filename: {filename}");
 
         // Write some content to this file.
         let content = "This is a test.\nThis is only a test.";
@@ -116,7 +116,7 @@ mod state_tests {
             friendly_random_id::generate_friendly_random_id()
         );
         let maybe_file_path = Some(filename.as_str());
-        println!("🍍🍎🍏filename: {}", filename);
+        println!("🍍🍎🍏filename: {filename}");
 
         // Write some content to this file.
         let content = "This is a test.\nThis is only a test.";

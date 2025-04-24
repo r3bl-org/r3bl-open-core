@@ -203,7 +203,7 @@ mod tests_parse_block_markdown_text_with_new_line {
     #[test]
     fn test_parse_multiple_plain_text_fragments_in_single_line() {
         let it = parse_block_markdown_text_with_new_line("this _bar\n");
-        println!("it: {:#?}", it);
+        println!("it: {it:#?}");
         assert_eq2!(
             it,
             Ok((

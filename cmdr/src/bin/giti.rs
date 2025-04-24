@@ -114,6 +114,6 @@ pub fn report_unrecoverable_errors(report: miette::Report) {
 pub async fn display_command_run_result(
     cmd_run_result: CommandRunResult<CommandRunDetails>,
 ) {
-    println!("{}", cmd_run_result);
+    println!("{cmd_run_result}");
     ui_templates::show_exit_message();
 }

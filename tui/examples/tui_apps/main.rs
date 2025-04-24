@@ -72,8 +72,9 @@ async fn main() -> CommonResult<()> {
         // Generate prompt.
         let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";
-        Some(format!("{}{}", prompt_seg_1, prompt_seg_2))
-    })?
+        Some(format!("{prompt_seg_1}{prompt_seg_2}"))
+    })
+    .await?
     else {
         return CommonError::new_error_result_with_only_msg(
             "Terminal is not fully interactive",
@@ -214,15 +215,14 @@ fn generate_help_msg() -> String {
 Welcome to the R3BL TUI demo app.
 Window size: {window_size:?}
 Type a number to run corresponding example:
-  0. 📏 {}
-  1. 📐 {}
-  2. 📐 {}
-  3. 🐒 {}
-  4. 🦜 {}
-  5. 📔 {}
+  0. 📏 {NoLayout}
+  1. 📐 {OneColLayout}
+  2. 📐 {TwoColLayout}
+  3. 🐒 {Editor}
+  4. 🦜 {Slides}
+  5. 📔 {Commander}
 
 or type Ctrl+C, Ctrl+D, 'exit', or 'x' to exit",
-        NoLayout, OneColLayout, TwoColLayout, Editor, Slides, Commander,
     );
 
     it

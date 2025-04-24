@@ -106,7 +106,7 @@ mod tests_directory_change {
             assert!(no_permissions_dir.exists());
             // Try to change to a directory with insufficient permissions.
             let result = try_cd(&no_permissions_dir);
-            println!("✅ err: {:?}", result);
+            println!("✅ err: {result:?}");
             assert!(result.is_err());
             assert!(matches!(result, Err(FsOpError::PermissionDenied(_))));
 
@@ -178,7 +178,7 @@ mod tests_directory_change {
                 fs_paths!(with_root: new_tmp_dir => "invalid_name_dir\0");
             let result = try_cd(&invalid_name_dir);
             assert!(result.is_err());
-            println!("✅ err: {:?}", result);
+            println!("✅ err: {result:?}");
             assert!(matches!(result, Err(FsOpError::InvalidName(_))));
 
             // Change back to the original directory.

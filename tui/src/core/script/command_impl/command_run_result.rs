@@ -71,7 +71,7 @@ mod display_impl_for_command_run_result {
                         d = fmt_cmd_str(cmd)?
                     )?;
 
-                    write!(f, "{A:?}", A = cmd)
+                    write!(f, "{cmd:?}")
                 }
                 CommandRunResult::DidNotRun(message, details) => {
                     write!(

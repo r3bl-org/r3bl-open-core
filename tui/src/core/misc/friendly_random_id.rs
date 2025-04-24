@@ -59,7 +59,7 @@ pub fn generate_friendly_random_id() -> InlineString {
         pet.len() + fruit.len() + 3 + 2, // 3 for the number, 2 for the dashes
     );
     use std::fmt::Write as _;
-    _ = write!(acc, "{}-{}-{:03}", pet, fruit, number);
+    _ = write!(acc, "{pet}-{fruit}-{number:03}");
 
     acc
 }
@@ -81,7 +81,7 @@ mod tests {
     #[test]
     fn test_generate_friendly_random_id() {
         let id = generate_friendly_random_id();
-        println!("Generated ID: {}", id);
+        println!("Generated ID: {id}");
         let parts: Vec<&str> = id.split('-').collect();
         assert_eq!(parts.len(), 3);
         assert!(PET_NAMES.contains(&parts[0].to_lowercase().as_str()));

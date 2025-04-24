@@ -28,7 +28,7 @@ use crate::{ast,
             fg_blue,
             get_terminal_width,
             inline_string,
-            output_device_as_mut,
+            lock_output_device_as_mut,
             pad_fmt,
             queue_commands,
             throws,
@@ -455,7 +455,7 @@ impl FunctionComponent<State> for SelectComponent {
                 MoveToPreviousLine(*items_viewport_height + *header_viewport_height),
             };
 
-            output_device_as_mut!(self.output_device).flush()?;
+            lock_output_device_as_mut!(self.output_device).flush()?;
         });
     }
 }
@@ -471,7 +471,7 @@ fn clip_string_to_width_with_ellipsis(
         // Clip the text to available space.
         let clipped_text =
             header_text_gcs.clip(col(0), width(available_space_col_count - 3));
-        let clipped_text = format!("{a}...", a = clipped_text);
+        let clipped_text = format!("{clipped_text}...");
         return clipped_text;
     }
     header_text
@@ -534,8 +534,7 @@ mod tests {
         let generated_output = stdout_mock.get_copy_of_buffer_as_string();
 
         println!(
-            "generated_output = writer.get_buffer(): \n\n{:#?}\n\n",
-            generated_output
+            "generated_output = writer.get_buffer(): \n\n{generated_output:#?}\n\n"
         );
 
         let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;5;153m\u{1b}[48;5;235m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;46m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◉ Item 1                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 2                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 3                              \u{1b}[1E\u{1b}[0m\u{1b}[4F";

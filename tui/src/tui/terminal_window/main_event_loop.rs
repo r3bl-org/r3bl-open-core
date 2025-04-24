@@ -26,9 +26,9 @@ use crate::{ch,
             glyphs,
             height,
             inline_string,
+            lock_output_device_as_mut,
             new_style,
             ok,
-            output_device_as_mut,
             render_pipeline,
             row,
             telemetry::{telemetry_default_constants, Telemetry},
@@ -106,7 +106,7 @@ where
     // Start raw mode.
     RawMode::start(
         global_data_mut_ref.window_size,
-        output_device_as_mut!(output_device),
+        lock_output_device_as_mut!(output_device),
         output_device.is_mock,
     );
 
@@ -137,7 +137,7 @@ where
                 global_data_mut_ref,
                 component_registry_map,
                 has_focus,
-                output_device_as_mut!(output_device),
+                lock_output_device_as_mut!(output_device),
                 output_device.is_mock,
             )?;
         },
@@ -170,7 +170,7 @@ where
                             // 🐒 Actually exit the main loop!
                             RawMode::end(
                                 global_data_mut_ref.window_size,
-                                output_device_as_mut!(output_device),
+                                lock_output_device_as_mut!(output_device),
                                 output_device.is_mock,
                             );
                             break;
@@ -185,7 +185,7 @@ where
                                         global_data_mut_ref,
                                         component_registry_map,
                                         has_focus,
-                                        output_device_as_mut!(output_device),
+                                        lock_output_device_as_mut!(output_device),
                                         output_device.is_mock,
                                     )?;
                                 },
@@ -208,7 +208,7 @@ where
                                         global_data_mut_ref,
                                         component_registry_map,
                                         has_focus,
-                                        output_device_as_mut!(output_device),
+                                        lock_output_device_as_mut!(output_device),
                                         output_device.is_mock,
                                     );
                                 },
@@ -254,7 +254,7 @@ where
                                     global_data_mut_ref, app,
                                     component_registry_map,
                                     has_focus,
-                                    output_device_as_mut!(output_device),
+                                    lock_output_device_as_mut!(output_device),
                                     output_device.is_mock,
                                 );
                             },
@@ -276,7 +276,7 @@ where
                                 exit_keys,
                                 component_registry_map,
                                 has_focus,
-                                output_device_as_mut!(output_device),
+                                lock_output_device_as_mut!(output_device),
                                 output_device.is_mock,
                             );
                         },

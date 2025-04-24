@@ -103,7 +103,7 @@ mod offscreen_buffer_impl {
     impl Debug for PixelCharDiffChunks {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             for (pos, pixel_char) in self.iter() {
-                writeln!(f, "\t{:?}: {:?}", pos, pixel_char)?;
+                writeln!(f, "\t{pos:?}: {pixel_char:?}")?;
             }
             ok!()
         }
@@ -139,7 +139,7 @@ mod offscreen_buffer_impl {
                     )?;
 
                     // Print the row itself in the "next" line.
-                    write!(f, "{:?}", row)?;
+                    write!(f, "{row:?}")?;
                 }
             }
 
@@ -377,7 +377,7 @@ mod pixel_char_line_impl {
                     if index > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", value)?;
+                    write!(f, "{value}")?;
                 }
                 // The next value continues the current range.
                 (

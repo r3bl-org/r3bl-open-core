@@ -102,7 +102,7 @@ async fn test_stdout_mock_strip_ansi() {
     let stdout_mock_clone = stdout_mock.clone(); // Points to the same inner value as `stdout_mock`.
 
     let normal_text = "hello world";
-    let red_text = format!("\x1b[31m{}\x1b[0m", normal_text); // Resets color after.
+    let red_text = format!("\x1b[31m{normal_text}\x1b[0m"); // Resets color after.
 
     stdout_mock.write_all(red_text.as_bytes()).unwrap();
     stdout_mock.flush().unwrap();

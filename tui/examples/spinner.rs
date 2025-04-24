@@ -59,7 +59,7 @@ pub async fn main() -> miette::Result<()> {
 
 #[allow(unused_assignments)]
 async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<()> {
-    let readline_async = ReadlineAsync::try_new(Some("$ "))?;
+    let readline_async = ReadlineAsync::try_new(Some("$ ")).await?;
     let readline_async = readline_async.expect("terminal is not fully interactive");
     let address = "127.0.0.1:8000";
     let message_trying_to_connect = format!(

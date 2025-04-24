@@ -220,6 +220,6 @@ mod tests {
     #[test]
     fn test_debug_fmt() {
         let length = Length::new(10);
-        assert_eq!(format!("{:?}", length), "Length(10)");
+        assert_eq!(format!("{length:?}"), "Length(10)");
     }
 }

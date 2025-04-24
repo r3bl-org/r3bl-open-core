@@ -340,7 +340,7 @@ mod rgb_value_impl_block {
             match parse_hex_color(input) {
                 Ok((_, color)) => color,
                 Err(_) => {
-                    panic!("Invalid hex color format: {}", input)
+                    panic!("Invalid hex color format: {input}")
                 }
             }
         }

@@ -186,7 +186,7 @@ mod tests_try_parse_and_highlight {
 
             println!(
                 "result: \n{}",
-                fg_cyan(&style_us_span_lines.pretty_print_debug())
+                fg_cyan(style_us_span_lines.pretty_print_debug())
             );
 
             assert_eq2!(editor_text_lines.len(), style_us_span_lines.len());
@@ -1252,7 +1252,7 @@ mod tests_style_us_span_lines_from {
                     color_bg: {tui_color!(red)}
                 );
                 let (_, doc) = parse_markdown("- Foo\n- Bar\n").into_diagnostic()?;
-                println!("{}", fg_cyan(&format!("{:#?}", doc)));
+                println!("{}", fg_cyan(format!("{doc:#?}")));
 
                 // First smart list.
                 {

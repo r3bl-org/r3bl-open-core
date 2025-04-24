@@ -244,12 +244,12 @@ pub mod render_ops_impl {
 
             // First line.
             if let Some(first) = iter.next() {
-                _ = write!(f, "[{:?}]", first);
+                _ = write!(f, "[{first:?}]");
             }
 
             // Subsequent lines.
             for item in iter {
-                _ = write!(f, "{DELIM}[{:?}]", item);
+                _ = write!(f, "{DELIM}[{item:?}]");
             }
 
             ok!()

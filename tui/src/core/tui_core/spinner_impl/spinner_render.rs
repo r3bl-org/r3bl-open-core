@@ -117,7 +117,7 @@ pub fn print_tick(
             writer
                 .queue(MoveToColumn(0))
                 .into_diagnostic()?
-                .queue(Print(format!("{}\n", output)))
+                .queue(Print(format!("{output}\n")))
                 .into_diagnostic()?
                 .queue(MoveUp(1))
                 .into_diagnostic()?;
@@ -131,7 +131,7 @@ pub fn print_tick(
                 .into_diagnostic()?
                 .queue(Clear(ClearType::CurrentLine))
                 .into_diagnostic()?
-                .queue(Print(format!("{}\n", output)))
+                .queue(Print(format!("{output}\n")))
                 .into_diagnostic()?
                 .queue(MoveUp(1))
                 .into_diagnostic()?;
@@ -145,7 +145,7 @@ pub fn print_tick(
                 .into_diagnostic()?
                 .queue(Clear(ClearType::CurrentLine))
                 .into_diagnostic()?
-                .queue(Print(format!("{}\n", output)))
+                .queue(Print(format!("{output}\n")))
                 .into_diagnostic()?
                 .queue(MoveUp(1))
                 .into_diagnostic()?;
@@ -183,7 +183,7 @@ pub fn print_final_tick(
                 .into_diagnostic()?
                 .queue(Print(Clear(ClearType::CurrentLine)))
                 .into_diagnostic()?
-                .queue(Print(format!("{}\n", output)))
+                .queue(Print(format!("{output}\n")))
                 .into_diagnostic()?
         }
     };

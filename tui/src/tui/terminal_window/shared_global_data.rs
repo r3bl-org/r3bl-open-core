@@ -83,7 +83,7 @@ where
             None => write!(f, "no saved offscreen_buffer")?,
             Some(ref offscreen_buffer) => match DEBUG_TUI_COMPOSITOR {
                 false => write!(f, "offscreen_buffer saved from previous render")?,
-                true => write!(f, "{:?}", offscreen_buffer)?,
+                true => write!(f, "{offscreen_buffer:?}")?,
             },
         }
         ok!()
@@ -144,7 +144,7 @@ where
     pub fn set_hud_report(&mut self, new: TelemetryHudReport) {
         self.hud_report.clear();
         use std::fmt::Write as _;
-        _ = write!(self.hud_report, "{}", new);
+        _ = write!(self.hud_report, "{new}");
     }
 
     const EMPTY_HUD_REPORT_STATIC: &str = "⮺ Collecting data ⠎";

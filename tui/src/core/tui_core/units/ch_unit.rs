@@ -271,7 +271,7 @@ pub mod convert_from_other_types_to_ch {
     fn f64_to_u16(value: f64) -> Result<u16, String> {
         let value = value.round(); // Remove the fractional part by rounding up or down.
         if value < 0.0 || value > u16::MAX as f64 {
-            return Err(format!("Failed to convert {} to u16: out of range", value));
+            return Err(format!("Failed to convert {value} to u16: out of range"));
         }
         Ok(value as u16)
     }

@@ -193,7 +193,7 @@ pub mod byte_io {
 
     /// Write the payload to the client. Use the length-prefix, binary payload, protocol.
     /// - The trait bounds on this function are so that this function can be tested w/ a
-    ///   mock from [tokio_test::io::Builder].
+    ///   mock from `tokio_test::io::Builder`.
     /// - More info: <https://tokio.rs/tokio/topics/testing>
     pub async fn try_write<W: AsyncWrite + Unpin, T: Serialize>(
         buf_writer: &mut BufWriter<W>,
@@ -227,7 +227,7 @@ pub mod byte_io {
     /// Ready the payload from the client. Use the length-prefix [LengthPrefixType],
     /// binary payload, protocol.
     /// - The trait bounds on this function are so that this function can be tested w/ a
-    ///   mock from [tokio_test::io::Builder].
+    ///   mock from `tokio_test::io::Builder`.
     /// - More info: <https://tokio.rs/tokio/topics/testing>
     pub async fn try_read<R: AsyncRead + Unpin, T: for<'d> Deserialize<'d>>(
         buf_reader: &mut BufReader<R>,
