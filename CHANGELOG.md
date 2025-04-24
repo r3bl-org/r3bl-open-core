@@ -245,6 +245,12 @@ also heavily refactored and the entire codebase updated so that a the more ergon
 `ChUnit` API is now used throughout the codebase. No new functionality is added in this
 release.
 
+- Added:
+    - New `memory_allocator.rs` module that allow `jemalloc` to be loaded instead of the
+      system default allocator. `jemalloc` is optimized for multi-threaded use cases where
+      lots of small objects are created and deleted, which is a great fit for this
+      crate. Use this in all the binary targets.
+
 - Removed:
     - Drop the dependency on `r3bl_ansi_color`.
 
@@ -446,6 +452,10 @@ Updated:
 
 Added:
 
+- New `memory_allocator.rs` module that allow `jemalloc` to be loaded instead of the
+  system default allocator. `jemalloc` is optimized for multi-threaded use cases where
+  lots of small objects are created and deleted, which is a great fit for this crate.
+  Use this in all the examples.
 - New `network_io` module that contains support for length prefixed binary protocols
   that can be used to create TCP API servers. Currently this does not include TLS
   support, and that needs to be added later. The new module also supports easy to use

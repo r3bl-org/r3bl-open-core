@@ -47,6 +47,7 @@ use r3bl_tui::{fg_color,
                ok,
                readline_async::{ReadlineAsync, ReadlineEvent},
                rla_println,
+               set_jemalloc_in_main,
                throws,
                tui_color,
                ASTColor,
@@ -61,6 +62,8 @@ use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
+    set_jemalloc_in_main!();
+
     let args: Vec<String> = std::env::args().collect();
     let no_log_arg_passed = args.contains(&"--no-log".to_string());
 

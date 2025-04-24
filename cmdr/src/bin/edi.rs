@@ -31,6 +31,7 @@ use r3bl_tui::{ColorWheel,
                height,
                log::try_initialize_logging_global,
                readline_async::{HowToChoose, StyleSheet},
+               set_jemalloc_in_main,
                throws,
                width};
 
@@ -39,6 +40,8 @@ use crate::clap_config::CLIArg;
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
+    set_jemalloc_in_main!();
+
     throws!({
         // Parse CLI args.
         let cli_arg: CLIArg = CLIArg::parse();

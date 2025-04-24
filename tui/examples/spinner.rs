@@ -20,6 +20,7 @@ use std::{io::{stderr, Write},
           time::Duration};
 
 use r3bl_tui::{readline_async::{ReadlineAsync, Spinner},
+               set_jemalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
                SpinnerColor,
                SpinnerStyle,
@@ -30,6 +31,8 @@ use tokio::{time::Instant, try_join};
 #[tokio::main]
 #[allow(clippy::needless_return)]
 pub async fn main() -> miette::Result<()> {
+    set_jemalloc_in_main!();
+
     println!("-------------> Example with concurrent output: Braille <-------------");
     example_with_concurrent_output(SpinnerStyle {
         template: SpinnerTemplate::Braille,
