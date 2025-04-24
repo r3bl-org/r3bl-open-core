@@ -37,12 +37,12 @@ impl OutputDeviceExt for OutputDevice {
 #[cfg(test)]
 mod tests {
     use super::OutputDeviceExt;
-    use crate::{output_device_as_mut, LockedOutputDevice, OutputDevice};
+    use crate::{lock_output_device_as_mut, LockedOutputDevice, OutputDevice};
 
     #[test]
     fn test_mock_output_device() {
         let (device, mock) = OutputDevice::new_mock();
-        let mut_ref: LockedOutputDevice<'_> = output_device_as_mut!(device);
+        let mut_ref: LockedOutputDevice<'_> = lock_output_device_as_mut!(device);
         let _ = mut_ref.write_all(b"Hello, world!\n");
         assert_eq!(
             mock.get_copy_of_buffer_as_string_strip_ansi(),

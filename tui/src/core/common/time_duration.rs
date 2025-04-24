@@ -102,17 +102,17 @@ mod display_formatter {
                 let hours = secs / 3600;
                 let mins = (secs % 3600) / 60;
                 let secs = secs % 60;
-                write!(f, "{}h:{}m:{}s{:}ms", hours, mins, secs, millis)?;
+                write!(f, "{hours}h:{mins}m:{secs}s{millis:}ms")?;
             } else if secs > 60 {
                 let mins = secs / 60;
                 let secs = secs % 60;
-                write!(f, "{}m:{}s:{}ms", mins, secs, millis)?;
+                write!(f, "{mins}m:{secs}s:{millis}ms")?;
             } else if secs > 0 {
-                write!(f, "{}s:{}ms", secs, millis)?;
+                write!(f, "{secs}s:{millis}ms")?;
             } else if millis > 0 {
-                write!(f, "{}ms:{}μs", millis, micros)?;
+                write!(f, "{millis}ms:{micros}μs")?;
             } else {
-                write!(f, "{}μs", micros)?;
+                write!(f, "{micros}μs")?;
             }
 
             ok!()
@@ -134,7 +134,7 @@ mod tests {
                 + Duration::from_millis(100)
                 + Duration::from_micros(100),
         );
-        assert_eq!(format!("{}", time_duration), "1h:0m:1s100ms");
+        assert_eq!(format!("{time_duration}"), "1h:0m:1s100ms");
 
         let time_duration = TimeDuration::from(
             Duration::from_secs(60)
@@ -142,13 +142,13 @@ mod tests {
                 + Duration::from_millis(100)
                 + Duration::from_micros(100),
         );
-        assert_eq!(format!("{}", time_duration), "1m:1s:100ms");
+        assert_eq!(format!("{time_duration}"), "1m:1s:100ms");
 
         let time_duration = TimeDuration::from(
             Duration::from_secs(1)
                 + Duration::from_millis(100)
                 + Duration::from_micros(100),
         );
-        assert_eq!(format!("{}", time_duration), "1s:100ms");
+        assert_eq!(format!("{time_duration}"), "1s:100ms");
     }
 }

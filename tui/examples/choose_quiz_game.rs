@@ -209,7 +209,7 @@ fn display_footer(
     let color = ASTColor::Rgb((9, 183, 238).into());
 
     ast(
-        format!("╭{}╮", line).as_str(),
+        format!("╭{line}╮").as_str(),
         new_style!(color_fg: {color.into()}),
     )
     .println();
@@ -235,7 +235,7 @@ fn display_footer(
     .println();
 
     ast(
-        format!("╰{}╯", line).as_str(),
+        format!("╰{line}╯").as_str(),
         new_style!(color_fg: {color.into()}),
     )
     .println();

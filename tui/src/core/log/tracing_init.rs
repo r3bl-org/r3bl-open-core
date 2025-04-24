@@ -182,7 +182,7 @@ mod tests {
         let file_path = dir.join("my_temp_log_file.log");
         let file_path = file_path.to_str().unwrap().to_string();
 
-        println!("file_path: {}", file_path);
+        println!("file_path: {file_path}");
 
         let level_filter = LevelFilter::DEBUG;
         let writer_config = WriterConfig::File(file_path.clone());
@@ -273,7 +273,7 @@ mod test_tracing_shared_writer_output {
             format: "{item}",
         );
 
-        println!("output: {}", output);
+        println!("output: {output}");
 
         for it in get_expected().iter() {
             assert!(output.contains(it));

@@ -2252,7 +2252,7 @@ mod tests {
         assert!(gs.is_empty());
 
         let gs = grapheme_string("a");
-        println!("{:#?}", gs);
+        println!("{gs:#?}");
         assert_eq!(gs.len(), seg_width(1));
         assert_eq!(gs.display_width, width(1));
         assert!(!gs.is_empty());

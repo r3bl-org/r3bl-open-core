@@ -116,7 +116,7 @@ mod to_from_string_impl {
             match s {
                 "strip_ansi" => Ok(Self::StripAnsi),
                 "unicode" => Ok(Self::Unicode),
-                _ => Err(format!("Invalid StringLength variant: {}", s)),
+                _ => Err(format!("Invalid StringLength variant: {s}")),
             }
         }
     }
@@ -144,7 +144,7 @@ mod tests {
             assert_eq!(hash, 1806968364);
             hash
         });
-        println!("Execution time - string_length(Sha256): {:?}", duration);
+        println!("Execution time - string_length(Sha256): {duration:?}");
         assert_eq!(hash, 1806968364);
     }
 
@@ -161,20 +161,14 @@ mod tests {
             assert_eq!(len, 3);
             assert!(memoized_len_map.contains_key(input));
         });
-        println!(
-            "Execution time - U string_length(StripAnsi): {:?}",
-            duration_uncached
-        );
+        println!("Execution time - U string_length(StripAnsi): {duration_uncached:?}");
 
         let (_, duration_cached) = timed!({
             let len = StringLength::StripAnsi.calculate(input, memoized_len_map);
             assert_eq!(len, 3);
             assert!(memoized_len_map.contains_key(input));
         });
-        println!(
-            "Execution time - C string_length(StripAnsi): {:?}",
-            duration_cached
-        );
+        println!("Execution time - C string_length(StripAnsi): {duration_cached:?}");
     }
 
     #[test]
@@ -189,9 +183,6 @@ mod tests {
             assert_eq!(len, 3);
             assert!(!memoized_len_map.contains_key(input));
         });
-        println!(
-            "Execution time - U string_length(Unicode): {:?}",
-            duration_uncached
-        );
+        println!("Execution time - U string_length(Unicode): {duration_uncached:?}");
     }
 }

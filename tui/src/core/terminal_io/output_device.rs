@@ -22,16 +22,17 @@ use crate::{SafeRawTerminal, SendRawTerminal, StdMutex};
 pub type LockedOutputDevice<'a> = &'a mut dyn std::io::Write;
 
 /// Macro to simplify locking and getting a mutable reference to the output device.
+/// Don't call this again in the same scope, it will deadlock!
 ///
 /// Usage example:
 /// ```rust
-/// use r3bl_tui::{output_device_as_mut, OutputDevice, LockedOutputDevice};
+/// use r3bl_tui::{lock_output_device_as_mut, OutputDevice, LockedOutputDevice};
 /// let device = OutputDevice::new_stdout();
-/// let mut_ref: LockedOutputDevice<'_> = output_device_as_mut!(device);
+/// let mut_ref: LockedOutputDevice<'_> = lock_output_device_as_mut!(device);
 /// let _ = mut_ref.write_all(b"Hello, world!\n");
 /// ```
 #[macro_export]
-macro_rules! output_device_as_mut {
+macro_rules! lock_output_device_as_mut {
     ($device:expr) => {
         &mut *$device.lock()
     };
@@ -39,7 +40,8 @@ macro_rules! output_device_as_mut {
 
 /// This struct represents an output device that can be used to write to the terminal.
 /// - It is safe to clone.
-/// - To write to it, see the examples in [Self::lock()] or [output_device_as_mut] macro.
+/// - To write to it, see the examples in [Self::lock()] or [lock_output_device_as_mut]
+///   macro.
 #[derive(Clone)]
 pub struct OutputDevice {
     pub resource: SafeRawTerminal,
@@ -78,12 +80,12 @@ impl OutputDevice {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{output_device_as_mut, LockedOutputDevice};
+    use crate::{lock_output_device_as_mut, LockedOutputDevice};
 
     #[test]
     fn test_stdout_output_device() {
         let output_device = OutputDevice::new_stdout();
-        let mut_ref: LockedOutputDevice<'_> = output_device_as_mut!(output_device);
+        let mut_ref: LockedOutputDevice<'_> = lock_output_device_as_mut!(output_device);
         let _ = mut_ref.write_all(b"Hello, world!\n");
         assert!(!output_device.is_mock);
     }

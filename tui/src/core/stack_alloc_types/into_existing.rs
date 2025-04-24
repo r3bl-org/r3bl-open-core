@@ -152,7 +152,7 @@ mod join_fmt_tests {
         let foo = Foo {
             items: items.iter().map(|s| s.to_string()).collect(),
         };
-        let result = format!("{}", foo);
+        let result = format!("{foo}");
         assert_eq!(result, "'apple', 'banana', 'cherry'");
     }
 }
@@ -221,7 +221,7 @@ mod join_with_index_fmt_tests {
         let foo = Foo {
             items: items.iter().map(|s| s.to_string()).collect(),
         };
-        let result = format!("{}", foo);
+        let result = format!("{foo}");
         assert_eq!(result, "[0]'apple', [1]'banana', [2]'cherry'");
     }
 }

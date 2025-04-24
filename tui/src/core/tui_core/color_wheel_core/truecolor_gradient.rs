@@ -110,9 +110,9 @@ mod random_color {
         let mut acc = StringHexColor::new();
         use std::fmt::Write as _;
         if a < 255 {
-            _ = write!(acc, "#{:02x}{:02x}{:02x}{:02x}", r, g, b, a);
+            _ = write!(acc, "#{r:02x}{g:02x}{b:02x}{a:02x}");
         } else {
-            _ = write!(acc, "#{:02x}{:02x}{:02x}", r, g, b);
+            _ = write!(acc, "#{r:02x}{g:02x}{b:02x}");
         }
 
         acc

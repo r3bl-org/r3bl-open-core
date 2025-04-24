@@ -89,7 +89,7 @@ mod tests_github_api {
             }
             Ok(Err(err)) => {
                 // Re-throw the error and fail the test.
-                panic!("Error: {:?}", err);
+                panic!("Error: {err:?}");
             }
             Err(_) => {
                 // Timeout does not mean that test has failed. Github is probably slow.

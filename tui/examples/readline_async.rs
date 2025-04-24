@@ -85,7 +85,7 @@ fn get_info_message() -> String {
         let commands = Command::iter()
             .map(|it| it.to_string())
             .collect::<Vec<String>>();
-        fg_color(tui_color!(lizard_green), &format!("{:?}", commands)).to_string()
+        fg_color(tui_color!(lizard_green), &format!("{commands:?}")).to_string()
     };
 
     let info_message = &format!(
@@ -143,10 +143,10 @@ async fn main() -> miette::Result<()> {
     let prompt = {
         let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";
-        format!("{}{}", prompt_seg_1, prompt_seg_2)
+        format!("{prompt_seg_1}{prompt_seg_2}")
     };
 
-    let maybe_readline_async = ReadlineAsync::try_new(Some(prompt))?;
+    let maybe_readline_async = ReadlineAsync::try_new(Some(prompt)).await?;
 
     // If the terminal is not fully interactive, then return early.
     let Some(mut rl_async) = maybe_readline_async else {
@@ -200,7 +200,7 @@ async fn main() -> miette::Result<()> {
                                 writeln!(
                                     shared_writer,
                                     "{}",
-                                    fg_color(tui_color!(frozen_blue), &"Terminal resized!")
+                                    fg_color(tui_color!(frozen_blue), "Terminal resized!")
                                 ).into_diagnostic()?;
                             }
                             // Ctrl+D, Ctrl+C.
@@ -211,7 +211,7 @@ async fn main() -> miette::Result<()> {
                         }
                     },
                     Err(err) => {
-                        let msg_1 = format!("Received err: {}", fg_red(&format!("{err:?}")));
+                        let msg_1 = format!("Received err: {}", fg_red(format!("{err:?}")));
                         let msg_2 = format!("{}", fg_red("Exiting..."));
                         rla_println!(rl_async, "{msg_1}");
                         rla_println!(rl_async, "{msg_2}");
@@ -394,10 +394,7 @@ mod long_running_task {
         tokio::spawn(async move {
             // Try to create and start a spinner.
             let maybe_spinner = Spinner::try_start(
-                format!(
-                    "{} - This is a sample indeterminate progress message",
-                    task_name
-                ),
+                format!("{task_name} - This is a sample indeterminate progress message"),
                 Duration::from_millis(100),
                 SpinnerStyle::default(),
                 Arc::new(StdMutex::new(stderr())),
@@ -432,8 +429,7 @@ mod long_running_task {
             // Don't forget to stop the spinner.
             if let Ok(Some(mut spinner)) = maybe_spinner {
                 let msg = format!(
-                    "{} - Task ended. Resuming terminal and showing any output that was generated while spinner was active.",
-                    task_name
+                    "{task_name} - Task ended. Resuming terminal and showing any output that was generated while spinner was active."
                 );
                 let _ = spinner.stop(msg.as_str()).await;
             }

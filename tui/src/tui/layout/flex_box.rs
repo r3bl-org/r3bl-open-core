@@ -76,7 +76,7 @@ impl Debug for FlexBox {
         // Optional fields.
         match self.insertion_pos_for_next_box {
             Some(pos) => {
-                write!(f, "insertion_pos_for_next_box: {:?}{EOL}", pos)?;
+                write!(f, "insertion_pos_for_next_box: {pos:?}{EOL}")?;
             }
             None => {
                 write!(f, "insertion_pos_for_next_box: None{EOL}")?;
@@ -85,7 +85,7 @@ impl Debug for FlexBox {
         // Last line.
         match self.maybe_computed_style {
             Some(style) => {
-                write!(f, "maybe_computed_style: {:?}", style)?;
+                write!(f, "maybe_computed_style: {style:?}")?;
             }
             None => {
                 write!(f, "maybe_computed_style: None")?;
@@ -154,7 +154,7 @@ mod tests {
             maybe_computed_style: TuiStyle::default().into(),
         };
 
-        let debug_str = format!("{:?}", flex_box);
+        let debug_str = format!("{flex_box:?}");
         assert!(debug_str.contains("FlexBox"));
         assert!(debug_str.contains("id"));
         assert!(debug_str.contains("dir"));

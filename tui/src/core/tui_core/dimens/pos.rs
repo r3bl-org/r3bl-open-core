@@ -563,7 +563,7 @@ mod tests {
         {
             let pos = Pos::new((ColIndex::new(ch(2)), RowIndex::new(ch(1))));
             let mut acc = String::new();
-            let _ = write!(acc, "{:?}", pos);
+            let _ = write!(acc, "{pos:?}");
             assert_eq!(acc, "Pos [c: 2, r: 1]");
         }
 

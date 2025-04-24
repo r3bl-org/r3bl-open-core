@@ -97,7 +97,9 @@ mod user_interaction {
     -> CommonResult<CommandRunResult<CommandRunDetails>> {
         let prompt_text =
             ui_str::branch_create_display::enter_branch_name_you_want_to_create();
-        let mut rl_async = ReadlineAsync::try_new(Some(&prompt_text))?
+
+        let mut rl_async = ReadlineAsync::try_new(Some(&prompt_text))
+            .await?
             .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
 
         // The loop is just to handle the resize event.

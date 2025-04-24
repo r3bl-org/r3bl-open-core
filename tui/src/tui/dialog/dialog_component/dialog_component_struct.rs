@@ -214,8 +214,7 @@ where
             // Error branch.
             _ => {
                 let msg = format!(
-                    "🐝 DialogComponent::handle_event: dialog_buffer is None for id: {:?}",
-                    id
+                    "🐝 DialogComponent::handle_event: dialog_buffer is None for id: {id:?}"
                 );
                 CommonError::new_error_result(CommonErrorType::NotFound, &msg)
             }

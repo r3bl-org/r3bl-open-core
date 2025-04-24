@@ -442,8 +442,7 @@ mod internal_impl {
                     return CommonError::new_error_result(
                         CommonErrorType::NotFound,
                         &format!(
-                            "Dialog buffer does not exist for component id:{id:?}",
-                            id = self_id
+                            "Dialog buffer does not exist for component id:{self_id:?}"
                         ),
                     )
                 }
@@ -508,18 +507,11 @@ mod internal_impl {
     {
         let mut it = render_ops!();
 
-        if let Some(dialog_buffer) = state.get_mut_dialog_buffer(self_id) {
-            if let Some(results) = dialog_buffer.maybe_results.as_ref() {
-                if !results.is_empty() {
-                    paint_results(
-                        &mut it,
-                        origin_pos,
-                        bounds_size,
-                        results,
-                        dialog_engine,
-                    );
-                };
-            }
+        if let Some(dialog_buffer) = state.get_mut_dialog_buffer(self_id)
+            && let Some(results) = dialog_buffer.maybe_results.as_ref()
+            && !results.is_empty()
+        {
+            paint_results(&mut it, origin_pos, bounds_size, results, dialog_engine);
         };
 
         return Ok(it);
@@ -680,17 +672,17 @@ mod internal_impl {
         text: &str,
     ) {
         // If lolcat is enabled, then colorize the text.
-        if let Some(style) = maybe_style {
-            if style.lolcat.is_some() {
-                let text_gcs = text.grapheme_string();
-                let texts = color_wheel.colorize_into_styled_texts(
-                    &text_gcs,
-                    GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                    TextColorizationPolicy::ColorEachCharacter(*maybe_style),
-                );
-                render_tui_styled_texts_into(&texts, ops);
-                return;
-            }
+        if let Some(style) = maybe_style
+            && style.lolcat.is_some()
+        {
+            let text_gcs = text.grapheme_string();
+            let texts = color_wheel.colorize_into_styled_texts(
+                &text_gcs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(*maybe_style),
+            );
+            render_tui_styled_texts_into(&texts, ops);
+            return;
         }
 
         // Otherwise, just paint the text as-is.
@@ -867,10 +859,10 @@ mod internal_impl {
 
                 DialogEngineMode::ModalAutocomplete => {
                     let selected_index = usize(*dialog_engine.selected_row_index);
-                    if let Some(results) = &dialog_buffer.maybe_results {
-                        if let Some(selected_result) = results.get(selected_index) {
-                            return Some(DialogChoice::Yes(selected_result.clone()));
-                        }
+                    if let Some(results) = &dialog_buffer.maybe_results
+                        && let Some(selected_result) = results.get(selected_index)
+                    {
+                        return Some(DialogChoice::Yes(selected_result.clone()));
                     }
                     return Some(DialogChoice::No);
                 }

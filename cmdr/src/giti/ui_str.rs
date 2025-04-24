@@ -157,7 +157,7 @@ pub mod branch_create_display {
         format!(
             "{a}{b}",
             a = fg_silver_metallic(" You created and switched to branch "),
-            b = fg_lizard_green(&format!("✅ {branch_name}"))
+            b = fg_lizard_green(format!("✅ {branch_name}"))
         )
     }
 

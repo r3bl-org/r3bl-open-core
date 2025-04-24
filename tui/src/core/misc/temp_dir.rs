@@ -117,7 +117,7 @@ mod tests_temp_dir {
         let temp_dir = create_temp_dir().unwrap();
         println!(
             "Temp dir: {}",
-            fg_lizard_green(&temp_dir.inner.display().to_string())
+            fg_lizard_green(temp_dir.inner.display().to_string())
         );
 
         assert!(temp_dir.inner.exists());
@@ -146,7 +146,7 @@ mod tests_temp_dir {
         let copy_of_path = temp_dir.inner.clone();
         println!(
             "Temp dir: {}",
-            fg_lizard_green(&copy_of_path.display().to_string())
+            fg_lizard_green(copy_of_path.display().to_string())
         );
 
         drop(temp_dir);

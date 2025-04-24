@@ -20,7 +20,7 @@ macro_rules! queue_commands {
     ($output_device:expr $(, $command:expr)* $(,)?) => {{
         $(
             ::crossterm::QueueableCommand::queue(
-                $crate::output_device_as_mut!($output_device),
+                $crate::lock_output_device_as_mut!($output_device),
                 $command
             )?;
         )*
@@ -32,10 +32,10 @@ macro_rules! execute_commands {
     ($output_device:expr $(, $command:expr)* $(,)?) => {{
         $(
             ::crossterm::QueueableCommand::queue(
-                $crate::output_device_as_mut!($output_device),
+                $crate::lock_output_device_as_mut!($output_device),
                 $command
             )?;
         )*
-        $crate::output_device_as_mut!($output_device).flush()?;
+        $crate::lock_output_device_as_mut!($output_device).flush()?;
     }}
 }

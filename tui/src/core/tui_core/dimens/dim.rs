@@ -343,7 +343,7 @@ mod tests {
     #[test]
     fn test_debug_fmt() {
         let size = Size::new((width(5), height(10)));
-        assert_eq!(format!("{:?}", size), "[w: 5, h: 10]");
+        assert_eq!(format!("{size:?}"), "[w: 5, h: 10]");
     }
 
     #[test]

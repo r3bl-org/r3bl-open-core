@@ -76,8 +76,7 @@ pub fn take_starts_with_delim_no_new_line<'i>(
             delim
         );
         println!(
-            "count: {}, starts_w: {}, input=delim: {}",
-            num_of_delim_occurrences, starts_with_delim, input_is_delim
+            "count: {num_of_delim_occurrences}, starts_w: {starts_with_delim}, input=delim: {input_is_delim}"
         );
     });
 
