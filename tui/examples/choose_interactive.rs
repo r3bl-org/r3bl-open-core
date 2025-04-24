@@ -26,6 +26,7 @@ use r3bl_tui::{ast,
                new_style,
                ok,
                readline_async::{style::StyleSheet, HowToChoose, DEVELOPMENT_MODE},
+               set_jemalloc_in_main,
                throws,
                tui_color,
                usize,
@@ -35,12 +36,12 @@ use r3bl_tui::{ast,
                AnsiStyledText,
                DefaultIoDevices,
                InlineVec};
-mod choose_quiz_game;
-use choose_quiz_game::main as single_select_quiz_game;
 use smallvec::smallvec;
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
+    set_jemalloc_in_main!();
+
     throws!({
         DEVELOPMENT_MODE.then(|| {
             try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
@@ -71,7 +72,6 @@ async fn main() -> miette::Result<()> {
             "Single select, 13 items, viewport height = 5";
         const SINGLE_SELECT_2_ITEMS_VPH_5: &str =
             "Single select, 2 items, viewport height = 5";
-        const SINGLE_SELECT_QUIZ_GAME: &str = "Single select, quiz game";
 
         // Choose which example to run.
         let mut default_io_devices = DefaultIoDevices::default();
@@ -85,7 +85,6 @@ async fn main() -> miette::Result<()> {
                 MULTIPLE_SELECT_2_ITEMS_VPH_5,
                 SINGLE_SELECT_13_ITEMS_VPH_5,
                 SINGLE_SELECT_2_ITEMS_VPH_5,
-                SINGLE_SELECT_QUIZ_GAME,
             ],
             Some(height(6)), /* height of the tuify component */
             Some(width(0)), /* width of the tuify component. 0 means it will use the full terminal width */
@@ -139,8 +138,6 @@ async fn main() -> miette::Result<()> {
                         default_style,
                     )
                     .await?;
-                } else if input_item == SINGLE_SELECT_QUIZ_GAME {
-                    let _ = single_select_quiz_game();
                 } else {
                     println!("User did not select anything")
                 }

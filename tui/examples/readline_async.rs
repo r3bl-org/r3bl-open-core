@@ -31,6 +31,7 @@ use r3bl_tui::{bold,
                log::{try_initialize_logging_global, DisplayPreference},
                readline_async::{Readline, ReadlineAsync, ReadlineEvent, Spinner},
                rla_println,
+               set_jemalloc_in_main,
                tui_color,
                InlineVec,
                SendRawTerminal,
@@ -137,6 +138,8 @@ impl Default for State {
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
+    set_jemalloc_in_main!();
+
     let prompt = {
         let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";

@@ -135,3 +135,9 @@
 - [x] update all the projects in `rust_scratch` to work with the `tuifyasync` branch
   - [x] `tls`
   - [x] `tcp-api-server`
+
+# refactor protocol.rs out of `tcp-api-server` into `r3bl_tui`
+
+- [x] refactor and move `protocol.rs` into `r3bl_tui`, but keep the specific server in
+      `tcp-api-server`, which showcases how this can be reused.
+- [x] remove `use crossterm::style::Stylize;` from `tcp-api-server`

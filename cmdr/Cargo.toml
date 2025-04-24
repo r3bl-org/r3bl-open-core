@@ -80,6 +80,12 @@ smallvec = { version = "1.15.0", features = [
     "const_new",
 ] }
 
-# Enum to string generation.
-strum = "0.27.1"
-strum_macros = "0.27.1"
+# `jemalloc` is a replacement for the default global allocator. It's optimized for
+# multi-threaded use cases where lots of small objects are created and destroyed. 
+# The default allocator is the system allocator that's optimized for single threaded
+# use cases.
+# https://www.svix.com/blog/heap-fragmentation-in-rust-applications/
+# https://news.ycombinator.com/item?id=35473271
+# https://crates.io/crates/jemallocator
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = "0.6.0"
