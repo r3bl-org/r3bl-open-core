@@ -1,8 +1,7 @@
-# refactor protocol.rs out of `tcp-api-server` into `r3bl_tui`
+# use `jemalloc` in `r3bl_tui` and `rust_scratch/tcp-api-server`
 
-- [x] refactor and move `protocol.rs` into `r3bl_tui`, but keep the specific server in
-      `tcp-api-server`, which showcases how this can be reused.
-- [ ] remove `use crossterm::style::Stylize;` from `tcp-api-server`
+- [x] use `jemalloc` in `r3bl-cmdr` and all the examples in `r3bl_tui`
+- [x] use `jemalloc` in `rust-scratch/tcp-api-server`
 
 # merge tuifyasync branch into main
 
@@ -13,12 +12,18 @@
 
 # clean up giti phase 5
 
+- [ ] reorder `giti` commands so that `checkout` is first (not `delete`)
 - [ ] use crates.io api to check for latest release to show upgrade message for `edi` and `giti`
       https://github.com/r3bl-org/r3bl-open-core/issues/415
 
+# make a release
+
+- [ ] `r3bl_tui`
+- [ ] `r3bl_cmdr`
+- [ ] close this: https://github.com/r3bl-org/r3bl-open-core/issues/365
+
 # clean up giti phase 6
 
-- [ ] reorder `giti` commands so that `checkout` is first (not `delete`)
 - [ ] use `InlineString` & `InlineVec` in `giti` codebase (for sake of consistency)
 - [ ] fix `giti branch delete <branch-name>` which currently does not work since this command
       ignores branches that are passed as a command line arg
@@ -39,12 +44,6 @@
 # add fps counter row to bottom of edi
 
 - [ ] just like in the `tui/examples/demo/*` add an FPS/telemetry display to bottom of edi
-
-# make a release
-
-- [ ] `r3bl_tui`
-- [ ] `r3bl_cmdr`
-- [ ] close this: https://github.com/r3bl-org/r3bl-open-core/issues/365
 
 # create sub-issues for giti https://github.com/r3bl-org/r3bl-open-core/issues/391
 

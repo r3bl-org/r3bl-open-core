@@ -16,11 +16,13 @@
  */
 
 use r3bl_cmdr::rc::run_app;
-use r3bl_tui::{CommonResult, throws};
+use r3bl_tui::{CommonResult, set_jemalloc_in_main, throws};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
+    set_jemalloc_in_main!();
+
     throws!({
         run_app().await?;
     })

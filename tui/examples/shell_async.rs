@@ -103,12 +103,15 @@ use r3bl_tui::{fg_guards_red,
                readline_async::{ReadlineAsync,
                                 ReadlineEvent,
                                 ReadlineEvent::{Eof, Interrupted, Line, Resized}},
+               set_jemalloc_in_main,
                SharedWriter};
 use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
+    set_jemalloc_in_main!();
+
     // Create a broadcast channel for shutdown.
     let (shutdown_sender, _) = tokio::sync::broadcast::channel::<()>(1);
 

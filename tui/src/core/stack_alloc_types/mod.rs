@@ -21,6 +21,7 @@ pub mod into_existing;
 pub mod items;
 pub mod list_of;
 pub mod make_new;
+pub mod memory_allocator;
 pub mod sizes;
 pub mod usize_fmt;
 

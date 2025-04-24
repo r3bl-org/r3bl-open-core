@@ -25,6 +25,7 @@ use r3bl_tui::{fg_slate_gray,
                                 HowToChoose,
                                 ReadlineAsync,
                                 StyleSheet},
+               set_jemalloc_in_main,
                try_initialize_logging_global,
                InputDevice,
                OutputDevice};
@@ -32,6 +33,8 @@ use r3bl_tui::{fg_slate_gray,
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
+    set_jemalloc_in_main!();
+
     // Initialize tracing w/ file writer.
     try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
 
