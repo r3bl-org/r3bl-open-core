@@ -73,8 +73,9 @@ async fn with_readline_async() -> miette::Result<()> {
         // Generate prompt.
         let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";
-        Some(format!("{}{}", prompt_seg_1, prompt_seg_2))
-    })?
+        Some(format!("{prompt_seg_1}{prompt_seg_2}"))
+    })
+    .await?
     else {
         return ok!();
     };

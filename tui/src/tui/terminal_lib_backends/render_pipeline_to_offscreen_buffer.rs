@@ -1012,7 +1012,7 @@ mod tests {
         let mut my_offscreen_buffer =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
         pipeline.convert(window_size, &mut my_offscreen_buffer);
-        println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+        println!("my_offscreen_buffer: \n{my_offscreen_buffer:#?}");
 
         // Line 1 (row_index = 7)
         {

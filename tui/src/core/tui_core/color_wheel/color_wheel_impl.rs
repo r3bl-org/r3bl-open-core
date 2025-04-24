@@ -350,11 +350,11 @@ impl ColorWheel {
     /// This method will reset the index to zero.
     fn reset_index(&mut self) {
         // If this is a lolcat, reset the seed, and early return.
-        if let GradientLengthKind::Lolcat(seed) = self.get_gradient_len() {
-            if let GradientKind::Lolcat(lolcat) = self.get_gradient_kind() {
-                lolcat.color_wheel_control.seed = seed;
-                return;
-            }
+        if let GradientLengthKind::Lolcat(seed) = self.get_gradient_len()
+            && let GradientKind::Lolcat(lolcat) = self.get_gradient_kind()
+        {
+            lolcat.color_wheel_control.seed = seed;
+            return;
         }
 
         // Not a lolcat so reset the index and direction.
@@ -397,7 +397,7 @@ impl ColorWheel {
                 style += default_style;
             }
             let ansi_styled_text = ast(text, style);
-            _ = write!(acc, "{}", ansi_styled_text);
+            _ = write!(acc, "{ansi_styled_text}");
         }
 
         acc
@@ -579,10 +579,10 @@ impl ColorWheel {
                 }
 
                 // Re-use gradient if possible.
-                if let GradientLengthKind::ColorWheel(length) = self.get_gradient_len() {
-                    if u8(ch(length)) != steps {
-                        self.generate_color_wheel(Some(steps));
-                    }
+                if let GradientLengthKind::ColorWheel(length) = self.get_gradient_len()
+                    && u8(ch(length)) != steps
+                {
+                    self.generate_color_wheel(Some(steps));
                 }
 
                 self.reset_index();
@@ -936,8 +936,8 @@ mod tests_color_wheel_rgb {
             None,
         );
 
-        println!("ansi_styled_string: {}", ansi_styled_string);
-        println!("ansi_styled_string: {:?}", ansi_styled_string);
+        println!("ansi_styled_string: {ansi_styled_string}");
+        println!("ansi_styled_string: {ansi_styled_string:?}");
 
         assert_eq2!(
             ansi_styled_string,

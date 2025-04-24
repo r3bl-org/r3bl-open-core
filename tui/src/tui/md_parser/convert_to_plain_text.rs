@@ -142,7 +142,7 @@ impl PrettyPrintDebug for HeadingLevel {
             pad_str: HEADING_CHAR,
             repeat_count: num_of_hashes
         );
-        _ = write!(acc, "{}", SPACE);
+        _ = write!(acc, "{SPACE}");
         acc
     }
 }

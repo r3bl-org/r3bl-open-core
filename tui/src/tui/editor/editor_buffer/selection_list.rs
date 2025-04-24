@@ -157,11 +157,11 @@ impl SelectionList {
         let ordered_row_indices = self.get_ordered_indices();
 
         for row_index in ordered_row_indices {
-            if let Some(sel_range) = self.get(row_index) {
-                if let Some(line_gcs) = lines.get(usize(row_index)) {
-                    let sel_text = sel_range.clip_to_range(line_gcs);
-                    acc.push((row_index, sel_text));
-                }
+            if let Some(sel_range) = self.get(row_index)
+                && let Some(line_gcs) = lines.get(usize(row_index))
+            {
+                let sel_text = sel_range.clip_to_range(line_gcs);
+                acc.push((row_index, sel_text));
             }
         }
 
@@ -216,10 +216,10 @@ impl SelectionList {
         &self,
         current_direction: CaretMovementDirection,
     ) -> DirectionChangeResult {
-        if let Some(previous_direction) = self.maybe_previous_direction {
-            if previous_direction != current_direction {
-                return DirectionChangeResult::DirectionHasChanged;
-            }
+        if let Some(previous_direction) = self.maybe_previous_direction
+            && previous_direction != current_direction
+        {
+            return DirectionChangeResult::DirectionHasChanged;
         }
         DirectionChangeResult::DirectionIsTheSame
     }

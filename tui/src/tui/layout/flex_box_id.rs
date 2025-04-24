@@ -83,12 +83,12 @@ mod tests {
     #[test]
     fn test_flex_box_id_debug() {
         let id = FlexBoxId::new(42);
-        assert_eq!(format!("{:?}", id), "❬42❭");
+        assert_eq!(format!("{id:?}"), "❬42❭");
     }
 
     #[test]
     fn test_flex_box_id_display() {
         let id = FlexBoxId::new(42);
-        assert_eq!(format!("{:?}", id), "❬42❭");
+        assert_eq!(format!("{id:?}"), "❬42❭");
     }
 }

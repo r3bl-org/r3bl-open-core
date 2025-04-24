@@ -22,7 +22,7 @@ pub fn get_giti_command_subcommand_names(arg: CLICommand) -> ItemsOwned {
     match arg {
         CLICommand::Branch { .. } => BranchSubcommand::value_variants()
             .iter()
-            .map(|subcommand| format!("{:?}", subcommand).to_ascii_lowercase().into())
+            .map(|subcommand| format!("{subcommand:?}").to_ascii_lowercase().into())
             .collect(),
         _ => unimplemented!(),
     }

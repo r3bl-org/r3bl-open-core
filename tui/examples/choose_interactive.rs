@@ -198,7 +198,7 @@ async fn multi_line_header() -> miette::Result<()> {
         return Ok(());
     }
 
-    println!("User selected: {:?}", user_input);
+    println!("User selected: {user_input:?}");
 
     ok!()
 }
@@ -237,7 +237,7 @@ async fn single_line_header() -> miette::Result<()> {
         return Ok(());
     }
 
-    println!("User selected: {:?}", user_input);
+    println!("User selected: {user_input:?}");
 
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
@@ -281,7 +281,7 @@ async fn multiple_select_single_item() -> miette::Result<()> {
         return Ok(());
     }
 
-    println!("User selected: {:?}", user_input);
+    println!("User selected: {user_input:?}");
 
     ok!()
 }
@@ -334,7 +334,7 @@ async fn multiple_select_13_items_vph_5(
         return Ok(());
     }
 
-    println!("User selected: {:?}", user_input);
+    println!("User selected: {user_input:?}");
 
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
@@ -382,7 +382,7 @@ async fn multiple_select_2_items_vph_5(
         return Ok(());
     }
 
-    println!("User selected: {:?}", user_input);
+    println!("User selected: {user_input:?}");
 
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
@@ -433,7 +433,7 @@ async fn single_select_13_items_vph_5(
         return Ok(());
     }
 
-    println!("User selected: {:?}", user_input);
+    println!("User selected: {user_input:?}");
 
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
@@ -480,7 +480,7 @@ async fn single_select_2_items_vph_5(
         return Ok(());
     }
 
-    println!("User selected: {:?}", user_input);
+    println!("User selected: {user_input:?}");
 
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.

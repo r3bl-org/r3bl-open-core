@@ -213,7 +213,7 @@ pub mod monitor_user_input_and_send_to_child {
                             break;
                         }
                         ControlFlow::ProcessLine(input) => {
-                            let input = format!("{}\n", input);
+                            let input = format!("{input}\n");
                             _ = stdin.write_all(input.as_bytes()).await;
                             _ = stdin.flush().await;
                         }
@@ -293,10 +293,10 @@ pub mod terminal_async_constructor {
             let prompt_str = inline_string!("┤{pid}├");
             let prompt_seg_1 = fg_slate_gray(&prompt_str).bg_moonlight_blue();
             let prompt_seg_2 = " ";
-            format!("{}{}", prompt_seg_1, prompt_seg_2)
+            format!("{prompt_seg_1}{prompt_seg_2}")
         };
 
-        let Ok(Some(readline_async)) = ReadlineAsync::try_new(Some(prompt)) else {
+        let Ok(Some(readline_async)) = ReadlineAsync::try_new(Some(prompt)).await else {
             miette::bail!("Failed to create ReadlineAsync instance");
         };
 

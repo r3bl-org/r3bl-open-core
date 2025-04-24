@@ -162,7 +162,7 @@ mod ansi_styled_text_impl {
 
     impl AnsiStyledText {
         pub fn println(&self) {
-            println!("{}", self);
+            println!("{self}");
         }
 
         pub fn print(&self) {}
@@ -172,7 +172,7 @@ mod ansi_styled_text_impl {
         /// If this buffer gets larger than [DEFAULT_STRING_STORAGE_SIZE], it will
         /// spill to the heap.
         pub fn to_small_str(&self) -> SmallString<[u8; DEFAULT_STRING_STORAGE_SIZE]> {
-            format!("{}", self).into()
+            format!("{self}").into()
         }
     }
 }
@@ -223,9 +223,9 @@ pub fn dim_underline(text: impl AsRef<str>) -> AST {
 
 // The following function is a convenience function for providing any color.
 
-pub fn fg_color(arg_color: impl Into<ASTColor>, text: &impl AsRef<str>) -> AST {
+pub fn fg_color(arg_color: impl Into<ASTColor>, text: &str) -> AST {
     AST {
-        text: text.as_ref().into(),
+        text: text.into(),
         styles: smallvec!(ASTStyle::Foreground(arg_color.into())),
     }
 }
@@ -681,7 +681,7 @@ mod display_trait_impl {
     impl Display for AST {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             for style_item in &self.styles {
-                write!(f, "{}", style_item)?;
+                write!(f, "{style_item}")?;
             }
             write!(f, "{}", self.text)?;
             write!(f, "{}", SgrCode::Reset)?;
@@ -802,16 +802,16 @@ mod tests {
                 ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
             ),
         };
-        println!("{:?}", eg_1);
-        println!("{}", eg_1);
+        println!("{eg_1:?}");
+        println!("{eg_1}");
         assert_eq!(
             format!("{:?}", eg_1),
             r#"AnsiStyledText { text: "Hello", styles: [Bold, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 }))] }"#
         );
 
         let eg_2 = eg_1.bg_dark_gray();
-        println!("{:?}", eg_2);
-        println!("{}", eg_2);
+        println!("{eg_2:?}");
+        println!("{eg_2}");
         assert_eq!(
             format!("{:?}", eg_2),
             r#"AnsiStyledText { text: "Hello", styles: [Bold, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 })), Background(Ansi(AnsiValue { index: 236 }))] }"#
@@ -824,8 +824,8 @@ mod tests {
         let eg_1 = dim("hello")
             .fg_color(tui_color!(0, 0, 0))
             .bg_color(tui_color!(1, 1, 1));
-        println!("{:?}", eg_1);
-        println!("{}", eg_1);
+        println!("{eg_1:?}");
+        println!("{eg_1}");
         assert_eq!(
             format!("{:?}", eg_1),
             r#"AnsiStyledText { text: "hello", styles: [Dim, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 })), Background(Rgb(RgbValue { red: 1, green: 1, blue: 1 }))] }"#

@@ -55,7 +55,7 @@ impl std::fmt::Display for AnalyticsAction {
             AnalyticsAction::EdiFileSave =>           "edi file save",
             AnalyticsAction::MachineIdProxyCreate =>  "proxy machine id create",
         };
-        write!(f, "{}", action)
+        write!(f, "{action}")
     }
 }
 
@@ -77,7 +77,7 @@ pub mod config_folder {
                 ConfigPaths::R3BLTopLevelFolderName => "r3bl-cmdr",
                 ConfigPaths::ProxyMachineIdFile => "id",
             };
-            write!(f, "{}", path)
+            write!(f, "{path}")
         }
     }
 
@@ -313,27 +313,27 @@ pub mod upgrade_check {
     pub fn start_task_to_check_for_updates() {
         tokio::spawn(async move {
             let result = http_client::make_get_request(GET_LATEST_VERSION_ENDPOINT).await;
-            if let Ok(response) = result {
-                if let Ok(body_text) = response.text().await {
-                    let latest_version = body_text.trim().to_string();
+            if let Ok(response) = result
+                && let Ok(body_text) = response.text().await
+            {
+                let latest_version = body_text.trim().to_string();
+                DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::info!(
+                        message = "📦📦📦 Latest version of cmdr",
+                        version = %latest_version
+                    );
+                });
+                let current_version = UPDATE_IF_NOT_THIS_VERSION.to_string();
+                if latest_version != current_version {
+                    UPDATE_REQUIRED.store(true, std::sync::atomic::Ordering::Relaxed);
                     DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
                         // % is Display, ? is Debug.
                         tracing::info!(
-                            message = "📦📦📦 Latest version of cmdr",
+                            message = "💿💿💿 There is a new version of cmdr available",
                             version = %latest_version
                         );
                     });
-                    let current_version = UPDATE_IF_NOT_THIS_VERSION.to_string();
-                    if latest_version != current_version {
-                        UPDATE_REQUIRED.store(true, std::sync::atomic::Ordering::Relaxed);
-                        DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
-                            // % is Display, ? is Debug.
-                            tracing::info!(
-                                message = "💿💿💿 There is a new version of cmdr available",
-                                version = %latest_version
-                            );
-                        });
-                    }
                 }
             }
         });

@@ -42,17 +42,17 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
 
     let it = take_text_between(start_delim, end_delim).parse(input);
 
-    if let Ok((_, output)) = &it {
-        if output.contains(NEW_LINE) {
-            DEBUG_MD_PARSER_STDOUT.then(|| {
-                println!("{} parser error out for input: {:?}", fg_red("⬢⬢"), input);
-            });
-            return Err(nom::Err::Error(nom::error::Error {
-                input: output,
-                code: ErrorKind::CrLf,
-            }));
-        };
-    }
+    if let Ok((_, output)) = &it
+        && output.contains(NEW_LINE)
+    {
+        DEBUG_MD_PARSER_STDOUT.then(|| {
+            println!("{} parser error out for input: {:?}", fg_red("⬢⬢"), input);
+        });
+        return Err(nom::Err::Error(nom::error::Error {
+            input: output,
+            code: ErrorKind::CrLf,
+        }));
+    };
 
     if it.is_err() {
         DEBUG_MD_PARSER_STDOUT.then(|| {
@@ -90,12 +90,12 @@ mod tests_parse_take_between {
     fn test_fenced() {
         let input = "_foo bar baz_";
         let it = take_text_between("_", "_").parse(input);
-        println!("it: {:?}", it);
+        println!("it: {it:?}");
         assert_eq2!(it, Ok(("", "foo bar baz")));
 
         let input = "_foo bar baz";
         let it = take_text_between("_", "_").parse(input);
-        println!("it: {:?}", it);
+        println!("it: {it:?}");
         assert_eq2!(
             it,
             Err(NomErr::Error(Error {
@@ -106,7 +106,7 @@ mod tests_parse_take_between {
 
         let input = "foo _bar_ baz";
         let it = take_text_between("_", "_").parse(input);
-        println!("it: {:?}", it);
+        println!("it: {it:?}");
         assert_eq2!(
             it,
             Err(NomErr::Error(Error {
@@ -120,7 +120,7 @@ mod tests_parse_take_between {
     fn test_parse_fenced_no_new_line() {
         let input = "_foo\nbar_";
         let it = take_text_between_delims_err_on_new_line(input, "_", "_");
-        println!("it: {:?}", it);
+        println!("it: {it:?}");
         assert_eq2!(
             it,
             Err(NomErr::Error(Error {
@@ -131,7 +131,7 @@ mod tests_parse_take_between {
 
         let input = "_foo bar_";
         let it = take_text_between_delims_err_on_new_line(input, "_", "_");
-        println!("it: {:?}", it);
+        println!("it: {it:?}");
         assert_eq2!(it, Ok(("", "foo bar")));
     }
 }

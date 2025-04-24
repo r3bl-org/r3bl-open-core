@@ -326,7 +326,7 @@ mod tests_command_runner {
             args => "Hello, world!",
             + items => items
         );
-        println!("Command: {:?}", cmd);
+        println!("Command: {cmd:?}");
     }
 
     #[tokio::test]

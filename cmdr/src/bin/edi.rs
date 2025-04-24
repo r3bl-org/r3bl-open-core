@@ -166,13 +166,13 @@ pub mod edi_ui_templates {
                     )
                 };
 
-                format!("{}\n{}", msg_line_1, msg_line_2)
+                format!("{msg_line_1}\n{msg_line_2}")
             });
         } else {
             println!("{}", {
                 let goodbye_to_user = match var("USER") {
                     Ok(username) => {
-                        format!("\n Goodbye, 👋 {}. Thanks for using 🦜 edi !", username)
+                        format!("\n Goodbye, 👋 {username}. Thanks for using 🦜 edi !")
                     }
                     Err(_) => "\n Goodbye 👋. Thanks for using 🦜 edi!".to_owned(),
                 };

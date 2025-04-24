@@ -367,7 +367,7 @@
 //!
 //! ```
 //! # use r3bl_tui::readline_async::ReadlineAsync;
-//! # use r3bl_tui::{fg_magenta, AnsiStyledText};
+//! # use r3bl_tui::{fg_magenta, AnsiStyledText, ok};
 //! # pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
 //!         let user = "naz";
@@ -376,11 +376,11 @@
 //!         let prompt_seg_3 = fg_magenta("╮").bg_dark_gray().to_string();
 //!         Some(format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3))
 //!     };
-//!     let readline_async = ReadlineAsync::try_new(prompt)?;
+//!     let readline_async = ReadlineAsync::try_new(prompt).await?;
 //!     let Some(mut readline_async) = readline_async else {
 //!         return Err(miette::miette!("Failed to create terminal").into());
 //!     };
-//!     Ok(())
+//!     ok!()
 //! # }
 //! ```
 //!

@@ -167,7 +167,7 @@ mod tests {
         {
             let pos = ScrOfs::new(col(2) + row(1));
             let mut acc = String::new();
-            let _ = write!(acc, "{:?}", pos);
+            let _ = write!(acc, "{pos:?}");
             assert_eq!(acc, "ScrOfs [c: 2, r: 1]");
         }
     }

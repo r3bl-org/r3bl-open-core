@@ -209,11 +209,15 @@ impl LineState {
     }
 
     fn reset_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
-        self.move_to_beginning(term, self.current_column)
+        self.move_to_beginning(term, self.current_column)?;
+
+        ok!()
     }
 
     fn set_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
-        self.move_from_beginning(term, self.current_column)
+        self.move_from_beginning(term, self.current_column)?;
+
+        ok!()
     }
 
     /// Clear current line.
@@ -231,7 +235,7 @@ impl LineState {
         early_return_if_paused!(self @Unit);
 
         let output = format!("{}{}", self.prompt, self.line);
-        write!(term, "{}", output)?;
+        write!(term, "{output}")?;
 
         let prompt_len =
             StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
@@ -610,14 +614,13 @@ impl LineState {
 
                         if prev_len != new_len {
                             self.move_cursor(1)?;
-                            if prev_len > 0 {
-                                if let Some((pos, str)) =
+                            if prev_len > 0
+                                && let Some((pos, str)) =
                                     self.cluster_buffer.grapheme_indices(true).next()
                                 {
                                     let len = str.len();
                                     self.cluster_buffer.replace_range(pos..len, "");
                                 }
-                            }
                         }
 
                         self.render_and_flush(term)?;

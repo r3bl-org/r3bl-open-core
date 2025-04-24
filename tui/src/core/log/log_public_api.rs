@@ -408,7 +408,7 @@ pub fn file_log(file_path: Option<&Path>, message: &str) {
     let message = if message.ends_with('\n') {
         message.to_string()
     } else {
-        format!("{}\n", message)
+        format!("{message}\n")
     };
     let mut file = OpenOptions::new()
         .create(true)

@@ -104,8 +104,8 @@ mod tests {
     fn test_no_line() {
         let input = "Something";
         let (remainder, blocks) = parse_markdown(input).unwrap();
-        println!("remainder: {:?}", remainder);
-        println!("blocks: {:?}", blocks);
+        println!("remainder: {remainder:?}");
+        println!("blocks: {blocks:?}");
         assert_eq2!(remainder, "");
         assert_eq2!(
             blocks[0],
@@ -117,8 +117,8 @@ mod tests {
     fn test_one_line() {
         let input = "Something\n";
         let (remainder, blocks) = parse_markdown(input).unwrap();
-        println!("remainder: {:?}", remainder);
-        println!("blocks: {:?}", blocks);
+        println!("remainder: {remainder:?}");
+        println!("blocks: {blocks:?}");
         assert_eq2!(remainder, "");
         assert_eq2!(
             blocks[0],
@@ -130,8 +130,8 @@ mod tests {
     fn test_parse_markdown_with_invalid_text_in_heading() {
         let input = ["# LINE 1", "", "##% LINE 2 FOO_BAR:", ""].join("\n");
         let (remainder, blocks) = parse_markdown(&input).unwrap();
-        println!("\nremainder:\n{:?}", remainder);
-        println!("\nblocks:\n{:#?}", blocks);
+        println!("\nremainder:\n{remainder:?}");
+        println!("\nblocks:\n{blocks:#?}");
         assert_eq2!(remainder, "");
         assert_eq2!(blocks.len(), 3);
         assert_eq2!(
@@ -159,8 +159,8 @@ mod tests {
     fn test_parse_markdown_single_line_plain_text() {
         let input = ["_this should not be italic", ""].join("\n");
         let (remainder, blocks) = parse_markdown(&input).unwrap();
-        println!("\nremainder:\n{:?}", remainder);
-        println!("\nblocks:\n{:?}", blocks);
+        println!("\nremainder:\n{remainder:?}");
+        println!("\nblocks:\n{blocks:?}");
         assert_eq2!(remainder, "");
         assert_eq2!(blocks.len(), 1);
         assert_eq2!(
