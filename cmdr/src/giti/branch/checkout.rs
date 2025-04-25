@@ -78,7 +78,7 @@ mod command_execute {
         // Early return if the branch does not exist locally.
         match git::local_branch_ops::exists_locally(branch_name, branches) {
             git::local_branch_ops::LocalBranch::DoesNotExist => {
-                let it = CommandRunResult::DidNotRun(
+                let it = CommandRunResult::Noop(
                     ui_str::branch_checkout_display::error_branch_does_not_exist(
                         branch_name,
                     ),
@@ -94,7 +94,7 @@ mod command_execute {
         let current_branch = res?;
 
         if branch_name == current_branch.as_str() {
-            let it = CommandRunResult::DidNotRun(
+            let it = CommandRunResult::Noop(
                 ui_str::branch_checkout_display::info_already_on_current_branch(
                     &current_branch,
                 ),
@@ -107,12 +107,10 @@ mod command_execute {
         if let (Ok(modified_unstaged_file_ops::ModifiedUnstagedFiles::Exist), _cmd) =
             modified_unstaged_file_ops::try_check_exists().await
         {
-            let it = CommandRunResult::DidNotRun(
-
+            let it = CommandRunResult::Noop(
                     ui_str::modified_files_display::warn_modified_files_on_current_branch_exist(
                         branch_name,
                     ),
-
                 details::empty(),
             );
             return Ok(it);
@@ -128,7 +126,7 @@ mod command_execute {
         let (res_output, cmd) = git::try_create_and_switch_to_branch(branch_name).await;
         match res_output {
             Ok(_) => {
-                let it = CommandRunResult::RanSuccessfully(
+                let it = CommandRunResult::Run(
                     ui_str::branch_checkout_display::info_checkout_success(
                         branch_name,
                         current_branch,
@@ -139,7 +137,7 @@ mod command_execute {
                 Ok(it)
             }
             Err(report) => {
-                let it = CommandRunResult::RanUnsuccessfullyOrFailedToRun(
+                let it = CommandRunResult::Fail(
                     ui_str::branch_checkout_display::error_failed_to_checkout_branch(
                         branch_name,
                     ),
@@ -170,7 +168,7 @@ mod user_interaction {
                         .await
                 }
                 None => {
-                    let it = CommandRunResult::DidNotRun(
+                    let it = CommandRunResult::Noop(
                         ui_str::branch_checkout_display::info_no_suitable_branch_is_available_for_checkout(),
                         details::empty(),
                     );
@@ -178,7 +176,7 @@ mod user_interaction {
                 }
             }
         } else {
-            let it = CommandRunResult::DidNotRun(
+            let it = CommandRunResult::Noop(
                 ui_str::branch_checkout_display::info_no_suitable_branch_is_available_for_checkout(),
                 details::empty(),
             );

@@ -97,6 +97,6 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
     };
 
     // User did not select anything.
-    let it = CommandRunResult::DidNotRun(ui_str::noop_message(), CommandRunDetails::Noop);
+    let it = CommandRunResult::Noop(ui_str::noop_message(), CommandRunDetails::Noop);
     Ok(it)
 }

@@ -25,28 +25,29 @@ use tokio::process::Command;
 #[derive(Debug)]
 pub enum CommandRunResult<T: Debug + Display> {
     /// Command was not run (probably because the command would be a no-op).
-    DidNotRun(
+    Noop(
         /* no-op message */ String,
-        /* command specific details */ T,
+        /* command-specific details */ T,
     ),
 
     /// Command ran, and produced success exit code.
-    RanSuccessfully(
+    Run(
         /* success message */ String,
-        /* command specific details */ T,
+        /* command-specific details */ T,
         /* command */ Command,
     ),
 
     /// Command ran and produced non-zero exit code. Or it failed to run, and never got
     /// the chance to generate an exit code.
-    RanUnsuccessfullyOrFailedToRun(
+    Fail(
         /* error message */ String,
         /* command */ Command,
         /* error report */ miette::Report,
     ),
 }
 
-mod display_impl_for_command_run_result {
+/// Display impl for [CommandRunResult]. This also generates log output.
+pub(crate) mod display_impl_for_command_run_result {
     use std::fmt::{Debug, Display, Formatter};
 
     use super::*;
@@ -61,39 +62,54 @@ mod display_impl_for_command_run_result {
     impl<T: Debug + Display> Display for CommandRunResult<T> {
         fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
             match self {
-                CommandRunResult::RanSuccessfully(message, details, cmd) => {
+                CommandRunResult::Fail(error_msg, cmd, error_report) => {
+                    let header = " 🗴 Command ran unsuccessfully";
+                    // Log output. % is Display, ? is Debug.
+                    tracing::error!(
+                        message = %header,
+                        error_msg = %error_msg,
+                        cmd = %fmt_cmd_str(cmd)?,
+                        error_report = ?error_report
+                    );
+                    // Display output.
                     write!(
                         f,
-                        "{a}\n{b}\n{c}\n{d}",
-                        a = fg_lizard_green(" 🗸 Command ran successfully"),
-                        b = message,
-                        c = details,
-                        d = fmt_cmd_str(cmd)?
-                    )?;
-
-                    write!(f, "{cmd:?}")
-                }
-                CommandRunResult::DidNotRun(message, details) => {
-                    write!(
-                        f,
-                        "{a}\n{b}\n{c}",
-                        a = fg_orange(" ❯ Command did not run").to_small_str(),
-                        b = message,
-                        c = fmt_details_str(details)?
+                        "{a}\n{b}",
+                        a = fg_pink(header).to_small_str(),
+                        b = error_msg,
                     )
                 }
-                CommandRunResult::RanUnsuccessfullyOrFailedToRun(
-                    message,
-                    cmd,
-                    output,
-                ) => {
+                CommandRunResult::Run(success_msg, cmd_details, cmd) => {
+                    let header = " 🗸 Command ran successfully";
+                    // Log output. % is Display, ? is Debug.
+                    tracing::info!(
+                        message = %header,
+                        success_msg = %success_msg,
+                        cmd_details = %fmt_details_str(cmd_details)?,
+                        cmd = %fmt_cmd_str(cmd)?
+                    );
+                    // Display output.
                     write!(
                         f,
-                        "{a}\n{b}\n{c}\n{D:?}",
-                        a = fg_pink(" 🗴 Command ran unsuccessfully").to_small_str(),
-                        b = message,
-                        c = fmt_cmd_str(cmd)?,
-                        D = output
+                        "{a}\n{b}",
+                        a = fg_lizard_green(header).to_small_str(),
+                        b = success_msg,
+                    )
+                }
+                CommandRunResult::Noop(noop_msg, cmd_details) => {
+                    let header = " ❯ No command ran";
+                    // Log output. % is Display, ? is Debug.
+                    tracing::warn!(
+                        message = %header,
+                        noop_msg = %noop_msg,
+                        cmd_details = %fmt_details_str(cmd_details)?
+                    );
+                    // Display output.
+                    write!(
+                        f,
+                        "{a}\n{b}",
+                        a = fg_orange(header).to_small_str(),
+                        b = noop_msg
                     )
                 }
             }
@@ -116,19 +132,19 @@ mod display_impl_for_command_run_result {
         let cmd_str = {
             let mut acc = InlineString::new();
 
-            writeln!(acc, " Command {{\n")?;
-            writeln!(acc, "   Program: {:?},\n", cmd.get_program())?;
+            writeln!(acc, " Command {{")?;
+            writeln!(acc, "   Program: {:?},", cmd.get_program())?;
             writeln!(
                 acc,
-                "   Args: {:?},\n",
+                "   Args: {:?},",
                 cmd.get_args().collect::<InlineVec<_>>()
             )?;
             writeln!(
                 acc,
-                "   Env: {:?},\n",
+                "   Env: {:?},",
                 cmd.get_envs().collect::<InlineVec<_>>()
             )?;
-            writeln!(acc, "   Current Dir: {:?}\n", cmd.get_current_dir())?;
+            writeln!(acc, "   Current Dir: {:?}", cmd.get_current_dir())?;
             writeln!(acc, " }}")?;
 
             acc

@@ -15,23 +15,33 @@
  *   limitations under the License.
  */
 
-//! The reason for the strange logic in the
-//! [VisitEventAndPopulateOrderedMapWithFields::record_debug] function and the
-//! [CustomEventFormatter::format_event] skipping empty field values (ie, empty body
-//! lines) is that we wanted to be able to have a `message` field where a String can be
-//! used instead of "stringify!" which just dumps the string literal. This does not allow
-//! the message to be a variable, which means it can't be composed using other glyphs,
-//! such as the ones from [crate::glyphs]. To get around this limitation, the
-//! following logic was implemented.
+//! To use this [CustomEventFormatter] with the `tracing` crate, you must register it with
+//! the `tracing_subscriber` crate. This is done in [crate::create_fmt!]. Here's an
+//! example of how you can do this with the `tracing` crate:
 //!
-//! The tracing crate deals with records that have fields. Each field has a name and
-//! value. The `message` field name is special and is automatically injected in cases
-//! where a call to `info!`, `warn!`, `error!`, etc. only has 1 expression, eg:
-//! `info!(foobar);`, `info!("foobar");` or `info!(format!("{}{}", "foo", "bar"));`.
+//! ```rust
+//! # use tracing_subscriber::{fmt::SubscriberBuilder, registry::LookupSpan};
+//! let subscriber = SubscriberBuilder::default()
+//!     .event_format(r3bl_log::core::log::CustomEventFormatter)
+//!     .finish();
+//! ```
 //!
-//! So in order to be able to create "dynamic" headings or field names, you have to
-//! explicitly use the `message` field name. Its value can then be any expression. There
-//! are lots of examples in the tests below.
+//! The reason for the strange logic in the [VisitEventAndPopulateOrderedMapWithFields::record_debug]
+//! function and the [CustomEventFormatter::format_event] skipping empty field values (ie, empty body
+//! lines) is that we wanted to be able to have a `message` field where a String can be used instead
+//! of "stringify!" which just dumps the string literal. This does not allow the message to be a
+//! variable, which means it can't be composed using other glyphs, such as the ones from
+//! [crate::glyphs]. To get around this limitation, the following logic was implemented.
+//!
+//! The tracing crate deals with records that have fields. Each field has a name and value. The
+//! `message` field name is special and is automatically injected in cases where a call to `info!`,
+//! `warn!`, `error!`, etc. only has 1 expression, eg: `info!(foobar);`, `info!("foobar");` or
+//! `info!(format!("{}{}", "foo", "bar"));`.
+//!
+//! So to be able to create "dynamic" headings or field names, you have to explicitly use the
+//! `message` field name. Its value can then be any expression. There are lots of examples in the
+//! tests below.
+
 use std::fmt::{self};
 
 use chrono::Local;
@@ -65,6 +75,8 @@ use crate::{ast,
             RgbValue,
             TuiColor};
 
+/// This is the "marker" struct that is used to register this formatter with the
+/// `tracing_subscriber` crate. Various traits are implemented for this struct.
 #[derive(Debug, Default)]
 pub struct CustomEventFormatter;
 
@@ -118,9 +130,9 @@ where
     N: for<'a> FormatFields<'a> + 'static,
 {
     /// Format the event into 2 lines:
-    /// 1. Timestamp, span context, level, and message truncated to the available visible
-    ///    width.
-    /// 2. Body that is text wrapped to the visible width.
+    /// 1. Heading: Timestamp, span context, level and message truncated to the available visible
+    ///    width (90 columns).
+    /// 2. Body: Body text wrapped to 90 columns wide.
     ///
     /// This function takes into account text that can contain emoji.
     ///
