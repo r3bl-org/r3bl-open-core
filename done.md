@@ -151,3 +151,10 @@
 
 - [x] in `giti branch delete` you can really see the jank caused by the cursor moving across the
       long prompt. clean this up and adjust all the existing examples to reflect this change.
+
+# merge tuifyasync branch into main
+
+- [x] crate a PR for tuifyasync & merge it into main
+- [x] update all the projects in `rust_scratch` to work with latest github version of `r3bl_tui`
+  - [x] `tls`
+  - [x] `tcp-api-server`

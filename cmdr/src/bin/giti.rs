@@ -32,43 +32,43 @@ use r3bl_cmdr::{AnalyticsAction,
 use r3bl_tui::{CommandRunResult,
                CommonResult,
                log::try_initialize_logging_global,
-               set_jemalloc_in_main,
-               throws};
+               ok,
+               set_jemalloc_in_main};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
     set_jemalloc_in_main!();
 
-    throws!({
-        // If no args are passed, the following line will fail, and help will be printed
-        // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
-        let cli_arg = CLIArg::parse();
+    // If no args are passed, the following line will fail, and help will be printed
+    // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
+    let cli_arg = CLIArg::parse();
 
-        let enable_logging = cli_arg.global_options.enable_logging;
-        enable_logging.then(|| {
-            try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
-            // % is Display, ? is Debug.
-            tracing::debug!(message = "Start logging...", cli_arg = ?cli_arg);
-        });
+    let enable_logging = cli_arg.global_options.enable_logging;
+    enable_logging.then(|| {
+        try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+        // % is Display, ? is Debug.
+        tracing::debug!(message = "Start logging...", cli_arg = ?cli_arg);
+    });
 
-        // Check analytics reporting.
-        if cli_arg.global_options.no_analytics {
-            report_analytics::disable();
-        }
+    // Check analytics reporting.
+    if cli_arg.global_options.no_analytics {
+        report_analytics::disable();
+    }
 
-        upgrade_check::start_task_to_check_for_updates();
-        report_analytics::start_task_to_generate_event(
-            "".to_string(),
-            AnalyticsAction::GitiAppStart,
-        );
+    upgrade_check::start_task_to_check_for_updates();
+    report_analytics::start_task_to_generate_event(
+        "".to_string(),
+        AnalyticsAction::GitiAppStart,
+    );
 
-        launch_giti(cli_arg).await;
+    launch_giti(cli_arg).await;
 
-        enable_logging.then(|| {
-            tracing::debug!(message = "Stop logging...");
-        });
-    })
+    enable_logging.then(|| {
+        tracing::debug!(message = "Stop logging...");
+    });
+
+    ok!()
 }
 
 pub async fn launch_giti(cli_arg: CLIArg) {
@@ -78,7 +78,8 @@ pub async fn launch_giti(cli_arg: CLIArg) {
             command_to_run_with_each_selection,
             maybe_branch_name,
         } => {
-            branch::try_main(command_to_run_with_each_selection, maybe_branch_name).await
+            branch::execute_command(command_to_run_with_each_selection, maybe_branch_name)
+                .await
         }
         CLICommand::Commit {} | CLICommand::Remote {} => unimplemented!(),
     };

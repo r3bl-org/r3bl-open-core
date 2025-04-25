@@ -1,13 +1,7 @@
-# merge tuifyasync branch into main
-
-- [ ] update all the projects in `rust_scratch` to work with latest github version of `r3bl_tui`
-  - [ ] `tls`
-  - [ ] `tcp-api-server`
-- [ ] crate a PR for tuifyasync & merge it into main
-
 # clean up giti phase 5
 
-- [ ] reorder `giti` commands so that `checkout` is first (not `delete`)
+- [x] reorder `giti` commands so that `checkout` is first (not `delete`)
+- [ ] fix `giti` output https://github.com/r3bl-org/r3bl-open-core/issues/418
 - [ ] use crates.io api to check for latest release to show upgrade message for `edi` and `giti`
       https://github.com/r3bl-org/r3bl-open-core/issues/415
 

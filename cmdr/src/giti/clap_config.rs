@@ -97,12 +97,14 @@ pub enum CLICommand {
     Remote {},
 }
 
+/// The ordering of these variants is important. The order in which they appear here is
+/// the order in which they are enumerated (and in some cases, displayed to the user).
 #[derive(Clone, Debug, ValueEnum)]
 pub enum BranchSubcommand {
-    #[clap(help = "Delete one or more selected branches")]
-    Delete,
     #[clap(help = "Switch to the selected branch")]
     Checkout,
     #[clap(help = "TODO Create a new branch")]
     New,
+    #[clap(help = "Delete one or more selected branches")]
+    Delete,
 }
