@@ -39,7 +39,7 @@ use crate::giti::{BranchSubcommand,
                   ui_templates::single_select_instruction_header};
 
 /// The main function to for `giti branch` command.
-pub async fn try_main(
+pub async fn execute_command(
     command_to_run_with_each_selection: Option<BranchSubcommand>,
     maybe_branch_name: Option<String>,
 ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
@@ -50,11 +50,13 @@ pub async fn try_main(
             BranchSubcommand::New => try_new(maybe_branch_name).await,
         }
     } else {
-        user_typed_giti_branch().await
+        prompt_for_sub_command().await
     }
 }
 
-async fn user_typed_giti_branch() -> CommonResult<CommandRunResult<CommandRunDetails>> {
+/// The user typed `giti branch` command with no subcommands. So prompt them for a
+/// subcommand.
+async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDetails>> {
     let branch_subcommands = get_giti_command_subcommand_names(CLICommand::Branch {
         command_to_run_with_each_selection: None,
         maybe_branch_name: None,
