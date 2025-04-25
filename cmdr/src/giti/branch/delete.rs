@@ -57,7 +57,7 @@ pub async fn try_delete() -> CommonResult<CommandRunResult<CommandRunDetails>> {
 
         // If the user didn't select any branches, we don't need to do anything.
         if branches.is_empty() {
-            return Ok(CommandRunResult::DidNotRun(
+            return Ok(CommandRunResult::Noop(
                 ui_str::branch_delete_display::info_no_branches_deleted(),
                 details::empty(),
             ));
@@ -74,7 +74,7 @@ pub async fn try_delete() -> CommonResult<CommandRunResult<CommandRunDetails>> {
         }
     }
 
-    Ok(CommandRunResult::DidNotRun(
+    Ok(CommandRunResult::Noop(
         ui_str::branch_delete_display::info_no_branches_deleted(),
         details::empty(),
     ))
@@ -230,7 +230,7 @@ mod command_execute {
         let (res_output, cmd) = git::try_delete_branches(branches).await;
         match res_output {
             Ok(_) => {
-                let it = CommandRunResult::RanSuccessfully(
+                let it = CommandRunResult::Run(
                     ui_str::branch_delete_display::info_delete_success(branches),
                     details::with_details(branches.clone()),
                     cmd,
@@ -238,7 +238,7 @@ mod command_execute {
                 Ok(it)
             }
             Err(report) => {
-                let it = CommandRunResult::RanUnsuccessfullyOrFailedToRun(
+                let it = CommandRunResult::Fail(
                     ui_str::branch_delete_display::error_failed_to_delete(branches, None),
                     cmd,
                     report,

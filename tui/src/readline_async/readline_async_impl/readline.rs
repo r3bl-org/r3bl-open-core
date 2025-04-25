@@ -468,8 +468,8 @@ impl Readline {
     /// There is an artificial delay of
     /// [READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY] added in this method so
     /// that the initial display of the cursor does not appear janky. In turn this makes
-    /// the caller of this method [ReadlineAsync::try_new()] have to wait that amount as
-    /// well.
+    /// the caller of this method [crate::ReadlineAsync::try_new()] have to wait that
+    /// amount as well.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub async fn new(
         prompt: String,

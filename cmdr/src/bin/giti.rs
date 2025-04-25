@@ -86,9 +86,13 @@ pub async fn launch_giti(cli_arg: CLIArg) {
 
     // Handle the result of the command execution.
     match res {
+        // This branch is for both successful and unsuccessful command executions. Even
+        // though the `res` is not `Err` it does not mean that the command ran
+        // successfully, it may have failed gracefully.
         Ok(cmd_run_result) => {
             display_command_run_result(cmd_run_result).await;
         }
+        // This branch is for strange errors like terminal not interactive.
         Err(error) => {
             report_unrecoverable_errors(error);
         }

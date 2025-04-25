@@ -1,7 +1,11 @@
 # clean up giti phase 5
 
 - [x] reorder `giti` commands so that `checkout` is first (not `delete`)
-- [ ] fix `giti` output https://github.com/r3bl-org/r3bl-open-core/issues/418
+- [x] fix `giti` output https://github.com/r3bl-org/r3bl-open-core/issues/418
+- [ ] decide which string to use for `CURRENT_PREFIX` = `(◕‿◕)`
+- [ ] fix `giti` ux https://github.com/r3bl-org/r3bl-open-core/issues/419
+- [ ] fix `giti branch delete <branch-name>` which currently does not work since this command
+      ignores branches that are passed as a command line arg
 - [ ] use crates.io api to check for latest release to show upgrade message for `edi` and `giti`
       https://github.com/r3bl-org/r3bl-open-core/issues/415
 
@@ -14,8 +18,6 @@
 # clean up giti phase 6
 
 - [ ] use `InlineString` & `InlineVec` in `giti` codebase (for sake of consistency)
-- [ ] fix `giti branch delete <branch-name>` which currently does not work since this command
-      ignores branches that are passed as a command line arg
 - [ ] fix clap args using `color_print::cstr` instead of directly embedding ansi escape sequences in
       the clap macro attributes `clap_config.rs`. see `rust_scratch/tcp-api-server` for examples
 - [ ] make sure that analytics calls are made consistent throughout the giti codebase (currently

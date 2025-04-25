@@ -28,14 +28,16 @@ use r3bl_tui::{ColorWheel,
                fg_silver_metallic,
                inline_string};
 
-pub const CURRENT_PREFIX: &str = "(current) ";
+pub const CURRENT_PREFIX: &str = "(◕‿◕)";
 
 pub fn unrecoverable_error_message(report: miette::Report) -> String {
     let text = format!(" Could not run giti due to the following problem.\n{report}");
     fg_pink(&text).to_string()
 }
 
-pub fn noop_message() -> String { fg_silver_metallic(" No command was run.").to_string() }
+pub fn noop_message() -> String {
+    fg_silver_metallic(" Nothing was selected to run.").to_string()
+}
 
 pub fn please_select_branch_sub_command() -> &'static str {
     "Please select a branch subcommand"
@@ -148,7 +150,7 @@ pub mod branch_create_display {
             .to_string()
     }
 
-    /// This is the [r3bl_tui::CommandRunResult::DidNotRun] message.
+    /// This is the [r3bl_tui::CommandRunResult::Noop] message.
     pub fn info_no_branch_created() -> String {
         fg_silver_metallic(" No new branch was created").to_string()
     }

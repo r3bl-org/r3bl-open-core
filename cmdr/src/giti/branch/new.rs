@@ -62,15 +62,14 @@ mod command_execute {
         if branches_trimmed.contains(&branch_name) {
             let string =
                 ui_str::branch_create_display::info_branch_already_exists(&branch_name);
-            let it =
-                CommandRunResult::DidNotRun(string, details::with_details(branch_name));
+            let it = CommandRunResult::Noop(string, details::with_details(branch_name));
             return Ok(it);
         }
 
         let (res_output, cmd) = git::try_create_and_switch_to_branch(&branch_name).await;
         match res_output {
             Ok(_) => {
-                let it = CommandRunResult::RanSuccessfully(
+                let it = CommandRunResult::Run(
                     ui_str::branch_create_display::info_create_success(&branch_name),
                     details::with_details(branch_name),
                     cmd,
@@ -82,8 +81,7 @@ mod command_execute {
                     ui_str::branch_create_display::error_failed_to_create_new_branch(
                         &branch_name,
                     );
-                let it =
-                    CommandRunResult::RanUnsuccessfullyOrFailedToRun(string, cmd, report);
+                let it = CommandRunResult::Fail(string, cmd, report);
                 Ok(it)
             }
         }
@@ -112,7 +110,7 @@ mod user_interaction {
                 }
                 ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
                     rl_async.exit(None).await.into_diagnostic()?;
-                    let it = CommandRunResult::DidNotRun(
+                    let it = CommandRunResult::Noop(
                         ui_str::branch_create_display::info_no_branch_created(),
                         details::empty(),
                     );
