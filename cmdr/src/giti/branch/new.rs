@@ -18,7 +18,7 @@
 use miette::IntoDiagnostic;
 use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsync, ReadlineEvent};
 
-use crate::giti::{BranchNewDetails, CommandRunDetails, git, ui_str};
+use crate::giti::{BranchNewDetails, CommandRunDetails, git, local_branch_ops, ui_str};
 
 /// The main function for `giti branch new` command.
 pub async fn try_new(
@@ -52,15 +52,12 @@ mod command_execute {
     pub async fn create_new_branch(
         branch_name: String,
     ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res, _cmd) =
-            git::local_branch_ops::try_get_local_branch_names_with_current_marked().await;
-        let branches = res?;
-        let branches_trimmed: Vec<String> = branches
-            .iter()
-            .map(|branch| branch.trim_start_matches("(current) ").to_string())
-            .collect();
+        let (res, _cmd) = local_branch_ops::try_get_local_branches().await;
+        let (_, branch_info) = res?;
 
-        if branches_trimmed.contains(&branch_name) {
+        if let local_branch_ops::BranchExists::Yes =
+            branch_info.exists_locally(&branch_name)
+        {
             let string =
                 ui_str::branch_create_display::info_branch_already_exists(&branch_name);
             let it = CommandRunResult::Noop(string, details::with_details(branch_name));

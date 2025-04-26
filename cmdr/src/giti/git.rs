@@ -192,111 +192,126 @@ pub async fn try_get_current_branch_name() -> ResultAndCommand<InlineString> {
 pub mod local_branch_ops {
     use super::*;
 
-    /// Get all the local branches. In the list of branches that are returned, the current
-    /// branch is prefixed with [CURRENT_PREFIX].
+    /// Information about local git branches:
+    /// - The currently checked out branch.
+    /// - List of other local branches (excluding the current one).
+    #[derive(Debug, PartialEq, Clone)]
+    pub struct LocalBranchInfo {
+        pub current_branch: InlineString,
+        pub other_branches: ItemsOwned,
+    }
+
+    #[derive(Debug, PartialEq, Clone)]
+    pub enum BranchExists {
+        Yes,
+        No,
+    }
+
+    /// Get all the local branches as a tuple.
     ///
-    /// ```
-    /// [
+    /// 1. The first item in the tuple contains the current branch is prefixed with
+    ///    [CURRENT_PREFIX].
+    ///
+    ///   ```
+    ///   [
     ///     "(◕‿◕) main",
     ///     "tuifyasync",
-    /// ]
-    /// ```
-    pub async fn try_get_local_branch_names_with_current_marked()
-    -> ResultAndCommand<ItemsOwned> {
-        // Get branches.
-        let (res, cmd) = try_execute_git_command_to_get_branches().await;
-        let Ok(branches) = res else {
+    ///   ]
+    ///   ```
+    ///
+    /// 2. The second item in the tuple contains [LocalBranchInfo].
+    pub async fn try_get_local_branches()
+    -> ResultAndCommand<(ItemsOwned, LocalBranchInfo)> {
+        let (res, cmd) = try_get_branch_info().await;
+        let Ok(info) = res else {
             let report = res.unwrap_err();
-            let err = Err(report);
-            return (err, cmd);
+            return (Err(report), cmd);
         };
 
-        // Get current branch.
-        let (res, cmd) = try_get_current_branch_name().await;
-        let Ok(current_branch) = res else {
-            let report = res.unwrap_err();
-            let err = Err(report);
-            return (err, cmd);
-        };
+        let mut items_owned = ItemsOwned::with_capacity(info.other_branches.len() + 1);
 
-        let mut items_owned = ItemsOwned::with_capacity(branches.len());
-        for branch in branches {
-            match branch == current_branch {
-                // If the branch is the current branch, prefix it with "(current)".
-                true => {
-                    items_owned.push(mark_branch_current(&branch));
-                }
-                // If the branch is not the current branch, just add it to the list.
-                false => {
-                    items_owned.push(branch);
-                }
+        // Add current branch with prefix.
+        items_owned.push(LocalBranchInfo::mark_branch_current(&info.current_branch));
+
+        // Add other branches as is.
+        items_owned.extend(info.other_branches.clone());
+
+        let tuple = (items_owned, info);
+
+        (Ok(tuple), cmd)
+    }
+
+    impl LocalBranchInfo {
+        pub fn exists_locally(&self, branch_name: &str) -> BranchExists {
+            if branch_name == self.current_branch.as_str()
+                || self.other_branches.iter().any(|b| b == branch_name)
+            {
+                BranchExists::Yes
+            } else {
+                BranchExists::No
             }
         }
 
-        (Ok(items_owned), cmd)
-    }
-
-    /// ### Input
-    /// ```
-    /// "main"
-    /// ```
-    ///
-    /// ### Output
-    /// ```
-    /// "(◕‿◕) main"
-    /// ```
-    pub fn mark_branch_current(branch_name: &str) -> InlineString {
-        let mut acc = InlineString::new();
-        use std::fmt::Write as _;
-        _ = write!(acc, "{CURRENT_PREFIX} {branch_name}");
-        acc
-    }
-
-    pub enum LocalBranch {
-        Exists,
-        DoesNotExist,
-    }
-
-    /// ### Input
-    /// ```
-    /// [
-    ///     "(◕‿◕) main",
-    ///     "tuifyasync",
-    /// ]
-    /// ```
-    ///
-    /// ### Output
-    /// ```
-    /// [
-    ///     "main",
-    ///     "tuifyasync",
-    /// ]
-    /// ```
-    pub fn filter_current_branch_prefix_from_branches(
-        branches: &ItemsOwned,
-    ) -> InlineVec<&str> {
-        branches
-            .iter()
-            .map(|item| trim_current_prefix_from_branch(item))
-            .collect()
-    }
-
-    // Add this function in local_branch_ops mod:
-    pub fn trim_current_prefix_from_branch(branch: &str) -> &str {
-        branch.trim_start_matches(CURRENT_PREFIX).trim()
-    }
-
-    /// Checks if a given branch name exists in the list of branches.
-    /// - The list of branches is produced by [super::local_branch_ops::try_get_local_branch_names_with_current_marked()].
-    /// - The current branch has a [CURRENT_PREFIX] at the start of it. So this prefix is removed when
-    ///   the check is performed.
-    pub fn exists_locally(branch_name: &str, branches: ItemsOwned) -> LocalBranch {
-        let branches_trimmed = filter_current_branch_prefix_from_branches(&branches);
-        if branches_trimmed.contains(&branch_name) {
-            LocalBranch::Exists
-        } else {
-            LocalBranch::DoesNotExist
+        /// ### Input
+        /// ```
+        /// "main"
+        /// ```
+        ///
+        /// ### Output
+        /// ```
+        /// "(◕‿◕) main"
+        /// ```
+        pub fn mark_branch_current(branch_name: &str) -> InlineString {
+            let mut acc = InlineString::new();
+            use std::fmt::Write as _;
+            _ = write!(acc, "{CURRENT_PREFIX} {branch_name}");
+            acc
         }
+
+        /// ### Input
+        /// ```
+        /// "(◕‿◕) main"
+        /// ```
+        ///
+        /// ### Output
+        /// ```
+        /// "main"
+        /// ```
+        pub fn trim_current_prefix_from_branch(branch: &str) -> &str {
+            branch.trim_start_matches(CURRENT_PREFIX).trim()
+        }
+    }
+
+    /// Returns information about local git branches:
+    /// 1. The currently checked out branch.
+    /// 2. List of other local branches (excluding the current one).
+    async fn try_get_branch_info() -> ResultAndCommand<LocalBranchInfo> {
+        // Get all branches first
+        let (res, cmd) = try_execute_git_command_to_get_branches().await;
+        let Ok(all_branches) = res else {
+            let report = res.unwrap_err();
+            return (Err(report), cmd);
+        };
+
+        // Get current branch
+        let (res, cmd) = try_get_current_branch_name().await;
+        let Ok(current_branch) = res else {
+            let report = res.unwrap_err();
+            return (Err(report), cmd);
+        };
+
+        // Filter out current branch from all branches to get other branches
+        let other_branches = all_branches
+            .into_iter()
+            .filter(|branch| branch != &current_branch)
+            .collect();
+
+        let info = LocalBranchInfo {
+            current_branch,
+            other_branches,
+        };
+
+        (Ok(info), cmd)
     }
 }
 
