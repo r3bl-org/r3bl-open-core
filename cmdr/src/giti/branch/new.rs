@@ -52,7 +52,8 @@ mod command_execute {
     pub async fn create_new_branch(
         branch_name: String,
     ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res, _cmd) = git::local_branch_ops::try_get_local_branch_names().await;
+        let (res, _cmd) =
+            git::local_branch_ops::try_get_local_branch_names_with_current_marked().await;
         let branches = res?;
         let branches_trimmed: Vec<String> = branches
             .iter()

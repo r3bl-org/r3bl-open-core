@@ -194,7 +194,15 @@ pub mod local_branch_ops {
 
     /// Get all the local branches. In the list of branches that are returned, the current
     /// branch is prefixed with [CURRENT_PREFIX].
-    pub async fn try_get_local_branch_names() -> ResultAndCommand<ItemsOwned> {
+    ///
+    /// ```
+    /// [
+    ///     "(◕‿◕) main",
+    ///     "tuifyasync",
+    /// ]
+    /// ```
+    pub async fn try_get_local_branch_names_with_current_marked()
+    -> ResultAndCommand<ItemsOwned> {
         // Get branches.
         let (res, cmd) = try_execute_git_command_to_get_branches().await;
         let Ok(branches) = res else {
@@ -228,6 +236,15 @@ pub mod local_branch_ops {
         (Ok(items_owned), cmd)
     }
 
+    /// ### Input
+    /// ```
+    /// "main"
+    /// ```
+    ///
+    /// ### Output
+    /// ```
+    /// "(◕‿◕) main"
+    /// ```
     pub fn mark_branch_current(branch_name: &str) -> InlineString {
         let mut acc = InlineString::new();
         use std::fmt::Write as _;
@@ -240,17 +257,41 @@ pub mod local_branch_ops {
         DoesNotExist,
     }
 
-    /// Checks if a given branch name exists in the list of branches.
-    /// - The list of branches is produced by
-    ///   [super::local_branch_ops::try_get_local_branch_names()].
-    /// - The current branch has a [CURRENT_PREFIX] at the start of it. So this prefix is
-    ///   removed when the check is performed.
-    pub fn exists_locally(branch_name: &str, branches: ItemsOwned) -> LocalBranch {
-        let branches_trimmed = branches
+    /// ### Input
+    /// ```
+    /// [
+    ///     "(◕‿◕) main",
+    ///     "tuifyasync",
+    /// ]
+    /// ```
+    ///
+    /// ### Output
+    /// ```
+    /// [
+    ///     "main",
+    ///     "tuifyasync",
+    /// ]
+    /// ```
+    pub fn filter_current_branch_prefix_from_branches(
+        branches: &ItemsOwned,
+    ) -> InlineVec<&str> {
+        branches
             .iter()
-            .map(|branch| branch.trim_start_matches(CURRENT_PREFIX))
-            .collect::<InlineVec<&str>>();
+            .map(|item| trim_current_prefix_from_branch(item))
+            .collect()
+    }
 
+    // Add this function in local_branch_ops mod:
+    pub fn trim_current_prefix_from_branch(branch: &str) -> &str {
+        branch.trim_start_matches(CURRENT_PREFIX).trim()
+    }
+
+    /// Checks if a given branch name exists in the list of branches.
+    /// - The list of branches is produced by [super::local_branch_ops::try_get_local_branch_names_with_current_marked()].
+    /// - The current branch has a [CURRENT_PREFIX] at the start of it. So this prefix is removed when
+    ///   the check is performed.
+    pub fn exists_locally(branch_name: &str, branches: ItemsOwned) -> LocalBranch {
+        let branches_trimmed = filter_current_branch_prefix_from_branches(&branches);
         if branches_trimmed.contains(&branch_name) {
             LocalBranch::Exists
         } else {
