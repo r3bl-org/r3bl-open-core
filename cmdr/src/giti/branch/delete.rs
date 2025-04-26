@@ -49,12 +49,13 @@ pub async fn try_delete() -> CommonResult<CommandRunResult<CommandRunDetails>> {
 
     // Only proceed if some local branches exist (can't delete anything if there aren't
     // any).
-    let (res, _cmd) =
-        git::local_branch_ops::try_get_local_branch_names_with_current_marked().await;
-    if let Ok(branches) = res
-        && !branches.is_empty()
+    let (res, _cmd) = git::local_branch_ops::try_get_local_branches().await;
+    if let Ok((_, branch_info)) = res
+        && !branch_info.other_branches.is_empty()
     {
-        let branches = user_interaction::select_branches_to_delete(branches).await?;
+        let branches =
+            user_interaction::select_branches_to_delete(branch_info.other_branches)
+                .await?;
 
         // If the user didn't select any branches, we don't need to do anything.
         if branches.is_empty() {

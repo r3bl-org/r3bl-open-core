@@ -72,13 +72,12 @@ mod command_execute {
     pub async fn checkout_branch_if_not_current(
         branch_name: &str,
     ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res, _cmd) =
-            git::local_branch_ops::try_get_local_branch_names_with_current_marked().await;
-        let branches = res?;
+        let (res, _cmd) = git::local_branch_ops::try_get_local_branches().await;
+        let (_, branch_info) = res?;
 
         // Early return if the branch does not exist locally.
-        match git::local_branch_ops::exists_locally(branch_name, branches) {
-            git::local_branch_ops::LocalBranch::DoesNotExist => {
+        match branch_info.exists_locally(branch_name) {
+            git::local_branch_ops::BranchExists::No => {
                 let it = CommandRunResult::Noop(
                     ui_str::branch_checkout_display::error_branch_does_not_exist(
                         branch_name,
@@ -156,23 +155,17 @@ mod user_interaction {
 
     pub async fn handle_branch_selection()
     -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res, _cmd) =
-            git::local_branch_ops::try_get_local_branch_names_with_current_marked().await;
-        if let Ok(branches) = res {
+        let (res, _cmd) = git::local_branch_ops::try_get_local_branches().await;
+        if let Ok((_, branch_info)) = res {
             let header = create_branch_selection_header();
-
-            let (res, _cmd) = git::try_get_current_branch_name().await;
-            let current_branch = res?;
-
-            match prompt_user_to_select_branch(header, branches).await? {
+            match prompt_user_to_select_branch(header, branch_info.other_branches).await?
+            {
                 Some(selected_branch) => {
-                    // Remove the current branch prefix (if any) from the selected branch.
-                    let selected_branch =
-                        git::local_branch_ops::trim_current_prefix_from_branch(
-                            &selected_branch,
-                        );
-                    command_execute::checkout_branch(selected_branch, &current_branch)
-                        .await
+                    command_execute::checkout_branch(
+                        &selected_branch,
+                        &branch_info.current_branch,
+                    )
+                    .await
                 }
                 None => {
                     let it = CommandRunResult::Noop(
@@ -193,16 +186,9 @@ mod user_interaction {
 
     async fn prompt_user_to_select_branch(
         arg_header: impl Into<Header>,
-        branches: ItemsOwned,
+        branches_with_current_removed: ItemsOwned,
     ) -> CommonResult<Option<InlineString>> {
         let mut default_io_devices = DefaultIoDevices::default();
-
-        // Remove the current branch from the list of branches.
-        let branches_with_current_removed = branches
-            .iter()
-            .filter(|branch| !branch.contains("(current)"))
-            .cloned()
-            .collect::<InlineVec<InlineString>>();
 
         // There are no branches to select from, so return None.
         if branches_with_current_removed.is_empty() {

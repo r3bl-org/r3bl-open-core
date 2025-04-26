@@ -158,3 +158,8 @@
 - [x] update all the projects in `rust_scratch` to work with latest github version of `r3bl_tui`
   - [x] `tls`
   - [x] `tcp-api-server`
+
+# clean up giti phase 5
+
+- [x] reorder `giti` commands so that `checkout` is first (not `delete`)
+- [x] fix `giti` output https://github.com/r3bl-org/r3bl-open-core/issues/418
