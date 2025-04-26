@@ -132,7 +132,7 @@ pub mod branch_checkout_display {
     }
 
     pub fn error_branch_does_not_exist(branch_name: &str) -> String {
-        let text = format!("Branch `{branch_name}` does not exist.");
+        let text = format!(" Branch `{branch_name}` does not exist.");
         fg_pink(&text).to_string()
     }
 

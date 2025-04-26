@@ -72,7 +72,8 @@ mod command_execute {
     pub async fn checkout_branch_if_not_current(
         branch_name: &str,
     ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res, _cmd) = git::local_branch_ops::try_get_local_branch_names().await;
+        let (res, _cmd) =
+            git::local_branch_ops::try_get_local_branch_names_with_current_marked().await;
         let branches = res?;
 
         // Early return if the branch does not exist locally.
@@ -155,7 +156,8 @@ mod user_interaction {
 
     pub async fn handle_branch_selection()
     -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res, _cmd) = git::local_branch_ops::try_get_local_branch_names().await;
+        let (res, _cmd) =
+            git::local_branch_ops::try_get_local_branch_names_with_current_marked().await;
         if let Ok(branches) = res {
             let header = create_branch_selection_header();
 
@@ -164,7 +166,12 @@ mod user_interaction {
 
             match prompt_user_to_select_branch(header, branches).await? {
                 Some(selected_branch) => {
-                    command_execute::checkout_branch(&selected_branch, &current_branch)
+                    // Remove the current branch prefix (if any) from the selected branch.
+                    let selected_branch =
+                        git::local_branch_ops::trim_current_prefix_from_branch(
+                            &selected_branch,
+                        );
+                    command_execute::checkout_branch(selected_branch, &current_branch)
                         .await
                 }
                 None => {
@@ -187,7 +194,7 @@ mod user_interaction {
     async fn prompt_user_to_select_branch(
         arg_header: impl Into<Header>,
         branches: ItemsOwned,
-    ) -> CommonResult<Option<String>> {
+    ) -> CommonResult<Option<InlineString>> {
         let mut default_io_devices = DefaultIoDevices::default();
 
         // Remove the current branch from the list of branches.
@@ -213,7 +220,7 @@ mod user_interaction {
         )
         .await?;
 
-        Ok(selected_branch.first().map(|branch| branch.to_string()))
+        Ok(selected_branch.first().cloned())
     }
 
     fn create_branch_selection_header() -> InlineVec<InlineVec<AnsiStyledText>> {
