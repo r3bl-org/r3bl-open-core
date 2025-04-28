@@ -20,6 +20,7 @@
 // Attach sources.
 pub mod apt_install;
 pub mod command_impl;
+pub mod crates_api;
 pub mod directory_change;
 pub mod directory_create;
 pub mod download;
@@ -32,6 +33,7 @@ pub mod permissions;
 // Re-export.
 pub use apt_install::*;
 pub use command_impl::*;
+pub use crates_api::*;
 pub use directory_change::*;
 pub use directory_create::*;
 pub use download::*;

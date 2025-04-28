@@ -186,14 +186,14 @@ macro_rules! console_log {
     ) => {
         /* Enclose the expansion in a block so that we can use multiple statements. */
         {
-            use $crate::{fg_pink, fg_lizard_green};
+            use $crate::{fg_pink, fg_lizard_green, fg_light_yellow_green};
             /* Start a repetition. */
             $(
                 /* Each repeat will contain the following statement, with $element replaced. */
                 println!(
                     "{} {} <- {}",
                     fg_pink("▶"),
-                    &format!("{:#?}", $element),
+                    fg_light_yellow_green(&format!("{:#?}", $element)),
                     fg_lizard_green(stringify!($element)).underline()
                 );
             )*

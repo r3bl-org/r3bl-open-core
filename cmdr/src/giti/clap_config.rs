@@ -33,7 +33,7 @@ pub fn get_giti_command_subcommand_names(arg: CLICommand) -> ItemsOwned {
 #[command(
     about = "😺 Version control with confidence 💪\n\x1b[38;5;206mEarly access preview \x1b[0m🐣"
 )]
-#[command(version)]
+#[command(version)] /* #[command(version = env!("CARGO_PKG_VERSION"))] */
 #[command(next_line_help = true)]
 #[command(arg_required_else_help(true))]
 /// More info: <https://docs.rs/clap/latest/clap/struct.Command.html#method.help_template>

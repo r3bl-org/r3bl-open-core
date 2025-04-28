@@ -24,7 +24,7 @@ mod constants {
     pub const VERSION_PREFIX: &str = "v";
 }
 
-pub mod urls {
+mod urls {
     pub const REPO_LATEST_RELEASE: &str =
         "https://api.github.com/repos/{org}/{repo}/releases/latest";
 }
