@@ -38,6 +38,18 @@ use crate::giti::{BranchCheckoutDetails,
                   modified_unstaged_file_ops,
                   ui_str};
 
+/// The main function for `giti branch checkout` command.
+pub async fn handle_branch_checkout_command(
+    maybe_branch_name: Option<String>,
+) -> CommonResult<CommandRunResult<CommandRunDetails>> {
+    match maybe_branch_name {
+        Some(ref branch_name) => {
+            command_execute::checkout_branch_if_not_current(branch_name).await
+        }
+        None => user_interaction::handle_branch_selection().await,
+    }
+}
+
 mod details {
     use super::*;
 
@@ -51,18 +63,6 @@ mod details {
         CommandRunDetails::BranchCheckout(BranchCheckoutDetails {
             maybe_checked_out_branch: Some(branch_name),
         })
-    }
-}
-
-/// The main function for `giti branch new` command.
-pub async fn try_checkout(
-    maybe_branch_name: Option<String>,
-) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-    match maybe_branch_name {
-        Some(ref branch_name) => {
-            command_execute::checkout_branch_if_not_current(branch_name).await
-        }
-        None => user_interaction::handle_branch_selection().await,
     }
 }
 

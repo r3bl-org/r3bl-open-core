@@ -158,21 +158,21 @@ macro_rules! call_if_true {
 #[macro_export]
 macro_rules! console_log {
     (ERROR_RAW $msg:expr, $err:expr) => {{
-        use $crate::{fg_red, fg_green, underline};
+        use $crate::{fg_pink, fg_lizard_green, italic};
         eprintln!(
             "{} {} {}\r",
-            fg_red("▶"),
-            fg_green($msg),
-            underline(&format!("{:#?}", $err))
+            fg_pink("▶"),
+            fg_lizard_green($msg),
+            italic(&format!("{:#?}", $err))
         );
     }};
 
     (OK_RAW $msg:expr) => {{
-        use $crate::{fg_red, fg_green};
+        use $crate::{fg_pink, fg_lizard_green};
         println!(
             "{} {}\r",
-            fg_red("▶"),
-            fg_green($msg)
+            fg_pink("▶"),
+            fg_lizard_green($msg)
         );
     }};
 
@@ -186,15 +186,15 @@ macro_rules! console_log {
     ) => {
         /* Enclose the expansion in a block so that we can use multiple statements. */
         {
-            use $crate::{fg_red, fg_green, underline};
+            use $crate::{fg_pink, fg_lizard_green};
             /* Start a repetition. */
             $(
                 /* Each repeat will contain the following statement, with $element replaced. */
                 println!(
                     "{} {} <- {}",
-                    fg_red("▶"),
-                    underline(&format!("{:#?}", $element)),
-                    fg_green(stringify!($element))
+                    fg_pink("▶"),
+                    &format!("{:#?}", $element),
+                    fg_lizard_green(stringify!($element)).underline()
                 );
             )*
         }

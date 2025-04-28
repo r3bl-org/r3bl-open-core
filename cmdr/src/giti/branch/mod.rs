@@ -16,13 +16,13 @@
  */
 
 // Attach.
-pub mod checkout;
-pub mod delete;
-pub mod executor;
-pub mod new;
+pub mod branch_checkout_command;
+pub mod branch_command;
+pub mod branch_delete_command;
+pub mod branch_new_command;
 
 // Re-export.
-pub use checkout::*;
-pub use delete::*;
-pub use executor::*;
-pub use new::*;
+pub use branch_checkout_command::*;
+pub use branch_command::*;
+pub use branch_delete_command::*;
+pub use branch_new_command::*;

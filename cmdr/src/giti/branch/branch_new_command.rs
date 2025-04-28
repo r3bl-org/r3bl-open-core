@@ -21,7 +21,7 @@ use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsync, ReadlineEvent};
 use crate::giti::{BranchNewDetails, CommandRunDetails, git, local_branch_ops, ui_str};
 
 /// The main function for `giti branch new` command.
-pub async fn try_new(
+pub async fn handle_branch_new_command(
     maybe_branch_name: Option<String>,
 ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
     match maybe_branch_name {

@@ -35,17 +35,64 @@ use crate::{AnalyticsAction,
             giti::{BranchDeleteDetails,
                    CommandRunDetails,
                    git::{self},
+                   local_branch_ops::BranchExists,
                    ui_str::{self},
                    ui_templates::{multi_select_instruction_header,
                                   single_select_instruction_header}},
             report_analytics};
 
 /// The main function for `giti branch delete` command.
-pub async fn try_delete() -> CommonResult<CommandRunResult<CommandRunDetails>> {
+pub async fn handle_branch_delete_command(
+    maybe_branch_name: Option<String>,
+) -> CommonResult<CommandRunResult<CommandRunDetails>> {
     report_analytics::start_task_to_generate_event(
         "".to_string(),
         AnalyticsAction::GitiBranchDelete,
     );
+
+    // Handle case when branch name is provided directly.
+    if let Some(branch_name) = maybe_branch_name {
+        // Validate branch name; return early if:
+        // - branch_name is empty.
+        // - branch_name does not exist locally.
+        // - branch_name is the same as the current branch.
+        let branch_name: InlineString = branch_name.trim().into();
+        let (res, _cmd) = git::local_branch_ops::try_get_local_branches().await;
+        let (_, branch_info) = res?;
+        if branch_name.is_empty()
+            || branch_info.exists_locally(&branch_name) == BranchExists::No
+            || branch_info.current_branch == branch_name
+        {
+            return Ok(CommandRunResult::Noop(
+                ui_str::branch_delete_display::info_unable_to_delete_branch(),
+                details::empty(),
+            ));
+        }
+
+        // Ask user for confirmation to delete the branch.
+        let branch_to_delete = branch_name.into();
+        let (confirm_header, confirm_options) =
+            user_interaction::create_confirmation_prompt(&branch_to_delete);
+        let selected_action =
+            user_interaction::get_user_confirmation(confirm_header, confirm_options)
+                .await?;
+
+        match selected_action {
+            // Actually delete the branch.
+            parse_user_choice::Selection::Delete => {
+                return command_execute::delete_selected_branches(&branch_to_delete)
+                    .await;
+            }
+            // Do nothing.
+            _ => {
+                return Ok(CommandRunResult::Noop(
+                    ui_str::branch_delete_display::info_user_chose_not_to_delete_branches(
+                    ),
+                    details::empty(),
+                ));
+            }
+        }
+    }
 
     // Only proceed if some local branches exist (can't delete anything if there aren't
     // any).
@@ -60,7 +107,7 @@ pub async fn try_delete() -> CommonResult<CommandRunResult<CommandRunDetails>> {
         // If the user didn't select any branches, we don't need to do anything.
         if branches.is_empty() {
             return Ok(CommandRunResult::Noop(
-                ui_str::branch_delete_display::info_no_branches_deleted(),
+                ui_str::branch_delete_display::info_user_chose_not_to_delete_branches(),
                 details::empty(),
             ));
         }
@@ -77,7 +124,7 @@ pub async fn try_delete() -> CommonResult<CommandRunResult<CommandRunDetails>> {
     }
 
     Ok(CommandRunResult::Noop(
-        ui_str::branch_delete_display::info_no_branches_deleted(),
+        ui_str::branch_delete_display::info_user_chose_not_to_delete_branches(),
         details::empty(),
     ))
 }

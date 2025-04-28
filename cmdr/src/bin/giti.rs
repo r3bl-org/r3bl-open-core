@@ -44,8 +44,9 @@ async fn main() -> CommonResult<()> {
     // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
     let cli_arg = CLIArg::parse();
 
-    let enable_logging = cli_arg.global_options.enable_logging;
-    enable_logging.then(|| {
+    let should_log = cli_arg.global_options.enable_logging;
+
+    should_log.then(|| {
         try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
         // % is Display, ? is Debug.
         tracing::debug!(message = "Start logging...", cli_arg = ?cli_arg);
@@ -64,7 +65,7 @@ async fn main() -> CommonResult<()> {
 
     launch_giti(cli_arg).await;
 
-    enable_logging.then(|| {
+    should_log.then(|| {
         tracing::debug!(message = "Stop logging...");
     });
 
@@ -75,13 +76,11 @@ pub async fn launch_giti(cli_arg: CLIArg) {
     // Figure out which control path to take. Then execute the command for that path.
     let res = match cli_arg.command {
         CLICommand::Branch {
-            command_to_run_with_each_selection,
+            sub_cmd,
             maybe_branch_name,
-        } => {
-            branch::execute_command(command_to_run_with_each_selection, maybe_branch_name)
-                .await
-        }
-        CLICommand::Commit {} | CLICommand::Remote {} => unimplemented!(),
+        } => branch::handle_branch_command(sub_cmd, maybe_branch_name).await,
+        CLICommand::Commit {} => unimplemented!(),
+        CLICommand::Remote {} => unimplemented!(),
     };
 
     // Handle the result of the command execution.
