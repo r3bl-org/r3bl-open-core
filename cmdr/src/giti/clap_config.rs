@@ -79,14 +79,21 @@ pub enum CLICommand {
     /// More info: <https://docs.rs/clap/latest/clap/struct.Command.html#method.help_template>
     #[command(
             /* cSpell:disable-next-line */
-            help_template = "{about} \n\nUSAGE 📓:\n  giti branch [\x1b[34mcommand\x1b[0m] [\x1b[32moptions\x1b[0m]\n\n{positionals}\n\n  [options]\n{options}"
+            help_template = "{about} \n\nUSAGE 📓:\n  giti branch [\x1b[34mcommand\x1b[0m] [\x1b[32mbranch_name\x1b[0m] [\x1b[32moptions\x1b[0m]\n\n{positionals}\n\n  [options]\n{options}"
         )]
     Branch {
         #[arg(
             value_name = "command",
             help = "In your shell, this command will execute, taking each selected item as an argument."
         )]
-        command_to_run_with_each_selection: Option<BranchSubcommand>,
+        /// Run this sub command with each selected item as an argument, if
+        /// `maybe_branch_name` is not provided.
+        sub_cmd: Option<BranchSubcommand>,
+        #[arg(
+            value_name = "branch_name",
+            help = "Optional branch name to use with the sub command."
+        )]
+        /// Optional branch name to use with the sub command.
         maybe_branch_name: Option<String>,
     },
 

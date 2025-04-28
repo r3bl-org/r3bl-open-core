@@ -177,7 +177,11 @@ pub mod branch_create_display {
 pub mod branch_delete_display {
     use super::*;
 
-    pub fn info_no_branches_deleted() -> String {
+    pub fn info_unable_to_delete_branch() -> String {
+        fg_silver_metallic(" Branch not found or currently checked out.").to_string()
+    }
+
+    pub fn info_user_chose_not_to_delete_branches() -> String {
         fg_silver_metallic(" You chose not to delete any branches.").to_string()
     }
 

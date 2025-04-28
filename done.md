@@ -163,3 +163,17 @@
 
 - [x] reorder `giti` commands so that `checkout` is first (not `delete`)
 - [x] fix `giti` output https://github.com/r3bl-org/r3bl-open-core/issues/418
+
+# clean up giti phase 6
+
+- [x] use newtype pattern to make sense of how git commands produce branches so that current branch
+      and not-current branches are represented naturally. there can be a conversion from
+      "(current-branch, branches)" into some struct that can implement `Display`, and transform from
+      UI selections to this struct.
+- [x] decide which string to use for `CURRENT_PREFIX` = `(◕‿◕)`
+- [x] fix `giti` ux https://github.com/r3bl-org/r3bl-open-core/issues/419
+
+# clean up giti phase 7
+
+- [x] fix `giti branch delete <branch-name>` which currently does not work since this command
+      ignores branches that are passed as a command line arg

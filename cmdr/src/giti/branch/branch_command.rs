@@ -32,22 +32,28 @@ use crate::giti::{BranchSubcommand,
                   CLICommand,
                   CommandRunDetails,
                   get_giti_command_subcommand_names,
-                  try_checkout,
-                  try_delete,
-                  try_new,
+                  handle_branch_checkout_command,
+                  handle_branch_delete_command,
+                  handle_branch_new_command,
                   ui_str,
                   ui_templates::single_select_instruction_header};
 
-/// The main function to for `giti branch` command.
-pub async fn execute_command(
-    command_to_run_with_each_selection: Option<BranchSubcommand>,
+/// The main function to for `giti branch` command. This is the main routing function that
+/// directs execution flow to the appropriate subcommand handler: `checkout`, `delete`,
+/// `new`.
+pub async fn handle_branch_command(
+    sub_cmd: Option<BranchSubcommand>,
     maybe_branch_name: Option<String>,
 ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-    if let Some(subcommand) = command_to_run_with_each_selection {
+    if let Some(subcommand) = sub_cmd {
         match subcommand {
-            BranchSubcommand::Delete => try_delete().await,
-            BranchSubcommand::Checkout => try_checkout(maybe_branch_name).await,
-            BranchSubcommand::New => try_new(maybe_branch_name).await,
+            BranchSubcommand::Delete => {
+                handle_branch_delete_command(maybe_branch_name).await
+            }
+            BranchSubcommand::Checkout => {
+                handle_branch_checkout_command(maybe_branch_name).await
+            }
+            BranchSubcommand::New => handle_branch_new_command(maybe_branch_name).await,
         }
     } else {
         prompt_for_sub_command().await
@@ -58,7 +64,7 @@ pub async fn execute_command(
 /// subcommand.
 async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDetails>> {
     let branch_subcommands = get_giti_command_subcommand_names(CLICommand::Branch {
-        command_to_run_with_each_selection: None,
+        sub_cmd: None,
         maybe_branch_name: None,
     });
 
@@ -87,9 +93,13 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
     if let Some(selected) = selected.first() {
         if let Ok(branch_subcommand) = BranchSubcommand::from_str(selected, true) {
             match branch_subcommand {
-                BranchSubcommand::Delete => return try_delete().await,
-                BranchSubcommand::Checkout => return try_checkout(None).await,
-                BranchSubcommand::New => return try_new(None).await,
+                BranchSubcommand::Delete => {
+                    return handle_branch_delete_command(None).await;
+                }
+                BranchSubcommand::Checkout => {
+                    return handle_branch_checkout_command(None).await;
+                }
+                BranchSubcommand::New => return handle_branch_new_command(None).await,
             }
         } else {
             unimplemented!();

@@ -470,6 +470,11 @@ impl AST {
         self
     }
 
+    pub fn underline(mut self) -> Self {
+        self.styles.push(ASTStyle::Underline);
+        self
+    }
+
     pub fn bg_color(mut self, arg_color: impl Into<ASTColor>) -> Self {
         let color: ASTColor = arg_color.into();
         self.styles.push(ASTStyle::Background(color));
