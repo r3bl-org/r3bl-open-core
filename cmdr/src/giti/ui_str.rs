@@ -17,11 +17,8 @@
 
 use std::process::Output;
 
-use r3bl_tui::{ColorWheel,
-               GradientGenerationPolicy,
-               InlineString,
+use r3bl_tui::{InlineString,
                ItemsOwned,
-               TextColorizationPolicy,
                fg_frozen_blue,
                fg_lizard_green,
                fg_pink,
@@ -41,39 +38,6 @@ pub fn noop_message() -> String {
 
 pub fn please_select_branch_sub_command() -> &'static str {
     "Please select a branch subcommand"
-}
-
-pub fn upgrade_required_message() -> InlineString {
-    let plain_text_exit_msg = inline_string!(
-        "{}\n{}",
-        "💿 A new version of giti is available.",
-        "Run `cargo install r3bl-cmdr` to upgrade 🙌."
-    );
-
-    ColorWheel::default().colorize_into_string(
-        &plain_text_exit_msg,
-        GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-        TextColorizationPolicy::ColorEachCharacter(None),
-        None,
-    )
-}
-
-pub fn goodbye_thanks_for_using_giti() -> InlineString {
-    let goodbye = match std::env::var("USER") {
-        Ok(username) => {
-            inline_string!("\n Goodbye, 👋 {username}. Thanks for using 😺 giti!")
-        }
-        Err(_) => inline_string!("\n Goodbye 👋.\n\n 😺 giti!"),
-    };
-
-    let please_star_us = inline_string!(
-        " Please report issues & star us on GitHub: 🌟 🐞 \
-        https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
-    );
-
-    let combined = inline_string!("{goodbye}\n{please_star_us}");
-
-    ColorWheel::lolcat_into_string(&combined, None)
 }
 
 pub mod modified_files_display {

@@ -75,6 +75,8 @@ pub const TIRE_MARKS_GLYPH: &str = "␩";
 pub const VERT_LINE_DASHED_GLYPH: &str = "┆";
 pub const DIRECTION_GLYPH: &str = "➤";
 pub const USER_INPUT_GLYPH: &str = "↹"; //"⿻";
+pub const TERMINAL: &str = "";
+pub const PROMPT: &str = "❯";
 
 pub const LOADING_GLYPH: &str = "░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█

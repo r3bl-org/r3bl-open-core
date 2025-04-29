@@ -15,19 +15,12 @@
  *   limitations under the License.
  */
 
-use std::env::var;
-
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction, edi::launcher, report_analytics, upgrade_check};
-use r3bl_tui::{ColorWheel,
-               CommonResult,
+use r3bl_tui::{CommonResult,
                DefaultIoDevices,
-               GradientGenerationPolicy,
                InlineString,
-               TextColorizationPolicy,
                choose,
-               fg_lizard_green,
-               fg_slate_gray,
                height,
                log::try_initialize_logging_global,
                readline_async::{HowToChoose, StyleSheet},
@@ -106,7 +99,7 @@ async fn main() -> CommonResult<()> {
         });
 
         // Exit message.
-        edi_ui_templates::print_exit_message();
+        upgrade_check::show_exit_message().await;
     })
 }
 
@@ -143,51 +136,6 @@ pub mod edi_ui_templates {
 
         // Otherwise, return None.
         None
-    }
-
-    pub fn print_exit_message() {
-        if upgrade_check::is_update_required() {
-            println!("{}", {
-                let msg_line_1 = {
-                    ColorWheel::default().colorize_into_string(
-                        "New version of edi is available 📦.",
-                        GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                        TextColorizationPolicy::ColorEachCharacter(None),
-                        None,
-                    )
-                };
-
-                let msg_line_2 = {
-                    format!(
-                        "{a}{b}{c}",
-                        a = fg_slate_gray("Run `"),
-                        b = fg_lizard_green("cargo install r3bl-cmdr"),
-                        c = fg_slate_gray("` to upgrade 🚀."),
-                    )
-                };
-
-                format!("{msg_line_1}\n{msg_line_2}")
-            });
-        } else {
-            println!("{}", {
-                let goodbye_to_user = match var("USER") {
-                    Ok(username) => {
-                        format!("\n Goodbye, 👋 {username}. Thanks for using 🦜 edi !")
-                    }
-                    Err(_) => "\n Goodbye 👋. Thanks for using 🦜 edi!".to_owned(),
-                };
-
-                let please_star_us = format!(
-                    "{}: {}",
-                    " Please star us and report issues on GitHub",
-                    "🌟 🐞 https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
-                );
-
-                let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
-
-                ColorWheel::lolcat_into_string(&plain_text_exit_msg, None)
-            });
-        }
     }
 }
 
