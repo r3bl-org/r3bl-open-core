@@ -1,6 +1,6 @@
 [package]
 name = "r3bl-cmdr"
-version = "0.0.16"
+version = "0.0.17"
 readme = "README.md"
 edition = "2024"
 homepage = "https://r3bl.com"

@@ -17,8 +17,6 @@
 
 use r3bl_tui::{AST, AnsiStyledText, InlineVec, ast_line, ast_lines, fg_slate_gray};
 
-use crate::{giti::ui_str, upgrade_check};
-
 /// This is the instruction header for the multi select list. It is used when the user can
 /// select multiple items from the list. The instructions are displayed at the top of the
 /// list. This is easily converted into a [r3bl_tui::choose_impl::Header::MultiLine].
@@ -67,14 +65,4 @@ pub fn single_select_instruction_header(
     last_lines.iter().for_each(|line| acc.push(line.clone()));
 
     acc
-}
-
-pub fn show_exit_message() {
-    if upgrade_check::is_update_required() {
-        let upgrade_reqd_msg = ui_str::upgrade_required_message();
-        println!("{upgrade_reqd_msg}");
-    } else {
-        let exit_msg = ui_str::goodbye_thanks_for_using_giti();
-        println!("{exit_msg}");
-    }
 }

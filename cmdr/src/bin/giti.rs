@@ -21,12 +21,7 @@
 
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
-                giti::{CLIArg,
-                       CLICommand,
-                       CommandRunDetails,
-                       branch,
-                       ui_str,
-                       ui_templates::{self}},
+                giti::{CLIArg, CLICommand, CommandRunDetails, branch, ui_str},
                 report_analytics,
                 upgrade_check};
 use r3bl_tui::{CommandRunResult,
@@ -119,5 +114,5 @@ pub async fn display_command_run_result(
     cmd_run_result: CommandRunResult<CommandRunDetails>,
 ) {
     println!("{cmd_run_result}");
-    ui_templates::show_exit_message();
+    upgrade_check::show_exit_message().await;
 }

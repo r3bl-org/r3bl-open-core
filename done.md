@@ -177,3 +177,10 @@
 
 - [x] fix `giti branch delete <branch-name>` which currently does not work since this command
       ignores branches that are passed as a command line arg
+
+# clean up giti phase 8
+
+- [x] use crates.io api to check for latest release to show upgrade message for `edi` and `giti`
+      https://github.com/r3bl-org/r3bl-open-core/issues/415
+- [x] Test this by changing the local version number so it's different from the crates.io version
+      for r3bl-cmdr `cmdr/src/analytics_client.rs:308`
