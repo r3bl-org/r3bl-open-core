@@ -46,8 +46,12 @@ path = "src/lib.rs"
 r3bl_analytics_schema = { path = "../analytics_schema", version = "0.0.2" } # version is required to publish to crates.io
 r3bl_tui = { path = "../tui", version = "0.6.0" }                           # version is required to publish to crates.io
 
-# Reqwest (HTTP client).
-reqwest = { version = "0.12.15", features = ["json"] }
+# HTTP client for analytics_client.
+# Reqwest (HTTP client). Use `rustls` instead of `openssl` for TLS support.
+reqwest = { version = "0.12.15", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
 
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
@@ -81,7 +85,7 @@ smallvec = { version = "1.15.0", features = [
 ] }
 
 # `jemalloc` is a replacement for the default global allocator. It's optimized for
-# multi-threaded use cases where lots of small objects are created and destroyed. 
+# multi-threaded use cases where lots of small objects are created and destroyed.
 # The default allocator is the system allocator that's optimized for single threaded
 # use cases.
 # https://www.svix.com/blog/heap-fragmentation-in-rust-applications/

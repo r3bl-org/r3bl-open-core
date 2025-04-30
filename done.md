@@ -184,3 +184,8 @@
       https://github.com/r3bl-org/r3bl-open-core/issues/415
 - [x] Test this by changing the local version number so it's different from the crates.io version
       for r3bl-cmdr `cmdr/src/analytics_client.rs:308`
+
+# fix cargo install without needing libssl-dev and pkg-config
+
+- [x] installing `r3bl-cmdr` on a new VM / machine requies `libssl-dev` to be installed. fix
+      `reqwest` so it uses `rustls` and not `openssl`

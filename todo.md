@@ -1,8 +1,18 @@
 # make a release
 
+- [x] make `analytics_client.rs` its own module since it has to much code inside of it
+- [ ] remove all the leading space from each ui string for `giti` and `edi`
+- [ ] move all the ui strings into a module, so they're not defined one-off / inline.
+- [ ] `fn install_with_spinner()` figure out what to do with `Ctrl+C` pressed in `giti` when
+      `cargo install ...` is being run as part of upgrade ; is this a special use case for the
+      spinner? if so, consider adding functionality that is not tied to `readline_async` for this
+      type of "blocking" use case
+  - `cmdr/src/analytics_client/upgrade_check.rs:150`
+  - `tui/examples/spinner.rs:33`
 - [ ] `r3bl_tui`
 - [ ] `r3bl_cmdr`
 - [ ] close this: https://github.com/r3bl-org/r3bl-open-core/issues/365
+- [ ] test that `cargo install r3bl_cmdr` in docker
 
 # clean up giti phase 6
 
