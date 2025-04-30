@@ -114,7 +114,12 @@ uuid = { version = "1.16.0", features = ["v4"] }
 is_ci = "1.2.0"
 
 # HTTP client library (for r3bl_script).
-reqwest = { version = "0.12.15", features = ["json"] }
+# Reqwest (HTTP client). Use `rustls` instead of `openssl` for TLS support.
+reqwest = { version = "0.12.15", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
+
 
 # Convert Rust structs to and from binary representation. For the protocol.
 # https://github.com/bincode-org/bincode/blob/trunk/docs/migration_guide.md

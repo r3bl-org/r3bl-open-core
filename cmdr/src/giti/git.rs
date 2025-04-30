@@ -212,7 +212,7 @@ pub mod local_branch_ops {
     /// 1. The first item in the tuple contains the current branch is prefixed with
     ///    [CURRENT_PREFIX].
     ///
-    ///   ```
+    ///   ```text
     ///   [
     ///     "(◕‿◕) main",
     ///     "tuifyasync",
@@ -253,12 +253,12 @@ pub mod local_branch_ops {
         }
 
         /// ### Input
-        /// ```
+        /// ```text
         /// "main"
         /// ```
         ///
         /// ### Output
-        /// ```
+        /// ```text
         /// "(◕‿◕) main"
         /// ```
         pub fn mark_branch_current(branch_name: &str) -> InlineString {
@@ -269,12 +269,12 @@ pub mod local_branch_ops {
         }
 
         /// ### Input
-        /// ```
+        /// ```text
         /// "(◕‿◕) main"
         /// ```
         ///
         /// ### Output
-        /// ```
+        /// ```text
         /// "main"
         /// ```
         pub fn trim_current_prefix_from_branch(branch: &str) -> &str {

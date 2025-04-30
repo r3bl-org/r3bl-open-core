@@ -21,8 +21,9 @@
 //!
 //! ```rust
 //! # use tracing_subscriber::{fmt::SubscriberBuilder, registry::LookupSpan};
+//! # use r3bl_tui::log::CustomEventFormatter;
 //! let subscriber = SubscriberBuilder::default()
-//!     .event_format(r3bl_log::core::log::CustomEventFormatter)
+//!     .event_format(CustomEventFormatter)
 //!     .finish();
 //! ```
 //!
