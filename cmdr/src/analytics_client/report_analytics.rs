@@ -18,7 +18,7 @@
 use r3bl_analytics_schema::AnalyticsEvent;
 use r3bl_tui::inline_string;
 
-use super::*;
+use super::{AnalyticsAction, http_client, proxy_machine_id};
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
 static mut ANALYTICS_REPORTING_ENABLED: bool = true;

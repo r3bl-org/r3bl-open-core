@@ -30,7 +30,7 @@ pub enum ConfigPaths {
 }
 
 impl Display for ConfigPaths {
-    /// This generates a `to_string()` method used by [config_folder::get_id_file_path].
+    /// This generates a `to_string()` method used by [get_id_file_path].
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let path = match self {
             ConfigPaths::R3BLTopLevelFolderName => "r3bl-cmdr",

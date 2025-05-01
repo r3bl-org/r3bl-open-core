@@ -15,36 +15,46 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::friendly_random_id;
+use r3bl_tui::{InlineString,
+               friendly_random_id,
+               into_existing::{read_from_file::try_read_file_path_into_inline_string,
+                               write_to_file}};
 
-use super::*;
+use super::{AnalyticsAction, config_folder, report_analytics};
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
 /// Read the file contents from [config_folder::get_id_file_path] and return it as a
 /// string if it exists and can be read.
-pub fn load_id_from_file_or_generate_and_save_it() -> String {
+pub fn load_id_from_file_or_generate_and_save_it() -> InlineString {
     match config_folder::create() {
         Ok(config_folder_path) => {
             let id_file_path =
                 config_folder::get_id_file_path(config_folder_path.clone());
-            let result = file_io::try_read_file_contents(&id_file_path);
-            match result {
-                Ok(contents) => {
+
+            // Create a new InlineString to store the contents
+            let mut content = InlineString::new();
+            let res_read_from_file = try_read_file_path_into_inline_string(
+                &mut content,
+                id_file_path.to_str().expect("Invalid path"),
+            );
+
+            // Try to read the file directly into InlineString
+            match res_read_from_file {
+                Ok(_) => {
                     DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug!(
                             message = "Successfully read proxy machine ID from file.",
-                            contents = %contents
+                            contents = %content
                         );
                     });
-
-                    contents
+                    content
                 }
                 Err(_) => {
                     let new_id = friendly_random_id::generate_friendly_random_id();
-                    let result_write_file_contents =
-                        file_io::try_write_file_contents(&id_file_path, &new_id);
-                    match result_write_file_contents {
+                    let res_write_to_file =
+                        write_to_file::try_write_str_to_file(&id_file_path, &new_id);
+                    match res_write_to_file {
                         Ok(_) => {
                             report_analytics::start_task_to_generate_event(
                                 "".to_string(),
@@ -67,10 +77,10 @@ pub fn load_id_from_file_or_generate_and_save_it() -> String {
                         }
                     }
 
-                    new_id.to_string()
+                    new_id
                 }
             }
         }
-        Err(_) => friendly_random_id::generate_friendly_random_id().to_string(),
+        Err(_) => friendly_random_id::generate_friendly_random_id(),
     }
 }

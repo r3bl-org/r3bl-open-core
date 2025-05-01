@@ -37,9 +37,9 @@ pub type InlineVecStr<'a> = InlineVec<&'a str>;
 /// [DEFAULT_STRING_STORAGE_SIZE], it will be [smallvec::SmallVec::spilled] on the heap.
 pub type InlineString = SmallString<[u8; DEFAULT_STRING_STORAGE_SIZE]>;
 
-/// Stack allocated really small string storage for small char sequences. When this gets
-/// larger than [DEFAULT_CHAR_STORAGE_SIZE], it will be [smallvec::SmallVec::spilled] on
-/// the heap.
+/// Stack allocated tiny string storage for small char sequences. When this gets larger
+/// than [DEFAULT_CHAR_STORAGE_SIZE], it will be [smallvec::SmallVec::spilled] on the
+/// heap.
 pub type TinyInlineString = SmallString<[u8; DEFAULT_CHAR_STORAGE_SIZE]>;
 pub const DEFAULT_CHAR_STORAGE_SIZE: usize = 4;
 
