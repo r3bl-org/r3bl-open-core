@@ -52,7 +52,7 @@ async fn main() -> CommonResult<()> {
         report_analytics::disable();
     }
 
-    upgrade_check::start_task_to_check_for_updates();
+    upgrade_check::start_task_to_check_if_upgrade_is_needed();
     report_analytics::start_task_to_generate_event(
         "".to_string(),
         AnalyticsAction::GitiAppStart,

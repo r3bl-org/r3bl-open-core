@@ -158,7 +158,7 @@ mod join_fmt_tests {
 }
 
 /// This macro is similar to [crate::join_with_index!] except that it also receives a
-/// [std::fmt::Formatter] in order to write the display output into without allocating
+/// [std::fmt::Formatter] to write the display output into without allocating
 /// anything.
 ///
 /// # Arguments
@@ -273,6 +273,74 @@ pub mod read_from_file {
         }
 
         ok!()
+    }
+}
+
+pub mod write_to_file {
+    use std::{fs::File, io::Write, path::PathBuf};
+
+    use miette::IntoDiagnostic as _;
+
+    use crate::CommonResult;
+
+    pub fn try_write_str_to_file(path: &PathBuf, contents: &str) -> CommonResult<()> {
+        let mut file = File::create(path).into_diagnostic()?;
+        file.write_all(contents.as_bytes()).into_diagnostic()?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests_write_to_file {
+    use std::fs;
+
+    use miette::IntoDiagnostic;
+
+    use crate::{create_temp_dir, into_existing::write_to_file::try_write_str_to_file};
+
+    #[test]
+    fn test_try_write_file_contents_success() -> miette::Result<()> {
+        // 1. Create a temporary directory.
+        let temp_dir = create_temp_dir().expect("Failed to create temp dir");
+        let file_path = temp_dir.as_path().join("test_output.txt");
+
+        // 2. Define the content to write.
+        let content = "Hello, world from test!";
+
+        // 3. Call the function under test.
+        let result = try_write_str_to_file(&file_path, content);
+
+        // 4. Assert that the write was successful.
+        assert!(result.is_ok());
+
+        // 5. Verify the file content.
+        let read_content = fs::read_to_string(&file_path).into_diagnostic()?;
+        assert_eq!(read_content, content);
+
+        // 6. Temp dir is automatically cleaned up when `temp_dir` goes out of scope.
+        Ok(())
+    }
+
+    #[test]
+    fn test_try_write_file_contents_invalid_path() {
+        // 1. Create a temporary directory (we still need it as a base).
+        let temp_dir = create_temp_dir().expect("Failed to create temp dir");
+
+        // 2. Define an invalid path *relative* to the temp dir, pointing to a
+        //    subdirectory that won't exist.
+        let invalid_path = temp_dir
+            .as_path()
+            .join("non_existent_sub_dir")
+            .join("test_output.txt");
+        let content = "This won't be written";
+
+        // 3. Call the function under test.
+        let result = try_write_str_to_file(&invalid_path, content);
+
+        // 4. Assert that the write failed (because the parent directory doesn't exist).
+        assert!(result.is_err());
+
+        // 5. Temp dir is automatically cleaned up.
     }
 }
 

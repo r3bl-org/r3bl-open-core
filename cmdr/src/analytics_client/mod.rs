@@ -18,7 +18,6 @@
 // Attach files.
 pub mod analytics_action;
 pub mod config_folder;
-pub mod file_io;
 pub mod http_client;
 pub mod proxy_machine_id;
 pub mod report_analytics;
@@ -28,7 +27,6 @@ pub mod upgrade_check;
 // Re-export.
 pub use analytics_action::*;
 pub use config_folder::*;
-pub use file_io::*;
 pub use http_client::*;
 pub use proxy_machine_id::*;
 pub use report_analytics::*;
