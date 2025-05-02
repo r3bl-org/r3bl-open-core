@@ -18,7 +18,6 @@ use r3bl_tui::{AST,
                CommandRunResult,
                CommonResult,
                DefaultIoDevices,
-               Header,
                InlineString,
                InlineVec,
                ItemsOwned,
@@ -26,19 +25,18 @@ use r3bl_tui::{AST,
                ast_line,
                choose,
                height,
-               new_style,
-               readline_async::{HowToChoose, StyleSheet},
-               tui_color};
+               readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 
 use crate::{AnalyticsAction,
+            common,
+            common::ui_templates::{prefix_multi_select_instruction_header,
+                                   prefix_single_select_instruction_header},
             giti::{BranchDeleteDetails,
                    CommandRunDetails,
                    git::{self},
                    local_branch_ops::BranchExists,
-                   ui_str::{self},
-                   ui_templates::{multi_select_instruction_header,
-                                  single_select_instruction_header}},
+                   ui_str::{self}},
             report_analytics};
 
 /// The main function for `giti branch delete` command.
@@ -64,7 +62,7 @@ pub async fn handle_branch_delete_command(
             || branch_info.current_branch == branch_name
         {
             return Ok(CommandRunResult::Noop(
-                ui_str::branch_delete_display::info_unable_to_delete_branch(),
+                ui_str::branch_delete_display::info_unable_to_msg(),
                 details::empty(),
             ));
         }
@@ -86,8 +84,7 @@ pub async fn handle_branch_delete_command(
             // Do nothing.
             _ => {
                 return Ok(CommandRunResult::Noop(
-                    ui_str::branch_delete_display::info_user_chose_not_to_delete_branches(
-                    ),
+                    ui_str::branch_delete_display::info_chose_not_to_msg(),
                     details::empty(),
                 ));
             }
@@ -107,7 +104,7 @@ pub async fn handle_branch_delete_command(
         // If the user didn't select any branches, we don't need to do anything.
         if branches.is_empty() {
             return Ok(CommandRunResult::Noop(
-                ui_str::branch_delete_display::info_user_chose_not_to_delete_branches(),
+                ui_str::branch_delete_display::info_chose_not_to_msg(),
                 details::empty(),
             ));
         }
@@ -124,7 +121,7 @@ pub async fn handle_branch_delete_command(
     }
 
     Ok(CommandRunResult::Noop(
-        ui_str::branch_delete_display::info_user_chose_not_to_delete_branches(),
+        ui_str::branch_delete_display::info_chose_not_to_msg(),
         details::empty(),
     ))
 }
@@ -154,25 +151,21 @@ mod details {
 mod user_interaction {
     use super::*;
 
-    pub fn create_multi_select_header() -> impl Into<Header> {
-        let default_header_style = new_style!(
-            color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
-        );
-        let last_line = ast_line![ast(
-            ui_str::branch_delete_display::please_select_branches_you_want_to_delete(),
-            default_header_style
-        )];
-        multi_select_instruction_header(last_line)
-    }
-
     pub async fn select_branches_to_delete(
-        branches: ItemsOwned,
+        branch_options: ItemsOwned,
     ) -> CommonResult<ItemsOwned> {
-        let header = create_multi_select_header();
+        let header_with_instructions = {
+            let last_line = ast_line![ast(
+                ui_str::branch_delete_display::select_branches_msg(),
+                common::ui_templates::header_style_default()
+            )];
+            prefix_multi_select_instruction_header(smallvec![last_line])
+        };
+
         let mut default_io_devices = DefaultIoDevices::default();
         choose(
-            header,
-            branches,
+            header_with_instructions,
+            branch_options,
             Some(height(20)),
             None,
             HowToChoose::Multiple,
@@ -190,29 +183,29 @@ mod user_interaction {
         let num_of_branches = branches.len();
 
         let mut confirm_deletion_options: ItemsOwned =
-            ui_str::branch_delete_display::exit_message().into();
+            ui_str::branch_delete_display::exit_msg().into();
 
         if num_of_branches == 1 {
             let branch_name = &branches[0];
             confirm_deletion_options.insert(
                 0,
-                ui_str::branch_delete_display::yes_delete_branch_message().into(),
+                ui_str::branch_delete_display::yes_single_branch_msg().into(),
             );
 
             // Return tuple.
             (
-                ui_str::branch_delete_display::confirm_delete_one_branch(branch_name),
+                ui_str::branch_delete_display::confirm_single_branch_msg(branch_name),
                 confirm_deletion_options,
             )
         } else {
             confirm_deletion_options.insert(
                 0,
-                ui_str::branch_delete_display::yes_delete_branches_message().into(),
+                ui_str::branch_delete_display::yes_multiple_branches_msg().into(),
             );
 
             // Return tuple.
             (
-                ui_str::branch_delete_display::confirm_deleting_multiple_branches(
+                ui_str::branch_delete_display::confirm_multiple_branches_msg(
                     num_of_branches,
                     branches,
                 ),
@@ -223,40 +216,37 @@ mod user_interaction {
 
     pub async fn get_user_confirmation(
         header_text: InlineString,
-        options: ItemsOwned,
+        confirmation_options: ItemsOwned,
     ) -> CommonResult<parse_user_choice::Selection> {
-        // Define styles for the header first line, and subsequent lines (which are branches
-        // that are selected for deletion).
-        let default_header_style = new_style!(
-            color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
-        );
-        let branch_to_delete_style = new_style!(
-            color_fg: {tui_color!(yellow)} color_bg: {tui_color!(moonlight_blue)}
-        );
-
         // Apply one style to the first line of the header, and another style to the rest of
         // the lines. Then prefix with the instruction header.
-        let header = {
+        let header_with_instructions = {
             let mut header_last_lines = header_text.lines();
             let mut header_last_lines_fmt: InlineVec<InlineVec<AST>> = smallvec![];
 
             if let Some(first_line) = header_last_lines.next() {
-                let first_line = ast_line![ast(first_line, default_header_style)];
+                let first_line = ast_line![ast(
+                    first_line,
+                    crate::common::ui_templates::header_style_default()
+                )];
                 header_last_lines_fmt.push(first_line);
             }
 
             for line in header_last_lines {
-                let line = ast_line![ast(line, branch_to_delete_style)];
+                let line = ast_line![ast(
+                    line,
+                    crate::common::ui_templates::header_style_primary()
+                )];
                 header_last_lines_fmt.push(line);
             }
 
-            single_select_instruction_header(header_last_lines_fmt)
+            prefix_single_select_instruction_header(header_last_lines_fmt)
         };
 
         let mut default_io_devices = DefaultIoDevices::default();
         let selected_option = choose(
-            header,
-            options,
+            header_with_instructions,
+            confirmation_options,
             Some(height(20)),
             None,
             HowToChoose::Single,
@@ -280,7 +270,7 @@ mod command_execute {
         match res_output {
             Ok(_) => {
                 let it = CommandRunResult::Run(
-                    ui_str::branch_delete_display::info_delete_success(branches),
+                    ui_str::branch_delete_display::info_success_msg(branches),
                     details::with_details(branches.clone()),
                     cmd,
                 );
@@ -288,7 +278,7 @@ mod command_execute {
             }
             Err(report) => {
                 let it = CommandRunResult::Fail(
-                    ui_str::branch_delete_display::error_failed_to_delete(branches, None),
+                    ui_str::branch_delete_display::error_failed_msg(branches, None),
                     cmd,
                     report,
                 );
@@ -308,20 +298,17 @@ mod parse_user_choice {
 
     impl From<ItemsOwned> for Selection {
         fn from(selected: ItemsOwned) -> Selection {
-            if selected.is_empty() {
+            let maybe_first = selected.into_iter().next();
+            let Some(first) = maybe_first else {
                 return Selection::ExitProgram;
-            }
+            };
 
-            let first = &selected[0];
-
-            match (
-                first == ui_str::branch_delete_display::yes_delete_branch_message(),
-                first == ui_str::branch_delete_display::yes_delete_branches_message(),
-                first == ui_str::branch_delete_display::exit_message(),
-            ) {
-                (true, _, _) | (_, true, _) => Selection::Delete,
-                (_, _, true) => Selection::ExitProgram,
-                _ => Selection::ExitProgram,
+            if first == ui_str::branch_delete_display::yes_single_branch_msg()
+                || first == ui_str::branch_delete_display::yes_multiple_branches_msg()
+            {
+                Selection::Delete
+            } else {
+                Selection::ExitProgram
             }
         }
     }

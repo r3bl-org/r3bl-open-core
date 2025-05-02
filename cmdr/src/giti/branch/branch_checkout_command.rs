@@ -14,29 +14,22 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use r3bl_tui::{AnsiStyledText,
-               CommandRunResult,
+use r3bl_tui::{CommandRunResult,
                CommonResult,
                DefaultIoDevices,
-               Header,
-               InlineString,
-               InlineVec,
-               ItemsOwned,
                ast,
                ast_line,
-               ast_lines,
                choose,
                height,
-               new_style,
-               readline_async::{HowToChoose, StyleSheet},
-               tui_color};
+               readline_async::{HowToChoose, StyleSheet}};
+use smallvec::smallvec;
 
-use crate::giti::{BranchCheckoutDetails,
-                  CommandRunDetails,
-                  git::{self},
-                  modified_unstaged_file_ops,
-                  ui_str};
+use crate::{giti::{BranchCheckoutDetails,
+                   CommandRunDetails,
+                   git::{self},
+                   modified_unstaged_file_ops,
+                   ui_str},
+            prefix_single_select_instruction_header};
 
 /// The main function for `giti branch checkout` command.
 pub async fn handle_branch_checkout_command(
@@ -79,7 +72,7 @@ mod command_execute {
         match branch_info.exists_locally(branch_name) {
             git::local_branch_ops::BranchExists::No => {
                 let it = CommandRunResult::Noop(
-                    ui_str::branch_checkout_display::error_branch_does_not_exist(
+                    ui_str::branch_checkout_display::error_branch_does_not_exist_msg(
                         branch_name,
                     ),
                     details::empty(),
@@ -95,7 +88,7 @@ mod command_execute {
 
         if branch_name == current_branch.as_str() {
             let it = CommandRunResult::Noop(
-                ui_str::branch_checkout_display::info_already_on_current_branch(
+                ui_str::branch_checkout_display::info_already_on_current_branch_msg(
                     &current_branch,
                 ),
                 details::empty(),
@@ -108,9 +101,9 @@ mod command_execute {
             modified_unstaged_file_ops::try_check_exists().await
         {
             let it = CommandRunResult::Noop(
-                    ui_str::modified_files_display::warn_modified_files_on_current_branch_exist(
-                        branch_name,
-                    ),
+                ui_str::modified_files_display::warn_modified_files_exist_msg(
+                    branch_name,
+                ),
                 details::empty(),
             );
             return Ok(it);
@@ -127,7 +120,7 @@ mod command_execute {
         match res_output {
             Ok(_) => {
                 let it = CommandRunResult::Run(
-                    ui_str::branch_checkout_display::info_checkout_success(
+                    ui_str::branch_checkout_display::info_checkout_success_msg(
                         branch_name,
                         current_branch,
                     ),
@@ -138,7 +131,7 @@ mod command_execute {
             }
             Err(report) => {
                 let it = CommandRunResult::Fail(
-                    ui_str::branch_checkout_display::error_failed_to_checkout_branch(
+                    ui_str::branch_checkout_display::error_failed_to_checkout_branch_msg(
                         branch_name,
                     ),
                     cmd,
@@ -156,66 +149,51 @@ mod user_interaction {
     pub async fn handle_branch_selection()
     -> CommonResult<CommandRunResult<CommandRunDetails>> {
         let (res, _cmd) = git::local_branch_ops::try_get_local_branches().await;
-        if let Ok((_, branch_info)) = res {
-            let header = create_branch_selection_header();
-            match prompt_user_to_select_branch(header, branch_info.other_branches).await?
-            {
-                Some(selected_branch) => {
-                    command_execute::checkout_branch(
-                        &selected_branch,
-                        &branch_info.current_branch,
-                    )
-                    .await
-                }
-                None => {
-                    let it = CommandRunResult::Noop(
-                        ui_str::branch_checkout_display::info_no_suitable_branch_is_available_for_checkout(),
-                        details::empty(),
-                    );
-                    Ok(it)
-                }
-            }
-        } else {
-            let it = CommandRunResult::Noop(
-                ui_str::branch_checkout_display::info_no_suitable_branch_is_available_for_checkout(),
-                details::empty(),
-            );
-            Ok(it)
-        }
-    }
 
-    async fn prompt_user_to_select_branch(
-        arg_header: impl Into<Header>,
-        branches_with_current_removed: ItemsOwned,
-    ) -> CommonResult<Option<InlineString>> {
+        // Early return if the command fails.
+        let Ok((_, branch_info)) = res else {
+            return noop();
+        };
+
+        // Early return if there are no branches to select from.
+        if branch_info.other_branches.is_empty() {
+            return noop();
+        }
+
+        let header_with_instructions = {
+            let last_line = ast_line![ast(
+                ui_str::branch_checkout_display::select_branch_to_switch_to_msg(),
+                crate::common::ui_templates::header_style_default()
+            )];
+            prefix_single_select_instruction_header(smallvec![last_line])
+        };
         let mut default_io_devices = DefaultIoDevices::default();
-
-        // There are no branches to select from, so return None.
-        if branches_with_current_removed.is_empty() {
-            return Ok(None);
-        }
-
-        let selected_branch = choose(
-            arg_header,
-            branches_with_current_removed,
+        let maybe_user_choice = choose(
+            header_with_instructions,
+            branch_info.other_branches,
             Some(height(20)),
             None,
             HowToChoose::Single,
             StyleSheet::default(),
             default_io_devices.as_mut_tuple(),
         )
-        .await?;
+        .await? // Propagate UI errors (e.g., I/O errors).
+        .into_iter() // Convert InlineVec<InlineString> to iterator.
+        .next(); // Get the first (and only) selected item, if any.
 
-        Ok(selected_branch.first().cloned())
+        // Early return if the user did not select a branch.
+        let Some(user_choice) = maybe_user_choice else {
+            return noop();
+        };
+
+        // Actually checkout the user selected branch.
+        command_execute::checkout_branch(&user_choice, &branch_info.current_branch).await
     }
 
-    fn create_branch_selection_header() -> InlineVec<InlineVec<AnsiStyledText>> {
-        ast_lines![ast_line![ast(
-            ui_str::branch_checkout_display::select_branch_to_switch_to(),
-            new_style!(
-                color_fg: {tui_color!(frozen_blue)}
-                color_bg: {tui_color!(moonlight_blue)}
-            )
-        )]]
+    fn noop() -> CommonResult<CommandRunResult<CommandRunDetails>> {
+        Ok(CommandRunResult::Noop(
+            ui_str::branch_checkout_display::no_suitable_branch_available_msg(),
+            details::empty(),
+        ))
     }
 }

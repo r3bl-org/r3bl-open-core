@@ -1,9 +1,8 @@
 # make a release
 
-- [x] make `analytics_client.rs` its own module since it has to much code inside of it
-- [x] move all the ui strings into a module, so they're not defined one-off / inline.
 - [ ] remove all the leading space from each ui string for `giti` and `edi`
   - [x] `cmdr/src/analytics_client/ui_str.rs`
+  - [x] `cmdr/src/giti/ui_templates.rs:24`
   - [ ] `giti/ui_str.rs`
   - [ ] `edi/ui_str.rs`
 - [ ] `fn install_with_spinner()`

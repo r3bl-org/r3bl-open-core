@@ -23,20 +23,19 @@ use r3bl_tui::{CommandRunResult,
                ast_line,
                choose,
                height,
-               new_style,
-               readline_async::{HowToChoose, StyleSheet},
-               tui_color};
+               readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 
-use crate::giti::{BranchSubcommand,
-                  CLICommand,
-                  CommandRunDetails,
-                  get_giti_command_subcommand_names,
-                  handle_branch_checkout_command,
-                  handle_branch_delete_command,
-                  handle_branch_new_command,
-                  ui_str,
-                  ui_templates::single_select_instruction_header};
+use crate::{common,
+            common::ui_templates::prefix_single_select_instruction_header,
+            giti::{BranchSubcommand,
+                   CLICommand,
+                   CommandRunDetails,
+                   get_giti_command_subcommand_names,
+                   handle_branch_checkout_command,
+                   handle_branch_delete_command,
+                   handle_branch_new_command,
+                   ui_str}};
 
 /// The main function to for `giti branch` command. This is the main routing function that
 /// directs execution flow to the appropriate subcommand handler: `checkout`, `delete`,
@@ -63,50 +62,51 @@ pub async fn handle_branch_command(
 /// The user typed `giti branch` command with no subcommands. So prompt them for a
 /// subcommand.
 async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDetails>> {
-    let branch_subcommands = get_giti_command_subcommand_names(CLICommand::Branch {
+    let branch_subcommand_options = get_giti_command_subcommand_names(CLICommand::Branch {
         sub_cmd: None,
         maybe_branch_name: None,
     });
-
-    let header = {
+    let header_with_instructions = {
         let last_line = ast_line![ast(
             ui_str::please_select_branch_sub_command(),
-            new_style!(
-                color_fg: {tui_color!(frozen_blue)} color_bg: {tui_color!(moonlight_blue)}
-            )
+            common::ui_templates::header_style_default()
         )];
-        single_select_instruction_header(smallvec![last_line])
+        prefix_single_select_instruction_header(smallvec![last_line])
     };
-
     let mut default_io_devices = DefaultIoDevices::default();
-    let selected = choose(
-        header,
-        branch_subcommands,
+    let maybe_user_choice = choose(
+        header_with_instructions,
+        branch_subcommand_options,
         Some(height(20)),
         None,
         HowToChoose::Single,
         StyleSheet::default(),
         default_io_devices.as_mut_tuple(),
     )
-    .await?;
+    .await?
+    .into_iter()
+    .next();
 
-    if let Some(selected) = selected.first() {
-        if let Ok(branch_subcommand) = BranchSubcommand::from_str(selected, true) {
-            match branch_subcommand {
-                BranchSubcommand::Delete => {
-                    return handle_branch_delete_command(None).await;
-                }
-                BranchSubcommand::Checkout => {
-                    return handle_branch_checkout_command(None).await;
-                }
-                BranchSubcommand::New => return handle_branch_new_command(None).await,
-            }
-        } else {
-            unimplemented!();
-        }
+    // Early return if the user didn't select anything.
+    let Some(user_choice) = maybe_user_choice else {
+        return Ok(CommandRunResult::Noop(
+            ui_str::noop_message(),
+            CommandRunDetails::Noop,
+        ));
     };
 
-    // User did not select anything.
-    let it = CommandRunResult::Noop(ui_str::noop_message(), CommandRunDetails::Noop);
-    Ok(it)
+    // Early return if the user-chosen branch subcommand is not valid (can't be parsed).
+    let Ok(branch_subcommand) = BranchSubcommand::from_str(&user_choice, true) else {
+        return Ok(CommandRunResult::Noop(
+            ui_str::invalid_branch_sub_command_message(),
+            CommandRunDetails::Noop,
+        ));
+    };
+
+    // Actually process the user-selected branch subcommand.
+    match branch_subcommand {
+        BranchSubcommand::Delete => handle_branch_delete_command(None).await,
+        BranchSubcommand::Checkout => handle_branch_checkout_command(None).await,
+        BranchSubcommand::New => handle_branch_new_command(None).await,
+    }
 }

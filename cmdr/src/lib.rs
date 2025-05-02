@@ -277,9 +277,11 @@ pub const DEBUG_ANALYTICS_CLIENT_MOD: bool = true;
 
 // Attach sources.
 pub mod analytics_client;
+pub mod common;
 pub mod edi;
 pub mod giti;
 pub mod rc;
 
 // Re-export.
 pub use analytics_client::*;
+pub use common::*;

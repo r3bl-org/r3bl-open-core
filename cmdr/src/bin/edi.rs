@@ -14,19 +14,26 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use clap::Parser;
-use r3bl_cmdr::{AnalyticsAction, edi::launcher, report_analytics, upgrade_check};
+use r3bl_cmdr::{AnalyticsAction,
+                common,
+                edi::launcher,
+                prefix_single_select_instruction_header,
+                report_analytics,
+                upgrade_check};
 use r3bl_tui::{CommonResult,
                DefaultIoDevices,
                InlineString,
+               ast,
+               ast_line,
                choose,
                height,
+               inline_string,
                log::try_initialize_logging_global,
                readline_async::{HowToChoose, StyleSheet},
                set_jemalloc_in_main,
-               throws,
-               width};
+               throws};
+use smallvec::smallvec;
 
 use crate::clap_config::CLIArg;
 
@@ -103,39 +110,48 @@ async fn main() -> CommonResult<()> {
     })
 }
 
+pub mod edi_ui_str {
+    use super::*;
+
+    pub fn multiple_files_not_supported_yet() -> InlineString {
+        inline_string!(
+            "edi currently only allows you to edit one file at a time. Select one:"
+        )
+    }
+}
+
 pub mod edi_ui_templates {
     use super::*;
 
     pub async fn handle_multiple_files_not_supported_yet(
         cli_arg: CLIArg,
     ) -> Option<InlineString> {
-        // Ask the user to select a file to edit.
+        // Ask the user to select a file to edit, and return the selected file path (if there is one).
         let mut default_io_devices = DefaultIoDevices::default();
-        let maybe_user_choices = choose(
-            "edi currently only allows you to edit one file at a time. Select one:",
-            cli_arg
-                .file_paths
-                .iter()
-                .map(|s| s.as_str())
-                .collect::<Vec<_>>(),
+        let file_path_options = cli_arg
+            .file_paths
+            .iter()
+            .map(|file| file.as_str())
+            .collect::<Vec<_>>();
+        let header_with_instructions = {
+            let last_line = ast_line![ast(
+                edi_ui_str::multiple_files_not_supported_yet(),
+                common::ui_templates::header_style_default()
+            )];
+            prefix_single_select_instruction_header(smallvec![last_line])
+        };
+        choose(
+            header_with_instructions,
+            file_path_options,
             Some(height(5)),
-            Some(width(0)),
+            None,
             HowToChoose::Single,
             StyleSheet::default(),
             default_io_devices.as_mut_tuple(),
         )
         .await
-        .ok();
-
-        // Return the single user choice, if there is one.
-        if let Some(user_choices) = maybe_user_choices {
-            if let Some(user_choice) = user_choices.first() {
-                return Some(user_choice.clone());
-            }
-        }
-
-        // Otherwise, return None.
-        None
+        .ok()
+        .and_then(|items| items.into_iter().next())
     }
 }
 

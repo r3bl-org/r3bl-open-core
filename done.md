@@ -189,3 +189,10 @@
 
 - [x] installing `r3bl-cmdr` on a new VM / machine requies `libssl-dev` to be installed. fix
       `reqwest` so it uses `rustls` and not `openssl`
+
+# clean up giti phase 9
+
+- [x] make `analytics_client.rs` its own module since it has to much code inside of it
+- [x] move all the ui strings into a module, so they're not defined one-off / inline.
+- [x] fix single and multiselect instruction formatting for `choose()` call sites & ensure they're
+      used everywhere: `cmdr/src/giti/ui_templates.rs:24`

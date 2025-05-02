@@ -63,7 +63,7 @@ pub(crate) mod display_impl_for_command_run_result {
         fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
             match self {
                 CommandRunResult::Fail(error_msg, cmd, error_report) => {
-                    let header = " 🗴 Command ran unsuccessfully";
+                    let header = "🗴 Command ran unsuccessfully";
                     // Log output. % is Display, ? is Debug.
                     tracing::error!(
                         message = %header,
@@ -80,7 +80,7 @@ pub(crate) mod display_impl_for_command_run_result {
                     )
                 }
                 CommandRunResult::Run(success_msg, cmd_details, cmd) => {
-                    let header = " 🗸 Command ran successfully";
+                    let header = "🗸 Command ran successfully";
                     // Log output. % is Display, ? is Debug.
                     tracing::info!(
                         message = %header,
@@ -97,7 +97,7 @@ pub(crate) mod display_impl_for_command_run_result {
                     )
                 }
                 CommandRunResult::Noop(noop_msg, cmd_details) => {
-                    let header = " ❯ No command ran";
+                    let header = "❯ No command ran";
                     // Log output. % is Display, ? is Debug.
                     tracing::warn!(
                         message = %header,
@@ -132,20 +132,20 @@ pub(crate) mod display_impl_for_command_run_result {
         let cmd_str = {
             let mut acc = InlineString::new();
 
-            writeln!(acc, " Command {{")?;
-            writeln!(acc, "   Program: {:?},", cmd.get_program())?;
+            writeln!(acc, "Command {{")?;
+            writeln!(acc, "  Program: {:?},", cmd.get_program())?;
             writeln!(
                 acc,
-                "   Args: {:?},",
+                "  Args: {:?},",
                 cmd.get_args().collect::<InlineVec<_>>()
             )?;
             writeln!(
                 acc,
-                "   Env: {:?},",
+                "  Env: {:?},",
                 cmd.get_envs().collect::<InlineVec<_>>()
             )?;
-            writeln!(acc, "   Current Dir: {:?}", cmd.get_current_dir())?;
-            writeln!(acc, " }}")?;
+            writeln!(acc, "  Current Dir: {:?}", cmd.get_current_dir())?;
+            writeln!(acc, "}}")?;
 
             acc
         };
