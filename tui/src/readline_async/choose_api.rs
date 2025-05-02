@@ -95,7 +95,7 @@ impl DefaultIoDevices {
 /// # Arguments
 ///
 /// * `arg_header` - The header to display above the list.
-/// * `from` - The list of items to choose from.
+/// * `arg_options_to_choose_from` - The list of items to choose from.
 /// * `maybe_max_height` - Optional: the maximum height of the list.
 /// * `maybe_max_width` - Optional: the maximum width of the list.
 /// * `how` - The selection mode.
@@ -108,7 +108,7 @@ impl DefaultIoDevices {
 ///     stdout needs to be paused when this function is running.
 pub async fn choose<'a>(
     arg_header: impl Into<Header>,
-    arg_from: impl Into<ItemsOwned>,
+    arg_options_to_choose_from: impl Into<ItemsOwned>,
     maybe_max_height: Option<Height>,
     maybe_max_width: Option<Width>,
     how: HowToChoose,
@@ -119,7 +119,7 @@ pub async fn choose<'a>(
         Option<SharedWriter>,
     ),
 ) -> miette::Result<ItemsOwned> {
-    let from = arg_from.into();
+    let from = arg_options_to_choose_from.into();
 
     // Destructure the io tuple.
     let (od, id, msw) = io;

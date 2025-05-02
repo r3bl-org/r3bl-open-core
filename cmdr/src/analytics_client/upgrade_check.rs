@@ -28,16 +28,18 @@ use r3bl_tui::{DefaultIoDevices,
                SpinnerStyle,
                StdMutex,
                StyleSheet,
+               ast,
+               ast_line,
                choose,
                height,
                inline_string,
                spinner::Spinner,
-               try_get_latest_release_version_from_crates_io,
-               width};
+               try_get_latest_release_version_from_crates_io};
+use smallvec::smallvec;
 use tokio::task;
 
 use super::ui_str;
-use crate::DEBUG_ANALYTICS_CLIENT_MOD;
+use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
 
 static UPGRADE_REQUIRED: AtomicBool = AtomicBool::new(false);
 
@@ -113,27 +115,34 @@ pub async fn show_exit_message() {
         println!("{}", ui_str::upgrade_check::upgrade_is_required_msg());
 
         // 2. Ask the user.
-        let options = &[
-            super::ui_str::upgrade_check::yes_msg(),
-            super::ui_str::upgrade_check::no_msg(),
+        let yes_no_options = &[
+            ui_str::upgrade_check::yes_msg(),
+            ui_str::upgrade_check::no_msg(),
         ];
+        let header_with_instructions = {
+            let last_line = ast_line![ast(
+                ui_str::upgrade_check::ask_user_msg(),
+                crate::common::ui_templates::header_style_default()
+            )];
+            prefix_single_select_instruction_header(smallvec![last_line])
+        };
         let mut io = DefaultIoDevices::default();
-        let picked = choose(
-            super::ui_str::upgrade_check::ask_user_msg(),
-            options,
-            Some(height(2)),
-            Some(width(0)),
+        let maybe_user_choice = choose(
+            header_with_instructions,
+            yes_no_options,
+            Some(height(yes_no_options.len())),
+            None,
             HowToChoose::Single,
             StyleSheet::default(),
             io.as_mut_tuple(),
         )
         .await
         .ok()
-        .and_then(|v| v.into_iter().next());
+        .and_then(|items| items.into_iter().next());
 
         // 3. If they chose “Yes, upgrade now”, run `cargo install …`.
-        if let Some(choice) = picked
-            && choice == options[0]
+        if let Some(user_choice) = maybe_user_choice
+            && user_choice == yes_no_options[0]
         {
             // With spinner.
             install_upgrade_command_with_spinner().await;

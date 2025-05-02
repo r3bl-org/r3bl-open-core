@@ -173,6 +173,7 @@
     "string",
     "strs",
     "stylesheet",
+    "Subcmd",
     "subsec",
     "surrealdb",
     "syntect",
