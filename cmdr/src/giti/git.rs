@@ -24,7 +24,7 @@ use r3bl_tui::{CommonResult,
                inline_string};
 use tokio::process::Command;
 
-use super::CURRENT_PREFIX;
+use super::CURRENT_BRANCH_PREFIX;
 
 /// This is a type alias for the result of a git command. The tuple contains:
 /// 1. The result of the command.
@@ -210,7 +210,7 @@ pub mod local_branch_ops {
     /// Get all the local branches as a tuple.
     ///
     /// 1. The first item in the tuple contains the current branch is prefixed with
-    ///    [CURRENT_PREFIX].
+    ///    [CURRENT_BRANCH_PREFIX].
     ///
     ///   ```text
     ///   [
@@ -264,7 +264,7 @@ pub mod local_branch_ops {
         pub fn mark_branch_current(branch_name: &str) -> InlineString {
             let mut acc = InlineString::new();
             use std::fmt::Write as _;
-            _ = write!(acc, "{CURRENT_PREFIX} {branch_name}");
+            _ = write!(acc, "{CURRENT_BRANCH_PREFIX} {branch_name}");
             acc
         }
 
@@ -278,7 +278,7 @@ pub mod local_branch_ops {
         /// "main"
         /// ```
         pub fn trim_current_prefix_from_branch(branch: &str) -> &str {
-            branch.trim_start_matches(CURRENT_PREFIX).trim()
+            branch.trim_start_matches(CURRENT_BRANCH_PREFIX).trim()
         }
     }
 

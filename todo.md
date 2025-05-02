@@ -5,6 +5,7 @@
   - [x] `cmdr/src/giti/ui_templates.rs:24`
   - [ ] `giti/ui_str.rs`
   - [ ] `edi/ui_str.rs`
+- [ ] manually test `giti` thoroughly (giti branch checkout is not working, etc.)
 - [ ] `fn install_with_spinner()`
   - `cmdr/src/analytics_client/upgrade_check.rs:142`
   - `tui/examples/spinner.rs:33`
@@ -13,6 +14,7 @@
   - is this a special use case for the spinner? if so, consider adding functionality that is not
     tied to `readline_async` for this type of "blocking" use case;
   - why does the cursor show while spinner is active (remove the cursor?)
+- [ ] use `r3bl_script` test fixtures to test `git` and `gh` adapters
 - [ ] make sure `cmdr` docker file works (with `pkg-config` and `libssl-dev` removed)
 - [ ] `r3bl_tui`
 - [ ] `r3bl_cmdr`
@@ -29,7 +31,6 @@
       hosted in our homelab); currently `delete.rs` has analytics calls
 - [ ] rewrite `giti` code to use the newtypes, like width, height, etc. and introduce newtypes, etc
       where needed
-- [ ] use `r3bl_script` test fixtures to test `git` and `gh` adapters
 
 # replace HashMap with BTreeMap (better cache locality performance)
 

@@ -21,6 +21,7 @@ use r3bl_tui::{ColorWheel,
                GradientGenerationPolicy,
                InlineString,
                TextColorizationPolicy,
+               fg_lizard_green,
                glyphs,
                inline_string};
 
@@ -71,7 +72,10 @@ pub mod upgrade_spinner {
     }
 
     pub fn readline_async_exit_msg() -> InlineString {
-        inline_string!("{} is installed 🎉.", get_self_crate_name())
+        inline_string!(
+            "\rCrate {a} is installed 🎉.",
+            a = fg_lizard_green(get_self_crate_name())
+        )
     }
 }
 

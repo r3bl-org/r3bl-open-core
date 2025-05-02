@@ -93,7 +93,7 @@ mod tests_pad_fmt {
 }
 
 /// This macro is similar to [crate::join!] except that it also receives a
-/// [std::fmt::Formatter] in order to write the display output into without allocating
+/// [std::fmt::Formatter] to write the display output into without allocating
 /// anything. It does not return any errors.
 ///
 /// # Arguments
@@ -114,6 +114,8 @@ macro_rules! join_fmt {
         delim: $delim:expr,
         format: $($format:tt)*
     ) => {{
+        #[allow(unused_imports)]
+        use std::fmt::Write as _;
         let mut iter = $collection.iter();
         // First item.
         if let Some($item) = iter.next() {
@@ -182,6 +184,8 @@ macro_rules! join_with_index_fmt {
         delim: $delim:expr,
         format: $($format:tt)*
     ) => {{
+        #[allow(unused_imports)]
+        use std::fmt::Write as _;
         let mut iter = $collection.iter().enumerate();
         // First item.
         if let Some(($index, $item)) = iter.next() {

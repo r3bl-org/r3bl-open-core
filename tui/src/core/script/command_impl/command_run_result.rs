@@ -19,6 +19,8 @@ use std::{fmt::{Debug, Display, Error, Result as FmtResult},
 
 use tokio::process::Command;
 
+use crate::InlineString;
+
 /// Hold all the possible outcomes of executing a [tokio::process::Command]. This is used
 /// to report the success or failure to a user (display via stdout output) or operator
 /// (debug via log output).
@@ -26,13 +28,13 @@ use tokio::process::Command;
 pub enum CommandRunResult<T: Debug + Display> {
     /// Command was not run (probably because the command would be a no-op).
     Noop(
-        /* no-op message */ String,
+        /* no-op message */ InlineString,
         /* command-specific details */ T,
     ),
 
     /// Command ran, and produced success exit code.
     Run(
-        /* success message */ String,
+        /* success message */ InlineString,
         /* command-specific details */ T,
         /* command */ Command,
     ),
@@ -40,7 +42,7 @@ pub enum CommandRunResult<T: Debug + Display> {
     /// Command ran and produced non-zero exit code. Or it failed to run, and never got
     /// the chance to generate an exit code.
     Fail(
-        /* error message */ String,
+        /* error message */ InlineString,
         /* command */ Command,
         /* error report */ miette::Report,
     ),
