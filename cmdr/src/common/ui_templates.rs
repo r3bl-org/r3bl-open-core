@@ -25,14 +25,20 @@ use r3bl_tui::{AST,
                fg_light_yellow_green,
                fg_sky_blue,
                new_style,
+               truncate_from_right,
                tui_color};
 
+/// Make the first column at least this wide, and pad with spaces if needed. It should not
+/// exceed this width either.
 const FIRST_COLUMN_WIDTH: usize = 20;
 
-/// Helper function to format two strings into columns.
-/// The first column has a fixed width defined by `COLUMN_WIDTH`.
-fn fmt_two_col(col1: &str, col2: &str) -> String {
-    format!("{col1:<FIRST_COLUMN_WIDTH$} {col2}")
+/// Helper function to format two strings into columns. The first column has a fixed width
+/// defined by [FIRST_COLUMN_WIDTH].
+fn fmt_two_col(col_1: &str, col_2: &str) -> String {
+    // Truncate col_1 if longer than FIRST_COLUMN_WIDTH, or pad it if shorter.
+    let processed_col_1 = truncate_from_right(col_1, FIRST_COLUMN_WIDTH, true);
+    // Format the processed_col_1 (which now has the correct width) with col_2.
+    format!("{} {}", processed_col_1, col_2)
 }
 
 /// This is the instruction header for the multi select list. It is used when the user can
