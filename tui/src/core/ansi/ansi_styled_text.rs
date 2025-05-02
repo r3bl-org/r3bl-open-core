@@ -17,17 +17,16 @@
 
 use std::fmt::{Display, Formatter, Result};
 
-use smallstr::SmallString;
 use smallvec::{smallvec, SmallVec};
 use strum_macros::EnumCount;
 
-use crate::{tui_color,
+use crate::{inline_string,
+            tui_color,
             ASTColor,
             InlineString,
             InlineVec,
             SgrCode,
-            TuiStyle,
-            DEFAULT_STRING_STORAGE_SIZE};
+            TuiStyle};
 
 /// Please don't create this struct directly, use [crate::ast()], [crate::ast_line!],
 /// [crate::ast_lines!] or the constructor functions like [fg_red()], [fg_green()],
@@ -167,13 +166,11 @@ mod ansi_styled_text_impl {
 
         pub fn print(&self) {}
 
-        /// This is different than the [Display] trait implementation, because it doesn't
+        /// This is different from the [Display] trait implementation, because it doesn't
         /// allocate a new [String], but instead allocates an inline buffer on the stack.
         /// If this buffer gets larger than [DEFAULT_STRING_STORAGE_SIZE], it will
         /// spill to the heap.
-        pub fn to_small_str(&self) -> SmallString<[u8; DEFAULT_STRING_STORAGE_SIZE]> {
-            format!("{self}").into()
-        }
+        pub fn to_small_str(&self) -> InlineString { inline_string!("{self}") }
     }
 }
 
@@ -462,6 +459,11 @@ pub fn fg_slate_gray(text: impl AsRef<str>) -> AST {
 impl AST {
     pub fn dim(mut self) -> Self {
         self.styles.push(ASTStyle::Dim);
+        self
+    }
+
+    pub fn italic(mut self) -> Self {
+        self.styles.push(ASTStyle::Italic);
         self
     }
 

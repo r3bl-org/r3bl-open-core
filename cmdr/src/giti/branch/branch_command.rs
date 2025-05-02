@@ -62,10 +62,11 @@ pub async fn handle_branch_command(
 /// The user typed `giti branch` command with no subcommands. So prompt them for a
 /// subcommand.
 async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDetails>> {
-    let branch_subcommand_options = get_giti_command_subcommand_names(CLICommand::Branch {
-        sub_cmd: None,
-        maybe_branch_name: None,
-    });
+    let branch_subcommand_options =
+        get_giti_command_subcommand_names(CLICommand::Branch {
+            sub_cmd: None,
+            maybe_branch_name: None,
+        });
     let header_with_instructions = {
         let last_line = ast_line![ast(
             ui_str::please_select_branch_sub_command(),

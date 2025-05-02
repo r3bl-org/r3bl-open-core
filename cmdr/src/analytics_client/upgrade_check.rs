@@ -163,11 +163,7 @@ async fn install_upgrade_command_with_spinner() {
     let crate_name = get_self_crate_name();
 
     // 1) Create readline async.
-    let res_readline_async = ReadlineAsync::try_new(
-        /* does not matter what this is, as it isn't displayed */
-        None::<&str>,
-    )
-    .await;
+    let res_readline_async = ReadlineAsync::try_new(Some("")).await;
 
     let mut maybe_spinner: Option<Spinner> = None;
 

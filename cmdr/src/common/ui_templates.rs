@@ -38,7 +38,7 @@ fn fmt_two_col(col_1: &str, col_2: &str) -> String {
     // Truncate col_1 if longer than FIRST_COLUMN_WIDTH, or pad it if shorter.
     let processed_col_1 = truncate_from_right(col_1, FIRST_COLUMN_WIDTH, true);
     // Format the processed_col_1 (which now has the correct width) with col_2.
-    format!("{} {}", processed_col_1, col_2)
+    format!("{processed_col_1} {col_2}")
 }
 
 /// This is the instruction header for the multi select list. It is used when the user can
