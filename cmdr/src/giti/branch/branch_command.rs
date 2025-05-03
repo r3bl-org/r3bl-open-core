@@ -69,7 +69,7 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
         });
     let header_with_instructions = {
         let last_line = ast_line![ast(
-            ui_str::please_select_branch_sub_command(),
+            ui_str::please_select_branch_sub_command_msg_raw(),
             common::ui_templates::header_style_default()
         )];
         prefix_single_select_instruction_header(smallvec![last_line])
@@ -91,7 +91,7 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
     // Early return if the user didn't select anything.
     let Some(user_choice) = maybe_user_choice else {
         return Ok(CommandRunResult::Noop(
-            ui_str::noop_message(),
+            ui_str::noop_msg(),
             CommandRunDetails::Noop,
         ));
     };
@@ -99,7 +99,7 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
     // Early return if the user-chosen branch subcommand is not valid (can't be parsed).
     let Ok(branch_subcommand) = BranchSubcommand::from_str(&user_choice, true) else {
         return Ok(CommandRunResult::Noop(
-            ui_str::invalid_branch_sub_command_message(),
+            ui_str::invalid_branch_sub_command_msg(),
             CommandRunDetails::Noop,
         ));
     };

@@ -196,3 +196,12 @@
 - [x] move all the ui strings into a module, so they're not defined one-off / inline.
 - [x] fix single and multiselect instruction formatting for `choose()` call sites & ensure they're
       used everywhere: `cmdr/src/giti/ui_templates.rs:24`
+
+# clean up giti phase 10
+
+- [x] remove all the leading space from each ui string for `giti` and `edi`
+  - [x] `cmdr/src/analytics_client/ui_str.rs`
+  - [x] `cmdr/src/giti/ui_templates.rs:24`
+  - [x] `giti/ui_str.rs`
+- [x] introduce consistent imperative formatting for `giti` and `edi`
+- [x] fix `giti branch checkout`

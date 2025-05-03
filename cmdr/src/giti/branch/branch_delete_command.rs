@@ -156,7 +156,7 @@ mod user_interaction {
     ) -> CommonResult<ItemsOwned> {
         let header_with_instructions = {
             let last_line = ast_line![ast(
-                ui_str::branch_delete_display::select_branches_msg(),
+                ui_str::branch_delete_display::select_branches_msg_raw(),
                 common::ui_templates::header_style_default()
             )];
             prefix_multi_select_instruction_header(smallvec![last_line])
@@ -183,13 +183,13 @@ mod user_interaction {
         let num_of_branches = branches.len();
 
         let mut confirm_deletion_options: ItemsOwned =
-            ui_str::branch_delete_display::exit_msg().into();
+            ui_str::branch_delete_display::exit_msg_raw().into();
 
         if num_of_branches == 1 {
             let branch_name = &branches[0];
             confirm_deletion_options.insert(
                 0,
-                ui_str::branch_delete_display::yes_single_branch_msg().into(),
+                ui_str::branch_delete_display::yes_single_branch_msg_raw().into(),
             );
 
             // Return tuple.
@@ -200,7 +200,7 @@ mod user_interaction {
         } else {
             confirm_deletion_options.insert(
                 0,
-                ui_str::branch_delete_display::yes_multiple_branches_msg().into(),
+                ui_str::branch_delete_display::yes_multiple_branches_msg_raw().into(),
             );
 
             // Return tuple.
@@ -303,8 +303,8 @@ mod parse_user_choice {
                 return Selection::ExitProgram;
             };
 
-            if first == ui_str::branch_delete_display::yes_single_branch_msg()
-                || first == ui_str::branch_delete_display::yes_multiple_branches_msg()
+            if first == ui_str::branch_delete_display::yes_single_branch_msg_raw()
+                || first == ui_str::branch_delete_display::yes_multiple_branches_msg_raw()
             {
                 Selection::Delete
             } else {

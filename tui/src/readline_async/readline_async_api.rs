@@ -18,7 +18,8 @@
 use futures_util::FutureExt as _;
 use miette::IntoDiagnostic as _;
 
-use crate::{is_fully_uninteractive_terminal,
+use crate::{inline_string,
+            is_fully_uninteractive_terminal,
             is_stdin_piped,
             is_stdout_piped,
             InputDevice,
@@ -214,9 +215,12 @@ impl ReadlineAsync {
     /// any exit message or stop the readline loop.
     pub async fn exit(self, message: Option<&str>) -> std::io::Result<()> {
         if let Some(message) = message {
+            // Prefix the message with `\r`.
+            let message = inline_string!("\r{message}");
+
             self.shared_writer
                 .line_state_control_channel_sender
-                .send(LineStateControlSignal::Line(message.into()))
+                .send(LineStateControlSignal::Line(message))
                 .await
                 .map_err(std::io::Error::other)?;
 

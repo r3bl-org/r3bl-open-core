@@ -116,7 +116,8 @@ mod command_execute {
         branch_name: &str,
         current_branch: &str,
     ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res_output, cmd) = git::try_create_and_switch_to_branch(branch_name).await;
+        let (res_output, cmd) =
+            git::try_checkout_existing_local_branch(branch_name).await;
         match res_output {
             Ok(_) => {
                 let it = CommandRunResult::Run(
@@ -162,7 +163,7 @@ mod user_interaction {
 
         let header_with_instructions = {
             let last_line = ast_line![ast(
-                ui_str::branch_checkout_display::select_branch_to_switch_to_msg(),
+                ui_str::branch_checkout_display::select_branch_to_switch_to_msg_raw(),
                 crate::common::ui_templates::header_style_default()
             )];
             prefix_single_select_instruction_header(smallvec![last_line])
