@@ -233,7 +233,7 @@ mod test_tracing_shared_writer_output {
     use smallvec::smallvec;
 
     use super::{fixtures::get_expected, *};
-    use crate::{join, InlineVec, LineStateControlSignal, SharedWriter, Text};
+    use crate::{join, InlineString, InlineVec, LineStateControlSignal, SharedWriter};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
@@ -260,7 +260,7 @@ mod test_tracing_shared_writer_output {
         receiver.close();
 
         // Check the output.
-        let mut output: InlineVec<Text> = smallvec![];
+        let mut output: InlineVec<InlineString> = smallvec![];
         while let Some(LineStateControlSignal::Line(line)) = receiver.recv().await {
             let it = line.trim();
             output.push(it.into());

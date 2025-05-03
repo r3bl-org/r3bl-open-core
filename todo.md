@@ -1,11 +1,9 @@
 # make a release
 
-- [ ] remove all the leading space from each ui string for `giti` and `edi`
-  - [x] `cmdr/src/analytics_client/ui_str.rs`
-  - [x] `cmdr/src/giti/ui_templates.rs:24`
-  - [ ] `giti/ui_str.rs`
-  - [ ] `edi/ui_str.rs`
-- [ ] manually test `giti` thoroughly (giti branch checkout is not working, etc.)
+- [ ] `cmdr/src/bin/edi.rs:113`
+  - [ ] clean up the module organization (many things need to be moved out of `bin/edi.rs`)
+  - [ ] remove all the leading space from each ui strings
+- [ ] manually test `giti` thoroughly
 - [ ] `fn install_with_spinner()`
   - `cmdr/src/analytics_client/upgrade_check.rs:142`
   - `tui/examples/spinner.rs:33`

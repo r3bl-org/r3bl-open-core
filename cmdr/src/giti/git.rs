@@ -136,6 +136,24 @@ pub mod modified_unstaged_file_ops {
     }
 }
 
+pub async fn try_checkout_existing_local_branch(
+    branch_name: &str,
+) -> ResultAndCommand<()> {
+    let mut cmd = command!(
+        program => "git",
+        args => "checkout", branch_name
+    );
+
+    let res_output = cmd.run().await;
+    let Ok(_) = res_output else {
+        let report = res_output.unwrap_err();
+        let err = Err(report);
+        return (err, cmd);
+    };
+
+    (Ok(()), cmd)
+}
+
 pub async fn try_create_and_switch_to_branch(branch_name: &str) -> ResultAndCommand<()> {
     let mut cmd = command!(
         program => "git",

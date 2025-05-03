@@ -470,7 +470,7 @@ pub use readline_async_impl::*;
 pub use spinner::*;
 
 // r3bl-open-core crates.
-use crate::{StdMutex, Text};
+use crate::{InlineString, StdMutex};
 
 // External crates.
 use smallvec::SmallVec;
@@ -485,7 +485,7 @@ pub type SafeBool = Arc<StdMutex<bool>>;
 /// This is a buffer of [DEFAULT_PAUSE_BUFFER_SIZE] 80 rows x
 /// [crate::DEFAULT_TEXT_SIZE] 128 columns (chars). This buffer collects output while
 /// the async terminal is paused.
-pub type PauseBuffer = SmallVec<[Text; DEFAULT_PAUSE_BUFFER_SIZE]>;
+pub type PauseBuffer = SmallVec<[InlineString; DEFAULT_PAUSE_BUFFER_SIZE]>;
 pub const DEFAULT_PAUSE_BUFFER_SIZE: usize = 128;
 pub type SafePauseBuffer = Arc<StdMutex<PauseBuffer>>;
 

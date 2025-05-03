@@ -106,7 +106,7 @@ pub fn report_unrecoverable_errors(report: miette::Report) {
         error = ?report
     );
 
-    println!("{}", ui_str::unrecoverable_error_message(report));
+    println!("{}", ui_str::unrecoverable_error_msg(report));
 }
 
 /// Command ran and produced result: success, not success, fail, no-op.

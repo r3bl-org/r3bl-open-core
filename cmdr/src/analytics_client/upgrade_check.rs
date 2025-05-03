@@ -116,12 +116,12 @@ pub async fn show_exit_message() {
 
         // 2. Ask the user.
         let yes_no_options = &[
-            ui_str::upgrade_check::yes_msg(),
-            ui_str::upgrade_check::no_msg(),
+            ui_str::upgrade_check::yes_msg_raw(),
+            ui_str::upgrade_check::no_msg_raw(),
         ];
         let header_with_instructions = {
             let last_line = ast_line![ast(
-                ui_str::upgrade_check::ask_user_msg(),
+                ui_str::upgrade_check::ask_user_msg_raw(),
                 crate::common::ui_templates::header_style_default()
             )];
             prefix_single_select_instruction_header(smallvec![last_line])
@@ -171,7 +171,7 @@ async fn install_upgrade_command_with_spinner() {
     if let Ok(Some(readline_async)) = &res_readline_async {
         // Configure the spinner.
         let res = Spinner::try_start(
-            ui_str::upgrade_spinner::indeterminate_progress_msg(),
+            ui_str::upgrade_spinner::indeterminate_progress_msg_raw(),
             Duration::from_millis(100),
             SpinnerStyle::default(),
             Arc::new(StdMutex::new(stderr())),
@@ -208,10 +208,9 @@ async fn install_upgrade_command_with_spinner() {
         Ok(it) => it,
         // Task failed (panic or cancellation). Convert JoinError -> io::Error.
         Err(join_err) => {
-            let err_msg = ui_str::upgrade_install::tokio_blocking_task_failed_msg(
-                join_err.to_string(),
-            );
-            let io_error = Error::other(err_msg);
+            let err_msg =
+                ui_str::upgrade_install::tokio_blocking_task_failed_msg(join_err);
+            let io_error = Error::other(err_msg.to_string());
             Err(io_error)
         }
     };
@@ -220,7 +219,7 @@ async fn install_upgrade_command_with_spinner() {
     if let Some(spinner) = maybe_spinner.as_mut()
         && !spinner.is_shutdown()
     {
-        let _ = spinner.stop(ui_str::upgrade_spinner::stop_msg()).await;
+        let _ = spinner.stop(&ui_str::upgrade_spinner::stop_msg_raw()).await;
     };
 
     // 5) Exit the readline_async.

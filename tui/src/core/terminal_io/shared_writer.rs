@@ -18,12 +18,7 @@
 use std::{io::{self, Write},
           str::from_utf8};
 
-use smallstr::SmallString;
-
-use crate::ok;
-
-pub type Text = SmallString<[u8; DEFAULT_TEXT_SIZE]>;
-pub const DEFAULT_TEXT_SIZE: usize = 128;
+use crate::{ok, InlineString};
 
 /// Cloneable object that implements [`Write`] and allows for sending data to the terminal
 /// without messing up its associated `Readline` instance (in the `r3bl_terminal_async`
@@ -50,7 +45,7 @@ pub const DEFAULT_TEXT_SIZE: usize = 128;
 #[derive(Debug)]
 pub struct SharedWriter {
     /// Holds the data to be written to the terminal.
-    pub buffer: Text,
+    pub buffer: InlineString,
 
     /// Sender end of the channel, the receiver end is in `Readline` (in the
     /// `r3bl_terminal_async` crate), which does the actual printing to `stdout`.
@@ -84,7 +79,7 @@ impl PartialEq for SharedWriter {
 /// Signals that can be sent to the `line` channel, which is monitored by the task.
 #[derive(Debug, Clone)]
 pub enum LineStateControlSignal {
-    Line(Text),
+    Line(InlineString),
     Flush,
     Pause,
     Resume,
@@ -98,7 +93,7 @@ impl SharedWriter {
     /// [`tokio::sync::mpsc::Sender`] end of the channel.
     pub fn new(line_sender: tokio::sync::mpsc::Sender<LineStateControlSignal>) -> Self {
         Self {
-            buffer: Text::new(),
+            buffer: InlineString::new(),
             line_state_control_channel_sender: line_sender,
             silent_error: false,
             uuid: uuid::Uuid::new_v4(),
@@ -114,7 +109,7 @@ impl SharedWriter {
 impl Clone for SharedWriter {
     fn clone(&self) -> Self {
         Self {
-            buffer: Text::new(),
+            buffer: InlineString::new(),
             line_state_control_channel_sender: self
                 .line_state_control_channel_sender
                 .clone(),

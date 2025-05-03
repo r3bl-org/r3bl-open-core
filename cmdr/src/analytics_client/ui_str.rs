@@ -15,49 +15,61 @@
  *   limitations under the License.
  */
 
-use std::{env::var, io::Error, process::ExitStatus};
+use std::{env::var, fmt::Display, io::Error, process::ExitStatus};
 
 use r3bl_tui::{ColorWheel,
                GradientGenerationPolicy,
                InlineString,
                TextColorizationPolicy,
-               fg_lizard_green,
                glyphs,
                inline_string};
 
 use super::upgrade_check::{get_self_bin_name, get_self_crate_name};
-use crate::get_self_bin_emoji;
+use crate::{common::fmt, get_self_bin_emoji};
 
 pub mod upgrade_install {
     use super::*;
 
     /// Ran `cargo install ...` and this process exited with zero exit code.
     pub fn install_success_msg() -> InlineString {
-        inline_string!("\n✅ Updated {} successfully.", get_self_crate_name())
+        inline_string!(
+            "✅ {a} {b} {c}{d}\n",
+            a = fmt::normal("Upgraded"),
+            b = fmt::emphasis(get_self_crate_name()),
+            c = fmt::normal("successfully"),
+            d = fmt::period()
+        )
     }
 
     /// Ran `cargo install ...` but this process exited with non-zero exit code.
     pub fn install_not_success_msg(status: ExitStatus) -> InlineString {
         inline_string!(
-            "\n❌ Failed to update {} (exit code {:?}).",
-            get_self_crate_name(),
-            status.code()
+            "❌ {a} {b} {c}{d}\n",
+            a = fmt::error("Failed to upgrade"),
+            b = fmt::emphasis(get_self_crate_name()),
+            c = fmt::emphasis_delete(inline_string!("(exit code {:?})", status.code())),
+            d = fmt::period()
         )
     }
 
     /// Could not run `cargo install $crate_name` itself.
     pub fn install_failed_to_run_command_msg(err: Error) -> InlineString {
         inline_string!(
-            "\n❌ Failed to run `cargo install {}`: {}",
-            get_self_crate_name(),
-            err
+            "❌ {a} {b}{c}\n{d}\n",
+            a = fmt::error("Failed to run"),
+            b = fmt::emphasis(inline_string!("cargo install {}", get_self_crate_name())),
+            c = fmt::colon(),
+            d = fmt::error(err)
         )
     }
 
-    pub fn tokio_blocking_task_failed_msg(err_str: impl AsRef<str>) -> String {
-        format!(
-            "Blocking task for installation failed: {}",
-            err_str.as_ref()
+    pub fn tokio_blocking_task_failed_msg(err_str_arg: impl Display) -> InlineString {
+        let err_str = inline_string!("{}", err_str_arg);
+        inline_string!(
+            "{a}{b}\n{c}",
+            a = fmt::error("Blocking task for installation failed"),
+            b = fmt::colon(),
+            c = fmt::error(err_str)
         )
     }
 }
@@ -65,16 +77,23 @@ pub mod upgrade_install {
 pub mod upgrade_spinner {
     use super::*;
 
-    pub fn stop_msg() -> &'static str { "Finished installation!" }
+    pub fn stop_msg_raw() -> InlineString {
+        inline_string!("{a}", a = fmt::dim("Finished installation!"))
+    }
 
-    pub fn indeterminate_progress_msg() -> String {
-        format!("Installing {}... ", get_self_crate_name())
+    /// No formatting on this string, since the spinner will apply its own animated lolcat
+    /// formatting.
+    pub fn indeterminate_progress_msg_raw() -> String {
+        format!("Installing {a}... ", a = get_self_crate_name())
     }
 
     pub fn readline_async_exit_msg() -> InlineString {
         inline_string!(
-            "\rCrate {a} is installed 🎉.",
-            a = fg_lizard_green(get_self_crate_name())
+            "{a} {b} {c}{d} 🎉",
+            a = fmt::normal("Crate"),
+            b = fmt::emphasis(get_self_crate_name()),
+            c = fmt::normal("is installed"),
+            d = fmt::period()
         )
     }
 }
@@ -82,12 +101,16 @@ pub mod upgrade_spinner {
 pub mod upgrade_check {
     use super::*;
 
-    pub fn yes_msg() -> &'static str { "Yes, upgrade now" }
+    pub fn yes_msg_raw() -> &'static str { "Yes, upgrade now" }
 
-    pub fn no_msg() -> &'static str { "No, thanks" }
+    pub fn no_msg_raw() -> &'static str { "No, thanks" }
 
-    pub fn ask_user_msg() -> InlineString {
-        inline_string!("Would you like to upgrade {} now?", get_self_crate_name())
+    /// No formatting on this string, as the formatting is applied by the caller.
+    pub fn ask_user_msg_raw() -> InlineString {
+        inline_string!(
+            "Would you like to upgrade {a} now?",
+            a = get_self_crate_name()
+        )
     }
 
     pub fn upgrade_is_required_msg() -> InlineString {
@@ -137,7 +160,7 @@ pub mod goodbye_greetings {
             b = "https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
         );
 
-        let combined = inline_string!("\n{goodbye_msg}\n{star_us_msg}");
+        let combined = inline_string!("{goodbye_msg}\n{star_us_msg}");
 
         ColorWheel::lolcat_into_string(&combined, None)
     }
