@@ -482,9 +482,9 @@ pub type SafeHistory = Arc<StdMutex<History>>;
 
 pub type SafeBool = Arc<StdMutex<bool>>;
 
-/// This is a buffer of [DEFAULT_PAUSE_BUFFER_SIZE] 80 rows x
-/// [crate::DEFAULT_TEXT_SIZE] 128 columns (chars). This buffer collects output while
-/// the async terminal is paused.
+/// This is a buffer of [crate::DEFAULT_STRING_STORAGE_SIZE] 80 rows x
+/// [crate::DEFAULT_PAUSE_BUFFER_SIZE] 128 columns (chars). This buffer collects output
+/// while the async terminal is paused.
 pub type PauseBuffer = SmallVec<[InlineString; DEFAULT_PAUSE_BUFFER_SIZE]>;
 pub const DEFAULT_PAUSE_BUFFER_SIZE: usize = 128;
 pub type SafePauseBuffer = Arc<StdMutex<PauseBuffer>>;

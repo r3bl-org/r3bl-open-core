@@ -77,7 +77,10 @@ macro_rules! rla_println_prefixed {
 }
 
 impl ReadlineAsync {
-    /// Create a new instance of [ReadlineAsync]. Example of `prompt` is `"> "`.
+    /// Create a new instance of [ReadlineAsync]. Example of `prompt` is `"> "`. It is
+    /// safe to have ANSI escape sequences inside the `prompt` as this is taken into
+    /// account when calculating the width of the terminal when displaying it in the "line
+    /// editor".
     ///
     /// # Example
     ///

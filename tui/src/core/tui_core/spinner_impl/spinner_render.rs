@@ -61,6 +61,9 @@ pub fn render_tick(
     count: usize,
     display_width: ColWidth,
 ) -> InlineString {
+    // Make sure to remove all ANSI escape sequences if they exist in the `message`.
+    let message = strip_ansi_escapes::strip_str(message);
+
     match style.template {
         SpinnerTemplate::Braille => {
             // Translate count into the index of the BRAILLE_DOTS array.

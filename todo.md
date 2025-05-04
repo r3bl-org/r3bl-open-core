@@ -41,6 +41,7 @@
 
 # create sub-issues for giti https://github.com/r3bl-org/r3bl-open-core/issues/391
 
+- [ ] `giti branch rename` -> rename an existing branch to other
 - [ ] `giti show <name>` -> choose an older version of a file to checkout to `Downloads` and
       optionally view in the `editor_component` itself in a TUI applet
 - [ ] `giti develop *` -> choose issues using TUI app as part of the flow
