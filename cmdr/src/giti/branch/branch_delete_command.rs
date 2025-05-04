@@ -14,7 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_tui::{AST,
+use r3bl_tui::{ASText,
                CommandRunResult,
                CommonResult,
                DefaultIoDevices,
@@ -222,7 +222,7 @@ mod user_interaction {
         // the lines. Then prefix with the instruction header.
         let header_with_instructions = {
             let mut header_last_lines = header_text.lines();
-            let mut header_last_lines_fmt: InlineVec<InlineVec<AST>> = smallvec![];
+            let mut header_last_lines_fmt: InlineVec<InlineVec<ASText>> = smallvec![];
 
             if let Some(first_line) = header_last_lines.next() {
                 let first_line = ast_line![ast(

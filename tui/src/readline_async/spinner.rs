@@ -19,7 +19,8 @@ use std::{sync::Arc, time::Duration};
 
 use tokio::time::interval;
 
-use crate::{get_terminal_width,
+use crate::{contains_ansi_escape_sequence,
+            get_terminal_width,
             is_fully_uninteractive_terminal,
             is_stdout_piped,
             spinner_render,
@@ -34,6 +35,7 @@ use crate::{get_terminal_width,
 
 pub struct Spinner {
     pub tick_delay: Duration,
+    /// ANSI escape sequences are stripped from this before being assigned.
     pub message: String,
     pub style: SpinnerStyle,
     pub safe_output_terminal: SafeRawTerminal,
@@ -43,7 +45,8 @@ pub struct Spinner {
 }
 
 impl Spinner {
-    /// Create a new instance of [Spinner].
+    /// Create a new instance of [Spinner]. If the `arg_spinner_message` contains ANSI
+    /// escape sequences then these will be stripped.
     ///
     /// # Returns
     /// 1. This will return an error if the task is already running.
@@ -57,12 +60,13 @@ impl Spinner {
     /// More info on terminal piping:
     /// - <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
     pub async fn try_start(
-        spinner_message: String,
+        arg_spinner_message: impl AsRef<str>,
         tick_delay: Duration,
         style: SpinnerStyle,
         safe_output_terminal: SafeRawTerminal,
         shared_writer: SharedWriter,
     ) -> miette::Result<Option<Spinner>> {
+        // Early return if the terminal is not fully interactive.
         if let StdoutIsPipedResult::StdoutIsPiped = is_stdout_piped() {
             return Ok(None);
         }
@@ -70,12 +74,22 @@ impl Spinner {
             return Ok(None);
         }
 
+        // Make sure no ANSI escape sequences are in the message.
+        let message = {
+            let msg = arg_spinner_message.as_ref();
+            if contains_ansi_escape_sequence(msg) {
+                strip_ansi_escapes::strip_str(msg)
+            } else {
+                msg.to_string()
+            }
+        };
+
         // Shutdown broadcast channel.
         let (shutdown_sender, _) = tokio::sync::broadcast::channel::<()>(1);
 
         // Only start the task if the terminal is fully interactive.
         let mut spinner = Spinner {
-            message: spinner_message,
+            message,
             tick_delay,
             style,
             safe_output_terminal,

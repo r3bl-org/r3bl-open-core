@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{AST,
+use r3bl_tui::{ASText,
                AnsiStyledText,
                InlineVec,
                TuiStyle,
@@ -48,7 +48,7 @@ fn fmt_two_col(col_1: &str, col_2: &str) -> String {
 /// The last line is passed in as a parameter to allow for customization. This is useful
 /// when the list is long and the instructions are at the top.
 pub fn prefix_multi_select_instruction_header(
-    last_lines: InlineVec<InlineVec<AST>>,
+    last_lines: InlineVec<InlineVec<ASText>>,
 ) -> InlineVec<InlineVec<AnsiStyledText>> {
     let text_up_and_down = fmt_two_col("Up or down:", "navigate");
     let text_space = fmt_two_col("Space:", "select or deselect item");
@@ -76,8 +76,8 @@ pub fn prefix_multi_select_instruction_header(
 /// can only select one item from the list. The instructions are displayed at the top of
 /// the list. This is easily converted into a [r3bl_tui::choose_impl::Header::MultiLine].
 pub fn prefix_single_select_instruction_header(
-    last_lines: InlineVec<InlineVec<AST>>,
-) -> InlineVec<InlineVec<AST>> {
+    last_lines: InlineVec<InlineVec<ASText>>,
+) -> InlineVec<InlineVec<ASText>> {
     let text_up_or_down = fmt_two_col("Up or down:", "navigate");
     let text_esc = fmt_two_col("Esc or Ctrl+C:", "exit program");
     let text_return_key = fmt_two_col("Return:", "confirm selection");

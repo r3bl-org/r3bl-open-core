@@ -117,7 +117,7 @@ pub mod upgrade_check {
         let plain_text_exit_msg = inline_string!(
             "\n{a}\n{b}\n",
             a = inline_string!(
-                "🎁 A new version of {} is available.",
+                "A new version of {} is available. 🎁",
                 get_self_bin_name()
             ),
             b = inline_string!(
