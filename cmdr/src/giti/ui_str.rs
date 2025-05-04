@@ -183,8 +183,8 @@ pub mod branch_delete_display {
                 acc,
                 "✅ {a} {b}{c}",
                 a = fmt::emphasis(branch_name),
-                b = fmt::error("deleted"),
-                c = fmt::colon()
+                b = fmt::emphasis_delete("deleted"),
+                c = fmt::period()
             );
         }
 

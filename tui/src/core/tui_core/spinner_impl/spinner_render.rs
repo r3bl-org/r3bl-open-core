@@ -14,6 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+use std::ops::Not;
 
 use crossterm::{cursor::{MoveToColumn, MoveUp},
                 style::{self, Print, Stylize},
@@ -21,7 +22,8 @@ use crossterm::{cursor::{MoveToColumn, MoveUp},
                 QueueableCommand};
 use miette::IntoDiagnostic as _;
 
-use crate::{convert_from_tui_color_to_crossterm_color,
+use crate::{contains_ansi_escape_sequence,
+            convert_from_tui_color_to_crossterm_color,
             inline_string,
             pad_fmt,
             spinner_render::style::style,
@@ -61,6 +63,8 @@ pub fn render_tick(
     count: usize,
     display_width: ColWidth,
 ) -> InlineString {
+    debug_assert!(contains_ansi_escape_sequence(message).not());
+
     match style.template {
         SpinnerTemplate::Braille => {
             // Translate count into the index of the BRAILLE_DOTS array.

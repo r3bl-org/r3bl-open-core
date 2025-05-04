@@ -205,3 +205,16 @@
   - [x] `giti/ui_str.rs`
 - [x] introduce consistent imperative formatting for `giti` and `edi`
 - [x] fix `giti branch checkout`
+
+# clean up giti phase 11
+
+- [x] rename `AST` -> `ASText`, etc.
+- [x] evaluate the use of `AST[]` -> `PixelChar[]` which can then be clipped for `readline_async`
+      prompt, `spinner`, and `choose` display. not all `ui_str::*` functions have to be changed,
+      just the ones that are related to the prompt and spinner displays
+  - `tui/src/core/tui_core/spinner_impl/spinner_render.rs:58`
+  - `tui/src/readline_async/readline_async_api.rs:121`
+  - [issue](https://github.com/r3bl-org/r3bl-open-core/issues/420)
+- [x] `tui/src/core/tui_core/spinner_impl/spinner_render.rs:58`
+  - move this into the constructor
+  - add debug_assert! to ensure no ANSI esc seq in message

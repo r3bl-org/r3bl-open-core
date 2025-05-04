@@ -1,10 +1,12 @@
-# make a release
+# clean up `edi.rs`
 
 - [ ] `cmdr/src/bin/edi.rs:113`
   - [ ] clean up the module organization (many things need to be moved out of `bin/edi.rs`)
   - [ ] remove all the leading space from each ui strings
-- [ ] manually test `giti` thoroughly
-- [ ] `fn install_with_spinner()`
+
+# Ctrl+C during upgrade run of `cargo install r3bl-cmdr`: https://github.com/r3bl-org/r3bl-open-core/issues/424
+
+- [ ] `fn install_with_spinner()`:
   - `cmdr/src/analytics_client/upgrade_check.rs:142`
   - `tui/examples/spinner.rs:33`
   - figure out what to do with `Ctrl+C` pressed in `giti` when `cargo install ...` is being run as
@@ -12,14 +14,28 @@
   - is this a special use case for the spinner? if so, consider adding functionality that is not
     tied to `readline_async` for this type of "blocking" use case;
   - why does the cursor show while spinner is active (remove the cursor?)
-- [ ] use `r3bl_script` test fixtures to test `git` and `gh` adapters
-- [ ] make sure `cmdr` docker file works (with `pkg-config` and `libssl-dev` removed)
-- [ ] `r3bl_tui`
-- [ ] `r3bl_cmdr`
-- [ ] close this: https://github.com/r3bl-org/r3bl-open-core/issues/365
-- [ ] test that `cargo install r3bl_cmdr` in docker
 
-# clean up giti phase 6
+# test `giti` thoroughly: https://github.com/r3bl-org/r3bl-open-core/issues/425
+
+- [ ] manual testing
+- [ ] use `r3bl_script` test fixtures to test `git` commands
+
+# make release of `r3bl-cmdr` and `r3bl_tui`
+
+- [ ] make sure `cmdr` docker file works (with `pkg-config` and `libssl-dev` removed):
+      https://github.com/r3bl-org/r3bl-open-core/issues/426
+- [ ] release `r3bl_tui`, `r3bl_cmdr`: https://github.com/r3bl-org/r3bl-open-core/issues/429
+- [ ] close this: https://github.com/r3bl-org/r3bl-open-core/issues/391
+
+# minor perf in `tui` and `edi`: https://github.com/r3bl-org/r3bl-open-core/issues/428
+
+- [ ] replace `HashMap` with `BTreeMap` (better cache locality performance). `HashMap` is great for
+      random access, `BTreeMap` is good for cache locality and iteration which is the primary use
+      case for most code in `r3bl_open_core` repo
+- [ ] add fps counter row to bottom of `edi`, just like in the `tui/examples/demo/*` add an
+      FPS/telemetry display to bottom of `edi`
+
+# modernize `choose` and `giti` codebase: https://github.com/r3bl-org/r3bl-open-core/issues/427
 
 - [ ] use `InlineString` & `InlineVec` in `giti` codebase (for sake of consistency)
 - [ ] fix clap args using `color_print::cstr` instead of directly embedding ansi escape sequences in
@@ -30,17 +46,9 @@
 - [ ] rewrite `giti` code to use the newtypes, like width, height, etc. and introduce newtypes, etc
       where needed
 
-# replace HashMap with BTreeMap (better cache locality performance)
+# create sub-issues for `giti`: https://github.com/r3bl-org/r3bl-open-core/issues/423
 
-- [ ] `HashMap` is great for random access, `BTreeMap` is good for cache locality and iteration
-      which is the primary use case for most code in `r3bl_open_core` repo
-
-# add fps counter row to bottom of edi
-
-- [ ] just like in the `tui/examples/demo/*` add an FPS/telemetry display to bottom of edi
-
-# create sub-issues for giti https://github.com/r3bl-org/r3bl-open-core/issues/391
-
+- [ ] `giti branch rename` -> rename an existing branch to other
 - [ ] `giti show <name>` -> choose an older version of a file to checkout to `Downloads` and
       optionally view in the `editor_component` itself in a TUI applet
 - [ ] `giti develop *` -> choose issues using TUI app as part of the flow
