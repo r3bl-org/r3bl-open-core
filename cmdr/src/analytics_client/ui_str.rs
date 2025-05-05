@@ -55,11 +55,13 @@ pub mod upgrade_install {
     /// Could not run `cargo install $crate_name` itself.
     pub fn install_failed_to_run_command_msg(err: Error) -> InlineString {
         inline_string!(
-            "❌ {a} {b}{c}\n{d}\n",
+            "❌ {a}{b} {c}{e} {d}{b}\n{f}",
             a = fmt::error("Failed to run"),
-            b = fmt::emphasis(inline_string!("cargo install {}", get_self_crate_name())),
-            c = fmt::colon(),
-            d = fmt::error(err)
+            b = fmt::colon(),
+            c = fmt::emphasis(inline_string!("cargo install {}", get_self_crate_name())),
+            d = fmt::normal("due to"),
+            e = fmt::comma(),
+            f = fmt::normal(err),
         )
     }
 
@@ -72,12 +74,33 @@ pub mod upgrade_install {
             c = fmt::error(err_str)
         )
     }
-}
 
-pub mod upgrade_spinner {
-    use super::*;
+    pub fn fail_send_sigint_msg(err: Error) -> InlineString {
+        inline_string!(
+            "{a}{b}\n{c}",
+            a = fmt::error("Failed to send kill signal to install process"),
+            b = fmt::colon(),
+            c = fmt::error(err)
+        )
+    }
 
-    pub fn stop_msg_raw() -> InlineString {
+    pub fn send_sigint_msg() -> InlineString {
+        inline_string!(
+            "{a}{c}",
+            a = fmt::error("Kill signal sent to install process"),
+            c = fmt::period(),
+        )
+    }
+
+    pub fn stop_sigint_msg() -> InlineString {
+        inline_string!(
+            "{a}{c}",
+            a = fmt::error("Installation interrupted by user"),
+            c = fmt::period(),
+        )
+    }
+
+    pub fn stop_msg() -> InlineString {
         inline_string!("{a}", a = fmt::dim("Finished installation!"))
     }
 

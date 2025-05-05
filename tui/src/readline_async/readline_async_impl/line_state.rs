@@ -370,12 +370,12 @@ impl LineState {
                 kind: KeyEventKind::Press,
                 ..
             }) => match code {
-                // End of transmission (CTRL-D)
+                // End of transmission (Ctrl+D)
                 KeyCode::Char('d') => {
                     self.exit(term)?;
                     return Ok(Some(ReadlineEvent::Eof));
                 }
-                // End of text (CTRL-C)
+                // End of text (Ctrl+C)
                 KeyCode::Char('c') => {
                     if self.should_print_line_on_control_c && !self.is_paused.is_paused()
                     {

@@ -275,16 +275,16 @@
 //! - In-memory History.
 //! - Left, Right: Move cursor left/right.
 //! - Up, Down: Scroll through input history.
-//! - Ctrl-W: Erase the input from the cursor to the previous whitespace.
-//! - Ctrl-U: Erase the input before the cursor.
-//! - Ctrl-L: Clear the screen.
-//! - Ctrl-Left / Ctrl-Right: Move to previous/next whitespace.
+//! - Ctrl+W: Erase the input from the cursor to the previous whitespace.
+//! - Ctrl+U: Erase the input before the cursor.
+//! - Ctrl+L: Clear the screen.
+//! - Ctrl+Left / Ctrl+Right: Move to previous/next whitespace.
 //! - Home: Jump to the start of the line.
-//!     - When the "emacs" feature (on by default) is enabled, Ctrl-A has the same effect.
+//!     - When the "emacs" feature (on by default) is enabled, Ctrl+A has the same effect.
 //! - End: Jump to the end of the line.
-//!     - When the "emacs" feature (on by default) is enabled, Ctrl-E has the same effect.
-//! - Ctrl-C, Ctrl-D: Send an `Eof` event.
-//! - Ctrl-C: Send an `Interrupt` event.
+//!     - When the "emacs" feature (on by default) is enabled, Ctrl+E has the same effect.
+//! - Ctrl+C, Ctrl+D: Send an `Eof` event.
+//! - Ctrl+C: Send an `Interrupt` event.
 //! - Extensible design based on `crossterm`'s `event-stream` feature.
 //!
 //! # Examples

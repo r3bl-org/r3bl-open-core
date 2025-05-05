@@ -398,7 +398,7 @@ mod long_running_task {
                 Duration::from_millis(100),
                 SpinnerStyle::default(),
                 Arc::new(StdMutex::new(stderr())),
-                shared_writer_clone_1,
+                Some(shared_writer_clone_1),
             )
             .await;
 

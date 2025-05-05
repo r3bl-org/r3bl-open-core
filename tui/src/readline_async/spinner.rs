@@ -33,13 +33,39 @@ use crate::{contains_ansi_escape_sequence,
             StdoutIsPipedResult,
             TTYResult};
 
+/// `Spinner` works in conjunction with [crate::ReadlineAsync] to provide a spinner in the
+/// terminal for long running tasks.
+///
+/// While the spinner is active, the async terminal output is paused. Also, when `Ctrl+C`
+/// or `Ctrl+D` is pressed, while both the readline **is active**, and a spinner **is
+/// active**, the spinner will be stopped, but the readline will continue to run. This
+/// behavior will not work unless **both** are active:
+/// - The readline is active, when [crate::ReadlineAsync::read_line()] is called.
+/// - The spinner is active, when [Spinner::try_start()] is called.
+///
+/// This behavior is handled by [crate::ReadlineAsync], with some coordination with
+/// `Spinner`. The spinner has to tell the [crate::ReadlineAsync] before it starts, and
+/// provide a way to stop the spinner when `Ctrl+C` or `Ctrl+D` is pressed. Here are the
+/// details:
+///
+/// - In [Self::try_start_task()], the `Spinner` will send a [LineStateControlSignal],
+///   containing a `shutdown_sender` of type [tokio::sync::broadcast::Sender<()>], signal
+///   to the [SharedWriter] instance of the [crate::ReadlineAsync].
+///   - This tells the [crate::ReadlineAsync] that a spinner is active.
+///   - It also gives a way to stop the spinner via the `shutdown_sender`.
+///
+/// - With this teed up, when `Ctrl+C` or `Ctrl+D` is intercepted by
+///   [crate::ReadlineAsync] in
+///   [crate::readline_internal::apply_event_to_line_state_and_render()], this will result
+///   in a `()` to be sent to [crate::Readline::safe_spinner_is_active], which shuts
+///   the spinner down.
 pub struct Spinner {
     pub tick_delay: Duration,
     /// ANSI escape sequences are stripped from this before being assigned.
     pub message: String,
     pub style: SpinnerStyle,
     pub safe_output_terminal: SafeRawTerminal,
-    pub shared_writer: SharedWriter,
+    pub maybe_shared_writer: Option<SharedWriter>,
     pub shutdown_sender: tokio::sync::broadcast::Sender<()>,
     safe_is_shutdown: SafeBool,
 }
@@ -64,7 +90,7 @@ impl Spinner {
         tick_delay: Duration,
         style: SpinnerStyle,
         safe_output_terminal: SafeRawTerminal,
-        shared_writer: SharedWriter,
+        maybe_shared_writer: Option<SharedWriter>,
     ) -> miette::Result<Option<Spinner>> {
         // Early return if the terminal is not fully interactive.
         if let StdoutIsPipedResult::StdoutIsPiped = is_stdout_piped() {
@@ -93,7 +119,7 @@ impl Spinner {
             tick_delay,
             style,
             safe_output_terminal,
-            shared_writer,
+            maybe_shared_writer,
             shutdown_sender,
             safe_is_shutdown: Arc::new(StdMutex::new(false)),
         };
@@ -106,26 +132,26 @@ impl Spinner {
 
     /// This is meant for the task that spawned this [Spinner] to check if it should
     /// shutdown, due to:
-    /// 1. The user pressing `Ctrl-C` or `Ctrl-D`.
+    /// 1. The user pressing `Ctrl+C` or `Ctrl+D`.
     /// 2. Or the [Spinner::stop] got called.
     pub fn is_shutdown(&self) -> bool { *self.safe_is_shutdown.lock().unwrap() }
 
     async fn try_start_task(&mut self) -> miette::Result<()> {
         // Tell readline that spinner is active & register the spinner shutdown sender.
-        _ = self
-            .shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::SpinnerActive(
-                self.shutdown_sender.clone(),
-            ))
-            .await;
+        if let Some(shared_writer) = self.maybe_shared_writer.as_ref() {
+            _ = shared_writer
+                .line_state_control_channel_sender
+                .send(LineStateControlSignal::SpinnerActive(
+                    self.shutdown_sender.clone(),
+                ))
+                .await;
 
-        // Pause the terminal.
-        let _ = self
-            .shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::Pause)
-            .await;
+            // Pause the terminal.
+            _ = shared_writer
+                .line_state_control_channel_sender
+                .send(LineStateControlSignal::Pause)
+                .await;
+        };
 
         let message = self.message.clone();
         let tick_delay = self.tick_delay;
@@ -182,11 +208,12 @@ impl Spinner {
 
     pub async fn stop(&mut self, final_message: &str) -> miette::Result<()> {
         // Tell readline that spinner is inactive.
-        _ = self
-            .shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::SpinnerInactive)
-            .await;
+        if let Some(shared_writer) = self.maybe_shared_writer.as_ref() {
+            _ = shared_writer
+                .line_state_control_channel_sender
+                .send(LineStateControlSignal::SpinnerInactive)
+                .await;
+        }
 
         // Shutdown the task (if it hasn't already been shutdown).
         if !*self.safe_is_shutdown.lock().unwrap() {
@@ -207,11 +234,12 @@ impl Spinner {
         )?;
 
         // Resume the terminal.
-        let _ = self
-            .shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::Resume)
-            .await;
+        if let Some(shared_writer) = self.maybe_shared_writer.as_ref() {
+            let _ = shared_writer
+                .line_state_control_channel_sender
+                .send(LineStateControlSignal::Resume)
+                .await;
+        }
 
         Ok(())
     }
@@ -257,7 +285,7 @@ mod tests {
                 color: SpinnerColor::None,
             },
             safe_output_terminal,
-            shared_writer,
+            Some(shared_writer),
         )
         .await;
 
@@ -333,7 +361,7 @@ mod tests {
             quantum,
             SpinnerStyle::default(),
             safe_output_terminal,
-            shared_writer,
+            Some(shared_writer),
         )
         .await;
 

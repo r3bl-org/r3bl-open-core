@@ -75,7 +75,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
         DELAY_UNIT,
         style,
         Arc::new(StdMutex::new(stderr())),
-        shared_writer.clone(),
+        Some(shared_writer.clone()),
     )
     .await?;
 

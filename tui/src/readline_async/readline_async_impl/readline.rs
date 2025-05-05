@@ -222,10 +222,10 @@ pub enum ReadlineEvent {
     /// The user entered a line of text.
     Line(String),
 
-    /// The user pressed Ctrl-D.
+    /// The user pressed `Ctrl+D`.
     Eof,
 
-    /// The user pressed Ctrl-C.
+    /// The user pressed `Ctrl+C`.
     Interrupted,
 
     /// The terminal was resized.
@@ -601,7 +601,7 @@ impl Readline {
     /// If `enter` is false, the prompt & input will be erased instead.
     /// The default value for this is `true`.
     ///
-    /// `control_c` similarly controls the behavior for when the user presses Ctrl-C.
+    /// `control_c` similarly controls the behavior for when the user presses `Ctrl+C`.
     /// The default value for this is `false`.
     pub fn should_print_line_on(&mut self, enter: bool, control_c: bool) {
         let mut line_state = self.safe_line_state.lock().unwrap();

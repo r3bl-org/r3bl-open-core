@@ -25,11 +25,13 @@ use r3bl_tui::{InlineString,
                fg_soft_pink,
                inline_string};
 
-pub fn colon() -> InlineString { fg_slate_gray(":").to_small_str() }
+pub fn colon() -> InlineString { dim(":") }
 
-pub fn period() -> InlineString { fg_slate_gray(".").to_small_str() }
+pub fn comma() -> InlineString { dim(",") }
 
-pub fn exclamation() -> InlineString { fg_slate_gray("!").to_small_str() }
+pub fn period() -> InlineString { dim(".") }
+
+pub fn exclamation() -> InlineString { dim("!") }
 
 /// Normal or default text style.
 pub fn normal(arg_text: impl Display) -> InlineString {
