@@ -1,9 +1,3 @@
-# clean up `edi.rs`
-
-- [ ] `cmdr/src/bin/edi.rs:113`
-  - [ ] clean up the module organization (many things need to be moved out of `bin/edi.rs`)
-  - [ ] remove all the leading space from each ui strings
-
 # Ctrl+C during upgrade run of `cargo install r3bl-cmdr`: https://github.com/r3bl-org/r3bl-open-core/issues/424
 
 - [ ] `fn install_with_spinner()`:

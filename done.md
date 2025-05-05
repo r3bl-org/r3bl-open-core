@@ -218,3 +218,9 @@
 - [x] `tui/src/core/tui_core/spinner_impl/spinner_render.rs:58`
   - move this into the constructor
   - add debug_assert! to ensure no ANSI esc seq in message
+
+# clean up `edi.rs`
+
+- [x] `cmdr/src/bin/edi.rs:113`
+  - [x] clean up the module organization (many things need to be moved out of `bin/edi.rs`)
+  - [x] remove all the leading space from each ui strings

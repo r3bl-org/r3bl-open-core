@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023-2025 R3BL LLC
+ *   Copyright (c) 2025 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,18 +15,13 @@
  *   limitations under the License.
  */
 
-// Include.
-pub mod app_main;
-pub mod clap_config;
-pub mod launcher;
-pub mod state;
-pub mod ui_str;
-pub mod ui_templates;
+use r3bl_tui::{InlineString, inline_string};
 
-// Reexport.
-pub use app_main::*;
-pub use clap_config::*;
-pub use launcher::*;
-pub use state::*;
-pub use ui_str::*;
-pub use ui_templates::*;
+use crate::get_self_bin_name;
+
+pub fn multiple_files_not_supported_yet() -> InlineString {
+    inline_string!(
+        "{} currently only allows you to edit one file at a time. Select one:",
+        get_self_bin_name()
+    )
+}
