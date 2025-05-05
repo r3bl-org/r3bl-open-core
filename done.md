@@ -84,7 +84,7 @@
 
 # clean up giti phase 2
 
-- [x] replace `SuccessReport` with an enum of valid variants (including user pressed ctrl+c)
+- [x] replace `SuccessReport` with an enum of valid variants (including user pressed `Ctrl+C`)
 - [x] change how errors are reported using `miette`
 - [x] collect all the git commands in a single module `git.rs`
 

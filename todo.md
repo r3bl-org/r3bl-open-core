@@ -1,13 +1,15 @@
 # Ctrl+C during upgrade run of `cargo install r3bl-cmdr`: https://github.com/r3bl-org/r3bl-open-core/issues/424
 
 - [ ] `fn install_with_spinner()`:
-  - `cmdr/src/analytics_client/upgrade_check.rs:142`
+  - `cmdr/src/analytics_client/upgrade_check.rs:162`
   - `tui/examples/spinner.rs:33`
   - figure out what to do with `Ctrl+C` pressed in `giti` when `cargo install ...` is being run as
-    part of upgrade ;
+    part of upgrade
   - is this a special use case for the spinner? if so, consider adding functionality that is not
-    tied to `readline_async` for this type of "blocking" use case;
-  - why does the cursor show while spinner is active (remove the cursor?)
+    tied to `readline_async` for this type of "blocking" use case
+- [ ] `tui/src/readline_async/spinner.rs:139` when `maybe_shared_writer` is None
+  - try_start: enable raw mode, hide cursor
+  - stop: disable raw mode, show cursor
 
 # test `giti` thoroughly: https://github.com/r3bl-org/r3bl-open-core/issues/425
 

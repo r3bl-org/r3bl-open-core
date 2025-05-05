@@ -14,19 +14,16 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::{env::current_exe,
-          io::{Error, stderr},
-          process::{Command, ExitStatus, Stdio},
+          io::{Error, ErrorKind, stderr},
+          process::{ExitStatus, Stdio},
           sync::{Arc, atomic::AtomicBool},
           time::Duration};
 
 use r3bl_tui::{DefaultIoDevices,
                HowToChoose,
                InlineString,
-               ReadlineAsync,
                SpinnerStyle,
-               StdMutex,
                StyleSheet,
                ast,
                ast_line,
@@ -36,7 +33,7 @@ use r3bl_tui::{DefaultIoDevices,
                spinner::Spinner,
                try_get_latest_release_version_from_crates_io};
 use smallvec::smallvec;
-use tokio::task;
+use tokio::{process::Command, signal};
 
 use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
@@ -111,10 +108,10 @@ pub fn is_upgrade_required() -> bool {
 /// the new version now.
 pub async fn show_exit_message() {
     if is_upgrade_required() {
-        // 1. Show the “upgrade available” text.
+        // Show the “upgrade available” text.
         println!("{}", ui_str::upgrade_check::upgrade_is_required_msg());
 
-        // 2. Ask the user.
+        // Ask the user.
         let yes_no_options = &[
             ui_str::upgrade_check::yes_msg_raw(),
             ui_str::upgrade_check::no_msg_raw(),
@@ -140,15 +137,11 @@ pub async fn show_exit_message() {
         .ok()
         .and_then(|items| items.into_iter().next());
 
-        // 3. If they chose “Yes, upgrade now”, run `cargo install …`.
+        // If they chose “Yes, upgrade now”, run `cargo install …`.
         if let Some(user_choice) = maybe_user_choice
             && user_choice == yes_no_options[0]
         {
-            // With spinner.
-            install_upgrade_command_with_spinner().await;
-
-            // Without spinner.
-            // install_without_spinner().await;
+            install_upgrade_command_with_spinner_and_ctrl_c().await;
         }
     }
 
@@ -158,87 +151,85 @@ pub async fn show_exit_message() {
 
 // XMARK: how to use long running potentially blocking synchronous code in Tokio, with spinner
 
-/// Just like [install_upgrade_command_without_spinner] but **with** the spinner.
-async fn install_upgrade_command_with_spinner() {
+async fn install_upgrade_command_with_spinner_and_ctrl_c() {
     let crate_name = get_self_crate_name();
 
-    // 1) Create readline async.
-    let res_readline_async = ReadlineAsync::try_new(Some("")).await;
-
-    let mut maybe_spinner: Option<Spinner> = None;
-
-    // 2) Spawn spinner task.
-    if let Ok(Some(readline_async)) = &res_readline_async {
-        // Configure the spinner.
-        let res = Spinner::try_start(
-            ui_str::upgrade_spinner::indeterminate_progress_msg_raw(),
-            Duration::from_millis(100),
-            SpinnerStyle::default(),
-            Arc::new(StdMutex::new(stderr())),
-            readline_async.clone_shared_writer(),
-        )
-        .await;
-
-        if let Ok(Some(spinner)) = res {
-            maybe_spinner = Some(spinner);
-        }
-    }
-
-    // 3) Run the install process via spawn_blocking() so that it does not gum up the
-    //    Tokio runtime for async tasks. `cargo install {crate_name}` is a long running,
-    //    synchronous, and potentially blocking operation. This is run in a native thread
-    //    from Tokio's thread pool, and not as a green thread.
-    let blocking_task_join_handle = task::spawn_blocking(|| {
-        // Run external process, and block current thread, until external process
-        // finishes.
-        Command::new("cargo")
-            .args(["install", crate_name])
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .status()
-    });
-    // Asynchronously wait for the potentially blocking, long running, synchronous task
-    // (on the **other** thread pool) to complete, by calling
-    // `blocking_task_join_handle.await`. This does **not block** the current async worker
-    // thread.
-    let res_join_handle = blocking_task_join_handle.await;
-    let res = match res_join_handle {
-        // Task completed successfully (the command may have succeeded or failed).
-        Ok(it) => it,
-        // Task failed (panic or cancellation). Convert JoinError -> io::Error.
-        Err(join_err) => {
-            let err_msg =
-                ui_str::upgrade_install::tokio_blocking_task_failed_msg(join_err);
-            let io_error = Error::other(err_msg.to_string());
-            Err(io_error)
-        }
-    };
-
-    // 4) Stop the spinner & wait.
-    if let Some(spinner) = maybe_spinner.as_mut()
-        && !spinner.is_shutdown()
+    // Setup spinner.
+    let mut maybe_spinner = if let Ok(Some(spinner)) = Spinner::try_start(
+        ui_str::upgrade_install::indeterminate_progress_msg_raw(),
+        Duration::from_millis(100),
+        SpinnerStyle::default(),
+        Arc::new(r3bl_tui::StdMutex::new(stderr())),
+        None,
+    )
+    .await
     {
-        let _ = spinner.stop(&ui_str::upgrade_spinner::stop_msg_raw()).await;
+        Some(spinner)
+    } else {
+        None
     };
 
-    // 5) Exit the readline_async.
-    if let Ok(Some(readline_async)) = res_readline_async {
-        _ = readline_async
-            .exit(Some(&ui_str::upgrade_spinner::readline_async_exit_msg()))
-            .await;
-    }
+    // Spawn the command asynchronously.
+    let mut cmd = {
+        let mut it = Command::new("cargo");
+        it.args(["install", crate_name])
+            // Ensure process is killed if Child handle is dropped.
+            .kill_on_drop(true)
+            // Don't need stdin.
+            .stdin(Stdio::null())
+            // Capture stdout (optional).
+            .stdout(Stdio::piped())
+            // Capture stderr (optional).
+            .stderr(Stdio::piped());
+        it
+    };
 
-    // 6) Report result.
-    report_upgrade_install_result(res);
-}
+    let process_status_result = match cmd.spawn() {
+        Ok(mut child) => {
+            tokio::select! {
+                // [Branch]: Wait for Ctrl+C signal.
+                _ = signal::ctrl_c() => {
+                    // Stop the spinner (if running).
+                    if let Some(mut spinner) = maybe_spinner.take()
+                        && !spinner.is_shutdown() {
+                            _ = spinner.stop(&ui_str::upgrade_install::stop_sigint_msg()).await;
+                        }
 
-/// Just like [install_upgrade_command_with_spinner] but **without** the spinner.
-#[allow(dead_code)]
-async fn install_upgrade_command_without_spinner() {
-    let crate_name = get_self_crate_name();
-    let res = Command::new("cargo").args(["install", crate_name]).status();
-    report_upgrade_install_result(res);
+                    // Try to kill the process, with start_kill() which is non-blocking.
+                    match child.start_kill() {
+                        Ok(_) => {
+                            println!("{}", ui_str::upgrade_install::send_sigint_msg());
+                            _ = child.wait().await;
+                        }
+                        Err(e) => {
+                            eprintln!("{}",ui_str::upgrade_install::fail_send_sigint_msg(e));
+                        }
+                    }
+
+                    // Return an error indicating cancellation.
+                    Err(Error::new(ErrorKind::Interrupted, "Installation cancelled by user"))
+                }
+                // [Branch]: Wait for the process to complete.
+                status_result = child.wait() => {
+                    // Stop the spinner (if running).
+                    if let Some(mut spinner) = maybe_spinner.take()
+                        && !spinner.is_shutdown() {
+                            let _ = spinner.stop(&ui_str::upgrade_install::stop_msg()).await;
+                        }
+
+                    // Return the process exit status.
+                    status_result
+                }
+            }
+        }
+        Err(e) => {
+            // Return the spawn error.
+            Err(e)
+        }
+    };
+
+    // Report the final result (success, failure, cancellation).
+    report_upgrade_install_result(process_status_result);
 }
 
 /// Reports the result of the installation process.
