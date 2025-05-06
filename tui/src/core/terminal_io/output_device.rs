@@ -22,14 +22,17 @@ use crate::{SafeRawTerminal, SendRawTerminal, StdMutex};
 pub type LockedOutputDevice<'a> = &'a mut dyn std::io::Write;
 
 /// Macro to simplify locking and getting a mutable reference to the output device.
-/// Don't call this again in the same scope, it will deadlock!
+/// Don't call this again in the same scope, it will deadlock! A safe approach is
+/// to use this macro in a separate block scope.
 ///
 /// Usage example:
 /// ```rust
 /// use r3bl_tui::{lock_output_device_as_mut, OutputDevice, LockedOutputDevice};
 /// let device = OutputDevice::new_stdout();
-/// let mut_ref: LockedOutputDevice<'_> = lock_output_device_as_mut!(device);
-/// let _ = mut_ref.write_all(b"Hello, world!\n");
+/// { // Start a new block scope to avoid deadlock.
+///     let mut_ref: LockedOutputDevice<'_> = lock_output_device_as_mut!(device);
+///     let _ = mut_ref.write_all(b"Hello, world!\n");
+/// } // The lock is released here.
 /// ```
 #[macro_export]
 macro_rules! lock_output_device_as_mut {
@@ -48,10 +51,21 @@ pub struct OutputDevice {
     pub is_mock: bool,
 }
 
+impl Default for OutputDevice {
+    fn default() -> Self { Self::new_stdout() }
+}
+
 impl OutputDevice {
     pub fn new_stdout() -> Self {
         Self {
             resource: Arc::new(StdMutex::new(std::io::stdout())),
+            is_mock: false,
+        }
+    }
+
+    pub fn new_stderr() -> Self {
+        Self {
+            resource: Arc::new(StdMutex::new(std::io::stderr())),
             is_mock: false,
         }
     }

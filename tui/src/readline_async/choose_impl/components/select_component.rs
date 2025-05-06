@@ -15,37 +15,13 @@
  *   limitations under the License.
  */
 
-use std::io::Result;
 
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 style::{Print, ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType}};
+use miette::IntoDiagnostic;
 
-use crate::{ast,
-            ch,
-            choose_apply_style,
-            col,
-            fg_blue,
-            get_terminal_width,
-            inline_string,
-            lock_output_device_as_mut,
-            pad_fmt,
-            queue_commands,
-            throws,
-            usize,
-            width,
-            AnsiStyledText,
-            ChUnit,
-            FunctionComponent,
-            GCStringExt,
-            Header,
-            HowToChoose,
-            InlineString,
-            InlineVec,
-            OutputDevice,
-            State,
-            StyleSheet,
-            DEVELOPMENT_MODE};
+use crate::{ast, ch, choose_apply_style, col, fg_blue, get_terminal_width, inline_string, lock_output_device_as_mut, pad_fmt, queue_commands, throws, usize, width, AnsiStyledText, ChUnit, CommonResult, FunctionComponent, GCStringExt, Header, HowToChoose, InlineString, InlineVec, OutputDevice, State, StyleSheet, DEVELOPMENT_MODE};
 
 pub struct SelectComponent {
     pub output_device: OutputDevice,
@@ -83,7 +59,7 @@ impl FunctionComponent<State> for SelectComponent {
 
     /// Allocate space and print the lines. The bring the cursor back to the start of the
     /// lines.
-    fn render(&mut self, state: &mut State) -> Result<()> {
+    fn render(&mut self, state: &mut State) -> CommonResult<()> {
         throws!({
             // Setup the required data.
             let focused_and_selected_style = self.style.focused_and_selected_style;
@@ -455,7 +431,7 @@ impl FunctionComponent<State> for SelectComponent {
                 MoveToPreviousLine(*items_viewport_height + *header_viewport_height),
             };
 
-            lock_output_device_as_mut!(self.output_device).flush()?;
+            lock_output_device_as_mut!(self.output_device).flush().into_diagnostic()?;
         });
     }
 }

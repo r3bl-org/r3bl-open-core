@@ -22,12 +22,14 @@ use crossterm::{cursor,
                 terminal::{self, disable_raw_mode, Clear},
                 ExecutableCommand,
                 QueueableCommand};
+use miette::Report as ErrorReport;
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
-use crate::{execute_commands,
+use crate::{execute_commands_no_lock,
             join,
             lock_output_device_as_mut,
+            CommonResultWithError,
             History,
             InputDevice,
             LineState,
@@ -214,6 +216,14 @@ pub enum ReadlineError {
     /// written to the `SharedWriter` was already output.
     #[error("line writers closed")]
     Closed,
+}
+
+/// For convenience, convert [`ErrorReport`] to [`ReadlineError`], so that
+/// `into_diagnostic()` works.
+impl From<ErrorReport> for ReadlineError {
+    fn from(report: ErrorReport) -> Self {
+        ReadlineError::IO(io::Error::other(format!("{report}")))
+    }
 }
 
 /// Events emitted by [`Readline::readline()`].
@@ -424,7 +434,7 @@ pub mod manage_shared_writer_output {
         is_paused: LineStateLiveness,
         mut line_state: std::sync::MutexGuard<'a, LineState>,
         term: &mut SendRawTerminal,
-    ) -> Result<(), ReadlineError> {
+    ) -> CommonResultWithError<(), ReadlineError> {
         // If paused, then return!
         if is_paused.is_paused() {
             return Ok(());
@@ -475,13 +485,16 @@ impl Readline {
         prompt: String,
         output_device: OutputDevice,
         /* move */ input_device: InputDevice,
-    ) -> Result<(Self, SharedWriter), ReadlineError> {
+    ) -> CommonResultWithError<(Self, SharedWriter), ReadlineError> {
         // Immediately hide the cursor. Then wait for
         // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor
         // (try to eliminate jank). It makes it appear as if the cursor is animated into
         // place.
-        execute_commands!(output_device, cursor::Hide);
-        execute_commands!(output_device, terminal::EnableLineWrap);
+        {
+            let writer = lock_output_device_as_mut!(output_device);
+            execute_commands_no_lock!(writer, cursor::Hide);
+            execute_commands_no_lock!(writer, terminal::EnableLineWrap);
+        } // This drops the writer lock.
 
         // Enable raw mode. Drop will disable raw mode.
         terminal::enable_raw_mode()?;
@@ -565,7 +578,10 @@ impl Readline {
 
     /// Change the prompt.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
-    pub fn update_prompt(&mut self, prompt: &str) -> Result<(), ReadlineError> {
+    pub fn update_prompt(
+        &mut self,
+        prompt: &str,
+    ) -> CommonResultWithError<(), ReadlineError> {
         let term = lock_output_device_as_mut!(self.output_device);
         self.safe_line_state
             .lock()
@@ -576,7 +592,7 @@ impl Readline {
 
     /// Clear the screen.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
-    pub fn clear(&mut self) -> Result<(), ReadlineError> {
+    pub fn clear(&mut self) -> CommonResultWithError<(), ReadlineError> {
         let term = lock_output_device_as_mut!(self.output_device);
         term.queue(Clear(terminal::ClearType::All))?;
         self.safe_line_state
@@ -619,7 +635,9 @@ impl Readline {
     ///
     /// Polling function for [`Self::readline`], manages all input and output. Returns
     /// either an [ReadlineEvent] or an [ReadlineError].
-    pub async fn readline(&mut self) -> miette::Result<ReadlineEvent, ReadlineError> {
+    pub async fn readline(
+        &mut self,
+    ) -> CommonResultWithError<ReadlineEvent, ReadlineError> {
         loop {
             tokio::select! {
                 // Poll for events.

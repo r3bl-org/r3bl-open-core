@@ -15,14 +15,15 @@
  *   limitations under the License.
  */
 use std::{env::current_exe,
-          io::{Error, ErrorKind, stderr},
+          io::{Error, ErrorKind},
           process::{ExitStatus, Stdio},
-          sync::{Arc, atomic::AtomicBool},
+          sync::atomic::AtomicBool,
           time::Duration};
 
 use r3bl_tui::{DefaultIoDevices,
                HowToChoose,
                InlineString,
+               OutputDevice,
                SpinnerStyle,
                StyleSheet,
                ast,
@@ -157,9 +158,10 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
     // Setup spinner.
     let mut maybe_spinner = if let Ok(Some(spinner)) = Spinner::try_start(
         ui_str::upgrade_install::indeterminate_progress_msg_raw(),
+        ui_str::upgrade_install::stop_msg(),
         Duration::from_millis(100),
         SpinnerStyle::default(),
-        Arc::new(r3bl_tui::StdMutex::new(stderr())),
+        OutputDevice::default(),
         None,
     )
     .await
@@ -192,7 +194,7 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
                     // Stop the spinner (if running).
                     if let Some(mut spinner) = maybe_spinner.take()
                         && !spinner.is_shutdown() {
-                            _ = spinner.stop(&ui_str::upgrade_install::stop_sigint_msg()).await;
+                            _ = spinner.stop().await;
                         }
 
                     // Try to kill the process, with start_kill() which is non-blocking.
@@ -214,7 +216,7 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
                     // Stop the spinner (if running).
                     if let Some(mut spinner) = maybe_spinner.take()
                         && !spinner.is_shutdown() {
-                            let _ = spinner.stop(&ui_str::upgrade_install::stop_msg()).await;
+                            let _ = spinner.stop().await;
                         }
 
                     // Return the process exit status.

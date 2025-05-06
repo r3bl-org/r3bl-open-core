@@ -15,11 +15,10 @@
  *   limitations under the License.
  */
 use std::{fs,
-          io::{stderr, Write},
+          io::Write,
           ops::ControlFlow,
           path::{self, PathBuf},
           str::FromStr as _,
-          sync::Arc,
           time::Duration};
 
 use miette::{miette, IntoDiagnostic as _};
@@ -36,8 +35,7 @@ use r3bl_tui::{bold,
                InlineVec,
                SendRawTerminal,
                SharedWriter,
-               SpinnerStyle,
-               StdMutex};
+               SpinnerStyle};
 use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
@@ -365,6 +363,8 @@ mod process_input_event {
 }
 
 mod long_running_task {
+    use r3bl_tui::OutputDevice;
+
     use super::*;
 
     // Spawn a task that uses the shared writer to print to stdout, and pauses the spinner
@@ -395,9 +395,12 @@ mod long_running_task {
             // Try to create and start a spinner.
             let maybe_spinner = Spinner::try_start(
                 format!("{task_name} - This is a sample indeterminate progress message"),
+                format!(
+                    "{task_name} - Task ended. Resuming terminal and showing any output that was generated while spinner was active."
+                ),
                 Duration::from_millis(100),
                 SpinnerStyle::default(),
-                Arc::new(StdMutex::new(stderr())),
+                OutputDevice::default(),
                 Some(shared_writer_clone_1),
             )
             .await;
@@ -428,10 +431,7 @@ mod long_running_task {
 
             // Don't forget to stop the spinner.
             if let Ok(Some(mut spinner)) = maybe_spinner {
-                let msg = format!(
-                    "{task_name} - Task ended. Resuming terminal and showing any output that was generated while spinner was active."
-                );
-                let _ = spinner.stop(msg.as_str()).await;
+                let _ = spinner.stop().await;
             }
         });
     }

@@ -16,46 +16,21 @@
  */
 use std::ops::Not;
 
-use crossterm::{cursor::{MoveToColumn, MoveUp},
-                style::{self, Print, Stylize},
-                terminal::{Clear, ClearType},
-                QueueableCommand};
-use miette::IntoDiagnostic as _;
+use crossterm::style::{self, Stylize};
 
 use crate::{contains_ansi_escape_sequence,
             convert_from_tui_color_to_crossterm_color,
             inline_string,
-            pad_fmt,
             spinner_render::style::style,
             width,
             ColWidth,
             GCStringExt,
             InlineString,
-            SendRawTerminal,
             SpinnerColor,
             SpinnerStyle,
             SpinnerTemplate,
             BLOCK_DOTS,
-            BRAILLE_DOTS,
-            ELLIPSIS_GLYPH};
-
-pub fn get_next_tick_glyph(style: &SpinnerStyle, count: usize) -> InlineString {
-    match style.template {
-        SpinnerTemplate::Braille => {
-            let index_to_use = count % BRAILLE_DOTS.len();
-            BRAILLE_DOTS[index_to_use].into()
-        }
-        SpinnerTemplate::Block => {
-            let index_to_use = count % BLOCK_DOTS.len();
-            BLOCK_DOTS[index_to_use].into()
-        }
-        SpinnerTemplate::Dots => {
-            let mut acc = InlineString::with_capacity(count);
-            pad_fmt!(fmt: acc, pad_str: ELLIPSIS_GLYPH, repeat_count: count);
-            acc
-        }
-    }
-}
+            BRAILLE_DOTS};
 
 pub fn render_tick(
     style: &mut SpinnerStyle,
@@ -94,71 +69,7 @@ pub fn render_tick(
 
             inline_string!("{output_symbol} {text_trunc_fmt}")
         }
-        SpinnerTemplate::Dots => {
-            let padding_right = get_next_tick_glyph(style, count);
-
-            let text = message.grapheme_string();
-            let text_trunc = text.trunc_end_to_fit({
-                display_width - width(padding_right.len()) -
-                /* last display col is empty */ width(1)
-            });
-            let text_trunc_with_padding = inline_string!("{text_trunc}{padding_right}");
-
-            apply_color(&text_trunc_with_padding, &mut style.color)
-        }
     }
-}
-
-pub fn print_tick(
-    style: &SpinnerStyle,
-    output: &str,
-    writer: &mut SendRawTerminal,
-) -> miette::Result<()> {
-    match style.template {
-        SpinnerTemplate::Dots => {
-            // Print the output. And make sure to terminate w/ a newline, so that the
-            // output is printed.
-            writer
-                .queue(MoveToColumn(0))
-                .into_diagnostic()?
-                .queue(Print(format!("{output}\n")))
-                .into_diagnostic()?
-                .queue(MoveUp(1))
-                .into_diagnostic()?;
-        }
-
-        SpinnerTemplate::Braille => {
-            // Print the output. And make sure to terminate w/ a newline, so that the
-            // output is printed.
-            writer
-                .queue(MoveToColumn(0))
-                .into_diagnostic()?
-                .queue(Clear(ClearType::CurrentLine))
-                .into_diagnostic()?
-                .queue(Print(format!("{output}\n")))
-                .into_diagnostic()?
-                .queue(MoveUp(1))
-                .into_diagnostic()?;
-        }
-
-        SpinnerTemplate::Block => {
-            // Print the output. And make sure to terminate w/ a newline, so that the
-            // output is printed.
-            writer
-                .queue(MoveToColumn(0))
-                .into_diagnostic()?
-                .queue(Clear(ClearType::CurrentLine))
-                .into_diagnostic()?
-                .queue(Print(format!("{output}\n")))
-                .into_diagnostic()?
-                .queue(MoveUp(1))
-                .into_diagnostic()?;
-        }
-    }
-
-    writer.flush().into_diagnostic()?;
-
-    Ok(())
 }
 
 pub fn render_final_tick(
@@ -169,34 +80,23 @@ pub fn render_final_tick(
     let text = final_message.grapheme_string();
     let text_trunc = text.trunc_end_to_fit(display_width);
     match style.template {
-        SpinnerTemplate::Dots => text_trunc.into(),
         SpinnerTemplate::Braille => text_trunc.into(),
         SpinnerTemplate::Block => text_trunc.into(),
     }
 }
 
-pub fn print_final_tick(
-    style: &SpinnerStyle,
-    output: &str,
-    writer: &mut SendRawTerminal,
-) -> miette::Result<()> {
+pub fn get_next_tick_glyph(style: &SpinnerStyle, count: usize) -> InlineString {
     match style.template {
-        SpinnerTemplate::Dots | SpinnerTemplate::Braille | SpinnerTemplate::Block => {
-            writer
-                .queue(MoveToColumn(0))
-                .into_diagnostic()?
-                .queue(Print(Clear(ClearType::CurrentLine)))
-                .into_diagnostic()?
-                .queue(Print(format!("{output}\n")))
-                .into_diagnostic()?
+        SpinnerTemplate::Braille => {
+            let index_to_use = count % BRAILLE_DOTS.len();
+            BRAILLE_DOTS[index_to_use].into()
         }
-    };
-
-    writer.flush().into_diagnostic()?;
-
-    Ok(())
+        SpinnerTemplate::Block => {
+            let index_to_use = count % BLOCK_DOTS.len();
+            BLOCK_DOTS[index_to_use].into()
+        }
+    }
 }
-
 fn apply_color(output: &str, color: &mut SpinnerColor) -> InlineString {
     if let SpinnerColor::ColorWheel(color_wheel) = color {
         let maybe_next_color = color_wheel.next_color();
