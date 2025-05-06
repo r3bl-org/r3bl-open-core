@@ -21,7 +21,6 @@ use crate::{ColorWheel, ColorWheelConfig, ColorWheelSpeed};
 
 #[derive(Debug, Clone, Copy)]
 pub enum SpinnerTemplate {
-    Dots,
     Braille,
     Block,
 }

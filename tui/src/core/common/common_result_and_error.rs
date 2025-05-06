@@ -47,7 +47,9 @@ use std::{error::Error,
 ///   }
 /// }
 /// ```
-pub type CommonResult<T> = miette::Result<T>;
+pub type CommonResult<R> = miette::Result<R>;
+
+pub type CommonResultWithError<R, E> = miette::Result<R, E>;
 
 /// Common error struct. Read custom error docs
 /// [here](https://learning-rust.github.io/docs/e7.custom_error_types.html).

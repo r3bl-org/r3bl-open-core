@@ -15,7 +15,6 @@
  *   limitations under the License.
  */
 
-use std::io::Result;
 
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
                 terminal::{Clear, ClearType}};
@@ -42,9 +41,9 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
 
     fn calculate_items_viewport_height(&self, state: &mut S) -> ChUnit;
 
-    fn render(&mut self, state: &mut S) -> Result<()>;
+    fn render(&mut self, state: &mut S) -> miette::Result<()>;
 
-    fn allocate_viewport_height_space(&mut self, state: &mut S) -> Result<()> {
+    fn allocate_viewport_height_space(&mut self, state: &mut S) -> miette::Result<()> {
         throws!({
             let viewport_height =
                 /* not including the header */ self.calculate_items_viewport_height(state) +
@@ -64,7 +63,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
         });
     }
 
-    fn clear_viewport_for_resize(&mut self, state: &mut S) -> Result<()> {
+    fn clear_viewport_for_resize(&mut self, state: &mut S) -> miette::Result<()> {
         throws!({
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
@@ -108,7 +107,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
         });
     }
 
-    fn clear_viewport(&mut self, state: &mut S) -> Result<()> {
+    fn clear_viewport(&mut self, state: &mut S) -> miette::Result<()> {
         throws!({
             let viewport_height =
                 /* not including the header */ self.calculate_items_viewport_height(state) +

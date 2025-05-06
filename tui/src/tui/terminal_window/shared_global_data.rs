@@ -167,8 +167,10 @@ where
         if self.hud_report.is_empty() {
             let count = self.spinner_helper.count;
             let style = &mut self.spinner_helper.spinner_style;
-            let spinner_glyph =
-                spinner_impl::get_next_tick_glyph(style, count.as_usize());
+            let spinner_glyph = spinner_impl::spinner_render::get_next_tick_glyph(
+                style,
+                count.as_usize(),
+            );
 
             self.spinner_helper.empty_message.clear();
             use std::fmt::Write as _;

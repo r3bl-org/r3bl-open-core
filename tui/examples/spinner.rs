@@ -15,44 +15,76 @@
  *   limitations under the License.
  */
 
-use std::{io::{stderr, Write},
-          sync::Arc,
-          time::Duration};
+use std::{io::Write, time::Duration};
 
 use r3bl_tui::{readline_async::{ReadlineAsync, Spinner},
                set_jemalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
+               underline,
+               CommonResult,
+               OutputDevice,
                SpinnerColor,
                SpinnerStyle,
-               SpinnerTemplate,
-               StdMutex};
+               SpinnerTemplate};
 use tokio::{time::Instant, try_join};
+
+macro_rules! println_with_flush {
+    ($($tt:tt)*) => {
+        println!($($tt)*);
+        std::io::stdout().flush().unwrap();
+    };
+}
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
-pub async fn main() -> miette::Result<()> {
+pub async fn main() -> CommonResult<()> {
     set_jemalloc_in_main!();
 
-    println!("-------------> Example with concurrent output: Braille <-------------");
-    example_with_concurrent_output(SpinnerStyle {
-        template: SpinnerTemplate::Braille,
-        color: SpinnerColor::default_color_wheel(),
-    })
-    .await?;
+    // Without readline.
+    {
+        println_with_flush!("{}", underline("❌ WITHOUT READLINE ASYNC").bold());
 
-    println!("-------------> Example with concurrent output: Block <-------------");
-    example_with_concurrent_output(SpinnerStyle {
-        template: SpinnerTemplate::Block,
-        color: SpinnerColor::default_color_wheel(),
-    })
-    .await?;
+        println_with_flush!(
+            "-------------> Example with concurrent output: Braille <-------------"
+        );
+        example_with_concurrent_output_no_readline_async(SpinnerStyle {
+            template: SpinnerTemplate::Braille,
+            color: SpinnerColor::default_color_wheel(),
+        })
+        .await?;
 
-    println!("-------------> Example with concurrent output: Dots <-------------");
-    example_with_concurrent_output(SpinnerStyle {
-        template: SpinnerTemplate::Dots,
-        color: SpinnerColor::default_color_wheel(),
-    })
-    .await?;
+        println_with_flush!(
+            "-------------> Example with concurrent output: Block <-------------"
+        );
+        example_with_concurrent_output_no_readline_async(SpinnerStyle {
+            template: SpinnerTemplate::Block,
+            color: SpinnerColor::default_color_wheel(),
+        })
+        .await?;
+    }
+
+    // With readline async.
+    {
+        println_with_flush!("{}", underline("✅ WITH READLINE ASYNC").bold());
+
+        println_with_flush!(
+            "-------------> Example with concurrent output: Braille <-------------"
+        );
+        example_with_concurrent_output(SpinnerStyle {
+            template: SpinnerTemplate::Braille,
+            color: SpinnerColor::default_color_wheel(),
+        })
+        .await?;
+
+        println_with_flush!(
+            "-------------> Example with concurrent output: Block <-------------"
+        );
+        example_with_concurrent_output(SpinnerStyle {
+            template: SpinnerTemplate::Block,
+            color: SpinnerColor::default_color_wheel(),
+        })
+        .await?;
+    }
 
     Ok(())
 }
@@ -72,9 +104,10 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
     // Start spinner. Automatically pauses the terminal.
     let mut maybe_spinner = Spinner::try_start(
         message_trying_to_connect,
+        "Sample FINAL message for the spinner: Connected to server",
         DELAY_UNIT,
         style,
-        Arc::new(StdMutex::new(stderr())),
+        OutputDevice::default(),
         Some(shared_writer.clone()),
     )
     .await?;
@@ -101,12 +134,44 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
 
     // Stop spinner. Automatically resumes the terminal.
     if let Some(spinner) = maybe_spinner.as_mut() {
-        spinner
-            .stop("This is a sample final message for the spinner component: Connected to server")
-            .await?;
+        spinner.stop().await?;
     }
 
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    tokio::time::sleep(ARTIFICIAL_UI_DELAY).await;
+
+    Ok(())
+}
+
+#[allow(unused_assignments)]
+async fn example_with_concurrent_output_no_readline_async(
+    style: SpinnerStyle,
+) -> miette::Result<()> {
+    let address = "127.0.0.1:8000";
+    let message_trying_to_connect = format!(
+        "This is a sample indeterminate progress message: trying to connect to server on {}",
+        &address
+    );
+
+    // Start spinner.
+    let mut maybe_spinner = Spinner::try_start(
+        message_trying_to_connect,
+        "Sample FINAL message for the spinner: Connected to server",
+        DELAY_UNIT,
+        style,
+        OutputDevice::default(),
+        None,
+    )
+    .await?;
+
+    // Simulate some async work.
+    tokio::time::sleep(ARTIFICIAL_UI_DELAY).await;
+
+    // Stop spinner.
+    if let Some(spinner) = maybe_spinner.as_mut() {
+        spinner.stop().await?;
+    }
+
+    tokio::time::sleep(ARTIFICIAL_UI_DELAY).await;
 
     Ok(())
 }

@@ -16,9 +16,11 @@
  */
 
 pub mod spinner_constants;
+pub mod spinner_print;
 pub mod spinner_render;
 pub mod spinner_style;
 
 pub use spinner_constants::*;
+pub use spinner_print::*;
 pub use spinner_render::*;
 pub use spinner_style::*;

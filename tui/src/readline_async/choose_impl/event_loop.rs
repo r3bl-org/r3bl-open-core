@@ -14,15 +14,16 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::io::Result;
 
 use crossterm::{cursor::{Hide, Show},
                 terminal::{disable_raw_mode, enable_raw_mode}};
+use miette::IntoDiagnostic;
 
 use super::KeyPressReader;
 use crate::{execute_commands,
             return_if_not_interactive_terminal,
             CalculateResizeHint,
+            CommonResult,
             FunctionComponent,
             InputDevice,
             InputDeviceExt,
@@ -46,7 +47,7 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
     function_component: &mut impl FunctionComponent<S>,
     on_keypress: impl Fn(&mut S, InputEvent) -> EventLoopResult,
     input_device: &mut InputDevice,
-) -> Result<EventLoopResult> {
+) -> CommonResult<EventLoopResult> {
     return_if_not_interactive_terminal!(Ok(EventLoopResult::ExitWithError));
 
     run_before_event_loop(state, function_component)?;
@@ -83,7 +84,7 @@ pub fn enter_event_loop_sync<S: CalculateResizeHint>(
     function_component: &mut impl FunctionComponent<S>,
     on_keypress: impl Fn(&mut S, InputEvent) -> EventLoopResult,
     key_press_reader: &mut impl KeyPressReader,
-) -> Result<EventLoopResult> {
+) -> CommonResult<EventLoopResult> {
     return_if_not_interactive_terminal!(Ok(EventLoopResult::ExitWithError));
 
     run_before_event_loop(state, function_component)?;
@@ -119,9 +120,9 @@ pub fn enter_event_loop_sync<S: CalculateResizeHint>(
 fn run_before_event_loop<S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<S>,
-) -> Result<()> {
+) -> CommonResult<()> {
     execute_commands!(function_component.get_output_device(), Hide);
-    enable_raw_mode()?;
+    enable_raw_mode().into_diagnostic()?;
 
     // First render before blocking the main thread for user input.
     function_component.render(state)?;
@@ -131,9 +132,9 @@ fn run_before_event_loop<S: CalculateResizeHint>(
 
 fn run_after_event_loop<S: CalculateResizeHint>(
     function_component: &mut impl FunctionComponent<S>,
-) -> Result<()> {
+) -> CommonResult<()> {
     execute_commands!(function_component.get_output_device(), Show);
-    disable_raw_mode()?;
+    disable_raw_mode().into_diagnostic()?;
     Ok(())
 }
 

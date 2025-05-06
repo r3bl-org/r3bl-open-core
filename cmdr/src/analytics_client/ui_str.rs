@@ -92,16 +92,8 @@ pub mod upgrade_install {
         )
     }
 
-    pub fn stop_sigint_msg() -> InlineString {
-        inline_string!(
-            "{a}{c}",
-            a = fmt::error("Installation interrupted by user"),
-            c = fmt::period(),
-        )
-    }
-
     pub fn stop_msg() -> InlineString {
-        inline_string!("{a}", a = fmt::dim("Finished installation!"))
+        inline_string!("{a}", a = fmt::dim("Installation ended."))
     }
 
     /// No formatting on this string, since the spinner will apply its own animated lolcat
@@ -139,10 +131,7 @@ pub mod upgrade_check {
     pub fn upgrade_is_required_msg() -> InlineString {
         let plain_text_exit_msg = inline_string!(
             "\n{a}\n{b}\n",
-            a = inline_string!(
-                "A new version of {} is available. 🎁",
-                get_self_bin_name()
-            ),
+            a = inline_string!("A new version of {} is available.", get_self_bin_name()),
             b = inline_string!(
                 "{} You can run `cargo install {}` to upgrade.",
                 glyphs::PROMPT,
@@ -179,7 +168,7 @@ pub mod goodbye_greetings {
 
         let star_us_msg = inline_string!(
             "{a}\n{b}",
-            a = "Please report issues & star us on GitHub: 🌟 🐞",
+            a = "Please report issues & star us on GitHub:",
             b = "https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
         );
 
