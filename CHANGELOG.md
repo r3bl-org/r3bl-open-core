@@ -430,6 +430,8 @@ These videos have been an inspiration for many of these changes:
 
 Moved:
 
+- `temp_dir.rs` is moved to `script` module where it belongs. The majority of code
+  accessing `TempDir` is in the `script` module, and it makes sense to move it there.
 - Move the contents of `r3bl_core` into `r3bl_tui` crate. Follow this
   [link](#archived-2025-04-21) to see all the final changes made to the `r3bl_core`
   crate before it was moved here. The `r3bl_core` crate is now archived. This allows for

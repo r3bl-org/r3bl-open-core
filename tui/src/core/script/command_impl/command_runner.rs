@@ -81,7 +81,7 @@ pub type TokioCommand = tokio::process::Command;
 /// }
 /// ```
 ///
-/// # Examples of using the [Run] trait, and [tokio::process::Output].
+/// # Examples of using the [Run] trait and [tokio::process::Command::output()].
 ///
 /// ```
 /// # use r3bl_tui::command;

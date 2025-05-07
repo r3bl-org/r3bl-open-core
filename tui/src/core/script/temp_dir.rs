@@ -21,7 +21,7 @@ use std::{fmt::{Display, Formatter},
 
 use miette::IntoDiagnostic;
 
-use super::friendly_random_id::generate_friendly_random_id;
+use crate::friendly_random_id::generate_friendly_random_id;
 
 pub struct TempDir {
     pub inner: std::path::PathBuf,

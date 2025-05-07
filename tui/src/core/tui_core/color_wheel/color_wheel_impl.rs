@@ -410,13 +410,13 @@ impl ColorWheel {
     ///
     /// # Colorization Policy
     ///
-    /// - [GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength]: The
+    /// - [GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength] - The
     ///   first time this method is called it will generate a gradient w/ the number of
     ///   steps. Subsequent calls will use the same gradient and index **if** the number
     ///   of steps is the same. However, if the number of steps are different, then a new
     ///   gradient will be generated & the index reset.
     ///
-    /// - [GradientGenerationPolicy::ReuseExistingGradientAndIndex]: The first time this
+    /// - [GradientGenerationPolicy::ReuseExistingGradientAndIndex] - The first time this
     ///   method is called it will generate a gradient w/ the number of steps. Subsequent
     ///   calls will use the same gradient and index.
     pub fn colorize_into_styled_texts(
