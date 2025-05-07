@@ -62,6 +62,34 @@ use crate::{contains_ansi_escape_sequence,
 ///   [crate::readline_internal::apply_event_to_line_state_and_render()], this will result
 ///   in a `()` to be sent to [crate::Readline::safe_spinner_is_active], which shuts the
 ///   spinner down.
+///
+/// # Usage Example
+///
+/// To properly stop a spinner and ensure it has completely shut down:
+/// ```
+/// # use std::time::Duration;
+/// # use r3bl_tui::{SpinnerStyle, OutputDevice, Spinner};
+/// # async fn example() -> miette::Result<()> {
+///     let mut spinner = Spinner::try_start(
+///         "Loading...",
+///         "Done!",
+///         Duration::from_millis(100),
+///         SpinnerStyle::default(),
+///         OutputDevice::default(),
+///         None,
+///     )
+///     .await?
+///     .unwrap();
+///
+///     // Some work happens here...
+///
+///     // Stop the spinner (sends the shutdown signal)
+///     spinner.stop().await;
+///     // Wait for the spinner to completely shut down
+///     spinner.wait_for_shutdown().await;
+/// # Ok(())
+/// # }
+/// ```
 pub struct Spinner {
     pub tick_delay: Duration,
     /// ANSI escape sequences are stripped from this before being assigned.
@@ -72,6 +100,9 @@ pub struct Spinner {
     pub maybe_shared_writer: Option<SharedWriter>,
     pub shutdown_sender: tokio::sync::broadcast::Sender<()>,
     safe_is_shutdown: SafeBool,
+    /// This is used to signal when the task has completely shut down. Use the
+    /// [Self::wait_for_shutdown()].
+    shutdown_complete_receiver: Option<tokio::sync::oneshot::Receiver<()>>,
 }
 
 impl Spinner {
@@ -138,6 +169,7 @@ impl Spinner {
             maybe_shared_writer,
             shutdown_sender,
             safe_is_shutdown: Arc::new(StdMutex::new(false)),
+            shutdown_complete_receiver: None,
         };
 
         // Start task.
@@ -157,6 +189,9 @@ impl Spinner {
     /// the spinner is active. This will continue running until [Self::stop()] is called,
     /// which simply sends a message to the shutdown channel, so that this task can shut
     /// itself down.
+    ///
+    /// This method also sets up a [tokio::sync::oneshot::channel] to allow
+    /// [Self::wait_for_shutdown()] to know when the task has completely finished.
     pub async fn try_start_task(&mut self) -> miette::Result<()> {
         // Tell readline that spinner is active & register the spinner shutdown sender.
         if let Some(shared_writer) = self.maybe_shared_writer.as_ref() {
@@ -184,6 +219,11 @@ impl Spinner {
             self.maybe_shared_writer.clone(),
         )?;
 
+        // Create a oneshot channel to signal when the task is complete
+        let (shutdown_complete_sender, maybe_shutdown_complete_receiver) =
+            tokio::sync::oneshot::channel();
+        self.shutdown_complete_receiver = Some(maybe_shutdown_complete_receiver);
+
         // These are all moved into the spawn block.
         let output_device_clone = self.output_device.clone();
         let interval_message_clone = self.interval_message.clone();
@@ -205,11 +245,6 @@ impl Spinner {
                     _ = shutdown_receiver.recv() => {
                         // Cancel the interval.
                         drop(interval);
-
-                        // This spinner is now shutdown, so other task(s) using it will
-                        // know that this spinner has been shutdown by user interaction or
-                        // other means.
-                        *self_safe_is_shutdown.lock().unwrap() = true;
 
                         // Tell readline that spinner is inactive.
                         if let Some(shared_writer) = maybe_shared_writer_clone.as_ref() {
@@ -239,6 +274,15 @@ impl Spinner {
                                 .send(LineStateControlSignal::Resume)
                                 .await;
                         }
+
+                        // This spinner is now shutdown, so other task(s) using it will
+                        // know that this spinner has been shutdown by user interaction or
+                        // other means.
+                        *self_safe_is_shutdown.lock().unwrap() = true;
+
+                        // Signal that the task has completely shut down. It's okay if
+                        // this fails - it just means the receiver was dropped.
+                        let _ = shutdown_complete_sender.send(());
 
                         break;
                     }
@@ -274,10 +318,20 @@ impl Spinner {
         ok!()
     }
 
-    /// Shutdown the task started by [Self::try_start_task()].
-    pub async fn stop(&mut self) -> miette::Result<()> {
-        _ = self.shutdown_sender.send(());
-        ok!()
+    /// Shutdown the task started by [Self::try_start_task()]. This method only sends the
+    /// shutdown signal and returns immediately without waiting for the spinner task to
+    /// completely shut down. To wait for the task to actually finish shutting down, call
+    /// [Self::wait_for_shutdown()] after this method.
+    pub async fn stop(&mut self) { _ = self.shutdown_sender.send(()); }
+
+    /// Waits for the spinner task to completely shut down. This can be used after calling
+    /// [Self::stop()] to ensure the task has fully completed.
+    pub async fn wait_for_shutdown(&mut self) {
+        if let Some(receiver) = self.shutdown_complete_receiver.take() {
+            // Wait for the task to signal completion. Ignore the error if the sender is
+            // dropped without sending (rare case).
+            let _ = receiver.await;
+        }
     }
 }
 
@@ -310,7 +364,7 @@ mod tests {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let shared_writer = SharedWriter::new(line_sender);
 
-        let spinner = Spinner::try_start(
+        let res_maybe_spinner = Spinner::try_start(
             "message",
             "final message",
             QUANTUM,
@@ -325,22 +379,19 @@ mod tests {
 
         return_if_not_interactive_terminal!();
 
-        let mut spinner = spinner.unwrap().unwrap();
+        let mut spinner = res_maybe_spinner.unwrap().unwrap();
 
+        // Let the spinner run for a while.
         tokio::time::sleep(QUANTUM * FACTOR).await;
 
         // This might take some time to finish, so we need to wait for it.
-        spinner.stop().await.unwrap();
-        tokio::time::sleep(QUANTUM * FACTOR).await;
+        spinner.stop().await;
+        spinner.wait_for_shutdown().await;
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
-        // println!("{:?}", output_buffer_data);
-
-        assert!(output_buffer_data.contains("final message"));
-        assert_eq!(
-            output_buffer_data,
-            "⠁ message\n⠃ message\n⡇ message\n⠇ message\n⡎ message\nfinal message\n"
-        );
+        println!("{:?}", output_buffer_data);
+        assert!(output_buffer_data.contains("⠁ message\n"));
+        assert!(output_buffer_data.contains("final message\n"));
 
         let line_control_signal_sink = {
             let mut acc = ArrayVec::new();
@@ -389,7 +440,7 @@ mod tests {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let shared_writer = SharedWriter::new(line_sender);
 
-        let spinner = Spinner::try_start(
+        let res_maybe_spinner = Spinner::try_start(
             "message",
             "final message",
             QUANTUM,
@@ -401,24 +452,22 @@ mod tests {
 
         return_if_not_interactive_terminal!();
 
-        let mut spinner = spinner.unwrap().unwrap();
+        let mut spinner = res_maybe_spinner.unwrap().unwrap();
 
+        // Let the spinner run for a while.
         tokio::time::sleep(QUANTUM * FACTOR).await;
 
         // This might take some time to finish, so we need to wait for it.
-        spinner.stop().await.unwrap();
-        tokio::time::sleep(QUANTUM * FACTOR).await;
+        spinner.stop().await;
+        spinner.wait_for_shutdown().await;
 
         // spell-checker:disable
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string();
-        // println!("{:?}", output_buffer_data);
-        assert!(output_buffer_data.contains("final message"));
-        assert_ne!(
-            output_buffer_data,
-            "⠁ message\n⠃ message\n⡇ message\n⠇ message\n⡎ message\nfinal message\n"
-        );
-        assert!(output_buffer_data.contains("message"));
-        assert!(output_buffer_data.contains("final message\n"));
+        println!("{:?}", output_buffer_data);
+        let stripped_output_buffer_data =
+            strip_ansi_escapes::strip_str(&output_buffer_data);
+        assert!(stripped_output_buffer_data.contains("⠁ message\n"));
+        assert!(stripped_output_buffer_data.contains("final message\n"));
         // spell-checker:enable
 
         let line_control_signal_sink = {

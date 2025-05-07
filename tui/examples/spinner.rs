@@ -134,7 +134,8 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
 
     // Stop spinner. Automatically resumes the terminal.
     if let Some(spinner) = maybe_spinner.as_mut() {
-        spinner.stop().await?;
+        spinner.stop().await;
+        spinner.wait_for_shutdown().await;
     }
 
     tokio::time::sleep(ARTIFICIAL_UI_DELAY).await;
@@ -168,7 +169,8 @@ async fn example_with_concurrent_output_no_readline_async(
 
     // Stop spinner.
     if let Some(spinner) = maybe_spinner.as_mut() {
-        spinner.stop().await?;
+        spinner.stop().await;
+        spinner.wait_for_shutdown().await;
     }
 
     tokio::time::sleep(ARTIFICIAL_UI_DELAY).await;

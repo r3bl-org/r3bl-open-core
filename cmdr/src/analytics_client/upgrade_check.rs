@@ -193,10 +193,10 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
                 // [Branch]: Wait for Ctrl+C signal.
                 _ = signal::ctrl_c() => {
                     // Stop the spinner (if running).
-                    if let Some(mut spinner) = maybe_spinner.take()
-                        && !spinner.is_shutdown() {
-                            _ = spinner.stop().await;
-                        }
+                    if let Some(mut spinner) = maybe_spinner.take() && !spinner.is_shutdown() {
+                        spinner.stop().await;
+                        spinner.wait_for_shutdown().await;
+                    }
 
                     // Try to kill the process, with start_kill() which is non-blocking.
                     match child.start_kill() {
@@ -205,20 +205,23 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
                             _ = child.wait().await;
                         }
                         Err(e) => {
-                            eprintln!("{}",ui_str::upgrade_install::fail_send_sigint_msg(e));
+                            eprintln!("{}", ui_str::upgrade_install::fail_send_sigint_msg(e));
                         }
                     }
 
                     // Return an error indicating cancellation.
-                    Err(Error::new(ErrorKind::Interrupted, "Installation cancelled by user"))
+                    Err(Error::new(
+                        ErrorKind::Interrupted, "Installation cancelled by user",
+                    ))
                 }
                 // [Branch]: Wait for the process to complete.
                 status_result = child.wait() => {
                     // Stop the spinner (if running).
                     if let Some(mut spinner) = maybe_spinner.take()
                         && !spinner.is_shutdown() {
-                            let _ = spinner.stop().await;
-                        }
+                        spinner.stop().await;
+                        spinner.wait_for_shutdown().await;
+                    }
 
                     // Return the process exit status.
                     status_result
