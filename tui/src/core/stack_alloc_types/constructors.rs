@@ -50,8 +50,8 @@ mod inline_string_tests {
 ///
 /// # Arguments
 ///
-/// - `$format` - The format to apply to the char storage. This is whatever you would
-///   pass to [format!] or [write!].
+/// - `$format` - The format to apply to the char storage. This is whatever you would pass
+///   to [format!] or [write!].
 #[macro_export]
 macro_rules! tiny_inline_string {
     (

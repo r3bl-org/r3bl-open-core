@@ -86,8 +86,8 @@ fn parse_code_block_body_to_code_block_end(input: &str) -> IResult<&str, &str> {
     Ok((remainder, output))
 }
 
-/// Split a string by newline. The idea is that a line is some text followed by a newline. An
-/// empty line is just a newline character.
+/// Split a string by newline. The idea is that a line is some text followed by a newline.
+/// An empty line is just a newline character.
 ///
 /// # Examples:
 /// | input          | output               |
@@ -109,8 +109,8 @@ pub fn split_by_new_line(input: &str) -> Vec<&str> {
 
 /// At a minimum, a [CodeBlockLine] will be 2 lines of text.
 /// 1. The first line will be the language of the code block, eg: "```rust\n" or "```\n".
-/// 2. The second line will be the end of the code block, eg: "```\n" Then there may be some
-///    number of lines of text in the middle. These lines are stored in the
+/// 2. The second line will be the end of the code block, eg: "```\n" Then there may be
+///    some number of lines of text in the middle. These lines are stored in the
 ///    [content](CodeBlockLine.content) field.
 pub fn convert_into_code_block_lines<'input>(
     lang: Option<&'input str>,
@@ -299,7 +299,9 @@ mod tests {
         }
 
         // Multiple lines.
-        // "import foobar\n\nfoobar.pluralize('word') # returns 'words'\nfoobar.pluralize('goose') # returns 'geese'\nfoobar.singularize('phenomena') # returns 'phenomenon'\n```"
+        // "import foobar\n\nfoobar.pluralize('word') # returns
+        // 'words'\nfoobar.pluralize('goose') # returns
+        // 'geese'\nfoobar.singularize('phenomena') # returns 'phenomenon'\n```"
         {
             let lang = "python";
             let code_lines = vec![

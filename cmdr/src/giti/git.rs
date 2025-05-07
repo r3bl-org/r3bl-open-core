@@ -40,8 +40,8 @@ pub mod modified_unstaged_file_ops {
         None,
     }
 
-    /// Similar to [try_get_modified_file_list()], but returns [ModifiedUnstagedFiles] state
-    /// indicating if there are any modified files.
+    /// Similar to [try_get_modified_file_list()], but returns [ModifiedUnstagedFiles]
+    /// state indicating if there are any modified files.
     pub async fn try_check_exists() -> ResultAndCommand<ModifiedUnstagedFiles> {
         let mut cmd = command!(
             program => "git",

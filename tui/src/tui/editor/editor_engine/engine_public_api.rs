@@ -449,8 +449,8 @@ mod syn_hi_r3bl_path {
     /// - Step 1: Get the lines from the buffer using
     ///   [editor_buffer.get_lines()](EditorBuffer::get_lines()).
     /// - Step 2: Convert the lines into a [List] of [StyleUSSpanLine] using
-    ///   [try_parse_and_highlight()]. If this fails then take the path of no
-    ///   syntax highlighting else take the path of syntax highlighting.
+    ///   [try_parse_and_highlight()]. If this fails then take the path of no syntax
+    ///   highlighting else take the path of syntax highlighting.
     pub fn render_content(
         editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,
@@ -471,8 +471,8 @@ mod syn_hi_r3bl_path {
 
     /// Path of syntax highlighting:
     /// - Step 1: Iterate the `List<StyleUSSpanLine>` from: `ch(@to_usize
-    ///           editor_buffer.get_scroll_offset().row_index)` to: `ch(@to_usize
-    ///           max_display_row_count)`
+    ///   editor_buffer.get_scroll_offset().row_index)` to: `ch(@to_usize
+    ///   max_display_row_count)`
     /// - Step 2: For each, call `StyleUSSpanLine::clip()` which returns a `StyledTexts`
     /// - Step 3: Render the `StyledTexts` into `render_ops`
     fn try_render_content(

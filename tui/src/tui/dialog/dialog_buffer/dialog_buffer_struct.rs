@@ -25,11 +25,11 @@ use crate::{ch,
             ItemsOwned,
             DEFAULT_SYN_HI_FILE_EXT};
 
-/// Please do not construct this struct directly and use [new_empty](DialogBuffer::new_empty)
-/// instead.
+/// Please do not construct this struct directly and use
+/// [new_empty](DialogBuffer::new_empty) instead.
 ///
-/// Stores the data for a modal dialog. It contains the text content in an [EditorBuffer] and a
-/// title that is displayed.
+/// Stores the data for a modal dialog. It contains the text content in an [EditorBuffer]
+/// and a title that is displayed.
 #[derive(Clone, PartialEq)]
 pub struct DialogBuffer {
     pub editor_buffer: EditorBuffer,

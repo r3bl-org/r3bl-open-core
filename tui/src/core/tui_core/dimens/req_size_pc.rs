@@ -25,9 +25,9 @@ use super::Pc;
 /// # How to use it
 ///
 /// You can create it either of the following ways:
-/// 1. Use the [crate::req_size_pc!] macro. It uses the [crate::pc!] macro to do
-///    the [crate::Pc] conversion. Make sure to call this macro from a block that
-///    returns a [Result] type, since the `?` operator is used here.
+/// 1. Use the [crate::req_size_pc!] macro. It uses the [crate::pc!] macro to do the
+///    [crate::Pc] conversion. Make sure to call this macro from a block that returns a
+///    [Result] type, since the `?` operator is used here.
 /// 2. Directly create it using the [ReqSizePc] struct with [crate::Pc] values.
 ///
 /// Note that [crate::Size], defined as:

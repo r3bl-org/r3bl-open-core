@@ -21,38 +21,56 @@
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
-//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
-//! </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874">
-//! </span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span style="color:#E10895">
-//! </span><span style="color:#DE0799">&amp;</span><span style="color:#DB069E">
-//! </span><span style="color:#D804A2">s</span><span style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span style="color:#C801B6">
-//! </span><span style="color:#C501B9">o</span><span style="color:#C101BD">f</span><span style="color:#BD01C1">
-//! </span><span style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span style="color:#AA03D2">
-//! </span><span style="color:#A603D5">f</span><span style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span style="color:#890DE8">
-//! </span><span style="color:#850FEB">o</span><span style="color:#8111ED">n</span><span style="color:#7C13EF">
-//! </span><span style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span style="color:#572CFC">r</span><span style="color:#532FFD">
-//! </span><span style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
+//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span
+//! style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span
+//! style="color:#F92363"> </span><span style="color:#F82067">T</span><span
+//! style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span
+//! style="color:#F31874"> </span><span style="color:#F11678">l</span><span
+//! style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span
+//! style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span
+//! style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span
+//! style="color:#E10895"> </span><span style="color:#DE0799">&amp;</span><span
+//! style="color:#DB069E"> </span><span style="color:#D804A2">s</span><span
+//! style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span
+//! style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span
+//! style="color:#C801B6"> </span><span style="color:#C501B9">o</span><span
+//! style="color:#C101BD">f</span><span style="color:#BD01C1"> </span><span
+//! style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span
+//! style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span
+//! style="color:#AA03D2"> </span><span style="color:#A603D5">f</span><span
+//! style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span
+//! style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span
+//! style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span
+//! style="color:#890DE8"> </span><span style="color:#850FEB">o</span><span
+//! style="color:#8111ED">n</span><span style="color:#7C13EF"> </span><span
+//! style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span
+//! style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span
+//! style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span
+//! style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span
+//! style="color:#572CFC">r</span><span style="color:#532FFD"> </span><span
+//! style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span
+//! style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span
+//! style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span
+//! style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span
+//! style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span
+//! style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 //!
-//! We are working on building command line apps in Rust which have rich text user interfaces (TUI).
-//! We want to lean into the terminal as a place of productivity, and build all kinds of awesome
-//! apps for it.
+//! We are working on building command line apps in Rust which have rich text user
+//! interfaces (TUI). We want to lean into the terminal as a place of productivity, and
+//! build all kinds of awesome apps for it.
 //!
-//! 1. 🔮 Instead of just building one app, we are building a library to enable any kind of rich TUI
-//!    development w/ a twist: taking concepts that work really well for the frontend mobile and web
-//!    development world and re-imagining them for TUI & Rust.
+//! 1. 🔮 Instead of just building one app, we are building a library to enable any kind
+//!    of rich TUI development w/ a twist: taking concepts that work really well for the
+//!    frontend mobile and web development world and re-imagining them for TUI & Rust.
 //!
-//!    - Taking inspiration from things like [React](https://react.dev/),
-//!      [SolidJS](https://www.solidjs.com/),
-//!      [Elm](https://guide.elm-lang.org/architecture/),
-//!      [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
-//!      Compose](https://developer.android.com/compose),
-//!      [JSX](https://ui.dev/imperative-vs-declarative-programming),
-//!      [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can
-//!      be run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
+//!    - Taking inspiration from things like [React](https://react.dev/), [SolidJS](https://www.solidjs.com/),
+//!      [Elm](https://guide.elm-lang.org/architecture/), [iced-rs](https://docs.rs/iced/latest/iced/),
+//!      [Jetpack Compose](https://developer.android.com/compose), [JSX](https://ui.dev/imperative-vs-declarative-programming),
+//!      [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can be
+//!      run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
 //!    - Even the thread running the main event loop doesn't block since it is async.
-//!    - Using proc macros to create DSLs to implement something inspired by
-//!      [CSS](https://www.w3.org/TR/CSS/#css) &
-//!      [JSX](https://ui.dev/imperative-vs-declarative-programming).
+//!    - Using proc macros to create DSLs to implement something inspired by [CSS](https://www.w3.org/TR/CSS/#css)
+//!      & [JSX](https://ui.dev/imperative-vs-declarative-programming).
 //!
 //! 2. 🌎 We are building apps to enhance developer productivity & workflows.
 //!
@@ -81,7 +99,8 @@
 //!
 //! - [Introduction](#introduction)
 //! - [Changelog](#changelog)
-//! - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+//! - [Learn how these crates are built, provide
+//!   feedback](#learn-how-these-crates-are-built-provide-feedback)
 //! - [How to use it](#how-to-use-it)
 //! - [Build, run, test tasks](#build-run-test-tasks)
 //!   - [Prerequisites](#prerequisites)
@@ -93,11 +112,12 @@
 //!
 //! # Introduction
 //!
-//! Rust crate to generate formatted ANSI 256 (8-bit) and truecolor (24-bit) color output to stdout. On
-//! macOS, the default Terminal.app does not support truecolor, so ANSI 256 colors are used instead.
+//! Rust crate to generate formatted ANSI 256 (8-bit) and truecolor (24-bit) color output
+//! to stdout. On macOS, the default Terminal.app does not support truecolor, so ANSI 256
+//! colors are used instead.
 //!
-//! This crate performs its own detection of terminal color capability heuristically. And does not
-//! use other crates to perform this function.
+//! This crate performs its own detection of terminal color capability heuristically. And
+//! does not use other crates to perform this function.
 //!
 //! Here's a screenshot of running the `main` example on various operating systems:
 //!
@@ -126,8 +146,9 @@
 //! # Learn how these crates are built, provide feedback
 //!
 //! To learn how we built this crate, please take a look at the following resources.
-//! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
-//! - If you like consuming written content, here's our developer [site](https://developerlife.com/). Please consider subscribing to our [newsletter](https://developerlife.com/subscribe.html).
+//! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom).
+//!   Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+//! - If you like consuming written content, here's our developer [site](https://developerlife.com/).
 //! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 //!
 //! # How to use it
@@ -168,8 +189,7 @@
 //! 🌠 In order for these to work you have to install the Rust toolchain and `nu` and
 //! `cargo-watch`:
 //!
-//! 1. Install the Rust toolchain using `rustup` by following the instructions
-//!    [here](https://rustup.rs/).
+//! 1. Install the Rust toolchain using `rustup` by following the instructions [here](https://rustup.rs/).
 //! 1. Install `cargo-watch` using `cargo install cargo-watch`.
 //! 1. Install `flamegraph` using `cargo install flamegraph`.
 //! 1. Install [`nu`](https://www.nushell.sh/) on your system using `cargo install nu`. It
@@ -214,10 +234,10 @@
 //!
 //! - There are a few crates on crates.io that do similar things but they don't amenable
 //!   licenses.
-//! - Other crates simply ignore ANSI 256 colors and only support truecolor, even when they
-//!   claim that they support it.
-//! - And there are other crates which don't correctly report that macOS Terminal.app does not
-//!   support truecolor and only supports ANSI 256 color.
+//! - Other crates simply ignore ANSI 256 colors and only support truecolor, even when
+//!   they claim that they support it.
+//! - And there are other crates which don't correctly report that macOS Terminal.app does
+//!   not support truecolor and only supports ANSI 256 color.
 //!
 //! Here are some relevant links:
 //! <!-- cspell:disable -->
@@ -228,7 +248,8 @@
 //! 1. [`term_supports_ansi_color` function](https://docs.rs/anstyle-query/latest/anstyle_query/fn.term_supports_ansi_color.html)
 //! 1. [`anstyle-query` crate](https://crates.io/crates/anstyle-query)
 //! 1. [`supports-color` documentation](https://docs.rs/supports-color/2.0.0/supports_color/)
-//! 1. [`r3bl_ansi_color` crate](https://crates.io/crates/r3bl_ansi_color) (the source in `ansi_color` folder is this crate)
+//! 1. [`r3bl_ansi_color` crate](https://crates.io/crates/r3bl_ansi_color) (the source in
+//!    `ansi_color` folder is this crate)
 //! 1. [`colored` crate](https://crates.io/crates/colored)
 //! <!-- cspell:enable -->
 

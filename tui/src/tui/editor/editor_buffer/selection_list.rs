@@ -210,8 +210,8 @@ impl SelectionList {
     /// `maybe_previous_direction` field.
     /// - If there is no existing previous direction, it returns
     ///   [DirectionChangeResult::DirectionIsTheSame].
-    /// - Otherwise it compares the two and returns [DirectionChangeResult] (whether
-    ///   the direction has changed or not).
+    /// - Otherwise it compares the two and returns [DirectionChangeResult] (whether the
+    ///   direction has changed or not).
     pub fn has_caret_movement_direction_changed(
         &self,
         current_direction: CaretMovementDirection,

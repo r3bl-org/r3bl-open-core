@@ -17,8 +17,7 @@
 
 //! Note that [PathBuf] is owned and [Path] is a slice into it.
 //! - So replace `&`[PathBuf] with a `&`[Path].
-//! - More details
-//!   [here](https://rust-lang.github.io/rust-clippy/master/index.html#ptr_arg).
+//! - More details [here](https://rust-lang.github.io/rust-clippy/master/index.html#ptr_arg).
 
 use std::{env,
           fs,
@@ -327,7 +326,8 @@ mod tests_fs_path {
 
             // Ensure that an invalid path returns an error.
             assert!(fs_path::try_file_exists(&new_file).is_err()); // This file does not exist.
-            assert!(fs_path::try_file_exists(&new_dir).is_err()); // This directory does not exist.
+            assert!(fs_path::try_file_exists(&new_dir).is_err()); // This directory does
+                                                                  // not exist.
         });
     });
 

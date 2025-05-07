@@ -52,14 +52,10 @@
 //! ```
 //!
 //! - tokio crate docs:
-//!     - [Async in depth, futures, polling, efficient
-//!       wakers](https://tokio.rs/tokio/tutorial/async)
-//!     - [Example of delay (setTimeout) w/out waker,
-//!       inefficient](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=7a43cdf047cc17047c3c8b3f137293f0)
-//!     - [Example of delay (setTimeout) w/ waker,
-//!       efficient](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=6633717db032ffe7af809e9131d7462f)
-//!     - [Per task concurrency w/ `select!`, vs parallelism w/
-//!       `tokio::spawn`](https://tokio.rs/tokio/tutorial/select#per-task-concurrency)
+//!     - [Async in depth, futures, polling, efficient wakers](https://tokio.rs/tokio/tutorial/async)
+//!     - [Example of delay (setTimeout) w/out waker, inefficient](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=7a43cdf047cc17047c3c8b3f137293f0)
+//!     - [Example of delay (setTimeout) w/ waker, efficient](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=6633717db032ffe7af809e9131d7462f)
+//!     - [Per task concurrency w/ `select!`, vs parallelism w/ `tokio::spawn`](https://tokio.rs/tokio/tutorial/select#per-task-concurrency)
 //! - std docs:
 //!     - <https://doc.rust-lang.org/std/future/trait.Future.html>
 //!     - <https://doc.rust-lang.org/std/task/struct.Waker.html>

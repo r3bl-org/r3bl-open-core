@@ -96,8 +96,8 @@ impl HasFocus {
 }
 
 impl HasFocus {
-    /// Pushes the `id` to the `id_vec`. The previous `id` is saved and can be restored with
-    /// [reset_modal_id](HasFocus::reset_modal_id).
+    /// Pushes the `id` to the `id_vec`. The previous `id` is saved and can be restored
+    /// with [reset_modal_id](HasFocus::reset_modal_id).
     pub fn try_set_modal_id(&mut self, id: FlexBoxId) -> CommonResult<()> {
         throws!({
             // Must have a non modal id already set.
@@ -132,8 +132,8 @@ impl HasFocus {
         self.is_modal_set() && self.does_id_have_focus(id)
     }
 
-    /// Restores the modal `id` to the previous non-modal `id`. It does nothing if there's no modal
-    /// `id` set.
+    /// Restores the modal `id` to the previous non-modal `id`. It does nothing if there's
+    /// no modal `id` set.
     pub fn reset_modal_id(&mut self) {
         if self.is_modal_set() {
             self.id_vec.pop();

@@ -19,8 +19,8 @@
 //! [crate::parse_inline_fragments_until_eol_or_eoi()].
 //!
 //! It matches anything that is not a special character. This is used to parse plain text.
-//! It works with the specialized parsers in [crate::parse_inline_fragments_until_eol_or_eoi()]
-//! such as:
+//! It works with the specialized parsers in
+//! [crate::parse_inline_fragments_until_eol_or_eoi()] such as:
 //! - [crate::parse_fragment_starts_with_underscore_err_on_new_line()],
 //! - [crate::parse_fragment_starts_with_star_err_on_new_line()],
 //! - [crate::parse_fragment_starts_with_backtick_err_on_new_line()], etc.
@@ -58,7 +58,8 @@ use crate::{fg_blue,
 
 /// This is the lowest priority parser called by
 /// [crate::parse_inline_fragments_until_eol_or_eoi()], which itself is called:
-/// 1. Repeatedly in a loop by [crate::parse_block_markdown_text_with_or_without_new_line()].
+/// 1. Repeatedly in a loop by
+///    [crate::parse_block_markdown_text_with_or_without_new_line()].
 /// 2. And by [crate::parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()].
 ///
 /// It will match anything that is not a special character. This is used to parse plain
@@ -72,8 +73,8 @@ use crate::{fg_blue,
 /// This gives the other more specialized parsers a chance to address these special
 /// characters (like italic, bold, links, etc.), when this function is called repeatedly:
 /// - By [crate::parse_block_markdown_text_with_or_without_new_line()],
-/// - Which repeatedly calls [crate::parse_inline_fragments_until_eol_or_eoi()]. This function
-///   actually runs the specialized parsers.
+/// - Which repeatedly calls [crate::parse_inline_fragments_until_eol_or_eoi()]. This
+///   function actually runs the specialized parsers.
 /// - Which calls this function repeatedly (if the specialized parsers don't match & error
 ///   out). This serves as a "catch all" parser.
 ///
@@ -92,14 +93,16 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
     if check_input_starts_with(input, &get_sp_char_set_2()).is_none() {
         // # Normal case:
         // If the input does not start with any of the special characters above,
-        // take till the first special character. And split the input there. This returns the
-        // chunk until the first special character as [MdLineFragment::Plain], and the
-        // remainder of the input gets a chance to be parsed by the specialized parsers. If
-        // they fail, then this function will be called again to parse the remainder, and the
-        // special case above will be triggered.
+        // take till the first special character. And split the input there. This returns
+        // the chunk until the first special character as [MdLineFragment::Plain],
+        // and the remainder of the input gets a chance to be parsed by the
+        // specialized parsers. If they fail, then this function will be called
+        // again to parse the remainder, and the special case above will be
+        // triggered.
 
         // `tag_tuple` replaces the following:
-        // `( tag(UNDERSCORE), tag(STAR), tag(BACK_TICK), tag(LEFT_IMAGE), tag(LEFT_BRACKET), tag(NEW_LINE) )`
+        // `( tag(UNDERSCORE), tag(STAR), tag(BACK_TICK), tag(LEFT_IMAGE),
+        // tag(LEFT_BRACKET), tag(NEW_LINE) )`
         let tag_vec = get_sp_char_set_3()
             .into_iter()
             .map(tag::<&str, &str, nom::error::Error<&str>>)

@@ -34,8 +34,7 @@ use crate::{u16, GCString};
 /// ```rust
 /// use std::collections::HashMap;
 /// use r3bl_tui::StringLength;
-///
-/* cspell:disable-next-line  */
+/* cspell:disable-next-line */
 /// let input = "\u{1b}[31mfoo\u{1b}[0m";
 /// let mut memoized_len_map = HashMap::new();
 ///
@@ -65,8 +64,7 @@ impl StringLength {
     /// |---------------------------|--------|---------|
     /// | [StringLength::Unicode]   | No     | None    |
     /// | [StringLength::StripAnsi] | Yes    | 70x     |
-    ///
-    /* cspell:disable-next-line  */
+    /* cspell:disable-next-line */
     /// Eg: For input: `"\u{1b}[31mfoo\u{1b}[0m";` on a 13th Gen Intel® Core™ i5-13600K
     /// machine with 64GB of RAM running Ubuntu 24.04, the execution times are:
     /// - Uncached time is 700µs.

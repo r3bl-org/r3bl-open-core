@@ -49,8 +49,8 @@ use crate::{caret_scroll_index,
 /// index must still be within the viewport (max index) bounds.
 ///
 /// - Let's assume the caret is represented by "░".
-/// - Think about typing "hello", and you expected the caret "░" to go past the end of
-///   the string "hello░".
+/// - Think about typing "hello", and you expected the caret "░" to go past the end of the
+///   string "hello░".
 /// - So the caret's col index is 5 in this case. Still within viewport bounds (max
 ///   index). But greater than the line content max index (4).
 ///
@@ -69,7 +69,6 @@ use crate::{caret_scroll_index,
 /// then the following will be displayed (the caret is at the end of the line on top
 /// of the "o"). You can see this in action in the test
 /// `test_editor_ops::editor_move_caret_home_end_overflow_viewport()`.
-///
 // <!-- cspell:disable -->
 /// ```text
 /// R ┌──────────┐
@@ -330,8 +329,8 @@ pub fn dec_caret_row(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) -> RowIndex
     (*caret_raw + *scr_ofs).row_index
 }
 
-/// Try to increment caret.row_index by row_amt. This will not scroll past the bottom of the buffer. It
-/// will also activate scrolling if needed.
+/// Try to increment caret.row_index by row_amt. This will not scroll past the bottom of
+/// the buffer. It will also activate scrolling if needed.
 ///
 /// ```text
 /// +---------------------+

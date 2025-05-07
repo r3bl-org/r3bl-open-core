@@ -29,12 +29,14 @@ use r3bl_tui::{DefaultIoDevices,
                ast,
                ast_line,
                choose,
+               command,
                height,
                inline_string,
+               script::command_impl::TokioCommand,
                spinner::Spinner,
                try_get_latest_release_version_from_crates_io};
 use smallvec::smallvec;
-use tokio::{process::Command, signal};
+use tokio::signal;
 
 use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
@@ -150,7 +152,8 @@ pub async fn show_exit_message() {
     println!("{}", ui_str::goodbye_greetings::thanks_msg());
 }
 
-// XMARK: how to use long running potentially blocking synchronous code in Tokio, with spinner
+// XMARK: how to use long running potentially blocking synchronous code in Tokio, with
+// spinner
 
 async fn install_upgrade_command_with_spinner_and_ctrl_c() {
     let crate_name = get_self_crate_name();
@@ -173,16 +176,14 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
 
     // Spawn the command asynchronously.
     let mut cmd = {
-        let mut it = Command::new("cargo");
-        it.args(["install", crate_name])
-            // Ensure process is killed if Child handle is dropped.
-            .kill_on_drop(true)
-            // Don't need stdin.
-            .stdin(Stdio::null())
-            // Capture stdout (optional).
-            .stdout(Stdio::piped())
-            // Capture stderr (optional).
-            .stderr(Stdio::piped());
+        let mut it: TokioCommand = command!(
+            program => "cargo",
+            args => "install", crate_name
+        );
+        it.kill_on_drop(true);
+        it.stdin(Stdio::null());
+        it.stdout(Stdio::piped());
+        it.stderr(Stdio::piped());
         it
     };
 

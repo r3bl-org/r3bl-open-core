@@ -53,8 +53,8 @@ pub fn parse_block_smart_list(
         List::with_capacity(smart_list_ir.content_lines.len());
 
     for (index, line) in smart_list_ir.content_lines.iter().enumerate() {
-        // Parse the line as a markdown text. Take special care of checkboxes if they show up at the
-        // start of the line.
+        // Parse the line as a markdown text. Take special care of checkboxes if they show
+        // up at the start of the line.
         let (_, fragments_in_line) = {
             let parse_checkbox_policy = {
                 let checked = tiny_inline_string!("{}{}", CHECKED, SPACE);
@@ -486,8 +486,9 @@ mod tests_parse_smart_lists_in_markdown {
     }
 }
 
-/// Holds a single list item for a given indent level. This may contain multiple lines which are
-/// stored in the `content_lines` field. Take a look at [parse_smart_list] for more details.
+/// Holds a single list item for a given indent level. This may contain multiple lines
+/// which are stored in the `content_lines` field. Take a look at [parse_smart_list] for
+/// more details.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SmartListIR<'a> {
     /// Spaces before the bullet (for all the lines in this list).

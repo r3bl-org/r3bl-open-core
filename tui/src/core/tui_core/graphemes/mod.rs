@@ -41,8 +41,7 @@
 //!
 //! Docs:
 //!
-//! - [Grapheme
-//!   clusters](https://medium.com/flutter-community/working-with-unicode-and-grapheme-clusters-in-dart-b054faab5705)
+//! - [Grapheme clusters](https://medium.com/flutter-community/working-with-unicode-and-grapheme-clusters-in-dart-b054faab5705)
 //! - [UTF-8 String](https://doc.rust-lang.org/book/ch08-02-strings.html)
 //!
 //! There is a discrepancy between how a [String] that contains grapheme clusters is
@@ -157,17 +156,16 @@
 //!
 //! - Some parsing is necessary to get "logical" index into the string that is grapheme
 //!   cluster based (not byte boundary based).
-//!   - This is where
-//!     [`unicode-segmentation`](https://crates.io/crates/unicode-segmentation) crate
-//!     comes in and allows us to split our string into a vector of grapheme clusters.
+//!   - This is where [`unicode-segmentation`](https://crates.io/crates/unicode-segmentation)
+//!     crate comes in and allows us to split our string into a vector of grapheme
+//!     clusters.
 //! - Some translation is necessary to get from the "logical" index to the physical index
 //!   and back again. This is where we can apply one of the following approaches:
 //!   - We can use the [`unicode-width`](https://crates.io/crates/unicode-width) crate to
 //!     calculate the width of the grapheme cluster. This works on Linux, but doesn't work
 //!     very well on macOS & I haven't tested it on Windows. This crate will (on Linux)
 //!     reliably tell us what the displayed width of a grapheme cluster is.
-//!   - We can take the approach from the [`reedline`](https://crates.io/crates/reedline)
-//!     crate's
+//!   - We can take the approach from the [`reedline`](https://crates.io/crates/reedline) crate's
 //!     [`repaint_buffer()`](https://github.com/nazmulidris/reedline/blob/79e7d8da92cd5ae4f8e459f901189d7419c3adfd/src/painting/painter.rs#L129)
 //!     where we split the string based on the "logical" index into the vector of grapheme
 //!     clusters. And then we print the 1st part of the string, then call `SavePosition`
@@ -179,9 +177,9 @@
 //! - Methods in [mod@crate::tui_core::graphemes::gc_string] for more details on how the
 //!   conversion between "display" (or `display_col_index`), ie, [crate::ColIndex] and
 //!   "logical" or "segment", ie, [SegIndex] is done.
-//! - The choices that were made in the design of the [GCString] struct for
-//!   performance to minimize memory latency (for access and allocation). The results
-//!   might surprise you, as intuition around performance is often not reliable.
+//! - The choices that were made in the design of the [GCString] struct for performance to
+//!   minimize memory latency (for access and allocation). The results might surprise you,
+//!   as intuition around performance is often not reliable.
 
 // Attach sources.
 pub mod byte_index;

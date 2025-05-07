@@ -23,18 +23,15 @@
 //! 2. Register a custom error report handler of your own. (Difficult).
 //!
 //! Background information on miette's architecture:
-//! - Miette allows customization how the report is
-//!   [`Report`](https://docs.rs/miette/latest/miette/struct.Report.html) displayed to
-//!   terminal output (stdout, stderr), when the global hook is activated, due to a
-//!   program "erroring out" or "crashing", when the top-level miette handler in `main()
-//!   -> miette::Result<_>` is activated. This hook is only activated at the time that the
-//!   error is displayed to terminal output, not when it is registered, it is lazy. So it
-//!   is possible to detect the terminal width just before the output is generated to the
-//!   terminal output (stdout, stderr).
-//! - The global default implementation of the [`ReportHandler`
-//!   trait](https://docs.rs/miette/latest/miette/trait.ReportHandler.html) is done by
-//!   [`MietteHandler`
-//!   struct](https://docs.rs/miette/latest/miette/struct.MietteHandler.html).
+//! - Miette allows customization how the report is [`Report`](https://docs.rs/miette/latest/miette/struct.Report.html)
+//!   displayed to terminal output (stdout, stderr), when the global hook is activated,
+//!   due to a program "erroring out" or "crashing", when the top-level miette handler in
+//!   `main() -> miette::Result<_>` is activated. This hook is only activated at the time
+//!   that the error is displayed to terminal output, not when it is registered, it is
+//!   lazy. So it is possible to detect the terminal width just before the output is
+//!   generated to the terminal output (stdout, stderr).
+//! - The global default implementation of the [`ReportHandler` trait](https://docs.rs/miette/latest/miette/trait.ReportHandler.html)
+//!   is done by [`MietteHandler` struct](https://docs.rs/miette/latest/miette/struct.MietteHandler.html).
 //! - Using the [`MietteHandlerOpts`
 //!   struct](https://docs.rs/miette/latest/miette/struct.MietteHandlerOpts.html) you can
 //!   configure the default `MietteHandler`. Under the hood, `build()` produces a

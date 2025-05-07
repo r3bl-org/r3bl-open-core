@@ -43,6 +43,7 @@
     </codeStyleSettings>
     <codeStyleSettings language="Rust">
       <option name="RIGHT_MARGIN" value="90" />
+      <option name="KEEP_LINE_BREAKS" value="false" />
     </codeStyleSettings>
     <codeStyleSettings language="TypeScript">
       <option name="SOFT_MARGINS" value="100" />

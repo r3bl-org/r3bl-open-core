@@ -23,8 +23,8 @@
 /// # Arguments
 ///
 /// * `fmt: $acc` - The accumulator to write the padding into. It can be [String],
-///   [crate::InlineString], [crate::TinyInlineString], or [std::fmt::Formatter], basically
-///   anything that implements [std::fmt::Write].
+///   [crate::InlineString], [crate::TinyInlineString], or [std::fmt::Formatter],
+///   basically anything that implements [std::fmt::Write].
 /// * `pad_str: $pad_str` - The string to use for padding.
 /// * `repeat_count: $repeat_count` - The number of times to repeat the padding string.
 ///
@@ -166,8 +166,8 @@ mod join_fmt_tests {
 /// # Arguments
 ///
 /// * `fmt: $acc` - The accumulator to write the padding into. It can be [String],
-///   [crate::InlineString], [crate::TinyInlineString], or [std::fmt::Formatter], basically
-///   anything that implements [std::fmt::Write].
+///   [crate::InlineString], [crate::TinyInlineString], or [std::fmt::Formatter],
+///   basically anything that implements [std::fmt::Write].
 /// * `from: $collection` - The collection to iterate over.
 /// * `each: $item` - The identifier for each item in the collection.
 /// * `index: $index` - The identifier for the index of each item in the collection.

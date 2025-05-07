@@ -32,16 +32,16 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
-    /// This is an optional method that can be used to initialize the state of the component's
-    /// engines. This applies to modal dialog components that need their engine to be initialized
-    /// before they are shown / activated.
+    /// This is an optional method that can be used to initialize the state of the
+    /// component's engines. This applies to modal dialog components that need their
+    /// engine to be initialized before they are shown / activated.
     fn reset(&mut self);
 
     fn get_id(&self) -> FlexBoxId;
 
-    /// Use the state to render the output. The state is immutable. If you want to change it then it
-    /// should be done in the [Component::handle_event] method. Here are all the arguments that are
-    /// passed in (which can be used to render the output):
+    /// Use the state to render the output. The state is immutable. If you want to change
+    /// it then it should be done in the [Component::handle_event] method. Here are
+    /// all the arguments that are passed in (which can be used to render the output):
     ///
     /// - Arguments:
     ///   - Get from `current_box`:
@@ -50,20 +50,20 @@ where
     ///     - maybe_box_style: `Option<Style>`
     ///   - Get from `state`:
     ///     - Content to render
-    ///     - get_focus_id(): String to determine if this component has keyboard focus (might affect
-    ///       the way it gets rendered)
+    ///     - get_focus_id(): String to determine if this component has keyboard focus
+    ///       (might affect the way it gets rendered)
     ///   - Maybe use `shared_store`:
     ///     - Dispatch an action if needed
     ///   - Maybe use `surface`:
-    ///     - Get the origin and size of the surface that can be drawn to (maybe different than the
-    ///       size of the window)
+    ///     - Get the origin and size of the surface that can be drawn to (maybe different
+    ///       than the size of the window)
     ///
     /// - Returns:
     ///   - [RenderPipeline] which must be rendered by the caller
     ///
     /// - Clipping, scrolling, overdrawing:
-    ///   - Each implementation of this trait is solely responsible of taking care of these
-    ///     behaviors
+    ///   - Each implementation of this trait is solely responsible of taking care of
+    ///     these behaviors
     fn render(
         &mut self,
         global_data: &mut GlobalData<S, AS>,

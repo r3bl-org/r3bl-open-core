@@ -87,11 +87,13 @@ async fn main() -> miette::Result<()> {
                 SINGLE_SELECT_2_ITEMS_VPH_5,
             ],
             Some(height(6)), /* height of the tuify component */
-            Some(width(0)), /* width of the tuify component. 0 means it will use the full terminal width */
+            Some(width(0)),  /* width of the tuify component. 0 means it will use the
+                              * full terminal width */
             HowToChoose::Single,
             StyleSheet::default(),
             default_io_devices.as_mut_tuple(),
-        ).await?;
+        )
+        .await?;
 
         if user_input.is_empty() {
             println!("User did not select anything");

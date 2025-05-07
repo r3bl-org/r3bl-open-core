@@ -225,7 +225,8 @@ mod construct {
     use super::*;
 
     impl EditorBuffer {
-        /// Marker method to make it easy to search for where an empty instance is created.
+        /// Marker method to make it easy to search for where an empty instance is
+        /// created.
         pub fn new_empty(
             maybe_file_extension: Option<&str>,
             maybe_file_path: Option<&str>,
@@ -533,7 +534,8 @@ pub mod access_and_mutate {
         /// - Then you can convert the `&[u8]` to a `&str` using `std::str::from_utf8`.
         /// - And then call `.lines()` on the `&str` to get an iterator over the lines
         ///   which can be passed to this method.
-        // XMARK: Clever Rust, use of `IntoIterator` to efficiently and flexibly load data.
+        // XMARK: Clever Rust, use of `IntoIterator` to efficiently and flexibly load
+        // data.
         pub fn set_lines<'a>(&mut self, arg_lines: impl IntoIterator<Item = &'a str>) {
             // Clear existing lines.
             self.content.lines.clear();

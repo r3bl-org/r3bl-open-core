@@ -36,14 +36,14 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 ///   combination of "a" (U+0061) followed by a combining acute accent (U+0301). In the
 ///   latter case, the grapheme cluster is the combination of the two code points "a" +
 ///   "´".
-/// - Emoji like "👨‍👩‍👧‍👦" (family) are often represented by a sequence of multiple
-///   code points (in this case, several characters joined by zero-width joiners). The
-///   entire sequence forms a single grapheme cluster.
+/// - Emoji like "👨‍👩‍👧‍👦" (family) are often represented by a sequence of multiple code points
+///   (in this case, several characters joined by zero-width joiners). The entire sequence
+///   forms a single grapheme cluster.
 ///
 /// Let's take the example of `🙏🏽`. This is a jumbo emoji that is an amalgamation of
 /// multiple code points.
-/// - If you use [str::chars()] to parse this, you would get two separate [char]:
-///   `'🙏' + '🏽'`.
+/// - If you use [str::chars()] to parse this, you would get two separate [char]: `'🙏' +
+///   '🏽'`.
 /// - However, [unicode_segmentation::UnicodeSegmentation] represents this as a single
 ///   grapheme cluster. This is why we use [unicode_segmentation::UnicodeSegmentation] to
 ///   handle grapheme clusters.
@@ -51,8 +51,8 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 /// # Performance, memory latency, access, allocation
 ///
 /// 1. This struct does not allocate anything and is [Copy].
-/// 2. The [super::GCString] owns the memory, and this struct is a "view" into parts of it,
-///    where each part is a grapheme cluster, and each of them is represented by this
+/// 2. The [super::GCString] owns the memory, and this struct is a "view" into parts of
+///    it, where each part is a grapheme cluster, and each of them is represented by this
 ///    struct.
 ///
 /// This struct provides information about a single grapheme cluster, including its byte
@@ -127,17 +127,17 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 /// ```
 #[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct Seg {
-    /// The start index (bytes), in the string slice, used to generate the [super::GCString]
-    /// that this grapheme cluster represents.
+    /// The start index (bytes), in the string slice, used to generate the
+    /// [super::GCString] that this grapheme cluster represents.
     pub start_byte_index: ChUnit,
 
-    /// The end index (bytes), in the string slice, used to generate the [super::GCString]
-    /// that this grapheme cluster represents.
+    /// The end index (bytes), in the string slice, used to generate the
+    /// [super::GCString] that this grapheme cluster represents.
     pub end_byte_index: ChUnit,
 
     /// Display width of the grapheme cluster calculated using
-    /// [unicode_width::UnicodeWidthChar]. The display width (aka `unicode_width`) may not
-    /// be the same as the byte size [Self::bytes_size].
+    /// [unicode_width::UnicodeWidthChar]. The display width (aka `unicode_width`) may
+    /// not be the same as the byte size [Self::bytes_size].
     pub display_width: ColWidth,
 
     /// The index of this entry in the [super::GCString::segments].
@@ -148,9 +148,9 @@ pub struct Seg {
     /// size.
     pub bytes_size: usize,
 
-    /// Display col index [ColIndex] (in the original string slice) at which this grapheme
-    /// cluster starts. The "offset" in the name means that this is relative to the start
-    /// of the original string slice.
+    /// Display col index [ColIndex] (in the original string slice) at which this
+    /// grapheme cluster starts. The "offset" in the name means that this is relative
+    /// to the start of the original string slice.
     /// - It is used to determine whether a given display col index [ColIndex] is within
     ///   the bounds of this grapheme cluster or not.
     pub start_display_col_index: ColIndex,

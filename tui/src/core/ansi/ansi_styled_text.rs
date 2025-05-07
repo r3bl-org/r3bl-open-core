@@ -1409,7 +1409,8 @@ mod tests {
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(8)),
-                end: Some(ColIndex::new(11)), // index 11 is out of bounds for "Hello World" (len 11)
+                end: Some(ColIndex::new(11)), /* index 11 is out of bounds for "Hello
+                                               * World" (len 11) */
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
             assert!(res.is_empty());

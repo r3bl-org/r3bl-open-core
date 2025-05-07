@@ -165,6 +165,11 @@ advisory whitelist and which tasks are run in CICD are included here.
       there is no need to run this anymore, since the project, since it is possible to run
       the build server locally and run `bacon nextest -W` and `bacon doc -W` continuously.
     - Remove `core` from the root level workspace `Cargo.toml` file.
+    - Update `config.toml` in the root folder to use `28` threads for parallel
+      compilation, instead of `8`. The `-Z` flag is an unstable compiler directive
+      only applies to `nightly` Rust.
+    - Update `rustfmt.toml` to wrap comments using `comment_width = 90` and
+      `wrap_comments = true`, and passing the `+nightly` flag to `rustfmt` (in IDEA, etc.)
 
 ### Global config (2025-03-24)
 
@@ -250,6 +255,11 @@ release.
       system default allocator. `jemalloc` is optimized for multi-threaded use cases where
       lots of small objects are created and deleted, which is a great fit for this
       crate. Use this in all the binary targets.
+    - Add support for the binaries in the crate to upgrade themselves when a new
+      version is detected.
+    - Implement a new way for the binaries to detect when a new release of the crate
+      is available so they can prompt the user that they can manually update or
+      automatically update (above).
 
 - Removed:
     - Drop the dependency on `r3bl_ansi_color`.
@@ -259,6 +269,14 @@ release.
     - This release just uses the latest deps from `r3bl-open-core` repo, since so many
       crates have been reorganized and renamed. The functionality has not changed at all,
       just the imports.
+
+- Changed:
+    - Modernize the codebase so that it uses the latest code from `r3bl_tui`. The
+      functionality is largely the same, however, almost every single line is rewritten,
+      especially for `giti`.
+    - Clean up all the styling and UI strings in the apps, so they are all in one
+      place. This will make it easy to internationalize in the future, and make it
+      possible to make changes easily and reduce maintenance burdens.
 
 ### v0.0.16 (2024-09-13)
 
@@ -502,6 +520,19 @@ Added:
 
 Changed:
 
+- Make `command!()` work with `TokioCommand` instead of `std::process::Command`. All the
+  code in the `script` module now works under the assumption that they will run in an
+  async context. And a real world use case for this is `giti` itself, in the way that
+  it works with `git` commands and `cargo install r3bl-cmdr` commands.
+- Fix `Spinner` bugs that caused undefined behavior in the timing of the output it
+  produced to animate interval ticks and the final tick. The bugs were a result of non
+  deterministic lock contention. The lock in question is the one required to be able to
+  write to `OutputDevice` which itself can be a wrapper on top of `stdout`, `stdin`, etc.
+  Rewrite the code so that it is explicit in the locking and sequence requirements for
+  display operations. This ensures that sequences that must occur in order don't get
+  delayed or interleaved with another task vying for the same lock. Also give
+  `Spinner` the ability to work outside a `ReadlineAsync` context (eg: in `giti`'s
+  `check_upgrade` module).
 - In the `ReadlineAsync::read_line()` method, don't display the dangling prompt + `\n`
   when the program exits, after calling `ReadlineAsync::exit()`.
 - Rename `get_readline_event()` to `read_line()`. This is an async replacement for
@@ -544,7 +575,7 @@ reflect how the functionality is used in the real world.
 
 Another huge change is the method signature of `main_event_loop()`. This is a breaking
 change, and it uses dependency injection, to provide an input device, output device,
-state, and app to the function! This allows for new types of applications to be built,
+state and app to the function! This allows for new types of applications to be built,
 which can carry state around between "applets".
 
 This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking

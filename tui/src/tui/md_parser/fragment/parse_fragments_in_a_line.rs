@@ -133,7 +133,7 @@ mod tests_parse_fragment {
     fn test_parse_plain_text_no_new_line1() {
         assert_eq2!(
             parse_fragment_plain_text_no_new_line("this _bar"),
-            Ok((/*rem*/ "_bar", /*output*/ "this "))
+            Ok((/* rem */ "_bar", /* output */ "this "))
         );
 
         assert_eq2!(
@@ -151,7 +151,7 @@ mod tests_parse_fragment {
     fn test_parse_fragment_checkbox_into_str() {
         assert_eq2!(
             parse_fragment_starts_with_checkbox_into_str("[x] here is a checkbox"),
-            Ok((/*rem*/ " here is a checkbox", /*output*/ "[x]"))
+            Ok((/* rem */ " here is a checkbox", /* output */ "[x]"))
         );
 
         assert_eq2!(
@@ -166,7 +166,7 @@ mod tests_parse_fragment {
             parse_fragment_starts_with_checkbox_checkbox_into_bool(
                 "[x] here is a checkbox"
             ),
-            Ok((/*rem*/ " here is a checkbox", /*output*/ true))
+            Ok((/* rem */ " here is a checkbox", /* output */ true))
         );
 
         assert_eq2!(
@@ -182,7 +182,7 @@ mod tests_parse_fragment {
     fn test_parse_fragment_italic() {
         assert_eq2!(
             parse_fragment_starts_with_underscore_err_on_new_line("_here is italic_"),
-            Ok((/*rem*/ "", /*output*/ "here is italic"))
+            Ok((/* rem */ "", /* output */ "here is italic"))
         );
 
         assert_eq2!(
@@ -254,7 +254,7 @@ mod tests_parse_fragment {
     fn test_parse_fragment_bold() {
         assert_eq2!(
             parse_fragment_starts_with_star_err_on_new_line("*here is bold*"),
-            Ok((/*rem*/ "", /*output*/ "here is bold"))
+            Ok((/* rem */ "", /* output */ "here is bold"))
         );
 
         assert_eq2!(
@@ -317,7 +317,7 @@ mod tests_parse_fragment {
         );
         assert_eq2!(
             parse_fragment_starts_with_backtick_err_on_new_line("``"),
-            Ok((/*rem*/ "", /*output*/ ""))
+            Ok((/* rem */ "", /* output */ ""))
         );
         assert_eq2!(
             parse_fragment_starts_with_backtick_err_on_new_line("`"),
@@ -353,8 +353,8 @@ mod tests_parse_fragment {
                 "[title](https://www.example.com)"
             ),
             Ok((
-                /*rem*/ "",
-                /*output*/ HyperlinkData::new("title", "https://www.example.com")
+                /* rem */ "",
+                /* output */ HyperlinkData::new("title", "https://www.example.com")
             ))
         );
         assert_eq2!(
@@ -373,8 +373,8 @@ mod tests_parse_fragment {
                 "![alt text](image.jpg)"
             ),
             Ok((
-                /*rem*/ "",
-                /*output*/ HyperlinkData::new("alt text", "image.jpg")
+                /* rem */ "",
+                /* output */ HyperlinkData::new("alt text", "image.jpg")
             ))
         );
         assert_eq2!(
@@ -399,7 +399,7 @@ mod tests_parse_fragment {
     fn test_parse_fragment_plaintext() {
         assert_eq2!(
             parse_fragment_plain_text_no_new_line("1234567890"),
-            Ok((/*rem*/ "", /*output*/ "1234567890"))
+            Ok((/* rem */ "", /* output */ "1234567890"))
         );
         assert_eq2!(
             parse_fragment_plain_text_no_new_line("oh my gosh!"),
@@ -482,8 +482,8 @@ mod tests_parse_fragment {
                 CheckboxParsePolicy::IgnoreCheckbox
             ),
             Ok((
-                /*rem*/ "",
-                /*output*/ MdLineFragment::Plain("here is plaintext!")
+                /* rem */ "",
+                /* output */ MdLineFragment::Plain("here is plaintext!")
             ))
         );
         assert_eq2!(

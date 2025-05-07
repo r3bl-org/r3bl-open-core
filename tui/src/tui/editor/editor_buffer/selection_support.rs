@@ -278,8 +278,8 @@ pub fn handle_selection_multiline_caret_movement(
 }
 
 /// Special case to handle the situation where up / down movement has resulted in the top
-/// or bottom of the document to be hit, so that further movement up / down isn't possible,
-/// but the caret might jump left or right.
+/// or bottom of the document to be hit, so that further movement up / down isn't
+/// possible, but the caret might jump left or right.
 pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
     buffer: &mut EditorBuffer,
     prev: CaretScrAdj,
@@ -458,7 +458,7 @@ mod multiline_select_helpers {
             // DirectionHasChanged: No selection -> Shift+Up -> Shift+Down -> Shift+Up.
             (
                 /* previous_caret */ RowLocationInSelectionList::Overflow,
-                /* current_caret  */ RowLocationInSelectionList::Overflow,
+                /* current_caret */ RowLocationInSelectionList::Overflow,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -472,7 +472,7 @@ mod multiline_select_helpers {
             // DirectionHasChanged: No selection -> Shift+Left/Right -> Shift+Down.
             (
                 /* previous_caret */ RowLocationInSelectionList::Contained,
-                /* current_caret  */ RowLocationInSelectionList::Overflow,
+                /* current_caret */ RowLocationInSelectionList::Overflow,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -485,7 +485,7 @@ mod multiline_select_helpers {
             // Position caret below empty line, Shift+Up, Shift+Up, Shift+Up, Shift+Down.
             (
                 /* previous_caret */ RowLocationInSelectionList::Overflow,
-                /* current_caret  */ RowLocationInSelectionList::Contained,
+                /* current_caret */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame,
             ) => multiline_select_helpers::continue_select_down(
@@ -498,7 +498,7 @@ mod multiline_select_helpers {
             // DirectionHasChanged: // No selection -> Shift+Left/Right -> Shift+Up.
             (
                 /* previous_caret */ RowLocationInSelectionList::Contained,
-                /* current_caret  */ RowLocationInSelectionList::Overflow,
+                /* current_caret */ RowLocationInSelectionList::Overflow,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -508,10 +508,11 @@ mod multiline_select_helpers {
                 buffer,
                 caret_vertical_movement_direction,
             ),
-            // Position caret above empty line, Shift+Down, Shift+Down, Shift+Down, Shift+Up.
+            // Position caret above empty line, Shift+Down, Shift+Down, Shift+Down,
+            // Shift+Up.
             (
                 /* previous_caret */ RowLocationInSelectionList::Overflow,
-                /* current_caret  */ RowLocationInSelectionList::Contained,
+                /* current_caret */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame,
             ) => multiline_select_helpers::continue_select_up(
@@ -521,10 +522,11 @@ mod multiline_select_helpers {
                 caret_vertical_movement_direction,
             ),
             // DirectionHasChanged: Previous selection with Shift+Down, then Shift+Up.
-            // DirectionIsTheSame: Previous selection with Shift+Down, then Shift+Up, then Shift+Up.
+            // DirectionIsTheSame: Previous selection with Shift+Down, then Shift+Up, then
+            // Shift+Up.
             (
                 /* previous_caret */ RowLocationInSelectionList::Contained,
-                /* current_caret  */ RowLocationInSelectionList::Contained,
+                /* current_caret */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionHasChanged
                 | DirectionChangeResult::DirectionIsTheSame,
@@ -534,11 +536,12 @@ mod multiline_select_helpers {
                 buffer,
                 caret_vertical_movement_direction,
             ),
-            // DirectionHasChanged: Previous selection with Shift+Up, then Shift+Up, then Shift+Down.
-            // DirectionIsTheSame: Previous selection with Shift+Up, then Shift+Down, then Shift+Down.
+            // DirectionHasChanged: Previous selection with Shift+Up, then Shift+Up, then
+            // Shift+Down. DirectionIsTheSame: Previous selection with
+            // Shift+Up, then Shift+Down, then Shift+Down.
             (
                 /* previous_caret */ RowLocationInSelectionList::Contained,
-                /* current_caret  */ RowLocationInSelectionList::Contained,
+                /* current_caret */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionHasChanged
                 | DirectionChangeResult::DirectionIsTheSame,
@@ -652,8 +655,8 @@ mod multiline_select_helpers {
         if let Some(first_row_range) = buffer_mut.inner.sel_list.get(first.row_index) {
             let start = caret_scr_adj(first_row_range.start() + first.row_index);
             let end = {
-                // Go one col index past the end of the width, since selection range is not
-                // inclusive of end index.
+                // Go one col index past the end of the width, since selection range is
+                // not inclusive of end index.
                 let end_col = caret_scroll_index::col_index_for_width(first_line_width);
                 caret_scr_adj(end_col + first.row_index)
             };
@@ -700,7 +703,8 @@ mod multiline_select_helpers {
 
         // FIRST ROW.
         if let Some(first_row_range) = buffer_mut.inner.sel_list.get(first.row_index) {
-            // Extend the existing range (in selection map) for the first row to end of line.
+            // Extend the existing range (in selection map) for the first row to end of
+            // line.
             let start = caret_scr_adj(first_row_range.start() + first.row_index);
             let end = {
                 // Go one col index past the end of the width, since selection range is
@@ -723,8 +727,8 @@ mod multiline_select_helpers {
                 let end_col = first_line_width;
                 let start = caret_scr_adj(start_col + first.row_index);
                 let end = {
-                    // Go one col index past the end of the width, since selection range is
-                    // not inclusive of end index.
+                    // Go one col index past the end of the width, since selection range
+                    // is not inclusive of end index.
                     caret_scr_adj(
                         caret_scroll_index::col_index_for_width(end_col)
                             + first.row_index,
@@ -741,7 +745,8 @@ mod multiline_select_helpers {
 
         // LAST ROW.
         if let Some(last_row_range) = buffer_mut.inner.sel_list.get(last.row_index) {
-            // Extend the existing range (in selection map) for the last row to start of line.
+            // Extend the existing range (in selection map) for the last row to start of
+            // line.
             let start = caret_scr_adj(col(0) + last.row_index);
             let end = caret_scr_adj(last_row_range.end() + last.row_index);
             let updated_last_row_range = (start, end).into();

@@ -186,19 +186,21 @@ where
                             );
                         };
 
-                        // Trigger re-render, now that focus has been restored to non-modal component.
+                        // Trigger re-render, now that focus has been restored to
+                        // non-modal component.
                         Ok(EventPropagation::ConsumedRender)
                     }
 
-                    // Handler user input that has updated the dialog_buffer.editor_buffer.
+                    // Handler user input that has updated the
+                    // dialog_buffer.editor_buffer.
                     DialogEngineApplyResponse::UpdateEditorBuffer => {
                         // Run the handler (if any) w/ `new_editor_buffer`.
                         if let Some(it) = &on_dialog_editor_change_handler {
                             it(state, &mut main_thread_channel_sender.clone());
                         };
 
-                        // The handler should dispatch action to change state since dialog_buffer.editor_buffer is
-                        // updated.
+                        // The handler should dispatch action to change state since
+                        // dialog_buffer.editor_buffer is updated.
                         Ok(EventPropagation::ConsumedRender)
                     }
 
@@ -227,9 +229,9 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
-    /// The on_dialog_press_handler is a lambda that is called if the user presses enter or escape.
-    /// Typically this results in a Redux action being created and then dispatched to the given
-    /// store.
+    /// The on_dialog_press_handler is a lambda that is called if the user presses enter
+    /// or escape. Typically this results in a Redux action being created and then
+    /// dispatched to the given store.
     pub fn new(
         id: FlexBoxId,
         dialog_options: DialogEngineConfigOptions,

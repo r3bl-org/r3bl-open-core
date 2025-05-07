@@ -82,7 +82,8 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
             self.internal_storage[self.head] = Some(value);
         }
         self.head = (self.head + 1) % N;
-        self.count = std::cmp::min(self.count + 1, N); // Make sure count doesn't exceed capacity
+        self.count = std::cmp::min(self.count + 1, N); // Make sure count doesn't exceed
+                                                       // capacity
     }
 
     /// Remove from tail (ie, remove the oldest item).

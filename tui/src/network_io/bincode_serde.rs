@@ -18,8 +18,7 @@
 //! This is a module to make it easier to use `bincode` with `serde`.
 //!
 //! More info:
-//! - [bincode v2.x migration
-//!   guide](https://github.com/bincode-org/bincode/blob/trunk/docs/migration_guide.md)
+//! - [bincode v2.x migration guide](https://github.com/bincode-org/bincode/blob/trunk/docs/migration_guide.md)
 
 use miette::IntoDiagnostic;
 use serde::{Deserialize, Serialize};

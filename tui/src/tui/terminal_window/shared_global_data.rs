@@ -44,8 +44,8 @@ use crate::{ok,
 /// - The `main_thread_channel_sender` is used to send [TerminalWindowMainThreadSignal]s
 /// - The `state` holds the application's state.
 /// - The `output_device` is the terminal's output device (anything that implements
-///   [crate::SafeRawTerminal] which can be [std::io::stdout] or
-///   [crate::SharedWriter], etc.`).
+///   [crate::SafeRawTerminal] which can be [std::io::stdout] or [crate::SharedWriter],
+///   etc.`).
 pub struct GlobalData<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,

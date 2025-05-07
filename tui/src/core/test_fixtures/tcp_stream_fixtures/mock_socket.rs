@@ -28,8 +28,7 @@ pub struct MockSocket {
 /// types.
 ///
 /// Given a "channel":
-/// 1. Writing to the first of the pairs will allow that data to be read from the
-///    other.
+/// 1. Writing to the first of the pairs will allow that data to be read from the other.
 /// 2. Writing to the other pair will allow that data to be read from the first.
 pub fn get_mock_socket_halves() -> MockSocket {
     let (client_stream, server_stream) = duplex(1024);

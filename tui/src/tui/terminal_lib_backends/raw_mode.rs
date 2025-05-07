@@ -18,8 +18,9 @@
 use super::{RenderOp, RenderOps, RenderOpsLocalData};
 use crate::{LockedOutputDevice, Size};
 
-/// To use this directly, you need to make sure to create an instance using [start](RawMode::start)
-/// which enables raw mode and then make sure to call [end](RawMode::end) when you are done.
+/// To use this directly, you need to make sure to create an instance using
+/// [start](RawMode::start) which enables raw mode and then make sure to call
+/// [end](RawMode::end) when you are done.
 #[derive(Debug, Clone)]
 pub struct RawMode;
 

@@ -241,8 +241,8 @@ pub mod branch_delete_display {
                 }
             }
             None => {
-                // Join the branch names with a specific delimiter, adding a bullet point before
-                // each subsequent branch.
+                // Join the branch names with a specific delimiter, adding a bullet point
+                // before each subsequent branch.
                 let mut joined_branches = InlineString::new();
                 join_fmt!(
                     fmt: joined_branches,

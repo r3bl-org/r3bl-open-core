@@ -181,8 +181,7 @@
 //!   channel](https://www.youtube.com/@developerlifecom). Please consider
 //!   [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
 //! - If you like consuming written content, here's our developer
-//!   [site](https://developerlife.com/). Please consider subscribing to our
-//!   [newsletter](https://developerlife.com/subscribe.html).
+//!   [site](https://developerlife.com/).
 //! - If you have questions, please join our [discord
 //!   server](https://discord.gg/8M2ePAevaM).
 //!

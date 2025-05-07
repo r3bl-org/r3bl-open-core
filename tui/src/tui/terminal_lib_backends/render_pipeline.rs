@@ -150,8 +150,8 @@ macro_rules! render_pipeline {
 
 type PipelineMap = HashMap<ZOrder, InlineVec<RenderOps>>;
 
-/// See [render_pipeline!] for the documentation. Also consider using it instead of this struct
-/// directly for convenience.
+/// See [render_pipeline!] for the documentation. Also consider using it instead of this
+/// struct directly for convenience.
 ///
 /// Here's an example.
 ///
@@ -229,10 +229,12 @@ impl RenderPipeline {
         AS: Debug + Default + Clone + Sync + Send,
     {
         paint(self, flush_kind, global_data, locked_output_device, is_mock);
-        // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
+        // FUTURE: support termion, along w/ crossterm, by providing another impl of this
+        // fn #24
     }
 
-    /// Move the [RenderOps] in the 'from' [ZOrder] (in self) to the 'to' [ZOrder] (in self).
+    /// Move the [RenderOps] in the 'from' [ZOrder] (in self) to the 'to' [ZOrder] (in
+    /// self).
     pub fn hoist(&mut self, z_order_from: ZOrder, z_order_to: ZOrder) {
         // If the 'from' [ZOrder] is not in the pipeline, then there's nothing to do.
         if !self.pipeline_map.contains_key(&z_order_from) {

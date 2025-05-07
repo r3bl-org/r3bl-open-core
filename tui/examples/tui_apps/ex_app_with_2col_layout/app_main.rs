@@ -181,7 +181,8 @@ mod app_main_impl_app_trait {
             throws_with_return!({
                 let window_size = global_data.window_size;
 
-                // Create a surface and then run the SurfaceRenderer (ContainerSurfaceRender) on it.
+                // Create a surface and then run the SurfaceRenderer
+                // (ContainerSurfaceRender) on it.
                 let mut surface = {
                     let mut it = surface!(stylesheet: stylesheet::create_stylesheet()?);
 

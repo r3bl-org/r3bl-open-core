@@ -75,7 +75,8 @@ pub fn print_start_if_standalone(
     ok!()
 }
 
-/// This gets called repeatedly to print the spinner with the intedeterminate progress message.
+/// This gets called repeatedly to print the spinner with the intedeterminate progress
+/// message.
 pub fn print_tick_interval_msg(
     _style: &SpinnerStyle,
     output: &str,

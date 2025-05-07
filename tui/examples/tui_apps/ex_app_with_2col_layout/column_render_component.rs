@@ -121,7 +121,8 @@ mod column_render_component_impl_component_trait {
                             }
                             '-' => {
                                 event_consumed = true;
-                                // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so
+                                // Note: make sure to wrap the call to `send` in a
+                                // `tokio::spawn()` so
                                 // that it doesn't block the calling thread. More info:
                                 // <https://tokio.rs/tokio/tutorial/channels>.
                                 send_signal!(

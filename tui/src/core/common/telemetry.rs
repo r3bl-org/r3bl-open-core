@@ -190,7 +190,8 @@ pub mod telemetry_constructor {
         }
     }
 
-    // XMARK: Clever Rust, use of `impl Into<struct>` for constructor & `const N: usize` for arrays.
+    // XMARK: Clever Rust, use of `impl Into<struct>` for constructor & `const N: usize`
+    // for arrays.
 
     impl<const N: usize> Telemetry<N> {
         pub fn new(arg_opts: impl Into<ResponseTimesRingBufferOptions>) -> Self {
@@ -258,8 +259,8 @@ mod mutator {
     impl<const N: usize> Telemetry<N> {
         /// Start recording the response time.
         /// 1. This will record the time when the operation started.
-        /// 2. This returns a handle that will automatically stop recording the response time
-        ///    when it's dropped.
+        /// 2. This returns a handle that will automatically stop recording the response
+        ///    time when it's dropped.
         pub fn record_start_auto_stop(
             &mut self,
             hint: TelemetryAtomHint,
@@ -267,8 +268,9 @@ mod mutator {
             RecordStartDropHandle::new(self, hint)
         }
 
-        /// Insert a new response time into the ring buffer. And sort the internal storage. If
-        /// the response time is below the minimum duration filter, it will be filtered out.
+        /// Insert a new response time into the ring buffer. And sort the internal
+        /// storage. If the response time is below the minimum duration filter, it
+        /// will be filtered out.
         pub fn try_record(&mut self, atom: TelemetryAtom) -> TryRecordResult {
             if self
                 .min_duration_filter
@@ -310,15 +312,16 @@ mod calculator {
         }
 
         /// Find the most common cluster of durations within a specified range (e.g., ±10
-        /// microseconds, defined in [telemetry_default_constants::CLUSTER_SENSITIVITY_RANGE])
-        /// in an array of [Duration].
+        /// microseconds, defined in
+        /// [telemetry_default_constants::CLUSTER_SENSITIVITY_RANGE]) in an array
+        /// of [Duration].
         ///
         /// Use a [HashMap] to count occurrences of durations, bucketing them based on the
-        /// specified range. For each duration, determine which bucket it falls into based on
-        /// the range. Find the bucket with the maximum count.
+        /// specified range. For each duration, determine which bucket it falls into based
+        /// on the range. Find the bucket with the maximum count.
         ///
-        /// Returns the representative duration for the most common bucket and the percentage
-        /// of occurrences of that bucket.
+        /// Returns the representative duration for the most common bucket and the
+        /// percentage of occurrences of that bucket.
         pub fn median(&self) -> Option<(Duration, Pc, TelemetryAtomHint)> {
             if self.ring_buffer.is_empty() {
                 return None;
@@ -611,7 +614,8 @@ mod tests_record {
         let mut response_times = create_default_telemetry();
         assert_eq!(response_times.ring_buffer.len(), 0.into());
 
-        // This block causes the _auto_stop handle to drop, which will record the response time.
+        // This block causes the _auto_stop handle to drop, which will record the response
+        // time.
         {
             let _auto_stop =
                 response_times.record_start_auto_stop(TelemetryAtomHint::None);

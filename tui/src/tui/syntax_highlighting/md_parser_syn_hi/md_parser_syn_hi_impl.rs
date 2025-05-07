@@ -103,7 +103,9 @@ pub fn try_parse_and_highlight(
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     parser_byte_cache: Option<&mut ParserByteCache>,
 ) -> CommonResult<StyleUSSpanLines> {
-    // PERF: This is a known performance bottleneck. The underlying storage mechanism for content in the editor will have to change (from Vec<String>) for this to be possible.
+    // PERF: This is a known performance bottleneck. The underlying storage mechanism for
+    // content in the editor will have to change (from Vec<String>) for this to be
+    // possible.
 
     // Convert the editor text into a InlineString (unfortunately requires allocating to
     // get the new lines back, since they're stripped out when loading content into the
@@ -247,12 +249,14 @@ impl StyleUSSpanLines {
     /// ```
     ///
     /// Case 1: Fallback
-    /// - 1st line        : "```": `get_foreground_dim_style()`, lang: `get_code_block_lang_style()`
+    /// - 1st line        : "```": `get_foreground_dim_style()`, lang:
+    ///   `get_code_block_lang_style()`
     /// - 2nd line .. end : content: `get_inline_code_style()`
     /// - last line       : "```": `get_foreground_dim_style()`
     ///
     /// Case 2: Syntect
-    /// - 1st line        : "```": `get_foreground_dim_style()`, lang: `get_code_block_lang_style()`
+    /// - 1st line        : "```": `get_foreground_dim_style()`, lang:
+    ///   `get_code_block_lang_style()`
     /// - 2nd line .. end : use syntect to highlight
     /// - last line       : "```": `get_foreground_dim_style()`
     pub fn from_block_codeblock(
@@ -425,8 +429,8 @@ impl StyleUSSpanLines {
     }
 
     /// Each [MdBlock] needs to be translated into a line. The [MdBlock::CodeBlock] is
-    /// the only block that needs to be translated into multiple lines. This is why the return type
-    /// is a [StyleUSSpanLines] (and not a single line).
+    /// the only block that needs to be translated into multiple lines. This is why the
+    /// return type is a [StyleUSSpanLines] (and not a single line).
     pub fn from_block(
         block: &MdBlock<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
@@ -699,7 +703,8 @@ impl StyleUSSpanLine {
         List { inner: acc }
     }
 
-    /// This is a sample [HeadingData] that needs to be converted into a [StyleUSSpanLine].
+    /// This is a sample [HeadingData] that needs to be converted into a
+    /// [StyleUSSpanLine].
     ///
     /// ```text
     /// #░heading░*foo*░**bar**
@@ -1328,14 +1333,15 @@ mod tests_style_us_span_lines_from {
             // There should be 7 spans in the line.
             assert_eq2!(spans_in_line.len(), 7);
 
-            // First span is the heading level `# ` in dim w/ Red bg color, and no fg color.
+            // First span is the heading level `# ` in dim w/ Red bg color, and no fg
+            // color.
             assert!(spans_in_line[0].style.dim.is_some());
             assert_eq2!(spans_in_line[0].style.color_bg.unwrap(), tui_color!(red));
             assert_eq2!(spans_in_line[0].style.color_fg.is_some(), false);
             assert_eq2!(spans_in_line[0].text_gcs.as_ref(), "# ");
 
-            // The remainder of the spans are the heading text which are colorized with a color
-            // wheel.
+            // The remainder of the spans are the heading text which are colorized with a
+            // color wheel.
             for span in &spans_in_line[1..=6] {
                 assert!(span.style.dim.is_none());
                 assert_eq2!(span.style.color_bg.unwrap(), tui_color!(red));

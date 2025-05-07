@@ -133,8 +133,8 @@ macro_rules! render_ops {
 /// 1. It moves the cursor using:
 ///     1. [`RenderOp::MoveCursorPositionAbs`]
 ///     2. [`RenderOp::MoveCursorPositionRelTo`]
-/// 2.  And it does not assume that the cursor is in the correct position from some other
-///     previously executed operation!
+/// 2. And it does not assume that the cursor is in the correct position from some other
+///    previously executed operation!
 /// 3. So there are no side effects when re-ordering or omitting painting an atomic paint
 ///    operation (eg in the case where it has already been painted before).
 ///
@@ -268,9 +268,10 @@ pub enum RenderOp {
     /// given [Pos].
     MoveCursorPositionAbs(/* absolute position */ Pos),
 
-    /// This is always painted on top. 1st [Pos] is the origin column and row, and the 2nd
-    /// [Pos] is the offset column and row. They are added together to move the absolute position
-    /// on the terminal screen. Then [RenderOp::MoveCursorPositionAbs] is used.
+    /// This is always painted on top. 1st [Pos] is the origin column and row, and the
+    /// 2nd [Pos] is the offset column and row. They are added together to move the
+    /// absolute position on the terminal screen. Then
+    /// [RenderOp::MoveCursorPositionAbs] is used.
     MoveCursorPositionRelTo(
         /* origin position */ Pos,
         /* relative position */ Pos,
@@ -295,12 +296,12 @@ pub enum RenderOp {
     /// underline, strikethrough, etc) and not colors. If you need to apply color, use
     /// [RenderOp::ApplyColors] instead.
     ///
-    /// 1. If the [InlineString] argument is plain text (no ANSI sequences)
-    ///    then it will be clipped available width of the terminal screen).
+    /// 1. If the [InlineString] argument is plain text (no ANSI sequences) then it will
+    ///    be clipped available width of the terminal screen).
     ///
-    /// 2. If the [InlineString] argument contains ANSI sequences then it will
-    ///    be printed as-is. You are responsible for handling clipping of the text to the
-    ///    bounds of the terminal screen.
+    /// 2. If the [InlineString] argument contains ANSI sequences then it will be printed
+    ///    as-is. You are responsible for handling clipping of the text to the bounds of
+    ///    the terminal screen.
     PaintTextWithAttributes(InlineString, Option<TuiStyle>),
 
     /// This is **not** meant for use directly by apps. It is to be used only by the
@@ -324,8 +325,8 @@ mod render_op_impl {
 
     impl Debug for RenderOp {
         /// When [crate::RenderPipeline] is printed as debug, each [RenderOp] is printed
-        /// using this method. Also [crate::queue_render_op!] does not use this; it has its
-        /// own way of logging output.
+        /// using this method. Also [crate::queue_render_op!] does not use this; it has
+        /// its own way of logging output.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {

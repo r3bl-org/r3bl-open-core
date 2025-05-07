@@ -189,8 +189,7 @@ pub fn page_down(
 
 /// Depending on [SelectMode], this acts as a:
 /// - Convenience function for simply calling [left] repeatedly.
-/// - Convenience function for simply calling
-///   [scroll_editor_content::reset_caret_col].
+/// - Convenience function for simply calling [scroll_editor_content::reset_caret_col].
 pub fn to_start_of_line(
     buffer: &mut EditorBuffer,
     engine: &mut EditorEngine,
@@ -222,8 +221,7 @@ pub fn to_start_of_line(
 
 /// Depending on [SelectMode], this acts as a:
 /// - Convenience function for simply calling [right] repeatedly.
-/// - Convenience function for simply calling
-///   [scroll_editor_content::set_caret_col_to].
+/// - Convenience function for simply calling [scroll_editor_content::set_caret_col_to].
 pub fn to_end_of_line(
     buffer: &mut EditorBuffer,
     engine: &mut EditorEngine,
@@ -349,8 +347,8 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
         use crate::{wide_segments::ContainsWideSegments, width, SegString};
 
         /// 1. Check for wide unicode character to the right of the caret.
-        /// 2. [validate::apply_change] checks for wide unicode character at the start of the
-        ///    viewport.
+        /// 2. [validate::apply_change] checks for wide unicode character at the start of
+        ///    the viewport.
         pub fn right_normal(
             buffer: &mut EditorBuffer,
             engine: &mut EditorEngine,

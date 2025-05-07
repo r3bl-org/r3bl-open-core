@@ -90,7 +90,8 @@ pub fn paste_from_clipboard(
                     clipboard_text.as_str(),
                 );
             }
-            // If the clipboard text contains a new line, then insert the text line by line.
+            // If the clipboard text contains a new line, then insert the text line by
+            // line.
             else {
                 let lines = clipboard_text.split(NEW_LINE);
                 let line_count = lines.clone().count();

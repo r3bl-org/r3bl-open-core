@@ -60,8 +60,8 @@ pub enum MdBlock<'a> {
     Authors(List<&'a str>),
 }
 
-/// These are things that show up in a single line of Markdown text [MdLineFragments]. They do not
-/// include other Markdown blocks (like code blocks, lists, headings, etc).
+/// These are things that show up in a single line of Markdown text [MdLineFragments].
+/// They do not include other Markdown blocks (like code blocks, lists, headings, etc).
 #[derive(Clone, Debug, PartialEq)]
 pub enum MdLineFragment<'a> {
     UnorderedListBullet {

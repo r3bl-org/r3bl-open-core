@@ -113,8 +113,8 @@ pub fn try_convert_key_modifiers(modifiers: &KeyModifiers) -> Option<ModifierKey
 
 impl From<KeyModifiers> for ModifierKeysMask {
     /// Difference in meaning between `intersects` and `contains`:
-    /// - `intersects` -> means that the given bit shows up in your variable, but it might contain
-    ///   other bits.
+    /// - `intersects` -> means that the given bit shows up in your variable, but it might
+    ///   contain other bits.
     /// - `contains` -> means that your variable ONLY contains these bits.
     /// - Docs: <https://docs.rs/bitflags/latest/bitflags/index.html>
     fn from(other: KeyModifiers) -> ModifierKeysMask {

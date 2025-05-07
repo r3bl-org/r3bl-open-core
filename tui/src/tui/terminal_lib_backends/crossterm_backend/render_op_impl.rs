@@ -131,8 +131,9 @@ mod impl_trait_paint_render_op {
                     );
                 }
                 RenderOp::PaintTextWithAttributes(_text, _maybe_style) => {
-                    // This should never be executed! The compositor always renders to an offscreen
-                    // buffer first, then that is diff'd and then painted via calls to
+                    // This should never be executed! The compositor always renders to an
+                    // offscreen buffer first, then that is diff'd and
+                    // then painted via calls to
                     // CompositorNoClipTruncPaintTextWithAttributes.
                 }
             }

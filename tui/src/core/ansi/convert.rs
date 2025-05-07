@@ -279,7 +279,7 @@ pub mod ansi_constants {
     ];
 
     /// ANSI Color Palette.
-    /// -  `u32` value encodes R (u8), G (u8), B(u8).
+    /// - `u32` value encodes R (u8), G (u8), B(u8).
     /// - [RgbValue::from](crate::RgbValue::from) can be used to convert `u32` into
     ///   `RgbValue`.
     pub static ANSI_COLOR_PALETTE: [u32; 256] = [

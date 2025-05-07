@@ -112,8 +112,8 @@ where
 
     let app = &mut app;
 
-    // This map is used to cache [Component]s that have been created and are meant to be reused between
-    // multiple renders.
+    // This map is used to cache [Component]s that have been created and are meant to be
+    // reused between multiple renders.
     // 1. It is entirely up to the [App] on how this [ComponentRegistryMap] is used.
     // 2. The methods provided allow components to be added to the map.
     let component_registry_map = &mut ComponentRegistryMap::default();
@@ -739,7 +739,8 @@ mod tests {
 
         let my_offscreen_buffer = global_data.maybe_saved_offscreen_buffer.unwrap();
 
-        // This is for CI/CD environment. It does not support truecolor, and degrades to ANSI 256 colors
+        // This is for CI/CD environment. It does not support truecolor, and degrades to
+        // ANSI 256 colors
         if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
             // Check pixel char at 4 x 7.
             {

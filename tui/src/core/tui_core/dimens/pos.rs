@@ -182,7 +182,8 @@ mod ops {
         }
     }
 
-    // (ColWidthCount, RowHeightCount) or (RowHeightCount, ColWidthCount) is equivalent to Dim.
+    // (ColWidthCount, RowHeightCount) or (RowHeightCount, ColWidthCount) is equivalent to
+    // Dim.
     impl Mul<(ColWidth, RowHeight)> for Pos {
         type Output = Pos;
 
@@ -194,7 +195,8 @@ mod ops {
         }
     }
 
-    // (ColWidthCount, RowHeightCount) or (RowHeightCount, ColWidthCount) is equivalent to Dim.
+    // (ColWidthCount, RowHeightCount) or (RowHeightCount, ColWidthCount) is equivalent to
+    // Dim.
     impl Mul<(RowHeight, ColWidth)> for Pos {
         type Output = Pos;
 
@@ -413,7 +415,8 @@ mod api {
         }
 
         /// Increment col index by `col_amt`, while making sure it will never exceed
-        /// `max_col_amt`. This function is not concerned with scrolling or [crate::ScrOfs].
+        /// `max_col_amt`. This function is not concerned with scrolling or
+        /// [crate::ScrOfs].
         ///
         /// Note that a caret is allowed to "go past" the end of the max index, so max
         /// index + 1 is a valid position.

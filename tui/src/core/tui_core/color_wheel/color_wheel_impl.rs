@@ -140,8 +140,9 @@ impl ColorWheel {
     }
 
     /// This method will return the length of the gradient. This is
-    /// [GradientLengthKind::NotCalculatedYet] if the gradient has not been computed & memoized yet
-    /// via a call to [`generate_color_wheel`](ColorWheel::generate_color_wheel).
+    /// [GradientLengthKind::NotCalculatedYet] if the gradient has not been computed &
+    /// memoized yet via a call to
+    /// [`generate_color_wheel`](ColorWheel::generate_color_wheel).
     pub fn get_gradient_len(&self) -> GradientLengthKind { self.gradient_length_kind }
 
     pub fn get_gradient_kind(&mut self) -> &mut GradientKind { &mut self.gradient_kind }
@@ -149,8 +150,8 @@ impl ColorWheel {
     /// Every time this method is called, it will generate the gradient & memoize it.
     ///
     /// # Arguments
-    /// * `steps_override` - If `Some` then the number of steps will be overridden. If `None` then
-    ///   the number of steps will be determined by the `ColorWheelConfig`.
+    /// * `steps_override` - If `Some` then the number of steps will be overridden. If
+    ///   `None` then the number of steps will be determined by the `ColorWheelConfig`.
     ///
     /// Here's the priority order of how `steps` is determined:
     /// 1. If `steps_override` is `Some` then use that.
@@ -229,9 +230,9 @@ impl ColorWheel {
         &self.gradient_kind
     }
 
-    /// This method will return the next color in the gradient. It updates the index. When it
-    /// reaches the end of the gradient, it will flip direction and go in reverse. And then flip
-    /// again when it reaches the start. And so on.
+    /// This method will return the next color in the gradient. It updates the index. When
+    /// it reaches the end of the gradient, it will flip direction and go in reverse.
+    /// And then flip again when it reaches the start. And so on.
     pub fn next_color(&mut self) -> Option<TuiColor> {
         // Early return if the following can't be found.
         if let GradientKind::NotCalculatedYet = self.gradient_kind {
@@ -409,15 +410,15 @@ impl ColorWheel {
     ///
     /// # Colorization Policy
     ///
-    /// - [GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength]:
-    ///   The first time this method is called it will generate a gradient w/ the number
-    ///   of steps. Subsequent calls will use the same gradient and index **if** the
-    ///   number of steps is the same. However, if the number of steps are different,
-    ///   then a new gradient will be generated & the index reset.
+    /// - [GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength]: The
+    ///   first time this method is called it will generate a gradient w/ the number of
+    ///   steps. Subsequent calls will use the same gradient and index **if** the number
+    ///   of steps is the same. However, if the number of steps are different, then a new
+    ///   gradient will be generated & the index reset.
     ///
-    /// - [GradientGenerationPolicy::ReuseExistingGradientAndIndex]:
-    ///   The first time this method is called it will generate a gradient w/ the number
-    ///   of steps. Subsequent calls will use the same gradient and index.
+    /// - [GradientGenerationPolicy::ReuseExistingGradientAndIndex]: The first time this
+    ///   method is called it will generate a gradient w/ the number of steps. Subsequent
+    ///   calls will use the same gradient and index.
     pub fn colorize_into_styled_texts(
         &mut self,
         us: &GCString,
@@ -630,14 +631,14 @@ mod tests_color_wheel_rgb {
         }
     }
 
-    /// This strange test is needed because the color wheel uses a global variable to determine
-    /// color support. This test ensures that the global variable is reset to its original value
-    /// after each test.
+    /// This strange test is needed because the color wheel uses a global variable to
+    /// determine color support. This test ensures that the global variable is reset
+    /// to its original value after each test.
     ///
-    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to ensure that
-    /// the global variable is reset to its original value before each test. This is why
-    /// `test_color_wheel_config_narrowing`, `test_color_wheel_iterator`, etc. are wrapped in a
-    /// single test.
+    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to
+    /// ensure that the global variable is reset to its original value before each
+    /// test. This is why `test_color_wheel_config_narrowing`,
+    /// `test_color_wheel_iterator`, etc. are wrapped in a single test.
     ///
     /// If these two are left as separate tests, then these tests will be flaky.
     #[serial]
@@ -690,14 +691,14 @@ mod tests_color_wheel_rgb {
         }
     }
 
-    /// This strange test is needed because the color wheel uses a global variable to determine
-    /// color support. This test ensures that the global variable is reset to its original value
-    /// after each test.
+    /// This strange test is needed because the color wheel uses a global variable to
+    /// determine color support. This test ensures that the global variable is reset
+    /// to its original value after each test.
     ///
-    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to ensure that
-    /// the global variable is reset to its original value before each test. This is why
-    /// `test_color_wheel_config_narrowing`, `test_color_wheel_iterator`, etc. are wrapped in a
-    /// single test.
+    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to
+    /// ensure that the global variable is reset to its original value before each
+    /// test. This is why `test_color_wheel_config_narrowing`,
+    /// `test_color_wheel_iterator`, etc. are wrapped in a single test.
     ///
     /// If these two are left as separate tests, then these tests will be flaky.
     #[serial]
@@ -789,14 +790,14 @@ mod tests_color_wheel_rgb {
         global_color_support::clear_override()
     }
 
-    /// This strange test is needed because the color wheel uses a global variable to determine
-    /// color support. This test ensures that the global variable is reset to its original value
-    /// after each test.
+    /// This strange test is needed because the color wheel uses a global variable to
+    /// determine color support. This test ensures that the global variable is reset
+    /// to its original value after each test.
     ///
-    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to ensure that
-    /// the global variable is reset to its original value before each test. This is why
-    /// `test_color_wheel_config_narrowing`, `test_color_wheel_iterator`, etc. are wrapped in a
-    /// single test.
+    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to
+    /// ensure that the global variable is reset to its original value before each
+    /// test. This is why `test_color_wheel_config_narrowing`,
+    /// `test_color_wheel_iterator`, etc. are wrapped in a single test.
     ///
     /// If these two are left as separate tests, then these tests will be flaky.
     #[serial]
@@ -838,14 +839,14 @@ mod tests_color_wheel_rgb {
         global_color_support::clear_override()
     }
 
-    /// This strange test is needed because the color wheel uses a global variable to determine
-    /// color support. This test ensures that the global variable is reset to its original value
-    /// after each test.
+    /// This strange test is needed because the color wheel uses a global variable to
+    /// determine color support. This test ensures that the global variable is reset
+    /// to its original value after each test.
     ///
-    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to ensure that
-    /// the global variable is reset to its original value before each test. This is why
-    /// `test_color_wheel_config_narrowing`, `test_color_wheel_iterator`, etc. are wrapped in a
-    /// single test.
+    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to
+    /// ensure that the global variable is reset to its original value before each
+    /// test. This is why `test_color_wheel_config_narrowing`,
+    /// `test_color_wheel_iterator`, etc. are wrapped in a single test.
     ///
     /// If these two are left as separate tests, then these tests will be flaky.
     #[serial]
@@ -910,14 +911,14 @@ mod tests_color_wheel_rgb {
         global_color_support::clear_override()
     }
 
-    /// This strange test is needed because the color wheel uses a global variable to determine
-    /// color support. This test ensures that the global variable is reset to its original value
-    /// after each test.
+    /// This strange test is needed because the color wheel uses a global variable to
+    /// determine color support. This test ensures that the global variable is reset
+    /// to its original value after each test.
     ///
-    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to ensure that
-    /// the global variable is reset to its original value before each test. This is why
-    /// `test_color_wheel_config_narrowing`, `test_color_wheel_iterator`, etc. are wrapped in a
-    /// single test.
+    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to
+    /// ensure that the global variable is reset to its original value before each
+    /// test. This is why `test_color_wheel_config_narrowing`,
+    /// `test_color_wheel_iterator`, etc. are wrapped in a single test.
     ///
     /// If these two are left as separate tests, then these tests will be flaky.
     #[serial]

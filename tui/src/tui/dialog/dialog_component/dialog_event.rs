@@ -33,8 +33,8 @@ mod dialog_event_impl {
 
     impl DialogEvent {
         /// Tries to convert the given [InputEvent] into a [DialogEvent].
-        /// - Enter and Esc are also matched against to return [DialogEvent::EnterPressed] and
-        ///   [DialogEvent::EscPressed]
+        /// - Enter and Esc are also matched against to return [DialogEvent::EnterPressed]
+        ///   and [DialogEvent::EscPressed]
         /// - Otherwise, [Err] is returned.
         pub fn from(input_event: InputEvent) -> Self {
             if let InputEvent::Keyboard(keypress) = input_event {

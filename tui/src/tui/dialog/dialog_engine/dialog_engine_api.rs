@@ -190,11 +190,12 @@ impl DialogEngineApi {
         Ok(pipeline)
     }
 
-    /// Event based interface for the editor. This executes the [InputEvent] and returns one of the
-    /// following:
-    /// - [DialogEngineApplyResponse::DialogChoice] => <kbd>Enter</kbd> or <kbd>Esc</kbd> was
-    ///   pressed.
-    /// - [DialogEngineApplyResponse::UpdateEditorBuffer] => the editor buffer was updated.
+    /// Event based interface for the editor. This executes the [InputEvent] and returns
+    /// one of the following:
+    /// - [DialogEngineApplyResponse::DialogChoice] => <kbd>Enter</kbd> or <kbd>Esc</kbd>
+    ///   was pressed.
+    /// - [DialogEngineApplyResponse::UpdateEditorBuffer] => the editor buffer was
+    ///   updated.
     /// - [DialogEngineApplyResponse::Noop] => otherwise.
     pub fn apply_event<S, AS>(
         mut_state: &mut S,
@@ -216,7 +217,8 @@ impl DialogEngineApi {
             return Ok(DialogEngineApplyResponse::DialogChoice(choice));
         }
 
-        // Was up / down pressed to select autocomplete results & vert scroll the results panel?
+        // Was up / down pressed to select autocomplete results & vert scroll the results
+        // panel?
         if let EventPropagation::ConsumedRender = internal_impl::try_handle_up_down(
             input_event,
             mut_state.get_mut_dialog_buffer(self_id),
@@ -272,14 +274,15 @@ mod internal_impl {
 
     /// Return the [FlexBox] for the dialog to be rendered in.
     ///
-    /// - In non-modal contexts (which this is not), this is determined by the layout engine.
-    /// - In the modal case (which this is), things are different because the dialog escapes the
-    ///   boundaries of the layout engine and really just paints itself on top of everything. It can
-    ///   reach any corner of the screen.
+    /// - In non-modal contexts (which this is not), this is determined by the layout
+    ///   engine.
+    /// - In the modal case (which this is), things are different because the dialog
+    ///   escapes the boundaries of the layout engine and really just paints itself on top
+    ///   of everything. It can reach any corner of the screen.
     ///   - In autocomplete mode it sizes itself differently than in normal mode.
-    /// - However, it is still constrained by the bounds of the [Surface] itself and does not take
-    ///   into account the full window size (in case these are different). This only applies if a
-    ///   [Surface] is passed in as an argument.
+    /// - However, it is still constrained by the bounds of the [Surface] itself and does
+    ///   not take into account the full window size (in case these are different). This
+    ///   only applies if a [Surface] is passed in as an argument.
     ///
     /// ```text
     /// EditorEngineFlexBox {
@@ -663,8 +666,8 @@ mod internal_impl {
         ops
     }
 
-    /// Only Colorizes text in-place if [Style]'s `lolcat` field is true. Otherwise leaves `text`
-    /// alone.
+    /// Only Colorizes text in-place if [Style]'s `lolcat` field is true. Otherwise leaves
+    /// `text` alone.
     fn lolcat_from_style(
         ops: &mut RenderOps,
         color_wheel: &mut ColorWheel,

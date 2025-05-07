@@ -57,24 +57,22 @@ pub struct SelectionRange {
     /// - It represents the display width at which the selection starts.
     /// - The [crate::RowIndex] field is not used and is clobbered with
     ///   [ChUnitPrimitiveType::MAX] after initialization.
-    /// - The display width is used, to support variable width characters.
-    ///   `UTF-8` encoding uses between 1 and 4 bytes to encode a character, e.g.:
-    ///   `"H"` is 1 byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more
-    ///   spaces, e.g.: `"H"` is 1 space wide, and `"😄"` is two spaces wide
-    ///   [crate::GCString::width()] and
-    ///   [crate::GCString::width_char()].
+    /// - The display width is used, to support variable width characters. `UTF-8`
+    ///   encoding uses between 1 and 4 bytes to encode a character, e.g.: `"H"` is 1
+    ///   byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces,
+    ///   e.g.: `"H"` is 1 space wide, and `"😄"` is two spaces wide
+    ///   [crate::GCString::width()] and [crate::GCString::width_char()].
     start: CaretScrAdj,
     /// This is not "raw", this is "scroll adjusted".
     /// - It represents the display width at which the selection ends. The display width
     ///   is used, to support variable width characters.
     /// - The end index is not inclusive when the selection range is resolved into a
     ///   result (string).
-    /// - The display width is used, to support variable width characters.
-    ///   `UTF-8` encoding uses between 1 and 4 bytes to encode a character, e.g.: `"H"` is
-    ///   1 byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces, e.g.
-    ///   `"H"` is 1 space wide, and `"😄"` is two spaces wide
-    ///   [crate::GCString::width()] and
-    ///   [crate::GCString::width_char()].
+    /// - The display width is used, to support variable width characters. `UTF-8`
+    ///   encoding uses between 1 and 4 bytes to encode a character, e.g.: `"H"` is 1
+    ///   byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces,
+    ///   e.g. `"H"` is 1 space wide, and `"😄"` is two spaces wide
+    ///   [crate::GCString::width()] and [crate::GCString::width_char()].
     end: CaretScrAdj,
 }
 

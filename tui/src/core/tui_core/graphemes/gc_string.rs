@@ -57,9 +57,9 @@ use crate::{ch,
 ///   combination of "a" (U+0061) followed by a combining acute accent (U+0301). In the
 ///   latter case, the grapheme cluster is the combination of the two code points "a" +
 ///   "´".
-/// - Emoji like "👨‍👩‍👧‍👦" (family) are often represented by a sequence of multiple
-///   code points (in this case, several characters joined by zero-width joiners). The
-///   entire sequence forms a single grapheme cluster.
+/// - Emoji like "👨‍👩‍👧‍👦" (family) are often represented by a sequence of multiple code points
+///   (in this case, several characters joined by zero-width joiners). The entire sequence
+///   forms a single grapheme cluster.
 ///
 /// So there's a discrepancy in the following:
 ///
@@ -392,7 +392,7 @@ mod basic {
             GCString {
                 string: str.into(),
                 segments: unicode_string_segments,
-                display_width: width(unicode_width_offset_acc), // Used as WidthColCount here.
+                display_width: width(unicode_width_offset_acc), /* Used as WidthColCount here. */
                 bytes_size: if total_byte_offset > ch(0) {
                     /* size = byte_offset (index) + 1 */
                     total_byte_offset + 1
@@ -808,8 +808,8 @@ pub mod wide_segments {
     }
 }
 
-/// Methods for easily truncating grapheme cluster segments (at the end) for common TUI use
-/// cases.
+/// Methods for easily truncating grapheme cluster segments (at the end) for common TUI
+/// use cases.
 pub mod trunc_end {
     use super::*;
 
@@ -1281,7 +1281,8 @@ mod mutate {
             &self,
             arg_col_index: impl Into<ColIndex>,
         ) -> Option<InlineString> {
-            // There is no segment present (Deref trait makes `len()` apply to `vec_segment`).
+            // There is no segment present (Deref trait makes `len()` apply to
+            // `vec_segment`).
             if self.is_empty() {
                 return None;
             }
@@ -1498,14 +1499,18 @@ mod tests {
         let test_cases = [
             ("🚀", col(00), "🚀Hi📦XelLo🙏🏽Bye", w("🚀")),
             ("🚀", col(01), "H🚀i📦XelLo🙏🏽Bye", w("🚀")),
-            ("🚀", col(02), "Hi🚀📦XelLo🙏🏽Bye", w("🚀")), /* `📦` is 2 display cols wide */
-            ("🚀", col(03), "Hi🚀📦XelLo🙏🏽Bye", w("🚀")), /* `📦` is 2 display cols wide */
+            ("🚀", col(02), "Hi🚀📦XelLo🙏🏽Bye", w("🚀")), /* `📦` is 2 display cols
+                                                           * wide */
+            ("🚀", col(03), "Hi🚀📦XelLo🙏🏽Bye", w("🚀")), /* `📦` is 2 display cols
+                                                           * wide */
             ("🚀", col(04), "Hi📦🚀XelLo🙏🏽Bye", w("🚀")),
             ("🚀", col(05), "Hi📦X🚀elLo🙏🏽Bye", w("🚀")),
             ("🚀", col(06), "Hi📦Xe🚀lLo🙏🏽Bye", w("🚀")),
             ("🚀", col(07), "Hi📦Xel🚀Lo🙏🏽Bye", w("🚀")),
-            ("🚀", col(08), "Hi📦XelL🚀o🙏🏽Bye", w("🚀")), /* `🙏🏽` is 2 display cols wide */
-            ("🚀", col(09), "Hi📦XelLo🚀🙏🏽Bye", w("🚀")), /* `🙏🏽` is 2 display cols wide */
+            ("🚀", col(08), "Hi📦XelL🚀o🙏🏽Bye", w("🚀")), /* `🙏🏽` is 2 display cols
+                                                           * wide */
+            ("🚀", col(09), "Hi📦XelLo🚀🙏🏽Bye", w("🚀")), /* `🙏🏽` is 2 display cols
+                                                           * wide */
             ("🚀", col(10), "Hi📦XelLo🚀🙏🏽Bye", w("🚀")),
             ("🚀", col(11), "Hi📦XelLo🙏🏽🚀Bye", w("🚀")),
             ("🚀", col(12), "Hi📦XelLo🙏🏽B🚀ye", w("🚀")),
@@ -1593,14 +1598,17 @@ mod tests {
         let test_cases = [
             (col(0), Some(("".into(), "Hi📦XelLo🙏🏽Bye".into()))),
             (col(1), Some(("H".into(), "i📦XelLo🙏🏽Bye".into()))),
-            (col(2), Some(("Hi".into(), "📦XelLo🙏🏽Bye".into()))), /* `📦` is 2 display cols wide */
-            (col(3), Some(("Hi".into(), "📦XelLo🙏🏽Bye".into()))), /* `📦` is 2 display cols wide */
+            (col(2), Some(("Hi".into(), "📦XelLo🙏🏽Bye".into()))), /* `📦` is 2 display
+                                                                   * cols wide */
+            (col(3), Some(("Hi".into(), "📦XelLo🙏🏽Bye".into()))), /* `📦` is 2 display
+                                                                   * cols wide */
             (col(4), Some(("Hi📦".into(), "XelLo🙏🏽Bye".into()))),
             (col(5), Some(("Hi📦X".into(), "elLo🙏🏽Bye".into()))),
             (col(6), Some(("Hi📦Xe".into(), "lLo🙏🏽Bye".into()))),
             (col(7), Some(("Hi📦Xel".into(), "Lo🙏🏽Bye".into()))),
             (col(8), Some(("Hi📦XelL".into(), "o🙏🏽Bye".into()))),
-            (col(9), Some(("Hi📦XelLo".into(), "🙏🏽Bye".into()))), /* `🙏🏽` is 2 display cols wide */
+            (col(9), Some(("Hi📦XelLo".into(), "🙏🏽Bye".into()))), /* `🙏🏽` is 2 display
+                                                                   * cols wide */
             (col(10), Some(("Hi📦XelLo".into(), "🙏🏽Bye".into()))), /* `🙏🏽` is 2 display cols wide */
             (col(11), Some(("Hi📦XelLo🙏🏽".into(), "Bye".into()))),
             (col(12), Some(("Hi📦XelLo🙏🏽B".into(), "ye".into()))),
@@ -1671,17 +1679,22 @@ mod tests {
             (col(00), None),
             (col(01), Some(ssr("H", width(1), col(0)))),
             (col(02), Some(ssr("i", width(1), col(1)))),
-            (col(03), Some(ssr("i", width(1), col(1)))), /* `📦` is 2 display cols wide */
-            (col(04), Some(ssr("📦", width(2), col(2)))), /* `📦` is 2 display cols wide */
+            (col(03), Some(ssr("i", width(1), col(1)))), /* `📦` is 2 display cols
+                                                          * wide */
+            (col(04), Some(ssr("📦", width(2), col(2)))), /* `📦` is 2 display cols
+                                                           * wide */
             (col(05), Some(ssr("X", width(1), col(4)))),
             (col(06), Some(ssr("e", width(1), col(5)))),
             (col(07), Some(ssr("l", width(1), col(6)))),
             (col(08), Some(ssr("L", width(1), col(7)))),
             (col(09), Some(ssr("o", width(1), col(8)))),
-            (col(10), Some(ssr("o", width(1), col(8)))), /* `🙏🏽` is 2 display cols wide */
-            (col(11), Some(ssr("🙏🏽", width(2), col(9)))), /* `🙏🏽` is 2 display cols wide */
+            (col(10), Some(ssr("o", width(1), col(8)))), /* `🙏🏽` is 2 display cols
+                                                          * wide */
+            (col(11), Some(ssr("🙏🏽", width(2), col(9)))), /* `🙏🏽` is 2 display cols
+                                                           * wide */
             (col(12), Some(ssr("B", width(1), col(11)))),
-            (col(13), Some(ssr("y", width(1), col(12)))), /* ▐ max display width required by line */
+            (col(13), Some(ssr("y", width(1), col(12)))), /* ▐ max display width
+                                                           * required by line */
             /* ❯ No "e" at the end */
             (col(14), None), /* ❯ exceeding display width */
             (col(15), None), /* ❯ exceeding display width */
@@ -1720,15 +1733,19 @@ mod tests {
             /* ← No "H" at the start */
             (col(00), Some(ssr("i", width(1), col(1)))),
             (col(01), Some(ssr("📦", width(2), col(2)))),
-            (col(02), Some(ssr("X", width(1), col(4)))), /* `📦` is 2 display cols wide */
-            (col(03), Some(ssr("X", width(1), col(4)))), /* `📦` is 2 display cols wide */
+            (col(02), Some(ssr("X", width(1), col(4)))), /* `📦` is 2 display cols
+                                                          * wide */
+            (col(03), Some(ssr("X", width(1), col(4)))), /* `📦` is 2 display cols
+                                                          * wide */
             (col(04), Some(ssr("e", width(1), col(5)))),
             (col(05), Some(ssr("l", width(1), col(6)))),
             (col(06), Some(ssr("L", width(1), col(7)))),
             (col(07), Some(ssr("o", width(1), col(8)))),
             (col(08), Some(ssr("🙏🏽", width(2), col(9)))),
-            (col(09), Some(ssr("B", width(1), col(11)))), /* `🙏🏽` is 2 display cols wide */
-            (col(10), Some(ssr("B", width(1), col(11)))), /* `🙏🏽` is 2 display cols wide */
+            (col(09), Some(ssr("B", width(1), col(11)))), /* `🙏🏽` is 2 display cols
+                                                           * wide */
+            (col(10), Some(ssr("B", width(1), col(11)))), /* `🙏🏽` is 2 display cols
+                                                           * wide */
             (col(11), Some(ssr("y", width(1), col(12)))),
             (col(12), Some(ssr("e", width(1), col(13)))),
             (col(13), None), /* ▐ max display width required by line */
@@ -1825,10 +1842,11 @@ mod tests {
             (col(10), None),                          /* `🙏🏽` is 2 display cols wide */
             (col(11), Some(("B", width(1), col(11)))),
             (col(12), Some(("y", width(1), col(12)))),
-            (col(13), Some(("e", width(1), col(13)))), /* ▐ max display width required by line */
-            (col(14), None),                           /* ❯ exceeding display width */
-            (col(15), None),                           /* ❯ exceeding display width */
-            (col(16), None),                           /* ❯ exceeding display width */
+            (col(13), Some(("e", width(1), col(13)))), /* ▐ max display width required
+                                                        * by line */
+            (col(14), None), /* ❯ exceeding display width */
+            (col(15), None), /* ❯ exceeding display width */
+            (col(16), None), /* ❯ exceeding display width */
         ];
 
         for (given_display_col, expected) in test_cases {
@@ -1883,7 +1901,8 @@ mod tests {
             (col(00), width(11), "Hi📦XelLo🙏🏽"),
             (col(00), width(12), "Hi📦XelLo🙏🏽B"),
             (col(00), width(13), "Hi📦XelLo🙏🏽By"),
-            (col(00), width(14), "Hi📦XelLo🙏🏽Bye"), /* ▐ max display width required by line */
+            (col(00), width(14), "Hi📦XelLo🙏🏽Bye"), /* ▐ max display width required by
+                                                     * line */
             (col(00), width(15), "Hi📦XelLo🙏🏽Bye"), /* ❯ exceeding display width */
             (col(00), width(16), "Hi📦XelLo🙏🏽Bye"), /* ❯ exceeding display width */
         ];
