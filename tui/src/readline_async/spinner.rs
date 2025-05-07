@@ -60,8 +60,8 @@ use crate::{contains_ansi_escape_sequence,
 /// - With this teed up, when `Ctrl+C` or `Ctrl+D` is intercepted by
 ///   [crate::ReadlineAsync] in
 ///   [crate::readline_internal::apply_event_to_line_state_and_render()], this will result
-///   in a `()` to be sent to [crate::Readline::safe_spinner_is_active], which shuts
-///   the spinner down.
+///   in a `()` to be sent to [crate::Readline::safe_spinner_is_active], which shuts the
+///   spinner down.
 pub struct Spinner {
     pub tick_delay: Duration,
     /// ANSI escape sequences are stripped from this before being assigned.
@@ -301,6 +301,7 @@ mod tests {
     const FACTOR: u32 = 5;
     const QUANTUM: Duration = Duration::from_millis(100);
 
+    #[serial_test::serial]
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_spinner_color() {
@@ -330,7 +331,7 @@ mod tests {
 
         // This might take some time to finish, so we need to wait for it.
         spinner.stop().await.unwrap();
-        tokio::time::sleep(QUANTUM).await;
+        tokio::time::sleep(QUANTUM * FACTOR).await;
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
         // println!("{:?}", output_buffer_data);
@@ -379,6 +380,7 @@ mod tests {
         drop(line_receiver);
     }
 
+    #[serial_test::serial]
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_spinner_no_color() {
@@ -405,7 +407,7 @@ mod tests {
 
         // This might take some time to finish, so we need to wait for it.
         spinner.stop().await.unwrap();
-        tokio::time::sleep(QUANTUM).await;
+        tokio::time::sleep(QUANTUM * FACTOR).await;
 
         // spell-checker:disable
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string();

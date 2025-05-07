@@ -85,105 +85,91 @@ mod tests_directory_change {
                 fs_paths};
 
     serial_preserve_pwd_test!(test_try_change_directory_permissions_errors, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            // Create a new temporary directory.
-            let new_tmp_dir =
-                fs_paths!(with_root: root => "test_change_dir_permissions_errors");
-            fs::create_dir_all(&new_tmp_dir).unwrap();
-            assert!(new_tmp_dir.exists());
+        // Create a new temporary directory.
+        let new_tmp_dir =
+            fs_paths!(with_root: root => "test_change_dir_permissions_errors");
+        fs::create_dir_all(&new_tmp_dir).unwrap();
+        assert!(new_tmp_dir.exists());
 
-            // Create a directory with no permissions for user.
-            let no_permissions_dir =
-                fs_paths!(with_root: new_tmp_dir => "no_permissions_dir");
-            fs::create_dir_all(&no_permissions_dir).unwrap();
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
-            permissions.set_mode(0o000);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
-            assert!(no_permissions_dir.exists());
-            // Try to change to a directory with insufficient permissions.
-            let result = try_cd(&no_permissions_dir);
-            println!("✅ err: {result:?}");
-            assert!(result.is_err());
-            assert!(matches!(result, Err(FsOpError::PermissionDenied(_))));
+        // Create a directory with no permissions for user.
+        let no_permissions_dir =
+            fs_paths!(with_root: new_tmp_dir => "no_permissions_dir");
+        fs::create_dir_all(&no_permissions_dir).unwrap();
+        let mut permissions = fs::metadata(&no_permissions_dir).unwrap().permissions();
+        permissions.set_mode(0o000);
+        fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+        assert!(no_permissions_dir.exists());
+        // Try to change to a directory with insufficient permissions.
+        let result = try_cd(&no_permissions_dir);
+        println!("✅ err: {result:?}");
+        assert!(result.is_err());
+        assert!(matches!(result, Err(FsOpError::PermissionDenied(_))));
 
-            // Change the permissions back, so that it can be cleaned up!
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
-            permissions.set_mode(0o777);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
-        });
+        // Change the permissions back, so that it can be cleaned up!
+        let mut permissions = fs::metadata(&no_permissions_dir).unwrap().permissions();
+        permissions.set_mode(0o777);
+        fs::set_permissions(&no_permissions_dir, permissions).unwrap();
     });
 
     serial_preserve_pwd_test!(test_try_change_directory_happy_path, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            // Create a new temporary directory.
-            let new_tmp_dir = fs_paths!(with_root: root => "test_change_dir_happy_path");
-            fs::create_dir_all(&new_tmp_dir).unwrap();
-            assert!(new_tmp_dir.exists());
+        // Create a new temporary directory.
+        let new_tmp_dir = fs_paths!(with_root: root => "test_change_dir_happy_path");
+        fs::create_dir_all(&new_tmp_dir).unwrap();
+        assert!(new_tmp_dir.exists());
 
-            // Change to the temporary directory.
-            try_cd(&new_tmp_dir).unwrap();
-            assert_eq!(env::current_dir().unwrap(), new_tmp_dir);
+        // Change to the temporary directory.
+        try_cd(&new_tmp_dir).unwrap();
+        assert_eq!(env::current_dir().unwrap(), new_tmp_dir);
 
-            // Change back to the original directory.
-            try_cd(&root).unwrap();
-            assert_eq!(env::current_dir().unwrap(), *root);
-        });
+        // Change back to the original directory.
+        try_cd(&root).unwrap();
+        assert_eq!(env::current_dir().unwrap(), *root);
     });
 
     serial_preserve_pwd_test!(test_try_change_directory_non_existent, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            // Create a new temporary directory.
-            let new_tmp_dir =
-                fs_paths!(with_root: root => "test_change_dir_non_existent");
-            fs::create_dir_all(&new_tmp_dir).unwrap();
-            assert!(new_tmp_dir.exists());
+        // Create a new temporary directory.
+        let new_tmp_dir = fs_paths!(with_root: root => "test_change_dir_non_existent");
+        fs::create_dir_all(&new_tmp_dir).unwrap();
+        assert!(new_tmp_dir.exists());
 
-            // Try to change to a non-existent directory.
-            let non_existent_dir =
-                fs_paths!(with_root: new_tmp_dir => "non_existent_dir");
-            let result = try_cd(&non_existent_dir);
-            assert!(result.is_err());
-            assert!(matches!(result, Err(FsOpError::DirectoryDoesNotExist(_))));
+        // Try to change to a non-existent directory.
+        let non_existent_dir = fs_paths!(with_root: new_tmp_dir => "non_existent_dir");
+        let result = try_cd(&non_existent_dir);
+        assert!(result.is_err());
+        assert!(matches!(result, Err(FsOpError::DirectoryDoesNotExist(_))));
 
-            // Change back to the original directory.
-            try_cd(&root).unwrap();
-            assert_eq!(env::current_dir().unwrap(), *root);
-        });
+        // Change back to the original directory.
+        try_cd(&root).unwrap();
+        assert_eq!(env::current_dir().unwrap(), *root);
     });
 
     serial_preserve_pwd_test!(test_try_change_directory_invalid_name, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            // Create a new temporary directory.
-            let new_tmp_dir =
-                fs_paths!(with_root: root => "test_change_dir_invalid_name");
-            fs::create_dir_all(&new_tmp_dir).unwrap();
-            assert!(new_tmp_dir.exists());
+        // Create a new temporary directory.
+        let new_tmp_dir = fs_paths!(with_root: root => "test_change_dir_invalid_name");
+        fs::create_dir_all(&new_tmp_dir).unwrap();
+        assert!(new_tmp_dir.exists());
 
-            // Try to change to a directory with an invalid name.
-            let invalid_name_dir =
-                fs_paths!(with_root: new_tmp_dir => "invalid_name_dir\0");
-            let result = try_cd(&invalid_name_dir);
-            assert!(result.is_err());
-            println!("✅ err: {result:?}");
-            assert!(matches!(result, Err(FsOpError::InvalidName(_))));
+        // Try to change to a directory with an invalid name.
+        let invalid_name_dir = fs_paths!(with_root: new_tmp_dir => "invalid_name_dir\0");
+        let result = try_cd(&invalid_name_dir);
+        assert!(result.is_err());
+        println!("✅ err: {result:?}");
+        assert!(matches!(result, Err(FsOpError::InvalidName(_))));
 
-            // Change back to the original directory.
-            try_cd(&root).unwrap();
-            assert_eq!(env::current_dir().unwrap(), *root);
-        });
+        // Change back to the original directory.
+        try_cd(&root).unwrap();
+        assert_eq!(env::current_dir().unwrap(), *root);
     });
 }

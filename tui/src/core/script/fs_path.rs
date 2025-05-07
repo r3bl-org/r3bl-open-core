@@ -221,239 +221,209 @@ mod tests_fs_path {
     use fs_path::try_pwd;
 
     use super::*;
-    use crate::{create_temp_dir, fs_path, serial_preserve_pwd_test, with_saved_pwd};
+    use crate::{create_temp_dir, fs_path, serial_preserve_pwd_test};
 
     serial_preserve_pwd_test!(test_try_pwd, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            let new_dir = root.join("test_pwd");
-            fs::create_dir_all(&new_dir).unwrap();
-            env::set_current_dir(&new_dir).unwrap();
+        let new_dir = root.join("test_pwd");
+        fs::create_dir_all(&new_dir).unwrap();
+        env::set_current_dir(&new_dir).unwrap();
 
-            let pwd = try_pwd().unwrap();
-            assert!(pwd.exists());
-            assert_eq!(pwd, new_dir);
-        });
+        let pwd = try_pwd().unwrap();
+        assert!(pwd.exists());
+        assert_eq!(pwd, new_dir);
     });
 
     serial_preserve_pwd_test!(test_try_pwd_errors, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            // Create a directory, change to it, remove all permissions for user.
-            let no_permissions_dir = root.join("no_permissions_dir");
-            fs::create_dir_all(&no_permissions_dir).unwrap();
-            env::set_current_dir(&no_permissions_dir).unwrap();
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
-            permissions.set_mode(0o000);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
-            assert!(no_permissions_dir.exists());
+        // Create a directory, change to it, remove all permissions for user.
+        let no_permissions_dir = root.join("no_permissions_dir");
+        fs::create_dir_all(&no_permissions_dir).unwrap();
+        env::set_current_dir(&no_permissions_dir).unwrap();
+        let mut permissions = fs::metadata(&no_permissions_dir).unwrap().permissions();
+        permissions.set_mode(0o000);
+        fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+        assert!(no_permissions_dir.exists());
 
-            // Try to get the pwd with insufficient permissions. It should work!
-            let result = try_pwd();
-            assert!(result.is_ok());
+        // Try to get the pwd with insufficient permissions. It should work!
+        let result = try_pwd();
+        assert!(result.is_ok());
 
-            // Change the permissions back, so that it can be cleaned up!
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
-            permissions.set_mode(0o777);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+        // Change the permissions back, so that it can be cleaned up!
+        let mut permissions = fs::metadata(&no_permissions_dir).unwrap().permissions();
+        permissions.set_mode(0o777);
+        fs::set_permissions(&no_permissions_dir, permissions).unwrap();
 
-            // Delete this directory, and try pwd again. It will not longer exist.
-            fs::remove_dir_all(&no_permissions_dir).unwrap();
-            let result = try_pwd();
-            assert!(result.is_err());
-            assert!(matches!(result, Err(FsOpError::DirectoryDoesNotExist(_))));
-        });
+        // Delete this directory, and try pwd again. It will not longer exist.
+        fs::remove_dir_all(&no_permissions_dir).unwrap();
+        let result = try_pwd();
+        assert!(result.is_err());
+        assert!(matches!(result, Err(FsOpError::DirectoryDoesNotExist(_))));
     });
 
     serial_preserve_pwd_test!(test_fq_path_relative_to_try_pwd, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            let sub_path = "test_fq_path_relative_to_pwd";
-            let new_dir = root.join(sub_path);
-            fs::create_dir_all(&new_dir).unwrap();
+        let sub_path = "test_fq_path_relative_to_pwd";
+        let new_dir = root.join(sub_path);
+        fs::create_dir_all(&new_dir).unwrap();
 
-            env::set_current_dir(&root).unwrap();
+        env::set_current_dir(&root).unwrap();
 
-            println!("Current directory set to: {root}");
-            println!("Current directory is    : {}", try_pwd().unwrap().display());
+        println!("Current directory set to: {root}");
+        println!("Current directory is    : {}", try_pwd().unwrap().display());
 
-            let fq_path = fs_paths!(with_root: try_pwd().unwrap() => sub_path);
+        let fq_path = fs_paths!(with_root: try_pwd().unwrap() => sub_path);
 
-            println!("Sub directory created at: {}", fq_path.display());
-            println!("Sub directory exists    : {}", fq_path.exists());
+        println!("Sub directory created at: {}", fq_path.display());
+        println!("Sub directory exists    : {}", fq_path.exists());
 
-            assert!(fq_path.exists());
-        });
+        assert!(fq_path.exists());
     });
 
     serial_preserve_pwd_test!(test_path_as_string, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            env::set_current_dir(&root).unwrap();
+        env::set_current_dir(&root).unwrap();
 
-            let fq_path = fs_paths!(with_root: try_pwd().unwrap() => "some_dir");
-            let fq_path_str = fs_path::path_as_string(&fq_path);
+        let fq_path = fs_paths!(with_root: try_pwd().unwrap() => "some_dir");
+        let fq_path_str = fs_path::path_as_string(&fq_path);
 
-            assert_eq!(fq_path_str, fq_path.display().to_string());
-        });
+        assert_eq!(fq_path_str, fq_path.display().to_string());
     });
 
     serial_preserve_pwd_test!(test_try_file_exists, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            let new_dir = root.join("test_file_exists_dir");
-            fs::create_dir_all(&new_dir).unwrap();
+        let new_dir = root.join("test_file_exists_dir");
+        fs::create_dir_all(&new_dir).unwrap();
 
-            let new_file = new_dir.join("test_file_exists_file.txt");
-            fs::write(&new_file, "test").unwrap();
+        let new_file = new_dir.join("test_file_exists_file.txt");
+        fs::write(&new_file, "test").unwrap();
 
-            assert!(fs_path::try_file_exists(&new_file).unwrap());
-            assert!(!fs_path::try_file_exists(&new_dir).unwrap());
+        assert!(fs_path::try_file_exists(&new_file).unwrap());
+        assert!(!fs_path::try_file_exists(&new_dir).unwrap());
 
-            fs::remove_dir_all(&new_dir).unwrap();
+        fs::remove_dir_all(&new_dir).unwrap();
 
-            // Ensure that an invalid path returns an error.
-            assert!(fs_path::try_file_exists(&new_file).is_err()); // This file does not exist.
-            assert!(fs_path::try_file_exists(&new_dir).is_err()); // This directory does
-                                                                  // not exist.
-        });
+        // Ensure that an invalid path returns an error.
+        assert!(fs_path::try_file_exists(&new_file).is_err()); // This file does not exist.
+        assert!(fs_path::try_file_exists(&new_dir).is_err()); // This directory does
+                                                              // not exist.
     });
 
     serial_preserve_pwd_test!(test_try_file_exists_not_found_error, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            let new_dir = root.join("test_file_exists_not_found_error");
+        let new_dir = root.join("test_file_exists_not_found_error");
 
-            // Try to check if the file exists. It should return an error.
-            let result = fs_path::try_file_exists(&new_dir);
-            assert!(result.is_err());
-            assert!(matches!(result, Err(FsOpError::FileDoesNotExist(_))));
-        });
+        // Try to check if the file exists. It should return an error.
+        let result = fs_path::try_file_exists(&new_dir);
+        assert!(result.is_err());
+        assert!(matches!(result, Err(FsOpError::FileDoesNotExist(_))));
     });
 
     serial_preserve_pwd_test!(test_try_file_exists_invalid_name_error, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            let new_dir = root.join("test_file_exists_invalid_name_error\0");
+        let new_dir = root.join("test_file_exists_invalid_name_error\0");
 
-            // Try to check if the file exists. It should return an error.
-            let result = fs_path::try_file_exists(&new_dir);
-            assert!(result.is_err());
-            assert!(matches!(result, Err(FsOpError::InvalidName(_))));
-        });
+        // Try to check if the file exists. It should return an error.
+        let result = fs_path::try_file_exists(&new_dir);
+        assert!(result.is_err());
+        assert!(matches!(result, Err(FsOpError::InvalidName(_))));
     });
 
     serial_preserve_pwd_test!(test_try_file_exists_permissions_errors, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            // Create a directory, change to it, remove all permissions for user.
-            let no_permissions_dir = root.join("no_permissions_dir");
-            fs::create_dir_all(&no_permissions_dir).unwrap();
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
-            permissions.set_mode(0o000);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
-            assert!(no_permissions_dir.exists());
+        // Create a directory, change to it, remove all permissions for user.
+        let no_permissions_dir = root.join("no_permissions_dir");
+        fs::create_dir_all(&no_permissions_dir).unwrap();
+        let mut permissions = fs::metadata(&no_permissions_dir).unwrap().permissions();
+        permissions.set_mode(0o000);
+        fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+        assert!(no_permissions_dir.exists());
 
-            // Try to check if the file exists with insufficient permissions. It should
-            // work!
-            let result = fs_path::try_file_exists(&no_permissions_dir);
-            assert!(result.is_ok());
+        // Try to check if the file exists with insufficient permissions. It should
+        // work!
+        let result = fs_path::try_file_exists(&no_permissions_dir);
+        assert!(result.is_ok());
 
-            // Change the permissions back, so that it can be cleaned up!
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
-            permissions.set_mode(0o777);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
-        });
+        // Change the permissions back, so that it can be cleaned up!
+        let mut permissions = fs::metadata(&no_permissions_dir).unwrap().permissions();
+        permissions.set_mode(0o777);
+        fs::set_permissions(&no_permissions_dir, permissions).unwrap();
     });
 
     serial_preserve_pwd_test!(test_try_directory_exists, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            let new_dir = root.join("test_dir_exists_dir");
-            fs::create_dir_all(&new_dir).unwrap();
+        let new_dir = root.join("test_dir_exists_dir");
+        fs::create_dir_all(&new_dir).unwrap();
 
-            let new_file = new_dir.join("test_dir_exists_file.txt");
-            fs::write(&new_file, "test").unwrap();
+        let new_file = new_dir.join("test_dir_exists_file.txt");
+        fs::write(&new_file, "test").unwrap();
 
-            assert!(fs_path::try_directory_exists(&new_dir).unwrap());
-            assert!(!fs_path::try_directory_exists(&new_file).unwrap());
-        })
+        assert!(fs_path::try_directory_exists(&new_dir).unwrap());
+        assert!(!fs_path::try_directory_exists(&new_file).unwrap());
     });
 
     serial_preserve_pwd_test!(test_try_directory_exists_not_found_error, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            let new_dir = root.join("test_dir_exists_not_found_error");
+        let new_dir = root.join("test_dir_exists_not_found_error");
 
-            // Try to check if the directory exists. It should return an error.
-            let result = fs_path::try_directory_exists(&new_dir);
-            assert!(result.is_err());
-            assert!(matches!(result, Err(FsOpError::DirectoryDoesNotExist(_))));
-        });
+        // Try to check if the directory exists. It should return an error.
+        let result = fs_path::try_directory_exists(&new_dir);
+        assert!(result.is_err());
+        assert!(matches!(result, Err(FsOpError::DirectoryDoesNotExist(_))));
     });
 
     serial_preserve_pwd_test!(test_try_directory_exists_invalid_name_error, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            let new_dir = root.join("test_dir_exists_invalid_name_error\0");
+        let new_dir = root.join("test_dir_exists_invalid_name_error\0");
 
-            // Try to check if the directory exists. It should return an error.
-            let result = fs_path::try_directory_exists(&new_dir);
-            assert!(result.is_err());
-            assert!(matches!(result, Err(FsOpError::InvalidName(_))));
-        });
+        // Try to check if the directory exists. It should return an error.
+        let result = fs_path::try_directory_exists(&new_dir);
+        assert!(result.is_err());
+        assert!(matches!(result, Err(FsOpError::InvalidName(_))));
     });
 
     serial_preserve_pwd_test!(test_try_directory_exists_permissions_errors, {
-        with_saved_pwd!({
-            // Create the root temp dir.
-            let root = create_temp_dir().unwrap();
+        // Create the root temp dir.
+        let root = create_temp_dir().unwrap();
 
-            // Create a directory, change to it, remove all permissions for user.
-            let no_permissions_dir = root.join("no_permissions_dir");
-            fs::create_dir_all(&no_permissions_dir).unwrap();
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
-            permissions.set_mode(0o000);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
-            assert!(no_permissions_dir.exists());
+        // Create a directory, change to it, remove all permissions for user.
+        let no_permissions_dir = root.join("no_permissions_dir");
+        fs::create_dir_all(&no_permissions_dir).unwrap();
+        let mut permissions = fs::metadata(&no_permissions_dir).unwrap().permissions();
+        permissions.set_mode(0o000);
+        fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+        assert!(no_permissions_dir.exists());
 
-            // Try to check if the directory exists with insufficient permissions. It
-            // should work!
-            let result = fs_path::try_directory_exists(&no_permissions_dir);
-            assert!(result.is_ok());
+        // Try to check if the directory exists with insufficient permissions. It
+        // should work!
+        let result = fs_path::try_directory_exists(&no_permissions_dir);
+        assert!(result.is_ok());
 
-            // Change the permissions back, so that it can be cleaned up!
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
-            permissions.set_mode(0o777);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
-        });
+        // Change the permissions back, so that it can be cleaned up!
+        let mut permissions = fs::metadata(&no_permissions_dir).unwrap().permissions();
+        permissions.set_mode(0o777);
+        fs::set_permissions(&no_permissions_dir, permissions).unwrap();
     });
 }
