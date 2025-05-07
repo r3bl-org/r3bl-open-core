@@ -29,6 +29,7 @@ pub mod fs_path;
 pub mod github_api;
 pub mod http_client;
 pub mod permissions;
+pub mod temp_dir;
 
 // Re-export.
 pub use apt_install::*;
@@ -42,5 +43,6 @@ pub use fs_path::*;
 pub use github_api::*;
 pub use http_client::*;
 pub use permissions::*;
+pub use temp_dir::*;
 
 pub const SCRIPT_MOD_DEBUG: bool = true;
