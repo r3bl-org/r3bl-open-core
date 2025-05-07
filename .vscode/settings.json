@@ -125,6 +125,7 @@
     "nodiratime",
     "notcurses",
     "nushell",
+    "oneshot",
     "opentelemetry",
     "ordermap",
     "orgn",
