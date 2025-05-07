@@ -471,7 +471,8 @@ pub fn delete_selected(
     {
         let buffer_mut = buffer.get_mut(engine.viewport());
 
-        // Replace lines, before removing them (to prevent indices from being invalidated).
+        // Replace lines, before removing them (to prevent indices from being
+        // invalidated).
         for row_index in map_lines_to_replace.keys() {
             let new_line_content = map_lines_to_replace[row_index].clone();
             let _ = std::mem::replace(
@@ -492,7 +493,8 @@ pub fn delete_selected(
 
         if let Some(new_caret_scr_adj) = maybe_new_caret {
             // Convert scroll adjusted caret to raw caret by applying scroll offset.
-            // Equivalent to: `let caret_raw = *new_caret_scr_adj - *buffer_mut.inner.scr_ofs;`
+            // Equivalent to: `let caret_raw = *new_caret_scr_adj -
+            // *buffer_mut.inner.scr_ofs;`
             let caret_raw = new_caret_scr_adj + *buffer_mut.inner.scr_ofs;
             *buffer_mut.inner.caret_raw = caret_raw;
         }

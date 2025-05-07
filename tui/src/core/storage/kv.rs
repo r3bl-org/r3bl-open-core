@@ -41,8 +41,7 @@
 //! [Bincode] is like [`CBOR`](https://en.wikipedia.org/wiki/CBOR), except that it isn't
 //! standards based, but it is faster. It also has full support of [serde] just like [kv]
 //! does.
-//! - [More info comparing [`CBOR`](https://en.wikipedia.org/wiki/CBOR) with
-//!   [`Bincode`](https://gemini.google.com/share/0684553f3d57)
+//! - [More info comparing [`CBOR`](https://en.wikipedia.org/wiki/CBOR) with [`Bincode`](https://gemini.google.com/share/0684553f3d57)
 //!
 //! The [kv] crate works really well, even with multiple processes accessing the same
 //! database on disk. Even though [sled](https://github.com/spacejam/sled), which the [kv]
@@ -80,12 +79,12 @@ mod default_settings {
 
     #[derive(Debug, strum_macros::EnumString, Hash, PartialEq, Eq, Clone, Copy)]
     pub enum Keys {
-        /// Your [Store] folder path name. [kv] uses this folder to save your key/value store.
-        /// It is your database persistence folder.
+        /// Your [Store] folder path name. [kv] uses this folder to save your key/value
+        /// store. It is your database persistence folder.
         StoreFolderPath,
         /// Your [Bucket] name that is used to store the key/value pairs.
-        /// - [Bincode] is used to serialize/deserialize the value stored in the key/value
-        ///   pair.
+        /// - [Bincode] is used to serialize/deserialize the value stored in the
+        ///   key/value pair.
         /// - A [Bucket] provides typed access to a section of the key/value store [kv].
         BucketName,
     }

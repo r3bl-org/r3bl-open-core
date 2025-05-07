@@ -30,8 +30,7 @@ use crate::{CommonResult, InputEvent, RenderPipeline};
 ///
 /// Notes:
 /// - Async trait docs: <https://doc.rust-lang.org/book/ch10-02-traits.html>
-/// - Limitations of linking to examples module:
-///   <https://users.rust-lang.org/t/how-to-link-to-examples/67918>
+/// - Limitations of linking to examples module: <https://users.rust-lang.org/t/how-to-link-to-examples/67918>
 pub trait App {
     /// State.
     type S: Debug + Default + Clone + Sync + Send;

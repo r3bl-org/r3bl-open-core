@@ -43,9 +43,9 @@ mod construct {
         /// This is for use with [crossterm] crate.
         pub fn as_u16(&self) -> u16 { self.0.into() }
 
-        /// Add 1 to the index to convert it to a length. The intention of this function is
-        /// to meaningfully convert a [Index] to a [Length]. This is useful in situations
-        /// where you need to find what the length is at this index.
+        /// Add 1 to the index to convert it to a length. The intention of this function
+        /// is to meaningfully convert a [Index] to a [Length]. This is useful in
+        /// situations where you need to find what the length is at this index.
         pub fn convert_to_length(&self) -> ChUnit { self.0 + 1 }
     }
 

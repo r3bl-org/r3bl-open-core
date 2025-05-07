@@ -48,8 +48,8 @@ pub fn render_tick(
 
             let text = message.grapheme_string();
             let text_trunc = text.trunc_end_to_fit(
-                display_width -
-                width(3) /* 1 for symbol, 1 for space, 1 empty for last display col */
+                display_width - width(3), /* 1 for symbol, 1 for space, 1 empty for
+                                           * last display col */
             );
             let text_trunc_fmt = apply_color(text_trunc, &mut style.color);
 
@@ -62,8 +62,8 @@ pub fn render_tick(
 
             let text = message.grapheme_string();
             let text_trunc = text.trunc_end_to_fit(
-                display_width -
-                width(3) /* 1 for symbol, 1 for space, 1 empty for last display col */
+                display_width - width(3), /* 1 for symbol, 1 for space, 1 empty for
+                                           * last display col */
             );
             let text_trunc_fmt = apply_color(text_trunc, &mut style.color);
 

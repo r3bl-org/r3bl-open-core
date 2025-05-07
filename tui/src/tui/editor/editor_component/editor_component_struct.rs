@@ -184,7 +184,8 @@ pub mod editor_component_impl_component_trait {
                         EventPropagation::Consumed
                     }
                     EditorEngineApplyEventResult::NotApplied => {
-                        // Optional: handle any `input_event` not consumed by `editor_engine`.
+                        // Optional: handle any `input_event` not consumed by
+                        // `editor_engine`.
                         EventPropagation::Propagate
                     }
                 }
@@ -201,8 +202,9 @@ pub mod constructor {
         S: Debug + Default + Clone + Sync + Send + HasEditorBuffers + 'static,
         AS: Debug + Default + Clone + Sync + Send + 'static,
     {
-        /// The on_change_handler is a lambda that is called if the editor buffer changes. Typically this
-        /// results in a Redux action being created and then dispatched to the given store.
+        /// The on_change_handler is a lambda that is called if the editor buffer changes.
+        /// Typically this results in a Redux action being created and then
+        /// dispatched to the given store.
         pub fn new(
             id: FlexBoxId,
             config_options: EditorEngineConfig,

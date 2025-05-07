@@ -46,8 +46,8 @@ type SyntectStyle = syntect::highlighting::Style;
 type SyntectFontStyle = syntect::highlighting::FontStyle;
 type SyntectColor = syntect::highlighting::Color;
 
-/// Span are chunks of a text that have an associated style. There are usually multiple spans in a
-/// line of text.
+/// Span are chunks of a text that have an associated style. There are usually multiple
+/// spans in a line of text.
 pub type SyntectStyleStrSpan<'a> = (SyntectStyle, &'a str);
 
 /// A line of text is made up of multiple [SyntectStyleStrSpan]s.

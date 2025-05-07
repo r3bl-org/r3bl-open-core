@@ -61,8 +61,8 @@ mod helpers {
     }
 
     impl InputEvent {
-        /// Checks to see whether the `input_event` matches any of the `exit_keys`. Returns `true`
-        /// if it does and `false` otherwise.
+        /// Checks to see whether the `input_event` matches any of the `exit_keys`.
+        /// Returns `true` if it does and `false` otherwise.
         pub fn matches(&self, exit_keys: &[InputEvent]) -> bool {
             for exit_key in exit_keys {
                 if self == exit_key {

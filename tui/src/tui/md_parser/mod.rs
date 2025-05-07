@@ -30,9 +30,9 @@
 //!    [MdDocument]. The tests are provided alongside the code itself. And you can follow
 //!    along to see how other smaller parsers are used to build up this big one that
 //!    parses the whole of the Markdown document.
-//! 2. The [mod@md_parser_types] contain all the types that are used to represent the Markdown
-//!    document model, such as [MdDocument], [MdBlock], [MdLineFragment] and all the other
-//!    intermediate types & enums required for parsing.
+//! 2. The [mod@md_parser_types] contain all the types that are used to represent the
+//!    Markdown document model, such as [MdDocument], [MdBlock], [MdLineFragment] and all
+//!    the other intermediate types & enums required for parsing.
 //! 3. All the parsers related to parsing metadata specific for [R3BL](https://r3bl.com)
 //!    applications, which are not standard Markdown can be found in
 //!    [mod@parse_metadata_kv] and [mod@parse_metadata_kcsv].
@@ -50,10 +50,8 @@
 //! developerlife.com channel.
 //!
 //! To learn about nom fundamentals, here are some resources:
-//! - Tutorial on nom parsing on
-//!   [developerlife.com](https://developerlife.com/2023/02/20/guide-to-nom-parsing/).
-//! - Video on nom parsing on [YouTube developerlife.com
-//!   channel](https://youtu.be/v3tMwr_ysPg).
+//! - Tutorial on nom parsing on [developerlife.com](https://developerlife.com/2023/02/20/guide-to-nom-parsing/).
+//! - Video on nom parsing on [YouTube developerlife.com channel](https://youtu.be/v3tMwr_ysPg).
 //!
 //! ## Architecture and parsing order
 //!

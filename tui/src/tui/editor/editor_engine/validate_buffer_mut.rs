@@ -45,11 +45,11 @@ pub struct EditorBufferMut<'a> {
     pub caret_raw: &'a mut CaretRaw,
     pub scr_ofs: &'a mut ScrOfs,
     pub sel_list: &'a mut SelectionList,
-    /// - Viewport width is optional because it's only needed for caret validation.
-    ///   And you can get it from [crate::EditorEngine]. You can pass `0` if you don't have
+    /// - Viewport width is optional because it's only needed for caret validation. And
+    ///   you can get it from [crate::EditorEngine]. You can pass `0` if you don't have
     ///   it.
-    /// - Viewport height is optional because it's only needed for caret validation.
-    ///   And you can get it from [crate::EditorEngine]. You can pass `0` if you don't have
+    /// - Viewport height is optional because it's only needed for caret validation. And
+    ///   you can get it from [crate::EditorEngine]. You can pass `0` if you don't have
     ///   it.
     pub vp: Size,
 }
@@ -108,7 +108,8 @@ mod editor_buffer_mut_no_drop_impl_block {
     }
 }
 
-// XMARK: Clever Rust, use of Drop to perform transaction close / end. And also of "newtype" idiom / pattern.
+// XMARK: Clever Rust, use of Drop to perform transaction close / end. And also of
+// "newtype" idiom / pattern.
 
 /// See the [Drop] implementation of `EditorBufferMut` which runs
 /// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
@@ -140,22 +141,23 @@ mod editor_buffer_mut_with_drop_impl_block {
     }
 
     impl Drop for EditorBufferMutWithDrop<'_> {
-        /// Once [crate::validate_buffer_mut::EditorBufferMut] is used to modify the buffer,
-        /// it needs to run the validation checks to ensure that the buffer is in a valid
-        /// state. This is done using
+        /// Once [crate::validate_buffer_mut::EditorBufferMut] is used to modify the
+        /// buffer, it needs to run the validation checks to ensure that the
+        /// buffer is in a valid state. This is done using
         /// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
         ///
-        /// Due to the nature of `UTF-8` and its variable width characters, where the memory
-        /// size is not the same as display size. Eg: `a` is 1 byte and 1 display width
-        /// (unicode segment width display). `😄` is 3 bytes but it's display width is 2! To
-        /// ensure that caret position and scroll offset positions are not in the middle of a
-        /// unicode segment character, we need to run the validation checks.
+        /// Due to the nature of `UTF-8` and its variable width characters, where the
+        /// memory size is not the same as display size. Eg: `a` is 1 byte and 1
+        /// display width (unicode segment width display). `😄` is 3 bytes but
+        /// it's display width is 2! To ensure that caret position and scroll
+        /// offset positions are not in the middle of a unicode segment character,
+        /// we need to run the validation checks.
         fn drop(&mut self) { perform_validation_checks_after_mutation(self); }
     }
 }
 
-/// In addition to mutating the buffer, this function runs the following validations on the
-/// [EditorBuffer]'s:
+/// In addition to mutating the buffer, this function runs the following validations on
+/// the [EditorBuffer]'s:
 /// 1. `caret`:
 ///    - the caret is in not in the middle of a unicode segment character.
 ///    - if it is then it moves the caret.

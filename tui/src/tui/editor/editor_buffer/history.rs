@@ -31,25 +31,25 @@ use crate::{format_as_kilobytes_with_commas, idx, RingBuffer as _};
 ///
 /// # Pushing a new state [self::EditorHistory::add]
 ///
-/// 1.  If the `current_index` is not the last index in the `versions` buffer, the history
-///     from `current_index + 1` to the end of the buffer is truncated (removed). This
-///     discards any "future" states that were previously redone.
-/// 2.  A copy of the current `EditorContent` is added to the `versions` buffer.
-/// 3.  The `current_index` is incremented to point to the newly added state.
+/// 1. If the `current_index` is not the last index in the `versions` buffer, the history
+///    from `current_index + 1` to the end of the buffer is truncated (removed). This
+///    discards any "future" states that were previously redone.
+/// 2. A copy of the current `EditorContent` is added to the `versions` buffer.
+/// 3. The `current_index` is incremented to point to the newly added state.
 ///
 /// # Undoing [self::EditorHistory::undo]
 ///
-/// 1.  If the history is empty, return `None`.
-/// 2.  If the current index is at the start of the history, return `None`.
-/// 3.  Decrement the `current_index`.
-/// 4.  Return the `EditorContent` at the new `current_index` from the `versions` buffer.
+/// 1. If the history is empty, return `None`.
+/// 2. If the current index is at the start of the history, return `None`.
+/// 3. Decrement the `current_index`.
+/// 4. Return the `EditorContent` at the new `current_index` from the `versions` buffer.
 ///
 /// # Redoing [self::EditorHistory::redo]
 ///
-/// 1.  If the history is empty, return `None`.
-/// 2.  If the current index is at the end of the history, return `None`.
-/// 3.  Increment the `current_index`.
-/// 4.  Return the `EditorContent` at the new `current_index` from the `versions` buffer.
+/// 1. If the history is empty, return `None`.
+/// 2. If the current index is at the end of the history, return `None`.
+/// 3. Increment the `current_index`.
+/// 4. Return the `EditorContent` at the new `current_index` from the `versions` buffer.
 ///
 /// # Notes
 ///

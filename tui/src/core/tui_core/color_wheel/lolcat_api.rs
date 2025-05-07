@@ -114,7 +114,8 @@ impl Default for LolcatBuilder {
             color_change_speed: ColorChangeSpeed::Slow,
             seed: 1.0.into(),
             seed_delta: 1.0.into(),
-            colorization_strategy: Colorize::OnlyForeground, /* color only the foreground */
+            colorization_strategy: Colorize::OnlyForeground, /* color only the
+                                                              * foreground */
         }
     }
 }

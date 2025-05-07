@@ -161,8 +161,8 @@ pub fn paint<S, AS>(
 
 /// 1. Ensure that the [Pos] is within the bounds of the terminal window using
 ///    [RenderOpsLocalData].
-/// 2. If the [Pos] is outside the bounds of the window then it is clamped to the
-///    nearest edge of the window. This clamped [Pos] is returned.
+/// 2. If the [Pos] is outside the bounds of the window then it is clamped to the nearest
+///    edge of the window. This clamped [Pos] is returned.
 /// 3. This also saves the clamped [Pos] to [RenderOpsLocalData].
 ///
 /// Note that printing [crate::SPACER_GLYPH] by

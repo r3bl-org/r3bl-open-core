@@ -296,19 +296,21 @@ pub fn print_plain_text(
             // Deal w/ the display width of the `PixelChar` > 1. This is the equivalent of
             // `jump_cursor()` in RenderOpImplCrossterm.
             //
-            // Move cursor "manually" to cover "extra" (display) width of a single character. This
-            // is a necessary precautionary measure, to make sure the behavior is the same on all
-            // terminals. In practice this means that terminals will be "broken" in the same way
+            // Move cursor "manually" to cover "extra" (display) width of a single
+            // character. This is a necessary precautionary measure, to make
+            // sure the behavior is the same on all terminals. In practice
+            // this means that terminals will be "broken" in the same way
             // across multiple terminal emulators and OSes.
-            // 1. Terminals vary in their support of complex grapheme clusters (joined emoji). This
-            //    code uses the crate unicode_width to display a given UTF-8 character "correctly"
-            //    in all terminals. The number reported by this crate and the actual display width
-            //    that the specific terminal emulator + OS combo will display may be different.
-            // 2. This means that in some terminals, the caret itself has to be manually "jumped" to
-            //    covert the special case of a really wide UTF-8 character. This happens by adding
-            //    Void pixel chars.
-            // 3. The insertion_col_index is calculated & updated based on the unicode_width crate
-            //    values.
+            // 1. Terminals vary in their support of complex grapheme clusters (joined
+            //    emoji). This code uses the crate unicode_width to display a given UTF-8
+            //    character "correctly" in all terminals. The number reported by this
+            //    crate and the actual display width that the specific terminal emulator +
+            //    OS combo will display may be different.
+            // 2. This means that in some terminals, the caret itself has to be manually
+            //    "jumped" to covert the special case of a really wide UTF-8 character.
+            //    This happens by adding Void pixel chars.
+            // 3. The insertion_col_index is calculated & updated based on the
+            //    unicode_width crate values.
             let segment_display_width = usize(*seg.display_width);
             if segment_display_width > 1 {
                 // Deal w/ `gc_segment` display width that is > 1 => pad w/ Void.
@@ -342,7 +344,8 @@ pub fn print_plain_text(
         .my_pos
         .add_col(already_inserted_display_width);
 
-    // 🥊Deal w/ padding SPACERs padding to end of line (if `maybe_max_display_col_count` is some).
+    // 🥊Deal w/ padding SPACERs padding to end of line (if `maybe_max_display_col_count`
+    // is some).
     if let Some(max_display_col_count) = maybe_max_display_col_count {
         let adj_max = *max_display_col_count - ch(display_col_index);
         while already_inserted_display_width < adj_max {
@@ -727,15 +730,17 @@ mod tests {
             // my_offscreen_buffer:
             // window_size: [width:10, height:2],
             // row_index: [0]
-            // 	0: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-            // 	1: "e" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-            // 	2: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-            // 	3: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-            // 	4: "o" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-            // 	5: "1" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-            // 	6: "2" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-            // 	7: "😃" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-            // 	8: ❯
+            // 	0: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+            // padding: 0 }) 	1: "e" Some(Style { _id + bold + dim | fg:
+            // Some(green) | bg: Some(blue) | padding: 0 }) 	2: "l" Some(Style
+            // { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
+            // 	3: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+            // padding: 0 }) 	4: "o" Some(Style { _id + bold + dim | fg:
+            // Some(green) | bg: Some(blue) | padding: 0 }) 	5: "1" Some(Style
+            // { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
+            // 	6: "2" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+            // padding: 0 }) 	7: "😃" Some(Style { _id + bold + dim | fg:
+            // Some(green) | bg: Some(blue) | padding: 0 }) 	8: ❯
             // 	9: ╳
             // row_index: [1]
             // 	0: ╳..
@@ -795,13 +800,10 @@ mod tests {
         //       - [SetFgColor(green)]
         //       - [SetBgColor(blue)]
         //       - [MoveCursorPositionAbs([col:0, row:0])]
-        //       - PrintTextWithAttributes(8 bytes, Style { _id + bold + dim | fg: None | bg: None | padding: 0 }), postfix pad to 10,
-        //                                 ↑
-        //                                 "hello12😃" + "╳╳" ← postfix padding
-        //                                 C01234567......89
-        //                                         ↑
-        //                                      This pixel char takes up 2 display cols.
-        //                                      There are 2 extra PixelChar::Empty at display cols 8 & 9.
+        //       - PrintTextWithAttributes(8 bytes, Style { _id + bold + dim | fg: None |
+        //         bg: None | padding: 0 }), postfix pad to 10, ↑ "hello12😃" + "╳╳" ←
+        //         postfix padding C01234567......89 ↑ This pixel char takes up 2 display
+        //         cols. There are 2 extra PixelChar::Empty at display cols 8 & 9.
         //       - [ResetColor]
         let pipeline = render_pipeline!(@new ZOrder::Normal =>
             RenderOp::ClearScreen,
@@ -819,15 +821,17 @@ mod tests {
         // my_offscreen_buffer:
         // window_size: [width:10, height:2],
         // row_index: [0]
-        //     0: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //     1: "e" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //     2: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //     3: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //     4: "o" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //     5: "1" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //     6: "2" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //     7: "😃" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //     8: ❯
+        //     0: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+        // padding: 0 })     1: "e" Some(Style { _id + bold + dim | fg:
+        // Some(green) | bg: Some(blue) | padding: 0 })     2: "l" Some(Style {
+        // _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
+        //     3: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+        // padding: 0 })     4: "o" Some(Style { _id + bold + dim | fg:
+        // Some(green) | bg: Some(blue) | padding: 0 })     5: "1" Some(Style {
+        // _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
+        //     6: "2" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+        // padding: 0 })     7: "😃" Some(Style { _id + bold + dim | fg:
+        // Some(green) | bg: Some(blue) | padding: 0 })     8: ❯
         //     9: ╳
         // row_index: [1]
         //     0: ╳ ..
@@ -873,12 +877,14 @@ mod tests {
         //         SetFgColor(green),
         //         SetBgColor(blue),
         //         MoveCursorPositionAbs([col:2, row:0]),
-        //         PrintTextWithAttributes(9 bytes, Style { _id + bold + dim | fg: None | bg: None | padding: 0 }), pad to width 10 col count,
+        //         PrintTextWithAttributes(9 bytes, Style { _id + bold + dim | fg: None |
+        // bg: None | padding: 0 }), pad to width 10 col count,
         //         ResetColor,
         //         SetFgColor(green),
         //         SetBgColor(blue),
         //         MoveCursorPositionAbs([col:4, row:1]),
-        //         PrintTextWithAttributes(5 bytes, Style { _id + bold + dim | fg: None | bg: None | padding: 0 }), pad to width 10 col count,
+        //         PrintTextWithAttributes(5 bytes, Style { _id + bold + dim | fg: None |
+        // bg: None | padding: 0 }), pad to width 10 col count,
         //         ResetColor,
         //     ],
         // )
@@ -908,25 +914,27 @@ mod tests {
         // row_index: [0]
         //   0: ╳
         //   1: ╳
-        //   2: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   3: "e" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   4: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   5: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   6: "o" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   7: "😃" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   8: ❯
+        //   2: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+        // padding: 0 })   3: "e" Some(Style { _id + bold + dim | fg: Some(green)
+        // | bg: Some(blue) | padding: 0 })   4: "l" Some(Style { _id + bold + dim
+        // | fg: Some(green) | bg: Some(blue) | padding: 0 })   5: "l" Some(Style
+        // { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
+        //   6: "o" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+        // padding: 0 })   7: "😃" Some(Style { _id + bold + dim | fg: Some(green)
+        // | bg: Some(blue) | padding: 0 })   8: ❯
         //   9: ╳
         // row_index: [1]
         //   0: ╳
         //   1: ╳
         //   2: ╳
         //   3: ╳
-        //   4: "w" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   5: "o" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   6: "r" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   7: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   8: "d" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   9: ╳
+        //   4: "w" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+        // padding: 0 })   5: "o" Some(Style { _id + bold + dim | fg: Some(green)
+        // | bg: Some(blue) | padding: 0 })   6: "r" Some(Style { _id + bold + dim
+        // | fg: Some(green) | bg: Some(blue) | padding: 0 })   7: "l" Some(Style
+        // { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
+        //   8: "d" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+        // padding: 0 })   9: ╳
 
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
 

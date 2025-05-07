@@ -21,7 +21,8 @@ use tracing::dispatcher;
 
 use crate::{ok, DisplayPreference, TracingConfig, WriterConfig};
 
-// XMARK: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config options.
+// XMARK: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config
+// options.
 
 /// This module makes it easier to configure the logging system. Instead of having lots of
 /// complex arguments to the [try_initialize_logging_global] and
@@ -135,12 +136,14 @@ pub mod tracing_config_options {
                 (Display(dp_lhs), File(f_rhs)) => DisplayAndFile(dp_lhs, f_rhs),
                 (File(f_lhs), Display(dp_rhs)) => DisplayAndFile(dp_rhs, f_lhs),
 
-                // Collision (rhs has higher specificity). DisplayPreference can't be merged.
+                // Collision (rhs has higher specificity). DisplayPreference can't be
+                // merged.
                 (Display(_dp_lhs), DisplayAndFile(dp_rhs, f_rhs)) => {
                     DisplayAndFile(dp_rhs, f_rhs)
                 }
 
-                // Collision (rhs has higher specificity). DisplayPreference can't be merged.
+                // Collision (rhs has higher specificity). DisplayPreference can't be
+                // merged.
                 (Display(_dp_lhs), Display(dp_rhs)) => Display(dp_rhs),
 
                 // Collision (rhs has higher specificity). String can't be merged.
@@ -151,7 +154,8 @@ pub mod tracing_config_options {
                     DisplayAndFile(dp_rhs, f_rhs)
                 }
 
-                // Collision (rhs has higher specificity). DisplayPreference can't be merged.
+                // Collision (rhs has higher specificity). DisplayPreference can't be
+                // merged.
                 (DisplayAndFile(_dp_lhs, f_rhs), Display(dp_rhs)) => {
                     DisplayAndFile(dp_rhs, f_rhs)
                 }
@@ -161,7 +165,8 @@ pub mod tracing_config_options {
                     DisplayAndFile(dp_lhs, f_rhs)
                 }
 
-                // Collision (rhs has higher specificity). DisplayPreference and String can't be merged.
+                // Collision (rhs has higher specificity). DisplayPreference and String
+                // can't be merged.
                 (DisplayAndFile(_dp_lhs, _f_lhs), DisplayAndFile(dp_rhs, f_rhs)) => {
                     DisplayAndFile(dp_rhs, f_rhs)
                 }
@@ -305,7 +310,8 @@ pub mod tracing_config_options {
                 display_sharedwriter_and_file
             );
 
-            // Collision (rhs has higher specificity). DisplayPreference and String can't be merged.
+            // Collision (rhs has higher specificity). DisplayPreference and String can't
+            // be merged.
             assert_eq!(
                 display_stdout_and_file.clone() + display_stderr_and_file.clone(),
                 display_stderr_and_file
@@ -320,10 +326,10 @@ pub mod tracing_config_options {
 
 /// Global default subscriber, which once set, can't be unset or changed.
 /// - This is great for apps.
-/// - Docs for [Global default tracing
-///   subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html)
-/// - Configure this using the [mod@tracing_config_options] module (which converts any number of
-///   arguments into [`Into<TracingConfig>`]. Look at this module for default configuration.
+/// - Docs for [Global default tracing subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html)
+/// - Configure this using the [mod@tracing_config_options] module (which converts any
+///   number of arguments into [`Into<TracingConfig>`]. Look at this module for default
+///   configuration.
 ///
 /// Logging is **DISABLED** by **default**.
 ///
@@ -362,10 +368,10 @@ pub fn try_initialize_logging_global(
 /// Thread local subscriber, which is thread local, and you can assign different ones
 /// to different threads.
 /// - This is great for tests.
-/// - Docs for [Thread local tracing
-///   subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html)
-/// - Configure this using the [mod@tracing_config_options] module (which converts any number of
-///   arguments into [`Into<TracingConfig>`]. Look at this module for default configuration.
+/// - Docs for [Thread local tracing subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html)
+/// - Configure this using the [mod@tracing_config_options] module (which converts any
+///   number of arguments into [`Into<TracingConfig>`]. Look at this module for default
+///   configuration.
 ///
 /// Logging is **DISABLED** by **default**.
 ///

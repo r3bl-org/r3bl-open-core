@@ -38,8 +38,9 @@ use crate::{clipboard_support::ClipboardService,
 
 /// Events that can be applied to the [EditorEngine] to modify an [EditorBuffer].
 ///
-/// By providing a conversion from [InputEvent] to [EditorEvent] it becomes easier to write event
-/// handlers that consume [InputEvent] and then execute [EditorEvent] on an [EditorBuffer].
+/// By providing a conversion from [InputEvent] to [EditorEvent] it becomes easier to
+/// write event handlers that consume [InputEvent] and then execute [EditorEvent] on an
+/// [EditorBuffer].
 #[derive(Clone, PartialEq, Eq)]
 pub enum EditorEvent {
     InsertChar(char),
@@ -352,7 +353,8 @@ impl EditorEvent {
                     // There is no selection and we want to delete a single character.
                     engine_internal_api::delete_at_caret(buffer, engine);
                 } else {
-                    // The text is selected and we want to delete the entire selected text.
+                    // The text is selected and we want to delete the entire selected
+                    // text.
                     engine_internal_api::delete_selected(
                         buffer,
                         engine,
@@ -366,7 +368,8 @@ impl EditorEvent {
                     // There is no selection and we want to backspace a single character.
                     engine_internal_api::backspace_at_caret(buffer, engine);
                 } else {
-                    // The text is selected and we want to delete the entire selected text.
+                    // The text is selected and we want to delete the entire selected
+                    // text.
                     engine_internal_api::delete_selected(
                         buffer,
                         engine,

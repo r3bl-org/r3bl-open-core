@@ -449,7 +449,7 @@ pub mod file_walker {
     /// - Returns a tuple of `(path, name)`. Eg:
     ///   (`/home/nazmul/github/r3bl_terminal_async`, `r3bl_terminal_async`).
     pub fn get_current_working_directory(
-    ) -> miette::Result<(/*path*/ String, /*name*/ String)> {
+    ) -> miette::Result<(/* path */ String, /* name */ String)> {
         let path = std::env::current_dir().into_diagnostic()?;
 
         let name = path

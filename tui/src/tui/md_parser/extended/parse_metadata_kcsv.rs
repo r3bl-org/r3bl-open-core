@@ -27,8 +27,8 @@ use crate::{list,
             InlineVec,
             List};
 
-/// - Sample parse input: `@tags: tag1, tag2, tag3`, `@tags: tag1, tag2, tag3\n`,
-///   or `@authors: me, myself, i`, `@authors: me, myself, i\n`.
+/// - Sample parse input: `@tags: tag1, tag2, tag3`, `@tags: tag1, tag2, tag3\n`, or
+///   `@authors: me, myself, i`, `@authors: me, myself, i\n`.
 /// - There may or may not be a newline at the end. If there is, it is consumed.
 pub fn parse_csv_opt_eol<'a>(
     tag_name: &'a str,

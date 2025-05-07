@@ -17,8 +17,9 @@
 
 use crate::Size;
 
-/// This works w/ the main event loop to let it know whether it should exit or resize after an input
-/// event has occurred (and has been passed thru the input event routing system).
+/// This works w/ the main event loop to let it know whether it should exit or resize
+/// after an input event has occurred (and has been passed thru the input event routing
+/// system).
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Continuation<T> {
@@ -30,8 +31,9 @@ pub enum Continuation<T> {
     Result(T),
 }
 
-/// This works w/ the input event routing system to provide the caller w/ information about whether
-/// an even has been consumed or not. If it has been consumed, is a render necessary.
+/// This works w/ the input event routing system to provide the caller w/ information
+/// about whether an even has been consumed or not. If it has been consumed, is a render
+/// necessary.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum EventPropagation {

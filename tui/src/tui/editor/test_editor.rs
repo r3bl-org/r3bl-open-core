@@ -413,8 +413,8 @@ mod test_editor_ops {
         );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(1)));
 
-        // Move caret up, and right. It should wrap around to the start of the next line and be to the
-        // left of the smiley face.
+        // Move caret up, and right. It should wrap around to the start of the next line
+        // and be to the left of the smiley face.
         // R ┌──────────┐
         // 0 ❱1         │
         // 1 │😀        │
@@ -862,8 +862,8 @@ mod test_editor_ops {
         );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
 
-        // Move caret to end of line, press enter, then move caret left (should be at end of prev line).
-        // `this` should look like:
+        // Move caret to end of line, press enter, then move caret left (should be at end
+        // of prev line). `this` should look like:
         // R ┌──────────┐
         // 0 ❱12a       │
         // 1 │          │
@@ -1350,8 +1350,8 @@ mod test_editor_ops {
             let result = line.get_string_at(display_col_index);
             assert_eq2!(result.unwrap().string.string, "🙏🏽");
 
-            // Press right 1 more time. The caret should correctly jump the width of "😀" from 68 to
-            // 70.
+            // Press right 1 more time. The caret should correctly jump the width of "😀"
+            // from 68 to 70.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
@@ -1510,7 +1510,9 @@ mod selection_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::MoveCaret(CaretDirection::Right); 5], // Move caret to right for 5 times
+                vec![EditorEvent::MoveCaret(CaretDirection::Right); 5], /* Move caret
+                                                                         * to right for
+                                                                         * 5 times */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 4]
@@ -1518,7 +1520,8 @@ mod selection_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::Select(SelectionAction::Home)], // Select text up to starting
+                vec![EditorEvent::Select(SelectionAction::Home)], /* Select text up to
+                                                                   * starting */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 0]
@@ -1540,7 +1543,7 @@ mod selection_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::Select(SelectionAction::OneCharRight)], // Move Selection to Right
+                vec![EditorEvent::Select(SelectionAction::OneCharRight)], /* Move Selection to Right */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 1]
@@ -1562,7 +1565,7 @@ mod selection_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::Select(SelectionAction::OneCharLeft)], // Move Selection to Left
+                vec![EditorEvent::Select(SelectionAction::OneCharLeft)], /* Move Selection to Left */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 0]
@@ -1584,12 +1587,14 @@ mod selection_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::Select(SelectionAction::OneLineUp)], // Select one line up
+                vec![EditorEvent::Select(SelectionAction::OneLineUp)], /* Select one
+                                                                        * line up */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 0, col : 0]
 
-            // Selection Map : {{0, SelectionRange {start: 0, end: 12}}, {1, SelectionRange {start: 0, end: 4}}}
+            // Selection Map : {{0, SelectionRange {start: 0, end: 12}}, {1,
+            // SelectionRange {start: 0, end: 4}}}
             let selection_list: SelectionList = smallvec! {
                 (row(0), (csa(0, 0), csa(12, 0)).into()),
                 (row(1), (csa(0, 1), csa(4, 1)).into())
@@ -1607,7 +1612,7 @@ mod selection_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::Select(SelectionAction::OneLineDown)], // De-Select one line down
+                vec![EditorEvent::Select(SelectionAction::OneLineDown)], /* De-Select one line down */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 0]
@@ -1628,7 +1633,8 @@ mod selection_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::MoveCaret(CaretDirection::Right)], // Move caret to right
+                vec![EditorEvent::MoveCaret(CaretDirection::Right)], /* Move caret to
+                                                                      * right */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 1]
@@ -1647,12 +1653,13 @@ mod selection_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::Select(SelectionAction::PageUp)], // Select by pressing PageUp
+                vec![EditorEvent::Select(SelectionAction::PageUp)], /* Select by pressing PageUp */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 0, col : 1]
 
-            // Selection Map : {{0, SelectionRange {start: 1, end: 12}}, {1, SelectionRange {start: 0, end: 1}}}
+            // Selection Map : {{0, SelectionRange {start: 1, end: 12}}, {1,
+            // SelectionRange {start: 0, end: 1}}}
             let selection_list: SelectionList = smallvec! {
                 (row(0), (csa(1, 0), csa(12, 0)).into()),
                 (row(1), (csa(0, 1), csa(1, 1)).into())
@@ -1669,18 +1676,20 @@ mod selection_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::MoveCaret(CaretDirection::Right)], // Move caret one char right
+                vec![EditorEvent::MoveCaret(CaretDirection::Right)], /* Move caret one
+                                                                      * char right */
                 &mut TestClipboard::default(),
             );
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::Select(SelectionAction::PageDown)], // Select by pressing PageDown
+                vec![EditorEvent::Select(SelectionAction::PageDown)], /* Select by pressing PageDown */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 2]
 
-            // Selection Map : {{0, SelectionRange {start: 2, end: 12}},{1, SelectionRange {start: 0, end: 2}}}
+            // Selection Map : {{0, SelectionRange {start: 2, end: 12}},{1, SelectionRange
+            // {start: 0, end: 2}}}
             let selection_list: SelectionList = smallvec! {
                 (row(0), (csa(2, 0), csa(12, 0)).into()),
                 (row(1), (csa(0, 1), csa(2, 1)).into())
@@ -1697,12 +1706,14 @@ mod selection_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::Select(SelectionAction::All)], // Select by pressing All
+                vec![EditorEvent::Select(SelectionAction::All)], /* Select by pressing
+                                                                  * All */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 2]
 
-            // Selection Map : {{0, SelectionRange {start: 0, end: 12}},{1, SelectionRange {start: 0, end: 2}}}
+            // Selection Map : {{0, SelectionRange {start: 0, end: 12}},{1, SelectionRange
+            // {start: 0, end: 2}}}
             let selection_list: SelectionList = smallvec! {
                 (row(0), (csa(0, 0), csa(12, 0)).into()),
                 (row(1), (csa(0, 1), csa(12, 1)).into())
@@ -1719,7 +1730,8 @@ mod selection_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::Select(SelectionAction::Esc)], // Select by pressing Esc
+                vec![EditorEvent::Select(SelectionAction::Esc)], /* Select by pressing
+                                                                  * Esc */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 2]
@@ -1825,7 +1837,7 @@ mod clipboard_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::MoveCaret(CaretDirection::Right); 4], // Move caret by 4 positions
+                vec![EditorEvent::MoveCaret(CaretDirection::Right); 4], /* Move caret by 4 positions */
                 &mut test_clipboard,
             );
 
@@ -1923,14 +1935,14 @@ mod clipboard_tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::MoveCaret(CaretDirection::Right); 4], // Move caret by 4 positions
+                vec![EditorEvent::MoveCaret(CaretDirection::Right); 4], /* Move caret by 4 positions */
                 &mut test_clipboard,
             );
             // Current Caret Position : [row : 1, col : 4]
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::Select(SelectionAction::PageUp)], // Select by pressing PageUp
+                vec![EditorEvent::Select(SelectionAction::PageUp)], /* Select by pressing PageUp */
                 &mut test_clipboard,
             );
             // Current Caret Position : [row : 0, col : 4]

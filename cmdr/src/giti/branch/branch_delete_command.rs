@@ -218,8 +218,8 @@ mod user_interaction {
         header_text: InlineString,
         confirmation_options: ItemsOwned,
     ) -> CommonResult<parse_user_choice::Selection> {
-        // Apply one style to the first line of the header, and another style to the rest of
-        // the lines. Then prefix with the instruction header.
+        // Apply one style to the first line of the header, and another style to the rest
+        // of the lines. Then prefix with the instruction header.
         let header_with_instructions = {
             let mut header_last_lines = header_text.lines();
             let mut header_last_lines_fmt: InlineVec<InlineVec<ASText>> = smallvec![];

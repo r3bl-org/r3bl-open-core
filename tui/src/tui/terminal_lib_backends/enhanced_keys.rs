@@ -20,16 +20,18 @@
 /// - [`PushKeyboardEnhancementFlags`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum Enhanced {
-    /// **Note:** this key can only be read if `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`
-    /// has been enabled with `PushKeyboardEnhancementFlags`.
+    /// **Note:** this key can only be read if
+    /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` has been enabled with
+    /// `PushKeyboardEnhancementFlags`.
     MediaKey(MediaKey),
-    /// **Note:** this key can only be read if `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`
-    /// has been enabled with `PushKeyboardEnhancementFlags`.
+    /// **Note:** this key can only be read if
+    /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` has been enabled with
+    /// `PushKeyboardEnhancementFlags`.
     SpecialKeyExt(SpecialKeyExt),
     /// **Note:** these keys can only be read if **both**
     /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` and
-    /// `KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES` have been enabled with
-    /// `PushKeyboardEnhancementFlags`.
+    /// `KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES` have been enabled
+    /// with `PushKeyboardEnhancementFlags`.
     ModifierKeyEnum(ModifierKeyEnum),
 }
 
@@ -77,8 +79,9 @@ pub enum ModifierKeyEnum {
 /// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
 /// - [`PushKeyboardEnhancementFlags`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
 ///
-/// **Note:** this key can only be read if `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` has
-/// been enabled with `PushKeyboardEnhancementFlags`.
+/// **Note:** this key can only be read if
+/// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` has been enabled with
+/// `PushKeyboardEnhancementFlags`.
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum SpecialKeyExt {
     CapsLock,

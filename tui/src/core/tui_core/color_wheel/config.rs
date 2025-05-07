@@ -71,8 +71,9 @@ pub mod defaults {
 /// For RGB colors:
 /// 1. The stops are the colors that will be used to create the gradient.
 /// 2. The speed is how fast the color wheel will rotate.
-/// 3. The steps are the number of colors that will be generated. The larger this number is the
-///    smoother the transition will be between each color. 100 is a good number to start with.
+/// 3. The steps are the number of colors that will be generated. The larger this number
+///    is the smoother the transition will be between each color. 100 is a good number to
+///    start with.
 #[derive(Clone, PartialEq, Debug)]
 pub enum ColorWheelConfig {
     Rgb(
@@ -98,7 +99,8 @@ impl ColorWheelConfig {
         })
     }
 
-    // Narrow down the given configs into a single one based on color_support (and global override)
+    // Narrow down the given configs into a single one based on color_support (and global
+    // override)
     pub fn narrow_config_based_on_color_support(
         configs: &[ColorWheelConfig],
     ) -> ColorWheelConfig {

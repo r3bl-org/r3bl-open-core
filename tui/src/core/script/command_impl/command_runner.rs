@@ -23,14 +23,30 @@ use tokio::{io::AsyncWriteExt as _,
 
 use crate::ok;
 
-/// This macro to create a [std::process::Command] that receives a set of arguments and
+/// Disambiguate the [tokio::process::Command] type from the [std::process::Command] type.
+/// Here are the key differences between them:
+///
+/// 1. **Execution Model**: tokio's `Command` is asynchronous and doesn't block the
+///    thread, while std's `Command` is synchronous and blocks until completion.
+/// 2. **Method Signatures**: Similar methods but tokio's version returns futures that
+///    must be awaited.
+/// 3. **Runtime Integration**: tokio's `Command` integrates with tokio's runtime and
+///    event loop, allowing it to work with other async features like select!.
+/// 4. **Process Management**: tokio provides additional features like `kill_on_drop()`
+///    and non-blocking `start_kill()` for better process management in async contexts.
+/// 5. **Use Case**: Use tokio's `Command` when working in async contexts to maintain
+///    non-blocking behavior, and std's `Command` for synchronous operations where
+///    blocking is acceptable.
+pub type TokioCommand = tokio::process::Command;
+
+/// This macro to create a [TokioCommand] that receives a set of arguments and
 /// returns it.
 ///
 /// # Example of command and args
 ///
 /// ```
 /// # use r3bl_tui::command;
-/// # use std::process::Command;
+/// # use r3bl_tui::command_runner::TokioCommand;
 ///
 /// async fn run_command() {
 ///     let arg_2 = "world!";
@@ -49,7 +65,7 @@ use crate::ok;
 /// ```
 /// # use r3bl_tui::command;
 /// # use r3bl_tui::environment::{self, EnvKeys};
-/// # use std::process::Command;
+/// # use r3bl_tui::command_runner::TokioCommand;
 ///
 /// async fn run_command() {
 ///     let my_path = "/usr/bin";
@@ -65,7 +81,7 @@ use crate::ok;
 /// }
 /// ```
 ///
-/// # Examples of using the [Run] trait, and [std::process::Output].
+/// # Examples of using the [Run] trait, and [tokio::process::Output].
 ///
 /// ```
 /// # use r3bl_tui::command;
@@ -108,7 +124,7 @@ macro_rules! command {
     // Variant that receives a command and args & items.
     (program=> $cmd:expr, args => $($args:expr,)* + items => $items:expr)
     => {{
-        let mut it = tokio::process::Command::new($cmd);
+        let mut it = $crate::TokioCommand::new($cmd);
         $(
             it.arg($args);
         )*
@@ -121,7 +137,7 @@ macro_rules! command {
 
     // Variant that receives a command and args.
     (program=> $cmd:expr, args=> $($args:expr),* $(,)?) => {{
-        let mut it = tokio::process::Command::new($cmd);
+        let mut it = $crate::TokioCommand::new($cmd);
         $(
             it.arg($args);
         )*
@@ -130,7 +146,7 @@ macro_rules! command {
 
     // Variant that receives a command, env (vec), and args.
     (program=> $cmd:expr, envs=> $envs:expr, args=> $($args:expr),* $(,)?) => {{
-        let mut it = tokio::process::Command::new($cmd);
+        let mut it = $crate::TokioCommand::new($cmd);
         it.envs($envs.to_owned());
         // The following is equivalent to the line above:
         // it.envs($envs.iter().map(|(k, v)| (k.as_str(), v.as_str())));
@@ -150,7 +166,7 @@ pub trait Run {
     ) -> impl std::future::Future<Output = miette::Result<Vec<u8>>> + Send;
 }
 
-impl Run for Command {
+impl Run for TokioCommand {
     async fn run(&mut self) -> miette::Result<Vec<u8>> { run(self).await }
 
     async fn run_interactive(&mut self) -> miette::Result<Vec<u8>> {

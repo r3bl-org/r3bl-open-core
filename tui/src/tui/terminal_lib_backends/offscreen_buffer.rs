@@ -148,8 +148,8 @@ mod offscreen_buffer_impl {
     }
 
     impl OffscreenBuffer {
-        /// Checks for differences between self and other. Returns a list of positions and pixel
-        /// chars if there are differences (from other).
+        /// Checks for differences between self and other. Returns a list of positions and
+        /// pixel chars if there are differences (from other).
         pub fn diff(&self, other: &Self) -> Option<PixelCharDiffChunks> {
             if self.window_size != other.window_size {
                 return None;
@@ -252,8 +252,8 @@ mod pixel_char_line_impl {
             let mut void_count: InlineVec<TinyInlineString> = smallvec![];
             let mut spacer_count: InlineVec<TinyInlineString> = smallvec![];
 
-            // Pretty print only so many chars per line (depending on the terminal width in which
-            // log.fish is run).
+            // Pretty print only so many chars per line (depending on the terminal width
+            // in which log.fish is run).
             const MAX_PIXEL_CHARS_PER_LINE: usize = 6;
             let mut char_count = 0;
 
@@ -369,7 +369,8 @@ mod pixel_char_line_impl {
                 ) => {
                     acc_current_range.push(*value);
                 }
-                // The next value does not continue the current range & the current range does not exist.
+                // The next value does not continue the current range & the current range
+                // does not exist.
                 (
                     helpers::Peek::NextItemDoesNotContinueRange,
                     helpers::CurrentRange::DoesNotExist,
@@ -386,7 +387,8 @@ mod pixel_char_line_impl {
                 ) => {
                     acc_current_range.push(*value);
                 }
-                // The next value does not continue the current range & the current range exists.
+                // The next value does not continue the current range & the current range
+                // exists.
                 (
                     helpers::Peek::NextItemDoesNotContinueRange,
                     helpers::CurrentRange::Exists,

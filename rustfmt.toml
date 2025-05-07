@@ -3,6 +3,10 @@
 # width
 max_width = 90
 
+# comment wrapping (make sure to run `rustfmt +nightly` for this to work as of May 2025.
+comment_width = 90
+wrap_comments = true
+
 # function
 fn_params_layout = "Tall" # Possible values: "Compressed", "Tall", "Vertical"
 fn_single_line = true

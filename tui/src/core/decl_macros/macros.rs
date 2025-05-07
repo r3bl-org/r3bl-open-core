@@ -310,7 +310,8 @@ macro_rules! assert_eq2 {
     };
 }
 
-/// Send a signal to the main thread of app to render. The two things to pass in this macro are
+/// Send a signal to the main thread of app to render. The two things to pass in this
+/// macro are
 /// 1. Sender
 /// 2. AppEvent (Signal to MPSC channel)
 #[macro_export]

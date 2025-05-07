@@ -20,7 +20,8 @@ use std::{env,
 
 /// Global variable which can be used to:
 /// 1. Override the color support.
-/// 2. Memoize the value of the color support result from running [global_color_support::detect].
+/// 2. Memoize the value of the color support result from running
+///    [global_color_support::detect].
 ///
 /// This is a global variable because it is used in multiple places in the codebase, and
 /// it is really dependent on the environment.
@@ -56,8 +57,8 @@ pub mod global_color_support {
     ///
     /// The [serial_test](https://crates.io/crates/serial_test) crate is used to test this
     /// function. In any test in which this function is called, please use the `#[serial]`
-    /// attribute to annotate that test. Otherwise there will be flakiness in the test results
-    /// (tests are run in parallel using many threads).
+    /// attribute to annotate that test. Otherwise there will be flakiness in the test
+    /// results (tests are run in parallel using many threads).
     #[allow(clippy::result_unit_err, static_mut_refs)]
     pub fn set_override(value: ColorSupport) {
         let it = i8::from(value);

@@ -52,7 +52,8 @@ impl<'a> PatternMatcherStateMachine<'a> {
     pub fn match_next(&mut self, character_to_test: char) -> CharacterMatchResult {
         let character_to_test_width = GCString::width_char(character_to_test);
 
-        // Skip the first "N" characters (these are display cols, so use the unicode width).
+        // Skip the first "N" characters (these are display cols, so use the unicode
+        // width).
         if let Some(scroll_offset_col_index) = self.maybe_scr_ofs_col_index
             && scroll_offset_col_index != col(0)
         {
@@ -113,8 +114,8 @@ mod tests {
         // index[5]: 'e' -> width: 1
         // index[6]: 'y' -> width: 1
         // index[7]: '🙏' -> width: 2 -> folded hands - Person With Folded Hands (U+1F64F)
-        // index[8]: '🏽' -> width: 2  -> brown color - Emoji Modifier Fitzpatrick Type-4 (U+1F3FD)
-        // index[9]: 'f' -> width: 1
+        // index[8]: '🏽' -> width: 2  -> brown color - Emoji Modifier Fitzpatrick Type-4
+        // (U+1F3FD) index[9]: 'f' -> width: 1
         // index[10]: 'o' -> width: 1
         // index[11]: 'o' -> width: 1
         // index[12]: '👍' -> width: 2

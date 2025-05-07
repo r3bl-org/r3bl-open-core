@@ -40,13 +40,11 @@
 //! # The many ways to create one
 //!
 //! - This API uses the `impl Into<struct>` pattern and [Add] `+` operator overloading to
-//!   allow for easy construction of [Size] by [ColWidth] with [RowHeight] in any
-//!   order.
+//!   allow for easy construction of [Size] by [ColWidth] with [RowHeight] in any order.
 //! - You can use the [crate::size()] to create a [Size] struct. This function can take a
-//!   sequence of [Add]ed [ColWidth] and [RowHeight] in any order, or tuples of
-//!   them in any order.
-//! - Just using the [Add] `+` operator ([RowHeight] and [ColWidth] can be in
-//!   any order):
+//!   sequence of [Add]ed [ColWidth] and [RowHeight] in any order, or tuples of them in
+//!   any order.
+//! - Just using the [Add] `+` operator ([RowHeight] and [ColWidth] can be in any order):
 //!     - You can use [Add] to convert: [ColWidth] + [RowHeight], into: a [Size].
 //!
 //! # Examples

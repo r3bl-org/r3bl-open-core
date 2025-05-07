@@ -152,10 +152,11 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 let is_at_end_of_line = ch(pixel_char_index) == (ch(line.len()) - ch(1));
                 let is_first_loop_iteration = row_index == 0 && pixel_char_index == 0;
 
-                // Deal w/: fg and bg colors | text attrib style | ANSI <-> PLAIN switchover.
+                // Deal w/: fg and bg colors | text attrib style | ANSI <-> PLAIN
+                // switchover.
                 if !is_style_same_as_prev {
-                    // The style changed / render path has changed and something is already in the
-                    // buffer, so flush it!
+                    // The style changed / render path has changed and something is
+                    // already in the buffer, so flush it!
                     render_helpers::flush_all_buffers(&mut context);
                 }
 
@@ -186,8 +187,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
             } // End for each pixel char in the line.
         } // End for each line in the offscreen buffer.
 
-        // This handles the edge case when there is still something in the temp buffer, but the loop
-        // has exited.
+        // This handles the edge case when there is still something in the temp buffer,
+        // but the loop has exited.
         if !context.buffer_plain_text.is_empty() {
             render_helpers::flush_all_buffers(&mut context);
         }
@@ -365,16 +366,18 @@ mod tests {
         // my_offscreen_buffer:
         // window_size: [width:10, height:2],
         // row_index: [0]
-        //   0: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   1: "e" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   2: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   3: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   4: "o" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   5: "1" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   6: "2" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   7: "3" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   8: "4" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //   9: ╳
+        //   0: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+        // padding: 0 })   1: "e" Some(Style { _id + bold + dim | fg: Some(green)
+        // | bg: Some(blue) | padding: 0 })   2: "l" Some(Style { _id + bold + dim
+        // | fg: Some(green) | bg: Some(blue) | padding: 0 })   3: "l" Some(Style
+        // { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
+        //   4: "o" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+        // padding: 0 })   5: "1" Some(Style { _id + bold + dim | fg: Some(green)
+        // | bg: Some(blue) | padding: 0 })   6: "2" Some(Style { _id + bold + dim
+        // | fg: Some(green) | bg: Some(blue) | padding: 0 })   7: "3" Some(Style
+        // { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
+        //   8: "4" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
+        // padding: 0 })   9: ╳
         // row_index: [1]
         //   0: ╳ ..
         //   9: ╳
@@ -395,7 +398,8 @@ mod tests {
         // - [SetFgColor(green)]
         // - [SetBgColor(blue)]
         // - [MoveCursorPositionAbs([col:0, row:0])]
-        // - [PrintTextWithAttributes(9 bytes, Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })]
+        // - [PrintTextWithAttributes(9 bytes, Style { _id + bold + dim | fg: Some(green)
+        //   | bg: Some(blue) | padding: 0 })]
         // - [ResetColor]
         // - [MoveCursorPositionAbs([col:9, row:0])]
         // - [PrintTextWithAttributes(1 bytes, None)]

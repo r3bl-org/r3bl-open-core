@@ -26,7 +26,8 @@ use crate::SharedWriter;
 
 /// - `tracing_log_file_path_and_prefix`: [String] is the file path and prefix to use for
 ///   the log file. Eg: `/tmp/tcp_api_server` or `tcp_api_server`.
-/// - `DisplayPreference`: [DisplayPreference] is the preferred display to use for logging.
+/// - `DisplayPreference`: [DisplayPreference] is the preferred display to use for
+///   logging.
 #[derive(Debug, Clone, PartialEq)]
 pub enum WriterConfig {
     None,
@@ -153,13 +154,11 @@ pub struct TracingConfig {
 ///
 /// 1. Global default subscriber, which once set, can't be unset or changed.
 ///    - This is great for apps.
-///    - Docs for [Global default tracing
-///      subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html)
+///    - Docs for [Global default tracing subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html)
 /// 2. Thread local subscriber, which is thread local, and you can assign different ones
 ///    to different threads.
 ///    - This is great for tests.
-///    - Docs for [Thread local tracing
-///      subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html)
+///    - Docs for [Thread local tracing subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html)
 impl TracingConfig {
     /// Thread local is use in tests, where each test should have its own log file or
     /// stdout, etc. This is set per thread. So you can have more than one, assuming you

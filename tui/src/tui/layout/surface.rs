@@ -36,8 +36,8 @@ use crate::{height,
             TuiStyle,
             TuiStylesheet};
 
-/// Represents a rectangular area of the terminal screen, and not necessarily the full terminal
-/// screen.
+/// Represents a rectangular area of the terminal screen, and not necessarily the full
+/// terminal screen.
 #[derive(Clone, Debug, Default)]
 pub struct Surface {
     pub origin_pos: Pos,
@@ -242,7 +242,8 @@ impl PerformPositioningAndSizing for Surface {
         });
     }
 
-    /// 🌳 Handle root (first) box to add to stack of boxes, explicitly sized & positioned.
+    /// 🌳 Handle root (first) box to add to stack of boxes, explicitly sized &
+    /// positioned.
     fn add_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
         throws!({
             let ReqSizePc {
@@ -268,8 +269,8 @@ impl PerformPositioningAndSizing for Surface {
 /// - If `is_root` is true:
 ///   - The `insertion_pos_for_next_box` is origin_pos + padding adjustment (from style)
 /// - If `is_root` is false:
-///   - The `insertion_pos_for_next_box` is `None` non-root box; it needs to be calculated by
-///     `update_box_cursor_pos_for_next_box_insertion()`
+///   - The `insertion_pos_for_next_box` is `None` non-root box; it needs to be calculated
+///     by `update_box_cursor_pos_for_next_box_insertion()`
 fn make_non_root_box_with_style(
     FlexBoxProps {
         id,

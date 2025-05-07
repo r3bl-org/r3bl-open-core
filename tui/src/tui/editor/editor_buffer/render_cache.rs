@@ -122,8 +122,8 @@ mod render_cache_impl_block {
             self.entry = Some(CacheEntry::new(key, value));
         }
 
-        /// Render the content of the editor buffer to the screen from the cache if the content
-        /// has not been modified.
+        /// Render the content of the editor buffer to the screen from the cache if the
+        /// content has not been modified.
         ///
         /// The cache miss occurs if
         /// - Scroll Offset changes
@@ -164,7 +164,8 @@ mod render_cache_impl_block {
                 UseRenderCache::Yes => buffer
                     .render_cache
                     .insert((buffer.get_scr_ofs(), window_size), render_ops.clone()),
-                // Cache is disabled, so invalidate it (it should contain nothing at this point).
+                // Cache is disabled, so invalidate it (it should contain nothing at this
+                // point).
                 UseRenderCache::No => buffer.render_cache.clear(),
             }
         }

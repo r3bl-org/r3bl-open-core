@@ -154,8 +154,8 @@ impl StyleUSSpanLine {
         }
     }
 
-    /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line is
-    /// represented as a [List] of ([TuiStyle], [GCString])`s.
+    /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line
+    /// is represented as a [List] of ([TuiStyle], [GCString])`s.
     pub fn clip(
         &self,
         scr_ofs: ScrOfs,
@@ -174,8 +174,8 @@ impl StyleUSSpanLine {
             Some(scroll_offset_col_index),
         );
 
-        // Main loop over each `styled_text_segment` in the `List` (the list represents a single
-        // line of text).
+        // Main loop over each `styled_text_segment` in the `List` (the list represents a
+        // single line of text).
         for span in self.iter() {
             let StyleUSSpan { style, text_gcs } = span;
 
@@ -266,8 +266,9 @@ mod convert {
     }
 }
 
-/// Make sure that the code to clip styled text to a range [ start_col .. end_col ] works. The
-/// list of styled unicode string represents a single line of text in an editor component.
+/// Make sure that the code to clip styled text to a range [ start_col .. end_col ] works.
+/// The list of styled unicode string represents a single line of text in an editor
+/// component.
 #[cfg(test)]
 mod tests_clip_styled_texts {
     use super::*;
@@ -564,16 +565,18 @@ mod tests_clip_styled_texts {
                 "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234";
 
         // BEFORE:
-        // ╭0                                                                              │
-        // │                                                                           ╭77 │
-        // .............................................................................   │ viewport
-        // 01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234
+        // ╭0
+        // │ │
+        // ╭77 │ .................................................................
+        // ............   │ viewport 01234567890 01234567890 01234567890
+        // 01234567890 01234567890 01234567890 01234
         //
         // AFTER:
-        // ╭0                                                                              │
-        // │                                                                           ╭77 │
-        // .............................................................................   │ viewport
-        // 1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234
+        // ╭0
+        // │ │
+        // ╭77 │ .................................................................
+        // ............   │ viewport 1234567890 01234567890 01234567890
+        // 01234567890 01234567890 01234567890 01234
 
         // Expected no highlight version.
         {
@@ -621,16 +624,18 @@ mod tests_clip_styled_texts {
                 "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345";
 
         // BEFORE:
-        // ╭0                                                                              │
-        // │                                                                           ╭77 │
-        // .............................................................................   │ viewport
-        // 01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456
+        // ╭0
+        // │ │
+        // ╭77 │ .................................................................
+        // ............   │ viewport 01234567890 01234567890 01234567890
+        // 01234567890 01234567890 01234567890 0123456
         //
         // AFTER:
-        // ╭0                                                                              │
-        // │                                                                           ╭77 │
-        // .............................................................................   │ viewport
-        // 1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345
+        // ╭0
+        // │ │
+        // ╭77 │ .................................................................
+        // ............   │ viewport 1234567890 01234567890 01234567890
+        // 01234567890 01234567890 01234567890 012345
 
         // Expected no highlight version.
         {

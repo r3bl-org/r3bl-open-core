@@ -82,8 +82,8 @@ impl Default for EditorEngine {
 }
 
 impl EditorEngine {
-    /// Syntax highlighting support - [SyntaxSet] and [Theme] are a very expensive objects to
-    /// create, so re-use them.
+    /// Syntax highlighting support - [SyntaxSet] and [Theme] are a very expensive objects
+    /// to create, so re-use them.
     pub fn new(config_options: EditorEngineConfig) -> Self {
         Self {
             current_box: Default::default(),

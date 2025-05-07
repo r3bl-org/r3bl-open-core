@@ -52,14 +52,16 @@ mod convert_to_vec_string {
         pub fn to_vec(&self) -> Vec<String> { self.into() }
     }
 
-    /// Convert `ItemsOwned` to `Vec<String>`. For compatibility with other Rust std lib types.
+    /// Convert `ItemsOwned` to `Vec<String>`. For compatibility with other Rust std lib
+    /// types.
     impl From<ItemsOwned> for Vec<String> {
         fn from(items: ItemsOwned) -> Self {
             items.0.iter().map(|s| s.to_string()).collect()
         }
     }
 
-    /// Convert `&ItemsOwned` to `Vec<String>`. For compatibility with other Rust std lib types.
+    /// Convert `&ItemsOwned` to `Vec<String>`. For compatibility with other Rust std lib
+    /// types.
     impl From<&ItemsOwned> for Vec<String> {
         fn from(items: &ItemsOwned) -> Self {
             items.0.iter().map(|s| s.to_string()).collect()
@@ -112,7 +114,8 @@ mod iter_impl {
 mod convert_into_items_owned {
     use super::*;
 
-    // XMARK: Clever Rust, to make it easy to work with arrays of any size, eg: `&["1", "2"]`, `vec!["1", "2"]`, `vec!["1".to_string(), "2".to_string()]`
+    // XMARK: Clever Rust, to make it easy to work with arrays of any size, eg: `&["1",
+    // "2"]`, `vec!["1", "2"]`, `vec!["1".to_string(), "2".to_string()]`
 
     impl<const N: usize> From<&[&str; N]> for ItemsOwned {
         /// Handle arrays of any fixed size.

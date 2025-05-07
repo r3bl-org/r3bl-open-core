@@ -55,16 +55,18 @@ pub struct DialogEngine {
     /// [new()](DialogEngine::new) is called.
     /// - The colors it cycles through are "stable" meaning that once constructed via the
     ///   [ColorWheel::new()](ColorWheel::new) (which sets the options that determine
-    ///   where the color wheel starts when it is used). For eg, between repeated calls to
-    ///   [DialogEngineApi::render_engine](crate::DialogEngineApi::render_engine) which
-    ///   uses the same [ColorWheel] instance, the generated colors will be the same.
+    ///   where the color wheel starts when it is used). For eg, between repeated calls
+    ///   to [DialogEngineApi::render_engine](crate::DialogEngineApi::render_engine)
+    ///   which uses the same [ColorWheel] instance, the generated colors will be the
+    ///   same.
     /// - If you want to change where the color wheel "begins", you have to change
     ///   [ColorWheelConfig] options used to create this instance.
     pub color_wheel: ColorWheel,
     /// This is evaluated and saved when
-    /// [DialogEngineApi::render_engine](crate::DialogEngineApi::render_engine) is called. The
-    /// dialog box is rendered outside of any layout [crate::FlexBox] or [crate::Surface],
-    /// so it just paints itself to the screen on top of everything else.
+    /// [DialogEngineApi::render_engine](crate::DialogEngineApi::render_engine) is
+    /// called. The dialog box is rendered outside of any layout [crate::FlexBox] or
+    /// [crate::Surface], so it just paints itself to the screen on top of everything
+    /// else.
     pub maybe_flex_box: Option<(
         /* window size: */ Size,
         /* mode: */ DialogEngineMode,
@@ -92,7 +94,7 @@ impl DialogEngine {
                 // Truecolor gradient.
                 ColorWheelConfig::Rgb(
                     smallvec::smallvec![
-                        "#00ffff".into(), /* cyan  */
+                        "#00ffff".into(), /* cyan */
                         "#ff00ff".into(), /* magenta */
                         "#0000ff".into(), /* blue */
                         "#00ff00".into(), /* green */
@@ -112,7 +114,8 @@ impl DialogEngine {
         }
     }
 
-    /// Clean up any state in the engine, eg: selected_row_index or scroll_offset_row_index.
+    /// Clean up any state in the engine, eg: selected_row_index or
+    /// scroll_offset_row_index.
     pub fn reset(&mut self) {
         self.selected_row_index = row(0);
         self.scroll_offset_row_index = row(0);

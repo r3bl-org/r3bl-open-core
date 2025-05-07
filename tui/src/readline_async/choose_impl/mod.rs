@@ -21,38 +21,56 @@
 //!
 //! <!-- R3BL TUI library and suite of apps focused on developer productivity -->
 //!
-//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
-//! </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874">
-//! </span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span style="color:#E10895">
-//! </span><span style="color:#DE0799">&amp;</span><span style="color:#DB069E">
-//! </span><span style="color:#D804A2">s</span><span style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span style="color:#C801B6">
-//! </span><span style="color:#C501B9">o</span><span style="color:#C101BD">f</span><span style="color:#BD01C1">
-//! </span><span style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span style="color:#AA03D2">
-//! </span><span style="color:#A603D5">f</span><span style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span style="color:#890DE8">
-//! </span><span style="color:#850FEB">o</span><span style="color:#8111ED">n</span><span style="color:#7C13EF">
-//! </span><span style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span style="color:#572CFC">r</span><span style="color:#532FFD">
-//! </span><span style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
+//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span
+//! style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span
+//! style="color:#F92363"> </span><span style="color:#F82067">T</span><span
+//! style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span
+//! style="color:#F31874"> </span><span style="color:#F11678">l</span><span
+//! style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span
+//! style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span
+//! style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span
+//! style="color:#E10895"> </span><span style="color:#DE0799">&amp;</span><span
+//! style="color:#DB069E"> </span><span style="color:#D804A2">s</span><span
+//! style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span
+//! style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span
+//! style="color:#C801B6"> </span><span style="color:#C501B9">o</span><span
+//! style="color:#C101BD">f</span><span style="color:#BD01C1"> </span><span
+//! style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span
+//! style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span
+//! style="color:#AA03D2"> </span><span style="color:#A603D5">f</span><span
+//! style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span
+//! style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span
+//! style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span
+//! style="color:#890DE8"> </span><span style="color:#850FEB">o</span><span
+//! style="color:#8111ED">n</span><span style="color:#7C13EF"> </span><span
+//! style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span
+//! style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span
+//! style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span
+//! style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span
+//! style="color:#572CFC">r</span><span style="color:#532FFD"> </span><span
+//! style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span
+//! style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span
+//! style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span
+//! style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span
+//! style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span
+//! style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 //!
-//! We are working on building command line apps in Rust which have rich text user interfaces (TUI).
-//! We want to lean into the terminal as a place of productivity and build all kinds of awesome
-//! apps for it.
+//! We are working on building command line apps in Rust which have rich text user
+//! interfaces (TUI). We want to lean into the terminal as a place of productivity and
+//! build all kinds of awesome apps for it.
 //!
-//! 1. 🔮 Instead of just building one app, we are building a library to enable any kind of rich TUI
-//!    development w/ a twist: taking concepts that work really well for the frontend mobile and web
-//!    development world and re-imagining them for TUI & Rust.
+//! 1. 🔮 Instead of just building one app, we are building a library to enable any kind
+//!    of rich TUI development w/ a twist: taking concepts that work really well for the
+//!    frontend mobile and web development world and re-imagining them for TUI & Rust.
 //!
-//!    - Taking inspiration from things like [React](https://react.dev/),
-//!      [SolidJS](https://www.solidjs.com/),
-//!      [Elm](https://guide.elm-lang.org/architecture/),
-//!      [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
-//!      Compose](https://developer.android.com/compose),
-//!      [JSX](https://ui.dev/imperative-vs-declarative-programming),
-//!      [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can
-//!      be run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
+//!    - Taking inspiration from things like [React](https://react.dev/), [SolidJS](https://www.solidjs.com/),
+//!      [Elm](https://guide.elm-lang.org/architecture/), [iced-rs](https://docs.rs/iced/latest/iced/),
+//!      [Jetpack Compose](https://developer.android.com/compose), [JSX](https://ui.dev/imperative-vs-declarative-programming),
+//!      [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can be
+//!      run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
 //!    - Even the thread running the main event loop doesn't block since it is async.
-//!    - Using proc macros to create DSLs to implement something inspired by
-//!      [CSS](https://www.w3.org/TR/CSS/#css) &
-//!      [JSX](https://ui.dev/imperative-vs-declarative-programming).
+//!    - Using proc macros to create DSLs to implement something inspired by [CSS](https://www.w3.org/TR/CSS/#css)
+//!      & [JSX](https://ui.dev/imperative-vs-declarative-programming).
 //!
 //! 2. 🌎 We are building apps to enhance developer productivity and workflows.
 //!
@@ -61,11 +79,11 @@
 //!      "tasks") that run in the same process that renders to one terminal window.
 //!    - Inside of this terminal window, we can implement things like "app" switching,
 //!      routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI
-//!      "apps" (which are tightly integrated) that are running in the same process, in the
-//!      same window. So you can imagine that all these "apps" have shared application
+//!      "apps" (which are tightly integrated) that are running in the same process, in
+//!      the same window. So you can imagine that all these "apps" have shared application
 //!      state. Each "app" may also have its own local application state.
-//!    - Here are some example "apps" we plan to build (for which this
-//!      infrastructure acts as the open source engine):
+//!    - Here are some example "apps" we plan to build (for which this infrastructure acts
+//!      as the open source engine):
 //!      1. Multi-user text editors w/ syntax highlighting.
 //!      2. Integrations w/ GitHub issues.
 //!      3. Integrations w/ calendar, email, contacts APIs.
@@ -82,7 +100,8 @@
 //! - [Introduction](#introduction)
 //! - [Examples](#examples)
 //! - [Changelog](#changelog)
-//! - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+//! - [Learn how these crates are built, provide
+//!   feedback](#learn-how-these-crates-are-built-provide-feedback)
 //! - [How to use it as a library?](#how-to-use-it-as-a-library)
 //! - [APIs](#apis)
 //!     - [choose](#choose)
@@ -91,16 +110,17 @@
 //!     - [Create your style](#create-your-style)
 //! - [Build, run, test tasks](#build-run-test-tasks)
 //!     - [Prerequisites](#prerequisites)
-//!     - [Nushell scripts to build, run, test, etc.](#nu-shell-scripts-to-build-run-test-etc)
+//!     - [Nushell scripts to build, run, test,
+//!       etc.](#nu-shell-scripts-to-build-run-test-etc)
 //! - [References](#references)
 //!
 //! <!-- /TOC -->
 //!
 //! # Introduction
 //!
-//! `choose_impl` allows you to add simple interactivity to your CLI app. It is not a full TUI, neither
-//! is it like [crate::ReadlineAsync]. It simply allows you to provide a list of items and ask
-//! the user to choose one or more of them.
+//! `choose_impl` allows you to add simple interactivity to your CLI app. It is not a full
+//! TUI, neither is it like [crate::ReadlineAsync]. It simply allows you to provide a list
+//! of items and ask the user to choose one or more of them.
 //!
 //! # Examples
 //!
@@ -115,8 +135,9 @@
 //! # Learn how these crates are built, provide feedback
 //!
 //! To learn how we built this crate, please take a look at the following resources.
-//! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
-//! - If you like consuming written content, here's our developer [site](https://developerlife.com/). Please consider subscribing to our [newsletter](https://developerlife.com/subscribe.html).
+//! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom).
+//!   Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+//! - If you like consuming written content, here's our developer [site](https://developerlife.com/).
 //! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 //!
 //! # How to use it as a library?
@@ -143,8 +164,8 @@
 //! select).
 //!
 //! It works on macOS, Linux, and Windows. And is aware of the terminal color output
-//! limitations of each. For e.g., it uses Windows API on Windows for keyboard input. And on
-//! macOS Terminal.app it restricts color output to a 256-color palette.
+//! limitations of each. For e.g., it uses Windows API on Windows for keyboard input. And
+//! on macOS Terminal.app it restricts color output to a 256-color palette.
 //!
 //! ```rust
 //! # use r3bl_tui::*;
@@ -191,7 +212,8 @@
 //!
 //! ## choose
 //!
-//! Use this async API if you want to display a list of items with a single or multi-line header.
+//! Use this async API if you want to display a list of items with a single or multi-line
+//! header.
 //!
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/0ae722bb-8cd1-47b1-a293-1a96e84d24d0)
 //!
@@ -363,17 +385,17 @@
 //! 🌠 For these to work, you have to install the Rust toolchain, `nu`, `cargo-watch`,
 //! `bat`, and `flamegraph` on your system. Here are the instructions:
 //!
-//! 1. Install the Rust toolchain using `rustup` by following the instructions
-//!    [here](https://rustup.rs/).
+//! 1. Install the Rust toolchain using `rustup` by following the instructions [here](https://rustup.rs/).
 //! 1. Install `cargo-watch` using `cargo install cargo-watch`.
 //! 1. Install `flamegraph` using `cargo install flamegraph`.
 //! 1. Install `bat` using `cargo install bat`.
-//! 1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo install
-//!    nu`. It is available for Linux, macOS, and Windows.
+//! 1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo
+//!    install nu`. It is available for Linux, macOS, and Windows.
 //!
 //! ## Nushell scripts to build, run, test, etc.
 //!
-//! Go to the `tui` folder and run the commands below. These commands are defined in the `./run` folder.
+//! Go to the `tui` folder and run the commands below. These commands are defined in the
+//! `./run` folder.
 //!
 //! | Command                                | Description                                |
 //! | -------------------------------------- | ------------------------------------------ |

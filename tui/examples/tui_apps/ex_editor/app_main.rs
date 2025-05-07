@@ -205,7 +205,8 @@ mod app_main_impl_app_trait {
             throws_with_return!({
                 let window_size = global_data.window_size;
 
-                // Create a surface and then run the SurfaceRenderer (ContainerSurfaceRender) on it.
+                // Create a surface and then run the SurfaceRenderer
+                // (ContainerSurfaceRender) on it.
                 let mut surface = {
                     let mut it = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
@@ -278,8 +279,9 @@ mod modal_dialogs {
                 }
             })
             .or_insert_with(
-                // This code path should never execute, since to update the buffer given an id,
-                // it should have already existed in the first place, which is created by:
+                // This code path should never execute, since to update the buffer given
+                // an id, it should have already existed in the first
+                // place, which is created by:
                 // 1. [Action::SimpleDialogComponentInitializeFocused].
                 // 2. [Action::AutocompleteDialogComponentInitializeFocused].
                 || {
@@ -392,12 +394,12 @@ mod modal_dialogs {
         ModalActivateResult::No
     }
 
-    /// If `input_event` matches <kbd>Ctrl+l</kbd> or <kbd>Ctrl+k</kbd>, then toggle the modal
-    /// dialog.
+    /// If `input_event` matches <kbd>Ctrl+l</kbd> or <kbd>Ctrl+k</kbd>, then toggle the
+    /// modal dialog.
     ///
     /// Note that this returns a [EventPropagation::Consumed] and not
-    /// [EventPropagation::ConsumedRender] because both the following dispatched to the store &
-    /// that will cause a rerender:
+    /// [EventPropagation::ConsumedRender] because both the following dispatched to the
+    /// store & that will cause a rerender:
     /// 1. [Action::SimpleDialogComponentInitializeFocused].
     /// 2. [Action::AutocompleteDialogComponentInitializeFocused].
     pub fn dialog_component_initialize_focused(
@@ -558,8 +560,8 @@ mod perform_layout {
                     };
                 }
 
-                // Or, render autocomplete modal dialog (if it is active, on top of the editor
-                // component).
+                // Or, render autocomplete modal dialog (if it is active, on top of the
+                // editor component).
                 if has_focus.is_modal_id(FlexBoxId::from(Id::AutocompleteDialog)) {
                     render_component_in_given_box! {
                       in:                 surface,

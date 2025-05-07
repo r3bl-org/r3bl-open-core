@@ -26,8 +26,8 @@ use crate::{color_helpers,
             TuiStyle,
             TuiStyledTexts};
 
-/// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
-/// Please do not use this struct directly.
+/// Please use the [LolcatBuilder] to create this struct (lots of documentation is
+/// provided here). Please do not use this struct directly.
 #[derive(Clone, Copy, PartialEq)]
 pub struct Lolcat {
     pub color_wheel_control: ColorWheelControl,

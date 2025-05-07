@@ -47,7 +47,8 @@ pub type DynLayer<S> = dyn Layer<S> + Send + Sync + 'static;
 /// this manually, by calling `init` on the returned layers.
 ///
 /// For example, once you have the layers, you can run the following:
-/// `try_create_layers(..).map(|layers| tracing_subscriber::registry().with(layers).init());`
+/// `try_create_layers(..).map(|layers|
+/// tracing_subscriber::registry().with(layers).init());`
 pub fn try_create_layers(
     tracing_config: TracingConfig,
 ) -> miette::Result<Option<Vec<Box<DynLayer<tracing_subscriber::Registry>>>>> {
@@ -55,8 +56,8 @@ pub fn try_create_layers(
     let layers = {
         let mut return_it: Vec<Box<DynLayer<tracing_subscriber::Registry>>> = vec![];
 
-        // Set the level filter from the tracing configuration. This is needed if you add more
-        // layers, like OpenTelemetry, which don't have a level filter.
+        // Set the level filter from the tracing configuration. This is needed if you add
+        // more layers, like OpenTelemetry, which don't have a level filter.
         return_it.push(Box::new(tracing_config.get_level_filter()));
 
         // The following is another way of setting the level filter, if you want to

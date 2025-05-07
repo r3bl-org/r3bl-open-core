@@ -138,7 +138,8 @@ pub enum Key {
     /// - `a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z`
     /// - `A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z`
     /// - `1, 2, 3, 4, 5, 6, 7, 8, 9, 0`
-    /// - `!, @, #, $, %, ^, &, *, (, ), _, +, -, =, [, ], {, }, |, \, ,, ., /, <, >, ?, `, ~`
+    /// - `!, @, #, $, %, ^, &, *, (, ), _, +, -, =, [, ], {, }, |, \, ,, ., /, <, >, ?,
+    ///   `, ~`
     Character(char),
     SpecialKey(SpecialKey),
     FunctionKey(FunctionKey),
@@ -147,8 +148,7 @@ pub enum Key {
     /// terminals on which this is currently supported:
     /// * [kitty terminal](https://sw.kovidgoyal.net/kitty/)
     /// * [foot terminal](https://codeberg.org/dnkl/foot/issues/319)
-    /// * [WezTerm
-    ///   terminal](https://wezfurlong.org/wezterm/config/lua/config/enable_kitty_keyboard.html)
+    /// * [WezTerm terminal](https://wezfurlong.org/wezterm/config/lua/config/enable_kitty_keyboard.html)
     /// * [notcurses library](https://github.com/dankamongmen/notcurses/issues/2131)
     /// * [neovim text editor](https://github.com/neovim/neovim/pull/18181)
     /// * [kakoune text editor](https://github.com/mawww/kakoune/issues/4103)
@@ -164,8 +164,8 @@ pub enum Key {
     ///
     /// **Note:** [ModifierKeyEnum] can only be read if **both**
     /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` and
-    /// `KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES` have been enabled with
-    /// `PushKeyboardEnhancementFlags`.
+    /// `KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES` have been enabled
+    /// with `PushKeyboardEnhancementFlags`.
     ///
     /// Here's how you can enable crossterm enhanced mode.
     ///
@@ -231,12 +231,12 @@ pub enum SpecialKey {
 
 /// Typecast / convert [KeyEvent] to [KeyPress].
 ///
-/// There is special handling of displayable characters in this conversion. This occurs if the
-/// [KeyEvent] is a [KeyCode::Char].
+/// There is special handling of displayable characters in this conversion. This occurs if
+/// the [KeyEvent] is a [KeyCode::Char].
 ///
-/// An example is typing "X" by pressing "Shift + X" on the keyboard, which shows up in crossterm
-/// as "Shift + X". In this case, the [KeyModifiers] `SHIFT` and `NONE` are ignored when converted
-/// into a [KeyPress]. This means the following:
+/// An example is typing "X" by pressing "Shift + X" on the keyboard, which shows up in
+/// crossterm as "Shift + X". In this case, the [KeyModifiers] `SHIFT` and `NONE` are
+/// ignored when converted into a [KeyPress]. This means the following:
 ///
 /// ```text
 /// ╔════════════════════╦════════════════════════════════════════════════════════════════╗
@@ -256,8 +256,7 @@ pub enum SpecialKey {
 /// this.
 ///
 /// Docs:
-///  - [Crossterm
-///    KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
+///  - [Crossterm KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
 pub mod convert_key_event {
     use super::*;
 

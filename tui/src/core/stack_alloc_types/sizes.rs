@@ -22,7 +22,8 @@
 //! your changes extensively using the demo examples in the `examples` directory to verify
 //! that they actually speed things up and cause performance regressions.
 
-// PERF: If you make this number too large, eg: more than 16, then it will slow down the editor performance
+// PERF: If you make this number too large, eg: more than 16, then it will slow down the
+// editor performance
 pub const DEFAULT_STRING_STORAGE_SIZE: usize = 16;
 
 use smallstr::SmallString;
