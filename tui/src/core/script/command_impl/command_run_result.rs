@@ -32,15 +32,15 @@ pub enum CommandRunResult<T: Debug + Display> {
         /* command-specific details */ T,
     ),
 
-    /// Command ran, and produced success exit code.
+    /// Command ran, and produced success request_shutdown code.
     Run(
         /* success message */ InlineString,
         /* command-specific details */ T,
         /* command */ Command,
     ),
 
-    /// Command ran and produced non-zero exit code. Or it failed to run, and never got
-    /// the chance to generate an exit code.
+    /// Command ran and produced non-zero request_shutdown code. Or it failed to run, and
+    /// never got the chance to generate an request_shutdown code.
     Fail(
         /* error message */ InlineString,
         /* command */ Command,

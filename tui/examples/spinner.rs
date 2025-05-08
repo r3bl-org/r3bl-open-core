@@ -17,7 +17,7 @@
 
 use std::{io::Write, time::Duration};
 
-use r3bl_tui::{readline_async::{ReadlineAsync, Spinner},
+use r3bl_tui::{readline_async::{ReadlineAsyncContext, Spinner},
                set_jemalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
                underline,
@@ -91,7 +91,7 @@ pub async fn main() -> CommonResult<()> {
 
 #[allow(unused_assignments)]
 async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<()> {
-    let readline_async = ReadlineAsync::try_new(Some("$ ")).await?;
+    let readline_async = ReadlineAsyncContext::try_new(Some("$ ")).await?;
     let readline_async = readline_async.expect("terminal is not fully interactive");
     let address = "127.0.0.1:8000";
     let message_trying_to_connect = format!(
@@ -133,9 +133,9 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
     }));
 
     // Stop spinner. Automatically resumes the terminal.
-    if let Some(spinner) = maybe_spinner.as_mut() {
-        spinner.stop().await;
-        spinner.wait_for_shutdown().await;
+    if let Some(mut spinner) = maybe_spinner.take() {
+        spinner.request_shutdown().await;
+        spinner.await_shutdown().await;
     }
 
     tokio::time::sleep(ARTIFICIAL_UI_DELAY).await;
@@ -168,9 +168,9 @@ async fn example_with_concurrent_output_no_readline_async(
     tokio::time::sleep(ARTIFICIAL_UI_DELAY).await;
 
     // Stop spinner.
-    if let Some(spinner) = maybe_spinner.as_mut() {
-        spinner.stop().await;
-        spinner.wait_for_shutdown().await;
+    if let Some(mut spinner) = maybe_spinner.take() {
+        spinner.request_shutdown().await;
+        spinner.await_shutdown().await;
     }
 
     tokio::time::sleep(ARTIFICIAL_UI_DELAY).await;

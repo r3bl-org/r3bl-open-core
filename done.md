@@ -237,3 +237,8 @@
 - [x] `tui/src/readline_async/spinner.rs:139` when `maybe_shared_writer` is None
   - try_start: enable raw mode, hide cursor
   - stop: disable raw mode, show cursor
+
+# Fix lifecycle shutdown issues for async structs like Spinner and AsyncReadline
+
+- [x] add `async fn wait_for_shutdown()` to `Spinner` for better testability
+- [x] add `async fn wait_for_shutdown()` to `ReadlineAsync` similar to `Spinner`

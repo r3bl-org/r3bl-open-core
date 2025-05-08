@@ -64,7 +64,7 @@ fn clear_lines_for_spinner(
 }
 
 /// This function only does something `Spinner` is used by itself, and not within a
-/// [crate::ReadlineAsync], ie, when `maybe_shared_writer` is `None`.
+/// [crate::ReadlineAsyncContext], ie, when `maybe_shared_writer` is `None`.
 pub fn print_start_if_standalone(
     output_device: OutputDevice,
     maybe_shared_writer: Option<SharedWriter>,
@@ -143,7 +143,7 @@ pub fn print_tick_final_msg(
 }
 
 /// This function only does something `Spinner` is used by itself, and not within a
-/// [crate::ReadlineAsync], ie, when `maybe_shared_writer` is `None`.
+/// [crate::ReadlineAsyncContext], ie, when `maybe_shared_writer` is `None`.
 ///
 /// This receives the `writer` that is already locked by the caller, so that there is no
 /// "out of sequence" issues with the output that is printed, that might result from

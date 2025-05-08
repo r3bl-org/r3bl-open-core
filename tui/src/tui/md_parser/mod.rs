@@ -90,9 +90,9 @@
 //! The nature of `nom` parsers is to simply error out when they don't match. And leave
 //! the `input` untouched, so that another parser have a go at it again. The nature of
 //! these parsing functions is kind of recursive in nature. So it's important identify
-//! edge and exit cases up front before diving into the parsing logic. You will see this
-//! used in parsers which look for something more specific, if its not found, they error
-//! out, and allow less specific parsers to have a go at it, and so on.
+//! edge and request_shutdown cases up front before diving into the parsing logic. You
+//! will see this used in parsers which look for something more specific, if its not
+//! found, they error out, and allow less specific parsers to have a go at it, and so on.
 //!
 //! ## The priority of parsers
 //!
@@ -134,8 +134,9 @@
 //! The most complicated parser is the "catch all" parser or the "plain text" parser. This
 //! parser is the last one in the chain and it simply consumes the rest of the input and
 //! turns it into a `MdBlock::Text`. This parser is the most complicated because it has to
-//! deal with all the edge cases and exit cases that other parsers have not dealt with.
-//! Such as special characters like `` ` ``, `*`, `_`, etc. They are all listed here:
+//! deal with all the edge cases and request_shutdown cases that other parsers have not
+//! dealt with. Such as special characters like `` ` ``, `*`, `_`, etc. They are all
+//! listed here:
 //!
 //! - If the input does not start with a special char in this [get_sp_char_set_2()], then
 //!   this is the "Normal case". In this case the input is split at the first occurrence

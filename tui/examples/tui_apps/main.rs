@@ -45,7 +45,7 @@ use r3bl_tui::{fg_color,
                key_press,
                log::try_initialize_logging_global,
                ok,
-               readline_async::{ReadlineAsync, ReadlineEvent},
+               readline_async::{ReadlineAsyncContext, ReadlineEvent},
                rla_println,
                set_jemalloc_in_main,
                throws,
@@ -68,7 +68,7 @@ async fn main() -> CommonResult<()> {
     let no_log_arg_passed = args.contains(&"--no-log".to_string());
 
     // If the terminal is not fully interactive, then return early.
-    let Some(mut readline_async) = ReadlineAsync::try_new({
+    let Some(mut readline_async) = ReadlineAsyncContext::try_new({
         // Generate prompt.
         let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";
@@ -138,7 +138,7 @@ async fn main() -> CommonResult<()> {
 /// alt screen, and then restore it all when it exits.
 async fn run_user_selected_example(
     selection: String,
-    readline_async: &mut ReadlineAsync,
+    readline_async: &mut ReadlineAsyncContext,
 ) -> CommonResult<()> {
     let result_command /* Eg: Ok(Exit) */ =
         AutoCompleteCommand::from_str(&selection /* eg: "0" */);
@@ -222,7 +222,7 @@ Type a number to run corresponding example:
   4. 🦜 {Slides}
   5. 📔 {Commander}
 
-or type Ctrl+C, Ctrl+D, 'exit', or 'x' to exit",
+or type Ctrl+C, Ctrl+D, 'request_shutdown', or 'x' to request_shutdown",
     );
 
     it

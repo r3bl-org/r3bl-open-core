@@ -188,7 +188,7 @@ fn display_header(line_length: usize) {
     .println();
 
     ast(
-        "To exit the game, press 'Esc'",
+        "To request_shutdown the game, press 'Esc'",
         new_style!(color_fg: {color.into()}),
     )
     .println();

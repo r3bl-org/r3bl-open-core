@@ -18,6 +18,8 @@
 use std::{io::{self, Write},
           str::from_utf8};
 
+use tokio::sync::{broadcast, mpsc};
+
 use crate::{ok, InlineString};
 
 /// Cloneable object that implements [`Write`] and allows for sending data to the terminal
@@ -49,8 +51,7 @@ pub struct SharedWriter {
 
     /// Sender end of the channel, the receiver end is in `Readline` (in the
     /// `r3bl_terminal_async` crate), which does the actual printing to `stdout`.
-    pub line_state_control_channel_sender:
-        tokio::sync::mpsc::Sender<LineStateControlSignal>,
+    pub line_state_control_channel_sender: mpsc::Sender<LineStateControlSignal>,
 
     /// This is set to `true` when this struct is cloned. Only the first instance of this
     /// struct will report errors when [`std::io::Write::write()`] fails, due to the
@@ -62,11 +63,8 @@ pub struct SharedWriter {
 }
 
 impl SharedWriter {
-    pub fn new_mock() -> (
-        tokio::sync::mpsc::Receiver<LineStateControlSignal>,
-        SharedWriter,
-    ) {
-        let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1_000);
+    pub fn new_mock() -> (mpsc::Receiver<LineStateControlSignal>, SharedWriter) {
+        let (line_sender, line_receiver) = mpsc::channel(1_000);
         let shared_writer = SharedWriter::new(line_sender);
         (line_receiver, shared_writer)
     }
@@ -83,7 +81,7 @@ pub enum LineStateControlSignal {
     Flush,
     Pause,
     Resume,
-    SpinnerActive(tokio::sync::broadcast::Sender<()>),
+    SpinnerActive(broadcast::Sender<()>),
     SpinnerInactive,
     ExitReadlineLoop,
 }
@@ -91,7 +89,7 @@ pub enum LineStateControlSignal {
 impl SharedWriter {
     /// Creates a new instance of `SharedWriter` with an empty buffer and a
     /// [`tokio::sync::mpsc::Sender`] end of the channel.
-    pub fn new(line_sender: tokio::sync::mpsc::Sender<LineStateControlSignal>) -> Self {
+    pub fn new(line_sender: mpsc::Sender<LineStateControlSignal>) -> Self {
         Self {
             buffer: InlineString::new(),
             line_state_control_channel_sender: line_sender,

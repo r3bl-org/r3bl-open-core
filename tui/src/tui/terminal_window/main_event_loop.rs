@@ -88,8 +88,8 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
-    // mpsc channel to send signals from the app to the main event loop (eg: for exit,
-    // re-render, apply action, etc).
+    // mpsc channel to send signals from the app to the main event loop (eg: for
+    // request_shutdown, re-render, apply action, etc).
     let (main_thread_channel_sender, mut main_thread_channel_receiver) =
         mpsc::channel::<TerminalWindowMainThreadSignal<AS>>(CHANNEL_WIDTH);
 
@@ -167,7 +167,7 @@ where
                 if let Some(ref signal) = maybe_signal {
                     match signal {
                         TerminalWindowMainThreadSignal::Exit => {
-                            // 🐒 Actually exit the main loop!
+                            // 🐒 Actually request_shutdown the main loop!
                             RawMode::end(
                                 global_data_mut_ref.window_size,
                                 lock_output_device_as_mut!(output_device),
@@ -286,7 +286,7 @@ where
                     );
                 } else {
                     // environments with InputDevice::new_mock_with_delay() or
-                    // There are no events in the stream, so exit. This happens in test
+                    // There are no events in the stream, so request_shutdown. This happens in test
                     // InputDevice::new_mock().
                     break;
                 }

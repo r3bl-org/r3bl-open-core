@@ -389,8 +389,8 @@
 //!   trait.
 //! - The main event loop takes an [App] trait object and starts listening for input
 //!   events. It enters raw mode, and paints to an alternate screen buffer, leaving your
-//!   original scroll back buffer and history intact. When you exit this TUI app, it will
-//!   return your terminal to where you'd left off.
+//!   original scroll back buffer and history intact. When you request_shutdown this TUI
+//!   app, it will return your terminal to where you'd left off.
 //! - The [main_event_loop] is where many global structs live which are shared across the
 //!   lifetime of your app. These include the following:
 //!   - [HasFocus]
@@ -590,8 +590,8 @@
 //!    program (eg: tilix, Terminal.app, etc). Your TUI app will end up taking up 100% of
 //!    the screen space of this terminal emulator. It will also enter raw mode, and paint
 //!    to an alternate screen buffer, leaving your original scroll back buffer and history
-//!    intact. When you exit this TUI app, it will return your terminal to where you'd
-//!    left off. You don't write this code, this is something that you use.
+//!    intact. When you request_shutdown this TUI app, it will return your terminal to
+//!    where you'd left off. You don't write this code, this is something that you use.
 //! 2. [App] - This is where you write your code. You pass in a [App] to the
 //!    [TerminalWindow] to bootstrap your TUI app. You can just use [App] to build your
 //!    app, if it is a simple one & you don't really need any sophisticated layout or

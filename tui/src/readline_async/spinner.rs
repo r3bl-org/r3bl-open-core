@@ -17,7 +17,7 @@
 
 use std::{sync::Arc, time::Duration};
 
-use tokio::time::interval;
+use tokio::{sync::broadcast, time::interval};
 
 use crate::{contains_ansi_escape_sequence,
             get_terminal_width,
@@ -36,36 +36,36 @@ use crate::{contains_ansi_escape_sequence,
             StdoutIsPipedResult,
             TTYResult};
 
-/// `Spinner` works in conjunction with [crate::ReadlineAsync] to provide a spinner in the
-/// terminal for long running tasks.
+/// `Spinner` works in conjunction with [crate::ReadlineAsyncContext] to provide a spinner
+/// in the terminal for long running tasks.
 ///
 /// While the spinner is active, the async terminal output is paused. Also, when `Ctrl+C`
 /// or `Ctrl+D` is pressed, while both the readline **is active**, and a spinner **is
 /// active**, the spinner will be stopped, but the readline will continue to run. This
 /// behavior will not work unless **both** are active:
-/// - The readline is active, when [crate::ReadlineAsync::read_line()] is called.
+/// - The readline is active, when [crate::ReadlineAsyncContext::read_line()] is called.
 /// - The spinner is active, when [Spinner::try_start()] is called.
 ///
-/// This behavior is handled by [crate::ReadlineAsync], with some coordination with
-/// `Spinner`. The spinner has to tell the [crate::ReadlineAsync] before it starts, and
-/// provide a way to stop the spinner when `Ctrl+C` or `Ctrl+D` is pressed. Here are the
-/// details:
+/// This behavior is handled by [crate::ReadlineAsyncContext], with some coordination with
+/// `Spinner`. The spinner has to tell the [crate::ReadlineAsyncContext] before it starts,
+/// and provide a way to stop the spinner when `Ctrl+C` or `Ctrl+D` is pressed. Here are
+/// the details:
 ///
 /// - In [Self::try_start_task()], the `Spinner` will send a [LineStateControlSignal],
 ///   containing a `shutdown_sender` of type [tokio::sync::broadcast::Sender<()>], signal
-///   to the [SharedWriter] instance of the [crate::ReadlineAsync].
-///   - This tells the [crate::ReadlineAsync] that a spinner is active.
+///   to the [SharedWriter] instance of the [crate::ReadlineAsyncContext].
+///   - This tells the [crate::ReadlineAsyncContext] that a spinner is active.
 ///   - It also gives a way to stop the spinner via the `shutdown_sender`.
 ///
 /// - With this teed up, when `Ctrl+C` or `Ctrl+D` is intercepted by
-///   [crate::ReadlineAsync] in
+///   [crate::ReadlineAsyncContext] in
 ///   [crate::readline_internal::apply_event_to_line_state_and_render()], this will result
 ///   in a `()` to be sent to [crate::Readline::safe_spinner_is_active], which shuts the
 ///   spinner down.
 ///
 /// # Usage Example
 ///
-/// To properly stop a spinner and ensure it has completely shut down:
+/// To properly stop a spinner and ensure it has completely shutdown:
 /// ```
 /// # use std::time::Duration;
 /// # use r3bl_tui::{SpinnerStyle, OutputDevice, Spinner};
@@ -84,9 +84,9 @@ use crate::{contains_ansi_escape_sequence,
 ///     // Some work happens here...
 ///
 ///     // Stop the spinner (sends the shutdown signal)
-///     spinner.stop().await;
-///     // Wait for the spinner to completely shut down
-///     spinner.wait_for_shutdown().await;
+///     spinner.request_shutdown().await;
+///     // Wait for the spinner to completely shutdown
+///     spinner.await_shutdown().await;
 /// # Ok(())
 /// # }
 /// ```
@@ -98,11 +98,11 @@ pub struct Spinner {
     pub style: SpinnerStyle,
     pub output_device: OutputDevice,
     pub maybe_shared_writer: Option<SharedWriter>,
-    pub shutdown_sender: tokio::sync::broadcast::Sender<()>,
+    pub shutdown_sender: broadcast::Sender<()>,
     safe_is_shutdown: SafeBool,
-    /// This is used to signal when the task has completely shut down. Use the
+    /// This is used to signal when the task has completely shutdown. Use the
     /// [Self::wait_for_shutdown()].
-    shutdown_complete_receiver: Option<tokio::sync::oneshot::Receiver<()>>,
+    maybe_shutdown_complete_rx: Option<tokio::sync::oneshot::Receiver<()>>,
 }
 
 impl Spinner {
@@ -157,7 +157,7 @@ impl Spinner {
         };
 
         // Shutdown broadcast channel.
-        let (shutdown_sender, _) = tokio::sync::broadcast::channel::<()>(1);
+        let (shutdown_sender, _) = broadcast::channel::<()>(1);
 
         // Only start the task if the terminal is fully interactive.
         let mut spinner = Spinner {
@@ -169,7 +169,7 @@ impl Spinner {
             maybe_shared_writer,
             shutdown_sender,
             safe_is_shutdown: Arc::new(StdMutex::new(false)),
-            shutdown_complete_receiver: None,
+            maybe_shutdown_complete_rx: None,
         };
 
         // Start task.
@@ -181,17 +181,17 @@ impl Spinner {
     /// This is meant for the task that spawned this [Spinner] to check if it should
     /// shutdown, due to:
     /// 1. The user pressing `Ctrl+C` or `Ctrl+D`.
-    /// 2. Or the [Spinner::stop] got called.
+    /// 2. Or the [Spinner::request_shutdown] got called.
     pub fn is_shutdown(&self) -> bool { *self.safe_is_shutdown.lock().unwrap() }
 
     /// Start and manage a task that will run in the background. This is where the spinner
     /// is started and the task is spawned. This will also pause the terminal output while
-    /// the spinner is active. This will continue running until [Self::stop()] is called,
-    /// which simply sends a message to the shutdown channel, so that this task can shut
-    /// itself down.
+    /// the spinner is active. This will continue running until [Self::request_shutdown()]
+    /// is called, which simply sends a message to the shutdown channel, so that this
+    /// task can shut itself down.
     ///
     /// This method also sets up a [tokio::sync::oneshot::channel] to allow
-    /// [Self::wait_for_shutdown()] to know when the task has completely finished.
+    /// [Self::await_shutdown()] to know when the task has completely finished.
     pub async fn try_start_task(&mut self) -> miette::Result<()> {
         // Tell readline that spinner is active & register the spinner shutdown sender.
         if let Some(shared_writer) = self.maybe_shared_writer.as_ref() {
@@ -220,9 +220,9 @@ impl Spinner {
         )?;
 
         // Create a oneshot channel to signal when the task is complete
-        let (shutdown_complete_sender, maybe_shutdown_complete_receiver) =
-            tokio::sync::oneshot::channel();
-        self.shutdown_complete_receiver = Some(maybe_shutdown_complete_receiver);
+        let (shutdown_complete_sender, shutdown_complete_receiver) =
+            tokio::sync::oneshot::channel::<()>();
+        self.maybe_shutdown_complete_rx = Some(shutdown_complete_receiver);
 
         // These are all moved into the spawn block.
         let output_device_clone = self.output_device.clone();
@@ -320,14 +320,16 @@ impl Spinner {
 
     /// Shutdown the task started by [Self::try_start_task()]. This method only sends the
     /// shutdown signal and returns immediately without waiting for the spinner task to
-    /// completely shut down. To wait for the task to actually finish shutting down, call
-    /// [Self::wait_for_shutdown()] after this method.
-    pub async fn stop(&mut self) { _ = self.shutdown_sender.send(()); }
+    /// completely shutdown. To wait for the task to actually finish shutting down, call
+    /// [Self::await_shutdown()] after this method.
+    pub async fn request_shutdown(&mut self) { _ = self.shutdown_sender.send(()); }
 
-    /// Waits for the spinner task to completely shut down. This can be used after calling
-    /// [Self::stop()] to ensure the task has fully completed.
-    pub async fn wait_for_shutdown(&mut self) {
-        if let Some(receiver) = self.shutdown_complete_receiver.take() {
+    /// Waits for the spinner task to completely shutdown. This can be used after calling
+    /// [Self::request_shutdown()] to ensure the task has fully completed. This consumes
+    /// self, and ensures this instance is dropped after the task has completed and
+    /// can't be used again.
+    pub async fn await_shutdown(mut self) {
+        if let Some(receiver) = self.maybe_shutdown_complete_rx.take() {
             // Wait for the task to signal completion. Ignore the error if the sender is
             // dropped without sending (rare case).
             let _ = receiver.await;
@@ -385,8 +387,8 @@ mod tests {
         tokio::time::sleep(QUANTUM * FACTOR).await;
 
         // This might take some time to finish, so we need to wait for it.
-        spinner.stop().await;
-        spinner.wait_for_shutdown().await;
+        spinner.request_shutdown().await;
+        spinner.await_shutdown().await;
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
         println!("{:?}", output_buffer_data);
@@ -458,8 +460,8 @@ mod tests {
         tokio::time::sleep(QUANTUM * FACTOR).await;
 
         // This might take some time to finish, so we need to wait for it.
-        spinner.stop().await;
-        spinner.wait_for_shutdown().await;
+        spinner.request_shutdown().await;
+        spinner.await_shutdown().await;
 
         // spell-checker:disable
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string();

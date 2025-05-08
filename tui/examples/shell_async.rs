@@ -35,7 +35,7 @@
 //!   mechanism to collect user input and display output.
 //! - [tokio::process::Child] to spawn the child process (`bash`) and interact with it.
 //!   This child process lives as long as the `main` function and exits when the user
-//!   chooses to exit the program.
+//!   chooses to request_shutdown the program.
 //!   - The [tokio::process::Command] starts `bash`.
 //!   - Both `stdin` and `stdout` are piped using [std::process::Stdio::piped].
 //!
@@ -45,10 +45,11 @@
 //!   - Monitor the shutdown signal from the broadcast channel
 //!   - Monitor the [r3bl_terminal_async::ReadlineAsync] for user input and write any
 //!     input (the user provides interactively) to to the [tokio::process::ChildStdin].
-//!   - Any exit inputs (when the user types "exit" or "Ctrl+D") from the user are
-//!     captured here and sent to the shutdown broadcast channel. It also listens to the
-//!     broadcast channel to break out of the loop on shutdown.
-//!   - It [tokio::process::Child::kill]s the child process when it gets the exit signal.
+//!   - Any request_shutdown inputs (when the user types "request_shutdown" or "Ctrl+D")
+//!     from the user are captured here and sent to the shutdown broadcast channel. It
+//!     also listens to the broadcast channel to break out of the loop on shutdown.
+//!   - It [tokio::process::Child::kill]s the child process when it gets the
+//!     request_shutdown signal.
 //!   - It does not monitor the child process for output.
 //!
 //! # 🚀 Spawn a new task to loop and read the output from the child process and display it
@@ -100,12 +101,13 @@ use r3bl_tui::{fg_guards_red,
                fg_slate_gray,
                inline_string,
                ok,
-               readline_async::{ReadlineAsync,
+               readline_async::{ReadlineAsyncContext,
                                 ReadlineEvent,
                                 ReadlineEvent::{Eof, Interrupted, Line, Resized}},
                set_jemalloc_in_main,
                SharedWriter};
-use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};
+use tokio::{io::{AsyncBufReadExt as _, AsyncWriteExt as _},
+            sync::broadcast};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -113,7 +115,7 @@ async fn main() -> miette::Result<()> {
     set_jemalloc_in_main!();
 
     // Create a broadcast channel for shutdown.
-    let (shutdown_sender, _) = tokio::sync::broadcast::channel::<()>(1);
+    let (shutdown_sender, _) = broadcast::channel::<()>(1);
 
     // Create a long-running `bash` child process using tokio::process::Command.
     let child_process_constructor::ChildProcessHandle {
@@ -172,7 +174,7 @@ pub mod monitor_user_input_and_send_to_child {
                 Ok(readline_event) => match readline_event {
                     Line(input) => {
                         let input = input.trim().to_string();
-                        if input == "exit" {
+                        if input == "request_shutdown" {
                             ControlFlow::ShutdownKillChild
                         } else {
                             ControlFlow::ProcessLine(input)
@@ -188,9 +190,9 @@ pub mod monitor_user_input_and_send_to_child {
 
     pub async fn start_event_loop(
         mut stdin: tokio::process::ChildStdin,
-        mut rl_async: ReadlineAsync,
+        mut rl_async: ReadlineAsyncContext,
         mut child: tokio::process::Child,
-        shutdown_sender: tokio::sync::broadcast::Sender<()>,
+        shutdown_sender: broadcast::Sender<()>,
     ) {
         let mut shutdown_receiver = shutdown_sender.subscribe();
 
@@ -208,7 +210,7 @@ pub mod monitor_user_input_and_send_to_child {
                     match ControlFlow::from(result_readline_event) {
                         ControlFlow::ShutdownKillChild => {
                             _ = child.kill().await;
-                            _ = rl_async.exit(Some("❪◕‿◕❫ Goodbye")).await;
+                            _ = rl_async.request_shutdown(Some("❪◕‿◕❫ Goodbye")).await;
                             _= shutdown_sender.send(());
                             break;
                         }
@@ -232,7 +234,7 @@ pub mod monitor_child_output {
         stdout: tokio::process::ChildStdout,
         stderr: tokio::process::ChildStderr,
         mut shared_writer: SharedWriter,
-        shutdown_sender: tokio::sync::broadcast::Sender<()>,
+        shutdown_sender: broadcast::Sender<()>,
     ) -> tokio::task::JoinHandle<()> {
         let mut stdout_lines = tokio::io::BufReader::new(stdout).lines();
         let mut stderr_lines = tokio::io::BufReader::new(stderr).lines();
@@ -284,7 +286,7 @@ pub mod terminal_async_constructor {
     use super::*;
 
     pub struct TerminalAsyncHandle {
-        pub readline_async: ReadlineAsync,
+        pub readline_async: ReadlineAsyncContext,
         pub shared_writer: SharedWriter,
     }
 
@@ -296,7 +298,8 @@ pub mod terminal_async_constructor {
             format!("{prompt_seg_1}{prompt_seg_2}")
         };
 
-        let Ok(Some(readline_async)) = ReadlineAsync::try_new(Some(prompt)).await else {
+        let Ok(Some(readline_async)) = ReadlineAsyncContext::try_new(Some(prompt)).await
+        else {
             miette::bail!("Failed to create ReadlineAsync instance");
         };
 

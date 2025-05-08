@@ -17,9 +17,9 @@
 
 use crate::Size;
 
-/// This works w/ the main event loop to let it know whether it should exit or resize
-/// after an input event has occurred (and has been passed thru the input event routing
-/// system).
+/// This works w/ the main event loop to let it know whether it should request_shutdown or
+/// resize after an input event has occurred (and has been passed thru the input event
+/// routing system).
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Continuation<T> {

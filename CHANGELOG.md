@@ -428,6 +428,20 @@ These videos have been an inspiration for many of these changes:
 - [Data oriented design](https://youtu.be/WwkuAqObplU)
 - [Memory alloc](https://youtu.be/pJ-FRRB5E84)
 
+Fixed:
+
+- `ReadlineAsync` is renamed to `ReadlineAsyncContext` and its lifecycle is cleaned up.
+  Previously there were undefined behaviors related to the timing of when an exit
+  operation was complete. This has been cleaned up and rewritten. Now the lifecycle is
+  very clear: `try_new()` creates a context. You can use its `Readline` as much as you
+  want. When you're done with this session, simply call `request_shutdown()` and then wait
+  for that to complete using `await_shutdown()`.
+- `Spinner` lifecycle has also been upgraded to match the `ReadlineAsyncContext`. It
+  supports clean shutdown as well. It's lifecycle is different. You start it using
+  `try_start()`. This spins up the spinner and it starts generating output. When you're
+  done with it, you call `request_shutdown()`, then call `await_shutdown()` to ensure that
+  it has completed its shutdown process.
+
 Moved:
 
 - `temp_dir.rs` is moved to `script` module where it belongs. The majority of code
@@ -486,7 +500,7 @@ Added:
   Further clean up is provided that are triggered by `exit()` method to ensure that all
   the tasks that spin up are cleaned up: 1. task to listen to `InputDevice`, and 2.
   another task to process
-  `crate::readline_impl::manage_shared_writer_output::spawn_task_to_monitor_line_state_signals`.
+  `crate::readline_impl::manage_shared_writer_output::spawn_task_to_monitor_line_control_channel`.
 - Add `ta_println!`, `ta_print!`, `ta_println_prefixed` macros that use `format_args!`
   style (just like `println!`, `write!`, etc). This makes the API more familiar with
   Rust standard library. This style of declarative macro is used in other crates in this
