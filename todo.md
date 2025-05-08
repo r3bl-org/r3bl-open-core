@@ -1,7 +1,7 @@
 # test `giti` thoroughly: https://github.com/r3bl-org/r3bl-open-core/issues/425
 
-- [ ] manual testing
-- [ ] use `r3bl_script` test fixtures to test `git` commands
+- [x] manual testing
+- [ ] use `r3bl_script` test fixtures to test `git.rs` commands
 
 # make release of `r3bl-cmdr` and `r3bl_tui`
 

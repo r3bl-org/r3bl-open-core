@@ -97,10 +97,10 @@ mod default_settings {
     }
 }
 
-/// Create the db folder if it doesn't exit. Otherwise load it from the folder on disk.
-/// Note there are no lifetime annotations on this function. All the other functions below
-/// do have lifetime annotations, since they are all tied to the lifetime of the returned
-/// [Store].
+/// Create the db folder if it doesn't request_shutdown. Otherwise load it from the folder
+/// on disk. Note there are no lifetime annotations on this function. All the other
+/// functions below do have lifetime annotations, since they are all tied to the lifetime
+/// of the returned [Store].
 #[tracing::instrument]
 pub fn load_or_create_store(
     maybe_db_folder_path: Option<&String>,

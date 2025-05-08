@@ -119,8 +119,8 @@
 //! # Introduction
 //!
 //! `choose_impl` allows you to add simple interactivity to your CLI app. It is not a full
-//! TUI, neither is it like [crate::ReadlineAsync]. It simply allows you to provide a list
-//! of items and ask the user to choose one or more of them.
+//! TUI, neither is it like [crate::ReadlineAsyncContext]. It simply allows you to provide
+//! a list of items and ask the user to choose one or more of them.
 //!
 //! # Examples
 //!

@@ -114,11 +114,10 @@ impl LineState {
     }
 
     /// Update the paused state, which affects the following:
-    /// - Rendering the output from multiple [crate::SharedWriter]s. When
-    ///   paused nothing is rendered from them, and things like the [crate::Spinner] can
-    ///   be active.
+    /// - Rendering the output from multiple [crate::SharedWriter]s. When paused nothing
+    ///   is rendered from them, and things like the [crate::Spinner] can be active.
     /// - Handling user input while the [crate::Readline::readline] is awaiting user input
-    ///   (which is equivalent to awaiting [crate::ReadlineAsync::read_line]).
+    ///   (which is equivalent to awaiting [crate::ReadlineAsyncContext::read_line]).
     ///
     /// This should not be called directly. Instead, use the mechanism provided by the
     /// following:
@@ -286,7 +285,8 @@ impl LineState {
         self.last_line_completed = data.ends_with(b"\n"); // Set whether data ends with newline
 
         // If data does not end with newline, save the cursor and write newline for prompt
-        // Usually data does end in newline due to the buffering of SharedWriter, but sometimes it may not (i.e. if .flush() is called)
+        // Usually data does end in newline due to the buffering of SharedWriter, but
+        // sometimes it may not (i.e. if .flush() is called)
         if !self.last_line_completed {
             self.last_line_length += data.len();
             // Make sure that last_line_length wraps around when doing multiple writes
@@ -506,9 +506,10 @@ impl LineState {
                 _ => {}
             },
             // Other Modifiers (None, Shift, Control+Alt)
-            // All other modifiers must be considered because the match expression cannot match
-            // combined KeyModifiers. Control+Alt is used to reach certain special symbols on a lot
-            // of international keyboard layouts.
+            // All other modifiers must be considered because the match expression cannot
+            // match combined KeyModifiers. Control+Alt is used to reach
+            // certain special symbols on a lot of international keyboard
+            // layouts.
             Event::Key(KeyEvent {
                 code,
                 modifiers: _,
@@ -617,10 +618,10 @@ impl LineState {
                             if prev_len > 0
                                 && let Some((pos, str)) =
                                     self.cluster_buffer.grapheme_indices(true).next()
-                                {
-                                    let len = str.len();
-                                    self.cluster_buffer.replace_range(pos..len, "");
-                                }
+                            {
+                                let len = str.len();
+                                self.cluster_buffer.replace_range(pos..len, "");
+                            }
                         }
 
                         self.render_and_flush(term)?;

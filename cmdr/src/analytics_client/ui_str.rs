@@ -30,7 +30,7 @@ use crate::{common::fmt, get_self_bin_emoji};
 pub mod upgrade_install {
     use super::*;
 
-    /// Ran `cargo install ...` and this process exited with zero exit code.
+    /// Ran `cargo install ...` and this process exited with zero request_shutdown code.
     pub fn install_success_msg() -> InlineString {
         inline_string!(
             "✅ {a} {b} {c}{d}\n",
@@ -41,13 +41,17 @@ pub mod upgrade_install {
         )
     }
 
-    /// Ran `cargo install ...` but this process exited with non-zero exit code.
+    /// Ran `cargo install ...` but this process exited with non-zero request_shutdown
+    /// code.
     pub fn install_not_success_msg(status: ExitStatus) -> InlineString {
         inline_string!(
             "❌ {a} {b} {c}{d}\n",
             a = fmt::error("Failed to upgrade"),
             b = fmt::emphasis(get_self_crate_name()),
-            c = fmt::emphasis_delete(inline_string!("(exit code {:?})", status.code())),
+            c = fmt::emphasis_delete(inline_string!(
+                "(request_shutdown code {:?})",
+                status.code()
+            )),
             d = fmt::period()
         )
     }

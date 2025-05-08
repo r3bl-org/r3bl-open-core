@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use miette::IntoDiagnostic;
-use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsync, ReadlineEvent};
+use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsyncContext, ReadlineEvent};
 
 use crate::giti::{BranchNewDetails, CommandRunDetails, git, local_branch_ops, ui_str};
 
@@ -94,7 +93,7 @@ mod user_interaction {
         let prompt_text =
             ui_str::branch_create_display::enter_branch_name_you_want_to_create();
 
-        let mut rl_async = ReadlineAsync::try_new(Some(&prompt_text))
+        let mut rl_async = ReadlineAsyncContext::try_new(Some(&prompt_text))
             .await?
             .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
 
@@ -103,15 +102,20 @@ mod user_interaction {
             let evt = rl_async.read_line().await?;
             match evt {
                 ReadlineEvent::Line(branch_name) => {
-                    rl_async.exit(None).await.into_diagnostic()?;
+                    rl_async.request_shutdown(None).await?;
+                    rl_async.await_shutdown().await;
+
                     return command_execute::create_new_branch(branch_name).await;
                 }
                 ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
-                    rl_async.exit(None).await.into_diagnostic()?;
+                    rl_async.request_shutdown(None).await?;
+                    rl_async.await_shutdown().await;
+
                     let it = CommandRunResult::Noop(
                         ui_str::branch_create_display::info_no_branch_created(),
                         details::empty(),
                     );
+
                     return Ok(it);
                 }
                 ReadlineEvent::Resized => { /* Do nothing */ }

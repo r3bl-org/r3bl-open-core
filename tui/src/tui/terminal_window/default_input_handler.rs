@@ -27,7 +27,7 @@ impl DefaultInputEventHandler {
         input_event: InputEvent,
         exit_keys: &[InputEvent],
     ) -> Continuation<String> {
-        // Early return if any exit key sequence is pressed.
+        // Early return if any request_shutdown key sequence is pressed.
         if input_event.matches(exit_keys) {
             return Continuation::Exit;
         }

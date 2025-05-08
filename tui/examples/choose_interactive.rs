@@ -546,7 +546,7 @@ fn multi_select_instructions() -> InlineVec<InlineVec<AnsiStyledText>> {
         );
 
         let exit = ast(
-            "  exit program",
+            "  request_shutdown program",
             new_style!(
                 color_fg: {tui_color!(94, 103, 111)}
                 color_bg: {tui_color!(14, 17, 23)}
@@ -610,7 +610,7 @@ fn single_select_instruction() -> InlineVec<InlineVec<AnsiStyledText>> {
         );
 
         let exit = ast(
-            "  exit program",
+            "  request_shutdown program",
             new_style!(
                 color_fg: {tui_color!(94, 103, 111)}
                 color_bg: {tui_color!(14, 17, 23)}

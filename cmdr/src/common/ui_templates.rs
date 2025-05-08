@@ -52,7 +52,7 @@ pub fn prefix_multi_select_instruction_header(
 ) -> InlineVec<InlineVec<AnsiStyledText>> {
     let text_up_and_down = fmt_two_col("Up or down:", "navigate");
     let text_space = fmt_two_col("Space:", "select or deselect item");
-    let text_esc = fmt_two_col("Esc or Ctrl+C:", "exit program");
+    let text_esc = fmt_two_col("Esc or Ctrl+C:", "request_shutdown program");
     let text_return_key = fmt_two_col("Return:", "confirm selection");
 
     let up_and_down = fg_light_yellow_green(text_up_and_down).bg_night_blue();
@@ -79,7 +79,7 @@ pub fn prefix_single_select_instruction_header(
     last_lines: InlineVec<InlineVec<ASText>>,
 ) -> InlineVec<InlineVec<ASText>> {
     let text_up_or_down = fmt_two_col("Up or down:", "navigate");
-    let text_esc = fmt_two_col("Esc or Ctrl+C:", "exit program");
+    let text_esc = fmt_two_col("Esc or Ctrl+C:", "request_shutdown program");
     let text_return_key = fmt_two_col("Return:", "confirm selection");
 
     let up_or_down = fg_light_yellow_green(text_up_or_down).bg_night_blue();

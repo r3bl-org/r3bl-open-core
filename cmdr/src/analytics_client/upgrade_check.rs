@@ -194,8 +194,8 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
                 _ = signal::ctrl_c() => {
                     // Stop the spinner (if running).
                     if let Some(mut spinner) = maybe_spinner.take() && !spinner.is_shutdown() {
-                        spinner.stop().await;
-                        spinner.wait_for_shutdown().await;
+                        spinner.request_shutdown().await;
+                        spinner.await_shutdown().await;
                     }
 
                     // Try to kill the process, with start_kill() which is non-blocking.
@@ -219,11 +219,11 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
                     // Stop the spinner (if running).
                     if let Some(mut spinner) = maybe_spinner.take()
                         && !spinner.is_shutdown() {
-                        spinner.stop().await;
-                        spinner.wait_for_shutdown().await;
+                        spinner.request_shutdown().await;
+                        spinner.await_shutdown().await;
                     }
 
-                    // Return the process exit status.
+                    // Return the process request_shutdown status.
                     status_result
                 }
             }

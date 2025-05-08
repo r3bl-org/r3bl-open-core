@@ -139,18 +139,18 @@
 //! 1. Because
 //!    [`read_line()`](https://doc.rust-lang.org/std/io/struct.Stdin.html#method.read_line)
 //!    is blocking. And there is no way to terminate an OS thread that is blocking in
-//!    Rust. To do this, you have to exit the process (who's thread is blocked in
+//!    Rust. To do this, you have to request_shutdown the process (who's thread is blocked in
 //!    `read_line()`).
 //!
 //!     - There is no way to get `read_line()` unblocked once it is blocked.
 //!     - You can use
-//!       [`process::exit()`](https://doc.rust-lang.org/std/process/fn.exit.html) or
+//!       [`process::request_shutdown()`](https://doc.rust-lang.org/std/process/fn.exit.html) or
 //!       [`panic!()`](https://doc.rust-lang.org/std/panic/index.html) to kill the entire
 //!       process. This is not appealing.
 //!     - Even if that task is wrapped in a [`thread::spawn()` or
 //!       `thread::spawn_blocking()`](https://tokio.rs/tokio/tutorial/spawning), it isn't
 //!       possible to cancel or abort that thread, without cooperatively asking it to
-//!       exit. To see what this type of code looks like, take a look at
+//!       request_shutdown. To see what this type of code looks like, take a look at
 //!       [this](https://github.com/nazmulidris/rust-scratch/blob/fcd730c4b17ed0b09ff2c1a7ac4dd5b4a0c66e49/tcp-api-server/src/client_task.rs#L275).
 //!
 //! 2. Another problem is that when a thread is blocked in `read_line()`, and you have to
@@ -192,11 +192,11 @@
 //!    - One [`Readline`] instance can be used to spawn
 //!      many async `stdout` writers, [crate::SharedWriter], that can write to the
 //!      terminal concurrently.
-//!    - For most users the [`ReadlineAsync`] struct is the simplest
+//!    - For most users the [`ReadlineAsyncContext`] struct is the simplest
 //!      way to use this crate. You rarely have to access the underlying [`Readline`] or
 //!      [`crate::SharedWriter`] directly. But you can if you need to.
 //!    - [`crate::SharedWriter`] can be cloned and is thread-safe. However, there is
-//!      only one instance of [`Readline`] per [`ReadlineAsync`] instance.
+//!      only one instance of [`Readline`] per [`ReadlineAsyncContext`] instance.
 //!
 //! 2. Generate a spinner (indeterminate progress indicator). This spinner works
 //!    concurrently with the rest of your program. When the [`Spinner`] is active, it
@@ -218,7 +218,7 @@
 //!
 //! This crate can detect when your terminal is not in interactive mode. E.g.: when you pipe
 //! the output of your program to another program. In this case, the `readline` feature is
-//! disabled. Both the [`ReadlineAsync`] and [`Spinner`] support this functionality. So if
+//! disabled. Both the [`ReadlineAsyncContext`] and [`Spinner`] support this functionality. So if
 //! you run the examples in this crate, and pipe something into them, they won't do
 //! anything.
 //!
@@ -243,18 +243,18 @@
 //! - [crate::SharedWriter::line_state_control_channel_sender] - Mechanism used to
 //!   manipulate the paused state.
 //!
-//! The [Readline::new] or [ReadlineAsync::try_new] create a `line_channel` to send and
+//! The [Readline::try_new] or [ReadlineAsyncContext::try_new] create a `line_channel` to send and
 //! receive [crate::LineStateControlSignal]:
 //! 1. The sender end of this channel is moved to the [crate::SharedWriter]. So any
 //!    [crate::SharedWriter] can be used to send [crate::LineStateControlSignal]s
 //!    to the channel, which will be processed in the task started, just for this, in
-//!    [Readline::new]. This is the primary mechanism to switch between pause and resume.
-//!    Some helper functions are provided in [ReadlineAsync::pause] and
-//!    [ReadlineAsync::resume], though you can just send the signals directly to the
+//!    [Readline::try_new]. This is the primary mechanism to switch between pause and resume.
+//!    Some helper functions are provided in [ReadlineAsyncContext::pause] and
+//!    [ReadlineAsyncContext::resume], though you can just send the signals directly to the
 //!    channel's sender via the
 //!    [crate::SharedWriter::line_state_control_channel_sender].
 //! 2. The receiver end of this [tokio::sync::mpsc::channel] is moved to the task that is
-//!    spawned by [Readline::new]. This is where the actual work is done when signals are
+//!    spawned by [Readline::try_new]. This is where the actual work is done when signals are
 //!    sent via the sender (described above).
 //!
 //! While the [Readline] is suspended, no input is possible, and only <kbd>Ctrl+C</kbd>
@@ -296,15 +296,15 @@
 //!
 //! # How to use this crate
 //!
-//! ## [`ReadlineAsync::try_new()`], which is the main entry point for most use cases
+//! ## [`ReadlineAsyncContext::try_new()`], which is the main entry point for most use cases
 //!
-//! 1. To read user input, call [`ReadlineAsync::read_line()`].
-//! 2. You can call [`ReadlineAsync::clone_shared_writer()`] to get a
+//! 1. To read user input, call [`ReadlineAsyncContext::read_line()`].
+//! 2. You can call [`ReadlineAsyncContext::clone_shared_writer()`] to get a
 //!    [`crate::SharedWriter`] instance that you can use to write to `stdout`
 //!    concurrently, using [`std::write!`] or [`std::writeln!`].
-//! 3. If you use [`std::writeln!`] then there's no need to [`ReadlineAsync::flush()`]
+//! 3. If you use [`std::writeln!`] then there's no need to [`ReadlineAsyncContext::flush()`]
 //!    because the `\n` will flush the buffer. When there's no `\n` in the buffer, or you
-//!    are using [`std::write!`] then you might need to call [`ReadlineAsync::flush()`].
+//!    are using [`std::write!`] then you might need to call [`ReadlineAsyncContext::flush()`].
 //! 4. You can use the [crate::rla_println!] and [crate::rla_println_prefixed!] methods to
 //!    easily write concurrent output to the `stdout` ([`crate::SharedWriter`]).
 //! 5. You can also get access to the underlying [`Readline`] via the
@@ -327,7 +327,7 @@
 //!   [`crate::SharedWriter`] instances. Lines written to an associated
 //!   [`crate::SharedWriter`] are output to the raw terminal.
 //!
-//! - Call [`Readline::new()`] to create a [`Readline`] instance and associated
+//! - Call [`Readline::try_new()`] to create a [`Readline`] instance and associated
 //!   [`crate::SharedWriter`].
 //!
 //! - Call [`Readline::readline()`] (most likely in a loop) to receive a line of input
@@ -358,14 +358,14 @@
 //! [`Spinner`]s also has cancellation support. Once a spinner is started,
 //! <kbd>Ctrl+C</kbd> and <kbd>Ctrl+D</kbd> are directed to the spinner, to cancel it.
 //! Spinners can also be checked for completion or cancellation by long running tasks, to
-//! ensure that they exit as a response to user cancellation. Take a look at the
+//! ensure that they request_shutdown as a response to user cancellation. Take a look at the
 //! `examples/readline_async.rs` file to get an understanding of how to use this API.
 //!
-//! The third change is that [`ReadlineAsync::try_new()`] now accepts prompts that can
+//! The third change is that [`ReadlineAsyncContext::try_new()`] now accepts prompts that can
 //! have ANSI escape sequences in them. Here's an example of this.
 //!
 //! ```
-//! # use r3bl_tui::readline_async::ReadlineAsync;
+//! # use r3bl_tui::readline_async::ReadlineAsyncContext;
 //! # use r3bl_tui::{fg_magenta, AnsiStyledText, ok};
 //! # pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
@@ -375,7 +375,7 @@
 //!         let prompt_seg_3 = fg_magenta("╮").bg_dark_gray().to_string();
 //!         Some(format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3))
 //!     };
-//!     let readline_async = ReadlineAsync::try_new(prompt).await?;
+//!     let readline_async = ReadlineAsyncContext::try_new(prompt).await?;
 //!     let Some(mut readline_async) = readline_async else {
 //!         return Err(miette::miette!("Failed to create terminal").into());
 //!     };

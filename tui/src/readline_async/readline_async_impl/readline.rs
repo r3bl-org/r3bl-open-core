@@ -24,7 +24,8 @@ use crossterm::{cursor,
                 QueueableCommand};
 use miette::Report as ErrorReport;
 use thiserror::Error;
-use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use tokio::sync::{broadcast,
+                  mpsc::{self, UnboundedReceiver, UnboundedSender}};
 
 use crate::{execute_commands_no_lock,
             join,
@@ -79,37 +80,49 @@ const CTRL_D: crossterm::event::Event =
 /// [`SharedWriter::line_state_control_channel_sender`].
 ///
 /// When you create a new [`Readline`] instance, a task, is started via
-/// [`manage_shared_writer_output::spawn_task_to_monitor_line_state_signals()`]. This task
-/// monitors the `line` channel, and processes any messages that are sent to it. This
+/// [`manage_shared_writer_output::spawn_task_to_monitor_line_control_channel()`]. This
+/// task monitors the `line` channel, and processes any messages that are sent to it. This
 /// allows the task to be paused, and resumed, and to flush the output from the
 /// [`SharedWriter`]s.
 ///
-/// # When to terminate the session
+/// # How or when to terminate the session
 ///
 /// There is no `close()` function on [`Readline`]. You simply drop it. This will cause
-/// the terminal to come out of raw mode. And all the buffers will be flushed.
-/// However, there are 2 ways to use this [`Readline::readline()`] in a loop or just as a
-/// one-off. Each time this function is called, you have to `await` it to return the user
-/// input or `Interrupted` or `Eof` signal.
+/// the terminal to come out of raw mode. And all the buffers will be flushed. However,
+/// there are 2 ways to use this [`Readline::readline()`] in a loop or just as a one-off.
+/// Each time this function is called, you have to `await` it to return the user input or
+/// `Interrupted` or `Eof` signal.
 ///
-/// When creating a new [`crate::ReadlineAsync`] instance, you can use this repeatedly
-/// before dropping it. This is because the [`crate::SharedWriter`] is cloned, and the
-/// terminal is kept in `raw mode` until the associated [`crate::Readline`] is dropped.
+/// When creating a new [`crate::ReadlineAsyncContext`] instance, you can use this
+/// repeatedly before dropping it. This is because the [`crate::SharedWriter`] is cloned,
+/// and the terminal is kept in `raw mode` until the associated [`crate::Readline`] is
+/// dropped.
+///
+/// To fully terminate the session, you can call
+/// [`crate::ReadlineAsyncContext::request_shutdown()`] on it's "enclosing context". Then
+/// wait for that to complete by calling
+/// [`crate::ReadlineAsyncContext::await_shutdown()`]. If a `readline()` function is
+/// currently running, it will stop and be dropped as well! This is the beauty of
+/// non-blocking terminal input support!
 ///
 /// # Inputs and dependency injection
 ///
-/// There are 2 main resources that must be passed into [`Self::new()`]:
+/// There are 2 main resources that must be passed into [`Self::try_new()`]:
 /// 1. [`InputDevice`] which contains a resource that implements
-///    [`crate::PinnedInputStream`] - This trait represents an async stream of events.
-///    It is typically implemented by
+///    [`crate::PinnedInputStream`] - This trait represents an async stream of events. It
+///    is typically implemented by
 ///    [`crossterm::event::EventStream`](https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html).
 ///    This is used to get input from the user. However, for testing you can provide your
 ///    own implementation of this trait.
-/// 2. [`OutputDevice`] which contains a resource that implements
-///    [crate::SafeRawTerminal] - This trait represents a raw terminal. It is
-///    typically implemented by [`std::io::Stdout`]. This is used to write to the
-///    terminal. However, for testing you can provide your own implementation of this
-///    trait.
+/// 2. [`OutputDevice`] which contains a resource that implements [crate::SafeRawTerminal]
+///    - This trait represents a raw terminal. It is typically implemented by
+///    [`std::io::Stdout`]. This is used to write to the terminal. However, for testing
+///    you can provide your own implementation of this trait.
+///
+/// Other structs are passed in as well, and these are:
+/// 1. `prompt` - This is the prompt that will be displayed to the user.
+/// 2. `shutdown_complete_sender` - This is a shutdown channel that is used to signal that
+///    the shutdown process is complete.
 ///
 /// # Support for testing
 ///
@@ -127,11 +140,11 @@ const CTRL_D: crossterm::event::Event =
 /// If the terminal is paused, then any output from the [`SharedWriter`]s will not be
 /// printed to the terminal. This is useful when you want to display a spinner, or some
 /// other indeterminate progress indicator. The user input from the terminal is not going
-/// to be accepted either. Only `Ctrl+C`, and `Ctrl+D` are accepted while paused. This ensures
-/// that the user can't enter any input while the terminal is paused. And output from a
-/// [`crate::Spinner`] won't clobber the output from the [`SharedWriter`]s or from the
-/// user input prompt while [`crate::Readline::readline()`] (or
-/// [`crate::ReadlineAsync::read_line`]) is being awaited.
+/// to be accepted either. Only `Ctrl+C`, and `Ctrl+D` are accepted while paused. This
+/// ensures that the user can't enter any input while the terminal is paused. And output
+/// from a [`crate::Spinner`] won't clobber the output from the [`SharedWriter`]s or from
+/// the user input prompt while [`crate::Readline::readline()`] (or
+/// [`crate::ReadlineAsyncContext::read_line`]) is being awaited.
 ///
 /// When the terminal is resumed, then the output from the [`SharedWriter`]s will be
 /// printed to the terminal by the [`manage_shared_writer_output::flush_internal()`]
@@ -148,15 +161,15 @@ const CTRL_D: crossterm::event::Event =
 ///
 /// References:
 /// 1. Review the [`crate::LineState`] struct for more information on exactly how the
-///    terminal is paused and resumed, when it comes to accepting or rejecting user
-///    input, and rendering output or not.
-/// 2. Review the [`crate::ReadlineAsync`] module docs for more information on the mental
-///    mode and architecture of this.
+///    terminal is paused and resumed, when it comes to accepting or rejecting user input,
+///    and rendering output or not.
+/// 2. Review the [`crate::ReadlineAsyncContext`] module docs for more information on the
+///    mental mode and architecture of this.
 ///
 /// # Usage details
 ///
-/// `Readline` struct allows reading lines of input from a terminal, without blocking
-/// the calling thread, while lines are output to the terminal concurrently.
+/// `Readline` struct allows reading lines of input from a terminal, without blocking the
+/// calling thread, while lines are output to the terminal concurrently.
 ///
 /// Terminal input is retrieved by calling [`Readline::readline()`], which returns each
 /// complete line of input once the user presses `Enter`.
@@ -198,10 +211,10 @@ pub struct Readline {
     ///   [LineStateControlSignal::Pause] signal.
     /// - Is [None] if no [crate::Spinner] is active. Also works with the
     ///   [LineStateControlSignal::Resume] signal.
-    pub safe_spinner_is_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
+    pub safe_spinner_is_active: Arc<StdMutex<Option<broadcast::Sender<()>>>>,
 
-    /// Receiver for shutdown signal.
-    pub shutdown_receiver: UnboundedReceiver<()>,
+    /// Shutdown channel.
+    shutdown_complete_sender: broadcast::Sender<()>,
 }
 
 /// Error returned from [`readline()`][Readline::readline]. Such errors generally require
@@ -242,8 +255,8 @@ pub enum ReadlineEvent {
     Resized,
 }
 
-/// Internal control flow for the `readline` method. This is used primarily to make testing
-/// easier.
+/// Internal control flow for the `readline` method. This is used primarily to make
+/// testing easier.
 #[derive(Debug, PartialEq, Clone)]
 pub enum ControlFlowExtended<T, E> {
     ReturnOk(T),
@@ -260,17 +273,17 @@ pub enum ControlFlowLimited<E> {
 /// # Task creation, shutdown and cleanup
 ///
 /// The task spawned by
-/// [manage_shared_writer_output::spawn_task_to_monitor_line_state_signals()] doesn't need
-/// to be shutdown, since it will simply exit when the [`Readline`] instance is dropped.
-/// The loop awaits on the channel, and when the [`Readline`] instance is dropped, the
-/// channel is dropped as well, since the [tokio::sync::mpsc::channel()]'s
-/// [tokio::sync::mpsc::Sender] is dropped when the [`SharedWriter`] associated with the
-/// [`Readline`] is dropped.
+/// [manage_shared_writer_output::spawn_task_to_monitor_line_control_channel()] doesn't
+/// need to be shutdown, since it will simply request_shutdown when the [`Readline`]
+/// instance is dropped. The loop awaits on the channel, and when the [`Readline`]
+/// instance is dropped, the channel is dropped as well, since the
+/// [tokio::sync::mpsc::channel()]'s [tokio::sync::mpsc::Sender] is dropped when the
+/// [`SharedWriter`] associated with the [`Readline`] is dropped.
 ///
 /// # Support for buffering & writing output from [`SharedWriter`]s
 ///
 /// - This module contains the logic for managing the `line_state_control_channel` that's
-///   created in [`Readline::new()`].
+///   created in [`Readline::try_new()`].
 /// - This channel is used to send signals *from* [`SharedWriter`]s *to*
 ///   [`Readline::readline()`], to control the [`LineState`] of the terminal.
 /// - Note that [`Readline::readline()`] must be called in a loop while the user is
@@ -286,14 +299,14 @@ pub mod manage_shared_writer_output {
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.
     /// - The sender end of the channel is in [`SharedWriter`].
-    pub fn spawn_task_to_monitor_line_state_signals(
+    pub fn spawn_task_to_monitor_line_control_channel(
         /* Move */
         mut line_control_channel_receiver: mpsc::Receiver<LineStateControlSignal>,
         safe_line_state: SafeLineState,
         output_device: OutputDevice,
         safe_is_paused_buffer: SafePauseBuffer,
-        safe_spinner_is_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
-        shutdown_sender: UnboundedSender<()>,
+        safe_spinner_is_active: Arc<StdMutex<Option<broadcast::Sender<()>>>>,
+        shutdown_complete_sender: broadcast::Sender<()>,
     ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             loop {
@@ -313,7 +326,7 @@ pub mod manage_shared_writer_output {
                     match control_flow {
                         ControlFlowLimited::ReturnError(_) => {
                             // Initiate shutdown.
-                            let _ = shutdown_sender.send(());
+                            let _ = shutdown_complete_sender.send(());
                             break;
                         }
                         ControlFlowLimited::Continue => {
@@ -324,7 +337,7 @@ pub mod manage_shared_writer_output {
                 // Channel is closed.
                 else {
                     // Initiate shutdown.
-                    let _ = shutdown_sender.send(());
+                    let _ = shutdown_complete_sender.send(());
                     break;
                 }
             }
@@ -338,13 +351,11 @@ pub mod manage_shared_writer_output {
         self_safe_is_paused_buffer: SafePauseBuffer,
         self_safe_line_state: SafeLineState,
         output_device: OutputDevice,
-        self_safe_spinner_is_active: Arc<
-            StdMutex<Option<tokio::sync::broadcast::Sender<()>>>,
-        >,
+        self_safe_spinner_is_active: Arc<StdMutex<Option<broadcast::Sender<()>>>>,
     ) -> ControlFlowLimited<ReadlineError> {
         match line_control_signal {
             LineStateControlSignal::ExitReadlineLoop => {
-                // This causes the readline loop to exit by using
+                // This causes the readline loop to request_shutdown by using
                 // `Readline::shutdown_sender`.
                 return ControlFlowLimited::ReturnError(ReadlineError::Closed);
             }
@@ -478,13 +489,14 @@ impl Readline {
     /// There is an artificial delay of
     /// [READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY] added in this method so
     /// that the initial display of the cursor does not appear janky. In turn this makes
-    /// the caller of this method [crate::ReadlineAsync::try_new()] have to wait that
-    /// amount as well.
+    /// the caller of this method [crate::ReadlineAsyncContext::try_new()] have to wait
+    /// that amount as well.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
-    pub async fn new(
+    pub async fn try_new(
         prompt: String,
         output_device: OutputDevice,
         /* move */ input_device: InputDevice,
+        /* move */ shutdown_complete_sender: broadcast::Sender<()>,
     ) -> CommonResultWithError<(Self, SharedWriter), ReadlineError> {
         // Immediately hide the cursor. Then wait for
         // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor
@@ -519,18 +531,15 @@ impl Readline {
         let is_paused_buffer = PauseBuffer::new();
         let safe_is_paused_buffer = Arc::new(StdMutex::new(is_paused_buffer));
 
-        // Create shutdown channel.
-        let (shutdown_sender, shutdown_receiver) = mpsc::unbounded_channel();
-
         // Start task to process line_receiver.
         let safe_spinner_is_active = Arc::new(StdMutex::new(None));
-        manage_shared_writer_output::spawn_task_to_monitor_line_state_signals(
+        manage_shared_writer_output::spawn_task_to_monitor_line_control_channel(
             line_state_control_channel_receiver,
             safe_line_state.clone(),
             output_device.clone(),
             safe_is_paused_buffer.clone(),
             safe_spinner_is_active.clone(),
-            shutdown_sender,
+            shutdown_complete_sender.clone(),
         );
 
         // Create the instance with all the supplied components.
@@ -543,7 +552,7 @@ impl Readline {
             safe_history,
             safe_is_paused_buffer,
             safe_spinner_is_active,
-            shutdown_receiver,
+            shutdown_complete_sender,
         };
 
         // Print the prompt.
@@ -556,7 +565,8 @@ impl Readline {
                 .render_and_flush(term)?;
         } // Drop the term lock.
 
-        // Wait for `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor (try to eliminate jank).
+        // Wait for `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display
+        // the cursor (try to eliminate jank).
         let output_device_clone = output_device.clone();
         tokio::spawn({
             async move {
@@ -629,15 +639,18 @@ impl Readline {
     /// <kbd>Enter</kbd> is pressed with some user input.
     ///
     /// Note that this function can be called repeatedly in a loop. It will return each
-    /// line of input as it is entered (and return / exit). The [crate::ReadlineAsync] can
-    /// be re-used, since the [crate::SharedWriter] is cloned, and the terminal is kept
-    /// in `raw mode` until the associated [crate::Readline] is dropped.
+    /// line of input as it is entered (and return / request_shutdown). The
+    /// [crate::ReadlineAsyncContext] can be re-used, since the [crate::SharedWriter]
+    /// is cloned, and the terminal is kept in `raw mode` until the associated
+    /// [crate::Readline] is dropped.
     ///
     /// Polling function for [`Self::readline`], manages all input and output. Returns
     /// either an [ReadlineEvent] or an [ReadlineError].
     pub async fn readline(
         &mut self,
     ) -> CommonResultWithError<ReadlineEvent, ReadlineError> {
+        let mut shutdown_complete_receiver = self.shutdown_complete_sender.subscribe();
+
         loop {
             tokio::select! {
                 // Poll for events.
@@ -671,7 +684,7 @@ impl Readline {
                 },
 
                 // Poll for shutdown signal.
-                _ = self.shutdown_receiver.recv() => {
+                _ = shutdown_complete_receiver.recv() => {
                     return Err(ReadlineError::Closed);
                 }
             }
@@ -692,9 +705,7 @@ pub mod readline_internal {
         self_line_state: SafeLineState,
         term: &mut dyn Write,
         self_safe_history: SafeHistory,
-        self_safe_is_spinner_active: Arc<
-            StdMutex<Option<tokio::sync::broadcast::Sender<()>>>,
-        >,
+        self_safe_is_spinner_active: Arc<StdMutex<Option<broadcast::Sender<()>>>>,
     ) -> ControlFlowExtended<ReadlineEvent, ReadlineError> {
         match result_crossterm_event {
             Ok(crossterm_event) => {
@@ -776,6 +787,7 @@ pub mod readline_test_fixtures {
 #[cfg(test)]
 mod test_readline {
     use readline_test_fixtures::get_input_vec;
+    use tokio::sync::broadcast;
 
     use super::*;
     use crate::{return_if_not_interactive_terminal,
@@ -798,10 +810,12 @@ mod test_readline {
         // We will get the `line_state` out of this to test.
         let (output_device, stdout_mock) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(get_input_vec());
-        let (readline, _) = Readline::new(
+        let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let (readline, _) = Readline::try_new(
             prompt_str.into(),
             output_device.clone(),
             /* move */ input_device,
+            /* move */ shutdown_sender,
         )
         .await
         .unwrap();
@@ -841,10 +855,12 @@ mod test_readline {
         // We will get the `line_state` out of this to test.
         let (output_device, stdout_mock) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(get_input_vec());
-        let (mut readline, _) = Readline::new(
+        let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let (mut readline, _) = Readline::try_new(
             prompt_str.into(),
             output_device.clone(),
             /* move */ input_device,
+            shutdown_sender,
         )
         .await
         .unwrap();
@@ -872,10 +888,12 @@ mod test_readline {
         // We will get the `line_state` out of this to test.
         let (output_device, _) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(get_input_vec());
-        let (readline, shared_writer) = Readline::new(
+        let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let (readline, shared_writer) = Readline::try_new(
             prompt_str.into(),
             output_device.clone(),
             /* move */ input_device,
+            shutdown_sender,
         )
         .await
         .unwrap();
@@ -915,10 +933,12 @@ mod test_readline {
         // We will get the `line_state` out of this to test.
         let (output_device, _) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(get_input_vec());
-        let (readline, shared_writer) = Readline::new(
+        let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let (readline, shared_writer) = Readline::try_new(
             prompt_str.into(),
             output_device.clone(),
             /* move */ input_device,
+            shutdown_sender,
         )
         .await
         .unwrap();

@@ -17,13 +17,12 @@
 
 use std::io::Write as _;
 
-use miette::IntoDiagnostic;
 use r3bl_tui::{fg_slate_gray,
                ok,
                readline_async::{choose,
                                 Header,
                                 HowToChoose,
-                                ReadlineAsync,
+                                ReadlineAsyncContext,
                                 StyleSheet},
                set_jemalloc_in_main,
                try_initialize_logging_global,
@@ -69,7 +68,7 @@ async fn without_readline_async() -> miette::Result<()> {
 
 async fn with_readline_async() -> miette::Result<()> {
     // If the terminal is not fully interactive, then return early.
-    let Some(mut rl_async) = ReadlineAsync::try_new({
+    let Some(mut rl_ctx) = ReadlineAsyncContext::try_new({
         // Generate prompt.
         let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";
@@ -80,10 +79,10 @@ async fn with_readline_async() -> miette::Result<()> {
         return ok!();
     };
 
-    let mut sw_1 = rl_async.clone_shared_writer();
-    let sw_2 = rl_async.clone_shared_writer();
-    let mut output_device = rl_async.clone_output_device();
-    let input_device = rl_async.mut_input_device();
+    let mut sw_1 = rl_ctx.clone_shared_writer();
+    let sw_2 = rl_ctx.clone_shared_writer();
+    let mut output_device = rl_ctx.clone_output_device();
+    let input_device = rl_ctx.mut_input_device();
 
     // Start a task to write some output to the shared writer. This output should be
     // paused (as long as choose() is active).
@@ -111,10 +110,8 @@ async fn with_readline_async() -> miette::Result<()> {
     .await;
 
     let message = format!(">>> Chosen {:<25}: {:?}", "(with readline_async)", chosen);
-    rl_async
-        .exit(Some(message.as_str()))
-        .await
-        .into_diagnostic()?;
+    rl_ctx.request_shutdown(Some(message.as_str())).await?;
+    rl_ctx.await_shutdown().await;
 
     // The output to the shared writer should be visible now.
 

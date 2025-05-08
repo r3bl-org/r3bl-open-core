@@ -28,7 +28,10 @@ use r3bl_tui::{bold,
                fg_slate_gray,
                inline_string,
                log::{try_initialize_logging_global, DisplayPreference},
-               readline_async::{Readline, ReadlineAsync, ReadlineEvent, Spinner},
+               readline_async::{Readline,
+                                ReadlineAsyncContext,
+                                ReadlineEvent,
+                                Spinner},
                rla_println,
                set_jemalloc_in_main,
                tui_color,
@@ -144,7 +147,7 @@ async fn main() -> miette::Result<()> {
         format!("{prompt_seg_1}{prompt_seg_2}")
     };
 
-    let maybe_readline_async = ReadlineAsync::try_new(Some(prompt)).await?;
+    let maybe_readline_async = ReadlineAsyncContext::try_new(Some(prompt)).await?;
 
     // If the terminal is not fully interactive, then return early.
     let Some(mut rl_async) = maybe_readline_async else {
@@ -188,7 +191,8 @@ async fn main() -> miette::Result<()> {
                                 let control_flow = process_input_event::process(
                                     user_input, mut_state, shared_writer, readline)?;
                                 if let ControlFlow::Break(_) = control_flow {
-                                    rl_async.exit(Some("❪◕‿◕❫ Goodbye")).await.into_diagnostic()?;
+                                    rl_async.request_shutdown(Some("❪◕‿◕❫ Goodbye")).await?;
+                                    rl_async.await_shutdown().await;
                                     break;
                                 }
                             }
@@ -203,7 +207,8 @@ async fn main() -> miette::Result<()> {
                             }
                             // Ctrl+D, Ctrl+C.
                             ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
-                                rl_async.exit(Some("❪◕‿◕❫ Goodbye")).await.into_diagnostic()?;
+                                rl_async.request_shutdown(Some("❪◕‿◕❫ Goodbye")).await?;
+                                rl_async.await_shutdown().await;
                                 break;
                             }
                         }
@@ -431,8 +436,8 @@ mod long_running_task {
 
             // Don't forget to stop the spinner.
             if let Ok(Some(mut spinner)) = maybe_spinner {
-                spinner.stop().await;
-                spinner.wait_for_shutdown().await;
+                spinner.request_shutdown().await;
+                spinner.await_shutdown().await;
             }
         });
     }
