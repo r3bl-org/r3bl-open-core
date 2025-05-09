@@ -242,3 +242,8 @@
 
 - [x] add `async fn wait_for_shutdown()` to `Spinner` for better testability
 - [x] add `async fn wait_for_shutdown()` to `ReadlineAsync` similar to `Spinner`
+
+# test `giti` thoroughly: https://github.com/r3bl-org/r3bl-open-core/issues/425
+
+- [x] manual testing
+- [x] use `r3bl_script` test fixtures to test `git.rs` commands
