@@ -1,7 +1,6 @@
-# test `giti` thoroughly: https://github.com/r3bl-org/r3bl-open-core/issues/425
+# test `giti` user flow
 
-- [x] manual testing
-- [ ] use `r3bl_script` test fixtures to test `git.rs` commands
+- [ ] devise an approach to do this
 
 # make release of `r3bl-cmdr` and `r3bl_tui`
 

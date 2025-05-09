@@ -26,8 +26,9 @@ use smallvec::smallvec;
 
 use crate::{giti::{BranchCheckoutDetails,
                    CommandRunDetails,
+                   RepoStatus,
                    git::{self},
-                   modified_unstaged_file_ops,
+                   try_is_working_directory_clean,
                    ui_str},
             prefix_single_select_instruction_header};
 
@@ -97,9 +98,7 @@ mod command_execute {
         }
 
         // Early return if there are modified files.
-        if let (Ok(modified_unstaged_file_ops::ModifiedUnstagedFiles::Exist), _cmd) =
-            modified_unstaged_file_ops::try_check_exists().await
-        {
+        if let (Ok(RepoStatus::Dirty), _cmd) = try_is_working_directory_clean().await {
             let it = CommandRunResult::Noop(
                 ui_str::modified_files_display::warn_modified_files_exist_msg(
                     branch_name,
