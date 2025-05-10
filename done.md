@@ -247,3 +247,10 @@
 
 - [x] manual testing
 - [x] use `r3bl_script` test fixtures to test `git.rs` commands
+
+# make release of `r3bl-cmdr` and `r3bl_tui`
+
+- [x] make sure `cmdr` docker file works (with `pkg-config` and `libssl-dev` removed):
+      https://github.com/r3bl-org/r3bl-open-core/issues/426
+- [x] release `r3bl_tui`, `r3bl_cmdr`: https://github.com/r3bl-org/r3bl-open-core/issues/429
+- [x] close this: https://github.com/r3bl-org/r3bl-open-core/issues/391

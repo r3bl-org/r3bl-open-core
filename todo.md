@@ -1,10 +1,3 @@
-# make release of `r3bl-cmdr` and `r3bl_tui`
-
-- [ ] make sure `cmdr` docker file works (with `pkg-config` and `libssl-dev` removed):
-      https://github.com/r3bl-org/r3bl-open-core/issues/426
-- [ ] release `r3bl_tui`, `r3bl_cmdr`: https://github.com/r3bl-org/r3bl-open-core/issues/429
-- [ ] close this: https://github.com/r3bl-org/r3bl-open-core/issues/391
-
 # modernize `choose` and `giti` codebase: https://github.com/r3bl-org/r3bl-open-core/issues/427
 
 - [ ] use `InlineString` & `InlineVec` in `giti` codebase (for sake of consistency)
