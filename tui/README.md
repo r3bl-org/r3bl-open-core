@@ -14,7 +14,8 @@ height="256px">
   - [Full TUI (async, raw mode, full screen) for immersive TUI
     apps](#full-tui-async-raw-mode-full-screen-for-immersive-tui-apps)
   - [Partial TUI (async, partial raw mode, async readline) for choice based user
-    interaction](#partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
+    interaction](#
+    partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
   - [Partial TUI (async, partial raw mode, async readline) for async
     REPL](#partial-tui-async-partial-raw-mode-async-readline-for-async-repl)
   - [Power via composition](#power-via-composition)
@@ -49,8 +50,8 @@ height="256px">
 - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
   - [Two callback functions](#two-callback-functions)
   - [How to use this dialog to make an HTTP request & pipe the results into a
-    selection
-    area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
+    selection area?](#
+    how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
 - [How to make HTTP requests](#how-to-make-http-requests)
 - [Custom Markdown MD parsing and custom syntax
   highlighting](#custom-markdown-md-parsing-and-custom-syntax-highlighting)
@@ -108,15 +109,11 @@ context in which this crate is meant to exist.
 You can build fully async TUI (text user interface) apps with a modern API that brings
 the best of the web frontend development ideas to TUI apps written in Rust:
 
-1. Reactive & unidirectional data flow architecture from frontend development
-   ([React](https://react.dev/), [SolidJS](https://www.solidjs.com/),
-   [Elm](https://guide.elm-lang.org/architecture/),
-   [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
-   Compose](https://developer.android.com/compose)).
-2. [Responsive
-   design](https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design)
-   with [CSS](https://www.w3.org/TR/CSS/#css),
-   [flexbox](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox)
+1. Reactive & unidirectional data flow architecture from frontend development ([React](https://react.dev/),
+   [SolidJS](https://www.solidjs.com/), [Elm](https://guide.elm-lang.org/architecture/),
+   [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack Compose](https://developer.android.com/compose)).
+2. [Responsive design](https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design)
+   with [CSS](https://www.w3.org/TR/CSS/#css), [flexbox](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox)
    like concepts.
 3. [Declarative style](https://ui.dev/imperative-vs-declarative-programming) of
    expressing styling and layouts.
@@ -139,10 +136,8 @@ in the middle.
 Here are some videos that you can watch to get a better understanding of TTY
 programming.
 
-- [Build with Naz: TTY
-  playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
-- [Build with Naz: async
-  readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
+- [Build with Naz: TTY playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
+- [Build with Naz: async readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
 
 ## Framework highlights
 
@@ -190,10 +185,8 @@ This crate allows you to build apps that range from "full" TUI to "partial" TUI,
 everything in the middle. Here are some videos that you can watch to get a better
 understanding of TTY programming.
 
-- [Build with Naz: TTY
-  playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
-- [Build with Naz: async
-  readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
+- [Build with Naz: TTY playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
+- [Build with Naz: async readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
 
 ### Partial TUI (async, partial raw mode, async readline) for choice based user interaction
 
@@ -264,13 +257,10 @@ to see how the library has evolved over time.
 ## Learn how these crates are built, provide feedback
 
 To learn how we built this crate, please take a look at the following resources.
-- If you like consuming video content, here's our [YT
-  channel](https://www.youtube.com/@developerlifecom). Please consider
-  [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
-- If you like consuming written content, here's our developer
-  [site](https://developerlife.com/).
-- If you have questions, please join our [discord
-  server](https://discord.gg/8M2ePAevaM).
+- If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom).
+  Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+- If you like consuming written content, here's our developer [site](https://developerlife.com/).
+- If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 
 ## Run the demo locally
 
@@ -378,8 +368,8 @@ app built using this TUI engine.
   trait.
 - The main event loop takes an [App] trait object and starts listening for input
   events. It enters raw mode, and paints to an alternate screen buffer, leaving your
-  original scroll back buffer and history intact. When you exit this TUI app, it will
-  return your terminal to where you'd left off.
+  original scroll back buffer and history intact. When you request_shutdown this TUI
+  app, it will return your terminal to where you'd left off.
 - The [main_event_loop] is where many global structs live which are shared across the
   lifetime of your app. These include the following:
   - [HasFocus]
@@ -579,8 +569,8 @@ The main building blocks of a TUI app are:
    program (eg: tilix, Terminal.app, etc). Your TUI app will end up taking up 100% of
    the screen space of this terminal emulator. It will also enter raw mode, and paint
    to an alternate screen buffer, leaving your original scroll back buffer and history
-   intact. When you exit this TUI app, it will return your terminal to where you'd
-   left off. You don't write this code, this is something that you use.
+   intact. When you request_shutdown this TUI app, it will return your terminal to
+   where you'd left off. You don't write this code, this is something that you use.
 2. [App] - This is where you write your code. You pass in a [App] to the
    [TerminalWindow] to bootstrap your TUI app. You can just use [App] to build your
    app, if it is a simple one & you don't really need any sophisticated layout or
@@ -592,19 +582,18 @@ The main building blocks of a TUI app are:
 Inside of your [App] if you want to use flexbox like layout and CSS like styling you
 can think of composing your code in the following way:
 
-1.  [App] is like a box or container. You can attach styles and an id here. The id has
-    to be unique, and you can reference as many styles as you want from your
-    stylesheet. Yes, cascading styles are supported! 👏 You can put boxes inside of
-    boxes. You can make a container box and inside of that you can add other boxes
-    (you can give them a direction and even relative sizing out of 100%).
-2.  As you approach the "leaf" nodes of your layout, you will find [Component] trait
-    objects. These are black boxes which are sized, positioned, and painted _relative_
-    to their parent box. They get to handle input events and render [RenderOp]s into a
-    [RenderPipeline]. This is kind of like virtual DOM in React. This queue of
-    commands is collected from all the components and ultimately painted to the
-    screen, for each render! Your app's state is mutable and is stored in the
-    [GlobalData] struct. You can handle out of band events as well using the signal
-    mechanism.
+1. [App] is like a box or container. You can attach styles and an id here. The id has
+   to be unique, and you can reference as many styles as you want from your
+   stylesheet. Yes, cascading styles are supported! 👏 You can put boxes inside of
+   boxes. You can make a container box and inside of that you can add other boxes (you
+   can give them a direction and even relative sizing out of 100%).
+2. As you approach the "leaf" nodes of your layout, you will find [Component] trait
+   objects. These are black boxes which are sized, positioned, and painted _relative_
+   to their parent box. They get to handle input events and render [RenderOp]s into a
+   [RenderPipeline]. This is kind of like virtual DOM in React. This queue of commands
+   is collected from all the components and ultimately painted to the screen, for each
+   render! Your app's state is mutable and is stored in the [GlobalData] struct. You
+   can handle out of band events as well using the signal mechanism.
 
 ## Component, ComponentRegistry, focus management, and event routing
 
@@ -625,12 +614,12 @@ focus.
 
 The [HasFocus] struct takes care of this. This provides 2 things:
 
-1.  It holds an `id` of a [FlexBox] / [Component] that has focus.
-2.  It also holds a map that holds a [crate::Pos] for each `id`. This is used to
-    represent a cursor (whatever that means to your app & component). This cursor is
-    maintained for each `id`. This allows a separate cursor for each [Component] that
-    has focus. This is needed to build apps like editors and viewers that maintains a
-    cursor position between focus switches.
+1. It holds an `id` of a [FlexBox] / [Component] that has focus.
+2. It also holds a map that holds a [crate::Pos] for each `id`. This is used to
+   represent a cursor (whatever that means to your app & component). This cursor is
+   maintained for each `id`. This allows a separate cursor for each [Component] that
+   has focus. This is needed to build apps like editors and viewers that maintains a
+   cursor position between focus switches.
 
 Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent
 between re-renders.
@@ -794,23 +783,24 @@ on the state.
 
 In other words,
 
-1.  `EditorEngine` -> **This goes in `EditorComponent`**
+1. `EditorEngine` -> **This goes in `EditorComponent`**
     - Contains the logic to process keypresses and modify an editor buffer.
-2.  `EditorBuffer` -> **This goes in the `State`**
+2. `EditorBuffer` -> **This goes in the `State`**
     - Contains the data that represents the document being edited. This contains the
       caret (insertion point) position and scroll position. And in the future can
       contain lots of other information such as undo / redo history, etc.
 
-Here are the connection points with the impl of `Component<S, AS>` in `EditorComponent`:
+Here are the connection points with the impl of `Component<S, AS>` in
+`EditorComponent`:
 
-1.  `handle_event(global_data: &mut GlobalData<S, AS>, input_event: InputEvent,
-    has_focus: &mut HasFocus)`
+1. `handle_event(global_data: &mut GlobalData<S, AS>, input_event: InputEvent,
+   has_focus: &mut HasFocus)`
     - Can simply relay the arguments to `EditorEngine::apply(state.editor_buffer,
       input_event)` which will return another `EditorBuffer`.
     - Return value can be dispatched to the store via an action
       `UpdateEditorBuffer(EditorBuffer)`.
-2.  `render(global_data: &mut GlobalData<S, AS>, current_box: FlexBox, surface_bounds:
-    SurfaceBounds, has_focus: &mut HasFocus,)`
+2. `render(global_data: &mut GlobalData<S, AS>, current_box: FlexBox, surface_bounds:
+   SurfaceBounds, has_focus: &mut HasFocus,)`
     - Can simply relay the arguments to `EditorEngine::render(state.editor_buffer)`
     - Which will return a `RenderPipeline`.
 
@@ -821,8 +811,8 @@ Definitions:
 1. **`Caret`** - the block that is visually displayed in a terminal which represents
    the insertion point for whatever is in focus. While only one insertion point is
    editable for the local user, there may be multiple of them, in which case there has
-   to be a way to distinguish a local caret from a remote one (this can be done with bg
-   color).
+   to be a way to distinguish a local caret from a remote one (this can be done with
+   bg color).
 
 2. **`Cursor`** - the global "thing" provided in terminals that shows by blinking
    usually where the cursor is. This cursor is moved around and then paint operations
@@ -833,8 +823,7 @@ There are two ways of showing cursors which are quite different (each with very
 different constraints).
 
 1. Using a global terminal cursor (we don't use this).
-   - Both [termion::cursor](https://docs.rs/termion/1.5.6/termion/cursor/index.html)
-     and
+   - Both [termion::cursor](https://docs.rs/termion/1.5.6/termion/cursor/index.html) and
      [crossterm::cursor](https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html)
      support this. The cursor has lots of effects like blink, etc.
    - The downside is that there is one global cursor for any given terminal window.
@@ -859,8 +848,8 @@ A modal dialog box is different than a normal reusable component. This is becaus
 1. It paints on top of the entire screen (in front of all other components, in
    ZOrder::Glass, and outside of any layouts using `FlexBox`es).
 2. Is "activated" by a keyboard shortcut (hidden otherwise). Once activated, the user
-   can accept or cancel the dialog box. And this results in a callback being called with
-   the result.
+   can accept or cancel the dialog box. And this results in a callback being called
+   with the result.
 
 So this activation trigger must be done at the `App` trait impl level (in the
 `app_handle_event()` method). Also, when this trigger is detected it has to:
@@ -868,8 +857,8 @@ So this activation trigger must be done at the `App` trait impl level (in the
 1. When a trigger is detected, send a signal via the channel sender (out of band) so
    that it will show when that signal is processed.
 2. When the signal is handled, set the focus to the dialog box, and return a
-   `EventPropagation::ConsumedRerender` which will re-render the UI with the dialog box
-   on top.
+   `EventPropagation::ConsumedRerender` which will re-render the UI with the dialog
+   box on top.
 
 There is a question about where does the response from the user (once a dialog is
 shown) go? This seems as though it would be different in nature from an
@@ -902,8 +891,8 @@ shown) go? This seems as though it would be different in nature from an
 
 When creating a new dialog box component, two callback functions are passed in:
 
-1. `on_dialog_press_handler()` - this will be called if the user choose no, or yes (with
-   their typed text).
+1. `on_dialog_press_handler()` - this will be called if the user choose no, or yes
+   (with their typed text).
 2. `on_dialog_editors_changed_handler()` - this will be called if the user types
    something into the editor.
 
@@ -923,8 +912,7 @@ starts at the top of the screen. The callbacks are the same.
 
 Crates like `reqwest` and `hyper` (which is part of Tokio) will work. Here's a link
 that shows the pros and cons of using each:
-- [Rust Crates for Networking and HTTP
-  Foundations](https://blessed.rs/crates#section-networking-subsection-http-foundations)
+- [Rust Crates for Networking and HTTP Foundations](https://blessed.rs/crates#section-networking-subsection-http-foundations)
 
 ### Custom Markdown (MD) parsing and custom syntax highlighting
 

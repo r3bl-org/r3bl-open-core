@@ -366,8 +366,7 @@ async fn multiple_select_2_items_vph_5(
         ),
     );
 
-    instructions.push(inline_vec
-        ![header]);
+    instructions.push(inline_vec![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(

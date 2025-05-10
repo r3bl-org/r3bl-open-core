@@ -55,7 +55,7 @@ reqwest = { version = "0.12.15", default-features = false, features = [
 
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
-clap = { version = "4.5.36", features = ["derive", "wrap_help", "help"] }
+clap = { version = "4.5.37", features = ["derive", "wrap_help", "help"] }
 
 # serde-json.
 serde = { version = "1.0.219", features = ["derive"] }
@@ -70,12 +70,12 @@ dirs = "6.0.0"
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
 # https://tokio.rs/tokio/topics/tracing-next-steps
-tokio = { version = "1.44.2", features = ["full", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "tracing"] }
 tracing = "0.1.41"
 tracing-core = "0.1.33"
 
 # Error handling.
-miette = { version = "7.5.0", features = ["fancy"] }
+miette = { version = "7.6.0", features = ["fancy"] }
 
 # For smallstr & smallvec.
 smallvec = { version = "1.15.0", features = [
