@@ -149,6 +149,8 @@ mod details {
 }
 
 mod user_interaction {
+    use r3bl_tui::inline_vec;
+
     use super::*;
 
     pub async fn select_branches_to_delete(
@@ -159,7 +161,7 @@ mod user_interaction {
                 ui_str::branch_delete_display::select_branches_msg_raw(),
                 common::ui_templates::header_style_default()
             )];
-            prefix_multi_select_instruction_header(smallvec![last_line])
+            prefix_multi_select_instruction_header(inline_vec![last_line])
         };
 
         let mut default_io_devices = DefaultIoDevices::default();

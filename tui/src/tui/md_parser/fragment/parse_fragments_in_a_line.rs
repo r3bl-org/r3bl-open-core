@@ -151,7 +151,10 @@ mod tests_parse_fragment {
     fn test_parse_fragment_checkbox_into_str() {
         assert_eq2!(
             parse_fragment_starts_with_checkbox_into_str("[x] here is a checkbox"),
-            Ok((/* rem */ " here is a checkbox", /* output */ "[x]"))
+            Ok((
+                /* rem */ " here is a checkbox",
+                /* output */ "[x]"
+            ))
         );
 
         assert_eq2!(

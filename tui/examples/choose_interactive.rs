@@ -22,6 +22,7 @@ use r3bl_tui::{ast,
                get_size,
                get_terminal_width,
                height,
+               inline_vec,
                log::try_initialize_logging_global,
                new_style,
                ok,
@@ -163,7 +164,7 @@ async fn multi_line_header() -> miette::Result<()> {
             color_bg: {tui_color!(31, 36, 46)}
         ),
     );
-    let line_5 = smallvec![header];
+    let line_5 = inline_vec![header];
 
     let mut instructions = multi_select_instructions();
     instructions.push(line_5);
@@ -262,8 +263,9 @@ async fn multiple_select_single_item() -> miette::Result<()> {
             color_bg: {tui_color!(31, 36, 46)}
         ),
     );
-    instructions.push(smallvec![header]);
-    let list = smallvec!["one element".into()];
+    instructions.push(inline_vec![header]);
+
+    let list = inline_vec!["one element"];
 
     let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
@@ -302,7 +304,7 @@ async fn multiple_select_13_items_vph_5(
             color_bg: {tui_color!(31, 36, 46)}
         ),
     );
-    instructions.push(smallvec![header]);
+    instructions.push(inline_vec![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
@@ -364,7 +366,8 @@ async fn multiple_select_2_items_vph_5(
         ),
     );
 
-    instructions.push(smallvec![header]);
+    instructions.push(inline_vec
+        ![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(
@@ -462,7 +465,7 @@ async fn single_select_2_items_vph_5(
             color_bg: {tui_color!(31, 36, 46)}
         ),
     );
-    instructions.push(smallvec![header]);
+    instructions.push(inline_vec![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
     let user_input = choose(

@@ -93,3 +93,9 @@ smallvec = { version = "1.15.0", features = [
 # https://crates.io/crates/jemallocator
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator = "0.6.0"
+
+[dev-dependencies]
+# For assert_eq2! macro.
+serial_test = "3.2.0"
+pretty_assertions = "1.4.1"
+test-case = "3.3.1"

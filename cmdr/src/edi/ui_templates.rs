@@ -23,8 +23,8 @@ use r3bl_tui::{DefaultIoDevices,
                ast,
                ast_line,
                choose,
-               height};
-use smallvec::smallvec;
+               height,
+               inline_vec};
 
 use super::CLIArg;
 use crate::{common, edi::ui_str, prefix_single_select_instruction_header};
@@ -45,7 +45,7 @@ pub async fn handle_multiple_files_not_supported_yet(
             ui_str::multiple_files_not_supported_yet(),
             common::ui_templates::header_style_default()
         )];
-        prefix_single_select_instruction_header(smallvec![last_line])
+        prefix_single_select_instruction_header(inline_vec![last_line])
     };
     choose(
         header_with_instructions,

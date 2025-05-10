@@ -300,12 +300,13 @@ mod tests_write_to_file {
 
     use miette::IntoDiagnostic;
 
-    use crate::{create_temp_dir, into_existing::write_to_file::try_write_str_to_file};
+    use crate::{into_existing::write_to_file::try_write_str_to_file,
+                try_create_temp_dir};
 
     #[test]
     fn test_try_write_file_contents_success() -> miette::Result<()> {
         // 1. Create a temporary directory.
-        let temp_dir = create_temp_dir().expect("Failed to create temp dir");
+        let temp_dir = try_create_temp_dir().expect("Failed to create temp dir");
         let file_path = temp_dir.as_path().join("test_output.txt");
 
         // 2. Define the content to write.
@@ -328,7 +329,7 @@ mod tests_write_to_file {
     #[test]
     fn test_try_write_file_contents_invalid_path() {
         // 1. Create a temporary directory (we still need it as a base).
-        let temp_dir = create_temp_dir().expect("Failed to create temp dir");
+        let temp_dir = try_create_temp_dir().expect("Failed to create temp dir");
 
         // 2. Define an invalid path *relative* to the temp dir, pointing to a
         //    subdirectory that won't exist.
@@ -352,8 +353,8 @@ mod tests_write_to_file {
 mod tests_read_from_file {
     use std::{fs::File, io::Write};
 
-    use crate::{create_temp_dir,
-                into_existing::read_from_file::try_read_file_path_into_inline_string,
+    use crate::{into_existing::read_from_file::try_read_file_path_into_inline_string,
+                try_create_temp_dir,
                 DocumentStorage,
                 InlineString,
                 DEFAULT_DOCUMENT_SIZE};
@@ -361,7 +362,7 @@ mod tests_read_from_file {
     #[test]
     fn test_read_tiny_file_into_inline_string() {
         // Create a temporary dir.
-        let temp_dir = create_temp_dir().expect("Failed to create temp dir");
+        let temp_dir = try_create_temp_dir().expect("Failed to create temp dir");
         let temp_file_path = temp_dir.join("test_file.txt");
 
         // Create a temporary file & write some content into it.
@@ -384,7 +385,7 @@ mod tests_read_from_file {
     #[test]
     fn test_read_large_file_into_inline_string() {
         // Create a temporary file.
-        let temp_dir = create_temp_dir().expect("Failed to create temp dir");
+        let temp_dir = try_create_temp_dir().expect("Failed to create temp dir");
         let temp_file_path = temp_dir.join("test_file.txt");
         let mut temp_file_handle =
             File::create(&temp_file_path).expect("Failed to create temp file");
@@ -417,7 +418,7 @@ mod tests_read_from_file {
     #[test]
     fn test_read_empty_file_into_inline_string() {
         // Create a temporary file.
-        let temp_dir = create_temp_dir().expect("Failed to create temp dir");
+        let temp_dir = try_create_temp_dir().expect("Failed to create temp dir");
         let temp_file_path = temp_dir.join("test_file.txt");
         _ = File::create(&temp_file_path).expect("Failed to create temp file");
 
@@ -434,7 +435,7 @@ mod tests_read_from_file {
     fn test_read_nonexistent_file_into_inline_string() {
         // Attempt to read a nonexistent file.
         let mut acc = InlineString::new();
-        let temp_dir = create_temp_dir().expect("Failed to create temp dir");
+        let temp_dir = try_create_temp_dir().expect("Failed to create temp dir");
         let temp_file_path = temp_dir.join("nonexistent_file.txt");
         let result = try_read_file_path_into_inline_string(&mut acc, temp_file_path);
 

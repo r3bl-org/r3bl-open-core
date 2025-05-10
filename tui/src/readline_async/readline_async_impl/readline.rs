@@ -109,18 +109,18 @@ const CTRL_D: crossterm::event::Event =
 ///
 /// There are 2 main resources that must be passed into [`Self::try_new()`]:
 /// 1. [`InputDevice`] which contains a resource that implements
-///    [`crate::PinnedInputStream`] - This trait represents an async stream of events. It
+///    [`crate::PinnedInputStream`]. This trait represents an async stream of events. It
 ///    is typically implemented by
 ///    [`crossterm::event::EventStream`](https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html).
 ///    This is used to get input from the user. However, for testing you can provide your
 ///    own implementation of this trait.
-/// 2. [`OutputDevice`] which contains a resource that implements [crate::SafeRawTerminal]
-///    - This trait represents a raw terminal. It is typically implemented by
-///    [`std::io::Stdout`]. This is used to write to the terminal. However, for testing
-///    you can provide your own implementation of this trait.
+/// 2. [`OutputDevice`] which contains a resource that implements
+///    [crate::SafeRawTerminal]. This trait represents a raw terminal. It is typically
+///    implemented by [`std::io::Stdout`]. This is used to write to the terminal. However,
+///    for testing you can provide your own implementation of this trait.
 ///
 /// Other structs are passed in as well, and these are:
-/// 1. `prompt` - This is the prompt that will be displayed to the user.
+/// 1. `prompt` - This prompt will be displayed to the user.
 /// 2. `shutdown_complete_sender` - This is a shutdown channel that is used to signal that
 ///    the shutdown process is complete.
 ///

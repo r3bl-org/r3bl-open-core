@@ -48,6 +48,25 @@ const FRUIT_NAMES: [&str; 20] = [
     "pomegranate",
 ];
 
+pub fn generate_friendly_strongly_random_id() -> InlineString {
+    let mut rng: ThreadRng = rand::rng();
+
+    let pet = PET_NAMES[rng.random_range(0..PET_NAMES.len())];
+    let fruit = FRUIT_NAMES[rng.random_range(0..FRUIT_NAMES.len())];
+    let number: u16 = rng.random_range(0..1000);
+
+    let mut acc = InlineString::with_capacity(
+        pet.len() + fruit.len() + 3 + 2, // 3 for the number, 2 for the dashes
+    );
+
+    let uuid = uuid::Uuid::new_v4();
+
+    use std::fmt::Write as _;
+    _ = write!(acc, "{pet}-{fruit}-{number:03}-{uuid}");
+
+    acc
+}
+
 pub fn generate_friendly_random_id() -> InlineString {
     let mut rng: ThreadRng = rand::rng();
 

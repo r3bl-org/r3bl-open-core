@@ -103,14 +103,14 @@ fn create_dir_all(new_path: &Path) -> FsOpResult<()> {
 #[cfg(test)]
 mod tests_directory_create {
     use super::*;
-    use crate::{create_temp_dir,
-                directory_create::{try_mkdir, MkdirOptions::*},
+    use crate::{directory_create::{try_mkdir, MkdirOptions::*},
                 fs_paths,
-                serial_preserve_pwd_test};
+                serial_preserve_pwd_test,
+                try_create_temp_dir};
 
     serial_preserve_pwd_test!(test_try_mkdir, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         // Create a temporary directory.
         let tmp_root_dir = fs_paths!(with_root: root => "test_create_clean_new_dir");

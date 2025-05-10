@@ -391,7 +391,7 @@ mod tests {
         spinner.await_shutdown().await;
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
-        println!("{:?}", output_buffer_data);
+        println!("{output_buffer_data:?}");
         assert!(output_buffer_data.contains("⠁ message\n"));
         assert!(output_buffer_data.contains("final message\n"));
 
@@ -465,7 +465,7 @@ mod tests {
 
         // spell-checker:disable
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string();
-        println!("{:?}", output_buffer_data);
+        println!("{output_buffer_data:?}");
         let stripped_output_buffer_data =
             strip_ansi_escapes::strip_str(&output_buffer_data);
         assert!(stripped_output_buffer_data.contains("⠁ message\n"));

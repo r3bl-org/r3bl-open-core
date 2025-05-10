@@ -36,7 +36,10 @@ impl TempDir {
 
 /// Create a temporary directory. The directory is automatically deleted when the
 /// [TempDir] struct is dropped.
-pub fn create_temp_dir() -> miette::Result<TempDir> {
+///
+/// You might want to use the [crate::try_create_temp_dir_and_cd!] macro instead,
+/// which creates a subdirectory inside the temp dir and changes to that subdirectory.
+pub fn try_create_temp_dir() -> miette::Result<TempDir> {
     let root = std::env::temp_dir();
     let new_temp_dir = root.join(generate_friendly_random_id().as_str());
     std::fs::create_dir(&new_temp_dir).into_diagnostic()?;
@@ -45,11 +48,64 @@ pub fn create_temp_dir() -> miette::Result<TempDir> {
     })
 }
 
+/// Macro to create a temp dir, a sub dir inside it, and change to that sub dir. It
+/// returns a tuple containing:
+///
+/// 1. [TempDir] struct that contains the path to the newly created temp dir (the root).
+///    Hold on to this and only drop it when you are done with the temp dir (since it will
+///    be deleted when dropped).
+/// 2. The [std::path::PathBuf] to the newly sub dir (inside the newly created temp dir
+///    root).
+///
+/// # Example
+///
+/// ```no_run
+/// # use r3bl_tui::{try_create_temp_dir_and_cd, ok};
+/// # fn variant_1() -> miette::Result<()> {
+///     let (temp_dir_root, sub_dir_path_buf) = try_create_temp_dir_and_cd!("sub_dir_name");
+///     ok!()
+/// } // temp_dir_root is dropped here and the temp dir is deleted.
+///
+/// # fn variant_2() -> miette::Result<()> {
+///     let temp_dir_root = try_create_temp_dir_and_cd!();
+///     ok!()
+/// } // temp_dir_root is dropped here and the temp dir is deleted.
+/// ```
+///
+/// # Warning, this changes the current working directory of the process
+///
+/// This macro will change the current working directory for current process. This is
+/// potentially dangerous, as it can affect other parts of the program that rely on the
+/// current working directory. Use with caution. An example of this is when running tests
+/// in parallel in `cargo test`. `cargo test` runs all the tests in a single process. This
+/// means that when one test changes the current working directory, it affects all other
+/// tests that run after it.
+#[macro_export]
+macro_rules! try_create_temp_dir_and_cd {
+    ($sub_dir:expr) => {{
+        let temp_dir_root = $crate::try_create_temp_dir()?;
+        let sub_dir_path = temp_dir_root.join($sub_dir);
+        $crate::try_mkdir(
+            &sub_dir_path,
+            $crate::MkdirOptions::CreateIntermediateDirectories,
+        )?;
+        $crate::try_cd(&sub_dir_path)?;
+        (temp_dir_root, sub_dir_path)
+    }};
+    () => {{
+        let temp_dir_root = $crate::try_create_temp_dir()?;
+        $crate::try_cd(&temp_dir_root)?;
+        temp_dir_root
+    }};
+}
+
 // XMARK: Clever Rust, use of Drop to perform transaction close / end.
 
 /// Automatically delete the temporary directory when the [TempDir] struct is dropped.
 impl Drop for TempDir {
-    fn drop(&mut self) { std::fs::remove_dir_all(&self.inner).unwrap(); }
+    fn drop(&mut self) {
+        _ = std::fs::remove_dir_all(&self.inner);
+    }
 }
 
 /// Allow access to the inner [std::path::Path] easily when using other APIs.
@@ -61,8 +117,8 @@ impl Drop for TempDir {
 /// # Example
 ///
 /// ```no_run
-/// use r3bl_tui::create_temp_dir;
-/// let root = create_temp_dir().unwrap();
+/// use r3bl_tui::try_create_temp_dir;
+/// let root = try_create_temp_dir().unwrap();
 /// let new_dir = root.join("test_set_file_executable");
 /// ```
 impl Deref for TempDir {
@@ -78,8 +134,8 @@ impl Deref for TempDir {
 /// # Example
 ///
 /// ```no_run
-/// use r3bl_tui::create_temp_dir;
-/// let root = create_temp_dir().unwrap();
+/// use r3bl_tui::try_create_temp_dir;
+/// let root = try_create_temp_dir().unwrap();
 /// println!("Temp dir: {}", root);
 /// ```
 impl Display for TempDir {
@@ -98,8 +154,8 @@ impl Display for TempDir {
 /// # Example
 ///
 /// ```no_run
-/// use r3bl_tui::create_temp_dir;
-/// let root = create_temp_dir().unwrap();
+/// use r3bl_tui::try_create_temp_dir;
+/// let root = try_create_temp_dir().unwrap();
 /// std::fs::create_dir_all(root.join("test_set_file_executable")).unwrap();
 /// std::fs::remove_dir_all(root).unwrap();
 /// ```
@@ -110,11 +166,56 @@ impl AsRef<Path> for TempDir {
 #[cfg(test)]
 mod tests_temp_dir {
     use super::*;
-    use crate::fg_lizard_green;
+    use crate::{fg_lizard_green, ok};
+
+    #[test]
+    fn test_macro_try_create_temp_dir_and_cd() -> miette::Result<()> {
+        // Create a temp dir and a sub dir inside it, then change to that sub dir.
+        {
+            let (temp_dir_root, sub_dir) = try_create_temp_dir_and_cd!("test_sub_dir");
+            println!(
+                "Temp dir root: {}",
+                fg_lizard_green(temp_dir_root.inner.display().to_string())
+            );
+            println!(
+                "Subfolder: {}",
+                fg_lizard_green(sub_dir.display().to_string())
+            );
+
+            assert!(temp_dir_root.inner.exists());
+            assert!(sub_dir.exists());
+
+            let copy_of_path = temp_dir_root.inner.clone();
+
+            drop(temp_dir_root);
+
+            assert!(!copy_of_path.exists());
+            assert!(!sub_dir.exists());
+        }
+
+        // Create a temp dir and change to it.
+        {
+            let temp_dir_root = try_create_temp_dir_and_cd!();
+            println!(
+                "Temp dir root: {}",
+                fg_lizard_green(temp_dir_root.inner.display().to_string())
+            );
+
+            assert!(temp_dir_root.inner.exists());
+
+            let copy_of_path = temp_dir_root.inner.clone();
+
+            drop(temp_dir_root);
+
+            assert!(!copy_of_path.exists());
+        }
+
+        ok!()
+    }
 
     #[test]
     fn test_temp_dir() {
-        let temp_dir = create_temp_dir().unwrap();
+        let temp_dir = try_create_temp_dir().unwrap();
         println!(
             "Temp dir: {}",
             fg_lizard_green(temp_dir.inner.display().to_string())
@@ -125,7 +226,7 @@ mod tests_temp_dir {
 
     #[test]
     fn test_temp_dir_join() {
-        let temp_dir = create_temp_dir().unwrap();
+        let temp_dir = try_create_temp_dir().unwrap();
         let expected_prefix = temp_dir.inner.display().to_string();
 
         let new_sub_dir = temp_dir.join("test_set_file_executable");
@@ -141,7 +242,7 @@ mod tests_temp_dir {
 
     #[test]
     fn test_temp_dir_drop() {
-        let temp_dir = create_temp_dir().unwrap();
+        let temp_dir = try_create_temp_dir().unwrap();
 
         let copy_of_path = temp_dir.inner.clone();
         println!(

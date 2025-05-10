@@ -112,10 +112,23 @@ mod iter_impl {
 }
 
 mod convert_into_items_owned {
+    use smallvec::SmallVec;
+
     use super::*;
 
     // XMARK: Clever Rust, to make it easy to work with arrays of any size, eg: `&["1",
     // "2"]`, `vec!["1", "2"]`, `vec!["1".to_string(), "2".to_string()]`
+
+    /// Convert `SmallVec<[&str; N]>` to `ItemsOwned` for any size N.
+    impl<const N: usize> From<SmallVec<[&str; N]>> for ItemsOwned {
+        fn from(items: SmallVec<[&str; N]>) -> Self {
+            let mut inline_vec = InlineVec::with_capacity(items.len());
+            for item in items {
+                inline_vec.push(item.into());
+            }
+            ItemsOwned(inline_vec)
+        }
+    }
 
     impl<const N: usize> From<&[&str; N]> for ItemsOwned {
         /// Handle arrays of any fixed size.
@@ -212,6 +225,7 @@ mod deref_deref_mut_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::inline_vec;
 
     #[test]
     fn test_use_with_choose() {
@@ -291,5 +305,29 @@ mod tests {
             assert_eq!(vec[1], "two");
             assert_eq!(vec[2], "three");
         }
+    }
+
+    #[test]
+    fn test_from_smallvec_str() {
+        use smallvec::{smallvec, SmallVec};
+
+        let small: SmallVec<[&str; 3]> = smallvec!["a", "b", "c"];
+        let items_owned = ItemsOwned::from(small);
+
+        assert_eq!(items_owned.len(), 3);
+        assert_eq!(items_owned[0], "a");
+        assert_eq!(items_owned[1], "b");
+        assert_eq!(items_owned[2], "c");
+    }
+
+    #[test]
+    fn test_from_inline_vec_str() {
+        let small = inline_vec!["a", "b", "c"];
+        let items_owned = ItemsOwned::from(small);
+
+        assert_eq!(items_owned.len(), 3);
+        assert_eq!(items_owned[0], "a");
+        assert_eq!(items_owned[1], "b");
+        assert_eq!(items_owned[2], "c");
     }
 }
