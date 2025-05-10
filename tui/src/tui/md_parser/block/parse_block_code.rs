@@ -99,10 +99,10 @@ fn parse_code_block_body_to_code_block_end(input: &str) -> IResult<&str, &str> {
 /// | "\nfoo\nbar\n" | `["", "foo", "bar"]` |
 pub fn split_by_new_line(input: &str) -> Vec<&str> {
     let mut acc: Vec<&str> = input.split('\n').collect();
-    if let Some(last_item) = acc.last()
-        && last_item.is_empty()
-    {
-        acc.pop();
+    if let Some(last_item) = acc.last() {
+        if last_item.is_empty() {
+            acc.pop();
+        }
     }
     acc
 }

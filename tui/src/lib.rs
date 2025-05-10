@@ -1010,8 +1010,6 @@
 #![warn(clippy::unwrap_in_result)]
 #![warn(rust_2018_idioms)]
 #![allow(clippy::literal_string_with_formatting_args)]
-#![feature(let_chains)]
-#![feature(trivial_bounds)]
 
 // Attach.
 pub mod core;

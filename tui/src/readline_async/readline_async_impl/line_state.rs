@@ -615,12 +615,13 @@ impl LineState {
 
                         if prev_len != new_len {
                             self.move_cursor(1)?;
-                            if prev_len > 0
-                                && let Some((pos, str)) =
+                            if prev_len > 0 {
+                                if let Some((pos, str)) =
                                     self.cluster_buffer.grapheme_indices(true).next()
-                            {
-                                let len = str.len();
-                                self.cluster_buffer.replace_range(pos..len, "");
+                                {
+                                    let len = str.len();
+                                    self.cluster_buffer.replace_range(pos..len, "");
+                                }
                             }
                         }
 
