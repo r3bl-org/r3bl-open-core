@@ -27,7 +27,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # Time
-chrono = "0.4.40"
+chrono = "0.4.41"
 
 # Crossterm & EventStream support.
 crossterm = { version = "0.29.0", features = ["event-stream"] }
@@ -52,7 +52,7 @@ copypasta-ext = "0.4.4"
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
 # https://tokio.rs/tokio/topics/tracing-next-steps
-tokio = { version = "1.44.2", features = ["full", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "tracing"] }
 tracing = "0.1.41"
 tracing-core = "0.1.33"
 tracing-subscriber = "0.3.19"
@@ -60,7 +60,7 @@ tracing-appender = "0.2.3"
 
 # Error handling.
 thiserror = "2.0.12"
-miette = { version = "7.5.0", features = ["fancy"] }
+miette = { version = "7.6.0", features = ["fancy"] }
 pretty_assertions = "1.4.1"
 
 # For smallstr & smallvec.
@@ -73,7 +73,7 @@ smallvec = { version = "1.15.0", features = [
 
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
-clap = { version = "4.5.36", features = ["derive", "wrap_help", "help"] }
+clap = { version = "4.5.37", features = ["derive", "wrap_help", "help"] }
 
 # MISSING
 
@@ -88,8 +88,8 @@ textwrap = { version = "0.16.2", features = ["unicode-linebreak"] }
 const_format = "0.2.34"
 
 # Misc.
-rand = "0.9.0"
-sha2 = "0.10.8"
+rand = "0.9.1"
+sha2 = "0.10.9"
 strip-ansi = "0.1.0"
 strip-ansi-escapes = "0.2.1"
 
@@ -103,9 +103,6 @@ kv = { version = "0.24.0", features = ["json-value", "bincode-value"] }
 # Async stream for DI and testing.
 futures-core = "0.3.31"
 async-stream = "0.3.6"
-
-# Dynamically name variables in declarative macros.
-paste = "1.0.15"
 
 # For SharedWriter ids.
 uuid = { version = "1.16.0", features = ["v4"] }

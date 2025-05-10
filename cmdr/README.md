@@ -11,7 +11,8 @@
 - [Introduction](#introduction)
 - [Installation](#installation)
 - [Changelog](#changelog)
-- [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+- [Learn how these crates are built, provide
+  feedback](#learn-how-these-crates-are-built-provide-feedback)
 - [Run giti binary target](#run-giti-binary-target)
 - [Run edi binary target](#run-edi-binary-target)
 - [Build, run, test tasks](#build-run-test-tasks)
@@ -66,18 +67,14 @@ build all kinds of awesome apps for it.
    of rich TUI development w/ a twist: taking concepts that work really well for the
    frontend mobile and web development world and re-imagining them for TUI & Rust.
 
-  - Taking inspiration from things like [React](https://react.dev/),
-    [SolidJS](https://www.solidjs.com/),
-    [Elm](https://guide.elm-lang.org/architecture/),
-    [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
-    Compose](https://developer.android.com/compose),
-    [JSX](https://ui.dev/imperative-vs-declarative-programming),
-    [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can
-    be run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
+  - Taking inspiration from things like [React](https://react.dev/), [SolidJS](https://www.solidjs.com/),
+    [Elm](https://guide.elm-lang.org/architecture/), [iced-rs](https://docs.rs/iced/latest/iced/),
+    [Jetpack Compose](https://developer.android.com/compose), [JSX](https://ui.dev/imperative-vs-declarative-programming),
+    [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can be
+    run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
   - Even the thread running the main event loop doesn't block since it is async.
-  - Using macros to create DSLs to implement something inspired by
-    [CSS](https://www.w3.org/TR/CSS/#css) &
-    [JSX](https://ui.dev/imperative-vs-declarative-programming).
+  - Using macros to create DSLs to implement something inspired by [CSS](https://www.w3.org/TR/CSS/#css)
+    & [JSX](https://ui.dev/imperative-vs-declarative-programming).
 
 2. 🌎 We are building apps to enhance developer productivity & workflows.
 
@@ -89,9 +86,9 @@ build all kinds of awesome apps for it.
     apps (which are tightly integrated) that are running in the same process, in the
     same window. So you can imagine that all these "applets" have shared application
     state. Each "applet" may also have its own local application state.
-  - You can mix and match "Full TUI" with "Partial TUI" to build for whatever use case you
-    need. `r3bl_tui` allows you to create application state that can be moved between various
-    "applets", where each "applet" can be "Full TUI" or "Partial TUI".
+  - You can mix and match "Full TUI" with "Partial TUI" to build for whatever use case
+    you need. `r3bl_tui` allows you to create application state that can be moved
+    between various "applets", where each "applet" can be "Full TUI" or "Partial TUI".
   - Here are some examples of the types of "app"s we plan to build (for which this
     infrastructure acts as the open source engine):
     1. Multi user text editors w/ syntax highlighting.
@@ -107,10 +104,10 @@ along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 The two apps, `edi` and `giti`, that comprise `r3bl-cmdr` will make you smile and make
 you more productive. These apps are currently available as early access preview 🐣.
 
-- 😺 `giti` - an interactive git CLI app designed to give you more confidence and a better
-  experience when working with git.
-- 🦜 `edi` - a TUI Markdown editor that lets you edit Markdown files in your terminal in
-  style.
+- 😺 `giti` - an interactive git CLI app designed to give you more confidence and a
+  better experience when working with git.
+- 🦜 `edi` - a TUI Markdown editor that lets you edit Markdown files in your terminal
+  in style.
 
 To install `r3bl-cmdr` on your system, run the following command, assuming you have
 `cargo` on your system:
@@ -123,9 +120,8 @@ If you don't have `cargo` on your system, you can either:
 
 1. Follow these [instructions](https://rustup.rs/) to install `cargo` on your system
    first. Then run `cargo install r3bl-cmdr` to install this crate.
-2. Build the binaries from the crate's source code. First clone this
-   [repo](https://github.com/r3bl-org/r3bl-open-core/). Then, run `cd
-   r3bl-open-core/cmdr && cargo install`.
+2. Build the binaries from the crate's source code. First clone this [repo](https://github.com/r3bl-org/r3bl-open-core/).
+   Then, run `cd r3bl-open-core/cmdr && cargo install`.
 
 ## Changelog
 
@@ -136,13 +132,10 @@ see how the crate has evolved over time.
 ## Learn how these crates are built, provide feedback
 
 To learn how we built this crate, please take a look at the following resources.
-- If you like consuming video content, here's our [YT
-  channel](https://www.youtube.com/@developerlifecom). Please consider
-  [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
-- If you like consuming written content, here's our developer
-  [site](https://developerlife.com/).
-- If you have questions, please join our [discord
-  server](https://discord.gg/8M2ePAevaM).
+- If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom).
+  Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+- If you like consuming written content, here's our developer [site](https://developerlife.com/).
+- If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 
 ## Run `giti` binary target
 
@@ -154,8 +147,8 @@ Source mp4: https://github.com/nazmulidris/developerlife.com/assets/2966499/262f
 ![giti video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/giti.gif?raw=true)
 
 To run from binary:
-- Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `giti`
-  locally to `~/.cargo/bin`.
+- Run `cargo install r3bl-cmdr` (detailed instructions above). This will install
+  `giti` locally to `~/.cargo/bin`.
 - Run `giti` from anywhere on your system.
 - Try `giti --help` to see the available commands.
 - To delete one or more branches in your repo run `giti branch delete`.
@@ -171,8 +164,8 @@ To run from source:
 - To delete one or more branches in your repo run `giti branch delete`.
 - To checkout a branch run `giti branch checkout`.
 - To create a new branch run `giti branch new`.
-- If you want to generate log output for `giti`, run `giti -l`. For example,
-  `giti -l branch delete`. To view this log output run `nu run.nu log`.
+- If you want to generate log output for `giti`, run `giti -l`. For example, `giti -l
+  branch delete`. To view this log output run `nu run.nu log`.
 
 ## Run `edi` binary target
 
@@ -184,8 +177,8 @@ Source mp4: https://github.com/nazmulidris/developerlife.com/assets/2966499/f2c4
 ![edi video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/edi.gif?raw=true)
 
 To run from binary:
-- Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `giti`
-  locally to `~/.cargo/bin`.
+- Run `cargo install r3bl-cmdr` (detailed instructions above). This will install
+  `giti` locally to `~/.cargo/bin`.
 - Run `edi` from anywhere on your system.
 - Try `edi --help` to see the available commands.
 - To open an existing file, run `edi <file_name>`. For example, `edi README.md`.
@@ -197,23 +190,22 @@ To run from source:
 - Run `edi` from anywhere on your system.
 - Try `edi --help` to see the available commands.
 - To open an existing file, run `edi <file_name>`. For example, `edi README.md`.
-- If you want to generate log output for `edi`, run `edi -l`. For example,
-  `edi -l README.md`. To view this log output run `nu run.nu log`.
+- If you want to generate log output for `edi`, run `edi -l`. For example, `edi -l
+  README.md`. To view this log output run `nu run.nu log`.
 
 ## Build, run, test tasks
 
 ### Prerequisites
 
-🌠 In order for these to work you have to install the Rust toolchain, `nu`, `cargo-watch`, `bat`,
-and `flamegraph` on your system. Here are the instructions:
+🌠 In order for these to work you have to install the Rust toolchain, `nu`,
+`cargo-watch`, `bat`, and `flamegraph` on your system. Here are the instructions:
 
-1. Install the Rust toolchain using `rustup` by following the instructions
-   [here](https://rustup.rs/).
+1. Install the Rust toolchain using `rustup` by following the instructions [here](https://rustup.rs/).
 1. Install `cargo-watch` using `cargo install cargo-watch`.
 1. Install `flamegraph` using `cargo install flamegraph`.
 1. Install `bat` using `cargo install bat`.
-1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo install nu`. It is
-   available for Linux, macOS, and Windows.
+1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo
+   install nu`. It is available for Linux, macOS, and Windows.
 
 ### Nushell scripts to build, run, test etc.
 
@@ -239,9 +231,9 @@ The following commands will watch for changes in the source folder and re-run:
 | `nu run.nu watch-clippy`                               | Watch clippy                       |
 | `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
 
-There's also a `run.nu` script at the **top level folder** of the repo. It is intended to be used in a
-CI/CD environment w/ all the required arguments supplied or in interactive mode, where the user will
-be prompted for input.
+There's also a `run.nu` script at the **top level folder** of the repo. It is intended
+to be used in a CI/CD environment w/ all the required arguments supplied or in
+interactive mode, where the user will be prompted for input.
 
 | Command                      | Description                                                                                                                                                                                                                                            |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
