@@ -39,6 +39,7 @@
     - [v0.3.2 2023-03-06](#v032-2023-03-06)
     - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_analytics_schema](#r3bl_analytics_schema)
+    - [v0.0.3 2025-05-10](#v003-2025-05-10)
     - [v0.0.2 2024-09-12](#v002-2024-09-12)
     - [v0.0.1 2023-12-31](#v001-2023-12-31)
 - [Archived](#archived)
@@ -988,6 +989,11 @@ exhaustively tested and is able to handle many more corner cases.
       accordingly.
 
 ## `r3bl_analytics_schema`
+
+### v0.0.3 (2025-05-10)
+
+- Updated:
+    - Use the latest deps.
 
 ### v0.0.2 (2024-09-12)
 
