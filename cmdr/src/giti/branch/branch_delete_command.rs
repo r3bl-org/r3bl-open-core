@@ -94,29 +94,29 @@ pub async fn handle_branch_delete_command(
     // Only proceed if some local branches exist (can't delete anything if there aren't
     // any).
     let (res, _cmd) = git::local_branch_ops::try_get_local_branches().await;
-    if let Ok((_, branch_info)) = res
-        && !branch_info.other_branches.is_empty()
-    {
-        let branches =
-            user_interaction::select_branches_to_delete(branch_info.other_branches)
-                .await?;
+    if let Ok((_, branch_info)) = res {
+        if !branch_info.other_branches.is_empty() {
+            let branches =
+                user_interaction::select_branches_to_delete(branch_info.other_branches)
+                    .await?;
 
-        // If the user didn't select any branches, we don't need to do anything.
-        if branches.is_empty() {
-            return Ok(CommandRunResult::Noop(
-                ui_str::branch_delete_display::info_chose_not_to_msg(),
-                details::empty(),
-            ));
-        }
+            // If the user didn't select any branches, we don't need to do anything.
+            if branches.is_empty() {
+                return Ok(CommandRunResult::Noop(
+                    ui_str::branch_delete_display::info_chose_not_to_msg(),
+                    details::empty(),
+                ));
+            }
 
-        let (confirm_header, confirm_options) =
-            user_interaction::create_confirmation_prompt(&branches);
-        let selected_action =
-            user_interaction::get_user_confirmation(confirm_header, confirm_options)
-                .await?;
+            let (confirm_header, confirm_options) =
+                user_interaction::create_confirmation_prompt(&branches);
+            let selected_action =
+                user_interaction::get_user_confirmation(confirm_header, confirm_options)
+                    .await?;
 
-        if let parse_user_choice::Selection::Delete = selected_action {
-            return command_execute::delete_selected_branches(&branches).await;
+            if let parse_user_choice::Selection::Delete = selected_action {
+                return command_execute::delete_selected_branches(&branches).await;
+            }
         }
     }
 
