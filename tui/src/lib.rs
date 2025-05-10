@@ -375,7 +375,7 @@
 //! │                                               │
 //! │  main.rs                                      │
 //! │                          ╭──────────────────╮ │
-//! │  GlobalData ────────────〉│ window size      │ │
+//! │  GlobalData ────────────>│ window size      │ │
 //! │  HasFocus                │ offscreen buffer │ │
 //! │  ComponentRegistryMap    │ state            │ │
 //! │  App & Component(s)      │ channel sender   │ │
@@ -481,17 +481,17 @@
 //! ╭─────────────────────────────────────────────────────────────────────────╮
 //! │In band input event                                                      │
 //! │                                                                         │
-//! │  Input ──〉 [TerminalWindow]                                             │
+//! │  Input ──> [TerminalWindow]                                             │
 //! │  Event          ⎫      │                                                │
 //! │                 │      ⎩                  [ComponentRegistryMap] stores │
-//! │                 │    [App]──────────────〉 [Component]s at 1st render    │
+//! │                 │    [App]──────────────> [Component]s at 1st render    │
 //! │                 │      │                                                │
 //! │                 │      │                                                │
-//! │                 │      │          ╭──────〉 id=1 has focus               │
+//! │                 │      │          ╭──────> id=1 has focus               │
 //! │                 │      │          │                                     │
-//! │                 │      ├──〉 [Component] id=1 ─────╮                     │
+//! │                 │      ├──> [Component] id=1 ─────╮                     │
 //! │                 │      │                          │                     │
-//! │                 │      ╰──〉 [Component] id=2      │                     │
+//! │                 │      ╰──> [Component] id=2      │                     │
 //! │                 │                                 │                     │
 //! │          default handler                          │                     │
 //! │                 ⎫                                 │                     │
@@ -503,16 +503,16 @@
 //! │Out of band app signal                                      │
 //! │                                                            │
 //! │  App                                                       │
-//! │  Signal ──〉 [App]                                          │
+//! │  Signal ──> [App]                                          │
 //! │               ⎫                                            │
 //! │               │                                            │
-//! │               ╰──────〉 Update state                        │
+//! │               ╰──────> Update state                        │
 //! │                        main thread rerender                │
 //! │                               ⎫                            │
 //! │                               │                            │
-//! │                               ╰─────〉[App]                 │
+//! │                               ╰─────>[App]                 │
 //! │                                        ⎫                   │
-//! │                                        ╰────〉 [Component]s │
+//! │                                        ╰────> [Component]s │
 //! │                                                            │
 //! ╰────────────────────────────────────────────────────────────╯
 //! ```

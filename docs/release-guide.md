@@ -50,22 +50,6 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 ## Example of full workflow
 
 ```sh
-cd tui
-# Update version in Cargo.toml and this file
-# Update CHANGELOG.md
-# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
-# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
-cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
-cargo readme > README.md
-git add -A
-git commit -S -m "v0.6.0-tui"
-git tag -a v0.6.0-tui -m "v0.6.0-tui"
-cargo publish
-git push ; git push --tags # Push tags & commits
-cd ..
-
 cd cmdr
 # Update version in Cargo.toml and this file
 # Update CHANGELOG.md
@@ -82,6 +66,22 @@ git tag -a v0.0.16-cmdr -m "v0.0.16-cmdr"
 cargo publish
 # 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
 # You can do this using `cd cmdr && nu run build-release-in-docker`
+git push ; git push --tags # Push tags & commits
+cd ..
+
+cd tui
+# Update version in Cargo.toml and this file
+# Update CHANGELOG.md
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
+git add -A
+git commit -S -m "v0.7.0-tui"
+git tag -a v0.7.0-tui -m "v0.7.0-tui"
+cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
 
