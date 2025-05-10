@@ -1741,7 +1741,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_tui"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "async-stream",
  "bincode 2.0.1",
