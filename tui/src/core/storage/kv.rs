@@ -343,7 +343,7 @@ mod kv_tests {
     use tracing::{instrument, Level};
 
     use super::*;
-    use crate::create_temp_dir;
+    use crate::try_create_temp_dir;
 
     fn check_folder_exists(path: &Path) -> bool { path.exists() && path.is_dir() }
 
@@ -364,7 +364,7 @@ mod kv_tests {
         let bucket_name = "bucket".to_string();
 
         // Setup temp dir (this will be dropped when `dir` is out of scope).
-        let root_temp_dir = create_temp_dir()?;
+        let root_temp_dir = try_create_temp_dir()?;
         let path_buf = root_temp_dir.join("db_folder");
 
         setup_tracing();
@@ -444,7 +444,7 @@ mod kv_tests {
         let bucket_name = "bucket".to_string();
 
         // Setup temp dir (this will be dropped when `dir` is out of scope).
-        let root_temp_dir = create_temp_dir()?;
+        let root_temp_dir = try_create_temp_dir()?;
         let path_buf = root_temp_dir.join("db_folder");
 
         setup_tracing();

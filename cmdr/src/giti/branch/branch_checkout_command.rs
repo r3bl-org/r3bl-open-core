@@ -22,7 +22,6 @@ use r3bl_tui::{CommandRunResult,
                choose,
                height,
                readline_async::{HowToChoose, StyleSheet}};
-use smallvec::smallvec;
 
 use crate::{giti::{BranchCheckoutDetails,
                    CommandRunDetails,
@@ -144,6 +143,8 @@ mod command_execute {
 }
 
 mod user_interaction {
+    use r3bl_tui::inline_vec;
+
     use super::*;
 
     pub async fn handle_branch_selection()
@@ -165,7 +166,7 @@ mod user_interaction {
                 ui_str::branch_checkout_display::select_branch_to_switch_to_msg_raw(),
                 crate::common::ui_templates::header_style_default()
             )];
-            prefix_single_select_instruction_header(smallvec![last_line])
+            prefix_single_select_instruction_header(inline_vec![last_line])
         };
         let mut default_io_devices = DefaultIoDevices::default();
         let maybe_user_choice = choose(

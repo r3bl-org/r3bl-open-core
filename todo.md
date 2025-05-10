@@ -1,21 +1,9 @@
-# test `giti` user flow
-
-- [ ] devise an approach to do this
-
 # make release of `r3bl-cmdr` and `r3bl_tui`
 
 - [ ] make sure `cmdr` docker file works (with `pkg-config` and `libssl-dev` removed):
       https://github.com/r3bl-org/r3bl-open-core/issues/426
 - [ ] release `r3bl_tui`, `r3bl_cmdr`: https://github.com/r3bl-org/r3bl-open-core/issues/429
 - [ ] close this: https://github.com/r3bl-org/r3bl-open-core/issues/391
-
-# minor perf in `tui` and `edi`: https://github.com/r3bl-org/r3bl-open-core/issues/428
-
-- [ ] replace `HashMap` with `BTreeMap` (better cache locality performance). `HashMap` is great for
-      random access, `BTreeMap` is good for cache locality and iteration which is the primary use
-      case for most code in `r3bl_open_core` repo
-- [ ] add fps counter row to bottom of `edi`, just like in the `tui/examples/demo/*` add an
-      FPS/telemetry display to bottom of `edi`
 
 # modernize `choose` and `giti` codebase: https://github.com/r3bl-org/r3bl-open-core/issues/427
 
@@ -28,6 +16,21 @@
 - [ ] rewrite `giti` code to use the newtypes, like width, height, etc. and introduce newtypes, etc
       where needed
 
+# minor perf in `tui` and `edi`: https://github.com/r3bl-org/r3bl-open-core/issues/428
+
+- [ ] replace `HashMap` with `BTreeMap` (better cache locality performance). `HashMap` is great for
+      random access, `BTreeMap` is good for cache locality and iteration which is the primary use
+      case for most code in `r3bl_open_core` repo
+- [ ] add fps counter row to bottom of `edi`, just like in the `tui/examples/demo/*` add an
+      FPS/telemetry display to bottom of `edi`
+
+# make release of `r3bl-cmdr` and `r3bl_tui`
+
+- [ ] make sure `cmdr` docker file works (with `pkg-config` and `libssl-dev` removed):
+      https://github.com/r3bl-org/r3bl-open-core/issues/426
+- [ ] release `r3bl_tui`, `r3bl_cmdr`: https://github.com/r3bl-org/r3bl-open-core/issues/429
+- [ ] close this: https://github.com/r3bl-org/r3bl-open-core/issues/391
+
 # create sub-issues for `giti`: https://github.com/r3bl-org/r3bl-open-core/issues/423
 
 - [ ] `giti branch rename` -> rename an existing branch to other
@@ -38,3 +41,7 @@
 - [ ] `giti delete *` -> switch to main and pull (delete remotes)
 - [ ] `giti --manual` -> show the user guide for giti using the TUI MD component w/ search, jump to
       headings, etc
+
+# test `giti` user flow
+
+- [ ] devise an approach to do this

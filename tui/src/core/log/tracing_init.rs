@@ -165,7 +165,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::create_temp_dir;
+    use crate::try_create_temp_dir;
 
     #[test]
     fn test_try_create_display_layer() {
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_try_create_file_layer() {
-        let dir = create_temp_dir().unwrap();
+        let dir = try_create_temp_dir().unwrap();
         let file_path = dir.join("my_temp_log_file.log");
         let file_path = file_path.to_str().unwrap().to_string();
 
@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_try_create_both_layers() {
-        let dir = create_temp_dir().unwrap();
+        let dir = try_create_temp_dir().unwrap();
         let file_path = dir.join("my_temp_log_file.log");
         let file_path = file_path.to_str().unwrap().to_string();
 

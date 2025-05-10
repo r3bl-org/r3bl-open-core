@@ -38,6 +38,26 @@ macro_rules! serial_preserve_pwd_test {
 }
 
 /// This macro is used to wrap a block with code that saves the current working directory,
+/// When `cargo test` runs, it runs all the tests in a single process. This means that
+/// when one test changes the current working directory, it affects all other tests that
+/// run after it. This macro is used to ensure that the current working directory is
+/// restored after the test is run. And all the tests that change directory are run
+/// serially.
+#[macro_export]
+macro_rules! serial_async_test_with_safe_cd {
+    ($name:ident, $block:block) => {
+        #[tokio::test]
+        #[serial_test::serial]
+        async fn $name() -> miette::Result<()> {
+            let og_pwd = std::env::current_dir().unwrap();
+            let result = { $block };
+            std::env::set_current_dir(og_pwd).unwrap();
+            result
+        }
+    };
+}
+
+/// This macro is used to wrap a block with code that saves the current working directory,
 /// runs the block of code for the test, and then restores the original working directory.
 ///
 /// Use this in conjunction with
@@ -55,7 +75,12 @@ macro_rules! with_saved_pwd {
     }};
 }
 
-/// Change cwd for current process.
+/// Change cwd for current process. This is potentially dangerous, as it can
+/// affect other parts of the program that rely on the current working directory.
+/// Use with caution. An example of this is when running tests in parallel in `cargo
+/// test`. `cargo test` runs all the tests in a single process. This means that when one
+/// test changes the current working directory, it affects all other tests that run after
+/// it.
 pub fn try_cd(new_dir: impl AsRef<Path>) -> FsOpResult<()> {
     match env::set_current_dir(new_dir.as_ref()) {
         Ok(_) => ok!(),
@@ -79,14 +104,14 @@ mod tests_directory_change {
     use std::{fs, os::unix::fs::PermissionsExt as _};
 
     use super::*;
-    use crate::{create_temp_dir,
-                directory_change::try_cd,
+    use crate::{directory_change::try_cd,
                 fs_path::FsOpError,
-                fs_paths};
+                fs_paths,
+                try_create_temp_dir};
 
     serial_preserve_pwd_test!(test_try_change_directory_permissions_errors, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         // Create a new temporary directory.
         let new_tmp_dir =
@@ -116,7 +141,7 @@ mod tests_directory_change {
 
     serial_preserve_pwd_test!(test_try_change_directory_happy_path, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         // Create a new temporary directory.
         let new_tmp_dir = fs_paths!(with_root: root => "test_change_dir_happy_path");
@@ -134,7 +159,7 @@ mod tests_directory_change {
 
     serial_preserve_pwd_test!(test_try_change_directory_non_existent, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         // Create a new temporary directory.
         let new_tmp_dir = fs_paths!(with_root: root => "test_change_dir_non_existent");
@@ -154,7 +179,7 @@ mod tests_directory_change {
 
     serial_preserve_pwd_test!(test_try_change_directory_invalid_name, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         // Create a new temporary directory.
         let new_tmp_dir = fs_paths!(with_root: root => "test_change_dir_invalid_name");

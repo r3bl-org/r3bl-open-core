@@ -75,7 +75,6 @@ use crate::{inline_string,
 ///     ok!()
 /// # }
 /// ```
-
 pub struct ReadlineAsyncContext {
     pub readline: Readline,
     pub shared_writer: SharedWriter,
@@ -178,9 +177,9 @@ impl ReadlineAsyncContext {
         tokio::time::sleep(READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY).await;
 
         Ok(Some(ReadlineAsyncContext {
-            readline: readline,
+            readline,
             shared_writer: stdout,
-            shutdown_complete_sender: shutdown_complete_sender,
+            shutdown_complete_sender,
         }))
     }
 

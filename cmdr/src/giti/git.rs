@@ -276,231 +276,125 @@ pub mod local_branch_ops {
     }
 }
 
-/// This module contains test functions for validating various Git-related operations,
-/// such as checking the working directory status, retrieving the current branch name,
-/// switching branches, and managing temporary directories for tests.
-///
-/// The code leverages `tokio::test` for asynchronous testing and uses helper functions
-/// and temporary directory utilities to simulate Git repositories. Each test ensures
-/// the target functionality behaves as expected in both valid and error scenarios.
-///
-/// # Modules
-///
-/// - **helper_setup_git_repo_with_commit**: A utility function to set up a Git repository
-///   with an initial commit. This helper is used to reduce boilerplate for initializing
-///   Git repositories in multiple tests.
-///
-/// # Tests
-///
-/// - **test_try_is_working_directory_clean**: Validates the
-///   `try_is_working_directory_clean` function:
-///     - Before Git initialization, the function should return an error.
-///     - After initialization and creating files, it should correctly identify the
-///       working directory as clean or dirty.
-///     - Staged but uncommitted changes should mark the repository as dirty, reverting to
-///       clean after a commit.
-///
-/// - **test_try_get_current_branch_name**: Confirms that the
-///   `try_get_current_branch_name` function works as intended for retrieving the active
-///   branch name:
-///     - Fails when executed outside a Git repository.
-///     - Successfully retrieves the branch name in an initialized repository.
-///     - Verifies the branch name updates correctly when switching between branches.
-///
-/// - **test_try_checkout_existing_local_branch**: Ensures the
-///   `try_checkout_existing_local_branch` function works as expected for switching
-///   branches:
-///     - Successfully checks out an existing branch.
-///     - Fails gracefully when trying to check out a non-existent branch.
-///
-/// # Dependencies:
-///
-/// - **TempDir**: Used to create and manage temporary directories during testing.
-///   Automatically cleans up directories when dropped.
-///
-/// - **fs_paths!**: Macro for handling file and folder paths conveniently during test
-///   setup.
-///
-/// - **commands!**: Utility macro for running shell commands (`git` in this case)
-///   asynchronously.
-///
-/// - **r3bl_tui**: Provides helper utilities such as temporary directory management and
-///   path creation.
-///
-/// # Note:
-///
-/// Each test ensures proper cleanup of temporary folders upon completion. Temporary Git
-/// repositories are automatically removed to maintain an isolated test environment.
-///
-/// Errors encountered during asynchronous calls (e.g., invalid Git operations) are
-/// correctly propagated and asserted to verify robustness in edge cases.
+/// These tests are all run using [serial_test], since `cargo test` runs all tests in a
+/// single process, and when one of the tests changes the current working directory, it
+/// affects the entire process moving forwards. These tests also use the
+/// [serial_async_test_with_safe_cd] macro to ensure that the current working directory
+/// gets safely restored once the test finishes running.
 #[cfg(test)]
 mod tests {
-    use std::fs::write;
-
-    use r3bl_tui::{MkdirOptions::CreateIntermediateDirectories,
-                   TempDir,
-                   create_temp_dir,
-                   fs_paths,
+    use r3bl_tui::{TempDir,
                    inline_string,
-                   try_cd,
-                   try_mkdir};
+                   inline_vec,
+                   ok,
+                   serial_async_test_with_safe_cd,
+                   try_create_temp_dir_and_cd,
+                   try_write_file};
 
     use super::*;
 
-    /// Tests [super::try_is_working_directory_clean()] function to verify it correctly
-    /// detects clean and dirty repository states. Does not use
-    /// [helper_setup_git_repo_with_commit()] helper function.
-    #[tokio::test]
-    async fn test_try_is_working_directory_clean() {
-        let tmp_dir_root = create_temp_dir().unwrap();
+    /// Helper function to setup a basic git repository with an initial commit Returns a
+    /// tuple of (temp_dir_root, git_folder_path, initial_branch_name). When the
+    /// `temp_dir_root` is dropped it will clean remove that folder.
+    ///
+    /// This function also uses [r3bl_tui::try_cd()] so make sure to wrap all tests that
+    /// call this function with [serial_test].
+    async fn helper_setup_git_repo_with_commit() -> miette::Result<(
+        /* temp_dir_root: don't drop this immediately using `_` */ TempDir,
+        /* initial_branch_name */ InlineString,
+    )> {
+        let (tmp_dir_root, git_folder) = try_create_temp_dir_and_cd!("git_test_repo");
 
-        // Setup git folder.
-        let git_folder = fs_paths!(with_root: tmp_dir_root => "test_git_folder");
-        try_mkdir(&git_folder, CreateIntermediateDirectories).unwrap();
+        // First run git init.
+        command!(program => "git", args => "init").run().await?;
 
-        // Change to this folder.
-        try_cd(&git_folder).unwrap();
+        // Configure initial branch name to be `main`.
+        command!(program => "git", args => "config", "--local", "init.defaultBranch", "main")
+            .run()
+            .await?;
+
+        // Configure git user for commit. This is necessary to create a commit. This test
+        // assumes an environment where no prior local or global git config has been
+        // created.
+        command!(program => "git", args => "config", "user.email", "test@example.com")
+            .run()
+            .await?;
+        command!(program => "git", args => "config", "user.name", "Test User")
+            .run()
+            .await?;
+
+        // Create and commit a file to have an initial commit.
+        try_write_file(git_folder, "initial.txt", "initial content")?;
+        command!(program => "git", args => "add", "initial.txt")
+            .run()
+            .await?;
+        command!(program => "git", args => "commit", "-m", "Initial commit")
+            .run()
+            .await?;
+
+        // Get current branch name.
+        let initial_branch = try_get_current_branch_name().await.0?;
+        assert_eq!(initial_branch.as_str(), "main");
+
+        ok!((tmp_dir_root, initial_branch))
+    }
+
+    // Tests [super::try_is_working_directory_clean()] function to verify it correctly
+    // detects clean and dirty repository states. Does not use
+    // [helper_setup_git_repo_with_commit()] helper function.
+    serial_async_test_with_safe_cd!(test_try_is_working_directory_clean, {
+        let (_temp_dir_root, git_folder) = try_create_temp_dir_and_cd!("test_git_folder");
 
         // Assert that running command will error out before git init.
         assert!(try_is_working_directory_clean().await.0.is_err());
 
         // Run git init.
-        _ = command!(program => "git", args => "init")
-            .run()
-            .await
-            .unwrap();
+        _ = command!(program => "git", args => "init").run().await?;
 
         // Assert that the working directory is clean after git init.
-        assert_eq!(
-            try_is_working_directory_clean().await.0.unwrap(),
-            RepoStatus::Clean
-        );
+        assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Clean);
 
         // Create a file.
-        write(
-            fs_paths!(with_root: git_folder => "test_file.txt"),
-            "test content",
-        )
-        .unwrap();
+        try_write_file(git_folder, "test_file.txt", "test content")?;
 
         // Assert that the working directory is dirty after creating a file.
-        assert_eq!(
-            try_is_working_directory_clean().await.0.unwrap(),
-            RepoStatus::Dirty
-        );
+        assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Dirty);
 
         // Stage the file.
         _ = command!(program => "git", args => "add", "test_file.txt")
             .run()
-            .await
-            .unwrap();
+            .await?;
 
         // Repo is still dirty (changes are staged but not committed).
-        assert_eq!(
-            try_is_working_directory_clean().await.0.unwrap(),
-            RepoStatus::Dirty
-        );
+        assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Dirty);
 
-        // Configure git user for commit.
+        // Configure git user for commit. This is necessary to create a commit. This test
+        // assumes an environment where no prior local or global git config has been
+        // created.
         _ = command!(program => "git", args => "config", "user.email", "test@example.com")
-            .run()
-            .await
-            .unwrap();
+            .run().await?;
         _ = command!(program => "git", args => "config", "user.name", "Test User")
             .run()
-            .await
-            .unwrap();
+            .await?;
 
         // Commit the changes.
         _ = command!(program => "git", args => "commit", "-m", "Initial commit")
             .run()
-            .await
-            .unwrap();
+            .await?;
 
         // Assert that the working directory is clean after committing.
-        assert_eq!(
-            try_is_working_directory_clean().await.0.unwrap(),
-            RepoStatus::Clean
-        );
-    } // Drop temp_dir_root here (which cleans up that folder).
+        assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Clean);
 
-    /// Helper function to setup a basic git repository with an initial commit Returns a
-    /// tuple of (temp_dir_root, git_folder_path, initial_branch_name). When the
-    /// `temp_dir_root` is dropped it will clean remove that folder.
-    async fn helper_setup_git_repo_with_commit() -> (
-        /* temp_dir_root: don't drop this immediately using `_` */ TempDir,
-        /* initial_branch_name */ InlineString,
-    ) {
-        let tmp_dir_root = create_temp_dir().unwrap();
+        ok!()
+    }); // Drop _temp_dir_root here (which cleans up that folder).
 
-        // Setup git folder.
-        let git_folder = fs_paths!(with_root: tmp_dir_root => "git_test_repo");
-        try_mkdir(&git_folder, CreateIntermediateDirectories).unwrap();
-
-        // Change to this folder.
-        try_cd(&git_folder).unwrap();
-
-        // First run git init.
-        _ = command!(program => "git", args => "init")
-            .run()
-            .await
-            .unwrap();
-
-        // Configure initial branch name to be `main`.
-        _ = command!(program => "git", args => "config", "--local", "init.defaultBranch", "main")
-            .run()
-            .await
-            .unwrap();
-
-        // Configure git user for commit.
-        _ = command!(program => "git", args => "config", "user.email", "test@example.com")
-            .run()
-            .await
-            .unwrap();
-        _ = command!(program => "git", args => "config", "user.name", "Test User")
-            .run()
-            .await
-            .unwrap();
-
-        // Create and commit a file to have an initial commit.
-        write(
-            fs_paths!(with_root: git_folder => "initial.txt"),
-            "initial content",
-        )
-        .unwrap();
-        _ = command!(program => "git", args => "add", "initial.txt")
-            .run()
-            .await
-            .unwrap();
-        _ = command!(program => "git", args => "commit", "-m", "Initial commit")
-            .run()
-            .await
-            .unwrap();
-
-        // Get current branch name.
-        let initial_branch = try_get_current_branch_name().await.0.unwrap();
-
-        assert_eq!(initial_branch.as_str(), "main");
-
-        (tmp_dir_root, initial_branch)
-    }
-
-    /// Tests [super::try_get_current_branch_name()] function to verify it correctly
-    /// retrieves the current branch name.
-    #[tokio::test]
-    async fn test_try_get_current_branch_name() {
+    // Tests [super::try_get_current_branch_name()] function to verify it correctly
+    // retrieves the current branch name.
+    serial_async_test_with_safe_cd!(test_try_get_current_branch_name, {
         // Create an empty temp dir to verify that running the command fails.
         {
-            // Create a temporary directory.
-            let temp_dir_root = create_temp_dir().unwrap();
-
-            // Setup git sub folder.
-            let git_folder = fs_paths!(with_root: temp_dir_root => "test_current_branch");
-            try_mkdir(&git_folder, CreateIntermediateDirectories).unwrap();
-
-            // Change to this sub folder.
-            try_cd(&git_folder).unwrap();
+            // Create a temp dir and cd to it.
+            let _temp_dir_root = try_create_temp_dir_and_cd!();
 
             // Assert that running command will error out before `git init` is run.
             assert!(try_get_current_branch_name().await.0.is_err());
@@ -511,126 +405,117 @@ mod tests {
             let (
                 /* don't drop this immediately using `_` */ _temp_dir_root,
                 initial_branch_name,
-            ) = helper_setup_git_repo_with_commit().await;
+            ) = helper_setup_git_repo_with_commit().await?;
 
             // Get initial branch name.
-            let (res, _) = try_get_current_branch_name().await;
-            {
-                let name = res.unwrap();
-                assert_eq!(name, initial_branch_name);
-            }
+            let name = try_get_current_branch_name().await.0?;
+            assert_eq!(name, initial_branch_name);
 
             // Create and switch to a new branch.
             _ = command!(program => "git", args => "checkout", "-b", "feature-branch")
                 .run()
-                .await
-                .unwrap();
+                .await?;
 
             // Get current branch name after switch.
-            let (res, _) = try_get_current_branch_name().await;
-            let new_feature_branch = res.unwrap();
+            let new_feature_branch = try_get_current_branch_name().await.0?;
 
             // Verify branch name has changed.
             assert_eq!(new_feature_branch, "feature-branch");
             assert_ne!(new_feature_branch, initial_branch_name);
         } // Drop _temp_dir_root here (which cleans up that folder).
-    }
 
-    /// Tests [super::try_checkout_existing_local_branch()] function to verify it
-    /// correctly switches to an existing branch.
-    #[tokio::test]
-    async fn test_try_checkout_existing_local_branch() {
+        ok!()
+    });
+
+    // Tests [super::try_checkout_existing_local_branch()] function to verify it
+    // correctly switches to an existing branch.
+    serial_async_test_with_safe_cd!(test_try_checkout_existing_local_branch, {
         let (
             /* don't drop this immediately using `_` */ _temp_dir_root,
             initial_branch,
-        ) = helper_setup_git_repo_with_commit().await;
+        ) = helper_setup_git_repo_with_commit().await?;
 
         // Create a new branch (without switching to it).
         _ = command!(program => "git", args => "branch", "test-branch")
             .run()
-            .await
-            .unwrap();
+            .await?;
 
         // Checkout the test branch.
-        let (res, _) = try_checkout_existing_local_branch("test-branch").await;
+        let res = try_checkout_existing_local_branch("test-branch").await.0;
         assert!(res.is_ok());
 
         // Get current branch after checkout.
-        let (res, _) = try_get_current_branch_name().await;
-        let current_branch = res.unwrap();
+        let current_branch = try_get_current_branch_name().await.0?;
 
         // Verify current branch is now the test branch.
         assert_eq!(current_branch, "test-branch");
         assert_ne!(current_branch, initial_branch);
 
         // Try to checkout a non-existent branch (should fail).
-        let (res, _) = try_checkout_existing_local_branch("nonexistent-branch").await;
+        let res = try_checkout_existing_local_branch("nonexistent-branch")
+            .await
+            .0;
         assert!(res.is_err());
-    } // Drop _temp_dir_root and clean up folder.
 
-    /// Tests [super::try_create_and_switch_to_branch()], and
-    /// [super::local_branch_ops::try_get_local_branches] function to verify it correctly
-    /// creates a new branch and switches to it.
-    #[tokio::test]
-    async fn test_try_create_and_switch_to_branch() {
+        ok!()
+    }); // Drop _temp_dir_root and clean up folder.
+
+    // Tests [super::try_create_and_switch_to_branch()], and
+    // [super::local_branch_ops::try_get_local_branches] function to verify it correctly
+    // creates a new branch and switches to it.
+    serial_async_test_with_safe_cd!(test_try_create_and_switch_to_branch, {
         let (
             /* don't drop this immediately using `_` */ _temp_dir_root,
             initial_branch,
-        ) = helper_setup_git_repo_with_commit().await;
+        ) = helper_setup_git_repo_with_commit().await?;
 
         // Create a new branch and switch to it.
-        let (res, _) = try_create_and_switch_to_branch("new-feature").await;
+        let res = try_create_and_switch_to_branch("new-feature").await.0;
         assert!(res.is_ok());
 
         // Get current branch after creating and switching.
-        let (res, _) = try_get_current_branch_name().await;
-        let current_branch = res.unwrap();
+        let current_branch = try_get_current_branch_name().await.0?;
 
         // Verify current branch is now the new branch.
         assert_eq!(current_branch, "new-feature");
         assert_ne!(current_branch, initial_branch);
 
-        // Check that the branch exists in the list of branches.
-        let (res, _) = local_branch_ops::try_get_local_branches().await;
-        let (_, branch_info) = res.unwrap();
-
+        // Ensure the branch exists in the list of branches.
+        let (_, branch_info) = local_branch_ops::try_get_local_branches().await.0?;
         assert_eq!(
             branch_info.exists_locally("new-feature"),
             local_branch_ops::BranchExists::Yes
         );
-    } // Drop _temp_dir_root and clean up folder.
 
-    /// Tests [super::try_delete_branches()] and
-    /// [super::local_branch_ops::try_get_local_branches()] functions to verify it
-    /// correctly deletes branches.
-    #[tokio::test]
-    async fn test_try_delete_branches() {
+        ok!()
+    }); // Drop _temp_dir_root and clean up folder.
+
+    // Tests [super::try_delete_branches()] and
+    // [super::local_branch_ops::try_get_local_branches()] functions to verify it
+    // correctly deletes branches.
+    serial_async_test_with_safe_cd!(test_try_delete_branches, {
         let (
             /* don't drop this immediately using `_` */ _temp_dir_root,
             initial_branch,
-        ) = helper_setup_git_repo_with_commit().await;
+        ) = helper_setup_git_repo_with_commit().await?;
 
         // Should fail to delete the current branch.
-        let (res, _) = try_delete_branches(&initial_branch.into()).await;
+        let res = try_delete_branches(&initial_branch.into()).await.0;
         assert!(res.is_err());
 
         // Create some branches.
         _ = command!(program => "git", args => "branch", "branch1")
             .run()
-            .await
-            .unwrap();
+            .await?;
         _ = command!(program => "git", args => "branch", "branch2")
             .run()
-            .await
-            .unwrap();
+            .await?;
         _ = command!(program => "git", args => "branch", "branch3")
             .run()
-            .await
-            .unwrap();
+            .await?;
 
         // Verify branches exist.
-        let (res, _) = local_branch_ops::try_get_local_branches().await;
-        let (_, branch_info) = res.unwrap();
+        let (_, branch_info) = local_branch_ops::try_get_local_branches().await.0?;
 
         assert_eq!(
             branch_info.exists_locally("main"),
@@ -651,12 +536,13 @@ mod tests {
         );
 
         // Delete branches.
-        let (res, _) = try_delete_branches(&(&["branch1", "branch2"]).into()).await;
+        let res = try_delete_branches(&inline_vec!["branch1", "branch2"].into())
+            .await
+            .0;
         assert!(res.is_ok());
 
         // Verify branches are deleted
-        let (res, _) = local_branch_ops::try_get_local_branches().await;
-        let (_, branch_info) = res.unwrap();
+        let (_, branch_info) = local_branch_ops::try_get_local_branches().await.0?;
 
         assert_eq!(
             branch_info.exists_locally("branch1"),
@@ -670,30 +556,29 @@ mod tests {
             branch_info.exists_locally("branch3"),
             local_branch_ops::BranchExists::Yes
         );
-    } // Drop _temp_dir_root and clean up folder.
 
-    /// Tests [super::local_branch_ops::try_get_local_branches()] function to verify it
-    /// correctly lists branches and distinguishes the current branch.
-    #[tokio::test]
-    async fn test_try_get_local_branches() {
+        ok!()
+    }); // Drop _temp_dir_root and clean up folder.
+
+    // Tests [super::local_branch_ops::try_get_local_branches()] function to verify it
+    // correctly lists branches and distinguishes the current branch.
+    serial_async_test_with_safe_cd!(test_try_get_local_branches, {
         let (
             /* don't drop this immediately using `_` */ _temp_dir_root,
             initial_branch,
-        ) = helper_setup_git_repo_with_commit().await;
+        ) = helper_setup_git_repo_with_commit().await?;
 
         // Create some branches.
         _ = command!(program => "git", args => "branch", "branch1")
             .run()
-            .await
-            .unwrap();
+            .await?;
         _ = command!(program => "git", args => "branch", "branch2")
             .run()
-            .await
-            .unwrap();
+            .await?;
 
         // Get local branches.
-        let (res, _) = local_branch_ops::try_get_local_branches().await;
-        let (items_owned, branch_info) = res.unwrap();
+        let (items_owned, branch_info) =
+            local_branch_ops::try_get_local_branches().await.0?;
         // Verify `items_owned` list is correct.
         {
             // Verify current branch is the same as the initial branch.
@@ -728,12 +613,11 @@ mod tests {
         // Switch to another branch.
         _ = command!(program => "git", args => "checkout", "branch1")
             .run()
-            .await
-            .unwrap();
+            .await?;
 
         // Get local branches again.
-        let (res, _) = local_branch_ops::try_get_local_branches().await;
-        let (items_owned, branch_info) = res.unwrap();
+        let (items_owned, branch_info) =
+            local_branch_ops::try_get_local_branches().await.0?;
         {
             // Verify the current branch is now "branch1".
             assert_eq!(branch_info.current_branch.as_str(), "branch1");
@@ -747,12 +631,13 @@ mod tests {
             assert!(items_owned.iter().any(|branch| branch == "main"));
             assert!(items_owned.iter().any(|branch| branch == "branch2"));
         }
-    } // Drop _temp_dir_root and clean up folder.
 
-    /// Tests [local_branch_ops::LocalBranchInfo] methods including `exists_locally()`,
-    /// `mark_branch_current()`, and `trim_current_prefix_from_branch()`.
-    #[tokio::test]
-    async fn test_local_branch_info_methods() {
+        ok!()
+    }); // Drop _temp_dir_root and clean up folder.
+
+    // Tests [local_branch_ops::LocalBranchInfo] methods including `exists_locally()`,
+    // `mark_branch_current()`, and `trim_current_prefix_from_branch()`.
+    serial_async_test_with_safe_cd!(test_local_branch_info_methods, {
         // Test exists_locally method.
         let branch_info = local_branch_ops::LocalBranchInfo {
             current_branch: "main".into(),
@@ -791,36 +676,37 @@ mod tests {
         let unchanged =
             local_branch_ops::LocalBranchInfo::trim_current_prefix_from_branch("develop");
         assert_eq!(unchanged, "develop");
-    } // Drop _temp_dir_root and clean up folder.
 
-    /// Tests [super::local_branch_ops::try_execute_git_command_to_get_branches()]
-    /// function to verify it correctly lists all branches from the git repository.
-    #[tokio::test]
-    async fn test_try_execute_git_command_to_get_branches() {
+        ok!()
+    }); // Drop _temp_dir_root and clean up folder.
+
+    // Tests [super::local_branch_ops::try_execute_git_command_to_get_branches()]
+    // function to verify it correctly lists all branches from the git repository.
+    serial_async_test_with_safe_cd!(test_try_execute_git_command_to_get_branches, {
         let (
             /* don't drop this immediately using `_` */ _temp_dir_root,
             initial_branch,
-        ) = helper_setup_git_repo_with_commit().await;
+        ) = helper_setup_git_repo_with_commit().await?;
 
         // Create some branches
         _ = command!(program => "git", args => "branch", "branch1")
             .run()
-            .await
-            .unwrap();
+            .await?;
         _ = command!(program => "git", args => "branch", "branch2")
             .run()
-            .await
-            .unwrap();
+            .await?;
 
         // Get all branches
-        let (res, _) =
-            super::local_branch_ops::try_execute_git_command_to_get_branches().await;
-        let branches = res.unwrap();
+        let branches = super::local_branch_ops::try_execute_git_command_to_get_branches()
+            .await
+            .0?;
 
         // Verify all branches are listed
         assert!(branches.iter().any(|b| b == &initial_branch));
         assert!(branches.iter().any(|b| b == "branch1"));
         assert!(branches.iter().any(|b| b == "branch2"));
         assert_eq!(branches.len(), 3); // initial + 2 created branches
-    }
-} // Drop _temp_dir_root and clean up folder.
+
+        ok!()
+    }); // Drop _temp_dir_root and clean up folder.
+}

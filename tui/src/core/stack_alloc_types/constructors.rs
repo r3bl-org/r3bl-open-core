@@ -35,15 +35,6 @@ macro_rules! inline_string {
     }};
 }
 
-#[cfg(test)]
-mod inline_string_tests {
-    #[test]
-    fn test_inline_string() {
-        let result = inline_string!("{}, {}", "Hello", "world!");
-        assert_eq!(result, "Hello, world!");
-    }
-}
-
 /// A macro to create a [crate::TinyInlineString] (which is allocated and returned) with a
 /// specified format. No heap allocation via [String] creation occurs when the `$format`
 /// expression is executed.
@@ -64,11 +55,49 @@ macro_rules! tiny_inline_string {
     }};
 }
 
+/// A macro to create a [smallvec::SmallVec] using the provided elements.
+/// This is just a wrapper around [smallvec::smallvec!].
+#[macro_export]
+macro_rules! inline_vec {
+    ( $( $elem:expr ),* $(,)? ) => {{
+        let mut acc = $crate::InlineVec::new();
+        $(
+            acc.push($elem);
+        )*
+        acc
+    }};
+}
+
 #[cfg(test)]
-mod tiny_inline_string_tests {
+mod tests {
+    #[test]
+    fn test_inline_string() {
+        let result = inline_string!("{}, {}", "Hello", "world!");
+        assert_eq!(result, "Hello, world!");
+    }
+
     #[test]
     fn test_tiny_inline_string() {
         let result = tiny_inline_string!("{}, {}", "X", "Y");
         assert_eq!(result, "X, Y");
+    }
+
+    #[test]
+    fn test_inline_vec() {
+        {
+            let res = inline_vec![1, 2, 3];
+            assert_eq!(res.len(), 3);
+            assert_eq!(res[0], 1);
+            assert_eq!(res[1], 2);
+            assert_eq!(res[2], 3);
+        }
+
+        {
+            let res = inline_vec!["one", "two", "three"];
+            assert_eq!(res.len(), 3);
+            assert_eq!(res[0], "one");
+            assert_eq!(res[1], "two");
+            assert_eq!(res[2], "three");
+        }
     }
 }

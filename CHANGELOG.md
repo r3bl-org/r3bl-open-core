@@ -536,6 +536,13 @@ Added:
 
 Changed:
 
+- Change `Drop` impl for `TempDir` silently ignore errors when the directory can't be
+  deleted. This was causing some issues with tests. The `create_temp_dir()` function is
+  changed to `try_create_temp_dir()` to match the style of other code. Also add a new
+  macro `try_create_temp_dir_and_cd!` to make it easy to perform operations that are often
+  performed together. And added a `serial_async_test_with_safe_cd!` macro for testing
+  async code that performs change directory operations (for `cargo test` which runs tests
+  in the same process).
 - Make `command!()` work with `TokioCommand` instead of `std::process::Command`. All the
   code in the `script` module now works under the assumption that they will run in an
   async context. And a real world use case for this is `giti` itself, in the way that

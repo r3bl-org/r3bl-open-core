@@ -21,7 +21,8 @@
 
 use std::{env,
           fs,
-          io::ErrorKind,
+          fs::File,
+          io::{ErrorKind, Write},
           path::{Path, PathBuf}};
 
 use miette::Diagnostic;
@@ -33,7 +34,7 @@ use crate::ok;
 ///
 /// # Example - create a new path
 ///
-/// ```
+/// ```no_run
 /// use r3bl_tui::fs_paths;
 /// use std::path::{PathBuf, Path};
 ///
@@ -46,7 +47,7 @@ use crate::ok;
 ///
 /// # Example - join to an existing path
 ///
-/// ```
+/// ```no_run
 /// use r3bl_tui::fs_paths;
 /// use std::path::{PathBuf, Path};
 ///
@@ -87,12 +88,12 @@ macro_rules! fs_paths {
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// use r3bl_tui::fs_paths_exist;
 /// use r3bl_tui::fs_paths;
-/// use r3bl_tui::create_temp_dir;
+/// use r3bl_tui::try_create_temp_dir;
 ///
-/// let temp_dir = create_temp_dir().unwrap();
+/// let temp_dir = try_create_temp_dir().unwrap();
 /// let path_1 = fs_paths![with_root: temp_dir => "some_dir"];
 /// let path_2 = fs_paths![with_root: temp_dir => "another_dir"];
 ///
@@ -214,18 +215,68 @@ pub fn try_pwd() -> FsOpResult<PathBuf> {
 /// - Eg: `"/home/user/some/path"`
 pub fn path_as_string(path: &Path) -> String { path.display().to_string() }
 
+/// Writes the given content to the file named `file_name` in the specified `folder`.
+/// - If the parent directory does not exist, returns an error.
+/// - If the file cannot be written due to permissions or invalid name, returns an error.
+pub fn try_write_file(
+    folder: impl AsRef<Path>,
+    file_name: impl AsRef<str>,
+    content: impl AsRef<str>,
+) -> FsOpResult<()> {
+    let file_path = folder.as_ref().join(file_name.as_ref());
+    match File::create(file_path) {
+        Ok(mut file) => {
+            if let Err(err) = file.write_all(content.as_ref().as_bytes()) {
+                return FsOpResult::Err(FsOpError::IoError(err));
+            }
+            ok!()
+        }
+        Err(err) => match err.kind() {
+            ErrorKind::NotFound => {
+                FsOpResult::Err(FsOpError::DirectoryDoesNotExist(err.to_string()))
+            }
+            ErrorKind::PermissionDenied => {
+                FsOpResult::Err(FsOpError::PermissionDenied(err.to_string()))
+            }
+            ErrorKind::InvalidInput => {
+                FsOpResult::Err(FsOpError::InvalidName(err.to_string()))
+            }
+            _ => FsOpResult::Err(FsOpError::IoError(err)),
+        },
+    }
+}
+
 #[cfg(test)]
-mod tests_fs_path {
+mod tests {
     use std::os::unix::fs::PermissionsExt as _;
 
     use fs_path::try_pwd;
 
     use super::*;
-    use crate::{create_temp_dir, fs_path, serial_preserve_pwd_test};
+    use crate::{fs_path, serial_preserve_pwd_test, try_create_temp_dir};
+
+    serial_preserve_pwd_test!(test_try_write, {
+        // Create the root temp dir.
+        let root = try_create_temp_dir().unwrap();
+
+        // Create a new file.
+        let content = "Hello, world!";
+        let file_name = "test_file.txt";
+        try_write_file(&root, file_name, content).unwrap();
+        let file_path = root.join(file_name);
+
+        // Check if the file exists and has the correct content.
+        assert!(file_path.exists());
+        assert!(file_path.is_file());
+        let read_content = fs::read_to_string(&file_path).unwrap();
+        assert_eq!(read_content, content);
+
+        // root will be deleted at the end of the test when it is dropped.
+    });
 
     serial_preserve_pwd_test!(test_try_pwd, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let new_dir = root.join("test_pwd");
         fs::create_dir_all(&new_dir).unwrap();
@@ -238,7 +289,7 @@ mod tests_fs_path {
 
     serial_preserve_pwd_test!(test_try_pwd_errors, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         // Create a directory, change to it, remove all permissions for user.
         let no_permissions_dir = root.join("no_permissions_dir");
@@ -267,7 +318,7 @@ mod tests_fs_path {
 
     serial_preserve_pwd_test!(test_fq_path_relative_to_try_pwd, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let sub_path = "test_fq_path_relative_to_pwd";
         let new_dir = root.join(sub_path);
@@ -288,7 +339,7 @@ mod tests_fs_path {
 
     serial_preserve_pwd_test!(test_path_as_string, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         env::set_current_dir(&root).unwrap();
 
@@ -300,7 +351,7 @@ mod tests_fs_path {
 
     serial_preserve_pwd_test!(test_try_file_exists, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let new_dir = root.join("test_file_exists_dir");
         fs::create_dir_all(&new_dir).unwrap();
@@ -321,7 +372,7 @@ mod tests_fs_path {
 
     serial_preserve_pwd_test!(test_try_file_exists_not_found_error, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let new_dir = root.join("test_file_exists_not_found_error");
 
@@ -333,7 +384,7 @@ mod tests_fs_path {
 
     serial_preserve_pwd_test!(test_try_file_exists_invalid_name_error, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let new_dir = root.join("test_file_exists_invalid_name_error\0");
 
@@ -345,7 +396,7 @@ mod tests_fs_path {
 
     serial_preserve_pwd_test!(test_try_file_exists_permissions_errors, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         // Create a directory, change to it, remove all permissions for user.
         let no_permissions_dir = root.join("no_permissions_dir");
@@ -368,7 +419,7 @@ mod tests_fs_path {
 
     serial_preserve_pwd_test!(test_try_directory_exists, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let new_dir = root.join("test_dir_exists_dir");
         fs::create_dir_all(&new_dir).unwrap();
@@ -382,7 +433,7 @@ mod tests_fs_path {
 
     serial_preserve_pwd_test!(test_try_directory_exists_not_found_error, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let new_dir = root.join("test_dir_exists_not_found_error");
 
@@ -394,7 +445,7 @@ mod tests_fs_path {
 
     serial_preserve_pwd_test!(test_try_directory_exists_invalid_name_error, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let new_dir = root.join("test_dir_exists_invalid_name_error\0");
 
@@ -406,7 +457,7 @@ mod tests_fs_path {
 
     serial_preserve_pwd_test!(test_try_directory_exists_permissions_errors, {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         // Create a directory, change to it, remove all permissions for user.
         let no_permissions_dir = root.join("no_permissions_dir");

@@ -23,8 +23,8 @@ use r3bl_tui::{CommandRunResult,
                ast_line,
                choose,
                height,
+               inline_vec,
                readline_async::{HowToChoose, StyleSheet}};
-use smallvec::smallvec;
 
 use crate::{common,
             common::ui_templates::prefix_single_select_instruction_header,
@@ -72,7 +72,7 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
             ui_str::please_select_branch_sub_command_msg_raw(),
             common::ui_templates::header_style_default()
         )];
-        prefix_single_select_instruction_header(smallvec![last_line])
+        prefix_single_select_instruction_header(inline_vec![last_line])
     };
     let mut default_io_devices = DefaultIoDevices::default();
     let maybe_user_choice = choose(

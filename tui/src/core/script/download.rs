@@ -47,14 +47,14 @@ mod tests_download {
     use tokio::time::timeout;
 
     use super::*;
-    use crate::create_temp_dir;
+    use crate::try_create_temp_dir;
 
     const TIMEOUT: Duration = Duration::from_secs(1);
 
     #[tokio::test]
     async fn test_download_file_overwrite_existing() {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let new_dir = root.join("test_download_file_overwrite_existing");
         fs::create_dir_all(&new_dir).unwrap();

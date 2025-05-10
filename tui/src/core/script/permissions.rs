@@ -41,12 +41,12 @@ pub fn try_set_file_executable(file: impl AsRef<Path>) -> miette::Result<()> {
 #[cfg(test)]
 mod tests_permissions {
     use super::*;
-    use crate::create_temp_dir;
+    use crate::try_create_temp_dir;
 
     #[test]
     fn test_set_file_executable() {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let new_dir = root.join("test_set_file_executable");
         fs::create_dir_all(&new_dir).unwrap();
@@ -70,7 +70,7 @@ mod tests_permissions {
     #[test]
     fn test_set_file_executable_on_non_file() {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let new_dir = root.join("test_set_file_executable_on_non_file");
         fs::create_dir_all(&new_dir).unwrap();
@@ -82,7 +82,7 @@ mod tests_permissions {
     #[test]
     fn test_set_file_executable_on_non_existent_file() {
         // Create the root temp dir.
-        let root = create_temp_dir().unwrap();
+        let root = try_create_temp_dir().unwrap();
 
         let new_dir = root.join("test_set_file_executable_on_non_existent_file");
         fs::create_dir_all(&new_dir).unwrap();
