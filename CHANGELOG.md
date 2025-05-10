@@ -6,6 +6,7 @@
     - [Global config (2025-03-19)](#global-config-2025-03-19)
     - [Global config (2024-12-04)](#global-config-2024-12-04)
 - [r3bl-cmdr](#r3bl-cmdr)
+    - [v0.0.19](#v0019-2025-05-10)
     - [v0.0.18](#v0018-2025-05-10)
     - [v0.0.17](#v0017-2025-05-10)
     - [v0.0.16 2024-09-13](#v0016-2024-09-13)
@@ -240,6 +241,10 @@ the following:
 <!-- Active crates section -->
 
 ## `r3bl-cmdr`
+
+### v0.0.19 (2025-05-10)
+
+Cleaning up more `let_chains` that were left after [v0.0.18](#v0018-2025-05-10) was made.
 
 ### v0.0.18 (2025-05-10)
 
