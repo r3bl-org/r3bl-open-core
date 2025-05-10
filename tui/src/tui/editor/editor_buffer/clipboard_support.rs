@@ -52,11 +52,11 @@ pub fn copy_to_clipboard(
 
     // Iterate through the sorted row indices, and copy the selected text.
     for row_index in row_indices {
-        if let Some(sel_range) = sel_list.get(row_index)
-            && let Some(line) = lines.get(usize(*row_index))
-        {
-            let sel_text = sel_range.clip_to_range(line);
-            vec_str.push(sel_text);
+        if let Some(sel_range) = sel_list.get(row_index) {
+            if let Some(line) = lines.get(usize(*row_index)) {
+                let sel_text = sel_range.clip_to_range(line);
+                vec_str.push(sel_text);
+            }
         }
     }
 

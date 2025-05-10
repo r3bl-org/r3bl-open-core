@@ -715,12 +715,12 @@ pub mod readline_internal {
                 // active). And early return!
                 let is_spinner_active =
                     self_safe_is_spinner_active.lock().unwrap().take();
-                if (crossterm_event == CTRL_C || crossterm_event == CTRL_D)
-                    && let Some(spinner_shutdown_sender) = is_spinner_active
-                {
-                    // Send signal to SharedWriter spinner shutdown channel.
-                    let _ = spinner_shutdown_sender.send(());
-                    return ControlFlowExtended::Continue;
+                if crossterm_event == CTRL_C || crossterm_event == CTRL_D {
+                    if let Some(spinner_shutdown_sender) = is_spinner_active {
+                        // Send signal to SharedWriter spinner shutdown channel.
+                        let _ = spinner_shutdown_sender.send(());
+                        return ControlFlowExtended::Continue;
+                    }
                 }
 
                 // Regular readline event handling.

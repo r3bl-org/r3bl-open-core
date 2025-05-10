@@ -201,14 +201,16 @@ pub fn handle_selection_single_line_caret_movement(
     // Remove any range that is empty after caret movement changes have been
     // incorporated. Ok to do this since empty lines are handled by
     // `handle_selection_multiline_caret_movement`.
-    if let Some(range) = buffer.get_selection_list().get(row_index)
-        && range.start() == range.end()
-    {
-        let buffer_mut = buffer.get_mut(dummy_viewport());
-        buffer_mut.inner.sel_list.remove(
-            row_index,
-            SelectionRange::caret_movement_direction_left_right(prev, curr),
-        );
+    if let Some(range) = buffer.get_selection_list().get(row_index) {
+        if range.start() == range.end() {
+            {
+                let buffer_mut = buffer.get_mut(dummy_viewport());
+                buffer_mut.inner.sel_list.remove(
+                    row_index,
+                    SelectionRange::caret_movement_direction_left_right(prev, curr),
+                );
+            }
+        }
     }
 }
 

@@ -6,6 +6,7 @@
     - [Global config (2025-03-19)](#global-config-2025-03-19)
     - [Global config (2024-12-04)](#global-config-2024-12-04)
 - [r3bl-cmdr](#r3bl-cmdr)
+    - [v0.0.18](#v0018-2025-05-10)
     - [v0.0.17](#v0017-2025-05-10)
     - [v0.0.16 2024-09-13](#v0016-2024-09-13)
     - [v0.0.15 2024-09-12](#v0015-2024-09-12)
@@ -18,6 +19,7 @@
     - [v0.0.8 2023-12-22](#v008-2023-12-22)
 - [r3bl_tui](#r3bl_tui)
     - [v0.7.0 2025-05-10](#v070-2025-05-10)
+    - [v0.7.1 2025-05-10](#v071-2025-05-10)
     - [v0.6.0 2024-10-21](#v060-2024-10-21)
     - [v0.5.9 2024-09-12](#v059-2024-09-12)
     - [v0.5.8 2024-09-07](#v058-2024-09-07)
@@ -239,6 +241,12 @@ the following:
 
 ## `r3bl-cmdr`
 
+### v0.0.18 (2025-05-10)
+
+Remove `#![feature(let_chains)]` and `#![feature(trivial_bounds)]` from lib.rs so that
+the crates can easily be installed using `cargo install r3bl-cmdr` instead of
+`cargo +nightly install r3bl-cmdr`.
+
 ### v0.0.17 (2025-05-10)
 
 This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking
@@ -413,6 +421,12 @@ in a text editor.
     - Add binary target `rc` aka `r3bl-cmdr`.
 
 ## `r3bl_tui`
+
+### v0.7.1 (2025-05-10)
+
+Remove `#![feature(let_chains)]` and `#![feature(trivial_bounds)]` from lib.rs so that
+the crates can easily be installed using `cargo install r3bl-cmdr` instead of
+`cargo +nightly install r3bl-cmdr`.
 
 ### v0.7.0 (2025-05-10)
 

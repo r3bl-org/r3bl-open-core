@@ -42,10 +42,10 @@ mod helpers {
 
     impl InputEvent {
         pub fn matches_keypress(&self, other: KeyPress) -> bool {
-            if let InputEvent::Keyboard(this) = self
-                && this == &other
-            {
-                return true;
+            if let InputEvent::Keyboard(this) = self {
+                if this == &other {
+                    return true;
+                }
             }
             false
         }
