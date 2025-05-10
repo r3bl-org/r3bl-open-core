@@ -243,9 +243,9 @@ the following:
 
 ### v0.0.18 (2025-05-10)
 
-Remove `#![feature(let_chains)]` and `#![feature(trivial_bounds)]` from lib.rs so that
-the crates can easily be installed using `cargo install r3bl-cmdr` instead of
-`cargo +nightly install r3bl-cmdr`.
+Minor change to remove `#![feature(let_chains)]` and `#![feature(trivial_bounds)]` from
+lib.rs so that the crates can easily be installed using `cargo install r3bl-cmdr` instead
+of `cargo +nightly install r3bl-cmdr`.
 
 ### v0.0.17 (2025-05-10)
 
@@ -424,9 +424,9 @@ in a text editor.
 
 ### v0.7.1 (2025-05-10)
 
-Remove `#![feature(let_chains)]` and `#![feature(trivial_bounds)]` from lib.rs so that
-the crates can easily be installed using `cargo install r3bl-cmdr` instead of
-`cargo +nightly install r3bl-cmdr`.
+Minor change to remove `#![feature(let_chains)]` and `#![feature(trivial_bounds)]` from
+lib.rs so that the crates can easily be installed using `cargo install r3bl-cmdr` instead
+of `cargo +nightly install r3bl-cmdr`.
 
 ### v0.7.0 (2025-05-10)
 
