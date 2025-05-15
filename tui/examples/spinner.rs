@@ -91,15 +91,15 @@ pub async fn main() -> CommonResult<()> {
 
 #[allow(unused_assignments)]
 async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<()> {
-    let readline_async = ReadlineAsyncContext::try_new(Some("$ ")).await?;
-    let readline_async = readline_async.expect("terminal is not fully interactive");
+    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some("$ ")).await?;
+    let rl_ctx = maybe_rl_ctx.expect("terminal is not fully interactive");
     let address = "127.0.0.1:8000";
     let message_trying_to_connect = format!(
         "This is a sample indeterminate progress message: trying to connect to server on {}",
         &address
     );
 
-    let mut shared_writer = readline_async.clone_shared_writer();
+    let mut shared_writer = rl_ctx.clone_shared_writer();
 
     // Start spinner. Automatically pauses the terminal.
     let mut maybe_spinner = Spinner::try_start(

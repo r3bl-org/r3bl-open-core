@@ -280,8 +280,8 @@ impl Spinner {
                         // other means.
                         *self_safe_is_shutdown.lock().unwrap() = true;
 
-                        // Signal that the task has completely shut down. It's okay if
-                        // this fails - it just means the receiver was dropped.
+                        // Signal that the task has completely shutdown. It's okay if this
+                        // fails - it just means the receiver was dropped.
                         let _ = shutdown_complete_sender.send(());
 
                         break;

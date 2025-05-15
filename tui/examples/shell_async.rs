@@ -128,7 +128,7 @@ async fn main() -> miette::Result<()> {
 
     // Create a `r3bl_terminal_async` instance.
     let terminal_async_constructor::TerminalAsyncHandle {
-        readline_async,
+        rl_ctx: readline_async,
         shared_writer,
     } = terminal_async_constructor::new(pid).await?;
 
@@ -286,7 +286,7 @@ pub mod terminal_async_constructor {
     use super::*;
 
     pub struct TerminalAsyncHandle {
-        pub readline_async: ReadlineAsyncContext,
+        pub rl_ctx: ReadlineAsyncContext,
         pub shared_writer: SharedWriter,
     }
 
@@ -298,15 +298,14 @@ pub mod terminal_async_constructor {
             format!("{prompt_seg_1}{prompt_seg_2}")
         };
 
-        let Ok(Some(readline_async)) = ReadlineAsyncContext::try_new(Some(prompt)).await
-        else {
+        let Ok(Some(rl_ctx)) = ReadlineAsyncContext::try_new(Some(prompt)).await else {
             miette::bail!("Failed to create ReadlineAsync instance");
         };
 
-        let shared_writer = readline_async.clone_shared_writer();
+        let shared_writer = rl_ctx.clone_shared_writer();
 
         ok!(TerminalAsyncHandle {
-            readline_async,
+            rl_ctx,
             shared_writer
         })
     }
