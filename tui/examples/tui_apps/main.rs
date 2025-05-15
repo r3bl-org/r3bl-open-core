@@ -68,7 +68,7 @@ async fn main() -> CommonResult<()> {
     let no_log_arg_passed = args.contains(&"--no-log".to_string());
 
     // If the terminal is not fully interactive, then return early.
-    let Some(mut readline_async) = ReadlineAsyncContext::try_new({
+    let Some(mut rl_ctx) = ReadlineAsyncContext::try_new({
         // Generate prompt.
         let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";
@@ -83,15 +83,13 @@ async fn main() -> CommonResult<()> {
 
     // Pre-populate the read_line's history with some entries.
     for command in AutoCompleteCommand::iter() {
-        readline_async
-            .readline
-            .add_history_entry(command.to_string());
+        rl_ctx.readline.add_history_entry(command.to_string());
     }
 
     let msg = inline_string!("{}", &generate_help_msg());
 
     let msg_fmt = fg_color(ASTColor::from(tui_color!(lizard_green)), &msg);
-    rla_println!(readline_async, "{}", msg_fmt.to_string());
+    rla_println!(rl_ctx, "{}", msg_fmt.to_string());
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
     if no_log_arg_passed {
@@ -101,14 +99,11 @@ async fn main() -> CommonResult<()> {
     }
 
     loop {
-        let result_readline_event = readline_async.read_line().await;
+        let result_readline_event = rl_ctx.read_line().await;
         match result_readline_event {
             Ok(readline_event) => match readline_event {
                 ReadlineEvent::Line(input) => {
-                    if run_user_selected_example(input, &mut readline_async)
-                        .await
-                        .is_err()
-                    {
+                    if run_user_selected_example(input, &mut rl_ctx).await.is_err() {
                         break;
                     };
                     crossterm::terminal::enable_raw_mode().into_diagnostic()?;

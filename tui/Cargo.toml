@@ -135,7 +135,6 @@ serde_json = "1.0.140"
 # https://www.svix.com/blog/heap-fragmentation-in-rust-applications/
 # https://news.ycombinator.com/item?id=35473271
 # https://crates.io/crates/jemallocator
-[target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator = "0.6.0"
 
 [dev-dependencies]

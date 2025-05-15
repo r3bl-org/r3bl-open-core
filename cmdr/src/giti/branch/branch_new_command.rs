@@ -93,23 +93,23 @@ mod user_interaction {
         let prompt_text =
             ui_str::branch_create_display::enter_branch_name_you_want_to_create();
 
-        let mut rl_async = ReadlineAsyncContext::try_new(Some(&prompt_text))
+        let mut rl_ctx = ReadlineAsyncContext::try_new(Some(&prompt_text))
             .await?
             .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
 
         // The loop is just to handle the resize event.
         loop {
-            let evt = rl_async.read_line().await?;
+            let evt = rl_ctx.read_line().await?;
             match evt {
                 ReadlineEvent::Line(branch_name) => {
-                    rl_async.request_shutdown(None).await?;
-                    rl_async.await_shutdown().await;
+                    rl_ctx.request_shutdown(None).await?;
+                    rl_ctx.await_shutdown().await;
 
                     return command_execute::create_new_branch(branch_name).await;
                 }
                 ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
-                    rl_async.request_shutdown(None).await?;
-                    rl_async.await_shutdown().await;
+                    rl_ctx.request_shutdown(None).await?;
+                    rl_ctx.await_shutdown().await;
 
                     let it = CommandRunResult::Noop(
                         ui_str::branch_create_display::info_no_branch_created(),

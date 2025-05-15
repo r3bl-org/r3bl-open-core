@@ -375,8 +375,8 @@
 //!         let prompt_seg_3 = fg_magenta("╮").bg_dark_gray().to_string();
 //!         Some(format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3))
 //!     };
-//!     let readline_async = ReadlineAsyncContext::try_new(prompt).await?;
-//!     let Some(mut readline_async) = readline_async else {
+//!     let maybe_rl_ctx = ReadlineAsyncContext::try_new(prompt).await?;
+//!     let Some(mut rl_ctx) = maybe_rl_ctx else {
 //!         return Err(miette::miette!("Failed to create terminal").into());
 //!     };
 //!     ok!()
