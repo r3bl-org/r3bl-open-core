@@ -142,7 +142,7 @@ The `EditorComponent` struct might be a good place to start looking for possible
 
 Sample code:
 
-```rust
+```rs
 pub struct EditorEngine;
 impl EditorEngine {
   fn async apply(
@@ -159,7 +159,7 @@ impl EditorEngine {
 }
 
 pub struct EditorBuffer {
-  
+
 }
 ```
 
@@ -204,7 +204,7 @@ Use the terminal's cursor show / hide.
     will clobber this value that's already been set. There's currently a weak warning that's
     displayed after the 1st time this value is set which isn't robust either.
 4.  This is what that code looks like:
-    ```rust
+    ```rs
     // Approach 1 - using cursor show / hide.
     render_pipeline! {
       queue push
@@ -227,7 +227,7 @@ effect of a cursor.
 2.  The downside is that it isn't possible to blink the cursor or have all the other "standard"
     cursor features that are provided by the actual global cursor (discussed above).
 3.  This is what that code looks like:
-    ```rust
+    ```rs
     // Approach 2 - painting the editor_buffer.caret position w/ reverse.
     render_pipeline! {
       queue push

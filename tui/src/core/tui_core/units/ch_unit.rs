@@ -48,7 +48,7 @@ impl ChUnit {
     pub fn as_u32(&self) -> u32 { u32(*self) }
 }
 
-/// ```rust
+/// ```
 /// use r3bl_tui::{ch, ChUnit};
 ///
 /// let it_usize: usize = 12;
@@ -56,7 +56,7 @@ impl ChUnit {
 /// ```
 pub fn ch(arg_num: impl Into<ChUnit>) -> ChUnit { arg_num.into() }
 
-/// ```rust
+/// ```
 /// use r3bl_tui::{ch, ChUnit, usize};
 ///
 /// let it_ch: ChUnit = ch(12);
@@ -64,7 +64,7 @@ pub fn ch(arg_num: impl Into<ChUnit>) -> ChUnit { arg_num.into() }
 /// ```
 pub fn usize(arg_num: impl Into<usize>) -> usize { arg_num.into() }
 
-/// ```rust
+/// ```
 /// use r3bl_tui::{ch, ChUnit, u32};
 ///
 /// let it_ch: ChUnit = ch(12);
@@ -72,7 +72,7 @@ pub fn usize(arg_num: impl Into<usize>) -> usize { arg_num.into() }
 /// ```
 pub fn u32(arg_num: impl Into<u32>) -> u32 { arg_num.into() }
 
-/// ```rust
+/// ```
 /// use r3bl_tui::{ch, ChUnit, isize};
 ///
 /// let it_ch: ChUnit = ch(12);
@@ -80,7 +80,7 @@ pub fn u32(arg_num: impl Into<u32>) -> u32 { arg_num.into() }
 /// ```
 pub fn isize(arg_num: impl Into<isize>) -> isize { arg_num.into() }
 
-/// ```rust
+/// ```
 /// use r3bl_tui::{ch, ChUnit, i32};
 ///
 /// let it_ch: ChUnit = ch(12);
@@ -88,7 +88,7 @@ pub fn isize(arg_num: impl Into<isize>) -> isize { arg_num.into() }
 /// ```
 pub fn i32(arg_num: impl Into<i32>) -> i32 { arg_num.into() }
 
-/// ```rust
+/// ```
 /// use r3bl_tui::{ch, ChUnit, i16};
 ///
 /// let it_ch: ChUnit = ch(12);
@@ -96,7 +96,7 @@ pub fn i32(arg_num: impl Into<i32>) -> i32 { arg_num.into() }
 /// ```
 pub fn i16(arg_num: impl Into<i16>) -> i16 { arg_num.into() }
 
-/// ```rust
+/// ```
 /// use r3bl_tui::{ch, ChUnit, f64};
 ///
 /// let it_ch: ChUnit = ch(12);
@@ -104,7 +104,7 @@ pub fn i16(arg_num: impl Into<i16>) -> i16 { arg_num.into() }
 /// ```
 pub fn f64(arg_num: impl Into<f64>) -> f64 { arg_num.into() }
 
-/// ```rust
+/// ```
 /// use r3bl_tui::{ch, ChUnit, u8};
 ///
 /// let it_usize: usize = 12;
@@ -113,7 +113,7 @@ pub fn f64(arg_num: impl Into<f64>) -> f64 { arg_num.into() }
 /// ```
 pub fn u8(arg_num: impl Into<u8>) -> u8 { arg_num.into() }
 
-/// ```rust
+/// ```
 /// use r3bl_tui::{ch, ChUnit, u16};
 ///
 /// let it_ch: ChUnit = ch(12);

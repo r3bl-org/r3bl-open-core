@@ -19,7 +19,7 @@
 //! the `tracing_subscriber` crate. This is done in [crate::create_fmt!]. Here's an
 //! example of how you can do this with the `tracing` crate:
 //!
-//! ```rust
+//! ```
 //! # use tracing_subscriber::{fmt::SubscriberBuilder, registry::LookupSpan};
 //! # use r3bl_tui::log::CustomEventFormatter;
 //! let subscriber = SubscriberBuilder::default()
@@ -322,7 +322,7 @@ impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
     /// field is a special field that is added by the `tracing` crate. In the example
     /// below, the statements are identical:
     ///
-    /// ```rust
+    /// ```
     /// use tracing::{info};
     /// info!(message = "This is a test log entry");
     /// info!("This is a test log entry");

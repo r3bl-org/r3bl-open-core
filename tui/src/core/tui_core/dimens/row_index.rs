@@ -28,7 +28,7 @@ use crate::{height, usize, ChUnit, RowHeight};
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{RowIndex, row};
 /// let row = row(5);
 /// let row = RowIndex::new(5);

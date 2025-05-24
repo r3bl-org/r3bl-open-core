@@ -94,7 +94,7 @@ variables. They can make your code more readable, maintainable, safer, and futur
 
 Here is an example of how to use an enum to represent the status of a file:
 
-```Rust
+```rs
 enum FileStatus {
     Open,
     Closed,
@@ -105,7 +105,7 @@ enum FileStatus {
 
 You can then use this enum to track the status of a \*\*file:
 
-```Rust
+```rs
 l**et mut file = File::new();
 
 file.open();

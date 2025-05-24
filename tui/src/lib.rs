@@ -620,7 +620,7 @@
 //!
 //! Typically your [App] will look like this:
 //!
-//! ```rust
+//! ```
 //! #[derive(Default)]
 //! pub struct AppMain {
 //!   // Might have some app data here as well.
@@ -972,7 +972,7 @@
 //!
 //! An implementation of lolcat color wheel is provided. Here's an example.
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::*;
 //!
 //! let mut lolcat = LolcatBuilder::new()

@@ -33,7 +33,7 @@ use crate::{ok,
 
 /// Here's an example. Refer to [RenderOps] for more details.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 ///
 /// let mut render_ops = render_ops!(
@@ -140,7 +140,7 @@ macro_rules! render_ops {
 ///
 /// Here's an example. Consider using the macro for convenience (see [render_ops!]).
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 ///
 /// let mut render_ops = RenderOps::default();

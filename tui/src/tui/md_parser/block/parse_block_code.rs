@@ -108,7 +108,7 @@ pub fn split_by_new_line(input: &str) -> Vec<&str> {
 }
 
 /// At a minimum, a [CodeBlockLine] will be 2 lines of text.
-/// 1. The first line will be the language of the code block, eg: "```rust\n" or "```\n".
+/// 1. The first line will be the language of the code block, eg: "```rs\n" or "```\n".
 /// 2. The second line will be the end of the code block, eg: "```\n" Then there may be
 ///    some number of lines of text in the middle. These lines are stored in the
 ///    [content](CodeBlockLine.content) field.
@@ -158,17 +158,17 @@ mod tests {
 
     #[test]
     fn test_convert_from_code_block_into_lines() {
-        // no line. "```rust\n```\n".
+        // no line. "```rs\n```\n".
         {
-            let language = Some("rust");
+            let language = Some("rs");
             let lines = vec![];
             let expected = list![
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::StartTag,
                 },
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
             ];
@@ -176,21 +176,21 @@ mod tests {
             assert_eq2!(output, expected);
         }
 
-        // 1 empty line. "```rust\n\n```\n".
+        // 1 empty line. "```rs\n\n```\n".
         {
-            let language = Some("rust");
+            let language = Some("rs");
             let lines = vec![""];
             let expected = list![
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::StartTag,
                 },
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::Text(""),
                 },
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
             ];
@@ -198,21 +198,21 @@ mod tests {
             assert_eq2!(output, expected);
         }
 
-        // 1 line. "```rust\nlet x = 1;\n```\n".
+        // 1 line. "```rs\nlet x = 1;\n```\n".
         {
-            let language = Some("rust");
+            let language = Some("rs");
             let lines = vec!["let x = 1;"];
             let expected = list![
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::StartTag,
                 },
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::Text("let x = 1;"),
                 },
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
             ];
@@ -220,25 +220,25 @@ mod tests {
             assert_eq2!(output, expected);
         }
 
-        // 2 lines. "```rust\nlet x = 1;\nlet y = 2;\n```\n".
+        // 2 lines. "```rs\nlet x = 1;\nlet y = 2;\n```\n".
         {
-            let language = Some("rust");
+            let language = Some("rs");
             let lines = vec!["let x = 1;", "let y = 2;"];
             let expected = list![
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::StartTag,
                 },
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::Text("let x = 1;"),
                 },
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::Text("let y = 2;"),
                 },
                 CodeBlockLine {
-                    language: Some("rust"),
+                    language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
             ];

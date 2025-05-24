@@ -30,7 +30,7 @@
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{pad_fmt, InlineString};
 ///
 /// let mut acc = InlineString::new();

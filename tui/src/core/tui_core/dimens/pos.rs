@@ -63,7 +63,7 @@ pub type Col = ColIndex;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{
 ///     ch,
 ///     ScrOfs, Pos, RowIndex, ColIndex,

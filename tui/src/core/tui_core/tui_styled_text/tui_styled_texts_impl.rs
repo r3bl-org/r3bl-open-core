@@ -24,7 +24,7 @@ use crate::{join_with_index_fmt, ok, ConvertToPlainText, GCString, InlineString}
 /// Macro to make building [`TuiStyledTexts`] easy.
 ///
 /// Here's an example.
-/// ```rust
+/// ```
 /// # use r3bl_tui::{tui_styled_text, tui_styled_texts, TuiStyledText, TuiStyle};
 ///
 /// let mut st_vec = tui_styled_texts! {

@@ -21,7 +21,7 @@ Ordered list:
 
 > my block quote
 
-```rust
+```rs
 fn main() {
   println!("Hello, world!");
 }

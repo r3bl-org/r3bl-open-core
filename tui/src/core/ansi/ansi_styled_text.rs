@@ -50,7 +50,7 @@ use crate::{inline_string,
 ///
 /// # Example usage:
 ///
-/// ```rust
+/// ```
 /// # use r3bl_tui::{
 /// #     TuiStyle, tui_color, new_style,
 /// #     ast, fg_red, dim, ASText, fg_color,

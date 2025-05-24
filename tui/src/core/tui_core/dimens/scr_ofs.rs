@@ -24,7 +24,7 @@ use crate::{ColIndex, Pos, RowIndex};
 /// semantically meaningful to use this when you're dealing with the offset of a position
 /// on the screen.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ScrOfs, scr_ofs, row, col, Pos};
 /// let pos = row(1) + col(2);
 /// let so = scr_ofs(pos);

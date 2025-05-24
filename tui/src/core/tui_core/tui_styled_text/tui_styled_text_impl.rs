@@ -35,7 +35,7 @@ pub(in crate::core::tui_core::tui_styled_text) mod sizing {
 /// Macro to make building [TuiStyledText] easy.
 ///
 /// Here's an example.
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 ///
 /// let style = TuiStyle::default();

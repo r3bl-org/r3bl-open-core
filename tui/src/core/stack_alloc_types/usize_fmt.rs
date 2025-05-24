@@ -35,7 +35,7 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::stack_alloc_types::usize_fmt::{usize_to_u8_array, convert_to_string_slice};
 //!
 //! let num = 1234567890;

@@ -26,7 +26,7 @@ pub type LockedOutputDevice<'a> = &'a mut dyn std::io::Write;
 /// to use this macro in a separate block scope.
 ///
 /// Usage example:
-/// ```rust
+/// ```
 /// use r3bl_tui::{lock_output_device_as_mut, OutputDevice, LockedOutputDevice};
 /// let device = OutputDevice::new_stdout();
 /// { // Start a new block scope to avoid deadlock.
@@ -74,7 +74,7 @@ impl OutputDevice {
 impl OutputDevice {
     /// Locks the output device for writing. To use it, use the following code:
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{OutputDevice, LockedOutputDevice};
     ///
     /// let device = OutputDevice::new_stdout();

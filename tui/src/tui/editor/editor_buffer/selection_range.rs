@@ -214,7 +214,7 @@ impl SelectionRange {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// # use r3bl_tui::SelectionRange;
     /// # use r3bl_tui::{col, row, caret_scr_adj};
     /// let range_1: SelectionRange = (

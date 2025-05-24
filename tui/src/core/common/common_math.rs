@@ -21,7 +21,7 @@ use crate::InlineString;
 
 /// Safely subtracts two unsigned numbers and returns the result. Does not panic.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 /// let a: u16 = 10;
 /// let b: u16 = 15;
@@ -41,7 +41,7 @@ macro_rules! sub_unsigned {
 
 /// Safely adds two unsigned numbers and returns the result. Does not panic.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 /// let a: u16 = 10;
 /// let b: u16 = 15;
@@ -84,7 +84,7 @@ macro_rules! mul_unsigned {
 
 /// Safely increments an unsigned number. Does not panic.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 /// let mut my_u16: u16 = 0;
 ///
@@ -123,7 +123,7 @@ macro_rules! inc_unsigned {
 
 /// Safely decrements an unsigned number. Does not panic.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 /// let mut my_u16: u16 = 10;
 ///

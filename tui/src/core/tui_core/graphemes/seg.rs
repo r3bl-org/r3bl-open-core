@@ -113,7 +113,7 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 ///
 /// ## Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{GCString, GCStringExt as _, ch, col, width, seg_index};
 /// let u_str = "📦🙏🏽".grapheme_string();
 /// if let Some(segment) = u_str.segments.first() {

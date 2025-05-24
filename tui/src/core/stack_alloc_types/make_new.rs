@@ -34,7 +34,7 @@
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::join_with_index;
 /// let items = vec!["apple", "banana", "cherry"];
 /// let ch = "x";
@@ -180,7 +180,7 @@ mod tests_join_with_index {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::join;
 /// let vec = vec![1, 2, 3];
 /// let ch = "x";

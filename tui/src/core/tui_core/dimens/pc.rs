@@ -49,7 +49,7 @@ use crate::{ch, glyphs, ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorTyp
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{Pc, pc};
 ///
 /// // Get as a result.
@@ -134,7 +134,7 @@ impl Pc {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{pc, ChUnit, ch, Pc};
     ///
     /// let percent = pc!(50).unwrap();
