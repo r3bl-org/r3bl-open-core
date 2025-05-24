@@ -43,7 +43,7 @@ use crate::{ok,
 ///
 /// Here's an example.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 ///
 /// let mut pipeline = render_pipeline!(@new ZOrder::Normal =>
@@ -56,7 +56,7 @@ use crate::{ok,
 ///
 /// Another example.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 ///
 /// let mut pipeline = render_pipeline!();
@@ -155,7 +155,7 @@ type PipelineMap = HashMap<ZOrder, InlineVec<RenderOps>>;
 ///
 /// Here's an example.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 ///
 /// let mut pipeline = render_pipeline!();

@@ -37,7 +37,7 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{
 //!     ch,
 //!     Pos, ScrOfs, CaretRaw, CaretScrAdj,

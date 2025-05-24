@@ -30,7 +30,7 @@ use crate::ok;
 ///
 /// To create one, you can use the [From] trait to convert from a [Duration].
 ///
-/// ```rust
+/// ```
 /// use std::time::Duration;
 /// use r3bl_tui::TimeDuration;
 /// let duration = Duration::from_secs(1) + Duration::from_millis(100) + Duration::from_micros(100);

@@ -60,7 +60,7 @@ use crate::{inline_string,
 /// # Example
 ///
 /// Here's an example of how to use this method:
-/// ```rust
+/// ```
 /// # async fn foo() -> miette::Result<()> {
 ///     # use r3bl_tui::readline_async::ReadlineAsyncContext;
 ///     # use r3bl_tui::ok;

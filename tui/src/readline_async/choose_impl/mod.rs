@@ -167,7 +167,7 @@
 //! limitations of each. For e.g., it uses Windows API on Windows for keyboard input. And
 //! on macOS Terminal.app it restricts color output to a 256-color palette.
 //!
-//! ```rust
+//! ```
 //! # use r3bl_tui::*;
 //! # use r3bl_tui::readline_async::*;
 //! # use std::io::Result;
@@ -219,7 +219,7 @@
 //!
 //! [crate::choose()] code example:
 //!
-//! ```rust
+//! ```
 //! # use r3bl_tui::*;
 //! # use r3bl_tui::readline_async::*;
 //! # use std::io::Result;
@@ -271,7 +271,7 @@
 //!
 //! To use one of the built-in styles, pass it as an argument to the `choose` function.
 //!
-//! ```rust
+//! ```
 //! # use r3bl_tui::*;
 //! # use r3bl_tui::readline_async::*;
 //! # use std::io::Result;
@@ -316,7 +316,7 @@
 //! To create your style, you need to create a `StyleSheet` struct and pass it as an
 //! argument to the `choose` function.
 //!
-//! ```rust
+//! ```
 //! use std::io::Result;
 //! use r3bl_tui::{
 //!     AnsiStyledText, ASTColor, tui_color, TuiStyle,

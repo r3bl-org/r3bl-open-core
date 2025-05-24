@@ -36,7 +36,7 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{list, List};
 //!
 //! let mut list = List::new();

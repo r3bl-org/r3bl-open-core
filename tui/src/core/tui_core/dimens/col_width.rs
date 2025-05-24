@@ -43,7 +43,7 @@ use crate::{ch, col, ChUnit, ColIndex};
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ColWidth, width};
 /// let width = width(5);
 /// let width = ColWidth::new(5);

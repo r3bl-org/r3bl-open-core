@@ -43,7 +43,7 @@ use crate::{ch, row, ChUnit, RowIndex};
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{RowHeight, height};
 /// let height = height(5);
 /// let height = RowHeight::new(5);

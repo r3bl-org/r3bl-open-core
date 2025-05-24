@@ -28,7 +28,7 @@ use crate::{usize, width, ChUnit, ColWidth};
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ColIndex, col};
 /// let col = col(5);
 /// let col = ColIndex::new(5);

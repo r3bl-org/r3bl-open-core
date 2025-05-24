@@ -160,7 +160,7 @@
 //!
 //! Here's an example.
 //!
-//! ```rust
+//! ```
 //! # use r3bl_tui::{
 //! #     fg_red, dim, fg_color, tui_color, new_style, ast,
 //! #     RgbValue, ASTStyle, AnsiStyledText, ASTColor,

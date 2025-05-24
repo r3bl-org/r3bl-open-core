@@ -214,7 +214,7 @@ use crate::{ch,
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::tui_core::graphemes::GCString;
 ///
 /// let ustr = GCString::new("Hello, 世界");

@@ -34,7 +34,7 @@ pub enum BoundsStatus {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{
 ///     BoundsCheck, BoundsStatus,
 ///     RowHeight, RowIndex, ColIndex, ColWidth

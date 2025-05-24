@@ -118,7 +118,7 @@ macro_rules! call_if_true {
 ///
 /// # Example 1
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::console_log;
 ///
 /// let my_string = "Hello World!";
@@ -133,7 +133,7 @@ macro_rules! call_if_true {
 /// You can also use it in these other forms for terminal raw mode output. This will dump
 /// the output to stderr.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::console_log;
 ///
 /// let result: miette::Result<String> = Ok("foo".to_string());
@@ -147,7 +147,7 @@ macro_rules! call_if_true {
 ///
 /// This will dump the output to stdout.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::console_log;
 ///
 /// let msg = format!("✅ Did the thing to {}", stringify!($name));
@@ -237,7 +237,7 @@ macro_rules! with {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::with_mut;
 /// let it = with_mut! {
 ///     vec!["one", "two", "three"],
@@ -263,7 +263,7 @@ macro_rules! with_mut {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::with_mut_returns;
 /// let queue = with_mut_returns! {
 ///     vec![1, 2, 3],

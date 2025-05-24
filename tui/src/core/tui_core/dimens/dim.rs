@@ -49,7 +49,7 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{
 //!     ch, Size, ColWidth, RowHeight,
 //!     width, height, Width, Height, size

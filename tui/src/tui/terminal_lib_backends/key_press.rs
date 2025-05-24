@@ -27,7 +27,7 @@ use crate::{try_convert_key_modifiers, MediaKey, ModifierKeyEnum, SpecialKeyExt}
 
 /// Examples.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 ///
 /// fn make_keypress() {
@@ -169,7 +169,7 @@ pub enum Key {
     ///
     /// Here's how you can enable crossterm enhanced mode.
     ///
-    /// ```rust
+    /// ```
     /// use std::io::{Write, stdout};
     /// use crossterm::execute;
     /// use crossterm::event::{

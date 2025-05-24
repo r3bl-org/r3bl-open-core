@@ -31,7 +31,7 @@ use crate::{u16, GCString};
 /// - `Unicode`: Calculates the Unicode width of the string.
 ///
 /// # Example
-/// ```rust
+/// ```
 /// use std::collections::HashMap;
 /// use r3bl_tui::StringLength;
 /* cspell:disable-next-line */

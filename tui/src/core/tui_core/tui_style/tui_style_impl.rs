@@ -37,7 +37,7 @@ use crate::{ch,
 ///
 /// Here's an example.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{TuiStyle, TuiColor, TuiStylesheet, RgbValue, tui_style_attrib};
 ///
 /// // Turquoise: TuiColor::Rgb { r: 51, g: 255, b: 255 }

@@ -22,7 +22,7 @@
 //! Here's an example of how to use the [`BoundsCheck`] trait to check if an index is
 //! within the bounds of a length:
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{BoundsCheck, BoundsStatus, Index, Length, idx, len};
 //! let index = idx(10);
 //! let length = len(10);
@@ -33,7 +33,7 @@
 //! Here's an example of how to use the [`BoundsCheck`] trait to check if an index is
 //! within the bounds of another index:
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{BoundsCheck, BoundsStatus, Index, idx};
 //! let index1 = idx(10);
 //! let index2 = idx(10);

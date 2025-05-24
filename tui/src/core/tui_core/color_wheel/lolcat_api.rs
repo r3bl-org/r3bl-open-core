@@ -61,7 +61,7 @@ pub fn lolcat_each_char_in_unicode_string(
 
 /// A builder struct for the [Lolcat] struct. Example usage:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 ///
 /// let mut lolcat = LolcatBuilder::new()

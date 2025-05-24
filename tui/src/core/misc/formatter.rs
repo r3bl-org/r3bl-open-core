@@ -22,7 +22,7 @@ use crate::InlineString;
 ///
 /// When using this, make sure to import [FormatOptionMsg] as well, like this:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{fmt_option, FormatOptionMsg};
 ///
 /// struct FooStruct {
