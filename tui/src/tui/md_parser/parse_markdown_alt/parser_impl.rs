@@ -14,11 +14,13 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+use std::fmt::Debug;
 
 use nom::{branch::alt,
           bytes::complete::tag,
           character::complete::{char, digit1, space0},
           combinator::{map, opt, recognize},
+          error::{Error as NomError, ErrorKind as NomErrorKind},
           multi::{many0, many1},
           sequence::{preceded, terminated},
           AsChar,
@@ -29,7 +31,7 @@ use nom::{branch::alt,
           Offset,
           Parser};
 
-use crate::{constants::BACK_TICK_CHAR,
+use crate::{constants::{BACK_TICK_CHAR, CHECKED, UNCHECKED},
             list,
             md_parser::{block::parse_block_smart_list::{BulletKind,
                                                         SmartListIR,
@@ -52,29 +54,34 @@ use crate::{constants::BACK_TICK_CHAR,
                                     TAGS,
                                     TITLE,
                                     UNORDERED_LIST_PREFIX}},
+            parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
+            parse_smart_list,
             take_text_until_new_line_or_end,
             tiny_inline_string,
+            AsStrSlice,
+            CheckboxParsePolicy,
             GCString,
-            GCStringSlice,
             InlineVec,
+            Lines,
             List,
             MdBlock,
-            MdDocument};
+            MdDocument,
+            MdLineFragment};
 
 /// Alternative implementation using the [nom::Input] trait (for future use).
-/// Note that [GCStringSlice] implements [nom::Input].
+/// Note that [AsStrSlice] implements [nom::Input].
 ///
-/// Once the `input_arg` is converted into [GCStringSlice] you can use it as [nom::Input]
-/// or [GCStringSlice] as you see fit, so there is a lot of flexibility in how to access
+/// Once the `input_arg` is converted into [AsStrSlice] you can use it as [nom::Input]
+/// or [AsStrSlice] as you see fit, so there is a lot of flexibility in how to access
 /// the input, in a "nom compatible" way.
 pub fn parse_markdown_alt<'a>(
-    input_arg: impl Into<GCStringSlice<'a>>,
-) -> nom::IResult<GCStringSlice<'a>, MdDocument<'a>> {
+    input_arg: impl Into<AsStrSlice<'a>>,
+) -> nom::IResult<AsStrSlice<'a>, MdDocument<'a>> {
     let input = input_arg.into();
 
     let (current_input, output) = many0(alt((
         // These parsers now work with any type that implements `nom::Input` which
-        // includes `GCStringSlice`.
+        // includes `AsStrSlice`.
         map(
             make_many0_compatible(|input| parse_unique_kv_opt_eol_generic(TITLE, input)),
             |value: &'_ str| MdBlock::Title(value),
@@ -107,7 +114,7 @@ pub fn parse_markdown_alt<'a>(
         ),
         map(
             make_many0_compatible(parse_block_heading_generic),
-            |(level, text): (usize, GCStringSlice<'_>)| {
+            |(level, text): (usize, AsStrSlice<'_>)| {
                 // Extract actual heading text from the text slice
                 let heading_text = text.extract_remaining_text_content_in_line();
                 MdBlock::Heading(crate::HeadingData {
@@ -122,14 +129,14 @@ pub fn parse_markdown_alt<'a>(
         ),
         map(
             make_many0_compatible(parse_block_smart_list_generic),
-            |content: GCStringSlice<'_>| {
+            |content: AsStrSlice<'_>| {
                 // Create proper smart list structure with actual content
                 let mut lines = List::new();
                 let mut line_fragments = List::new();
 
-                if let Some(item_content) = extract_list_item_content(content) {
+                if let Some(item_content) = extract_list_item_content(content.clone()) {
                     line_fragments.push(crate::MdLineFragment::Plain(Box::leak(
-                        item_content.into_boxed_str(),
+                        Box::new(item_content.to_owned()),
                     )));
                 } else {
                     // Extract the actual text content as fallback
@@ -144,7 +151,7 @@ pub fn parse_markdown_alt<'a>(
         ),
         map(
             make_many0_compatible(parse_block_text_generic),
-            |text: GCStringSlice<'_>| {
+            |text: AsStrSlice<'_>| {
                 // Create proper text structure with actual content
                 let mut line_fragments = List::new();
                 let text_content = text.extract_remaining_text_content_in_line();
@@ -172,11 +179,11 @@ pub fn parse_markdown_alt<'a>(
 ///
 /// Note that the return type of [parse_code_block_generic()] is a concrete type that
 /// implements [nom::Input], and so this return value can be passed as an argument to this
-/// function which receives a `slice` input of type [GCStringSlice].
+/// function which receives a `slice` input of type [AsStrSlice].
 ///
 /// ## Processing Pipeline
 ///
-/// 1. **Input**: Takes a [GCStringSlice] containing the raw fenced code block content
+/// 1. **Input**: Takes a [AsStrSlice] containing the raw fenced code block content
 ///    (including markers) as identified by [parse_code_block_generic()]
 /// 2. **Text Extraction**: Extracts the text content and splits it into lines for
 ///    processing
@@ -204,8 +211,8 @@ pub fn parse_markdown_alt<'a>(
 ///
 /// ## Parameters
 ///
-/// * `slice` - A [GCStringSlice] containing the markdown text content to process,
-///   typically obtained from [parse_code_block_generic()]
+/// * `slice` - A [AsStrSlice] containing the markdown text content to process, typically
+///   obtained from [parse_code_block_generic()]
 ///
 /// ## Returns
 ///
@@ -222,7 +229,7 @@ pub fn parse_markdown_alt<'a>(
 /// This would produce a code block with:
 /// - Language: `Some("rs")`
 /// - Content: `fn main() { println!("Hello, world!"); }`
-fn extract_code_block_content<'a>(slice: GCStringSlice<'a>) -> MdBlock<'a> {
+fn extract_code_block_content<'a>(slice: AsStrSlice<'a>) -> MdBlock<'a> {
     let text = slice.extract_remaining_text_content_in_line();
     let lines: Vec<&str> = text.lines().collect();
 
@@ -267,13 +274,13 @@ fn extract_code_block_content<'a>(slice: GCStringSlice<'a>) -> MdBlock<'a> {
 }
 
 // Helper function to extract list item content
-fn extract_list_item_content<'a>(slice: GCStringSlice<'a>) -> Option<String> {
+fn extract_list_item_content<'a>(slice: AsStrSlice<'a>) -> Option<&'a str> {
     let text = slice.extract_remaining_text_content_in_line();
     let trimmed = text.trim();
 
     // Handle unordered list items
     if let Some(content) = trimmed.strip_prefix(UNORDERED_LIST_PREFIX) {
-        return Some(content.to_string());
+        return Some(content);
     }
 
     // Handle ordered list items (simplified - just look for digit +
@@ -281,9 +288,8 @@ fn extract_list_item_content<'a>(slice: GCStringSlice<'a>) -> Option<String> {
     if let Some(dot_pos) = trimmed.find(ORDERED_LIST_PARTIAL_PREFIX) {
         let prefix = &trimmed[..dot_pos];
         if prefix.chars().all(|c| c.is_ascii_digit()) {
-            return Some(
-                trimmed[dot_pos + ORDERED_LIST_PARTIAL_PREFIX.len()..].to_string(),
-            );
+            let it = &trimmed[dot_pos + ORDERED_LIST_PARTIAL_PREFIX.len()..];
+            return Some(it);
         }
     }
 
@@ -293,17 +299,17 @@ fn extract_list_item_content<'a>(slice: GCStringSlice<'a>) -> Option<String> {
 // Generic helper function to take text until newline or end for any Input type
 fn take_text_until_new_line_or_end_generic<I>() -> impl Fn(I) -> IResult<I, I>
 where
-    I: Input + Copy + Clone,
+    I: Input + Clone,
     I::Item: AsChar + Copy,
 {
     move |input: I| {
         // Handle empty input case explicitly
         if input.input_len() == 0 {
-            return Ok((input, input));
+            return Ok((input.clone(), input));
         }
 
         let original_len = input.input_len();
-        let mut input_copy = input;
+        let mut input_clone = input.clone();
         let mut consumed = 0;
 
         loop {
@@ -312,12 +318,12 @@ where
                 break;
             }
 
-            let slice = input_copy.take(1);
+            let slice = input_clone.take(1);
             if let Some(ch) = slice.iter_elements().next() {
                 if ch.as_char() == NEW_LINE_CHAR {
                     break;
                 }
-                input_copy = input_copy.take_from(1);
+                input_clone = input_clone.take_from(1);
                 consumed += 1;
             } else {
                 // No more characters available
@@ -342,8 +348,11 @@ where
 ///   in the `output`.
 fn parse_unique_kv_opt_eol_generic<'a>(
     tag_name: &'a str,
-    input: GCStringSlice<'a>,
-) -> IResult</* remainder */ GCStringSlice<'a>, /* output */ &'a str> {
+    input: AsStrSlice<'a>,
+) -> IResult</* remainder */ AsStrSlice<'a>, /* output */ &'a str> {
+    // In case of error, this is a backup clone of input.
+    let input_clone = input.clone();
+
     let (remainder, title_text) = preceded(
         /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
         /* output */ take_text_until_new_line_or_end_generic(),
@@ -359,9 +368,9 @@ fn parse_unique_kv_opt_eol_generic<'a>(
     let remainder_str = remainder.extract_remaining_text_content_in_line();
 
     if title_str.contains(tag_str) || remainder_str.contains(tag_str) {
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input, // Use input as the error location
-            nom::error::ErrorKind::Fail,
+        return Err(nom::Err::Error(NomError::new(
+            input_clone, // Use input as the error location
+            NomErrorKind::Fail,
         )));
     }
 
@@ -386,8 +395,8 @@ fn parse_unique_kv_opt_eol_generic<'a>(
 /// - There may or may not be a newline at the end. If there is, it is consumed.
 pub fn parse_csv_opt_eol_generic<'a>(
     tag_name: &'a str,
-    input: GCStringSlice<'a>,
-) -> IResult</* remainder */ GCStringSlice<'a>, /* output */ List<&'a str>> {
+    input: AsStrSlice<'a>,
+) -> IResult</* remainder */ AsStrSlice<'a>, /* output */ List<&'a str>> {
     let (remainder, tags_text) = preceded(
         /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
         /* output */ take_text_until_new_line_or_end_generic(),
@@ -438,7 +447,7 @@ fn parse_block_heading_generic<'a, I>(
     input: I,
 ) -> IResult</* remainder */ I, /* output */ (usize, I)>
 where
-    I: Input + Copy + Clone + Compare<&'a str>,
+    I: Input + Clone + Compare<&'a str>,
     I::Item: AsChar + Copy,
 {
     let (input, hashes) = many1(char(HEADING_CHAR)).parse(input)?;
@@ -452,17 +461,14 @@ where
 // Generic text parser
 fn parse_block_text_generic<'a, I>(input: I) -> IResult<I, I>
 where
-    I: Input + Copy + Clone + Compare<&'a str>,
+    I: Input + Clone + Compare<&'a str>,
     I::Item: AsChar + Copy,
 {
     let (input, text) = take_text_until_new_line_or_end_generic().parse(input)?;
 
     // Fail if no text was captured (empty input)
     if text.input_len() == 0 {
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        )));
+        return Err(nom::Err::Error(NomError::new(input, NomErrorKind::Tag)));
     }
 
     let (input, _) = opt(tag(NEW_LINE)).parse(input)?;
@@ -473,7 +479,7 @@ where
 // Generic smart list parser
 fn parse_block_smart_list_generic<'a, I>(input: I) -> IResult<I, I>
 where
-    I: Input + Copy + Clone + Compare<&'a str>,
+    I: Input + Clone + Compare<&'a str>,
     I::Item: AsChar + Copy,
 {
     // Simplified smart list parser that just finds lines starting with "- " or digit + ".
@@ -492,17 +498,17 @@ where
 
     // Check for ordered list marker (simplified - just look for digit +
     // ORDERED_LIST_PARTIAL_PREFIX)
-    let mut current = input;
+    let mut input_clone = input.clone();
     let mut found_digit = false;
     let mut count = 0;
 
     // Look for digits
-    while count < current.input_len() {
-        let slice = current.take(1);
+    while count < input_clone.input_len() {
+        let slice = input_clone.take(1);
         if let Some(ch) = slice.iter_elements().next() {
             if ch.as_char().is_ascii_digit() {
                 found_digit = true;
-                current = current.take_from(1);
+                input_clone = input_clone.take_from(1);
                 count += 1;
             } else {
                 break;
@@ -513,8 +519,8 @@ where
     }
 
     if found_digit
-        && current.input_len() >= 2
-        && current.compare(ORDERED_LIST_PARTIAL_PREFIX) == nom::CompareResult::Ok
+        && input_clone.input_len() >= 2
+        && input_clone.compare(ORDERED_LIST_PARTIAL_PREFIX) == nom::CompareResult::Ok
     {
         let (input, _marker) = input.take_split(count + 2); // digits + ORDERED_LIST_PARTIAL_PREFIX
         let (input, content) = take_text_until_new_line_or_end_generic().parse(input)?;
@@ -523,17 +529,14 @@ where
     }
 
     // If no list marker found, fail
-    Err(nom::Err::Error(nom::error::Error::new(
-        input,
-        nom::error::ErrorKind::Tag,
-    )))
+    Err(nom::Err::Error(NomError::new(input, NomErrorKind::Tag)))
 }
 
 /// Generic version of the [parse_block_smart_list::parse_smart_list] function that uses
-/// [GCStringSlice]. This function parses a smart list from markdown text and returns a
+/// [AsStrSlice]. This function parses a smart list from markdown text and returns a
 /// [SmartListIR] structure.
 ///
-/// This function specifically works with [GCStringSlice] to leverage its specialized
+/// This function specifically works with [AsStrSlice] to leverage its specialized
 /// methods for more efficient character manipulation.
 ///
 /// First line of `input` looks like this.
@@ -564,14 +567,14 @@ where
 /// ╰────────────────────────────┴──────────────────────────────╯
 /// ```
 pub fn parse_smart_list_and_extract_ir_generic<'a>(
-    input: GCStringSlice<'a>,
-) -> IResult</* remainder */ GCStringSlice<'a>, SmartListIR<'a>> {
+    input: AsStrSlice<'a>,
+) -> IResult</* remainder */ AsStrSlice<'a>, /* output */ SmartListIR<'a>> {
     // Calculate indent by counting leading spaces
     let mut indent = 0;
-    let mut input_copy = input;
+    let mut input_clone = input.clone();
 
-    // Count leading spaces using GCStringSlice's methods
-    let text_content = input_copy.extract_remaining_text_content_in_line();
+    // Count leading spaces using AsStrSlice's methods
+    let text_content = input_clone.extract_remaining_text_content_in_line();
     let leading_spaces = text_content
         .chars()
         .take_while(|&c| c == SPACE_CHAR)
@@ -617,9 +620,13 @@ pub fn parse_smart_list_and_extract_ir_generic<'a>(
 
         if found_digit && text_content[count..].starts_with(ORDERED_LIST_PARTIAL_PREFIX) {
             // Parse the number
-            let number_usize = digits.parse::<usize>().or(Err(nom::Err::Error(
-                nom::error::Error::new(input_after_spaces, nom::error::ErrorKind::Fail),
-            )))?;
+            let number_usize =
+                digits
+                    .parse::<usize>()
+                    .or(Err(nom::Err::Error(NomError::new(
+                        input_after_spaces.clone(),
+                        NomErrorKind::Fail,
+                    ))))?;
 
             // Skip the digits and the ". " part
             let (input, _) =
@@ -633,9 +640,9 @@ pub fn parse_smart_list_and_extract_ir_generic<'a>(
 
             input
         } else {
-            return Err(nom::Err::Error(nom::error::Error::new(
+            return Err(nom::Err::Error(NomError::new(
                 input_after_spaces,
-                nom::error::ErrorKind::Tag,
+                NomErrorKind::Tag,
             )));
         }
     };
@@ -643,7 +650,7 @@ pub fn parse_smart_list_and_extract_ir_generic<'a>(
     // Match the rest of the line & other lines that have the same indent.
     let (remainder, content) = take_text_until_new_line_or_end_generic().parse(input)?;
 
-    // Extract content directly using GCStringSlice's methods
+    // Extract content directly using AsStrSlice's methods
     let content_str = content.extract_remaining_text_content_in_line().to_string();
 
     // For ordered lists, the content is actually in the remaining input
@@ -681,6 +688,101 @@ pub fn parse_smart_list_and_extract_ir_generic<'a>(
             content_lines,
         },
     ))
+}
+
+fn extract_block_smart_list_from_ir_generic_alt<'a>(
+    smart_list_ir: SmartListIR<'a>,
+) -> Option<(Lines<'a>, BulletKind, usize)> {
+    let indent = smart_list_ir.indent;
+    let bullet_kind = smart_list_ir.bullet_kind;
+    let mut output_lines: Lines<'_> =
+        List::with_capacity(smart_list_ir.content_lines.len());
+
+    for (index, line) in smart_list_ir.content_lines.iter().enumerate() {
+        // Parse the line as a markdown text. Take special care of checkboxes if they show
+        // up at the start of the line.
+        let fragments_in_line = {
+            let parse_checkbox_policy = {
+                let checked = tiny_inline_string!("{}{}", CHECKED, SPACE);
+                let unchecked = tiny_inline_string!("{}{}", UNCHECKED, SPACE);
+                if line.content.starts_with(checked.as_str())
+                    || line.content.starts_with(unchecked.as_str())
+                {
+                    CheckboxParsePolicy::ParseCheckbox
+                } else {
+                    CheckboxParsePolicy::IgnoreCheckbox
+                }
+            };
+            // If there is an error return the entire input as remainder
+            let res_it =
+                parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
+                    line.content,
+                    parse_checkbox_policy,
+                );
+
+            let Ok((_, fragments)) = res_it else {
+                // If there is an error, return None to indicate failure.
+                return None;
+            };
+
+            fragments
+        };
+
+        // Mark is first line or not (to show or hide bullet).
+        let is_first_line = index == 0;
+
+        // Insert bullet marker before the line.
+        let mut it = match bullet_kind {
+            BulletKind::Ordered(number) => {
+                list![MdLineFragment::OrderedListBullet {
+                    indent,
+                    number,
+                    is_first_line
+                }]
+            }
+            BulletKind::Unordered => list![MdLineFragment::UnorderedListBullet {
+                indent,
+                is_first_line
+            }],
+        };
+
+        if fragments_in_line.is_empty() {
+            // If the line is empty, then we need to insert a blank line.
+            it.push(MdLineFragment::Plain(""));
+        } else {
+            // Otherwise, we can just append the fragments.
+            it += fragments_in_line;
+        }
+
+        output_lines.push(it);
+    }
+
+    Some((output_lines, bullet_kind, indent))
+}
+
+pub fn parse_block_smart_list_generic_alt<'a>(
+    input: AsStrSlice<'a>,
+) -> IResult<
+    /* remainder */ AsStrSlice<'a>,
+    /* output */ (Lines<'a>, BulletKind, usize),
+> {
+    // Backup of input, in case of error
+    let input_clone = input.clone();
+
+    // Parse the smart list structure first
+    let (remainder, smart_list_ir) = parse_smart_list_and_extract_ir_generic(input)?;
+
+    // Extract and process the smart list information
+    match extract_block_smart_list_from_ir_generic_alt(smart_list_ir) {
+        Some(output) => Ok((remainder, output)),
+        None => {
+            // If there was an error extracting the smart list, return it
+            Err(nom::Err::Error(NomError::new(
+                input_clone,
+                NomErrorKind::Fail,
+            )))
+        }
+    }
 }
 
 /// The function is a low-level splitter that identifies where a code block starts and
@@ -737,7 +839,7 @@ pub fn parse_smart_list_and_extract_ir_generic<'a>(
 /// ```
 pub fn parse_code_block_generic<'a, I>(input: I) -> IResult<I, I>
 where
-    I: Input + Copy + Clone + Compare<&'a str>,
+    I: Input + Clone + Compare<&'a str>,
     I::Item: AsChar + Copy,
 {
     // Look for code block start "```".
@@ -748,14 +850,14 @@ where
     let (input, _) = opt(tag(NEW_LINE)).parse(input)?;
 
     // Take everything until "```" (handles missing end markers).
-    let mut input_copy = input;
+    let mut input_clone = input.clone();
     let mut content_len = 0;
     let original_len = input.input_len();
     let mut found_end_marker = false;
 
     while content_len + 3 <= original_len {
         // Check if we found the end marker.
-        let slice = input_copy.take(3);
+        let slice = input_clone.take(3);
         let mut chars = slice.iter_elements();
         if chars.next().map(|c| c.as_char()) == Some(BACK_TICK_CHAR)
             && chars.next().map(|c| c.as_char()) == Some(BACK_TICK_CHAR)
@@ -767,7 +869,7 @@ where
         }
 
         // Move forward to next character.
-        input_copy = input_copy.take_from(1);
+        input_clone = input_clone.take_from(1);
         content_len += 1;
     }
 
@@ -782,10 +884,7 @@ where
         Ok((remaining, content))
     } else {
         // No end marker found, return an error so that many0 will go to the next parser.
-        Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        )))
+        Err(nom::Err::Error(NomError::new(input, NomErrorKind::Tag)))
     }
 }
 
@@ -803,7 +902,7 @@ where
 fn make_many0_compatible<I, O, F>(mut parser: F) -> impl FnMut(I) -> IResult<I, O>
 where
     F: FnMut(I) -> IResult<I, O>,
-    I: Copy + Clone + std::fmt::Debug,
+    I: Clone + Debug,
 {
     move |input: I| {
         match parser.parse(input) {
@@ -820,7 +919,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{inline_vec, GCString, GCStringSlice};
+    use crate::{inline_vec, AsStrSlice, GCString};
 
     #[test]
     fn test_gc_string_slice_basic_functionality() {
@@ -830,7 +929,7 @@ mod tests {
             GCString::new("Third line"),
         ];
 
-        let slice = GCStringSlice::new(&lines);
+        let slice = AsStrSlice::from(&lines);
 
         // Test that we can iterate through characters
         let mut chars: Vec<char> = vec![];
@@ -910,7 +1009,7 @@ mod tests {
     fn test_nom_input_position() {
         let lines = vec![GCString::new("hello"), GCString::new("world")];
 
-        let slice = GCStringSlice::new(&lines);
+        let slice = AsStrSlice::from(&lines);
 
         // Test position finding
         let pos = slice.position(|c| c == 'w');
@@ -923,7 +1022,7 @@ mod tests {
     #[test]
     fn test_individual_parsers() {
         let lines = vec![GCString::new("@title: Test Document")];
-        let slice = GCStringSlice::new(&lines);
+        let slice = AsStrSlice::from(&lines);
 
         // Test title parser directly
         let result = parse_unique_kv_opt_eol_generic(TITLE, slice);
@@ -937,7 +1036,7 @@ mod tests {
     #[test]
     fn test_heading_parser() {
         let lines = vec![GCString::new("# Heading 1")];
-        let slice = GCStringSlice::new(&lines);
+        let slice = AsStrSlice::from(&lines);
 
         let result = parse_block_heading_generic(slice);
         assert!(result.is_ok(), "Heading parser should succeed");
@@ -955,7 +1054,7 @@ mod tests {
     #[test]
     fn test_list_parser() {
         let lines = vec![GCString::new("- List item 1")];
-        let slice = GCStringSlice::new(&lines);
+        let slice = AsStrSlice::from(&lines);
 
         let result = parse_block_smart_list_generic(slice);
         assert!(result.is_ok(), "List parser should succeed");
@@ -974,7 +1073,7 @@ mod tests {
         // Test unordered list
         {
             let lines = vec![GCString::new("- List item 1")];
-            let slice = GCStringSlice::new(&lines);
+            let slice = AsStrSlice::from(&lines);
 
             let result = parse_smart_list_and_extract_ir_generic(slice);
             assert!(
@@ -1003,7 +1102,7 @@ mod tests {
         // Test ordered list
         {
             let lines = vec![GCString::new("1. List item 1")];
-            let slice = GCStringSlice::new(&lines);
+            let slice = AsStrSlice::from(&lines);
 
             let result = parse_smart_list_and_extract_ir_generic(slice);
             assert!(
@@ -1037,7 +1136,7 @@ mod tests {
         // Test indented list
         {
             let lines = vec![GCString::new("  - Indented list item")];
-            let slice = GCStringSlice::new(&lines);
+            let slice = AsStrSlice::from(&lines);
 
             let result = parse_smart_list_and_extract_ir_generic(slice);
             assert!(
@@ -1070,7 +1169,7 @@ mod tests {
             GCString::new("@title: Test Document"),
             GCString::new("@tags: rust, parsing"),
         ];
-        let slice = GCStringSlice::new(&lines);
+        let slice = AsStrSlice::from(&lines);
 
         // Parse title
         let (remaining, title_value) =
@@ -1102,7 +1201,7 @@ mod tests {
             GCString::new("@tags: rust, parsing"),
         ];
 
-        let input_slice = GCStringSlice::new(&lines);
+        let input_slice = AsStrSlice::from(&lines);
 
         // Test parsing just the title
         let title_result = parse_unique_kv_opt_eol_generic(TITLE, input_slice);
@@ -1136,7 +1235,7 @@ mod tests {
             GCString::new("@tags: rust, parsing"),
         ];
 
-        let input_slice = GCStringSlice::new(&lines);
+        let input_slice = AsStrSlice::from(&lines);
 
         // Test the alt combinator directly without many0
         let mut alt_parser = alt((
@@ -1171,7 +1270,7 @@ mod tests {
     #[test]
     fn test_many0_with_empty_input() {
         let lines = vec![GCString::new("@title: Test Document")];
-        let input_slice = GCStringSlice::new(&lines);
+        let input_slice = AsStrSlice::from(&lines);
 
         // Parse the title
         let (remaining_input, title_value) =
@@ -1193,7 +1292,7 @@ mod tests {
             ),
         ));
 
-        let result = alt_parser.parse(remaining_input);
+        let result = alt_parser.parse(remaining_input.clone());
         assert!(result.is_err(), "Alt parser should fail on empty input");
 
         // Test many0 directly on empty input - should succeed with empty result
@@ -1223,7 +1322,7 @@ mod tests {
             GCString::new("}"),
             GCString::new("```"),
         ];
-        let slice = GCStringSlice::new(&lines);
+        let slice = AsStrSlice::from(&lines);
 
         let result = parse_code_block_generic(slice);
         assert!(
@@ -1242,7 +1341,7 @@ mod tests {
             GCString::new("}"),
             // No closing ```
         ];
-        let slice = GCStringSlice::new(&lines);
+        let slice = AsStrSlice::from(&lines);
 
         let result = parse_code_block_generic(slice);
         assert!(

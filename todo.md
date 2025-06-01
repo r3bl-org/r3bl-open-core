@@ -15,14 +15,6 @@
   - [x] generalize impl of `GCStringSlice` into `AsStrSlice` which implements `nom::Input`, drop the
         `Copy` requirement, and make `Clone` explicit
 
-- use OG parsers _dump the new AI generated stuff_
-
-  - [x] `parse_unique_kv_opt_eol_generic()`: copy from `parse_unique_kv_opt_eol()`
-  - [x] `parse_csv_opt_eol_generic()`: copy from OG `parse_csv_opt_eol()`
-  - [ ] `parse_block_heading_generic()`: copy from OG `???`
-  - [ ] `parse_code_block_generic()`: copy from OG `???`
-  - [ ] `parse_block_text_generic()`: copy from OG `???`
-
 - smart list
 
   - [ ] remove `parse_block_smart_list_generic()` and all deps => replace with `_alt()`
@@ -32,6 +24,14 @@
         `parse_block_smart_list.rs::parse_smart_list()`:
   - [ ] Remove all `Box::leak()`
   - [ ] Remove all `trim()`
+
+- use OG parsers _dump the new AI generated stuff_
+
+  - [x] `parse_unique_kv_opt_eol_generic()`: copy from `parse_unique_kv_opt_eol()`
+  - [x] `parse_csv_opt_eol_generic()`: copy from OG `parse_csv_opt_eol()`
+  - [ ] `parse_block_heading_generic()`: copy from OG `???`
+  - [ ] `parse_code_block_generic()`: copy from OG `???`
+  - [ ] `parse_block_text_generic()`: copy from OG `???`
 
 - vec -> inlinevec
 
