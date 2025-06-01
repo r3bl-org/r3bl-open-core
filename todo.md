@@ -4,15 +4,16 @@
   - `parse_*()` -> splits bytes from input into remainder and output bytes
   - `*_extract` -> generates structs from already-split-input using a `parse_*()`
   - `*_parser()` -> function that recieves an input and is called by `parse_*()`
-- [x] `GCStringSlice::extract_remaining_text_content_in_line()`: fix the naming and add fn docs
+- [x] `AsStrSlice::extract_remaining_text_content_in_line()`: fix the naming and add fn docs
 - code block
 - [x] `parse_code_block_generic()`: fix the behavior when end maker "```" is missing, add fn docs
 - [x] `extract_code_block_content()`: fix this so it doesn't return `String`, only `&str`
 
-- into GStringSlice
+- GStringSlice -> AsStrSlice
 
-  - [x] change `fn parse_markdown_alt()`, from: `&'a [GCString]`, to
-        `input: impl Into<GCStringSlice>`
+  - [x] change `fn parse_markdown_alt()`, from: `&'a [GCString]`, to `input: impl Into<AsStrSlice>`
+  - [x] generalize impl of `GCStringSlice` into `AsStrSlice` which implements `nom::Input`, drop the
+        `Copy` requirement, and make `Clone` explicit
 
 - use OG parsers _dump the new AI generated stuff_
 
@@ -24,9 +25,11 @@
 
 - smart list
 
-  - [x] `parse_block_smart_list.rs::parse_smart_list()`: `parse_smart_list_and_extract_ir_generic()`
-  - [ ] `parse_block_smart_list.rs::parse_block_smart_list()`: `parse_block_smart_list_generic()`
-  - [ ] remove `parse_block_smart_list_generic()` et al
+  - [ ] remove `parse_block_smart_list_generic()` and all deps => replace with `_alt()`
+  - [x] `parse_block_smart_list_generic_alt()`: copy this from OG
+        `parse_block_smart_list.rs::parse_block_smart_list()`
+  - [x] `parse_smart_list_and_extract_ir_generic()`: copy this from OG
+        `parse_block_smart_list.rs::parse_smart_list()`:
   - [ ] Remove all `Box::leak()`
   - [ ] Remove all `trim()`
 
@@ -35,6 +38,7 @@
   - [ ] change all `Vec` to `InlineVec` in `parse_markdown_alt.rs`
 
 - [ ] remove println!() except in tests
+- [ ] fix clippy warnings
 - [ ] add docs for everything
 - [ ] Title
 - [ ] Tags
