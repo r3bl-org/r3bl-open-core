@@ -120,7 +120,9 @@ pub mod constants {
     pub const TITLE: &str = "@title";
     pub const TAGS: &str = "@tags";
     pub const COLON: &str = ":";
+    pub const COLON_CHAR: char = ':';
     pub const COMMA: &str = ",";
+    pub const COMMA_CHAR: char = ',';
     pub const QUOTE: &str = "\"";
     pub const HEADING_CHAR: char = '#';
     pub const SPACE: &str = " ";
@@ -143,6 +145,7 @@ pub mod constants {
     pub const STAR: &str = "*";
     pub const UNDERSCORE: &str = "_";
     pub const BACK_TICK: &str = "`";
+    pub const BACK_TICK_CHAR: char = '`';
     pub const LEFT_BRACKET: &str = "[";
     pub const RIGHT_BRACKET: &str = "]";
     pub const LEFT_PARENTHESIS: &str = "(";

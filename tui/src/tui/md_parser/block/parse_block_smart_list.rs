@@ -305,22 +305,21 @@ mod tests_parse_block_smart_list {
 /// Tests things that are final output (and not at the IR level).
 #[cfg(test)]
 mod tests_parse_smart_lists_in_markdown {
-    use crate::{assert_eq2, parse_markdown, MdDocument, PrettyPrintDebug};
+    use crate::{assert_eq2, parse_markdown, GCString, MdDocument, PrettyPrintDebug};
 
     #[test]
     fn test_parse_valid_md_ol_with_indent() {
         let input = [
-            "start",
-            "1. ol1",
-            "  2. ol2",
-            "     ol2.1",
-            "    3. ol3",
-            "       ol3.1",
-            "       ol3.2",
-            "end",
-            "",
-        ]
-        .join("\n");
+            GCString::new("start"),
+            GCString::new("1. ol1"),
+            GCString::new("  2. ol2"),
+            GCString::new("     ol2.1"),
+            GCString::new("    3. ol3"),
+            GCString::new("       ol3.1"),
+            GCString::new("       ol3.2"),
+            GCString::new("end"),
+            GCString::new(""),
+        ];
 
         let expected_output = [
             "start",
@@ -330,8 +329,8 @@ mod tests_parse_smart_lists_in_markdown {
             "end",
         ];
 
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
+        let result = parse_markdown(&input);
+        let remainder = result.as_ref().unwrap().0.clone();
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
         // md_doc.console_log_fg();
@@ -350,17 +349,16 @@ mod tests_parse_smart_lists_in_markdown {
     #[test]
     fn test_parse_valid_md_ul_with_indent() {
         let input = [
-            "start",
-            "- ul1",
-            "  - ul2",
-            "    ul2.1",
-            "    - ul3",
-            "      ul3.1",
-            "      ul3.2",
-            "end",
-            "",
-        ]
-        .join("\n");
+            GCString::new("start"),
+            GCString::new("- ul1"),
+            GCString::new("  - ul2"),
+            GCString::new("    ul2.1"),
+            GCString::new("    - ul3"),
+            GCString::new("      ul3.1"),
+            GCString::new("      ul3.2"),
+            GCString::new("end"),
+            GCString::new(""),
+        ];
 
         let expected_output = [
             "start",
@@ -370,8 +368,8 @@ mod tests_parse_smart_lists_in_markdown {
             "end",
         ];
 
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
+        let result = parse_markdown(&input);
+        let remainder = result.as_ref().unwrap().0.clone();
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
         // console_log!(md_doc);
@@ -390,26 +388,25 @@ mod tests_parse_smart_lists_in_markdown {
     #[test]
     fn test_parse_valid_md_multiline_no_indent() {
         let input = vec![
-            "start",
-            "- ul1",
-            "- ul2",
-            "  ul2.1",
-            "  ",
-            "- ul3",
-            "  ul3.1",
-            "  ul3.2",
-            "1. ol1",
-            "2. ol2",
-            "   ol2.1",
-            "3. ol3",
-            "   ol3.1",
-            "   ol3.2",
-            "- [ ] todo",
-            "- [x] done",
-            "end",
-            "",
-        ]
-        .join("\n");
+            GCString::new("start"),
+            GCString::new("- ul1"),
+            GCString::new("- ul2"),
+            GCString::new("  ul2.1"),
+            GCString::new("  "),
+            GCString::new("- ul3"),
+            GCString::new("  ul3.1"),
+            GCString::new("  ul3.2"),
+            GCString::new("1. ol1"),
+            GCString::new("2. ol2"),
+            GCString::new("   ol2.1"),
+            GCString::new("3. ol3"),
+            GCString::new("   ol3.1"),
+            GCString::new("   ol3.2"),
+            GCString::new("- [ ] todo"),
+            GCString::new("- [x] done"),
+            GCString::new("end"),
+            GCString::new(""),
+        ];
 
         let expected_output = [
             "start",
@@ -425,8 +422,8 @@ mod tests_parse_smart_lists_in_markdown {
             "end",
         ];
 
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
+        let result = parse_markdown(&input);
+        let remainder = result.as_ref().unwrap().0.clone();
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
         // console_log!(md_doc);
@@ -445,17 +442,16 @@ mod tests_parse_smart_lists_in_markdown {
     #[test]
     fn test_parse_valid_md_no_indent() {
         let input = [
-            "start",
-            "- ul1",
-            "- ul2",
-            "1. ol1",
-            "2. ol2",
-            "- [ ] todo",
-            "- [x] done",
-            "end",
-            "",
-        ]
-        .join("\n");
+            GCString::new("start"),
+            GCString::new("- ul1"),
+            GCString::new("- ul2"),
+            GCString::new("1. ol1"),
+            GCString::new("2. ol2"),
+            GCString::new("- [ ] todo"),
+            GCString::new("- [x] done"),
+            GCString::new("end"),
+            GCString::new(""),
+        ];
 
         let expected_output = [
             "start",
@@ -468,8 +464,8 @@ mod tests_parse_smart_lists_in_markdown {
             "end",
         ];
 
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
+        let result = parse_markdown(&input);
+        let remainder = result.as_ref().unwrap().0.clone();
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
         // console_log!(md_doc);

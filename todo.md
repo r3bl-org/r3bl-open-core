@@ -1,3 +1,64 @@
+# fix md parser: https://github.com/r3bl-org/r3bl-open-core/issues/397
+
+- [x] document naming convention:
+  - `parse_*()` -> splits bytes from input into remainder and output bytes
+  - `*_extract` -> generates structs from already-split-input using a `parse_*()`
+  - `*_parser()` -> function that recieves an input and is called by `parse_*()`
+- [x] `GCStringSlice::extract_remaining_text_content_in_line()`: fix the naming and add fn docs
+- code block
+- [x] `parse_code_block_generic()`: fix the behavior when end maker "```" is missing, add fn docs
+- [x] `extract_code_block_content()`: fix this so it doesn't return `String`, only `&str`
+
+- into GStringSlice
+
+  - [x] change `fn parse_markdown_alt()`, from: `&'a [GCString]`, to
+        `input: impl Into<GCStringSlice>`
+
+- use OG parsers _dump the new AI generated stuff_
+
+  - [x] `parse_unique_kv_opt_eol_generic()`: copy from `parse_unique_kv_opt_eol()`
+  - [x] `parse_csv_opt_eol_generic()`: copy from OG `parse_csv_opt_eol()`
+  - [ ] `parse_block_heading_generic()`: copy from OG `???`
+  - [ ] `parse_code_block_generic()`: copy from OG `???`
+  - [ ] `parse_block_text_generic()`: copy from OG `???`
+
+- smart list
+
+  - [x] `parse_block_smart_list.rs::parse_smart_list()`: `parse_smart_list_and_extract_ir_generic()`
+  - [ ] `parse_block_smart_list.rs::parse_block_smart_list()`: `parse_block_smart_list_generic()`
+  - [ ] remove `parse_block_smart_list_generic()` et al
+  - [ ] Remove all `Box::leak()`
+  - [ ] Remove all `trim()`
+
+- vec -> inlinevec
+
+  - [ ] change all `Vec` to `InlineVec` in `parse_markdown_alt.rs`
+
+- [ ] remove println!() except in tests
+- [ ] add docs for everything
+- [ ] Title
+- [ ] Tags
+- [ ] Authors
+- [ ] Date
+- [ ] Heading
+- [ ] SmartList
+- [ ] CodeBlock
+- [ ] Text
+
+- lines approach (discard?)
+
+  - [ ] convert `VecEditorContentLines` into a newtype
+  - [ ] impl `nom::Input` for `VecEditorContentLines`
+  - [ ] need to change `try_parse_and_highlight()`?
+  - [ ] change `parse_markdown()` (et al) so it can recieve something other than `&str`
+
+- table
+
+  - [ ] impl md table parser
+  - [ ] impl syn hi for this
+
+- fix "`rust`" parsing in syn hi code (should support both "rust" and "rs")
+
 # modernize `choose` and `giti` codebase: https://github.com/r3bl-org/r3bl-open-core/issues/427
 
 - [ ] use `InlineString` & `InlineVec` in `giti` codebase (for sake of consistency)
