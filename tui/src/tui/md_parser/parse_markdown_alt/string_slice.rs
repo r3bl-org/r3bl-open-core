@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use nom::{Compare, CompareResult, Input};
+use nom::{Compare, CompareResult, Input, Offset};
 
 use crate::{constants::{NEW_LINE, NEW_LINE_CHAR},
             GCString};
@@ -352,7 +352,6 @@ impl<'a> Compare<&str> for AsStrSlice<'a> {
     }
 }
 
-// Iterator implementations
 pub struct StringChars<'a> {
     slice: AsStrSlice<'a>,
 }
@@ -391,5 +390,605 @@ impl<'a> Iterator for StringCharIndices<'a> {
         self.slice.advance();
         self.position += 1;
         Some((pos, ch))
+    }
+}
+
+/// Implement [Offset] trait for [AsStrSlice].
+impl<'a> Offset for AsStrSlice<'a> {
+    fn offset(&self, second: &Self) -> usize {
+        // Calculate the character offset between two AsStrSlice instances
+        // The second slice must be a part of self (advanced from self)
+
+        // If they point to different line arrays, we can't calculate a meaningful offset
+        if !std::ptr::eq(self.lines.as_ptr(), second.lines.as_ptr()) {
+            return 0;
+        }
+
+        // If second is before self, return 0 (invalid case)
+        if second.line_index < self.line_index
+            || (second.line_index == self.line_index
+                && second.char_index < self.char_index)
+        {
+            return 0;
+        }
+
+        let mut offset = 0;
+
+        // Count characters from self's position to second's position
+        let mut current_line = self.line_index;
+        let mut current_char = self.char_index;
+
+        while current_line < second.line_index
+            || (current_line == second.line_index && current_char < second.char_index)
+        {
+            if current_line >= self.lines.len() {
+                break;
+            }
+
+            let line = &self.lines[current_line].string;
+
+            if current_line < second.line_index {
+                // Count remaining characters in current line
+                if current_char < line.len() {
+                    offset += line.len() - current_char;
+                }
+                // Add synthetic newline if not the last line
+                if current_line < self.lines.len() - 1 {
+                    offset += 1;
+                }
+                // Move to next line
+                current_line += 1;
+                current_char = 0;
+            } else {
+                // We're on the same line as second, count up to second's char_index
+                let end_char = second.char_index.min(line.len());
+                if current_char < end_char {
+                    offset += end_char - current_char;
+                }
+                break;
+            }
+        }
+
+        offset
+    }
+}
+
+/// Implement [Display] trait for [AsStrSlice].
+impl<'a> std::fmt::Display for AsStrSlice<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Materialize the text by collecting all characters from the current position
+        let mut current = self.clone();
+        while let Some(ch) = current.current_char() {
+            write!(f, "{}", ch)?;
+            current.advance();
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use nom::{Compare, CompareResult, Input, Offset};
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+
+    fn create_test_lines() -> Vec<GCString> {
+        vec![
+            GCString::new("Hello world"),
+            GCString::new("Second line"),
+            GCString::new("Third line"),
+            GCString::new(""),
+            GCString::new("Fifth line"),
+        ]
+    }
+
+    fn create_simple_lines() -> Vec<GCString> {
+        vec![GCString::new("abc"), GCString::new("def")]
+    }
+
+    // Test From trait implementations
+    #[test]
+    fn test_from_slice() {
+        let lines = create_test_lines();
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        assert_eq!(slice.line_index, 0);
+        assert_eq!(slice.char_index, 0);
+        assert_eq!(slice.max_len, None);
+        assert_eq!(slice.lines.len(), 5);
+    }
+
+    #[test]
+    fn test_from_vec() {
+        let lines = create_test_lines();
+        let slice = AsStrSlice::from(&lines);
+
+        assert_eq!(slice.line_index, 0);
+        assert_eq!(slice.char_index, 0);
+        assert_eq!(slice.max_len, None);
+        assert_eq!(slice.lines.len(), 5);
+    }
+
+    // Test Clone and PartialEq traits
+    #[test]
+    fn test_clone_and_partial_eq() {
+        let lines = create_test_lines();
+        let slice1 = AsStrSlice::from(lines.as_slice());
+        let slice2 = slice1.clone();
+
+        assert_eq!(slice1, slice2);
+
+        let slice3 = slice1.take_from(1);
+        assert_ne!(slice1, slice3);
+    }
+
+    // Test Debug trait
+    #[test]
+    fn test_debug() {
+        let lines = create_simple_lines();
+        let slice = AsStrSlice::from(lines.as_slice());
+        let debug_str = format!("{:?}", slice);
+
+        assert!(debug_str.contains("AsStrSlice"));
+        assert!(debug_str.contains("line_index: 0"));
+        assert!(debug_str.contains("char_index: 0"));
+    }
+
+    // Test with_limit constructor
+    #[test]
+    fn test_with_limit() {
+        let lines = create_test_lines();
+        let slice = AsStrSlice::with_limit(&lines, 1, 3, Some(5));
+
+        assert_eq!(slice.line_index, 1);
+        assert_eq!(slice.char_index, 3);
+        assert_eq!(slice.max_len, Some(5));
+    }
+
+    // Test extract_remaining_text_content_in_line
+    #[test]
+    fn test_extract_remaining_text_content_in_line() {
+        let lines = create_test_lines();
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        // From beginning of first line
+        assert_eq!(
+            slice.extract_remaining_text_content_in_line(),
+            "Hello world"
+        );
+
+        // From middle of first line
+        let slice_offset = slice.take_from(6);
+        assert_eq!(
+            slice_offset.extract_remaining_text_content_in_line(),
+            "world"
+        );
+
+        // From empty line
+        let slice_empty = AsStrSlice::with_limit(&lines, 3, 0, None);
+        assert_eq!(slice_empty.extract_remaining_text_content_in_line(), "");
+
+        // With max_len limit
+        let slice_limited = AsStrSlice::with_limit(&lines, 0, 0, Some(5));
+        assert_eq!(
+            slice_limited.extract_remaining_text_content_in_line(),
+            "Hello"
+        );
+
+        // Out of bounds
+        let slice_oob = AsStrSlice::with_limit(&lines, 10, 0, None);
+        assert_eq!(slice_oob.extract_remaining_text_content_in_line(), "");
+    }
+
+    // Test current_char and advance
+    #[test]
+    fn test_current_char_and_advance() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let mut slice = AsStrSlice::from(lines.as_slice());
+        // Input appears as: "abc\ndef" (synthetic \n added between lines)
+        // Positions: a(0), b(1), c(2), \n(3), d(4), e(5), f(6)
+
+        // Test normal characters
+        assert_eq!(slice.current_char(), Some('a'));
+        slice.advance();
+        assert_eq!(slice.current_char(), Some('b'));
+        slice.advance();
+        assert_eq!(slice.current_char(), Some('c'));
+        slice.advance();
+
+        // Test synthetic newline
+        assert_eq!(slice.current_char(), Some('\n'));
+        slice.advance();
+
+        // Test second line
+        assert_eq!(slice.current_char(), Some('d'));
+        slice.advance();
+        assert_eq!(slice.current_char(), Some('e'));
+        slice.advance();
+        assert_eq!(slice.current_char(), Some('f'));
+        slice.advance();
+
+        // Test end of input
+        assert_eq!(slice.current_char(), None);
+    }
+
+    #[test]
+    fn test_advance_with_max_len() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let mut slice = AsStrSlice::with_limit(&lines, 0, 0, Some(2));
+        // Input appears as: "abc\ndef" but limited to first 2 chars: "ab"
+
+        assert_eq!(slice.current_char(), Some('a'));
+        slice.advance();
+        assert_eq!(slice.current_char(), Some('b'));
+        slice.advance();
+        assert_eq!(slice.current_char(), None); // Hit max_len limit
+    }
+
+    // Test Input trait implementation
+    #[test]
+    fn test_input_len() {
+        let lines = create_simple_lines(); // "abc", "def" = 6 chars + 1 newline = 7
+        let slice = AsStrSlice::from(lines.as_slice());
+        assert_eq!(slice.input_len(), 7);
+
+        let slice_offset = slice.take_from(2);
+        assert_eq!(slice_offset.input_len(), 5); // "c\ndef" (from position 2 to end)
+
+        // With max_len
+        let slice_limited = AsStrSlice::with_limit(&lines, 0, 0, Some(3));
+        assert_eq!(slice_limited.input_len(), 3);
+    }
+
+    #[test]
+    fn test_input_take() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let slice = AsStrSlice::from(lines.as_slice());
+        // Input appears as: "abc\ndef" (7 total chars)
+
+        let taken = slice.take(3);
+        assert_eq!(taken.max_len, Some(3));
+        assert_eq!(taken.input_len(), 3); // Takes first 3 chars: "abc"
+    }
+
+    #[test]
+    fn test_input_take_from() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let slice = AsStrSlice::from(lines.as_slice());
+        // Input appears as: "abc\ndef" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
+        // f(6))
+
+        let from_offset = slice.take_from(2);
+        assert_eq!(from_offset.line_index, 0);
+        assert_eq!(from_offset.char_index, 2); // Advanced to position 2: 'c'
+        assert_eq!(from_offset.max_len, None);
+    }
+
+    #[test]
+    fn test_input_take_split() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let slice = AsStrSlice::from(lines.as_slice());
+        // Input appears as: "abc\ndef" (synthetic \n added between lines)
+        // Positions: a(0), b(1), c(2), \n(3), d(4), e(5), f(6)
+
+        let (taken, remaining) = slice.take_split(3);
+        assert_eq!(taken.max_len, Some(3));
+        assert_eq!(taken.input_len(), 3);
+        assert_eq!(remaining.char_index, 3); // Advanced by 3: 'a'(0), 'b'(1), 'c'(2) ->
+                                             // now at '\n'(3)
+    }
+
+    #[test]
+    fn test_input_position() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let slice = AsStrSlice::from(lines.as_slice());
+        // Input appears as: "abc\ndef" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
+        // f(6))
+
+        // Find newline
+        let pos = slice.position(|c| c == '\n');
+        assert_eq!(pos, Some(3)); // Synthetic newline at position 3
+
+        // Find 'd'
+        let pos = slice.position(|c| c == 'd');
+        assert_eq!(pos, Some(4)); // 'd' at position 4 (after synthetic newline)
+
+        // Find non-existent character
+        let pos = slice.position(|c| c == 'z');
+        assert_eq!(pos, None);
+    }
+
+    #[test]
+    fn test_input_slice_index() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let slice = AsStrSlice::from(lines.as_slice());
+        // Input appears as: "abc\ndef" (7 total chars)
+
+        // Valid count
+        assert_eq!(slice.slice_index(3), Ok(3));
+        assert_eq!(slice.slice_index(7), Ok(7)); // Full length
+
+        // Invalid count
+        let result = slice.slice_index(10);
+        assert!(result.is_err());
+        if let Err(nom::Needed::Size(size)) = result {
+            assert_eq!(size.get(), 3); // 10 - 7 = 3 (need 3 more chars)
+        }
+    }
+
+    // Test iterators
+    #[test]
+    fn test_iter_elements() {
+        let lines = vec![GCString::new("ab"), GCString::new("cd")]; // Creates ["ab", "cd"]
+        let slice = AsStrSlice::from(lines.as_slice());
+        // Input appears as: "ab\ncd" (synthetic \n added between lines)
+
+        let chars: Vec<char> = slice.iter_elements().collect();
+        assert_eq!(chars, vec!['a', 'b', '\n', 'c', 'd']); // Note synthetic newline
+    }
+
+    #[test]
+    fn test_iter_indices() {
+        let lines = vec![GCString::new("ab"), GCString::new("cd")]; // Creates ["ab", "cd"]
+        let slice = AsStrSlice::from(lines.as_slice());
+        // Input appears as: "ab\ncd" (synthetic \n added between lines)
+
+        let indexed_chars: Vec<(usize, char)> = slice.iter_indices().collect();
+        assert_eq!(
+            indexed_chars,
+            vec![(0, 'a'), (1, 'b'), (2, '\n'), (3, 'c'), (4, 'd')] /* Note synthetic
+                                                                     * newline at
+                                                                     * index 2 */
+        );
+    }
+
+    // Test Compare trait implementation
+    #[test]
+    fn test_compare() {
+        let lines = vec![GCString::new("Hello"), GCString::new("World")];
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        // Exact match
+        assert_eq!(slice.compare("Hello"), CompareResult::Ok);
+
+        // Partial match (target is longer)
+        assert_eq!(slice.compare("Hello\nWorld"), CompareResult::Ok);
+
+        // Mismatch
+        assert_eq!(slice.compare("Hi"), CompareResult::Error);
+
+        // Target longer than available input
+        assert_eq!(
+            slice.compare("Hello\nWorld\nExtra"),
+            CompareResult::Incomplete
+        );
+
+        // Empty string
+        assert_eq!(slice.compare(""), CompareResult::Ok);
+    }
+
+    #[test]
+    fn test_compare_no_case() {
+        let lines = vec![GCString::new("Hello"), GCString::new("World")];
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        // Case insensitive match
+        assert_eq!(slice.compare_no_case("hello"), CompareResult::Ok);
+        assert_eq!(slice.compare_no_case("HELLO"), CompareResult::Ok);
+        assert_eq!(slice.compare_no_case("HeLLo"), CompareResult::Ok);
+
+        // Mismatch
+        assert_eq!(slice.compare_no_case("hi"), CompareResult::Error);
+
+        // Target longer than available input
+        assert_eq!(
+            slice.compare_no_case("hello\nworld\nextra"),
+            CompareResult::Incomplete
+        );
+    }
+
+    // Test Offset trait implementation
+    #[test]
+    fn test_offset() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let slice1 = AsStrSlice::from(lines.as_slice());
+        // Input appears as: "abc\ndef" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
+        // f(6))
+        let slice2 = slice1.take_from(3); // After "abc" -> at position 3 ('\n')
+        let slice3 = slice1.take_from(5); // After "abc\nde" -> at position 5 ('f')
+
+        assert_eq!(slice1.offset(&slice1), 0);
+        assert_eq!(slice1.offset(&slice2), 3); // 3 positions advanced
+        assert_eq!(slice1.offset(&slice3), 5); // 5 positions advanced
+        assert_eq!(slice2.offset(&slice3), 2); // 2 positions from '\n' to 'f'
+
+        // Invalid case: second is before first
+        assert_eq!(slice2.offset(&slice1), 0);
+    }
+
+    #[test]
+    fn test_offset_different_arrays() {
+        let lines1 = create_simple_lines(); // Creates ["abc", "def"]
+        let lines2 = create_test_lines();
+        let slice1 = AsStrSlice::from(lines1.as_slice());
+        let slice2 = AsStrSlice::from(lines2.as_slice());
+
+        // Different arrays should return 0
+        assert_eq!(slice1.offset(&slice2), 0);
+    }
+
+    // Edge cases and error conditions
+    #[test]
+    fn test_empty_lines() {
+        let lines: Vec<GCString> = vec![];
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        assert_eq!(slice.current_char(), None);
+        assert_eq!(slice.input_len(), 0);
+        assert_eq!(slice.extract_remaining_text_content_in_line(), "");
+    }
+
+    #[test]
+    fn test_single_empty_line() {
+        let lines = vec![GCString::new("")];
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        assert_eq!(slice.current_char(), None);
+        assert_eq!(slice.input_len(), 0);
+        assert_eq!(slice.extract_remaining_text_content_in_line(), "");
+    }
+
+    #[test]
+    fn test_max_len_zero() {
+        let lines = create_simple_lines();
+        let slice = AsStrSlice::with_limit(&lines, 0, 0, Some(0));
+
+        assert_eq!(slice.current_char(), None);
+        assert_eq!(slice.input_len(), 0);
+        assert_eq!(slice.extract_remaining_text_content_in_line(), "");
+    }
+
+    #[test]
+    fn test_advance_beyond_bounds() {
+        let lines = vec![GCString::new("a")];
+        let mut slice = AsStrSlice::from(lines.as_slice());
+
+        assert_eq!(slice.current_char(), Some('a'));
+        slice.advance(); // Now at end
+        assert_eq!(slice.current_char(), None);
+        slice.advance(); // Should not panic or change state
+        assert_eq!(slice.current_char(), None);
+    }
+
+    #[test]
+    fn test_with_newlines_in_content() {
+        let lines = vec![GCString::new("line1\nembedded"), GCString::new("line2")];
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        // Should handle embedded newlines in line content
+        let content = slice.extract_remaining_text_content_in_line();
+        assert_eq!(content, "line1\nembedded");
+    }
+
+    #[test]
+    fn test_char_index_beyond_line_length() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let slice = AsStrSlice::with_limit(&lines, 0, 10, None); // char_index > line.len()
+                                                                 // Input appears as: "abc\ndef" but starting at invalid position 10
+
+        // Should clamp to line length
+        assert_eq!(slice.extract_remaining_text_content_in_line(), "");
+    }
+
+    // Test Display trait implementation
+    #[test]
+    fn test_display_full_content() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let slice = AsStrSlice::from(lines.as_slice());
+        // Input appears as: "abc\ndef" (synthetic \n added between lines)
+
+        let displayed = format!("{}", slice);
+        assert_eq!(displayed, "abc\ndef"); // Shows synthetic newline in output
+    }
+
+    #[test]
+    fn test_display_from_offset() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let slice = AsStrSlice::from(lines.as_slice()).take_from(2);
+        // Input appears as: "abc\ndef", starting from position 2 ('c')
+
+        let displayed = format!("{}", slice);
+        assert_eq!(displayed, "c\ndef"); // From 'c' through synthetic newline to end
+    }
+
+    #[test]
+    fn test_display_with_limit() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let slice = AsStrSlice::with_limit(&lines, 0, 0, Some(4));
+        // Input appears as: "abc\ndef" but limited to first 4 chars: "abc\n"
+
+        let displayed = format!("{}", slice);
+        assert_eq!(displayed, "abc\n"); // First 4 chars including synthetic newline
+    }
+
+    #[test]
+    fn test_display_empty_slice() {
+        let lines: Vec<GCString> = vec![];
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        let displayed = format!("{}", slice);
+        assert_eq!(displayed, "");
+    }
+
+    #[test]
+    fn test_display_single_line() {
+        let lines = vec![GCString::new("hello")];
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        let displayed = format!("{}", slice);
+        assert_eq!(displayed, "hello");
+    }
+
+    #[test]
+    fn test_display_empty_lines() {
+        let lines = vec![
+            GCString::new(""),
+            GCString::new("middle"),
+            GCString::new(""),
+        ];
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        let displayed = format!("{}", slice);
+        assert_eq!(displayed, "\nmiddle\n");
+    }
+
+    #[test]
+    fn test_display_with_embedded_newlines() {
+        let lines = vec![GCString::new("line1\nembedded"), GCString::new("line2")];
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        let displayed = format!("{}", slice);
+        assert_eq!(displayed, "line1\nembedded\nline2");
+    }
+
+    #[test]
+    fn test_display_max_len_zero() {
+        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let slice = AsStrSlice::with_limit(&lines, 0, 0, Some(0));
+        // Input appears as: "abc\ndef" but limited to 0 chars
+
+        let displayed = format!("{}", slice);
+        assert_eq!(displayed, ""); // No characters displayed due to max_len = 0
+    }
+
+    #[test]
+    fn test_display_at_end_position() {
+        let lines = vec![GCString::new("abc")];
+        let slice = AsStrSlice::with_limit(&lines, 0, 3, None); // At end of line
+
+        let displayed = format!("{}", slice);
+        assert_eq!(displayed, "");
+    }
+
+    #[test]
+    fn test_display_multiline_complex() {
+        let lines = create_test_lines(); // Multiple lines including empty
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        let displayed = format!("{}", slice);
+        assert_eq!(
+            displayed,
+            "Hello world\nSecond line\nThird line\n\nFifth line"
+        );
+    }
+
+    #[test]
+    fn test_display_partial_from_middle() {
+        let lines = create_test_lines();
+        let slice = AsStrSlice::with_limit(&lines, 1, 7, Some(10)); // From "line" in "Second line"
+
+        let displayed = format!("{}", slice);
+        assert_eq!(displayed, "line\nThird");
     }
 }
