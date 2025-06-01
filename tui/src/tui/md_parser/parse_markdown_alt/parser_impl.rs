@@ -129,24 +129,10 @@ pub fn parse_markdown_alt<'a>(
         ),
         map(
             make_many0_compatible(parse_block_smart_list_generic),
-            |content: AsStrSlice<'_>| {
-                // Create proper smart list structure with actual content
-                let mut lines = List::new();
-                let mut line_fragments = List::new();
-
-                if let Some(item_content) = extract_list_item_content(content.clone()) {
-                    line_fragments.push(crate::MdLineFragment::Plain(Box::leak(
-                        Box::new(item_content.to_owned()),
-                    )));
-                } else {
-                    // Extract the actual text content as fallback
-                    let fallback_content =
-                        content.extract_remaining_text_content_in_line();
-                    line_fragments.push(crate::MdLineFragment::Plain(fallback_content));
-                }
-
-                lines.push(line_fragments);
-                MdBlock::SmartList((lines, crate::BulletKind::Unordered, 0))
+            |(lines, bullet_kind, indent): (Lines<'_>, BulletKind, usize)| {
+                // The lines, bullet_kind, and indent are already properly structured
+                // Just need to wrap them in MdBlock::SmartList
+                MdBlock::SmartList((lines, bullet_kind, indent))
             },
         ),
         map(
@@ -476,62 +462,6 @@ where
     Ok((input, text))
 }
 
-// Generic smart list parser
-fn parse_block_smart_list_generic<'a, I>(input: I) -> IResult<I, I>
-where
-    I: Input + Clone + Compare<&'a str>,
-    I::Item: AsChar + Copy,
-{
-    // Simplified smart list parser that just finds lines starting with "- " or digit + ".
-    // " This is a placeholder implementation - in a real implementation you'd need to
-    // handle multi-line list items, nesting, checkboxes, etc.
-
-    // Check for unordered list marker
-    if input.input_len() >= 2
-        && input.compare(UNORDERED_LIST_PREFIX) == nom::CompareResult::Ok
-    {
-        let (input, _) = tag(UNORDERED_LIST_PREFIX).parse(input)?;
-        let (input, content) = take_text_until_new_line_or_end_generic().parse(input)?;
-        let (input, _) = opt(tag(NEW_LINE)).parse(input)?;
-        return Ok((input, content));
-    }
-
-    // Check for ordered list marker (simplified - just look for digit +
-    // ORDERED_LIST_PARTIAL_PREFIX)
-    let mut input_clone = input.clone();
-    let mut found_digit = false;
-    let mut count = 0;
-
-    // Look for digits
-    while count < input_clone.input_len() {
-        let slice = input_clone.take(1);
-        if let Some(ch) = slice.iter_elements().next() {
-            if ch.as_char().is_ascii_digit() {
-                found_digit = true;
-                input_clone = input_clone.take_from(1);
-                count += 1;
-            } else {
-                break;
-            }
-        } else {
-            break;
-        }
-    }
-
-    if found_digit
-        && input_clone.input_len() >= 2
-        && input_clone.compare(ORDERED_LIST_PARTIAL_PREFIX) == nom::CompareResult::Ok
-    {
-        let (input, _marker) = input.take_split(count + 2); // digits + ORDERED_LIST_PARTIAL_PREFIX
-        let (input, content) = take_text_until_new_line_or_end_generic().parse(input)?;
-        let (input, _) = opt(tag(NEW_LINE)).parse(input)?;
-        return Ok((input, content));
-    }
-
-    // If no list marker found, fail
-    Err(nom::Err::Error(NomError::new(input, NomErrorKind::Tag)))
-}
-
 /// Generic version of the [parse_block_smart_list::parse_smart_list] function that uses
 /// [AsStrSlice]. This function parses a smart list from markdown text and returns a
 /// [SmartListIR] structure.
@@ -760,7 +690,7 @@ fn extract_block_smart_list_from_ir_generic_alt<'a>(
     Some((output_lines, bullet_kind, indent))
 }
 
-pub fn parse_block_smart_list_generic_alt<'a>(
+pub fn parse_block_smart_list_generic<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<
     /* remainder */ AsStrSlice<'a>,
@@ -1059,10 +989,30 @@ mod tests {
         let result = parse_block_smart_list_generic(slice);
         assert!(result.is_ok(), "List parser should succeed");
 
-        let (remaining, content) = result.unwrap();
+        let (remaining, (lines, bullet_kind, indent)) = result.unwrap();
         assert_eq!(remaining.input_len(), 0, "Should consume all input");
+
+        assert_eq!(indent, 0, "Indent should be 0 for simple list");
+        assert!(
+            matches!(bullet_kind, BulletKind::Unordered),
+            "Bullet kind should be Unordered"
+        );
         assert_eq!(
-            content.extract_remaining_text_content_in_line(),
+            lines
+                .first()
+                .map(|line| {
+                    line.iter()
+                        .filter_map(|fragment| {
+                            if let MdLineFragment::Plain(text) = fragment {
+                                Some(*text)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .join("")
+                })
+                .unwrap_or_default(),
             "List item 1",
             "Should extract correct list content"
         );
