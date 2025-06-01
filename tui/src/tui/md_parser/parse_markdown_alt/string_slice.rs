@@ -20,11 +20,22 @@ use nom::{Compare, CompareResult, Input};
 use crate::{constants::{NEW_LINE, NEW_LINE_CHAR},
             GCString};
 
-/// Wrapper type that implements [nom::Input] for &[GCString]. The [Clone] operations on
-/// this struct are really cheap, and it implements [Copy].
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct GCStringSlice<'a> {
-    lines: &'a [GCString],
+/// Wrapper type that implements [nom::Input] for &[GCString] or any type that implements
+/// [AsRef<str>]. The [Clone] operations on this struct are really cheap.
+///
+/// This struct generates synthetic new lines when it's [nom::Input] methods are used
+/// to manipulate it. This ensures that it can make the underline `line` struct "act" like
+/// it is a contiguous array of chars.
+///
+/// Since this struct implements [nom::Input], it can be used in any function that can
+/// receive an argument that implements it. So you have flexibility in using the
+/// [AsStrSlice] type or the [nom::Input] type where appropriate.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AsStrSlice<'a, T: AsRef<str> = GCString>
+where
+    &'a [T]: Copy,
+{
+    lines: &'a [T],
     // Position tracking: (line_index, char_index_within_line).
     // Special case: if char_index == line.len(), we're at the synthetic newline.
     line_index: usize,
@@ -34,13 +45,9 @@ pub struct GCStringSlice<'a> {
 }
 
 /// Implement [From] trait to allow automatic conversion from &[GCString] to
-/// [GCStringSlice].
-impl<'a> From<&'a [GCString]> for GCStringSlice<'a> {
-    fn from(lines: &'a [GCString]) -> Self { Self::new(lines) }
-}
-
-impl<'a> GCStringSlice<'a> {
-    pub fn new(lines: &'a [GCString]) -> Self {
+/// [AsStrSlice].
+impl<'a> From<&'a [GCString]> for AsStrSlice<'a> {
+    fn from(lines: &'a [GCString]) -> Self {
         Self {
             lines,
             line_index: 0,
@@ -48,10 +55,22 @@ impl<'a> GCStringSlice<'a> {
             max_len: None,
         }
     }
+}
 
-    /// Convert from a slice reference to a GCStringSlice
-    pub fn from_slice(lines: &'a [GCString]) -> Self { Self::new(lines) }
+/// Implement [From] trait to allow automatic conversion from &Vec<GCString> to
+/// [AsStrSlice].
+impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
+    fn from(lines: &'a Vec<GCString>) -> Self {
+        Self {
+            lines,
+            line_index: 0,
+            char_index: 0,
+            max_len: None,
+        }
+    }
+}
 
+impl<'a> AsStrSlice<'a> {
     // Create a new slice with a maximum length limit
     pub fn with_limit(
         lines: &'a [GCString],
@@ -81,10 +100,10 @@ impl<'a> GCStringSlice<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use r3bl_tui::{GCString, GCStringSlice};
+    /// # use r3bl_tui::{GCString, AsStrSlice};
     /// # use nom::Input;
     /// let lines = vec![GCString::new("Hello world"), GCString::new("Second line")];
-    /// let slice = GCStringSlice::new(&lines);
+    /// let slice = AsStrSlice::new(&lines);
     ///
     /// // Extract from beginning of first line.
     /// let content = slice.extract_remaining_text_content_in_line();
@@ -232,21 +251,21 @@ impl<'a> GCStringSlice<'a> {
     }
 }
 
-impl<'a> Input for GCStringSlice<'a> {
+impl<'a> Input for AsStrSlice<'a> {
     type Item = char;
-    type Iter = GCStringChars<'a>;
-    type IterIndices = GCStringCharIndices<'a>;
+    type Iter = StringChars<'a>;
+    type IterIndices = StringCharIndices<'a>;
 
-    fn iter_indices(&self) -> Self::IterIndices { GCStringCharIndices::new(*self) }
+    fn iter_indices(&self) -> Self::IterIndices { StringCharIndices::new(self.clone()) }
 
-    fn iter_elements(&self) -> Self::Iter { GCStringChars::new(*self) }
+    fn iter_elements(&self) -> Self::Iter { StringChars::new(self.clone()) }
 
     fn position<P>(&self, predicate: P) -> Option<usize>
     where
         P: Fn(Self::Item) -> bool,
     {
         let mut pos = 0;
-        let mut current = *self;
+        let mut current = self.clone();
 
         while let Some(ch) = current.current_char() {
             if predicate(ch) {
@@ -277,7 +296,7 @@ impl<'a> Input for GCStringSlice<'a> {
     }
 
     fn take_from(&self, start: usize) -> Self {
-        let mut result = *self;
+        let mut result = self.clone();
 
         // Advance to the start position
         for _ in 0..start.min(self.remaining_len()) {
@@ -297,9 +316,9 @@ impl<'a> Input for GCStringSlice<'a> {
     }
 }
 
-impl<'a> Compare<&str> for GCStringSlice<'a> {
+impl<'a> Compare<&str> for AsStrSlice<'a> {
     fn compare(&self, t: &str) -> CompareResult {
-        let mut current = *self;
+        let mut current = self.clone();
         let mut target_chars = t.chars();
 
         loop {
@@ -316,7 +335,7 @@ impl<'a> Compare<&str> for GCStringSlice<'a> {
     }
 
     fn compare_no_case(&self, t: &str) -> CompareResult {
-        let mut current = *self;
+        let mut current = self.clone();
         let mut target_chars = t.chars();
 
         loop {
@@ -334,15 +353,15 @@ impl<'a> Compare<&str> for GCStringSlice<'a> {
 }
 
 // Iterator implementations
-pub struct GCStringChars<'a> {
-    slice: GCStringSlice<'a>,
+pub struct StringChars<'a> {
+    slice: AsStrSlice<'a>,
 }
 
-impl<'a> GCStringChars<'a> {
-    fn new(slice: GCStringSlice<'a>) -> Self { Self { slice } }
+impl<'a> StringChars<'a> {
+    fn new(slice: AsStrSlice<'a>) -> Self { Self { slice } }
 }
 
-impl<'a> Iterator for GCStringChars<'a> {
+impl<'a> Iterator for StringChars<'a> {
     type Item = char;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -354,16 +373,16 @@ impl<'a> Iterator for GCStringChars<'a> {
     }
 }
 
-pub struct GCStringCharIndices<'a> {
-    slice: GCStringSlice<'a>,
+pub struct StringCharIndices<'a> {
+    slice: AsStrSlice<'a>,
     position: usize,
 }
 
-impl<'a> GCStringCharIndices<'a> {
-    fn new(slice: GCStringSlice<'a>) -> Self { Self { slice, position: 0 } }
+impl<'a> StringCharIndices<'a> {
+    fn new(slice: AsStrSlice<'a>) -> Self { Self { slice, position: 0 } }
 }
 
-impl<'a> Iterator for GCStringCharIndices<'a> {
+impl<'a> Iterator for StringCharIndices<'a> {
     type Item = (usize, char);
 
     fn next(&mut self) -> Option<Self::Item> {

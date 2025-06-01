@@ -26,13 +26,13 @@
 //! | `*_parser()`        | A function that receives an input, and is called by `parse_*()`            |
 //!
 //! # Polymorphic behavior of nom-compatible struct
-//! Since [GCStringSlice] implements [nom::Input], any function that can receive a
-//! [nom::Input] can accept [GCStringSlice] type.
+//! Since [AsStrSlice] implements [nom::Input], any function that can receive a
+//! [nom::Input] can accept [AsStrSlice] type.
 //!
-//! Depending on your needs, you can interchangeably treat a [GCStringSlice] as a
-//! [nom::Input], or [GCStringSlice] as needed, so there is a lot of flexibility in how to
-//! access the `input`, in a "nom compatible" way. Also [CGStringSlice] is both [Copy] and
-//! [Clone] and it is very cheap to copy. These features are used in many of the
+//! Depending on your needs, you can interchangeably treat a [AsStrSlice] as a
+//! [nom::Input], or [AsStrSlice] as needed, so there is a lot of flexibility in how to
+//! access the `input`, in a "nom compatible" way. Also [CGStringSlice] is
+//! [Clone] and it is very cheap. These features are used in many of the
 //! functions in this module.
 
 // Attach sources.
