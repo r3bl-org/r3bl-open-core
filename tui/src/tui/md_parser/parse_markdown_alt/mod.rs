@@ -36,9 +36,12 @@
 //! functions in this module.
 
 // Attach sources.
+pub mod fragment_alt;
 pub mod parser_impl;
 pub mod string_slice;
 
 // Re-export.
+// TODO: fix this visibility to pub
+use fragment_alt::*;
 pub use parser_impl::*;
 pub use string_slice::*;
