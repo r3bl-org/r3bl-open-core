@@ -9,11 +9,41 @@
 - [x] `parse_code_block_generic()`: fix the behavior when end maker "```" is missing, add fn docs
 - [x] `extract_code_block_content()`: fix this so it doesn't return `String`, only `&str`
 
+- use OG parsers _dump the new AI generated stuff_
+
+  - [x] `parse_unique_kv_opt_eol_generic()`: copy from `parse_unique_kv_opt_eol()`
+  - [x] `parse_csv_opt_eol_generic()`: copy from OG `parse_csv_opt_eol()`
+
 - GStringSlice -> AsStrSlice
 
   - [x] change `fn parse_markdown_alt()`, from: `&'a [GCString]`, to `input: impl Into<AsStrSlice>`
   - [x] generalize impl of `GCStringSlice` into `AsStrSlice` which implements `nom::Input`, drop the
         `Copy` requirement, and make `Clone` explicit
+
+- use OG parsers _dump the new AI generated stuff_
+
+  - [x] `parse_code_block_generic()`: fix bug! strips
+        "```" from start and end and `test_parse_block_code_with_missing_end_marker()`
+  - [ ] `extract_code_block_content()`: test this
+  - [ ] add tests for `extract_code_block_content()`
+  - [ ] `parse_block_heading_generic()`: copy from OG `???`
+  - [ ] `parse_code_block_generic()`: copy from OG `???`
+  - [ ] `parse_block_text_generic()`: copy from OG `???`
+  - [ ] stop using the generic function signature, and use this:
+
+    ```rust
+    fn f<'a>(i: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {}
+    ```
+
+    instead of:
+
+    ```rust
+    fn f<'a, I>(input: I) -> IResult<I, I>
+    where
+          I: Input + Clone + Compare<&'a str> + Offset + Debug,
+          I::Item: AsChar + Copy
+    {}
+    ```
 
 - smart list
 
@@ -24,14 +54,6 @@
         `parse_block_smart_list.rs::parse_smart_list()`:
   - [ ] Remove all `Box::leak()`
   - [ ] Remove all `trim()`
-
-- use OG parsers _dump the new AI generated stuff_
-
-  - [x] `parse_unique_kv_opt_eol_generic()`: copy from `parse_unique_kv_opt_eol()`
-  - [x] `parse_csv_opt_eol_generic()`: copy from OG `parse_csv_opt_eol()`
-  - [ ] `parse_block_heading_generic()`: copy from OG `???`
-  - [ ] `parse_code_block_generic()`: copy from OG `???`
-  - [ ] `parse_block_text_generic()`: copy from OG `???`
 
 - vec -> inlinevec
 

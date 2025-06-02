@@ -14,18 +14,44 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+
+//! This file uses the following parser signatures:
+//!
+//! ```
+//! # use r3bl_tui::AsStrSlice;
+//! # use nom::IResult;
+//! fn f<'a>(i: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> { unimplemented!() }
+//! ```
+//!
+//! Instead of the overly generic and difficult to work with (this type of signature makes
+//! sense for the built-in parsers which are expected to work with any slice, but our use
+//! case is anchored in [AsStrSlice], which itself is very flexible):
+//!
+//! ```
+//! # use r3bl_tui::AsStrSlice;
+//! # use nom::{IResult, Input, Compare, Offset, AsChar};
+//! # use std::fmt::Debug;
+//! fn f<'a, I>(input: I) -> IResult<I, I>
+//! where
+//!       I: Input + Clone + Compare<&'a str> + Offset + Debug,
+//!       I::Item: AsChar + Copy
+//! { unimplemented!() }
+//! ```
+
 use std::fmt::Debug;
 
 use nom::{branch::alt,
-          bytes::complete::tag,
-          character::complete::{char, digit1, space0},
+          bytes::complete::{tag, take_until},
+          character::complete::{char, digit1, line_ending, not_line_ending, space0},
           combinator::{map, opt, recognize},
           error::{Error as NomError, ErrorKind as NomErrorKind},
           multi::{many0, many1},
-          sequence::{preceded, terminated},
+          sequence::{preceded, terminated, tuple},
           AsChar,
           Compare,
           CompareResult,
+          Err as NomErr,
+          FindSubstring,
           IResult,
           Input,
           Offset,
@@ -60,8 +86,10 @@ use crate::{constants::{BACK_TICK_CHAR, CHECKED, UNCHECKED},
             tiny_inline_string,
             AsStrSlice,
             CheckboxParsePolicy,
+            CodeBlockLineContent,
             GCString,
             InlineVec,
+            InlineVecStr,
             Lines,
             List,
             MdBlock,
@@ -151,137 +179,6 @@ pub fn parse_markdown_alt<'a>(
     Ok((current_input, List::from(output)))
 }
 
-/// Extracts and processes code block content from a parsed markdown slice.
-///
-/// ## Context
-///
-/// [parse_code_block_generic()] handles the boundary detection, while this function
-/// handles content extraction. They work hand in hand.
-///
-/// This helper function processes the output from [parse_code_block_generic()], which is
-/// guaranteed to produce a valid Markdown fenced code block slice, to extract the
-/// language specification and code content from a markdown code block, converting it into
-/// a structured [MdBlock::CodeBlock].
-///
-/// Note that the return type of [parse_code_block_generic()] is a concrete type that
-/// implements [nom::Input], and so this return value can be passed as an argument to this
-/// function which receives a `slice` input of type [AsStrSlice].
-///
-/// ## Processing Pipeline
-///
-/// 1. **Input**: Takes a [AsStrSlice] containing the raw fenced code block content
-///    (including markers) as identified by [parse_code_block_generic()]
-/// 2. **Text Extraction**: Extracts the text content and splits it into lines for
-///    processing
-/// 3. **Language Detection**: Parses the first line to extract optional language
-///    specification
-/// 4. **Content Collection**: Collects code lines between the opening and closing ```
-///    markers
-/// 5. **Structure Building**: Creates [CodeBlockLine] entries with
-///    [CodeBlockLineContent::Text]
-///
-/// ## Functionality
-///
-/// 1. **Language Extraction**: Parses the first line to extract the optional language
-///    specification after the opening ``` markers
-/// 2. **Content Processing**: Extracts all lines between the opening and closing ```
-///    markers as code content
-/// 3. **Structure Creation**: Builds a proper [MdBlock::CodeBlock] with [CodeBlockLine]
-///    entries containing the language and content
-///
-/// ## Dependencies
-///
-/// This function depends on the output of [parse_code_block_generic()], which provides
-/// the initial parsing of code block boundaries and guarantees that the input contains
-/// a well-formed fenced code block with proper opening and closing markers.
-///
-/// ## Parameters
-///
-/// * `slice` - A [AsStrSlice] containing the markdown text content to process, typically
-///   obtained from [parse_code_block_generic()]
-///
-/// ## Returns
-///
-/// Returns an [MdBlock::CodeBlock] containing:
-/// - Language specification (if present)
-/// - All code lines as [CodeBlockLine] entries with [CodeBlockLineContent::Text]
-///
-/// ## Example Input Processing
-///
-/// ```rs
-/// fn main() { println!("Hello, world!"); }
-/// ```
-///
-/// This would produce a code block with:
-/// - Language: `Some("rs")`
-/// - Content: `fn main() { println!("Hello, world!"); }`
-fn extract_code_block_content<'a>(slice: AsStrSlice<'a>) -> MdBlock<'a> {
-    let text = slice.extract_remaining_text_content_in_line();
-    let lines: Vec<&str> = text.lines().collect();
-
-    // Extract language from first line
-    let first_line = if !lines.is_empty() { lines[0] } else { "" };
-    let language =
-        if first_line.len() > 3 && first_line.starts_with(CODE_BLOCK_START_PARTIAL) {
-            let lang_part = first_line[3..].trim();
-            if lang_part.is_empty() {
-                None
-            } else {
-                Some(lang_part)
-            }
-        } else {
-            None
-        };
-
-    // Extract code lines (between ``` markers)
-    let mut raw_code_lines = Vec::new();
-    let mut in_code = false;
-
-    for line in lines.iter().skip(1) {
-        if line.trim() == CODE_BLOCK_END {
-            break;
-        }
-        if in_code || !first_line.starts_with(CODE_BLOCK_START_PARTIAL) {
-            in_code = true;
-        }
-        raw_code_lines.push(*line);
-    }
-
-    // Create proper code block structure with actual content
-    let mut code_lines = List::new();
-    for line in raw_code_lines {
-        code_lines.push(crate::CodeBlockLine {
-            language,
-            content: crate::CodeBlockLineContent::Text(line),
-        });
-    }
-
-    MdBlock::CodeBlock(code_lines)
-}
-
-// Helper function to extract list item content
-fn extract_list_item_content<'a>(slice: AsStrSlice<'a>) -> Option<&'a str> {
-    let text = slice.extract_remaining_text_content_in_line();
-    let trimmed = text.trim();
-
-    // Handle unordered list items
-    if let Some(content) = trimmed.strip_prefix(UNORDERED_LIST_PREFIX) {
-        return Some(content);
-    }
-
-    // Handle ordered list items (simplified - just look for digit +
-    // ORDERED_LIST_PARTIAL_PREFIX)
-    if let Some(dot_pos) = trimmed.find(ORDERED_LIST_PARTIAL_PREFIX) {
-        let prefix = &trimmed[..dot_pos];
-        if prefix.chars().all(|c| c.is_ascii_digit()) {
-            let it = &trimmed[dot_pos + ORDERED_LIST_PARTIAL_PREFIX.len()..];
-            return Some(it);
-        }
-    }
-
-    None
-}
-
 // Generic helper function to take text until newline or end for any Input type
 fn take_text_until_new_line_or_end_generic<I>() -> impl Fn(I) -> IResult<I, I>
 where
@@ -354,7 +251,7 @@ fn parse_unique_kv_opt_eol_generic<'a>(
     let remainder_str = remainder.extract_remaining_text_content_in_line();
 
     if title_str.contains(tag_str) || remainder_str.contains(tag_str) {
-        return Err(nom::Err::Error(NomError::new(
+        return Err(NomErr::Error(NomError::new(
             input_clone, // Use input as the error location
             NomErrorKind::Fail,
         )));
@@ -454,7 +351,7 @@ where
 
     // Fail if no text was captured (empty input)
     if text.input_len() == 0 {
-        return Err(nom::Err::Error(NomError::new(input, NomErrorKind::Tag)));
+        return Err(NomErr::Error(NomError::new(input, NomErrorKind::Tag)));
     }
 
     let (input, _) = opt(tag(NEW_LINE)).parse(input)?;
@@ -550,13 +447,9 @@ pub fn parse_smart_list_and_extract_ir_generic<'a>(
 
         if found_digit && text_content[count..].starts_with(ORDERED_LIST_PARTIAL_PREFIX) {
             // Parse the number
-            let number_usize =
-                digits
-                    .parse::<usize>()
-                    .or(Err(nom::Err::Error(NomError::new(
-                        input_after_spaces.clone(),
-                        NomErrorKind::Fail,
-                    ))))?;
+            let number_usize = digits.parse::<usize>().or(Err(NomErr::Error(
+                NomError::new(input_after_spaces.clone(), NomErrorKind::Fail),
+            )))?;
 
             // Skip the digits and the ". " part
             let (input, _) =
@@ -570,7 +463,7 @@ pub fn parse_smart_list_and_extract_ir_generic<'a>(
 
             input
         } else {
-            return Err(nom::Err::Error(NomError::new(
+            return Err(NomErr::Error(NomError::new(
                 input_after_spaces,
                 NomErrorKind::Tag,
             )));
@@ -707,7 +600,7 @@ pub fn parse_block_smart_list_generic<'a>(
         Some(output) => Ok((remainder, output)),
         None => {
             // If there was an error extracting the smart list, return it
-            Err(nom::Err::Error(NomError::new(
+            Err(NomErr::Error(NomError::new(
                 input_clone,
                 NomErrorKind::Fail,
             )))
@@ -719,14 +612,20 @@ pub fn parse_block_smart_list_generic<'a>(
 /// ends, returning the entire block as a slice of the input, which can then be further
 /// processed by higher-level parsers.
 ///
+/// # Behavior
+/// - Does not parse or extract the inner content - returns the raw slice. And includes
+///   the opening "```" with everything in the middle, but not the closing "```".
+/// - Expects input to start with "```".
+/// - Captures the fenced code block with the opening marker but not the closing marker.
+/// - **Requires a closing marker** - will fail if the closing "```" is missing.
+///
 /// A generic parser for markdown code blocks delimited by triple backticks (```).
 /// It does not extract the [MdBlock::CodeBlock] from the `input`, it only splits
 /// the `input` into:
 /// 1. the fenced code block slice (including opening and closing markers) and
 /// 2. the remainder of input slice.
 ///
-/// ## Context
-///
+/// # Context
 /// This function handles the boundary detection, while [extract_code_block_content]
 /// handles content extraction. They work hand in hand.
 ///
@@ -738,88 +637,174 @@ pub fn parse_block_smart_list_generic<'a>(
 /// - `Ok((remaining_input, fenced_code_block_slice))` - Successfully parsed code block
 ///   slice.
 /// - `Err(_)` - Input doesn't start with code block marker or missing closing marker.
-///
-/// # Behavior
-/// - Expects input to start with "```"
-/// - Captures the entire fenced code block (including markers)
-/// - **Requires a closing marker** - will fail if the closing "```" is missing
-/// - Does not parse or extract the inner content - returns the raw slice
-///
-/// # Examples
-/// ```rust
-/// // With proper closing marker - succeeds
-/// # use nom::IResult;
-/// # use r3bl_tui::r#impl::parse_code_block_generic;
-/// # fn it() -> Result<(), Box<dyn std::error::Error>> {
-/// let input = "```rust\nlet x = 5;\n```\nmore text";
-/// let (remaining, fenced_block) = parse_code_block_generic(input)?;
-/// assert_eq!(fenced_block, "```rust\nlet x = 5;\n```");
-/// assert_eq!(remaining, "\nmore text");
-/// # Ok(())
-/// # }
-/// ```
-///
-/// ```rust
-/// // Missing closing marker - returns error
-/// # use nom::IResult;
-/// # use r3bl_tui::r#impl::parse_code_block_generic;
-/// let input = "```python\nprint('hello')";
-/// let result = parse_code_block_generic(input);
-/// assert!(result.is_err());
-/// ```
-pub fn parse_code_block_generic<'a, I>(input: I) -> IResult<I, I>
-where
-    I: Input + Clone + Compare<&'a str>,
-    I::Item: AsChar + Copy,
-{
-    // Look for code block start "```".
-    let (input, _) = tag(CODE_BLOCK_START_PARTIAL).parse(input)?;
+pub fn parse_code_block_generic<'a>(
+    input: AsStrSlice<'a>,
+) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+    // Check if the input starts with the code block marker
+    if !input.to_string().starts_with(CODE_BLOCK_START_PARTIAL) {
+        return Err(NomErr::Error(NomError::new(input, NomErrorKind::Tag)));
+    }
 
-    // Skip optional language specification until newline.
-    let (input, _lang) = take_text_until_new_line_or_end_generic().parse(input)?;
-    let (input, _) = opt(tag(NEW_LINE)).parse(input)?;
+    // Find the position of the closing marker
+    let input_str = input.to_string();
+    let mut lines = input_str.lines();
 
-    // Take everything until "```" (handles missing end markers).
-    let mut input_clone = input.clone();
-    let mut content_len = 0;
-    let original_len = input.input_len();
-    let mut found_end_marker = false;
+    // Skip the first line (opening marker)
+    let _first_line = lines.next().unwrap_or("");
 
-    while content_len + 3 <= original_len {
-        // Check if we found the end marker.
-        let slice = input_clone.take(3);
-        let mut chars = slice.iter_elements();
-        if chars.next().map(|c| c.as_char()) == Some(BACK_TICK_CHAR)
-            && chars.next().map(|c| c.as_char()) == Some(BACK_TICK_CHAR)
-            && chars.next().map(|c| c.as_char()) == Some(BACK_TICK_CHAR)
-        {
-            // Found end marker.
-            found_end_marker = true;
+    // Find the closing marker
+    let mut line_count = 1; // Start at 1 for the first line
+    let mut found_closing = false;
+
+    for line in lines {
+        line_count += 1;
+        if line.trim() == CODE_BLOCK_START_PARTIAL {
+            found_closing = true;
             break;
         }
-
-        // Move forward to next character.
-        input_clone = input_clone.take_from(1);
-        content_len += 1;
     }
 
-    if found_end_marker {
-        // Extract the content up to the end marker.
-        let (content, remaining) = input.take_split(content_len);
-
-        // Skip the closing "```".
-        let (remaining, _) = tag(CODE_BLOCK_END).parse(remaining)?;
-        let (remaining, _) = opt(tag(NEW_LINE)).parse(remaining)?;
-
-        Ok((remaining, content))
-    } else {
-        // No end marker found, return an error so that many0 will go to the next parser.
-        Err(nom::Err::Error(NomError::new(input, NomErrorKind::Tag)))
+    if !found_closing {
+        return Err(NomErr::Failure(NomError::new(input, NomErrorKind::Tag)));
     }
+
+    // Calculate the length of the code block
+    let mut code_block_len = 0;
+    let mut current_line = 0;
+
+    for line in input_str.lines() {
+        current_line += 1;
+        code_block_len += line.len() + 1; // +1 for the newline
+
+        if current_line == line_count {
+            break;
+        }
+    }
+
+    // Adjust for the last newline if needed
+    if code_block_len > 0 {
+        code_block_len -= 1; // Remove the last newline
+    }
+
+    // Take the code block
+    let code_block = input.take(code_block_len);
+    let remaining = input.take_from(code_block_len);
+
+    Ok((remaining, code_block))
 }
 
-/// Helper function to ensure parsers return [nom::Err::Error] instead of
-/// [nom::Err::Failure] for `many0` compatibility. Here's what it does:
+/// Extracts and processes code block content from a parsed markdown slice.
+///
+/// ## Context
+///
+/// [parse_code_block_generic()] handles the boundary detection, while this function
+/// handles content extraction. They work hand in hand.
+///
+/// This helper function processes the output from [parse_code_block_generic()], which is
+/// guaranteed to produce a valid Markdown fenced code block slice, to extract the
+/// language specification and code content from a markdown code block, converting it into
+/// a structured [MdBlock::CodeBlock].
+///
+/// Note that the return type of [parse_code_block_generic()] is a concrete type that
+/// implements [nom::Input], and so this return value can be passed as an argument to this
+/// function which receives a `slice` input of type [AsStrSlice].
+///
+/// ## Processing Pipeline
+///
+/// 1. **Input**: Takes a [AsStrSlice] containing the raw fenced code block content (does
+///    not include markers) as identified by [parse_code_block_generic()]
+/// 2. **Text Extraction**: Extracts the text content and splits it into lines for
+///    processing
+/// 3. **Language Detection**: Parses the first line to extract optional language
+///    specification
+/// 4. **Content Collection**: Collects code lines between the opening and closing ```
+///    markers
+/// 5. **Structure Building**: Creates [CodeBlockLine] entries with
+///    [CodeBlockLineContent::Text]
+///
+/// ## Functionality
+///
+/// 1. **Language Extraction**: Parses the first line to extract the optional language
+///    specification after the opening ``` markers
+/// 2. **Content Processing**: Extracts all lines between the opening and closing ```
+///    markers as code content
+/// 3. **Structure Creation**: Builds a proper [MdBlock::CodeBlock] with [CodeBlockLine]
+///    entries containing the language and content
+///
+/// ## Dependencies
+///
+/// This function depends on the output of [parse_code_block_generic()], which provides
+/// the initial parsing of code block boundaries and guarantees that the input contains
+/// a well-formed fenced code block with proper opening and closing markers.
+///
+/// ## Parameters
+///
+/// * `slice` - A [AsStrSlice] containing the markdown text content to process, typically
+///   obtained from [parse_code_block_generic()]
+///
+/// ## Returns
+///
+/// Returns an [MdBlock::CodeBlock] containing:
+/// - Language specification (if present)
+/// - All code lines as [CodeBlockLine] entries with [CodeBlockLineContent::Text]
+///
+/// ## Example Input Processing
+///
+/// ```rs
+/// fn main() { println!("Hello, world!"); }
+/// ```
+///
+/// This would produce a code block with:
+/// - Language: `Some("rs")`
+/// - Content: `fn main() { println!("Hello, world!"); }`
+fn extract_code_block_content<'a>(slice: AsStrSlice<'a>) -> MdBlock<'a> {
+    let text = slice.extract_remaining_text_content_in_line();
+    let lines: Vec<&str> = text.lines().collect();
+
+    // Extract language from first line
+    let first_line = if !lines.is_empty() { lines[0] } else { "" };
+    let code_block_marker_width = CODE_BLOCK_START_PARTIAL.len();
+    let language = if first_line.len() > code_block_marker_width
+        && first_line.starts_with(CODE_BLOCK_START_PARTIAL)
+    {
+        let lang_part = first_line[code_block_marker_width..].trim();
+        if lang_part.is_empty() {
+            None
+        } else {
+            Some(lang_part)
+        }
+    } else {
+        None
+    };
+
+    // Extract code lines (between ``` markers)
+    let mut raw_code_lines = InlineVecStr::new();
+    let mut in_code = false;
+
+    for line in lines.iter().skip(1) {
+        if line.trim() == CODE_BLOCK_END {
+            break;
+        }
+        if in_code || !first_line.starts_with(CODE_BLOCK_START_PARTIAL) {
+            in_code = true;
+        }
+        raw_code_lines.push(*line);
+    }
+
+    // Create proper code block structure with actual content
+    let mut code_lines = List::new();
+    for line in raw_code_lines {
+        code_lines.push(crate::CodeBlockLine {
+            language,
+            content: CodeBlockLineContent::Text(line),
+        });
+    }
+
+    MdBlock::CodeBlock(code_lines)
+}
+
+/// Helper function to ensure parsers return [NomErr::Error] instead of
+/// [NomErr::Failure] for `many0` compatibility. Here's what it does:
 ///
 /// 1. It wraps a parser to convert `Failure` errors to `Error` errors.
 /// 2. This is important because nom's `many0` combinator stops collecting items when it
@@ -837,9 +822,9 @@ where
     move |input: I| {
         match parser.parse(input) {
             Ok(result) => Ok(result),
-            Err(nom::Err::Failure(e)) => {
+            Err(NomErr::Failure(e)) => {
                 // Convert Failure to Error so many0 treats it as "end of sequence"
-                Err(nom::Err::Error(e))
+                Err(NomErr::Error(e))
             }
             Err(e) => Err(e),
         }
@@ -1263,12 +1248,12 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_block_code_with_missing_end_marker() {
+    fn test_parse_block_code_with_end_marker() {
         // Test with a complete code block (has end marker)
         let lines = vec![
             GCString::new("```rust"),
             GCString::new("fn test() {"),
-            GCString::new("    println!(\"Hello, world!\");"),
+            GCString::new("    let a = 1;"),
             GCString::new("}"),
             GCString::new("```"),
         ];
@@ -1282,7 +1267,46 @@ mod tests {
 
         let (remaining, content) = result.unwrap();
         assert_eq!(remaining.input_len(), 0, "Should consume all input");
+        // Create a string with the expected content
+        let expected_content = "```rust\nfn test() {\n    let a = 1;\n}\n```";
 
+        // Convert the content to a string with newlines
+        let actual_content = content.to_string();
+        dbg!(&actual_content);
+
+        // Compare the actual content with the expected content
+        assert_eq!(
+            actual_content, expected_content,
+            "Should extract correct code block content"
+        );
+    }
+
+    #[test]
+    fn test_parse_block_code_with_end_marker_trailing_remainder() {
+        // Test with a complete code block (has end marker) and remainder
+        let lines = vec![
+            GCString::new("```rust"),
+            GCString::new("fn test() {"),
+            GCString::new("    let a = 1;"),
+            GCString::new("}"),
+            GCString::new("```"),
+            GCString::new("some trailing text"),
+        ];
+        let slice = AsStrSlice::from(&lines);
+        let result = parse_code_block_generic(slice);
+
+        assert!(result.is_ok());
+        let (remainder, parsed_code) = result.unwrap();
+
+        // Check that the code block was parsed correctly
+        let expected_content = "```rust\nfn test() {\n    let a = 1;\n}\n```";
+        assert_eq!(parsed_code.to_string(), expected_content);
+        // Check that the remainder contains the text after the code block
+        assert_eq!(remainder.to_string(), "\nsome trailing text");
+    }
+
+    #[test]
+    fn test_parse_block_code_with_missing_end_marker() {
         // Test with a code block missing the end marker
         let lines = vec![
             GCString::new("```rust"),
@@ -1299,16 +1323,16 @@ mod tests {
             "Code block parser should fail without end marker"
         );
 
-        // Verify that the error is of the expected type (Error, not Failure)
+        // Verify that the error is of the expected type (Failure, not Error)
         match result {
-            Err(nom::Err::Error(_)) => {
+            Err(NomErr::Failure(_)) => {
                 // This is the expected error type
             }
-            Err(nom::Err::Failure(_)) => {
-                panic!("Expected Error, got Failure");
+            Err(NomErr::Error(_)) => {
+                panic!("Expected Failure, got Error");
             }
             _ => {
-                panic!("Expected Error, got something else");
+                panic!("Expected Failure, got something else");
             }
         }
     }
