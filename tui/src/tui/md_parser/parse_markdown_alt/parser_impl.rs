@@ -86,6 +86,7 @@ use crate::{constants::{BACK_TICK_CHAR, CHECKED, UNCHECKED},
             tiny_inline_string,
             AsStrSlice,
             CheckboxParsePolicy,
+            CodeBlockLine,
             CodeBlockLineContent,
             GCString,
             InlineVec,
@@ -418,7 +419,7 @@ pub fn parse_smart_list_and_extract_ir_generic<'a>(
 
     // Check for unordered list marker
     let bullet_kind: BulletKind;
-    let bullet_str: &'static str;
+    let bullet_str: &str;
 
     // Get the text content for easier comparison
     let text_content = input_after_spaces.extract_remaining_text_content_in_line();
@@ -513,7 +514,7 @@ pub fn parse_smart_list_and_extract_ir_generic<'a>(
     ))
 }
 
-fn extract_block_smart_list_from_ir_generic_alt<'a>(
+fn extract_block_smart_list_from_ir_generic<'a>(
     smart_list_ir: SmartListIR<'a>,
 ) -> Option<(Lines<'a>, BulletKind, usize)> {
     let indent = smart_list_ir.indent;
@@ -596,7 +597,7 @@ pub fn parse_block_smart_list_generic<'a>(
     let (remainder, smart_list_ir) = parse_smart_list_and_extract_ir_generic(input)?;
 
     // Extract and process the smart list information
-    match extract_block_smart_list_from_ir_generic_alt(smart_list_ir) {
+    match extract_block_smart_list_from_ir_generic(smart_list_ir) {
         Some(output) => Ok((remainder, output)),
         None => {
             // If there was an error extracting the smart list, return it
@@ -641,26 +642,49 @@ pub fn parse_code_block_generic<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
     // Check if the input starts with the code block marker
-    if !input.to_string().starts_with(CODE_BLOCK_START_PARTIAL) {
+    let first_line = input.extract_remaining_text_content_in_line();
+    if !first_line.starts_with(CODE_BLOCK_START_PARTIAL) {
         return Err(NomErr::Error(NomError::new(input, NomErrorKind::Tag)));
     }
 
-    // Find the position of the closing marker
-    let input_str = input.to_string();
-    let mut lines = input_str.lines();
-
-    // Skip the first line (opening marker)
-    let _first_line = lines.next().unwrap_or("");
-
-    // Find the closing marker
+    // Create a clone of the input to iterate through the lines
+    let mut current = input.clone();
     let mut line_count = 1; // Start at 1 for the first line
     let mut found_closing = false;
 
-    for line in lines {
-        line_count += 1;
-        if line.trim() == CODE_BLOCK_START_PARTIAL {
-            found_closing = true;
+    // Skip the first line (opening marker)
+    while let Some(ch) = current.current_char() {
+        if ch == NEW_LINE_CHAR {
+            current.advance(); // Move past the newline
             break;
+        }
+        current.advance();
+    }
+
+    // Find the closing marker
+    let mut code_block_end_pos = 0;
+    let mut current_pos = first_line.len() + 1; // +1 for the newline
+
+    while current.input_len() > 0 {
+        let line = current.extract_remaining_text_content_in_line();
+        line_count += 1;
+
+        // Check if this is the closing marker
+        if line.trim() == CODE_BLOCK_END {
+            found_closing = true;
+            code_block_end_pos = current_pos + line.len();
+            break;
+        }
+
+        current_pos += line.len() + 1; // +1 for the newline
+
+        // Skip to the end of the current line
+        while let Some(ch) = current.current_char() {
+            if ch == NEW_LINE_CHAR {
+                current.advance(); // Move past the newline
+                break;
+            }
+            current.advance();
         }
     }
 
@@ -668,27 +692,9 @@ pub fn parse_code_block_generic<'a>(
         return Err(NomErr::Failure(NomError::new(input, NomErrorKind::Tag)));
     }
 
-    // Calculate the length of the code block
-    let mut code_block_len = 0;
-    let mut current_line = 0;
-
-    for line in input_str.lines() {
-        current_line += 1;
-        code_block_len += line.len() + 1; // +1 for the newline
-
-        if current_line == line_count {
-            break;
-        }
-    }
-
-    // Adjust for the last newline if needed
-    if code_block_len > 0 {
-        code_block_len -= 1; // Remove the last newline
-    }
-
     // Take the code block
-    let code_block = input.take(code_block_len);
-    let remaining = input.take_from(code_block_len);
+    let code_block = input.take(code_block_end_pos);
+    let remaining = input.take_from(code_block_end_pos);
 
     Ok((remaining, code_block))
 }
@@ -709,18 +715,11 @@ pub fn parse_code_block_generic<'a>(
 /// implements [nom::Input], and so this return value can be passed as an argument to this
 /// function which receives a `slice` input of type [AsStrSlice].
 ///
-/// ## Processing Pipeline
+/// ## Dependencies
 ///
-/// 1. **Input**: Takes a [AsStrSlice] containing the raw fenced code block content (does
-///    not include markers) as identified by [parse_code_block_generic()]
-/// 2. **Text Extraction**: Extracts the text content and splits it into lines for
-///    processing
-/// 3. **Language Detection**: Parses the first line to extract optional language
-///    specification
-/// 4. **Content Collection**: Collects code lines between the opening and closing ```
-///    markers
-/// 5. **Structure Building**: Creates [CodeBlockLine] entries with
-///    [CodeBlockLineContent::Text]
+/// This function depends on the output of [parse_code_block_generic()], which provides
+/// the initial parsing of code block boundaries and guarantees that the input contains
+/// a well-formed fenced code block with proper opening and closing markers.
 ///
 /// ## Functionality
 ///
@@ -731,13 +730,7 @@ pub fn parse_code_block_generic<'a>(
 /// 3. **Structure Creation**: Builds a proper [MdBlock::CodeBlock] with [CodeBlockLine]
 ///    entries containing the language and content
 ///
-/// ## Dependencies
-///
-/// This function depends on the output of [parse_code_block_generic()], which provides
-/// the initial parsing of code block boundaries and guarantees that the input contains
-/// a well-formed fenced code block with proper opening and closing markers.
-///
-/// ## Parameters
+/// ## Arguments
 ///
 /// * `slice` - A [AsStrSlice] containing the markdown text content to process, typically
 ///   obtained from [parse_code_block_generic()]
@@ -750,23 +743,26 @@ pub fn parse_code_block_generic<'a>(
 ///
 /// ## Example Input Processing
 ///
-/// ```rs
-/// fn main() { println!("Hello, world!"); }
+/// For the following input:
+///
+/// ```
+/// let input =  "```rs\nfn f() { let a = 1; }\n```";
 /// ```
 ///
 /// This would produce a code block with:
 /// - Language: `Some("rs")`
-/// - Content: `fn main() { println!("Hello, world!"); }`
-fn extract_code_block_content<'a>(slice: AsStrSlice<'a>) -> MdBlock<'a> {
-    let text = slice.extract_remaining_text_content_in_line();
-    let lines: Vec<&str> = text.lines().collect();
+/// - Content: `fn f() { let a = 1; }`
+fn extract_code_block_content<'a>(input: AsStrSlice<'a>) -> MdBlock<'a> {
+    // The slice contains the entire code block including the opening and closing markers
+    // We need to extract the language from the first line and the content from the middle
+    // lines
 
-    // Extract language from first line
-    let first_line = if !lines.is_empty() { lines[0] } else { "" };
+    let mut code_lines = List::new();
+
+    // Process the first line to extract language
+    let first_line = input.extract_remaining_text_content_in_line();
     let code_block_marker_width = CODE_BLOCK_START_PARTIAL.len();
-    let language = if first_line.len() > code_block_marker_width
-        && first_line.starts_with(CODE_BLOCK_START_PARTIAL)
-    {
+    let language = if first_line.starts_with(CODE_BLOCK_START_PARTIAL) {
         let lang_part = first_line[code_block_marker_width..].trim();
         if lang_part.is_empty() {
             None
@@ -777,27 +773,49 @@ fn extract_code_block_content<'a>(slice: AsStrSlice<'a>) -> MdBlock<'a> {
         None
     };
 
-    // Extract code lines (between ``` markers)
-    let mut raw_code_lines = InlineVecStr::new();
-    let mut in_code = false;
+    // Create a clone of the slice to iterate through the lines
+    let mut input_clone = input.clone();
 
-    for line in lines.iter().skip(1) {
-        if line.trim() == CODE_BLOCK_END {
+    // Skip the first line (opening marker)
+    while let Some(ch) = input_clone.current_char() {
+        if ch == NEW_LINE_CHAR {
+            input_clone.advance(); // Move past the newline
             break;
         }
-        if in_code || !first_line.starts_with(CODE_BLOCK_START_PARTIAL) {
-            in_code = true;
-        }
-        raw_code_lines.push(*line);
+        input_clone.advance();
     }
 
-    // Create proper code block structure with actual content
-    let mut code_lines = List::new();
-    for line in raw_code_lines {
-        code_lines.push(crate::CodeBlockLine {
+    // Process each line until we reach the closing marker
+    while input_clone.input_len() > 0 {
+        let line = input_clone.extract_remaining_text_content_in_line();
+
+        // Check if this is the closing marker
+        if line.trim() == CODE_BLOCK_END {
+            // Skip the closing marker line
+            while let Some(ch) = input_clone.current_char() {
+                if ch == NEW_LINE_CHAR {
+                    input_clone.advance(); // Move past the newline
+                    break;
+                }
+                input_clone.advance();
+            }
+            break;
+        }
+
+        // Add this line to the code block
+        code_lines.push(CodeBlockLine {
             language,
             content: CodeBlockLineContent::Text(line),
         });
+
+        // Skip to the end of the current line
+        while let Some(ch) = input_clone.current_char() {
+            if ch == NEW_LINE_CHAR {
+                input_clone.advance(); // Move past the newline
+                break;
+            }
+            input_clone.advance();
+        }
     }
 
     MdBlock::CodeBlock(code_lines)
@@ -836,29 +854,7 @@ mod tests {
     use super::*;
     use crate::{inline_vec, AsStrSlice, GCString};
 
-    #[test]
-    fn test_gc_string_slice_basic_functionality() {
-        let lines = vec![
-            GCString::new("Hello world"),
-            GCString::new("This is a test"),
-            GCString::new("Third line"),
-        ];
-
-        let slice = AsStrSlice::from(&lines);
-
-        // Test that we can iterate through characters
-        let mut chars: Vec<char> = vec![];
-        let mut current = slice;
-        while let Some(ch) = current.current_char() {
-            chars.push(ch);
-            current.advance();
-        }
-
-        let expected = "Hello world\nThis is a test\nThird line";
-        let result: String = chars.into_iter().collect();
-        assert_eq!(result, expected);
-    }
-
+    // TODO: fix this failing test
     #[test]
     fn test_parse_simple_markdown() {
         let lines = inline_vec![
@@ -918,6 +914,29 @@ mod tests {
             matches!(document[5], MdBlock::CodeBlock(_)),
             "Sixth block should be CodeBlock"
         );
+    }
+
+    #[test]
+    fn test_gc_string_slice_basic_functionality() {
+        let lines = vec![
+            GCString::new("Hello world"),
+            GCString::new("This is a test"),
+            GCString::new("Third line"),
+        ];
+
+        let slice = AsStrSlice::from(&lines);
+
+        // Test that we can iterate through characters
+        let mut chars: Vec<char> = vec![];
+        let mut current = slice;
+        while let Some(ch) = current.current_char() {
+            chars.push(ch);
+            current.advance();
+        }
+
+        let expected = "Hello world\nThis is a test\nThird line";
+        let result: String = chars.into_iter().collect();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -1334,6 +1353,171 @@ mod tests {
             _ => {
                 panic!("Expected Failure, got something else");
             }
+        }
+    }
+
+    #[test]
+    fn test_extract_code_block_content_with_language() {
+        // Test extracting content from a code block with language specification
+        let lines = vec![
+            GCString::new("```rust"),
+            GCString::new("fn test() {"),
+            GCString::new("    let a = 1;"),
+            GCString::new("}"),
+            GCString::new("```"),
+        ];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = extract_code_block_content(slice);
+
+        // Verify the result is a CodeBlock
+        if let MdBlock::CodeBlock(code_lines) = result {
+            // Check the number of lines
+            assert_eq!(code_lines.len(), 3, "Should extract 3 lines of code");
+
+            // Check the language
+            assert_eq!(
+                code_lines[0].language,
+                Some("rust"),
+                "Should extract 'rust' as language"
+            );
+
+            // Check the content of each line
+            if let CodeBlockLineContent::Text(content) = code_lines[0].content {
+                assert_eq!(content, "fn test() {", "First line content should match");
+            } else {
+                panic!("Expected Text content");
+            }
+
+            if let CodeBlockLineContent::Text(content) = code_lines[1].content {
+                assert_eq!(
+                    content, "    let a = 1;",
+                    "Second line content should match"
+                );
+            } else {
+                panic!("Expected Text content");
+            }
+
+            if let CodeBlockLineContent::Text(content) = code_lines[2].content {
+                assert_eq!(content, "}", "Third line content should match");
+            } else {
+                panic!("Expected Text content");
+            }
+        } else {
+            panic!("Expected CodeBlock result");
+        }
+    }
+
+    #[test]
+    fn test_extract_code_block_content_without_language() {
+        // Test extracting content from a code block without language specification
+        let lines = vec![
+            GCString::new("```"),
+            GCString::new("This is a code block"),
+            GCString::new("without language specification"),
+            GCString::new("```"),
+        ];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = extract_code_block_content(slice);
+
+        // Verify the result is a CodeBlock
+        if let MdBlock::CodeBlock(code_lines) = result {
+            // Check the number of lines
+            assert_eq!(code_lines.len(), 2, "Should extract 2 lines of code");
+
+            // Check that language is None
+            assert_eq!(code_lines[0].language, None, "Language should be None");
+
+            // Check the content of each line
+            if let CodeBlockLineContent::Text(content) = code_lines[0].content {
+                assert_eq!(
+                    content, "This is a code block",
+                    "First line content should match"
+                );
+            } else {
+                panic!("Expected Text content");
+            }
+
+            if let CodeBlockLineContent::Text(content) = code_lines[1].content {
+                assert_eq!(
+                    content, "without language specification",
+                    "Second line content should match"
+                );
+            } else {
+                panic!("Expected Text content");
+            }
+        } else {
+            panic!("Expected CodeBlock result");
+        }
+    }
+
+    #[test]
+    fn test_extract_code_block_content_with_missing_end_marker() {
+        // Test extracting content from a code block with missing end marker
+        let lines = vec![
+            GCString::new("```rust"),
+            GCString::new("fn test() {"),
+            GCString::new("    println!(\"Hello, world!\");"),
+            GCString::new("}"),
+            // No closing ```
+        ];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = extract_code_block_content(slice);
+
+        // Verify the result is a CodeBlock
+        if let MdBlock::CodeBlock(code_lines) = result {
+            // Check the number of lines
+            assert_eq!(code_lines.len(), 3, "Should extract 3 lines of code");
+
+            // Check the language
+            assert_eq!(
+                code_lines[0].language,
+                Some("rust"),
+                "Should extract 'rust' as language"
+            );
+
+            // Check the content of each line
+            if let CodeBlockLineContent::Text(content) = code_lines[0].content {
+                assert_eq!(content, "fn test() {", "First line content should match");
+            } else {
+                panic!("Expected Text content");
+            }
+
+            if let CodeBlockLineContent::Text(content) = code_lines[1].content {
+                assert_eq!(
+                    content, "    println!(\"Hello, world!\");",
+                    "Second line content should match"
+                );
+            } else {
+                panic!("Expected Text content");
+            }
+
+            if let CodeBlockLineContent::Text(content) = code_lines[2].content {
+                assert_eq!(content, "}", "Third line content should match");
+            } else {
+                panic!("Expected Text content");
+            }
+        } else {
+            panic!("Expected CodeBlock result");
+        }
+    }
+
+    #[test]
+    fn test_extract_code_block_content_empty() {
+        // Test extracting content from an empty code block
+        let lines = vec![GCString::new("```python"), GCString::new("```")];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = extract_code_block_content(slice);
+
+        // Verify the result is a CodeBlock
+        if let MdBlock::CodeBlock(code_lines) = result {
+            // Check the number of lines
+            assert_eq!(code_lines.len(), 0, "Should extract 0 lines of code");
+        } else {
+            panic!("Expected CodeBlock result");
         }
     }
 }
