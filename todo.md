@@ -37,8 +37,7 @@
 
 - use OG parsers _dump the new AI generated stuff_
 
-  - [ ] `parse_block_heading_generic()`: copy from OG `???`
-  - [ ] `parse_code_block_generic()`: copy from OG `???`
+  - [x] `parse_block_heading_generic()`: change signature to use `AsStrSlice` and not `nom::Input`
   - [ ] `parse_block_text_generic()`: copy from OG `???`
   - [ ] stop using the generic function signature, and use this:
 

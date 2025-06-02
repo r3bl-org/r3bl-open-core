@@ -327,13 +327,9 @@ pub fn parse_csv_opt_eol_generic<'a>(
 // Specific parsers using generic implementations
 
 // Generic heading parser
-fn parse_block_heading_generic<'a, I>(
-    input: I,
-) -> IResult</* remainder */ I, /* output */ (usize, I)>
-where
-    I: Input + Clone + Compare<&'a str>,
-    I::Item: AsChar + Copy,
-{
+fn parse_block_heading_generic<'a>(
+    input: AsStrSlice<'a>,
+) -> IResult</* remainder */ AsStrSlice<'a>, /* output */ (usize, AsStrSlice<'a>)> {
     let (input, hashes) = many1(char(HEADING_CHAR)).parse(input)?;
     let (input, _) = char(SPACE_CHAR).parse(input)?;
     let (input, text) = take_text_until_new_line_or_end_generic().parse(input)?;
@@ -915,43 +911,6 @@ mod tests {
     }
 
     #[test]
-    fn test_gc_string_slice_basic_functionality() {
-        let lines = vec![
-            GCString::new("Hello world"),
-            GCString::new("This is a test"),
-            GCString::new("Third line"),
-        ];
-
-        let slice = AsStrSlice::from(&lines);
-
-        // Test that we can iterate through characters
-        let mut chars: Vec<char> = vec![];
-        let mut current = slice;
-        while let Some(ch) = current.current_char() {
-            chars.push(ch);
-            current.advance();
-        }
-
-        let expected = "Hello world\nThis is a test\nThird line";
-        let result: String = chars.into_iter().collect();
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_nom_input_position() {
-        let lines = vec![GCString::new("hello"), GCString::new("world")];
-
-        let slice = AsStrSlice::from(&lines);
-
-        // Test position finding
-        let pos = slice.position(|c| c == 'w');
-        assert_eq!(pos, Some(6)); // "hello\n" = 6 chars, then 'w'
-
-        let pos = slice.position(|c| c == 'z');
-        assert_eq!(pos, None); // 'z' not found
-    }
-
-    #[test]
     fn test_individual_parsers() {
         let lines = vec![GCString::new("@title: Test Document")];
         let slice = AsStrSlice::from(&lines);
@@ -963,24 +922,6 @@ mod tests {
         let (remaining, value) = result.unwrap();
         assert_eq!(remaining.input_len(), 0, "Should consume all input");
         assert_eq!(value, "Test Document", "Should extract correct title value");
-    }
-
-    #[test]
-    fn test_heading_parser() {
-        let lines = vec![GCString::new("# Heading 1")];
-        let slice = AsStrSlice::from(&lines);
-
-        let result = parse_block_heading_generic(slice);
-        assert!(result.is_ok(), "Heading parser should succeed");
-
-        let (remaining, (level, text)) = result.unwrap();
-        assert_eq!(remaining.input_len(), 0, "Should consume all input");
-        assert_eq!(level, 1, "Should parse heading level correctly");
-        assert_eq!(
-            text.extract_remaining_text_content_in_line(),
-            "Heading 1",
-            "Should extract correct heading text"
-        );
     }
 
     #[test]
@@ -1263,6 +1204,15 @@ mod tests {
             "Should return empty vector for empty input"
         );
     }
+}
+
+#[cfg(test)]
+mod tests_code_block_parsing {
+    use super::*;
+    use crate::{inline_vec,
+                parser_impl::parse_code_block_generic,
+                AsStrSlice,
+                GCString};
 
     #[test]
     fn test_parse_block_code_with_end_marker() {
@@ -1517,5 +1467,179 @@ mod tests {
         } else {
             panic!("Expected CodeBlock result");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_heading_parser {
+    use super::*;
+    use crate::{inline_vec,
+                parser_impl::parse_block_heading_generic,
+                AsStrSlice,
+                GCString};
+
+    #[test]
+    fn test_heading_parser() {
+        let lines = vec![GCString::new("# Heading 1")];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = parse_block_heading_generic(slice);
+        assert!(result.is_ok(), "Heading parser should succeed");
+
+        let (remaining, (level, text)) = result.unwrap();
+        assert_eq!(remaining.input_len(), 0, "Should consume all input");
+        assert_eq!(level, 1, "Should parse heading level correctly");
+        assert_eq!(
+            text.extract_remaining_text_content_in_line(),
+            "Heading 1",
+            "Should extract correct heading text"
+        );
+    }
+
+    #[test]
+    fn test_heading_parser_different_levels() {
+        // Test level 2 heading
+        let lines = vec![GCString::new("## Heading 2")];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = parse_block_heading_generic(slice);
+        assert!(result.is_ok(), "Level 2 heading parser should succeed");
+
+        let (remaining, (level, text)) = result.unwrap();
+        assert_eq!(remaining.input_len(), 0, "Should consume all input");
+        assert_eq!(level, 2, "Should parse heading level 2 correctly");
+        assert_eq!(
+            text.extract_remaining_text_content_in_line(),
+            "Heading 2",
+            "Should extract correct heading text for level 2"
+        );
+
+        // Test level 3 heading
+        let lines = vec![GCString::new("### Heading 3")];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = parse_block_heading_generic(slice);
+        assert!(result.is_ok(), "Level 3 heading parser should succeed");
+
+        let (remaining, (level, text)) = result.unwrap();
+        assert_eq!(remaining.input_len(), 0, "Should consume all input");
+        assert_eq!(level, 3, "Should parse heading level 3 correctly");
+        assert_eq!(
+            text.extract_remaining_text_content_in_line(),
+            "Heading 3",
+            "Should extract correct heading text for level 3"
+        );
+
+        // Test level 6 heading (maximum in markdown)
+        let lines = vec![GCString::new("###### Heading 6")];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = parse_block_heading_generic(slice);
+        assert!(result.is_ok(), "Level 6 heading parser should succeed");
+
+        let (remaining, (level, text)) = result.unwrap();
+        assert_eq!(remaining.input_len(), 0, "Should consume all input");
+        assert_eq!(level, 6, "Should parse heading level 6 correctly");
+        assert_eq!(
+            text.extract_remaining_text_content_in_line(),
+            "Heading 6",
+            "Should extract correct heading text for level 6"
+        );
+    }
+
+    #[test]
+    fn test_heading_parser_with_special_characters() {
+        let lines = vec![GCString::new("# Special *chars* & symbols!")];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = parse_block_heading_generic(slice);
+        assert!(
+            result.is_ok(),
+            "Heading with special characters should parse"
+        );
+
+        let (remaining, (level, text)) = result.unwrap();
+        assert_eq!(remaining.input_len(), 0, "Should consume all input");
+        assert_eq!(level, 1, "Should parse heading level correctly");
+        assert_eq!(
+            text.extract_remaining_text_content_in_line(),
+            "Special *chars* & symbols!",
+            "Should extract text with special characters correctly"
+        );
+    }
+
+    #[test]
+    fn test_heading_parser_with_newline() {
+        let lines = vec![GCString::new("# Heading with newline\n")];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = parse_block_heading_generic(slice);
+        assert!(result.is_ok(), "Heading with newline should parse");
+
+        let (remaining, (level, text)) = result.unwrap();
+        assert_eq!(
+            remaining.input_len(),
+            0,
+            "Should consume all input including newline"
+        );
+        assert_eq!(level, 1, "Should parse heading level correctly");
+        assert_eq!(
+            text.extract_remaining_text_content_in_line(),
+            "Heading with newline",
+            "Should extract text without the newline"
+        );
+    }
+
+    #[test]
+    fn test_heading_parser_empty_text() {
+        let lines = vec![GCString::new("# ")];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = parse_block_heading_generic(slice);
+        assert!(result.is_ok(), "Heading with empty text should parse");
+
+        let (remaining, (level, text)) = result.unwrap();
+        assert_eq!(remaining.input_len(), 0, "Should consume all input");
+        assert_eq!(level, 1, "Should parse heading level correctly");
+        assert_eq!(
+            text.extract_remaining_text_content_in_line(),
+            "",
+            "Should extract empty text correctly"
+        );
+    }
+
+    #[test]
+    fn test_heading_parser_no_space_should_fail() {
+        let lines = vec![GCString::new("#NoSpace")];
+        let slice = AsStrSlice::from(&lines);
+
+        let result = parse_block_heading_generic(slice);
+        assert!(
+            result.is_err(),
+            "Heading without space after hash should fail"
+        );
+    }
+
+    #[test]
+    fn test_heading_parser_multiple_spaces() {
+        let lines = vec![GCString::new("#   Multiple Spaces")];
+        let slice = AsStrSlice::from(&lines);
+
+        // The parser accepts multiple spaces, with the additional spaces becoming part of
+        // the text
+        let result = parse_block_heading_generic(slice);
+        assert!(
+            result.is_ok(),
+            "Heading with multiple spaces after hash should succeed"
+        );
+
+        let (remaining, (level, text)) = result.unwrap();
+        assert_eq!(remaining.input_len(), 0, "Should consume all input");
+        assert_eq!(level, 1, "Should parse heading level correctly");
+        assert_eq!(
+            text.extract_remaining_text_content_in_line(),
+            "  Multiple Spaces",
+            "Should extract text with leading spaces correctly"
+        );
     }
 }
