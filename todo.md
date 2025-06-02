@@ -33,8 +33,7 @@
         `parse_block_smart_list.rs::parse_block_smart_list()`
   - [x] `parse_smart_list_and_extract_ir_generic()`: copy this from OG
         `parse_block_smart_list.rs::parse_smart_list()`:
-  - [ ] Remove all `Box::leak()`
-  - [ ] Remove all `trim()`
+  - [x] Remove all `Box::leak()`
 
 - use OG parsers _dump the new AI generated stuff_
 
