@@ -59,13 +59,13 @@ pub struct AsStrSlice<'a, T: AsRef<str> = GCString>
 where
     &'a [T]: Copy,
 {
-    lines: &'a [T],
+    pub lines: &'a [T],
     // Position tracking: (line_index, char_index_within_line).
     // Special case: if char_index == line.len(), we're at the synthetic newline.
-    line_index: usize,
-    char_index: usize,
+    pub line_index: usize,
+    pub char_index: usize,
     // Optional maximum length limit for the slice.
-    max_len: Option<usize>,
+    pub max_len: Option<usize>,
 }
 
 /// Implement [From] trait to allow automatic conversion from &[GCString] to

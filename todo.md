@@ -24,36 +24,44 @@
 
   - [x] `parse_code_block_generic()`: fix bug! strips
         "```" from start and end and `test_parse_block_code_with_missing_end_marker()`
-  - [ ] `extract_code_block_content()`: test this
-  - [ ] add tests for `extract_code_block_content()`
-  - [ ] `parse_block_heading_generic()`: copy from OG `???`
-  - [ ] `parse_code_block_generic()`: copy from OG `???`
-  - [ ] `parse_block_text_generic()`: copy from OG `???`
-  - [ ] stop using the generic function signature, and use this:
-
-    ```rust
-    fn f<'a>(i: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {}
-    ```
-
-    instead of:
-
-    ```rust
-    fn f<'a, I>(input: I) -> IResult<I, I>
-    where
-          I: Input + Clone + Compare<&'a str> + Offset + Debug,
-          I::Item: AsChar + Copy
-    {}
-    ```
+  - [x] `extract_code_block_content()`: test this
+  - [x] add tests for `extract_code_block_content()`
 
 - smart list
 
-  - [ ] remove `parse_block_smart_list_generic()` and all deps => replace with `_alt()`
-  - [x] `parse_block_smart_list_generic_alt()`: copy this from OG
+  - [x] `parse_block_smart_list_generic()`: copy this from OG
         `parse_block_smart_list.rs::parse_block_smart_list()`
   - [x] `parse_smart_list_and_extract_ir_generic()`: copy this from OG
         `parse_block_smart_list.rs::parse_smart_list()`:
   - [ ] Remove all `Box::leak()`
   - [ ] Remove all `trim()`
+
+- use OG parsers _dump the new AI generated stuff_
+
+  - [ ] `parse_block_heading_generic()`: copy from OG `???`
+  - [ ] `parse_code_block_generic()`: copy from OG `???`
+  - [ ] `parse_block_text_generic()`: copy from OG `???`
+  - [ ] stop using the generic function signature, and use this:
+
+- [ ] use the correct method signatures for (most) parsers
+
+  ```rust
+  fn f<'a>(i: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {}
+  ```
+
+  instead of:
+
+  ```rust
+  fn f<'a, I>(input: I) -> IResult<I, I>
+  where
+        I: Input + Clone + Compare<&'a str> + Offset + Debug,
+        I::Item: AsChar + Copy
+  {}
+  ```
+
+- address markdown parsing test failure
+
+  - [ ] fix test: `test_parse_simple_markdown()`
 
 - vec -> inlinevec
 
