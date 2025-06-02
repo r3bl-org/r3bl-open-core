@@ -524,12 +524,12 @@ impl<'a> Display for AsStrSlice<'a> {
 
 /// Implement [FindSubstring] trait for [AsStrSlice].
 impl<'a> FindSubstring<&str> for AsStrSlice<'a> {
-    fn find_substring(&self, substr: &str) -> Option<usize> {
+    fn find_substring(&self, sub_str: &str) -> Option<usize> {
         // Convert the AsStrSlice to a string representation
         let full_text = self.extract_remaining_text_content_to_end();
 
         // Find the substring in the full text
-        full_text.find(substr)
+        full_text.find(sub_str)
     }
 }
 
@@ -583,24 +583,73 @@ mod tests {
 
     use super::*;
 
-    fn create_test_lines() -> Vec<GCString> {
-        vec![
+    #[test]
+    fn test_gc_string_slice_basic_functionality() {
+        let lines = vec![
             GCString::new("Hello world"),
-            GCString::new("Second line"),
+            GCString::new("This is a test"),
             GCString::new("Third line"),
-            GCString::new(""),
-            GCString::new("Fifth line"),
-        ]
+        ];
+
+        let slice = AsStrSlice::from(&lines);
+
+        // Test that we can iterate through characters
+        let mut chars: Vec<char> = vec![];
+        let mut current = slice;
+        while let Some(ch) = current.current_char() {
+            chars.push(ch);
+            current.advance();
+        }
+
+        let expected = "Hello world\nThis is a test\nThird line";
+        let result: String = chars.into_iter().collect();
+        std::assert_eq!(result, expected);
     }
 
-    fn create_simple_lines() -> Vec<GCString> {
-        vec![GCString::new("abc"), GCString::new("def")]
+    #[test]
+    fn test_nom_input_position() {
+        let lines = vec![GCString::new("hello"), GCString::new("world")];
+
+        let slice = AsStrSlice::from(&lines);
+
+        // Test position finding
+        let pos = slice.position(|c| c == 'w');
+        std::assert_eq!(pos, Some(6)); // "hello\n" = 6 chars, then 'w'
+
+        let pos = slice.position(|c| c == 'z');
+        std::assert_eq!(pos, None); // 'z' not found
+    }
+
+    pub mod fixtures {
+        use crate::GCString;
+
+        pub fn create_test_lines() -> Vec<GCString> {
+            vec![
+                GCString::new("Hello world"),
+                GCString::new("Second line"),
+                GCString::new("Third line"),
+                GCString::new(""),
+                GCString::new("Fifth line"),
+            ]
+        }
+
+        pub fn create_simple_lines() -> Vec<GCString> {
+            vec![GCString::new("abc"), GCString::new("def")]
+        }
+
+        pub fn create_three_lines() -> Vec<GCString> {
+            vec![
+                GCString::from("First line"),
+                GCString::from("Second line"),
+                GCString::from("Third line"),
+            ]
+        }
     }
 
     // Test From trait implementations
     #[test]
     fn test_from_slice() {
-        let lines = create_test_lines();
+        let lines = fixtures::create_test_lines();
         let slice = AsStrSlice::from(lines.as_slice());
 
         assert_eq!(slice.line_index, 0);
@@ -611,7 +660,7 @@ mod tests {
 
     #[test]
     fn test_from_vec() {
-        let lines = create_test_lines();
+        let lines = fixtures::create_test_lines();
         let slice = AsStrSlice::from(&lines);
 
         assert_eq!(slice.line_index, 0);
@@ -623,7 +672,7 @@ mod tests {
     // Test Clone and PartialEq traits
     #[test]
     fn test_clone_and_partial_eq() {
-        let lines = create_test_lines();
+        let lines = fixtures::create_test_lines();
         let slice1 = AsStrSlice::from(lines.as_slice());
         let slice2 = slice1.clone();
 
@@ -636,7 +685,7 @@ mod tests {
     // Test Debug trait
     #[test]
     fn test_debug() {
-        let lines = create_simple_lines();
+        let lines = fixtures::create_simple_lines();
         let slice = AsStrSlice::from(lines.as_slice());
         let debug_str = format!("{:?}", slice);
 
@@ -648,7 +697,7 @@ mod tests {
     // Test with_limit constructor
     #[test]
     fn test_with_limit() {
-        let lines = create_test_lines();
+        let lines = fixtures::create_test_lines();
         let slice = AsStrSlice::with_limit(&lines, 1, 3, Some(5));
 
         assert_eq!(slice.line_index, 1);
@@ -659,7 +708,7 @@ mod tests {
     // Test extract_remaining_text_content_in_line
     #[test]
     fn test_extract_remaining_text_content_in_line() {
-        let lines = create_test_lines();
+        let lines = fixtures::create_test_lines();
         let slice = AsStrSlice::from(lines.as_slice());
 
         // From beginning of first line
@@ -694,7 +743,7 @@ mod tests {
     // Test current_char and advance
     #[test]
     fn test_current_char_and_advance() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let mut slice = AsStrSlice::from(lines.as_slice());
         // Input appears as: "abc\ndef" (synthetic \n added between lines)
         // Positions: a(0), b(1), c(2), \n(3), d(4), e(5), f(6)
@@ -725,7 +774,7 @@ mod tests {
 
     #[test]
     fn test_advance_with_max_len() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let mut slice = AsStrSlice::with_limit(&lines, 0, 0, Some(2));
         // Input appears as: "abc\ndef" but limited to first 2 chars: "ab"
 
@@ -739,7 +788,7 @@ mod tests {
     // Test Input trait implementation
     #[test]
     fn test_input_len() {
-        let lines = create_simple_lines(); // "abc", "def" = 6 chars + 1 newline = 7
+        let lines = fixtures::create_simple_lines(); // "abc", "def" = 6 chars + 1 newline = 7
         let slice = AsStrSlice::from(lines.as_slice());
         assert_eq!(slice.input_len(), 7);
 
@@ -753,7 +802,7 @@ mod tests {
 
     #[test]
     fn test_input_take() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
         // Input appears as: "abc\ndef" (7 total chars)
 
@@ -764,7 +813,7 @@ mod tests {
 
     #[test]
     fn test_input_take_from() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
         // Input appears as: "abc\ndef" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
         // f(6))
@@ -777,7 +826,7 @@ mod tests {
 
     #[test]
     fn test_input_take_split() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
         // Input appears as: "abc\ndef" (synthetic \n added between lines)
         // Positions: a(0), b(1), c(2), \n(3), d(4), e(5), f(6)
@@ -791,7 +840,7 @@ mod tests {
 
     #[test]
     fn test_input_position() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
         // Input appears as: "abc\ndef" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
         // f(6))
@@ -811,7 +860,7 @@ mod tests {
 
     #[test]
     fn test_input_slice_index() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
         // Input appears as: "abc\ndef" (7 total chars)
 
@@ -901,7 +950,7 @@ mod tests {
     // Test Offset trait implementation
     #[test]
     fn test_offset() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice1 = AsStrSlice::from(lines.as_slice());
         // Input appears as: "abc\ndef" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
         // f(6))
@@ -919,8 +968,8 @@ mod tests {
 
     #[test]
     fn test_offset_different_arrays() {
-        let lines1 = create_simple_lines(); // Creates ["abc", "def"]
-        let lines2 = create_test_lines();
+        let lines1 = fixtures::create_simple_lines(); // Creates ["abc", "def"]
+        let lines2 = fixtures::create_test_lines();
         let slice1 = AsStrSlice::from(lines1.as_slice());
         let slice2 = AsStrSlice::from(lines2.as_slice());
 
@@ -951,7 +1000,7 @@ mod tests {
 
     #[test]
     fn test_max_len_zero() {
-        let lines = create_simple_lines();
+        let lines = fixtures::create_simple_lines();
         let slice = AsStrSlice::with_limit(&lines, 0, 0, Some(0));
 
         assert_eq!(slice.current_char(), None);
@@ -983,7 +1032,7 @@ mod tests {
 
     #[test]
     fn test_char_index_beyond_line_length() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::with_limit(&lines, 0, 10, None); // char_index > line.len()
                                                                  // Input appears as: "abc\ndef" but starting at invalid position 10
 
@@ -994,7 +1043,7 @@ mod tests {
     // Test Display trait implementation
     #[test]
     fn test_display_full_content() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
         // Input appears as: "abc\ndef" (synthetic \n added between lines)
 
@@ -1004,7 +1053,7 @@ mod tests {
 
     #[test]
     fn test_display_from_offset() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice()).take_from(2);
         // Input appears as: "abc\ndef", starting from position 2 ('c')
 
@@ -1014,7 +1063,7 @@ mod tests {
 
     #[test]
     fn test_display_with_limit() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::with_limit(&lines, 0, 0, Some(4));
         // Input appears as: "abc\ndef" but limited to first 4 chars: "abc\n"
 
@@ -1064,7 +1113,7 @@ mod tests {
 
     #[test]
     fn test_display_max_len_zero() {
-        let lines = create_simple_lines(); // Creates ["abc", "def"]
+        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::with_limit(&lines, 0, 0, Some(0));
         // Input appears as: "abc\ndef" but limited to 0 chars
 
@@ -1083,7 +1132,7 @@ mod tests {
 
     #[test]
     fn test_display_multiline_complex() {
-        let lines = create_test_lines(); // Multiple lines including empty
+        let lines = fixtures::create_test_lines(); // Multiple lines including empty
         let slice = AsStrSlice::from(lines.as_slice());
 
         let displayed = format!("{}", slice);
@@ -1095,7 +1144,7 @@ mod tests {
 
     #[test]
     fn test_display_partial_from_middle() {
-        let lines = create_test_lines();
+        let lines = fixtures::create_test_lines();
         let slice = AsStrSlice::with_limit(&lines, 1, 7, Some(10)); // From "line" in "Second line"
 
         let displayed = format!("{}", slice);
@@ -1105,123 +1154,148 @@ mod tests {
     #[test]
     fn test_extract_remaining_text_content_to_end() {
         // Test single line - should return Cow::Borrowed
-        let lines = create_simple_lines(); // ["Hello", "World"]
-        let mut slice = AsStrSlice::from(&lines);
-        // Advance to position 3 in first line (after "Hel")
-        slice.advance();
-        slice.advance();
-        slice.advance();
+        {
+            let lines = fixtures::create_simple_lines(); // ["abc", "def"]
+            let mut slice = AsStrSlice::from(&lines);
+            // Advance to position 2 in first line (after "ab")
+            slice.advance();
+            slice.advance();
 
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "lo\nWorld");
-        // Should be owned since it spans multiple lines
-        assert!(matches!(result, Cow::Owned(_)));
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "c\ndef");
+            // Should be owned since it spans multiple lines
+            assert!(matches!(result, Cow::Owned(_)));
+        }
 
         // Test single line from start - should return Cow::Owned for multi-line
-        let slice = AsStrSlice::from(&lines);
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "Hello\nWorld");
-        assert!(matches!(result, Cow::Owned(_)));
+        {
+            let lines = fixtures::create_simple_lines(); // ["abc", "def"]
+            let slice = AsStrSlice::from(&lines);
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "abc\ndef");
+            assert!(matches!(result, Cow::Owned(_)));
+        }
 
         // Test single line remaining content only
-        let lines = vec![GCString::from("Hello, World!")];
-        let mut slice = AsStrSlice::from(&lines);
-        // Advance to position 7 (after "Hello, ")
-        for _ in 0..7 {
-            slice.advance();
-        }
+        {
+            let lines = vec![GCString::from("Hello, World!")];
+            let mut slice = AsStrSlice::from(&lines);
+            // Advance to position 7 (after "Hello, ")
+            for _ in 0..7 {
+                slice.advance();
+            }
 
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "World!");
-        // Should be borrowed since it's single line content
-        assert!(matches!(result, Cow::Borrowed(_)));
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "World!");
+            // Should be borrowed since it's single line content
+            assert!(matches!(result, Cow::Borrowed(_)));
+        }
 
         // Test from start of single line
-        let slice = AsStrSlice::from(&lines);
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "Hello, World!");
-        assert!(matches!(result, Cow::Borrowed(_)));
+        {
+            let lines = vec![GCString::from("Hello, World!")];
+            let slice = AsStrSlice::from(&lines);
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "Hello, World!");
+            assert!(matches!(result, Cow::Borrowed(_)));
+        }
 
         // Test at end of single line
-        let mut slice = AsStrSlice::from(&lines);
-        // Advance to end
-        for _ in 0..13 {
-            slice.advance();
+        {
+            let lines = fixtures::create_simple_lines(); // ["abc", "def"]
+            let mut slice = AsStrSlice::from(&lines);
+            // Advance to end
+            for _ in 0..13 {
+                slice.advance();
+            }
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "");
+            assert!(matches!(result, Cow::Borrowed(_)));
         }
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "");
-        assert!(matches!(result, Cow::Borrowed(_)));
 
         // Test multi-line from middle
-        let lines = create_test_lines(); // More complex test data
-        let mut slice = AsStrSlice::from(&lines);
-        // Advance a few characters into first line
-        slice.advance();
-        slice.advance();
+        {
+            let lines = fixtures::create_test_lines(); // More complex test data
+            let mut slice = AsStrSlice::from(&lines);
+            // Advance a few characters into first line
+            slice.advance();
+            slice.advance();
 
-        let result = slice.extract_remaining_text_content_to_end();
-        // Result should contain remaining content from current position to end
-        assert!(!result.is_empty());
-        assert!(matches!(result, Cow::Owned(_)));
+            let result = slice.extract_remaining_text_content_to_end();
+            // Result should contain remaining content from current position to end
+            assert!(!result.is_empty());
+            assert!(matches!(result, Cow::Owned(_)));
+        }
 
         // Test with max_len limit on single line
-        let lines = vec![GCString::from("Hello, World!")];
-        let slice = AsStrSlice::with_limit(&lines, 0, 7, Some(3)); // Start at pos 7, limit 3 chars
+        {
+            let lines = vec![GCString::from("Hello, World!")];
+            let slice = AsStrSlice::with_limit(&lines, 0, 7, Some(3)); // Start at pos 7, limit 3 chars
 
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "Wor"); // Only 3 chars due to limit
-        assert!(matches!(result, Cow::Borrowed(_)));
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "Wor"); // Only 3 chars due to limit
+            assert!(matches!(result, Cow::Borrowed(_)));
+        }
 
         // Test with max_len limit on multi-line
-        let lines = vec![
-            GCString::from("First"),
-            GCString::from("Second"),
-            GCString::from("Third"),
-        ];
-        let slice = AsStrSlice::with_limit(&lines, 0, 3, Some(7)); // Start at pos 3, limit 7 chars
+        {
+            let lines = vec![
+                GCString::from("First"),
+                GCString::from("Second"),
+                GCString::from("Third"),
+            ];
+            let slice = AsStrSlice::with_limit(&lines, 0, 3, Some(7)); // Start at pos 3, limit 7 chars
 
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "st\nSeco"); // "st" + "\n" + "Seco" = 7 chars
-        assert!(matches!(result, Cow::Owned(_)));
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "st\nSeco"); // "st" + "\n" + "Seco" = 7 chars
+            assert!(matches!(result, Cow::Owned(_)));
+        }
 
         // Test with max_len that cuts off at newline
-        let lines = vec![GCString::from("First"), GCString::from("Second")];
-        let slice = AsStrSlice::with_limit(&lines, 0, 3, Some(4)); // Start at pos 3, limit 4 chars
+        {
+            let lines = vec![GCString::from("First"), GCString::from("Second")];
+            let slice = AsStrSlice::with_limit(&lines, 0, 3, Some(4)); // Start at pos 3, limit 4 chars
 
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "st\n"); // "st" + "\n" = 3 chars (newline ends it)
-        assert!(matches!(result, Cow::Owned(_)));
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "st\nS"); // "st" + "\n" + "S" = 4 chars
+            assert!(matches!(result, Cow::Owned(_)));
+        }
 
         // Test empty lines
-        let lines = vec![GCString::from(""), GCString::from(""), GCString::from("")];
-        let slice = AsStrSlice::from(&lines);
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "\n\n");
-        assert!(matches!(result, Cow::Owned(_)));
+        {
+            let lines = vec![GCString::from(""), GCString::from(""), GCString::from("")];
+            let slice = AsStrSlice::from(&lines);
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "\n\n");
+            assert!(matches!(result, Cow::Owned(_)));
+        }
 
         // Test beyond end
-        let lines = vec![GCString::from("Hello")];
-        let slice = AsStrSlice::with_limit(&lines, 10, 0, None); // Start beyond available lines
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "");
-        assert!(matches!(result, Cow::Borrowed(_)));
+        {
+            let lines = vec![GCString::from("Hello")];
+            let slice = AsStrSlice::with_limit(&lines, 10, 0, None); // Start beyond available lines
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "");
+            assert!(matches!(result, Cow::Borrowed(_)));
+        }
 
         // Test starting from second line
-        let lines = vec![
-            GCString::from("First line"),
-            GCString::from("Second line"),
-            GCString::from("Third line"),
-        ];
-        let slice = AsStrSlice::with_limit(&lines, 1, 0, None); // Start at beginning of second line
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "Second line\nThird line");
-        assert!(matches!(result, Cow::Owned(_)));
+        {
+            let lines = fixtures::create_three_lines();
+            let slice = AsStrSlice::with_limit(&lines, 1, 0, None); // Start at beginning of second line
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "Second line\nThird line");
+            assert!(matches!(result, Cow::Owned(_)));
+        }
 
         // Test starting from middle of second line
-        let slice = AsStrSlice::with_limit(&lines, 1, 7, None); // Start at "line" in "Second line"
-        let result = slice.extract_remaining_text_content_to_end();
-        assert_eq!(result, "line\nThird line");
-        assert!(matches!(result, Cow::Owned(_)));
+        {
+            let lines = fixtures::create_three_lines();
+            let slice = AsStrSlice::with_limit(&lines, 1, 7, None); // Start at "line" in "Second line"
+            let result = slice.extract_remaining_text_content_to_end();
+            assert_eq!(result, "line\nThird line");
+            assert!(matches!(result, Cow::Owned(_)));
+        }
     }
 
     #[test]
