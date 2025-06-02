@@ -26,6 +26,7 @@
         "```" from start and end and `test_parse_block_code_with_missing_end_marker()`
   - [x] `extract_code_block_content()`: test this
   - [x] add tests for `extract_code_block_content()`
+  - [x] `parse_block_heading_generic()`: change signature to use `AsStrSlice` and not `nom::Input`
 
 - smart list
 
@@ -35,11 +36,26 @@
         `parse_block_smart_list.rs::parse_smart_list()`:
   - [x] Remove all `Box::leak()`
 
-- use OG parsers _dump the new AI generated stuff_
+- handle inline markdown fragments (in one line)
 
-  - [x] `parse_block_heading_generic()`: change signature to use `AsStrSlice` and not `nom::Input`
-  - [ ] `parse_block_text_generic()`: copy from OG `???`
+  - [ ] `parse_inline_fragments_until_eol_or_eoi()`: migrate OG to `fragment_alt`
+
+    - [ ] `take_text_between.rs`: fix tests & check logic
+    - [ ] `specialized_parsers.rs`: fix tests & check logic
+    - [ ] `specialized_parser_delim_matchers.rs`: fix tests & check logic
+    - [ ] `plain_parser_catch_all.rs`: fix tests & check logic
+    - [ ] `parse_fragments_in_a_line.rs`: fix tests & check logic
+
+  - [ ] `parse_block_text_generic()`: copy from OG
+        `tui/src/tui/md_parser/block/parse_block_markdown_text_until_eol_or_eoi.rs:25` & handle
+        input with or without new line which calls the following lower level parser
+  - [ ] `parse_block_text_generic()`: integrate into main parser `parse_markdown_alt()`
+
+- incorporate `parse_inline_fragments_until_eol_or_eoi()` into `parse_block_smart_list_generic()`
+  (currently missing)
+
   - [ ] stop using the generic function signature, and use this:
+  - [ ] fix the export `tui/src/tui/md_parser/parse_markdown_alt/mod.rs:44` of `fragment_alt`
 
 - [ ] use the correct method signatures for (most) parsers
 
