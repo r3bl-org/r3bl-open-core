@@ -14,14 +14,15 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+use std::{borrow::Cow, fmt::Display};
 
-use nom::{Compare, CompareResult, Input, Offset};
+use nom::{Compare, CompareResult, FindSubstring, Input, Offset};
 
 use crate::{constants::{NEW_LINE, NEW_LINE_CHAR},
             GCString};
 
-/// Wrapper type that implements [nom::Input] for &[GCString] or any type that implements
-/// [AsRef<str>]. The [Clone] operations on this struct are really cheap.
+/// Wrapper type that implements [nom::Input] for &[GCString] or **any other type** that
+/// implements [AsRef<str>]. The [Clone] operations on this struct are really cheap.
 ///
 /// This struct generates synthetic new lines when it's [nom::Input] methods are used
 /// to manipulate it. This ensures that it can make the underline `line` struct "act" like
@@ -30,6 +31,29 @@ use crate::{constants::{NEW_LINE, NEW_LINE_CHAR},
 /// Since this struct implements [nom::Input], it can be used in any function that can
 /// receive an argument that implements it. So you have flexibility in using the
 /// [AsStrSlice] type or the [nom::Input] type where appropriate.
+///
+/// Also it is preferable to use the following function signature:
+///
+/// ```
+/// # use r3bl_tui::AsStrSlice;
+/// # use nom::IResult;
+/// fn f<'a>(i: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> { unimplemented!() }
+/// ```
+///
+/// Instead of the overly generic and difficult to work with (this type of signature makes
+/// sense for the built-in parsers which are expected to work with any slice, but our use
+/// case is anchored in [AsStrSlice], which itself is very flexible):
+///
+/// ```
+/// # use r3bl_tui::AsStrSlice;
+/// # use nom::{IResult, Input, Compare, Offset, AsChar};
+/// # use std::fmt::Debug;
+/// fn f<'a, I>(input: I) -> IResult<I, I>
+/// where
+///       I: Input + Clone + Compare<&'a str> + Offset + Debug,
+///       I::Item: AsChar + Copy
+/// { unimplemented!() }
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct AsStrSlice<'a, T: AsRef<str> = GCString>
 where
@@ -154,6 +178,79 @@ impl<'a> AsStrSlice<'a> {
         }
 
         ""
+    }
+
+    /// For multiline content this will allocate, since there is no contiguous chunk of
+    /// memory that has `\n` in them, since these new lines are generated
+    /// synthetically when iterating this struct. Thus it is not possible to take
+    /// chunks from [Self::lines] and then "join" them with `\n` in between lines, WITHOUT
+    /// allocating.
+    ///
+    /// In the case there is only one line, this method will NOT allocate. This is why
+    /// [Cow] is used.
+    pub fn extract_remaining_text_content_to_end(&self) -> Cow<'a, str> {
+        if self.line_index >= self.lines.len() {
+            return Cow::Borrowed("");
+        }
+
+        let current_line = self.lines[self.line_index].as_ref();
+        let start_char = std::cmp::min(self.char_index, current_line.len());
+
+        // Calculate how much content we can actually return based on max_len
+        let max_chars = self.remaining_len();
+
+        // If we're on the last line, just return the remaining content from current line
+        if self.line_index == self.lines.len() - 1 {
+            let remaining_in_line = &current_line[start_char..];
+            let content = if max_chars < remaining_in_line.len() {
+                &remaining_in_line[..max_chars]
+            } else {
+                remaining_in_line
+            };
+            return Cow::Borrowed(content);
+        }
+
+        // Multi-line case: need to allocate and join with newlines
+        let mut result = String::new();
+        let mut chars_added = 0;
+
+        // Add remaining content from current line
+        let remaining_in_current = &current_line[start_char..];
+        let chars_to_add = std::cmp::min(remaining_in_current.len(), max_chars);
+        result.push_str(&remaining_in_current[..chars_to_add]);
+        chars_added += chars_to_add;
+
+        if chars_added >= max_chars {
+            return Cow::Owned(result);
+        }
+
+        // Add subsequent lines with newlines
+        for line_idx in (self.line_index + 1)..self.lines.len() {
+            // Add newline
+            if chars_added >= max_chars {
+                break;
+            }
+            result.push('\n');
+            chars_added += 1;
+
+            if chars_added >= max_chars {
+                break;
+            }
+
+            // Add line content
+            let line_content = self.lines[line_idx].as_ref();
+            let remaining_chars = max_chars - chars_added;
+            let chars_to_add = std::cmp::min(line_content.len(), remaining_chars);
+
+            result.push_str(&line_content[..chars_to_add]);
+            chars_added += chars_to_add;
+
+            if chars_added >= max_chars {
+                break;
+            }
+        }
+
+        Cow::Owned(result)
     }
 
     // Get the current character without materializing the full string
@@ -352,47 +449,6 @@ impl<'a> Compare<&str> for AsStrSlice<'a> {
     }
 }
 
-pub struct StringChars<'a> {
-    slice: AsStrSlice<'a>,
-}
-
-impl<'a> StringChars<'a> {
-    fn new(slice: AsStrSlice<'a>) -> Self { Self { slice } }
-}
-
-impl<'a> Iterator for StringChars<'a> {
-    type Item = char;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let ch = self.slice.current_char();
-        if ch.is_some() {
-            self.slice.advance();
-        }
-        ch
-    }
-}
-
-pub struct StringCharIndices<'a> {
-    slice: AsStrSlice<'a>,
-    position: usize,
-}
-
-impl<'a> StringCharIndices<'a> {
-    fn new(slice: AsStrSlice<'a>) -> Self { Self { slice, position: 0 } }
-}
-
-impl<'a> Iterator for StringCharIndices<'a> {
-    type Item = (usize, char);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let ch = self.slice.current_char()?;
-        let pos = self.position;
-        self.slice.advance();
-        self.position += 1;
-        Some((pos, ch))
-    }
-}
-
 /// Implement [Offset] trait for [AsStrSlice].
 impl<'a> Offset for AsStrSlice<'a> {
     fn offset(&self, second: &Self) -> usize {
@@ -454,7 +510,7 @@ impl<'a> Offset for AsStrSlice<'a> {
 }
 
 /// Implement [Display] trait for [AsStrSlice].
-impl<'a> std::fmt::Display for AsStrSlice<'a> {
+impl<'a> Display for AsStrSlice<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Materialize the text by collecting all characters from the current position
         let mut current = self.clone();
@@ -466,8 +522,62 @@ impl<'a> std::fmt::Display for AsStrSlice<'a> {
     }
 }
 
+/// Implement [FindSubstring] trait for [AsStrSlice].
+impl<'a> FindSubstring<&str> for AsStrSlice<'a> {
+    fn find_substring(&self, substr: &str) -> Option<usize> {
+        // Convert the AsStrSlice to a string representation
+        let full_text = self.extract_remaining_text_content_to_end();
+
+        // Find the substring in the full text
+        full_text.find(substr)
+    }
+}
+
+pub struct StringChars<'a> {
+    slice: AsStrSlice<'a>,
+}
+
+impl<'a> StringChars<'a> {
+    fn new(slice: AsStrSlice<'a>) -> Self { Self { slice } }
+}
+
+impl<'a> Iterator for StringChars<'a> {
+    type Item = char;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let ch = self.slice.current_char();
+        if ch.is_some() {
+            self.slice.advance();
+        }
+        ch
+    }
+}
+
+pub struct StringCharIndices<'a> {
+    slice: AsStrSlice<'a>,
+    position: usize,
+}
+
+impl<'a> StringCharIndices<'a> {
+    fn new(slice: AsStrSlice<'a>) -> Self { Self { slice, position: 0 } }
+}
+
+impl<'a> Iterator for StringCharIndices<'a> {
+    type Item = (usize, char);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let ch = self.slice.current_char()?;
+        let pos = self.position;
+        self.slice.advance();
+        self.position += 1;
+        Some((pos, ch))
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use nom::{Compare, CompareResult, Input, Offset};
     use pretty_assertions::assert_eq;
 
@@ -990,5 +1100,190 @@ mod tests {
 
         let displayed = format!("{}", slice);
         assert_eq!(displayed, "line\nThird");
+    }
+
+    #[test]
+    fn test_extract_remaining_text_content_to_end() {
+        // Test single line - should return Cow::Borrowed
+        let lines = create_simple_lines(); // ["Hello", "World"]
+        let mut slice = AsStrSlice::from(&lines);
+        // Advance to position 3 in first line (after "Hel")
+        slice.advance();
+        slice.advance();
+        slice.advance();
+
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "lo\nWorld");
+        // Should be owned since it spans multiple lines
+        assert!(matches!(result, Cow::Owned(_)));
+
+        // Test single line from start - should return Cow::Owned for multi-line
+        let slice = AsStrSlice::from(&lines);
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "Hello\nWorld");
+        assert!(matches!(result, Cow::Owned(_)));
+
+        // Test single line remaining content only
+        let lines = vec![GCString::from("Hello, World!")];
+        let mut slice = AsStrSlice::from(&lines);
+        // Advance to position 7 (after "Hello, ")
+        for _ in 0..7 {
+            slice.advance();
+        }
+
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "World!");
+        // Should be borrowed since it's single line content
+        assert!(matches!(result, Cow::Borrowed(_)));
+
+        // Test from start of single line
+        let slice = AsStrSlice::from(&lines);
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "Hello, World!");
+        assert!(matches!(result, Cow::Borrowed(_)));
+
+        // Test at end of single line
+        let mut slice = AsStrSlice::from(&lines);
+        // Advance to end
+        for _ in 0..13 {
+            slice.advance();
+        }
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "");
+        assert!(matches!(result, Cow::Borrowed(_)));
+
+        // Test multi-line from middle
+        let lines = create_test_lines(); // More complex test data
+        let mut slice = AsStrSlice::from(&lines);
+        // Advance a few characters into first line
+        slice.advance();
+        slice.advance();
+
+        let result = slice.extract_remaining_text_content_to_end();
+        // Result should contain remaining content from current position to end
+        assert!(!result.is_empty());
+        assert!(matches!(result, Cow::Owned(_)));
+
+        // Test with max_len limit on single line
+        let lines = vec![GCString::from("Hello, World!")];
+        let slice = AsStrSlice::with_limit(&lines, 0, 7, Some(3)); // Start at pos 7, limit 3 chars
+
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "Wor"); // Only 3 chars due to limit
+        assert!(matches!(result, Cow::Borrowed(_)));
+
+        // Test with max_len limit on multi-line
+        let lines = vec![
+            GCString::from("First"),
+            GCString::from("Second"),
+            GCString::from("Third"),
+        ];
+        let slice = AsStrSlice::with_limit(&lines, 0, 3, Some(7)); // Start at pos 3, limit 7 chars
+
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "st\nSeco"); // "st" + "\n" + "Seco" = 7 chars
+        assert!(matches!(result, Cow::Owned(_)));
+
+        // Test with max_len that cuts off at newline
+        let lines = vec![GCString::from("First"), GCString::from("Second")];
+        let slice = AsStrSlice::with_limit(&lines, 0, 3, Some(4)); // Start at pos 3, limit 4 chars
+
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "st\n"); // "st" + "\n" = 3 chars (newline ends it)
+        assert!(matches!(result, Cow::Owned(_)));
+
+        // Test empty lines
+        let lines = vec![GCString::from(""), GCString::from(""), GCString::from("")];
+        let slice = AsStrSlice::from(&lines);
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "\n\n");
+        assert!(matches!(result, Cow::Owned(_)));
+
+        // Test beyond end
+        let lines = vec![GCString::from("Hello")];
+        let slice = AsStrSlice::with_limit(&lines, 10, 0, None); // Start beyond available lines
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "");
+        assert!(matches!(result, Cow::Borrowed(_)));
+
+        // Test starting from second line
+        let lines = vec![
+            GCString::from("First line"),
+            GCString::from("Second line"),
+            GCString::from("Third line"),
+        ];
+        let slice = AsStrSlice::with_limit(&lines, 1, 0, None); // Start at beginning of second line
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "Second line\nThird line");
+        assert!(matches!(result, Cow::Owned(_)));
+
+        // Test starting from middle of second line
+        let slice = AsStrSlice::with_limit(&lines, 1, 7, None); // Start at "line" in "Second line"
+        let result = slice.extract_remaining_text_content_to_end();
+        assert_eq!(result, "line\nThird line");
+        assert!(matches!(result, Cow::Owned(_)));
+    }
+
+    #[test]
+    fn test_find_substring() {
+        // Test basic substring finding in a single line
+        let lines = vec![GCString::from("Hello, World!")];
+        let slice = AsStrSlice::from(&lines);
+
+        // Find substring in the middle
+        let pos = slice.find_substring("World");
+        assert_eq!(pos, Some(7));
+
+        // Find substring at the beginning
+        let pos = slice.find_substring("Hello");
+        assert_eq!(pos, Some(0));
+
+        // Find substring at the end
+        let pos = slice.find_substring("!");
+        assert_eq!(pos, Some(12));
+
+        // Substring not found
+        let pos = slice.find_substring("Rust");
+        assert_eq!(pos, None);
+
+        // Empty substring (should match at position 0)
+        let pos = slice.find_substring("");
+        assert_eq!(pos, Some(0));
+
+        // Test finding substring across multiple lines
+        let lines = vec![
+            GCString::from("First line"),
+            GCString::from("Second line"),
+            GCString::from("Third line"),
+        ];
+        let slice = AsStrSlice::from(&lines);
+
+        // Find substring that spans a newline
+        let pos = slice.find_substring("line\nSecond");
+        assert_eq!(pos, Some(6));
+
+        // Find substring in the middle line
+        let pos = slice.find_substring("Second");
+        assert_eq!(pos, Some(11));
+
+        // Test with offset position
+        let slice = AsStrSlice::with_limit(&lines, 1, 0, None); // Start at beginning of second line
+        let pos = slice.find_substring("Second");
+        assert_eq!(pos, Some(0));
+
+        // Test with max_len limit
+        let slice = AsStrSlice::with_limit(&lines, 0, 0, Some(15)); // Limit to first 15 chars
+        let pos = slice.find_substring("Second");
+        assert_eq!(pos, None); // Should not find "Second" as it's beyond the limit
+
+        // Test with empty lines
+        let lines = vec![
+            GCString::from(""),
+            GCString::from(""),
+            GCString::from("Content"),
+        ];
+        let slice = AsStrSlice::from(&lines);
+        let pos = slice.find_substring("Content");
+        assert_eq!(pos, Some(2)); // 2 newlines before "Content"
     }
 }
