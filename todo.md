@@ -36,6 +36,11 @@
         `parse_block_smart_list.rs::parse_smart_list()`:
   - [x] Remove all `Box::leak()`
 
+- [x] revert "parse by line" approach to rewriting the parser, use `nom::Input` & `AsStrSlice`
+      instead
+
+- [ ] make naming convention consistent, use `_alt`, drop `_generic`
+
 - handle inline markdown fragments (in one line)
 
   - [ ] `parse_inline_fragments_until_eol_or_eoi()`: migrate OG to `fragment_alt`

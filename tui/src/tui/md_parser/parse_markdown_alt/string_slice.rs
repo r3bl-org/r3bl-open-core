@@ -19,7 +19,10 @@ use std::{borrow::Cow, fmt::Display};
 use nom::{Compare, CompareResult, FindSubstring, Input, Offset};
 
 use crate::{constants::{NEW_LINE, NEW_LINE_CHAR},
-            GCString};
+            DocumentStorage,
+            GCString,
+            ParserByteCache,
+            PARSER_BYTE_CACHE_PAGE_SIZE};
 
 /// Wrapper type that implements [nom::Input] for &[GCString] or **any other type** that
 /// implements [AsRef<str>]. The [Clone] operations on this struct are really cheap.
@@ -109,6 +112,42 @@ impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
 }
 
 impl<'a> AsStrSlice<'a> {
+    /// Use the Display implementation to materialize the [DocumentStorage] content.
+    pub fn to_inline_string(&self) -> DocumentStorage {
+        let mut acc = DocumentStorage::new();
+        use std::fmt::Write as _;
+        _ = write!(acc, "{}", self);
+        acc
+    }
+
+    pub fn write_to_byte_cache(
+        &self,
+        size_hint: usize,
+        acc: &mut ParserByteCache,
+    ) {
+        // Clear the cache before writing to it. And size it correctly.
+        acc.clear();
+        let amount_to_reserve = {
+            // Increase the capacity of the acc if necessary by rounding up to the
+            // nearest PARSER_BYTE_CACHE_PAGE_SIZE.
+            let page_size = PARSER_BYTE_CACHE_PAGE_SIZE;
+            let current_capacity = acc.capacity();
+            if size_hint > current_capacity {
+                let bytes_needed: usize = size_hint - current_capacity;
+                // Round up bytes_needed to the nearest page_size.
+                let pages_needed = bytes_needed.div_ceil(page_size);
+                pages_needed * page_size
+            } else {
+                0
+            }
+        };
+        acc.reserve(amount_to_reserve);
+
+        // Write the content into the cache.
+        use std::fmt::Write as _;
+        _ = write!(acc, "{}", self);
+    }
+
     // Create a new slice with a maximum length limit
     pub fn with_limit(
         lines: &'a [GCString],

@@ -55,6 +55,7 @@ use crate::{generate_ordered_list_item_bullet,
                                         TITLE,
                                         UNCHECKED_OUTPUT,
                                         UNDERSCORE},
+            AsStrSlice,
             CodeBlockLineContent,
             CodeBlockLines,
             CommonError,
@@ -103,11 +104,33 @@ pub fn try_parse_and_highlight(
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     parser_byte_cache: Option<&mut ParserByteCache>,
 ) -> CommonResult<StyleUSSpanLines> {
-    // Now directly using editor_text_lines with the updated parse_markdown function
-    // which handles the conversion internally
-    let result_md_ast = parse_markdown(editor_text_lines);
+    // PERF: This is a known performance bottleneck. The underlying storage mechanism for
+    // content in the editor will have to change (from Vec<String>) for this to be
+    // possible.
+
+    // Convert the editor text into a InlineString (unfortunately requires allocating to
+    // get the new lines back, since they're stripped out when loading content into the
+    // editor buffer struct).
+    let size_hint = editor_text_lines
+        .iter()
+        .map(|line| line.len().as_usize() + 1 /* for new line */)
+        .sum();
+    let slice = AsStrSlice::from(editor_text_lines);
+    // Use the parser_byte_cache if it exists, otherwise create a new one with the
+    // size_hint.
+    let acc = match parser_byte_cache {
+        // If the parser_byte_cache exists, we can write to it directly.
+        Some(parser_byte_cache) => parser_byte_cache,
+        // If it doesn't exist, we create a new one with the size hint.
+        None => &mut ParserByteCache::with_capacity(size_hint),
+    };
+
+    // Write the editor text into the byte cache, adding CRLF at the end of each line.
+    slice.write_to_byte_cache(size_hint, acc);
 
     // XMARK: Parse markdown from editor and render it
+    let result_md_ast = parse_markdown(&acc);
+
     // Try and parse `editor_text_to_string` into a `Document`.
     match result_md_ast {
         Ok((_remainder, document)) => Ok(StyleUSSpanLines::from_document(
@@ -1158,99 +1181,94 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
-        fn test_block_ol() {
-            let style = new_style!(
-                color_bg: {tui_color!(red)}
-            );
-
-            let input = [
-                GCString::new("100. Foo"),
-                GCString::new("200. Bar"),
-                GCString::new(""),
-            ];
-
-            let (remainder, doc) = parse_markdown(&input).unwrap();
-            assert_eq2!(remainder, "");
-
-            let ol_block_1 = &doc[0];
-            {
-                // println!("{:#?}", ol_block_1);
-                let lines = StyleUSSpanLines::from_block(ol_block_1, &Some(style), None);
-
-                let line_0 = &lines.inner[0];
-                // println!("{}", line_0..pretty_print_debug());
-                assert_eq2!(
-                    line_0.inner[0],
-                    StyleUSSpan::new(style + get_list_bullet_style(), "100.│",)
+        fn test_block_ol() -> CommonResult<()> {
+            throws!({
+                let style = new_style!(
+                    color_bg: {tui_color!(red)}
                 );
-                assert_eq2!(
-                    line_0.inner[1],
-                    StyleUSSpan::new(style + get_foreground_style(), "Foo",)
-                );
-            }
+                let (remainder, doc) =
+                    parse_markdown("100. Foo\n200. Bar\n").into_diagnostic()?;
+                assert_eq2!(remainder, "");
 
-            let ol_block_2 = &doc[1];
-            {
-                // println!("{:#?}", ol_block_2);
-                let lines = StyleUSSpanLines::from_block(ol_block_2, &Some(style), None);
+                let ol_block_1 = &doc[0];
+                {
+                    // println!("{:#?}", ol_block_1);
+                    let lines =
+                        StyleUSSpanLines::from_block(ol_block_1, &Some(style), None);
 
-                let line_0 = &lines.inner[0];
-                // println!("{}", line_0..pretty_print_debug());
-                assert_eq2!(
-                    line_0.inner[0],
-                    StyleUSSpan::new(style + get_list_bullet_style(), "200.│",)
-                );
-                assert_eq2!(
-                    line_0.inner[1],
-                    StyleUSSpan::new(style + get_foreground_style(), "Bar",)
-                );
-            }
+                    let line_0 = &lines.inner[0];
+                    // println!("{}", line_0..pretty_print_debug());
+                    assert_eq2!(
+                        line_0.inner[0],
+                        StyleUSSpan::new(style + get_list_bullet_style(), "100.│",)
+                    );
+                    assert_eq2!(
+                        line_0.inner[1],
+                        StyleUSSpan::new(style + get_foreground_style(), "Foo",)
+                    );
+                }
+
+                let ol_block_2 = &doc[1];
+                {
+                    // println!("{:#?}", ol_block_2);
+                    let lines =
+                        StyleUSSpanLines::from_block(ol_block_2, &Some(style), None);
+
+                    let line_0 = &lines.inner[0];
+                    // println!("{}", line_0..pretty_print_debug());
+                    assert_eq2!(
+                        line_0.inner[0],
+                        StyleUSSpan::new(style + get_list_bullet_style(), "200.│",)
+                    );
+                    assert_eq2!(
+                        line_0.inner[1],
+                        StyleUSSpan::new(style + get_foreground_style(), "Bar",)
+                    );
+                }
+            });
         }
 
         #[test]
-        fn test_block_ul() {
-            let style = new_style!(
-                color_bg: {tui_color!(red)}
-            );
-            // Clone the data to avoid borrowing issues - parse_markdown takes ownership
-            // of its input reference
-            let input = [
-                GCString::new("- Foo"),
-                GCString::new("- Bar"),
-                GCString::new(""),
-            ];
-            let (_, doc) = parse_markdown(input.as_slice()).unwrap();
-            println!("{}", fg_cyan(format!("{doc:#?}")));
+        fn test_block_ul() -> CommonResult<()> {
+            throws!({
+                let style = new_style!(
+                    color_bg: {tui_color!(red)}
+                );
+                let (_, doc) = parse_markdown("- Foo\n- Bar\n").into_diagnostic()?;
+                println!("{}", fg_cyan(format!("{doc:#?}")));
 
-            // First smart list.
-            {
-                let ul_block_0 = &doc[0];
-                let lines = StyleUSSpanLines::from_block(ul_block_0, &Some(style), None);
-                let line_0 = &lines.inner[0];
-                assert_eq2!(
-                    line_0.inner[0],
-                    StyleUSSpan::new(style + get_list_bullet_style(), "─┤",)
-                );
-                assert_eq2!(
-                    line_0.inner[1],
-                    StyleUSSpan::new(style + get_foreground_style(), "Foo",)
-                );
-            }
+                // First smart list.
+                {
+                    let ul_block_0 = &doc[0];
+                    let lines =
+                        StyleUSSpanLines::from_block(ul_block_0, &Some(style), None);
+                    let line_0 = &lines.inner[0];
+                    assert_eq2!(
+                        line_0.inner[0],
+                        StyleUSSpan::new(style + get_list_bullet_style(), "─┤",)
+                    );
+                    assert_eq2!(
+                        line_0.inner[1],
+                        StyleUSSpan::new(style + get_foreground_style(), "Foo",)
+                    );
+                }
 
-            // Second smart list.
-            {
-                let ul_block_1 = &doc[1];
-                let lines = StyleUSSpanLines::from_block(ul_block_1, &Some(style), None);
-                let line_0 = &lines.inner[0];
-                assert_eq2!(
-                    line_0.inner[0],
-                    StyleUSSpan::new(style + get_list_bullet_style(), "─┤",)
-                );
-                assert_eq2!(
-                    line_0.inner[1],
-                    StyleUSSpan::new(style + get_foreground_style(), "Bar",)
-                );
-            }
+                // Second smart list.
+                {
+                    let ul_block_1 = &doc[1];
+                    let lines =
+                        StyleUSSpanLines::from_block(ul_block_1, &Some(style), None);
+                    let line_0 = &lines.inner[0];
+                    assert_eq2!(
+                        line_0.inner[0],
+                        StyleUSSpan::new(style + get_list_bullet_style(), "─┤",)
+                    );
+                    assert_eq2!(
+                        line_0.inner[1],
+                        StyleUSSpan::new(style + get_foreground_style(), "Bar",)
+                    );
+                }
+            });
         }
 
         #[test]
