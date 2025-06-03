@@ -81,7 +81,21 @@ impl<'a> From<&'a [GCString]> for AsStrSlice<'a> {
     }
 }
 
-/// Implement [From] trait to allow automatic conversion from &Vec<GCString> to
+/// Implement [From] trait to allow automatic conversion from &[[GCString]; N] to
+/// [AsStrSlice]. Primary use case is for tests where the inputs are hardcoded as
+/// fixed-size arrays.
+impl<'a, const N: usize> From<&'a [GCString; N]> for AsStrSlice<'a> {
+    fn from(lines: &'a [GCString; N]) -> Self {
+        Self {
+            lines: lines.as_slice(),
+            line_index: 0,
+            char_index: 0,
+            max_len: None,
+        }
+    }
+}
+
+/// Implement [From] trait to allow automatic conversion from &[Vec<GCString>] to
 /// [AsStrSlice].
 impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
     fn from(lines: &'a Vec<GCString>) -> Self {
@@ -574,6 +588,7 @@ impl<'a> Iterator for StringCharIndices<'a> {
     }
 }
 
+/// Unit tests for the [AsStrSlice] struct and its methods.
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
@@ -1359,5 +1374,84 @@ mod tests {
         let slice = AsStrSlice::from(&lines);
         let pos = slice.find_substring("Content");
         assert_eq!(pos, Some(2)); // 2 newlines before "Content"
+    }
+}
+
+/// These are tests to ensure that [AsStrSlice] works correctly in integration with
+/// nom parsers.
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+    use crate::tui::md_parser::parse_markdown_alt::fragment_alt::take_text_between_generic;
+
+    /// When the parser succeeds, it should return the remaining input and the
+    /// extracted text.
+    #[test]
+    fn test_take_text_between_ok() {
+        let lines = [GCString::new("_foo bar baz_bar")];
+        let input = AsStrSlice::from(&lines);
+
+        // Add assertions for the input slice before parsing.
+        assert_eq!(input.char_index, 0);
+        assert_eq!(input.input_len(), 16);
+        assert_eq!(input.lines.len(), 1);
+        assert_eq!(input.line_index, 0);
+        assert_eq!(
+            input.extract_remaining_text_content_in_line(),
+            "_foo bar baz_bar"
+        );
+
+        // Extract the result for comparison.
+        let it = take_text_between_generic(input, "_", "_");
+        let (rem, output) = it.unwrap();
+
+        // Make sure the remainder (remaining input) slice is correct.
+        assert_eq!(rem.char_index, 13);
+        assert_eq!(rem.input_len(), 3);
+        assert_eq!(rem.lines.len(), 1);
+        assert_eq!(rem.line_index, 0);
+        assert_eq!(rem.extract_remaining_text_content_in_line(), "bar");
+
+        // Check that extracted contains "foo bar baz". Use the Display trait impl to
+        // convert it to a string.
+        assert_eq!(output.to_string(), "foo bar baz");
+        assert_eq!(output.char_index, 1);
+        assert_eq!(output.input_len(), 11);
+        assert_eq!(output.lines.len(), 1);
+        assert_eq!(output.line_index, 0);
+        assert_eq!(
+            output.extract_remaining_text_content_in_line(),
+            "foo bar baz"
+        );
+    }
+
+    /// When a parser fails, it should return an error containing a copy of the "input" in
+    /// the correct position.
+    #[test]
+    fn test_take_text_between_error() {
+        let lines = [GCString::new("_foo bar baz")];
+        let input = AsStrSlice::from(&lines);
+        assert_eq!(input.char_index, 0);
+
+        let res = take_text_between_generic(input, "_", "_");
+
+        match res {
+            Ok(_) => panic!("Expected an error, but got Ok"),
+            Err(nom::Err::Error(error)) => {
+                // Add more rigorous assertions for `error.input`.
+                assert_eq!(error.code, nom::error::ErrorKind::TakeUntil);
+                // `tag("_")` moved this forward by 1. it is no longer equal to `input`.
+                assert_eq!(error.input.char_index, 1);
+                assert_eq!(error.input.input_len(), 11); // "foo bar baz" remaining
+                assert_eq!(error.input.lines.len(), 1);
+                assert_eq!(error.input.line_index, 0);
+                assert_eq!(error.input.max_len, None);
+                assert_eq!(
+                    error.input.extract_remaining_text_content_in_line(),
+                    "foo bar baz"
+                );
+            }
+            Err(other_err) => panic!("Expected Error variant, but got: {:?}", other_err),
+        }
     }
 }

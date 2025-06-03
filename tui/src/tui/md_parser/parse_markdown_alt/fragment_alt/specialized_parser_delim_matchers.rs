@@ -28,7 +28,7 @@ use nom::{bytes::complete::tag,
           IResult,
           Parser as _};
 
-use super::take_text_between_delims_err_on_new_line;
+use super::take_text_between_delims_err_on_new_line_generic;
 use crate::{fg_blue,
             fg_green,
             fg_red,
@@ -107,7 +107,7 @@ pub fn take_starts_with_delim_no_new_line<'i>(
 
     // If there is a closing delim, then we can safely take the text between the delim.
     if num_of_delim_occurrences > 1 {
-        let it = take_text_between_delims_err_on_new_line(input, delim, delim);
+        let it = take_text_between_delims_err_on_new_line_generic(input, delim, delim);
         DEBUG_MD_PARSER_STDOUT.then(|| {
             println!("{a} it: {b:?}",
                 a = fg_blue("▲▲"),

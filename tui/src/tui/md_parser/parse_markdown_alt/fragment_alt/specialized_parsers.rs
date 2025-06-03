@@ -24,7 +24,7 @@ use nom::{branch::alt,
           Parser};
 
 use super::{specialized_parser_delim_matchers,
-            take_text_between_delims_err_on_new_line};
+            take_text_between_delims_err_on_new_line_generic};
 use crate::{fg_blue,
             fg_red,
             md_parser::constants::{BACK_TICK,
@@ -102,7 +102,7 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line<'a>(
 ) -> IResult<AsStrSlice<'a>, HyperlinkData<'a>> {
     // Parse the text between the image tags.
     let result_first =
-        take_text_between_delims_err_on_new_line(input, LEFT_IMAGE, RIGHT_IMAGE);
+        take_text_between_delims_err_on_new_line_generic(input, LEFT_IMAGE, RIGHT_IMAGE);
 
     // if result_first.is_err() {
     //     DEBUG_MD_PARSER_STDOUT.then(|| {
@@ -118,7 +118,7 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line<'a>(
     let (rem, part_between_image_tags) = result_first?;
 
     // Parse the text between the parenthesis.
-    let result_second = take_text_between_delims_err_on_new_line(
+    let result_second = take_text_between_delims_err_on_new_line_generic(
         rem,
         LEFT_PARENTHESIS,
         RIGHT_PARENTHESIS,
@@ -164,8 +164,11 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, HyperlinkData<'a>> {
     // Parse the text between the brackets.
-    let result_first =
-        take_text_between_delims_err_on_new_line(input, LEFT_BRACKET, RIGHT_BRACKET);
+    let result_first = take_text_between_delims_err_on_new_line_generic(
+        input,
+        LEFT_BRACKET,
+        RIGHT_BRACKET,
+    );
 
     // if result_first.is_err() {
     //     DEBUG_MD_PARSER_STDOUT.then(|| {
@@ -181,7 +184,7 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line<'a>(
     let (rem, part_between_brackets) = result_first?;
 
     // Parse the text between the parenthesis.
-    let result_second = take_text_between_delims_err_on_new_line(
+    let result_second = take_text_between_delims_err_on_new_line_generic(
         rem,
         LEFT_PARENTHESIS,
         RIGHT_PARENTHESIS,
