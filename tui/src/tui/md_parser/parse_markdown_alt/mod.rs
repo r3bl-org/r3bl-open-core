@@ -42,6 +42,6 @@ pub mod string_slice;
 
 // Re-export.
 // TODO: fix this visibility to pub
-use fragment_alt::*;
+pub(in crate::tui::md_parser::parse_markdown_alt) use fragment_alt::*;
 pub use parser_impl::*;
 pub use string_slice::*;

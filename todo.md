@@ -40,7 +40,8 @@
 
   - [ ] `parse_inline_fragments_until_eol_or_eoi()`: migrate OG to `fragment_alt`
 
-    - [ ] `take_text_between.rs`: fix tests & check logic
+    - [x] `take_text_between_generic.rs`: fix tests & check logic; add more tests to `AsStrSlice`
+          based on this
     - [ ] `specialized_parsers.rs`: fix tests & check logic
     - [ ] `specialized_parser_delim_matchers.rs`: fix tests & check logic
     - [ ] `plain_parser_catch_all.rs`: fix tests & check logic
