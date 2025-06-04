@@ -36,12 +36,15 @@
 //! functions in this module.
 
 // Attach sources.
+pub mod extended_alt;
 pub mod fragment_alt;
 pub mod parser_impl;
 pub mod string_slice;
 
 // Re-export.
 // TODO: fix this visibility to pub
+// pub use fragment_alt::*;
+pub use extended_alt::*;
 pub(in crate::tui::md_parser::parse_markdown_alt) use fragment_alt::*;
 pub use parser_impl::*;
 pub use string_slice::*;

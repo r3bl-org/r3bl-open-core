@@ -112,11 +112,11 @@ pub fn parse_markdown_alt<'a>(
         // These parsers now work with any type that implements `nom::Input` which
         // includes `AsStrSlice`.
         map(
-            make_many0_compatible(|input| parse_unique_kv_opt_eol_generic(TITLE, input)),
+            make_many0_compatible(|input| parse_unique_kv_opt_eol_alt(TITLE, input)),
             |value: &'_ str| MdBlock::Title(value),
         ),
         map(
-            make_many0_compatible(|input| parse_csv_opt_eol_generic(TAGS, input)),
+            make_many0_compatible(|input| parse_csv_opt_eol_alt(TAGS, input)),
             |values: List<&'_ str>| {
                 // Create a new List directly to ensure proper type
                 let mut tags_list = List::new();
@@ -127,7 +127,7 @@ pub fn parse_markdown_alt<'a>(
             },
         ),
         map(
-            make_many0_compatible(|input| parse_csv_opt_eol_generic(AUTHORS, input)),
+            make_many0_compatible(|input| parse_csv_opt_eol_alt(AUTHORS, input)),
             |values: List<&'_ str>| {
                 // Create a new List directly to ensure proper type
                 let mut authors_list = List::new();
@@ -138,11 +138,11 @@ pub fn parse_markdown_alt<'a>(
             },
         ),
         map(
-            make_many0_compatible(|input| parse_unique_kv_opt_eol_generic(DATE, input)),
+            make_many0_compatible(|input| parse_unique_kv_opt_eol_alt(DATE, input)),
             |value: &'_ str| MdBlock::Date(value),
         ),
         map(
-            make_many0_compatible(parse_block_heading_generic),
+            make_many0_compatible(parse_block_heading_alt),
             |(level, text): (usize, AsStrSlice<'_>)| {
                 // Extract actual heading text from the text slice
                 let heading_text = text.extract_remaining_text_content_in_line();
@@ -153,11 +153,11 @@ pub fn parse_markdown_alt<'a>(
             },
         ),
         map(
-            make_many0_compatible(parse_code_block_generic),
-            extract_code_block_content,
+            make_many0_compatible(parse_code_block_alt),
+            extract_code_block_content_alt,
         ),
         map(
-            make_many0_compatible(parse_block_smart_list_generic),
+            make_many0_compatible(parse_block_smart_list_alt),
             |(lines, bullet_kind, indent): (Lines<'_>, BulletKind, usize)| {
                 // The lines, bullet_kind, and indent are already properly structured
                 // Just need to wrap them in MdBlock::SmartList
@@ -165,7 +165,7 @@ pub fn parse_markdown_alt<'a>(
             },
         ),
         map(
-            make_many0_compatible(parse_block_text_generic),
+            make_many0_compatible(parse_block_text_alt),
             |text: AsStrSlice<'_>| {
                 // Create proper text structure with actual content
                 let mut line_fragments = List::new();
@@ -181,7 +181,7 @@ pub fn parse_markdown_alt<'a>(
 }
 
 // Generic helper function to take text until newline or end for any Input type
-fn take_text_until_new_line_or_end_generic<I>() -> impl Fn(I) -> IResult<I, I>
+fn take_text_until_new_line_or_end_alt<I>() -> impl Fn(I) -> IResult<I, I>
 where
     I: Input + Clone,
     I::Item: AsChar + Copy,
@@ -221,8 +221,6 @@ where
     }
 }
 
-// Removed unused take_until_comma_or_end_generic_parser function
-
 /// Generic version of [crate::md_parser::extended::parse_unique_kv_opt_eol] for future
 /// use.
 ///
@@ -230,7 +228,7 @@ where
 /// - There may or may not be a newline at the end. If there is, it is consumed.
 /// - Can't nest the `tag_name` within the `output`. So there can only be one `tag_name`
 ///   in the `output`.
-fn parse_unique_kv_opt_eol_generic<'a>(
+pub fn parse_unique_kv_opt_eol_alt<'a>(
     tag_name: &'a str,
     input: AsStrSlice<'a>,
 ) -> IResult</* remainder */ AsStrSlice<'a>, /* output */ &'a str> {
@@ -239,7 +237,7 @@ fn parse_unique_kv_opt_eol_generic<'a>(
 
     let (remainder, title_text) = preceded(
         /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
-        /* output */ take_text_until_new_line_or_end_generic(),
+        /* output */ take_text_until_new_line_or_end_alt(),
     )
     .parse(input)?;
 
@@ -277,13 +275,13 @@ fn parse_unique_kv_opt_eol_generic<'a>(
 /// - Sample parse input: `@tags: tag1, tag2, tag3`, `@tags: tag1, tag2, tag3\n`, or
 ///   `@authors: me, myself, i`, `@authors: me, myself, i\n`.
 /// - There may or may not be a newline at the end. If there is, it is consumed.
-pub fn parse_csv_opt_eol_generic<'a>(
+pub fn parse_csv_opt_eol_alt<'a>(
     tag_name: &'a str,
     input: AsStrSlice<'a>,
 ) -> IResult</* remainder */ AsStrSlice<'a>, /* output */ List<&'a str>> {
     let (remainder, tags_text) = preceded(
         /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
-        /* output */ take_text_until_new_line_or_end_generic(),
+        /* output */ take_text_until_new_line_or_end_alt(),
     )
     .parse(input)?;
 
@@ -327,24 +325,24 @@ pub fn parse_csv_opt_eol_generic<'a>(
 // Specific parsers using generic implementations
 
 // Generic heading parser
-fn parse_block_heading_generic<'a>(
+fn parse_block_heading_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult</* remainder */ AsStrSlice<'a>, /* output */ (usize, AsStrSlice<'a>)> {
     let (input, hashes) = many1(char(HEADING_CHAR)).parse(input)?;
     let (input, _) = char(SPACE_CHAR).parse(input)?;
-    let (input, text) = take_text_until_new_line_or_end_generic().parse(input)?;
+    let (input, text) = take_text_until_new_line_or_end_alt().parse(input)?;
     let (input, _) = opt(tag(NEW_LINE)).parse(input)?;
 
     Ok((input, (hashes.len(), text)))
 }
 
 // Generic text parser
-fn parse_block_text_generic<'a, I>(input: I) -> IResult<I, I>
+fn parse_block_text_alt<'a, I>(input: I) -> IResult<I, I>
 where
     I: Input + Clone + Compare<&'a str>,
     I::Item: AsChar + Copy,
 {
-    let (input, text) = take_text_until_new_line_or_end_generic().parse(input)?;
+    let (input, text) = take_text_until_new_line_or_end_alt().parse(input)?;
 
     // Fail if no text was captured (empty input)
     if text.input_len() == 0 {
@@ -390,7 +388,7 @@ where
 /// │  ⎩indent: 4                │  ⎩indent: 4                  │
 /// ╰────────────────────────────┴──────────────────────────────╯
 /// ```
-pub fn parse_smart_list_and_extract_ir_generic<'a>(
+pub fn parse_smart_list_and_extract_ir_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult</* remainder */ AsStrSlice<'a>, /* output */ SmartListIR<'a>> {
     // Calculate indent by counting leading spaces
@@ -468,7 +466,7 @@ pub fn parse_smart_list_and_extract_ir_generic<'a>(
     };
 
     // Match the rest of the line & other lines that have the same indent.
-    let (remainder, content) = take_text_until_new_line_or_end_generic().parse(input)?;
+    let (remainder, content) = take_text_until_new_line_or_end_alt().parse(input)?;
 
     // Extract content directly using AsStrSlice's methods
     let content_str = content.extract_remaining_text_content_in_line();
@@ -508,7 +506,7 @@ pub fn parse_smart_list_and_extract_ir_generic<'a>(
     ))
 }
 
-fn extract_block_smart_list_from_ir_generic<'a>(
+fn extract_block_smart_list_from_ir_alt<'a>(
     smart_list_ir: SmartListIR<'a>,
 ) -> Option<(Lines<'a>, BulletKind, usize)> {
     let indent = smart_list_ir.indent;
@@ -578,7 +576,7 @@ fn extract_block_smart_list_from_ir_generic<'a>(
     Some((output_lines, bullet_kind, indent))
 }
 
-pub fn parse_block_smart_list_generic<'a>(
+pub fn parse_block_smart_list_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<
     /* remainder */ AsStrSlice<'a>,
@@ -588,10 +586,10 @@ pub fn parse_block_smart_list_generic<'a>(
     let input_clone = input.clone();
 
     // Parse the smart list structure first
-    let (remainder, smart_list_ir) = parse_smart_list_and_extract_ir_generic(input)?;
+    let (remainder, smart_list_ir) = parse_smart_list_and_extract_ir_alt(input)?;
 
     // Extract and process the smart list information
-    match extract_block_smart_list_from_ir_generic(smart_list_ir) {
+    match extract_block_smart_list_from_ir_alt(smart_list_ir) {
         Some(output) => Ok((remainder, output)),
         None => {
             // If there was an error extracting the smart list, return it
@@ -621,7 +619,7 @@ pub fn parse_block_smart_list_generic<'a>(
 /// 2. the remainder of input slice.
 ///
 /// # Context
-/// This function handles the boundary detection, while [extract_code_block_content]
+/// This function handles the boundary detection, while [extract_code_block_content_alt]
 /// handles content extraction. They work hand in hand.
 ///
 /// This is a low-level generic function that works with any input type implementing
@@ -632,7 +630,7 @@ pub fn parse_block_smart_list_generic<'a>(
 /// - `Ok((remaining_input, fenced_code_block_slice))` - Successfully parsed code block
 ///   slice.
 /// - `Err(_)` - Input doesn't start with code block marker or missing closing marker.
-pub fn parse_code_block_generic<'a>(
+pub fn parse_code_block_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
     // Check if the input starts with the code block marker
@@ -697,21 +695,21 @@ pub fn parse_code_block_generic<'a>(
 ///
 /// ## Context
 ///
-/// [parse_code_block_generic()] handles the boundary detection, while this function
+/// [parse_code_block_alt()] handles the boundary detection, while this function
 /// handles content extraction. They work hand in hand.
 ///
-/// This helper function processes the output from [parse_code_block_generic()], which is
+/// This helper function processes the output from [parse_code_block_alt()], which is
 /// guaranteed to produce a valid Markdown fenced code block slice, to extract the
 /// language specification and code content from a markdown code block, converting it into
 /// a structured [MdBlock::CodeBlock].
 ///
-/// Note that the return type of [parse_code_block_generic()] is a concrete type that
+/// Note that the return type of [parse_code_block_alt()] is a concrete type that
 /// implements [nom::Input], and so this return value can be passed as an argument to this
 /// function which receives a `slice` input of type [AsStrSlice].
 ///
 /// ## Dependencies
 ///
-/// This function depends on the output of [parse_code_block_generic()], which provides
+/// This function depends on the output of [parse_code_block_alt()], which provides
 /// the initial parsing of code block boundaries and guarantees that the input contains
 /// a well-formed fenced code block with proper opening and closing markers.
 ///
@@ -727,7 +725,7 @@ pub fn parse_code_block_generic<'a>(
 /// ## Arguments
 ///
 /// * `slice` - A [AsStrSlice] containing the markdown text content to process, typically
-///   obtained from [parse_code_block_generic()]
+///   obtained from [parse_code_block_alt()]
 ///
 /// ## Returns
 ///
@@ -746,7 +744,7 @@ pub fn parse_code_block_generic<'a>(
 /// This would produce a code block with:
 /// - Language: `Some("rs")`
 /// - Content: `fn f() { let a = 1; }`
-fn extract_code_block_content<'a>(input: AsStrSlice<'a>) -> MdBlock<'a> {
+fn extract_code_block_content_alt<'a>(input: AsStrSlice<'a>) -> MdBlock<'a> {
     // The slice contains the entire code block including the opening and closing markers
     // We need to extract the language from the first line and the content from the middle
     // lines
@@ -916,7 +914,7 @@ mod tests {
         let slice = AsStrSlice::from(&lines);
 
         // Test title parser directly
-        let result = parse_unique_kv_opt_eol_generic(TITLE, slice);
+        let result = parse_unique_kv_opt_eol_alt(TITLE, slice);
         assert!(result.is_ok(), "Title parser should succeed");
 
         let (remaining, value) = result.unwrap();
@@ -929,7 +927,7 @@ mod tests {
         let lines = vec![GCString::new("- List item 1")];
         let slice = AsStrSlice::from(&lines);
 
-        let result = parse_block_smart_list_generic(slice);
+        let result = parse_block_smart_list_alt(slice);
         assert!(result.is_ok(), "List parser should succeed");
 
         let (remaining, (lines, bullet_kind, indent)) = result.unwrap();
@@ -962,13 +960,13 @@ mod tests {
     }
 
     #[test]
-    fn test_smart_list_ir_generic() {
+    fn test_smart_list_ir_alt() {
         // Test unordered list
         {
             let lines = vec![GCString::new("- List item 1")];
             let slice = AsStrSlice::from(&lines);
 
-            let result = parse_smart_list_and_extract_ir_generic(slice);
+            let result = parse_smart_list_and_extract_ir_alt(slice);
             assert!(
                 result.is_ok(),
                 "Smart list IR parser should succeed for unordered list"
@@ -997,7 +995,7 @@ mod tests {
             let lines = vec![GCString::new("1. List item 1")];
             let slice = AsStrSlice::from(&lines);
 
-            let result = parse_smart_list_and_extract_ir_generic(slice);
+            let result = parse_smart_list_and_extract_ir_alt(slice);
             assert!(
                 result.is_ok(),
                 "Smart list IR parser should succeed for ordered list"
@@ -1031,7 +1029,7 @@ mod tests {
             let lines = vec![GCString::new("  - Indented list item")];
             let slice = AsStrSlice::from(&lines);
 
-            let result = parse_smart_list_and_extract_ir_generic(slice);
+            let result = parse_smart_list_and_extract_ir_alt(slice);
             assert!(
                 result.is_ok(),
                 "Smart list IR parser should succeed for indented list"
@@ -1065,8 +1063,7 @@ mod tests {
         let slice = AsStrSlice::from(&lines);
 
         // Parse title
-        let (remaining, title_value) =
-            parse_unique_kv_opt_eol_generic(TITLE, slice).unwrap();
+        let (remaining, title_value) = parse_unique_kv_opt_eol_alt(TITLE, slice).unwrap();
         assert_eq!(title_value, "Test Document", "Should extract correct title");
         assert!(
             remaining.input_len() > 0,
@@ -1074,7 +1071,7 @@ mod tests {
         );
 
         // Should be able to parse tags next
-        let result = parse_csv_opt_eol_generic(TAGS, remaining);
+        let result = parse_csv_opt_eol_alt(TAGS, remaining);
         assert!(result.is_ok(), "Tags parsing should succeed");
 
         let (final_remaining, tags_value) = result.unwrap();
@@ -1097,7 +1094,7 @@ mod tests {
         let input_slice = AsStrSlice::from(&lines);
 
         // Test parsing just the title
-        let title_result = parse_unique_kv_opt_eol_generic(TITLE, input_slice);
+        let title_result = parse_unique_kv_opt_eol_alt(TITLE, input_slice);
         assert!(title_result.is_ok(), "Title parsing should succeed");
 
         let (remaining_after_title, title_value) = title_result.unwrap();
@@ -1108,7 +1105,7 @@ mod tests {
         );
 
         // Now try to parse tags from remaining input
-        let tags_result = parse_csv_opt_eol_generic(TAGS, remaining_after_title);
+        let tags_result = parse_csv_opt_eol_alt(TAGS, remaining_after_title);
         assert!(tags_result.is_ok(), "Tags parsing should succeed");
 
         let (final_remaining, tags_value) = tags_result.unwrap();
@@ -1133,13 +1130,11 @@ mod tests {
         // Test the alt combinator directly without many0
         let mut alt_parser = alt((
             map(
-                make_many0_compatible(|input| {
-                    parse_unique_kv_opt_eol_generic(TITLE, input)
-                }),
+                make_many0_compatible(|input| parse_unique_kv_opt_eol_alt(TITLE, input)),
                 |_| "title",
             ),
             map(
-                make_many0_compatible(|input| parse_csv_opt_eol_generic(TAGS, input)),
+                make_many0_compatible(|input| parse_csv_opt_eol_alt(TAGS, input)),
                 |_| "tags",
             ),
         ));
@@ -1167,20 +1162,18 @@ mod tests {
 
         // Parse the title
         let (remaining_input, title_value) =
-            parse_unique_kv_opt_eol_generic(TITLE, input_slice).unwrap();
+            parse_unique_kv_opt_eol_alt(TITLE, input_slice).unwrap();
         assert_eq!(title_value, "Test Document", "Should extract correct title");
         assert_eq!(remaining_input.input_len(), 0, "Should consume all input");
 
         // Now test what happens when many0 tries to parse the empty remaining input
         let mut alt_parser = alt((
             map(
-                make_many0_compatible(|input| {
-                    parse_unique_kv_opt_eol_generic(TITLE, input)
-                }),
+                make_many0_compatible(|input| parse_unique_kv_opt_eol_alt(TITLE, input)),
                 |_| "title",
             ),
             map(
-                make_many0_compatible(|input| parse_csv_opt_eol_generic(TAGS, input)),
+                make_many0_compatible(|input| parse_csv_opt_eol_alt(TAGS, input)),
                 |_| "tags",
             ),
         ));
@@ -1209,10 +1202,7 @@ mod tests {
 #[cfg(test)]
 mod tests_code_block_parsing {
     use super::*;
-    use crate::{inline_vec,
-                parser_impl::parse_code_block_generic,
-                AsStrSlice,
-                GCString};
+    use crate::{inline_vec, parser_impl::parse_code_block_alt, AsStrSlice, GCString};
 
     #[test]
     fn test_parse_block_code_with_end_marker() {
@@ -1226,7 +1216,7 @@ mod tests_code_block_parsing {
         ];
         let slice = AsStrSlice::from(&lines);
 
-        let result = parse_code_block_generic(slice);
+        let result = parse_code_block_alt(slice);
         assert!(
             result.is_ok(),
             "Code block parser should succeed with end marker"
@@ -1260,7 +1250,7 @@ mod tests_code_block_parsing {
             GCString::new("some trailing text"),
         ];
         let slice = AsStrSlice::from(&lines);
-        let result = parse_code_block_generic(slice);
+        let result = parse_code_block_alt(slice);
 
         assert!(result.is_ok());
         let (remainder, parsed_code) = result.unwrap();
@@ -1284,7 +1274,7 @@ mod tests_code_block_parsing {
         ];
         let slice = AsStrSlice::from(&lines);
 
-        let result = parse_code_block_generic(slice);
+        let result = parse_code_block_alt(slice);
         assert!(
             result.is_err(),
             "Code block parser should fail without end marker"
@@ -1316,7 +1306,7 @@ mod tests_code_block_parsing {
         ];
         let slice = AsStrSlice::from(&lines);
 
-        let result = extract_code_block_content(slice);
+        let result = extract_code_block_content_alt(slice);
 
         // Verify the result is a CodeBlock
         if let MdBlock::CodeBlock(code_lines) = result {
@@ -1367,7 +1357,7 @@ mod tests_code_block_parsing {
         ];
         let slice = AsStrSlice::from(&lines);
 
-        let result = extract_code_block_content(slice);
+        let result = extract_code_block_content_alt(slice);
 
         // Verify the result is a CodeBlock
         if let MdBlock::CodeBlock(code_lines) = result {
@@ -1412,7 +1402,7 @@ mod tests_code_block_parsing {
         ];
         let slice = AsStrSlice::from(&lines);
 
-        let result = extract_code_block_content(slice);
+        let result = extract_code_block_content_alt(slice);
 
         // Verify the result is a CodeBlock
         if let MdBlock::CodeBlock(code_lines) = result {
@@ -1458,7 +1448,7 @@ mod tests_code_block_parsing {
         let lines = vec![GCString::new("```python"), GCString::new("```")];
         let slice = AsStrSlice::from(&lines);
 
-        let result = extract_code_block_content(slice);
+        let result = extract_code_block_content_alt(slice);
 
         // Verify the result is a CodeBlock
         if let MdBlock::CodeBlock(code_lines) = result {
@@ -1473,17 +1463,14 @@ mod tests_code_block_parsing {
 #[cfg(test)]
 mod tests_heading_parser {
     use super::*;
-    use crate::{inline_vec,
-                parser_impl::parse_block_heading_generic,
-                AsStrSlice,
-                GCString};
+    use crate::{inline_vec, parser_impl::parse_block_heading_alt, AsStrSlice, GCString};
 
     #[test]
     fn test_heading_parser() {
         let lines = vec![GCString::new("# Heading 1")];
         let slice = AsStrSlice::from(&lines);
 
-        let result = parse_block_heading_generic(slice);
+        let result = parse_block_heading_alt(slice);
         assert!(result.is_ok(), "Heading parser should succeed");
 
         let (remaining, (level, text)) = result.unwrap();
@@ -1502,7 +1489,7 @@ mod tests_heading_parser {
         let lines = vec![GCString::new("## Heading 2")];
         let slice = AsStrSlice::from(&lines);
 
-        let result = parse_block_heading_generic(slice);
+        let result = parse_block_heading_alt(slice);
         assert!(result.is_ok(), "Level 2 heading parser should succeed");
 
         let (remaining, (level, text)) = result.unwrap();
@@ -1518,7 +1505,7 @@ mod tests_heading_parser {
         let lines = vec![GCString::new("### Heading 3")];
         let slice = AsStrSlice::from(&lines);
 
-        let result = parse_block_heading_generic(slice);
+        let result = parse_block_heading_alt(slice);
         assert!(result.is_ok(), "Level 3 heading parser should succeed");
 
         let (remaining, (level, text)) = result.unwrap();
@@ -1534,7 +1521,7 @@ mod tests_heading_parser {
         let lines = vec![GCString::new("###### Heading 6")];
         let slice = AsStrSlice::from(&lines);
 
-        let result = parse_block_heading_generic(slice);
+        let result = parse_block_heading_alt(slice);
         assert!(result.is_ok(), "Level 6 heading parser should succeed");
 
         let (remaining, (level, text)) = result.unwrap();
@@ -1552,7 +1539,7 @@ mod tests_heading_parser {
         let lines = vec![GCString::new("# Special *chars* & symbols!")];
         let slice = AsStrSlice::from(&lines);
 
-        let result = parse_block_heading_generic(slice);
+        let result = parse_block_heading_alt(slice);
         assert!(
             result.is_ok(),
             "Heading with special characters should parse"
@@ -1573,7 +1560,7 @@ mod tests_heading_parser {
         let lines = vec![GCString::new("# Heading with newline\n")];
         let slice = AsStrSlice::from(&lines);
 
-        let result = parse_block_heading_generic(slice);
+        let result = parse_block_heading_alt(slice);
         assert!(result.is_ok(), "Heading with newline should parse");
 
         let (remaining, (level, text)) = result.unwrap();
@@ -1595,7 +1582,7 @@ mod tests_heading_parser {
         let lines = vec![GCString::new("# ")];
         let slice = AsStrSlice::from(&lines);
 
-        let result = parse_block_heading_generic(slice);
+        let result = parse_block_heading_alt(slice);
         assert!(result.is_ok(), "Heading with empty text should parse");
 
         let (remaining, (level, text)) = result.unwrap();
@@ -1613,7 +1600,7 @@ mod tests_heading_parser {
         let lines = vec![GCString::new("#NoSpace")];
         let slice = AsStrSlice::from(&lines);
 
-        let result = parse_block_heading_generic(slice);
+        let result = parse_block_heading_alt(slice);
         assert!(
             result.is_err(),
             "Heading without space after hash should fail"
@@ -1627,7 +1614,7 @@ mod tests_heading_parser {
 
         // The parser accepts multiple spaces, with the additional spaces becoming part of
         // the text
-        let result = parse_block_heading_generic(slice);
+        let result = parse_block_heading_alt(slice);
         assert!(
             result.is_ok(),
             "Heading with multiple spaces after hash should succeed"

@@ -39,23 +39,39 @@
 - [x] revert "parse by line" approach to rewriting the parser, use `nom::Input` & `AsStrSlice`
       instead
 
-- [ ] make naming convention consistent, use `_alt`, drop `_generic`
+- [x] make naming convention consistent, use `_alt`, drop `_generic`
 
-- handle inline markdown fragments (in one line)
+- handle inline markdown fragments (in one line) migrate from `fragment` to `fragment_alt`
 
   - [ ] `parse_inline_fragments_until_eol_or_eoi()`: migrate OG to `fragment_alt`
 
-    - [x] `take_text_between_generic.rs`: fix tests & check logic; add more tests to `AsStrSlice`
-          based on this
+    - [x] `take_text_between_alt.rs`: fix tests & check logic; add more tests to `AsStrSlice` based
+          on this
     - [ ] `specialized_parsers.rs`: fix tests & check logic
     - [ ] `specialized_parser_delim_matchers.rs`: fix tests & check logic
     - [ ] `plain_parser_catch_all.rs`: fix tests & check logic
     - [ ] `parse_fragments_in_a_line.rs`: fix tests & check logic
 
+- [ ] migrate `extended` parsers into `extended_alt`
+
+  - [ ] `k_csv`
+  - [ ] `k_v`
+  - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
+
+- handle inline markdown fragments (in one line) migrate from `fragment` to `fragment_alt`
+
   - [ ] `parse_block_text_generic()`: copy from OG
         `tui/src/tui/md_parser/block/parse_block_markdown_text_until_eol_or_eoi.rs:25` & handle
         input with or without new line which calls the following lower level parser
   - [ ] `parse_block_text_generic()`: integrate into main parser `parse_markdown_alt()`
+
+- [ ] migrate `block` parsers into `block_alt`
+
+  - [ ] block code
+  - [ ] block heading
+  - [ ] block markdown text
+  - [ ] block smart list
+  - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
 
 - incorporate `parse_inline_fragments_until_eol_or_eoi()` into `parse_block_smart_list_generic()`
   (currently missing)
