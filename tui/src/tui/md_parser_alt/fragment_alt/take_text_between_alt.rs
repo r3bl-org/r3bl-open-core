@@ -26,6 +26,8 @@ use crate::{fg_green,
             fg_red,
             md_parser::constants::NEW_LINE,
             AsStrSlice,
+            NomErr,
+            NomError,
             DEBUG_MD_PARSER_STDOUT};
 
 /// Takes the text between the start and end delimiters. Will error out if this text
@@ -47,10 +49,26 @@ pub fn take_text_between_delims_err_on_new_line_alt<'i>(
 
     let input_clone_dbg = input.clone();
 
-    let it = take_text_between_alt(input, start_delim, end_delim);
-
-    if let Ok((_, ref output)) = it {
-        if output.find_substring(NEW_LINE).is_some() {
+    match take_text_between_alt(start_delim, end_delim, input) {
+        Ok((remaining, output)) => {
+            // If the output contains a new line, return an error.
+            if output.find_substring(NEW_LINE).is_some() {
+                DEBUG_MD_PARSER_STDOUT.then(|| {
+                    println!(
+                        "{} parser error out for input: {:?}",
+                        fg_red("⬢⬢"),
+                        input_clone_dbg
+                    );
+                });
+                Err(NomErr::Error(NomError {
+                    input: output,
+                    code: ErrorKind::CrLf,
+                }))
+            } else {
+                Ok((remaining, output))
+            }
+        }
+        Err(err) => {
             DEBUG_MD_PARSER_STDOUT.then(|| {
                 println!(
                     "{} parser error out for input: {:?}",
@@ -58,32 +76,17 @@ pub fn take_text_between_delims_err_on_new_line_alt<'i>(
                     input_clone_dbg
                 );
             });
-            return Err(nom::Err::Error(nom::error::Error {
-                input: (*output).clone(),
-                code: ErrorKind::CrLf,
-            }));
+            Err(err)
         }
     }
-
-    if it.is_err() {
-        DEBUG_MD_PARSER_STDOUT.then(|| {
-            println!(
-                "{} parser error out for input: {:?}",
-                fg_red("⬢⬢"),
-                input_clone_dbg
-            );
-        });
-    }
-
-    it
 }
 
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
 #[rustfmt::skip]
 pub fn take_text_between_alt<'i>(
-    input: AsStrSlice<'i>,
     start_tag: &'i str,
     end_tag: &'i str,
+    input: AsStrSlice<'i>,
 ) -> IResult<AsStrSlice<'i>, AsStrSlice<'i>> {
     // Declarative way (idiomatic).
     map(
@@ -104,17 +107,16 @@ pub fn take_text_between_alt<'i>(
 
 #[cfg(test)]
 mod tests_parse_take_between {
-    use nom::{error::{Error, ErrorKind},
-              Err as NomErr};
+    use nom::{error::ErrorKind, Err as NomErr};
 
     use super::*;
-    use crate::{assert_eq2, GCString};
+    use crate::GCString;
 
     #[test]
     fn test_fenced_success() {
         let lines = [GCString::new("_foo bar baz_")];
         let input = AsStrSlice::from(&lines);
-        let it = take_text_between_alt(input, "_", "_");
+        let it = take_text_between_alt("_", "_", input);
         println!("it: {it:#?}");
 
         // Extract the result for comparison
@@ -133,10 +135,9 @@ mod tests_parse_take_between {
     fn test_fenced_missing_end_tag() {
         let lines = [GCString::new("_foo bar baz")];
         let input = AsStrSlice::from(&lines);
-        let input_copy = input.clone();
         assert_eq!(input.char_index, 0);
 
-        let res = take_text_between_alt(input, "_", "_");
+        let res = take_text_between_alt("_", "_", input);
         println!("it: {res:?}");
 
         match res {
@@ -154,7 +155,7 @@ mod tests_parse_take_between {
     fn test_fenced_missing_start_tag() {
         let lines = [GCString::new("foo _bar_ baz")];
         let input = AsStrSlice::from(&lines);
-        let it = take_text_between_alt(input, "_", "_");
+        let it = take_text_between_alt("_", "_", input);
         println!("it: {it:?}");
 
         // Check that the result is an error with Tag error kind

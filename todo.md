@@ -41,45 +41,7 @@
 
 - [x] make naming convention consistent, use `_alt`, drop `_generic`
 
-- handle inline markdown fragments (in one line) migrate from `fragment` to `fragment_alt`
-
-  - [ ] `parse_inline_fragments_until_eol_or_eoi()`: migrate OG to `fragment_alt`
-
-    - [x] `take_text_between_alt.rs`: fix tests & check logic; add more tests to `AsStrSlice` based
-          on this
-    - [ ] `specialized_parsers.rs`: fix tests & check logic
-    - [ ] `specialized_parser_delim_matchers.rs`: fix tests & check logic
-    - [ ] `plain_parser_catch_all.rs`: fix tests & check logic
-    - [ ] `parse_fragments_in_a_line.rs`: fix tests & check logic
-
-- [ ] migrate `extended` parsers into `extended_alt`
-
-  - [ ] `k_csv`
-  - [ ] `k_v`
-  - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
-
-- handle inline markdown fragments (in one line) migrate from `fragment` to `fragment_alt`
-
-  - [ ] `parse_block_text_generic()`: copy from OG
-        `tui/src/tui/md_parser/block/parse_block_markdown_text_until_eol_or_eoi.rs:25` & handle
-        input with or without new line which calls the following lower level parser
-  - [ ] `parse_block_text_generic()`: integrate into main parser `parse_markdown_alt()`
-
-- [ ] migrate `block` parsers into `block_alt`
-
-  - [ ] block code
-  - [ ] block heading
-  - [ ] block markdown text
-  - [ ] block smart list
-  - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
-
-- incorporate `parse_inline_fragments_until_eol_or_eoi()` into `parse_block_smart_list_generic()`
-  (currently missing)
-
-  - [ ] stop using the generic function signature, and use this:
-  - [ ] fix the export `tui/src/tui/md_parser/parse_markdown_alt/mod.rs:44` of `fragment_alt`
-
-- [ ] use the correct method signatures for (most) parsers
+- [x] use the correct method signatures for (most) parsers
 
   ```rust
   fn f<'a>(i: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {}
@@ -95,9 +57,44 @@
   {}
   ```
 
-- address markdown parsing test failure
+- [x] create new package `md_parser_alt`
 
-  - [ ] fix test: `test_parse_simple_markdown()`
+- [ ] migrate `fragment` to `fragment_alt` mod
+
+  - [x] `take_text_between.rs` -> `take_text_between_alt.rs` : fix tests & check logic; add more
+        tests to `AsStrSlice` based on this
+  - [x] `specialized_parsers.rs` -> `specialized_parsers_alt.rs`: fix tests & check logic
+    - [x] `parse_fragment_starts_with_checkbox_checkbox_into_bool_alt()`
+    - [x] `parse_fragment_starts_with_checkbox_into_str_alt()`
+    - [x] `parse_fragment_starts_with_left_link_err_on_new_line_alt()`
+    - [x] `parse_fragment_starts_with_left_image_err_on_new_line_alt()`
+    - [x] `parse_fragment_starts_with_backtick_err_on_new_line_alt()`
+    - [x] `parse_fragment_starts_with_star_err_on_new_line_alt()`
+    - [x] `parse_fragment_starts_with_underscore_err_on_new_line_alt()`
+  - [ ] `specialized_parser_delim_matchers.rs` -> `specialized_parser_delim_matchers_alt.rs`: fix
+        tests & check logic
+  - [ ] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: fix tests & check logic
+  - [ ] `parse_fragments_in_a_line.rs` -> `parse_fragments_in_a_line_alt.rs`: fix tests & check
+        logic
+
+- [ ] migrate `extended` parsers into `extended_alt`
+
+  - [ ] `k_csv`
+  - [ ] `k_v`
+  - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
+
+- [ ] delete `parser_impl.rs` (was only needed for experimentation)
+
+- [ ] migrate `block` parsers into `block_alt`
+
+  - [ ] block code
+  - [ ] block heading
+  - [ ] block markdown text
+  - [ ] block smart list
+  - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
+
+- [ ] remove `md_parser` mod and `md_parser_alt` mod is the new one; update
+      `md_parser_syn_hi_impl.rs` to use this
 
 - vec -> inlinevec
 
