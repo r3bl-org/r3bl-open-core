@@ -71,8 +71,7 @@
     - [x] `parse_fragment_starts_with_backtick_err_on_new_line_alt()`
     - [x] `parse_fragment_starts_with_star_err_on_new_line_alt()`
     - [x] `parse_fragment_starts_with_underscore_err_on_new_line_alt()`
-  - [ ] `specialized_parser_delim_matchers.rs` -> `specialized_parser_delim_matchers_alt.rs`: fix
-        tests & check logic
+  - [x] `specialized_parser_delim_matchers.rs` -> `specialized_parsers_alt.rs`: add tests
   - [ ] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: fix tests & check logic
   - [ ] `parse_fragments_in_a_line.rs` -> `parse_fragments_in_a_line_alt.rs`: fix tests & check
         logic
