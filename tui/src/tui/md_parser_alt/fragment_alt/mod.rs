@@ -18,13 +18,11 @@
 // Attach sources.
 pub mod parse_fragments_in_a_line_alt;
 pub mod plain_parser_catch_all_alt;
-pub mod specialized_parser_delim_matchers_alt;
 pub mod specialized_parsers_alt;
 pub mod take_text_between_alt;
 
 // Re-export.
 pub use parse_fragments_in_a_line_alt::*;
 pub use plain_parser_catch_all_alt::*;
-pub use specialized_parser_delim_matchers_alt::*;
 pub use specialized_parsers_alt::*;
 pub use take_text_between_alt::*;

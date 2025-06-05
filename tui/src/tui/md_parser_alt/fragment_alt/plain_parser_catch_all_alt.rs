@@ -42,7 +42,6 @@ use nom::{branch::alt,
           Input,
           Parser};
 
-use super::specialized_parser_delim_matchers_alt;
 use crate::{fg_blue,
             fg_magenta,
             fg_red,
@@ -53,6 +52,7 @@ use crate::{fg_blue,
                                    NEW_LINE_CHAR,
                                    STAR,
                                    UNDERSCORE},
+            specialized_parsers_alt,
             AsStrSlice,
             DEBUG_MD_PARSER_STDOUT};
 
@@ -197,7 +197,7 @@ pub fn parse_fragment_plain_text_no_new_line_alt<'a>(
         &get_sp_char_set_1(),
     ) {
         let (count, _, _, _) =
-            specialized_parser_delim_matchers_alt::count_delim_occurrences_until_eol(
+            specialized_parsers_alt::delim_matchers::count_delim_occurrences_until_eol(
                 input_clone_br_2_2,
                 special_str,
             );

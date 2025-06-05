@@ -23,8 +23,7 @@ use nom::{branch::alt,
           Input,
           Parser};
 
-use super::{specialized_parser_delim_matchers_alt,
-            take_text_between_delims_err_on_new_line_alt};
+use super::take_text_between_delims_err_on_new_line_alt;
 use crate::{fg_blue,
             fg_red,
             md_parser::constants::{BACK_TICK,
@@ -48,15 +47,120 @@ use crate::{fg_blue,
 pub fn parse_fragment_starts_with_underscore_err_on_new_line_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
-    specialized_parser_delim_matchers_alt::take_starts_with_delim_no_new_line(
-        input, UNDERSCORE,
-    )
+    delim_matchers::take_starts_with_delim_no_new_line(input, UNDERSCORE)
 }
 
 pub fn parse_fragment_starts_with_star_err_on_new_line_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
-    specialized_parser_delim_matchers_alt::take_starts_with_delim_no_new_line(input, STAR)
+    delim_matchers::take_starts_with_delim_no_new_line(input, STAR)
+}
+
+/// For use with specialized parsers for: [crate::constants::UNDERSCORE],
+/// [crate::constants::STAR], and [crate::constants::BACK_TICK]. See:
+/// [crate::parse_fragment_plain_text_no_new_line()].
+///
+/// To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
+/// in [crate::parse_fragments_in_a_line].
+pub mod delim_matchers {
+    use nom::multi::many1;
+
+    use super::*;
+    use crate::{constants::NEW_LINE, fg_green};
+
+    /// Returns tuple:
+    /// 0. number of occurrences in the input, until the first "\n" or end of input.
+    /// 1. does the input start with the delimiter?
+    /// 2. is the input the delimiter?
+    /// 3. the delimiter.
+    pub fn count_delim_occurrences_until_eol<'a>(
+        input: AsStrSlice<'a>,
+        delim: &'a str,
+    ) -> (usize, bool, bool, &'a str) {
+        // If the input has a "\n" then split it at the first "\n", only count the number
+        // of delims at the first part of the split.
+        let input_str = input.extract_remaining_text_content_in_line();
+        let (first_part, _) =
+            input_str.split_at(input_str.find(NEW_LINE).unwrap_or(input_str.len()));
+        let num_of_delim_occurrences = first_part.matches(delim).count();
+        (
+            num_of_delim_occurrences,
+            input_str.starts_with(delim),
+            input_str == delim,
+            delim,
+        )
+    }
+
+    pub fn take_starts_with_delim_no_new_line<'a>(
+        input: AsStrSlice<'a>,
+        delim: &'a str,
+    ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+        // Check if there is a closing delim.
+        let (num_of_delim_occurrences, starts_with_delim, input_is_delim, _) =
+            count_delim_occurrences_until_eol(input.clone(), delim);
+
+        DEBUG_MD_PARSER_STDOUT.then(|| {
+        println!(
+            "\n{} specialized parser {}: \ninput: {:?}, delim: {:?}",
+            fg_green("■■"),
+            delim,
+            input,
+            delim
+        );
+        println!(
+            "count: {num_of_delim_occurrences}, starts_w: {starts_with_delim}, input=delim: {input_is_delim}"
+        );
+    });
+
+        if
+        // The input must start with the delim for this parser to run.
+        !starts_with_delim
+        ||
+        // If the input just contains a single delim, error out.
+        input_is_delim
+        ||
+        // If there is no closing delim, only a single opening delim, then error out. This
+        // forces the [parse_fragment_plain_text_no_new_line1()] to take care of this
+        // case.
+        num_of_delim_occurrences == 1
+        {
+            DEBUG_MD_PARSER_STDOUT.then(|| {
+                println!(
+                    "{a} parser error out for input: {i:?}",
+                    a = fg_red("⬢⬢"),
+                    i = input
+                );
+            });
+            return Err(nom::Err::Error(nom::error::Error {
+                input,
+                code: nom::error::ErrorKind::Fail,
+            }));
+        }
+
+        // If there is a closing delim, then we can safely take the text between the
+        // delim.
+        if num_of_delim_occurrences > 1 {
+            let it = take_text_between_delims_err_on_new_line_alt(input, delim, delim);
+            DEBUG_MD_PARSER_STDOUT.then(|| {
+                println!("{a} it: {b:?}", a = fg_blue("▲▲"), b = it);
+            });
+            return it;
+        }
+
+        // Otherwise, we split the input at the first delim.
+        let (rem, output) = recognize(many1(tag(delim))).parse(input)?;
+
+        DEBUG_MD_PARSER_STDOUT.then(|| {
+            println!(
+                "{a}, rem: {r:?}, output: {o:?}",
+                a = fg_blue("▲▲"),
+                r = rem,
+                o = output
+            );
+        });
+
+        Ok((rem, output))
+    }
 }
 
 pub fn parse_fragment_starts_with_backtick_err_on_new_line_alt<'a>(
@@ -94,10 +198,7 @@ pub fn parse_fragment_starts_with_backtick_err_on_new_line_alt<'a>(
     }
 
     // Otherwise, return the text between the backticks.
-    specialized_parser_delim_matchers_alt::take_starts_with_delim_no_new_line(
-        input_clone,
-        BACK_TICK,
-    )
+    delim_matchers::take_starts_with_delim_no_new_line(input_clone, BACK_TICK)
 }
 
 pub fn parse_fragment_starts_with_left_image_err_on_new_line_alt<'a>(
@@ -754,6 +855,301 @@ mod tests {
                 rem.extract_remaining_text_content_in_line(),
                 " here is a checkbox"
             );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_delim_matchers {
+    use super::*;
+    use crate::{assert_eq2,
+                md_parser::constants::NEW_LINE,
+                GCString,
+                NomErr,
+                NomErrorKind};
+
+    #[test]
+    fn test_delim_matchers_count_delim_occurrences_until_eol() {
+        // Test basic underscore counting
+        {
+            let lines = &[GCString::new("_hello_world_")];
+            let input = AsStrSlice::from(lines);
+            let (count, starts_with, is_delim, delim) =
+                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+            assert_eq2!(count, 3);
+            assert_eq2!(starts_with, true);
+            assert_eq2!(is_delim, false);
+            assert_eq2!(delim, "_");
+        }
+
+        // Test with newline - should only count before newline
+        {
+            let input_str = "_hello_\nworld_more_";
+            let lines = &[GCString::new(input_str)];
+            let input = AsStrSlice::from(lines);
+            let (count, starts_with, is_delim, delim) =
+                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+            assert_eq2!(count, 2); // Only counts "_hello_", not after newline
+            assert_eq2!(starts_with, true);
+            assert_eq2!(is_delim, false);
+            assert_eq2!(delim, "_");
+        }
+
+        // Test input that is just the delimiter
+        {
+            let lines = &[GCString::new("_")];
+            let input = AsStrSlice::from(lines);
+            let (count, starts_with, is_delim, delim) =
+                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+            assert_eq2!(count, 1);
+            assert_eq2!(starts_with, true);
+            assert_eq2!(is_delim, true);
+            assert_eq2!(delim, "_");
+        }
+
+        // Test input that doesn't start with delimiter
+        {
+            let lines = &[GCString::new("hello_world")];
+            let input = AsStrSlice::from(lines);
+            let (count, starts_with, is_delim, delim) =
+                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+            assert_eq2!(count, 1);
+            assert_eq2!(starts_with, false);
+            assert_eq2!(is_delim, false);
+            assert_eq2!(delim, "_");
+        }
+
+        // Test empty input
+        {
+            let lines = &[GCString::new("")];
+            let input = AsStrSlice::from(lines);
+            let (count, starts_with, is_delim, delim) =
+                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+            assert_eq2!(count, 0);
+            assert_eq2!(starts_with, false);
+            assert_eq2!(is_delim, false);
+            assert_eq2!(delim, "_");
+        }
+
+        // Test with star delimiter
+        {
+            let lines = &[GCString::new("*bold*text*")];
+            let input = AsStrSlice::from(lines);
+            let (count, starts_with, is_delim, delim) =
+                delim_matchers::count_delim_occurrences_until_eol(input, "*");
+            assert_eq2!(count, 3);
+            assert_eq2!(starts_with, true);
+            assert_eq2!(is_delim, false);
+            assert_eq2!(delim, "*");
+        }
+
+        // Test with backtick delimiter
+        {
+            let lines = &[GCString::new("`code`")];
+            let input = AsStrSlice::from(lines);
+            let (count, starts_with, is_delim, delim) =
+                delim_matchers::count_delim_occurrences_until_eol(input, "`");
+            assert_eq2!(count, 2);
+            assert_eq2!(starts_with, true);
+            assert_eq2!(is_delim, false);
+            assert_eq2!(delim, "`");
+        }
+
+        // Test no occurrences
+        {
+            let lines = &[GCString::new("hello world")];
+            let input = AsStrSlice::from(lines);
+            let (count, starts_with, is_delim, delim) =
+                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+            assert_eq2!(count, 0);
+            assert_eq2!(starts_with, false);
+            assert_eq2!(is_delim, false);
+            assert_eq2!(delim, "_");
+        }
+    }
+
+    #[test]
+    fn test_delim_matchers_take_starts_with_delim_no_new_line() {
+        // Test successful case with underscore - paired delimiters
+        {
+            let lines = &[GCString::new("_hello_")];
+            let input = AsStrSlice::from(lines);
+            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            match result {
+                Ok((rem, output)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(output.extract_remaining_text_content_in_line(), "hello");
+                }
+                _ => panic!("Expected success result"),
+            }
+        }
+
+        // Test successful case with star - paired delimiters
+        {
+            let lines = &[GCString::new("*bold*")];
+            let input = AsStrSlice::from(lines);
+            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "*");
+            match result {
+                Ok((rem, output)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(output.extract_remaining_text_content_in_line(), "bold");
+                }
+                _ => panic!("Expected success result"),
+            }
+        }
+
+        // Test successful case with backtick - paired delimiters
+        {
+            let lines = &[GCString::new("`code`")];
+            let input = AsStrSlice::from(lines);
+            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "`");
+            match result {
+                Ok((rem, output)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(output.extract_remaining_text_content_in_line(), "code");
+                }
+                _ => panic!("Expected success result"),
+            }
+        }
+
+        // Test successful case with empty content between delimiters
+        {
+            let lines = &[GCString::new("__")];
+            let input = AsStrSlice::from(lines);
+            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            match result {
+                Ok((rem, output)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(output.extract_remaining_text_content_in_line(), "");
+                }
+                _ => panic!("Expected success result"),
+            }
+        }
+
+        // Test error case - doesn't start with delimiter
+        {
+            let err_input = "hello_world_";
+            let lines = &[GCString::new(err_input)];
+            let input = AsStrSlice::from(lines);
+            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            match result {
+                Err(NomErr::Error(error)) => {
+                    assert_eq2!(
+                        error.input.extract_remaining_text_content_in_line(),
+                        err_input
+                    );
+                    assert_eq2!(error.code, NomErrorKind::Fail);
+                }
+                _ => panic!("Expected error result"),
+            }
+        }
+
+        // Test error case - input is just the delimiter
+        {
+            let err_input = "_";
+            let lines = &[GCString::new(err_input)];
+            let input = AsStrSlice::from(lines);
+            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            match result {
+                Err(NomErr::Error(error)) => {
+                    assert_eq2!(
+                        error.input.extract_remaining_text_content_in_line(),
+                        err_input
+                    );
+                    assert_eq2!(error.code, NomErrorKind::Fail);
+                }
+                _ => panic!("Expected error result"),
+            }
+        }
+
+        // Test error case - only one delimiter (no closing delimiter)
+        {
+            let err_input = "_hello";
+            let lines = &[GCString::new(err_input)];
+            let input = AsStrSlice::from(lines);
+            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            match result {
+                Err(NomErr::Error(error)) => {
+                    assert_eq2!(
+                        error.input.extract_remaining_text_content_in_line(),
+                        err_input
+                    );
+                    assert_eq2!(error.code, NomErrorKind::Fail);
+                }
+                _ => panic!("Expected error result"),
+            }
+        }
+
+        // Test error case - empty input
+        {
+            let err_input = "";
+            let lines = &[GCString::new(err_input)];
+            let input = AsStrSlice::from(lines);
+            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            match result {
+                Err(NomErr::Error(error)) => {
+                    assert_eq2!(
+                        error.input.extract_remaining_text_content_in_line(),
+                        err_input
+                    );
+                    assert_eq2!(error.code, NomErrorKind::Fail);
+                }
+                _ => panic!("Expected error result"),
+            }
+        }
+
+        // Test successful case with multiple delimiters (more than 2)
+        {
+            let lines = &[GCString::new("_hello_world_more_")];
+            let input = AsStrSlice::from(lines);
+            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            match result {
+                Ok((rem, output)) => {
+                    assert_eq2!(
+                        rem.extract_remaining_text_content_in_line(),
+                        "world_more_"
+                    );
+                    assert_eq2!(output.extract_remaining_text_content_in_line(), "hello");
+                }
+                _ => panic!("Expected success result"),
+            }
+        }
+
+        // Test with remaining text after paired delimiters
+        {
+            let lines = &[GCString::new("_italic_ and more text")];
+            let input = AsStrSlice::from(lines);
+            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            match result {
+                Ok((rem, output)) => {
+                    assert_eq2!(
+                        rem.extract_remaining_text_content_in_line(),
+                        " and more text"
+                    );
+                    assert_eq2!(
+                        output.extract_remaining_text_content_in_line(),
+                        "italic"
+                    );
+                }
+                _ => panic!("Expected success result"),
+            }
+        }
+
+        // Test with content containing spaces
+        {
+            let lines = &[GCString::new("_hello world_")];
+            let input = AsStrSlice::from(lines);
+            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            match result {
+                Ok((rem, output)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        output.extract_remaining_text_content_in_line(),
+                        "hello world"
+                    );
+                }
+                _ => panic!("Expected success result"),
+            }
         }
     }
 }
