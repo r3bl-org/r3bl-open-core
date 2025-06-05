@@ -298,3 +298,14 @@ pub fn tuple5<T>(a: &[T]) -> (&T, &T, &T, &T, &T) { (&a[0], &a[1], &a[2], &a[3],
 pub fn tuple6<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T) {
     (&a[0], &a[1], &a[2], &a[3], &a[4], &a[5])
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_check_input_starts_with() {
+        assert_eq!(check_input_starts_with("abc", &["a", "b", "c"]), Some("a"));
+        assert_eq!(check_input_starts_with("abc", &["d", "e", "f"]), None);
+    }
+}
