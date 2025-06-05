@@ -1417,7 +1417,7 @@ mod tests {
 #[cfg(test)]
 mod integration_tests {
     use super::*;
-    use crate::tui::md_parser::parse_markdown_alt::fragment_alt::take_text_between_alt;
+    use crate::tui::md_parser_alt::fragment_alt::take_text_between_alt;
 
     /// When the parser succeeds, it should return the remaining input and the
     /// extracted text.
@@ -1437,7 +1437,7 @@ mod integration_tests {
         );
 
         // Extract the result for comparison.
-        let it = take_text_between_alt(input, "_", "_");
+        let it = take_text_between_alt("_", "_", input);
         let (rem, output) = it.unwrap();
 
         // Make sure the remainder (remaining input) slice is correct.
@@ -1468,7 +1468,7 @@ mod integration_tests {
         let input = AsStrSlice::from(&lines);
         assert_eq!(input.char_index, 0);
 
-        let res = take_text_between_alt(input, "_", "_");
+        let res = take_text_between_alt("_", "_", input);
 
         match res {
             Ok(_) => panic!("Expected an error, but got Ok"),

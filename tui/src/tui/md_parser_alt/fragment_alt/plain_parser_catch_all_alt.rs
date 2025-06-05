@@ -26,7 +26,7 @@
 //! - [crate::parse_fragment_starts_with_backtick_err_on_new_line()], etc.
 //!
 //! It also works hand in hand with
-//! [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()] which is
+//! [specialized_parser_delim_matchers_alt::take_starts_with_delim_no_new_line()] which is
 //! used by the specialized parsers.
 //!
 //! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
@@ -42,7 +42,7 @@ use nom::{branch::alt,
           Input,
           Parser};
 
-use super::specialized_parser_delim_matchers;
+use super::specialized_parser_delim_matchers_alt;
 use crate::{fg_blue,
             fg_magenta,
             fg_red,
@@ -86,8 +86,8 @@ use crate::{fg_blue,
 /// the input.
 ///
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
-/// See: [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()].
-pub fn parse_fragment_plain_text_no_new_line<'a>(
+/// See: [specialized_parser_delim_matchers_alt::take_starts_with_delim_no_new_line()].
+pub fn parse_fragment_plain_text_no_new_line_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
     DEBUG_MD_PARSER_STDOUT.then(|| {
@@ -197,7 +197,7 @@ pub fn parse_fragment_plain_text_no_new_line<'a>(
         &get_sp_char_set_1(),
     ) {
         let (count, _, _, _) =
-            specialized_parser_delim_matchers::count_delim_occurrences_until_eol(
+            specialized_parser_delim_matchers_alt::count_delim_occurrences_until_eol(
                 input_clone_br_2_2,
                 special_str,
             );

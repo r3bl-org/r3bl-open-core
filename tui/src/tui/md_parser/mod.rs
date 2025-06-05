@@ -166,7 +166,6 @@ pub mod extended;
 pub mod fragment;
 pub mod md_parser_types;
 pub mod parse_markdown;
-pub mod parse_markdown_alt;
 
 pub use atomics::*;
 pub use block::*;
@@ -175,4 +174,3 @@ pub use extended::*;
 pub use fragment::*;
 pub use md_parser_types::*;
 pub use parse_markdown::*;
-pub use parse_markdown_alt::*;

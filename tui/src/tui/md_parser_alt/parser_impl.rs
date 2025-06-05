@@ -40,17 +40,19 @@
 
 use std::fmt::Debug;
 
+pub type NomError<T> = nom::error::Error<T>;
+pub type NomErrorKind = nom::error::ErrorKind;
+pub type NomErr<T> = nom::Err<T>;
+
 use nom::{branch::alt,
           bytes::complete::{tag, take_until},
           character::complete::{char, digit1, line_ending, not_line_ending, space0},
           combinator::{map, opt, recognize},
-          error::{Error as NomError, ErrorKind as NomErrorKind},
           multi::{many0, many1},
           sequence::{preceded, terminated, tuple},
           AsChar,
           Compare,
           CompareResult,
-          Err as NomErr,
           FindSubstring,
           IResult,
           Input,
