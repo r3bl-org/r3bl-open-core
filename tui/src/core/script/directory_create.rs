@@ -15,6 +15,9 @@
  *   limitations under the License.
  */
 
+//! All tests have been moved to `fs_path.rs::test_all_fs_path_functions_in_isolated_process()`
+//! to prevent flakiness when tests are run in parallel.
+
 use std::{fs, io::ErrorKind, path::Path};
 
 use strum_macros::Display;
@@ -98,45 +101,4 @@ fn create_dir_all(new_path: &Path) -> FsOpResult<()> {
         Ok(_) => ok!(),
         Err(err) => handle_err(err),
     }
-}
-
-#[cfg(test)]
-mod tests_directory_create {
-    use super::*;
-    use crate::{directory_create::{try_mkdir, MkdirOptions::*},
-                fs_paths,
-                serial_preserve_pwd_test,
-                try_create_temp_dir};
-
-    serial_preserve_pwd_test!(test_try_mkdir, {
-        // Create the root temp dir.
-        let root = try_create_temp_dir().unwrap();
-
-        // Create a temporary directory.
-        let tmp_root_dir = fs_paths!(with_root: root => "test_create_clean_new_dir");
-        try_mkdir(&tmp_root_dir, CreateIntermediateDirectories).unwrap();
-
-        // Create a new directory inside the temporary directory.
-        let new_dir = fs_paths!(with_root: tmp_root_dir => "new_dir");
-        try_mkdir(&new_dir, CreateIntermediateDirectories).unwrap();
-        assert!(new_dir.exists());
-
-        // Try & fail to create the same directory again non destructively.
-        let result = try_mkdir(&new_dir, CreateIntermediateDirectoriesOnlyIfNotExists);
-        assert!(result.is_err());
-        assert!(matches!(result, Err(FsOpError::DirectoryAlreadyExists(_))));
-
-        // Create a file inside the new directory.
-        let file_path = new_dir.join("test_file.txt");
-        fs::write(&file_path, "test").unwrap();
-        assert!(file_path.exists());
-
-        // Call `mkdir` again with destructive options and ensure the directory is
-        // clean.
-        try_mkdir(&new_dir, CreateIntermediateDirectoriesAndPurgeExisting).unwrap();
-
-        // Ensure the directory is clean.
-        assert!(new_dir.exists());
-        assert!(!file_path.exists());
-    });
 }
