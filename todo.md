@@ -59,6 +59,11 @@
 
 - [x] create new package `md_parser_alt`
 
+- [ ] use [`mimalloc` crate](https://docs.rs/mimalloc/latest/mimalloc/) to replace `jemalloc` w/
+      microsoft [`mimalloc`](https://github.com/microsoft/mimalloc?tab=readme-ov-file#performance).
+      [jemalloc](https://github.com/jemalloc/jemalloc) is archived.
+      [more info on best rust allocators](https://gemini.google.com/app/e4979f6a69f5f9e5)
+
 - [ ] migrate `fragment` to `fragment_alt` mod
 
   - [x] `take_text_between.rs` -> `take_text_between_alt.rs` : fix tests & check logic; add more
