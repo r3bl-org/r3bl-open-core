@@ -129,13 +129,19 @@ flate2 = "1.1.1"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 
-# Replacement for the default global allocator. This one is optimize for multi-threaded
-# use cases where lots of small objects are created and destroyed. The default
-# allocator is the system allocator that's optimized for single threaded use cases.
-# https://www.svix.com/blog/heap-fragmentation-in-rust-applications/
-# https://news.ycombinator.com/item?id=35473271
-# https://crates.io/crates/jemallocator
-tikv-jemallocator = "0.6.0"
+# `mimalloc` is a replacement for the default global allocator. It's optimized for
+# multi-threaded use cases where lots of small objects are created and destroyed.
+# The default allocator is the system allocator that's optimized for single threaded
+# use cases.
+#
+# mimalloc (by Microsoft):
+# - https://github.com/microsoft/mimalloc?tab=readme-ov-file#performance
+#
+# jemalloc (originally by Facebook, now archived):
+# - https://www.svix.com/blog/heap-fragmentation-in-rust-applications/
+# - https://news.ycombinator.com/item?id=35473271
+# - https://crates.io/crates/jemallocator
+mimalloc = "0.1.46"
 
 [dev-dependencies]
 # For assert_eq2! macro.
