@@ -59,10 +59,41 @@
 
 - [x] create new package `md_parser_alt`
 
-- [ ] use [`mimalloc` crate](https://docs.rs/mimalloc/latest/mimalloc/) to replace `jemalloc` w/
+- [x] use [`mimalloc` crate](https://docs.rs/mimalloc/latest/mimalloc/) to replace `jemalloc` w/
       microsoft [`mimalloc`](https://github.com/microsoft/mimalloc?tab=readme-ov-file#performance).
       [jemalloc](https://github.com/jemalloc/jemalloc) is archived.
       [more info on best rust allocators](https://gemini.google.com/app/e4979f6a69f5f9e5)
+
+- [x] fix flaky `script` tests which change the cwd, all of them need to be run in a single function
+      so there are no issues with multiple tests processes `serialtest` does not seem to address
+      this issue. test file: `tui/src/core/script/fs_path.rs:434:5`
+
+  - `core::script::fs_path::tests::test_try_directory_exists_not_found_error`
+  - `core::script::fs_path::tests::test_try_directory_exists_permissions_errors`
+  - `core::script::fs_path::tests::test_try_file_exists`
+  - `core::script::fs_path::tests::test_try_file_exists_invalid_name_error`
+  - `core::script::directory_create::tests_directory_create::test_try_mkdir`
+  - `core::script::fs_path::tests::test_try_file_exists_permissions_errors`
+  - `core::script::fs_path::tests::test_try_pwd`
+  - `core::script::fs_path::tests::test_try_pwd_errors`
+  - `core::script::fs_path::tests::test_try_write`
+
+- [ ] fix regression bug in `md_parser` when using `AsStrSlice::to_string()`. see
+      `EditorBuffer::new_empty()` & `EditorBuffer::set_lines()` for how "raw" data is loaded into
+      the model in memory (from disk or new / empty).
+
+  - [x] `impl Display for AsStrSlice` address all `FIXME: proper \n handling`
+  - [x] test `test_parse_fragment_plaintext_unicode()` in
+        `tui/src/tui/md_parser_alt/fragment_alt/parse_fragments_in_a_line_alt.rs:201` should PASS
+  - [x] `extract_remaining_text_content_in_line()` in
+        `tui/src/tui/md_parser_alt/string_slice.rs:241`: should NOT do anything with `NEW_LINE`
+  - [ ] `try_parse_and_highlight()` in
+        `tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:141`: manually
+        create `acc` or will `write_to_byte_cache()` work?
+  - [ ] `parse_fragments_in_a_line_alt.rs` => `test_parse_fragment_plaintext_unicode()`: something
+        is wrong with synthetic `\n` handling
+  - [ ] what are semantics of `AsStrSlice::to_string()`? how does the `.to_string()` handle `\n`?
+        this is making the "old" `parse_markdown()` fail silently when running the examples
 
 - [ ] migrate `fragment` to `fragment_alt` mod
 
