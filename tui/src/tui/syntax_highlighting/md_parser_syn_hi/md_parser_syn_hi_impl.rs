@@ -104,6 +104,8 @@ pub fn try_parse_and_highlight(
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     parser_byte_cache: Option<&mut ParserByteCache>,
 ) -> CommonResult<StyleUSSpanLines> {
+    // XMARK: Parse markdown from editor and render it
+
     // PERF: This is a known performance bottleneck. The underlying storage mechanism for
     // content in the editor will have to change (from Vec<String>) for this to be
     // possible.
@@ -111,11 +113,14 @@ pub fn try_parse_and_highlight(
     // Convert the editor text into a InlineString (unfortunately requires allocating to
     // get the new lines back, since they're stripped out when loading content into the
     // editor buffer struct).
+
+    let slice = AsStrSlice::from(editor_text_lines);
+
     let size_hint = editor_text_lines
         .iter()
         .map(|line| line.len().as_usize() + 1 /* for new line */)
         .sum();
-    let slice = AsStrSlice::from(editor_text_lines);
+
     // Use the parser_byte_cache if it exists, otherwise create a new one with the
     // size_hint.
     let acc = match parser_byte_cache {
@@ -125,10 +130,16 @@ pub fn try_parse_and_highlight(
         None => &mut ParserByteCache::with_capacity(size_hint),
     };
 
-    // Write the editor text into the byte cache, adding CRLF at the end of each line.
-    slice.write_to_byte_cache(size_hint, acc);
-
-    // XMARK: Parse markdown from editor and render it
+    // Write each line w/ CRLF into the accumulator.
+    // - The CRLF is necessary for the parser to work correctly.
+    // - This also requires the entire document to be copied into the accumulator (and
+    //   CRLFs added).
+    for line in editor_text_lines {
+        acc.push_str(line.as_ref());
+        acc.push(NEW_LINE_CHAR);
+    }
+    // FIXME: does the following work?
+    // slice.write_to_byte_cache(size_hint, acc);
     let result_md_ast = parse_markdown(&acc);
 
     // Try and parse `editor_text_to_string` into a `Document`.

@@ -524,6 +524,8 @@ pub mod access_and_mutate {
             )
         }
 
+        // XMARK: Clever Rust, use `IntoIterator` to efficiently & flexibly load data.
+
         /// You can load a file into the editor buffer using this method. Since this is a
         /// text editor and not binary editor, it operates on UTF-8 encoded text files and
         /// not binary files (which just contain `u8`s).
@@ -534,8 +536,6 @@ pub mod access_and_mutate {
         /// - Then you can convert the `&[u8]` to a `&str` using `std::str::from_utf8`.
         /// - And then call `.lines()` on the `&str` to get an iterator over the lines
         ///   which can be passed to this method.
-        // XMARK: Clever Rust, use of `IntoIterator` to efficiently and flexibly load
-        // data.
         pub fn set_lines<'a>(&mut self, arg_lines: impl IntoIterator<Item = &'a str>) {
             // Clear existing lines.
             self.content.lines.clear();

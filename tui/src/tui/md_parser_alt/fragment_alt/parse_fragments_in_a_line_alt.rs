@@ -140,8 +140,8 @@ mod tests_parse_fragment {
     fn test_parse_plain_text_no_new_line1() {
         {
             let input_raw = "this _bar";
-            let lines = vec![GCString::new(input_raw)];
-            let input = AsStrSlice::from(&lines);
+            let lines = &[GCString::new(input_raw)];
+            let input = AsStrSlice::from(lines);
 
             let res = parse_fragment_plain_text_no_new_line_alt(input);
             let (rem, out) = res.unwrap();
@@ -151,8 +151,8 @@ mod tests_parse_fragment {
 
         {
             let input_raw = "_bar";
-            let lines = vec![GCString::new(input_raw)];
-            let input = AsStrSlice::from(&lines);
+            let lines = &[GCString::new(input_raw)];
+            let input = AsStrSlice::from(lines);
 
             let res = parse_fragment_plain_text_no_new_line_alt(input);
             let (rem, out) = res.unwrap();
@@ -162,8 +162,8 @@ mod tests_parse_fragment {
 
         {
             let input_raw = "bar_";
-            let lines = vec![GCString::new(input_raw)];
-            let input = AsStrSlice::from(&lines);
+            let lines = &[GCString::new(input_raw)];
+            let input = AsStrSlice::from(lines);
 
             let res = parse_fragment_plain_text_no_new_line_alt(input);
             let (rem, out) = res.unwrap();
@@ -175,12 +175,30 @@ mod tests_parse_fragment {
     #[test]
     fn test_parse_fragment_plaintext_unicode() {
         let input_raw = "- straight😃\n";
-        let lines = vec![GCString::new(input_raw)];
-        let input = AsStrSlice::from(&lines);
+        let lines = &[GCString::new(input_raw)];
+        let input = AsStrSlice::from(lines);
 
         let res = parse_fragment_plain_text_no_new_line_alt(input);
         let (rem, out) = res.unwrap();
+
+        // println!("rem: {:#?}", rem);
+        println!(
+            "rem.extract_remaining_text_content_in_line(): {:#?}",
+            rem.extract_remaining_text_content_in_line()
+        );
+
+        // println!("out: {:#?}", out);
+        println!(
+            "out.extract_remaining_text_content_in_line(): {:#?}",
+            out.extract_remaining_text_content_in_line()
+        );
+
+        assert_eq2!(rem.lines.len(), 1);
+        assert_eq2!(rem.line_index, 0);
         assert_eq2!(rem.extract_remaining_text_content_in_line(), "\n");
+
+        assert_eq2!(out.lines.len(), 1);
+        assert_eq2!(out.line_index, 0);
         assert_eq2!(out.extract_remaining_text_content_in_line(), "- straight😃");
     }
 
@@ -188,218 +206,305 @@ mod tests_parse_fragment {
     fn test_parse_fragment_plaintext() {
         // "1234567890" -> ok
         {
-            let input_vec = vec![GCString::new("1234567890")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec = vec![GCString::new("1234567890")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("1234567890")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "1234567890"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "oh my gosh!" -> ok
         {
-            let input_vec = vec![GCString::new("oh my gosh!")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec = vec![GCString::new("oh my gosh!")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("oh my gosh!")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "oh my gosh!"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "oh my gosh![" -> ok
         {
-            let input_vec = vec![GCString::new("oh my gosh![")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let rem_vec = vec![GCString::new("![")];
-            let rem_slice = AsStrSlice::from(&rem_vec);
-            let expected_output_vec = vec![GCString::new("oh my gosh")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((rem_slice, expected_output)));
+            let lines = &[GCString::new("oh my gosh![")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "![");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "oh my gosh"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "oh my gosh!*" -> ok
         {
-            let input_vec = vec![GCString::new("oh my gosh!*")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let rem_vec = vec![GCString::new("*")];
-            let rem_slice = AsStrSlice::from(&rem_vec);
-            let expected_output_vec = vec![GCString::new("oh my gosh!")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((rem_slice, expected_output)));
+            let lines = &[GCString::new("oh my gosh!*")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "*");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "oh my gosh!"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "*bold baby bold*" -> ok
         {
-            let input_vec = vec![GCString::new("*bold baby bold*")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec = vec![GCString::new("*bold baby bold*")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("*bold baby bold*")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "*bold baby bold*"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "[link baby](and then somewhat)" -> ok
         {
-            let input_vec = vec![GCString::new("[link baby](and then somewhat)")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec =
-                vec![GCString::new("[link baby](and then somewhat)")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("[link baby](and then somewhat)")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "[link baby](and then somewhat)"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "`codeblock for bums`" -> ok
         {
-            let input_vec = vec![GCString::new("`codeblock for bums`")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec = vec![GCString::new("`codeblock for bums`")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("`codeblock for bums`")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "`codeblock for bums`"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "![ but wait theres more](jk)" -> ok
         {
-            let input_vec = vec![GCString::new("![ but wait theres more](jk)")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec = vec![GCString::new("![ but wait theres more](jk)")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("![ but wait theres more](jk)")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "![ but wait theres more](jk)"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "here is plaintext" -> ok
         {
-            let input_vec = vec![GCString::new("here is plaintext")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec = vec![GCString::new("here is plaintext")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("here is plaintext")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "here is plaintext"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "here is plaintext!" -> ok
         {
-            let input_vec = vec![GCString::new("here is plaintext!")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec = vec![GCString::new("here is plaintext!")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("here is plaintext!")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "here is plaintext!"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "here is plaintext![image starting" -> ok
         {
-            let input_vec = vec![GCString::new("here is plaintext![image starting")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let rem_vec = vec![GCString::new("![image starting")];
-            let rem_slice = AsStrSlice::from(&rem_vec);
-            let expected_output_vec = vec![GCString::new("here is plaintext")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((rem_slice, expected_output)));
+            let lines = &[GCString::new("here is plaintext![image starting")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(
+                        rem.extract_remaining_text_content_in_line(),
+                        "![image starting"
+                    );
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "here is plaintext"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "here is plaintext\n" -> ok
         {
-            let input_vec = vec![GCString::new("here is plaintext\n")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let rem_vec = vec![GCString::new("\n")];
-            let rem_slice = AsStrSlice::from(&rem_vec);
-            let expected_output_vec = vec![GCString::new("here is plaintext")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((rem_slice, expected_output)));
+            let lines = &[GCString::new("here is plaintext\n")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "\n");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "here is plaintext"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "*here is italic*" -> ok
         {
-            let input_vec = vec![GCString::new("*here is italic*")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec = vec![GCString::new("*here is italic*")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("*here is italic*")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "*here is italic*"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "**here is bold**" -> ok
         {
-            let input_vec = vec![GCString::new("**here is bold**")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec = vec![GCString::new("**here is bold**")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("**here is bold**")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "**here is bold**"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "`here is code`" -> ok
         {
-            let input_vec = vec![GCString::new("`here is code`")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec = vec![GCString::new("`here is code`")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("`here is code`")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "`here is code`"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "[title](https://www.example.com)" -> ok
         {
-            let input_vec = vec![GCString::new("[title](https://www.example.com)")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec =
-                vec![GCString::new("[title](https://www.example.com)")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("[title](https://www.example.com)")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "[title](https://www.example.com)"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "![alt text](image.jpg)" -> ok
         {
-            let input_vec = vec![GCString::new("![alt text](image.jpg)")];
-            let input = AsStrSlice::from(&input_vec);
-            let result = parse_fragment_plain_text_no_new_line_alt(input);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            let expected_output_vec = vec![GCString::new("![alt text](image.jpg)")];
-            let expected_output = AsStrSlice::from(&expected_output_vec);
-            assert_eq2!(result, Ok((empty_slice, expected_output)));
+            let lines = &[GCString::new("![alt text](image.jpg)")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out.extract_remaining_text_content_in_line(),
+                        "![alt text](image.jpg)"
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // "" -> error
         {
-            let input_vec = vec![GCString::new("")];
-            let input = AsStrSlice::from(&input_vec);
+            let lines = &[GCString::new("")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_fragment_plain_text_no_new_line_alt(input);
             assert_eq2!(
-                parse_fragment_plain_text_no_new_line_alt(input),
+                res,
                 Err(NomErr::Error(Error {
-                    input: AsStrSlice::from(&vec![GCString::new("")]),
+                    input: AsStrSlice::from(&[GCString::new("")]),
                     code: ErrorKind::Eof
                 }))
             );
@@ -411,253 +516,293 @@ mod tests_parse_fragment {
         // Plain text.
         // "here is plaintext!" -> ok
         {
-            let input_vec = vec![GCString::new("here is plaintext!")];
-            let input = AsStrSlice::from(&input_vec);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    input,
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Ok((
-                    /* rem */ empty_slice,
-                    /* output */ MdLineFragment::Plain("here is plaintext!")
-                ))
+            let lines = &[GCString::new("here is plaintext!")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(out, MdLineFragment::Plain("here is plaintext!"));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Bold text.
         // "*here is bold*" -> ok
         {
-            let input_vec = vec![GCString::new("*here is bold*")];
-            let input = AsStrSlice::from(&input_vec);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    input,
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Ok((empty_slice, MdLineFragment::Bold("here is bold")))
+            let lines = &[GCString::new("*here is bold*")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(out, MdLineFragment::Bold("here is bold"));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Italic text.
         // "_here is italic_" -> ok
         {
-            let input_vec = vec![GCString::new("_here is italic_")];
-            let input = AsStrSlice::from(&input_vec);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    input,
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Ok((empty_slice, MdLineFragment::Italic("here is italic")))
+            let lines = &[GCString::new("_here is italic_")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(out, MdLineFragment::Italic("here is italic"));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Inline code.
         // "`here is code`" -> ok
         {
-            let input_vec = vec![GCString::new("`here is code`")];
-            let input = AsStrSlice::from(&input_vec);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    input,
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Ok((empty_slice, MdLineFragment::InlineCode("here is code")))
+            let lines = &[GCString::new("`here is code`")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(out, MdLineFragment::InlineCode("here is code"));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Link.
         // "[title](https://www.example.com)" -> ok
         {
-            let input_vec = vec![GCString::new("[title](https://www.example.com)")];
-            let input = AsStrSlice::from(&input_vec);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    input,
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Ok((
-                    empty_slice,
-                    MdLineFragment::Link(HyperlinkData::new(
-                        "title",
-                        "https://www.example.com"
-                    ))
-                ))
+            let lines = &[GCString::new("[title](https://www.example.com)")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out,
+                        MdLineFragment::Link(HyperlinkData {
+                            text: "title",
+                            url: "https://www.example.com"
+                        })
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Image.
         // "![alt text](image.jpg)" -> ok
         {
-            let input_vec = vec![GCString::new("![alt text](image.jpg)")];
-            let input = AsStrSlice::from(&input_vec);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    input,
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Ok((
-                    empty_slice,
-                    MdLineFragment::Image(HyperlinkData::new("alt text", "image.jpg"))
-                ))
+            let lines = &[GCString::new("![alt text](image.jpg)")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        out,
+                        MdLineFragment::Image(HyperlinkData {
+                            text: "alt text",
+                            url: "image.jpg"
+                        })
+                    );
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Plain text (duplicate for consistency).
         // "here is plaintext!" -> ok
         {
-            let input_vec = vec![GCString::new("here is plaintext!")];
-            let input = AsStrSlice::from(&input_vec);
-            let empty_vec = vec![GCString::new("")];
-            let empty_slice = AsStrSlice::from(&empty_vec);
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    input,
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Ok((empty_slice, MdLineFragment::Plain("here is plaintext!")))
+            let lines = &[GCString::new("here is plaintext!")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(out, MdLineFragment::Plain("here is plaintext!"));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Partial parsing - plaintext with remaining content.
         // "here is some plaintext *but what if we italicize?" -> ok
         {
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    AsStrSlice::from(&vec![GCString::new(
-                        "here is some plaintext *but what if we italicize?"
-                    )]),
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Ok((
-                    AsStrSlice::from(&vec![GCString::new("*but what if we italicize?")]),
-                    MdLineFragment::Plain("here is some plaintext ")
-                ))
+            let lines = &[GCString::new(
+                "here is some plaintext *but what if we italicize?",
+            )];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(
+                        rem.extract_remaining_text_content_in_line(),
+                        "*but what if we italicize?"
+                    );
+                    assert_eq2!(out, MdLineFragment::Plain("here is some plaintext "));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Partial parsing with newline - plaintext with remaining content.
         // "here is some plaintext \n*but what if we italicize?" -> ok
         {
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    AsStrSlice::from(&vec![GCString::new(
-                        "here is some plaintext \n*but what if we italicize?"
-                    )]),
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Ok((
-                    AsStrSlice::from(&vec![GCString::new(
-                        "\n*but what if we italicize?"
-                    )]),
-                    MdLineFragment::Plain("here is some plaintext ")
-                ))
+            let lines = &[GCString::new(
+                "here is some plaintext \n*but what if we italicize?",
+            )];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(
+                        rem.extract_remaining_text_content_in_line(),
+                        "\n*but what if we italicize?"
+                    );
+                    assert_eq2!(out, MdLineFragment::Plain("here is some plaintext "));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Error case - newline only.
         // "\n" -> error
         {
-            let newline_vec = vec![GCString::new("\n")];
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    AsStrSlice::from(&newline_vec),
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Err(NomErr::Error(Error {
-                    input: AsStrSlice::from(&newline_vec),
-                    code: ErrorKind::Not
-                }))
+            let lines = &[GCString::new("\n")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok(_) => panic!("Expected Err, got Ok"),
+                Err(err) => {
+                    // Expected error case
+                    assert!(matches!(err, NomErr::Error(_)));
+                }
+            }
         }
 
         // Error case - empty string.
         // "" -> error
         {
-            let empty_vec = vec![GCString::new("")];
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    AsStrSlice::from(&empty_vec),
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Err(NomErr::Error(Error {
-                    input: AsStrSlice::from(&empty_vec),
-                    code: ErrorKind::Eof
-                }))
+            let lines = &[GCString::new("")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok(_) => panic!("Expected Err, got Ok"),
+                Err(err) => {
+                    // Expected error case
+                    assert!(matches!(err, NomErr::Error(_)));
+                }
+            }
         }
 
         // Checkbox parsing - unchecked, ignore policy.
         // "[ ] this is a checkbox" -> ok
         {
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    AsStrSlice::from(&vec![GCString::new("[ ] this is a checkbox")]),
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Ok((
-                    AsStrSlice::from(&vec![GCString::new(" this is a checkbox")]),
-                    MdLineFragment::Plain("[ ]")
-                ))
+            let lines = &[GCString::new("[ ] this is a checkbox")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(out, MdLineFragment::Plain("[ ] this is a checkbox"));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Checkbox parsing - checked, ignore policy.
         // "[x] this is a checkbox" -> ok
         {
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    AsStrSlice::from(&vec![GCString::new("[x] this is a checkbox")]),
-                    CheckboxParsePolicy::IgnoreCheckbox
-                ),
-                Ok((
-                    AsStrSlice::from(&vec![GCString::new(" this is a checkbox")]),
-                    MdLineFragment::Plain("[x]")
-                ))
+            let lines = &[GCString::new("[x] this is a checkbox")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(out, MdLineFragment::Plain("[x] this is a checkbox"));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Checkbox parsing - unchecked, parse policy.
         // "[ ] this is a checkbox" -> ok
         {
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    AsStrSlice::from(&vec![GCString::new("[ ] this is a checkbox")]),
-                    CheckboxParsePolicy::ParseCheckbox
-                ),
-                Ok((
-                    AsStrSlice::from(&vec![GCString::new(" this is a checkbox")]),
-                    MdLineFragment::Checkbox(false)
-                ))
+            let lines = &[GCString::new("[ ] this is a checkbox")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::ParseCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(out, MdLineFragment::Checkbox(false));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
 
         // Checkbox parsing - checked, parse policy.
         // "[x] this is a checkbox" -> ok
         {
-            assert_eq2!(
-                parse_inline_fragments_until_eol_or_eoi_alt(
-                    AsStrSlice::from(&vec![GCString::new("[x] this is a checkbox")]),
-                    CheckboxParsePolicy::ParseCheckbox
-                ),
-                Ok((
-                    AsStrSlice::from(&vec![GCString::new(" this is a checkbox")]),
-                    MdLineFragment::Checkbox(true)
-                ))
+            let lines = &[GCString::new("[x] this is a checkbox")];
+            let input = AsStrSlice::from(lines);
+            let res = parse_inline_fragments_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::ParseCheckbox,
             );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(out, MdLineFragment::Checkbox(true));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            }
         }
     }
 }
