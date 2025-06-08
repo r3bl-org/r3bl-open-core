@@ -130,16 +130,7 @@ pub fn try_parse_and_highlight(
         None => &mut ParserByteCache::with_capacity(size_hint),
     };
 
-    // Write each line w/ CRLF into the accumulator.
-    // - The CRLF is necessary for the parser to work correctly.
-    // - This also requires the entire document to be copied into the accumulator (and
-    //   CRLFs added).
-    for line in editor_text_lines {
-        acc.push_str(line.as_ref());
-        acc.push(NEW_LINE_CHAR);
-    }
-    // FIXME: does the following work?
-    // slice.write_to_byte_cache(size_hint, acc);
+    slice.write_to_byte_cache_compat(size_hint, acc);
     let result_md_ast = parse_markdown(&acc);
 
     // Try and parse `editor_text_to_string` into a `Document`.
