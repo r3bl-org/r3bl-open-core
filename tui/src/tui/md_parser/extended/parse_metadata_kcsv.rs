@@ -23,7 +23,7 @@ use nom::{bytes::complete::tag,
 
 use crate::{list,
             md_parser::constants::{COLON, COMMA, NEW_LINE, SPACE},
-            take_text_until_new_line_or_end,
+            take_text_until_eol_or_eoi,
             InlineVec,
             List};
 
@@ -36,7 +36,7 @@ pub fn parse_csv_opt_eol<'a>(
 ) -> IResult<&'a str, List<&'a str>> {
     let (remainder, tags_text) = preceded(
         /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
-        /* output */ take_text_until_new_line_or_end(),
+        /* output */ take_text_until_eol_or_eoi(),
     )
     .parse(input)?;
 

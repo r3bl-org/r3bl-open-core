@@ -86,8 +86,8 @@ use crate::{fg_blue,
 /// the input.
 ///
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
-/// See: [specialized_parser_delim_matchers_alt::take_starts_with_delim_no_new_line()].
-pub fn parse_fragment_plain_text_no_new_line_alt<'a>(
+/// See: [crate::delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi()].
+pub fn parse_fragment_plain_text_until_eol_or_eoi_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
     DEBUG_MD_PARSER_STDOUT.then(|| {
@@ -197,7 +197,7 @@ pub fn parse_fragment_plain_text_no_new_line_alt<'a>(
         &get_sp_char_set_1(),
     ) {
         let (count, _, _, _) =
-            specialized_parsers_alt::delim_matchers::count_delim_occurrences_until_eol(
+            specialized_parsers_alt::delim_matchers::count_delim_occurrences_until_eol_or_eoi(
                 input_clone_br_2_2,
                 special_str,
             );

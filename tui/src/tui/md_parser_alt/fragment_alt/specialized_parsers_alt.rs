@@ -23,7 +23,7 @@ use nom::{branch::alt,
           Input,
           Parser};
 
-use super::take_text_between_delims_err_on_new_line_alt;
+use super::take_text_between_delims_enclosed_err_on_new_line_alt;
 use crate::{fg_blue,
             fg_red,
             md_parser::constants::{BACK_TICK,
@@ -47,13 +47,13 @@ use crate::{fg_blue,
 pub fn parse_fragment_starts_with_underscore_err_on_new_line_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
-    delim_matchers::take_starts_with_delim_no_new_line(input, UNDERSCORE)
+    delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(input, UNDERSCORE)
 }
 
 pub fn parse_fragment_starts_with_star_err_on_new_line_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
-    delim_matchers::take_starts_with_delim_no_new_line(input, STAR)
+    delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(input, STAR)
 }
 
 /// For use with specialized parsers for: [crate::constants::UNDERSCORE],
@@ -73,7 +73,7 @@ pub mod delim_matchers {
     /// 1. does the input start with the delimiter?
     /// 2. is the input the delimiter?
     /// 3. the delimiter.
-    pub fn count_delim_occurrences_until_eol<'a>(
+    pub fn count_delim_occurrences_until_eol_or_eoi<'a>(
         input: AsStrSlice<'a>,
         delim: &'a str,
     ) -> (usize, bool, bool, &'a str) {
@@ -91,13 +91,13 @@ pub mod delim_matchers {
         )
     }
 
-    pub fn take_starts_with_delim_no_new_line<'a>(
+    pub fn take_starts_with_delim_enclosed_until_eol_or_eoi<'a>(
         input: AsStrSlice<'a>,
         delim: &'a str,
     ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
         // Check if there is a closing delim.
         let (num_of_delim_occurrences, starts_with_delim, input_is_delim, _) =
-            count_delim_occurrences_until_eol(input.clone(), delim);
+            count_delim_occurrences_until_eol_or_eoi(input.clone(), delim);
 
         DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
@@ -140,7 +140,9 @@ pub mod delim_matchers {
         // If there is a closing delim, then we can safely take the text between the
         // delim.
         if num_of_delim_occurrences > 1 {
-            let it = take_text_between_delims_err_on_new_line_alt(input, delim, delim);
+            let it = take_text_between_delims_enclosed_err_on_new_line_alt(
+                input, delim, delim,
+            );
             DEBUG_MD_PARSER_STDOUT.then(|| {
                 println!("{a} it: {b:?}", a = fg_blue("▲▲"), b = it);
             });
@@ -198,7 +200,10 @@ pub fn parse_fragment_starts_with_backtick_err_on_new_line_alt<'a>(
     }
 
     // Otherwise, return the text between the backticks.
-    delim_matchers::take_starts_with_delim_no_new_line(input_clone, BACK_TICK)
+    delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+        input_clone,
+        BACK_TICK,
+    )
 }
 
 pub fn parse_fragment_starts_with_left_image_err_on_new_line_alt<'a>(
@@ -207,8 +212,11 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line_alt<'a>(
     let input_clone_dbg = input.clone();
 
     // Parse the text between the image tags.
-    let result_first =
-        take_text_between_delims_err_on_new_line_alt(input, LEFT_IMAGE, RIGHT_IMAGE);
+    let result_first = take_text_between_delims_enclosed_err_on_new_line_alt(
+        input,
+        LEFT_IMAGE,
+        RIGHT_IMAGE,
+    );
 
     if result_first.is_err() {
         DEBUG_MD_PARSER_STDOUT.then(|| {
@@ -226,7 +234,7 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line_alt<'a>(
     let rem_clone_dbg = rem.clone();
 
     // Parse the text between the parenthesis.
-    let result_second = take_text_between_delims_err_on_new_line_alt(
+    let result_second = take_text_between_delims_enclosed_err_on_new_line_alt(
         rem,
         LEFT_PARENTHESIS,
         RIGHT_PARENTHESIS,
@@ -274,8 +282,11 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line_alt<'a>(
     let input_clone_dbg = input.clone();
 
     // Parse the text between the brackets.
-    let result_first =
-        take_text_between_delims_err_on_new_line_alt(input, LEFT_BRACKET, RIGHT_BRACKET);
+    let result_first = take_text_between_delims_enclosed_err_on_new_line_alt(
+        input,
+        LEFT_BRACKET,
+        RIGHT_BRACKET,
+    );
 
     if result_first.is_err() {
         DEBUG_MD_PARSER_STDOUT.then(|| {
@@ -293,7 +304,7 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line_alt<'a>(
     let rem_clone_dbg = rem.clone();
 
     // Parse the text between the parenthesis.
-    let result_second = take_text_between_delims_err_on_new_line_alt(
+    let result_second = take_text_between_delims_enclosed_err_on_new_line_alt(
         rem,
         LEFT_PARENTHESIS,
         RIGHT_PARENTHESIS,
@@ -875,7 +886,7 @@ mod tests_delim_matchers {
             let lines = &[GCString::new("_hello_world_")];
             let input = AsStrSlice::from(lines);
             let (count, starts_with, is_delim, delim) =
-                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+                delim_matchers::count_delim_occurrences_until_eol_or_eoi(input, "_");
             assert_eq2!(count, 3);
             assert_eq2!(starts_with, true);
             assert_eq2!(is_delim, false);
@@ -888,7 +899,7 @@ mod tests_delim_matchers {
             let lines = &[GCString::new(input_str)];
             let input = AsStrSlice::from(lines);
             let (count, starts_with, is_delim, delim) =
-                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+                delim_matchers::count_delim_occurrences_until_eol_or_eoi(input, "_");
             assert_eq2!(count, 2); // Only counts "_hello_", not after newline
             assert_eq2!(starts_with, true);
             assert_eq2!(is_delim, false);
@@ -900,7 +911,7 @@ mod tests_delim_matchers {
             let lines = &[GCString::new("_")];
             let input = AsStrSlice::from(lines);
             let (count, starts_with, is_delim, delim) =
-                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+                delim_matchers::count_delim_occurrences_until_eol_or_eoi(input, "_");
             assert_eq2!(count, 1);
             assert_eq2!(starts_with, true);
             assert_eq2!(is_delim, true);
@@ -912,7 +923,7 @@ mod tests_delim_matchers {
             let lines = &[GCString::new("hello_world")];
             let input = AsStrSlice::from(lines);
             let (count, starts_with, is_delim, delim) =
-                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+                delim_matchers::count_delim_occurrences_until_eol_or_eoi(input, "_");
             assert_eq2!(count, 1);
             assert_eq2!(starts_with, false);
             assert_eq2!(is_delim, false);
@@ -924,7 +935,7 @@ mod tests_delim_matchers {
             let lines = &[GCString::new("")];
             let input = AsStrSlice::from(lines);
             let (count, starts_with, is_delim, delim) =
-                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+                delim_matchers::count_delim_occurrences_until_eol_or_eoi(input, "_");
             assert_eq2!(count, 0);
             assert_eq2!(starts_with, false);
             assert_eq2!(is_delim, false);
@@ -936,7 +947,7 @@ mod tests_delim_matchers {
             let lines = &[GCString::new("*bold*text*")];
             let input = AsStrSlice::from(lines);
             let (count, starts_with, is_delim, delim) =
-                delim_matchers::count_delim_occurrences_until_eol(input, "*");
+                delim_matchers::count_delim_occurrences_until_eol_or_eoi(input, "*");
             assert_eq2!(count, 3);
             assert_eq2!(starts_with, true);
             assert_eq2!(is_delim, false);
@@ -948,7 +959,7 @@ mod tests_delim_matchers {
             let lines = &[GCString::new("`code`")];
             let input = AsStrSlice::from(lines);
             let (count, starts_with, is_delim, delim) =
-                delim_matchers::count_delim_occurrences_until_eol(input, "`");
+                delim_matchers::count_delim_occurrences_until_eol_or_eoi(input, "`");
             assert_eq2!(count, 2);
             assert_eq2!(starts_with, true);
             assert_eq2!(is_delim, false);
@@ -960,7 +971,7 @@ mod tests_delim_matchers {
             let lines = &[GCString::new("hello world")];
             let input = AsStrSlice::from(lines);
             let (count, starts_with, is_delim, delim) =
-                delim_matchers::count_delim_occurrences_until_eol(input, "_");
+                delim_matchers::count_delim_occurrences_until_eol_or_eoi(input, "_");
             assert_eq2!(count, 0);
             assert_eq2!(starts_with, false);
             assert_eq2!(is_delim, false);
@@ -974,7 +985,9 @@ mod tests_delim_matchers {
         {
             let lines = &[GCString::new("_hello_")];
             let input = AsStrSlice::from(lines);
-            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            let result = delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+                input, "_",
+            );
             match result {
                 Ok((rem, output)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -988,7 +1001,9 @@ mod tests_delim_matchers {
         {
             let lines = &[GCString::new("*bold*")];
             let input = AsStrSlice::from(lines);
-            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "*");
+            let result = delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+                input, "*",
+            );
             match result {
                 Ok((rem, output)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -1002,7 +1017,9 @@ mod tests_delim_matchers {
         {
             let lines = &[GCString::new("`code`")];
             let input = AsStrSlice::from(lines);
-            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "`");
+            let result = delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+                input, "`",
+            );
             match result {
                 Ok((rem, output)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -1016,7 +1033,9 @@ mod tests_delim_matchers {
         {
             let lines = &[GCString::new("__")];
             let input = AsStrSlice::from(lines);
-            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            let result = delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+                input, "_",
+            );
             match result {
                 Ok((rem, output)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -1031,7 +1050,9 @@ mod tests_delim_matchers {
             let err_input = "hello_world_";
             let lines = &[GCString::new(err_input)];
             let input = AsStrSlice::from(lines);
-            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            let result = delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+                input, "_",
+            );
             match result {
                 Err(NomErr::Error(error)) => {
                     assert_eq2!(
@@ -1049,7 +1070,9 @@ mod tests_delim_matchers {
             let err_input = "_";
             let lines = &[GCString::new(err_input)];
             let input = AsStrSlice::from(lines);
-            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            let result = delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+                input, "_",
+            );
             match result {
                 Err(NomErr::Error(error)) => {
                     assert_eq2!(
@@ -1067,7 +1090,9 @@ mod tests_delim_matchers {
             let err_input = "_hello";
             let lines = &[GCString::new(err_input)];
             let input = AsStrSlice::from(lines);
-            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            let result = delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+                input, "_",
+            );
             match result {
                 Err(NomErr::Error(error)) => {
                     assert_eq2!(
@@ -1085,7 +1110,9 @@ mod tests_delim_matchers {
             let err_input = "";
             let lines = &[GCString::new(err_input)];
             let input = AsStrSlice::from(lines);
-            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            let result = delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+                input, "_",
+            );
             match result {
                 Err(NomErr::Error(error)) => {
                     assert_eq2!(
@@ -1102,7 +1129,9 @@ mod tests_delim_matchers {
         {
             let lines = &[GCString::new("_hello_world_more_")];
             let input = AsStrSlice::from(lines);
-            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            let result = delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+                input, "_",
+            );
             match result {
                 Ok((rem, output)) => {
                     assert_eq2!(
@@ -1119,7 +1148,9 @@ mod tests_delim_matchers {
         {
             let lines = &[GCString::new("_italic_ and more text")];
             let input = AsStrSlice::from(lines);
-            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            let result = delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+                input, "_",
+            );
             match result {
                 Ok((rem, output)) => {
                     assert_eq2!(
@@ -1139,7 +1170,9 @@ mod tests_delim_matchers {
         {
             let lines = &[GCString::new("_hello world_")];
             let input = AsStrSlice::from(lines);
-            let result = delim_matchers::take_starts_with_delim_no_new_line(input, "_");
+            let result = delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(
+                input, "_",
+            );
             match result {
                 Ok((rem, output)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");

@@ -29,7 +29,7 @@
 
 use nom::{branch::alt, combinator::map, IResult, Parser};
 
-use super::{parse_fragment_plain_text_no_new_line_alt,
+use super::{parse_fragment_plain_text_until_eol_or_eoi_alt,
             parse_fragment_starts_with_backtick_err_on_new_line_alt,
             parse_fragment_starts_with_checkbox_checkbox_into_bool_alt,
             parse_fragment_starts_with_checkbox_into_str_alt,
@@ -70,9 +70,6 @@ pub fn parse_inline_fragments_until_eol_or_eoi_alt<'a>(
     input: AsStrSlice<'a>,
     checkbox_policy: CheckboxParsePolicy,
 ) -> IResult<AsStrSlice<'a>, MdLineFragment<'a>> {
-    // Debug assertion to ensure the input is a single line without newline characters
-    debug_assert!(!input.extract_remaining_text_content_in_line().contains('\n'),
-                 "Input must be a single line without newline characters");
     // The order of the following parsers is important. The highest priority parser is at
     // the top. The lowest priority parser is at the bottom. This is because the first
     // parser that matches will be the one that is used.
@@ -88,7 +85,7 @@ pub fn parse_inline_fragments_until_eol_or_eoi_alt<'a>(
             map(parse_fragment_starts_with_left_image_err_on_new_line_alt,  MdLineFragment::Image),
             map(parse_fragment_starts_with_left_link_err_on_new_line_alt,   MdLineFragment::Link),
             map(parse_fragment_starts_with_checkbox_into_str_alt,           |s| MdLineFragment::Plain(s.extract_remaining_text_content_in_line())), // This line is different.
-            map(parse_fragment_plain_text_no_new_line_alt,                  |s| MdLineFragment::Plain(s.extract_remaining_text_content_in_line())),
+            map(parse_fragment_plain_text_until_eol_or_eoi_alt,                  |s| MdLineFragment::Plain(s.extract_remaining_text_content_in_line())),
         )).parse(input_clone.clone()),
         CheckboxParsePolicy::ParseCheckbox => alt((
             map(parse_fragment_starts_with_underscore_err_on_new_line_alt,  |s| MdLineFragment::Italic(s.extract_remaining_text_content_in_line())),
@@ -97,7 +94,7 @@ pub fn parse_inline_fragments_until_eol_or_eoi_alt<'a>(
             map(parse_fragment_starts_with_left_image_err_on_new_line_alt,  MdLineFragment::Image),
             map(parse_fragment_starts_with_left_link_err_on_new_line_alt,   MdLineFragment::Link),
             map(parse_fragment_starts_with_checkbox_checkbox_into_bool_alt, MdLineFragment::Checkbox), // This line is different.
-            map(parse_fragment_plain_text_no_new_line_alt,                 |s| MdLineFragment::Plain(s.extract_remaining_text_content_in_line())),
+            map(parse_fragment_plain_text_until_eol_or_eoi_alt,                 |s| MdLineFragment::Plain(s.extract_remaining_text_content_in_line())),
         )).parse(input_clone)
     };
 
@@ -143,7 +140,7 @@ mod tests_parse_fragment {
             let lines = &[GCString::new(input_raw)];
             let input = AsStrSlice::from(lines);
 
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             let (rem, out) = res.unwrap();
             assert_eq2!(rem.extract_remaining_text_content_in_line(), "_bar");
             assert_eq2!(out.extract_remaining_text_content_in_line(), "this ");
@@ -154,7 +151,7 @@ mod tests_parse_fragment {
             let lines = &[GCString::new(input_raw)];
             let input = AsStrSlice::from(lines);
 
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             let (rem, out) = res.unwrap();
             assert_eq2!(rem.extract_remaining_text_content_in_line(), "bar");
             assert_eq2!(out.extract_remaining_text_content_in_line(), "_");
@@ -165,7 +162,7 @@ mod tests_parse_fragment {
             let lines = &[GCString::new(input_raw)];
             let input = AsStrSlice::from(lines);
 
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             let (rem, out) = res.unwrap();
             assert_eq2!(rem.extract_remaining_text_content_in_line(), "_");
             assert_eq2!(out.extract_remaining_text_content_in_line(), "bar");
@@ -178,7 +175,7 @@ mod tests_parse_fragment {
         let lines = &[GCString::new(input_raw)];
         let input = AsStrSlice::from(lines);
 
-        let res = parse_fragment_plain_text_no_new_line_alt(input);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
         let (rem, out) = res.unwrap();
 
         // println!("rem: {:#?}", rem);
@@ -208,7 +205,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("1234567890")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -225,7 +222,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("oh my gosh!")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -242,7 +239,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("oh my gosh![")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "![");
@@ -259,7 +256,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("oh my gosh!*")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "*");
@@ -276,7 +273,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("*bold baby bold*")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -293,7 +290,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("[link baby](and then somewhat)")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -310,7 +307,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("`codeblock for bums`")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -327,7 +324,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("![ but wait theres more](jk)")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -344,7 +341,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("here is plaintext")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -361,7 +358,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("here is plaintext!")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -378,7 +375,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("here is plaintext![image starting")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(
@@ -398,7 +395,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("here is plaintext\n")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "\n");
@@ -415,7 +412,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("*here is italic*")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -432,7 +429,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("**here is bold**")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -449,7 +446,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("`here is code`")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -466,7 +463,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("[title](https://www.example.com)")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -483,7 +480,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("![alt text](image.jpg)")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
@@ -500,7 +497,7 @@ mod tests_parse_fragment {
         {
             let lines = &[GCString::new("")];
             let input = AsStrSlice::from(lines);
-            let res = parse_fragment_plain_text_no_new_line_alt(input);
+            let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             assert_eq2!(
                 res,
                 Err(NomErr::Error(Error {
@@ -744,8 +741,11 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(out, MdLineFragment::Plain("[ ] this is a checkbox"));
+                    assert_eq2!(
+                        rem.extract_remaining_text_content_in_line(),
+                        " this is a checkbox"
+                    );
+                    assert_eq2!(out, MdLineFragment::Plain("[ ]"));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -762,8 +762,11 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(out, MdLineFragment::Plain("[x] this is a checkbox"));
+                    assert_eq2!(
+                        rem.extract_remaining_text_content_in_line(),
+                        " this is a checkbox"
+                    );
+                    assert_eq2!(out, MdLineFragment::Plain("[x]"));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -780,7 +783,10 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        rem.extract_remaining_text_content_in_line(),
+                        " this is a checkbox"
+                    );
                     assert_eq2!(out, MdLineFragment::Checkbox(false));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
@@ -798,7 +804,10 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(
+                        rem.extract_remaining_text_content_in_line(),
+                        " this is a checkbox"
+                    );
                     assert_eq2!(out, MdLineFragment::Checkbox(true));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
