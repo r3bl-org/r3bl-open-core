@@ -39,7 +39,7 @@ use crate::md_parser::constants::NEW_LINE;
 /// | `"Hello, world!\n"` | `"\n"`         | `"Hello, world!"` |
 /// | `"Hello, world!"`   | `""`           | `"Hello, world!"` |
 #[rustfmt::skip]
-pub fn take_text_until_new_line_or_end<'input>() ->
+pub fn take_text_until_eol_or_eoi<'input>() ->
     impl Parser<&'input str, Output = &'input str, Error = nom::error::Error<&'input str>>
 {
     recognize( /* match anychar up until a denied string below is encountered */
@@ -78,7 +78,7 @@ mod test_text_until_opt_eol {
         // With EOL.
         {
             let input = "Hello, world!\n";
-            let (rem, output) = take_text_until_new_line_or_end().parse(input).unwrap();
+            let (rem, output) = take_text_until_eol_or_eoi().parse(input).unwrap();
             println!("{:8}: {:?}", "input", input);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
@@ -89,7 +89,7 @@ mod test_text_until_opt_eol {
         // Without EOL.
         {
             let input = "Hello, world!";
-            let (rem, output) = take_text_until_new_line_or_end().parse(input).unwrap();
+            let (rem, output) = take_text_until_eol_or_eoi().parse(input).unwrap();
             println!("\n{:8}: {:?}", "input", input);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
@@ -100,7 +100,7 @@ mod test_text_until_opt_eol {
         // With EOL.
         {
             let input = "\nfoo\nbar";
-            let (rem, output) = take_text_until_new_line_or_end().parse(input).unwrap();
+            let (rem, output) = take_text_until_eol_or_eoi().parse(input).unwrap();
             println!("\n{:8}: {:?}", "input", input);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);

@@ -32,7 +32,7 @@ use crate::{fg_green,
 
 /// Takes the text between the start and end delimiters. Will error out if this text
 /// contains a new line.
-pub fn take_text_between_delims_err_on_new_line_alt<'i>(
+pub fn take_text_between_delims_enclosed_err_on_new_line_alt<'i>(
     input: AsStrSlice<'i>,
     start_delim: &'i str,
     end_delim: &'i str,
@@ -171,7 +171,7 @@ mod tests_parse_take_between {
     fn test_parse_fenced_with_new_line_error() {
         let lines = [GCString::new("_foo\nbar_")];
         let input = AsStrSlice::from(&lines);
-        let it = take_text_between_delims_err_on_new_line_alt(input, "_", "_");
+        let it = take_text_between_delims_enclosed_err_on_new_line_alt(input, "_", "_");
         println!("it: {it:?}");
 
         // Check that the result is an error with CrLf error kind
@@ -187,7 +187,7 @@ mod tests_parse_take_between {
     fn test_parse_fenced_without_new_line_success() {
         let lines = [GCString::new("_foo bar_")];
         let input = AsStrSlice::from(&lines);
-        let it = take_text_between_delims_err_on_new_line_alt(input, "_", "_");
+        let it = take_text_between_delims_enclosed_err_on_new_line_alt(input, "_", "_");
         println!("it: {it:?}");
 
         // Extract the result for comparison

@@ -17,8 +17,8 @@
 
 // Attach sources.
 pub mod take_text_between;
-pub mod take_text_until_eol_or_end;
+pub mod take_text_until_eol_or_eoi;
 
 // Re-export.
 pub use take_text_between::*;
-pub use take_text_until_eol_or_end::*;
+pub use take_text_until_eol_or_eoi::*;

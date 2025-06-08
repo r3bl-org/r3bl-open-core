@@ -87,18 +87,17 @@
         `tui/src/tui/md_parser_alt/fragment_alt/parse_fragments_in_a_line_alt.rs:201` should PASS
   - [x] `extract_remaining_text_content_in_line()` in
         `tui/src/tui/md_parser_alt/string_slice.rs:241`: should NOT do anything with `NEW_LINE`
-  - [ ] `try_parse_and_highlight()` in
-        `tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:141`: manually
-        create `acc` or will `write_to_byte_cache()` work?
-  - [ ] `parse_fragments_in_a_line_alt.rs` => `test_parse_fragment_plaintext_unicode()`: something
-        is wrong with synthetic `\n` handling
-  - [ ] what are semantics of `AsStrSlice::to_string()`? how does the `.to_string()` handle `\n`?
-        this is making the "old" `parse_markdown()` fail silently when running the examples
+  - [x] fix `test_parse_fragment_markdown_inline()` and
+        `parse_inline_fragments_until_eol_or_eoi_alt()`
 
-- [ ] migrate `fragment` to `fragment_alt` mod
+- [x] migrate `atomics` parsers into `atomics_alt`
 
-  - [x] `take_text_between.rs` -> `take_text_between_alt.rs` : fix tests & check logic; add more
-        tests to `AsStrSlice` based on this
+  - [x] `take_text_between.rs` -> `fragment_alt/take_text_between_alt.rs`: only used by
+        `specialized_parsers_alt.rs`. fix tests & check logic; add more tests to `AsStrSlice` based
+        on this
+
+- [x] migrate `fragment` to `fragment_alt` mod
+
   - [x] `specialized_parsers.rs` -> `specialized_parsers_alt.rs`: fix tests & check logic
     - [x] `parse_fragment_starts_with_checkbox_checkbox_into_bool_alt()`
     - [x] `parse_fragment_starts_with_checkbox_into_str_alt()`
@@ -108,17 +107,32 @@
     - [x] `parse_fragment_starts_with_star_err_on_new_line_alt()`
     - [x] `parse_fragment_starts_with_underscore_err_on_new_line_alt()`
   - [x] `specialized_parser_delim_matchers.rs` -> `specialized_parsers_alt.rs`: add tests
+  - [x] `parse_fragments_in_a_line_alt.rs` => `test_parse_fragment_plaintext_unicode()`: something
+        is wrong with synthetic `\n` handling
+  - [x] what are semantics of `AsStrSlice::to_string()`? how does the `.to_string()` handle `\n`?
+        this is making the "old" `parse_markdown()` fail silently when running the examples
+
+- [ ] fix regression in old code when starting to incorporate `AsStrSlice`
+
+  - [ ] `try_parse_and_highlight()` in
+        `tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:141`: manually
+        create `acc` or will `write_to_byte_cache()` work?
+
+- [ ] migrate `fragment` to `fragment_alt` mod
+
   - [ ] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: fix tests & check logic
   - [ ] `parse_fragments_in_a_line.rs` -> `parse_fragments_in_a_line_alt.rs`: fix tests & check
         logic
+
+- [ ] migrate `atomics` parsers into `atomics_alt`
+
+  - [ ] `take_text_until_eol_or_eoi.rs` -> `extended_alt/take_text_until_eol_or_eoi_alt.rs`
 
 - [ ] migrate `extended` parsers into `extended_alt`
 
   - [ ] `k_csv`
   - [ ] `k_v`
   - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
-
-- [ ] delete `parser_impl.rs` (was only needed for experimentation)
 
 - [ ] migrate `block` parsers into `block_alt`
 
@@ -127,6 +141,8 @@
   - [ ] block markdown text
   - [ ] block smart list
   - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
+
+- [ ] delete `parser_impl.rs` (was only needed for experimentation)
 
 - [ ] remove `md_parser` mod and `md_parser_alt` mod is the new one; update
       `md_parser_syn_hi_impl.rs` to use this
