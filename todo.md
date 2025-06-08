@@ -112,21 +112,23 @@
   - [x] what are semantics of `AsStrSlice::to_string()`? how does the `.to_string()` handle `\n`?
         this is making the "old" `parse_markdown()` fail silently when running the examples
 
-- [ ] fix regression in old code when starting to incorporate `AsStrSlice`
+- [x] fix regression in old code when starting to incorporate `AsStrSlice`
 
-  - [ ] `try_parse_and_highlight()` in
-        `tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:141`: manually
-        create `acc` or will `write_to_byte_cache()` work?
+  - [x] `try_parse_and_highlight()` in
+        `tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:141`: fix
+        `write_to_byte_cache()` to behave in "legacy" or "compat" mode to be compatible w/ the old
+        style (before `_alt`) markdown parser behavior
+  - [x] why `AsStrSlice::max_len`? for `take()` to work!
+
+- [ ] migrate `atomics` parsers into `extended_alt`
+
+  - [ ] `take_text_until_eol_or_eoi.rs` -> `extended_alt/take_text_until_eol_or_eoi_alt.rs`
 
 - [ ] migrate `fragment` to `fragment_alt` mod
 
   - [ ] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: fix tests & check logic
   - [ ] `parse_fragments_in_a_line.rs` -> `parse_fragments_in_a_line_alt.rs`: fix tests & check
         logic
-
-- [ ] migrate `atomics` parsers into `atomics_alt`
-
-  - [ ] `take_text_until_eol_or_eoi.rs` -> `extended_alt/take_text_until_eol_or_eoi_alt.rs`
 
 - [ ] migrate `extended` parsers into `extended_alt`
 
