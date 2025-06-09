@@ -14,3 +14,9 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+
+// Attach.
+pub mod take_text_until_eol_or_eoi_alt;
+
+// Re-export.
+pub use take_text_until_eol_or_eoi_alt::*;
