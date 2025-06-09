@@ -35,21 +35,28 @@ pub type NomErr<T> = nom::Err<T>;
 /// to manipulate it. This ensures that it can make the underlying `line` struct "act"
 /// like it is a contiguous array of chars.
 ///
-/// ## Compatibility with [write_to_byte_cache_compat()]
+/// ## Compatibility with [AsStrSlice::write_to_byte_cache_compat()]
 ///
 /// [AsStrSlice] is designed to be fully compatible with how
-/// [write_to_byte_cache_compat()] processes text. Specifically, it handles trailing
-/// newlines the same way:
+/// [AsStrSlice::write_to_byte_cache_compat()] processes text. Specifically, it handles
+/// trailing newlines the same way:
 ///
 /// - **Trailing newlines are added**: When there are multiple lines, a trailing newline
 ///   is added after the last line, matching the behavior of
-///   [write_to_byte_cache_compat()]
+///   [AsStrSlice::write_to_byte_cache_compat()].
 /// - **Empty lines preserved**: Leading and middle empty lines are preserved as empty
-///   strings followed by newlines
+///   strings followed by newlines.
 /// - **Single line gets no trailing newline**: A single line with no additional lines
-///   produces no trailing newline
+///   produces no trailing newline.
 /// - **Multiple lines always get trailing newlines**: Each line gets a trailing newline,
-///   including the last one
+///   including the last one.
+///
+/// ## Incompatibility with [str::lines()]
+///
+/// **Important**: This behavior is intentionally different from [str::lines()]. When
+/// there are multiple lines and the last line is empty, [AsStrSlice] will add a trailing
+/// newline, whereas [str::lines()] would not. This is to maintain compatibility with
+/// [AsStrSlice::write_to_byte_cache_compat()].
 ///
 /// Here are some examples of new line handling:
 ///
@@ -177,6 +184,21 @@ impl<'a> AsStrSlice<'a> {
 
     /// Use the [Display] implementation to materialize the [DocumentStorage] content.
     /// Returns a string representation of the slice.
+    ///
+    /// ## Newline Behavior
+    ///
+    /// This method follows the same newline handling rules as described in the struct
+    /// documentation:
+    ///
+    /// - For multiple lines, a trailing newline is added after the last line
+    /// - For a single line, no trailing newline is added
+    /// - Empty lines are preserved with newlines
+    ///
+    /// ## Incompatibility with [str::lines()]
+    ///
+    /// **Important**: This behavior is intentionally different from [str::lines()].
+    /// When there are multiple lines and the last line is empty, this method will add
+    /// a trailing newline, whereas [str::lines()] would not.
     pub fn to_inline_string(&self) -> DocumentStorage {
         let mut acc = DocumentStorage::new();
         use std::fmt::Write as _;
@@ -189,10 +211,21 @@ impl<'a> AsStrSlice<'a> {
     /// This is for compatibility with the legacy markdown parser, which expects a [&str]
     /// input with trailing [NEW_LINE].
     ///
+    /// ## Newline Behavior
+    ///
     /// - It adds a trailing [NEW_LINE] to the end of the `acc` in case there is more than
     ///   one line in `lines` field of [AsStrSlice].
-    /// - This behavior is what was used in the legacy parser which takes [&str] as input,
-    ///   rather than [AsStrSlice].
+    /// - For a single line, no trailing newline is added.
+    /// - Empty lines are preserved with newlines.
+    ///
+    /// ## Incompatibility with [str::lines()]
+    ///
+    /// **Important**: This behavior is intentionally different from [str::lines()].
+    /// When there are multiple lines and the last line is empty, this method will add
+    /// a trailing newline, whereas [str::lines()] would not.
+    ///
+    /// This behavior is what was used in the legacy parser which takes [&str] as input,
+    /// rather than [AsStrSlice].
     pub fn write_to_byte_cache_compat(
         &self,
         size_hint: usize,
@@ -802,13 +835,14 @@ impl<'a> Iterator for StringCharIndices<'a> {
     }
 }
 
-/// These tests ensure compatibility with how [write_to_byte_cache_compat()] works. And
-/// ensuring that the [AsStrSlice] methods that are used to implement the [Display] trait
-/// do in fact make it behave like a "virtual" array or slice of strings that matches the
-/// behavior of [write_to_byte_cache_compat()].
+/// These tests ensure compatibility with how [AsStrSlice::write_to_byte_cache_compat()]
+/// works. And ensuring that the [AsStrSlice] methods that are used to implement the
+/// [Display] trait do in fact make it behave like a "virtual" array or slice of strings
+/// that matches the behavior of [AsStrSlice::write_to_byte_cache_compat()].
 ///
 /// This breaks compatibility with [str::lines()] behavior, but matches the behavior of
-/// [write_to_byte_cache_compat()] which adds trailing newlines for multiple lines.
+/// [AsStrSlice::write_to_byte_cache_compat()] which adds trailing newlines for multiple
+/// lines.
 #[cfg(test)]
 mod tests_write_to_byte_cache_compat_behavior {
     use super::*;
@@ -926,6 +960,54 @@ mod tests_write_to_byte_cache_compat_behavior {
                 slice_result,
                 cache_result
             );
+        }
+    }
+
+    #[test]
+    fn test_compare_with_str_lines() {
+        // This test explicitly demonstrates the incompatibility with str::lines()
+        // when there are multiple lines and the last line is empty.
+
+        // Case 1: Multiple lines with empty last line
+        {
+            // Create a string with multiple lines and empty last line
+            let str_with_empty_last_line = "line1\nline2\n";
+
+            // Using str::lines()
+            let str_lines: Vec<&str> = str_with_empty_last_line.lines().collect();
+            assert_eq!(str_lines, vec!["line1", "line2"]); // str::lines() ignores the empty last line
+
+            // Using AsStrSlice
+            let gc_lines = vec![GCString::new("line1"), GCString::new("line2")];
+            let slice = AsStrSlice::from(&gc_lines);
+            let slice_result = slice.to_inline_string();
+            assert_eq!(slice_result.as_str(), "line1\nline2\n"); // AsStrSlice preserves the trailing newline
+
+            // Demonstrate the difference
+            let reconstructed_from_str_lines = str_lines.join("\n");
+            assert_eq!(reconstructed_from_str_lines, "line1\nline2"); // No trailing newline
+            assert_ne!(reconstructed_from_str_lines, slice_result.as_str()); // Different from AsStrSlice
+        }
+
+        // Case 2: Multiple lines with non-empty last line
+        {
+            // Create a string with multiple lines and non-empty last line
+            let str_with_non_empty_last_line = "line1\nline2";
+
+            // Using str::lines()
+            let str_lines: Vec<&str> = str_with_non_empty_last_line.lines().collect();
+            assert_eq!(str_lines, vec!["line1", "line2"]);
+
+            // Using AsStrSlice
+            let gc_lines = vec![GCString::new("line1"), GCString::new("line2")];
+            let slice = AsStrSlice::from(&gc_lines);
+            let slice_result = slice.to_inline_string();
+            assert_eq!(slice_result.as_str(), "line1\nline2\n"); // AsStrSlice adds a trailing newline
+
+            // Demonstrate the difference
+            let reconstructed_from_str_lines = str_lines.join("\n");
+            assert_eq!(reconstructed_from_str_lines, "line1\nline2"); // No trailing newline
+            assert_ne!(reconstructed_from_str_lines, slice_result.as_str()); // Different from AsStrSlice
         }
     }
 }
