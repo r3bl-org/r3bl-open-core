@@ -124,9 +124,24 @@
       adding a new line at the end of the output when there is more than 1 line in `Self::lines` and
       the last line is empty. update docs and tests to match.
 
+- [x] unicode bug is present in `Display` impl of `AsStrSlice`! this is what breaks the examples!
+      when switching the implementation of `write_to_byte_cache_compat()` to use `Display` impl the
+      bug can be seen in the tui/examples#3! revert back to the simplistic way of creating the
+      output `&str` and the example works again.
+
+  - [x] add test cases to repro the bug: `test_input_contains_emoji()` & fix it
+  - [x] update comments to clarify the emoji handling logic in the `AsStrSlice` docs, and document
+        the field `byte_index` and make it clear that byte indexing is used and not char indexing
+  - [x] make sure there are tests which compare the `Display` impl to the
+        `write_to_byte_cache_compat()` and ensure they produce the same output
+
+---
+
 - [ ] migrate `atomics` parsers into `extended_alt`
 
   - [ ] `take_text_until_eol_or_eoi.rs` -> `extended_alt/take_text_until_eol_or_eoi_alt.rs`
+
+---
 
 - [ ] migrate `fragment` to `fragment_alt` mod
 

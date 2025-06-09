@@ -31,9 +31,28 @@ pub type NomErr<T> = nom::Err<T>;
 /// Wrapper type that implements [nom::Input] for &[GCString] or **any other type** that
 /// implements [AsRef<str>]. The [Clone] operations on this struct are really cheap.
 ///
-/// This struct generates synthetic new lines when it's [nom::Input] methods are used
+/// This struct generates synthetic new lines when it's [nom::Input] methods are used.
 /// to manipulate it. This ensures that it can make the underlying `line` struct "act"
 /// like it is a contiguous array of chars.
+///
+/// ## Unicode/UTF-8 Support
+///
+/// This implementation properly handles Unicode characters including emojis and other
+/// multi-byte UTF-8 sequences. Character iteration and indexing logic do not mix
+/// byte-based operations with character-based operations, causing incorrect behavior when
+/// processing multi-byte UTF-8 characters like `😀`.
+///
+/// The character advancement and positioning logic uses character-based counting
+/// (`line.chars().count()`) instead of byte-based counting (`line.len()`) to ensure
+/// proper Unicode character handling throughout the implementation.
+///
+/// The `char_index` field represents the character index within the current line, and it
+/// is incremented by 1 for each character, including multi-byte characters like emojis.
+/// `char_index` represents the character index within the current line. It is:
+/// - Used with `line.chars().nth(self.char_index)` to get characters.
+/// - Compared with line_char_count (from `line.chars().count()`).
+/// - Incremented by 1 to advance to the next character.
+/// - Reset to 0 when moving to a new line.
 ///
 /// ## Compatibility with [AsStrSlice::write_to_byte_cache_compat()]
 ///
@@ -111,17 +130,29 @@ pub struct AsStrSlice<'a, T: AsRef<str> = GCString>
 where
     &'a [T]: Copy,
 {
+    /// The lines of text represented as a slice of [GCString] or any type that
+    /// implements [AsRef<str>].
     pub lines: &'a [T],
+
     /// Position tracking: (line_index, char_index_within_line).
     /// Special case: if char_index == line.len(), we're at the synthetic newline.
     pub line_index: usize,
+
+    /// This represents the character index within the current line. It is:
+    /// - Used with `line.chars().nth(self.char_index)` to get characters.
+    /// - Compared with line_char_count (from `line.chars().count()`).
+    /// - Incremented by 1 to advance to the next character.
+    /// - Reset to 0 when moving to a new line.
     pub char_index: usize,
+
     /// Optional maximum length limit for the slice. This is needed for
     /// [AsStrSlice::take()] to work.
     pub max_len: Option<usize>,
+
     /// Total number of characters across all lines (including synthetic newlines).
     /// For multiple lines, includes trailing newline after the last line.
     pub total_size: usize,
+
     /// Number of characters consumed from the beginning.
     pub current_taken: usize,
 }
@@ -190,9 +221,9 @@ impl<'a> AsStrSlice<'a> {
     /// This method follows the same newline handling rules as described in the struct
     /// documentation:
     ///
-    /// - For multiple lines, a trailing newline is added after the last line
-    /// - For a single line, no trailing newline is added
-    /// - Empty lines are preserved with newlines
+    /// - For multiple lines, a trailing newline is added after the last line.
+    /// - For a single line, no trailing newline is added.
+    /// - Empty lines are preserved with newlines.
     ///
     /// ## Incompatibility with [str::lines()]
     ///
@@ -253,17 +284,10 @@ impl<'a> AsStrSlice<'a> {
             return;
         }
 
-        // Single line: no trailing newline
-        if self.lines.len() == 1 {
-            acc.push_str(self.lines[0].as_ref());
-            return;
-        }
-
-        // Multiple lines: add newlines between lines and trailing newline
-        for line in self.lines {
-            acc.push_str(line.as_ref());
-            acc.push(NEW_LINE_CHAR);
-        }
+        // Use the Display implementation which already handles the correct newline
+        // behavior.
+        use std::fmt::Write as _;
+        _ = write!(acc, "{}", self);
     }
 
     /// Create a new slice with a maximum length limit.
@@ -425,7 +449,27 @@ impl<'a> AsStrSlice<'a> {
 
         if self.char_index < line.len() {
             // We're within the line content
-            line.chars().nth(self.char_index)
+            // Need to convert byte index to character
+            let mut char_iter = line.char_indices();
+            let mut current_byte_pos = 0;
+
+            while let Some((byte_pos, ch)) = char_iter.next() {
+                if byte_pos == self.char_index {
+                    return Some(ch);
+                }
+                if byte_pos > self.char_index {
+                    break;
+                }
+                current_byte_pos = byte_pos;
+            }
+
+            // If we didn't find an exact match, return the character at the closest byte
+            // position
+            if current_byte_pos < self.char_index && current_byte_pos < line.len() {
+                line[current_byte_pos..].chars().next()
+            } else {
+                None
+            }
         } else if self.char_index == line.len() {
             // We're at the end of the line
             if self.line_index < self.lines.len() - 1 {
@@ -463,7 +507,20 @@ impl<'a> AsStrSlice<'a> {
 
         if self.char_index < line.len() {
             // Move to next character within the line
-            self.char_index += 1;
+            // Need to handle multi-byte UTF-8 characters correctly
+            let mut char_iter = line.char_indices();
+            let mut next_byte_pos = line.len(); // Default to end of line
+
+            // Find the next character's byte position
+            while let Some((byte_pos, _)) = char_iter.next() {
+                if byte_pos > self.char_index {
+                    next_byte_pos = byte_pos;
+                    break;
+                }
+            }
+
+            // Advance to the next character's byte position
+            self.char_index = next_byte_pos;
             self.current_taken += 1;
         } else if self.char_index == line.len() {
             // We're at the end of the line
@@ -835,6 +892,89 @@ impl<'a> Iterator for StringCharIndices<'a> {
     }
 }
 
+#[cfg(test)]
+mod tests_compat_with_unicode_grapheme_cluster_segment_boundary {
+    use super::*;
+    use crate::assert_eq2;
+
+    const EMOJI_CHAR: char = '\u{1F600}'; // 😀
+    const INPUT_RAW: &str = "a😀b😀c";
+    const EMOJI_AS_BYTES: [u8; 4] = [240, 159, 152, 128];
+
+    #[test]
+    fn test_utf8_encoding_char_string() {
+        // Memory size of the char type itself (always 4 bytes in Rust).
+        assert_eq2!(std::mem::size_of::<char>(), 4);
+
+        // UTF-8 encoding length (how many bytes when encoded as UTF-8).
+        let utf8_len = EMOJI_CHAR.len_utf8();
+        assert_eq2!(utf8_len, 4);
+
+        // Put emoji in an Vec of u8.
+        let mut buffer: [u8; 4] = [0; 4];
+        EMOJI_CHAR.encode_utf8(&mut buffer);
+        assert_eq2!(buffer, EMOJI_AS_BYTES);
+
+        // Character count vs byte count.
+        let emoji_string = EMOJI_CHAR.to_string();
+        let emoji_str: &str = emoji_string.as_ref();
+        let byte_count = emoji_str.len();
+        assert_eq2!(byte_count, 4);
+        let char_count = emoji_str.chars().count();
+        assert_eq2!(char_count, 1);
+    }
+
+    #[test]
+    fn test_index_str_byte_count_vs_char_count() {
+        let input_string = format!("a{EMOJI_CHAR}b{EMOJI_CHAR}c");
+        let input_str = input_string.as_str();
+        assert_eq2!(input_str, INPUT_RAW);
+
+        // Size in memory.
+        let byte_count = input_str.len();
+        assert_eq2!(byte_count, 11);
+
+        // UTF-8 encoded chars in the string.
+        let char_count = input_str.chars().count();
+        assert_eq2!(char_count, 5);
+
+        // Index bytes in the input_str.
+        let input_str_bytes = input_str.as_bytes();
+        assert_eq2!(input_str_bytes[0], b'a');
+        assert_eq2!(input_str_bytes[1..=4], EMOJI_AS_BYTES);
+        assert_eq2!(input_str_bytes[5], b'b');
+        assert_eq2!(input_str_bytes[6..=9], EMOJI_AS_BYTES);
+        assert_eq2!(input_str_bytes[10], b'c');
+
+        // Index chars in the input_str using Chars iterator.
+        let mut input_str_chars = input_str.chars();
+        assert_eq2!(input_str_chars.next(), Some('a'));
+        assert_eq2!(input_str_chars.next(), Some('😀'));
+        assert_eq2!(input_str_chars.next(), Some('b'));
+        assert_eq2!(input_str_chars.next(), Some('😀'));
+        assert_eq2!(input_str_chars.next(), Some('c'));
+        assert_eq2!(input_str_chars.next(), None);
+    }
+
+    #[test]
+    fn test_input_contains_emoji() {
+        let lines: Vec<GCString> =
+            vec![GCString::from(INPUT_RAW), GCString::from(INPUT_RAW)];
+        let slice = AsStrSlice::from(&lines);
+        assert_eq2!(slice.lines.len(), 2);
+        assert_eq2!(
+            slice.to_inline_string(),
+            format!("{INPUT_RAW}\n{INPUT_RAW}\n")
+        );
+        assert_eq2!(slice.lines[0].as_ref(), INPUT_RAW);
+        assert_eq2!(slice.lines[1].as_ref(), INPUT_RAW);
+        assert_eq2!(slice.lines[0].string, INPUT_RAW);
+        assert_eq2!(slice.lines[1].string, INPUT_RAW);
+        assert_eq2!(slice.lines[0].string.len(), INPUT_RAW.len());
+        assert_eq2!(slice.lines[1].string.len(), INPUT_RAW.len());
+    }
+}
+
 /// These tests ensure compatibility with how [AsStrSlice::write_to_byte_cache_compat()]
 /// works. And ensuring that the [AsStrSlice] methods that are used to implement the
 /// [Display] trait do in fact make it behave like a "virtual" array or slice of strings
@@ -1032,7 +1172,7 @@ mod tests {
 
         let slice = AsStrSlice::from(&lines);
 
-        // Test that we can iterate through characters
+        // Test that we can iterate through characters.
         let mut chars: Vec<char> = vec![];
         let mut current = slice;
         while let Some(ch) = current.current_char() {
@@ -1239,11 +1379,11 @@ mod tests {
         assert_eq!(slice.current_char(), Some('f'));
         slice.advance();
 
-        // Test trailing newline for multiple lines
+        // Test trailing newline for multiple lines.
         assert_eq!(slice.current_char(), Some('\n'));
         slice.advance();
 
-        // Test end of input
+        // Test end of input.
         assert_eq!(slice.current_char(), None);
     }
 
@@ -1662,35 +1802,98 @@ mod tests {
         assert_eq!(single_result, "single"); // Single line gets no trailing newline
     }
 
-    // Test write_to_byte_cache method
+    // Test that Display implementation is equivalent to write_to_byte_cache_compat
     #[test]
-    fn test_write_to_byte_cache() {
+    fn test_display_impl_equivalent_to_write_to_byte_cache_compat() {
         // Test with simple lines (multiple lines).
         let lines = fixtures::create_simple_lines(); // ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
-        let mut cache = ParserByteCache::new();
 
-        // Write to cache with size hint smaller than content.
-        slice.write_to_byte_cache_compat(4, &mut cache);
-        assert_eq!(cache, "abc\ndef\n"); // Note the trailing newline for multiple lines
+        // Get Display implementation result using to_inline_string()
+        let display_result = slice.to_inline_string();
 
-        // Write to cache with size hint larger than content.
+        // Get write_to_byte_cache_compat result
         let mut cache = ParserByteCache::new();
-        slice.write_to_byte_cache_compat(20, &mut cache);
-        assert_eq!(cache, "abc\ndef\n"); // Note the trailing newline for multiple lines
+        slice.write_to_byte_cache_compat(display_result.len() + 10, &mut cache);
+
+        // Verify that write_to_byte_cache_compat and Display implementation produce the
+        // same result
+        assert_eq!(
+            display_result.as_str(), cache.as_str(),
+            "write_to_byte_cache_compat() and Display implementation should produce the same output for multiple lines"
+        );
 
         // Test with single line (no trailing newline).
         let single_line = vec![GCString::new("single")];
         let single_slice = AsStrSlice::from(single_line.as_slice());
+
+        // Get Display implementation result
+        let single_display_result = single_slice.to_inline_string();
+
+        // Get write_to_byte_cache_compat result
         let mut cache = ParserByteCache::new();
         single_slice.write_to_byte_cache_compat(10, &mut cache);
+
+        // Verify that write_to_byte_cache_compat and Display implementation produce the
+        // same result
+        assert_eq!(
+            single_display_result.as_str(), cache.as_str(),
+            "write_to_byte_cache_compat() and Display implementation should produce the same output for single line"
+        );
+
+        // Test with empty lines.
+        let empty_lines: Vec<GCString> = vec![];
+        let empty_slice = AsStrSlice::from(empty_lines.as_slice());
+
+        // Get Display implementation result
+        let empty_display_result = empty_slice.to_inline_string();
+
+        // Get write_to_byte_cache_compat result
+        let mut cache = ParserByteCache::new();
+        empty_slice.write_to_byte_cache_compat(0, &mut cache);
+
+        // Verify that write_to_byte_cache_compat and Display implementation produce the
+        // same result
+        assert_eq!(
+            empty_display_result.as_str(), cache.as_str(),
+            "write_to_byte_cache_compat() and Display implementation should produce the same output for empty lines"
+        );
+    }
+
+    // Test that write_to_byte_cache_compat behaves as expected
+    #[test]
+    fn test_write_to_byte_cache_compat_behavior() {
+        // Test with simple lines (multiple lines).
+        let lines = fixtures::create_simple_lines(); // ["abc", "def"]
+        let slice = AsStrSlice::from(lines.as_slice());
+
+        // Get write_to_byte_cache_compat result
+        let mut cache = ParserByteCache::new();
+        slice.write_to_byte_cache_compat(20, &mut cache);
+
+        // Verify expected behavior for multiple lines (trailing newline)
+        assert_eq!(cache, "abc\ndef\n"); // Note the trailing newline for multiple lines.
+
+        // Test with single line (no trailing newline).
+        let single_line = vec![GCString::new("single")];
+        let single_slice = AsStrSlice::from(single_line.as_slice());
+
+        // Get write_to_byte_cache_compat result
+        let mut cache = ParserByteCache::new();
+        single_slice.write_to_byte_cache_compat(10, &mut cache);
+
+        // Verify expected behavior for single line (no trailing newline)
         assert_eq!(cache, "single"); // No trailing newline for single line
 
         // Test with empty lines.
         let empty_lines: Vec<GCString> = vec![];
         let empty_slice = AsStrSlice::from(empty_lines.as_slice());
+
+        // Get write_to_byte_cache_compat result
         let mut cache = ParserByteCache::new();
         empty_slice.write_to_byte_cache_compat(0, &mut cache);
+
+        // Verify expected behavior for empty lines
         assert_eq!(cache, "");
     }
 
