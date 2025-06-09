@@ -120,6 +120,10 @@
         style (before `_alt`) markdown parser behavior
   - [x] why `AsStrSlice::max_len`? for `take()` to work!
 
+- [x] break compat with `slice::lines()` in `AsStrSlice` and do it the "intuitive way". this means
+      adding a new line at the end of the output when there is more than 1 line in `Self::lines` and
+      the last line is empty. update docs and tests to match.
+
 - [ ] migrate `atomics` parsers into `extended_alt`
 
   - [ ] `take_text_until_eol_or_eoi.rs` -> `extended_alt/take_text_until_eol_or_eoi_alt.rs`
