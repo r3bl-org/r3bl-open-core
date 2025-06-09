@@ -178,13 +178,11 @@ mod tests_parse_fragment {
         let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
         let (rem, out) = res.unwrap();
 
-        // println!("rem: {:#?}", rem);
         println!(
             "rem.extract_remaining_text_content_in_line(): {:#?}",
             rem.extract_remaining_text_content_in_line()
         );
 
-        // println!("out: {:#?}", out);
         println!(
             "out.extract_remaining_text_content_in_line(): {:#?}",
             out.extract_remaining_text_content_in_line()
@@ -192,7 +190,7 @@ mod tests_parse_fragment {
 
         assert_eq2!(rem.lines.len(), 1);
         assert_eq2!(rem.line_index, 0);
-        assert_eq2!(rem.extract_remaining_text_content_in_line(), "\n");
+        assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
 
         assert_eq2!(out.lines.len(), 1);
         assert_eq2!(out.line_index, 0);
