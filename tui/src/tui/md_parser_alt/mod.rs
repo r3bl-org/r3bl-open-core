@@ -15,16 +15,6 @@
  *   limitations under the License.
  */
 
-//! # Naming convention and semantics
-//! This naming convention is used throughout this file to make sure code is readable,
-//! understandable, and maintainable.
-//!
-//! | Fn Name Pattern     | Purpose                                                                    |
-//! | ------------------- | -------------------------------------------------------------------------- |
-//! | `parse_*()`         | Boundary detection: Splits items from input into remainder and output      |
-//! | `*_extract`         | Content extraction: Convert already-split-input using `parse_*()` to model |
-//! | `*_parser()`        | A function that receives an input, and is called by `parse_*()`            |
-//!
 //! # Polymorphic behavior of nom-compatible struct
 //! Since [AsStrSlice] implements [nom::Input], any function that can receive a
 //! [nom::Input] can accept [AsStrSlice] type.
@@ -38,11 +28,9 @@
 // Attach sources.
 pub mod extended_alt;
 pub mod fragment_alt;
-pub mod parser_impl;
 pub mod string_slice;
 
 // Re-export.
 pub use extended_alt::*;
 pub use fragment_alt::*;
-pub use parser_impl::*;
 pub use string_slice::*;

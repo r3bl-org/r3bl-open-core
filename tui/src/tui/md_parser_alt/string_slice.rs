@@ -24,6 +24,10 @@ use crate::{constants::{NEW_LINE, NEW_LINE_CHAR},
             ParserByteCache,
             PARSER_BYTE_CACHE_PAGE_SIZE};
 
+pub type NomError<T> = nom::error::Error<T>;
+pub type NomErrorKind = nom::error::ErrorKind;
+pub type NomErr<T> = nom::Err<T>;
+
 /// Wrapper type that implements [nom::Input] for &[GCString] or **any other type** that
 /// implements [AsRef<str>]. The [Clone] operations on this struct are really cheap.
 ///
@@ -31,39 +35,40 @@ use crate::{constants::{NEW_LINE, NEW_LINE_CHAR},
 /// to manipulate it. This ensures that it can make the underlying `line` struct "act"
 /// like it is a contiguous array of chars.
 ///
-/// ## Compatibility with [str::lines()]
+/// ## Compatibility with [write_to_byte_cache_compat()]
 ///
-/// [AsStrSlice] is designed to be fully compatible with how [str::lines()] processes
-/// text. Specifically, it handles trailing newlines the same way:
+/// [AsStrSlice] is designed to be fully compatible with how
+/// [write_to_byte_cache_compat()] processes text. Specifically, it handles trailing
+/// newlines the same way:
 ///
-/// - **Trailing newlines are removed**: `str::lines()` "eats" any trailing newline
-///   characters, and [AsStrSlice] behaves identically when reconstructed via [Display]
+/// - **Trailing newlines are added**: When there are multiple lines, a trailing newline
+///   is added after the last line, matching the behavior of
+///   [write_to_byte_cache_compat()]
 /// - **Empty lines preserved**: Leading and middle empty lines are preserved as empty
-///   strings
-/// - **Single newline becomes empty line**: A string containing only "\n" produces one
-///   empty line
-/// - **Multiple newlines create multiple empty lines**: "\n\n" produces two empty lines
+///   strings followed by newlines
+/// - **Single line gets no trailing newline**: A single line with no additional lines
+///   produces no trailing newline
+/// - **Multiple lines always get trailing newlines**: Each line gets a trailing newline,
+///   including the last one
 ///
 /// Here are some examples of new line handling:
 ///
 /// ```rust
 /// # use r3bl_tui::{GCString, AsStrSlice};
-/// // Input with trailing newline
-/// let raw = "a\nb\n";
-/// let str_lines: Vec<&str> = raw.lines().collect(); // ["a", "b"]
-/// let reconstructed = str_lines.join("\n");         // "a\nb" (trailing \n removed)
+/// // Input with multiple lines
+/// let lines = vec![GCString::new("a"), GCString::new("b")];
+/// let slice = AsStrSlice::from(&lines);
+/// assert_eq!(slice.to_inline_string(), "a\nb\n");     // Trailing \n added
 ///
-/// // AsStrSlice behaves identically
-/// let gc_lines: Vec<GCString> = raw.lines().map(GCString::new).collect();
-/// let slice = AsStrSlice::from(&gc_lines);
-/// assert_eq!(slice.to_inline_string(), "a\nb");     // Same result
-/// assert_ne!(slice.to_inline_string(), raw);        // Trailing \n removed
+/// // Single line
+/// let lines = vec![GCString::new("single")];
+/// let slice = AsStrSlice::from(&lines);
+/// assert_eq!(slice.to_inline_string(), "single");     // No trailing \n
 ///
-/// // Leading/middle newlines are preserved
-/// let raw = "\na\nb\n";
-/// let gc_lines: Vec<GCString> = raw.lines().map(GCString::new).collect();
-/// let slice = AsStrSlice::from(&gc_lines);
-/// assert_eq!(slice.to_inline_string(), "\na\nb");   // Leading \n preserved, trailing removed
+/// // Empty lines are preserved with newlines
+/// let lines = vec![GCString::new(""), GCString::new("a"), GCString::new("")];
+/// let slice = AsStrSlice::from(&lines);
+/// assert_eq!(slice.to_inline_string(), "\na\n\n");   // Each line followed by \n
 /// ```
 ///
 /// ## Compatibility with [nom::Input]
@@ -107,17 +112,25 @@ where
     /// Optional maximum length limit for the slice. This is needed for
     /// [AsStrSlice::take()] to work.
     pub max_len: Option<usize>,
+    /// Total number of characters across all lines (including synthetic newlines).
+    /// For multiple lines, includes trailing newline after the last line.
+    pub total_size: usize,
+    /// Number of characters consumed from the beginning.
+    pub current_taken: usize,
 }
 
 /// Implement [From] trait to allow automatic conversion from &[GCString] to
 /// [AsStrSlice].
 impl<'a> From<&'a [GCString]> for AsStrSlice<'a> {
     fn from(lines: &'a [GCString]) -> Self {
+        let total_size = Self::calculate_total_size(lines);
         Self {
             lines,
             line_index: 0,
             char_index: 0,
             max_len: None,
+            total_size,
+            current_taken: 0,
         }
     }
 }
@@ -127,11 +140,15 @@ impl<'a> From<&'a [GCString]> for AsStrSlice<'a> {
 /// fixed-size arrays.
 impl<'a, const N: usize> From<&'a [GCString; N]> for AsStrSlice<'a> {
     fn from(lines: &'a [GCString; N]) -> Self {
+        let lines_slice = lines.as_slice();
+        let total_size = Self::calculate_total_size(lines_slice);
         Self {
-            lines: lines.as_slice(),
+            lines: lines_slice,
             line_index: 0,
             char_index: 0,
             max_len: None,
+            total_size,
+            current_taken: 0,
         }
     }
 }
@@ -140,11 +157,14 @@ impl<'a, const N: usize> From<&'a [GCString; N]> for AsStrSlice<'a> {
 /// [AsStrSlice].
 impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
     fn from(lines: &'a Vec<GCString>) -> Self {
+        let total_size = Self::calculate_total_size(lines);
         Self {
             lines,
             line_index: 0,
             char_index: 0,
             max_len: None,
+            total_size,
+            current_taken: 0,
         }
     }
 }
@@ -200,6 +220,13 @@ impl<'a> AsStrSlice<'a> {
             return;
         }
 
+        // Single line: no trailing newline
+        if self.lines.len() == 1 {
+            acc.push_str(self.lines[0].as_ref());
+            return;
+        }
+
+        // Multiple lines: add newlines between lines and trailing newline
         for line in self.lines {
             acc.push_str(line.as_ref());
             acc.push(NEW_LINE_CHAR);
@@ -213,11 +240,15 @@ impl<'a> AsStrSlice<'a> {
         start_char: usize,
         max_len: Option<usize>,
     ) -> Self {
+        let total_size = Self::calculate_total_size(lines);
+        let current_taken = Self::calculate_current_taken(lines, start_line, start_char);
         Self {
             lines,
             line_index: start_line,
             char_index: start_char,
             max_len,
+            total_size,
+            current_taken,
         }
     }
 
@@ -292,69 +323,56 @@ impl<'a> AsStrSlice<'a> {
     ///
     /// In the case there is only one line, this method will NOT allocate. This is why
     /// [Cow] is used.
+    ///
+    /// For multiline content this will allocate, since there is no contiguous chunk of
+    /// memory that has `\n` in them, since these new lines are generated
+    /// synthetically when iterating this struct. Thus it is impossible to take
+    /// chunks from [Self::lines] and then "join" them with `\n` in between lines, WITHOUT
+    /// allocating.
+    ///
+    /// In the case there is only one line, this method will NOT allocate. This is why
+    /// [Cow] is used.
+    ///
+    /// This method behaves similarly to the Display trait implementation but respects
+    /// the current position (line_index, char_index) and max_len limit.
     pub fn extract_remaining_text_content_to_end(&self) -> Cow<'a, str> {
         if self.line_index >= self.lines.len() {
             return Cow::Borrowed("");
         }
 
-        let current_line = self.lines[self.line_index].as_ref();
-        let start_char = std::cmp::min(self.char_index, current_line.len());
+        // For single line case, we can potentially return borrowed content
+        if self.lines.len() == 1 {
+            let line = &self.lines[0].string;
+            let start = self.char_index.min(line.len());
 
-        // Calculate how much content we can actually return based on max_len
-        let max_chars = self.remaining_len();
+            // Check if we're already at the end
+            if start >= line.len() {
+                return Cow::Borrowed("");
+            }
 
-        // If we're on the last line, just return the remaining content from current line
-        if self.line_index == self.lines.len() - 1 {
-            let remaining_in_line = &current_line[start_char..];
-            let content = if max_chars < remaining_in_line.len() {
-                &remaining_in_line[..max_chars]
+            let end = if let Some(max_len) = self.max_len {
+                (start + max_len).min(line.len())
             } else {
-                remaining_in_line
+                line.len()
             };
-            return Cow::Borrowed(content);
+
+            return Cow::Borrowed(&line[start..end]);
         }
 
-        // Multi-line case: need to allocate and join with newlines
+        // Multi-line case: need to allocate and use synthetic newlines
         let mut result = String::new();
-        let mut chars_added = 0;
+        let mut current = self.clone();
 
-        // Add remaining content from current line
-        let remaining_in_current = &current_line[start_char..];
-        let chars_to_add = std::cmp::min(remaining_in_current.len(), max_chars);
-        result.push_str(&remaining_in_current[..chars_to_add]);
-        chars_added += chars_to_add;
-
-        if chars_added >= max_chars {
-            return Cow::Owned(result);
+        while let Some(ch) = current.current_char() {
+            result.push(ch);
+            current.advance();
         }
 
-        // Add subsequent lines with newlines
-        for line_idx in (self.line_index + 1)..self.lines.len() {
-            // Add newline
-            if chars_added >= max_chars {
-                break;
-            }
-            result.push('\n');
-            chars_added += 1;
-
-            if chars_added >= max_chars {
-                break;
-            }
-
-            // Add line content
-            let line_content = self.lines[line_idx].as_ref();
-            let remaining_chars = max_chars - chars_added;
-            let chars_to_add = std::cmp::min(line_content.len(), remaining_chars);
-
-            result.push_str(&line_content[..chars_to_add]);
-            chars_added += chars_to_add;
-
-            if chars_added >= max_chars {
-                break;
-            }
+        if result.is_empty() {
+            Cow::Borrowed("")
+        } else {
+            Cow::Owned(result)
         }
-
-        Cow::Owned(result)
     }
 
     /// Get the current character without materializing the full string.
@@ -375,12 +393,20 @@ impl<'a> AsStrSlice<'a> {
         if self.char_index < line.len() {
             // We're within the line content
             line.chars().nth(self.char_index)
-        } else if self.char_index == line.len() && self.line_index < self.lines.len() - 1
-        {
-            // We're at the synthetic newline (between lines)
-            Some(NEW_LINE_CHAR)
+        } else if self.char_index == line.len() {
+            // We're at the end of the line
+            if self.line_index < self.lines.len() - 1 {
+                // There are more lines, return synthetic newline
+                Some(NEW_LINE_CHAR)
+            } else if self.lines.len() > 1 {
+                // We're at the last line of multiple lines, add trailing newline
+                Some(NEW_LINE_CHAR)
+            } else {
+                // Single line, no trailing newline
+                None
+            }
         } else {
-            // End of input
+            // We're past the end of the line and any synthetic newline
             None
         }
     }
@@ -405,13 +431,22 @@ impl<'a> AsStrSlice<'a> {
         if self.char_index < line.len() {
             // Move to next character within the line
             self.char_index += 1;
-        } else if self.char_index == line.len() && self.line_index < self.lines.len() - 1
-        {
-            // We're at the synthetic newline, move to next line
-            self.line_index += 1;
-            self.char_index = 0;
+            self.current_taken += 1;
+        } else if self.char_index == line.len() {
+            // We're at the end of the line
+            if self.line_index < self.lines.len() - 1 {
+                // There are more lines, advance past synthetic newline to next line
+                self.line_index += 1;
+                self.char_index = 0;
+                self.current_taken += 1;
+            } else if self.lines.len() > 1 {
+                // We're at the last line of multiple lines, advance past trailing newline
+                self.char_index += 1; // Move past the synthetic trailing newline
+                self.current_taken += 1;
+            }
+            // For single line, don't advance further
         }
-        // If we're at the end, don't advance further
+        // If we're past the end, don't advance further
     }
 
     /// Get remaining length without materializing string.
@@ -420,6 +455,23 @@ impl<'a> AsStrSlice<'a> {
             return 0;
         }
 
+        // For single line, no trailing newline
+        if self.lines.len() == 1 {
+            let current_line = &self.lines[self.line_index].string;
+            let remaining = if self.char_index < current_line.len() {
+                current_line.len() - self.char_index
+            } else {
+                0
+            };
+
+            return if let Some(max_len) = self.max_len {
+                remaining.min(max_len)
+            } else {
+                remaining
+            };
+        }
+
+        // Multiple lines case
         let mut total = 0;
 
         // Count remaining chars in current line
@@ -428,19 +480,15 @@ impl<'a> AsStrSlice<'a> {
             total += current_line.len() - self.char_index;
         }
 
-        // Add synthetic newline if not at last line and we haven't passed the end of
-        // current line
-        if self.line_index < self.lines.len() - 1 && self.char_index <= current_line.len()
-        {
-            total += 1; // synthetic newline
+        // Add synthetic newline after current line (always for multiple lines)
+        if self.char_index <= current_line.len() {
+            total += 1;
         }
 
         // Add all subsequent lines plus their synthetic newlines
         for i in (self.line_index + 1)..self.lines.len() {
             total += self.lines[i].string.len();
-            if i < self.lines.len() - 1 {
-                total += 1; // synthetic newline
-            }
+            total += 1; // Each line gets a trailing newline in multiple line scenario
         }
 
         // Apply max_len limit if set
@@ -449,6 +497,75 @@ impl<'a> AsStrSlice<'a> {
         } else {
             total
         }
+    }
+
+    /// Calculate the total size of all lines including synthetic newlines.
+    /// For multiple lines, includes a trailing newline after the last line
+    /// to match write_to_byte_cache_compat() behavior.
+    fn calculate_total_size(lines: &[GCString]) -> usize {
+        if lines.is_empty() {
+            return 0;
+        }
+
+        if lines.len() == 1 {
+            // Single line gets no trailing newline
+            return lines[0].string.len();
+        }
+
+        let mut total = 0;
+        for line in lines {
+            total += line.string.len();
+        }
+
+        // For multiple lines:
+        // - Add synthetic newlines between lines (len - 1)
+        // - Add trailing newline after last line (+1)
+        total += lines.len(); // This gives us (len - 1) + 1 = len
+
+        total
+    }
+
+    /// Calculate how many characters have been consumed up to the current position.
+    fn calculate_current_taken(
+        lines: &[GCString],
+        line_index: usize,
+        char_index: usize,
+    ) -> usize {
+        if lines.is_empty() || line_index >= lines.len() {
+            return 0;
+        }
+
+        let mut taken = 0;
+
+        // Add all complete lines before current line
+        for i in 0..line_index {
+            taken += lines[i].string.len();
+            // For multiple lines, add synthetic newline after each line
+            if lines.len() > 1 {
+                taken += 1;
+            }
+        }
+
+        // Add characters consumed in current line
+        if line_index < lines.len() {
+            let current_line = &lines[line_index].string;
+            taken += char_index.min(current_line.len());
+
+            // If we're at the end of current line and there are more lines,
+            // or we're at the end of the last line in a multi-line scenario,
+            // we might be at a synthetic newline position
+            if char_index == current_line.len() && lines.len() > 1 {
+                if line_index < lines.len() - 1 {
+                    // We're at a newline between lines
+                    taken += 1;
+                } else {
+                    // We're at the trailing newline after the last line
+                    taken += 1;
+                }
+            }
+        }
+
+        taken
     }
 }
 
@@ -685,49 +802,25 @@ impl<'a> Iterator for StringCharIndices<'a> {
     }
 }
 
-/// These tests ensure compatibility with how [str::lines()] works. And ensuring that
-/// the [AsStrSlice] methods that are used to implement the [Display] trait do in fact
-/// make it behave like a "virtual" array or slice of strings.
+/// These tests ensure compatibility with how [write_to_byte_cache_compat()] works. And
+/// ensuring that the [AsStrSlice] methods that are used to implement the [Display] trait
+/// do in fact make it behave like a "virtual" array or slice of strings that matches the
+/// behavior of [write_to_byte_cache_compat()].
 ///
-/// This has to be compatible with the following constructors which are from the editor
-/// buffer:
-/// - [crate::EditorBuffer::set_lines()]
-/// - [crate::EditorBuffer::new_empty()]
-/// The editor buffer loads content from a file using [file_utils::read_file_into_storage]
-/// and then calls [str::lines()] on it to load the data into the [EditorContent]
-/// struct. Here's an example of that:
-///
-/// ```no_run
-/// let content = crate::file_utils::read_file_into_storage(maybe_file_path);
-/// let editor_buffer = crate::EditorBuffer::new_empty();
-/// let lines = content.lines();
-/// editor_buffer.set_lines(lines);
-/// ```
-///
-/// [str::lines()] eats any trailing new line characters, so we need to ensure that
-/// the [AsStrSlice] methods that are used to implement the [Display] trait
-/// behave like a "virtual" array or slice of strings.
+/// This breaks compatibility with [str::lines()] behavior, but matches the behavior of
+/// [write_to_byte_cache_compat()] which adds trailing newlines for multiple lines.
 #[cfg(test)]
-mod tests_str_lines_expected_behavior {
+mod tests_write_to_byte_cache_compat_behavior {
     use super::*;
 
     #[test]
     fn test_empty_string() {
         let input_raw = "";
 
-        // str::lines() behavior.
+        // Empty lines behavior.
         {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            assert_eq!(lines.len(), 0, "Empty string should produce no lines");
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(reconstructed_from_lines, "", "Empty reconstruction");
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
+            let lines: Vec<GCString> = vec![];
             let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), input_raw);
             assert_eq!(slice.to_inline_string(), "");
             assert_eq!(slice.lines.len(), 0);
         }
@@ -737,335 +830,101 @@ mod tests_str_lines_expected_behavior {
     fn test_single_char_no_newline() {
         let input_raw = "a";
 
-        // str::lines() behavior.
+        // Single line behavior - no trailing newline for single lines.
         {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            assert_eq!(lines, vec!["a"]);
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(reconstructed_from_lines, "a");
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
-            let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), input_raw);
-            assert_eq!(slice.to_inline_string(), "a");
-            assert_eq!(slice.lines.len(), 1);
-        }
-    }
-
-    #[test]
-    fn test_single_char_with_trailing_newline() {
-        let input_raw = "a\n";
-
-        // str::lines() behavior (eats trailing newline).
-        {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            assert_eq!(lines, vec!["a"]);
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(reconstructed_from_lines, "a", "Trailing newline eaten");
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
+            let lines = vec![GCString::new("a")];
             let slice = AsStrSlice::from(&lines);
             assert_eq!(slice.to_inline_string(), "a");
-            assert_ne!(
-                slice.to_inline_string(),
-                input_raw,
-                "Trailing newline should be removed"
-            );
             assert_eq!(slice.lines.len(), 1);
-        }
-    }
-
-    #[test]
-    fn test_two_chars_no_trailing_newline() {
-        let input_raw = "a\nb";
-
-        // str::lines() behavior.
-        {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            assert_eq!(lines, vec!["a", "b"]);
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(reconstructed_from_lines, "a\nb");
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
-            let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), input_raw);
-            assert_eq!(slice.to_inline_string(), "a\nb");
-            assert_eq!(slice.lines.len(), 2);
         }
     }
 
     #[test]
     fn test_two_chars_with_trailing_newline() {
-        let input_raw = "a\nb\n";
-
-        // str::lines() behavior (eats trailing newline).
+        // Multiple lines behavior - adds trailing newline for multiple lines.
         {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            assert_eq!(lines, vec!["a", "b"]);
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(reconstructed_from_lines, "a\nb", "Trailing newline eaten");
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
+            let lines = vec![GCString::new("a"), GCString::new("b")];
             let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), "a\nb");
-            assert_ne!(
-                slice.to_inline_string(),
-                input_raw,
-                "Trailing newline should be removed"
-            );
+            assert_eq!(slice.to_inline_string(), "a\nb\n"); // Trailing newline added
             assert_eq!(slice.lines.len(), 2);
         }
     }
 
     #[test]
     fn test_three_chars_with_trailing_newline() {
-        let input_raw = "a\nb\nc\n";
-
-        // str::lines() behavior (eats any trailing new line characters).
+        // Multiple lines behavior - adds trailing newline for multiple lines.
         {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(
-                reconstructed_from_lines, "a\nb\nc",
-                "Trailing newline should be removed"
-            );
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
+            let lines = vec![GCString::new("a"), GCString::new("b"), GCString::new("c")];
             let slice = AsStrSlice::from(&lines);
-            assert_ne!(
-                slice.to_inline_string(),
-                input_raw,
-                "Trailing newline should be removed"
-            );
-            assert_eq!(
-                slice.to_inline_string().ends_with("\n"),
-                false,
-                "Trailing newline should not be present"
-            );
+            assert_eq!(slice.to_inline_string(), "a\nb\nc\n"); // Trailing newline added
+            assert_eq!(slice.lines.len(), 3);
         }
     }
 
     #[test]
-    fn test_leading_newline_single_char() {
-        let input_raw = "\na";
-
-        // str::lines() behavior.
+    fn test_empty_lines_with_trailing_newline() {
+        // Empty lines are preserved with newlines, plus trailing newline.
         {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            assert_eq!(lines, vec!["", "a"]);
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(reconstructed_from_lines, "\na");
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
+            let lines = vec![GCString::new(""), GCString::new("a"), GCString::new("")];
             let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), input_raw);
-            assert_eq!(slice.to_inline_string(), "\na");
+            assert_eq!(slice.to_inline_string(), "\na\n\n"); // Each line followed by \n
+            assert_eq!(slice.lines.len(), 3);
+        }
+    }
+
+    #[test]
+    fn test_only_empty_lines() {
+        // Multiple empty lines get trailing newline.
+        {
+            let lines = vec![GCString::new(""), GCString::new("")];
+            let slice = AsStrSlice::from(&lines);
+            assert_eq!(slice.to_inline_string(), "\n\n"); // Two newlines plus trailing
             assert_eq!(slice.lines.len(), 2);
-            assert_eq!(slice.lines[0].as_ref(), "");
-            assert_eq!(slice.lines[1].as_ref(), "a");
         }
     }
 
     #[test]
-    fn test_double_leading_newline_single_char() {
-        let input_raw = "\n\na";
-
-        // str::lines() behavior.
+    fn test_single_empty_line() {
+        // Single empty line gets no trailing newline.
         {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            assert_eq!(lines, vec!["", "", "a"]);
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(reconstructed_from_lines, "\n\na");
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
+            let lines = vec![GCString::new("")];
             let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), input_raw);
-            assert_eq!(slice.to_inline_string(), "\n\na");
-            assert_eq!(slice.lines.len(), 3);
-            assert_eq!(slice.lines[0].as_ref(), "");
-            assert_eq!(slice.lines[1].as_ref(), "");
-            assert_eq!(slice.lines[2].as_ref(), "a");
-        }
-    }
-
-    #[test]
-    fn test_double_leading_newline_single_char_with_trailing_newline() {
-        let input_raw = "\n\na\n";
-
-        // str::lines() behavior (eats trailing newline).
-        {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            assert_eq!(lines, vec!["", "", "a"]);
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(reconstructed_from_lines, "\n\na", "Trailing newline eaten");
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
-            let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), "\n\na");
-            assert_ne!(
-                slice.to_inline_string(),
-                input_raw,
-                "Trailing newline should be removed"
-            );
-            assert_eq!(slice.lines.len(), 3);
-            assert_eq!(slice.lines[0].as_ref(), "");
-            assert_eq!(slice.lines[1].as_ref(), "");
-            assert_eq!(slice.lines[2].as_ref(), "a");
-        }
-    }
-
-    #[test]
-    fn test_only_newlines() {
-        let input_raw = "\n";
-
-        // str::lines() behavior.
-        {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            assert_eq!(lines, vec![""]);
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(reconstructed_from_lines, "");
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
-            let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), "");
-            assert_ne!(
-                slice.to_inline_string(),
-                input_raw,
-                "Single newline should be removed"
-            );
+            assert_eq!(slice.to_inline_string(), ""); // No trailing newline for single line
             assert_eq!(slice.lines.len(), 1);
-            assert_eq!(slice.lines[0].as_ref(), "");
         }
     }
 
     #[test]
-    fn test_only_double_newlines() {
-        let input_raw = "\n\n";
-
-        // str::lines() behavior.
-        {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            assert_eq!(lines, vec!["", ""]);
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(reconstructed_from_lines, "\n");
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
-            let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), "\n");
-            assert_ne!(
-                slice.to_inline_string(),
-                input_raw,
-                "Trailing newline should be removed"
-            );
-            assert_eq!(slice.lines.len(), 2);
-            assert_eq!(slice.lines[0].as_ref(), "");
-            assert_eq!(slice.lines[1].as_ref(), "");
-        }
-    }
-
-    #[test]
-    fn test_complex_mixed_newlines() {
-        let input_raw = "\n\na\nb\n\nc\n";
-
-        // str::lines() behavior (eats trailing newline).
-        {
-            let lines: Vec<&str> = input_raw.lines().collect();
-            assert_eq!(lines, vec!["", "", "a", "b", "", "c"]);
-            let reconstructed_from_lines: String = lines.join("\n");
-            assert_eq!(
-                reconstructed_from_lines, "\n\na\nb\n\nc",
-                "Trailing newline eaten"
-            );
-        }
-
-        // AsStrSlice behavior matches str::lines() behavior.
-        {
-            let lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
-            let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), "\n\na\nb\n\nc");
-            assert_ne!(
-                slice.to_inline_string(),
-                input_raw,
-                "Trailing newline should be removed"
-            );
-            assert_eq!(slice.lines.len(), 6);
-            assert_eq!(slice.lines[0].as_ref(), "");
-            assert_eq!(slice.lines[1].as_ref(), "");
-            assert_eq!(slice.lines[2].as_ref(), "a");
-            assert_eq!(slice.lines[3].as_ref(), "b");
-            assert_eq!(slice.lines[4].as_ref(), "");
-            assert_eq!(slice.lines[5].as_ref(), "c");
-        }
-    }
-
-    #[test]
-    fn test_verify_consistency_across_all_cases() {
+    fn test_verify_write_to_byte_cache_compat_consistency() {
         let test_cases = vec![
-            "",
-            "a",
-            "a\n",
-            "a\nb",
-            "a\nb\n",
-            "a\nb\nc\n",
-            "\na",
-            "\n\na",
-            "\n\na\n",
-            "\n",
-            "\n\n",
+            vec![],                                       // Empty
+            vec![GCString::new("single")],                // Single line
+            vec![GCString::new("a"), GCString::new("b")], // Two lines
+            vec![
+                GCString::new(""),
+                GCString::new("middle"),
+                GCString::new(""),
+            ], // With empty lines
+            vec![GCString::new(""), GCString::new("")],   // Only empty lines
         ];
 
-        for input_raw in test_cases {
-            // Get str::lines() result
-            let str_lines: Vec<&str> = input_raw.lines().collect();
-            let str_reconstructed = str_lines.join("\n");
-
+        for lines in test_cases {
             // Get AsStrSlice result
-            let gc_lines: Vec<GCString> = input_raw.lines().map(GCString::new).collect();
-            let slice = AsStrSlice::from(&gc_lines);
+            let slice = AsStrSlice::from(&lines);
             let slice_result = slice.to_inline_string();
+
+            // Get write_to_byte_cache_compat result
+            let mut cache = ParserByteCache::new();
+            slice.write_to_byte_cache_compat(slice_result.len() + 10, &mut cache);
+            let cache_result = cache.as_str();
 
             // They should match exactly
             assert_eq!(
-                slice_result, str_reconstructed,
-                "Mismatch for input {:?}: AsStrSlice produced {:?}, str::lines() produced {:?}",
-                input_raw, slice_result, str_reconstructed
-            );
-
-            // Additional verification: line count should match
-            assert_eq!(
-                slice.lines.len(), str_lines.len(),
-                "Line count mismatch for input {:?}: AsStrSlice has {} lines, str::lines() has {} lines",
-                input_raw, slice.lines.len(), str_lines.len()
+                slice_result, cache_result,
+                "Mismatch for lines {:?}: AsStrSlice produced {:?}, write_to_byte_cache_compat produced {:?}",
+                lines.iter().map(|l| l.as_ref()).collect::<Vec<_>>(),
+                slice_result,
+                cache_result
             );
         }
     }
@@ -1099,7 +958,7 @@ mod tests {
             current.advance();
         }
 
-        let expected = "Hello world\nThis is a test\nThird line";
+        let expected = "Hello world\nThis is a test\nThird line\n"; // Trailing newline for multiple lines
         let result: String = chars.into_iter().collect();
         std::assert_eq!(result, expected);
     }
@@ -1215,7 +1074,7 @@ mod tests {
         // Test with no limit
         let no_limit_slice = AsStrSlice::with_limit(&lines, 0, 6, None);
         let result = no_limit_slice.to_inline_string();
-        assert_eq!(result, "world\nSecond line\nThird line\n\nFifth line");
+        assert_eq!(result, "world\nSecond line\nThird line\n\nFifth line\n");
 
         // Test with zero limit
         let zero_limit_slice = AsStrSlice::with_limit(&lines, 0, 0, Some(0));
@@ -1275,8 +1134,8 @@ mod tests {
     fn test_current_char_and_advance() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let mut slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef" (synthetic \n added between lines)
-        // Positions: a(0), b(1), c(2), \n(3), d(4), e(5), f(6)
+        // Input appears as: "abc\ndef\n" (synthetic \n added between lines + trailing \n)
+        // Positions: a(0), b(1), c(2), \n(3), d(4), e(5), f(6), \n(7)
 
         // Test normal characters
         assert_eq!(slice.current_char(), Some('a'));
@@ -1286,7 +1145,7 @@ mod tests {
         assert_eq!(slice.current_char(), Some('c'));
         slice.advance();
 
-        // Test synthetic newline
+        // Test synthetic newline between lines
         assert_eq!(slice.current_char(), Some('\n'));
         slice.advance();
 
@@ -1296,6 +1155,10 @@ mod tests {
         assert_eq!(slice.current_char(), Some('e'));
         slice.advance();
         assert_eq!(slice.current_char(), Some('f'));
+        slice.advance();
+
+        // Test trailing newline for multiple lines
+        assert_eq!(slice.current_char(), Some('\n'));
         slice.advance();
 
         // Test end of input
@@ -1318,12 +1181,12 @@ mod tests {
     // Test Input trait implementation
     #[test]
     fn test_input_len() {
-        let lines = fixtures::create_simple_lines(); // "abc", "def" = 6 chars + 1 newline = 7
+        let lines = fixtures::create_simple_lines(); // "abc", "def" = 6 chars + 1 newline + 1 trailing = 8
         let slice = AsStrSlice::from(lines.as_slice());
-        assert_eq!(slice.input_len(), 7);
+        assert_eq!(slice.input_len(), 8);
 
         let slice_offset = slice.take_from(2);
-        assert_eq!(slice_offset.input_len(), 5); // "c\ndef" (from position 2 to end)
+        assert_eq!(slice_offset.input_len(), 6); // "c\ndef\n" (from position 2 to end)
 
         // With max_len
         let slice_limited = AsStrSlice::with_limit(&lines, 0, 0, Some(3));
@@ -1334,7 +1197,7 @@ mod tests {
     fn test_input_take() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef" (7 total chars)
+        // Input appears as: "abc\ndef\n" (8 total chars)
 
         let taken = slice.take(3);
         assert_eq!(taken.max_len, Some(3));
@@ -1345,8 +1208,8 @@ mod tests {
     fn test_input_take_from() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
-        // f(6))
+        // Input appears as: "abc\ndef\n" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
+        // f(6), \n(7))
 
         let from_offset = slice.take_from(2);
         assert_eq!(from_offset.line_index, 0);
@@ -1358,8 +1221,8 @@ mod tests {
     fn test_input_take_split() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef" (synthetic \n added between lines)
-        // Positions: a(0), b(1), c(2), \n(3), d(4), e(5), f(6)
+        // Input appears as: "abc\ndef\n" (synthetic \n added between lines + trailing \n)
+        // Positions: a(0), b(1), c(2), \n(3), d(4), e(5), f(6), \n(7)
 
         let (taken, remaining) = slice.take_split(3);
         assert_eq!(taken.max_len, Some(3));
@@ -1372,10 +1235,10 @@ mod tests {
     fn test_input_position() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
-        // f(6))
+        // Input appears as: "abc\ndef\n" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
+        // f(6), \n(7))
 
-        // Find newline
+        // Find newline between lines
         let pos = slice.position(|c| c == '\n');
         assert_eq!(pos, Some(3)); // Synthetic newline at position 3
 
@@ -1392,17 +1255,17 @@ mod tests {
     fn test_input_slice_index() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef" (7 total chars)
+        // Input appears as: "abc\ndef\n" (8 total chars)
 
         // Valid count
         assert_eq!(slice.slice_index(3), Ok(3));
-        assert_eq!(slice.slice_index(7), Ok(7)); // Full length
+        assert_eq!(slice.slice_index(8), Ok(8)); // Full length
 
         // Invalid count
         let result = slice.slice_index(10);
         assert!(result.is_err());
         if let Err(nom::Needed::Size(size)) = result {
-            assert_eq!(size.get(), 3); // 10 - 7 = 3 (need 3 more chars)
+            assert_eq!(size.get(), 2); // 10 - 8 = 2 (need 2 more chars)
         }
     }
 
@@ -1411,24 +1274,25 @@ mod tests {
     fn test_iter_elements() {
         let lines = vec![GCString::new("ab"), GCString::new("cd")]; // Creates ["ab", "cd"]
         let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "ab\ncd" (synthetic \n added between lines)
+        // Input appears as: "ab\ncd\n" (synthetic \n added between lines + trailing \n)
 
         let chars: Vec<char> = slice.iter_elements().collect();
-        assert_eq!(chars, vec!['a', 'b', '\n', 'c', 'd']); // Note synthetic newline
+        assert_eq!(chars, vec!['a', 'b', '\n', 'c', 'd', '\n']); // Note synthetic
+                                                                 // newlines
     }
 
     #[test]
     fn test_iter_indices() {
         let lines = vec![GCString::new("ab"), GCString::new("cd")]; // Creates ["ab", "cd"]
         let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "ab\ncd" (synthetic \n added between lines)
+        // Input appears as: "ab\ncd\n" (synthetic \n added between lines + trailing \n)
 
         let indexed_chars: Vec<(usize, char)> = slice.iter_indices().collect();
         assert_eq!(
             indexed_chars,
-            vec![(0, 'a'), (1, 'b'), (2, '\n'), (3, 'c'), (4, 'd')] /* Note synthetic
-                                                                     * newline at
-                                                                     * index 2 */
+            vec![(0, 'a'), (1, 'b'), (2, '\n'), (3, 'c'), (4, 'd'), (5, '\n')] /* Note synthetic
+                                                                                * newlines at
+                                                                                * indices 2 and 5 */
         );
     }
 
@@ -1575,20 +1439,20 @@ mod tests {
     fn test_display_full_content() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef" (synthetic \n added between lines)
+        // Input appears as: "abc\ndef\n" (synthetic \n added between lines + trailing \n)
 
         let displayed = format!("{}", slice);
-        assert_eq!(displayed, "abc\ndef"); // Shows synthetic newline in output
+        assert_eq!(displayed, "abc\ndef\n"); // Shows synthetic newlines in output
     }
 
     #[test]
     fn test_display_from_offset() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice()).take_from(2);
-        // Input appears as: "abc\ndef", starting from position 2 ('c')
+        // Input appears as: "abc\ndef\n", starting from position 2 ('c')
 
         let displayed = format!("{}", slice);
-        assert_eq!(displayed, "c\ndef"); // From 'c' through synthetic newline to end
+        assert_eq!(displayed, "c\ndef\n"); // From 'c' through synthetic newlines to end
     }
 
     #[test]
@@ -1629,7 +1493,7 @@ mod tests {
         let slice = AsStrSlice::from(lines.as_slice());
 
         let displayed = format!("{}", slice);
-        assert_eq!(displayed, "\nmiddle\n");
+        assert_eq!(displayed, "\nmiddle\n\n"); // Multiple lines get trailing newline
     }
 
     #[test]
@@ -1638,7 +1502,8 @@ mod tests {
         let slice = AsStrSlice::from(lines.as_slice());
 
         let displayed = format!("{}", slice);
-        assert_eq!(displayed, "line1\nembedded\nline2");
+        assert_eq!(displayed, "line1\nembedded\nline2\n"); // Multiple lines get trailing
+                                                           // newline
     }
 
     #[test]
@@ -1668,7 +1533,9 @@ mod tests {
         let displayed = format!("{}", slice);
         assert_eq!(
             displayed,
-            "Hello world\nSecond line\nThird line\n\nFifth line"
+            "Hello world\nSecond line\nThird line\n\nFifth line\n" /* Trailing newline
+                                                                    * for multiple
+                                                                    * lines */
         );
     }
 
@@ -1688,7 +1555,7 @@ mod tests {
         let lines = fixtures::create_simple_lines(); // ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
         let result = slice.to_inline_string();
-        assert_eq!(result, "abc\ndef");
+        assert_eq!(result, "abc\ndef\n"); // Multiple lines get trailing newline
 
         // Test with empty lines
         let empty_lines: Vec<GCString> = vec![];
@@ -1699,30 +1566,43 @@ mod tests {
         // Test with offset
         let offset_slice = slice.take_from(2); // Start from 'c'
         let offset_result = offset_slice.to_inline_string();
-        assert_eq!(offset_result, "c\ndef");
+        assert_eq!(offset_result, "c\ndef\n");
 
         // Test with limit
         let limited_slice = AsStrSlice::with_limit(&lines, 0, 0, Some(3));
         let limited_result = limited_slice.to_inline_string();
         assert_eq!(limited_result, "abc");
+
+        // Test single line (no trailing newline)
+        let single_line = vec![GCString::new("single")];
+        let single_slice = AsStrSlice::from(single_line.as_slice());
+        let single_result = single_slice.to_inline_string();
+        assert_eq!(single_result, "single"); // Single line gets no trailing newline
     }
 
     // Test write_to_byte_cache method
     #[test]
     fn test_write_to_byte_cache() {
-        // Test with simple lines.
+        // Test with simple lines (multiple lines).
         let lines = fixtures::create_simple_lines(); // ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
         let mut cache = ParserByteCache::new();
 
         // Write to cache with size hint smaller than content.
         slice.write_to_byte_cache_compat(4, &mut cache);
-        assert_eq!(cache, "abc\ndef\n"); // Note the trailing newline
+        assert_eq!(cache, "abc\ndef\n"); // Note the trailing newline for multiple lines
 
         // Write to cache with size hint larger than content.
         let mut cache = ParserByteCache::new();
         slice.write_to_byte_cache_compat(20, &mut cache);
-        assert_eq!(cache, "abc\ndef\n"); // Note the trailing newline
+        assert_eq!(cache, "abc\ndef\n"); // Note the trailing newline for multiple lines
+
+        // Test with single line (no trailing newline).
+        let single_line = vec![GCString::new("single")];
+        let single_slice = AsStrSlice::from(single_line.as_slice());
+        let mut cache = ParserByteCache::new();
+        single_slice.write_to_byte_cache_compat(10, &mut cache);
+        assert_eq!(cache, "single"); // No trailing newline for single line
 
         // Test with empty lines.
         let empty_lines: Vec<GCString> = vec![];
@@ -1743,6 +1623,7 @@ mod tests {
         assert!(slice.contains("abc"));
         assert!(slice.contains("def"));
         assert!(slice.contains("c\nd")); // Across lines with synthetic newline
+        assert!(slice.contains("def\n")); // Including trailing newline
 
         // Test substring that doesn't exist
         assert!(!slice.contains("xyz"));
@@ -1779,8 +1660,8 @@ mod tests {
             slice.advance();
 
             let result = slice.extract_remaining_text_content_to_end();
-            assert_eq!(result, "c\ndef");
-            // Should be owned since it spans multiple lines
+            assert_eq!(result, "c\ndef\n"); // Multiple lines include trailing newline
+                                            // Should be owned since it spans multiple lines
             assert!(matches!(result, Cow::Owned(_)));
         }
 
@@ -1789,7 +1670,7 @@ mod tests {
             let lines = fixtures::create_simple_lines(); // ["abc", "def"]
             let slice = AsStrSlice::from(&lines);
             let result = slice.extract_remaining_text_content_to_end();
-            assert_eq!(result, "abc\ndef");
+            assert_eq!(result, "abc\ndef\n"); // Multiple lines include trailing newline
             assert!(matches!(result, Cow::Owned(_)));
         }
 
@@ -1883,7 +1764,7 @@ mod tests {
             let lines = vec![GCString::from(""), GCString::from(""), GCString::from("")];
             let slice = AsStrSlice::from(&lines);
             let result = slice.extract_remaining_text_content_to_end();
-            assert_eq!(result, "\n\n");
+            assert_eq!(result, "\n\n\n"); // Multiple lines include trailing newline
             assert!(matches!(result, Cow::Owned(_)));
         }
 
@@ -1901,7 +1782,7 @@ mod tests {
             let lines = fixtures::create_three_lines();
             let slice = AsStrSlice::with_limit(&lines, 1, 0, None); // Start at beginning of second line
             let result = slice.extract_remaining_text_content_to_end();
-            assert_eq!(result, "Second line\nThird line");
+            assert_eq!(result, "Second line\nThird line\n"); // Multiple lines include trailing newline
             assert!(matches!(result, Cow::Owned(_)));
         }
 
@@ -1910,7 +1791,7 @@ mod tests {
             let lines = fixtures::create_three_lines();
             let slice = AsStrSlice::with_limit(&lines, 1, 7, None); // Start at "line" in "Second line"
             let result = slice.extract_remaining_text_content_to_end();
-            assert_eq!(result, "line\nThird line");
+            assert_eq!(result, "line\nThird line\n"); // Multiple lines include trailing newline
             assert!(matches!(result, Cow::Owned(_)));
         }
     }
@@ -1976,84 +1857,5 @@ mod tests {
         let slice = AsStrSlice::from(&lines);
         let pos = slice.find_substring("Content");
         assert_eq!(pos, Some(2)); // 2 newlines before "Content"
-    }
-}
-
-/// These are tests to ensure that [AsStrSlice] works correctly in integration with
-/// nom parsers.
-#[cfg(test)]
-mod integration_tests {
-    use super::*;
-    use crate::tui::md_parser_alt::fragment_alt::take_text_between_alt;
-
-    /// When the parser succeeds, it should return the remaining input and the
-    /// extracted text.
-    #[test]
-    fn test_take_text_between_ok() {
-        let lines = [GCString::new("_foo bar baz_bar")];
-        let input = AsStrSlice::from(&lines);
-
-        // Add assertions for the input slice before parsing.
-        assert_eq!(input.char_index, 0);
-        assert_eq!(input.input_len(), 16);
-        assert_eq!(input.lines.len(), 1);
-        assert_eq!(input.line_index, 0);
-        assert_eq!(
-            input.extract_remaining_text_content_in_line(),
-            "_foo bar baz_bar"
-        );
-
-        // Extract the result for comparison.
-        let it = take_text_between_alt("_", "_", input);
-        let (rem, output) = it.unwrap();
-
-        // Make sure the remainder (remaining input) slice is correct.
-        assert_eq!(rem.char_index, 13);
-        assert_eq!(rem.input_len(), 3);
-        assert_eq!(rem.lines.len(), 1);
-        assert_eq!(rem.line_index, 0);
-        assert_eq!(rem.extract_remaining_text_content_in_line(), "bar");
-
-        // Check that extracted contains "foo bar baz". Use the Display trait impl to
-        // convert it to a string.
-        assert_eq!(output.to_string(), "foo bar baz");
-        assert_eq!(output.char_index, 1);
-        assert_eq!(output.input_len(), 11);
-        assert_eq!(output.lines.len(), 1);
-        assert_eq!(output.line_index, 0);
-        assert_eq!(
-            output.extract_remaining_text_content_in_line(),
-            "foo bar baz"
-        );
-    }
-
-    /// When a parser fails, it should return an error containing a copy of the "input" in
-    /// the correct position.
-    #[test]
-    fn test_take_text_between_error() {
-        let lines = [GCString::new("_foo bar baz")];
-        let input = AsStrSlice::from(&lines);
-        assert_eq!(input.char_index, 0);
-
-        let res = take_text_between_alt("_", "_", input);
-
-        match res {
-            Ok(_) => panic!("Expected an error, but got Ok"),
-            Err(nom::Err::Error(error)) => {
-                // Add more rigorous assertions for `error.input`.
-                assert_eq!(error.code, nom::error::ErrorKind::TakeUntil);
-                // `tag("_")` moved this forward by 1. it is no longer equal to `input`.
-                assert_eq!(error.input.char_index, 1);
-                assert_eq!(error.input.input_len(), 11); // "foo bar baz" remaining
-                assert_eq!(error.input.lines.len(), 1);
-                assert_eq!(error.input.line_index, 0);
-                assert_eq!(error.input.max_len, None);
-                assert_eq!(
-                    error.input.extract_remaining_text_content_in_line(),
-                    "foo bar baz"
-                );
-            }
-            Err(other_err) => panic!("Expected Error variant, but got: {:?}", other_err),
-        }
     }
 }
