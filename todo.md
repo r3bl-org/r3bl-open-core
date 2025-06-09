@@ -135,11 +135,10 @@
   - [x] make sure there are tests which compare the `Display` impl to the
         `write_to_byte_cache_compat()` and ensure they produce the same output
 
----
+- [x] migrate `atomics` parsers into `extended_alt`
 
-- [ ] migrate `atomics` parsers into `extended_alt`
-
-  - [ ] `take_text_until_eol_or_eoi.rs` -> `extended_alt/take_text_until_eol_or_eoi_alt.rs`
+  - [x] `take_text_until_eol_or_eoi.rs` -> `extended_alt/take_text_until_eol_or_eoi_alt.rs`: simply
+        replace `&'a str` with `AsStrSlice<'a>`
 
 ---
 
@@ -148,6 +147,8 @@
   - [ ] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: fix tests & check logic
   - [ ] `parse_fragments_in_a_line.rs` -> `parse_fragments_in_a_line_alt.rs`: fix tests & check
         logic
+
+---
 
 - [ ] migrate `extended` parsers into `extended_alt`
 
