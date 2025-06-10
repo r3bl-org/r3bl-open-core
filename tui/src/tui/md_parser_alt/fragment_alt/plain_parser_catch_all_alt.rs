@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+//! This module implements the lowest priority parser for "plain text" Markdown fragments.
+//!
 //! This is the lowest priority parser called by
 //! [crate::parse_inline_fragments_until_eol_or_eoi()].
 //!
@@ -54,9 +56,10 @@ use crate::{fg_blue,
                                    UNDERSCORE},
             specialized_parsers_alt,
             AsStrSlice,
+            NomErr,
+            NomError,
+            NomErrorKind,
             DEBUG_MD_PARSER_STDOUT};
-
-// XMARK: Lowest priority parser for "plain text" Markdown fragment
 
 /// This is the lowest priority parser called by
 /// [crate::parse_inline_fragments_until_eol_or_eoi()], which itself is called:
@@ -67,10 +70,18 @@ use crate::{fg_blue,
 /// It will match anything that is not a special character. This is used to parse plain
 /// text.
 ///
-/// However, when it encounters a special character, it will break the input at that
-/// character and split the input into two parts, and return them:
-/// 1. The plain text.
-/// 2. And the remainder (after the special character).
+/// This function handles three cases:
+/// 1. Normal case: Input doesn't start with special characters
+///    - Takes text until the first special character is encountered
+///    - Splits the input at that point and returns the plain text and remainder
+/// 2. Special edge case: Input starts with a single special character ([UNDERSCORE],
+///    [STAR], [BACK_TICK])
+///    - Handles the case where there is no closing delimiter
+///    - Returns the special character as plain text
+/// 3. Normal edge case: Input starts with special characters but doesn't match any
+///    specialized parser
+///    - Takes text until the first new line
+///    - Returns it as plain text
 ///
 /// This gives the other more specialized parsers a chance to address these special
 /// characters (like italic, bold, links, etc.), when this function is called repeatedly:
@@ -80,10 +91,10 @@ use crate::{fg_blue,
 /// - Which calls this function repeatedly (if the specialized parsers don't match & error
 ///   out). This serves as a "catch all" parser.
 ///
-/// If these more specialized parsers error out, then this parser will be called again to
-/// parse the remainder; this time the input will start with the special character; and in
-/// this edge case it will take the input until the first new line; or until the end of
-/// the input.
+/// If these more specialized parsers error out, then this parser will be called
+/// again to parse the remainder; this time the input will start with the special
+/// character; and in this edge case it will take the input until the first new line; or
+/// until the end of the input.
 ///
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
 /// See: [crate::delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi()].
@@ -94,169 +105,205 @@ pub fn parse_fragment_plain_text_until_eol_or_eoi_alt<'a>(
         println!("\n{} plain parser, input: {:?}", fg_magenta("██"), input);
     });
 
-    let input_clone_br_1 = input.clone();
+    let input_clone = input.clone();
 
+    // Check if input doesn't start with special characters.
     if check_input_starts_with(
-        input_clone_br_1.extract_remaining_text_content_in_line(),
+        input_clone.extract_remaining_text_content_in_line(),
         &get_sp_char_set_2(),
     )
     .is_none()
     {
-        // # Normal case:
-        // If the input does not start with any of the special characters above,
-        // take till the first special character. And split the input there. This returns
-        // the chunk until the first special character as [MdLineFragment::Plain],
-        // and the remainder of the input gets a chance to be parsed by the
-        // specialized parsers. If they fail, then this function will be called
-        // again to parse the remainder, and the special case above will be
-        // triggered.
-
-        // `tag_tuple` replaces the following:
-        // `( tag(UNDERSCORE), tag(STAR), tag(BACK_TICK), tag(LEFT_IMAGE),
-        // tag(LEFT_BRACKET), tag(NEW_LINE) )`
-        let tag_vec = get_sp_char_set_3()
-            .into_iter()
-            .map(tag::<&str, &str, nom::error::Error<&str>>)
-            .collect::<Vec<_>>();
-        let tag_tuple = {
-            assert_eq!(tag_vec.len(), 6);
-            tuple6(&tag_vec)
-        };
-
-        let res = recognize(
-            /* match anychar up until any of the denied strings below is encountered */
-            many1(/* match at least 1 char */ preceded(
-                /* match anything that isn't in the denied strings list below */
-                /* prefix is discarded, it doesn't match anything, only errors out for denied strings */
-                not(
-                    /* error out if starts w/ denied strings below */
-                    alt(tag_tuple),
-                ),
-                /* output - keep char if it didn't error out above */
-                anychar,
-            )),
-        ).parse(input_clone_br_1.extract_remaining_text_content_in_line());
-
-        // DEBUG_MD_PARSER_STDOUT.then(|| {
-        //     println!(
-        //         "{} normal case :: {:?}",
-        //         if it.is_err() {
-        //             fg_red("⬢⬢")
-        //         } else {
-        //             fg_blue("▲▲")
-        //         },
-        //         it
-        //     );
-        // });
-
-        return match res {
-            Ok((rem, output)) => {
-                // Convert the output length to determine how many characters to take from
-                // input
-                let output_len = output.len();
-
-                // Take the specified number of characters from the current input to
-                // create AsStrSlice
-                let taken_slice = input_clone_br_1.take(output_len);
-
-                // Create AsStrSlice for the remainder by advancing past the taken
-                // characters
-                let remainder_slice = input_clone_br_1.take_from(output_len);
-
-                Ok((remainder_slice, taken_slice))
-            }
-            Err(err) => {
-                // Extract the ErrorKind from the original error
-                let error_kind = match &err {
-                    nom::Err::Error(e) => e.code,
-                    nom::Err::Failure(e) => e.code,
-                    nom::Err::Incomplete(_) => nom::error::ErrorKind::Complete,
-                };
-
-                // Convert to proper nom::Error type for AsStrSlice
-                let nom_error = nom::error::Error::new(input_clone_br_1, error_kind);
-                Err(nom::Err::Error(nom_error))
-            }
-        };
+        // Case 1: Normal - input doesn't start with special characters.
+        return handle_normal_case(input);
     }
 
-    // # Edge case (catch all):
-    // If the input starts with any of these special characters, take till the first new
-    // line. Since the specialized parsers did not match the input.
+    // Case 2: Edge case - input starts with single special character.
+    if let Some(result) = handle_special_edge_case(&input) {
+        return result;
+    }
 
-    let input_clone_br_2_1 = input.clone();
-    let input_clone_br_2_2 = input.clone();
+    // Case 3: Fallback - take everything until newline as plain text.
+    handle_normal_edge_case(input)
+}
 
-    // # Edge case -> Special case:
-    // Check for single UNDERSCORE, STAR, BACK_TICK. until the first new line. This is
-    // to handle the case with
-    // [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()] where
-    // there is no closing delim found.
+/// Handle the normal case: when input doesn't start with special characters.
+///
+/// This function processes input that doesn't start with special characters by taking
+/// text until the first special character is encountered. It then splits the input at
+/// that point and returns the plain text and remainder.
+fn handle_normal_case<'a>(
+    input: AsStrSlice<'a>,
+) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+    let input_clone = input.clone();
+
+    // `tag_tuple` replaces the following:
+    // `( tag(UNDERSCORE), tag(STAR), tag(BACK_TICK), tag(LEFT_IMAGE),
+    // tag(LEFT_BRACKET), tag(NEW_LINE) )`
+    let tag_vec = get_sp_char_set_3()
+        .into_iter()
+        .map(tag::<&str, &str, NomError<&str>>)
+        .collect::<Vec<_>>();
+    let tag_tuple = {
+        assert_eq!(tag_vec.len(), 6);
+        tuple6(&tag_vec)
+    };
+
+    // Parse the input until any special character is encountered.
+    let res = recognize(
+        // Match at least one character
+        many1(preceded(
+            // Don't match any of the special characters
+            not(
+                // Alternative of all special characters
+                alt(tag_tuple),
+            ),
+            // Keep any character that isn't a special character
+            anychar,
+        )),
+    )
+    .parse(input_clone.extract_remaining_text_content_in_line());
+
+    DEBUG_MD_PARSER_STDOUT.then(|| {
+        println!(
+            "{} normal case :: {:?}",
+            if res.is_err() {
+                fg_red("⬢⬢")
+            } else {
+                fg_blue("▲▲")
+            },
+            res
+        );
+    });
+
+    match res {
+        Ok((_rem, output)) => {
+            // Convert the output length to determine how many characters to take from
+            // input
+            let output_len = output.len();
+
+            // Take the specified number of characters from the current input to create
+            // AsStrSlice
+            let taken_slice = input_clone.take(output_len);
+
+            // Create AsStrSlice for the remainder by advancing past the taken characters
+            let remainder_slice = input_clone.take_from(output_len);
+
+            Ok((remainder_slice, taken_slice))
+        }
+        Err(err) => {
+            // Extract the ErrorKind from the original error
+            let error_kind = match &err {
+                NomErr::Error(e) => e.code,
+                NomErr::Failure(e) => e.code,
+                NomErr::Incomplete(_) => NomErrorKind::Complete,
+            };
+
+            // Convert to proper NomError type for AsStrSlice
+            let nom_error = NomError::new(input_clone, error_kind);
+            Err(NomErr::Error(nom_error))
+        }
+    }
+}
+
+/// Handle the special edge case: when input starts with a single special character.
+///
+/// This function handles the case where the input starts with a single special character
+/// (UNDERSCORE, STAR, BACK_TICK) and there is no closing delimiter.
+fn handle_special_edge_case<'a>(
+    input: &AsStrSlice<'a>,
+) -> Option<IResult<AsStrSlice<'a>, AsStrSlice<'a>>> {
+    let input_clone_1 = input.clone();
+    let input_clone_2 = input.clone();
+
+    // Check for single UNDERSCORE, STAR, BACK_TICK.
     if let Some(special_str) = check_input_starts_with(
-        input_clone_br_2_1.extract_remaining_text_content_in_line(),
+        input_clone_1.extract_remaining_text_content_in_line(),
         &get_sp_char_set_1(),
     ) {
         let (count, _, _, _) =
             specialized_parsers_alt::delim_matchers::count_delim_occurrences_until_eol_or_eoi(
-                input_clone_br_2_2,
+                input_clone_2,
                 special_str,
             );
+
         if count == 1 {
-            // Split the input, by returning the first part as plain text, and the
-            // remainder as the input to be parsed by the specialized parsers.
-            let (rem, output) =
-                recognize(many1(tag(special_str))).parse(input_clone_br_2_1)?;
+            // Split the input, by returning the first part as plain text.
+            let result = recognize(many1(tag::<&str, &str, NomError<&str>>(special_str)))
+                .parse(input_clone_1.extract_remaining_text_content_in_line());
 
-            // DEBUG_MD_PARSER_STDOUT.then(|| {
-            //     println!(
-            //         "{} edge case -> special case :: rem: {:?}, output: {:?}",
-            //         fg_blue("▲▲"),
-            //         rem,
-            //         output
-            //     );
-            // });
+            if let Ok((rem, output)) = result {
+                DEBUG_MD_PARSER_STDOUT.then(|| {
+                    println!(
+                        "{} edge case -> special case :: rem: {:?}, output: {:?}",
+                        fg_blue("▲▲"),
+                        rem,
+                        output
+                    );
+                });
 
-            return Ok((rem, output));
+                // Convert the output length to determine how many characters to take from
+                // input.
+                let output_len = output.len();
+
+                // Take the specified number of characters from the current input to
+                // create AsStrSlice.
+                let taken_slice = input_clone_1.take(output_len);
+
+                // Create AsStrSlice for the remainder by advancing past the taken
+                // characters.
+                let remainder_slice = input_clone_1.take_from(output_len);
+
+                return Some(Ok((remainder_slice, taken_slice)));
+            }
         }
-        // Otherwise, fall back to the normal case below.
     }
 
-    // # Edge case -> Normal case:
-    // Take till the first new line, as [MdLineFragment::Plain], since the specialized
-    // parsers did not match the input.
-    let it = take_till1(|it: char| it == NEW_LINE_CHAR)(input);
-
-    // DEBUG_MD_PARSER_STDOUT.then(|| {
-    //     println!(
-    //         "{} edge case -> normal case :: {:?}",
-    //         if it.is_err() {
-    //             fg_red("⬢⬢")
-    //         } else {
-    //             fg_blue("▲▲")
-    //         },
-    //         it
-    //     );
-    // });
-
-    it
+    None
 }
 
-/// This is a special set of chars called `set_1`.
+/// Handle the normal edge case: fallback for other inputs.
 ///
-/// This is used to check if the input starts with any of these special characters, which
-/// must have at least 2 occurrences for it to be parsed by the specialized parsers. If
-/// only 1 occurrence is found, then this parser's `Edge case -> Special case` will take
-/// care of it by splitting the input, and returning the first part as plain text, and the
-/// remainder as the input to be parsed by the specialized parsers.
+/// This function handles the case where the input starts with special characters
+/// but doesn't match any specialized parser. It takes text until the first new line.
+fn handle_normal_edge_case<'a>(
+    input: AsStrSlice<'a>,
+) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+    // Take till the first new line.
+    let res = take_till1(|it: char| it == NEW_LINE_CHAR)(input);
+
+    DEBUG_MD_PARSER_STDOUT.then(|| {
+        println!(
+            "{} edge case -> normal case :: {:?}",
+            if res.is_err() {
+                fg_red("⬢⬢")
+            } else {
+                fg_blue("▲▲")
+            },
+            res
+        );
+    });
+
+    res
+}
+
+/// Returns a set of special characters that require special handling.
+///
+/// This set contains characters (UNDERSCORE, STAR, BACK_TICK) that are used for
+/// formatting in Markdown (like italic, bold, code). These characters must have at least
+/// 2 occurrences to be parsed by the specialized parsers. If only 1 occurrence is found,
+/// then the `handle_special_edge_case` function will handle it by returning the character
+/// as plain text.
 pub fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 
-/// This is a special set of chars called `set_2`.
+/// Returns an extended set of special characters for detecting the normal edge case.
 ///
-/// This is used to detect the `Edge case -> Normal case` where the input starts with any
-/// of these special characters, and the input is taken until the first new line, and
-/// return as plain text. Unless both of the following are true:
-/// 1. input is in [get_sp_char_set_1()] and,
-/// 2. count is 1.
+/// This set extends `get_sp_char_set_1()` with additional characters (LEFT_IMAGE,
+/// LEFT_BRACKET) that are used to detect when the input starts with special characters.
+/// In such cases, the `handle_normal_edge_case` function will take text until the first
+/// new line, unless the special edge case applies:
+/// 1. The character is in `get_sp_char_set_1()` and,
+/// 2. There is exactly one occurrence of it.
 pub fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
     get_sp_char_set_1()
         .iter()
@@ -267,13 +314,13 @@ pub fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
         .unwrap()
 }
 
-/// This is a special set of chars called `set_3`.
+/// Returns a complete set of special characters for the normal case.
 ///
-/// This is used to detect the `Normal case` where the input does not start with any of
-/// the special characters in [get_sp_char_set_2()]. The input is taken until the first
-/// special character, and split there. This returns the chunk until the first special
-/// character as [crate::MdLineFragment::Plain], and the remainder of the input gets a
-/// chance to be parsed by the specialized parsers.
+/// This set extends `get_sp_char_set_2()` with NEW_LINE character. It's used in the
+/// `handle_normal_case` function to detect when to stop parsing plain text. When any of
+/// these characters is encountered, the input is split at that point. The text before
+/// the special character is returned as plain text, and the remainder gets a chance to
+/// be parsed by specialized parsers.
 pub fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
     get_sp_char_set_2()
         .iter()
@@ -284,6 +331,16 @@ pub fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
         .unwrap()
 }
 
+/// Checks if the input string starts with any of the strings in the provided character
+/// set.
+///
+/// # Arguments
+/// * `input` - The input string to check
+/// * `char_set` - A slice of strings to check against
+///
+/// # Returns
+/// * `Some(&str)` - The matching string from the character set if found
+/// * `None` - If the input doesn't start with any of the strings in the character set
 pub fn check_input_starts_with<'a>(
     input: &'a str,
     char_set: &[&'a str],
@@ -294,7 +351,16 @@ pub fn check_input_starts_with<'a>(
         .copied()
 }
 
+/// Converts a slice of 5 elements into a tuple of 5 references.
+///
+/// This utility function is used to convert a slice into a tuple format that can be used
+/// with nom's `alt` function.
 pub fn tuple5<T>(a: &[T]) -> (&T, &T, &T, &T, &T) { (&a[0], &a[1], &a[2], &a[3], &a[4]) }
+
+/// Converts a slice of 6 elements into a tuple of 6 references.
+///
+/// This utility function is used to convert a slice into a tuple format that can be used
+/// with nom's `alt` function.
 pub fn tuple6<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T) {
     (&a[0], &a[1], &a[2], &a[3], &a[4], &a[5])
 }
@@ -302,10 +368,321 @@ pub fn tuple6<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{assert_eq2, GCString, NomErr, NomErrorKind};
 
     #[test]
     fn test_check_input_starts_with() {
         assert_eq!(check_input_starts_with("abc", &["a", "b", "c"]), Some("a"));
         assert_eq!(check_input_starts_with("abc", &["d", "e", "f"]), None);
+        assert_eq!(check_input_starts_with("", &["a", "b", "c"]), None);
+        assert_eq!(check_input_starts_with("abc", &[]), None);
+    }
+
+    #[test]
+    fn test_get_sp_char_sets() {
+        // Test get_sp_char_set_1
+        let set1 = get_sp_char_set_1();
+        assert_eq!(set1.len(), 3);
+        assert!(set1.contains(&UNDERSCORE));
+        assert!(set1.contains(&STAR));
+        assert!(set1.contains(&BACK_TICK));
+
+        // Test get_sp_char_set_2
+        let set2 = get_sp_char_set_2();
+        assert_eq!(set2.len(), 5);
+        assert!(set2.contains(&UNDERSCORE));
+        assert!(set2.contains(&STAR));
+        assert!(set2.contains(&BACK_TICK));
+        assert!(set2.contains(&LEFT_IMAGE));
+        assert!(set2.contains(&LEFT_BRACKET));
+
+        // Test get_sp_char_set_3
+        let set3 = get_sp_char_set_3();
+        assert_eq!(set3.len(), 6);
+        assert!(set3.contains(&UNDERSCORE));
+        assert!(set3.contains(&STAR));
+        assert!(set3.contains(&BACK_TICK));
+        assert!(set3.contains(&LEFT_IMAGE));
+        assert!(set3.contains(&LEFT_BRACKET));
+        assert!(set3.contains(&NEW_LINE));
+    }
+
+    #[test]
+    fn test_tuple_functions() {
+        let vec5 = vec![1, 2, 3, 4, 5];
+        let tuple5_result = tuple5(&vec5);
+        assert_eq!(tuple5_result, (&1, &2, &3, &4, &5));
+
+        let vec6 = vec![1, 2, 3, 4, 5, 6];
+        let tuple6_result = tuple6(&vec6);
+        assert_eq!(tuple6_result, (&1, &2, &3, &4, &5, &6));
+    }
+
+    #[test]
+    fn test_parse_fragment_plain_text_normal_case() {
+        // Test normal case: plain text without special characters
+        let lines = &[GCString::new("Hello world")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello world");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_parse_fragment_plain_text_with_special_chars() {
+        // Test normal case: text with special characters
+        let lines = &[GCString::new("Hello *world")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "*world");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello ");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+
+        // Test with multiple special characters
+        let lines = &[GCString::new("Hello _*`[!world")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "_*`[!world");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello ");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_parse_fragment_plain_text_special_edge_case() {
+        // Test special edge case: single underscore
+        let lines = &[GCString::new("_single")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "single");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "_");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+
+        // Test special edge case: single star
+        let lines = &[GCString::new("*single")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "single");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "*");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+
+        // Test special edge case: single backtick
+        let lines = &[GCString::new("`single")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "single");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "`");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_parse_fragment_plain_text_normal_edge_case() {
+        // Test normal edge case: starts with special character but not a single one
+        let lines = &[GCString::new("**bold**")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "**bold**");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+
+        // Test normal edge case: starts with left bracket
+        let lines = &[GCString::new("[link](url)")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "[link](url)");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+
+        // Test normal edge case: starts with left image
+        let lines = &[GCString::new("![image](url)")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                assert_eq2!(
+                    out.extract_remaining_text_content_in_line(),
+                    "![image](url)"
+                );
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_parse_fragment_plain_text_with_newlines() {
+        // Test with newline in the middle
+        let lines = &[GCString::new("Hello\nworld")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "\nworld");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+
+        // Test with multiple lines
+        let lines = &[GCString::new("Hello"), GCString::new("world")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_parse_fragment_plain_text_empty_input() {
+        // Test with empty input
+        let lines = &[GCString::new("")];
+        let input = AsStrSlice::from(lines);
+        let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
+
+        match res {
+            Ok(_) => panic!("Expected Err, got Ok"),
+            Err(err) => match err {
+                NomErr::Error(error) => {
+                    assert_eq2!(error.input.extract_remaining_text_content_in_line(), "");
+                }
+                _ => panic!("Expected Error, got different error type"),
+            },
+        }
+    }
+
+    #[test]
+    fn test_handle_normal_case() {
+        // Test normal case: plain text without special characters
+        let lines = &[GCString::new("Hello world")];
+        let input = AsStrSlice::from(lines);
+        let res = handle_normal_case(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello world");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+
+        // Test with special character in the middle
+        let lines = &[GCString::new("Hello *world")];
+        let input = AsStrSlice::from(lines);
+        let res = handle_normal_case(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "*world");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello ");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_handle_special_edge_case() {
+        // Test special edge case: single underscore
+        let lines = &[GCString::new("_single")];
+        let input = AsStrSlice::from(lines);
+        let res = handle_special_edge_case(&input);
+
+        match res {
+            Some(Ok((rem, out))) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "single");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "_");
+            }
+            Some(Err(err)) => panic!("Expected Ok, got Err: {:?}", err),
+            None => panic!("Expected Some, got None"),
+        }
+
+        // Test not a special edge case: double underscore
+        let lines = &[GCString::new("__double")];
+        let input = AsStrSlice::from(lines);
+        let res = handle_special_edge_case(&input);
+
+        assert!(res.is_none(), "Expected None for double underscore");
+
+        // Test not a special edge case: doesn't start with special character
+        let lines = &[GCString::new("normal")];
+        let input = AsStrSlice::from(lines);
+        let res = handle_special_edge_case(&input);
+
+        assert!(res.is_none(), "Expected None for normal text");
+    }
+
+    #[test]
+    fn test_handle_normal_edge_case() {
+        // Test normal edge case: starts with special character
+        let lines = &[GCString::new("**bold**")];
+        let input = AsStrSlice::from(lines);
+        let res = handle_normal_edge_case(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "**bold**");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
+
+        // Test with newline in the middle
+        let lines = &[GCString::new("**bold\ntext**")];
+        let input = AsStrSlice::from(lines);
+        let res = handle_normal_edge_case(input);
+
+        match res {
+            Ok((rem, out)) => {
+                assert_eq2!(rem.extract_remaining_text_content_in_line(), "\ntext**");
+                assert_eq2!(out.extract_remaining_text_content_in_line(), "**bold");
+            }
+            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+        }
     }
 }
