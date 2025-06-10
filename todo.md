@@ -140,14 +140,13 @@
   - [x] `take_text_until_eol_or_eoi.rs` -> `extended_alt/take_text_until_eol_or_eoi_alt.rs`: simply
         replace `&'a str` with `AsStrSlice<'a>`
 
----
+- [x] delete `parser_impl.rs` (was only needed for experimentation)
 
-- [ ] migrate `fragment` to `fragment_alt` mod
+- [x] migrate `fragment` to `fragment_alt` mod
 
   - [x] rename `string_slice.rs` -> `as_str_slice.rs`
-  - [x] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: check logic & add tests
-  - [ ] `parse_fragments_in_a_line.rs` -> `parse_fragments_in_a_line_alt.rs`: fix tests & check
-        logic
+  - [x] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: fix bugs & add tests
+  - [x] `parse_fragments_in_a_line.rs` -> `parse_fragments_in_a_line_alt.rs`: fix bugs & add tests
 
 ---
 
@@ -157,6 +156,8 @@
   - [ ] `k_v`
   - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
 
+---
+
 - [ ] migrate `block` parsers into `block_alt`
 
   - [ ] block code
@@ -164,8 +165,6 @@
   - [ ] block markdown text
   - [ ] block smart list
   - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
-
-- [ ] delete `parser_impl.rs` (was only needed for experimentation)
 
 - [ ] remove `md_parser` mod and `md_parser_alt` mod is the new one; update
       `md_parser_syn_hi_impl.rs` to use this

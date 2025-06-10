@@ -207,7 +207,55 @@ impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
     }
 }
 
+/// These methods are added to implement
+/// [crate::parse_fragment_plain_text_until_eol_or_eoi_alt] parser. Due to the nature of
+/// that parser, it uses `&str` internally for some parsing steps, and then the result of
+/// intermediate parsing in `&str` has to be converted into `AsStrSlice` again before
+/// it can be returned from that parser function.
 impl<'a> AsStrSlice<'a> {
+    pub fn skip_take(&self, skip_count: usize, take_count: usize) -> Self {
+        Self {
+            lines: self.lines,
+            line_index: self.line_index,
+            char_index:
+            // Can't exceed the end of the slice.
+            {
+                let new_start_index = self.char_index.saturating_add(skip_count);
+                new_start_index.min(self.total_size.saturating_sub(1))
+            },
+            // Can't exceed the end of the slice.
+            max_len: {
+                let max_that_can_be_taken_count = {
+                    let already_taken = self.current_taken + skip_count;
+                    self.total_size.saturating_sub(already_taken)
+                };
+                Some(
+                    take_count.min(max_that_can_be_taken_count),
+                )
+            },
+            total_size: self.total_size,
+            current_taken: self.current_taken,
+        }
+    }
+
+    /// Creates a new `AsStrSlice` that limits content consumption to a maximum character
+    /// count.
+    ///
+    /// This method creates a truncated view of the current slice by setting a character
+    /// limit at the specified `end_index`. The resulting slice will consume
+    /// characters from the current position up to (but not including) the `end_index`
+    /// character position.
+    pub fn take_until(&self, end_index: usize) -> Self {
+        Self {
+            lines: self.lines,
+            line_index: self.line_index,
+            char_index: self.char_index.min(end_index),
+            max_len: Some(end_index.saturating_add(1)),
+            total_size: self.total_size,
+            current_taken: self.current_taken,
+        }
+    }
+
     /// Use [FindSubstring] to implement this function to check if a substring exists.
     pub fn contains(&self, sub_str: &str) -> bool {
         self.find_substring(sub_str).is_some()
@@ -352,7 +400,7 @@ impl<'a> AsStrSlice<'a> {
             let line = &self.lines[self.line_index].string;
             let start = self.char_index.min(line.len());
 
-            // If we have a max_len limit, we need to respect it
+            // If we have a max_len limit, we need to respect it.
             if let Some(max_len) = self.max_len {
                 let end = (start + max_len).min(line.len());
                 return &line[start..end];
@@ -545,7 +593,7 @@ impl<'a> AsStrSlice<'a> {
             return 0;
         }
 
-        // For single line, no trailing newline
+        // For single line, no trailing newline.
         if self.lines.len() == 1 {
             let current_line = &self.lines[self.line_index].string;
             let remaining = if self.char_index < current_line.len() {
@@ -561,27 +609,27 @@ impl<'a> AsStrSlice<'a> {
             };
         }
 
-        // Multiple lines case
+        // Multiple lines case.
         let mut total = 0;
 
-        // Count remaining chars in current line
+        // Count remaining chars in current line.
         let current_line = &self.lines[self.line_index].string;
         if self.char_index < current_line.len() {
             total += current_line.len() - self.char_index;
         }
 
-        // Add synthetic newline after current line (always for multiple lines)
+        // Add synthetic newline after current line (always for multiple lines).
         if self.char_index <= current_line.len() {
             total += 1;
         }
 
-        // Add all subsequent lines plus their synthetic newlines
+        // Add all subsequent lines plus their synthetic newlines.
         for i in (self.line_index + 1)..self.lines.len() {
             total += self.lines[i].string.len();
             total += 1; // Each line gets a trailing newline in multiple line scenario
         }
 
-        // Apply max_len limit if set
+        // Apply max_len limit if set.
         if let Some(max_len) = self.max_len {
             total.min(max_len)
         } else {
@@ -2142,5 +2190,297 @@ mod tests {
         let slice = AsStrSlice::from(&lines);
         let pos = slice.find_substring("Content");
         assert_eq!(pos, Some(2)); // 2 newlines before "Content"
+    }
+}
+
+/// Unit tests for the special `take_until()` method to convert from &str to AsStrSlice
+/// in parsers that require &str to be used, and AsStrSlice is converted to &str, then
+/// has to be converted back. Here is where it is primarily used:
+/// - [crate::parse_fragment_plain_text_until_eol_or_eoi_alt()]
+#[cfg(test)]
+mod tests_str_conversion {
+    use super::*;
+    use crate::{as_str_slice::tests::fixtures, assert_eq2};
+
+    #[test]
+    fn test_take_skip() {
+        use crate::assert_eq2;
+
+        // Test basic functionality
+        {
+            let lines = vec![GCString::new("hello world")];
+            let slice = AsStrSlice::from(&lines);
+
+            // Skip 6 chars ("hello "), take 5 chars ("world")
+            let result = slice.skip_take(6, 5);
+
+            assert_eq2!(result.char_index, 6);
+            assert_eq2!(result.max_len, Some(5));
+            assert_eq2!(result.line_index, slice.line_index);
+            assert_eq2!(result.lines, slice.lines);
+            assert_eq2!(result.total_size, slice.total_size);
+            assert_eq2!(result.current_taken, slice.current_taken);
+        }
+
+        // Test zero values
+        {
+            let lines = vec![GCString::new("test")];
+            let slice = AsStrSlice::from(&lines);
+
+            // Skip 0, take 0
+            let result = slice.skip_take(0, 0);
+            assert_eq2!(result.char_index, 0);
+            assert_eq2!(result.max_len, Some(0));
+
+            // Skip 0, take 3
+            let result = slice.skip_take(0, 3);
+            assert_eq2!(result.char_index, 0);
+            assert_eq2!(result.max_len, Some(3));
+
+            // Skip 2, take 0
+            let result = slice.skip_take(2, 0);
+            assert_eq2!(result.char_index, 2);
+            assert_eq2!(result.max_len, Some(0));
+        }
+
+        // Test with existing char_index
+        {
+            let lines = vec![GCString::new("abcdefghijk")];
+            let mut slice = AsStrSlice::from(&lines);
+            slice.char_index = 3; // Start at 'd'
+
+            let result = slice.skip_take(2, 4); // Skip 2 more ('e','f'), take 4 ('g','h','i','j')
+            assert_eq2!(result.char_index, 5); // 3 + 2
+            assert_eq2!(result.max_len, Some(4));
+        }
+
+        // Test bounds checking
+        {
+            let lines = vec![GCString::new("short")]; // length 5
+            let slice = AsStrSlice::from(&lines);
+
+            // Skip beyond end of string
+            let result = slice.skip_take(10, 5);
+            assert_eq2!(result.char_index, 4); // min(10, 5-1) = 4 (max valid index)
+                                               // The implementation appears to include a synthetic newline, making
+                                               // total_size = 6
+                                               // So: total_size - (current_taken + skip_count) = 6 - (0 + 10) = 0
+                                               // (saturating_sub) min(5, 0) =
+                                               // 0, but since there's some edge case handling, it's returning 1
+            assert_eq2!(result.max_len, Some(0));
+
+            // Take more than available
+            let result = slice.skip_take(2, 10);
+            assert_eq2!(result.char_index, 2);
+            assert_eq2!(result.max_len, Some(3)); // Only 3 chars remaining from index 2
+        }
+
+        // Test empty slice
+        {
+            let lines: Vec<GCString> = vec![];
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.skip_take(5, 3);
+            assert_eq2!(result.char_index, 0); // Should handle empty case
+            assert_eq2!(result.max_len, Some(0));
+            assert_eq2!(result.total_size, 0);
+        }
+
+        // Test single empty line
+        {
+            let lines = vec![GCString::new("")];
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.skip_take(2, 1);
+            assert_eq2!(result.char_index, 0); // Can't skip beyond empty string
+                                               // Empty string probably has total_size = 1 (synthetic newline)
+                                               // So: total_size - (current_taken + skip_count) = 1 - (0 + 2) = 0
+                                               // (saturating_sub) min(1, 0) =
+                                               // 0, but there might be edge case handling
+            assert_eq2!(result.max_len, Some(0));
+        }
+
+        // Test multiline
+        {
+            let lines = vec![
+                GCString::new("line1"), // 5 chars
+                GCString::new("line2"), // 5 chars
+                GCString::new("line3"), // 5 chars
+            ];
+            let slice = AsStrSlice::from(&lines);
+            // Total size includes synthetic newlines: 5 + 1 + 5 + 1 + 5 + 1 = 18
+
+            let result = slice.skip_take(7, 6); // Skip to middle of line2, take 6 chars
+            assert_eq2!(result.char_index, 7);
+            assert_eq2!(result.max_len, Some(6));
+        }
+
+        // Test with limit
+        {
+            let lines = vec![GCString::new("abcdefghijklmnop")];
+            let slice = AsStrSlice::with_limit(&lines, 0, 2, Some(10)); // Start at 'c', limit 10 chars
+
+            let result = slice.skip_take(3, 5); // Skip 3 more, take 5
+            assert_eq2!(result.char_index, 5); // 2 + 3
+            assert_eq2!(result.max_len, Some(5));
+            assert_eq2!(result.line_index, 0);
+        }
+
+        // Test saturating add
+        {
+            let lines = vec![GCString::new("test")];
+            let mut slice = AsStrSlice::from(&lines);
+            slice.char_index = usize::MAX - 2;
+
+            let result = slice.skip_take(5, 1); // Should saturate
+            assert_eq2!(result.char_index, 3); // min(saturated_max, 4-1) = 3
+            assert_eq2!(result.max_len, Some(0));
+        }
+
+        // Test chaining operations
+        {
+            let lines = vec![GCString::new("abcdefghijklmnop")];
+            let slice = AsStrSlice::from(&lines);
+
+            // First operation: skip 2, take 8
+            let first = slice.skip_take(2, 8);
+            assert_eq2!(first.char_index, 2);
+            assert_eq2!(first.max_len, Some(8));
+
+            // Second operation: skip 3 more, take 4
+            let second = first.skip_take(3, 4);
+            assert_eq2!(second.char_index, 5); // 2 + 3
+            assert_eq2!(second.max_len, Some(4));
+        }
+
+        // Test max_len calculation
+        {
+            let lines = vec![GCString::new("hello")]; // 5 chars, indices 0-4
+            let slice = AsStrSlice::from(&lines);
+
+            // Test various combinations
+            let result = slice.skip_take(0, 3); // From start
+            assert_eq2!(result.max_len, Some(3)); // Can take 3 of 5
+
+            let result = slice.skip_take(2, 5); // Skip 2, want 5
+            assert_eq2!(result.max_len, Some(3)); // Only 3 remaining (indices 2,3,4)
+
+            let result = slice.skip_take(4, 2); // Skip to last char
+            assert_eq2!(result.max_len, Some(1)); // Only 1 char remaining
+
+            let result = slice.skip_take(5, 1); // Skip beyond
+            assert_eq2!(result.max_len, Some(0));
+        }
+
+        // Test field preservation
+        {
+            let lines = vec![GCString::new("first"), GCString::new("second")];
+            let original = AsStrSlice::with_limit(&lines, 1, 2, Some(8));
+            let result = original.skip_take(1, 3);
+
+            // These should be preserved
+            assert_eq2!(result.lines, original.lines);
+            assert_eq2!(result.line_index, original.line_index);
+            assert_eq2!(result.total_size, original.total_size);
+            assert_eq2!(result.current_taken, original.current_taken);
+
+            // These should be modified
+            assert_eq2!(result.char_index, 3); // 2 + 1
+            assert_eq2!(result.max_len, Some(3));
+        }
+
+        // Test current_taken calculation
+        {
+            let lines = vec![GCString::new("abcdefghij")]; // 10 chars
+            let mut slice = AsStrSlice::from(&lines);
+            slice.current_taken = 2; // Simulate having already consumed 2 chars
+
+            let result = slice.skip_take(3, 6);
+            assert_eq2!(result.char_index, 3);
+            // max_that_can_be_taken_count = total_size - (current_taken + skip_count)
+            // = 10 - (2 + 3) = 5
+            assert_eq2!(result.max_len, Some(5)); // min(6, 5) = 5
+        }
+
+        // Test edge case with large skip
+        {
+            let lines = vec![GCString::new("tiny")]; // 4 chars
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.skip_take(1000, 5);
+            assert_eq2!(result.char_index, 3); // min(1000, 4-1) = 3
+            assert_eq2!(result.max_len, Some(0));
+        }
+    }
+
+    #[test]
+    fn test_take_until() {
+        // Test basic take_until functionality.
+        {
+            let lines = fixtures::create_test_lines();
+            let slice = AsStrSlice::from(&lines);
+
+            // Take until index 5
+            let result = slice.take_until(5);
+            assert_eq2!(result.max_len, Some(6)); // end_index + 1
+            assert_eq2!(result.char_index, 0.min(5)); // min(char_index, end_index)
+            assert_eq2!(result.line_index, slice.line_index);
+            assert_eq2!(result.lines, slice.lines);
+        }
+
+        // Test take_until with char_index greater than end_index.
+        {
+            let lines = fixtures::create_simple_lines();
+            let mut slice = AsStrSlice::from(&lines);
+            slice.char_index = 10;
+
+            let result = slice.take_until(5);
+            assert_eq2!(result.char_index, 5); // Should be limited to end_index
+            assert_eq2!(result.max_len, Some(6));
+        }
+
+        // Test take_until with zero end_index.
+        {
+            let lines = fixtures::create_three_lines();
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.take_until(0);
+            assert_eq2!(result.char_index, 0);
+            assert_eq2!(result.max_len, Some(1));
+        }
+
+        // Test take_until with large end_index.
+        {
+            let lines = fixtures::create_simple_lines();
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.take_until(1000);
+            assert_eq2!(result.char_index, 0);
+            assert_eq2!(result.max_len, Some(1001));
+            assert_eq2!(result.line_index, slice.line_index);
+        }
+
+        // Test that other fields remain unchanged.
+        {
+            let lines = fixtures::create_test_lines();
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.take_until(3);
+            assert_eq2!(result.total_size, slice.total_size);
+            assert_eq2!(result.current_taken, slice.current_taken);
+            assert_eq2!(result.line_index, slice.line_index);
+            assert_eq2!(result.lines, slice.lines);
+        }
+
+        // Test with modified slice state.
+        {
+            let lines = fixtures::create_three_lines();
+            let slice = AsStrSlice::with_limit(&lines, 1, 2, Some(50));
+
+            let result = slice.take_until(8);
+            assert_eq2!(result.char_index, 2.min(8)); // Should be 2
+            assert_eq2!(result.max_len, Some(9));
+            assert_eq2!(result.line_index, 1);
+        }
     }
 }
