@@ -63,7 +63,7 @@ use crate::{fg_green,
 /// etc.
 /// ```
 ///
-/// To see this in action, set the [crate::DEBUG_MD_PARSER_STDOUT] to true, and run all
+/// To see this in action, set the [crate::DEBUG_MD_PARSER] to true, and run all
 /// the tests in this file.
 #[rustfmt::skip]
 pub fn parse_inline_fragments_until_eol_or_eoi_alt<'a>(
@@ -89,7 +89,7 @@ pub fn parse_inline_fragments_until_eol_or_eoi_alt<'a>(
         )).parse(input_clone.clone()),
         CheckboxParsePolicy::ParseCheckbox => alt((
             map(parse_fragment_starts_with_underscore_err_on_new_line_alt,  |s| MdLineFragment::Italic(s.extract_remaining_text_content_in_line())),
-            map(parse_fragment_starts_with_star_err_on_new_line_alt,       |s| MdLineFragment::Bold(s.extract_remaining_text_content_in_line())),
+            map(parse_fragment_starts_with_star_err_on_new_line_alt,        |s| MdLineFragment::Bold(s.extract_remaining_text_content_in_line())),
             map(parse_fragment_starts_with_backtick_err_on_new_line_alt,    |s| MdLineFragment::InlineCode(s.extract_remaining_text_content_in_line())),
             map(parse_fragment_starts_with_left_image_err_on_new_line_alt,  MdLineFragment::Image),
             map(parse_fragment_starts_with_left_link_err_on_new_line_alt,   MdLineFragment::Link),
@@ -178,11 +178,13 @@ mod tests_parse_fragment {
         let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
         let (rem, out) = res.unwrap();
 
+        println!("rem.to_inline_string()(): {:#?}", rem.to_inline_string());
         println!(
             "rem.extract_remaining_text_content_in_line(): {:#?}",
             rem.extract_remaining_text_content_in_line()
         );
 
+        println!("out.inline_string()(): {:#?}", out.to_inline_string());
         println!(
             "out.extract_remaining_text_content_in_line(): {:#?}",
             out.extract_remaining_text_content_in_line()
@@ -190,7 +192,7 @@ mod tests_parse_fragment {
 
         assert_eq2!(rem.lines.len(), 1);
         assert_eq2!(rem.line_index, 0);
-        assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+        assert_eq2!(rem.extract_remaining_text_content_in_line(), "\n");
 
         assert_eq2!(out.lines.len(), 1);
         assert_eq2!(out.line_index, 0);
