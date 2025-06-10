@@ -26,11 +26,11 @@
 //! functions in this module.
 
 // Attach sources.
+pub mod as_str_slice;
 pub mod extended_alt;
 pub mod fragment_alt;
-pub mod string_slice;
 
 // Re-export.
+pub use as_str_slice::*;
 pub use extended_alt::*;
 pub use fragment_alt::*;
-pub use string_slice::*;

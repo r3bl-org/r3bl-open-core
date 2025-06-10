@@ -44,13 +44,13 @@
 - [x] use the correct method signatures for (most) parsers
 
   ```rust
-  fn f<'a>(i: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {}
+  fn f<'a>(input: AsStrSlice<'a>) -> IResult</* rem */ AsStrSlice<'a>, /* output */ AsStrSlice<'a>> {}
   ```
 
   instead of:
 
   ```rust
-  fn f<'a, I>(input: I) -> IResult<I, I>
+  fn f<'a, I>(input: I) -> IResult</* rem */ I, /* output */ I>
   where
         I: Input + Clone + Compare<&'a str> + Offset + Debug,
         I::Item: AsChar + Copy
@@ -144,7 +144,8 @@
 
 - [ ] migrate `fragment` to `fragment_alt` mod
 
-  - [ ] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: fix tests & check logic
+  - [x] rename `string_slice.rs` -> `as_str_slice.rs`
+  - [x] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: check logic & add tests
   - [ ] `parse_fragments_in_a_line.rs` -> `parse_fragments_in_a_line_alt.rs`: fix tests & check
         logic
 

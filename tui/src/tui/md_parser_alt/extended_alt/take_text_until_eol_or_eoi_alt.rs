@@ -25,6 +25,9 @@ use nom::{branch::alt,
 
 use crate::{md_parser::constants::NEW_LINE, AsStrSlice, NomError};
 
+/// This returns a function, which implements [Parser]. So call `input()` on it
+/// or pass it to other `nom` combination functions.
+/// 
 /// Take text until an optional EOL character is found, or end of input is reached. If an
 /// EOL character is found:
 /// - The EOL character is not included in the output.
@@ -39,7 +42,7 @@ use crate::{md_parser::constants::NEW_LINE, AsStrSlice, NomError};
 /// | `"Hello, world!\n"` | `"\n"`         | `"Hello, world!"` |
 /// | `"Hello, world!"`   | `""`           | `"Hello, world!"` |
 #[rustfmt::skip]
-pub fn take_text_until_eol_or_eoi_alt<'a>() ->
+pub fn parser_take_text_until_eol_or_eoi_alt<'a>() ->
     impl Parser<AsStrSlice<'a>, Output = AsStrSlice<'a>, Error = NomError<AsStrSlice<'a>>>
 {
     recognize( /* match anychar up until a denied string below is encountered */
@@ -79,7 +82,9 @@ mod test_text_until_opt_eol {
         {
             let input_raw = &[GCString::new("Hello, world!\n")];
             let input = AsStrSlice::from(input_raw);
-            let (rem, output) = take_text_until_eol_or_eoi_alt().parse(input).unwrap();
+            let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
+                .parse(input)
+                .unwrap();
             println!("{:8}: {:?}", "input", input_raw);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
@@ -94,7 +99,9 @@ mod test_text_until_opt_eol {
         {
             let input_raw = &[GCString::new("Hello, world!")];
             let input = AsStrSlice::from(input_raw);
-            let (rem, output) = take_text_until_eol_or_eoi_alt().parse(input).unwrap();
+            let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
+                .parse(input)
+                .unwrap();
             println!("\n{:8}: {:?}", "input", input_raw);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
@@ -106,7 +113,9 @@ mod test_text_until_opt_eol {
         {
             let input_raw = &[GCString::new("\nfoo\nbar")];
             let input = AsStrSlice::from(input_raw);
-            let (rem, output) = take_text_until_eol_or_eoi_alt().parse(input).unwrap();
+            let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
+                .parse(input)
+                .unwrap();
             println!("\n{:8}: {:?}", "input", input_raw);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
