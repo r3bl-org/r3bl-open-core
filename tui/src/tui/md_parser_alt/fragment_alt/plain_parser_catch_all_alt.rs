@@ -265,7 +265,7 @@ fn try_parse_single_special_char<'a>(
                 let new_output = input.take(output_len);
                 let new_rem = input.skip_take(
                     /* skip this many */ output_len,
-                    /* take this manny */ rem_len,
+                    /* take this many */ rem_len,
                 );
 
                 return Some(Ok((new_rem, new_output)));

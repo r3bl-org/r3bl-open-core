@@ -43,7 +43,8 @@ use crate::{fg_green,
             AsStrSlice,
             CheckboxParsePolicy,
             MdLineFragment,
-            DEBUG_MD_PARSER};
+            DEBUG_MD_PARSER,
+            core::tui_core::units::idx};
 
 // XMARK: Parser for a single line of markdown
 
@@ -191,11 +192,11 @@ mod tests_parse_fragment {
         );
 
         assert_eq2!(rem.lines.len(), 1);
-        assert_eq2!(rem.line_index, 0);
+        assert_eq2!(rem.line_index, idx(0));
         assert_eq2!(rem.extract_remaining_text_content_in_line(), "\n");
 
         assert_eq2!(out.lines.len(), 1);
-        assert_eq2!(out.line_index, 0);
+        assert_eq2!(out.line_index, idx(0));
         assert_eq2!(out.extract_remaining_text_content_in_line(), "- straight😃");
     }
 
