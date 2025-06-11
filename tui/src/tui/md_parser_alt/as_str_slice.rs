@@ -18,7 +18,10 @@ use std::{borrow::Cow, fmt::Display};
 
 use nom::{Compare, CompareResult, FindSubstring, Input, Offset};
 
-use crate::{constants::{NEW_LINE, NEW_LINE_CHAR},
+use crate::{constants::NEW_LINE_CHAR,
+            core::tui_core::units::{idx, len, Index, Length},
+            BoundsCheck,
+            BoundsStatus,
             DocumentStorage,
             GCString,
             ParserByteCache,
@@ -136,25 +139,25 @@ where
 
     /// Position tracking: (line_index, char_index_within_line).
     /// Special case: if char_index == line.len(), we're at the synthetic newline.
-    pub line_index: usize,
+    pub line_index: Index,
 
     /// This represents the character index within the current line. It is:
     /// - Used with `line.chars().nth(self.char_index)` to get characters.
     /// - Compared with line_char_count (from `line.chars().count()`).
     /// - Incremented by 1 to advance to the next character.
     /// - Reset to 0 when moving to a new line.
-    pub char_index: usize,
+    pub char_index: Index,
 
     /// Optional maximum length limit for the slice. This is needed for
     /// [AsStrSlice::take()] to work.
-    pub max_len: Option<usize>,
+    pub max_len: Option<Length>,
 
     /// Total number of characters across all lines (including synthetic newlines).
     /// For multiple lines, includes trailing newline after the last line.
-    pub total_size: usize,
+    pub total_size: Length,
 
     /// Number of characters consumed from the beginning.
-    pub current_taken: usize,
+    pub current_taken: Length,
 }
 
 /// Implement [From] trait to allow automatic conversion from &[GCString] to
@@ -164,11 +167,11 @@ impl<'a> From<&'a [GCString]> for AsStrSlice<'a> {
         let total_size = Self::calculate_total_size(lines);
         Self {
             lines,
-            line_index: 0,
-            char_index: 0,
+            line_index: idx(0),
+            char_index: idx(0),
             max_len: None,
-            total_size,
-            current_taken: 0,
+            total_size: len(total_size),
+            current_taken: len(0),
         }
     }
 }
@@ -182,11 +185,11 @@ impl<'a, const N: usize> From<&'a [GCString; N]> for AsStrSlice<'a> {
         let total_size = Self::calculate_total_size(lines_slice);
         Self {
             lines: lines_slice,
-            line_index: 0,
-            char_index: 0,
+            line_index: idx(0),
+            char_index: idx(0),
             max_len: None,
-            total_size,
-            current_taken: 0,
+            total_size: len(total_size),
+            current_taken: len(0),
         }
     }
 }
@@ -198,12 +201,113 @@ impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
         let total_size = Self::calculate_total_size(lines);
         Self {
             lines,
-            line_index: 0,
-            char_index: 0,
+            line_index: idx(0),
+            char_index: idx(0),
             max_len: None,
-            total_size,
-            current_taken: 0,
+            total_size: len(total_size),
+            current_taken: len(0),
         }
+    }
+}
+
+pub mod synthetic_new_line_for_current_char {
+    use super::*;
+
+    /// Determine the position state relative to the current line.
+    pub fn determine_position_state(this: &AsStrSlice<'_>, line: &str) -> PositionState {
+        match this.char_index.as_usize() {
+            pos if pos < line.len() => PositionState::WithinLineContent,
+            pos if pos == line.len() => PositionState::AtEndOfLine,
+            _ => PositionState::PastEndOfLine,
+        }
+    }
+
+    /// Determine the document state based on the number of lines.
+    pub fn determine_document_state(lines_len: usize) -> DocumentState {
+        match lines_len {
+            1 => DocumentState::SingleLine,
+            _ => DocumentState::MultipleLines,
+        }
+    }
+
+    /// Determine the line location in the document.
+    pub fn determine_line_location(
+        line_index: Index,
+        lines_len: Length,
+    ) -> LineLocationInDocument {
+        match line_index < lines_len.convert_to_index() {
+            true => LineLocationInDocument::HasMoreLinesAfter,
+            false => LineLocationInDocument::LastLine,
+        }
+    }
+
+    /// Helper method to get character at current position within line content.
+    pub fn get_char_at_position(this: &AsStrSlice<'_>, line: &str) -> Option<char> {
+        // Need to convert byte index to character
+        let mut char_iter = line.char_indices();
+        let mut current_byte_pos = 0;
+
+        while let Some((byte_pos, ch)) = char_iter.next() {
+            if byte_pos == this.char_index.as_usize() {
+                return Some(ch);
+            }
+            if byte_pos > this.char_index.as_usize() {
+                break;
+            }
+            current_byte_pos = byte_pos;
+        }
+
+        // If we didn't find an exact match, return the character at the closest byte
+        // position
+        if current_byte_pos < this.char_index.as_usize() && current_byte_pos < line.len()
+        {
+            line[current_byte_pos..].chars().next()
+        } else {
+            None
+        }
+    }
+
+    /// Helper method to determine if we should return a synthetic newline character.
+    pub fn get_synthetic_newline_char(this: &AsStrSlice<'_>) -> Option<char> {
+        if this.line_index.as_usize() < this.lines.len() - 1 {
+            // There are more lines, return synthetic newline
+            Some(NEW_LINE_CHAR)
+        } else if this.lines.len() > 1 {
+            // We're at the last line of multiple lines, add trailing newline
+            Some(NEW_LINE_CHAR)
+        } else {
+            // Single line, no trailing newline
+            None
+        }
+    }
+
+    /// Represents the position state relative to the current line.
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    pub enum PositionState {
+        /// Character index is within the line content (char_index < line.len())
+        WithinLineContent,
+        /// Character index is at the end of the line (char_index == line.len())
+        AtEndOfLine,
+        /// Character index is past the end of the line (char_index > line.len())
+        PastEndOfLine,
+    }
+
+    /// Represents the document structure.
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    pub enum DocumentState {
+        /// Only one line in the document - no synthetic newlines
+        SingleLine,
+        /// Multiple lines in the document - synthetic newlines between and after lines
+        MultipleLines,
+    }
+
+    /// Represents the line position in the document.
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    pub enum LineLocationInDocument {
+        /// We're at a line that has more lines after it
+        HasMoreLinesAfter,
+        /// We're at the very last line in the document
+        LastLine,
     }
 }
 
@@ -213,24 +317,33 @@ impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
 /// intermediate parsing in `&str` has to be converted into `AsStrSlice` again before
 /// it can be returned from that parser function.
 impl<'a> AsStrSlice<'a> {
-    pub fn skip_take(&self, skip_count: usize, take_count: usize) -> Self {
+    pub fn skip_take(
+        &self,
+        arg_skip_count: impl Into<Length>,
+        arg_take_count: impl Into<Length>,
+    ) -> Self {
+        let skip_count: Length = arg_skip_count.into();
+        let take_count: Length = arg_take_count.into();
+
         Self {
             lines: self.lines,
             line_index: self.line_index,
             char_index:
-            // Can't exceed the end of the slice.
+            // Can't exceed the end of the slice. Set the new char_index
+            // based on the current char_index and skip_count.
             {
-                let new_start_index = self.char_index.saturating_add(skip_count);
-                new_start_index.min(self.total_size.saturating_sub(1))
+                let new_start_index_after_skip = self.char_index + skip_count;
+                let max_index = self.total_size.convert_to_index();
+                new_start_index_after_skip.min(max_index)
             },
-            // Can't exceed the end of the slice.
-            max_len: {
-                let max_that_can_be_taken_count = {
-                    let already_taken = self.current_taken + skip_count;
-                    self.total_size.saturating_sub(already_taken)
-                };
+            max_len:
+            // Can't exceed the end of the slice. This is the maximum length
+            // that can be taken after the new char_index is set.
+            {
+                let consumed_after_skip = self.current_taken + skip_count;
+                let available_space_after_skip = self.total_size - consumed_after_skip;
                 Some(
-                    take_count.min(max_that_can_be_taken_count),
+                    take_count.min(available_space_after_skip)
                 )
             },
             total_size: self.total_size,
@@ -245,12 +358,18 @@ impl<'a> AsStrSlice<'a> {
     /// limit at the specified `end_index`. The resulting slice will consume
     /// characters from the current position up to (but not including) the `end_index`
     /// character position.
-    pub fn take_until(&self, end_index: usize) -> Self {
+    pub fn take_until(&self, arg_end_index: impl Into<Index>) -> Self {
+        let end_index: Index = arg_end_index.into();
+        let new_char_index = self.char_index.min(end_index);
+
         Self {
             lines: self.lines,
             line_index: self.line_index,
-            char_index: self.char_index.min(end_index),
-            max_len: Some(end_index.saturating_add(1)),
+            char_index: new_char_index,
+            max_len: {
+                let max_until_end = *end_index - *new_char_index;
+                Some(len(max_until_end))
+            },
             total_size: self.total_size,
             current_taken: self.current_taken,
         }
@@ -341,12 +460,15 @@ impl<'a> AsStrSlice<'a> {
     /// Create a new slice with a maximum length limit.
     pub fn with_limit(
         lines: &'a [GCString],
-        start_line: usize,
-        start_char: usize,
-        max_len: Option<usize>,
+        arg_start_line: impl Into<Index>,
+        arg_start_char: impl Into<Index>,
+        max_len: Option<Length>,
     ) -> Self {
+        let start_line: Index = arg_start_line.into();
+        let start_char: Index = arg_start_char.into();
         let total_size = Self::calculate_total_size(lines);
         let current_taken = Self::calculate_current_taken(lines, start_line, start_char);
+
         Self {
             lines,
             line_index: start_line,
@@ -394,30 +516,50 @@ impl<'a> AsStrSlice<'a> {
     /// - **Embedded newlines**: Don't do any special handling or processing of [NEW_LINE]
     ///   chars inside the current line.
     pub fn extract_remaining_text_content_in_line(&self) -> &'a str {
-        // If we're looking at a slice with a valid line index, we can extract text from
-        // that line.
-        if self.line_index < self.lines.len() {
-            let line = &self.lines[self.line_index].string;
-            let start = self.char_index.min(line.len());
+        // Early returns for edge cases.
+        {
+            if self.lines.is_empty() {
+                return "";
+            }
 
-            // If we have a max_len limit, we need to respect it.
+            if self.line_index.check_overflows(len(self.lines.len()))
+                == BoundsStatus::Overflowed
+            {
+                return "";
+            }
+
             if let Some(max_len) = self.max_len {
-                let end = (start + max_len).min(line.len());
-                return &line[start..end];
+                if max_len == len(0) {
+                    return "";
+                }
             }
-
-            // If we're at the beginning of a line, return the whole line.
-            if start == 0 {
-                return line;
-            }
-
-            // Simply return the remaining content from the current position to the end of
-            // the line This works for all cases, including lines with
-            // embedded newlines.
-            return &line[start..];
         }
 
-        ""
+        // Early return if current_line does not exist.
+        let Some(current_line) = self.lines.get(self.line_index.as_usize()) else {
+            return "";
+        };
+
+        let current_line = current_line.as_ref();
+        let start_col_index = self.char_index.as_usize();
+
+        // If we're past the end of the line, return empty.
+        if self.char_index.check_overflows(len(current_line.len()))
+            == BoundsStatus::Overflowed
+        {
+            return "";
+        }
+
+        let eol = current_line.len();
+        let end_col_index = match self.max_len {
+            None => eol,
+            Some(max_len) => {
+                let limit = start_col_index + max_len.as_usize();
+                (eol).min(limit) // This ensures end_col <= eol
+            }
+        };
+
+        &current_line[start_col_index..end_col_index]
     }
 
     /// For multiline content this will allocate, since there is no contiguous chunk of
@@ -441,171 +583,196 @@ impl<'a> AsStrSlice<'a> {
     /// This method behaves similarly to the Display trait implementation but respects
     /// the current position (line_index, char_index) and max_len limit.
     pub fn extract_remaining_text_content_to_end(&self) -> Cow<'a, str> {
-        if self.line_index >= self.lines.len() {
+        // Early return for invalid line_index (it has gone beyond the available lines in
+        // the slice).
+        if self.line_index.check_overflows(len(self.lines.len()))
+            == BoundsStatus::Overflowed
+        {
             return Cow::Borrowed("");
         }
 
-        // For single line case, we can potentially return borrowed content
+        // For single line case, we can potentially return borrowed content.
         if self.lines.len() == 1 {
-            let line = &self.lines[0].string;
-            let start = self.char_index.min(line.len());
+            let current_line = &self.lines[0].string;
 
-            // Check if we're already at the end
-            if start >= line.len() {
+            // Check if we're already at the end.
+            if self.char_index.check_overflows(len(current_line.len()))
+                == BoundsStatus::Overflowed
+            {
                 return Cow::Borrowed("");
             }
 
-            let end = if let Some(max_len) = self.max_len {
-                (start + max_len).min(line.len())
-            } else {
-                line.len()
+            let start_col_index = self.char_index.as_usize();
+
+            let eol = current_line.len();
+            let end_col_index = match self.max_len {
+                None => eol,
+                Some(max_len) => {
+                    let limit = start_col_index + max_len.as_usize();
+                    (eol).min(limit)
+                }
             };
 
-            return Cow::Borrowed(&line[start..end]);
+            return Cow::Borrowed(&current_line[start_col_index..end_col_index]);
         }
 
-        // Multi-line case: need to allocate and use synthetic newlines
-        let mut result = String::new();
-        let mut current = self.clone();
+        // Multi-line case: need to allocate and use synthetic newlines.
+        let mut acc = String::new();
+        let mut self_clone = self.clone();
 
-        while let Some(ch) = current.current_char() {
-            result.push(ch);
-            current.advance();
+        while let Some(ch) = self_clone.current_char() {
+            acc.push(ch);
+            self_clone.advance();
         }
 
-        if result.is_empty() {
+        if acc.is_empty() {
             Cow::Borrowed("")
         } else {
-            Cow::Owned(result)
+            Cow::Owned(acc)
         }
     }
 
     /// Get the current character without materializing the full string.
     pub fn current_char(&self) -> Option<char> {
+        use synthetic_new_line_for_current_char::{determine_position_state,
+                                                  get_char_at_position,
+                                                  get_synthetic_newline_char,
+                                                  PositionState};
+
         // Check if we've hit the max_len limit
         if let Some(max_len) = self.max_len {
-            if max_len == 0 {
+            if max_len == len(0) {
                 return None;
             }
         }
 
-        if self.line_index >= self.lines.len() {
+        // Early return for empty lines
+        if self.lines.is_empty() {
             return None;
         }
 
-        let line = &self.lines[self.line_index].string;
+        // Early return for invalid line_index (it has gone beyond the available lines in
+        // the slice).
+        if self.line_index.check_overflows(len(self.lines.len()))
+            == BoundsStatus::Overflowed
+        {
+            return None;
+        }
 
-        if self.char_index < line.len() {
-            // We're within the line content
-            // Need to convert byte index to character
-            let mut char_iter = line.char_indices();
-            let mut current_byte_pos = 0;
-
-            while let Some((byte_pos, ch)) = char_iter.next() {
-                if byte_pos == self.char_index {
-                    return Some(ch);
-                }
-                if byte_pos > self.char_index {
-                    break;
-                }
-                current_byte_pos = byte_pos;
-            }
-
-            // If we didn't find an exact match, return the character at the closest byte
-            // position
-            if current_byte_pos < self.char_index && current_byte_pos < line.len() {
-                line[current_byte_pos..].chars().next()
-            } else {
-                None
-            }
-        } else if self.char_index == line.len() {
-            // We're at the end of the line
-            if self.line_index < self.lines.len() - 1 {
-                // There are more lines, return synthetic newline
-                Some(NEW_LINE_CHAR)
-            } else if self.lines.len() > 1 {
-                // We're at the last line of multiple lines, add trailing newline
-                Some(NEW_LINE_CHAR)
-            } else {
-                // Single line, no trailing newline
-                None
-            }
-        } else {
-            // We're past the end of the line and any synthetic newline
-            None
+        // Determine position state relative to the current line.
+        let current_line = &self.lines[self.line_index.as_usize()].string;
+        let position_state = determine_position_state(self, current_line);
+        match position_state {
+            PositionState::WithinLineContent => get_char_at_position(self, current_line),
+            PositionState::AtEndOfLine => get_synthetic_newline_char(self),
+            PositionState::PastEndOfLine => None,
         }
     }
 
     /// Advance position by one character.
     pub fn advance(&mut self) {
-        // Check if we've hit the max_len limit
-        if let Some(max_len) = self.max_len {
-            if max_len == 0 {
-                return;
-            }
-            // Decrement max_len as we advance
-            self.max_len = Some(max_len - 1);
-        }
+        use synthetic_new_line_for_current_char::{determine_position_state,
+                                                  PositionState};
 
-        if self.line_index >= self.lines.len() {
+        // Return early if the line index exceeds the available lines.
+        if self.line_index.check_overflows(len(self.lines.len()))
+            == BoundsStatus::Overflowed
+        {
             return;
         }
 
-        let line = &self.lines[self.line_index].string;
-
-        if self.char_index < line.len() {
-            // Move to next character within the line
-            // Need to handle multi-byte UTF-8 characters correctly
-            let mut char_iter = line.char_indices();
-            let mut next_byte_pos = line.len(); // Default to end of line
-
-            // Find the next character's byte position
-            while let Some((byte_pos, _)) = char_iter.next() {
-                if byte_pos > self.char_index {
-                    next_byte_pos = byte_pos;
-                    break;
-                }
+        // Check if we've hit the max_len limit.
+        if let Some(max_len) = self.max_len {
+            if max_len == len(0) {
+                return;
             }
-
-            // Advance to the next character's byte position
-            self.char_index = next_byte_pos;
-            self.current_taken += 1;
-        } else if self.char_index == line.len() {
-            // We're at the end of the line
-            if self.line_index < self.lines.len() - 1 {
-                // There are more lines, advance past synthetic newline to next line
-                self.line_index += 1;
-                self.char_index = 0;
-                self.current_taken += 1;
-            } else if self.lines.len() > 1 {
-                // We're at the last line of multiple lines, advance past trailing newline
-                self.char_index += 1; // Move past the synthetic trailing newline
-                self.current_taken += 1;
-            }
-            // For single line, don't advance further
+            // Decrement max_len as we advance.
+            self.max_len = Some(max_len - len(1));
         }
-        // If we're past the end, don't advance further
+
+        let current_line = &self.lines[self.line_index.as_usize()].string;
+
+        // Determine position state and handle advancement accordingly.
+        let position_state = determine_position_state(self, current_line);
+
+        match position_state {
+            PositionState::WithinLineContent => {
+                // Move to next character within the line.
+                // Need to handle multi-byte UTF-8 characters correctly.
+                let mut char_iter = current_line.char_indices();
+                let mut next_byte_pos = current_line.len(); // Default to end of line
+
+                // Find the next character's byte position
+                while let Some((byte_pos, _)) = char_iter.next() {
+                    if byte_pos > self.char_index.as_usize() {
+                        next_byte_pos = byte_pos;
+                        break;
+                    }
+                }
+
+                // Advance to the next character's byte position.
+                self.char_index = idx(next_byte_pos);
+                self.current_taken = self.current_taken + len(1);
+            }
+
+            PositionState::AtEndOfLine => {
+                // We're at the end of the line - handle synthetic newlines.
+                if self.line_index.as_usize() < self.lines.len() - 1 {
+                    // There are more lines, advance past synthetic newline to next line.
+                    self.line_index = self.line_index + idx(1);
+                    self.char_index = idx(0);
+                    self.current_taken = self.current_taken + len(1);
+                } else if self.lines.len() > 1 {
+                    // We're at the last line of multiple lines, advance past trailing
+                    // newline.
+                    self.char_index = self.char_index + idx(1); // Move past the synthetic trailing newline.
+                    self.current_taken = self.current_taken + len(1);
+                }
+                // For single line, don't advance further.
+            }
+
+            PositionState::PastEndOfLine => {
+                // If we're past the end, don't advance further.
+                // This is a no-op case.
+            }
+        }
     }
 
     /// Get remaining length without materializing string.
-    fn remaining_len(&self) -> usize {
-        if self.line_index >= self.lines.len() {
-            return 0;
+    fn remaining_len(&self) -> Length {
+        use synthetic_new_line_for_current_char::{determine_document_state,
+                                                  determine_position_state,
+                                                  DocumentState,
+                                                  PositionState};
+
+        // Early return for invalid line_index (it has gone beyond the available lines in
+        // the slice).
+        if self.line_index.check_overflows(len(self.lines.len()))
+            == BoundsStatus::Overflowed
+        {
+            return len(0);
         }
 
-        // For single line, no trailing newline.
-        if self.lines.len() == 1 {
-            let current_line = &self.lines[self.line_index].string;
-            let remaining = if self.char_index < current_line.len() {
-                current_line.len() - self.char_index
-            } else {
-                0
-            };
+        // Early return for empty lines.
+        if self.lines.is_empty() {
+            return len(0);
+        }
 
-            return if let Some(max_len) = self.max_len {
-                remaining.min(max_len)
-            } else {
-                remaining
+        // Determine document state
+        let document_state = determine_document_state(self.lines.len());
+
+        // For single line, no trailing newline. Return remaining chars in that line.
+        if let DocumentState::SingleLine = document_state {
+            let current_line = &self.lines[self.line_index.as_usize()].string;
+            let chars_left_in_line =
+                match self.char_index.check_overflows(len(current_line.len())) {
+                    BoundsStatus::Overflowed => 0,
+                    _ => current_line.len() - self.char_index.as_usize(),
+                };
+
+            return match self.max_len {
+                None => len(chars_left_in_line),
+                Some(max_len) => len(chars_left_in_line.min(max_len.as_usize())),
             };
         }
 
@@ -613,41 +780,54 @@ impl<'a> AsStrSlice<'a> {
         let mut total = 0;
 
         // Count remaining chars in current line.
-        let current_line = &self.lines[self.line_index].string;
-        if self.char_index < current_line.len() {
-            total += current_line.len() - self.char_index;
+        let current_line = &self.lines[self.line_index.as_usize()].string;
+        let position_state = determine_position_state(self, current_line);
+
+        if let PositionState::WithinLineContent = position_state {
+            total += current_line.len() - self.char_index.as_usize();
         }
 
         // Add synthetic newline after current line (always for multiple lines).
-        if self.char_index <= current_line.len() {
+        if position_state != PositionState::PastEndOfLine {
             total += 1;
         }
 
         // Add all subsequent lines plus their synthetic newlines.
-        for i in (self.line_index + 1)..self.lines.len() {
-            total += self.lines[i].string.len();
-            total += 1; // Each line gets a trailing newline in multiple line scenario
-        }
+        total += self
+            .lines
+            .iter()
+            // Skip the current line.
+            .skip(self.line_index.as_usize() + 1)
+            // Each subsequent line gets content + trailing newline.
+            .map(|line| line.string.len() + 1)
+            .sum::<usize>();
 
         // Apply max_len limit if set.
-        if let Some(max_len) = self.max_len {
-            total.min(max_len)
-        } else {
-            total
+        match self.max_len {
+            None => len(total),
+            Some(max_len) => len(total.min(max_len.as_usize())),
         }
     }
 
     /// Calculate the total size of all lines including synthetic newlines.
     /// For multiple lines, includes a trailing newline after the last line
     /// to match write_to_byte_cache_compat() behavior.
-    fn calculate_total_size(lines: &[GCString]) -> usize {
+    fn calculate_total_size(lines: &[GCString]) -> Length {
+        use synthetic_new_line_for_current_char::{determine_document_state,
+                                                  DocumentState};
+
+        // Early return for empty lines.
         if lines.is_empty() {
-            return 0;
+            return len(0);
         }
 
-        if lines.len() == 1 {
-            // Single line gets no trailing newline
-            return lines[0].string.len();
+        // Determine document state
+        let document_state = determine_document_state(lines.len());
+
+        // For single line, no trailing newline.
+        if let DocumentState::SingleLine = document_state {
+            // Single line gets no trailing newline.
+            return len(lines[0].string.len());
         }
 
         let mut total = 0;
@@ -660,50 +840,98 @@ impl<'a> AsStrSlice<'a> {
         // - Add trailing newline after last line (+1)
         total += lines.len(); // This gives us (len - 1) + 1 = len
 
-        total
+        len(total)
     }
 
     /// Calculate how many characters have been consumed up to the current position.
     fn calculate_current_taken(
         lines: &[GCString],
-        line_index: usize,
-        char_index: usize,
-    ) -> usize {
-        if lines.is_empty() || line_index >= lines.len() {
-            return 0;
+        arg_line_index: impl Into<Index>,
+        arg_char_index: impl Into<Index>,
+    ) -> Length {
+        use synthetic_new_line_for_current_char::{determine_document_state,
+                                                  determine_line_location,
+                                                  determine_position_state,
+                                                  DocumentState,
+                                                  LineLocationInDocument,
+                                                  PositionState};
+
+        let line_index: Index = arg_line_index.into();
+        let char_index: Index = arg_char_index.into();
+
+        if line_index.check_overflows(len(lines.len())) == BoundsStatus::Overflowed {
+            return len(0);
         }
 
         let mut taken = 0;
 
-        // Add all complete lines before current line
-        for i in 0..line_index {
+        // Add all complete lines before current line (at line_index).
+        for i in 0..line_index.as_usize() {
             taken += lines[i].string.len();
-            // For multiple lines, add synthetic newline after each line
+            // For multiple lines, add synthetic newline after each line.
             if lines.len() > 1 {
                 taken += 1;
             }
         }
 
-        // Add characters consumed in current line
-        if line_index < lines.len() {
-            let current_line = &lines[line_index].string;
-            taken += char_index.min(current_line.len());
+        // If there aren't any more lines left after current line (at line_index) then
+        // return the total taken so far.
+        if line_index.check_overflows(len(lines.len())) == BoundsStatus::Overflowed {
+            return len(taken);
+        }
 
-            // If we're at the end of current line and there are more lines,
-            // or we're at the end of the last line in a multi-line scenario,
-            // we might be at a synthetic newline position
-            if char_index == current_line.len() && lines.len() > 1 {
-                if line_index < lines.len() - 1 {
-                    // We're at a newline between lines
-                    taken += 1;
-                } else {
-                    // We're at the trailing newline after the last line
-                    taken += 1;
-                }
+        // Add characters consumed in current line (at line_index).
+        let current_line = &lines[line_index.as_usize()].string;
+        taken += char_index.as_usize().min(current_line.len());
+
+        // Create a temporary AsStrSlice to use with determine_position_state
+        let temp_slice = AsStrSlice {
+            lines,
+            line_index,
+            char_index,
+            max_len: None,
+            total_size: len(0), // Not used for position state determination
+            current_taken: len(0), // Not used for position state determination
+        };
+
+        // Determine states using the module functions
+        let position_state = determine_position_state(&temp_slice, current_line);
+        let document_state = determine_document_state(lines.len());
+        let line_location = determine_line_location(line_index, len(lines.len()));
+
+        // Clear decision matrix for when to add synthetic newlines
+        match (position_state, document_state, line_location) {
+            // At end of line in a multi-line document
+            (
+                PositionState::AtEndOfLine,
+                DocumentState::MultipleLines,
+                LineLocationInDocument::HasMoreLinesAfter,
+            ) => {
+                taken += 1; // Add synthetic newline between lines.
+            }
+
+            // At end of last line in a multi-line document
+            (
+                PositionState::AtEndOfLine,
+                DocumentState::MultipleLines,
+                LineLocationInDocument::LastLine,
+            ) => {
+                taken += 1; // Add trailing newline after last line.
+            }
+
+            // At end of line in a single-line document
+            (PositionState::AtEndOfLine, DocumentState::SingleLine, _) => {
+                // No synthetic newline for single lines.
+            }
+
+            // Within line content or past end - no synthetic newlines
+            (PositionState::WithinLineContent, _, _)
+            | (PositionState::PastEndOfLine, _, _) => {
+                // No synthetic newline to add.
             }
         }
 
-        taken
+        len(taken)
     }
 }
 
@@ -737,7 +965,7 @@ impl<'a> Input for AsStrSlice<'a> {
     }
 
     fn slice_index(&self, count: usize) -> Result<usize, nom::Needed> {
-        let remaining = self.remaining_len();
+        let remaining = self.remaining_len().as_usize();
         if count <= remaining {
             Ok(count)
         } else {
@@ -745,21 +973,26 @@ impl<'a> Input for AsStrSlice<'a> {
         }
     }
 
-    fn input_len(&self) -> usize { self.remaining_len() }
+    fn input_len(&self) -> usize { self.remaining_len().as_usize() }
 
     /// Returns a slice containing the first `count` characters from the current position.
     /// This works with the `max_len` field of [AsStrSlice].
     fn take(&self, count: usize) -> Self {
         // take() should return a slice containing the first 'count' characters.
         // Create a slice that starts at current position with max_len = count.
-        Self::with_limit(self.lines, self.line_index, self.char_index, Some(count))
+        Self::with_limit(
+            self.lines,
+            self.line_index,
+            self.char_index,
+            Some(len(count)),
+        )
     }
 
     fn take_from(&self, start: usize) -> Self {
         let mut result = self.clone();
 
         // Advance to the start position.
-        for _ in 0..start.min(self.remaining_len()) {
+        for _ in 0..start.min(self.remaining_len().as_usize()) {
             result.advance();
         }
 
@@ -812,7 +1045,8 @@ impl<'a> Compare<&str> for AsStrSlice<'a> {
     }
 }
 
-/// Implement [Offset] trait for [AsStrSlice].
+/// Implement [Offset] trait for [AsStrSlice]. This is required for the
+/// [nom::combinator::recognize] parser to work.
 impl<'a> Offset for AsStrSlice<'a> {
     fn offset(&self, second: &Self) -> usize {
         // Calculate the character offset between two AsStrSlice instances.
@@ -824,21 +1058,22 @@ impl<'a> Offset for AsStrSlice<'a> {
         }
 
         // If second is before self, return 0 (invalid case).
-        if second.line_index < self.line_index
+        if second.line_index.as_usize() < self.line_index.as_usize()
             || (second.line_index == self.line_index
-                && second.char_index < self.char_index)
+                && second.char_index.as_usize() < self.char_index.as_usize())
         {
             return 0;
         }
 
         let mut offset = 0;
 
-        // Count characters from self's position to second's position
-        let mut current_line = self.line_index;
-        let mut current_char = self.char_index;
+        // Count characters from self's position to second's position.
+        let mut current_line = self.line_index.as_usize();
+        let mut current_char = self.char_index.as_usize();
 
-        while current_line < second.line_index
-            || (current_line == second.line_index && current_char < second.char_index)
+        while current_line < second.line_index.as_usize()
+            || (current_line == second.line_index.as_usize()
+                && current_char < second.char_index.as_usize())
         {
             if current_line >= self.lines.len() {
                 break;
@@ -846,7 +1081,7 @@ impl<'a> Offset for AsStrSlice<'a> {
 
             let line = &self.lines[current_line].string;
 
-            if current_line < second.line_index {
+            if current_line < second.line_index.as_usize() {
                 // Count remaining characters in current line
                 if current_char < line.len() {
                     offset += line.len() - current_char;
@@ -860,7 +1095,7 @@ impl<'a> Offset for AsStrSlice<'a> {
                 current_char = 0;
             } else {
                 // We're on the same line as second, count up to second's char_index
-                let end_char = second.char_index.min(line.len());
+                let end_char = second.char_index.as_usize().min(line.len());
                 if current_char < end_char {
                     offset += end_char - current_char;
                 }
@@ -885,7 +1120,8 @@ impl<'a> Display for AsStrSlice<'a> {
     }
 }
 
-/// Implement [FindSubstring] trait for [AsStrSlice].
+/// Implement [FindSubstring] trait for [AsStrSlice]. This is required by the
+/// [nom::bytes::complete::take_until] parser function.
 impl<'a> FindSubstring<&str> for AsStrSlice<'a> {
     fn find_substring(&self, sub_str: &str) -> Option<usize> {
         // Convert the AsStrSlice to a string representation.
@@ -921,11 +1157,16 @@ impl<'a> Iterator for StringChars<'a> {
 /// Iterator over the characters in an [AsStrSlice] with their indices.
 pub struct StringCharIndices<'a> {
     slice: AsStrSlice<'a>,
-    position: usize,
+    position: Index,
 }
 
 impl<'a> StringCharIndices<'a> {
-    fn new(slice: AsStrSlice<'a>) -> Self { Self { slice, position: 0 } }
+    fn new(slice: AsStrSlice<'a>) -> Self {
+        Self {
+            slice,
+            position: idx(0),
+        }
+    }
 }
 
 impl<'a> Iterator for StringCharIndices<'a> {
@@ -933,9 +1174,9 @@ impl<'a> Iterator for StringCharIndices<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let ch = self.slice.current_char()?;
-        let pos = self.position;
+        let pos = self.position.as_usize();
         self.slice.advance();
-        self.position += 1;
+        self.position = self.position + idx(1);
         Some((pos, ch))
     }
 }
@@ -1037,8 +1278,6 @@ mod tests_write_to_byte_cache_compat_behavior {
 
     #[test]
     fn test_empty_string() {
-        let input_raw = "";
-
         // Empty lines behavior.
         {
             let lines: Vec<GCString> = vec![];
@@ -1050,8 +1289,6 @@ mod tests_write_to_byte_cache_compat_behavior {
 
     #[test]
     fn test_single_char_no_newline() {
-        let input_raw = "a";
-
         // Single line behavior - no trailing newline for single lines.
         {
             let lines = vec![GCString::new("a")];
@@ -1279,8 +1516,8 @@ mod tests {
         let lines = fixtures::create_test_lines();
         let slice = AsStrSlice::from(lines.as_slice());
 
-        assert_eq!(slice.line_index, 0);
-        assert_eq!(slice.char_index, 0);
+        assert_eq!(slice.line_index, idx(0));
+        assert_eq!(slice.char_index, idx(0));
         assert_eq!(slice.max_len, None);
         assert_eq!(slice.lines.len(), 5);
     }
@@ -1290,8 +1527,8 @@ mod tests {
         let lines = fixtures::create_test_lines();
         let slice = AsStrSlice::from(&lines);
 
-        assert_eq!(slice.line_index, 0);
-        assert_eq!(slice.char_index, 0);
+        assert_eq!(slice.line_index, idx(0));
+        assert_eq!(slice.char_index, idx(0));
         assert_eq!(slice.max_len, None);
         assert_eq!(slice.lines.len(), 5);
     }
@@ -1317,8 +1554,8 @@ mod tests {
         let debug_str = format!("{:?}", slice);
 
         assert!(debug_str.contains("AsStrSlice"));
-        assert!(debug_str.contains("line_index: 0"));
-        assert!(debug_str.contains("char_index: 0"));
+        assert!(debug_str.contains("line_index"));
+        assert!(debug_str.contains("char_index"));
     }
 
     // Test with_limit constructor and behavior.
@@ -1327,39 +1564,41 @@ mod tests {
         let lines = fixtures::create_test_lines();
 
         // Basic constructor test
-        let slice = AsStrSlice::with_limit(&lines, 1, 3, Some(5));
-        assert_eq!(slice.line_index, 1);
-        assert_eq!(slice.char_index, 3);
-        assert_eq!(slice.max_len, Some(5));
+        let slice = AsStrSlice::with_limit(&lines, idx(1), idx(3), Some(len(5)));
+        assert_eq!(slice.line_index, idx(1));
+        assert_eq!(slice.char_index, idx(3));
+        assert_eq!(slice.max_len, Some(len(5)));
 
         // Test behavior with limit
         let content = slice.extract_remaining_text_content_in_line();
         assert_eq!(content, "ond l"); // "Second line" starting at index 3 with max 5 chars
 
         // Test with limit spanning multiple lines
-        let multi_line_slice = AsStrSlice::with_limit(&lines, 0, 6, Some(15));
+        let multi_line_slice =
+            AsStrSlice::with_limit(&lines, idx(0), idx(6), Some(len(15)));
         let result = multi_line_slice.to_inline_string();
         assert_eq!(result, "world\nSecond li"); // 15 chars total
 
         // Test with no limit
-        let no_limit_slice = AsStrSlice::with_limit(&lines, 0, 6, None);
+        let no_limit_slice = AsStrSlice::with_limit(&lines, idx(0), idx(6), None);
         let result = no_limit_slice.to_inline_string();
         assert_eq!(result, "world\nSecond line\nThird line\n\nFifth line\n");
 
         // Test with zero limit
-        let zero_limit_slice = AsStrSlice::with_limit(&lines, 0, 0, Some(0));
+        let zero_limit_slice =
+            AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(0)));
         assert_eq!(zero_limit_slice.current_char(), None);
         assert_eq!(zero_limit_slice.input_len(), 0);
         assert_eq!(zero_limit_slice.to_inline_string(), "");
 
         // Test with out-of-bounds line index
-        let oob_slice = AsStrSlice::with_limit(&lines, 10, 0, None);
+        let oob_slice = AsStrSlice::with_limit(&lines, idx(10), idx(0), None);
         assert_eq!(oob_slice.current_char(), None);
         assert_eq!(oob_slice.input_len(), 0);
         assert_eq!(oob_slice.to_inline_string(), "");
 
         // Test with out-of-bounds char index
-        let oob_char_slice = AsStrSlice::with_limit(&lines, 0, 100, None);
+        let oob_char_slice = AsStrSlice::with_limit(&lines, idx(0), idx(100), None);
         assert_eq!(oob_char_slice.current_char(), None);
         assert_eq!(oob_char_slice.to_inline_string(), "");
     }
@@ -1384,18 +1623,18 @@ mod tests {
         );
 
         // From empty line
-        let slice_empty = AsStrSlice::with_limit(&lines, 3, 0, None);
+        let slice_empty = AsStrSlice::with_limit(&lines, idx(3), idx(0), None);
         assert_eq!(slice_empty.extract_remaining_text_content_in_line(), "");
 
         // With max_len limit
-        let slice_limited = AsStrSlice::with_limit(&lines, 0, 0, Some(5));
+        let slice_limited = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(5)));
         assert_eq!(
             slice_limited.extract_remaining_text_content_in_line(),
             "Hello"
         );
 
         // Out of bounds
-        let slice_oob = AsStrSlice::with_limit(&lines, 10, 0, None);
+        let slice_oob = AsStrSlice::with_limit(&lines, idx(10), idx(0), None);
         assert_eq!(slice_oob.extract_remaining_text_content_in_line(), "");
     }
 
@@ -1438,7 +1677,7 @@ mod tests {
     #[test]
     fn test_advance_with_max_len() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let mut slice = AsStrSlice::with_limit(&lines, 0, 0, Some(2));
+        let mut slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(2)));
         // Input appears as: "abc\ndef" but limited to first 2 chars: "ab"
 
         assert_eq!(slice.current_char(), Some('a'));
@@ -1459,7 +1698,7 @@ mod tests {
         assert_eq!(slice_offset.input_len(), 6); // "c\ndef\n" (from position 2 to end)
 
         // With max_len
-        let slice_limited = AsStrSlice::with_limit(&lines, 0, 0, Some(3));
+        let slice_limited = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(3)));
         assert_eq!(slice_limited.input_len(), 3);
     }
 
@@ -1470,7 +1709,7 @@ mod tests {
         // Input appears as: "abc\ndef\n" (8 total chars)
 
         let taken = slice.take(3);
-        assert_eq!(taken.max_len, Some(3));
+        assert_eq!(taken.max_len, Some(len(3)));
         assert_eq!(taken.input_len(), 3); // Takes first 3 chars: "abc"
     }
 
@@ -1482,8 +1721,8 @@ mod tests {
         // f(6), \n(7))
 
         let from_offset = slice.take_from(2);
-        assert_eq!(from_offset.line_index, 0);
-        assert_eq!(from_offset.char_index, 2); // Advanced to position 2: 'c'
+        assert_eq!(from_offset.line_index, idx(0));
+        assert_eq!(from_offset.char_index, idx(2)); // Advanced to position 2: 'c'
         assert_eq!(from_offset.max_len, None);
     }
 
@@ -1495,10 +1734,11 @@ mod tests {
         // Positions: a(0), b(1), c(2), \n(3), d(4), e(5), f(6), \n(7)
 
         let (taken, remaining) = slice.take_split(3);
-        assert_eq!(taken.max_len, Some(3));
+        assert_eq!(taken.max_len, Some(len(3)));
         assert_eq!(taken.input_len(), 3);
-        assert_eq!(remaining.char_index, 3); // Advanced by 3: 'a'(0), 'b'(1), 'c'(2) ->
-                                             // now at '\n'(3)
+        assert_eq!(remaining.char_index, idx(3)); // Advanced by 3: 'a'(0), 'b'(1), 'c'(2)
+                                                  // ->
+                                                  // now at '\n'(3)
     }
 
     #[test]
@@ -1665,7 +1905,7 @@ mod tests {
     #[test]
     fn test_max_len_zero() {
         let lines = fixtures::create_simple_lines();
-        let slice = AsStrSlice::with_limit(&lines, 0, 0, Some(0));
+        let slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(0)));
 
         assert_eq!(slice.current_char(), None);
         assert_eq!(slice.input_len(), 0);
@@ -1697,8 +1937,8 @@ mod tests {
     #[test]
     fn test_char_index_beyond_line_length() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::with_limit(&lines, 0, 10, None); // char_index > line.len()
-                                                                 // Input appears as: "abc\ndef" but starting at invalid position 10
+        let slice = AsStrSlice::with_limit(&lines, idx(0), idx(10), None); // char_index > line.len()
+                                                                           // Input appears as: "abc\ndef" but starting at invalid position 10
 
         // Should clamp to line length
         assert_eq!(slice.extract_remaining_text_content_in_line(), "");
@@ -1728,7 +1968,7 @@ mod tests {
     #[test]
     fn test_display_with_limit() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::with_limit(&lines, 0, 0, Some(4));
+        let slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(4)));
         // Input appears as: "abc\ndef" but limited to first 4 chars: "abc\n"
 
         let displayed = format!("{}", slice);
@@ -1779,7 +2019,7 @@ mod tests {
     #[test]
     fn test_display_max_len_zero() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::with_limit(&lines, 0, 0, Some(0));
+        let slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(0)));
         // Input appears as: "abc\ndef" but limited to 0 chars
 
         let displayed = format!("{}", slice);
@@ -1812,7 +2052,7 @@ mod tests {
     #[test]
     fn test_display_partial_from_middle() {
         let lines = fixtures::create_test_lines();
-        let slice = AsStrSlice::with_limit(&lines, 1, 7, Some(10)); // From "line" in "Second line"
+        let slice = AsStrSlice::with_limit(&lines, idx(1), idx(7), Some(len(10))); // From "line" in "Second line"
 
         let displayed = format!("{}", slice);
         assert_eq!(displayed, "line\nThird");
@@ -1839,7 +2079,7 @@ mod tests {
         assert_eq!(offset_result, "c\ndef\n");
 
         // Test with limit
-        let limited_slice = AsStrSlice::with_limit(&lines, 0, 0, Some(3));
+        let limited_slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(3)));
         let limited_result = limited_slice.to_inline_string();
         assert_eq!(limited_result, "abc");
 
@@ -1977,7 +2217,7 @@ mod tests {
         assert!(!offset_slice.contains("abc")); // No longer contains "abc"
 
         // Test with limit
-        let limited_slice = AsStrSlice::with_limit(&lines, 0, 0, Some(3));
+        let limited_slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(3)));
         assert!(limited_slice.contains("abc"));
         assert!(!limited_slice.contains("def")); // Limited to first 3 chars
     }
@@ -2061,7 +2301,7 @@ mod tests {
         // Test with max_len limit on single line
         {
             let lines = vec![GCString::from("Hello, World!")];
-            let slice = AsStrSlice::with_limit(&lines, 0, 7, Some(3)); // Start at pos 7, limit 3 chars
+            let slice = AsStrSlice::with_limit(&lines, idx(0), idx(7), Some(len(3))); // Start at pos 7, limit 3 chars
 
             let result = slice.extract_remaining_text_content_to_end();
             assert_eq!(result, "Wor"); // Only 3 chars due to limit
@@ -2075,7 +2315,7 @@ mod tests {
                 GCString::from("Second"),
                 GCString::from("Third"),
             ];
-            let slice = AsStrSlice::with_limit(&lines, 0, 3, Some(7)); // Start at pos 3, limit 7 chars
+            let slice = AsStrSlice::with_limit(&lines, idx(0), idx(3), Some(len(7))); // Start at pos 3, limit 7 chars
 
             let result = slice.extract_remaining_text_content_to_end();
             assert_eq!(result, "st\nSeco"); // "st" + "\n" + "Seco" = 7 chars
@@ -2085,7 +2325,7 @@ mod tests {
         // Test with max_len that cuts off at newline
         {
             let lines = vec![GCString::from("First"), GCString::from("Second")];
-            let slice = AsStrSlice::with_limit(&lines, 0, 3, Some(4)); // Start at pos 3, limit 4 chars
+            let slice = AsStrSlice::with_limit(&lines, idx(0), idx(3), Some(len(4))); // Start at pos 3, limit 4 chars
 
             let result = slice.extract_remaining_text_content_to_end();
             assert_eq!(result, "st\nS"); // "st" + "\n" + "S" = 4 chars
@@ -2104,7 +2344,7 @@ mod tests {
         // Test beyond end
         {
             let lines = vec![GCString::from("Hello")];
-            let slice = AsStrSlice::with_limit(&lines, 10, 0, None); // Start beyond available lines
+            let slice = AsStrSlice::with_limit(&lines, idx(10), idx(0), None); // Start beyond available lines
             let result = slice.extract_remaining_text_content_to_end();
             assert_eq!(result, "");
             assert!(matches!(result, Cow::Borrowed(_)));
@@ -2172,12 +2412,12 @@ mod tests {
         assert_eq!(pos, Some(11));
 
         // Test with offset position
-        let slice = AsStrSlice::with_limit(&lines, 1, 0, None); // Start at beginning of second line
+        let slice = AsStrSlice::with_limit(&lines, idx(1), idx(0), None); // Start at beginning of second line
         let pos = slice.find_substring("Second");
         assert_eq!(pos, Some(0));
 
         // Test with max_len limit
-        let slice = AsStrSlice::with_limit(&lines, 0, 0, Some(15)); // Limit to first 15 chars
+        let slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(15))); // Limit to first 15 chars
         let pos = slice.find_substring("Second");
         assert_eq!(pos, None); // Should not find "Second" as it's beyond the limit
 
@@ -2214,8 +2454,8 @@ mod tests_str_conversion {
             // Skip 6 chars ("hello "), take 5 chars ("world")
             let result = slice.skip_take(6, 5);
 
-            assert_eq2!(result.char_index, 6);
-            assert_eq2!(result.max_len, Some(5));
+            assert_eq2!(result.char_index, idx(6));
+            assert_eq2!(result.max_len, Some(len(5)));
             assert_eq2!(result.line_index, slice.line_index);
             assert_eq2!(result.lines, slice.lines);
             assert_eq2!(result.total_size, slice.total_size);
@@ -2229,29 +2469,29 @@ mod tests_str_conversion {
 
             // Skip 0, take 0
             let result = slice.skip_take(0, 0);
-            assert_eq2!(result.char_index, 0);
-            assert_eq2!(result.max_len, Some(0));
+            assert_eq2!(result.char_index, idx(0));
+            assert_eq2!(result.max_len, Some(len(0)));
 
             // Skip 0, take 3
             let result = slice.skip_take(0, 3);
-            assert_eq2!(result.char_index, 0);
-            assert_eq2!(result.max_len, Some(3));
+            assert_eq2!(result.char_index, idx(0));
+            assert_eq2!(result.max_len, Some(len(3)));
 
             // Skip 2, take 0
             let result = slice.skip_take(2, 0);
-            assert_eq2!(result.char_index, 2);
-            assert_eq2!(result.max_len, Some(0));
+            assert_eq2!(result.char_index, idx(2));
+            assert_eq2!(result.max_len, Some(len(0)));
         }
 
         // Test with existing char_index
         {
             let lines = vec![GCString::new("abcdefghijk")];
             let mut slice = AsStrSlice::from(&lines);
-            slice.char_index = 3; // Start at 'd'
+            slice.char_index = idx(3); // Start at 'd'
 
             let result = slice.skip_take(2, 4); // Skip 2 more ('e','f'), take 4 ('g','h','i','j')
-            assert_eq2!(result.char_index, 5); // 3 + 2
-            assert_eq2!(result.max_len, Some(4));
+            assert_eq2!(result.char_index, idx(5)); // 3 + 2
+            assert_eq2!(result.max_len, Some(len(4)));
         }
 
         // Test bounds checking
@@ -2261,18 +2501,19 @@ mod tests_str_conversion {
 
             // Skip beyond end of string
             let result = slice.skip_take(10, 5);
-            assert_eq2!(result.char_index, 4); // min(10, 5-1) = 4 (max valid index)
-                                               // The implementation appears to include a synthetic newline, making
-                                               // total_size = 6
-                                               // So: total_size - (current_taken + skip_count) = 6 - (0 + 10) = 0
-                                               // (saturating_sub) min(5, 0) =
-                                               // 0, but since there's some edge case handling, it's returning 1
-            assert_eq2!(result.max_len, Some(0));
+            assert_eq2!(result.char_index, idx(4)); // min(10, 5-1) = 4 (max valid index)
+                                                    // The implementation appears to include a synthetic newline, making
+                                                    // total_size = 6
+                                                    // So: total_size - (current_taken + skip_count) = 6 - (0 + 10) = 0
+                                                    // (saturating_sub) min(5, 0) =
+                                                    // 0, but since there's some edge case handling, it's returning 1
+            assert_eq2!(result.max_len, Some(len(0)));
 
             // Take more than available
             let result = slice.skip_take(2, 10);
-            assert_eq2!(result.char_index, 2);
-            assert_eq2!(result.max_len, Some(3)); // Only 3 chars remaining from index 2
+            assert_eq2!(result.char_index, idx(2));
+            assert_eq2!(result.max_len, Some(len(3))); // Only 3 chars remaining from
+                                                       // index 2
         }
 
         // Test empty slice
@@ -2281,9 +2522,9 @@ mod tests_str_conversion {
             let slice = AsStrSlice::from(&lines);
 
             let result = slice.skip_take(5, 3);
-            assert_eq2!(result.char_index, 0); // Should handle empty case
-            assert_eq2!(result.max_len, Some(0));
-            assert_eq2!(result.total_size, 0);
+            assert_eq2!(result.char_index, idx(0)); // Should handle empty case
+            assert_eq2!(result.max_len, Some(len(0)));
+            assert_eq2!(result.total_size, len(0));
         }
 
         // Test single empty line
@@ -2292,12 +2533,12 @@ mod tests_str_conversion {
             let slice = AsStrSlice::from(&lines);
 
             let result = slice.skip_take(2, 1);
-            assert_eq2!(result.char_index, 0); // Can't skip beyond empty string
-                                               // Empty string probably has total_size = 1 (synthetic newline)
-                                               // So: total_size - (current_taken + skip_count) = 1 - (0 + 2) = 0
-                                               // (saturating_sub) min(1, 0) =
-                                               // 0, but there might be edge case handling
-            assert_eq2!(result.max_len, Some(0));
+            assert_eq2!(result.char_index, idx(0)); // Can't skip beyond empty string
+                                                    // Empty string probably has total_size = 1 (synthetic newline)
+                                                    // So: total_size - (current_taken + skip_count) = 1 - (0 + 2) = 0
+                                                    // (saturating_sub) min(1, 0) =
+                                                    // 0, but there might be edge case handling
+            assert_eq2!(result.max_len, Some(len(0)));
         }
 
         // Test multiline
@@ -2311,30 +2552,30 @@ mod tests_str_conversion {
             // Total size includes synthetic newlines: 5 + 1 + 5 + 1 + 5 + 1 = 18
 
             let result = slice.skip_take(7, 6); // Skip to middle of line2, take 6 chars
-            assert_eq2!(result.char_index, 7);
-            assert_eq2!(result.max_len, Some(6));
+            assert_eq2!(result.char_index, idx(7));
+            assert_eq2!(result.max_len, Some(len(6)));
         }
 
         // Test with limit
         {
             let lines = vec![GCString::new("abcdefghijklmnop")];
-            let slice = AsStrSlice::with_limit(&lines, 0, 2, Some(10)); // Start at 'c', limit 10 chars
+            let slice = AsStrSlice::with_limit(&lines, idx(0), idx(2), Some(len(10))); // Start at 'c', limit 10 chars
 
             let result = slice.skip_take(3, 5); // Skip 3 more, take 5
-            assert_eq2!(result.char_index, 5); // 2 + 3
-            assert_eq2!(result.max_len, Some(5));
-            assert_eq2!(result.line_index, 0);
+            assert_eq2!(result.char_index, idx(5)); // 2 + 3
+            assert_eq2!(result.max_len, Some(len(5)));
+            assert_eq2!(result.line_index, idx(0));
         }
 
         // Test saturating add
         {
             let lines = vec![GCString::new("test")];
             let mut slice = AsStrSlice::from(&lines);
-            slice.char_index = usize::MAX - 2;
+            slice.char_index = idx(usize::MAX - 2);
 
             let result = slice.skip_take(5, 1); // Should saturate
-            assert_eq2!(result.char_index, 3); // min(saturated_max, 4-1) = 3
-            assert_eq2!(result.max_len, Some(0));
+            assert_eq2!(result.char_index, idx(3)); // min(saturated_max, 4-1) = 3
+            assert_eq2!(result.max_len, Some(len(0)));
         }
 
         // Test chaining operations
@@ -2344,13 +2585,13 @@ mod tests_str_conversion {
 
             // First operation: skip 2, take 8
             let first = slice.skip_take(2, 8);
-            assert_eq2!(first.char_index, 2);
-            assert_eq2!(first.max_len, Some(8));
+            assert_eq2!(first.char_index, idx(2));
+            assert_eq2!(first.max_len, Some(len(8)));
 
             // Second operation: skip 3 more, take 4
             let second = first.skip_take(3, 4);
-            assert_eq2!(second.char_index, 5); // 2 + 3
-            assert_eq2!(second.max_len, Some(4));
+            assert_eq2!(second.char_index, idx(5)); // 2 + 3
+            assert_eq2!(second.max_len, Some(len(4)));
         }
 
         // Test max_len calculation
@@ -2360,22 +2601,22 @@ mod tests_str_conversion {
 
             // Test various combinations
             let result = slice.skip_take(0, 3); // From start
-            assert_eq2!(result.max_len, Some(3)); // Can take 3 of 5
+            assert_eq2!(result.max_len, Some(len(3))); // Can take 3 of 5
 
             let result = slice.skip_take(2, 5); // Skip 2, want 5
-            assert_eq2!(result.max_len, Some(3)); // Only 3 remaining (indices 2,3,4)
+            assert_eq2!(result.max_len, Some(len(3))); // Only 3 remaining (indices 2,3,4)
 
             let result = slice.skip_take(4, 2); // Skip to last char
-            assert_eq2!(result.max_len, Some(1)); // Only 1 char remaining
+            assert_eq2!(result.max_len, Some(len(1))); // Only 1 char remaining
 
             let result = slice.skip_take(5, 1); // Skip beyond
-            assert_eq2!(result.max_len, Some(0));
+            assert_eq2!(result.max_len, Some(len(0)));
         }
 
         // Test field preservation
         {
             let lines = vec![GCString::new("first"), GCString::new("second")];
-            let original = AsStrSlice::with_limit(&lines, 1, 2, Some(8));
+            let original = AsStrSlice::with_limit(&lines, idx(1), idx(2), Some(len(8)));
             let result = original.skip_take(1, 3);
 
             // These should be preserved
@@ -2385,21 +2626,21 @@ mod tests_str_conversion {
             assert_eq2!(result.current_taken, original.current_taken);
 
             // These should be modified
-            assert_eq2!(result.char_index, 3); // 2 + 1
-            assert_eq2!(result.max_len, Some(3));
+            assert_eq2!(result.char_index, idx(3)); // 2 + 1
+            assert_eq2!(result.max_len, Some(len(3)));
         }
 
         // Test current_taken calculation
         {
             let lines = vec![GCString::new("abcdefghij")]; // 10 chars
             let mut slice = AsStrSlice::from(&lines);
-            slice.current_taken = 2; // Simulate having already consumed 2 chars
+            slice.current_taken = len(2); // Simulate having already consumed 2 chars
 
             let result = slice.skip_take(3, 6);
-            assert_eq2!(result.char_index, 3);
+            assert_eq2!(result.char_index, idx(3));
             // max_that_can_be_taken_count = total_size - (current_taken + skip_count)
             // = 10 - (2 + 3) = 5
-            assert_eq2!(result.max_len, Some(5)); // min(6, 5) = 5
+            assert_eq2!(result.max_len, Some(len(5))); // min(6, 5) = 5
         }
 
         // Test edge case with large skip
@@ -2408,8 +2649,8 @@ mod tests_str_conversion {
             let slice = AsStrSlice::from(&lines);
 
             let result = slice.skip_take(1000, 5);
-            assert_eq2!(result.char_index, 3); // min(1000, 4-1) = 3
-            assert_eq2!(result.max_len, Some(0));
+            assert_eq2!(result.char_index, idx(3)); // min(1000, 4-1) = 3
+            assert_eq2!(result.max_len, Some(len(0)));
         }
     }
 
@@ -2422,8 +2663,8 @@ mod tests_str_conversion {
 
             // Take until index 5
             let result = slice.take_until(5);
-            assert_eq2!(result.max_len, Some(6)); // end_index + 1
-            assert_eq2!(result.char_index, 0.min(5)); // min(char_index, end_index)
+            assert_eq2!(result.max_len, Some(len(5))); // end_index - new_char_index = 5 - 0 = 5
+            assert_eq2!(result.char_index, idx(0.min(5))); // min(char_index, end_index)
             assert_eq2!(result.line_index, slice.line_index);
             assert_eq2!(result.lines, slice.lines);
         }
@@ -2432,11 +2673,12 @@ mod tests_str_conversion {
         {
             let lines = fixtures::create_simple_lines();
             let mut slice = AsStrSlice::from(&lines);
-            slice.char_index = 10;
+            slice.char_index = idx(10);
 
             let result = slice.take_until(5);
-            assert_eq2!(result.char_index, 5); // Should be limited to end_index
-            assert_eq2!(result.max_len, Some(6));
+            assert_eq2!(result.char_index, idx(5)); // Should be limited to end_index
+            assert_eq2!(result.max_len, Some(len(0))); // end_index - new_char_index = 5 -
+                                                       // 5 = 0
         }
 
         // Test take_until with zero end_index.
@@ -2445,8 +2687,9 @@ mod tests_str_conversion {
             let slice = AsStrSlice::from(&lines);
 
             let result = slice.take_until(0);
-            assert_eq2!(result.char_index, 0);
-            assert_eq2!(result.max_len, Some(1));
+            assert_eq2!(result.char_index, idx(0));
+            assert_eq2!(result.max_len, Some(len(0))); // end_index - new_char_index = 0 -
+                                                       // 0 = 0
         }
 
         // Test take_until with large end_index.
@@ -2455,8 +2698,8 @@ mod tests_str_conversion {
             let slice = AsStrSlice::from(&lines);
 
             let result = slice.take_until(1000);
-            assert_eq2!(result.char_index, 0);
-            assert_eq2!(result.max_len, Some(1001));
+            assert_eq2!(result.char_index, idx(0));
+            assert_eq2!(result.max_len, Some(len(1000))); // end_index - new_char_index = 1000 - 0 = 1000
             assert_eq2!(result.line_index, slice.line_index);
         }
 
@@ -2475,12 +2718,12 @@ mod tests_str_conversion {
         // Test with modified slice state.
         {
             let lines = fixtures::create_three_lines();
-            let slice = AsStrSlice::with_limit(&lines, 1, 2, Some(50));
+            let slice = AsStrSlice::with_limit(&lines, idx(1), idx(2), Some(len(50)));
 
             let result = slice.take_until(8);
-            assert_eq2!(result.char_index, 2.min(8)); // Should be 2
-            assert_eq2!(result.max_len, Some(9));
-            assert_eq2!(result.line_index, 1);
+            assert_eq2!(result.char_index, idx(2.min(8))); // Should be 2
+            assert_eq2!(result.max_len, Some(len(6))); // end_index - new_char_index = 8 - 2 = 6
+            assert_eq2!(result.line_index, idx(1));
         }
     }
 }

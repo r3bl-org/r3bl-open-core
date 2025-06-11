@@ -22,7 +22,8 @@ use nom::{bytes::complete::{tag, take_until},
           IResult,
           Parser};
 
-use crate::{fg_green,
+use crate::{core::tui_core::units::idx,
+            fg_green,
             fg_red,
             md_parser::constants::NEW_LINE,
             AsStrSlice,
@@ -135,7 +136,7 @@ mod tests_parse_take_between {
     fn test_fenced_missing_end_tag() {
         let lines = [GCString::new("_foo bar baz")];
         let input = AsStrSlice::from(&lines);
-        assert_eq!(input.char_index, 0);
+        assert_eq!(input.char_index, idx(0));
 
         let res = take_text_between_alt("_", "_", input);
         println!("it: {res:?}");
@@ -145,7 +146,7 @@ mod tests_parse_take_between {
             Err(nom::Err::Error(error)) => {
                 assert_eq!(error.code, nom::error::ErrorKind::TakeUntil);
                 // `tag("_")` moved this forward by 1. it is no longer equal to `input`.
-                assert_eq!(error.input.char_index, 1);
+                assert_eq!(error.input.char_index, idx(1));
             }
             Err(other_err) => panic!("Expected Error variant, but got: {:?}", other_err),
         }

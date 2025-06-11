@@ -39,6 +39,11 @@ mod construct {
     impl Length {
         pub fn new(arg_length: impl Into<Length>) -> Self { arg_length.into() }
 
+        pub fn as_usize(&self) -> usize { self.0.into() }
+
+        /// This is for use with [crossterm] crate.
+        pub fn as_u16(&self) -> u16 { self.0.into() }
+
         /// Subtract 1 from length to get the last index. I.e.: `length = last index + 1`.
         ///
         /// The following are equivalent:

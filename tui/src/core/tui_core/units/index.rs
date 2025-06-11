@@ -20,6 +20,7 @@ use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
 use super::{ChUnit, Length};
+use crate::ch;
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Index(pub ChUnit);
@@ -43,10 +44,11 @@ mod construct {
         /// This is for use with [crossterm] crate.
         pub fn as_u16(&self) -> u16 { self.0.into() }
 
-        /// Add 1 to the index to convert it to a length. The intention of this function
-        /// is to meaningfully convert a [Index] to a [Length]. This is useful in
-        /// situations where you need to find what the length is at this index.
-        pub fn convert_to_length(&self) -> ChUnit { self.0 + 1 }
+        /// Add 1 to the index (0 based) to convert it to a length (1 based). The
+        /// intention of this function is to meaningfully convert a [Index] to a
+        /// [Length]. This is useful in situations where you need to find what the
+        /// length is at this index.
+        pub fn convert_to_length(&self) -> Length { Length(self.0 + ch(1)) }
     }
 
     impl From<ChUnit> for Index {
@@ -231,10 +233,10 @@ mod tests {
     }
 
     #[test]
-    fn test_index_convert_to_width() {
-        let index = idx(9);
-        let width = index.convert_to_length();
-        assert_eq!(width, ch(10));
+    fn test_index_convert_to_length() {
+        let index = idx(9); // 0 based.
+        let value = index.convert_to_length(); // 1 based.
+        assert_eq!(value, len(10));
     }
 
     #[test]
