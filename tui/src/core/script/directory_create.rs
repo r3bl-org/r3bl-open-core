@@ -15,8 +15,9 @@
  *   limitations under the License.
  */
 
-//! All tests have been moved to `fs_path.rs::test_all_fs_path_functions_in_isolated_process()`
-//! to prevent flakiness when tests are run in parallel.
+//! All tests have been moved to
+//! `fs_path.rs::test_all_fs_path_functions_in_isolated_process()` to prevent flakiness
+//! when tests are run in parallel.
 
 use std::{fs, io::ErrorKind, path::Path};
 

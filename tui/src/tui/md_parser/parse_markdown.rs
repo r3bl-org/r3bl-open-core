@@ -15,7 +15,6 @@
  *   limitations under the License.
  */
 
-
 use nom::{branch::alt, combinator::map, multi::many0, IResult, Parser};
 
 use crate::{md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
@@ -28,7 +27,6 @@ use crate::{md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
             List,
             MdBlock,
             MdDocument};
-
 
 // XMARK: Main Markdown parser entry point
 

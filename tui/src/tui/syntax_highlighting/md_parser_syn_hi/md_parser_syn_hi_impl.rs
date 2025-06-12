@@ -46,7 +46,6 @@ use crate::{generate_ordered_list_item_bullet,
                                          LEFT_IMAGE,
                                          LEFT_PARENTHESIS,
                                          NEW_LINE,
-                                         NEW_LINE_CHAR,
                                          RIGHT_BRACKET,
                                          RIGHT_IMAGE,
                                          RIGHT_PARENTHESIS,
@@ -80,8 +79,7 @@ use crate::{generate_ordered_list_item_bullet,
             StyleUSSpanLines,
             TextColorizationPolicy,
             TuiStyle,
-            TuiStyledTexts,
-            PARSER_BYTE_CACHE_PAGE_SIZE};
+            TuiStyledTexts};
 
 /// This is the main function that the [crate::editor] uses this in order to display the
 /// markdown to the user.It is responsible for converting:
@@ -131,7 +129,7 @@ pub fn try_parse_and_highlight(
     };
 
     slice.write_to_byte_cache_compat(size_hint, acc);
-    let result_md_ast = parse_markdown(&acc);
+    let result_md_ast = parse_markdown(acc);
 
     // Try and parse `editor_text_to_string` into a `Document`.
     match result_md_ast {

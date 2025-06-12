@@ -247,10 +247,10 @@ pub mod synthetic_new_line_for_current_char {
     /// Helper method to get character at current position within line content.
     pub fn get_char_at_position(this: &AsStrSlice<'_>, line: &str) -> Option<char> {
         // Need to convert byte index to character
-        let mut char_iter = line.char_indices();
+        let char_iter = line.char_indices();
         let mut current_byte_pos = 0;
 
-        while let Some((byte_pos, ch)) = char_iter.next() {
+        for (byte_pos, ch) in char_iter {
             if byte_pos == this.char_index.as_usize() {
                 return Some(ch);
             }
@@ -403,7 +403,7 @@ impl<'a> AsStrSlice<'a> {
     pub fn to_inline_string(&self) -> DocumentStorage {
         let mut acc = DocumentStorage::new();
         use std::fmt::Write as _;
-        _ = write!(acc, "{}", self);
+        _ = write!(acc, "{self}");
         acc
     }
 
@@ -457,7 +457,7 @@ impl<'a> AsStrSlice<'a> {
         // Use the Display implementation which already handles the correct newline
         // behavior.
         use std::fmt::Write as _;
-        _ = write!(acc, "{}", self);
+        _ = write!(acc, "{self}");
     }
 
     /// Create a new slice with a maximum length limit.
@@ -692,11 +692,11 @@ impl<'a> AsStrSlice<'a> {
             PositionState::WithinLineContent => {
                 // Move to next character within the line.
                 // Need to handle multi-byte UTF-8 characters correctly.
-                let mut char_iter = current_line.char_indices();
+                let char_iter = current_line.char_indices();
                 let mut next_byte_pos = current_line.len(); // Default to end of line
 
                 // Find the next character's byte position
-                while let Some((byte_pos, _)) = char_iter.next() {
+                for (byte_pos, _) in char_iter {
                     if byte_pos > self.char_index.as_usize() {
                         next_byte_pos = byte_pos;
                         break;
@@ -705,21 +705,21 @@ impl<'a> AsStrSlice<'a> {
 
                 // Advance to the next character's byte position.
                 self.char_index = idx(next_byte_pos);
-                self.current_taken = self.current_taken + len(1);
+                self.current_taken += len(1);
             }
 
             PositionState::AtEndOfLine => {
                 // We're at the end of the line - handle synthetic newlines.
                 if self.line_index.as_usize() < self.lines.len() - 1 {
                     // There are more lines, advance past synthetic newline to next line.
-                    self.line_index = self.line_index + idx(1);
+                    self.line_index += idx(1);
                     self.char_index = idx(0);
-                    self.current_taken = self.current_taken + len(1);
+                    self.current_taken += len(1);
                 } else if self.lines.len() > 1 {
                     // We're at the last line of multiple lines, advance past trailing
                     // newline.
-                    self.char_index = self.char_index + idx(1); // Move past the synthetic trailing newline.
-                    self.current_taken = self.current_taken + len(1);
+                    self.char_index += idx(1); // Move past the synthetic trailing newline.
+                    self.current_taken += len(1);
                 }
                 // For single line, don't advance further.
             }
@@ -1150,7 +1150,7 @@ impl<'a> Display for AsStrSlice<'a> {
         // Materialize the text by collecting all characters from the current position.
         let mut current = self.clone();
         while let Some(ch) = current.current_char() {
-            write!(f, "{}", ch)?;
+            write!(f, "{ch}")?;
             current.advance();
         }
         Ok(())
@@ -1213,7 +1213,7 @@ impl<'a> Iterator for StringCharIndices<'a> {
         let ch = self.slice.current_char()?;
         let pos = self.position.as_usize();
         self.slice.advance();
-        self.position = self.position + idx(1);
+        self.position += idx(1);
         Some((pos, ch))
     }
 }

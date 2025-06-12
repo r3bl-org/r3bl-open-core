@@ -141,10 +141,10 @@ pub async fn show_exit_message() {
         .and_then(|items| items.into_iter().next());
 
         // If they chose “Yes, upgrade now”, run `cargo install …`.
-        if let Some(user_choice) = maybe_user_choice {
-            if user_choice == yes_no_options[0] {
-                install_upgrade_command_with_spinner_and_ctrl_c().await;
-            }
+        if let Some(user_choice) = maybe_user_choice
+            && user_choice == yes_no_options[0]
+        {
+            install_upgrade_command_with_spinner_and_ctrl_c().await;
         }
     }
 
@@ -193,12 +193,11 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
                 // [Branch]: Wait for Ctrl+C signal.
                 _ = signal::ctrl_c() => {
                     // Stop the spinner (if running).
-                    if let Some(mut spinner) = maybe_spinner.take() {
-                        if !spinner.is_shutdown() {
+                    if let Some(mut spinner) = maybe_spinner.take()
+                        && !spinner.is_shutdown() {
                             spinner.request_shutdown().await;
                             spinner.await_shutdown().await;
                         }
-                    }
 
                     // Try to kill the process, with start_kill() which is non-blocking.
                     match child.start_kill() {
@@ -219,12 +218,11 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
                 // [Branch]: Wait for the process to complete.
                 status_result = child.wait() => {
                     // Stop the spinner (if running).
-                    if let Some(mut spinner) = maybe_spinner.take() {
-                        if !spinner.is_shutdown() {
+                    if let Some(mut spinner) = maybe_spinner.take()
+                        && !spinner.is_shutdown() {
                             spinner.request_shutdown().await;
                             spinner.await_shutdown().await;
                         }
-                    }
 
                     // Return the process request_shutdown status.
                     status_result
