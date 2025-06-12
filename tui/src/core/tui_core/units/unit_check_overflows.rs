@@ -59,6 +59,26 @@ impl BoundsCheck<Length> for Index {
 }
 
 impl BoundsCheck<Index> for Index {
+    /// Checks if this index overflows another index.
+    ///
+    /// This implementation compares two indices and returns:
+    /// - [BoundsStatus::Within] if this index is less than or equal to the other index
+    /// - [BoundsStatus::Overflowed] if this index is greater than the other index
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use r3bl_tui::{BoundsCheck, BoundsStatus, Index, idx};
+    ///
+    /// let index1 = idx(5);
+    /// let index2 = idx(10);
+    ///
+    /// // Check if index1 is within the bounds of index2
+    /// assert_eq!(index1.check_overflows(index2), BoundsStatus::Within);
+    ///
+    /// // Check if index2 is within the bounds of index1
+    /// assert_eq!(index2.check_overflows(index1), BoundsStatus::Overflowed);
+    /// ```
     fn check_overflows(&self, other: Index) -> BoundsStatus {
         let this = *self;
         if this > other {
