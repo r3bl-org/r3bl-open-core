@@ -43,8 +43,7 @@ use crate::{fg_green,
             AsStrSlice,
             CheckboxParsePolicy,
             MdLineFragment,
-            DEBUG_MD_PARSER,
-            core::tui_core::units::idx};
+            DEBUG_MD_PARSER};
 
 // XMARK: Parser for a single line of markdown
 
@@ -132,7 +131,7 @@ mod tests_parse_fragment {
               Err as NomErr};
 
     use super::*;
-    use crate::{assert_eq2, GCString, HyperlinkData};
+    use crate::{assert_eq2, idx, GCString, HyperlinkData};
 
     #[test]
     fn test_parse_plain_text_no_new_line1() {

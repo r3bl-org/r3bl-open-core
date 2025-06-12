@@ -571,7 +571,10 @@ mod tests {
         assert_eq!(result_index, idx(15));
 
         // Check if the new index is within bounds
-        assert_eq!(result_index.check_overflows(length), BoundsStatus::Overflowed);
+        assert_eq!(
+            result_index.check_overflows(length),
+            BoundsStatus::Overflowed
+        );
 
         // Subtract length from index
         let result_index = result_index - length;

@@ -18,12 +18,10 @@
 use nom::{bytes::complete::{tag, take_until},
           combinator::map,
           error::ErrorKind,
-          FindSubstring,
           IResult,
           Parser};
 
-use crate::{core::tui_core::units::idx,
-            fg_green,
+use crate::{fg_green,
             fg_red,
             md_parser::constants::NEW_LINE,
             AsStrSlice,
@@ -111,7 +109,7 @@ mod tests_parse_take_between {
     use nom::{error::ErrorKind, Err as NomErr};
 
     use super::*;
-    use crate::GCString;
+    use crate::{idx, GCString};
 
     #[test]
     fn test_fenced_success() {
