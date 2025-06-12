@@ -25,6 +25,8 @@ use crate::{bounds_check,
             BoundsStatus,
             DocumentStorage,
             GCString,
+            InlineVec,
+            List,
             ParserByteCache,
             PARSER_BYTE_CACHE_PAGE_SIZE};
 
@@ -998,6 +1000,8 @@ impl<'a> Input for AsStrSlice<'a> {
     }
 }
 
+/// The `Compare` trait in nom is not symmetric - you need to implement it in both
+/// directions if you want to use both types interchangeably with the `tag` function.
 impl<'a> Compare<&str> for AsStrSlice<'a> {
     fn compare(&self, t: &str) -> CompareResult {
         let mut current = self.clone();
@@ -1031,6 +1035,50 @@ impl<'a> Compare<&str> for AsStrSlice<'a> {
                 (None, None) => return CompareResult::Ok,
             }
         }
+    }
+}
+
+/// The `Compare` trait in nom is not symmetric - you need to implement it in both
+/// directions if you want to use both types interchangeably with the `tag` function.
+impl<'a> Compare<AsStrSlice<'a>> for &str {
+    fn compare(&self, t: AsStrSlice<'a>) -> CompareResult {
+        // Convert AsStrSlice to string and compare with self
+        let t_str = t.extract_remaining_text_content_to_end();
+        self.compare(t_str.as_ref())
+    }
+
+    fn compare_no_case(&self, t: AsStrSlice<'a>) -> CompareResult {
+        // Convert AsStrSlice to string and compare with self (case insensitive)
+        let t_str = t.extract_remaining_text_content_to_end();
+        self.compare_no_case(t_str.as_ref())
+    }
+}
+
+/// The `Compare` trait needs to be implemented to compare `AsStrSlice` with each other
+/// for the `tag` function.
+impl<'a> Compare<AsStrSlice<'a>> for AsStrSlice<'a> {
+    fn compare(&self, t: AsStrSlice<'a>) -> CompareResult {
+        // Convert both AsStrSlice instances to strings and compare
+        let self_str = self.extract_remaining_text_content_to_end();
+        let t_str = t.extract_remaining_text_content_to_end();
+        self_str.as_ref().compare(t_str.as_ref())
+    }
+
+    fn compare_no_case(&self, t: AsStrSlice<'a>) -> CompareResult {
+        // Convert both AsStrSlice instances to strings and compare (case insensitive)
+        let self_str = self.extract_remaining_text_content_to_end();
+        let t_str = t.extract_remaining_text_content_to_end();
+        self_str.as_ref().compare_no_case(t_str.as_ref())
+    }
+}
+
+/// Integrate with [crate::List] so that `List::from()` will work for
+/// `InlineVec<AsStrSlice>`.
+impl<'a> From<InlineVec<AsStrSlice<'a>>> for List<AsStrSlice<'a>> {
+    fn from(other: InlineVec<AsStrSlice<'a>>) -> Self {
+        let mut it = List::with_capacity(other.len());
+        it.extend(other);
+        it
     }
 }
 
