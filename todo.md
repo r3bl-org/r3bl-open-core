@@ -156,6 +156,14 @@
 - [ ] migrate `extended` parsers into `extended_alt`
 
   - [ ] `parse_metadata_k_csv_alt`
+    - [x] migrate the functions `parse_csv_opt_eol_alt` and `parse_comma_separated_list_alt` over
+      - [x] don't use `&str` anymore! implement lots of new traits for `AsStrSlice` for `Compare`
+            for nom `tag` integration
+      - [x] implement `From<InlineVec<AsStrSlice<'a>>> for List<AsStrSlice<'a>>` for `List` and
+            `InlineVec` integration
+    - [x] migrate all the existing tests over
+    - [ ] is `AsStrSlice::skip_take()` needed anymore after changes made for `parse_csv_opt_eol_alt`
+          and `parse_comma_separated_list_alt`?
   - [ ] `parse_metadata_k_v_alt`
   - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
 

@@ -60,6 +60,7 @@ macro_rules! tiny_inline_string {
 #[macro_export]
 macro_rules! inline_vec {
     ( $( $elem:expr ),* $(,)? ) => {{
+        #[allow(unused_mut)]
         let mut acc = $crate::InlineVec::new();
         $(
             acc.push($elem);

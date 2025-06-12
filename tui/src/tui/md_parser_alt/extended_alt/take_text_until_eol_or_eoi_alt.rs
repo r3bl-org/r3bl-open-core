@@ -64,63 +64,70 @@ pub fn parser_take_text_until_eol_or_eoi_alt<'a>() ->
 #[cfg(test)]
 mod test_text_until_opt_eol {
     use super::*;
-    use crate::{assert_eq2, fg_lizard_green, AsStrSlice, GCString};
+    use crate::{assert_eq2, AsStrSlice, GCString};
 
     #[test]
-    fn test_text_until_opt_eol() {
-        println!(
-            "\n\n{}",
-            format_args!(
-                "{}",
-                fg_lizard_green("test_text_until_opt_eol()")
-                    .bold()
-                    .bg_dark_gray()
-            )
+    fn test_input_starts_with_new_line() {
+        // Starts with new line.
+        let input_raw = &[GCString::new("\nfoo\nbar")];
+        let input = AsStrSlice::from(input_raw);
+        let (remainder, result) = parser_take_text_until_eol_or_eoi_alt()
+            .parse(input)
+            .unwrap();
+        // Should return empty content when input immediately starts with newline
+        assert_eq2!(result.extract_remaining_text_content_in_line(), "");
+        // Remainder should start from the newline
+        assert_eq2!(
+            remainder.extract_remaining_text_content_in_line(),
+            "\nfoo\nbar"
         );
+    }
 
+    #[test]
+    fn test_input_with_eol() {
         // With EOL.
-        {
-            let input_raw = &[GCString::new("Hello, world!\n")];
-            let input = AsStrSlice::from(input_raw);
-            let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
-                .parse(input)
-                .unwrap();
-            println!("{:8}: {:?}", "input", input_raw);
-            println!("{:8}: {:?}", "rem", rem);
-            println!("{:8}: {:?}", "output", output);
-            assert_eq2!(
-                output.extract_remaining_text_content_in_line(),
-                "Hello, world!"
-            );
-            assert_eq2!(rem.extract_remaining_text_content_in_line(), "\n");
-        }
+        let input_raw = &[GCString::new("Hello, world!\n")];
+        let input = AsStrSlice::from(input_raw);
+        let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
+            .parse(input)
+            .unwrap();
+        println!("{:8}: {:?}", "input", input_raw);
+        println!("{:8}: {:?}", "rem", rem);
+        println!("{:8}: {:?}", "output", output);
+        assert_eq2!(
+            output.extract_remaining_text_content_in_line(),
+            "Hello, world!"
+        );
+        assert_eq2!(rem.extract_remaining_text_content_in_line(), "\n");
+    }
 
+    #[test]
+    fn test_input_without_eol() {
         // Without EOL.
-        {
-            let input_raw = &[GCString::new("Hello, world!")];
-            let input = AsStrSlice::from(input_raw);
-            let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
-                .parse(input)
-                .unwrap();
-            println!("\n{:8}: {:?}", "input", input_raw);
-            println!("{:8}: {:?}", "rem", rem);
-            println!("{:8}: {:?}", "output", output);
-            assert_eq2!(output.to_inline_string(), "Hello, world!");
-            assert_eq2!(rem.to_inline_string(), "");
-        }
+        let input_raw = &[GCString::new("Hello, world!")];
+        let input = AsStrSlice::from(input_raw);
+        let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
+            .parse(input)
+            .unwrap();
+        println!("\n{:8}: {:?}", "input", input_raw);
+        println!("{:8}: {:?}", "rem", rem);
+        println!("{:8}: {:?}", "output", output);
+        assert_eq2!(output.to_inline_string(), "Hello, world!");
+        assert_eq2!(rem.to_inline_string(), "");
+    }
 
+    #[test]
+    fn test_another_input_with_eol() {
         // With EOL.
-        {
-            let input_raw = &[GCString::new("\nfoo\nbar")];
-            let input = AsStrSlice::from(input_raw);
-            let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
-                .parse(input)
-                .unwrap();
-            println!("\n{:8}: {:?}", "input", input_raw);
-            println!("{:8}: {:?}", "rem", rem);
-            println!("{:8}: {:?}", "output", output);
-            assert_eq2!(output.to_inline_string(), "");
-            assert_eq2!(rem.to_inline_string(), "\nfoo\nbar");
-        }
+        let input_raw = &[GCString::new("\nfoo\nbar")];
+        let input = AsStrSlice::from(input_raw);
+        let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
+            .parse(input)
+            .unwrap();
+        println!("\n{:8}: {:?}", "input", input_raw);
+        println!("{:8}: {:?}", "rem", rem);
+        println!("{:8}: {:?}", "output", output);
+        assert_eq2!(output.to_inline_string(), "");
+        assert_eq2!(rem.to_inline_string(), "\nfoo\nbar");
     }
 }
