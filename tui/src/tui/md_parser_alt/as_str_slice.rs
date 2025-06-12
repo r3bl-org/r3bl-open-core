@@ -18,7 +18,8 @@ use std::{borrow::Cow, fmt::Display};
 
 use nom::{Compare, CompareResult, FindSubstring, Input, Offset};
 
-use crate::{constants::NEW_LINE_CHAR,
+use crate::{bounds_check,
+            constants::NEW_LINE_CHAR,
             core::tui_core::units::{idx, len, Index, Length},
             BoundsCheck,
             BoundsStatus,
@@ -522,11 +523,9 @@ impl<'a> AsStrSlice<'a> {
                 return "";
             }
 
-            if self.line_index.check_overflows(len(self.lines.len()))
-                == BoundsStatus::Overflowed
-            {
+            bounds_check!(self.line_index, self.lines.len(), {
                 return "";
-            }
+            });
 
             if let Some(max_len) = self.max_len {
                 if max_len == len(0) {
@@ -544,11 +543,9 @@ impl<'a> AsStrSlice<'a> {
         let start_col_index = self.char_index.as_usize();
 
         // If we're past the end of the line, return empty.
-        if self.char_index.check_overflows(len(current_line.len()))
-            == BoundsStatus::Overflowed
-        {
+        bounds_check!(self.char_index, current_line.len(), {
             return "";
-        }
+        });
 
         let eol = current_line.len();
         let end_col_index = match self.max_len {
@@ -585,22 +582,18 @@ impl<'a> AsStrSlice<'a> {
     pub fn extract_remaining_text_content_to_end(&self) -> Cow<'a, str> {
         // Early return for invalid line_index (it has gone beyond the available lines in
         // the slice).
-        if self.line_index.check_overflows(len(self.lines.len()))
-            == BoundsStatus::Overflowed
-        {
+        bounds_check!(self.line_index, self.lines.len(), {
             return Cow::Borrowed("");
-        }
+        });
 
         // For single line case, we can potentially return borrowed content.
         if self.lines.len() == 1 {
             let current_line = &self.lines[0].string;
 
             // Check if we're already at the end.
-            if self.char_index.check_overflows(len(current_line.len()))
-                == BoundsStatus::Overflowed
-            {
+            bounds_check!(self.char_index, current_line.len(), {
                 return Cow::Borrowed("");
-            }
+            });
 
             let start_col_index = self.char_index.as_usize();
 
@@ -675,11 +668,9 @@ impl<'a> AsStrSlice<'a> {
                                                   PositionState};
 
         // Return early if the line index exceeds the available lines.
-        if self.line_index.check_overflows(len(self.lines.len()))
-            == BoundsStatus::Overflowed
-        {
+        bounds_check!(self.line_index, self.lines.len(), {
             return;
-        }
+        });
 
         // Check if we've hit the max_len limit.
         if let Some(max_len) = self.max_len {
@@ -747,11 +738,9 @@ impl<'a> AsStrSlice<'a> {
 
         // Early return for invalid line_index (it has gone beyond the available lines in
         // the slice).
-        if self.line_index.check_overflows(len(self.lines.len()))
-            == BoundsStatus::Overflowed
-        {
+        bounds_check!(self.line_index, self.lines.len(), {
             return len(0);
-        }
+        });
 
         // Early return for empty lines.
         if self.lines.is_empty() {
@@ -859,9 +848,9 @@ impl<'a> AsStrSlice<'a> {
         let line_index: Index = arg_line_index.into();
         let char_index: Index = arg_char_index.into();
 
-        if line_index.check_overflows(len(lines.len())) == BoundsStatus::Overflowed {
+        bounds_check!(line_index, lines.len(), {
             return len(0);
-        }
+        });
 
         let mut taken = 0;
 
@@ -876,9 +865,9 @@ impl<'a> AsStrSlice<'a> {
 
         // If there aren't any more lines left after current line (at line_index) then
         // return the total taken so far.
-        if line_index.check_overflows(len(lines.len())) == BoundsStatus::Overflowed {
+        bounds_check!(line_index, lines.len(), {
             return len(taken);
-        }
+        });
 
         // Add characters consumed in current line (at line_index).
         let current_line = &lines[line_index.as_usize()].string;

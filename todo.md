@@ -148,12 +148,15 @@
   - [x] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: fix bugs & add tests
   - [x] `parse_fragments_in_a_line.rs` -> `parse_fragments_in_a_line_alt.rs`: fix bugs & add tests
 
+- [x] refactor / rewrite `as_str_slice.rs` using `Length`, `Index`, `BoundsCheck` and lots of enums
+      for state machine states and functions to calculate these
+
 ---
 
 - [ ] migrate `extended` parsers into `extended_alt`
 
-  - [ ] `k_csv`
-  - [ ] `k_v`
+  - [ ] `parse_metadata_k_csv_alt`
+  - [ ] `parse_metadata_k_v_alt`
   - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
 
 ---

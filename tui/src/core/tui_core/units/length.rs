@@ -22,9 +22,47 @@ use std::{fmt::Debug,
 use super::{idx, ChUnit, Index};
 use crate::ch;
 
+/// Represents a length measurement in character units.
+///
+/// A Length is a 1-based measurement (as opposed to 0-based indices) that represents
+/// the size or extent of something in the terminal UI, such as the width or height
+/// of a component. It wraps a [ChUnit] value.
+///
+/// Length values can be created using the [Length::new] method, the [len] function,
+/// or by converting from various numeric types.
+///
+/// # Examples
+///
+/// ```
+/// use r3bl_tui::{Length, len, ch};
+///
+/// // Create a Length using the new method
+/// let length1 = Length::new(10);
+///
+/// // Create a Length using the len function
+/// let length2 = len(10);
+///
+/// // Convert from a ChUnit
+/// let length3 = Length::from(ch(10));
+///
+/// assert_eq!(length1, length2);
+/// assert_eq!(length2, length3);
+/// ```
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Length(pub ChUnit);
 
+/// Creates a new [Length] from a value that can be converted into a Length.
+///
+/// This is a convenience function that is equivalent to calling [Length::new].
+///
+/// # Examples
+///
+/// ```
+/// use r3bl_tui::{Length, len};
+///
+/// let length = len(10);
+/// assert_eq!(length, Length::new(10));
+/// ```
 pub fn len(arg_length: impl Into<Length>) -> Length { arg_length.into() }
 
 impl Debug for Length {
@@ -226,5 +264,57 @@ mod tests {
     fn test_debug_fmt() {
         let length = Length::new(10);
         assert_eq!(format!("{length:?}"), "Length(10)");
+    }
+
+    #[test]
+    fn test_length_max_value() {
+        // Test with maximum u16 value
+        let max_length = Length::new(u16::MAX);
+        assert_eq!(max_length.as_u16(), u16::MAX);
+    }
+
+    #[test]
+    fn test_length_zero() {
+        // Test with zero
+        let zero_length = Length::new(0);
+        assert_eq!(zero_length.0, ch(0));
+
+        // Converting zero length to index
+        let index = zero_length.convert_to_index();
+        assert_eq!(index.0, ch(0)); // Should be 0 since we don't go below 0
+    }
+
+    #[test]
+    fn test_length_interop_with_index() {
+        // Test interoperability with Index
+        let length = Length::new(10);
+        let index = idx(5);
+
+        // Index + Length
+        let new_index = index + length;
+        assert_eq!(new_index, idx(15));
+
+        // Index - Length
+        let new_index = idx(20) - length;
+        assert_eq!(new_index, idx(10));
+    }
+
+    #[test]
+    fn test_length_arithmetic_edge_cases() {
+        // Test addition near maximum value
+        let max_length = Length::new(u16::MAX - 5);
+        let small_length = Length::new(5);
+        let result = max_length + small_length;
+        assert_eq!(result, Length::new(u16::MAX));
+
+        // Test subtraction with zero
+        let length = Length::new(5);
+        let result = length - Length::new(5);
+        assert_eq!(result, Length::new(0));
+
+        // Test subtraction below zero (should clamp to zero due to unsigned type)
+        let length = Length::new(5);
+        let result = length - Length::new(10);
+        assert_eq!(result, Length::new(0));
     }
 }

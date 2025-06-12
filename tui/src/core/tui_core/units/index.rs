@@ -22,9 +22,51 @@ use std::{fmt::Debug,
 use super::{ChUnit, Length};
 use crate::ch;
 
+/// Represents an index position in character units.
+///
+/// An Index is a 0-based measurement that represents a position within a component
+/// in the terminal UI, such as a row or column position. It wraps a [ChUnit] value.
+///
+/// Index values can be created using the [Index::new] method, the [idx] function,
+/// or by converting from various numeric types.
+///
+/// The relationship between [Index] and [Length] is that:
+/// - A Length is 1-based (starts from 1)
+/// - An Index is 0-based (starts from 0)
+/// - The last valid index in a component with length L is L-1
+///
+/// # Examples
+///
+/// ```
+/// use r3bl_tui::{Index, idx, ch};
+///
+/// // Create an Index using the new method
+/// let index1 = Index::new(5);
+///
+/// // Create an Index using the idx function
+/// let index2 = idx(5);
+///
+/// // Convert from a ChUnit
+/// let index3 = Index::from(ch(5));
+///
+/// assert_eq!(index1, index2);
+/// assert_eq!(index2, index3);
+/// ```
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Index(pub ChUnit);
 
+/// Creates a new [Index] from a value that can be converted into an Index.
+///
+/// This is a convenience function that is equivalent to calling [Index::new].
+///
+/// # Examples
+///
+/// ```
+/// use r3bl_tui::{Index, idx};
+///
+/// let index = idx(5);
+/// assert_eq!(index, Index::new(5));
+/// ```
 pub fn idx(arg_index: impl Into<Index>) -> Index { arg_index.into() }
 
 impl Debug for Index {
@@ -156,7 +198,13 @@ mod tests {
     use std::hash::{DefaultHasher, Hasher as _};
 
     use super::*;
-    use crate::{ch, len};
+    use crate::{ch, len, BoundsCheck, BoundsStatus};
+
+    #[test]
+    fn test_index_new() {
+        let index = Index::new(10);
+        assert_eq!(index, idx(10));
+    }
 
     #[test]
     fn test_index_add() {
@@ -359,5 +407,177 @@ mod tests {
     fn test_idx_fn() {
         let index = Index(ch(10));
         assert_eq!(index, idx(10));
+    }
+
+    #[test]
+    fn test_index_max_value() {
+        // Test with maximum u16 value
+        let max_index = idx(u16::MAX);
+        assert_eq!(max_index.as_u16(), u16::MAX);
+    }
+
+    #[test]
+    fn test_index_convert_to_length_edge_cases() {
+        // Test with 0
+        let index = idx(0);
+        let length = index.convert_to_length();
+        assert_eq!(length, len(1));
+
+        // Test with max value
+        let max_index = idx(u16::MAX - 1); // Subtract 1 to avoid overflow when adding 1
+        let length = max_index.convert_to_length();
+        assert_eq!(length, len(u16::MAX));
+    }
+
+    #[test]
+    fn test_index_arithmetic_edge_cases() {
+        // Test addition near maximum value
+        let max_index = idx(u16::MAX - 5);
+        let small_index = idx(5);
+        let result = max_index + small_index;
+        assert_eq!(result, idx(u16::MAX));
+
+        // Test subtraction with zero
+        let index = idx(5);
+        let result = index - idx(5);
+        assert_eq!(result, idx(0));
+
+        // Test subtraction below zero (should clamp to zero due to unsigned type)
+        let index = idx(5);
+        let result = index - idx(10);
+        assert_eq!(result, idx(0));
+    }
+
+    #[test]
+    fn test_index_with_length_operations_edge_cases() {
+        // Test addition with length near maximum
+        let max_index = idx(u16::MAX - 5);
+        let length = len(5);
+        let result = max_index + length;
+        assert_eq!(result, idx(u16::MAX));
+
+        // Test subtraction with length
+        let index = idx(10);
+        let length = len(5);
+        let result = index - length;
+        assert_eq!(result, idx(5));
+
+        // Test subtraction with length below zero
+        let index = idx(5);
+        let length = len(10);
+        let result = index - length;
+        assert_eq!(result, idx(0));
+
+        // Test multiplication with length
+        let index = idx(u16::MAX / 2);
+        let length = len(2);
+        let result = index * length;
+        assert_eq!(result, idx(u16::MAX - 1)); // Due to how multiplication works with u16
+    }
+
+    #[test]
+    fn test_index_bounds_check_with_length() {
+        // Test index within bounds
+        let index = idx(5);
+        let length = len(10);
+        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+
+        // Test index at boundary
+        let index = idx(9);
+        let length = len(10);
+        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+
+        // Test index overflowing
+        let index = idx(10);
+        let length = len(10);
+        assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
+
+        // Test index far beyond bounds
+        let index = idx(20);
+        let length = len(10);
+        assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
+    }
+
+    #[test]
+    fn test_index_bounds_check_with_index() {
+        // Test index within bounds
+        let index1 = idx(5);
+        let index2 = idx(10);
+        assert_eq!(index1.check_overflows(index2), BoundsStatus::Within);
+
+        // Test index at boundary
+        let index1 = idx(10);
+        let index2 = idx(10);
+        assert_eq!(index1.check_overflows(index2), BoundsStatus::Within);
+
+        // Test index overflowing
+        let index1 = idx(11);
+        let index2 = idx(10);
+        assert_eq!(index1.check_overflows(index2), BoundsStatus::Overflowed);
+
+        // Test index far beyond bounds
+        let index1 = idx(20);
+        let index2 = idx(10);
+        assert_eq!(index1.check_overflows(index2), BoundsStatus::Overflowed);
+    }
+
+    #[test]
+    fn test_index_bounds_check_edge_cases() {
+        // Test with zero length
+        let index = idx(0);
+        let length = len(0);
+        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+
+        // Test with zero index against zero length
+        let index = idx(0);
+        let length = len(0);
+        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+
+        // Test with non-zero index against zero length
+        let index = idx(1);
+        let length = len(0);
+        assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
+
+        // Test with maximum values
+        let index = idx(u16::MAX);
+        let length = len(u16::MAX);
+        assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
+
+        // Test with maximum index against maximum length
+        let index = idx(u16::MAX - 1);
+        let length = len(u16::MAX);
+        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+    }
+
+    #[test]
+    fn test_full_interoperability() {
+        // Create an index and length
+        let index = idx(5);
+        let length = len(10);
+
+        // Check if index is within bounds
+        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+
+        // Convert index to length
+        let new_length = index.convert_to_length();
+        assert_eq!(new_length, len(6));
+
+        // Convert length to index
+        let new_index = length.convert_to_index();
+        assert_eq!(new_index, idx(9));
+
+        // Perform arithmetic with index and length
+        let result_index = index + length;
+        assert_eq!(result_index, idx(15));
+
+        // Check if the new index is within bounds
+        assert_eq!(result_index.check_overflows(length), BoundsStatus::Overflowed);
+
+        // Subtract length from index
+        let result_index = result_index - length;
+        assert_eq!(result_index, idx(5));
+
+        // Check if the new index is within bounds
+        assert_eq!(result_index.check_overflows(length), BoundsStatus::Within);
     }
 }
