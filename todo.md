@@ -151,8 +151,6 @@
 - [x] refactor / rewrite `as_str_slice.rs` using `Length`, `Index`, `BoundsCheck` and lots of enums
       for state machine states and functions to calculate these
 
----
-
 - [ ] migrate `extended` parsers into `extended_alt`
 
   - [x] `parse_metadata_k_csv_alt`
@@ -174,9 +172,9 @@
 
   - [x] clean up messy test case input data creation using `as_str_slice_test_case!`
 
-  - [ ] `parse_metadata_k_v_alt`
+  - [x] `parse_metadata_k_v_alt`
 
-  - [ ] make sure all the docs have been copied over along with any `println!()` statements at the
+  - [x] make sure all the docs have been copied over along with any `println!()` statements at the
         start of main parser function execution
 
 ---
@@ -187,7 +185,8 @@
   - [ ] block heading
   - [ ] block markdown text
   - [ ] block smart list
-  - [ ] use the above in `parser_impl.rs` (instead of the ones defined file)
+
+---
 
 - [ ] remove `md_parser` mod and `md_parser_alt` mod is the new one; update
       `md_parser_syn_hi_impl.rs` to use this

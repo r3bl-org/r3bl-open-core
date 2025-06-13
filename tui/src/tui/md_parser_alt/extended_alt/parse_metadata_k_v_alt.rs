@@ -64,18 +64,164 @@ pub fn parse_unique_kv_opt_eol_alt<'a>(
 #[cfg(test)]
 mod test_parse_title_no_eol {
     use super::*;
-    use crate::{assert_eq2,
+    use crate::{as_str_slice_test_case,
+                assert_eq2,
                 fg_black,
                 inline_string,
                 md_parser::constants::TITLE,
                 GCString,
-                as_str_slice_test_case};
+                NomErr,
+                NomError,
+                NomErrorKind};
 
     #[test]
     fn test_not_quoted_no_eol() {
         as_str_slice_test_case!(input, "@title: Something");
-        let (input, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
-        assert_eq2!(input.extract_to_slice_end(), "");
-        assert_eq2!(output.unwrap().extract_to_slice_end(), "Something");
+        let (rem, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+
+        let rem_str = &rem.extract_to_slice_end();
+        let output_str = &output.unwrap().extract_to_slice_end();
+
+        println!(
+            "output: '{o}', rem: '{r}'",
+            o = fg_black(output_str).bg_green(),
+            r = fg_black(rem_str).bg_yellow(),
+        );
+
+        assert_eq2!(output_str, "Something");
+        assert_eq2!(rem_str, "");
+    }
+
+    #[test]
+    fn test_not_quoted_with_eol() {
+        as_str_slice_test_case!(input, "@title: Something\n");
+        let (rem, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+
+        let rem_str = &rem.extract_to_slice_end();
+        let output_str = &output.unwrap().extract_to_slice_end();
+
+        println!(
+            "output: '{o}', rem: '{r}'",
+            o = fg_black(output_str).bg_green(),
+            r = fg_black(rem_str).bg_yellow(),
+        );
+
+        assert_eq2!(output_str, "Something");
+        assert_eq2!(rem_str, "");
+    }
+
+    #[test]
+    fn test_no_quoted_no_eol_nested_title() {
+        as_str_slice_test_case!(input, "@title: Something @title: Something");
+        let input_clone = input.clone();
+
+        let res = parse_unique_kv_opt_eol_alt(TITLE, input);
+
+        assert_eq2!(res.is_err(), true);
+        if let Err(NomErr::Error(ref e)) = res {
+            assert_eq2!(e.input, input_clone);
+            assert_eq2!(e.code, NomErrorKind::Fail);
+        }
+
+        println!(
+            "err: '{}'",
+            fg_black(&inline_string!("{:?}", res.err().unwrap())).bg_yellow(),
+        );
+    }
+
+    #[test]
+    fn test_no_quoted_no_eol_multiple_title_tags() {
+        as_str_slice_test_case!(input, "@title: Something\n@title: Else\n");
+        let input_clone = input.clone();
+
+        let res = parse_unique_kv_opt_eol_alt(TITLE, input);
+
+        assert_eq2!(res.is_err(), true);
+        if let Err(NomErr::Error(ref e)) = res {
+            assert_eq2!(e.input, input_clone);
+            assert_eq2!(e.code, NomErrorKind::Fail);
+        }
+
+        println!(
+            "err: '{}'",
+            fg_black(&inline_string!("{:?}", res.err().unwrap())).bg_yellow(),
+        );
+    }
+
+    #[test]
+    fn test_no_quoted_with_eol_title_with_postfix_content_1() {
+        as_str_slice_test_case!(input, "@title: \nfoo\nbar");
+        println!(
+            "input: '{}'",
+            fg_black(input.extract_to_slice_end()).bg_cyan()
+        );
+
+        let (rem, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+
+        let rem_str = &rem.extract_to_slice_end();
+        let output_str = match output {
+            Some(o) => &o.extract_to_slice_end(),
+            None => "",
+        };
+
+        println!(
+            "output: '{o}', rem: '{r}'",
+            o = fg_black(output_str).bg_green(),
+            r = fg_black(rem_str).bg_yellow(),
+        );
+
+        assert_eq2!(output_str, "");
+        assert_eq2!(rem_str, "foo\nbar");
+    }
+
+    #[test]
+    fn test_no_quoted_with_eol_title_with_postfix_content_2() {
+        as_str_slice_test_case!(input, "@title:  a\nfoo\nbar");
+        println!(
+            "input: '{}'",
+            fg_black(input.extract_to_slice_end()).bg_cyan()
+        );
+
+        let (rem, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+
+        let rem_str = &rem.extract_to_slice_end();
+        let output_str = match output {
+            Some(o) => &o.extract_to_slice_end(),
+            None => "",
+        };
+
+        println!(
+            "output: '{o}', rem: '{r}'",
+            o = fg_black(output_str).bg_green(),
+            r = fg_black(rem_str).bg_yellow(),
+        );
+
+        assert_eq2!(rem_str, "foo\nbar");
+        assert_eq2!(output_str, " a");
+    }
+
+    #[test]
+    fn test_no_quoted_with_eol_title_with_postfix_content_3() {
+        as_str_slice_test_case!(input, "@title: \n\n# heading1\n## heading2");
+        println!(
+            "input: '{}'",
+            fg_black(input.extract_to_slice_end()).bg_cyan()
+        );
+
+        let (rem, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+
+        let rem_str = &rem.extract_to_slice_end();
+        let output_str = match output {
+            Some(o) => &o.extract_to_slice_end(),
+            None => "",
+        };
+
+        println!(
+            "output: '{o}', rem: '{r}'",
+            o = fg_black(output_str).bg_green(),
+            r = fg_black(rem_str).bg_yellow(),
+        );
+        assert_eq2!(output_str, "");
+        assert_eq2!(rem_str, "\n# heading1\n## heading2");
     }
 }
