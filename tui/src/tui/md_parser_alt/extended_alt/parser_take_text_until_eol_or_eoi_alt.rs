@@ -27,7 +27,7 @@ use crate::{md_parser::constants::NEW_LINE, AsStrSlice, NomError};
 
 /// This returns a function, which implements [Parser]. So call `input()` on it
 /// or pass it to other `nom` combination functions.
-/// 
+///
 /// Take text until an optional EOL character is found, or end of input is reached. If an
 /// EOL character is found:
 /// - The EOL character is not included in the output.
@@ -75,12 +75,9 @@ mod test_text_until_opt_eol {
             .parse(input)
             .unwrap();
         // Should return empty content when input immediately starts with newline
-        assert_eq2!(result.extract_remaining_text_content_in_line(), "");
+        assert_eq2!(result.extract_to_slice_end(), "");
         // Remainder should start from the newline
-        assert_eq2!(
-            remainder.extract_remaining_text_content_in_line(),
-            "\nfoo\nbar"
-        );
+        assert_eq2!(remainder.extract_to_slice_end(), "\nfoo\nbar");
     }
 
     #[test]
@@ -94,11 +91,8 @@ mod test_text_until_opt_eol {
         println!("{:8}: {:?}", "input", input_raw);
         println!("{:8}: {:?}", "rem", rem);
         println!("{:8}: {:?}", "output", output);
-        assert_eq2!(
-            output.extract_remaining_text_content_in_line(),
-            "Hello, world!"
-        );
-        assert_eq2!(rem.extract_remaining_text_content_in_line(), "\n");
+        assert_eq2!(output.extract_to_slice_end(), "Hello, world!");
+        assert_eq2!(rem.extract_to_slice_end(), "\n");
     }
 
     #[test]
@@ -112,22 +106,45 @@ mod test_text_until_opt_eol {
         println!("\n{:8}: {:?}", "input", input_raw);
         println!("{:8}: {:?}", "rem", rem);
         println!("{:8}: {:?}", "output", output);
-        assert_eq2!(output.to_inline_string(), "Hello, world!");
-        assert_eq2!(rem.to_inline_string(), "");
+        assert_eq2!(output.extract_to_slice_end(), "Hello, world!");
+        assert_eq2!(rem.extract_to_slice_end(), "");
     }
 
     #[test]
-    fn test_another_input_with_eol() {
-        // With EOL.
-        let input_raw = &[GCString::new("\nfoo\nbar")];
-        let input = AsStrSlice::from(input_raw);
-        let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
-            .parse(input)
-            .unwrap();
-        println!("\n{:8}: {:?}", "input", input_raw);
-        println!("{:8}: {:?}", "rem", rem);
-        println!("{:8}: {:?}", "output", output);
-        assert_eq2!(output.to_inline_string(), "");
-        assert_eq2!(rem.to_inline_string(), "\nfoo\nbar");
+    fn test_another_input_starts_with_eol() {
+        // Begins with EOL, then has some text, and ends with EOL.
+        {
+            let input_raw = &[GCString::new("\nfoo\nbar")];
+            let input = AsStrSlice::from(input_raw);
+            let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
+                .parse(input)
+                .unwrap();
+            println!("\n{:8}: {:?}", "input", input_raw);
+            println!("{:8}: {:?}", "rem", rem);
+            println!("{:8}: {:?}", "output", output);
+            assert_eq2!(output.extract_to_slice_end(), "");
+            assert_eq2!(rem.extract_to_slice_end(), "\nfoo\nbar");
+        }
+
+        // Multi-element input with empty line (new line only), "foo", and "bar".
+        // Note the extra new line at the end of the rem. This is expected behavior
+        // for `AsStrSlice` which generates a new line at the end of the slice
+        // when there is more than 1 line.
+        {
+            let input_raw = &[
+                GCString::new(""),
+                GCString::new("foo"),
+                GCString::new("bar"),
+            ];
+            let input = AsStrSlice::from(input_raw);
+            let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
+                .parse(input)
+                .unwrap();
+            println!("\n{:8}: {:?}", "input", input_raw);
+            println!("{:8}: {:?}", "rem", rem);
+            println!("{:8}: {:?}", "output", output);
+            assert_eq2!(output.extract_to_slice_end(), "");
+            assert_eq2!(rem.extract_to_slice_end(), "\nfoo\nbar\n");
+        }
     }
 }

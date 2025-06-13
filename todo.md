@@ -164,6 +164,14 @@
             `InlineVec` integration
     - [x] migrate all the existing tests over
 
+  - [x] `as_str_slice.rs` clean up
+
+    - [x] `extract_remaining_text_content_in_line()` -> `extract_to_line_end()`
+    - [x] `extract_remaining_text_content_to_end()` -> `extract_to_slice_end()`
+    - [x] `is_empty()`
+    - [x] `contains()`
+    - [x] `starts_with()`
+
   - [ ] `parse_metadata_k_v_alt`
 
 ---

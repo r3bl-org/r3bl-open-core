@@ -27,12 +27,12 @@
 macro_rules! inline_string {
     (
         $($format:tt)*
-    ) => {{
-        let mut acc = $crate::InlineString::new();
-        use std::fmt::Write as _;
-        _ = write!(&mut acc, $($format)*);
-        acc
-    }};
+        ) => {{
+            let mut acc = $crate::InlineString::new();
+            use std::fmt::Write as _;
+            _ = write!(&mut acc, $($format)*);
+            acc
+        }};
 }
 
 /// A macro to create a [crate::TinyInlineString] (which is allocated and returned) with a

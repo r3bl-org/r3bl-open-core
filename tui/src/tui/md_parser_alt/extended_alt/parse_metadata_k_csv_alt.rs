@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::{tag, take_while1},
+use nom::{bytes::complete::{tag, take_while, take_while1},
           combinator::{opt, verify},
           multi::many0,
           sequence::preceded,
@@ -26,13 +26,17 @@ use crate::{constants::{COMMA_CHAR, NEW_LINE_CHAR, SPACE_CHAR},
             inline_vec,
             list,
             md_parser::constants::{COLON, COMMA, NEW_LINE, SPACE},
-            take_text_until_eol_or_eoi_alt::parser_take_text_until_eol_or_eoi_alt,
+            parser_take_text_until_eol_or_eoi_alt::parser_take_text_until_eol_or_eoi_alt,
             AsStrSlice,
             InlineVec,
             List};
 
-/// - Sample parse input: `@tags: tag1, tag2, tag3`, `@tags: tag1, tag2, tag3\n`, or
-///   `@authors: me, myself, i`, `@authors: me, myself, i\n`.
+/// - Sample parse input:
+///   - `@tags: tag1, tag2, tag3`
+///   - `@tags: tag1, tag2, tag3\n`
+///   - `@authors: me, myself, i`
+///   - `@authors: me, myself, i\n`
+/// - There may or may not be a newline at the end. If there is, it is consumed.
 pub fn parse_csv_opt_eol_alt<'a>(
     tag_name: &str,
     input: AsStrSlice<'a>,
@@ -47,10 +51,7 @@ pub fn parse_csv_opt_eol_alt<'a>(
     let (rem_new, _) = opt(tag(NEW_LINE)).parse(rem)?;
 
     // Special case: Early return when just a `@tags: ` is found.
-    if tags_text
-        .extract_remaining_text_content_in_line()
-        .is_empty()
-    {
+    if tags_text.is_empty() {
         Ok((rem_new, list![]))
     }
     // Normal case.
@@ -68,29 +69,26 @@ fn parse_comma_separated_list_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, InlineVec<AsStrSlice<'a>>> {
     // Handle empty input.
-    if input.extract_remaining_text_content_in_line().is_empty() {
+    if input.is_empty() {
         return Ok((input, inline_vec![]));
     }
 
     // Parser for the first item (must not start with space, stops at comma or end).
     let mut first_item = verify(
         take_while1(|c: char| c != COMMA_CHAR && c != NEW_LINE_CHAR),
-        |item: &AsStrSlice<'_>| {
-            !item
-                .extract_remaining_text_content_in_line()
-                .starts_with(SPACE_CHAR)
-        },
+        |item: &AsStrSlice<'_>| !item.starts_with(SPACE),
     );
 
-    // Parser for subsequent items (after comma, must start with space).
+    // Parser for subsequent items (after comma, must start with at least one space, then
+    // trim all leading spaces).
     let subsequent_item = preceded(
         tag(COMMA),
-        verify(
+        preceded(
+            verify(
+                take_while1(|c: char| c == SPACE_CHAR),
+                |spaces: &AsStrSlice<'_>| !spaces.is_empty(),
+            ),
             take_while1(|c: char| c != COMMA_CHAR && c != NEW_LINE_CHAR),
-            |item: &AsStrSlice<'_>| {
-                let content = item.extract_remaining_text_content_in_line();
-                content.starts_with(SPACE_CHAR)
-            },
         ),
     );
 
@@ -102,42 +100,17 @@ fn parse_comma_separated_list_alt<'a>(
 
     // Check if there's any remaining input that contains a comma.
     // This ensures we reject inputs like "tag1,tag2" (without a space after the comma).
-    if remaining
-        .extract_remaining_text_content_in_line()
-        .contains(COMMA_CHAR)
-    {
+    if remaining.contains(COMMA) {
         return Err(nom::Err::Error(nom::error::Error::new(
             remaining,
             nom::error::ErrorKind::Verify,
         )));
     }
 
-    // Build result vector, trimming leading space from subsequent items.
+    // Build result vector.
     let mut result = InlineVec::with_capacity(1 + rest.len());
     result.push(first);
-
-    for item in rest {
-        let content = item.extract_remaining_text_content_in_line();
-
-        // Count leading spaces that need to be trimmed. Use character count, not byte
-        // offset.
-        let leading_spaces_count =
-            content.chars().take_while(|&c| c == SPACE_CHAR).count();
-
-        if leading_spaces_count > 0 {
-            // Calculate remaining content length after trimming leading spaces. Use
-            // character count, not byte offset.
-            let total_char_count = content.chars().count();
-            let remaining_content_length = total_char_count - leading_spaces_count;
-
-            // Create trimmed slice by skipping leading spaces.
-            let trimmed_item =
-                item.skip_take(leading_spaces_count, remaining_content_length);
-            result.push(trimmed_item);
-        } else {
-            result.push(item);
-        }
-    }
+    result.extend(rest);
 
     Ok((remaining, result))
 }
@@ -154,7 +127,7 @@ mod test_parse_tags_opt_eol {
         let input_slice = AsStrSlice::from(lines);
 
         let (input, output) = super::parse_csv_opt_eol_alt(TAGS, input_slice).unwrap();
-        assert_eq2!(input.extract_remaining_text_content_in_line(), "");
+        assert_eq2!(input.extract_to_slice_end(), "");
 
         // Create expected output with AsStrSlice values
         let expected_tag1 = &[GCString::new("tag1")];
@@ -170,11 +143,11 @@ mod test_parse_tags_opt_eol {
         assert_eq2!(
             output
                 .iter()
-                .map(|s| s.extract_remaining_text_content_in_line())
+                .map(|s| s.extract_to_slice_end())
                 .collect::<Vec<_>>(),
             expected
                 .iter()
-                .map(|s| s.extract_remaining_text_content_in_line())
+                .map(|s| s.extract_to_slice_end())
                 .collect::<Vec<_>>()
         );
     }
@@ -210,7 +183,7 @@ mod test_parse_tags_opt_eol {
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         let input5 = &[GCString::new("@tags: tag1, tag2,  tag3")];
         let result = parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input5)).unwrap();
-        assert_eq2!(result.0.extract_remaining_text_content_in_line(), "",);
+        assert_eq2!(result.0.extract_to_slice_end(), "",);
 
         // Create expected output with AsStrSlice values
         let expected_tag1 = &[GCString::new("tag1")];
@@ -227,11 +200,11 @@ mod test_parse_tags_opt_eol {
             result
                 .1
                 .iter()
-                .map(|s| s.extract_remaining_text_content_in_line())
+                .map(|s| s.extract_to_slice_end())
                 .collect::<Vec<_>>(),
             expected
                 .iter()
-                .map(|s| s.extract_remaining_text_content_in_line())
+                .map(|s| s.extract_to_slice_end())
                 .collect::<Vec<_>>()
         );
     }
@@ -245,7 +218,7 @@ mod test_parse_tags_opt_eol {
             let input_slice = AsStrSlice::from(input_lines);
 
             let (input, output) = parse_csv_opt_eol_alt(TAGS, input_slice).unwrap();
-            assert_eq2!(input.extract_remaining_text_content_in_line(), "");
+            assert_eq2!(input.extract_to_slice_end(), "");
 
             // Create expected output with AsStrSlice values
             let expected_tag1 = &[GCString::new("tag1")];
@@ -261,11 +234,11 @@ mod test_parse_tags_opt_eol {
             assert_eq2!(
                 output
                     .iter()
-                    .map(|s| s.extract_remaining_text_content_in_line())
+                    .map(|s| s.extract_to_slice_end())
                     .collect::<Vec<_>>(),
                 expected
                     .iter()
-                    .map(|s| s.extract_remaining_text_content_in_line())
+                    .map(|s| s.extract_to_slice_end())
                     .collect::<Vec<_>>()
             );
         }
@@ -320,7 +293,7 @@ mod test_parse_tags_opt_eol {
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         let input5 = &[GCString::new("@tags: tag1, tag2,  tag3\n")];
         let result = parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input5)).unwrap();
-        assert_eq2!(result.0.extract_remaining_text_content_in_line(), "",);
+        assert_eq2!(result.0.extract_to_slice_end(), "",);
 
         // Create expected output with AsStrSlice values
         let expected_tag1 = &[GCString::new("tag1")];
@@ -337,11 +310,11 @@ mod test_parse_tags_opt_eol {
             result
                 .1
                 .iter()
-                .map(|s| s.extract_remaining_text_content_in_line())
+                .map(|s| s.extract_to_slice_end())
                 .collect::<Vec<_>>(),
             expected
                 .iter()
-                .map(|s| s.extract_remaining_text_content_in_line())
+                .map(|s| s.extract_to_slice_end())
                 .collect::<Vec<_>>()
         );
     }
@@ -352,18 +325,12 @@ mod test_parse_tags_opt_eol {
         let lines = &[GCString::new(input_raw)];
         let input = AsStrSlice::from(lines);
 
-        println!(
-            "Input: {:?}",
-            input.extract_remaining_text_content_in_line()
-        );
+        println!("Input: {:?}", input.extract_to_slice_end());
         let (input, output) = parse_csv_opt_eol_alt(TAGS, input).unwrap();
-        println!(
-            "Remainder: {:?}",
-            input.extract_remaining_text_content_in_line()
-        );
+        println!("Remainder: {:?}", input.extract_to_slice_end());
         println!("Output: {:?}", output);
 
-        assert_eq2!(input.extract_remaining_text_content_in_line(), "foo\nbar");
+        assert_eq2!(input.extract_to_slice_end(), "foo\nbar");
 
         // Empty list case
         let expected = list![];
