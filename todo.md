@@ -172,7 +172,12 @@
     - [x] `contains()`
     - [x] `starts_with()`
 
+  - [x] clean up messy test case input data creation using `as_str_slice_test_case!`
+
   - [ ] `parse_metadata_k_v_alt`
+
+  - [ ] make sure all the docs have been copied over along with any `println!()` statements at the
+        start of main parser function execution
 
 ---
 
