@@ -239,6 +239,15 @@ impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
     }
 }
 
+#[macro_export]
+macro_rules! as_str_slice_test_case {
+    ($var_name:ident, $($string_expr:expr),+ $(,)?) => {
+        #[allow(unused_variables)]
+        let _input_array = [$(GCString::new($string_expr)),+];
+        let $var_name = AsStrSlice::from(&_input_array);
+    };
+}
+
 pub mod synthetic_new_line_for_current_char {
     use super::*;
 
@@ -1261,6 +1270,32 @@ impl<'a> Iterator for StringCharIndices<'a> {
         self.slice.advance();
         self.position += idx(1);
         Some((pos, ch))
+    }
+}
+
+#[cfg(test)]
+mod tests_as_str_slice_test_case {
+    use super::*;
+    use crate::assert_eq2;
+
+    #[test]
+    fn test_as_str_slice_creation() {
+        // Single string.
+        as_str_slice_test_case!(input, "@title: Something");
+        assert_eq2!(input.lines.len(), 1);
+        assert_eq2!(input.lines[0].as_ref(), "@title: Something");
+
+        // Multiple strings.
+        as_str_slice_test_case!(input, "@title: Something", "more content", "even more");
+        assert_eq2!(input.lines.len(), 3);
+        assert_eq2!(input.lines[0].as_ref(), "@title: Something");
+        assert_eq2!(input.lines[1].as_ref(), "more content");
+        assert_eq2!(input.lines[2].as_ref(), "even more");
+
+        // With trailing comma (optional).
+        as_str_slice_test_case!(input, "@title: Something",);
+        assert_eq2!(input.lines.len(), 1);
+        assert_eq2!(input.lines[0].as_ref(), "@title: Something");
     }
 }
 

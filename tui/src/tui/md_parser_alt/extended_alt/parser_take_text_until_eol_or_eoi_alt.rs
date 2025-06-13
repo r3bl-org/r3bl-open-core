@@ -64,13 +64,12 @@ pub fn parser_take_text_until_eol_or_eoi_alt<'a>() ->
 #[cfg(test)]
 mod test_text_until_opt_eol {
     use super::*;
-    use crate::{assert_eq2, AsStrSlice, GCString};
+    use crate::{assert_eq2, AsStrSlice, GCString, as_str_slice_test_case};
 
     #[test]
     fn test_input_starts_with_new_line() {
         // Starts with new line.
-        let input_raw = &[GCString::new("\nfoo\nbar")];
-        let input = AsStrSlice::from(input_raw);
+        as_str_slice_test_case!(input, "\nfoo\nbar");
         let (remainder, result) = parser_take_text_until_eol_or_eoi_alt()
             .parse(input)
             .unwrap();
@@ -83,12 +82,11 @@ mod test_text_until_opt_eol {
     #[test]
     fn test_input_with_eol() {
         // With EOL.
-        let input_raw = &[GCString::new("Hello, world!\n")];
-        let input = AsStrSlice::from(input_raw);
+        as_str_slice_test_case!(input, "Hello, world!\n");
         let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
             .parse(input)
             .unwrap();
-        println!("{:8}: {:?}", "input", input_raw);
+        println!("{:8}: {:?}", "input", "_input_array");
         println!("{:8}: {:?}", "rem", rem);
         println!("{:8}: {:?}", "output", output);
         assert_eq2!(output.extract_to_slice_end(), "Hello, world!");
@@ -98,12 +96,11 @@ mod test_text_until_opt_eol {
     #[test]
     fn test_input_without_eol() {
         // Without EOL.
-        let input_raw = &[GCString::new("Hello, world!")];
-        let input = AsStrSlice::from(input_raw);
+        as_str_slice_test_case!(input, "Hello, world!");
         let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
             .parse(input)
             .unwrap();
-        println!("\n{:8}: {:?}", "input", input_raw);
+        println!("\n{:8}: {:?}", "input", "_input_array");
         println!("{:8}: {:?}", "rem", rem);
         println!("{:8}: {:?}", "output", output);
         assert_eq2!(output.extract_to_slice_end(), "Hello, world!");
@@ -114,12 +111,11 @@ mod test_text_until_opt_eol {
     fn test_another_input_starts_with_eol() {
         // Begins with EOL, then has some text, and ends with EOL.
         {
-            let input_raw = &[GCString::new("\nfoo\nbar")];
-            let input = AsStrSlice::from(input_raw);
+            as_str_slice_test_case!(input, "\nfoo\nbar");
             let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
                 .parse(input)
                 .unwrap();
-            println!("\n{:8}: {:?}", "input", input_raw);
+            println!("\n{:8}: {:?}", "input", "_input_array");
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
             assert_eq2!(output.extract_to_slice_end(), "");
@@ -131,16 +127,11 @@ mod test_text_until_opt_eol {
         // for `AsStrSlice` which generates a new line at the end of the slice
         // when there is more than 1 line.
         {
-            let input_raw = &[
-                GCString::new(""),
-                GCString::new("foo"),
-                GCString::new("bar"),
-            ];
-            let input = AsStrSlice::from(input_raw);
+            as_str_slice_test_case!(input, "", "foo", "bar");
             let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
                 .parse(input)
                 .unwrap();
-            println!("\n{:8}: {:?}", "input", input_raw);
+            println!("\n{:8}: {:?}", "input", "_input_array");
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
             assert_eq2!(output.extract_to_slice_end(), "");

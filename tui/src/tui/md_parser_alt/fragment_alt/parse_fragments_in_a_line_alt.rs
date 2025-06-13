@@ -133,15 +133,12 @@ mod tests_parse_fragment {
               Err as NomErr};
 
     use super::*;
-    use crate::{assert_eq2, idx, GCString, HyperlinkData};
+    use crate::{as_str_slice_test_case, assert_eq2, idx, GCString, HyperlinkData};
 
     #[test]
     fn test_parse_plain_text_no_new_line1() {
         {
-            let input_raw = "this _bar";
-            let lines = &[GCString::new(input_raw)];
-            let input = AsStrSlice::from(lines);
-
+            as_str_slice_test_case!(input, "this _bar");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             let (rem, out) = res.unwrap();
             assert_eq2!(rem.extract_to_line_end(), "_bar");
@@ -149,10 +146,7 @@ mod tests_parse_fragment {
         }
 
         {
-            let input_raw = "_bar";
-            let lines = &[GCString::new(input_raw)];
-            let input = AsStrSlice::from(lines);
-
+            as_str_slice_test_case!(input, "_bar");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             let (rem, out) = res.unwrap();
             assert_eq2!(rem.extract_to_line_end(), "bar");
@@ -160,10 +154,7 @@ mod tests_parse_fragment {
         }
 
         {
-            let input_raw = "bar_";
-            let lines = &[GCString::new(input_raw)];
-            let input = AsStrSlice::from(lines);
-
+            as_str_slice_test_case!(input, "bar_");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             let (rem, out) = res.unwrap();
             assert_eq2!(rem.extract_to_line_end(), "_");
@@ -173,10 +164,7 @@ mod tests_parse_fragment {
 
     #[test]
     fn test_parse_fragment_plaintext_unicode() {
-        let input_raw = "- straight😃\n";
-        let lines = &[GCString::new(input_raw)];
-        let input = AsStrSlice::from(lines);
-
+        as_str_slice_test_case!(input, "- straight😃\n");
         let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
         let (rem, out) = res.unwrap();
 
@@ -205,8 +193,7 @@ mod tests_parse_fragment {
     fn test_parse_fragment_plaintext() {
         // "1234567890" -> ok
         {
-            let lines = &[GCString::new("1234567890")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "1234567890");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -219,8 +206,7 @@ mod tests_parse_fragment {
 
         // "oh my gosh!" -> ok
         {
-            let lines = &[GCString::new("oh my gosh!")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "oh my gosh!");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -233,8 +219,7 @@ mod tests_parse_fragment {
 
         // "oh my gosh![" -> ok
         {
-            let lines = &[GCString::new("oh my gosh![")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "oh my gosh![");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -247,8 +232,7 @@ mod tests_parse_fragment {
 
         // "oh my gosh!*" -> ok
         {
-            let lines = &[GCString::new("oh my gosh!*")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "oh my gosh!*");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -261,8 +245,7 @@ mod tests_parse_fragment {
 
         // "*bold baby bold*" -> ok
         {
-            let lines = &[GCString::new("*bold baby bold*")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "*bold baby bold*");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -275,8 +258,7 @@ mod tests_parse_fragment {
 
         // "[link baby](and then somewhat)" -> ok
         {
-            let lines = &[GCString::new("[link baby](and then somewhat)")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "[link baby](and then somewhat)");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -292,8 +274,7 @@ mod tests_parse_fragment {
 
         // "`codeblock for bums`" -> ok
         {
-            let lines = &[GCString::new("`codeblock for bums`")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "`codeblock for bums`");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -306,8 +287,7 @@ mod tests_parse_fragment {
 
         // "![ but wait theres more](jk)" -> ok
         {
-            let lines = &[GCString::new("![ but wait theres more](jk)")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "![ but wait theres more](jk)");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -323,8 +303,7 @@ mod tests_parse_fragment {
 
         // "here is plaintext" -> ok
         {
-            let lines = &[GCString::new("here is plaintext")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "here is plaintext");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -337,8 +316,7 @@ mod tests_parse_fragment {
 
         // "here is plaintext!" -> ok
         {
-            let lines = &[GCString::new("here is plaintext!")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "here is plaintext!");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -351,8 +329,7 @@ mod tests_parse_fragment {
 
         // "here is plaintext![image starting" -> ok
         {
-            let lines = &[GCString::new("here is plaintext![image starting")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "here is plaintext![image starting");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -365,8 +342,7 @@ mod tests_parse_fragment {
 
         // "here is plaintext\n" -> ok
         {
-            let lines = &[GCString::new("here is plaintext\n")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "here is plaintext\n");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -379,8 +355,7 @@ mod tests_parse_fragment {
 
         // "*here is italic*" -> ok
         {
-            let lines = &[GCString::new("*here is italic*")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "*here is italic*");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -393,8 +368,7 @@ mod tests_parse_fragment {
 
         // "**here is bold**" -> ok
         {
-            let lines = &[GCString::new("**here is bold**")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "**here is bold**");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -407,8 +381,7 @@ mod tests_parse_fragment {
 
         // "`here is code`" -> ok
         {
-            let lines = &[GCString::new("`here is code`")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "`here is code`");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -421,8 +394,7 @@ mod tests_parse_fragment {
 
         // "[title](https://www.example.com)" -> ok
         {
-            let lines = &[GCString::new("[title](https://www.example.com)")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "[title](https://www.example.com)");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -438,8 +410,7 @@ mod tests_parse_fragment {
 
         // "![alt text](image.jpg)" -> ok
         {
-            let lines = &[GCString::new("![alt text](image.jpg)")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "![alt text](image.jpg)");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
@@ -452,8 +423,7 @@ mod tests_parse_fragment {
 
         // "" -> error
         {
-            let lines = &[GCString::new("")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "");
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             assert_eq2!(
                 res,
@@ -470,8 +440,7 @@ mod tests_parse_fragment {
         // Plain text.
         // "here is plaintext!" -> ok
         {
-            let lines = &[GCString::new("here is plaintext!")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "here is plaintext!");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -488,8 +457,7 @@ mod tests_parse_fragment {
         // Bold text.
         // "*here is bold*" -> ok
         {
-            let lines = &[GCString::new("*here is bold*")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "*here is bold*");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -506,8 +474,7 @@ mod tests_parse_fragment {
         // Italic text.
         // "_here is italic_" -> ok
         {
-            let lines = &[GCString::new("_here is italic_")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "_here is italic_");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -524,8 +491,7 @@ mod tests_parse_fragment {
         // Inline code.
         // "`here is code`" -> ok
         {
-            let lines = &[GCString::new("`here is code`")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "`here is code`");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -542,8 +508,7 @@ mod tests_parse_fragment {
         // Link.
         // "[title](https://www.example.com)" -> ok
         {
-            let lines = &[GCString::new("[title](https://www.example.com)")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "[title](https://www.example.com)");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -566,8 +531,7 @@ mod tests_parse_fragment {
         // Image.
         // "![alt text](image.jpg)" -> ok
         {
-            let lines = &[GCString::new("![alt text](image.jpg)")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "![alt text](image.jpg)");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -590,8 +554,7 @@ mod tests_parse_fragment {
         // Plain text (duplicate for consistency).
         // "here is plaintext!" -> ok
         {
-            let lines = &[GCString::new("here is plaintext!")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "here is plaintext!");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -608,10 +571,10 @@ mod tests_parse_fragment {
         // Partial parsing - plaintext with remaining content.
         // "here is some plaintext *but what if we italicize?" -> ok
         {
-            let lines = &[GCString::new(
-                "here is some plaintext *but what if we italicize?",
-            )];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(
+                input,
+                "here is some plaintext *but what if we italicize?"
+            );
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -628,10 +591,10 @@ mod tests_parse_fragment {
         // Partial parsing with newline - plaintext with remaining content.
         // "here is some plaintext \n*but what if we italicize?" -> ok
         {
-            let lines = &[GCString::new(
-                "here is some plaintext \n*but what if we italicize?",
-            )];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(
+                input,
+                "here is some plaintext \n*but what if we italicize?"
+            );
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -651,8 +614,7 @@ mod tests_parse_fragment {
         // Error case - newline only.
         // "\n" -> error
         {
-            let lines = &[GCString::new("\n")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "\n");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -669,8 +631,7 @@ mod tests_parse_fragment {
         // Error case - empty string.
         // "" -> error
         {
-            let lines = &[GCString::new("")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -687,8 +648,7 @@ mod tests_parse_fragment {
         // Checkbox parsing - unchecked, ignore policy.
         // "[ ] this is a checkbox" -> ok
         {
-            let lines = &[GCString::new("[ ] this is a checkbox")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "[ ] this is a checkbox");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -705,8 +665,7 @@ mod tests_parse_fragment {
         // Checkbox parsing - checked, ignore policy.
         // "[x] this is a checkbox" -> ok
         {
-            let lines = &[GCString::new("[x] this is a checkbox")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "[x] this is a checkbox");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::IgnoreCheckbox,
@@ -723,8 +682,7 @@ mod tests_parse_fragment {
         // Checkbox parsing - unchecked, parse policy.
         // "[ ] this is a checkbox" -> ok
         {
-            let lines = &[GCString::new("[ ] this is a checkbox")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "[ ] this is a checkbox");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::ParseCheckbox,
@@ -741,8 +699,7 @@ mod tests_parse_fragment {
         // Checkbox parsing - checked, parse policy.
         // "[x] this is a checkbox" -> ok
         {
-            let lines = &[GCString::new("[x] this is a checkbox")];
-            let input = AsStrSlice::from(lines);
+            as_str_slice_test_case!(input, "[x] this is a checkbox");
             let res = parse_inline_fragments_until_eol_or_eoi_alt(
                 input,
                 CheckboxParsePolicy::ParseCheckbox,

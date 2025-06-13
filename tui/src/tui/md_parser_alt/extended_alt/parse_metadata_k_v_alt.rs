@@ -60,3 +60,22 @@ pub fn parse_unique_kv_opt_eol_alt<'a>(
         Ok((remainder, Some(title_text)))
     }
 }
+
+#[cfg(test)]
+mod test_parse_title_no_eol {
+    use super::*;
+    use crate::{assert_eq2,
+                fg_black,
+                inline_string,
+                md_parser::constants::TITLE,
+                GCString,
+                as_str_slice_test_case};
+
+    #[test]
+    fn test_not_quoted_no_eol() {
+        as_str_slice_test_case!(input, "@title: Something");
+        let (input, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+        assert_eq2!(input.extract_to_slice_end(), "");
+        assert_eq2!(output.unwrap().extract_to_slice_end(), "Something");
+    }
+}

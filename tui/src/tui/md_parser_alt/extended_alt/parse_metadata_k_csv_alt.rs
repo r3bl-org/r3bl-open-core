@@ -22,7 +22,8 @@ use nom::{bytes::complete::{tag, take_while, take_while1},
           IResult,
           Parser as _};
 
-use crate::{constants::{COMMA_CHAR, NEW_LINE_CHAR, SPACE_CHAR},
+use crate::{as_str_slice_test_case,
+            constants::{COMMA_CHAR, NEW_LINE_CHAR, SPACE_CHAR},
             inline_vec,
             list,
             md_parser::constants::{COLON, COMMA, NEW_LINE, SPACE},
@@ -122,11 +123,9 @@ mod test_parse_tags_opt_eol {
 
     #[test]
     fn test_not_quoted_no_eol() {
-        let input = "@tags: tag1, tag2, tag3";
-        let lines = &[GCString::new(input)];
-        let input_slice = AsStrSlice::from(lines);
+        as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3");
 
-        let (input, output) = super::parse_csv_opt_eol_alt(TAGS, input_slice).unwrap();
+        let (input, output) = super::parse_csv_opt_eol_alt(TAGS, input).unwrap();
         assert_eq2!(input.extract_to_slice_end(), "");
 
         // Create expected output with AsStrSlice values
@@ -155,34 +154,22 @@ mod test_parse_tags_opt_eol {
     #[test]
     fn test_not_quoted_no_eol_err_whitespace() {
         // First fragment mustn't have any space prefix.
-        let input1 = &[GCString::new("@tags:  tag1, tag2, tag3")];
-        assert_eq2!(
-            parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input1)).is_err(),
-            true,
-        );
+        as_str_slice_test_case!(input1, "@tags:  tag1, tag2, tag3");
+        assert_eq2!(parse_csv_opt_eol_alt(TAGS, input1).is_err(), true,);
 
         // 2nd fragment onwards must have a single space prefix.
-        let input2 = &[GCString::new("@tags: tag1,tag2, tag3")];
-        assert_eq2!(
-            parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input2)).is_err(),
-            true,
-        );
+        as_str_slice_test_case!(input2, "@tags: tag1,tag2, tag3");
+        assert_eq2!(parse_csv_opt_eol_alt(TAGS, input2).is_err(), true,);
 
-        let input3 = &[GCString::new("@tags: tag1,  tag2,tag3")];
-        assert_eq2!(
-            parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input3)).is_err(),
-            true,
-        );
+        as_str_slice_test_case!(input3, "@tags: tag1,  tag2,tag3");
+        assert_eq2!(parse_csv_opt_eol_alt(TAGS, input3).is_err(), true,);
 
-        let input4 = &[GCString::new("@tags: tag1, tag2,tag3")];
-        assert_eq2!(
-            parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input4)).is_err(),
-            true,
-        );
+        as_str_slice_test_case!(input4, "@tags: tag1, tag2,tag3");
+        assert_eq2!(parse_csv_opt_eol_alt(TAGS, input4).is_err(), true,);
 
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
-        let input5 = &[GCString::new("@tags: tag1, tag2,  tag3")];
-        let result = parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input5)).unwrap();
+        as_str_slice_test_case!(input5, "@tags: tag1, tag2,  tag3");
+        let result = parse_csv_opt_eol_alt(TAGS, input5).unwrap();
         assert_eq2!(result.0.extract_to_slice_end(), "",);
 
         // Create expected output with AsStrSlice values
@@ -213,11 +200,9 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_with_eol() {
         // Valid.
         {
-            let input = "@tags: tag1, tag2, tag3\n";
-            let input_lines = &[GCString::new(input)];
-            let input_slice = AsStrSlice::from(input_lines);
+            as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3\n");
 
-            let (input, output) = parse_csv_opt_eol_alt(TAGS, input_slice).unwrap();
+            let (input, output) = parse_csv_opt_eol_alt(TAGS, input).unwrap();
             assert_eq2!(input.extract_to_slice_end(), "");
 
             // Create expected output with AsStrSlice values
@@ -244,20 +229,16 @@ mod test_parse_tags_opt_eol {
         }
 
         {
-            let input = "@tags: tag1, tag2, tag3\n]\n";
-            let input_lines = &[GCString::new(input)];
-            let input_slice = AsStrSlice::from(input_lines);
+            as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3\n]\n");
 
-            let result = parse_csv_opt_eol_alt(TAGS, input_slice);
+            let result = parse_csv_opt_eol_alt(TAGS, input);
             assert_eq2!(result.is_err(), false);
         }
 
         {
-            let input = "@tags: tag1, tag2, tag3";
-            let input_lines = &[GCString::new(input)];
-            let input_slice = AsStrSlice::from(input_lines);
+            as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3");
 
-            let result = parse_csv_opt_eol_alt(TAGS, input_slice);
+            let result = parse_csv_opt_eol_alt(TAGS, input);
             assert_eq2!(result.is_err(), false);
         }
     }
@@ -265,34 +246,22 @@ mod test_parse_tags_opt_eol {
     #[test]
     fn test_not_quoted_with_eol_whitespace() {
         // First fragment mustn't have any space prefix.
-        let input1 = &[GCString::new("@tags:  tag1, tag2, tag3\n")];
-        assert_eq2!(
-            parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input1)).is_err(),
-            true,
-        );
+        as_str_slice_test_case!(input1, "@tags:  tag1, tag2, tag3\n");
+        assert_eq2!(parse_csv_opt_eol_alt(TAGS, input1).is_err(), true,);
 
         // 2nd fragment onwards must have a single space prefix.
-        let input2 = &[GCString::new("@tags: tag1,tag2, tag3\n")];
-        assert_eq2!(
-            parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input2)).is_err(),
-            true,
-        );
+        as_str_slice_test_case!(input2, "@tags: tag1,tag2, tag3\n");
+        assert_eq2!(parse_csv_opt_eol_alt(TAGS, input2).is_err(), true,);
 
-        let input3 = &[GCString::new("@tags: tag1,  tag2,tag3\n")];
-        assert_eq2!(
-            parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input3)).is_err(),
-            true,
-        );
+        as_str_slice_test_case!(input3, "@tags: tag1,  tag2,tag3\n");
+        assert_eq2!(parse_csv_opt_eol_alt(TAGS, input3).is_err(), true,);
 
-        let input4 = &[GCString::new("@tags: tag1, tag2,tag3\n")];
-        assert_eq2!(
-            parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input4)).is_err(),
-            true,
-        );
+        as_str_slice_test_case!(input4, "@tags: tag1, tag2,tag3\n");
+        assert_eq2!(parse_csv_opt_eol_alt(TAGS, input4).is_err(), true,);
 
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
-        let input5 = &[GCString::new("@tags: tag1, tag2,  tag3\n")];
-        let result = parse_csv_opt_eol_alt(TAGS, AsStrSlice::from(input5)).unwrap();
+        as_str_slice_test_case!(input5, "@tags: tag1, tag2,  tag3\n");
+        let result = parse_csv_opt_eol_alt(TAGS, input5).unwrap();
         assert_eq2!(result.0.extract_to_slice_end(), "",);
 
         // Create expected output with AsStrSlice values
@@ -321,9 +290,7 @@ mod test_parse_tags_opt_eol {
 
     #[test]
     fn test_not_quoted_with_postfix_content() {
-        let input_raw = "@tags: \nfoo\nbar";
-        let lines = &[GCString::new(input_raw)];
-        let input = AsStrSlice::from(lines);
+        as_str_slice_test_case!(input, "@tags: \nfoo\nbar");
 
         println!("Input: {:?}", input.extract_to_slice_end());
         let (input, output) = parse_csv_opt_eol_alt(TAGS, input).unwrap();
