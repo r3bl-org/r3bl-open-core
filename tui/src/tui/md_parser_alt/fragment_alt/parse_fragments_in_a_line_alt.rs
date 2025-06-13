@@ -77,24 +77,26 @@ pub fn parse_inline_fragments_until_eol_or_eoi_alt<'a>(
     // Clone the input to avoid ownership issues
     let input_clone = input.clone();
 
+    // It is ok to call `extract_to_line_end` instead of `extract_to_slice_end` here, since we
+    // are guaranteed that the input is a single line of text.
     let it = match checkbox_policy {
         CheckboxParsePolicy::IgnoreCheckbox => alt((
-            map(parse_fragment_starts_with_underscore_err_on_new_line_alt,  |s| MdLineFragment::Italic(s.extract_remaining_text_content_in_line())),
-            map(parse_fragment_starts_with_star_err_on_new_line_alt,        |s| MdLineFragment::Bold(s.extract_remaining_text_content_in_line())),
-            map(parse_fragment_starts_with_backtick_err_on_new_line_alt,    |s| MdLineFragment::InlineCode(s.extract_remaining_text_content_in_line())),
+            map(parse_fragment_starts_with_underscore_err_on_new_line_alt,  |s| MdLineFragment::Italic(s.extract_to_line_end())),
+            map(parse_fragment_starts_with_star_err_on_new_line_alt,        |s| MdLineFragment::Bold(s.extract_to_line_end())),
+            map(parse_fragment_starts_with_backtick_err_on_new_line_alt,    |s| MdLineFragment::InlineCode(s.extract_to_line_end())),
             map(parse_fragment_starts_with_left_image_err_on_new_line_alt,  MdLineFragment::Image),
             map(parse_fragment_starts_with_left_link_err_on_new_line_alt,   MdLineFragment::Link),
-            map(parse_fragment_starts_with_checkbox_into_str_alt,           |s| MdLineFragment::Plain(s.extract_remaining_text_content_in_line())), // This line is different.
-            map(parse_fragment_plain_text_until_eol_or_eoi_alt,                  |s| MdLineFragment::Plain(s.extract_remaining_text_content_in_line())),
+            map(parse_fragment_starts_with_checkbox_into_str_alt,           |s| MdLineFragment::Plain(s.extract_to_line_end())), // This line is different.
+            map(parse_fragment_plain_text_until_eol_or_eoi_alt,                  |s| MdLineFragment::Plain(s.extract_to_line_end())),
         )).parse(input_clone.clone()),
         CheckboxParsePolicy::ParseCheckbox => alt((
-            map(parse_fragment_starts_with_underscore_err_on_new_line_alt,  |s| MdLineFragment::Italic(s.extract_remaining_text_content_in_line())),
-            map(parse_fragment_starts_with_star_err_on_new_line_alt,        |s| MdLineFragment::Bold(s.extract_remaining_text_content_in_line())),
-            map(parse_fragment_starts_with_backtick_err_on_new_line_alt,    |s| MdLineFragment::InlineCode(s.extract_remaining_text_content_in_line())),
+            map(parse_fragment_starts_with_underscore_err_on_new_line_alt,  |s| MdLineFragment::Italic(s.extract_to_line_end())),
+            map(parse_fragment_starts_with_star_err_on_new_line_alt,        |s| MdLineFragment::Bold(s.extract_to_line_end())),
+            map(parse_fragment_starts_with_backtick_err_on_new_line_alt,    |s| MdLineFragment::InlineCode(s.extract_to_line_end())),
             map(parse_fragment_starts_with_left_image_err_on_new_line_alt,  MdLineFragment::Image),
             map(parse_fragment_starts_with_left_link_err_on_new_line_alt,   MdLineFragment::Link),
             map(parse_fragment_starts_with_checkbox_checkbox_into_bool_alt, MdLineFragment::Checkbox), // This line is different.
-            map(parse_fragment_plain_text_until_eol_or_eoi_alt,                 |s| MdLineFragment::Plain(s.extract_remaining_text_content_in_line())),
+            map(parse_fragment_plain_text_until_eol_or_eoi_alt,                 |s| MdLineFragment::Plain(s.extract_to_line_end())),
         )).parse(input_clone)
     };
 
@@ -142,8 +144,8 @@ mod tests_parse_fragment {
 
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             let (rem, out) = res.unwrap();
-            assert_eq2!(rem.extract_remaining_text_content_in_line(), "_bar");
-            assert_eq2!(out.extract_remaining_text_content_in_line(), "this ");
+            assert_eq2!(rem.extract_to_line_end(), "_bar");
+            assert_eq2!(out.extract_to_line_end(), "this ");
         }
 
         {
@@ -153,8 +155,8 @@ mod tests_parse_fragment {
 
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             let (rem, out) = res.unwrap();
-            assert_eq2!(rem.extract_remaining_text_content_in_line(), "bar");
-            assert_eq2!(out.extract_remaining_text_content_in_line(), "_");
+            assert_eq2!(rem.extract_to_line_end(), "bar");
+            assert_eq2!(out.extract_to_line_end(), "_");
         }
 
         {
@@ -164,8 +166,8 @@ mod tests_parse_fragment {
 
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             let (rem, out) = res.unwrap();
-            assert_eq2!(rem.extract_remaining_text_content_in_line(), "_");
-            assert_eq2!(out.extract_remaining_text_content_in_line(), "bar");
+            assert_eq2!(rem.extract_to_line_end(), "_");
+            assert_eq2!(out.extract_to_line_end(), "bar");
         }
     }
 
@@ -181,22 +183,22 @@ mod tests_parse_fragment {
         println!("rem.to_inline_string()(): {:#?}", rem.to_inline_string());
         println!(
             "rem.extract_remaining_text_content_in_line(): {:#?}",
-            rem.extract_remaining_text_content_in_line()
+            rem.extract_to_line_end()
         );
 
         println!("out.inline_string()(): {:#?}", out.to_inline_string());
         println!(
             "out.extract_remaining_text_content_in_line(): {:#?}",
-            out.extract_remaining_text_content_in_line()
+            out.extract_to_line_end()
         );
 
         assert_eq2!(rem.lines.len(), 1);
         assert_eq2!(rem.line_index, idx(0));
-        assert_eq2!(rem.extract_remaining_text_content_in_line(), "\n");
+        assert_eq2!(rem.extract_to_line_end(), "\n");
 
         assert_eq2!(out.lines.len(), 1);
         assert_eq2!(out.line_index, idx(0));
-        assert_eq2!(out.extract_remaining_text_content_in_line(), "- straight😃");
+        assert_eq2!(out.extract_to_line_end(), "- straight😃");
     }
 
     #[test]
@@ -208,11 +210,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "1234567890"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(out.extract_to_line_end(), "1234567890");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -225,11 +224,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "oh my gosh!"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(out.extract_to_line_end(), "oh my gosh!");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -242,11 +238,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "![");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "oh my gosh"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "![");
+                    assert_eq2!(out.extract_to_line_end(), "oh my gosh");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -259,11 +252,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "*");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "oh my gosh!"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "*");
+                    assert_eq2!(out.extract_to_line_end(), "oh my gosh!");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -276,11 +266,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "*bold baby bold*"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(out.extract_to_line_end(), "*bold baby bold*");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -293,9 +280,9 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
+                        out.extract_to_line_end(),
                         "[link baby](and then somewhat)"
                     );
                 }
@@ -310,11 +297,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "`codeblock for bums`"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(out.extract_to_line_end(), "`codeblock for bums`");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -327,9 +311,9 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
+                        out.extract_to_line_end(),
                         "![ but wait theres more](jk)"
                     );
                 }
@@ -344,11 +328,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "here is plaintext"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(out.extract_to_line_end(), "here is plaintext");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -361,11 +342,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "here is plaintext!"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(out.extract_to_line_end(), "here is plaintext!");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -378,14 +356,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(
-                        rem.extract_remaining_text_content_in_line(),
-                        "![image starting"
-                    );
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "here is plaintext"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "![image starting");
+                    assert_eq2!(out.extract_to_line_end(), "here is plaintext");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -398,11 +370,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "\n");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "here is plaintext"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "\n");
+                    assert_eq2!(out.extract_to_line_end(), "here is plaintext");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -415,11 +384,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "*here is italic*"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(out.extract_to_line_end(), "*here is italic*");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -432,11 +398,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "**here is bold**"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(out.extract_to_line_end(), "**here is bold**");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -449,11 +412,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "`here is code`"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(out.extract_to_line_end(), "`here is code`");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -466,9 +426,9 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
+                        out.extract_to_line_end(),
                         "[title](https://www.example.com)"
                     );
                 }
@@ -483,11 +443,8 @@ mod tests_parse_fragment {
             let res = parse_fragment_plain_text_until_eol_or_eoi_alt(input);
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(
-                        out.extract_remaining_text_content_in_line(),
-                        "![alt text](image.jpg)"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(out.extract_to_line_end(), "![alt text](image.jpg)");
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
             }
@@ -521,7 +478,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out, MdLineFragment::Plain("here is plaintext!"));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
@@ -539,7 +496,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out, MdLineFragment::Bold("here is bold"));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
@@ -557,7 +514,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out, MdLineFragment::Italic("here is italic"));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
@@ -575,7 +532,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out, MdLineFragment::InlineCode("here is code"));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
@@ -593,7 +550,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(
                         out,
                         MdLineFragment::Link(HyperlinkData {
@@ -617,7 +574,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(
                         out,
                         MdLineFragment::Image(HyperlinkData {
@@ -641,7 +598,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out, MdLineFragment::Plain("here is plaintext!"));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
@@ -661,10 +618,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(
-                        rem.extract_remaining_text_content_in_line(),
-                        "*but what if we italicize?"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "*but what if we italicize?");
                     assert_eq2!(out, MdLineFragment::Plain("here is some plaintext "));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
@@ -685,7 +639,7 @@ mod tests_parse_fragment {
             match res {
                 Ok((rem, out)) => {
                     assert_eq2!(
-                        rem.extract_remaining_text_content_in_line(),
+                        rem.extract_to_line_end(),
                         "\n*but what if we italicize?"
                     );
                     assert_eq2!(out, MdLineFragment::Plain("here is some plaintext "));
@@ -741,10 +695,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(
-                        rem.extract_remaining_text_content_in_line(),
-                        " this is a checkbox"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), " this is a checkbox");
                     assert_eq2!(out, MdLineFragment::Plain("[ ]"));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
@@ -762,10 +713,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(
-                        rem.extract_remaining_text_content_in_line(),
-                        " this is a checkbox"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), " this is a checkbox");
                     assert_eq2!(out, MdLineFragment::Plain("[x]"));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
@@ -783,10 +731,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(
-                        rem.extract_remaining_text_content_in_line(),
-                        " this is a checkbox"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), " this is a checkbox");
                     assert_eq2!(out, MdLineFragment::Checkbox(false));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),
@@ -804,10 +749,7 @@ mod tests_parse_fragment {
             );
             match res {
                 Ok((rem, out)) => {
-                    assert_eq2!(
-                        rem.extract_remaining_text_content_in_line(),
-                        " this is a checkbox"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), " this is a checkbox");
                     assert_eq2!(out, MdLineFragment::Checkbox(true));
                 }
                 Err(err) => panic!("Expected Ok, got Err: {:?}", err),

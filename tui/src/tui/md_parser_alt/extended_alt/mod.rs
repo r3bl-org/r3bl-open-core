@@ -18,9 +18,9 @@
 // Attach.
 pub mod parse_metadata_k_csv_alt;
 pub mod parse_metadata_k_v_alt;
-pub mod take_text_until_eol_or_eoi_alt;
+pub mod parser_take_text_until_eol_or_eoi_alt;
 
 // Re-export.
 pub use parse_metadata_k_csv_alt::*;
 pub use parse_metadata_k_v_alt::*;
-pub use take_text_until_eol_or_eoi_alt::*;
+pub use parser_take_text_until_eol_or_eoi_alt::*;

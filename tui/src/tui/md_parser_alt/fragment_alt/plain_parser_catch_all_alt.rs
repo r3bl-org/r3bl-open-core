@@ -105,15 +105,8 @@ pub fn parse_fragment_plain_text_until_eol_or_eoi_alt<'a>(
         println!("\n{} plain parser, input: {:?}", fg_magenta("██"), input);
     });
 
-    let input_clone = input.clone();
-
     // Check if input doesn't start with special characters.
-    if check_input_starts_with(
-        input_clone.extract_remaining_text_content_in_line(),
-        &get_sp_char_set_2(),
-    )
-    .is_none()
-    {
+    if check_input_starts_with(&input, &get_sp_char_set_2()).is_none() {
         // Case 1: Normal - input doesn't start with special characters.
         return parse_plain_text_until_special_char(input);
     }
@@ -162,7 +155,7 @@ fn parse_plain_text_until_special_char<'a>(
             anychar,
         )),
     )
-    .parse(input.extract_remaining_text_content_in_line());
+    .parse(input.extract_to_line_end());
 
     DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
@@ -192,7 +185,7 @@ fn parse_plain_text_until_special_char<'a>(
             // Given the &str information, extract the following from `input`:
             let new_output = input.take(output_len);
             let new_rem = input.skip_take(
-                /* skip this many */ output_len, /* take this manny */ rem_len,
+                /* skip this many */ output_len, /* take this many */ rem_len,
             );
 
             Ok((new_rem, new_output))
@@ -220,10 +213,7 @@ fn try_parse_single_special_char<'a>(
     input: &AsStrSlice<'a>,
 ) -> Option<IResult<AsStrSlice<'a>, AsStrSlice<'a>>> {
     // Check for single UNDERSCORE, STAR, BACK_TICK.
-    if let Some(special_str) = check_input_starts_with(
-        input.extract_remaining_text_content_in_line(),
-        &get_sp_char_set_1(),
-    ) {
+    if let Some(special_str) = check_input_starts_with(input, &get_sp_char_set_1()) {
         let input_clone_counting = input.clone();
 
         let (count, _, _, _) =
@@ -238,7 +228,7 @@ fn try_parse_single_special_char<'a>(
             // Split the input, by returning the first part as plain text.
             let res: IResult<&str, &str> =
                 recognize(many1(tag::<&str, &str, NomError<&str>>(special_str)))
-                    .parse(input_clone_parsing.extract_remaining_text_content_in_line());
+                    .parse(input_clone_parsing.extract_to_line_end());
 
             // Convert &str back into AsStrSlice for Ok.
             // input: "abcdefghijklmnopqr01234567890"
@@ -359,7 +349,7 @@ pub fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
 /// * `Some(&str)` - The matching string from the character set if found
 /// * `None` - If the input doesn't start with any of the strings in the character set
 pub fn check_input_starts_with<'a>(
-    input: &'a str,
+    input: &AsStrSlice<'a>,
     char_set: &[&'a str],
 ) -> Option<&'a str> {
     char_set
@@ -385,14 +375,35 @@ pub fn tuple6<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, GCString, NomErr, NomErrorKind};
+    use crate::{assert_eq2, GCString, NomErr};
 
     #[test]
     fn test_check_input_starts_with() {
-        assert_eq!(check_input_starts_with("abc", &["a", "b", "c"]), Some("a"));
-        assert_eq!(check_input_starts_with("abc", &["d", "e", "f"]), None);
-        assert_eq!(check_input_starts_with("", &["a", "b", "c"]), None);
-        assert_eq!(check_input_starts_with("abc", &[]), None);
+        assert_eq!(
+            check_input_starts_with(
+                &AsStrSlice::from(&[GCString::new("abc")]),
+                &["a", "b", "c"]
+            ),
+            Some("a")
+        );
+        assert_eq!(
+            check_input_starts_with(
+                &AsStrSlice::from(&[GCString::new("abc")]),
+                &["d", "e", "f"]
+            ),
+            None
+        );
+        assert_eq!(
+            check_input_starts_with(
+                &AsStrSlice::from(&[GCString::new("")]),
+                &["a", "b", "c"]
+            ),
+            None
+        );
+        assert_eq!(
+            check_input_starts_with(&AsStrSlice::from(&[GCString::new("abc")]), &[]),
+            None
+        );
     }
 
     #[test]
@@ -444,8 +455,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello world");
+                assert_eq2!(rem.extract_to_line_end(), "");
+                assert_eq2!(out.extract_to_line_end(), "Hello world");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -460,8 +471,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "*world");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello ");
+                assert_eq2!(rem.extract_to_line_end(), "*world");
+                assert_eq2!(out.extract_to_line_end(), "Hello ");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -473,8 +484,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "_*`[!world");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello ");
+                assert_eq2!(rem.extract_to_line_end(), "_*`[!world");
+                assert_eq2!(out.extract_to_line_end(), "Hello ");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -489,8 +500,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "single");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "_");
+                assert_eq2!(rem.extract_to_line_end(), "single");
+                assert_eq2!(out.extract_to_line_end(), "_");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -502,8 +513,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "single");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "*");
+                assert_eq2!(rem.extract_to_line_end(), "single");
+                assert_eq2!(out.extract_to_line_end(), "*");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -515,8 +526,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "single");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "`");
+                assert_eq2!(rem.extract_to_line_end(), "single");
+                assert_eq2!(out.extract_to_line_end(), "`");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -531,8 +542,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "**bold**");
+                assert_eq2!(rem.extract_to_line_end(), "");
+                assert_eq2!(out.extract_to_line_end(), "**bold**");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -544,8 +555,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "[link](url)");
+                assert_eq2!(rem.extract_to_line_end(), "");
+                assert_eq2!(out.extract_to_line_end(), "[link](url)");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -557,11 +568,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                assert_eq2!(
-                    out.extract_remaining_text_content_in_line(),
-                    "![image](url)"
-                );
+                assert_eq2!(rem.extract_to_line_end(), "");
+                assert_eq2!(out.extract_to_line_end(), "![image](url)");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -576,8 +584,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "\nworld");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello");
+                assert_eq2!(rem.extract_to_line_end(), "\nworld");
+                assert_eq2!(out.extract_to_line_end(), "Hello");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -589,8 +597,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello");
+                assert_eq2!(rem.extract_to_line_end(), "");
+                assert_eq2!(out.extract_to_line_end(), "Hello");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -607,7 +615,7 @@ mod tests {
             Ok(_) => panic!("Expected Err, got Ok"),
             Err(err) => match err {
                 NomErr::Error(error) => {
-                    assert_eq2!(error.input.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(error.input.extract_to_line_end(), "");
                 }
                 _ => panic!("Expected Error, got different error type"),
             },
@@ -623,8 +631,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello world");
+                assert_eq2!(rem.extract_to_line_end(), "");
+                assert_eq2!(out.extract_to_line_end(), "Hello world");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -636,8 +644,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "*world");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "Hello ");
+                assert_eq2!(rem.extract_to_line_end(), "*world");
+                assert_eq2!(out.extract_to_line_end(), "Hello ");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -652,8 +660,8 @@ mod tests {
 
         match res {
             Some(Ok((rem, out))) => {
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "single");
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "_");
+                assert_eq2!(rem.extract_to_line_end(), "single");
+                assert_eq2!(out.extract_to_line_end(), "_");
             }
             Some(Err(err)) => panic!("Expected Ok, got Err: {:?}", err),
             None => panic!("Expected Some, got None"),
@@ -683,8 +691,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "**bold**");
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                assert_eq2!(out.extract_to_line_end(), "**bold**");
+                assert_eq2!(rem.extract_to_line_end(), "");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -696,8 +704,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "**bold");
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "\ntext**");
+                assert_eq2!(out.extract_to_line_end(), "**bold");
+                assert_eq2!(rem.extract_to_line_end(), "\ntext**");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -711,8 +719,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(out.extract_remaining_text_content_in_line(), "hello world");
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                assert_eq2!(out.extract_to_line_end(), "hello world");
+                assert_eq2!(rem.extract_to_line_end(), "");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -726,11 +734,8 @@ mod tests {
 
         match res {
             Ok((rem, out)) => {
-                assert_eq2!(
-                    out.extract_remaining_text_content_in_line(),
-                    "single line text"
-                );
-                assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+                assert_eq2!(out.extract_to_line_end(), "single line text");
+                assert_eq2!(rem.extract_to_line_end(), "");
             }
             Err(err) => panic!("Expected Ok, got Err: {:?}", err),
         }
@@ -745,8 +750,8 @@ mod tests {
         match res {
             Ok((rem, out)) => panic!(
                 "Expected Err for empty input, got Ok: rem={:?}, out={:?}",
-                rem.extract_remaining_text_content_in_line(),
-                out.extract_remaining_text_content_in_line()
+                rem.extract_to_line_end(),
+                out.extract_to_line_end()
             ),
             Err(_err) => {
                 // Expected error case - take_till1 requires at least one character

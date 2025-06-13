@@ -79,7 +79,7 @@ pub mod delim_matchers {
     ) -> (usize, bool, bool, &'a str) {
         // If the input has a "\n" then split it at the first "\n", only count the number
         // of delims at the first part of the split.
-        let input_str = input.extract_remaining_text_content_in_line();
+        let input_str = input.extract_to_slice_end();
         let (first_part, _) =
             input_str.split_at(input_str.find(NEW_LINE).unwrap_or(input_str.len()));
         let num_of_delim_occurrences = first_part.matches(delim).count();
@@ -256,8 +256,8 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line_alt<'a>(
     let it = Ok((
         rem,
         HyperlinkData::from((
-            part_between_image_tags.extract_remaining_text_content_in_line(),
-            part_between_parenthesis.extract_remaining_text_content_in_line(),
+            part_between_image_tags.extract_to_line_end(),
+            part_between_parenthesis.extract_to_line_end(),
         )),
     ));
 
@@ -326,8 +326,8 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line_alt<'a>(
     let it = Ok((
         rem,
         HyperlinkData::from((
-            part_between_brackets.extract_remaining_text_content_in_line(),
-            part_between_parenthesis.extract_remaining_text_content_in_line(),
+            part_between_brackets.extract_to_line_end(),
+            part_between_parenthesis.extract_to_line_end(),
         )),
     ));
 
@@ -413,8 +413,8 @@ mod tests {
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
                 Ok((rem, output)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), exp_rem);
-                    assert_eq2!(output.extract_remaining_text_content_in_line(), exp_out);
+                    assert_eq2!(rem.extract_to_line_end(), exp_rem);
+                    assert_eq2!(output.extract_to_line_end(), exp_out);
                 }
                 _ => panic!("Expected success result"),
             }
@@ -429,8 +429,8 @@ mod tests {
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
                 Ok((rem, output)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), exp_rem);
-                    assert_eq2!(output.extract_remaining_text_content_in_line(), exp_out);
+                    assert_eq2!(rem.extract_to_line_end(), exp_rem);
+                    assert_eq2!(output.extract_to_line_end(), exp_out);
                 }
                 _ => panic!("Expected success result"),
             }
@@ -444,10 +444,7 @@ mod tests {
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -462,10 +459,7 @@ mod tests {
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -480,10 +474,7 @@ mod tests {
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -498,10 +489,7 @@ mod tests {
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -516,10 +504,7 @@ mod tests {
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -538,8 +523,8 @@ mod tests {
             let res = parse_fragment_starts_with_star_err_on_new_line_alt(input);
             match res {
                 Ok((rem, output)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), exp_rem);
-                    assert_eq2!(output.extract_remaining_text_content_in_line(), exp_out);
+                    assert_eq2!(rem.extract_to_line_end(), exp_rem);
+                    assert_eq2!(output.extract_to_line_end(), exp_out);
                 }
                 _ => panic!("Expected success result"),
             }
@@ -553,10 +538,7 @@ mod tests {
             let res = parse_fragment_starts_with_star_err_on_new_line_alt(input);
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -571,10 +553,7 @@ mod tests {
             let res = parse_fragment_starts_with_star_err_on_new_line_alt(input);
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -589,10 +568,7 @@ mod tests {
             let res = parse_fragment_starts_with_star_err_on_new_line_alt(input);
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -607,10 +583,7 @@ mod tests {
             let res = parse_fragment_starts_with_star_err_on_new_line_alt(input);
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -625,10 +598,7 @@ mod tests {
             let res = parse_fragment_starts_with_star_err_on_new_line_alt(input);
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -645,7 +615,7 @@ mod tests {
 
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(error.input.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(error.input.extract_to_line_end(), "");
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -659,7 +629,7 @@ mod tests {
 
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(error.input.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(error.input.extract_to_line_end(), "");
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -673,10 +643,7 @@ mod tests {
 
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        "`here is code"
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), "`here is code");
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -690,10 +657,7 @@ mod tests {
 
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        "here is code`"
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), "here is code`");
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -707,8 +671,8 @@ mod tests {
 
             match res {
                 Ok((rem, output)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(output.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(output.extract_to_line_end(), "");
                 }
                 _ => panic!("Expected success result"),
             }
@@ -721,10 +685,7 @@ mod tests {
 
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        "`"
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), "`");
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -738,7 +699,7 @@ mod tests {
 
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(error.input.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(error.input.extract_to_line_end(), "");
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -752,8 +713,8 @@ mod tests {
 
             match res {
                 Ok((rem, output)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(output.extract_remaining_text_content_in_line(), "abcd");
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(output.extract_to_line_end(), "abcd");
                 }
                 _ => panic!("Expected success result"),
             }
@@ -766,10 +727,7 @@ mod tests {
 
             match res {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        "```"
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), "```");
                     assert_eq2!(error.code, NomErrorKind::Tag);
                 }
                 _ => panic!("Expected error result"),
@@ -785,7 +743,7 @@ mod tests {
 
             let (rem, output) =
                 parse_fragment_starts_with_left_image_err_on_new_line_alt(input).unwrap();
-            assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+            assert_eq2!(rem.extract_to_line_end(), "");
             assert_eq2!(output, HyperlinkData::new("alt text", "image.jpg"));
         }
 
@@ -796,7 +754,7 @@ mod tests {
             );
 
             let (rem, output) = res.unwrap();
-            assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
+            assert_eq2!(rem.extract_to_line_end(), "");
             assert_eq2!(
                 output,
                 HyperlinkData::new("title", "https://www.example.com")
@@ -813,11 +771,8 @@ mod tests {
                 parse_fragment_starts_with_checkbox_into_str_alt(AsStrSlice::from(lines));
 
             let (rem, output) = res.unwrap();
-            assert_eq2!(output.extract_remaining_text_content_in_line(), "[x]");
-            assert_eq2!(
-                rem.extract_remaining_text_content_in_line(),
-                " here is a checkbox"
-            );
+            assert_eq2!(output.extract_to_line_end(), "[x]");
+            assert_eq2!(rem.extract_to_line_end(), " here is a checkbox");
         }
 
         // Test [ ] checkbox.
@@ -828,11 +783,8 @@ mod tests {
 
             assert!(res.is_ok());
             let (rem, output) = res.unwrap();
-            assert_eq2!(output.extract_remaining_text_content_in_line(), "[ ]");
-            assert_eq2!(
-                rem.extract_remaining_text_content_in_line(),
-                " here is a checkbox"
-            );
+            assert_eq2!(output.extract_to_line_end(), "[ ]");
+            assert_eq2!(rem.extract_to_line_end(), " here is a checkbox");
         }
     }
 
@@ -847,10 +799,7 @@ mod tests {
 
             let (rem, output) = res.unwrap();
             assert_eq2!(output, true);
-            assert_eq2!(
-                rem.extract_remaining_text_content_in_line(),
-                " here is a checkbox"
-            );
+            assert_eq2!(rem.extract_to_line_end(), " here is a checkbox");
         }
 
         // Test [ ] checkbox.
@@ -862,10 +811,7 @@ mod tests {
 
             let (rem, output) = res.unwrap();
             assert_eq2!(output, false);
-            assert_eq2!(
-                rem.extract_remaining_text_content_in_line(),
-                " here is a checkbox"
-            );
+            assert_eq2!(rem.extract_to_line_end(), " here is a checkbox");
         }
     }
 }
@@ -990,8 +936,8 @@ mod tests_delim_matchers {
             );
             match result {
                 Ok((rem, output)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(output.extract_remaining_text_content_in_line(), "hello");
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(output.extract_to_line_end(), "hello");
                 }
                 _ => panic!("Expected success result"),
             }
@@ -1006,8 +952,8 @@ mod tests_delim_matchers {
             );
             match result {
                 Ok((rem, output)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(output.extract_remaining_text_content_in_line(), "bold");
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(output.extract_to_line_end(), "bold");
                 }
                 _ => panic!("Expected success result"),
             }
@@ -1022,8 +968,8 @@ mod tests_delim_matchers {
             );
             match result {
                 Ok((rem, output)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(output.extract_remaining_text_content_in_line(), "code");
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(output.extract_to_line_end(), "code");
                 }
                 _ => panic!("Expected success result"),
             }
@@ -1038,8 +984,8 @@ mod tests_delim_matchers {
             );
             match result {
                 Ok((rem, output)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(output.extract_remaining_text_content_in_line(), "");
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(output.extract_to_line_end(), "");
                 }
                 _ => panic!("Expected success result"),
             }
@@ -1055,10 +1001,7 @@ mod tests_delim_matchers {
             );
             match result {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -1075,10 +1018,7 @@ mod tests_delim_matchers {
             );
             match result {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -1095,10 +1035,7 @@ mod tests_delim_matchers {
             );
             match result {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -1115,10 +1052,7 @@ mod tests_delim_matchers {
             );
             match result {
                 Err(NomErr::Error(error)) => {
-                    assert_eq2!(
-                        error.input.extract_remaining_text_content_in_line(),
-                        err_input
-                    );
+                    assert_eq2!(error.input.extract_to_line_end(), err_input);
                     assert_eq2!(error.code, NomErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
@@ -1134,11 +1068,8 @@ mod tests_delim_matchers {
             );
             match result {
                 Ok((rem, output)) => {
-                    assert_eq2!(
-                        rem.extract_remaining_text_content_in_line(),
-                        "world_more_"
-                    );
-                    assert_eq2!(output.extract_remaining_text_content_in_line(), "hello");
+                    assert_eq2!(rem.extract_to_line_end(), "world_more_");
+                    assert_eq2!(output.extract_to_line_end(), "hello");
                 }
                 _ => panic!("Expected success result"),
             }
@@ -1153,14 +1084,8 @@ mod tests_delim_matchers {
             );
             match result {
                 Ok((rem, output)) => {
-                    assert_eq2!(
-                        rem.extract_remaining_text_content_in_line(),
-                        " and more text"
-                    );
-                    assert_eq2!(
-                        output.extract_remaining_text_content_in_line(),
-                        "italic"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), " and more text");
+                    assert_eq2!(output.extract_to_line_end(), "italic");
                 }
                 _ => panic!("Expected success result"),
             }
@@ -1175,11 +1100,8 @@ mod tests_delim_matchers {
             );
             match result {
                 Ok((rem, output)) => {
-                    assert_eq2!(rem.extract_remaining_text_content_in_line(), "");
-                    assert_eq2!(
-                        output.extract_remaining_text_content_in_line(),
-                        "hello world"
-                    );
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(output.extract_to_line_end(), "hello world");
                 }
                 _ => panic!("Expected success result"),
             }

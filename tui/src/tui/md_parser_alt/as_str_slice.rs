@@ -35,11 +35,37 @@ pub type NomErrorKind = nom::error::ErrorKind;
 pub type NomErr<T> = nom::Err<T>;
 
 /// Wrapper type that implements [nom::Input] for &[GCString] or **any other type** that
-/// implements [AsRef<str>]. The [Clone] operations on this struct are really cheap.
+/// implements [AsRef<str>]. The [Clone] operations on this struct are really cheap. This
+/// wraps around the output of [str::lines()] and provides a way to adapt it for use
+/// as a "virtual array" or "virtual slice" of strings for `nom` parsers.
 ///
 /// This struct generates synthetic new lines when it's [nom::Input] methods are used.
 /// to manipulate it. This ensures that it can make the underlying `line` struct "act"
 /// like it is a contiguous array of chars.
+///
+/// ## Manually creating `lines` instead of using `str::lines()`
+///
+/// If you don't use [str::lines()] which strips [crate::constants::NEW_LINE] characters,
+/// then you have to make sure that each `line` does not have any
+/// [crate::constants::NEW_LINE] character in it. This is not enforced, since this struct
+/// does not allocate, and it can't take the provided `lines: &'a [T]` and remove any
+/// [crate::constants::NEW_LINE] characters from them, and generate a new `lines` slice.
+/// There are many tests that leverage this behavior, so it is not a problem in practice.
+/// However, this is something to be aware if you are "manually" creating the `line` slice
+/// that you pass to [AsStrSlice::from()].
+///
+/// ## Why?
+///
+/// The inception of this struct was to provide a way to have `nom` parsers work with the
+/// output type of [str::lines()], which is a slice of `&str`, that is stored in the
+/// [crate::EditorContent] struct. In order to use `nom` parsers with this output type,
+/// it was necessary to materialize the entire slice into a contiguous
+/// array of characters, which is not efficient for large documents. This materialization
+/// happened in the critical render loop of the TUI, which caused performance
+/// issues. This struct provides a way to avoid that materialization by
+/// providing a "virtual" slice of strings that can be used with `nom` parsers without
+/// materializing the entire slice. And it handles the synthetic new lines
+/// to boot! And it is cheap to clone!
 ///
 /// ## Unicode/UTF-8 Support
 ///
@@ -379,8 +405,18 @@ impl<'a> AsStrSlice<'a> {
     }
 
     /// Use [FindSubstring] to implement this function to check if a substring exists.
+    /// This will try not to materialize the `AsStrSlice` if it can avoid it, but there
+    /// are situations where it may have to (and allocate memory).
     pub fn contains(&self, sub_str: &str) -> bool {
         self.find_substring(sub_str).is_some()
+    }
+
+    /// This does not materialize the `AsStrSlice`.
+    pub fn is_empty(&self) -> bool { return self.remaining_len() == len(0); }
+
+    /// This does not materialize the `AsStrSlice`.
+    pub fn starts_with(&self, sub_str: &str) -> bool {
+        self.extract_to_line_end().starts_with(sub_str)
     }
 
     /// Use the [Display] implementation to materialize the [DocumentStorage] content.
@@ -483,7 +519,9 @@ impl<'a> AsStrSlice<'a> {
     }
 
     /// Extracts text content from the current position (`line_index`, `char_index`) to
-    /// the end of the line (optionally limited `by max_len`).
+    /// the end of the line (optionally limited `by max_len`). Only use this over
+    /// [Self::extract_to_slice_end()] if you need to extract the remaining text
+    /// in the current line (but not the entire slice).
     ///
     /// It handles various edge cases like:
     /// - Being at the end of a line.
@@ -502,12 +540,12 @@ impl<'a> AsStrSlice<'a> {
     /// let slice = AsStrSlice::from(lines);
     ///
     /// // Extract from beginning of first line.
-    /// let content = slice.extract_remaining_text_content_in_line();
+    /// let content = slice.extract_to_line_end();
     /// assert_eq!(content, "Hello world");
     ///
     /// // Extract with position offset.
     /// let slice_offset = slice.take_from(6); // Start from "world".
-    /// assert_eq!(slice_offset.extract_remaining_text_content_in_line(), "world");
+    /// assert_eq!(slice_offset.extract_to_line_end(), "world");
     /// ```
     ///
     /// # Edge Cases
@@ -518,7 +556,7 @@ impl<'a> AsStrSlice<'a> {
     /// - **Zero max_len**: When `max_len` is `Some(0)`, returns empty string
     /// - **Embedded newlines**: Don't do any special handling or processing of [NEW_LINE]
     ///   chars inside the current line.
-    pub fn extract_remaining_text_content_in_line(&self) -> &'a str {
+    pub fn extract_to_line_end(&self) -> &'a str {
         // Early returns for edge cases.
         {
             if self.lines.is_empty() {
@@ -561,6 +599,23 @@ impl<'a> AsStrSlice<'a> {
         &current_line[start_col_index..end_col_index]
     }
 
+    /// Extracts text content from the current position (`line_index`, `char_index`) to
+    /// the end of the slice, respecting the `max_len` limit. It allocates for multiline
+    /// `lines`, but not for single line content.
+    ///
+    /// ## Allocation Behavior
+    ///
+    /// For multiline content this will allocate, since there is no contiguous chunk of
+    /// memory that has `\n` in them, since these new lines are generated
+    /// synthetically when iterating this struct. Thus it is impossible to take
+    /// chunks from [Self::lines] and then "join" them with `\n` in between lines, WITHOUT
+    /// allocating.
+    ///
+    /// In the case there is only one line, this method will NOT allocate. This is why
+    /// [Cow] is used. If you are sure that you will always have a single line, you can
+    /// use [Self::extract_to_line_end()] instead, which does not
+    /// allocate.
+    ///
     /// For multiline content this will allocate, since there is no contiguous chunk of
     /// memory that has `\n` in them, since these new lines are generated
     /// synthetically when iterating this struct. Thus it is impossible to take
@@ -570,18 +625,9 @@ impl<'a> AsStrSlice<'a> {
     /// In the case there is only one line, this method will NOT allocate. This is why
     /// [Cow] is used.
     ///
-    /// For multiline content this will allocate, since there is no contiguous chunk of
-    /// memory that has `\n` in them, since these new lines are generated
-    /// synthetically when iterating this struct. Thus it is impossible to take
-    /// chunks from [Self::lines] and then "join" them with `\n` in between lines, WITHOUT
-    /// allocating.
-    ///
-    /// In the case there is only one line, this method will NOT allocate. This is why
-    /// [Cow] is used.
-    ///
-    /// This method behaves similarly to the Display trait implementation but respects
-    /// the current position (line_index, char_index) and max_len limit.
-    pub fn extract_remaining_text_content_to_end(&self) -> Cow<'a, str> {
+    /// This method behaves similarly to the [Display] trait implementation but respects
+    /// the current position (`line_index`, `char_index`) and `max_len` limit.
+    pub fn extract_to_slice_end(&self) -> Cow<'a, str> {
         // Early return for invalid line_index (it has gone beyond the available lines in
         // the slice).
         bounds_check!(self.line_index, self.lines.len(), {
@@ -1043,13 +1089,13 @@ impl<'a> Compare<&str> for AsStrSlice<'a> {
 impl<'a> Compare<AsStrSlice<'a>> for &str {
     fn compare(&self, t: AsStrSlice<'a>) -> CompareResult {
         // Convert AsStrSlice to string and compare with self
-        let t_str = t.extract_remaining_text_content_to_end();
+        let t_str = t.extract_to_slice_end();
         self.compare(t_str.as_ref())
     }
 
     fn compare_no_case(&self, t: AsStrSlice<'a>) -> CompareResult {
         // Convert AsStrSlice to string and compare with self (case insensitive)
-        let t_str = t.extract_remaining_text_content_to_end();
+        let t_str = t.extract_to_slice_end();
         self.compare_no_case(t_str.as_ref())
     }
 }
@@ -1059,15 +1105,15 @@ impl<'a> Compare<AsStrSlice<'a>> for &str {
 impl<'a> Compare<AsStrSlice<'a>> for AsStrSlice<'a> {
     fn compare(&self, t: AsStrSlice<'a>) -> CompareResult {
         // Convert both AsStrSlice instances to strings and compare
-        let self_str = self.extract_remaining_text_content_to_end();
-        let t_str = t.extract_remaining_text_content_to_end();
+        let self_str = self.extract_to_slice_end();
+        let t_str = t.extract_to_slice_end();
         self_str.as_ref().compare(t_str.as_ref())
     }
 
     fn compare_no_case(&self, t: AsStrSlice<'a>) -> CompareResult {
         // Convert both AsStrSlice instances to strings and compare (case insensitive)
-        let self_str = self.extract_remaining_text_content_to_end();
-        let t_str = t.extract_remaining_text_content_to_end();
+        let self_str = self.extract_to_slice_end();
+        let t_str = t.extract_to_slice_end();
         self_str.as_ref().compare_no_case(t_str.as_ref())
     }
 }
@@ -1162,7 +1208,7 @@ impl<'a> Display for AsStrSlice<'a> {
 impl<'a> FindSubstring<&str> for AsStrSlice<'a> {
     fn find_substring(&self, sub_str: &str) -> Option<usize> {
         // Convert the AsStrSlice to a string representation.
-        let full_text = self.extract_remaining_text_content_to_end();
+        let full_text = self.extract_to_slice_end();
 
         // Find the substring in the full text.
         full_text.find(sub_str)
@@ -1607,7 +1653,7 @@ mod tests {
         assert_eq!(slice.max_len, Some(len(5)));
 
         // Test behavior with limit
-        let content = slice.extract_remaining_text_content_in_line();
+        let content = slice.extract_to_line_end();
         assert_eq!(content, "ond l"); // "Second line" starting at index 3 with max 5 chars
 
         // Test with limit spanning multiple lines
@@ -1647,32 +1693,23 @@ mod tests {
         let slice = AsStrSlice::from(lines.as_slice());
 
         // From beginning of first line
-        assert_eq!(
-            slice.extract_remaining_text_content_in_line(),
-            "Hello world"
-        );
+        assert_eq!(slice.extract_to_line_end(), "Hello world");
 
         // From middle of first line
         let slice_offset = slice.take_from(6);
-        assert_eq!(
-            slice_offset.extract_remaining_text_content_in_line(),
-            "world"
-        );
+        assert_eq!(slice_offset.extract_to_line_end(), "world");
 
         // From empty line
         let slice_empty = AsStrSlice::with_limit(&lines, idx(3), idx(0), None);
-        assert_eq!(slice_empty.extract_remaining_text_content_in_line(), "");
+        assert_eq!(slice_empty.extract_to_line_end(), "");
 
         // With max_len limit
         let slice_limited = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(5)));
-        assert_eq!(
-            slice_limited.extract_remaining_text_content_in_line(),
-            "Hello"
-        );
+        assert_eq!(slice_limited.extract_to_line_end(), "Hello");
 
         // Out of bounds
         let slice_oob = AsStrSlice::with_limit(&lines, idx(10), idx(0), None);
-        assert_eq!(slice_oob.extract_remaining_text_content_in_line(), "");
+        assert_eq!(slice_oob.extract_to_line_end(), "");
     }
 
     // Test current_char and advance
@@ -1926,7 +1963,7 @@ mod tests {
 
         assert_eq!(slice.current_char(), None);
         assert_eq!(slice.input_len(), 0);
-        assert_eq!(slice.extract_remaining_text_content_in_line(), "");
+        assert_eq!(slice.extract_to_line_end(), "");
     }
 
     #[test]
@@ -1936,7 +1973,7 @@ mod tests {
 
         assert_eq!(slice.current_char(), None);
         assert_eq!(slice.input_len(), 0);
-        assert_eq!(slice.extract_remaining_text_content_in_line(), "");
+        assert_eq!(slice.extract_to_line_end(), "");
     }
 
     #[test]
@@ -1946,7 +1983,7 @@ mod tests {
 
         assert_eq!(slice.current_char(), None);
         assert_eq!(slice.input_len(), 0);
-        assert_eq!(slice.extract_remaining_text_content_in_line(), "");
+        assert_eq!(slice.extract_to_line_end(), "");
     }
 
     #[test]
@@ -1967,7 +2004,7 @@ mod tests {
         let slice = AsStrSlice::from(lines.as_slice());
 
         // Should handle embedded newlines in line content
-        let content = slice.extract_remaining_text_content_in_line();
+        let content = slice.extract_to_line_end();
         assert_eq!(content, "line1\nembedded");
     }
 
@@ -1978,7 +2015,7 @@ mod tests {
                                                                            // Input appears as: "abc\ndef" but starting at invalid position 10
 
         // Should clamp to line length
-        assert_eq!(slice.extract_remaining_text_content_in_line(), "");
+        assert_eq!(slice.extract_to_line_end(), "");
     }
 
     // Test Display trait implementation
@@ -2269,7 +2306,7 @@ mod tests {
             slice.advance();
             slice.advance();
 
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "c\ndef\n"); // Multiple lines include trailing newline
                                             // Should be owned since it spans multiple lines
             assert!(matches!(result, Cow::Owned(_)));
@@ -2279,7 +2316,7 @@ mod tests {
         {
             let lines = fixtures::create_simple_lines(); // ["abc", "def"]
             let slice = AsStrSlice::from(&lines);
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "abc\ndef\n"); // Multiple lines include trailing newline
             assert!(matches!(result, Cow::Owned(_)));
         }
@@ -2293,7 +2330,7 @@ mod tests {
                 slice.advance();
             }
 
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "World!");
             // Should be borrowed since it's single line content
             assert!(matches!(result, Cow::Borrowed(_)));
@@ -2303,7 +2340,7 @@ mod tests {
         {
             let lines = vec![GCString::from("Hello, World!")];
             let slice = AsStrSlice::from(&lines);
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "Hello, World!");
             assert!(matches!(result, Cow::Borrowed(_)));
         }
@@ -2316,7 +2353,7 @@ mod tests {
             for _ in 0..13 {
                 slice.advance();
             }
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "");
             assert!(matches!(result, Cow::Borrowed(_)));
         }
@@ -2329,7 +2366,7 @@ mod tests {
             slice.advance();
             slice.advance();
 
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             // Result should contain remaining content from current position to end
             assert!(!result.is_empty());
             assert!(matches!(result, Cow::Owned(_)));
@@ -2340,7 +2377,7 @@ mod tests {
             let lines = vec![GCString::from("Hello, World!")];
             let slice = AsStrSlice::with_limit(&lines, idx(0), idx(7), Some(len(3))); // Start at pos 7, limit 3 chars
 
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "Wor"); // Only 3 chars due to limit
             assert!(matches!(result, Cow::Borrowed(_)));
         }
@@ -2354,7 +2391,7 @@ mod tests {
             ];
             let slice = AsStrSlice::with_limit(&lines, idx(0), idx(3), Some(len(7))); // Start at pos 3, limit 7 chars
 
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "st\nSeco"); // "st" + "\n" + "Seco" = 7 chars
             assert!(matches!(result, Cow::Owned(_)));
         }
@@ -2364,7 +2401,7 @@ mod tests {
             let lines = vec![GCString::from("First"), GCString::from("Second")];
             let slice = AsStrSlice::with_limit(&lines, idx(0), idx(3), Some(len(4))); // Start at pos 3, limit 4 chars
 
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "st\nS"); // "st" + "\n" + "S" = 4 chars
             assert!(matches!(result, Cow::Owned(_)));
         }
@@ -2373,7 +2410,7 @@ mod tests {
         {
             let lines = vec![GCString::from(""), GCString::from(""), GCString::from("")];
             let slice = AsStrSlice::from(&lines);
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "\n\n\n"); // Multiple lines include trailing newline
             assert!(matches!(result, Cow::Owned(_)));
         }
@@ -2382,7 +2419,7 @@ mod tests {
         {
             let lines = vec![GCString::from("Hello")];
             let slice = AsStrSlice::with_limit(&lines, idx(10), idx(0), None); // Start beyond available lines
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "");
             assert!(matches!(result, Cow::Borrowed(_)));
         }
@@ -2391,7 +2428,7 @@ mod tests {
         {
             let lines = fixtures::create_three_lines();
             let slice = AsStrSlice::with_limit(&lines, 1, 0, None); // Start at beginning of second line
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "Second line\nThird line\n"); // Multiple lines include trailing newline
             assert!(matches!(result, Cow::Owned(_)));
         }
@@ -2400,7 +2437,7 @@ mod tests {
         {
             let lines = fixtures::create_three_lines();
             let slice = AsStrSlice::with_limit(&lines, 1, 7, None); // Start at "line" in "Second line"
-            let result = slice.extract_remaining_text_content_to_end();
+            let result = slice.extract_to_slice_end();
             assert_eq!(result, "line\nThird line\n"); // Multiple lines include trailing newline
             assert!(matches!(result, Cow::Owned(_)));
         }
