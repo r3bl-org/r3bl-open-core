@@ -196,7 +196,7 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
 /// only 1 occurrence is found, then this parser's `Edge case -> Special case` will take
 /// care of it by splitting the input, and returning the first part as plain text, and the
 /// remainder as the input to be parsed by the specialized parsers.
-pub fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
+fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 
 /// This is a special set of chars called `set_2`.
 ///
@@ -205,7 +205,7 @@ pub fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 /// return as plain text. Unless both of the following are true:
 /// 1. input is in [get_sp_char_set_1()] and,
 /// 2. count is 1.
-pub fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
+fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
     get_sp_char_set_1()
         .iter()
         .chain([LEFT_IMAGE, LEFT_BRACKET].iter())
@@ -222,7 +222,7 @@ pub fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
 /// special character, and split there. This returns the chunk until the first special
 /// character as [crate::MdLineFragment::Plain], and the remainder of the input gets a
 /// chance to be parsed by the specialized parsers.
-pub fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
+fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
     get_sp_char_set_2()
         .iter()
         .chain([NEW_LINE].iter())
@@ -232,17 +232,15 @@ pub fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
         .unwrap()
 }
 
-pub fn check_input_starts_with<'a>(
-    input: &'a str,
-    char_set: &[&'a str],
-) -> Option<&'a str> {
+fn check_input_starts_with<'a>(input: &'a str, char_set: &[&'a str]) -> Option<&'a str> {
     char_set
         .iter()
         .find(|&special_str| input.starts_with(special_str))
         .copied()
 }
 
-pub fn tuple5<T>(a: &[T]) -> (&T, &T, &T, &T, &T) { (&a[0], &a[1], &a[2], &a[3], &a[4]) }
-pub fn tuple6<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T) {
+#[allow(dead_code)]
+fn tuple5<T>(a: &[T]) -> (&T, &T, &T, &T, &T) { (&a[0], &a[1], &a[2], &a[3], &a[4]) }
+fn tuple6<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T) {
     (&a[0], &a[1], &a[2], &a[3], &a[4], &a[5])
 }

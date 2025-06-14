@@ -137,7 +137,7 @@ mod tests {
         assert_eq2!(
             blocks[0],
             MdBlock::Heading(HeadingData {
-                heading_level: HeadingLevel { level: 1 },
+                level: HeadingLevel { level: 1 },
                 text: "LINE 1",
             })
         );
@@ -216,7 +216,7 @@ mod tests {
             MdBlock::Title("Something"),
             MdBlock::Tags(list!["tag1", "tag2", "tag3"]),
             MdBlock::Heading(HeadingData {
-                heading_level: HeadingLevel { level: 1 },
+                level: HeadingLevel { level: 1 },
                 text: "Foobar",
             }),
             MdBlock::Text(list![]), /* Empty line */
@@ -231,7 +231,7 @@ mod tests {
             MdBlock::CodeBlock(convert_into_code_block_lines(Some("fish"), vec![])),
             MdBlock::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
             MdBlock::Heading(HeadingData {
-                heading_level: HeadingLevel { level: 2 },
+                level: HeadingLevel { level: 2 },
                 text: "Installation",
             }),
             MdBlock::Text(list![]), /* Empty line */

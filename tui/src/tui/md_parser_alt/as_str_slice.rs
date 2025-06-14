@@ -421,7 +421,7 @@ impl<'a> AsStrSlice<'a> {
     }
 
     /// This does not materialize the `AsStrSlice`.
-    pub fn is_empty(&self) -> bool { return self.remaining_len() == len(0); }
+    pub fn is_empty(&self) -> bool { self.remaining_len() == len(0) }
 
     /// This does not materialize the `AsStrSlice`.
     pub fn starts_with(&self, sub_str: &str) -> bool {

@@ -44,12 +44,12 @@ fn parse(input: &str) -> IResult<&str, HeadingData<'_>> {
         opt(tag(NEW_LINE)),
     )
         .parse(input)?;
-    Ok((input, HeadingData { heading_level: level, text }))
+    Ok((input, HeadingData { level, text }))
 }
 
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
 #[rustfmt::skip]
-pub fn parse_anychar_in_heading_no_new_line(input: &str) -> IResult<&str, &str> {
+fn parse_anychar_in_heading_no_new_line(input: &str) -> IResult<&str, &str> {
     recognize(
         many1( /* match at least 1 char */
             preceded(
@@ -117,7 +117,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    heading_level: 1.into(),
+                    level: 1.into(),
                     text: "h1",
                 }
             ))
@@ -127,7 +127,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    heading_level: 2.into(),
+                    level: 2.into(),
                     text: "h2",
                 }
             ))
@@ -137,7 +137,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    heading_level: 3.into(),
+                    level: 3.into(),
                     text: " h3",
                 }
             ))
@@ -147,7 +147,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    heading_level: 3.into(),
+                    level: 3.into(),
                     text: "h3 *foo* **bar**",
                 }
             ))
@@ -200,7 +200,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    heading_level: 1.into(),
+                    level: 1.into(),
                     text: "test",
                 }
             ))

@@ -301,7 +301,7 @@ fn parse_plain_text_until_newline<'a>(
 /// 2 occurrences to be parsed by the specialized parsers. If only 1 occurrence is found,
 /// then the `handle_special_edge_case` function will handle it by returning the character
 /// as plain text.
-pub fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
+fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 
 /// Returns an extended set of special characters for detecting the normal edge case.
 ///
@@ -311,7 +311,7 @@ pub fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 /// new line, unless the special edge case applies:
 /// 1. The character is in `get_sp_char_set_1()` and,
 /// 2. There is exactly one occurrence of it.
-pub fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
+fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
     get_sp_char_set_1()
         .iter()
         .chain([LEFT_IMAGE, LEFT_BRACKET].iter())
@@ -328,7 +328,7 @@ pub fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
 /// these characters is encountered, the input is split at that point. The text before
 /// the special character is returned as plain text, and the remainder gets a chance to
 /// be parsed by specialized parsers.
-pub fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
+fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
     get_sp_char_set_2()
         .iter()
         .chain([NEW_LINE].iter())
@@ -348,7 +348,7 @@ pub fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
 /// # Returns
 /// * `Some(&str)` - The matching string from the character set if found
 /// * `None` - If the input doesn't start with any of the strings in the character set
-pub fn check_input_starts_with<'a>(
+fn check_input_starts_with<'a>(
     input: &AsStrSlice<'a>,
     char_set: &[&'a str],
 ) -> Option<&'a str> {
@@ -362,13 +362,14 @@ pub fn check_input_starts_with<'a>(
 ///
 /// This utility function is used to convert a slice into a tuple format that can be used
 /// with nom's `alt` function.
-pub fn tuple5<T>(a: &[T]) -> (&T, &T, &T, &T, &T) { (&a[0], &a[1], &a[2], &a[3], &a[4]) }
+#[allow(dead_code)]
+fn tuple5<T>(a: &[T]) -> (&T, &T, &T, &T, &T) { (&a[0], &a[1], &a[2], &a[3], &a[4]) }
 
 /// Converts a slice of 6 elements into a tuple of 6 references.
 ///
 /// This utility function is used to convert a slice into a tuple format that can be used
 /// with nom's `alt` function.
-pub fn tuple6<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T) {
+fn tuple6<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T) {
     (&a[0], &a[1], &a[2], &a[3], &a[4], &a[5])
 }
 

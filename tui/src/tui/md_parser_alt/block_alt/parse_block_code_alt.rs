@@ -14,9 +14,3 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-// Attach.
-pub mod parse_block_code_alt;
-pub mod parse_block_smart_list_alt;
-
-// Re-export.

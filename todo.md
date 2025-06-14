@@ -183,11 +183,13 @@
 ---
 
 - [ ] migrate `block` parsers into `block_alt`
-
-  - [ ] block code
-  - [ ] block heading
-  - [ ] block markdown text
-  - [ ] block smart list
+  - not block parsers (in `standard_alt`):
+    - [x] `parse_block_heading.rs` -> `parse_heading_alt.rs`
+    - [ ] `parse_block_markdown_text_until_eol_or_eoi.rs` ->
+          `parse_markdown_text_until_eol_or_eoi_alt.rs`
+  - block parsers:
+    - [ ] `parse_block_code.rs` -> `block_alt/parse_block_code_alt.rs`
+    - [ ] `parse_block_smart_list.rs` -> `block_alt/parse_block_smart_list_alt.rs`
 
 ---
 
