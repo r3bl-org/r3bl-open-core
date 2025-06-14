@@ -15,15 +15,14 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::{tag, take_while, take_while1},
+use nom::{bytes::complete::{tag, take_while1},
           combinator::{opt, verify},
           multi::many0,
           sequence::preceded,
           IResult,
           Parser as _};
 
-use crate::{as_str_slice_test_case,
-            constants::{COMMA_CHAR, NEW_LINE_CHAR, SPACE_CHAR},
+use crate::{constants::{COMMA_CHAR, NEW_LINE_CHAR, SPACE_CHAR},
             inline_vec,
             list,
             md_parser::constants::{COLON, COMMA, NEW_LINE, SPACE},
@@ -119,7 +118,10 @@ fn parse_comma_separated_list_alt<'a>(
 #[cfg(test)]
 mod test_parse_tags_opt_eol {
     use super::*;
-    use crate::{assert_eq2, md_parser::constants::TAGS, GCString};
+    use crate::{as_str_slice_test_case,
+                assert_eq2,
+                md_parser::constants::TAGS,
+                GCString};
 
     #[test]
     fn test_not_quoted_no_eol() {

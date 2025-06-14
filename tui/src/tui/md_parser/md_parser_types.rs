@@ -36,7 +36,7 @@ pub type Lines<'a> = List<FragmentsInOneLine<'a>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeadingData<'a> {
-    pub heading_level: HeadingLevel,
+    pub level: HeadingLevel,
     pub text: &'a str,
 }
 

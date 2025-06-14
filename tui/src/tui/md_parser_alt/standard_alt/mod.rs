@@ -16,7 +16,8 @@
  */
 
 // Attach.
-pub mod parse_block_code_alt;
-pub mod parse_block_smart_list_alt;
+pub mod parse_heading_alt;
+pub mod parse_markdown_text_until_eol_or_eoi_alt;
 
 // Re-export.
+pub use parse_heading_alt::*;

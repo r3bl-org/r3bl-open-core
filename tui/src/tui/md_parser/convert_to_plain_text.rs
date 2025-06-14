@@ -83,7 +83,7 @@ impl PrettyPrintDebug for MdBlock<'_> {
             MdBlock::Heading(heading_data) => {
                 inline_string!(
                     "{}{}",
-                    heading_data.heading_level.pretty_print_debug(),
+                    heading_data.level.pretty_print_debug(),
                     heading_data.text,
                 )
             }

@@ -287,7 +287,7 @@ const STEPS: u8 = 20;
 pub fn create_color_wheel_from_heading_data(
     heading_data: &HeadingData<'_>,
 ) -> ColorWheel {
-    match heading_data.heading_level.level {
+    match heading_data.level.level {
         1 => ColorWheel::new(smallvec![
             ColorWheelConfig::Rgb(
                 smallvec!["#01fa22".into(), "#00eef2".into()],
