@@ -610,7 +610,7 @@ impl<'a> AsStrSlice<'a> {
 
     /// Extracts text content from the current position (`line_index`, `char_index`) to
     /// the end of the slice, respecting the `max_len` limit. It allocates for multiline
-    /// `lines`, but not for single line content.
+    /// `lines`, but not for single line content. This is used mostly for tests.
     ///
     /// ## Allocation Behavior
     ///
