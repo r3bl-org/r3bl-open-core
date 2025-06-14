@@ -1669,7 +1669,7 @@ mod tests {
     fn test_debug() {
         let lines = fixtures::create_simple_lines();
         let slice = AsStrSlice::from(lines.as_slice());
-        let debug_str = format!("{:?}", slice);
+        let debug_str = format!("{slice:?}");
 
         assert!(debug_str.contains("AsStrSlice"));
         assert!(debug_str.contains("line_index"));
@@ -2060,7 +2060,7 @@ mod tests {
         let slice = AsStrSlice::from(lines.as_slice());
         // Input appears as: "abc\ndef\n" (synthetic \n added between lines + trailing \n)
 
-        let displayed = format!("{}", slice);
+        let displayed = format!("{slice}");
         assert_eq!(displayed, "abc\ndef\n"); // Shows synthetic newlines in output
     }
 
@@ -2070,7 +2070,7 @@ mod tests {
         let slice = AsStrSlice::from(lines.as_slice()).take_from(2);
         // Input appears as: "abc\ndef\n", starting from position 2 ('c')
 
-        let displayed = format!("{}", slice);
+        let displayed = format!("{slice}");
         assert_eq!(displayed, "c\ndef\n"); // From 'c' through synthetic newlines to end
     }
 
@@ -2080,7 +2080,7 @@ mod tests {
         let slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(4)));
         // Input appears as: "abc\ndef" but limited to first 4 chars: "abc\n"
 
-        let displayed = format!("{}", slice);
+        let displayed = format!("{slice}");
         assert_eq!(displayed, "abc\n"); // First 4 chars including synthetic newline
     }
 
@@ -2089,7 +2089,7 @@ mod tests {
         let lines: Vec<GCString> = vec![];
         let slice = AsStrSlice::from(lines.as_slice());
 
-        let displayed = format!("{}", slice);
+        let displayed = format!("{slice}");
         assert_eq!(displayed, "");
     }
 
@@ -2098,7 +2098,7 @@ mod tests {
         let lines = vec![GCString::new("hello")];
         let slice = AsStrSlice::from(lines.as_slice());
 
-        let displayed = format!("{}", slice);
+        let displayed = format!("{slice}");
         assert_eq!(displayed, "hello");
     }
 
@@ -2111,7 +2111,7 @@ mod tests {
         ];
         let slice = AsStrSlice::from(lines.as_slice());
 
-        let displayed = format!("{}", slice);
+        let displayed = format!("{slice}");
         assert_eq!(displayed, "\nmiddle\n\n"); // Multiple lines get trailing newline
     }
 
@@ -2120,7 +2120,7 @@ mod tests {
         let lines = vec![GCString::new("line1\nembedded"), GCString::new("line2")];
         let slice = AsStrSlice::from(lines.as_slice());
 
-        let displayed = format!("{}", slice);
+        let displayed = format!("{slice}");
         assert_eq!(displayed, "line1\nembedded\nline2\n"); // Multiple lines get trailing
                                                            // newline
     }
@@ -2131,7 +2131,7 @@ mod tests {
         let slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(0)));
         // Input appears as: "abc\ndef" but limited to 0 chars
 
-        let displayed = format!("{}", slice);
+        let displayed = format!("{slice}");
         assert_eq!(displayed, ""); // No characters displayed due to max_len = 0
     }
 
@@ -2140,7 +2140,7 @@ mod tests {
         let lines = vec![GCString::new("abc")];
         let slice = AsStrSlice::with_limit(&lines, 0, 3, None); // At end of line
 
-        let displayed = format!("{}", slice);
+        let displayed = format!("{slice}");
         assert_eq!(displayed, "");
     }
 
@@ -2149,7 +2149,7 @@ mod tests {
         let lines = fixtures::create_test_lines(); // Multiple lines including empty
         let slice = AsStrSlice::from(lines.as_slice());
 
-        let displayed = format!("{}", slice);
+        let displayed = format!("{slice}");
         assert_eq!(
             displayed,
             "Hello world\nSecond line\nThird line\n\nFifth line\n" /* Trailing newline
@@ -2163,7 +2163,7 @@ mod tests {
         let lines = fixtures::create_test_lines();
         let slice = AsStrSlice::with_limit(&lines, idx(1), idx(7), Some(len(10))); // From "line" in "Second line"
 
-        let displayed = format!("{}", slice);
+        let displayed = format!("{slice}");
         assert_eq!(displayed, "line\nThird");
     }
 
@@ -2773,7 +2773,7 @@ mod tests_str_conversion {
             // Take until index 5
             let result = slice.take_until(5);
             assert_eq2!(result.max_len, Some(len(5))); // end_index - new_char_index = 5 - 0 = 5
-            assert_eq2!(result.char_index, idx(0.min(5))); // min(char_index, end_index)
+            assert_eq2!(result.char_index, idx(0)); // min(char_index, end_index)
             assert_eq2!(result.line_index, slice.line_index);
             assert_eq2!(result.lines, slice.lines);
         }
@@ -2830,7 +2830,7 @@ mod tests_str_conversion {
             let slice = AsStrSlice::with_limit(&lines, idx(1), idx(2), Some(len(50)));
 
             let result = slice.take_until(8);
-            assert_eq2!(result.char_index, idx(2.min(8))); // Should be 2
+            assert_eq2!(result.char_index, idx(2)); // Should be 2
             assert_eq2!(result.max_len, Some(len(6))); // end_index - new_char_index = 8 - 2 = 6
             assert_eq2!(result.line_index, idx(1));
         }

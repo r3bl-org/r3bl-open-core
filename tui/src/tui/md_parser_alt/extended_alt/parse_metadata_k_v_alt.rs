@@ -71,7 +71,6 @@ mod test_parse_title_no_eol {
                 md_parser::constants::TITLE,
                 GCString,
                 NomErr,
-                NomError,
                 NomErrorKind};
 
     #[test]

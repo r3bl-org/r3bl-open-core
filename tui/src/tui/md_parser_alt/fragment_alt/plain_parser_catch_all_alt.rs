@@ -459,7 +459,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "");
                 assert_eq2!(out.extract_to_line_end(), "Hello world");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
     }
 
@@ -475,7 +475,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "*world");
                 assert_eq2!(out.extract_to_line_end(), "Hello ");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
 
         // Test with multiple special characters
@@ -488,7 +488,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "_*`[!world");
                 assert_eq2!(out.extract_to_line_end(), "Hello ");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
     }
 
@@ -504,7 +504,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "single");
                 assert_eq2!(out.extract_to_line_end(), "_");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
 
         // Test special edge case: single star
@@ -517,7 +517,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "single");
                 assert_eq2!(out.extract_to_line_end(), "*");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
 
         // Test special edge case: single backtick
@@ -530,7 +530,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "single");
                 assert_eq2!(out.extract_to_line_end(), "`");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
     }
 
@@ -546,7 +546,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "");
                 assert_eq2!(out.extract_to_line_end(), "**bold**");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
 
         // Test normal edge case: starts with left bracket
@@ -559,7 +559,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "");
                 assert_eq2!(out.extract_to_line_end(), "[link](url)");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
 
         // Test normal edge case: starts with left image
@@ -572,7 +572,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "");
                 assert_eq2!(out.extract_to_line_end(), "![image](url)");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
     }
 
@@ -588,7 +588,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "\nworld");
                 assert_eq2!(out.extract_to_line_end(), "Hello");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
 
         // Test with multiple lines
@@ -601,7 +601,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "");
                 assert_eq2!(out.extract_to_line_end(), "Hello");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
     }
 
@@ -635,7 +635,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "");
                 assert_eq2!(out.extract_to_line_end(), "Hello world");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
 
         // Test with special character in the middle
@@ -648,7 +648,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "*world");
                 assert_eq2!(out.extract_to_line_end(), "Hello ");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
     }
 
@@ -664,7 +664,7 @@ mod tests {
                 assert_eq2!(rem.extract_to_line_end(), "single");
                 assert_eq2!(out.extract_to_line_end(), "_");
             }
-            Some(Err(err)) => panic!("Expected Ok, got Err: {:?}", err),
+            Some(Err(err)) => panic!("Expected Ok, got Err: {err:?}"),
             None => panic!("Expected Some, got None"),
         }
 
@@ -695,7 +695,7 @@ mod tests {
                 assert_eq2!(out.extract_to_line_end(), "**bold**");
                 assert_eq2!(rem.extract_to_line_end(), "");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
 
         // Test with newline in the middle.
@@ -708,7 +708,7 @@ mod tests {
                 assert_eq2!(out.extract_to_line_end(), "**bold");
                 assert_eq2!(rem.extract_to_line_end(), "\ntext**");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
 
         // Input: "hello world" (no newline)
@@ -723,7 +723,7 @@ mod tests {
                 assert_eq2!(out.extract_to_line_end(), "hello world");
                 assert_eq2!(rem.extract_to_line_end(), "");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
 
         // Input: "single line text" (no newline)
@@ -738,7 +738,7 @@ mod tests {
                 assert_eq2!(out.extract_to_line_end(), "single line text");
                 assert_eq2!(rem.extract_to_line_end(), "");
             }
-            Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+            Err(err) => panic!("Expected Ok, got Err: {err:?}"),
         }
 
         // Input: "" (empty string)
