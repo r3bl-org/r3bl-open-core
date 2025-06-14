@@ -79,7 +79,7 @@ pub mod delim_matchers {
     ) -> (usize, bool, bool, &'a str) {
         // If the input has a "\n" then split it at the first "\n", only count the number
         // of delims at the first part of the split.
-        let input_str = input.extract_to_slice_end();
+        let input_str = input.extract_to_line_end();
         let (first_part, _) =
             input_str.split_at(input_str.find(NEW_LINE).unwrap_or(input_str.len()));
         let num_of_delim_occurrences = first_part.matches(delim).count();

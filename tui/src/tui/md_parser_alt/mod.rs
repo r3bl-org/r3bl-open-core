@@ -16,6 +16,7 @@
  */
 
 //! # Polymorphic behavior of nom-compatible struct
+//!
 //! Since [AsStrSlice] implements [nom::Input], any function that can receive a
 //! [nom::Input] can accept [AsStrSlice] type.
 //!
@@ -24,13 +25,24 @@
 //! access the `input`, in a "nom compatible" way. Also [CGStringSlice] is
 //! [Clone] and it is very cheap. These features are used in many of the
 //! functions in this module.
+//!
+//! # Line vs block parsers
+//!
+//! Almost all the parsers in this module are line parsers, meaning they parse a single
+//! line of text, and return the remainder of the input after parsing that line.
+//!
+//! The parsers that are not line parsers are block parsers, meaning they parse across
+//! line breaks and peek ahead to find the end of the block (which may span multiple
+//! lines). Block parser are in the [mod@block_alt] module.
 
 // Attach sources.
 pub mod as_str_slice;
+pub mod block_alt;
 pub mod extended_alt;
 pub mod fragment_alt;
 
 // Re-export.
 pub use as_str_slice::*;
+pub use block_alt::*;
 pub use extended_alt::*;
 pub use fragment_alt::*;

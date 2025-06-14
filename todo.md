@@ -177,6 +177,9 @@
   - [x] make sure all the docs have been copied over along with any `println!()` statements at the
         start of main parser function execution
 
+- [x] should there be `block` and `line` parsers? if so, should `extract_to_line_end()` be used
+      exclusively by `line` parsers? also who should use `extract_to_slice_end()`
+
 ---
 
 - [ ] migrate `block` parsers into `block_alt`
