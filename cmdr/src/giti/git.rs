@@ -774,7 +774,7 @@ mod tests {
         if std::env::var("ISOLATED_TEST_RUNNER").is_ok() {
             // This is the actual test running in the isolated process
             if let Err(err) = run_all_git_tests_sequentially_impl().await {
-                eprintln!("Test failed with error: {}", err);
+                eprintln!("Test failed with error: {err}");
                 std::process::exit(1);
             }
             // If we reach here without errors, exit normally
@@ -786,7 +786,7 @@ mod tests {
         let mut cmd = std::process::Command::new(&current_exe);
         cmd.env("ISOLATED_TEST_RUNNER", "1")
             .env("RUST_BACKTRACE", "1") // Get better error info
-            .args(&[
+            .args([
                 "--test-threads",
                 "1",
                 "test_all_git_functions_in_isolated_process",
@@ -806,7 +806,7 @@ mod tests {
             // the test sources above which failed.
             eprintln!("Exit status: {:?}", output.status);
             eprintln!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
-            eprintln!("Stderr: {}", stderr);
+            eprintln!("Stderr: {stderr}");
 
             panic!(
                 "Isolated test failed with status code {:?}: {}",

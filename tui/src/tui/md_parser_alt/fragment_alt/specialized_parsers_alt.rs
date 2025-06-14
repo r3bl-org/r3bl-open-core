@@ -819,11 +819,7 @@ mod tests {
 #[cfg(test)]
 mod tests_delim_matchers {
     use super::*;
-    use crate::{assert_eq2,
-                md_parser::constants::NEW_LINE,
-                GCString,
-                NomErr,
-                NomErrorKind};
+    use crate::{assert_eq2, GCString, NomErr, NomErrorKind};
 
     #[test]
     fn test_delim_matchers_count_delim_occurrences_until_eol() {

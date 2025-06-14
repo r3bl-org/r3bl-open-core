@@ -122,11 +122,11 @@ mod tests_parse_take_between {
         let (rem, output) = it.unwrap();
 
         // Check that remaining is empty by converting to string and checking length
-        let remaining_str = format!("{}", rem);
+        let remaining_str = format!("{rem}");
         assert_eq!(remaining_str.len(), 0);
 
         // Check that extracted contains "foo bar baz"
-        let extracted_str = format!("{}", output);
+        let extracted_str = format!("{output}");
         assert_eq!(extracted_str, "foo bar baz");
     }
 
@@ -146,7 +146,7 @@ mod tests_parse_take_between {
                 // `tag("_")` moved this forward by 1. it is no longer equal to `input`.
                 assert_eq!(error.input.char_index, idx(1));
             }
-            Err(other_err) => panic!("Expected Error variant, but got: {:?}", other_err),
+            Err(other_err) => panic!("Expected Error variant, but got: {other_err:?}"),
         }
     }
 
@@ -193,11 +193,11 @@ mod tests_parse_take_between {
         let (remaining, extracted) = it.unwrap();
 
         // Check that remaining is empty by converting to string and checking length
-        let remaining_str = format!("{}", remaining);
+        let remaining_str = format!("{remaining}");
         assert_eq!(remaining_str.len(), 0);
 
         // Check that extracted contains "foo bar"
-        let extracted_str = format!("{}", extracted);
+        let extracted_str = format!("{extracted}");
         assert_eq!(extracted_str, "foo bar");
     }
 }

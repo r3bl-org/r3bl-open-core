@@ -200,7 +200,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out.extract_to_line_end(), "1234567890");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -213,7 +213,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out.extract_to_line_end(), "oh my gosh!");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -226,7 +226,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "![");
                     assert_eq2!(out.extract_to_line_end(), "oh my gosh");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -239,7 +239,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "*");
                     assert_eq2!(out.extract_to_line_end(), "oh my gosh!");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -252,7 +252,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out.extract_to_line_end(), "*bold baby bold*");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -268,7 +268,7 @@ mod tests_parse_fragment {
                         "[link baby](and then somewhat)"
                     );
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -281,7 +281,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out.extract_to_line_end(), "`codeblock for bums`");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -297,7 +297,7 @@ mod tests_parse_fragment {
                         "![ but wait theres more](jk)"
                     );
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -310,7 +310,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out.extract_to_line_end(), "here is plaintext");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -323,7 +323,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out.extract_to_line_end(), "here is plaintext!");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -336,7 +336,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "![image starting");
                     assert_eq2!(out.extract_to_line_end(), "here is plaintext");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -349,7 +349,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "\n");
                     assert_eq2!(out.extract_to_line_end(), "here is plaintext");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -362,7 +362,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out.extract_to_line_end(), "*here is italic*");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -375,7 +375,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out.extract_to_line_end(), "**here is bold**");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -388,7 +388,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out.extract_to_line_end(), "`here is code`");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -404,7 +404,7 @@ mod tests_parse_fragment {
                         "[title](https://www.example.com)"
                     );
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -417,7 +417,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out.extract_to_line_end(), "![alt text](image.jpg)");
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -450,7 +450,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out, MdLineFragment::Plain("here is plaintext!"));
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -467,7 +467,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out, MdLineFragment::Bold("here is bold"));
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -484,7 +484,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out, MdLineFragment::Italic("here is italic"));
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -501,7 +501,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out, MdLineFragment::InlineCode("here is code"));
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -524,7 +524,7 @@ mod tests_parse_fragment {
                         })
                     );
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -547,7 +547,7 @@ mod tests_parse_fragment {
                         })
                     );
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -564,7 +564,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "");
                     assert_eq2!(out, MdLineFragment::Plain("here is plaintext!"));
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -584,7 +584,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), "*but what if we italicize?");
                     assert_eq2!(out, MdLineFragment::Plain("here is some plaintext "));
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -607,7 +607,7 @@ mod tests_parse_fragment {
                     );
                     assert_eq2!(out, MdLineFragment::Plain("here is some plaintext "));
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -658,7 +658,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), " this is a checkbox");
                     assert_eq2!(out, MdLineFragment::Plain("[ ]"));
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -675,7 +675,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), " this is a checkbox");
                     assert_eq2!(out, MdLineFragment::Plain("[x]"));
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -692,7 +692,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), " this is a checkbox");
                     assert_eq2!(out, MdLineFragment::Checkbox(false));
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
 
@@ -709,7 +709,7 @@ mod tests_parse_fragment {
                     assert_eq2!(rem.extract_to_line_end(), " this is a checkbox");
                     assert_eq2!(out, MdLineFragment::Checkbox(true));
                 }
-                Err(err) => panic!("Expected Ok, got Err: {:?}", err),
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
     }

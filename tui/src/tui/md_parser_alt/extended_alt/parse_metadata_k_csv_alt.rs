@@ -297,7 +297,7 @@ mod test_parse_tags_opt_eol {
         println!("Input: {:?}", input.extract_to_slice_end());
         let (input, output) = parse_csv_opt_eol_alt(TAGS, input).unwrap();
         println!("Remainder: {:?}", input.extract_to_slice_end());
-        println!("Output: {:?}", output);
+        println!("Output: {output:?}");
 
         assert_eq2!(input.extract_to_slice_end(), "foo\nbar");
 

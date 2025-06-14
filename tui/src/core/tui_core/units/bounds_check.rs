@@ -68,15 +68,17 @@ pub enum BoundsStatus {
 /// let height = RowHeight::new(5);
 /// assert_eq!(
 ///     row_index.check_overflows(height),
-///     BoundsStatus::Overflowed);
+///     BoundsStatus::Overflowed
+/// );
 ///
 /// let col_index = ColIndex::new(3);
 /// let width = ColWidth::new(5);
 /// assert_eq!(
 ///     col_index.check_overflows(width),
-///     BoundsStatus::Within);
+///     BoundsStatus::Within
+/// );
 /// ```
-
+///
 /// A macro for performing bounds checks with a concise syntax.
 ///
 /// This macro automatically calls `len()` on the `$length` parameter before passing it to
@@ -114,7 +116,7 @@ pub trait BoundsCheck<OtherType> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{bounds_check, idx, len};
+    use crate::{bounds_check, idx};
 
     #[test]
     fn test_bounds_status_equality() {
@@ -142,7 +144,7 @@ mod tests {
 
     #[test]
     fn test_bounds_check_macro() {
-        let lines = vec!["line1", "line2", "line3"];
+        let lines = ["line1", "line2", "line3"];
 
         // Test case: index within bounds
         {
