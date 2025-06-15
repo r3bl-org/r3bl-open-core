@@ -20,3 +20,5 @@ pub mod parse_block_code_alt;
 pub mod parse_block_smart_list_alt;
 
 // Re-export.
+pub use parse_block_code_alt::*;
+pub use parse_block_smart_list_alt::*;

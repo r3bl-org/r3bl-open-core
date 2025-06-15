@@ -94,8 +94,7 @@ pub enum BoundsStatus {
 /// let array = [1, 2, 3, 4, 5];
 ///
 /// bounds_check!(index, array.len(), {
-///     println!("Index {} overflows array length {}", index, array.len());
-///     return None;
+///     println!("Index {:?} overflows array length {:?}", index, array.len());
 /// });
 /// ```
 #[macro_export]

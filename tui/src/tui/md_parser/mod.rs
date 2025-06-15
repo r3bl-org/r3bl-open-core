@@ -18,7 +18,7 @@
 //! The main entry point (function) for this Markdown parsing module is
 //! [parse_markdown()].
 //! - It takes a string slice.
-//! - And returns a vector of [MdBlock]s.
+//! - And returns a vector of [MdElement]s.
 //!
 //! This module contains a fully functional Markdown parser. This parser supports standard
 //! Markdown syntax as well as some extensions that are added to make it work w/
@@ -31,8 +31,8 @@
 //!    along to see how other smaller parsers are used to build up this big one that
 //!    parses the whole of the Markdown document.
 //! 2. The [mod@md_parser_types] contain all the types that are used to represent the
-//!    Markdown document model, such as [MdDocument], [MdBlock], [MdLineFragment] and all
-//!    the other intermediate types & enums required for parsing.
+//!    Markdown document model, such as [MdDocument], [MdElement], [MdLineFragment] and
+//!    all the other intermediate types & enums required for parsing.
 //! 3. All the parsers related to parsing metadata specific for [R3BL](https://r3bl.com)
 //!    applications, which are not standard Markdown can be found in
 //!    [mod@parse_metadata_kv] and [mod@parse_metadata_kcsv].

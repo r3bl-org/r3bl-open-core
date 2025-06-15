@@ -17,7 +17,7 @@
 
 // Attach.
 pub mod parse_heading_alt;
-pub mod parse_markdown_text_until_eol_or_eoi_alt;
+pub mod parse_markdown_text_including_eol_or_eoi_alt;
 
 // Re-export.
 pub use parse_heading_alt::*;

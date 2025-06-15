@@ -180,20 +180,34 @@
 - [x] should there be `block` and `line` parsers? if so, should `extract_to_line_end()` be used
       exclusively by `line` parsers? also who should use `extract_to_slice_end()`
 
+- [x] migrate `block` parsers into `block_alt` (part 1)
+
+  - not block parsers (in `standard_alt`):
+
+    - [x] `parse_block_heading.rs` -> `parse_heading_alt.rs`
+    - [x] `parse_block_markdown_text_until_eol_or_eoi.rs`
+
+      - [x] `parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()` ->
+            `parse_block_smart_list_alt.rs`
+            `parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt()`
+
+      - [x] `parse_block_markdown_text_with_or_without_new_line()` ->
+            `parse_markdown_text_including_eol_or_eoi_alt.rs`
+            `parse_markdown_text_including_eol_or_eoi_alt()`
+
+      - [x] Rename `MdBlock` -> `MdElement`
+
 ---
 
-- [ ] migrate `block` parsers into `block_alt`
-  - not block parsers (in `standard_alt`):
-    - [x] `parse_block_heading.rs` -> `parse_heading_alt.rs`
-    - [ ] `parse_block_markdown_text_until_eol_or_eoi.rs` ->
-          `parse_markdown_text_until_eol_or_eoi_alt.rs`
-      - [ ] `parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()` ->
-            `parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt()`
-      - [ ] `parse_block_markdown_text_with_or_without_new_line()` ->
-            `parse_markdown_text_until_eol_or_eoi_alt()`
+- [ ] migrate `block` parsers into `block_alt` (part 2)
+
   - block parsers:
+
     - [ ] `parse_block_code.rs` -> `block_alt/parse_block_code_alt.rs`
+
     - [ ] `parse_block_smart_list.rs` -> `block_alt/parse_block_smart_list_alt.rs`
+
+- [ ] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_mardown_alt()`
 
 ---
 
