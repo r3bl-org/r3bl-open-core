@@ -69,8 +69,8 @@ use crate::{generate_ordered_list_item_bullet,
             InlineString,
             Lines,
             List,
-            MdBlock,
             MdDocument,
+            MdElement,
             MdLineFragment,
             ParserByteCache,
             PrettyPrintDebug,
@@ -406,64 +406,64 @@ impl StyleUSSpanLines {
         acc_lines_output
     }
 
-    /// Each [MdBlock] needs to be translated into a line. The [MdBlock::CodeBlock] is
+    /// Each [MdElement] needs to be translated into a line. The [MdElement::CodeBlock] is
     /// the only block that needs to be translated into multiple lines. This is why the
     /// return type is a [StyleUSSpanLines] (and not a single line).
     pub fn from_block(
-        block: &MdBlock<'_>,
+        block: &MdElement<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         let mut lines = StyleUSSpanLines::default();
 
         match block {
-            MdBlock::Title(title) => {
+            MdElement::Title(title) => {
                 lines += StyleUSSpanLine::from_kvp(
                     TITLE,
                     title,
                     maybe_current_box_computed_style,
                 );
             }
-            MdBlock::Date(date) => {
+            MdElement::Date(date) => {
                 lines += StyleUSSpanLine::from_kvp(
                     DATE,
                     date,
                     maybe_current_box_computed_style,
                 );
             }
-            MdBlock::Tags(tags) => {
+            MdElement::Tags(tags) => {
                 lines += StyleUSSpanLine::from_csvp(
                     TAGS,
                     tags,
                     maybe_current_box_computed_style,
                 );
             }
-            MdBlock::Authors(authors) => {
+            MdElement::Authors(authors) => {
                 lines += StyleUSSpanLine::from_csvp(
                     AUTHORS,
                     authors,
                     maybe_current_box_computed_style,
                 );
             }
-            MdBlock::Heading(heading_data) => {
+            MdElement::Heading(heading_data) => {
                 lines.push(StyleUSSpanLine::from_heading_data(
                     heading_data,
                     maybe_current_box_computed_style,
                 ));
             }
-            MdBlock::Text(fragments_in_one_line) => {
+            MdElement::Text(fragments_in_one_line) => {
                 lines.push(StyleUSSpanLine::from_fragments(
                     fragments_in_one_line,
                     maybe_current_box_computed_style,
                 ))
             }
-            MdBlock::SmartList((list_lines, _bullet_kind, _indent)) => {
+            MdElement::SmartList((list_lines, _bullet_kind, _indent)) => {
                 lines += StyleUSSpanLines::from_block_smart_list(
                     list_lines,
                     maybe_current_box_computed_style,
                 );
             }
-            MdBlock::CodeBlock(code_block_lines) => {
+            MdElement::CodeBlock(code_block_lines) => {
                 lines += StyleUSSpanLines::from_block_codeblock(
                     code_block_lines,
                     maybe_current_box_computed_style,
@@ -1060,7 +1060,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_metadata_tags() -> Result<(), ()> {
             throws!({
-                let tags = MdBlock::Tags(list!["tag1", "tag2", "tag3"]);
+                let tags = MdElement::Tags(list!["tag1", "tag2", "tag3"]);
                 let style = new_style!(
                     color_bg: {tui_color!(red)}
                 );
@@ -1102,7 +1102,7 @@ mod tests_style_us_span_lines_from {
 
         #[test]
         fn test_block_metadata_title() {
-            let title = MdBlock::Title("Something");
+            let title = MdElement::Title("Something");
             let style = new_style!(
                 color_bg: {tui_color!(red)}
             );
@@ -1132,7 +1132,7 @@ mod tests_style_us_span_lines_from {
 
         #[test]
         fn test_block_codeblock() {
-            let codeblock_block = MdBlock::CodeBlock(list!(
+            let codeblock_block = MdElement::CodeBlock(list!(
                 CodeBlockLine {
                     language: Some("ts"),
                     content: CodeBlockLineContent::StartTag
@@ -1273,7 +1273,7 @@ mod tests_style_us_span_lines_from {
 
         #[test]
         fn test_block_text() {
-            let text_block = MdBlock::Text(list![MdLineFragment::Plain("Foobar")]);
+            let text_block = MdElement::Text(list![MdLineFragment::Plain("Foobar")]);
             let style = new_style!(
                 color_bg: {tui_color!(red)}
             );
@@ -1292,7 +1292,7 @@ mod tests_style_us_span_lines_from {
 
         #[test]
         fn test_block_heading() {
-            let heading_block = MdBlock::Heading(HeadingData {
+            let heading_block = MdElement::Heading(HeadingData {
                 level: HeadingLevel { level: 1 },
                 text: "Foobar",
             });

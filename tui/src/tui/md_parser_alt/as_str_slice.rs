@@ -1309,25 +1309,86 @@ mod tests_compat_with_unicode_grapheme_cluster_segment_boundary {
 
     #[test]
     fn test_utf8_encoding_char_string() {
-        // Memory size of the char type itself (always 4 bytes in Rust).
-        assert_eq2!(std::mem::size_of::<char>(), 4);
+        // "😀", `char` is 4 bytes, this "😀" len_utf8() is 4. chars().count() is 1.
+        {
+            // Memory size of the char type itself (always 4 bytes in Rust).
+            assert_eq2!(std::mem::size_of::<char>(), 4);
 
-        // UTF-8 encoding length (how many bytes when encoded as UTF-8).
-        let utf8_len = EMOJI_CHAR.len_utf8();
-        assert_eq2!(utf8_len, 4);
+            // UTF-8 encoding length (how many bytes when encoded as UTF-8).
+            let utf8_len = EMOJI_CHAR.len_utf8();
+            assert_eq2!(utf8_len, 4);
 
-        // Put emoji in an Vec of u8.
-        let mut buffer: [u8; 4] = [0; 4];
-        EMOJI_CHAR.encode_utf8(&mut buffer);
-        assert_eq2!(buffer, EMOJI_AS_BYTES);
+            // Put emoji in an Vec of u8.
+            let mut buffer: [u8; 4] = [0; 4];
+            EMOJI_CHAR.encode_utf8(&mut buffer);
+            assert_eq2!(buffer, EMOJI_AS_BYTES);
 
-        // Character count vs byte count.
-        let emoji_string = EMOJI_CHAR.to_string();
-        let emoji_str: &str = emoji_string.as_ref();
-        let byte_count = emoji_str.len();
-        assert_eq2!(byte_count, 4);
-        let char_count = emoji_str.chars().count();
-        assert_eq2!(char_count, 1);
+            // Character count vs byte count.
+            let emoji_string = EMOJI_CHAR.to_string();
+            let emoji_str: &str = emoji_string.as_ref();
+            let byte_count = emoji_str.len();
+            assert_eq2!(byte_count, 4);
+            let char_count = emoji_str.chars().count();
+            assert_eq2!(char_count, 1);
+        }
+
+        // "a", char is 4 bytes, this "a" len_utf8() is 1. chars().count() is also 1.
+        {
+            // Test with a simple ASCII character 'a'
+            const ASCII_CHAR: char = 'a';
+            const ASCII_AS_BYTES: [u8; 1] = [97]; // ASCII value of 'a'
+
+            // Memory size of the char type itself (always 4 bytes in Rust).
+            assert_eq2!(std::mem::size_of::<char>(), 4);
+
+            // UTF-8 encoding length (how many bytes when encoded as UTF-8).
+            let utf8_len = ASCII_CHAR.len_utf8();
+            assert_eq2!(utf8_len, 1);
+
+            // Put ASCII char in a Vec of u8.
+            let mut buffer: [u8; 4] = [0; 4];
+            ASCII_CHAR.encode_utf8(&mut buffer);
+            // Only the first byte should match, rest should be 0
+            assert_eq2!(buffer[0], ASCII_AS_BYTES[0]);
+            assert_eq2!(buffer[1..], [0, 0, 0]);
+
+            // Character count vs byte count.
+            let ascii_string = ASCII_CHAR.to_string();
+            let ascii_str: &str = ascii_string.as_ref();
+            let byte_count = ascii_str.len();
+            assert_eq2!(byte_count, 1);
+            let char_count = ascii_str.chars().count();
+            assert_eq2!(char_count, 1);
+        }
+
+        // "1", char is 4 bytes, this "1" len_utf8() is 1. chars().count() is also 1.
+        {
+            // Test with a simple ASCII digit '1'
+            const DIGIT_CHAR: char = '1';
+            const DIGIT_AS_BYTES: [u8; 1] = [49]; // ASCII value of '1'
+
+            // Memory size of the char type itself (always 4 bytes in Rust).
+            assert_eq2!(std::mem::size_of::<char>(), 4);
+
+            // UTF-8 encoding length (how many bytes when encoded as UTF-8).
+            let utf8_len = DIGIT_CHAR.len_utf8();
+            assert_eq2!(utf8_len, 1);
+
+            // Put digit in a Vec of u8.
+            let mut buffer: [u8; 4] = [0; 4];
+            DIGIT_CHAR.encode_utf8(&mut buffer);
+            // Only the first byte should match, rest should be 0
+            assert_eq2!(buffer[0], DIGIT_AS_BYTES[0]);
+            assert_eq2!(buffer[1..], [0, 0, 0]);
+
+            // Character count vs byte count.
+            let digit_string = DIGIT_CHAR.to_string();
+            let digit_str: &str = digit_string.as_ref();
+            let byte_count = digit_str.len();
+            assert_eq2!(byte_count, 1);
+            let char_count = digit_str.chars().count();
+            assert_eq2!(char_count, 1);
+        }
     }
 
     #[test]

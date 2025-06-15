@@ -94,7 +94,7 @@ mod inner {
 // XMARK: Great tests to understand how a single line of Markdown text is parsed
 
 #[cfg(test)]
-mod tests_parse_block_markdown_text_opt_eol_with_checkbox_policy {
+mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
     use super::*;
     use crate::{assert_eq2, list, MdLineFragment};
 
@@ -129,7 +129,91 @@ mod tests_parse_block_markdown_text_opt_eol_with_checkbox_policy {
 }
 
 #[cfg(test)]
-mod tests_parse_block_markdown_text_with_or_without_new_line {
+mod tests_parse_block_markdown_text_inner {
+    use super::*;
+    use crate::{assert_eq2, list, MdLineFragment};
+
+    #[test]
+    fn test_inner_parse_block_markdown_text_with_eol() {
+        assert_eq2!(
+            inner::parse_block_markdown_text_with_new_line("\n"),
+            Ok(("", list![]))
+        );
+        assert_eq2!(
+            inner::parse_block_markdown_text_with_new_line("here is some plaintext\n"),
+            Ok(("", list![MdLineFragment::Plain("here is some plaintext")]))
+        );
+        assert_eq2!(
+            inner::parse_block_markdown_text_with_new_line(
+                "here is some plaintext *but what if we bold?*\n"
+            ),
+            Ok((
+                "",
+                list![
+                    MdLineFragment::Plain("here is some plaintext "),
+                    MdLineFragment::Bold("but what if we bold?"),
+                ]
+            ))
+        );
+        assert_eq2!(
+            inner::parse_block_markdown_text_with_new_line("here is some plaintext *but what if we bold?* I guess it doesn't **matter** in my `code`\n"),
+            Ok(
+                ("",
+                list![
+                    MdLineFragment::Plain("here is some plaintext "),
+                    MdLineFragment::Bold("but what if we bold?"),
+                    MdLineFragment::Plain(" I guess it doesn't "),
+                    MdLineFragment::Bold(""),
+                    MdLineFragment::Plain("matter"),
+                    MdLineFragment::Bold(""),
+                    MdLineFragment::Plain(" in my "),
+                    MdLineFragment::InlineCode("code"),
+                ])
+            )
+        );
+        assert_eq2!(
+            inner::parse_block_markdown_text_with_new_line(
+                "here is some plaintext _but what if we italic?_\n"
+            ),
+            Ok((
+                "",
+                list![
+                    MdLineFragment::Plain("here is some plaintext "),
+                    MdLineFragment::Italic("but what if we italic?"),
+                ]
+            ))
+        );
+        assert_eq2!(
+            inner::parse_block_markdown_text_with_new_line("this!\n"),
+            Ok((
+                /* remainder */ "",
+                /* output */
+                list![MdLineFragment::Plain("this!"),]
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_multiple_plain_text_fragments_in_single_line() {
+        let it = inner::parse_block_markdown_text_with_new_line("this _bar\n");
+        println!("it: {it:#?}");
+        assert_eq2!(
+            it,
+            Ok((
+                /* remainder */ "",
+                /* output */
+                list![
+                    MdLineFragment::Plain("this "),
+                    MdLineFragment::Plain("_"),
+                    MdLineFragment::Plain("bar"),
+                ]
+            ))
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_parse_block_markdown_text {
     use super::*;
     use crate::{assert_eq2, list, HyperlinkData, MdLineFragment};
 
@@ -223,90 +307,6 @@ mod tests_parse_block_markdown_text_with_or_without_new_line {
                     MdLineFragment::Plain(" ",),
                     MdLineFragment::Plain("*",),
                 ],
-            ))
-        );
-    }
-}
-
-#[cfg(test)]
-mod tests_parse_block_markdown_text_with_new_line {
-    use super::*;
-    use crate::{assert_eq2, list, MdLineFragment};
-
-    #[test]
-    fn test_inner_parse_block_markdown_text_with_eol() {
-        assert_eq2!(
-            inner::parse_block_markdown_text_with_new_line("\n"),
-            Ok(("", list![]))
-        );
-        assert_eq2!(
-            inner::parse_block_markdown_text_with_new_line("here is some plaintext\n"),
-            Ok(("", list![MdLineFragment::Plain("here is some plaintext")]))
-        );
-        assert_eq2!(
-            inner::parse_block_markdown_text_with_new_line(
-                "here is some plaintext *but what if we bold?*\n"
-            ),
-            Ok((
-                "",
-                list![
-                    MdLineFragment::Plain("here is some plaintext "),
-                    MdLineFragment::Bold("but what if we bold?"),
-                ]
-            ))
-        );
-        assert_eq2!(
-            inner::parse_block_markdown_text_with_new_line("here is some plaintext *but what if we bold?* I guess it doesn't **matter** in my `code`\n"),
-            Ok(
-                ("",
-                list![
-                    MdLineFragment::Plain("here is some plaintext "),
-                    MdLineFragment::Bold("but what if we bold?"),
-                    MdLineFragment::Plain(" I guess it doesn't "),
-                    MdLineFragment::Bold(""),
-                    MdLineFragment::Plain("matter"),
-                    MdLineFragment::Bold(""),
-                    MdLineFragment::Plain(" in my "),
-                    MdLineFragment::InlineCode("code"),
-                ])
-            )
-        );
-        assert_eq2!(
-            inner::parse_block_markdown_text_with_new_line(
-                "here is some plaintext _but what if we italic?_\n"
-            ),
-            Ok((
-                "",
-                list![
-                    MdLineFragment::Plain("here is some plaintext "),
-                    MdLineFragment::Italic("but what if we italic?"),
-                ]
-            ))
-        );
-        assert_eq2!(
-            inner::parse_block_markdown_text_with_new_line("this!\n"),
-            Ok((
-                /* remainder */ "",
-                /* output */
-                list![MdLineFragment::Plain("this!"),]
-            ))
-        );
-    }
-
-    #[test]
-    fn test_parse_multiple_plain_text_fragments_in_single_line() {
-        let it = inner::parse_block_markdown_text_with_new_line("this _bar\n");
-        println!("it: {it:#?}");
-        assert_eq2!(
-            it,
-            Ok((
-                /* remainder */ "",
-                /* output */
-                list![
-                    MdLineFragment::Plain("this "),
-                    MdLineFragment::Plain("_"),
-                    MdLineFragment::Plain("bar"),
-                ]
             ))
         );
     }

@@ -19,7 +19,7 @@ use crate::{BulletKind, List};
 
 /// This corresponds to a single Markdown document, which is produced after a successful
 /// parse operation [crate::parse_markdown()].
-pub type MdDocument<'a> = List<MdBlock<'a>>;
+pub type MdDocument<'a> = List<MdElement<'a>>;
 
 /// Alias for [MdDocument].
 pub type Blocks<'a> = MdDocument<'a>;
@@ -55,7 +55,7 @@ pub enum CheckboxParsePolicy {
 ///   multiple lines of text.
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq)]
-pub enum MdBlock<'a> {
+pub enum MdElement<'a> {
     Heading(HeadingData<'a>),
     SmartList((Lines<'a>, BulletKind, usize)),
     Text(MdLineFragments<'a>),

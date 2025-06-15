@@ -25,8 +25,8 @@ use crate::{md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
             parse_csv_opt_eol,
             parse_unique_kv_opt_eol,
             List,
-            MdBlock,
-            MdDocument};
+            MdDocument,
+            MdElement};
 
 // XMARK: Main Markdown parser entry point
 
@@ -36,7 +36,7 @@ use crate::{md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
 /// 1. [crate::MdLineFragments] roughly corresponds to a line of parsed text.
 /// 2. [MdDocument] contains all the blocks that are parsed from a Markdown string slice.
 ///
-/// Each item in this [MdDocument] corresponds to a block of Markdown [MdBlock], which can
+/// Each item in this [MdDocument] corresponds to a block of Markdown [MdElement], which can
 /// be one of the following variants:
 /// 1. Metadata title. The parsers in [crate::parse_metadata_kv] file handle this.
 /// 2. Metadata tags. The parsers in [crate::parse_metadata_kcsv] file handle this.
@@ -53,14 +53,14 @@ pub fn parse_markdown<'a>(input: &'a str) -> IResult<&'a str, MdDocument<'a>> {
     let (input, output) = many0(
         // NOTE: The ordering of the parsers below matters.
         alt((
-            map(parse_title_value,                                  MdBlock::Title),
-            map(parse_tags_list,                                    MdBlock::Tags),
-            map(parse_authors_list,                                 MdBlock::Authors),
-            map(parse_date_value,                                   MdBlock::Date),
-            map(parse_block_heading_opt_eol,                        MdBlock::Heading),
-            map(parse_block_smart_list,                             MdBlock::SmartList),
-            map(parse_block_code,                                   MdBlock::CodeBlock),
-            map(parse_block_markdown_text_with_or_without_new_line, MdBlock::Text),
+            map(parse_title_value,                                  MdElement::Title),
+            map(parse_tags_list,                                    MdElement::Tags),
+            map(parse_authors_list,                                 MdElement::Authors),
+            map(parse_date_value,                                   MdElement::Date),
+            map(parse_block_heading_opt_eol,                        MdElement::Heading),
+            map(parse_block_smart_list,                             MdElement::SmartList),
+            map(parse_block_code,                                   MdElement::CodeBlock),
+            map(parse_block_markdown_text_with_or_without_new_line, MdElement::Text),
         )),
     ).parse(input)?;
 
@@ -109,7 +109,7 @@ mod tests {
         assert_eq2!(remainder, "");
         assert_eq2!(
             blocks[0],
-            MdBlock::Text(list![MdLineFragment::Plain("Something")])
+            MdElement::Text(list![MdLineFragment::Plain("Something")])
         );
     }
 
@@ -122,7 +122,7 @@ mod tests {
         assert_eq2!(remainder, "");
         assert_eq2!(
             blocks[0],
-            MdBlock::Text(list![MdLineFragment::Plain("Something")])
+            MdElement::Text(list![MdLineFragment::Plain("Something")])
         );
     }
 
@@ -136,18 +136,18 @@ mod tests {
         assert_eq2!(blocks.len(), 3);
         assert_eq2!(
             blocks[0],
-            MdBlock::Heading(HeadingData {
+            MdElement::Heading(HeadingData {
                 level: HeadingLevel { level: 1 },
                 text: "LINE 1",
             })
         );
         assert_eq2!(
             blocks[1],
-            MdBlock::Text(list![]), // Empty line.
+            MdElement::Text(list![]), // Empty line.
         );
         assert_eq2!(
             blocks[2],
-            MdBlock::Text(list![
+            MdElement::Text(list![
                 MdLineFragment::Plain("##% LINE 2 FOO"),
                 MdLineFragment::Plain("_"),
                 MdLineFragment::Plain("BAR:"),
@@ -165,7 +165,7 @@ mod tests {
         assert_eq2!(blocks.len(), 1);
         assert_eq2!(
             blocks[0],
-            MdBlock::Text(list![
+            MdElement::Text(list![
                 MdLineFragment::Plain("_"),
                 MdLineFragment::Plain("this should not be italic"),
             ])
@@ -213,29 +213,29 @@ mod tests {
         let (remainder, list_block) = parse_markdown(&input).unwrap();
 
         let vec_block = &[
-            MdBlock::Title("Something"),
-            MdBlock::Tags(list!["tag1", "tag2", "tag3"]),
-            MdBlock::Heading(HeadingData {
+            MdElement::Title("Something"),
+            MdElement::Tags(list!["tag1", "tag2", "tag3"]),
+            MdElement::Heading(HeadingData {
                 level: HeadingLevel { level: 1 },
                 text: "Foobar",
             }),
-            MdBlock::Text(list![]), /* Empty line */
-            MdBlock::Text(list![MdLineFragment::Plain(
+            MdElement::Text(list![]), /* Empty line */
+            MdElement::Text(list![MdLineFragment::Plain(
                 "Foobar is a Python library for dealing with word pluralization.",
             )]),
-            MdBlock::Text(list![]), /* Empty line */
-            MdBlock::CodeBlock(convert_into_code_block_lines(
+            MdElement::Text(list![]), /* Empty line */
+            MdElement::CodeBlock(convert_into_code_block_lines(
                 Some("bash"),
                 vec!["pip install foobar"],
             )),
-            MdBlock::CodeBlock(convert_into_code_block_lines(Some("fish"), vec![])),
-            MdBlock::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
-            MdBlock::Heading(HeadingData {
+            MdElement::CodeBlock(convert_into_code_block_lines(Some("fish"), vec![])),
+            MdElement::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
+            MdElement::Heading(HeadingData {
                 level: HeadingLevel { level: 2 },
                 text: "Installation",
             }),
-            MdBlock::Text(list![]), /* Empty line */
-            MdBlock::Text(list![
+            MdElement::Text(list![]), /* Empty line */
+            MdElement::Text(list![
                 MdLineFragment::Plain("Use the package manager "),
                 MdLineFragment::Link(HyperlinkData::from((
                     "pip",
@@ -243,7 +243,7 @@ mod tests {
                 ))),
                 MdLineFragment::Plain(" to install foobar."),
             ]),
-            MdBlock::CodeBlock(convert_into_code_block_lines(
+            MdElement::CodeBlock(convert_into_code_block_lines(
                 Some("python"),
                 vec![
                     "import foobar",
@@ -253,7 +253,7 @@ mod tests {
                     "foobar.singularize('phenomena') # returns 'phenomenon'",
                 ],
             )),
-            MdBlock::SmartList((
+            MdElement::SmartList((
                 list![list![
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
@@ -264,7 +264,7 @@ mod tests {
                 BulletKind::Unordered,
                 0,
             )),
-            MdBlock::SmartList((
+            MdElement::SmartList((
                 list![list![
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
@@ -275,7 +275,7 @@ mod tests {
                 BulletKind::Unordered,
                 0,
             )),
-            MdBlock::SmartList((
+            MdElement::SmartList((
                 list![list![
                     MdLineFragment::OrderedListBullet {
                         indent: 0,
@@ -287,7 +287,7 @@ mod tests {
                 BulletKind::Ordered(1),
                 0,
             )),
-            MdBlock::SmartList((
+            MdElement::SmartList((
                 list![list![
                     MdLineFragment::OrderedListBullet {
                         indent: 0,
@@ -299,7 +299,7 @@ mod tests {
                 BulletKind::Ordered(2),
                 0,
             )),
-            MdBlock::SmartList((
+            MdElement::SmartList((
                 list![list![
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
@@ -311,7 +311,7 @@ mod tests {
                 BulletKind::Unordered,
                 0,
             )),
-            MdBlock::SmartList((
+            MdElement::SmartList((
                 list![list![
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
@@ -323,7 +323,7 @@ mod tests {
                 BulletKind::Unordered,
                 0,
             )),
-            MdBlock::Text(list![MdLineFragment::Plain("end")]),
+            MdElement::Text(list![MdLineFragment::Plain("end")]),
         ];
 
         // Print a few of the last items.

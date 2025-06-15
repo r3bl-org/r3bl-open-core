@@ -49,8 +49,8 @@ use crate::{convert_to_string_slice,
             HyperlinkData,
             InlineString,
             List,
-            MdBlock,
             MdDocument,
+            MdElement,
             MdLineFragment,
             PrettyPrintDebug};
 
@@ -77,18 +77,18 @@ impl PrettyPrintDebug for List<MdLineFragment<'_>> {
     }
 }
 
-impl PrettyPrintDebug for MdBlock<'_> {
+impl PrettyPrintDebug for MdElement<'_> {
     fn pretty_print_debug(&self) -> InlineString {
         match self {
-            MdBlock::Heading(heading_data) => {
+            MdElement::Heading(heading_data) => {
                 inline_string!(
                     "{}{}",
                     heading_data.level.pretty_print_debug(),
                     heading_data.text,
                 )
             }
-            MdBlock::Text(fragments) => fragments.pretty_print_debug(),
-            MdBlock::CodeBlock(list_codeblock_line) => {
+            MdElement::Text(fragments) => fragments.pretty_print_debug(),
+            MdElement::CodeBlock(list_codeblock_line) => {
                 let line_count = list_codeblock_line.len();
                 let lang = {
                     list_codeblock_line
@@ -98,8 +98,8 @@ impl PrettyPrintDebug for MdBlock<'_> {
                 };
                 inline_string!("code block, line count: {line_count}, lang: {lang}")
             }
-            MdBlock::Title(title) => inline_string!("title: {}", title),
-            MdBlock::Tags(tags) => {
+            MdElement::Title(title) => inline_string!("title: {}", title),
+            MdElement::Tags(tags) => {
                 join!(
                     from: tags,
                     each: tag,
@@ -107,8 +107,8 @@ impl PrettyPrintDebug for MdBlock<'_> {
                     format: "{a}", a = tag
                 )
             }
-            MdBlock::Date(date) => inline_string!("title: {}", date),
-            MdBlock::Authors(authors) => {
+            MdElement::Date(date) => inline_string!("title: {}", date),
+            MdElement::Authors(authors) => {
                 join!(
                     from: authors,
                     each: author,
@@ -116,7 +116,7 @@ impl PrettyPrintDebug for MdBlock<'_> {
                     format: "{a}", a = author
                 )
             }
-            MdBlock::SmartList((list_lines, _bullet_kind, _indent)) => {
+            MdElement::SmartList((list_lines, _bullet_kind, _indent)) => {
                 let mut acc = InlineString::new();
                 _ = write!(acc, "[  ");
                 join_fmt!(
