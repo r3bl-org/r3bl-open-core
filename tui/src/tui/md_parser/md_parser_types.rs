@@ -40,6 +40,12 @@ pub struct HeadingData<'a> {
     pub text: &'a str,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum CheckboxParsePolicy {
+    IgnoreCheckbox,
+    ParseCheckbox,
+}
+
 /// A Markdown document once parsed is turned into a [Vec] of "blocks".
 ///
 /// A block roughly represents a single line of text, and is the top-level entity of a

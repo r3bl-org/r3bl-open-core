@@ -69,7 +69,6 @@ mod test_parse_title_no_eol {
                 fg_black,
                 inline_string,
                 md_parser::constants::TITLE,
-                GCString,
                 NomErr,
                 NomErrorKind};
 

@@ -243,8 +243,8 @@ impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
 macro_rules! as_str_slice_test_case {
     ($var_name:ident, $($string_expr:expr),+ $(,)?) => {
         #[allow(unused_variables)]
-        let _input_array = [$(GCString::new($string_expr)),+];
-        let $var_name = AsStrSlice::from(&_input_array);
+        let _input_array = [$($crate::GCString::new($string_expr)),+];
+        let $var_name = $crate::AsStrSlice::from(&_input_array);
     };
 }
 
@@ -1275,7 +1275,6 @@ impl<'a> Iterator for StringCharIndices<'a> {
 
 #[cfg(test)]
 mod tests_as_str_slice_test_case {
-    use super::*;
     use crate::assert_eq2;
 
     #[test]
