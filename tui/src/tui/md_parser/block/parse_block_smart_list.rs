@@ -24,8 +24,7 @@ use nom::{branch::alt,
           Parser};
 use smallvec::smallvec;
 
-use super::{parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
-            CheckboxParsePolicy};
+use super::parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line;
 use crate::{list,
             md_parser::constants::{CHECKED,
                                    LIST_PREFIX_BASE_WIDTH,
@@ -36,6 +35,7 @@ use crate::{list,
                                    UNCHECKED,
                                    UNORDERED_LIST_PREFIX},
             tiny_inline_string,
+            CheckboxParsePolicy,
             InlineVec,
             Lines,
             List,

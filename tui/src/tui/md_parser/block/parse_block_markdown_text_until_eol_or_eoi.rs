@@ -18,65 +18,10 @@
 use nom::{bytes::complete::tag, multi::many0, sequence::terminated, IResult, Parser};
 
 use crate::{md_parser::constants::NEW_LINE,
+            md_parser_types::CheckboxParsePolicy,
             parse_inline_fragments_until_eol_or_eoi,
             List,
             MdLineFragments};
-
-pub fn parse_block_markdown_text_with_or_without_new_line(
-    input: &str,
-) -> IResult<&str, MdLineFragments<'_>> {
-    if input.contains(NEW_LINE) {
-        parse_block_markdown_text_with_new_line(input)
-    } else {
-        parse_block_markdown_text_without_new_line(input)
-    }
-}
-
-/// Parse a single line of markdown text [crate::FragmentsInOneLine] terminated by EOL.
-#[rustfmt::skip]
-fn parse_block_markdown_text_with_new_line(
-    input: &str,
-) -> IResult<&str, MdLineFragments<'_>> {
-    let (input, output) =
-        terminated(
-            /* output */
-            many0(
-                |it| parse_inline_fragments_until_eol_or_eoi( it, CheckboxParsePolicy::IgnoreCheckbox)
-            ),
-            /* ends with (discarded) */
-            tag(NEW_LINE),
-        ).parse(input)?;
-
-    let it = List::from(output);
-
-    Ok((input, it))
-}
-
-/// Parse a single line of markdown text [crate::FragmentsInOneLine] not terminated by EOL.
-#[rustfmt::skip]
-fn parse_block_markdown_text_without_new_line(input: &str) -> IResult<&str, MdLineFragments<'_>> {
-    // Nothing to parse, early return.
-    if input.is_empty() {
-        return Err(nom::Err::Error(nom::error::Error::new(
-            "Empty input.",
-            nom::error::ErrorKind::Fail,
-        )));
-    }
-
-    let (input, output) = many0(
-        |it| parse_inline_fragments_until_eol_or_eoi(it, CheckboxParsePolicy::IgnoreCheckbox)
-    ).parse(input)?;
-
-    let it = List::from(output);
-
-    Ok((input, it))
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum CheckboxParsePolicy {
-    IgnoreCheckbox,
-    ParseCheckbox,
-}
 
 /// Parse a markdown text [crate::FragmentsInOneLine] in the input (no EOL required).
 #[rustfmt::skip]
@@ -93,7 +38,95 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
     Ok((input, it))
 }
 
+pub fn parse_block_markdown_text_with_or_without_new_line(
+    input: &str,
+) -> IResult<&str, MdLineFragments<'_>> {
+    if input.contains(NEW_LINE) {
+        inner::parse_block_markdown_text_with_new_line(input)
+    } else {
+        inner::parse_block_markdown_text_without_new_line(input)
+    }
+}
+mod inner {
+    use super::*;
+
+    /// Parse a single line of markdown text [crate::FragmentsInOneLine] terminated by EOL.
+    #[rustfmt::skip]
+    pub fn parse_block_markdown_text_with_new_line(
+        input: &str,
+    ) -> IResult<&str, MdLineFragments<'_>> {
+        let (input, output) =
+            terminated(
+                /* output */
+                many0(
+                    |it| parse_inline_fragments_until_eol_or_eoi( it, CheckboxParsePolicy::IgnoreCheckbox)
+                ),
+                /* ends with (discarded) */
+                tag(NEW_LINE),
+            ).parse(input)?;
+
+        let it = List::from(output);
+
+        Ok((input, it))
+    }
+
+    /// Parse a single line of markdown text [crate::FragmentsInOneLine] not terminated by EOL.
+    #[rustfmt::skip]
+    pub fn parse_block_markdown_text_without_new_line(input: &str) -> IResult<&str, MdLineFragments<'_>> {
+        // Nothing to parse, early return.
+        if input.is_empty() {
+            return Err(nom::Err::Error(nom::error::Error::new(
+                "Empty input.",
+                nom::error::ErrorKind::Fail,
+            )));
+        }
+
+        let (input, output) = many0(
+            |it| parse_inline_fragments_until_eol_or_eoi(it, CheckboxParsePolicy::IgnoreCheckbox)
+        ).parse(input)?;
+
+        let it = List::from(output);
+
+        Ok((input, it))
+    }
+}
+
 // XMARK: Great tests to understand how a single line of Markdown text is parsed
+
+#[cfg(test)]
+mod tests_parse_block_markdown_text_opt_eol_with_checkbox_policy {
+    use super::*;
+    use crate::{assert_eq2, list, MdLineFragment};
+
+    #[test]
+    fn test_ignore_checkbox_empty_string() {
+        assert_eq2!(
+            parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
+                "",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
+            Ok(("", list![]))
+        );
+    }
+
+    #[test]
+    fn test_ignore_checkbox_non_empty_string() {
+        assert_eq2!(
+            parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
+                "here is some plaintext *but what if we italicize?",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
+            Ok((
+                "",
+                list![
+                    MdLineFragment::Plain("here is some plaintext "),
+                    MdLineFragment::Plain("*"),
+                    MdLineFragment::Plain("but what if we italicize?"),
+                ]
+            ))
+        );
+    }
+}
 
 #[cfg(test)]
 mod tests_parse_block_markdown_text_with_or_without_new_line {
@@ -201,35 +234,17 @@ mod tests_parse_block_markdown_text_with_new_line {
     use crate::{assert_eq2, list, MdLineFragment};
 
     #[test]
-    fn test_parse_multiple_plain_text_fragments_in_single_line() {
-        let it = parse_block_markdown_text_with_new_line("this _bar\n");
-        println!("it: {it:#?}");
+    fn test_inner_parse_block_markdown_text_with_eol() {
         assert_eq2!(
-            it,
-            Ok((
-                /* remainder */ "",
-                /* output */
-                list![
-                    MdLineFragment::Plain("this "),
-                    MdLineFragment::Plain("_"),
-                    MdLineFragment::Plain("bar"),
-                ]
-            ))
-        );
-    }
-
-    #[test]
-    fn test_parse_block_markdown_text_with_eol() {
-        assert_eq2!(
-            parse_block_markdown_text_with_new_line("\n"),
+            inner::parse_block_markdown_text_with_new_line("\n"),
             Ok(("", list![]))
         );
         assert_eq2!(
-            parse_block_markdown_text_with_new_line("here is some plaintext\n"),
+            inner::parse_block_markdown_text_with_new_line("here is some plaintext\n"),
             Ok(("", list![MdLineFragment::Plain("here is some plaintext")]))
         );
         assert_eq2!(
-            parse_block_markdown_text_with_new_line(
+            inner::parse_block_markdown_text_with_new_line(
                 "here is some plaintext *but what if we bold?*\n"
             ),
             Ok((
@@ -241,7 +256,7 @@ mod tests_parse_block_markdown_text_with_new_line {
             ))
         );
         assert_eq2!(
-            parse_block_markdown_text_with_new_line("here is some plaintext *but what if we bold?* I guess it doesn't **matter** in my `code`\n"),
+            inner::parse_block_markdown_text_with_new_line("here is some plaintext *but what if we bold?* I guess it doesn't **matter** in my `code`\n"),
             Ok(
                 ("",
                 list![
@@ -257,7 +272,7 @@ mod tests_parse_block_markdown_text_with_new_line {
             )
         );
         assert_eq2!(
-            parse_block_markdown_text_with_new_line(
+            inner::parse_block_markdown_text_with_new_line(
                 "here is some plaintext _but what if we italic?_\n"
             ),
             Ok((
@@ -269,7 +284,7 @@ mod tests_parse_block_markdown_text_with_new_line {
             ))
         );
         assert_eq2!(
-            parse_block_markdown_text_with_new_line("this!\n"),
+            inner::parse_block_markdown_text_with_new_line("this!\n"),
             Ok((
                 /* remainder */ "",
                 /* output */
@@ -277,37 +292,20 @@ mod tests_parse_block_markdown_text_with_new_line {
             ))
         );
     }
-}
-
-#[cfg(test)]
-mod tests_parse_block_markdown_text_opt_eol_with_checkbox_policy {
-    use super::*;
-    use crate::{assert_eq2, list, MdLineFragment};
 
     #[test]
-    fn test_ignore_checkbox_empty_string() {
+    fn test_parse_multiple_plain_text_fragments_in_single_line() {
+        let it = inner::parse_block_markdown_text_with_new_line("this _bar\n");
+        println!("it: {it:#?}");
         assert_eq2!(
-            parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
-                "",
-                CheckboxParsePolicy::IgnoreCheckbox
-            ),
-            Ok(("", list![]))
-        );
-    }
-
-    #[test]
-    fn test_ignore_checkbox_non_empty_string() {
-        assert_eq2!(
-            parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
-                "here is some plaintext *but what if we italicize?",
-                CheckboxParsePolicy::IgnoreCheckbox
-            ),
+            it,
             Ok((
-                "",
+                /* remainder */ "",
+                /* output */
                 list![
-                    MdLineFragment::Plain("here is some plaintext "),
-                    MdLineFragment::Plain("*"),
-                    MdLineFragment::Plain("but what if we italicize?"),
+                    MdLineFragment::Plain("this "),
+                    MdLineFragment::Plain("_"),
+                    MdLineFragment::Plain("bar"),
                 ]
             ))
         );

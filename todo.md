@@ -187,6 +187,10 @@
     - [x] `parse_block_heading.rs` -> `parse_heading_alt.rs`
     - [ ] `parse_block_markdown_text_until_eol_or_eoi.rs` ->
           `parse_markdown_text_until_eol_or_eoi_alt.rs`
+      - [ ] `parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()` ->
+            `parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt()`
+      - [ ] `parse_block_markdown_text_with_or_without_new_line()` ->
+            `parse_markdown_text_until_eol_or_eoi_alt()`
   - block parsers:
     - [ ] `parse_block_code.rs` -> `block_alt/parse_block_code_alt.rs`
     - [ ] `parse_block_smart_list.rs` -> `block_alt/parse_block_smart_list_alt.rs`

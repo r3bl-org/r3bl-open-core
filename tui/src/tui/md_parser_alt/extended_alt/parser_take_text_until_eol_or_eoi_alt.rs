@@ -64,7 +64,7 @@ pub fn parser_take_text_until_eol_or_eoi_alt<'a>() ->
 #[cfg(test)]
 mod test_text_until_opt_eol {
     use super::*;
-    use crate::{as_str_slice_test_case, assert_eq2, AsStrSlice, GCString};
+    use crate::{as_str_slice_test_case, assert_eq2};
 
     #[test]
     fn test_input_starts_with_new_line() {
