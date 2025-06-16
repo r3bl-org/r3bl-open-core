@@ -203,7 +203,7 @@
 
   - block parsers:
 
-    - [ ] `parse_block_code.rs` -> `block_alt/parse_block_code_alt.rs`
+    - [x] `parse_block_code.rs` -> `block_alt/parse_block_code_alt.rs`
 
     - [ ] `parse_block_smart_list.rs` -> `block_alt/parse_block_smart_list_alt.rs`
 
@@ -216,7 +216,8 @@
 ---
 
 - [ ] remove `md_parser` mod and `md_parser_alt` mod is the new one; update
-      `md_parser_syn_hi_impl.rs` to use this
+      `md_parser_syn_hi_impl.rs` to use this. provide a new `bool` flag that allows the new `_alt`
+      parser active instead of the old one (keep them all in the code for now)
 
 - vec -> inlinevec
 
