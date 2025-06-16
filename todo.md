@@ -209,6 +209,10 @@
 
 - [ ] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_mardown_alt()`
 
+- [ ] maybe check `AsStrSlice::find_substring()` for performance penalty when looking ahead to find
+      something in a really large `lines`. might be able to speed up this search using `line` and
+      some match to calculate the "expected byte index"
+
 ---
 
 - [ ] remove `md_parser` mod and `md_parser_alt` mod is the new one; update
