@@ -655,7 +655,18 @@ impl<'a> AsStrSlice<'a> {
                 return Cow::Borrowed("");
             });
 
+            // Get the start index, ensuring it's at a valid char boundary.
             let start_col_index = self.char_index.as_usize();
+            if !current_line.is_char_boundary(start_col_index) {
+                // If not at a valid boundary, use a safe approach: collect chars and
+                // rejoin.
+                return Cow::Owned(
+                    current_line
+                        .chars()
+                        .skip(start_col_index)
+                        .collect::<String>(),
+                );
+            }
 
             let eol = current_line.len();
             let end_col_index = match self.max_len {
@@ -665,6 +676,19 @@ impl<'a> AsStrSlice<'a> {
                     (eol).min(limit)
                 }
             };
+
+            // Ensure the end index is also at a valid char boundary.
+            if !current_line.is_char_boundary(end_col_index) {
+                // If not at a valid boundary, use a safe approach: collect chars and
+                // rejoin.
+                return Cow::Owned(
+                    current_line
+                        .chars()
+                        .skip(start_col_index)
+                        .take(end_col_index - start_col_index)
+                        .collect::<String>(),
+                );
+            }
 
             return Cow::Borrowed(&current_line[start_col_index..end_col_index]);
         }
