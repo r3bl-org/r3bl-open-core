@@ -43,6 +43,9 @@ pub type NomErr<T> = nom::Err<T>;
 /// to manipulate it. This ensures that it can make the underlying `line` struct "act"
 /// like it is a contiguous array of chars.
 ///
+/// The key insight is that we're creating new instances that reference the same
+/// underlying `lines` data but with different bounds, which is how we avoid copying data.
+///
 /// ## Manually creating `lines` instead of using `str::lines()`
 ///
 /// If you don't use [str::lines()] which strips [crate::constants::NEW_LINE] characters,

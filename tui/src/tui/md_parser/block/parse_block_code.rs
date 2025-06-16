@@ -40,8 +40,8 @@ use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW
 #[rustfmt::skip]
 pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
     let (remainder, (lang, code)) = (
-        parse_code_block_lang_to_eol,
-        parse_code_block_body_to_code_block_end,
+        parse_code_block_lang_including_eol,
+        parse_code_block_body_including_code_block_end,
     )
         .parse(input)?;
 
@@ -54,8 +54,10 @@ pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
     Ok((remainder, convert_into_code_block_lines(lang, acc)))
 }
 
+/// Take text until an optional EOL character is found, or end of input is reached.
+/// Consumes the [NEW_LINE] if it exists.
 #[rustfmt::skip]
-fn parse_code_block_lang_to_eol(input: &str) -> IResult<&str, Option<&str>> {
+fn parse_code_block_lang_including_eol(input: &str) -> IResult<&str, Option<&str>> {
     alt((
         // Either - Successfully parse both code block language & text.
         map(
@@ -77,34 +79,16 @@ fn parse_code_block_lang_to_eol(input: &str) -> IResult<&str, Option<&str>> {
     )).parse(input)
 }
 
+/// Parse the body of a code block until the end of the code block is reached.
+/// The end of the code block is indicated by the [CODE_BLOCK_END] constant.
+/// Consumes the [CODE_BLOCK_END] if it exists.
 #[rustfmt::skip]
-fn parse_code_block_body_to_code_block_end(input: &str) -> IResult<&str, &str> {
+fn parse_code_block_body_including_code_block_end(input: &str) -> IResult<&str, &str> {
     let (remainder, output) = terminated(
         take_until(CODE_BLOCK_END),
         /* end (discard) */ tag(CODE_BLOCK_END),
     ).parse(input)?;
     Ok((remainder, output))
-}
-
-/// Split a string by newline. The idea is that a line is some text followed by a newline.
-/// An empty line is just a newline character.
-///
-/// # Examples:
-/// | input          | output               |
-/// | -------------- | -------------------- |
-/// | "foobar\n"     | `["foobar"]`         |
-/// | "\n"           | `[""] `              |
-/// | ""             | `[] `                |
-/// | "foo\nbar\n"   | `["foo", "bar"] `    |
-/// | "\nfoo\nbar\n" | `["", "foo", "bar"]` |
-pub fn split_by_new_line(input: &str) -> Vec<&str> {
-    let mut acc: Vec<&str> = input.split('\n').collect();
-    if let Some(last_item) = acc.last() {
-        if last_item.is_empty() {
-            acc.pop();
-        }
-    }
-    acc
 }
 
 /// At a minimum, a [CodeBlockLine] will be 2 lines of text.
@@ -138,10 +122,40 @@ pub fn convert_into_code_block_lines<'input>(
     acc
 }
 
+/// Split a string by newline. The idea is that a line is some text followed by a newline.
+/// An empty line is just a newline character.
+///
+/// # Examples:
+/// | input          | output               |
+/// | -------------- | -------------------- |
+/// | "foobar\n"     | `["foobar"]`         |
+/// | "\n"           | `[""] `              |
+/// | ""             | `[] `                |
+/// | "foo\nbar\n"   | `["foo", "bar"] `    |
+/// | "\nfoo\nbar\n" | `["", "foo", "bar"]` |
+pub fn split_by_new_line(input: &str) -> Vec<&str> {
+    let mut acc: Vec<&str> = input.split('\n').collect();
+    if let Some(last_item) = acc.last() {
+        if last_item.is_empty() {
+            acc.pop();
+        }
+    }
+    acc
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{assert_eq2, list};
+
+    #[test]
+    fn test_parse_codeblock_split_by_eol() {
+        assert_eq2!(split_by_new_line("foobar\n"), vec!["foobar"]);
+        assert_eq2!(split_by_new_line("\n"), vec![""]);
+        assert_eq2!(split_by_new_line(""), Vec::<&str>::new());
+        assert_eq2!(split_by_new_line("foo\nbar\n"), vec!["foo", "bar"]);
+        assert_eq2!(split_by_new_line("\nfoo\nbar\n"), vec!["", "foo", "bar"]);
+    }
 
     #[test]
     fn test_parse_codeblock_trailing_extra() {
@@ -245,15 +259,6 @@ mod tests {
             let output = convert_into_code_block_lines(language, lines);
             assert_eq2!(output, expected);
         }
-    }
-
-    #[test]
-    fn test_parse_codeblock_split_by_eol() {
-        assert_eq2!(split_by_new_line("foobar\n"), vec!["foobar"]);
-        assert_eq2!(split_by_new_line("\n"), vec![""]);
-        assert_eq2!(split_by_new_line(""), Vec::<&str>::new());
-        assert_eq2!(split_by_new_line("foo\nbar\n"), vec!["foo", "bar"]);
-        assert_eq2!(split_by_new_line("\nfoo\nbar\n"), vec!["", "foo", "bar"]);
     }
 
     #[test]
