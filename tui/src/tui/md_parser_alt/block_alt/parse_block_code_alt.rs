@@ -147,6 +147,233 @@ fn split_by_new_line_alt<'a>(input: AsStrSlice<'a>) -> Vec<AsStrSlice<'a>> {
 }
 
 #[cfg(test)]
+mod tests_parse_code_block_lang_including_eol_alt {
+    use super::*;
+    use crate::{as_str_slice_test_case, assert_eq2};
+
+    #[test]
+    fn test_parse_code_block_lang_with_language() {
+        // Test with language specified
+        {
+            as_str_slice_test_case!(input, "```rust\n");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            let (remainder, lang) = result.unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(lang.is_some(), true);
+            assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "rust");
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_no_language() {
+        // Test with no language specified (just ``` followed by newline)
+        {
+            as_str_slice_test_case!(input, "```\n");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            let (remainder, lang) = result.unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(lang.is_none(), true);
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_with_remainder() {
+        // Test with language and content after newline
+        {
+            as_str_slice_test_case!(input, "```python\nprint('hello')\n```");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            let (remainder, lang) = result.unwrap();
+            assert_eq2!(
+                remainder.extract_to_slice_end().as_ref(),
+                "print('hello')\n```"
+            );
+            assert_eq2!(lang.is_some(), true);
+            assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "python");
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_empty_language() {
+        // Test with empty language (``` followed immediately by newline)
+        {
+            as_str_slice_test_case!(input, "```\nsome code here");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            let (remainder, lang) = result.unwrap();
+            assert_eq2!(remainder.extract_to_slice_end().as_ref(), "some code here");
+            assert_eq2!(lang.is_none(), true);
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_with_spaces() {
+        // Test with language that has spaces/attributes
+        {
+            as_str_slice_test_case!(input, "```javascript {.line-numbers}\n");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            let (remainder, lang) = result.unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(lang.is_some(), true);
+            assert_eq2!(
+                lang.unwrap().extract_to_slice_end().as_ref(),
+                "javascript {.line-numbers}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_common_languages() {
+        // Test various common programming languages
+        let test_cases = [
+            "rust",
+            "python",
+            "javascript",
+            "typescript",
+            "java",
+            "cpp",
+            "c",
+            "html",
+            "css",
+            "json",
+            "yaml",
+            "toml",
+            "xml",
+            "bash",
+            "sh",
+            "sql",
+        ];
+
+        for lang in test_cases {
+            as_str_slice_test_case!(input, format!("```{}\n", lang));
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            let (remainder, parsed_lang) = result.unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(parsed_lang.is_some(), true);
+            assert_eq2!(parsed_lang.unwrap().extract_to_slice_end().as_ref(), lang);
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_with_numbers() {
+        // Test language identifier with numbers
+        {
+            as_str_slice_test_case!(input, "```c++11\n");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            let (remainder, lang) = result.unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(lang.is_some(), true);
+            assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "c++11");
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_with_dashes() {
+        // Test language identifier with dashes/hyphens
+        {
+            as_str_slice_test_case!(input, "```objective-c\n");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            let (remainder, lang) = result.unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(lang.is_some(), true);
+            assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "objective-c");
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_missing_newline_error() {
+        // Test error case when newline is missing
+        {
+            as_str_slice_test_case!(input, "```rust some code without newline");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_missing_backticks_error() {
+        // Test error case when CODE_BLOCK_START_PARTIAL is missing
+        {
+            as_str_slice_test_case!(input, "rust\n");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_partial_backticks_error() {
+        // Test error case with incomplete backticks
+        {
+            as_str_slice_test_case!(input, "``rust\n");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_case_sensitive() {
+        // Test that language parsing is case sensitive
+        {
+            as_str_slice_test_case!(input, "```RUST\n");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            let (remainder, lang) = result.unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(lang.is_some(), true);
+            assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "RUST");
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_with_attributes() {
+        // Test with GitHub-style language attributes
+        {
+            as_str_slice_test_case!(input, "```rust,ignore\n");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            let (remainder, lang) = result.unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(lang.is_some(), true);
+            assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "rust,ignore");
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_only_backticks() {
+        // Test edge case with only the starting backticks
+        {
+            as_str_slice_test_case!(input, "```");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    fn test_parse_code_block_lang_unicode_language() {
+        // Test with unicode characters in language identifier (though uncommon)
+        {
+            as_str_slice_test_case!(input, "```语言\n");
+            let result = parse_code_block_lang_including_eol_alt(input);
+
+            let (remainder, lang) = result.unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(lang.is_some(), true);
+            assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "语言");
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests_parse_code_block_body_including_code_block_end_alt {
     use super::*;
     use crate::{as_str_slice_test_case, assert_eq2};
