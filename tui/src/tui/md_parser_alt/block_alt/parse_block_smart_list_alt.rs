@@ -15,55 +15,590 @@
  *   limitations under the License.
  */
 
+//! ⚠️  IMPORTANT: CHARACTER-BASED INDEXING THROUGHOUT
+//!
+//! This module uses AsStrSlice which operates on CHARACTER-BASED indexing for
+//! proper Unicode/UTF-8 support. All functions in this file follow these principles:
+//!
+//! 1. Use AsStrSlice methods (take_from, extract_to_line_end) for slicing
+//! 2. Convert byte positions from nom's FindSubstring to character positions
+//! 3. Never use raw slice operators (&str[byte_start..byte_end]) on UTF-8 text
+//! 4. Count characters with .chars().count(), not bytes with .len()
+//!
+//! This ensures proper handling of emojis and multi-byte UTF-8 characters.
+//! See the main function documentation for detailed examples and warnings.
+
 use nom::{branch::alt,
           bytes::complete::{is_not, tag},
-          character::complete::{anychar, digit1, space0},
-          combinator::{map, opt, recognize, verify},
+          character::complete::anychar,
+          combinator::{opt, recognize, verify},
           multi::{many0, many1},
-          sequence::{preceded, terminated},
+          sequence::preceded,
+          FindSubstring,
           IResult,
           Input,
           Parser};
 use smallvec::smallvec;
 
-use crate::{list,
-            md_parser::constants::{CHECKED,
-                                   LIST_PREFIX_BASE_WIDTH,
-                                   NEW_LINE,
+use crate::{md_parser::constants::{NEW_LINE,
                                    ORDERED_LIST_PARTIAL_PREFIX,
                                    SPACE,
                                    SPACE_CHAR,
-                                   UNCHECKED,
                                    UNORDERED_LIST_PREFIX},
-            parse_inline_fragments_until_eol_or_eoi_alt,
-            tiny_inline_string,
+            pad_fmt,
             AsStrSlice,
-            BulletKind,
-            CheckboxParsePolicy,
+            InlineString,
             InlineVec,
-            Lines,
-            List,
-            MdLineFragment,
-            MdLineFragments,
-            SmartListIR,
             SmartListLine};
 
-// TODO: parse_smart_list_content_lines_alt()
-// TODO: mod tests_parse_list_item
-// TODO: mod tests_list_item_lines
 // TODO: mod tests_bullet_kinds
-// TODO: mod tests_parse_indents
 // TODO: parse_smart_list_alt()
+// TODO: parse_block_smart_list_alt()
+// TODO: mod tests_parse_list_item
+// TODO: mod tests_parse_indents
 // TODO: mod tests_parse_block_smart_list
 // TODO: mod tests_parse_smart_lists_in_markdown
+
+/// Parses content lines that belong to a smart list item.
+///
+/// This function takes an input string slice, an indent level, and a bullet string,
+/// and returns a vector of `SmartListLine` objects representing the parsed content.
+/// It handles both the first line of a list item and any continuation lines that
+/// follow it.
+///
+/// # ⚠️ Critical: Character-Based vs Byte-Based Indexing
+///
+/// This implementation **exclusively uses character-based indexing** throughout.
+/// This is critical for proper Unicode/UTF-8 support, especially when handling
+/// emojis and other multi-byte characters.
+///
+/// **Key principles followed:**
+/// - Always use `AsStrSlice::take_from(char_count)` for character-based slicing
+/// - Always use `AsStrSlice::extract_to_line_end()` to extract content
+/// - Never use raw slice operators like `&str[byte_start..byte_end]`
+/// - Convert byte positions from `find_substring()` to character positions before slicing
+///
+/// **Why this matters:**
+/// ```no_run
+/// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
+/// # use nom::Input;
+/// // ❌ WRONG - byte-based slicing can panic or corrupt UTF-8
+/// let text = "😀hello";
+/// let bad = &text[1..]; // PANIC! Splits UTF-8 sequence
+///
+/// // ✅ CORRECT - character-based slicing with AsStrSlice
+/// as_str_slice_test_case!(slice, "😀hello");
+/// let good = slice.take_from(1).extract_to_line_end(); // "hello"
+/// ```
+///
+/// Earlier versions of this function had bugs where byte positions from
+/// `find_substring()` were used as character offsets in `take_from()`, causing
+/// incorrect slicing for multi-byte characters.
+///
+/// # Parameters
+/// - `input`: The input text to parse
+/// - `indent`: The indentation level of the list item (number of spaces)
+/// - `bullet`: The bullet string (e.g., "- ", "1. ") that precedes the list item
+///
+/// # Returns
+/// A tuple containing:
+/// - The remainder of the input that wasn't consumed
+/// - A vector of `SmartListLine` objects representing the parsed content
+pub fn parse_smart_list_content_lines_alt<'a>(
+    input: AsStrSlice<'a>,
+    indent: usize,
+    bullet: AsStrSlice<'a>,
+) -> IResult<
+    /* remainder */ AsStrSlice<'a>,
+    /* lines */ InlineVec<SmartListLine<'a>>,
+> {
+    let mut indent_padding = InlineString::with_capacity(indent);
+    pad_fmt!(
+        fmt: indent_padding,
+        pad_str: SPACE,
+        repeat_count: indent
+    );
+    let indent_padding = indent_padding.as_str();
+
+    // Early return if there are no more lines after the first one.
+    let Some(first_line_end) = input.find_substring(NEW_LINE) else {
+        return Ok((
+            input.take_from(input.input_len()),
+            smallvec![SmartListLine {
+                indent,
+                bullet_str: bullet.extract_to_line_end(),
+                content: input.extract_to_line_end()
+            }],
+        ));
+    };
+
+    // Keep the first line. There may be more than 1 line.
+    let first = input.take(first_line_end);
+
+    // ⚠️ CRITICAL: Convert byte position to character position.
+    // `find_substring()` returns a BYTE offset, but `take_from()` expects a CHARACTER
+    // offset. For Unicode/multi-byte characters like emojis, these are different!
+    // We must count characters, not bytes, to avoid slicing UTF-8 sequences incorrectly.
+    let first_line_chars = first.extract_to_line_end().chars().count();
+
+    // We need to skip the first line + the newline character.
+    let input = input.take_from(first_line_chars + 1);
+
+    // Match the rest of the lines.
+    let (remainder, rest) = many0((
+        verify(
+            // FIRST STEP: Match the ul or ol list item line.
+            preceded(
+                // Match the indent.
+                tag(indent_padding),
+                // Match the rest of the line.
+                /* output */
+                is_not(NEW_LINE),
+            ),
+            // SECOND STEP: Verify it to make sure no ul or ol list prefix.
+            |it: &AsStrSlice<'a>| {
+                // `it` must not *just* have spaces.
+                if it.trim_start_current_line_is_empty() {
+                    return false;
+                }
+
+                // `it` must start w/ *exactly* the correct number of spaces.
+                if !verify_rest::must_start_with_correct_num_of_spaces(
+                    it.clone(),
+                    bullet.clone(),
+                ) {
+                    return false;
+                }
+
+                // `it` must not start w/ the ul list prefix.
+                // `it` must not start w/ the ol list prefix.
+                verify_rest::list_contents_does_not_start_with_list_prefix(it.clone())
+            },
+        ),
+        opt(tag(NEW_LINE)),
+    ))
+    .parse(input)?;
+
+    // Convert `rest` into a Vec<&str> that contains the output lines.
+    let output_lines: InlineVec<SmartListLine<'_>> = {
+        let mut it = InlineVec::with_capacity(rest.len() + 1);
+
+        it.push(SmartListLine {
+            indent,
+            bullet_str: bullet.extract_to_line_end(),
+            content: first.extract_to_line_end(),
+        });
+        it.extend(rest.iter().map(
+            // Skip "bullet's width" number of characters at the start of the line.
+            |(rest_line_content, _newline)| {
+                let bullet_len = bullet.input_len();
+
+                // ⚠️ CRITICAL: Use character-aware slicing, not byte slicing
+                // bullet.input_len() returns character count, so this is safe
+                // Using take_from() ensures we skip the correct number of Unicode
+                // characters.
+                let content_slice = rest_line_content.take_from(bullet_len);
+                let content = content_slice.extract_to_line_end();
+
+                SmartListLine {
+                    indent,
+                    bullet_str: bullet.extract_to_line_end(),
+                    content,
+                }
+            },
+        ));
+
+        it
+    };
+
+    Ok((remainder, output_lines))
+}
+
+#[cfg(test)]
+mod tests_parse_smart_list_content_lines_alt {
+    use super::*;
+    use crate::{as_str_slice_test_case, assert_eq2};
+
+    #[test]
+    fn test_single_line_no_newline() {
+        as_str_slice_test_case!(input, "foo bar");
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "foo bar"));
+    }
+
+    #[test]
+    fn test_single_line_with_newline() {
+        as_str_slice_test_case!(input, "foo bar");
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "foo bar"));
+    }
+
+    #[test]
+    fn test_multiple_lines_unordered() {
+        as_str_slice_test_case!(input, "first line", "  second line", "  third line");
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(0, "- ", "third line"));
+    }
+
+    #[test]
+    fn test_multiple_lines_ordered() {
+        as_str_slice_test_case!(input, "first line", "   second line", "   third line");
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "1. ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(0, "1. ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "1. ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(0, "1. ", "third line"));
+    }
+
+    #[test]
+    fn test_with_indent_unordered() {
+        as_str_slice_test_case!(input, "first line", "    second line", "    third line");
+        let indent = 2;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(2, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(2, "- ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(2, "- ", "third line"));
+    }
+
+    #[test]
+    fn test_with_indent_ordered() {
+        as_str_slice_test_case!(
+            input,
+            "first line",
+            "     second line",
+            "     third line"
+        );
+        let indent = 2;
+        as_str_slice_test_case!(bullet, "1. ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(2, "1. ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(2, "1. ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(2, "1. ", "third line"));
+    }
+
+    #[test]
+    fn test_stops_at_new_list_item_unordered() {
+        as_str_slice_test_case!(
+            input,
+            "first line",
+            "  second line",
+            "- new item",
+            "  its content"
+        );
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(
+            remainder.extract_to_slice_end().as_ref(),
+            "- new item\n  its content\n"
+        );
+        assert_eq2!(lines.len(), 2);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+    }
+
+    #[test]
+    fn test_stops_at_new_list_item_ordered() {
+        as_str_slice_test_case!(
+            input,
+            "first line",
+            "   second line",
+            "2. new item",
+            "   its content"
+        );
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "1. ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(
+            remainder.extract_to_slice_end().as_ref(),
+            "2. new item\n   its content\n"
+        );
+        assert_eq2!(lines.len(), 2);
+        assert_eq2!(lines[0], SmartListLine::new(0, "1. ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "1. ", "second line"));
+    }
+
+    #[test]
+    fn test_stops_at_different_indent_list() {
+        as_str_slice_test_case!(input, "first line", "  second line", "  - nested item");
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(
+            remainder.extract_to_slice_end().as_ref(),
+            "  - nested item\n"
+        );
+        assert_eq2!(lines.len(), 2);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+    }
+
+    #[test]
+    fn test_with_trailing_newlines() {
+        as_str_slice_test_case!(
+            input,
+            "first line",
+            "  second line",
+            "",
+            "other content"
+        );
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(
+            remainder.extract_to_slice_end().as_ref(),
+            "\nother content\n"
+        );
+        assert_eq2!(lines.len(), 2);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+    }
+
+    #[test]
+    fn test_empty_continuation_lines() {
+        as_str_slice_test_case!(input, "first line", "  ", "  third line");
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(
+            remainder.extract_to_slice_end().as_ref(),
+            "  \n  third line\n"
+        );
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+    }
+
+    #[test]
+    fn test_insufficient_indent() {
+        as_str_slice_test_case!(input, "first line", " second line"); // Only 1 space instead of 2
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder.extract_to_slice_end().as_ref(), " second line\n");
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+    }
+
+    #[test]
+    fn test_too_much_indent() {
+        as_str_slice_test_case!(input, "first line", "   second line"); // 3 spaces instead of 2
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(
+            remainder.extract_to_slice_end().as_ref(),
+            "   second line\n"
+        );
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+    }
+
+    #[test]
+    fn test_double_digit_ordered_list() {
+        as_str_slice_test_case!(input, "first line", "    second line", "    third line");
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "10. ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(0, "10. ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "10. ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(0, "10. ", "third line"));
+    }
+
+    #[test]
+    fn test_triple_digit_ordered_list() {
+        as_str_slice_test_case!(
+            input,
+            "first line",
+            "     second line",
+            "     third line"
+        );
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "100. ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(0, "100. ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "100. ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(0, "100. ", "third line"));
+    }
+
+    #[test]
+    fn test_unicode_content() {
+        as_str_slice_test_case!(
+            input,
+            "😃 unicode",
+            "  more 🎉 unicode",
+            "  final 🚀 line"
+        );
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "😃 unicode"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "more 🎉 unicode"));
+        assert_eq2!(lines[2], SmartListLine::new(0, "- ", "final 🚀 line"));
+    }
+
+    #[test]
+    fn test_complex_multiline_with_mixed_indent() {
+        as_str_slice_test_case!(
+            input,
+            "item1",
+            "  continuation",
+            "  more continuation",
+            "- new item"
+        );
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder.extract_to_slice_end().as_ref(), "- new item\n");
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "item1"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "continuation"));
+        assert_eq2!(lines[2], SmartListLine::new(0, "- ", "more continuation"));
+    }
+
+    #[test]
+    fn test_ordered_list_with_varying_numbers() {
+        as_str_slice_test_case!(input, "item1", "   continuation", "5. different number");
+        let indent = 0;
+        as_str_slice_test_case!(bullet, "1. ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(
+            remainder.extract_to_slice_end().as_ref(),
+            "5. different number\n"
+        );
+        assert_eq2!(lines.len(), 2);
+        assert_eq2!(lines[0], SmartListLine::new(0, "1. ", "item1"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "1. ", "continuation"));
+    }
+
+    #[test]
+    fn test_complex_indented_scenario() {
+        as_str_slice_test_case!(
+            input,
+            "first line",
+            "      second line",
+            "      third line",
+            "    - nested list"
+        );
+        let indent = 4;
+        as_str_slice_test_case!(bullet, "- ");
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines_alt(input, indent, bullet).unwrap();
+
+        assert_eq2!(
+            remainder.extract_to_slice_end().as_ref(),
+            "    - nested list\n"
+        );
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(4, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(4, "- ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(4, "- ", "third line"));
+    }
+}
 
 mod verify_rest {
     use super::*;
 
-    /// Return true if:
-    /// - No ul items (at any indent).
-    /// - No other ol items with same indent + number.
-    /// - No other ol items with any indent or number.
+    /// Checks if the input string does not start with a list prefix.
+    ///
+    /// This function is used to determine if a line is a continuation of a list item
+    /// rather than the start of a new list item. It ensures that the line doesn't
+    /// start with an unordered list prefix (like "- ") or an ordered list prefix
+    /// (like "1. ").
+    ///
+    /// ⚠️ **Character-Based Processing**: This function uses character-aware operations
+    /// to safely handle Unicode text. It avoids byte-based slicing that could split
+    /// UTF-8 sequences.
+    ///
+    /// # Return value
+    /// Returns true if:
+    /// - No unordered list items (at any indent level)
+    /// - No ordered list items (with any number or indent level)
+    ///
+    /// # Parameters
+    /// - `input`: The input text to check
     pub fn list_contents_does_not_start_with_list_prefix<'a>(
         input: AsStrSlice<'a>,
     ) -> bool {
@@ -77,23 +612,24 @@ mod verify_rest {
         // Check for ordered list prefix (digit(s) followed by ". ")
         let input_str = trimmed_input.extract_to_line_end();
 
-        // Find the position of the first non-digit character
+        // Find the position of the first non-digit character using CHARACTER indices
         let mut digit_end = 0;
-        for (i, c) in input_str.char_indices() {
-            if !c.is_digit(10) {
-                digit_end = i;
+        for (char_idx, c) in input_str.char_indices() {
+            if !c.is_ascii_digit() {
+                // char_indices() gives us byte positions, but we need character positions
+                // Convert by counting characters up to this point
+                digit_end = input_str[..char_idx].chars().count();
                 break;
             }
             // If we reach the end of the string, all characters are digits
-            if i == input_str.len() - 1 {
-                digit_end = input_str.len();
-                break;
-            }
+            digit_end = input_str.chars().count();
         }
 
         // If we found at least one digit, check if it's followed by ". "
         if digit_end > 0 {
-            let rest = &input_str[digit_end..];
+            // ⚠️ Use character-aware slicing instead of raw slice operator
+            let remaining_slice = trimmed_input.take_from(digit_end);
+            let rest = remaining_slice.extract_to_line_end();
             if rest.starts_with(ORDERED_LIST_PARTIAL_PREFIX) {
                 return false;
             }
@@ -108,6 +644,9 @@ mod verify_rest {
     /// the length of the bullet string (which includes the bullet marker and following
     /// space).
     ///
+    /// ⚠️ **Character-Based Counting**: Both space counting and bullet length use
+    /// character-based counting, making this safe for Unicode bullet strings.
+    ///
     /// # Examples
     /// - `"  content"` with bullet `"- "` (len=2) => true (2 spaces match bullet length)
     /// - `"    content"` with bullet `"1. "` (len=3) => false (4 spaces != 3)
@@ -117,18 +656,39 @@ mod verify_rest {
         input: AsStrSlice<'a>,
         my_bullet: AsStrSlice<'a>,
     ) -> bool {
-        let it_spaces_at_start = count_whitespace_at_start(input);
+        let it_spaces_at_start = count_spaces_at_start(input);
         let expected_spaces = my_bullet.input_len();
         it_spaces_at_start == expected_spaces
     }
 
-    pub fn count_whitespace_at_start<'a>(input: AsStrSlice<'a>) -> usize {
-        // Use position() to find the first non-space character
-        // If found, that position is the count of leading spaces
-        // If not found (all spaces or empty), return the total length
-        input
-            .position(|c| c != SPACE_CHAR)
-            .unwrap_or(input.input_len())
+    /// Counts the number of space characters at the start of the input string.
+    ///
+    /// This function is used to determine the indentation level of a line.
+    /// It only counts space characters (ASCII 32), not other whitespace like tabs.
+    ///
+    /// ⚠️ **Character-Based Iteration**: Uses AsStrSlice's character-aware iteration
+    /// to safely count spaces in Unicode text.
+    ///
+    /// # Parameters
+    /// - `input`: The input text to analyze
+    ///
+    /// # Returns
+    /// The number of space characters at the beginning of the input.
+    /// If the input is all spaces or empty, returns the total length of the input.
+    pub fn count_spaces_at_start<'a>(input: AsStrSlice<'a>) -> usize {
+        let mut count: usize = 0;
+        let mut current = input.clone();
+
+        while let Some(ch) = current.current_char() {
+            if ch == SPACE_CHAR {
+                count += 1;
+                current.advance();
+            } else {
+                break;
+            }
+        }
+
+        count
     }
 }
 
@@ -339,53 +899,193 @@ mod tests_verify_rest {
     }
 
     #[test]
+    fn test_list_contents_does_not_start_with_list_prefix_unicode() {
+        // Test Unicode content that does NOT start with list prefixes (should return
+        // true)
+
+        // Unicode content without list prefix
+        {
+            as_str_slice_test_case!(input, "😀 emoji content");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, true);
+        }
+
+        // Multi-byte Unicode characters
+        {
+            as_str_slice_test_case!(input, "🎉🚀 multiple emojis");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, true);
+        }
+
+        // Unicode with spaces before but no list prefix
+        {
+            as_str_slice_test_case!(input, "  🌟 indented emoji");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, true);
+        }
+
+        // Unicode text that looks like it might contain numbers but doesn't form list
+        // prefix
+        {
+            as_str_slice_test_case!(input, "👨‍👩‍👧‍👦 family emoji");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, true);
+        }
+
+        // Unicode content starting with dash-like character but not ASCII dash
+        {
+            as_str_slice_test_case!(input, "— em dash not list");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, true);
+        }
+
+        // Unicode content starting with bullet-like character but not ASCII
+        {
+            as_str_slice_test_case!(input, "• bullet point not list");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, true);
+        }
+
+        // Test Unicode content that DOES start with list prefixes (should return false)
+
+        // Unicode content with ASCII list prefix at start
+        {
+            as_str_slice_test_case!(input, "- 😀 emoji list item");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, false);
+        }
+
+        // Unicode content with ordered list prefix
+        {
+            as_str_slice_test_case!(input, "1. 🎉 emoji ordered list");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, false);
+        }
+
+        // Unicode content with indented list prefix
+        {
+            as_str_slice_test_case!(input, "  - 🚀 indented emoji list");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, false);
+        }
+
+        // Unicode content with indented ordered list
+        {
+            as_str_slice_test_case!(input, "    42. 🌟 indented emoji ordered");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, false);
+        }
+
+        // Edge case: Unicode digits in ordered list prefix
+        {
+            as_str_slice_test_case!(input, "123. 🎯 numbered with emoji");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, false);
+        }
+
+        // Unicode content with very long emoji sequence after list prefix
+        {
+            as_str_slice_test_case!(input, "- 👨‍👩‍👧‍👦🏠🌳 complex emoji family");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, false);
+        }
+
+        // Mixed Unicode and ASCII in content but with ASCII list prefix
+        {
+            as_str_slice_test_case!(input, "99. Hello 世界 mixed languages");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, false);
+        }
+
+        // Test edge cases with Unicode that might confuse byte/character indexing
+
+        // Content starting with multi-byte character that looks like digit
+        {
+            as_str_slice_test_case!(input, "①not a list"); // Unicode digit one
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, true);
+        }
+
+        // Content with Unicode spaces before list prefix - should NOT be detected as list
+        // because Markdown only recognizes ASCII spaces for indentation
+        {
+            as_str_slice_test_case!(input, " \u{2003}- wide space before list"); // em space
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, true); // Unicode spaces don't count as valid indentation
+        }
+
+        // Very long Unicode sequence without list prefix
+        {
+            as_str_slice_test_case!(input, "🏴󠁧󠁢󠁳󠁣󠁴󠁿 flag emoji sequence");
+            let result =
+                verify_rest::list_contents_does_not_start_with_list_prefix(input);
+            assert_eq!(result, true);
+        }
+    }
+
+    #[test]
     fn test_count_whitespace_at_start() {
         // Test with no leading spaces
         {
             as_str_slice_test_case!(input, "hello world");
-            let count = verify_rest::count_whitespace_at_start(input);
+            let count = verify_rest::count_spaces_at_start(input);
             assert_eq!(count, 0);
         }
 
         // Test with leading spaces
         {
             as_str_slice_test_case!(input, "   hello world");
-            let count = verify_rest::count_whitespace_at_start(input);
+            let count = verify_rest::count_spaces_at_start(input);
             assert_eq!(count, 3);
         }
 
         // Test with all spaces
         {
             as_str_slice_test_case!(input, "    ");
-            let count = verify_rest::count_whitespace_at_start(input);
+            let count = verify_rest::count_spaces_at_start(input);
             assert_eq!(count, 4);
         }
 
         // Test with empty string
         {
             as_str_slice_test_case!(input, "");
-            let count = verify_rest::count_whitespace_at_start(input);
+            let count = verify_rest::count_spaces_at_start(input);
             assert_eq!(count, 0);
         }
 
         // Test with single space
         {
             as_str_slice_test_case!(input, " ");
-            let count = verify_rest::count_whitespace_at_start(input);
+            let count = verify_rest::count_spaces_at_start(input);
             assert_eq!(count, 1);
         }
 
         // Test with tabs and spaces (should only count spaces)
         {
             as_str_slice_test_case!(input, "  \thello");
-            let count = verify_rest::count_whitespace_at_start(input);
+            let count = verify_rest::count_spaces_at_start(input);
             assert_eq!(count, 2); // Only spaces, not tabs
         }
 
         // Test with non-space whitespace at start
         {
             as_str_slice_test_case!(input, "\t  hello");
-            let count = verify_rest::count_whitespace_at_start(input);
+            let count = verify_rest::count_spaces_at_start(input);
             assert_eq!(count, 0); // Tab is not a space character
         }
     }
@@ -519,74 +1219,6 @@ mod tests_verify_rest {
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
             assert_eq!(result, true); // 5 spaces == 5 char bullet length
-        }
-    }
-}
-
-/// Parse markdown text with a specific checkbox policy until the end of line or input.
-/// This function is used as a utility for parsing markdown text that may contain checkboxes.
-/// It returns a list of markdown line fragments [MdLineFragments].
-///
-/// Does not consume the end of line character if it exists. If an EOL character
-/// [crate::constants::NEW_LINE] is found:
-/// - The EOL character is not included in the output.
-/// - The EOL character is not consumed, and is part of the remainder.
-#[rustfmt::skip]
-pub fn parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt<'a>(
-    input: AsStrSlice<'a>,
-    checkbox_policy: CheckboxParsePolicy,
-) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
-    let (input, output) = many0(
-        |it| parse_inline_fragments_until_eol_or_eoi_alt(it, checkbox_policy)
-    ).parse(input)?;
-
-    let it = List::from(output);
-
-    Ok((input, it))
-}
-
-#[cfg(test)]
-mod tests_checkbox_policy {
-    use super::*;
-    use crate::{as_str_slice_test_case, assert_eq2, list, MdLineFragment};
-
-    #[test]
-    fn test_ignore_checkbox_empty_string() {
-        {
-            as_str_slice_test_case!(input, "");
-            let result = parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt(
-                input,
-                CheckboxParsePolicy::IgnoreCheckbox,
-            );
-
-            let (remaining, fragments) = result.unwrap();
-            assert_eq2!(remaining.is_empty(), true);
-            assert_eq2!(fragments, list![]);
-        }
-    }
-
-    #[test]
-    fn test_ignore_checkbox_non_empty_string() {
-        {
-            as_str_slice_test_case!(
-                input,
-                "here is some plaintext *but what if we italicize?"
-            );
-            let result = parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt(
-                input,
-                CheckboxParsePolicy::IgnoreCheckbox,
-            );
-
-            let (remaining, fragments) = result.unwrap();
-            assert_eq2!(remaining.is_empty(), true);
-            assert_eq2!(
-                fragments,
-                list![
-                    MdLineFragment::Plain("here is some plaintext "),
-                    MdLineFragment::Plain("*"),
-                    MdLineFragment::Plain("but what if we italicize?"),
-                ]
-            );
         }
     }
 }

@@ -34,6 +34,31 @@ pub type NomError<T> = nom::error::Error<T>;
 pub type NomErrorKind = nom::error::ErrorKind;
 pub type NomErr<T> = nom::Err<T>;
 
+//
+// ⚠️  CRITICAL WARNING: CHARACTER-BASED vs BYTE-BASED INDEXING
+//
+// This entire module uses CHARACTER-BASED indexing for Unicode/UTF-8 safety.
+//
+// NEVER mix byte-based operations (from nom's FindSubstring, &str[..]) with
+// character-based operations (AsStrSlice methods). This will cause panics or
+// incorrect results when processing multi-byte UTF-8 characters like emojis.
+//
+// Safe patterns:
+//   ✅ let chars = slice.extract_to_line_end().chars().count();
+//   ✅ let advanced = slice.take_from(char_count);
+//   ✅ let content = slice.extract_to_line_end();
+//
+// Dangerous patterns:
+//   ❌ let byte_pos = slice.find_substring("text").unwrap();
+//   ❌ let wrong = slice.take_from(byte_pos); // byte pos as char pos!
+//   ❌ let bad = &text[byte_start..byte_end]; // raw slice operator
+//
+// When you must use find_substring() (which returns byte positions):
+//   1. Use the byte position with take() to get a prefix
+//   2. Count characters in the prefix: prefix.extract_to_line_end().chars().count()
+//   3. Use the character count with take_from()
+//
+
 /// Wrapper type that implements [nom::Input] for &[GCString] or **any other type** that
 /// implements [AsRef<str>]. The [Clone] operations on this struct are really cheap. This
 /// wraps around the output of [str::lines()] and provides a way to adapt it for use
@@ -70,24 +95,79 @@ pub type NomErr<T> = nom::Err<T>;
 /// materializing the entire slice. And it handles the synthetic new lines
 /// to boot! And it is cheap to clone!
 ///
-/// ## Unicode/UTF-8 Support
+/// ## Unicode/UTF-8 Support and Character vs Byte Indexing
 ///
-/// This implementation properly handles Unicode characters including emojis and other
-/// multi-byte UTF-8 sequences. Character iteration and indexing logic do not mix
-/// byte-based operations with character-based operations, causing incorrect behavior when
-/// processing multi-byte UTF-8 characters like `😀`.
+/// **⚠️ CRITICAL: This implementation uses CHARACTER-BASED indexing throughout.**
 ///
-/// The character advancement and positioning logic uses character-based counting
-/// (`line.chars().count()`) instead of byte-based counting (`line.len()`) to ensure
-/// proper Unicode character handling throughout the implementation.
+/// This is essential for proper Unicode/UTF-8 support, especially when handling
+/// emojis and other multi-byte UTF-8 sequences. **Never mix byte-based operations
+/// with character-based operations** as this will cause incorrect behavior or panics
+/// when processing multi-byte UTF-8 characters like `😀`.
 ///
-/// The `char_index` field represents the character index within the current line, and it
-/// is incremented by 1 for each character, including multi-byte characters like emojis.
-/// `char_index` represents the character index within the current line. It is:
+/// ### Key Implementation Details:
+///
+/// - **Character counting**: Uses `line.chars().count()` instead of `line.len()`
+/// - **Character indexing**: Uses `line.chars().nth(char_index)` instead of byte indexing
+/// - **Character slicing**: Uses `take_from(char_count)` instead of
+///   `&str[byte_start..byte_end]`
+/// - **Position tracking**: `char_index` represents character position, not byte position
+///
+/// ### The `char_index` Field:
+///
+/// The `char_index` field represents the character index within the current line. It is:
 /// - Used with `line.chars().nth(self.char_index)` to get characters.
 /// - Compared with line_char_count (from `line.chars().count()`).
 /// - Incremented by 1 to advance to the next character.
 /// - Reset to 0 when moving to a new line.
+///
+/// ### ⚠️ WARNING: Never Use Raw Slice Operators on UTF-8 Text
+///
+/// ```no_run
+/// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
+/// # use nom::Input;
+/// // ❌ DANGEROUS - Can panic or corrupt UTF-8 sequences
+/// let text = "😀hello world";
+/// let bad = &text[1..5]; // PANIC! Splits the emoji's UTF-8 sequence
+/// let bad = &text[4..];  // Might work but indices are unpredictable
+///
+/// // ✅ SAFE - Use AsStrSlice's character-aware methods
+/// as_str_slice_test_case!(slice, "😀hello world");
+/// let good = slice.take_from(1).extract_to_line_end(); // "hello world"
+/// let good = slice.take(5).extract_to_line_end();      // "😀hell"
+/// ```
+///
+/// ### Why Byte vs Character Indexing Matters:
+///
+/// In UTF-8, characters can be 1-4 bytes long:
+/// - ASCII characters (A-Z, 0-9): 1 byte each
+/// - Extended Latin (é, ñ): 2 bytes each
+/// - Most symbols and emojis (😀, ♥️): 3-4 bytes each
+///
+/// Using byte positions as character positions leads to:
+/// - **Panics** when slicing splits a multi-byte character
+/// - **Wrong content** when characters are skipped or duplicated
+/// - **Test failures** when expected vs actual content differs
+///
+/// ### Integration with `find_substring()`:
+///
+/// When using `nom`'s `FindSubstring::find_substring()`, remember that it returns
+/// **byte positions**, not character positions. Always convert:
+///
+/// ```no_run
+/// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
+/// # use nom::FindSubstring;
+/// # use nom::Input;
+/// // ❌ WRONG - using byte position as character position
+/// as_str_slice_test_case!(input, "hello\nworld");
+/// let byte_pos = input.find_substring("\n").unwrap();
+/// let wrong = input.take_from(byte_pos); // May panic with Unicode
+///
+/// // ✅ CORRECT - convert byte position to character position
+/// let byte_pos = input.find_substring("\n").unwrap();
+/// let first_part = input.take(byte_pos); // Use byte pos with take()
+/// let char_count = first_part.extract_to_line_end().chars().count();
+/// let correct = input.take_from(char_count); // Use char count with take_from()
+/// ```
 ///
 /// ## Compatibility with [AsStrSlice::write_to_byte_cache_compat()]
 ///
@@ -115,21 +195,18 @@ pub type NomErr<T> = nom::Err<T>;
 /// Here are some examples of new line handling:
 ///
 /// ```rust
-/// # use r3bl_tui::{GCString, AsStrSlice};
+/// # use r3bl_tui::{GCString, AsStrSlice, as_str_slice_test_case};
 /// // Input with multiple lines
-/// let lines = vec![GCString::new("a"), GCString::new("b")];
-/// let slice = AsStrSlice::from(&lines);
+/// as_str_slice_test_case!(slice, "a", "b");
 /// assert_eq!(slice.to_inline_string(), "a\nb\n");     // Trailing \n added
 ///
 /// // Single line
-/// let lines = vec![GCString::new("single")];
-/// let slice = AsStrSlice::from(&lines);
-/// assert_eq!(slice.to_inline_string(), "single");     // No trailing \n
+/// as_str_slice_test_case!(slice2, "single");
+/// assert_eq!(slice2.to_inline_string(), "single");     // No trailing \n
 ///
 /// // Empty lines are preserved with newlines
-/// let lines = vec![GCString::new(""), GCString::new("a"), GCString::new("")];
-/// let slice = AsStrSlice::from(&lines);
-/// assert_eq!(slice.to_inline_string(), "\na\n\n");   // Each line followed by \n
+/// as_str_slice_test_case!(slice3, "", "a", "");
+/// assert_eq!(slice3.to_inline_string(), "\na\n\n");   // Each line followed by \n
 /// ```
 ///
 /// ## Compatibility with [nom::Input]
@@ -360,6 +437,31 @@ pub mod synthetic_new_line_for_current_char {
 impl<'a> AsStrSlice<'a> {
     /// Remove leading whitespace from the start of the slice. This only operates on the
     /// contents of the current line. Whitespace includes [SPACE_CHAR] and [TAB_CHAR].
+    ///
+    /// ⚠️ **Important: ASCII-Only Whitespace Trimming**
+    ///
+    /// This method **only trims ASCII spaces (U+0020) and ASCII tabs (U+0009)**, not
+    /// Unicode whitespace characters like em space (U+2003), non-breaking space
+    /// (U+00A0), or other Unicode whitespace. This is the correct behavior for
+    /// Markdown parsing, as the Markdown specification typically only recognizes
+    /// ASCII spaces for list indentation and text formatting.
+    ///
+    /// # Examples
+    /// ```
+    /// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
+    /// // ASCII whitespace - will be trimmed
+    /// as_str_slice_test_case!(slice, "  \thello");
+    /// let trimmed = slice.trim_start_current_line();
+    /// assert_eq!(trimmed.extract_to_line_end(), "hello");
+    ///
+    /// // Unicode whitespace - will NOT be trimmed
+    /// as_str_slice_test_case!(slice2, " \u{2003}hello");  // space + em space
+    /// let trimmed = slice2.trim_start_current_line();
+    /// assert_eq!(trimmed.extract_to_line_end(), "\u{2003}hello");  // em space preserved
+    /// ```
+    ///
+    /// This behavior ensures consistent Markdown parsing where Unicode spaces don't count
+    /// as valid indentation for lists and other block elements.
     pub fn trim_start_current_line(&self) -> Self {
         let mut result = self.clone();
 
@@ -379,6 +481,44 @@ impl<'a> AsStrSlice<'a> {
         // Update the char_index to the new position.
         result.char_index = idx(char_pos);
         result
+    }
+
+    /// Handy check to verify that if the leading whitespace are trimmed from the start
+    /// of the current line, it is just an empty string. Needed for some parsers in
+    /// smart lists.
+    ///
+    /// ⚠️ **Note**: This method only considers ASCII spaces and tabs as whitespace
+    /// (via `trim_start_current_line()`), not Unicode whitespace characters. This
+    /// ensures consistent Markdown parsing behavior.
+    pub fn trim_start_current_line_is_empty(&self) -> bool {
+        self.trim_start_current_line()
+            .extract_to_line_end()
+            .is_empty()
+    }
+
+    /// Similar to [Self::trim_start_current_line()], but it trims leading spaces
+    /// and returns the number of space characters trimmed from the start
+    /// and the trimmed [AsStrSlice] instance.
+    pub fn trim_spaces_start_current_line(&self) -> (Length, Self) {
+        let mut result = self.clone();
+        let current_line = &self.lines[self.line_index.as_usize()].as_ref();
+        let mut char_pos = self.char_index.as_usize();
+        let mut spaces_trimmed = len(0);
+
+        // Manually advance through space characters in the current line only.
+        while char_pos < current_line.len() {
+            match current_line.chars().nth(char_pos) {
+                Some(SPACE_CHAR) => {
+                    char_pos += 1;
+                    spaces_trimmed += len(1);
+                }
+                _ => break,
+            }
+        }
+
+        // Update the char_index to the new position.
+        result.char_index = idx(char_pos);
+        (spaces_trimmed, result)
     }
 
     pub fn skip_take(
@@ -554,9 +694,14 @@ impl<'a> AsStrSlice<'a> {
     }
 
     /// Extracts text content from the current position (`line_index`, `char_index`) to
-    /// the end of the line (optionally limited `by max_len`). Only use this over
-    /// [Self::extract_to_slice_end()] if you need to extract the remaining text
-    /// in the current line (but not the entire slice).
+    /// the end of the line (optionally limited by `max_len`).
+    ///
+    /// ⚠️ **Character-Based Extraction**: This method extracts content starting from the
+    /// current **character position** (not byte position) to the end of the line.
+    /// This is safe for Unicode/UTF-8 text and will never split multi-byte characters.
+    ///
+    /// Only use this over [Self::extract_to_slice_end()] if you need to extract the
+    /// remaining text in the current line (but not the entire slice).
     ///
     /// It handles various edge cases like:
     /// - Being at the end of a line.
@@ -564,23 +709,24 @@ impl<'a> AsStrSlice<'a> {
     /// - Lines with embedded newline characters.
     /// - Fallback to empty string for invalid positions.
     ///
-    /// Returns a string reference to the slice content.
+    /// Returns a string reference to the slice content that is guaranteed to contain
+    /// valid UTF-8.
     ///
     /// # Examples
     ///
     /// ```
     /// # use r3bl_tui::{GCString, AsStrSlice};
     /// # use nom::Input;
-    /// let lines = &[GCString::new("Hello world"), GCString::new("Second line")];
+    /// let lines = &[GCString::new("😀hello world"), GCString::new("Second line")];
     /// let slice = AsStrSlice::from(lines);
     ///
     /// // Extract from beginning of first line.
     /// let content = slice.extract_to_line_end();
-    /// assert_eq!(content, "Hello world");
+    /// assert_eq!(content, "😀hello world");
     ///
-    /// // Extract with position offset.
-    /// let slice_offset = slice.take_from(6); // Start from "world".
-    /// assert_eq!(slice_offset.extract_to_line_end(), "world");
+    /// // Extract with character position offset (safe for Unicode).
+    /// let slice_offset = slice.take_from(1); // Start after emoji character
+    /// assert_eq!(slice_offset.extract_to_line_end(), "hello world");
     /// ```
     ///
     /// # Edge Cases
@@ -1072,6 +1218,20 @@ impl<'a> Input for AsStrSlice<'a> {
     fn input_len(&self) -> usize { self.remaining_len().as_usize() }
 
     /// Returns a slice containing the first `count` characters from the current position.
+    ///
+    /// ⚠️ **Character-Based Operation**: This method takes `count` **characters**, not
+    /// bytes. This is safe for Unicode/UTF-8 text including emojis and multi-byte
+    /// characters.
+    ///
+    /// # Example
+    /// ```
+    /// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
+    /// # use nom::Input;
+    /// as_str_slice_test_case!(slice, "😀hello");
+    /// let first_two = slice.take(2); // Gets "😀h" (2 characters)
+    /// // NOT "😀" + partial byte sequence which would panic
+    /// ```
+    ///
     /// This works with the `max_len` field of [AsStrSlice].
     fn take(&self, count: usize) -> Self {
         // take() should return a slice containing the first 'count' characters.
@@ -1084,6 +1244,34 @@ impl<'a> Input for AsStrSlice<'a> {
         )
     }
 
+    /// Returns a slice starting from the `start` character position.
+    ///
+    /// ⚠️ **Character-Based Operation**: The `start` parameter is a **character offset**,
+    /// not a byte offset. This is critical for Unicode/UTF-8 safety - never pass byte
+    /// positions from operations like `find_substring()` directly to this method.
+    ///
+    /// # Example
+    /// ```
+    /// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
+    /// # use nom::Input;
+    /// as_str_slice_test_case!(slice, "😀hello");
+    /// let from_second = slice.take_from(1); // Starts from "hello" (after the emoji)
+    /// // NOT from a byte position that might split the emoji
+    /// ```
+    ///
+    /// # Converting Byte Positions to Character Positions
+    ///
+    /// If you have a byte position (e.g., from `find_substring()`), convert it first:
+    /// ```
+    /// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
+    /// # use nom::FindSubstring;
+    /// # use nom::Input;
+    /// as_str_slice_test_case!(slice, "hello world");
+    /// let byte_pos = slice.find_substring("world").unwrap();
+    /// let prefix = slice.take(byte_pos); // Use byte position with take()
+    /// let char_count = prefix.extract_to_line_end().chars().count(); // Convert to chars
+    /// let from_char = slice.take_from(char_count); // Use char count here
+    /// ```
     fn take_from(&self, start: usize) -> Self {
         let mut result = self.clone();
 
@@ -1519,8 +1707,7 @@ mod tests_write_to_byte_cache_compat_behavior {
     fn test_single_char_no_newline() {
         // Single line behavior - no trailing newline for single lines.
         {
-            let lines = vec![GCString::new("a")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "a");
             assert_eq!(slice.to_inline_string(), "a");
             assert_eq!(slice.lines.len(), 1);
         }
@@ -1530,8 +1717,7 @@ mod tests_write_to_byte_cache_compat_behavior {
     fn test_two_chars_with_trailing_newline() {
         // Multiple lines behavior - adds trailing newline for multiple lines.
         {
-            let lines = vec![GCString::new("a"), GCString::new("b")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "a", "b");
             assert_eq!(slice.to_inline_string(), "a\nb\n"); // Trailing newline added
             assert_eq!(slice.lines.len(), 2);
         }
@@ -1541,8 +1727,7 @@ mod tests_write_to_byte_cache_compat_behavior {
     fn test_three_chars_with_trailing_newline() {
         // Multiple lines behavior - adds trailing newline for multiple lines.
         {
-            let lines = vec![GCString::new("a"), GCString::new("b"), GCString::new("c")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "a", "b", "c");
             assert_eq!(slice.to_inline_string(), "a\nb\nc\n"); // Trailing newline added
             assert_eq!(slice.lines.len(), 3);
         }
@@ -1552,8 +1737,7 @@ mod tests_write_to_byte_cache_compat_behavior {
     fn test_empty_lines_with_trailing_newline() {
         // Empty lines are preserved with newlines, plus trailing newline.
         {
-            let lines = vec![GCString::new(""), GCString::new("a"), GCString::new("")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "", "a", "");
             assert_eq!(slice.to_inline_string(), "\na\n\n"); // Each line followed by \n
             assert_eq!(slice.lines.len(), 3);
         }
@@ -1563,8 +1747,7 @@ mod tests_write_to_byte_cache_compat_behavior {
     fn test_only_empty_lines() {
         // Multiple empty lines get trailing newline.
         {
-            let lines = vec![GCString::new(""), GCString::new("")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "", "");
             assert_eq!(slice.to_inline_string(), "\n\n"); // Two newlines plus trailing
             assert_eq!(slice.lines.len(), 2);
         }
@@ -1574,8 +1757,7 @@ mod tests_write_to_byte_cache_compat_behavior {
     fn test_single_empty_line() {
         // Single empty line gets no trailing newline.
         {
-            let lines = vec![GCString::new("")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "");
             assert_eq!(slice.to_inline_string(), ""); // No trailing newline for single line
             assert_eq!(slice.lines.len(), 1);
         }
@@ -1583,21 +1765,7 @@ mod tests_write_to_byte_cache_compat_behavior {
 
     #[test]
     fn test_verify_write_to_byte_cache_compat_consistency() {
-        let test_cases = vec![
-            vec![],                                       // Empty
-            vec![GCString::new("single")],                // Single line
-            vec![GCString::new("a"), GCString::new("b")], // Two lines
-            vec![
-                GCString::new(""),
-                GCString::new("middle"),
-                GCString::new(""),
-            ], // With empty lines
-            vec![GCString::new(""), GCString::new("")],   // Only empty lines
-        ];
-
-        for lines in test_cases {
-            // Get AsStrSlice result
-            let slice = AsStrSlice::from(&lines);
+        let test_helper = |slice: AsStrSlice<'_>| {
             let slice_result = slice.to_inline_string();
 
             // Get write_to_byte_cache_compat result
@@ -1608,11 +1776,40 @@ mod tests_write_to_byte_cache_compat_behavior {
             // They should match exactly
             assert_eq!(
                 slice_result, cache_result,
-                "Mismatch for lines {:?}: AsStrSlice produced {:?}, write_to_byte_cache_compat produced {:?}",
-                lines.iter().map(|l| l.as_ref()).collect::<Vec<_>>(),
+                "Mismatch: AsStrSlice produced {:?}, write_to_byte_cache_compat produced {:?}",
                 slice_result,
                 cache_result
             );
+        };
+
+        // Empty
+        {
+            let slice = AsStrSlice::from(&[]);
+            test_helper(slice);
+        }
+
+        // Single line
+        {
+            as_str_slice_test_case!(slice, "single");
+            test_helper(slice);
+        }
+
+        // Two lines
+        {
+            as_str_slice_test_case!(slice, "a", "b");
+            test_helper(slice);
+        }
+
+        // With empty lines
+        {
+            as_str_slice_test_case!(slice, "", "middle", "");
+            test_helper(slice);
+        }
+
+        // Only empty lines
+        {
+            as_str_slice_test_case!(slice, "", "");
+            test_helper(slice);
         }
     }
 
@@ -1631,8 +1828,7 @@ mod tests_write_to_byte_cache_compat_behavior {
             assert_eq!(str_lines, vec!["line1", "line2"]); // str::lines() ignores the empty last line
 
             // Using AsStrSlice
-            let gc_lines = vec![GCString::new("line1"), GCString::new("line2")];
-            let slice = AsStrSlice::from(&gc_lines);
+            as_str_slice_test_case!(slice, "line1", "line2");
             let slice_result = slice.to_inline_string();
             assert_eq!(slice_result.as_str(), "line1\nline2\n"); // AsStrSlice preserves the trailing newline
 
@@ -1652,8 +1848,7 @@ mod tests_write_to_byte_cache_compat_behavior {
             assert_eq!(str_lines, vec!["line1", "line2"]);
 
             // Using AsStrSlice
-            let gc_lines = vec![GCString::new("line1"), GCString::new("line2")];
-            let slice = AsStrSlice::from(&gc_lines);
+            as_str_slice_test_case!(slice, "line1", "line2");
             let slice_result = slice.to_inline_string();
             assert_eq!(slice_result.as_str(), "line1\nline2\n"); // AsStrSlice adds a trailing newline
 
@@ -1677,13 +1872,7 @@ mod tests {
 
     #[test]
     fn test_gc_string_slice_basic_functionality() {
-        let lines = vec![
-            GCString::new("Hello world"),
-            GCString::new("This is a test"),
-            GCString::new("Third line"),
-        ];
-
-        let slice = AsStrSlice::from(&lines);
+        as_str_slice_test_case!(slice, "Hello world", "This is a test", "Third line");
 
         // Test that we can iterate through characters.
         let mut chars: Vec<char> = vec![];
@@ -1700,9 +1889,7 @@ mod tests {
 
     #[test]
     fn test_nom_input_position() {
-        let lines = vec![GCString::new("hello"), GCString::new("world")];
-
-        let slice = AsStrSlice::from(&lines);
+        as_str_slice_test_case!(slice, "hello", "world");
 
         // Test position finding
         let pos = slice.position(|c| c == 'w');
@@ -1837,10 +2024,10 @@ mod tests {
         let lines = fixtures::create_test_lines();
         let slice = AsStrSlice::from(lines.as_slice());
 
-        // From beginning of first line
+        // From beginning of first line.
         assert_eq!(slice.extract_to_line_end(), "Hello world");
 
-        // From middle of first line
+        // From middle of first line.
         let slice_offset = slice.take_from(6);
         assert_eq!(slice_offset.extract_to_line_end(), "world");
 
@@ -1984,7 +2171,7 @@ mod tests {
     fn test_input_slice_index() {
         let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
         let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef\n" (8 total chars)
+        // Input appears as: "abc\ndef" (8 total chars)
 
         // Valid count
         assert_eq!(slice.slice_index(3), Ok(3));
@@ -2001,9 +2188,8 @@ mod tests {
     // Test iterators
     #[test]
     fn test_iter_elements() {
-        let lines = vec![GCString::new("ab"), GCString::new("cd")]; // Creates ["ab", "cd"]
-        let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "ab\ncd\n" (synthetic \n added between lines + trailing \n)
+        as_str_slice_test_case!(slice, "ab", "cd"); // Creates ["ab", "cd"]
+                                                    // Input appears as: "ab\ncd\n" (synthetic \n added between lines + trailing \n)
 
         let chars: Vec<char> = slice.iter_elements().collect();
         assert_eq!(chars, vec!['a', 'b', '\n', 'c', 'd', '\n']); // Note synthetic
@@ -2012,9 +2198,8 @@ mod tests {
 
     #[test]
     fn test_iter_indices() {
-        let lines = vec![GCString::new("ab"), GCString::new("cd")]; // Creates ["ab", "cd"]
-        let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "ab\ncd\n" (synthetic \n added between lines + trailing \n)
+        as_str_slice_test_case!(slice, "ab", "cd"); // Creates ["ab", "cd"]
+                                                    // Input appears as: "ab\ncd\n" (synthetic \n added between lines + trailing \n)
 
         let indexed_chars: Vec<(usize, char)> = slice.iter_indices().collect();
         assert_eq!(
@@ -2028,8 +2213,7 @@ mod tests {
     // Test Compare trait implementation
     #[test]
     fn test_compare() {
-        let lines = vec![GCString::new("Hello"), GCString::new("World")];
-        let slice = AsStrSlice::from(lines.as_slice());
+        as_str_slice_test_case!(slice, "Hello", "World");
 
         // Exact match
         assert_eq!(slice.compare("Hello"), CompareResult::Ok);
@@ -2052,8 +2236,7 @@ mod tests {
 
     #[test]
     fn test_compare_no_case() {
-        let lines = vec![GCString::new("Hello"), GCString::new("World")];
-        let slice = AsStrSlice::from(lines.as_slice());
+        as_str_slice_test_case!(slice, "Hello", "World");
 
         // Case insensitive match
         assert_eq!(slice.compare_no_case("hello"), CompareResult::Ok);
@@ -2103,8 +2286,7 @@ mod tests {
     // Edge cases and error conditions
     #[test]
     fn test_empty_lines() {
-        let lines: Vec<GCString> = vec![];
-        let slice = AsStrSlice::from(lines.as_slice());
+        let slice = AsStrSlice::from(&[]);
 
         assert_eq!(slice.current_char(), None);
         assert_eq!(slice.input_len(), 0);
@@ -2113,8 +2295,7 @@ mod tests {
 
     #[test]
     fn test_single_empty_line() {
-        let lines = vec![GCString::new("")];
-        let slice = AsStrSlice::from(lines.as_slice());
+        as_str_slice_test_case!(slice, "");
 
         assert_eq!(slice.current_char(), None);
         assert_eq!(slice.input_len(), 0);
@@ -2133,8 +2314,8 @@ mod tests {
 
     #[test]
     fn test_advance_beyond_bounds() {
-        let lines = vec![GCString::new("a")];
-        let mut slice = AsStrSlice::from(lines.as_slice());
+        as_str_slice_test_case!(slice, "a");
+        let mut slice = slice;
 
         assert_eq!(slice.current_char(), Some('a'));
         slice.advance(); // Now at end
@@ -2145,8 +2326,7 @@ mod tests {
 
     #[test]
     fn test_with_newlines_in_content() {
-        let lines = vec![GCString::new("line1\nembedded"), GCString::new("line2")];
-        let slice = AsStrSlice::from(lines.as_slice());
+        as_str_slice_test_case!(slice, "line1\nembedded", "line2");
 
         // Should handle embedded newlines in line content
         let content = slice.extract_to_line_end();
@@ -2205,8 +2385,7 @@ mod tests {
 
     #[test]
     fn test_display_single_line() {
-        let lines = vec![GCString::new("hello")];
-        let slice = AsStrSlice::from(lines.as_slice());
+        as_str_slice_test_case!(slice, "hello");
 
         let displayed = format!("{slice}");
         assert_eq!(displayed, "hello");
@@ -2214,12 +2393,7 @@ mod tests {
 
     #[test]
     fn test_display_empty_lines() {
-        let lines = vec![
-            GCString::new(""),
-            GCString::new("middle"),
-            GCString::new(""),
-        ];
-        let slice = AsStrSlice::from(lines.as_slice());
+        as_str_slice_test_case!(slice, "", "middle", "");
 
         let displayed = format!("{slice}");
         assert_eq!(displayed, "\nmiddle\n\n"); // Multiple lines get trailing newline
@@ -2227,8 +2401,7 @@ mod tests {
 
     #[test]
     fn test_display_with_embedded_newlines() {
-        let lines = vec![GCString::new("line1\nembedded"), GCString::new("line2")];
-        let slice = AsStrSlice::from(lines.as_slice());
+        as_str_slice_test_case!(slice, "line1\nembedded", "line2");
 
         let displayed = format!("{slice}");
         assert_eq!(displayed, "line1\nembedded\nline2\n"); // Multiple lines get trailing
@@ -2247,8 +2420,8 @@ mod tests {
 
     #[test]
     fn test_display_at_end_position() {
-        let lines = vec![GCString::new("abc")];
-        let slice = AsStrSlice::with_limit(&lines, 0, 3, None); // At end of line
+        as_str_slice_test_case!(slice, "abc");
+        let slice = AsStrSlice::with_limit(&slice.lines, 0, 3, None); // At end of line
 
         let displayed = format!("{slice}");
         assert_eq!(displayed, "");
@@ -2287,8 +2460,7 @@ mod tests {
         assert_eq!(result, "abc\ndef\n"); // Multiple lines get trailing newline
 
         // Test with empty lines
-        let empty_lines: Vec<GCString> = vec![];
-        let empty_slice = AsStrSlice::from(empty_lines.as_slice());
+        let empty_slice = AsStrSlice::from(&[]);
         let empty_result = empty_slice.to_inline_string();
         assert_eq!(empty_result, "");
 
@@ -2303,8 +2475,7 @@ mod tests {
         assert_eq!(limited_result, "abc");
 
         // Test single line (no trailing newline)
-        let single_line = vec![GCString::new("single")];
-        let single_slice = AsStrSlice::from(single_line.as_slice());
+        as_str_slice_test_case!(single_slice, "single");
         let single_result = single_slice.to_inline_string();
         assert_eq!(single_result, "single"); // Single line gets no trailing newline
     }
@@ -2331,8 +2502,7 @@ mod tests {
         );
 
         // Test with single line (no trailing newline).
-        let single_line = vec![GCString::new("single")];
-        let single_slice = AsStrSlice::from(single_line.as_slice());
+        as_str_slice_test_case!(single_slice, "single");
 
         // Get Display implementation result
         let single_display_result = single_slice.to_inline_string();
@@ -2382,8 +2552,7 @@ mod tests {
         assert_eq!(cache, "abc\ndef\n"); // Note the trailing newline for multiple lines.
 
         // Test with single line (no trailing newline).
-        let single_line = vec![GCString::new("single")];
-        let single_slice = AsStrSlice::from(single_line.as_slice());
+        as_str_slice_test_case!(single_slice, "single");
 
         // Get write_to_byte_cache_compat result
         let mut cache = ParserByteCache::new();
@@ -2425,8 +2594,7 @@ mod tests {
         assert!(slice.contains("")); // Empty string is always contained
 
         // Test with empty slice
-        let empty_lines: Vec<GCString> = vec![];
-        let empty_slice = AsStrSlice::from(empty_lines.as_slice());
+        let empty_slice = AsStrSlice::from(&[]);
         assert!(!empty_slice.contains("abc"));
         assert!(empty_slice.contains("")); // Empty string is contained in empty slice
 
@@ -2553,10 +2721,14 @@ mod tests {
 
         // Test empty lines
         {
-            let lines = vec![GCString::from(""), GCString::from(""), GCString::from("")];
+            let lines = vec![
+                GCString::from(""),
+                GCString::from(""),
+                GCString::from("Content"),
+            ];
             let slice = AsStrSlice::from(&lines);
             let result = slice.extract_to_slice_end();
-            assert_eq!(result, "\n\n\n"); // Multiple lines include trailing newline
+            assert_eq!(result, "\n\nContent\n"); // 2 newlines + "Content"
             assert!(matches!(result, Cow::Owned(_)));
         }
 
@@ -2657,7 +2829,7 @@ mod tests {
 /// has to be converted back. Here is where it is primarily used:
 /// - [crate::parse_fragment_plain_text_until_eol_or_eoi_alt()]
 #[cfg(test)]
-mod tests_str_conversion {
+mod tests_str_functionality {
     use super::*;
     use crate::{as_str_slice::tests::fixtures, assert_eq2};
 
@@ -2667,8 +2839,7 @@ mod tests_str_conversion {
 
         // Test basic functionality
         {
-            let lines = vec![GCString::new("hello world")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "hello world");
 
             // Skip 6 chars ("hello "), take 5 chars ("world")
             let result = slice.skip_take(6, 5);
@@ -2683,8 +2854,7 @@ mod tests_str_conversion {
 
         // Test zero values
         {
-            let lines = vec![GCString::new("test")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "test");
 
             // Skip 0, take 0
             let result = slice.skip_take(0, 0);
@@ -2704,8 +2874,8 @@ mod tests_str_conversion {
 
         // Test with existing char_index
         {
-            let lines = vec![GCString::new("abcdefghijk")];
-            let mut slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "abcdefghijk");
+            let mut slice = slice;
             slice.char_index = idx(3); // Start at 'd'
 
             let result = slice.skip_take(2, 4); // Skip 2 more ('e','f'), take 4 ('g','h','i','j')
@@ -2715,8 +2885,7 @@ mod tests_str_conversion {
 
         // Test bounds checking
         {
-            let lines = vec![GCString::new("short")]; // length 5
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "short"); // length 5
 
             // Skip beyond end of string
             let result = slice.skip_take(10, 5);
@@ -2731,14 +2900,12 @@ mod tests_str_conversion {
             // Take more than available
             let result = slice.skip_take(2, 10);
             assert_eq2!(result.char_index, idx(2));
-            assert_eq2!(result.max_len, Some(len(3))); // Only 3 chars remaining from
-                                                       // index 2
+            assert_eq2!(result.max_len, Some(len(3))); // Only 3 remaining (indices 2,3,4)
         }
 
         // Test empty slice
         {
-            let lines: Vec<GCString> = vec![];
-            let slice = AsStrSlice::from(&lines);
+            let slice = AsStrSlice::from(&[]);
 
             let result = slice.skip_take(5, 3);
             assert_eq2!(result.char_index, idx(0)); // Should handle empty case
@@ -2748,8 +2915,7 @@ mod tests_str_conversion {
 
         // Test single empty line
         {
-            let lines = vec![GCString::new("")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "");
 
             let result = slice.skip_take(2, 1);
             assert_eq2!(result.char_index, idx(0)); // Can't skip beyond empty string
@@ -2777,8 +2943,9 @@ mod tests_str_conversion {
 
         // Test with limit
         {
-            let lines = vec![GCString::new("abcdefghijklmnop")];
-            let slice = AsStrSlice::with_limit(&lines, idx(0), idx(2), Some(len(10))); // Start at 'c', limit 10 chars
+            as_str_slice_test_case!(lines, "abcdefghijklmnop");
+            let slice =
+                AsStrSlice::with_limit(&lines.lines, idx(0), idx(2), Some(len(10))); // Start at 'c', limit 10 chars
 
             let result = slice.skip_take(3, 5); // Skip 3 more, take 5
             assert_eq2!(result.char_index, idx(5)); // 2 + 3
@@ -2788,8 +2955,8 @@ mod tests_str_conversion {
 
         // Test saturating add
         {
-            let lines = vec![GCString::new("test")];
-            let mut slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "test");
+            let mut slice = slice;
             slice.char_index = idx(usize::MAX - 2);
 
             let result = slice.skip_take(5, 1); // Should saturate
@@ -2799,8 +2966,7 @@ mod tests_str_conversion {
 
         // Test chaining operations
         {
-            let lines = vec![GCString::new("abcdefghijklmnop")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "abcdefghijklmnop");
 
             // First operation: skip 2, take 8
             let first = slice.skip_take(2, 8);
@@ -2815,8 +2981,7 @@ mod tests_str_conversion {
 
         // Test max_len calculation
         {
-            let lines = vec![GCString::new("hello")]; // 5 chars, indices 0-4
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "hello"); // 5 chars, indices 0-4
 
             // Test various combinations
             let result = slice.skip_take(0, 3); // From start
@@ -2834,8 +2999,9 @@ mod tests_str_conversion {
 
         // Test field preservation
         {
-            let lines = vec![GCString::new("first"), GCString::new("second")];
-            let original = AsStrSlice::with_limit(&lines, idx(1), idx(2), Some(len(8)));
+            as_str_slice_test_case!(lines, "first", "second");
+            let original =
+                AsStrSlice::with_limit(&lines.lines, idx(1), idx(2), Some(len(8)));
             let result = original.skip_take(1, 3);
 
             // These should be preserved
@@ -2851,8 +3017,8 @@ mod tests_str_conversion {
 
         // Test current_taken calculation
         {
-            let lines = vec![GCString::new("abcdefghij")]; // 10 chars
-            let mut slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "abcdefghij"); // 10 chars
+            let mut slice = slice;
             slice.current_taken = len(2); // Simulate having already consumed 2 chars
 
             let result = slice.skip_take(3, 6);
@@ -2864,8 +3030,7 @@ mod tests_str_conversion {
 
         // Test edge case with large skip
         {
-            let lines = vec![GCString::new("tiny")]; // 4 chars
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "tiny"); // 4 chars
 
             let result = slice.skip_take(1000, 5);
             assert_eq2!(result.char_index, idx(3)); // min(1000, 4-1) = 3
@@ -2950,8 +3115,7 @@ mod tests_str_conversion {
     fn test_trim_start_current_line() {
         // Test basic functionality - trimming spaces
         {
-            let lines = vec![GCString::new("   hello world")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "   hello world");
 
             let result = slice.trim_start_current_line();
             assert_eq2!(result.char_index, idx(3)); // Should skip 3 spaces
@@ -2964,8 +3128,7 @@ mod tests_str_conversion {
 
         // Test trimming tabs
         {
-            let lines = vec![GCString::new("\t\thello world")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "\t\thello world");
 
             let result = slice.trim_start_current_line();
             assert_eq2!(result.char_index, idx(2)); // Should skip 2 tabs
@@ -2973,8 +3136,7 @@ mod tests_str_conversion {
 
         // Test trimming mixed whitespace (spaces and tabs)
         {
-            let lines = vec![GCString::new(" \t \thello world")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, " \t \thello world");
 
             let result = slice.trim_start_current_line();
             assert_eq2!(result.char_index, idx(4)); // Should skip 4 whitespace chars
@@ -2982,8 +3144,7 @@ mod tests_str_conversion {
 
         // Test with no leading whitespace
         {
-            let lines = vec![GCString::new("hello world")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "hello world");
 
             let result = slice.trim_start_current_line();
             assert_eq2!(result.char_index, idx(0)); // Should not change
@@ -2991,8 +3152,7 @@ mod tests_str_conversion {
 
         // Test with empty string
         {
-            let lines = vec![GCString::new("")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "");
 
             let result = slice.trim_start_current_line();
             assert_eq2!(result.char_index, idx(0)); // Should not change
@@ -3000,17 +3160,16 @@ mod tests_str_conversion {
 
         // Test with whitespace in the middle - should only trim from start
         {
-            let lines = vec![GCString::new("  hello  world")];
-            let slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "  hello  world");
 
             let result = slice.trim_start_current_line();
-            assert_eq2!(result.char_index, idx(2)); // Should skip 2 spaces at start only
+            assert_eq2!(result.char_index, idx(2)); // Should skip 2 spaces
         }
 
         // Test with existing char_index offset
         {
-            let lines = vec![GCString::new("hello   world")];
-            let mut slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "hello   world");
+            let mut slice = slice;
             slice.char_index = idx(6); // Position at the second space after "hello"
 
             let result = slice.trim_start_current_line();
@@ -3019,12 +3178,370 @@ mod tests_str_conversion {
 
         // Test with char_index at end of string
         {
-            let lines = vec![GCString::new("hello")];
-            let mut slice = AsStrSlice::from(&lines);
+            as_str_slice_test_case!(slice, "hello");
+            let mut slice = slice;
             slice.char_index = idx(5); // Position at the end of string
 
             let result = slice.trim_start_current_line();
             assert_eq2!(result.char_index, idx(5)); // Should not change
+        }
+
+        // Test with only whitespace characters
+        {
+            as_str_slice_test_case!(slice, "   \t  ");
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(6)); // Should skip all 6 whitespace chars
+        }
+
+        // Test with only spaces
+        {
+            as_str_slice_test_case!(slice, "    ");
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(4)); // Should skip all 4 spaces
+        }
+
+        // Test with only tabs
+        {
+            as_str_slice_test_case!(slice, "\t\t\t");
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(3)); // Should skip all 3 tabs
+        }
+
+        // Test with Unicode non-breaking space (should NOT be trimmed) - should NOT be
+        // empty
+        {
+            as_str_slice_test_case!(slice, "\u{00A0}");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test with newline character (should NOT be trimmed) - should NOT be empty
+        {
+            as_str_slice_test_case!(slice, "\n");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test multiline with different line indices
+        {
+            as_str_slice_test_case!(
+                slice,
+                "   first line",
+                "\t\tsecond line",
+                "third line"
+            );
+
+            // Test first line
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(3)); // Skip 3 spaces
+            assert_eq2!(result.line_index, idx(0));
+
+            // Test second line
+            let slice = AsStrSlice::with_limit(slice.lines, idx(1), idx(0), None);
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(2)); // Skip 2 tabs
+            assert_eq2!(result.line_index, idx(1));
+
+            // Test third line (no leading whitespace)
+            let slice = AsStrSlice::with_limit(slice.lines, idx(2), idx(0), None);
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(0)); // No change
+            assert_eq2!(result.line_index, idx(2));
+        }
+
+        // Test with char_index in middle of whitespace
+        {
+            as_str_slice_test_case!(slice, "    hello world");
+            let mut slice = slice;
+            slice.char_index = idx(2); // Position in middle of leading spaces
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(4)); // Should advance to first
+                                                    // non-whitespace
+        }
+
+        // Test with char_index beyond leading whitespace
+        {
+            as_str_slice_test_case!(slice, "   hello world");
+            let mut slice = slice;
+            slice.char_index = idx(5); // Position at 'l' in "hello"
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(5)); // Should not change
+        }
+
+        // Test with max_len limit (should be preserved)
+        {
+            as_str_slice_test_case!(slice, "   hello world");
+            let slice =
+                AsStrSlice::with_limit(slice.lines, idx(0), idx(0), Some(len(10)));
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(3)); // Should skip 3 spaces
+            assert_eq2!(result.max_len, Some(len(10))); // Should preserve max_len
+        }
+
+        // Test that all other fields are preserved correctly
+        {
+            as_str_slice_test_case!(slice, "first", "   second");
+            let slice =
+                AsStrSlice::with_limit(slice.lines, idx(1), idx(0), Some(len(15)));
+
+            let result = slice.trim_start_current_line();
+
+            // Check return values
+            assert_eq2!(result.char_index, idx(3)); // Should skip 3 spaces
+
+            // Check that non-char_index fields are preserved
+            assert_eq2!(result.line_index, slice.line_index);
+            assert_eq2!(result.lines, slice.lines);
+            assert_eq2!(result.total_size, slice.total_size);
+            assert_eq2!(result.current_taken, slice.current_taken);
+            assert_eq2!(result.max_len, slice.max_len);
+        }
+
+        // Test with extreme whitespace patterns
+        {
+            as_str_slice_test_case!(slice, " \t \t \t hello");
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(7)); // Should skip complex pattern
+        }
+
+        // Test starting from whitespace at different positions
+        {
+            as_str_slice_test_case!(slice, "a   b   c");
+
+            // Start at position 1 (first space after 'a')
+            let mut slice = slice;
+            slice.char_index = idx(1);
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(4)); // Should advance to 'b'
+
+            // Start at position 5 (first space after 'b')
+            slice.char_index = idx(5);
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(8)); // Should advance to 'c'
+        }
+
+        // Test with line containing only a single space
+        {
+            as_str_slice_test_case!(slice, " ");
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(1)); // Should skip the single space
+        }
+
+        // Test edge case: single tab character
+        {
+            as_str_slice_test_case!(slice, "\t");
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(1)); // Should skip the single tab
+        }
+
+        // Test behavior at boundaries
+        {
+            as_str_slice_test_case!(slice, "  hello");
+            let mut slice = slice;
+
+            // Start at char_index equal to line length
+            slice.char_index = idx(7); // Beyond the string
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(7)); // Should not change
+        }
+
+        // Test with mixed content that starts with whitespace
+        {
+            as_str_slice_test_case!(slice, "\t  hello\tworld  ");
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(3)); // Should skip tab and 2 spaces
+
+            // Verify the remaining content after trimming
+            let remaining = result.extract_to_line_end();
+            assert_eq2!(remaining, "hello\tworld  "); // Whitespace in middle/end
+                                                      // preserved
+        }
+    }
+
+    #[test]
+    fn test_trim_start_current_line_is_empty() {
+        // Test with only whitespace (spaces) - should be empty after trimming
+        {
+            as_str_slice_test_case!(slice, "   ");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), true);
+        }
+
+        // Test with only whitespace (tabs) - should be empty after trimming
+        {
+            as_str_slice_test_case!(slice, "\t\t\t");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), true);
+        }
+
+        // Test with mixed whitespace only - should be empty after trimming
+        {
+            as_str_slice_test_case!(slice, " \t \t ");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), true);
+        }
+
+        // Test with empty string - should be empty
+        {
+            as_str_slice_test_case!(slice, "");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), true);
+        }
+
+        // Test with whitespace followed by content - should NOT be empty
+        {
+            as_str_slice_test_case!(slice, "   hello");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test with tabs followed by content - should NOT be empty
+        {
+            as_str_slice_test_case!(slice, "\t\thello");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test with mixed whitespace followed by content - should NOT be empty
+        {
+            as_str_slice_test_case!(slice, " \t hello world");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test with no leading whitespace - should NOT be empty
+        {
+            as_str_slice_test_case!(slice, "hello world");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test with content that starts with non-whitespace - should NOT be empty
+        {
+            as_str_slice_test_case!(slice, "hello   world");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test with Unicode non-breaking space (should NOT be trimmed) - should NOT be
+        // empty
+        {
+            as_str_slice_test_case!(slice, "\u{00A0}");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test with newline character (should NOT be trimmed) - should NOT be empty
+        {
+            as_str_slice_test_case!(slice, "\n");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test with existing char_index offset in whitespace-only line
+        {
+            as_str_slice_test_case!(slice, "      ");
+            let mut slice = slice;
+            slice.char_index = idx(2); // Start from middle of whitespace
+
+            assert_eq2!(slice.trim_start_current_line_is_empty(), true);
+        }
+
+        // Test with existing char_index offset with content after whitespace
+        {
+            as_str_slice_test_case!(slice, "   hello");
+            let mut slice = slice;
+            slice.char_index = idx(1); // Start from middle of leading whitespace
+
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test with char_index positioned after whitespace
+        {
+            as_str_slice_test_case!(slice, "   hello");
+            let mut slice = slice;
+            slice.char_index = idx(3); // Start from 'h' in "hello"
+
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test with char_index at end of whitespace-only line
+        {
+            as_str_slice_test_case!(slice, "   ");
+            let mut slice = slice;
+            slice.char_index = idx(3); // Start at end of line
+
+            assert_eq2!(slice.trim_start_current_line_is_empty(), true);
+        }
+
+        // Test multiline - should only consider current line
+        {
+            as_str_slice_test_case!(
+                slice, "   ",   // Line 0: only whitespace
+                "hello", // Line 1: has content
+                "\t\t"   // Line 2: only tabs
+            );
+
+            // Test line 0 (only whitespace)
+            let line0_slice = AsStrSlice::with_limit(slice.lines, idx(0), idx(0), None);
+            assert_eq2!(line0_slice.trim_start_current_line_is_empty(), true);
+
+            // Test line 1 (has content)
+            let line1_slice = AsStrSlice::with_limit(slice.lines, idx(1), idx(0), None);
+            assert_eq2!(line1_slice.trim_start_current_line_is_empty(), false);
+
+            // Test line 2 (only tabs)
+            let line2_slice = AsStrSlice::with_limit(slice.lines, idx(2), idx(0), None);
+            assert_eq2!(line2_slice.trim_start_current_line_is_empty(), true);
+        }
+
+        // Test with max_len limit on whitespace-only line
+        {
+            as_str_slice_test_case!(slice, "      ");
+            let slice = AsStrSlice::with_limit(slice.lines, idx(0), idx(0), Some(len(3)));
+
+            // Even with max_len limit, should still be empty after trimming
+            assert_eq2!(slice.trim_start_current_line_is_empty(), true);
+        }
+
+        // Test with max_len limit on line with content
+        {
+            as_str_slice_test_case!(slice, "   hello");
+            let slice = AsStrSlice::with_limit(slice.lines, idx(0), idx(0), Some(len(5)));
+
+            // Should not be empty because there's content after whitespace
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test edge case: single space character
+        {
+            as_str_slice_test_case!(slice, " ");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), true);
+        }
+
+        // Test edge case: single tab character
+        {
+            as_str_slice_test_case!(slice, "\t");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), true);
+        }
+
+        // Test complex whitespace pattern
+        {
+            as_str_slice_test_case!(slice, " \t \t \t ");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), true);
+        }
+
+        // Test whitespace with trailing content
+        {
+            as_str_slice_test_case!(slice, "   a");
+            assert_eq2!(slice.trim_start_current_line_is_empty(), false);
+        }
+
+        // Test boundary condition with char_index beyond line
+        {
+            as_str_slice_test_case!(slice, "   ");
+            let mut slice = slice;
+            slice.char_index = idx(10); // Beyond the line
+
+            // Should handle gracefully and return true (empty after any trimming)
+            assert_eq2!(slice.trim_start_current_line_is_empty(), true);
         }
     }
 }
