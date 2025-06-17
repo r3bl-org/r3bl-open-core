@@ -35,11 +35,14 @@ use crate::{list,
                                    UNCHECKED,
                                    UNORDERED_LIST_PREFIX},
             tiny_inline_string,
+            BulletKind,
             CheckboxParsePolicy,
             InlineVec,
             Lines,
             List,
-            MdLineFragment};
+            MdLineFragment,
+            SmartListIR,
+            SmartListLine};
 
 /// Public API for parsing a smart list block in markdown.
 pub fn parse_block_smart_list(
@@ -486,45 +489,6 @@ mod tests_parse_smart_lists_in_markdown {
     }
 }
 
-/// Holds a single list item for a given indent level. This may contain multiple lines
-/// which are stored in the `content_lines` field. Take a look at [parse_smart_list] for
-/// more details.
-#[derive(Clone, Debug, PartialEq)]
-pub struct SmartListIR<'a> {
-    /// Spaces before the bullet (for all the lines in this list).
-    pub indent: usize,
-    /// Unordered or ordered.
-    pub bullet_kind: BulletKind,
-    /// Does not contain any bullets.
-    pub content_lines: InlineVec<SmartListLine<'a>>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct SmartListLine<'a> {
-    /// Spaces before the bullet (for all the lines in this list).
-    pub indent: usize,
-    /// Unordered or ordered.
-    pub bullet_str: &'a str,
-    /// Does not contain any bullets or any spaces for the indent prefix.
-    pub content: &'a str,
-}
-
-impl<'a> SmartListLine<'a> {
-    pub fn new(indent: usize, bullet_str: &'a str, content: &'a str) -> Self {
-        Self {
-            indent,
-            bullet_str,
-            content,
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum BulletKind {
-    Ordered(usize),
-    Unordered,
-}
-
 /// First line of `input` looks like this.
 ///
 /// ```text
@@ -601,44 +565,6 @@ pub fn parse_smart_list(
         input,
         SmartListIR { indent, bullet_kind, content_lines },
     ))
-}
-
-mod verify_rest {
-    use super::*;
-
-    /// Return true if:
-    /// - No ul items (at any indent).
-    /// - No other ol items with same indent + number.
-    /// - No other ol items with any indent or number.
-    pub fn list_contents_does_not_start_with_list_prefix(it: &str) -> bool {
-        let result: IResult<&str, &str> = recognize(alt((
-            tag(UNORDERED_LIST_PREFIX),
-            terminated(digit1, tag(ORDERED_LIST_PARTIAL_PREFIX)),
-        )))
-        .parse(it.trim_start());
-        let starts_with_list_prefix = result.is_ok();
-        !starts_with_list_prefix
-    }
-
-    fn count_whitespace_at_start(it: &str) -> usize {
-        let mut count: usize = 0;
-        for c in it.chars() {
-            if c == SPACE_CHAR {
-                count += 1;
-            } else {
-                break;
-            }
-        }
-        count
-    }
-
-    /// - Eg: "  - ul2", indent: 0, my_bullet_str_len: 2 => true
-    /// - Eg: "  ul2.1", indent: 2, my_bullet_str_len: 4 => true
-    /// - Eg: "  u13.1", indent: 4, my_bullet_str_len: 6 => true
-    pub fn must_start_with_correct_num_of_spaces(it: &str, my_bullet_str: &str) -> bool {
-        let it_spaces_at_start = count_whitespace_at_start(it);
-        it_spaces_at_start == my_bullet_str.len()
-    }
 }
 
 #[rustfmt::skip]
@@ -724,6 +650,44 @@ pub fn parse_smart_list_content_lines<'a>(
                 content: input
             }]))
         }
+    }
+}
+
+mod verify_rest {
+    use super::*;
+
+    /// Return true if:
+    /// - No ul items (at any indent).
+    /// - No other ol items with same indent + number.
+    /// - No other ol items with any indent or number.
+    pub fn list_contents_does_not_start_with_list_prefix(it: &str) -> bool {
+        let result: IResult<&str, &str> = recognize(alt((
+            tag(UNORDERED_LIST_PREFIX),
+            terminated(digit1, tag(ORDERED_LIST_PARTIAL_PREFIX)),
+        )))
+        .parse(it.trim_start());
+        let starts_with_list_prefix = result.is_ok();
+        !starts_with_list_prefix
+    }
+
+    fn count_whitespace_at_start(it: &str) -> usize {
+        let mut count: usize = 0;
+        for c in it.chars() {
+            if c == SPACE_CHAR {
+                count += 1;
+            } else {
+                break;
+            }
+        }
+        count
+    }
+
+    /// - Eg: "  - ul2", indent: 0, my_bullet_str_len: 2 => true
+    /// - Eg: "  ul2.1", indent: 2, my_bullet_str_len: 4 => true
+    /// - Eg: "  u13.1", indent: 4, my_bullet_str_len: 6 => true
+    pub fn must_start_with_correct_num_of_spaces(it: &str, my_bullet_str: &str) -> bool {
+        let it_spaces_at_start = count_whitespace_at_start(it);
+        it_spaces_at_start == my_bullet_str.len()
     }
 }
 

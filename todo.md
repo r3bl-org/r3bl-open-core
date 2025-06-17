@@ -207,6 +207,15 @@
 
     - [ ] `parse_block_smart_list.rs` -> `block_alt/parse_block_smart_list_alt.rs`
 
+      - [ ] `parse_smart_list_content_lines_alt()`
+      - [ ] `mod tests_parse_list_item`
+      - [ ] `mod tests_list_item_lines`
+      - [ ] `mod tests_bullet_kinds`
+      - [ ] `mod tests_parse_indents`
+      - [ ] `parse_smart_list_alt()`
+      - [ ] `mod tests_parse_block_smart_list`
+      - [ ] `mod tests_parse_smart_lists_in_markdown`
+
 - [ ] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_mardown_alt()`
 
 - [ ] maybe check `AsStrSlice::find_substring()` for performance penalty when looking ahead to find
