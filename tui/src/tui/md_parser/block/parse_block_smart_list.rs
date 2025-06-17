@@ -576,80 +576,356 @@ pub fn parse_smart_list_content_lines<'a>(
     let indent_padding = SPACE.repeat(indent);
     let indent_padding = indent_padding.as_str();
 
-    match input.find(NEW_LINE) {
-        // Keep the first line. There may be more than 1 line.
-        Some(first_line_end) => {
-            let first = &input[..first_line_end];
-            let input = &input[first_line_end+1..];
+    // Early return if there are no more lines after the first one.
+    let Some(first_line_end) = input.find(NEW_LINE) else {
+        return Ok(("", smallvec![SmartListLine {
+            indent,
+            bullet_str: bullet,
+            content: input
+        }]));
+    };
 
-            // Match the rest of the lines.
-            let (remainder, rest) = many0(
-                (
-                    verify(
-                        // FIRST STEP: Match the ul or ol list item line.
-                        preceded(
-                            // Match the indent.
-                            tag(indent_padding),
-                            // Match the rest of the line.
-                            /* output */ alt((
-                                is_not(NEW_LINE),
-                                recognize(many1(anychar)),
-                            )),
-                        ),
-                        // SECOND STEP: Verify it to make sure no ul or ol list prefix.
-                        |it: &str| {
-                            // `it` must not *just* have spaces.
-                            if it.trim_start().is_empty() {
-                                return false;
-                            }
+    // Keep the first line. There may be more than 1 line.
+    let first = &input[..first_line_end];
+    let input = &input[first_line_end+1..];
 
-                            // `it` must start w/ *exactly* the correct number of spaces.
-                            if !verify_rest::must_start_with_correct_num_of_spaces(it, bullet) {
-                                return false;
-                            }
+    // Match the rest of the lines.
+    let (remainder, rest) = many0(
+        (
+            verify(
+                // FIRST STEP: Match the ul or ol list item line.
+                preceded(
+                    // Match the indent.
+                    tag(indent_padding),
+                    // Match the rest of the line.
+                    /* output */ alt((
+                        is_not(NEW_LINE),
+                        recognize(many1(anychar)),
+                    )),
+                ),
+                // SECOND STEP: Verify it to make sure no ul or ol list prefix.
+                |it: &str| {
+                    // `it` must not *just* have spaces.
+                    if it.trim_start().is_empty() {
+                        return false;
+                    }
 
-                            // `it` must not start w/ the ul list prefix.
-                            // `it` must not start w/ the ol list prefix.
-                            verify_rest::list_contents_does_not_start_with_list_prefix(it)
-                        }
-                    ),
-                    opt(tag(NEW_LINE)),
-                )
-            ).parse(input)?;
+                    // `it` must start w/ *exactly* the correct number of spaces.
+                    if !verify_rest::must_start_with_correct_num_of_spaces(it, bullet) {
+                        return false;
+                    }
 
-            // Convert `rest` into a Vec<&str> that contains the output lines.
-            let output_lines: InlineVec<SmartListLine<'_>> = {
-                let mut it = InlineVec::with_capacity(rest.len() + 1);
+                    // `it` must not start w/ the ul list prefix.
+                    // `it` must not start w/ the ol list prefix.
+                    verify_rest::list_contents_does_not_start_with_list_prefix(it)
+                }
+            ),
+            opt(tag(NEW_LINE)),
+        )
+    ).parse(input)?;
 
-                it.push(SmartListLine {
-                    indent,
-                    bullet_str: bullet,
-                    content: first
-                });
+    // Convert `rest` into a Vec<&str> that contains the output lines.
+    let output_lines: InlineVec<SmartListLine<'_>> = {
+        let mut it = InlineVec::with_capacity(rest.len() + 1);
 
-                it.extend(rest.iter().map(
-                    // Skip "bullet's width" number of spaces at the start of the line.
-                    |(rest_line_content, _)|
-                    SmartListLine {
-                        indent,
-                        bullet_str: bullet,
-                        content: &rest_line_content[bullet.len()..]
-                    })
-                );
+        it.push(SmartListLine {
+            indent,
+            bullet_str: bullet,
+            content: first
+        });
 
-                it
-            };
-
-            Ok((remainder, output_lines))
-        }
-        None => {
-            // Keep the first line. There are no more lines.
-            Ok(("", smallvec![SmartListLine {
+        it.extend(rest.iter().map(
+            // Skip "bullet's width" number of spaces at the start of the line.
+            |(rest_line_content, _)|
+            SmartListLine {
                 indent,
                 bullet_str: bullet,
-                content: input
-            }]))
-        }
+                content: &rest_line_content[bullet.len()..]
+            })
+        );
+
+        it
+    };
+
+    Ok((remainder, output_lines))
+}
+
+#[cfg(test)]
+mod tests_parse_smart_list_content_lines {
+    use super::*;
+    use crate::assert_eq2;
+
+    #[test]
+    fn test_single_line_no_newline() {
+        let input = "foo bar";
+        let indent = 0;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "");
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "foo bar"));
+    }
+
+    #[test]
+    fn test_single_line_with_newline() {
+        let input = "foo bar\n";
+        let indent = 0;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "");
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "foo bar"));
+    }
+
+    #[test]
+    fn test_multiple_lines_unordered() {
+        let input = "first line\n  second line\n  third line";
+        let indent = 0;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "");
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(0, "- ", "third line"));
+    }
+
+    #[test]
+    fn test_multiple_lines_ordered() {
+        let input = "first line\n   second line\n   third line";
+        let indent = 0;
+        let bullet = "1. ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "");
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(0, "1. ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "1. ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(0, "1. ", "third line"));
+    }
+
+    #[test]
+    fn test_with_indent_unordered() {
+        let input = "first line\n    second line\n    third line";
+        let indent = 2;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "");
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(2, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(2, "- ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(2, "- ", "third line"));
+    }
+
+    #[test]
+    fn test_with_indent_ordered() {
+        let input = "first line\n     second line\n     third line";
+        let indent = 2;
+        let bullet = "1. ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "");
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(2, "1. ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(2, "1. ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(2, "1. ", "third line"));
+    }
+
+    #[test]
+    fn test_stops_at_new_list_item_unordered() {
+        let input = "first line\n  second line\n- new item\n  its content";
+        let indent = 0;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "- new item\n  its content");
+        assert_eq2!(lines.len(), 2);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+    }
+
+    #[test]
+    fn test_stops_at_new_list_item_ordered() {
+        let input = "first line\n   second line\n2. new item\n   its content";
+        let indent = 0;
+        let bullet = "1. ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "2. new item\n   its content");
+        assert_eq2!(lines.len(), 2);
+        assert_eq2!(lines[0], SmartListLine::new(0, "1. ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "1. ", "second line"));
+    }
+
+    #[test]
+    fn test_stops_at_different_indent_list() {
+        let input = "first line\n  second line\n  - nested item";
+        let indent = 0;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "  - nested item");
+        assert_eq2!(lines.len(), 2);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+    }
+
+    #[test]
+    fn test_with_trailing_newlines() {
+        let input = "first line\n  second line\n\nother content";
+        let indent = 0;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "\nother content");
+        assert_eq2!(lines.len(), 2);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+    }
+
+    #[test]
+    fn test_empty_continuation_lines() {
+        let input = "first line\n  \n  third line";
+        let indent = 0;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "  \n  third line");
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+    }
+
+    #[test]
+    fn test_insufficient_indent() {
+        let input = "first line\n second line"; // Only 1 space instead of 2
+        let indent = 0;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, " second line");
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+    }
+
+    #[test]
+    fn test_too_much_indent() {
+        let input = "first line\n   second line"; // 3 spaces instead of 2
+        let indent = 0;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "   second line");
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+    }
+
+    #[test]
+    fn test_double_digit_ordered_list() {
+        let input = "first line\n    second line\n    third line";
+        let indent = 0;
+        let bullet = "10. ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "");
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(0, "10. ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "10. ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(0, "10. ", "third line"));
+    }
+
+    #[test]
+    fn test_triple_digit_ordered_list() {
+        let input = "first line\n     second line\n     third line";
+        let indent = 0;
+        let bullet = "100. ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "");
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(0, "100. ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "100. ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(0, "100. ", "third line"));
+    }
+
+    #[test]
+    fn test_unicode_content() {
+        let input = "😃 unicode\n  more 🎉 unicode\n  final 🚀 line";
+        let indent = 0;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "");
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "😃 unicode"));
+        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "more 🎉 unicode"));
+        assert_eq2!(lines[2], SmartListLine::new(0, "- ", "final 🚀 line"));
+    }
+
+    #[test]
+    fn test_mixed_list_types_in_content() {
+        // Content that looks like list items but shouldn't be parsed as such
+        let input = "first line\n  - not a list item\n  1. also not a list item";
+        let indent = 0;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "  - not a list item\n  1. also not a list item");
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+    }
+
+    #[test]
+    fn test_complex_indented_scenario() {
+        let input = "first line\n      second line\n      third line\n    - nested list";
+        let indent = 4;
+        let bullet = "- ";
+
+        let (remainder, lines) =
+            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+
+        assert_eq2!(remainder, "    - nested list");
+        assert_eq2!(lines.len(), 3);
+        assert_eq2!(lines[0], SmartListLine::new(4, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLine::new(4, "- ", "second line"));
+        assert_eq2!(lines[2], SmartListLine::new(4, "- ", "third line"));
     }
 }
 
@@ -670,7 +946,7 @@ mod verify_rest {
         !starts_with_list_prefix
     }
 
-    fn count_whitespace_at_start(it: &str) -> usize {
+    fn count_spaces_at_start(it: &str) -> usize {
         let mut count: usize = 0;
         for c in it.chars() {
             if c == SPACE_CHAR {
@@ -686,7 +962,7 @@ mod verify_rest {
     /// - Eg: "  ul2.1", indent: 2, my_bullet_str_len: 4 => true
     /// - Eg: "  u13.1", indent: 4, my_bullet_str_len: 6 => true
     pub fn must_start_with_correct_num_of_spaces(it: &str, my_bullet_str: &str) -> bool {
-        let it_spaces_at_start = count_whitespace_at_start(it);
+        let it_spaces_at_start = count_spaces_at_start(it);
         it_spaces_at_start == my_bullet_str.len()
     }
 }

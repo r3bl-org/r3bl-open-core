@@ -207,12 +207,13 @@
 
     - [ ] `parse_block_smart_list.rs` -> `block_alt/parse_block_smart_list_alt.rs`
 
-      - [ ] `parse_smart_list_content_lines_alt()`
-      - [ ] `mod tests_parse_list_item`
-      - [ ] `mod tests_list_item_lines`
+      - [x] `parse_smart_list_content_lines_alt()`
+      - [x] `mod tests_parse_smart_list_content_lines_alt`
       - [ ] `mod tests_bullet_kinds`
-      - [ ] `mod tests_parse_indents`
       - [ ] `parse_smart_list_alt()`
+      - [ ] `parse_block_smart_list_alt()`
+      - [ ] `mod tests_parse_list_item`
+      - [ ] `mod tests_parse_indents`
       - [ ] `mod tests_parse_block_smart_list`
       - [ ] `mod tests_parse_smart_lists_in_markdown`
 
