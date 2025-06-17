@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{BulletKind, List};
+use crate::{InlineVec, List};
 
 /// This corresponds to a single Markdown document, which is produced after a successful
 /// parse operation [crate::parse_markdown()].
@@ -167,6 +167,8 @@ pub mod constants {
     pub const CHECKED_OUTPUT: &str = "┊✔┊";
     pub const UNCHECKED_OUTPUT: &str = "┊┈┊";
     pub const EXCLAMATION: &str = "!";
+
+    pub const TAB_CHAR: char = '\t';
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -183,4 +185,43 @@ pub enum CodeBlockLineContent<'a> {
     Text(&'a str),
     StartTag,
     EndTag,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum BulletKind {
+    Ordered(usize),
+    Unordered,
+}
+
+/// Holds a single list item for a given indent level. This may contain multiple lines
+/// which are stored in the `content_lines` field. Take a look at [parse_smart_list] for
+/// more details.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SmartListIR<'a> {
+    /// Spaces before the bullet (for all the lines in this list).
+    pub indent: usize,
+    /// Unordered or ordered.
+    pub bullet_kind: BulletKind,
+    /// Does not contain any bullets.
+    pub content_lines: InlineVec<SmartListLine<'a>>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SmartListLine<'a> {
+    /// Spaces before the bullet (for all the lines in this list).
+    pub indent: usize,
+    /// Unordered or ordered.
+    pub bullet_str: &'a str,
+    /// Does not contain any bullets or any spaces for the indent prefix.
+    pub content: &'a str,
+}
+
+impl<'a> SmartListLine<'a> {
+    pub fn new(indent: usize, bullet_str: &'a str, content: &'a str) -> Self {
+        Self {
+            indent,
+            bullet_str,
+            content,
+        }
+    }
 }

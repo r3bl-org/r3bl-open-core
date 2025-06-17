@@ -19,7 +19,7 @@ use std::{borrow::Cow, fmt::Display};
 use nom::{Compare, CompareResult, FindSubstring, Input, Offset};
 
 use crate::{bounds_check,
-            constants::NEW_LINE_CHAR,
+            constants::{NEW_LINE_CHAR, SPACE_CHAR, TAB_CHAR},
             core::tui_core::units::{idx, len, Index, Length},
             BoundsCheck,
             BoundsStatus,
@@ -358,6 +358,29 @@ pub mod synthetic_new_line_for_current_char {
 /// intermediate parsing in `&str` has to be converted into `AsStrSlice` again before
 /// it can be returned from that parser function.
 impl<'a> AsStrSlice<'a> {
+    /// Remove leading whitespace from the start of the slice. This only operates on the
+    /// contents of the current line. Whitespace includes [SPACE_CHAR] and [TAB_CHAR].
+    pub fn trim_start_current_line(&self) -> Self {
+        let mut result = self.clone();
+
+        let current_line = &self.lines[self.line_index.as_usize()].as_ref();
+        let mut char_pos = self.char_index.as_usize();
+
+        // Manually advance through whitespace characters in the current line only.
+        while char_pos < current_line.len() {
+            match current_line.chars().nth(char_pos) {
+                Some(SPACE_CHAR) | Some(TAB_CHAR) => {
+                    char_pos += 1;
+                }
+                _ => break,
+            }
+        }
+
+        // Update the char_index to the new position.
+        result.char_index = idx(char_pos);
+        result
+    }
+
     pub fn skip_take(
         &self,
         arg_skip_count: impl Into<Length>,
@@ -2920,6 +2943,88 @@ mod tests_str_conversion {
             assert_eq2!(result.char_index, idx(2)); // Should be 2
             assert_eq2!(result.max_len, Some(len(6))); // end_index - new_char_index = 8 - 2 = 6
             assert_eq2!(result.line_index, idx(1));
+        }
+    }
+
+    #[test]
+    fn test_trim_start_current_line() {
+        // Test basic functionality - trimming spaces
+        {
+            let lines = vec![GCString::new("   hello world")];
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(3)); // Should skip 3 spaces
+            assert_eq2!(result.line_index, slice.line_index);
+            assert_eq2!(result.lines, slice.lines);
+            assert_eq2!(result.total_size, slice.total_size);
+            assert_eq2!(result.current_taken, slice.current_taken);
+            assert_eq2!(result.max_len, slice.max_len);
+        }
+
+        // Test trimming tabs
+        {
+            let lines = vec![GCString::new("\t\thello world")];
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(2)); // Should skip 2 tabs
+        }
+
+        // Test trimming mixed whitespace (spaces and tabs)
+        {
+            let lines = vec![GCString::new(" \t \thello world")];
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(4)); // Should skip 4 whitespace chars
+        }
+
+        // Test with no leading whitespace
+        {
+            let lines = vec![GCString::new("hello world")];
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(0)); // Should not change
+        }
+
+        // Test with empty string
+        {
+            let lines = vec![GCString::new("")];
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(0)); // Should not change
+        }
+
+        // Test with whitespace in the middle - should only trim from start
+        {
+            let lines = vec![GCString::new("  hello  world")];
+            let slice = AsStrSlice::from(&lines);
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(2)); // Should skip 2 spaces at start only
+        }
+
+        // Test with existing char_index offset
+        {
+            let lines = vec![GCString::new("hello   world")];
+            let mut slice = AsStrSlice::from(&lines);
+            slice.char_index = idx(6); // Position at the second space after "hello"
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(8)); // Should skip 2 spaces
+        }
+
+        // Test with char_index at end of string
+        {
+            let lines = vec![GCString::new("hello")];
+            let mut slice = AsStrSlice::from(&lines);
+            slice.char_index = idx(5); // Position at the end of string
+
+            let result = slice.trim_start_current_line();
+            assert_eq2!(result.char_index, idx(5)); // Should not change
         }
     }
 }
