@@ -1,19 +1,25 @@
 /*
- *   Copyright (c) 2024-2025 R3BL LLC
- *   All rights reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- */
+*   Copyright (c) 2024-2025 R3BL LLC
+*   All rights reserved.
+*
+*   Licensed under the Apache License, Version 2.0 (the "License");
+*   you may not use this file except in compliance with the License.
+*   You may obtain a copy of the License a                // Convert the output and remainder to character counts, not byte counts.
+               // &str.len() returns byte count, but AsStrSlice methods expect character counts.
+               let output_char_count = output.chars().count();
+               let rem_char_count = rem.chars().count();
+
+               // Given the character count information, extract the following from `input`:
+               let new_output = input.take(output_char_count);
+               let new_rem = input.skip_take(
+                   /* skip this many */ output_char_count, /* take this many */ rem_char_count, http://www.apache.org/licenses/LICENSE-2.0
+*
+*   Unless required by applicable law or agreed to in writing, software
+*   distributed under the License is distributed on an "AS IS" BASIS,
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*   See the License for the specific language governing permissions and
+*   limitations under the License.
+*/
 
 //! This module implements the lowest priority parser for "plain text" Markdown fragments.
 //!
@@ -179,15 +185,17 @@ fn parse_plain_text_until_special_char<'a>(
         //                           ↑
         //                       split here
         Ok((rem, output)) => {
-            // Convert the output length to determine how many characters to take from
-            // input.
-            let output_len = output.len(); // Ok to use &str.len(), since not dealing with bytes.
-            let rem_len = rem.len(); // Ok to use &str.len(), since not dealing with bytes.
+            // Convert the output and remainder to character counts, not byte counts.
+            // &str.len() returns byte count, but AsStrSlice methods expect character
+            // counts.
+            let output_char_count = output.chars().count();
+            let rem_char_count = rem.chars().count();
 
-            // Given the &str information, extract the following from `input`:
-            let new_output = input.take(output_len);
+            // Given the character count information, extract the following from `input`:
+            let new_output = input.take(output_char_count);
             let new_rem = input.skip_take(
-                /* skip this many */ output_len, /* take this many */ rem_len,
+                /* skip this many */ output_char_count,
+                /* take this many */ rem_char_count,
             );
 
             Ok((new_rem, new_output))

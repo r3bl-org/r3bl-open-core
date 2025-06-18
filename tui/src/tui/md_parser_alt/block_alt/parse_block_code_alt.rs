@@ -181,8 +181,10 @@ fn split_by_new_line_alt<'a>(input: AsStrSlice<'a>) -> Vec<AsStrSlice<'a>> {
     let mut current_offset = 0;
     for split_str in string_splits {
         if !split_str.is_empty() {
-            // Create an AsStrSlice for this segment.
-            let segment_slice = input.skip_take(current_offset, split_str.len());
+            // ⚠️ CRITICAL: Convert byte length to character count
+            // split_str.len() returns BYTE count, but skip_take() expects CHARACTER count
+            let char_count = split_str.chars().count();
+            let segment_slice = input.skip_take(current_offset, char_count);
             result.push(segment_slice);
         } else {
             // Handle empty segments (from "\n" cases).
@@ -190,7 +192,9 @@ fn split_by_new_line_alt<'a>(input: AsStrSlice<'a>) -> Vec<AsStrSlice<'a>> {
             result.push(segment_slice);
         }
         // Move past this segment and the newline character.
-        current_offset += split_str.len() + 1; // +1 for the newline
+        // ⚠️ CRITICAL: Use character count, not byte count
+        let char_count = split_str.chars().count();
+        current_offset += char_count + 1; // +1 for the newline character
     }
 
     result
