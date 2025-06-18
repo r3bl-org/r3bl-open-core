@@ -28,11 +28,9 @@
 //! This ensures proper handling of emojis and multi-byte UTF-8 characters.
 //! See the main function documentation for detailed examples and warnings.
 
-use nom::{branch::alt,
-          bytes::complete::{is_not, tag},
-          character::complete::anychar,
-          combinator::{opt, recognize, verify},
-          multi::{many0, many1},
+use nom::{bytes::complete::{is_not, tag},
+          combinator::{opt, verify},
+          multi::many0,
           sequence::preceded,
           FindSubstring,
           IResult,
@@ -614,15 +612,14 @@ mod verify_rest {
 
         // Find the position of the first non-digit character using CHARACTER indices
         let mut digit_end = 0;
-        for (char_idx, c) in input_str.char_indices() {
+        for (char_position, c) in input_str.chars().enumerate() {
             if !c.is_ascii_digit() {
-                // char_indices() gives us byte positions, but we need character positions
-                // Convert by counting characters up to this point
-                digit_end = input_str[..char_idx].chars().count();
+                // chars().enumerate() gives us character positions directly
+                digit_end = char_position;
                 break;
             }
             // If we reach the end of the string, all characters are digits
-            digit_end = input_str.chars().count();
+            digit_end = char_position + 1;
         }
 
         // If we found at least one digit, check if it's followed by ". "
