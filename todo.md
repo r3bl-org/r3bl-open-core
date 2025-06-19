@@ -209,8 +209,8 @@
 
       - [x] `parse_smart_list_content_lines_alt()`
       - [x] `mod tests_parse_smart_list_content_lines_alt`
-      - [ ] `mod tests_bullet_kinds`
       - [ ] `parse_smart_list_alt()`
+      - [ ] `mod tests_bullet_kinds`
       - [ ] `parse_block_smart_list_alt()`
       - [ ] `mod tests_parse_list_item`
       - [ ] `mod tests_parse_indents`

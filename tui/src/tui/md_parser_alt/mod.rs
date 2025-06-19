@@ -38,7 +38,6 @@
 // Attach sources.
 pub mod as_str_slice;
 pub mod block_alt;
-pub mod char_index;
 pub mod extended_alt;
 pub mod fragment_alt;
 pub mod standard_alt;
@@ -46,7 +45,6 @@ pub mod standard_alt;
 // Re-export.
 pub use as_str_slice::*;
 pub use block_alt::*;
-pub use char_index::*;
 pub use extended_alt::*;
 pub use fragment_alt::*;
 pub use standard_alt::*;

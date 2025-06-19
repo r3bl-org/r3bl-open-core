@@ -76,7 +76,7 @@
 //! iterate over "characters," you use `s.chars()`. This iterator decodes the
 //! UTF-8 bytes into char (Unicode Scalar Values).
 
-use std::{borrow::Cow, fmt::Display};
+use std::{borrow::Cow, convert::AsRef, fmt::Display};
 
 use nom::{Compare, CompareResult, FindSubstring, Input, Offset};
 
@@ -90,6 +90,7 @@ use crate::{bounds_check,
             InlineVec,
             List,
             ParserByteCache,
+            PositionStatus,
             PARSER_BYTE_CACHE_PAGE_SIZE};
 
 pub type NomError<T> = nom::error::Error<T>;
@@ -104,9 +105,111 @@ pub type CharacterLength = Length;
 /// Marker type alias for [Index] to clarify character based index type.
 pub type CharacterIndex = Index;
 
+/// Extension trait for getting the character length of string-like types.
+///
+/// This trait provides a unified interface for obtaining the character count
+/// of various string types. Unlike the standard `len()` method which returns
+/// byte length, this trait's `len_chars()` method returns the actual number
+/// of Unicode characters (code points) in the string.
+///
+/// This is particularly important when working with Unicode text that may
+/// contain multi-byte characters, emojis, or other complex Unicode sequences
+/// where byte length and character count differ significantly.
+///
+/// # Why This Matters
+///
+/// In UTF-8 encoded strings:
+/// - ASCII characters take 1 byte each
+/// - Non-ASCII characters can take 2-4 bytes each
+/// - Emojis and complex Unicode can take even more bytes
+///
+/// For example:
+/// - `"hello"` has 5 bytes and 5 characters
+/// - `"héllo"` has 6 bytes but 5 characters
+/// - `"hello 👋"` has 10 bytes but 7 characters
+///
+/// # Examples
+///
+/// ```
+/// use r3bl_tui::{CharLengthExt, Length};
+///
+/// let ascii_text = "hello";
+/// assert_eq!(ascii_text.len(), 5);        // 5 bytes
+/// assert_eq!(ascii_text.len_chars(), Length::new(5)); // 5 characters
+///
+/// let unicode_text = "hello 👋 world";
+/// assert_eq!(unicode_text.len(), 16);     // 16 bytes
+/// assert_eq!(unicode_text.len_chars(), Length::new(13)); // 13 characters
+///
+/// let mixed_text = "café";
+/// assert_eq!(mixed_text.len(), 5);        // 5 bytes (é is 2 bytes)
+/// assert_eq!(mixed_text.len_chars(), Length::new(4)); // 4 characters
+/// ```
+///
+/// # Use Cases
+///
+/// This trait is essential for:
+/// - Text editor cursor positioning
+/// - UI layout calculations with Unicode text
+/// - Parser position tracking in multi-byte text
+/// - String manipulation operations that need character-based indexing
+/// - Display width calculations for terminal applications
+///
+/// # Implementation Notes
+///
+/// The returned [`Length`] type provides type safety and ensures that
+/// character counts are not confused with byte counts or other numeric
+/// values in the codebase.
+pub trait CharLengthExt {
+    /// Returns the length of the string in characters, not bytes. That is, the number of
+    /// Unicode characters (code points) in the string.
+    ///
+    /// This method counts the actual Unicode characters rather than bytes,
+    /// making it suitable for operations that need to work with the logical
+    /// length of text as perceived by users.
+    ///
+    /// # Returns
+    ///
+    /// A [Length] representing the count of Unicode characters in the string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use r3bl_tui::{CharLengthExt, Length};
+    ///
+    /// // ASCII text - characters match bytes
+    /// let text = "hello";
+    /// assert_eq!(text.len_chars(), Length::new(5));
+    ///
+    /// // Unicode text - characters differ from bytes
+    /// let text = "🚀 Rust";
+    /// assert_eq!(text.len_chars(), Length::new(6)); // rocket + space + R + u + s + t
+    ///
+    /// // Empty string
+    /// let text = "";
+    /// assert_eq!(text.len_chars(), Length::new(0));
+    ///
+    /// // Text with combining characters
+    /// let text = "e̊"; // e + combining ring above
+    /// assert_eq!(text.len_chars(), Length::new(2)); // 2 code points
+    /// ```
+    ///
+    /// # Performance
+    ///
+    /// This method iterates through the string to count characters, so it has
+    /// O(n) time complexity where n is the byte length of the string. For
+    /// performance-critical code that calls this method frequently on the same
+    /// string, consider caching the result.
+    fn len_chars(&self) -> Length;
+}
+
+impl CharLengthExt for &str {
+    fn len_chars(&self) -> Length { len(self.chars().count()) }
+}
+
 /// Wrapper type that implements [nom::Input] for &[GCString] or **any other type** that
-/// implements [`AsRef<str>`]. The [Clone] operations on this struct are really cheap. This
-/// wraps around the output of [str::lines()] and provides a way to adapt it for use
+/// implements [`AsRef<str>`]. The [Clone] operations on this struct are really cheap.
+/// This wraps around the output of [str::lines()] and provides a way to adapt it for use
 /// as a "virtual array" or "virtual slice" of strings for `nom` parsers.
 ///
 /// This struct generates synthetic new lines when it's [nom::Input] methods are used.
@@ -151,7 +254,7 @@ pub type CharacterIndex = Index;
 ///
 /// ### Key Implementation Details:
 ///
-/// - **Character counting**: Uses `line.chars().count()` instead of `line.len()`
+/// - **Character counting**: Uses `line.len_chars()` instead of `line.len()`
 /// - **Character indexing**: Uses `line.chars().nth(char_index)` instead of byte indexing
 /// - **Character slicing**: Uses `take_from(char_count)` instead of
 ///   `&str[byte_start..byte_end]`
@@ -161,7 +264,7 @@ pub type CharacterIndex = Index;
 ///
 /// The `char_index` field represents the character index within the current line. It is:
 /// - Used with `line.chars().nth(self.char_index)` to get characters.
-/// - Compared with line_char_count (from `line.chars().count()`).
+/// - Compared with line_char_count (from `line.len_chars()`).
 /// - Incremented by 1 to advance to the next character.
 /// - Reset to 0 when moving to a new line.
 ///
@@ -297,7 +400,7 @@ where
 
     /// This represents the character index within the current line. It is:
     /// - Used with `line.chars().nth(self.char_index)` to get characters.
-    /// - Compared with line_char_count (from `line.chars().count()`).
+    /// - Compared with line_char_count (from `line.len_chars()`).
     /// - Incremented by 1 to advance to the next character.
     /// - Reset to 0 when moving to a new line.
     pub char_index: CharacterIndex,
@@ -378,12 +481,12 @@ pub mod synthetic_new_line_for_current_char {
 
     /// Determine the position state relative to the current line.
     pub fn determine_position_state(this: &AsStrSlice<'_>, line: &str) -> PositionState {
-        // ⚠️ CRITICAL: char_index represents CHARACTER position, use chars().count()
-        let line_char_count = line.chars().count();
-        match this.char_index.as_usize() {
-            pos if pos < line_char_count => PositionState::WithinLineContent,
-            pos if pos == line_char_count => PositionState::AtEndOfLine,
-            _ => PositionState::PastEndOfLine,
+        // ⚠️ CRITICAL: char_index represents CHARACTER position, use
+        // check_content_position()
+        match this.char_index.check_content_position(line.len_chars()) {
+            PositionStatus::Within => PositionState::WithinLineContent,
+            PositionStatus::Boundary => PositionState::AtEndOfLine,
+            PositionStatus::Beyond => PositionState::PastEndOfLine,
         }
     }
 
@@ -463,6 +566,53 @@ pub mod synthetic_new_line_for_current_char {
 /// intermediate parsing in `&str` has to be converted into `AsStrSlice` again before
 /// it can be returned from that parser function.
 impl<'a> AsStrSlice<'a> {
+    /// Internal helper function that trims specified whitespace characters from the start
+    /// of the current line. This only operates on the contents of the current line.
+    ///
+    /// ⚠️ **Important: ASCII-Only Whitespace Trimming**
+    ///
+    /// This method **only trims specified ASCII characters**, not Unicode whitespace
+    /// characters. This is the correct behavior for Markdown parsing, as the Markdown
+    /// specification typically only recognizes ASCII spaces for list indentation and
+    /// text formatting.
+    ///
+    /// # Parameters
+    /// - `whitespace_chars`: A slice of characters to be considered as whitespace
+    ///
+    /// # Returns
+    /// A tuple containing:
+    /// - The number of characters trimmed
+    /// - The trimmed `AsStrSlice` instance
+    fn trim_whitespace_chars_start_current_line(
+        &self,
+        whitespace_chars: &[char],
+    ) -> (Length, Self) {
+        let mut result = self.clone();
+        let current_line = &self.lines[self.line_index.as_usize()].as_ref();
+        let mut char_pos = self.char_index;
+        let mut chars_trimmed = len(0);
+
+        // Manually advance through whitespace characters in the current line only.
+        loop {
+            bounds_check!(char_pos, current_line.len_chars(), {
+                break; // if char_pos overflows current_line.len_chars() break
+            });
+
+            match current_line.chars().nth(char_pos.as_usize()) {
+                Some(ch) if whitespace_chars.contains(&ch) => {
+                    // Increment the char_pos to skip the whitespace character.
+                    char_pos += idx(1);
+                    chars_trimmed += len(1);
+                }
+                _ => break,
+            }
+        }
+
+        // Update the char_index to the new position.
+        result.char_index = char_pos;
+        (chars_trimmed, result)
+    }
+
     /// Remove leading whitespace from the start of the slice. This only operates on the
     /// contents of the current line. Whitespace includes [SPACE_CHAR] and [TAB_CHAR].
     ///
@@ -491,24 +641,9 @@ impl<'a> AsStrSlice<'a> {
     /// This behavior ensures consistent Markdown parsing where Unicode spaces don't count
     /// as valid indentation for lists and other block elements.
     pub fn trim_start_current_line(&self) -> Self {
-        let mut result = self.clone();
-
-        let current_line = &self.lines[self.line_index.as_usize()].as_ref();
-        let mut char_pos = self.char_index.as_usize();
-
-        // Manually advance through whitespace characters in the current line only.
-        while char_pos < current_line.chars().count() {
-            match current_line.chars().nth(char_pos) {
-                Some(SPACE_CHAR) | Some(TAB_CHAR) => {
-                    char_pos += 1;
-                }
-                _ => break,
-            }
-        }
-
-        // Update the char_index to the new position.
-        result.char_index = idx(char_pos);
-        result
+        let (_, trimmed_slice) =
+            self.trim_whitespace_chars_start_current_line(&[SPACE_CHAR, TAB_CHAR]);
+        trimmed_slice
     }
 
     /// Handy check to verify that if the leading whitespace are trimmed from the start
@@ -528,25 +663,7 @@ impl<'a> AsStrSlice<'a> {
     /// and returns the number of space characters trimmed from the start
     /// and the trimmed [AsStrSlice] instance.
     pub fn trim_spaces_start_current_line(&self) -> (Length, Self) {
-        let mut result = self.clone();
-        let current_line = &self.lines[self.line_index.as_usize()].as_ref();
-        let mut char_pos = self.char_index.as_usize();
-        let mut spaces_trimmed = len(0);
-
-        // Manually advance through space characters in the current line only.
-        while char_pos < current_line.chars().count() {
-            match current_line.chars().nth(char_pos) {
-                Some(SPACE_CHAR) => {
-                    char_pos += 1;
-                    spaces_trimmed += len(1);
-                }
-                _ => break,
-            }
-        }
-
-        // Update the char_index to the new position.
-        result.char_index = idx(char_pos);
-        (spaces_trimmed, result)
+        self.trim_whitespace_chars_start_current_line(&[SPACE_CHAR])
     }
 
     pub fn skip_take(
@@ -698,8 +815,8 @@ impl<'a> AsStrSlice<'a> {
     ///
     /// ## Newline Behavior
     ///
-    /// - It adds a trailing [crate::constants::NEW_LINE] to the end of the `acc` in case there is more than
-    ///   one line in `lines` field of [AsStrSlice].
+    /// - It adds a trailing [crate::constants::NEW_LINE] to the end of the `acc` in case
+    ///   there is more than one line in `lines` field of [AsStrSlice].
     /// - For a single line, no trailing newline is added.
     /// - Empty lines are preserved with newlines.
     ///
@@ -808,8 +925,8 @@ impl<'a> AsStrSlice<'a> {
     /// - **Out of bounds**: Returns empty string when `line_index >= lines.len()`
     /// - **Character index beyond line**: Clamps `char_index` to line length
     /// - **Zero max_len**: When `max_len` is `Some(0)`, returns empty string
-    /// - **Embedded newlines**: Don't do any special handling or processing of [crate::constants::NEW_LINE]
-    ///   chars inside the current line.
+    /// - **Embedded newlines**: Don't do any special handling or processing of
+    ///   [crate::constants::NEW_LINE] chars inside the current line.
     pub fn extract_to_line_end(&self) -> &'a str {
         // Early returns for edge cases.
         {
@@ -911,10 +1028,11 @@ impl<'a> AsStrSlice<'a> {
         // For single line case, we can potentially return borrowed content.
         if self.lines.len() == 1 {
             let current_line = &self.lines[0].string;
+            let current_line: &str = current_line.as_ref();
 
             // Check if we're already at the end.
             // ⚠️ CRITICAL: char_index represents CHARACTER position, use chars().count()
-            let line_char_count = current_line.chars().count();
+            let line_char_count = current_line.len_chars();
             bounds_check!(self.char_index, line_char_count, {
                 return Cow::Borrowed("");
             });
@@ -1091,16 +1209,17 @@ impl<'a> AsStrSlice<'a> {
         // For single line, no trailing newline. Return remaining chars in that line.
         if let DocumentState::SingleLine = document_state {
             let current_line = &self.lines[self.line_index.as_usize()].string;
-            let line_char_count = current_line.chars().count();
+            let current_line: &str = current_line.as_ref();
+            let line_char_count = current_line.len_chars();
             let chars_left_in_line =
                 match self.char_index.check_overflows(len(line_char_count)) {
-                    BoundsStatus::Overflowed => 0,
-                    _ => line_char_count - self.char_index.as_usize(),
+                    BoundsStatus::Overflowed => len(0),
+                    _ => line_char_count - len(self.char_index.as_usize()),
                 };
 
             return match self.max_len {
                 None => len(chars_left_in_line),
-                Some(max_len) => len(chars_left_in_line.min(max_len.as_usize())),
+                Some(max_len) => len(chars_left_in_line.min(max_len)),
             };
         }
 
@@ -1109,11 +1228,12 @@ impl<'a> AsStrSlice<'a> {
 
         // Count remaining chars in current line.
         let current_line = &self.lines[self.line_index.as_usize()].string;
+        let current_line: &str = current_line.as_ref();
         let position_state = determine_position_state(self, current_line);
 
         if let PositionState::WithinLineContent = position_state {
-            let line_char_count = current_line.chars().count();
-            total += line_char_count - self.char_index.as_usize();
+            let line_char_count = current_line.len_chars();
+            total += line_char_count.as_usize() - self.char_index.as_usize();
         }
 
         // Add synthetic newline after current line (always for multiple lines).
@@ -1128,7 +1248,7 @@ impl<'a> AsStrSlice<'a> {
             // Skip the current line.
             .skip(self.line_index.as_usize() + 1)
             // Each subsequent line gets content + trailing newline.
-            .map(|line| line.string.chars().count() + 1)
+            .map(|line| AsRef::<str>::as_ref(&line.string).len_chars().as_usize() + 1)
             .sum::<usize>();
 
         // Apply max_len limit if set.
@@ -1156,12 +1276,12 @@ impl<'a> AsStrSlice<'a> {
         // For single line, no trailing newline.
         if let DocumentState::SingleLine = document_state {
             // Single line gets no trailing newline.
-            return len(lines[0].string.chars().count());
+            return AsRef::<str>::as_ref(&lines[0].string).len_chars();
         }
 
         let mut total = 0;
         for line in lines {
-            total += line.string.chars().count();
+            total += AsRef::<str>::as_ref(&line.string).len_chars().as_usize();
         }
 
         // For multiple lines:
@@ -1196,7 +1316,8 @@ impl<'a> AsStrSlice<'a> {
 
         // Add all complete lines before current line (at line_index).
         for i in 0..line_index.as_usize() {
-            taken += lines[i].string.chars().count();
+            let line: &str = lines[i].string.as_ref();
+            taken += line.len_chars().as_usize();
             // For multiple lines, add synthetic newline after each line.
             if lines.len() > 1 {
                 taken += 1;
@@ -1211,8 +1332,9 @@ impl<'a> AsStrSlice<'a> {
 
         // Add characters consumed in current line (at line_index).
         let current_line = &lines[line_index.as_usize()].string;
-        let line_char_count = current_line.chars().count();
-        taken += char_index.as_usize().min(line_char_count);
+        let current_line: &str = current_line.as_ref();
+        let line_char_count = current_line.len_chars();
+        taken += char_index.as_usize().min(line_char_count.as_usize());
 
         // Create a temporary AsStrSlice to use with determine_position_state
         let temp_slice = AsStrSlice {
@@ -2153,8 +2275,8 @@ mod tests_compat_with_unicode_grapheme_cluster_segment_boundary {
             let emoji_str: &str = emoji_string.as_ref();
             let byte_count = emoji_str.len();
             assert_eq2!(byte_count, 4);
-            let char_count = emoji_str.chars().count();
-            assert_eq2!(char_count, 1);
+            let char_count = emoji_str.len_chars(); // aka chars().count()
+            assert_eq2!(char_count, len(1));
         }
 
         // "a", char is 4 bytes, this "a" len_utf8() is 1. chars().count() is also 1.
@@ -2182,8 +2304,8 @@ mod tests_compat_with_unicode_grapheme_cluster_segment_boundary {
             let ascii_str: &str = ascii_string.as_ref();
             let byte_count = ascii_str.len();
             assert_eq2!(byte_count, 1);
-            let char_count = ascii_str.chars().count();
-            assert_eq2!(char_count, 1);
+            let char_count = ascii_str.len_chars(); // aka chars().count()
+            assert_eq2!(char_count, len(1));
         }
 
         // "1", char is 4 bytes, this "1" len_utf8() is 1. chars().count() is also 1.
@@ -2211,8 +2333,8 @@ mod tests_compat_with_unicode_grapheme_cluster_segment_boundary {
             let digit_str: &str = digit_string.as_ref();
             let byte_count = digit_str.len();
             assert_eq2!(byte_count, 1);
-            let char_count = digit_str.chars().count();
-            assert_eq2!(char_count, 1);
+            let char_count = digit_str.len_chars(); // aka chars().count()
+            assert_eq2!(char_count, len(1));
         }
     }
 
@@ -2227,8 +2349,8 @@ mod tests_compat_with_unicode_grapheme_cluster_segment_boundary {
         assert_eq2!(byte_count, 11);
 
         // UTF-8 encoded chars in the string.
-        let char_count = input_str.chars().count();
-        assert_eq2!(char_count, 5);
+        let char_count = input_str.len_chars(); // aka chars().count()
+        assert_eq2!(char_count, len(5));
 
         // Index bytes in the input_str.
         let input_str_bytes = input_str.as_bytes();

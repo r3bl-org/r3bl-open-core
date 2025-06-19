@@ -24,6 +24,7 @@ use nom::{branch::alt,
 
 use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
             AsStrSlice,
+            CharLengthExt as _,
             CodeBlockLine,
             CodeBlockLineContent,
             List};
@@ -183,7 +184,7 @@ fn split_by_new_line_alt<'a>(input: AsStrSlice<'a>) -> Vec<AsStrSlice<'a>> {
         if !split_str.is_empty() {
             // ⚠️ CRITICAL: Convert byte length to character count
             // split_str.len() returns BYTE count, but skip_take() expects CHARACTER count
-            let char_count = split_str.chars().count();
+            let char_count = split_str.len_chars();
             let segment_slice = input.skip_take(current_offset, char_count);
             result.push(segment_slice);
         } else {
@@ -193,8 +194,8 @@ fn split_by_new_line_alt<'a>(input: AsStrSlice<'a>) -> Vec<AsStrSlice<'a>> {
         }
         // Move past this segment and the newline character.
         // ⚠️ CRITICAL: Use character count, not byte count
-        let char_count = split_str.chars().count();
-        current_offset += char_count + 1; // +1 for the newline character
+        let char_count = split_str.len_chars();
+        current_offset += char_count.as_usize() + 1; // +1 for the newline character
     }
 
     result

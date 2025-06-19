@@ -20,42 +20,50 @@
 //! This module uses AsStrSlice which operates on CHARACTER-BASED indexing for
 //! proper Unicode/UTF-8 support. All functions in this file follow these principles:
 //!
-//! 1. Use AsStrSlice methods (take_from, extract_to_line_end) for slicing
-//! 2. Convert byte positions from nom's FindSubstring to character positions
-//! 3. Never use raw slice operators (&str[byte_start..byte_end]) on UTF-8 text
-//! 4. Count characters with .chars().count(), not bytes with .len()
+//! 1. Use [AsStrSlice] methods (`take_from`, `extract_to_line_end`) for slicing.
+//! 2. Convert byte positions from nom's [FindSubstring] to character positions.
+//! 3. Never use raw slice operators (&str[byte_start..byte_end]) on UTF-8 text.
+//! 4. Count characters with `.chars().count()`, not bytes with `.len()`, or just use the
+//!    [CharLengthExt] which adds a safe `len_chars()` method on `&str`.
 //!
 //! This ensures proper handling of emojis and multi-byte UTF-8 characters.
 //! See the main function documentation for detailed examples and warnings.
 
-use nom::{bytes::complete::{is_not, tag},
-          combinator::{opt, verify},
+use nom::{branch::alt,
+          bytes::complete::{is_not, tag},
+          character::complete::digit1,
+          combinator::{opt, recognize, verify},
           multi::many0,
-          sequence::preceded,
+          sequence::{preceded, terminated},
           FindSubstring,
           IResult,
           Input,
           Parser};
 use smallvec::smallvec;
 
-use crate::{md_parser::constants::{NEW_LINE,
+use crate::{md_parser::constants::{LIST_PREFIX_BASE_WIDTH,
+                                   NEW_LINE,
                                    ORDERED_LIST_PARTIAL_PREFIX,
                                    SPACE,
                                    SPACE_CHAR,
                                    UNORDERED_LIST_PREFIX},
             pad_fmt,
             AsStrSlice,
+            BulletKind,
+            CharLengthExt,
             InlineString,
             InlineVec,
+            SmartListIR,
             SmartListLine};
 
-// TODO: mod tests_bullet_kinds
 // TODO: parse_smart_list_alt()
+// TODO: mod tests_bullet_kinds
 // TODO: parse_block_smart_list_alt()
 // TODO: mod tests_parse_list_item
 // TODO: mod tests_parse_indents
 // TODO: mod tests_parse_block_smart_list
 // TODO: mod tests_parse_smart_lists_in_markdown
+
 
 /// Parses content lines that belong to a smart list item.
 ///
@@ -137,10 +145,10 @@ pub fn parse_smart_list_content_lines_alt<'a>(
     // `find_substring()` returns a BYTE offset, but `take_from()` expects a CHARACTER
     // offset. For Unicode/multi-byte characters like emojis, these are different!
     // We must count characters, not bytes, to avoid slicing UTF-8 sequences incorrectly.
-    let first_line_chars = first.extract_to_line_end().chars().count();
+    let first_line_char_count = first.extract_to_line_end().len_chars().as_usize();
 
     // We need to skip the first line + the newline character.
-    let input = input.take_from(first_line_chars + 1);
+    let input = input.take_from(first_line_char_count + 1);
 
     // Match the rest of the lines.
     let (remainder, rest) = many0((

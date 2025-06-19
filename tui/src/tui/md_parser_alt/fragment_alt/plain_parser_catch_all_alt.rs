@@ -1,27 +1,22 @@
 /*
-*   Copyright (c) 2024-2025 R3BL LLC
-*   All rights reserved.
-*
-*   Licensed under the Apache License, Version 2.0 (the "License");
-*   you may not use this file except in compliance with the License.
-*   You may obtain a copy of the License a                // Convert the output and remainder to character counts, not byte counts.
-               // &str.len() returns byte count, but AsStrSlice methods expect character counts.
-               let output_char_count = output.chars().count();
-               let rem_char_count = rem.chars().count();
+ *   Copyright (c) 2025 R3BL LLC
+ *   All rights reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
 
-               // Given the character count information, extract the following from `input`:
-               let new_output = input.take(output_char_count);
-               let new_rem = input.skip_take(
-                   /* skip this many */ output_char_count, /* take this many */ rem_char_count, http://www.apache.org/licenses/LICENSE-2.0
-*
-*   Unless required by applicable law or agreed to in writing, software
-*   distributed under the License is distributed on an "AS IS" BASIS,
-*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*   See the License for the specific language governing permissions and
-*   limitations under the License.
-*/
-
-//! This module implements the lowest priority parser for "plain text" Markdown fragments.
+//! This module implements the lowest priority parser for "plain text" Markdown
+//! fragments.
 //!
 //! This is the lowest priority parser called by
 //! [crate::fragment_alt::parse_fragments_in_a_line_alt::parse_inline_fragments_until_eol_or_eoi_alt].
@@ -38,8 +33,8 @@
 //! [crate::specialized_parsers_alt::delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi()] which is
 //! used by the specialized parsers.
 //!
-//! To see this in action, set the [crate::DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
-//! in this module.
+//! To see this in action, set the [crate::DEBUG_MD_PARSER_STDOUT] to true, and run all
+//! the tests in this module.
 
 use nom::{branch::alt,
           bytes::complete::{tag, take_till1},
@@ -63,6 +58,7 @@ use crate::{fg_blue,
                                    UNDERSCORE},
             specialized_parsers_alt,
             AsStrSlice,
+            CharLengthExt as _,
             NomErr,
             NomError,
             NomErrorKind,
@@ -81,8 +77,9 @@ use crate::{fg_blue,
 /// 1. Normal case: Input doesn't start with special characters
 ///    - Takes text until the first special character is encountered
 ///    - Splits the input at that point and returns the plain text and remainder
-/// 2. Special edge case: Input starts with a single special character ([crate::md_parser::constants::UNDERSCORE],
-///    [crate::md_parser::constants::STAR], [crate::md_parser::constants::BACK_TICK])
+/// 2. Special edge case: Input starts with a single special character
+///    ([crate::md_parser::constants::UNDERSCORE], [crate::md_parser::constants::STAR],
+///    [crate::md_parser::constants::BACK_TICK])
 ///    - Handles the case where there is no closing delimiter
 ///    - Returns the special character as plain text
 /// 3. Normal edge case: Input starts with special characters but doesn't match any
@@ -92,7 +89,8 @@ use crate::{fg_blue,
 ///
 /// This gives the other more specialized parsers a chance to address these special
 /// characters (like italic, bold, links, etc.), when this function is called repeatedly:
-/// - By functions like [crate::standard_alt::parse_markdown_text_including_eol_or_eoi_alt],
+/// - By functions like
+///   [crate::standard_alt::parse_markdown_text_including_eol_or_eoi_alt],
 /// - Which repeatedly calls [crate::fragment_alt::parse_fragments_in_a_line_alt::parse_inline_fragments_until_eol_or_eoi_alt]. This
 ///   function actually runs the specialized parsers.
 /// - Which calls this function repeatedly (if the specialized parsers don't match & error
@@ -187,11 +185,11 @@ fn parse_plain_text_until_special_char<'a>(
             // Convert the output and remainder to character counts, not byte counts.
             // &str.len() returns byte count, but AsStrSlice methods expect character
             // counts.
-            let output_char_count = output.chars().count();
-            let rem_char_count = rem.chars().count();
+            let output_char_count = output.len_chars();
+            let rem_char_count = rem.len_chars();
 
             // Given the character count information, extract the following from `input`:
-            let new_output = input.take(output_char_count);
+            let new_output = input.take(output_char_count.as_usize());
             let new_rem = input.skip_take(
                 /* skip this many */ output_char_count,
                 /* take this many */ rem_char_count,
