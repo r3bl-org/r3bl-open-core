@@ -24,21 +24,21 @@
 //! This module implements the lowest priority parser for "plain text" Markdown fragments.
 //!
 //! This is the lowest priority parser called by
-//! [crate::parse_inline_fragments_until_eol_or_eoi_alt].
+//! [crate::fragment_alt::parse_fragments_in_a_line_alt::parse_inline_fragments_until_eol_or_eoi_alt].
 //!
 //! It matches anything that is not a special character. This is used to parse plain text.
 //! It works with the specialized parsers in
-//! [crate::parse_inline_fragments_until_eol_or_eoi_alt] such as:
-//! - [crate::parse_fragment_starts_with_underscore_err_on_new_line_alt],
-//! - [crate::parse_fragment_starts_with_star_err_on_new_line_alt],
-//! - [crate::parse_fragment_starts_with_backtick_err_on_new_line_alt],
+//! [crate::fragment_alt::parse_fragments_in_a_line_alt::parse_inline_fragments_until_eol_or_eoi_alt] such as:
+//! - [crate::fragment_alt::parse_fragment_starts_with_underscore_err_on_new_line_alt],
+//! - [crate::fragment_alt::parse_fragment_starts_with_star_err_on_new_line_alt],
+//! - [crate::fragment_alt::parse_fragment_starts_with_backtick_err_on_new_line_alt],
 //! - etc.
 //!
 //! It also works hand in hand with
-//! [specialized_parser_delim_matchers_alt::take_starts_with_delim_no_new_line()] which is
+//! [crate::specialized_parsers_alt::delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi()] which is
 //! used by the specialized parsers.
 //!
-//! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
+//! To see this in action, set the [crate::DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
 //! in this module.
 
 use nom::{branch::alt,
@@ -69,11 +69,10 @@ use crate::{fg_blue,
             DEBUG_MD_PARSER_STDOUT};
 
 /// This is the lowest priority parser called by
-/// [crate::parse_inline_fragments_until_eol_or_eoi_alt()], which itself is called:
+/// [crate::fragment_alt::parse_fragments_in_a_line_alt::parse_inline_fragments_until_eol_or_eoi_alt], which itself is called:
 /// 1. Repeatedly in a loop by functions like
-///    [crate::parse_markdown_text_including_eol_or_eoi_alt()].
-/// 2. And by functions like
-///    [crate::parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt()].
+///    [crate::standard_alt::parse_markdown_text_including_eol_or_eoi_alt].
+/// 2. And by other similar functions.
 ///
 /// It will match anything that is not a special character. This is used to parse plain
 /// text.
@@ -82,8 +81,8 @@ use crate::{fg_blue,
 /// 1. Normal case: Input doesn't start with special characters
 ///    - Takes text until the first special character is encountered
 ///    - Splits the input at that point and returns the plain text and remainder
-/// 2. Special edge case: Input starts with a single special character ([UNDERSCORE],
-///    [STAR], [BACK_TICK])
+/// 2. Special edge case: Input starts with a single special character ([crate::md_parser::constants::UNDERSCORE],
+///    [crate::md_parser::constants::STAR], [crate::md_parser::constants::BACK_TICK])
 ///    - Handles the case where there is no closing delimiter
 ///    - Returns the special character as plain text
 /// 3. Normal edge case: Input starts with special characters but doesn't match any
@@ -93,8 +92,8 @@ use crate::{fg_blue,
 ///
 /// This gives the other more specialized parsers a chance to address these special
 /// characters (like italic, bold, links, etc.), when this function is called repeatedly:
-/// - By functions like [crate::parse_markdown_text_including_eol_or_eoi_alt()],
-/// - Which repeatedly calls [crate::parse_inline_fragments_until_eol_or_eoi_alt()]. This
+/// - By functions like [crate::standard_alt::parse_markdown_text_including_eol_or_eoi_alt],
+/// - Which repeatedly calls [crate::fragment_alt::parse_fragments_in_a_line_alt::parse_inline_fragments_until_eol_or_eoi_alt]. This
 ///   function actually runs the specialized parsers.
 /// - Which calls this function repeatedly (if the specialized parsers don't match & error
 ///   out). This serves as a "catch all" parser.
@@ -105,7 +104,7 @@ use crate::{fg_blue,
 /// until the end of the input.
 ///
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
-/// See: [specialized_parsers_alt::delim_matchers::count_delim_occurrences_until_eol_or_eoi].
+/// See: [crate::specialized_parsers_alt::delim_matchers::count_delim_occurrences_until_eol_or_eoi].
 pub fn parse_fragment_plain_text_until_eol_or_eoi_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {

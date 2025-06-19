@@ -21,12 +21,12 @@
 /// use cases.
 ///
 /// mimalloc (by Microsoft):
-/// - https://github.com/microsoft/mimalloc?tab=readme-ov-file#performance
+/// - <https://github.com/microsoft/mimalloc?tab=readme-ov-file#performance>
 ///
 /// jemalloc (originally by Facebook, now archived):
-/// - https://www.svix.com/blog/heap-fragmentation-in-rust-applications/
-/// - https://news.ycombinator.com/item?id=35473271
-/// - https://crates.io/crates/jemallocator
+/// - <https://www.svix.com/blog/heap-fragmentation-in-rust-applications/>
+/// - <https://news.ycombinator.com/item?id=35473271>
+/// - <https://crates.io/crates/jemallocator>
 #[macro_export]
 macro_rules! set_jemalloc_in_main {
     () => {{

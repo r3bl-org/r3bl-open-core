@@ -52,7 +52,7 @@ use crate::{fg_green,
 /// the entire input.
 ///
 /// Here's an example of the runtime iterations that may occur, which repeatedly run by
-/// functions like [crate::parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt()]:
+/// functions like [mod@crate::standard_alt::parse_markdown_text_including_eol_or_eoi_alt]:
 ///
 /// ```txt
 /// input: "foo *bar* _baz_ [link](url) ![image](url)"

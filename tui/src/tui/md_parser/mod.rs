@@ -138,13 +138,13 @@
 //! dealt with. Such as special characters like `` ` ``, `*`, `_`, etc. They are all
 //! listed here:
 //!
-//! - If the input does not start with a special char in this [get_sp_char_set_2()], then
+//! - If the input does not start with a special char in this `get_sp_char_set_2()`, then
 //!   this is the "Normal case". In this case the input is split at the first occurrence
-//!   of a special char in [get_sp_char_set_3()]. The "before" part is
+//!   of a special char in `get_sp_char_set_3()`. The "before" part is
 //!   [MdLineFragment::Plain] and the "after" part is parsed again by a more specific
 //!   parser.
-//! - If the input starts with a special char in this [get_sp_char_set_2()] and it is not
-//!   in the [get_sp_char_set_1()] with only 1 occurrence, then the behavior is different
+//! - If the input starts with a special char in this `get_sp_char_set_2()` and it is not
+//!   in the `get_sp_char_set_1()` with only 1 occurrence, then the behavior is different
 //!   "Edge case -> Normal case". Otherwise the behavior is "Edge case -> Special case".
 //!   - "Edge case -> Normal case" takes all the characters until `\n` or end of input and
 //!     turns it into a [MdLineFragment::Plain].

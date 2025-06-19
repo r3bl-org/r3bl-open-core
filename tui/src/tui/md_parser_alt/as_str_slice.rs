@@ -96,8 +96,16 @@ pub type NomError<T> = nom::error::Error<T>;
 pub type NomErrorKind = nom::error::ErrorKind;
 pub type NomErr<T> = nom::Err<T>;
 
+/// Marker type alias for [nom::Input] trait methods (which we can't change)
+/// to clarify a character based index type.
+pub type CharacterIndexNomCompat = usize;
+/// Marker type alias for [Length] to clarify character based length type.
+pub type CharacterLength = Length;
+/// Marker type alias for [Index] to clarify character based index type.
+pub type CharacterIndex = Index;
+
 /// Wrapper type that implements [nom::Input] for &[GCString] or **any other type** that
-/// implements [AsRef<str>]. The [Clone] operations on this struct are really cheap. This
+/// implements [`AsRef<str>`]. The [Clone] operations on this struct are really cheap. This
 /// wraps around the output of [str::lines()] and provides a way to adapt it for use
 /// as a "virtual array" or "virtual slice" of strings for `nom` parsers.
 ///
@@ -280,30 +288,30 @@ where
     &'a [T]: Copy,
 {
     /// The lines of text represented as a slice of [GCString] or any type that
-    /// implements [AsRef<str>].
+    /// implements [`AsRef<str>`].
     pub lines: &'a [T],
 
     /// Position tracking: (line_index, char_index_within_line).
     /// Special case: if char_index == line.len(), we're at the synthetic newline.
-    pub line_index: Index,
+    pub line_index: CharacterIndex,
 
     /// This represents the character index within the current line. It is:
     /// - Used with `line.chars().nth(self.char_index)` to get characters.
     /// - Compared with line_char_count (from `line.chars().count()`).
     /// - Incremented by 1 to advance to the next character.
     /// - Reset to 0 when moving to a new line.
-    pub char_index: Index,
+    pub char_index: CharacterIndex,
 
     /// Optional maximum length limit for the slice. This is needed for
     /// [AsStrSlice::take()] to work.
-    pub max_len: Option<Length>,
+    pub max_len: Option<CharacterLength>,
 
     /// Total number of characters across all lines (including synthetic newlines).
     /// For multiple lines, includes trailing newline after the last line.
-    pub total_size: Length,
+    pub total_size: CharacterLength,
 
     /// Number of characters consumed from the beginning.
-    pub current_taken: Length,
+    pub current_taken: CharacterLength,
 }
 
 /// Implement [From] trait to allow automatic conversion from &[GCString] to
@@ -340,7 +348,7 @@ impl<'a, const N: usize> From<&'a [GCString; N]> for AsStrSlice<'a> {
     }
 }
 
-/// Implement [From] trait to allow automatic conversion from &[Vec<GCString>] to
+/// Implement [From] trait to allow automatic conversion from &[`Vec<GCString>`] to
 /// [AsStrSlice].
 impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
     fn from(lines: &'a Vec<GCString>) -> Self {
@@ -686,11 +694,11 @@ impl<'a> AsStrSlice<'a> {
     /// Write the content of this slice to a byte cache.
     ///
     /// This is for compatibility with the legacy markdown parser, which expects a [&str]
-    /// input with trailing [NEW_LINE].
+    /// input with trailing [crate::constants::NEW_LINE].
     ///
     /// ## Newline Behavior
     ///
-    /// - It adds a trailing [NEW_LINE] to the end of the `acc` in case there is more than
+    /// - It adds a trailing [crate::constants::NEW_LINE] to the end of the `acc` in case there is more than
     ///   one line in `lines` field of [AsStrSlice].
     /// - For a single line, no trailing newline is added.
     /// - Empty lines are preserved with newlines.
@@ -800,7 +808,7 @@ impl<'a> AsStrSlice<'a> {
     /// - **Out of bounds**: Returns empty string when `line_index >= lines.len()`
     /// - **Character index beyond line**: Clamps `char_index` to line length
     /// - **Zero max_len**: When `max_len` is `Some(0)`, returns empty string
-    /// - **Embedded newlines**: Don't do any special handling or processing of [NEW_LINE]
+    /// - **Embedded newlines**: Don't do any special handling or processing of [crate::constants::NEW_LINE]
     ///   chars inside the current line.
     pub fn extract_to_line_end(&self) -> &'a str {
         // Early returns for edge cases.
@@ -1298,6 +1306,7 @@ impl<'a> Input for AsStrSlice<'a> {
     fn input_len(&self) -> usize { self.remaining_len().as_usize() }
 
     /// Returns a slice containing the first `count` characters from the current position.
+    /// This is a character index due to the [Self::Item] assignment to [char].
     ///
     /// ⚠️ **Character-Based Operation**: This method takes `count` **characters**, not
     /// bytes. This is safe for Unicode/UTF-8 text including emojis and multi-byte
@@ -1313,7 +1322,7 @@ impl<'a> Input for AsStrSlice<'a> {
     /// ```
     ///
     /// This works with the `max_len` field of [AsStrSlice].
-    fn take(&self, count: usize) -> Self {
+    fn take(&self, count: CharacterIndexNomCompat) -> Self {
         // take() should return a slice containing the first 'count' characters.
         // Create a slice that starts at current position with max_len = count.
         Self::with_limit(
@@ -1324,7 +1333,8 @@ impl<'a> Input for AsStrSlice<'a> {
         )
     }
 
-    /// Returns a slice starting from the `start` character position.
+    /// Returns a slice starting from the `start` character position. This is a character
+    /// index due to the [Self::Item] assignment to [char].
     ///
     /// ⚠️ **Character-Based Operation**: The `start` parameter is a **character offset**,
     /// not a byte offset. This is critical for Unicode/UTF-8 safety - never pass byte
@@ -1352,7 +1362,7 @@ impl<'a> Input for AsStrSlice<'a> {
     /// let char_count = prefix.extract_to_line_end().chars().count(); // Convert to chars
     /// let from_char = slice.take_from(char_count); // Use char count here
     /// ```
-    fn take_from(&self, start: usize) -> Self {
+    fn take_from(&self, start: CharacterIndexNomCompat) -> Self {
         let mut result = self.clone();
 
         // Advance to the start position.
@@ -1390,6 +1400,7 @@ impl<'a> AsStrSlice<'a> {
     /// for proper Unicode/UTF-8 support.
     ///
     /// # Examples
+    ///
     /// ```
     /// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case, assert_eq2};
     /// as_str_slice_test_case!(slice, "😀hello world");
@@ -1397,16 +1408,30 @@ impl<'a> AsStrSlice<'a> {
     /// assert_eq2!(range.extract_to_line_end(), "hello");
     /// ```
     ///
-    /// # Panics
-    /// This method will panic if `start > end`.
+    /// # Invalid start and end index
+    /// This method will return an empty `AsStrSlice` if `start > end`.
     ///
     /// # Parameters
     /// - `start`: The starting character position (inclusive)
     /// - `end`: The ending character position (exclusive)
-    pub fn char_range(&self, start: usize, end: usize) -> Self {
+    pub fn char_range(
+        &self,
+        arg_start: impl Into<CharacterIndex>,
+        arg_end: impl Into<CharacterIndex>,
+    ) -> Self {
+        let start = arg_start.into().as_usize();
+        let end = arg_end.into().as_usize();
+
         if start > end {
-            panic!("char_range: start ({start}) must be <= end ({end})");
+            // Return empty slice.
+            return Self::with_limit(
+                self.lines,
+                self.line_index,
+                self.char_index,
+                Some(Length::from(0)),
+            );
         }
+
         self.take_from(start).take(end - start)
     }
 
@@ -1429,7 +1454,10 @@ impl<'a> AsStrSlice<'a> {
     ///
     /// # Parameters
     /// - `start`: The starting character position (inclusive)
-    pub fn char_from(&self, start: usize) -> Self { self.take_from(start) }
+    pub fn char_from(&self, arg_start: impl Into<CharacterIndex>) -> Self {
+        let start = arg_start.into().as_usize();
+        self.take_from(start)
+    }
 
     /// Character-based range [..end] - safe for Unicode/UTF-8 text.
     ///
@@ -1450,7 +1478,10 @@ impl<'a> AsStrSlice<'a> {
     ///
     /// # Parameters
     /// - `end`: The ending character position (exclusive)
-    pub fn char_to(&self, end: usize) -> Self { self.take(end) }
+    pub fn char_to(&self, arg_end: impl Into<CharacterIndex>) -> Self {
+        let end = arg_end.into().as_usize();
+        self.take(end)
+    }
 
     /// Character-based range [start..=end] - safe for Unicode/UTF-8 text.
     ///
@@ -1470,16 +1501,30 @@ impl<'a> AsStrSlice<'a> {
     /// assert_eq!(range.extract_to_line_end(), "hello");
     /// ```
     ///
-    /// # Panics
-    /// This method will panic if `start > end`.
+    /// # Invalid start and end index
+    /// This method will return an empty `AsStrSlice` if `start > end`.
     ///
     /// # Parameters
     /// - `start`: The starting character position (inclusive)
     /// - `end`: The ending character position (inclusive)
-    pub fn char_range_inclusive(&self, start: usize, end: usize) -> Self {
+    pub fn char_range_inclusive(
+        &self,
+        arg_start: impl Into<CharacterIndex>,
+        arg_end: impl Into<CharacterIndex>,
+    ) -> Self {
+        let start = arg_start.into().as_usize();
+        let end = arg_end.into().as_usize();
+
         if start > end {
-            panic!("char_range_inclusive: start ({start}) must be <= end ({end})");
+            // Return empty slice.
+            return Self::with_limit(
+                self.lines,
+                self.line_index,
+                self.char_index,
+                Some(Length::from(0)),
+            );
         }
+
         self.take_from(start).take(end - start + 1)
     }
 }
@@ -1729,7 +1774,7 @@ mod tests_as_str_slice_test_case {
 
 #[cfg(test)]
 mod tests_character_based_range_methods {
-    use crate::assert_eq2;
+    use crate::{assert_eq2, len};
 
     #[test]
     fn test_char_range() {
@@ -1784,10 +1829,13 @@ mod tests_character_based_range_methods {
     }
 
     #[test]
-    #[should_panic(expected = "char_range: start (5) must be <= end (3)")]
-    fn test_char_range_panic_start_greater_than_end() {
-        as_str_slice_test_case!(slice, "hello");
-        let _range = slice.char_range(5, 3); // Should panic
+    fn test_char_range_invalid_start_greater_than_end() {
+        // This test should now verify that char_range returns an empty slice
+        // instead of panicking when start > end
+        as_str_slice_test_case!(input, "Hello", "World");
+        let result = input.char_range(5, 3);
+        assert_eq2!(result.is_empty(), true);
+        assert_eq2!(result.len_chars(), len(0));
     }
 
     #[test]
@@ -1921,15 +1969,18 @@ mod tests_character_based_range_methods {
     }
 
     #[test]
-    #[should_panic(expected = "char_range_inclusive: start (5) must be <= end (3)")]
-    fn test_char_range_inclusive_panic_start_greater_than_end() {
-        as_str_slice_test_case!(slice, "hello");
-        let _range = slice.char_range_inclusive(5, 3); // Should panic
+    fn test_char_range_inclusive_invalid_start_greater_than_end() {
+        // This test should now verify that char_range_inclusive returns an empty slice
+        // instead of panicking when start > end
+        as_str_slice_test_case!(input, "Hello", "World");
+        let result = input.char_range_inclusive(5, 3);
+        assert_eq2!(result.is_empty(), true);
+        assert_eq2!(result.len_chars(), len(0));
     }
 
     #[test]
     fn test_char_range_methods_equivalence() {
-        // Test that char_range(a, b) == char_from(a).char_to(b-a)
+        // Test that char_range(a, b) = = char_from(a).char_to(b-a)
         {
             as_str_slice_test_case!(slice, "😀hello world🎉");
             let range1 = slice.char_range(2, 7);
@@ -2312,9 +2363,7 @@ mod tests_write_to_byte_cache_compat_behavior {
             // They should match exactly
             assert_eq!(
                 slice_result, cache_result,
-                "Mismatch: AsStrSlice produced {:?}, write_to_byte_cache_compat produced {:?}",
-                slice_result,
-                cache_result
+                "Mismatch: AsStrSlice produced {slice_result:?}, write_to_byte_cache_compat produced {cache_result:?}"
             );
         };
 
@@ -2955,7 +3004,7 @@ mod tests {
     #[test]
     fn test_display_at_end_position() {
         as_str_slice_test_case!(slice, "abc");
-        let slice = AsStrSlice::with_limit(&slice.lines, 0, 3, None); // At end of line
+        let slice = AsStrSlice::with_limit(slice.lines, 0, 3, None); // At end of line
 
         let displayed = format!("{slice}");
         assert_eq!(displayed, "");

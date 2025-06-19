@@ -703,7 +703,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "regular text content");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Content starting with spaces but no list prefix
@@ -711,7 +711,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "  indented content");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Content with dash but not followed by space
@@ -719,7 +719,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "-notalist");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Content with number but not followed by ". "
@@ -727,7 +727,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "123notalist");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Content with number followed by dot but no space
@@ -735,7 +735,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "1.notalist");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Empty string
@@ -743,7 +743,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Only spaces
@@ -751,7 +751,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "   ");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Test content that DOES start with list prefixes (should return false)
@@ -761,7 +761,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "- this is a list item");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Unordered list prefix with leading spaces
@@ -769,7 +769,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "  - indented list item");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Ordered list prefix at start - single digit
@@ -777,7 +777,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "1. this is ordered list item");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Ordered list prefix at start - multiple digits
@@ -785,7 +785,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "123. this is ordered list item");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Ordered list prefix with leading spaces
@@ -793,7 +793,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "    2. indented ordered list item");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Just the unordered list prefix
@@ -801,7 +801,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "- ");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Just the ordered list prefix
@@ -809,7 +809,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "42. ");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Multiple spaces before unordered list prefix
@@ -817,7 +817,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "      - deeply indented list");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Multiple spaces before ordered list prefix
@@ -825,7 +825,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "        99. deeply indented ordered");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Edge case: zero as ordered list number
@@ -833,7 +833,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "0. zero numbered list");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Edge case: very large number
@@ -841,7 +841,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "999999. large numbered list");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Mixed whitespace before list prefix (tabs and spaces)
@@ -849,7 +849,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, " \t - mixed whitespace");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Test edge cases with special characters
@@ -859,7 +859,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "*not a list");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Content starting with plus (not unordered list prefix)
@@ -867,7 +867,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "+not a list");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Content with Unicode characters
@@ -875,7 +875,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "😀 emoji content");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // List prefix in middle of line (should not be detected)
@@ -883,7 +883,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "some text - not a list");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // List prefix in middle of line (ordered)
@@ -891,7 +891,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "text 1. not a list");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
     }
 
@@ -905,7 +905,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "😀 emoji content");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Multi-byte Unicode characters
@@ -913,7 +913,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "🎉🚀 multiple emojis");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Unicode with spaces before but no list prefix
@@ -921,7 +921,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "  🌟 indented emoji");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Unicode text that looks like it might contain numbers but doesn't form list
@@ -930,7 +930,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "👨‍👩‍👧‍👦 family emoji");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Unicode content starting with dash-like character but not ASCII dash
@@ -938,7 +938,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "— em dash not list");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Unicode content starting with bullet-like character but not ASCII
@@ -946,7 +946,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "• bullet point not list");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Test Unicode content that DOES start with list prefixes (should return false)
@@ -956,7 +956,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "- 😀 emoji list item");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Unicode content with ordered list prefix
@@ -964,7 +964,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "1. 🎉 emoji ordered list");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Unicode content with indented list prefix
@@ -972,7 +972,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "  - 🚀 indented emoji list");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Unicode content with indented ordered list
@@ -980,7 +980,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "    42. 🌟 indented emoji ordered");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Edge case: Unicode digits in ordered list prefix
@@ -988,7 +988,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "123. 🎯 numbered with emoji");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Unicode content with very long emoji sequence after list prefix
@@ -996,7 +996,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "- 👨‍👩‍👧‍👦🏠🌳 complex emoji family");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Mixed Unicode and ASCII in content but with ASCII list prefix
@@ -1004,7 +1004,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "99. Hello 世界 mixed languages");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Test edge cases with Unicode that might confuse byte/character indexing
@@ -1014,7 +1014,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "①not a list"); // Unicode digit one
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Content with Unicode spaces before list prefix - should NOT be detected as list
@@ -1023,7 +1023,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, " \u{2003}- wide space before list"); // em space
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true); // Unicode spaces don't count as valid indentation
+            assert!(result); // Unicode spaces don't count as valid indentation
         }
 
         // Very long Unicode sequence without list prefix
@@ -1031,7 +1031,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(input, "🏴󠁧󠁢󠁳󠁣󠁴󠁿 flag emoji sequence");
             let result =
                 verify_rest::list_contents_does_not_start_with_list_prefix(input);
-            assert_eq!(result, true);
+            assert!(result);
         }
     }
 
@@ -1095,7 +1095,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "- ");
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Test case: 3 spaces with bullet "1. " (length 3) => should be true
@@ -1104,7 +1104,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "1. ");
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Test case: 4 spaces with bullet "1. " (length 3) => should be false
@@ -1113,7 +1113,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "1. ");
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Test case: 1 space with bullet "- " (length 2) => should be false
@@ -1122,7 +1122,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "- ");
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Test case: 0 spaces with bullet "- " (length 2) => should be false
@@ -1131,7 +1131,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "- ");
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Test case: exact match with longer bullet "10. " (length 4)
@@ -1140,7 +1140,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "10. ");
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Test case: empty content with empty bullet
@@ -1149,7 +1149,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "");
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Test case: content with only spaces matching bullet length
@@ -1158,7 +1158,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "- ");
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Test case: content with only spaces not matching bullet length
@@ -1167,7 +1167,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "- ");
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, false);
+            assert!(!result);
         }
 
         // Test case: content with mixed whitespace at start (only spaces should count)
@@ -1176,7 +1176,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "- ");
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, false); // Only 1 space, not 2
+            assert!(!result); // Only 1 space, not 2
         }
     }
 
@@ -1188,7 +1188,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "- ");
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, true);
+            assert!(result);
         }
 
         // Test with Unicode characters in bullet
@@ -1197,7 +1197,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "● "); // bullet character + space = 2 chars
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, false); // 3 spaces != 2 char bullet length
+            assert!(!result); // 3 spaces != 2 char bullet length
         }
 
         // Test with very long bullet
@@ -1206,7 +1206,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "100. "); // 5 characters
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, false); // 6 spaces != 5 char bullet length
+            assert!(!result); // 6 spaces != 5 char bullet length
         }
 
         // Test with very long bullet - correct match
@@ -1215,7 +1215,7 @@ mod tests_verify_rest {
             as_str_slice_test_case!(bullet, "100. "); // 5 characters
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
-            assert_eq!(result, true); // 5 spaces == 5 char bullet length
+            assert!(result); // 5 spaces == 5 char bullet length
         }
     }
 }

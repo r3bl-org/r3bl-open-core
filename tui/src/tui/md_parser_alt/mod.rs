@@ -22,7 +22,7 @@
 //!
 //! Depending on your needs, you can interchangeably treat a [AsStrSlice] as a
 //! [nom::Input], or [AsStrSlice] as needed, so there is a lot of flexibility in how to
-//! access the `input`, in a "nom compatible" way. Also [CGStringSlice] is
+//! access the `input`, in a "nom compatible" way. Also [crate::GCString] is
 //! [Clone] and it is very cheap. These features are used in many of the
 //! functions in this module.
 //!
@@ -38,6 +38,7 @@
 // Attach sources.
 pub mod as_str_slice;
 pub mod block_alt;
+pub mod char_index;
 pub mod extended_alt;
 pub mod fragment_alt;
 pub mod standard_alt;
@@ -45,6 +46,7 @@ pub mod standard_alt;
 // Re-export.
 pub use as_str_slice::*;
 pub use block_alt::*;
+pub use char_index::*;
 pub use extended_alt::*;
 pub use fragment_alt::*;
 pub use standard_alt::*;
