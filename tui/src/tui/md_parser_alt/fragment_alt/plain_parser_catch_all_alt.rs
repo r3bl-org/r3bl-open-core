@@ -319,13 +319,21 @@ fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 /// 1. The character is in `get_sp_char_set_1()` and,
 /// 2. There is exactly one occurrence of it.
 fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
-    get_sp_char_set_1()
+    // We know this will always have exactly 5 elements:
+    // 3 from get_sp_char_set_1() + 2 from [LEFT_IMAGE, LEFT_BRACKET]
+    let mut result = [""; 5];
+    let vec = get_sp_char_set_1()
         .iter()
         .chain([LEFT_IMAGE, LEFT_BRACKET].iter())
         .copied()
-        .collect::<Vec<_>>()
-        .try_into()
-        .unwrap()
+        .collect::<Vec<_>>();
+
+    // Copy elements from vec to result
+    for (i, &item) in vec.iter().enumerate() {
+        result[i] = item;
+    }
+
+    result
 }
 
 /// Returns a complete set of special characters for the normal case.
@@ -336,13 +344,21 @@ fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
 /// the special character is returned as plain text, and the remainder gets a chance to
 /// be parsed by specialized parsers.
 fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
-    get_sp_char_set_2()
+    // We know this will always have exactly 6 elements:
+    // 5 from get_sp_char_set_2() + 1 from [NEW_LINE]
+    let mut result = [""; 6];
+    let vec = get_sp_char_set_2()
         .iter()
         .chain([NEW_LINE].iter())
         .copied()
-        .collect::<Vec<_>>()
-        .try_into()
-        .unwrap()
+        .collect::<Vec<_>>();
+
+    // Copy elements from vec to result
+    for (i, &item) in vec.iter().enumerate() {
+        result[i] = item;
+    }
+
+    result
 }
 
 /// Checks if the input string starts with any of the strings in the provided character

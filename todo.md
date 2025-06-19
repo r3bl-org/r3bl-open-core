@@ -209,8 +209,11 @@
 
       - [x] `parse_smart_list_content_lines_alt()`
       - [x] `mod tests_parse_smart_list_content_lines_alt`
-      - [ ] `parse_smart_list_alt()`
-      - [ ] `mod tests_bullet_kinds`
+        - [x] `parse_smart_list_alt()`
+        - [x] review implementation and see if `digit1` and other parts can be refactored into small
+              functions
+        - [x] `mod tests_parse_smart_list_alt`
+      - [x] `mod tests_bullet_kinds`
       - [ ] `parse_block_smart_list_alt()`
       - [ ] `mod tests_parse_list_item`
       - [ ] `mod tests_parse_indents`
