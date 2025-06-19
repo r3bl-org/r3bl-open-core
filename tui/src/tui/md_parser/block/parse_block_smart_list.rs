@@ -567,6 +567,268 @@ pub fn parse_smart_list(
     ))
 }
 
+#[cfg(test)]
+mod tests_bullet_kinds {
+    use super::*;
+    use crate::assert_eq2;
+
+    #[test]
+    fn test_bullet_kinds() {
+        // Unordered.
+        {
+            let input = "- foo";
+            let (_remainder, actual) = parse_smart_list(input).unwrap();
+            assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
+        }
+
+        // Ordered.
+        {
+            let input = "1. foo";
+            let (_remainder, actual) = parse_smart_list(input).unwrap();
+            assert_eq2!(actual.bullet_kind, BulletKind::Ordered(1));
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_parse_smart_list {
+    use super::*;
+    use crate::assert_eq2;
+
+    #[test]
+    fn test_invalid_ul_list() {
+        let input = "  -";
+        let actual = parse_smart_list(input);
+        assert_eq2!(actual.is_err(), true);
+    }
+
+    #[test]
+    fn test_valid_ul_list() {
+        // 1 item.
+        {
+            let input = "- foo";
+            let actual = parse_smart_list(input);
+            assert_eq2!(
+                actual,
+                Ok((
+                    "",
+                    SmartListIR {
+                        indent: 0,
+                        bullet_kind: BulletKind::Unordered,
+                        content_lines: smallvec![SmartListLine::new(0, "- ", "foo")],
+                    }
+                ))
+            );
+        }
+
+        // 2 items.
+        {
+            let input = "- foo\n  bar";
+            let actual = parse_smart_list(input);
+            assert_eq2!(
+                actual,
+                Ok((
+                    "",
+                    SmartListIR {
+                        indent: 0,
+                        bullet_kind: BulletKind::Unordered,
+                        content_lines: smallvec![
+                            SmartListLine::new(0, "- ", "foo"),
+                            SmartListLine::new(0, "- ", "bar"),
+                        ],
+                    }
+                ))
+            );
+        }
+    }
+
+    #[test]
+    fn test_invalid_ol_list() {
+        let input = "  1.";
+        let actual = parse_smart_list(input);
+        assert_eq2!(actual.is_err(), true);
+    }
+
+    #[test]
+    fn test_valid_ol_list() {
+        // 1 item.
+        {
+            let input = "1. foo";
+            let actual = parse_smart_list(input);
+            assert_eq2!(
+                actual,
+                Ok((
+                    "",
+                    SmartListIR {
+                        indent: 0,
+                        bullet_kind: BulletKind::Ordered(1),
+                        content_lines: smallvec![SmartListLine::new(0, "1. ", "foo")],
+                    }
+                ))
+            );
+        }
+
+        // 2 items.
+        {
+            let input = "1. foo\n   bar";
+            let result = parse_smart_list(input);
+            assert_eq2!(
+                result,
+                Ok((
+                    "",
+                    SmartListIR {
+                        indent: 0,
+                        bullet_kind: BulletKind::Ordered(1),
+                        content_lines: smallvec![
+                            SmartListLine::new(0, "1. ", "foo"),
+                            SmartListLine::new(0, "1. ", "bar"),
+                        ],
+                    }
+                ))
+            );
+        }
+    }
+
+    /// One line: "- foo".
+    #[test]
+    fn test_one_line() {
+        let input = "- foo";
+        let (remainder, actual) = parse_smart_list(input).unwrap();
+        assert_eq2!(remainder, "");
+        assert_eq2!(
+            actual,
+            SmartListIR {
+                indent: 0,
+                bullet_kind: BulletKind::Unordered,
+                content_lines: smallvec![SmartListLine::new(0, "- ", "foo")],
+            }
+        );
+    }
+
+    /// One line (with trailing new_line): "- foo\n".
+    #[test]
+    fn test_one_line_trailing_new_line() {
+        let input = "- foo\n";
+        let (remainder, actual) = parse_smart_list(input).unwrap();
+        assert_eq2!(remainder, "");
+        assert_eq2!(
+            actual,
+            SmartListIR {
+                indent: 0,
+                bullet_kind: BulletKind::Unordered,
+                content_lines: smallvec![SmartListLine::new(0, "- ", "foo")]
+            }
+        );
+    }
+
+    /// 2 lines (last line is empty): "- foo\n\n".
+    #[test]
+    fn test_two_lines_last_is_empty() {
+        let input = "- foo\n\n";
+        let actual = parse_smart_list(input);
+        let (remainder, actual) = actual.unwrap();
+        assert_eq2!(remainder, "\n");
+        assert_eq2!(
+            actual,
+            SmartListIR {
+                indent: 0,
+                bullet_kind: BulletKind::Unordered,
+                content_lines: smallvec![SmartListLine::new(0, "- ", "foo")]
+            }
+        );
+    }
+
+    /// 2 lines: "- foo\n  bar baz".
+    #[test]
+    fn test_two_lines() {
+        let input = "- foo\n  bar baz";
+        let (remainder, actual) = parse_smart_list(input).unwrap();
+        assert_eq2!(remainder, "");
+        assert_eq2!(
+            actual,
+            SmartListIR {
+                indent: 0,
+                bullet_kind: BulletKind::Unordered,
+                content_lines: smallvec![
+                    SmartListLine::new(0, "- ", "foo"),
+                    SmartListLine::new(0, "- ", "bar baz"),
+                ]
+            }
+        );
+    }
+
+    /// 3 lines (last line is empty): "- foo\n  bar baz\n".
+    #[test]
+    fn test_three_lines_last_is_empty() {
+        let input = "- foo\n  bar baz\n";
+        let (remainder, actual) = parse_smart_list(input).unwrap();
+        assert_eq2!(remainder, "");
+        assert_eq2!(
+            actual,
+            SmartListIR {
+                indent: 0,
+                bullet_kind: BulletKind::Unordered,
+                content_lines: smallvec![
+                    SmartListLine::new(0, "- ", "foo"),
+                    SmartListLine::new(0, "- ", "bar baz"),
+                ]
+            }
+        );
+    }
+
+    /// 3 lines: "- foo\n  bar baz\n  qux".
+    #[test]
+    fn test_three_lines() {
+        let input = "- foo\n  bar baz\n  qux";
+        let (remainder, actual) = parse_smart_list(input).unwrap();
+        assert_eq2!(remainder, "");
+        assert_eq2!(
+            actual,
+            SmartListIR {
+                indent: 0,
+                bullet_kind: BulletKind::Unordered,
+                content_lines: smallvec![
+                    SmartListLine::new(0, "- ", "foo"),
+                    SmartListLine::new(0, "- ", "bar baz"),
+                    SmartListLine::new(0, "- ", "qux"),
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn test_indent() {
+        // Indent = 0 Ok.
+        {
+            let input = "- foo";
+            let (_remainder, actual) = parse_smart_list(input).unwrap();
+            assert_eq2!(actual.indent, 0);
+            assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
+        }
+
+        // Indent = 1 Fail.
+        {
+            let input = " - foo";
+            let result = parse_smart_list(input);
+            assert_eq2!(
+                result.err(),
+                Some(nom::Err::Error(nom::error::Error::new(
+                    "Indent must be a multiple of LIST_PREFIX_INDENT_SIZE",
+                    nom::error::ErrorKind::Fail,
+                )))
+            );
+        }
+
+        // Indent = 2 Ok.
+        {
+            let input = "  - foo";
+            let (_remainder, actual) = parse_smart_list(input).unwrap();
+            assert_eq2!(actual.indent, 2);
+            assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
+        }
+    }
+}
+
 #[rustfmt::skip]
 pub fn parse_smart_list_content_lines<'a>(
     input: &'a str,
@@ -964,279 +1226,5 @@ mod verify_rest {
     pub fn must_start_with_correct_num_of_spaces(it: &str, my_bullet_str: &str) -> bool {
         let it_spaces_at_start = count_spaces_at_start(it);
         it_spaces_at_start == my_bullet_str.len()
-    }
-}
-
-#[cfg(test)]
-mod tests_parse_list_item {
-    use super::*;
-    use crate::assert_eq2;
-
-    #[test]
-    fn test_invalid_ul_list() {
-        let input = "  -";
-        let actual = parse_smart_list(input);
-        assert_eq2!(actual.is_err(), true);
-    }
-
-    #[test]
-    fn test_valid_ul_list() {
-        // 1 item.
-        {
-            let input = "- foo";
-            let actual = parse_smart_list(input);
-            assert_eq2!(
-                actual,
-                Ok((
-                    "",
-                    SmartListIR {
-                        indent: 0,
-                        bullet_kind: BulletKind::Unordered,
-                        content_lines: smallvec![SmartListLine::new(0, "- ", "foo")],
-                    }
-                ))
-            );
-        }
-
-        // 2 items.
-        {
-            let input = "- foo\n  bar";
-            let actual = parse_smart_list(input);
-            assert_eq2!(
-                actual,
-                Ok((
-                    "",
-                    SmartListIR {
-                        indent: 0,
-                        bullet_kind: BulletKind::Unordered,
-                        content_lines: smallvec![
-                            SmartListLine::new(0, "- ", "foo"),
-                            SmartListLine::new(0, "- ", "bar"),
-                        ],
-                    }
-                ))
-            );
-        }
-    }
-
-    #[test]
-    fn test_invalid_ol_list() {
-        let input = "  1.";
-        let actual = parse_smart_list(input);
-        assert_eq2!(actual.is_err(), true);
-    }
-
-    #[test]
-    fn test_valid_ol_list() {
-        // 1 item.
-        {
-            let input = "1. foo";
-            let actual = parse_smart_list(input);
-            assert_eq2!(
-                actual,
-                Ok((
-                    "",
-                    SmartListIR {
-                        indent: 0,
-                        bullet_kind: BulletKind::Ordered(1),
-                        content_lines: smallvec![SmartListLine::new(0, "1. ", "foo")],
-                    }
-                ))
-            );
-        }
-
-        // 2 items.
-        {
-            let input = "1. foo\n   bar";
-            let result = parse_smart_list(input);
-            assert_eq2!(
-                result,
-                Ok((
-                    "",
-                    SmartListIR {
-                        indent: 0,
-                        bullet_kind: BulletKind::Ordered(1),
-                        content_lines: smallvec![
-                            SmartListLine::new(0, "1. ", "foo"),
-                            SmartListLine::new(0, "1. ", "bar"),
-                        ],
-                    }
-                ))
-            );
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests_list_item_lines {
-    use super::*;
-    use crate::assert_eq2;
-
-    /// One line: "- foo".
-    #[test]
-    fn test_one_line() {
-        let input = "- foo";
-        let (remainder, actual) = parse_smart_list(input).unwrap();
-        assert_eq2!(remainder, "");
-        assert_eq2!(
-            actual,
-            SmartListIR {
-                indent: 0,
-                bullet_kind: BulletKind::Unordered,
-                content_lines: smallvec![SmartListLine::new(0, "- ", "foo")],
-            }
-        );
-    }
-
-    /// One line (with trailing new_line): "- foo\n".
-    #[test]
-    fn test_one_line_trailing_new_line() {
-        let input = "- foo\n";
-        let (remainder, actual) = parse_smart_list(input).unwrap();
-        assert_eq2!(remainder, "");
-        assert_eq2!(
-            actual,
-            SmartListIR {
-                indent: 0,
-                bullet_kind: BulletKind::Unordered,
-                content_lines: smallvec![SmartListLine::new(0, "- ", "foo")]
-            }
-        );
-    }
-
-    /// 2 lines (last line is empty): "- foo\n\n".
-    #[test]
-    fn test_two_lines_last_is_empty() {
-        let input = "- foo\n\n";
-        let actual = parse_smart_list(input);
-        let (remainder, actual) = actual.unwrap();
-        assert_eq2!(remainder, "\n");
-        assert_eq2!(
-            actual,
-            SmartListIR {
-                indent: 0,
-                bullet_kind: BulletKind::Unordered,
-                content_lines: smallvec![SmartListLine::new(0, "- ", "foo")]
-            }
-        );
-    }
-
-    /// 2 lines: "- foo\n  bar baz".
-    #[test]
-    fn test_two_lines() {
-        let input = "- foo\n  bar baz";
-        let (remainder, actual) = parse_smart_list(input).unwrap();
-        assert_eq2!(remainder, "");
-        assert_eq2!(
-            actual,
-            SmartListIR {
-                indent: 0,
-                bullet_kind: BulletKind::Unordered,
-                content_lines: smallvec![
-                    SmartListLine::new(0, "- ", "foo"),
-                    SmartListLine::new(0, "- ", "bar baz"),
-                ]
-            }
-        );
-    }
-
-    /// 3 lines (last line is empty): "- foo\n  bar baz\n".
-    #[test]
-    fn test_three_lines_last_is_empty() {
-        let input = "- foo\n  bar baz\n";
-        let (remainder, actual) = parse_smart_list(input).unwrap();
-        assert_eq2!(remainder, "");
-        assert_eq2!(
-            actual,
-            SmartListIR {
-                indent: 0,
-                bullet_kind: BulletKind::Unordered,
-                content_lines: smallvec![
-                    SmartListLine::new(0, "- ", "foo"),
-                    SmartListLine::new(0, "- ", "bar baz"),
-                ]
-            }
-        );
-    }
-
-    /// 3 lines: "- foo\n  bar baz\n  qux".
-    #[test]
-    fn test_three_lines() {
-        let input = "- foo\n  bar baz\n  qux";
-        let (remainder, actual) = parse_smart_list(input).unwrap();
-        assert_eq2!(remainder, "");
-        assert_eq2!(
-            actual,
-            SmartListIR {
-                indent: 0,
-                bullet_kind: BulletKind::Unordered,
-                content_lines: smallvec![
-                    SmartListLine::new(0, "- ", "foo"),
-                    SmartListLine::new(0, "- ", "bar baz"),
-                    SmartListLine::new(0, "- ", "qux"),
-                ]
-            }
-        );
-    }
-}
-
-#[cfg(test)]
-mod tests_bullet_kinds {
-    use super::*;
-    use crate::assert_eq2;
-
-    #[test]
-    fn test_bullet_kinds() {
-        // Unordered.
-        {
-            let input = "- foo";
-            let (_remainder, actual) = parse_smart_list(input).unwrap();
-            assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
-        }
-
-        // Ordered.
-        {
-            let input = "1. foo";
-            let (_remainder, actual) = parse_smart_list(input).unwrap();
-            assert_eq2!(actual.bullet_kind, BulletKind::Ordered(1));
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests_parse_indents {
-    use super::*;
-    use crate::assert_eq2;
-
-    #[test]
-    fn test_indent() {
-        // Indent = 0 Ok.
-        {
-            let input = "- foo";
-            let (_remainder, actual) = parse_smart_list(input).unwrap();
-            assert_eq2!(actual.indent, 0);
-            assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
-        }
-
-        // Indent = 1 Fail.
-        {
-            let input = " - foo";
-            let result = parse_smart_list(input);
-            assert_eq2!(
-                result.err(),
-                Some(nom::Err::Error(nom::error::Error::new(
-                    "Indent must be a multiple of LIST_PREFIX_INDENT_SIZE",
-                    nom::error::ErrorKind::Fail,
-                )))
-            );
-        }
-
-        // Indent = 2 Ok.
-        {
-            let input = "  - foo";
-            let (_remainder, actual) = parse_smart_list(input).unwrap();
-            assert_eq2!(actual.indent, 2);
-            assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
-        }
     }
 }

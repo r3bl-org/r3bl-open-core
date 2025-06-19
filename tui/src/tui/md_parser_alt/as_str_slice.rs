@@ -93,9 +93,9 @@ use crate::{bounds_check,
             PositionStatus,
             PARSER_BYTE_CACHE_PAGE_SIZE};
 
+pub type NomErr<T> = nom::Err<T>;
 pub type NomError<T> = nom::error::Error<T>;
 pub type NomErrorKind = nom::error::ErrorKind;
-pub type NomErr<T> = nom::Err<T>;
 
 /// Marker type alias for [nom::Input] trait methods (which we can't change)
 /// to clarify a character based index type.
@@ -474,6 +474,11 @@ macro_rules! as_str_slice_test_case {
         let _input_array = [$($crate::GCString::new($string_expr)),+];
         let $var_name = $crate::AsStrSlice::from(&_input_array);
     };
+    ($var_name:ident, limit: $max_len:expr, $($string_expr:expr),+ $(,)?) => {
+        #[allow(unused_variables)]
+        let _input_array = [$($crate::GCString::new($string_expr)),+];
+        let $var_name = $crate::AsStrSlice::with_limit(&_input_array, $crate::idx(0), $crate::idx(0), Some($crate::len($max_len)));
+    };
 }
 
 pub mod synthetic_new_line_for_current_char {
@@ -588,28 +593,19 @@ impl<'a> AsStrSlice<'a> {
         whitespace_chars: &[char],
     ) -> (Length, Self) {
         let mut result = self.clone();
-        let current_line = &self.lines[self.line_index.as_usize()].as_ref();
-        let mut char_pos = self.char_index;
         let mut chars_trimmed = len(0);
 
-        // Manually advance through whitespace characters in the current line only.
+        // Use advance() instead of manual manipulation.
         loop {
-            bounds_check!(char_pos, current_line.len_chars(), {
-                break; // if char_pos overflows current_line.len_chars() break
-            });
-
-            match current_line.chars().nth(char_pos.as_usize()) {
+            match result.current_char() {
                 Some(ch) if whitespace_chars.contains(&ch) => {
-                    // Increment the char_pos to skip the whitespace character.
-                    char_pos += idx(1);
+                    result.advance(); // This properly handles both char_index and max_len
                     chars_trimmed += len(1);
                 }
                 _ => break,
             }
         }
 
-        // Update the char_index to the new position.
-        result.char_index = char_pos;
         (chars_trimmed, result)
     }
 
@@ -1866,6 +1862,310 @@ impl<'a> Iterator for StringCharIndices<'a> {
         self.slice.advance();
         self.position += idx(1);
         Some((pos, ch))
+    }
+}
+
+#[cfg(test)]
+mod tests_trim_whitespace_chars_start_current_line {
+    use super::*;
+    use crate::assert_eq2;
+
+    #[test]
+    fn test_no_whitespace_to_trim() {
+        as_str_slice_test_case!(slice, "hello world", "second line");
+        let whitespace_chars = [' ', '\t', '\n'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(0));
+        assert_eq2!(result.current_char(), Some('h'));
+        assert_eq2!(result.extract_to_line_end(), "hello world");
+    }
+
+    #[test]
+    fn test_trim_single_space() {
+        as_str_slice_test_case!(slice, " hello world", "second line");
+        let whitespace_chars = [' ', '\t', '\n'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(1));
+        assert_eq2!(result.current_char(), Some('h'));
+        assert_eq2!(result.extract_to_line_end(), "hello world");
+    }
+
+    #[test]
+    fn test_trim_multiple_spaces() {
+        as_str_slice_test_case!(slice, "   hello world", "second line");
+        let whitespace_chars = [' ', '\t', '\n'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(3));
+        assert_eq2!(result.current_char(), Some('h'));
+        assert_eq2!(result.extract_to_line_end(), "hello world");
+    }
+
+    #[test]
+    fn test_trim_mixed_whitespace() {
+        as_str_slice_test_case!(slice, " \t  hello world", "second line");
+        let whitespace_chars = [' ', '\t', '\n'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(4));
+        assert_eq2!(result.current_char(), Some('h'));
+        assert_eq2!(result.extract_to_line_end(), "hello world");
+    }
+
+    #[test]
+    fn test_trim_only_specific_whitespace_chars() {
+        as_str_slice_test_case!(slice, " \t\nhello world", "second line");
+        let whitespace_chars = [' ', '\t']; // Don't include '\n'
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(2)); // Should stop at '\n'
+        assert_eq2!(result.current_char(), Some('\n'));
+    }
+
+    #[test]
+    fn test_trim_entire_line_of_whitespace() {
+        as_str_slice_test_case!(slice, "   \t  ", "second line");
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(6));
+        assert_eq2!(result.current_char(), Some('\n')); // At synthetic newline
+    }
+
+    #[test]
+    fn test_trim_with_unicode_content() {
+        as_str_slice_test_case!(slice, "  😀hello🌟world", "second line");
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(2));
+        assert_eq2!(result.current_char(), Some('😀'));
+        assert_eq2!(result.extract_to_line_end(), "😀hello🌟world");
+    }
+
+    #[test]
+    fn test_trim_unicode_whitespace() {
+        // Test with Unicode whitespace characters
+        as_str_slice_test_case!(slice, "\u{2000}\u{2001}hello", "second line"); // en-space, em-space
+        let whitespace_chars = ['\u{2000}', '\u{2001}', ' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(2));
+        assert_eq2!(result.current_char(), Some('h'));
+        assert_eq2!(result.extract_to_line_end(), "hello");
+    }
+
+    #[test]
+    fn test_trim_with_max_len_limit() {
+        as_str_slice_test_case!(slice, limit: 10, "   hello world", "second line");
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(3));
+        assert_eq2!(result.current_char(), Some('h'));
+        assert_eq2!(result.max_len, Some(len(7))); // Original 10 - 3 trimmed = 7
+    }
+
+    #[test]
+    fn test_trim_with_max_len_exhausted_by_whitespace() {
+        as_str_slice_test_case!(slice, limit: 3, "   hello world", "second line");
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(3));
+        assert_eq2!(result.current_char(), None); // Max length reached
+        assert_eq2!(result.max_len, Some(len(0))); // All consumed
+    }
+
+    #[test]
+    fn test_trim_with_max_len_partial_whitespace() {
+        as_str_slice_test_case!(slice, limit: 3, "     hello world", "second line");
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(3)); // Can only trim 3 due to max_len
+        assert_eq2!(result.current_char(), None); // Hit max_len limit
+        assert_eq2!(result.max_len, Some(len(0)));
+    }
+
+    #[test]
+    fn test_trim_starting_mid_line() {
+        as_str_slice_test_case!(slice_orig, "abc   def", "second line");
+        let slice = slice_orig.take_from(3); // Start at the spaces
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(3));
+        assert_eq2!(result.current_char(), Some('d'));
+        assert_eq2!(result.extract_to_line_end(), "def");
+    }
+
+    #[test]
+    fn test_trim_empty_line() {
+        as_str_slice_test_case!(slice, "", "second line");
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(0));
+        assert_eq2!(result.current_char(), Some('\n')); // At synthetic newline
+                                                        // immediately
+    }
+
+    #[test]
+    fn test_trim_single_line_input() {
+        as_str_slice_test_case!(slice, "  hello");
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(2));
+        assert_eq2!(result.current_char(), Some('h'));
+        assert_eq2!(result.extract_to_line_end(), "hello");
+    }
+
+    #[test]
+    fn test_trim_doesnt_cross_line_boundaries() {
+        as_str_slice_test_case!(slice, "hello", "  world");
+        let slice = slice.take_from(5); // Position at synthetic newline after "hello"
+        let whitespace_chars = [' ', '\t', '\n'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        // Should advance past the synthetic newline and then trim spaces on the next line
+        assert_eq2!(chars_trimmed, len(3)); // Newline + 2 spaces
+        assert_eq2!(result.line_index, idx(1)); // Moved to second line
+        assert_eq2!(result.char_index, idx(2)); // After spaces
+    }
+
+    #[test]
+    fn test_trim_with_custom_whitespace_set() {
+        as_str_slice_test_case!(slice, ".,!hello world", "second line");
+        let custom_chars = ['.', ',', '!'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&custom_chars);
+
+        assert_eq2!(chars_trimmed, len(3));
+        assert_eq2!(result.current_char(), Some('h'));
+        assert_eq2!(result.extract_to_line_end(), "hello world");
+    }
+
+    #[test]
+    fn test_trim_no_matching_chars() {
+        as_str_slice_test_case!(slice, "hello world", "second line");
+        let custom_chars = ['.', ',', '!'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&custom_chars);
+
+        assert_eq2!(chars_trimmed, len(0));
+        assert_eq2!(result.current_char(), Some('h'));
+        assert_eq2!(result, slice); // Should be unchanged
+    }
+
+    #[test]
+    fn test_trim_position_consistency() {
+        as_str_slice_test_case!(slice, "   hello world", "second line");
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        // Verify that the result is consistent with manual advancement
+        let mut manual_result = slice.clone();
+        for _ in 0..chars_trimmed.as_usize() {
+            manual_result.advance();
+        }
+
+        assert_eq2!(result.line_index, manual_result.line_index);
+        assert_eq2!(result.char_index, manual_result.char_index);
+        assert_eq2!(result.current_char(), manual_result.current_char());
+    }
+
+    #[test]
+    fn test_trim_with_very_long_whitespace() {
+        let long_whitespace = " ".repeat(100);
+        let line = format!("{}hello", long_whitespace);
+        let line_1 = GCString::new(line);
+        let line_2 = GCString::new("second line");
+        let lines = vec![line_1, line_2];
+        let slice = AsStrSlice::from(&lines);
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(100));
+        assert_eq2!(result.current_char(), Some('h'));
+        assert_eq2!(result.extract_to_line_end(), "hello");
+    }
+
+    #[test]
+    fn test_trim_edge_case_at_line_end() {
+        as_str_slice_test_case!(slice, "hello   ", "second line");
+        let slice = slice.take_from(5); // Position at first space after "hello"
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(3));
+        assert_eq2!(result.current_char(), Some('\n')); // At synthetic newline
+    }
+
+    #[test]
+    fn test_trim_preserves_current_taken_tracking() {
+        as_str_slice_test_case!(slice, "  hello world", "second line");
+        let original_taken = slice.current_taken;
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(result.current_taken, original_taken + chars_trimmed);
+    }
+
+    #[test]
+    fn test_trim_with_zero_length_input() {
+        as_str_slice_test_case!(slice, limit: 0, "hello");
+        let whitespace_chars = [' ', '\t'];
+
+        let (chars_trimmed, result) =
+            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+
+        assert_eq2!(chars_trimmed, len(0));
+        assert_eq2!(result.current_char(), None);
+        assert_eq2!(result, slice); // Should be unchanged
     }
 }
 
