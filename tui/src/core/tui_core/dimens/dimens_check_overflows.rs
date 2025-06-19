@@ -16,12 +16,9 @@
  */
 
 use super::{ColIndex, ColWidth, RowHeight, RowIndex};
-use crate::{BoundsCheck, BoundsStatus};
+use crate::{BoundsCheck, BoundsStatus, PositionStatus};
 
 impl BoundsCheck<RowHeight> for RowIndex {
-    /// Used to be `row_index >= height`.
-    /// And: `a >= b` === `a > b-1`.
-    /// So: `row_index > height - 1`.
     fn check_overflows(&self, height: RowHeight) -> BoundsStatus {
         let this = *self;
         let other = height.convert_to_row_index() /*-1*/;
@@ -31,12 +28,22 @@ impl BoundsCheck<RowHeight> for RowIndex {
             BoundsStatus::Within
         }
     }
+
+    fn check_content_position(&self, content_length: RowHeight) -> PositionStatus {
+        let this = *self;
+        let length = content_length.as_usize();
+
+        if this.as_usize() < length {
+            PositionStatus::Within
+        } else if this.as_usize() == length {
+            PositionStatus::Boundary
+        } else {
+            PositionStatus::Beyond
+        }
+    }
 }
 
 impl BoundsCheck<ColWidth> for ColIndex {
-    /// Used to be `col_index >= width`.
-    /// And: `a >= b` === `a > b-1`.
-    /// So: `col_index > width - 1`.
     fn check_overflows(&self, width: ColWidth) -> BoundsStatus {
         let this = *self;
         let other = width.convert_to_col_index() /*-1*/;
@@ -44,6 +51,19 @@ impl BoundsCheck<ColWidth> for ColIndex {
             BoundsStatus::Overflowed
         } else {
             BoundsStatus::Within
+        }
+    }
+
+    fn check_content_position(&self, content_length: ColWidth) -> PositionStatus {
+        let this = *self;
+        let length = content_length.as_usize();
+
+        if this.as_usize() < length {
+            PositionStatus::Within
+        } else if this.as_usize() == length {
+            PositionStatus::Boundary
+        } else {
+            PositionStatus::Beyond
         }
     }
 }
@@ -57,10 +77,23 @@ impl BoundsCheck<RowIndex> for RowIndex {
             BoundsStatus::Within
         }
     }
+
+    fn check_content_position(&self, content_length: RowIndex) -> PositionStatus {
+        let this = *self;
+        let length = content_length.as_usize();
+
+        if this.as_usize() < length {
+            PositionStatus::Within
+        } else if this.as_usize() == length {
+            PositionStatus::Boundary
+        } else {
+            PositionStatus::Beyond
+        }
+    }
 }
 
 #[cfg(test)]
-mod tests_overflow_check {
+mod tests_bounds_check_overflows {
     use super::*;
     use crate::{col, height, row, width};
 
