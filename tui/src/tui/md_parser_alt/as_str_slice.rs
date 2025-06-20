@@ -986,6 +986,41 @@ impl<'a> AsStrSlice<'a> {
         &current_line[safe_start_byte_index..safe_end_byte_index]
     }
 
+    /// Creates a new `AsStrSlice` with `max_len` set to the length of content that
+    /// `extract_to_line_end()` would return. This effectively limits the slice to
+    /// only include the characters from the current position to the end of the current
+    /// line.
+    ///
+    /// This is useful when you want to create a slice that represents only the remaining
+    /// content in the current line, which can then be used with other methods while
+    /// maintaining the character-based limitation.
+    ///
+    /// # Returns
+    /// A new `AsStrSlice` with the same position but with `max_len` set to the character
+    /// count of the content from current position to end of line.
+    ///
+    /// # Examples
+    /// ```
+    /// # use r3bl_tui::{GCString, AsStrSlice};
+    /// # use nom::Input;
+    /// let lines = &[GCString::new("hello world"), GCString::new("second line")];
+    /// let slice = AsStrSlice::from(lines);
+    ///
+    /// // Get slice limited to current line content
+    /// let line_limited = slice.limit_to_line_end();
+    /// assert_eq!(line_limited.extract_to_line_end(), "hello world");
+    ///
+    /// // After taking some characters, limit to remaining line content
+    /// let advanced = slice.take_from(6); // Start from "world"
+    /// let limited = advanced.limit_to_line_end();
+    /// assert_eq!(limited.extract_to_line_end(), "world");
+    /// ```
+    pub fn limit_to_line_end(&self) -> Self {
+        let line = self.extract_to_line_end();
+        let line_char_count = line.len_chars().as_usize();
+        self.take(line_char_count)
+    }
+
     /// Extracts text content from the current position (`line_index`, `char_index`) to
     /// the end of the slice, respecting the `max_len` limit. It allocates for multiline
     /// `lines`, but not for single line content. This is used mostly for tests.
@@ -1866,6 +1901,229 @@ impl<'a> Iterator for StringCharIndices<'a> {
 }
 
 #[cfg(test)]
+mod tests_limit_to_line_end {
+    use super::*;
+    use crate::{assert_eq2, len};
+
+    #[test]
+    fn test_limit_to_line_end_basic() {
+        // Single line - limit to entire line
+        {
+            as_str_slice_test_case!(slice, "hello world");
+            let limited = slice.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "hello world");
+            assert_eq2!(limited.max_len, Some(len(11))); // "hello world" = 11 chars
+
+            // Should be equivalent to original extract_to_line_end()
+            assert_eq2!(limited.extract_to_line_end(), slice.extract_to_line_end());
+        }
+
+        // Multiple lines - limit to first line only
+        {
+            as_str_slice_test_case!(slice, "first line", "second line", "third line");
+            let limited = slice.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "first line");
+            assert_eq2!(limited.max_len, Some(len(10))); // "first line" = 10 chars
+
+            // Should be equivalent to original extract_to_line_end()
+            assert_eq2!(limited.extract_to_line_end(), slice.extract_to_line_end());
+        }
+    }
+
+    #[test]
+    fn test_limit_to_line_end_with_position_offset() {
+        // Test with character offset in the middle of a line
+        {
+            as_str_slice_test_case!(slice, "hello world", "second line");
+            let advanced = slice.take_from(6); // Start from "world"
+            let limited = advanced.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "world");
+            assert_eq2!(limited.max_len, Some(len(5))); // "world" = 5 chars
+
+            // Should be equivalent to original extract_to_line_end()
+            assert_eq2!(
+                limited.extract_to_line_end(),
+                advanced.extract_to_line_end()
+            );
+        }
+
+        // Test at the beginning of second line
+        {
+            as_str_slice_test_case!(slice, "first", "second line");
+            let advanced = slice.take_from(6); // Move to second line (5 chars + 1 newline)
+            let limited = advanced.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "second line");
+            assert_eq2!(limited.max_len, Some(len(11))); // "second line" = 11 chars
+        }
+    }
+
+    #[test]
+    fn test_limit_to_line_end_unicode() {
+        // Test with Unicode characters including emojis
+        {
+            as_str_slice_test_case!(slice, "😀hello 🌍world", "next line");
+            let limited = slice.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "😀hello 🌍world");
+            assert_eq2!(limited.max_len, Some(len(13))); // 😀 + hello + space + 🌍 +
+                                                         // world = 13 chars
+        }
+
+        // Test with Unicode and position offset
+        {
+            as_str_slice_test_case!(slice, "😀hello 🌍world");
+            let advanced = slice.take_from(1); // Start after emoji
+            let limited = advanced.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "hello 🌍world");
+            assert_eq2!(limited.max_len, Some(len(12))); // hello + space + 🌍 + world =
+                                                         // 12 chars
+        }
+    }
+
+    #[test]
+    fn test_limit_to_line_end_edge_cases() {
+        // Empty line
+        {
+            as_str_slice_test_case!(slice, "");
+            let limited = slice.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "");
+            assert_eq2!(limited.max_len, Some(len(0)));
+        }
+
+        // Empty line in the middle
+        {
+            as_str_slice_test_case!(slice, "first", "", "third");
+            let advanced = slice.take_from(6); // Move to empty line (5 chars + 1 newline)
+            let limited = advanced.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "");
+            assert_eq2!(limited.max_len, Some(len(0)));
+        }
+
+        // At end of line
+        {
+            as_str_slice_test_case!(slice, "hello");
+            let advanced = slice.take_from(5); // Move to end of line
+            let limited = advanced.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "");
+            assert_eq2!(limited.max_len, Some(len(0)));
+        }
+
+        // Beyond end of line (should be handled gracefully)
+        {
+            as_str_slice_test_case!(slice, "hello");
+            let advanced = slice.take_from(10); // Beyond end
+            let limited = advanced.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "");
+            assert_eq2!(limited.max_len, Some(len(0)));
+        }
+    }
+
+    #[test]
+    fn test_limit_to_line_end_with_existing_max_len() {
+        // Test when slice already has a max_len that's larger than line content
+        {
+            as_str_slice_test_case!(slice, limit: 20, "hello world");
+            let limited = slice.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "hello world");
+            assert_eq2!(limited.max_len, Some(len(11))); // Should be line length, not
+                                                         // original max_len
+        }
+
+        // Test when slice already has a max_len that's smaller than line content
+        {
+            as_str_slice_test_case!(slice, limit: 5, "hello world");
+            let limited = slice.limit_to_line_end();
+
+            assert_eq2!(limited.extract_to_line_end(), "hello");
+            assert_eq2!(limited.max_len, Some(len(5))); // Should be actual extracted
+                                                        // length
+        }
+    }
+
+    #[test]
+    fn test_limit_to_line_end_preserves_other_fields() {
+        // Verify that other fields are preserved correctly
+        {
+            as_str_slice_test_case!(slice, "first line", "second line");
+            let advanced = slice.take_from(3); // Move to position 3 in first line
+            let limited = advanced.limit_to_line_end();
+
+            // Check that position fields are preserved
+            assert_eq2!(limited.lines, advanced.lines);
+            assert_eq2!(limited.line_index, advanced.line_index);
+            assert_eq2!(limited.char_index, advanced.char_index);
+            assert_eq2!(limited.total_size, advanced.total_size);
+            assert_eq2!(limited.current_taken, advanced.current_taken);
+
+            // Only max_len should be different
+            assert_eq2!(limited.max_len, Some(len(7))); // "st line" = 7 chars
+        }
+    }
+
+    #[test]
+    fn test_limit_to_line_end_equivalence_with_take() {
+        // Verify that limit_to_line_end() produces same result as manual take()
+        {
+            as_str_slice_test_case!(slice, "hello world", "second line");
+
+            let line_content = slice.extract_to_line_end();
+            let char_count = line_content.chars().count();
+            let manual_limited = slice.take(char_count);
+            let auto_limited = slice.limit_to_line_end();
+
+            assert_eq2!(
+                auto_limited.extract_to_line_end(),
+                manual_limited.extract_to_line_end()
+            );
+            assert_eq2!(auto_limited.max_len, manual_limited.max_len);
+        }
+
+        // Test with position offset
+        {
+            as_str_slice_test_case!(slice, "hello world", "second line");
+            let advanced = slice.take_from(6);
+
+            let line_content = advanced.extract_to_line_end();
+            let char_count = line_content.chars().count();
+            let manual_limited = advanced.take(char_count);
+            let auto_limited = advanced.limit_to_line_end();
+
+            assert_eq2!(
+                auto_limited.extract_to_line_end(),
+                manual_limited.extract_to_line_end()
+            );
+            assert_eq2!(auto_limited.max_len, manual_limited.max_len);
+        }
+    }
+
+    #[test]
+    fn test_limit_to_line_end_multiple_calls() {
+        // Test that calling limit_to_line_end() multiple times is idempotent
+        {
+            as_str_slice_test_case!(slice, "hello world");
+            let limited1 = slice.limit_to_line_end();
+            let limited2 = limited1.limit_to_line_end();
+
+            assert_eq2!(
+                limited1.extract_to_line_end(),
+                limited2.extract_to_line_end()
+            );
+            assert_eq2!(limited1.max_len, limited2.max_len);
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests_trim_whitespace_chars_start_current_line {
     use super::*;
     use crate::assert_eq2;
@@ -2504,48 +2762,6 @@ mod tests_character_based_range_methods {
 }
 
 #[cfg(test)]
-mod debug_char_range {
-    use super::*;
-
-    #[test]
-    fn debug_char_range_behavior() {
-        // Let's examine step by step what's happening
-        as_str_slice_test_case!(slice, "😀hello world");
-
-        // Check individual components
-        println!("Original slice: {:?}", slice.extract_to_line_end());
-
-        // Check take_from(1)
-        let after_emoji = slice.take_from(1);
-        println!(
-            "After take_from(1): {:?}",
-            after_emoji.extract_to_line_end()
-        );
-
-        // Check take(5) on that
-        let first_five = after_emoji.take(5);
-        println!("After take(5): {:?}", first_five.extract_to_line_end());
-
-        // Check the full range
-        let range = slice.char_range(1, 6);
-        println!("char_range(1, 6): {:?}", range.extract_to_line_end());
-
-        // Let's also check the emoji itself
-        let emoji_only = slice.char_range(0, 1);
-        println!(
-            "Emoji only char_range(0, 1): {:?}",
-            emoji_only.extract_to_line_end()
-        );
-
-        // And check what each character position is
-        for i in 0..12 {
-            let single_char = slice.char_range(i, i + 1).extract_to_line_end();
-            println!("Position {i}: {single_char:?}");
-        }
-    }
-}
-
-#[cfg(test)]
 mod tests_compat_with_unicode_grapheme_cluster_segment_boundary {
     use super::*;
     use crate::assert_eq2;
@@ -2869,7 +3085,7 @@ mod tests_write_to_byte_cache_compat_behavior {
 
 /// Unit tests for the [AsStrSlice] struct and its methods.
 #[cfg(test)]
-mod tests {
+mod tests_as_str_slice_basic_functionality {
     use nom::{Compare, CompareResult, Input, Offset};
     use pretty_assertions::assert_eq;
 

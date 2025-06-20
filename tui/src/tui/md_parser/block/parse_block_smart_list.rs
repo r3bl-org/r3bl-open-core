@@ -42,7 +42,9 @@ use crate::{list,
             List,
             MdLineFragment,
             SmartListIR,
-            SmartListLine};
+            SmartListIRStr,
+            SmartListLine,
+            SmartListLineStr};
 
 /// Public API for parsing a smart list block in markdown.
 pub fn parse_block_smart_list(
@@ -56,31 +58,48 @@ pub fn parse_block_smart_list(
         List::with_capacity(smart_list_ir.content_lines.len());
 
     for (index, line) in smart_list_ir.content_lines.iter().enumerate() {
-        // Parse the line as a markdown text. Take special care of checkboxes if they show
-        // up at the start of the line.
-        let (_, fragments_in_line) = {
-            let parse_checkbox_policy = {
-                let checked = tiny_inline_string!("{}{}", CHECKED, SPACE);
-                let unchecked = tiny_inline_string!("{}{}", UNCHECKED, SPACE);
-                if line.content.starts_with(checked.as_str())
-                    || line.content.starts_with(unchecked.as_str())
-                {
-                    CheckboxParsePolicy::ParseCheckbox
-                } else {
-                    CheckboxParsePolicy::IgnoreCheckbox
-                }
-            };
+        // Parse the line as markdown text with checkbox handling.
+        let line_content = line.content;
+        let parse_checkbox_policy = determine_checkbox_policy(line_content);
+        let (_, fragments_in_line) =
             parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
-                line.content,
+                line_content,
                 parse_checkbox_policy,
-            )?
-        };
+            )?;
 
-        // Mark is first line or not (to show or hide bullet).
+        // Mark if this is the first line (to show or hide bullet).
         let is_first_line = index == 0;
 
-        // Insert bullet marker before the line.
-        let mut it = match bullet_kind {
+        // Create bullet fragment and build complete line.
+        let bullet_fragments = create_bullet_fragment(bullet_kind, indent, is_first_line);
+        let complete_line = build_line_fragments(bullet_fragments, fragments_in_line);
+
+        output_lines.push(complete_line);
+    }
+
+    return Ok((remainder, (output_lines, bullet_kind, indent)));
+
+    // Helper function to determine checkbox parsing policy.
+    fn determine_checkbox_policy(content: &str) -> CheckboxParsePolicy {
+        let checked = tiny_inline_string!("{}{}", CHECKED, SPACE);
+        let unchecked = tiny_inline_string!("{}{}", UNCHECKED, SPACE);
+
+        if content.starts_with(checked.as_str())
+            || content.starts_with(unchecked.as_str())
+        {
+            CheckboxParsePolicy::ParseCheckbox
+        } else {
+            CheckboxParsePolicy::IgnoreCheckbox
+        }
+    }
+
+    // Helper function to create bullet fragment.
+    fn create_bullet_fragment<'a>(
+        bullet_kind: BulletKind,
+        indent: usize,
+        is_first_line: bool,
+    ) -> List<MdLineFragment<'a>> {
+        match bullet_kind {
             BulletKind::Ordered(number) => {
                 list![MdLineFragment::OrderedListBullet {
                     indent,
@@ -88,24 +107,30 @@ pub fn parse_block_smart_list(
                     is_first_line
                 }]
             }
-            BulletKind::Unordered => list![MdLineFragment::UnorderedListBullet {
-                indent,
-                is_first_line
-            }],
-        };
-
-        if fragments_in_line.is_empty() {
-            // If the line is empty, then we need to insert a blank line.
-            it.push(MdLineFragment::Plain(""));
-        } else {
-            // Otherwise, we can just append the fragments.
-            it += fragments_in_line;
+            BulletKind::Unordered => {
+                list![MdLineFragment::UnorderedListBullet {
+                    indent,
+                    is_first_line
+                }]
+            }
         }
-
-        output_lines.push(it);
     }
 
-    Ok((remainder, (output_lines, bullet_kind, indent)))
+    // Helper function to build complete line fragments.
+    fn build_line_fragments<'a>(
+        mut bullet_fragments: List<MdLineFragment<'a>>,
+        content_fragments: List<MdLineFragment<'a>>,
+    ) -> List<MdLineFragment<'a>> {
+        if content_fragments.is_empty() {
+            // If the line is empty, then we need to insert a blank line.
+            bullet_fragments.push(MdLineFragment::Plain(""));
+        } else {
+            // Otherwise, we can just append the fragments.
+            bullet_fragments += content_fragments;
+        }
+
+        bullet_fragments
+    }
 }
 
 /// Tests things that are final output (and not at the IR level).
@@ -519,7 +544,7 @@ mod tests_parse_smart_lists_in_markdown {
 #[rustfmt::skip]
 pub fn parse_smart_list(
     input: &str
-) -> IResult</* remainder */ &str, SmartListIR<'_>> {
+) -> IResult</* remainder */ &str, SmartListIRStr<'_>> {
     // Match empty spaces & count them into indent.
     let (input, indent) = map(
         space0,
@@ -563,7 +588,7 @@ pub fn parse_smart_list(
     // Return the result.
     Ok((
         input,
-        SmartListIR { indent, bullet_kind, content_lines },
+        SmartListIRStr { indent, bullet_kind, content_lines },
     ))
 }
 
@@ -612,10 +637,10 @@ mod tests_parse_smart_list {
                 actual,
                 Ok((
                     "",
-                    SmartListIR {
+                    SmartListIRStr {
                         indent: 0,
                         bullet_kind: BulletKind::Unordered,
-                        content_lines: smallvec![SmartListLine::new(0, "- ", "foo")],
+                        content_lines: smallvec![SmartListLineStr::new(0, "- ", "foo")],
                     }
                 ))
             );
@@ -629,12 +654,12 @@ mod tests_parse_smart_list {
                 actual,
                 Ok((
                     "",
-                    SmartListIR {
+                    SmartListIRStr {
                         indent: 0,
                         bullet_kind: BulletKind::Unordered,
                         content_lines: smallvec![
-                            SmartListLine::new(0, "- ", "foo"),
-                            SmartListLine::new(0, "- ", "bar"),
+                            SmartListLineStr::new(0, "- ", "foo"),
+                            SmartListLineStr::new(0, "- ", "bar"),
                         ],
                     }
                 ))
@@ -834,7 +859,7 @@ pub fn parse_smart_list_content_lines<'a>(
     input: &'a str,
     indent: usize,
     bullet: &'a str,
-) -> IResult</* remainder */ &'a str, /* lines */ InlineVec<SmartListLine<'a>>> {
+) -> IResult</* remainder */ &'a str, /* lines */ InlineVec<SmartListLineStr<'a>>> {
     let indent_padding = SPACE.repeat(indent);
     let indent_padding = indent_padding.as_str();
 
@@ -887,10 +912,10 @@ pub fn parse_smart_list_content_lines<'a>(
     ).parse(input)?;
 
     // Convert `rest` into a Vec<&str> that contains the output lines.
-    let output_lines: InlineVec<SmartListLine<'_>> = {
+    let output_lines: InlineVec<SmartListLineStr<'_>> = {
         let mut it = InlineVec::with_capacity(rest.len() + 1);
 
-        it.push(SmartListLine {
+        it.push(SmartListLineStr {
             indent,
             bullet_str: bullet,
             content: first
@@ -899,7 +924,7 @@ pub fn parse_smart_list_content_lines<'a>(
         it.extend(rest.iter().map(
             // Skip "bullet's width" number of spaces at the start of the line.
             |(rest_line_content, _)|
-            SmartListLine {
+            SmartListLineStr {
                 indent,
                 bullet_str: bullet,
                 content: &rest_line_content[bullet.len()..]
@@ -928,7 +953,7 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 1);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "foo bar"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "foo bar"));
     }
 
     #[test]
@@ -942,7 +967,7 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 1);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "foo bar"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "foo bar"));
     }
 
     #[test]
@@ -956,9 +981,9 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(0, "- ", "third line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLineStr::new(0, "- ", "second line"));
+        assert_eq2!(lines[2], SmartListLineStr::new(0, "- ", "third line"));
     }
 
     #[test]
@@ -972,9 +997,9 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(0, "1. ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "1. ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(0, "1. ", "third line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "1. ", "first line"));
+        assert_eq2!(lines[1], SmartListLineStr::new(0, "1. ", "second line"));
+        assert_eq2!(lines[2], SmartListLineStr::new(0, "1. ", "third line"));
     }
 
     #[test]
@@ -988,9 +1013,9 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(2, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(2, "- ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(2, "- ", "third line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(2, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLineStr::new(2, "- ", "second line"));
+        assert_eq2!(lines[2], SmartListLineStr::new(2, "- ", "third line"));
     }
 
     #[test]
@@ -1004,9 +1029,9 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(2, "1. ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(2, "1. ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(2, "1. ", "third line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(2, "1. ", "first line"));
+        assert_eq2!(lines[1], SmartListLineStr::new(2, "1. ", "second line"));
+        assert_eq2!(lines[2], SmartListLineStr::new(2, "1. ", "third line"));
     }
 
     #[test]
@@ -1020,8 +1045,8 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "- new item\n  its content");
         assert_eq2!(lines.len(), 2);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLineStr::new(0, "- ", "second line"));
     }
 
     #[test]
@@ -1035,8 +1060,8 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "2. new item\n   its content");
         assert_eq2!(lines.len(), 2);
-        assert_eq2!(lines[0], SmartListLine::new(0, "1. ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "1. ", "second line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "1. ", "first line"));
+        assert_eq2!(lines[1], SmartListLineStr::new(0, "1. ", "second line"));
     }
 
     #[test]
@@ -1050,8 +1075,8 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "  - nested item");
         assert_eq2!(lines.len(), 2);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLineStr::new(0, "- ", "second line"));
     }
 
     #[test]
@@ -1065,8 +1090,8 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "\nother content");
         assert_eq2!(lines.len(), 2);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLineStr::new(0, "- ", "second line"));
     }
 
     #[test]
@@ -1080,7 +1105,7 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "  \n  third line");
         assert_eq2!(lines.len(), 1);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "first line"));
     }
 
     #[test]
@@ -1094,7 +1119,7 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, " second line");
         assert_eq2!(lines.len(), 1);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "first line"));
     }
 
     #[test]
@@ -1108,7 +1133,7 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "   second line");
         assert_eq2!(lines.len(), 1);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "first line"));
     }
 
     #[test]
@@ -1122,9 +1147,9 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(0, "10. ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "10. ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(0, "10. ", "third line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "10. ", "first line"));
+        assert_eq2!(lines[1], SmartListLineStr::new(0, "10. ", "second line"));
+        assert_eq2!(lines[2], SmartListLineStr::new(0, "10. ", "third line"));
     }
 
     #[test]
@@ -1138,9 +1163,9 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(0, "100. ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "100. ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(0, "100. ", "third line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "100. ", "first line"));
+        assert_eq2!(lines[1], SmartListLineStr::new(0, "100. ", "second line"));
+        assert_eq2!(lines[2], SmartListLineStr::new(0, "100. ", "third line"));
     }
 
     #[test]
@@ -1154,9 +1179,9 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "😃 unicode"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "more 🎉 unicode"));
-        assert_eq2!(lines[2], SmartListLine::new(0, "- ", "final 🚀 line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "😃 unicode"));
+        assert_eq2!(lines[1], SmartListLineStr::new(0, "- ", "more 🎉 unicode"));
+        assert_eq2!(lines[2], SmartListLineStr::new(0, "- ", "final 🚀 line"));
     }
 
     #[test]
@@ -1171,7 +1196,7 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "  - not a list item\n  1. also not a list item");
         assert_eq2!(lines.len(), 1);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "first line"));
     }
 
     #[test]
@@ -1185,9 +1210,9 @@ mod tests_parse_smart_list_content_lines {
 
         assert_eq2!(remainder, "    - nested list");
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(4, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(4, "- ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(4, "- ", "third line"));
+        assert_eq2!(lines[0], SmartListLineStr::new(4, "- ", "first line"));
+        assert_eq2!(lines[1], SmartListLineStr::new(4, "- ", "second line"));
+        assert_eq2!(lines[2], SmartListLineStr::new(4, "- ", "third line"));
     }
 }
 

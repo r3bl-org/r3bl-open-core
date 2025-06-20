@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{InlineVec, List};
+use crate::{AsStrSlice, InlineVec, List};
 
 /// This corresponds to a single Markdown document, which is produced after a successful
 /// parse operation [crate::parse_markdown()].
@@ -194,30 +194,32 @@ pub enum BulletKind {
 }
 
 /// Holds a single list item for a given indent level. This may contain multiple lines
-/// which are stored in the `content_lines` field. Take a look at [crate::block::parse_block_smart_list::parse_smart_list] for
-/// more details.
+/// which are stored in the `content_lines` field. Take a look at
+/// [crate::md_parser::parse_block_smart_list::parse_smart_list] or
+/// [crate::md_parser_alt::parse_block_smart_list_alt::parse_smart_list_alt]
+/// for more details.
 #[derive(Clone, Debug, PartialEq)]
-pub struct SmartListIR<'a> {
+pub struct SmartListIR<'a, T> {
     /// Spaces before the bullet (for all the lines in this list).
     pub indent: usize,
     /// Unordered or ordered.
     pub bullet_kind: BulletKind,
     /// Does not contain any bullets.
-    pub content_lines: InlineVec<SmartListLine<'a>>,
+    pub content_lines: InlineVec<SmartListLine<'a, T>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct SmartListLine<'a> {
+pub struct SmartListLine<'a, T> {
     /// Spaces before the bullet (for all the lines in this list).
     pub indent: usize,
     /// Unordered or ordered.
     pub bullet_str: &'a str,
     /// Does not contain any bullets or any spaces for the indent prefix.
-    pub content: &'a str,
+    pub content: T,
 }
 
-impl<'a> SmartListLine<'a> {
-    pub fn new(indent: usize, bullet_str: &'a str, content: &'a str) -> Self {
+impl<'a, T> SmartListLine<'a, T> {
+    pub fn new(indent: usize, bullet_str: &'a str, content: T) -> Self {
         Self {
             indent,
             bullet_str,
@@ -225,3 +227,9 @@ impl<'a> SmartListLine<'a> {
         }
     }
 }
+
+// Type aliases for backward compatibility.
+pub type SmartListIRStr<'a> = SmartListIR<'a, &'a str>;
+pub type SmartListLineStr<'a> = SmartListLine<'a, &'a str>;
+pub type SmartListIRAlt<'a> = SmartListIR<'a, AsStrSlice<'a>>;
+pub type SmartListLineAlt<'a> = SmartListLine<'a, AsStrSlice<'a>>;
