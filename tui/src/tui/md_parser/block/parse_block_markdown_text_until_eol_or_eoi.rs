@@ -30,7 +30,7 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
     checkbox_policy: CheckboxParsePolicy,
 ) -> IResult<&str, MdLineFragments<'_>> {
     let (input, output) = many0(
-        |it| parse_inline_fragments_until_eol_or_eoi(it, checkbox_policy)
+        |it| parse_inline_fragments_until_eol_or_eoi(it, checkbox_policy)   
     ).parse(input)?;
 
     let it = List::from(output);

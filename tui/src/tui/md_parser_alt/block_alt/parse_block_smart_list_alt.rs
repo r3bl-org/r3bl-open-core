@@ -31,9 +31,9 @@
 
 use nom::{branch::alt,
           bytes::complete::{is_not, tag},
-          character::complete::{anychar, digit1},
-          combinator::{opt, recognize, verify},
-          multi::many0,
+          character::complete::{anychar, digit1, space0},
+          combinator::{map, opt, recognize, verify},
+          multi::{many0, many1},
           sequence::{preceded, terminated},
           FindSubstring,
           IResult,
@@ -41,35 +41,87 @@ use nom::{branch::alt,
           Parser};
 use smallvec::smallvec;
 
-use crate::{idx,
+use crate::{as_str_slice_test_case,
+            idx,
             len,
-            md_parser::constants::{LIST_PREFIX_BASE_WIDTH,
+            list,
+            md_parser::constants::{CHECKED,
+                                   LIST_PREFIX_BASE_WIDTH,
                                    NEW_LINE,
                                    ORDERED_LIST_PARTIAL_PREFIX,
                                    SPACE,
                                    SPACE_CHAR,
+                                   UNCHECKED,
                                    UNORDERED_LIST_PREFIX},
             pad_fmt,
+            parse_inline_fragments_until_eol_or_eoi_alt,
+            tiny_inline_string,
             AsStrSlice,
             BulletKind,
             CharLengthExt,
+            CheckboxParsePolicy,
+            GCString,
             InlineString,
             InlineVec,
+            Lines,
+            List,
+            MdLineFragment,
+            MdLineFragments,
             NomErr,
             NomError,
             NomErrorKind,
             SmartListIR,
-            SmartListLine};
+            SmartListIRAlt,
+            SmartListLine,
+            SmartListLineAlt};
 
-// TODO: mod tests_bullet_kinds
 // TODO: parse_block_smart_list_alt()
 // TODO: mod tests_parse_list_item
 // TODO: mod tests_parse_indents
 // TODO: mod tests_parse_block_smart_list
 // TODO: mod tests_parse_smart_lists_in_markdown
 
+/// Public API for parsing a smart list in markdown.
+pub fn parse_block_smart_list_alt<'a>(
+    input: AsStrSlice<'a>,
+) -> IResult<AsStrSlice<'a>, (Lines<'a>, BulletKind, usize)> {
+    let (remainder, smart_list_ir) = parse_smart_list_alt(input)?;
+
+    let indent = smart_list_ir.indent;
+    let bullet_kind = smart_list_ir.bullet_kind;
+    let mut output_lines: Lines<'a> =
+        List::with_capacity(smart_list_ir.content_lines.len());
+
+    for (index, line) in smart_list_ir.content_lines.iter().enumerate() {
+        // Parse the line as markdown text with checkbox handling.
+        let parse_checkbox_policy = determine_checkbox_policy(line.content.clone());
+        let (_, fragments_in_line) =
+            parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt(
+                line.content.clone(),
+                parse_checkbox_policy,
+            )?;
+    }
+
+    todo!();
+
+    // Helper function to determine checkbox parsing policy.
+    fn determine_checkbox_policy(content: AsStrSlice<'_>) -> CheckboxParsePolicy {
+        let checked = tiny_inline_string!("{}{}", CHECKED, SPACE);
+        let unchecked = tiny_inline_string!("{}{}", UNCHECKED, SPACE);
+        if content.starts_with(checked.as_str())
+            || content.starts_with(unchecked.as_str())
+        {
+            CheckboxParsePolicy::ParseCheckbox
+        } else {
+            CheckboxParsePolicy::IgnoreCheckbox
+        }
+    }
+}
+
 /// Parses a complete smart list (ordered or unordered) from the input.
-/// Returns the parsed [SmartListIR] structure. Examples:
+/// Returns the parsed [SmartListIR] structure.
+///
+/// Examples:
 /// - "- item\n  continued" → [SmartListIR] with unordered bullet
 /// - "1. task\n   details" → [SmartListIR] with ordered bullet
 ///
@@ -100,16 +152,15 @@ use crate::{idx,
 /// │  ⎩indent: 4                │  ⎩indent: 4                  │
 /// ╰────────────────────────────┴──────────────────────────────╯
 /// ```
-/// Public API for parsing a smart list in markdown.
 ///
 /// This function parses a smart list from the input text and returns a tuple containing:
 /// - The remainder of the input that wasn't consumed
 /// - A [SmartListIR] object representing the parsed smart list
 ///
 /// The function handles both ordered and unordered lists, with proper indentation.
-pub fn parse_smart_list_alt<'a>(
+fn parse_smart_list_alt<'a>(
     input: AsStrSlice<'a>,
-) -> IResult</* remainder */ AsStrSlice<'a>, SmartListIR<'a>> {
+) -> IResult</* remainder */ AsStrSlice<'a>, SmartListIRAlt<'a>> {
     // Validate indentation and get the trimmed input.
     let (indent, input) = validate_list_indentation(input)?;
 
@@ -155,7 +206,7 @@ fn validate_list_indentation<'a>(
 fn parse_unordered_list<'a>(
     input: AsStrSlice<'a>,
     indent: usize,
-) -> IResult<AsStrSlice<'a>, SmartListIR<'a>> {
+) -> IResult<AsStrSlice<'a>, SmartListIRAlt<'a>> {
     // Match the bullet: Unordered => "- ".
     let (input, bullet) = tag(UNORDERED_LIST_PREFIX).parse(input)?;
 
@@ -166,7 +217,7 @@ fn parse_unordered_list<'a>(
     // Return the result.
     Ok((
         input,
-        SmartListIR {
+        SmartListIRAlt {
             indent,
             bullet_kind: BulletKind::Unordered,
             content_lines,
@@ -182,10 +233,10 @@ fn parse_unordered_list<'a>(
 fn parse_ordered_list<'a>(
     input: AsStrSlice<'a>,
     indent: usize,
-) -> IResult<AsStrSlice<'a>, SmartListIR<'a>> {
+) -> IResult<AsStrSlice<'a>, SmartListIRAlt<'a>> {
     let input_str = input.extract_to_line_end();
 
-    // Parse and validate bullet
+    // Parse and validate bullet.
     let (bullet_str, bullet_kind) =
         parse_ordered_list_bullet(input_str).map_err(|_| {
             nom::Err::Error(nom::error::Error::new(
@@ -205,7 +256,7 @@ fn parse_ordered_list<'a>(
     // Return result
     return Ok((
         input,
-        SmartListIR {
+        SmartListIRAlt {
             indent,
             bullet_kind,
             content_lines,
@@ -251,8 +302,14 @@ mod tests_parse_smart_list_alt {
         as_str_slice_test_case!(input, "- emoji 😀🎉 content", "  more emoji 🚀 content");
         let (remainder, actual) = parse_smart_list_alt(input).unwrap();
         assert_eq2!(remainder.is_empty(), true);
-        assert_eq2!(actual.content_lines[0].content, "emoji 😀🎉 content");
-        assert_eq2!(actual.content_lines[1].content, "more emoji 🚀 content");
+        assert_eq2!(
+            actual.content_lines[0].content.extract_to_line_end(),
+            "emoji 😀🎉 content"
+        );
+        assert_eq2!(
+            actual.content_lines[1].content.extract_to_line_end(),
+            "more emoji 🚀 content"
+        );
     }
 
     #[test]
@@ -279,12 +336,18 @@ mod tests_parse_smart_list_alt {
         // Check first line (bullet line)
         assert_eq2!(actual.content_lines[0].indent, 0);
         assert_eq2!(actual.content_lines[0].bullet_str, "123. ");
-        assert_eq2!(actual.content_lines[0].content, "large number");
+        assert_eq2!(
+            actual.content_lines[0].content.extract_to_line_end(),
+            "large number"
+        );
 
         // Check second line (continuation line)
         assert_eq2!(actual.content_lines[1].indent, 0);
         assert_eq2!(actual.content_lines[1].bullet_str, "123. ");
-        assert_eq2!(actual.content_lines[1].content, "continuation");
+        assert_eq2!(
+            actual.content_lines[1].content.extract_to_line_end(),
+            "continuation"
+        );
     }
 
     #[test]
@@ -303,17 +366,26 @@ mod tests_parse_smart_list_alt {
         // Check first line (Chinese content)
         assert_eq2!(actual.content_lines[0].indent, 0);
         assert_eq2!(actual.content_lines[0].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[0].content, "中文 content");
+        assert_eq2!(
+            actual.content_lines[0].content.extract_to_line_end(),
+            "中文 content"
+        );
 
         // Check second line (Arabic content)
         assert_eq2!(actual.content_lines[1].indent, 0);
         assert_eq2!(actual.content_lines[1].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[1].content, "العربية text");
+        assert_eq2!(
+            actual.content_lines[1].content.extract_to_line_end(),
+            "العربية text"
+        );
 
         // Check third line (Emoji content)
         assert_eq2!(actual.content_lines[2].indent, 0);
         assert_eq2!(actual.content_lines[2].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[2].content, "🌍 global");
+        assert_eq2!(
+            actual.content_lines[2].content.extract_to_line_end(),
+            "🌍 global"
+        );
     }
 
     #[test]
@@ -336,7 +408,7 @@ mod tests_parse_smart_list_alt {
             assert_eq2!(result.content_lines.len(), 1);
             assert_eq2!(result.content_lines[0].indent, 0);
             assert_eq2!(result.content_lines[0].bullet_str, "- ");
-            assert_eq2!(result.content_lines[0].content, "foo");
+            assert_eq2!(result.content_lines[0].content.extract_to_line_end(), "foo");
         }
 
         // 2 items.
@@ -350,10 +422,10 @@ mod tests_parse_smart_list_alt {
             assert_eq2!(result.content_lines.len(), 2);
             assert_eq2!(result.content_lines[0].indent, 0);
             assert_eq2!(result.content_lines[0].bullet_str, "- ");
-            assert_eq2!(result.content_lines[0].content, "foo");
+            assert_eq2!(result.content_lines[0].content.extract_to_line_end(), "foo");
             assert_eq2!(result.content_lines[1].indent, 0);
             assert_eq2!(result.content_lines[1].bullet_str, "- ");
-            assert_eq2!(result.content_lines[1].content, "bar");
+            assert_eq2!(result.content_lines[1].content.extract_to_line_end(), "bar");
         }
     }
 
@@ -377,7 +449,7 @@ mod tests_parse_smart_list_alt {
             assert_eq2!(result.content_lines.len(), 1);
             assert_eq2!(result.content_lines[0].indent, 0);
             assert_eq2!(result.content_lines[0].bullet_str, "1. ");
-            assert_eq2!(result.content_lines[0].content, "foo");
+            assert_eq2!(result.content_lines[0].content.extract_to_line_end(), "foo");
         }
 
         // 2 items.
@@ -391,10 +463,10 @@ mod tests_parse_smart_list_alt {
             assert_eq2!(result.content_lines.len(), 2);
             assert_eq2!(result.content_lines[0].indent, 0);
             assert_eq2!(result.content_lines[0].bullet_str, "1. ");
-            assert_eq2!(result.content_lines[0].content, "foo");
+            assert_eq2!(result.content_lines[0].content.extract_to_line_end(), "foo");
             assert_eq2!(result.content_lines[1].indent, 0);
             assert_eq2!(result.content_lines[1].bullet_str, "1. ");
-            assert_eq2!(result.content_lines[1].content, "bar");
+            assert_eq2!(result.content_lines[1].content.extract_to_line_end(), "bar");
         }
     }
 
@@ -408,37 +480,35 @@ mod tests_parse_smart_list_alt {
         assert_eq2!(actual.content_lines.len(), 1);
         assert_eq2!(actual.content_lines[0].indent, 0);
         assert_eq2!(actual.content_lines[0].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[0].content, "foo");
+        assert_eq2!(actual.content_lines[0].content.extract_to_line_end(), "foo");
     }
 
     #[test]
     fn test_one_line_trailing_new_line() {
         as_str_slice_test_case!(input, "- foo", "");
         let (remainder, actual) = parse_smart_list_alt(input).unwrap();
-        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(remainder.is_empty(), false);
+        assert_eq2!(remainder.extract_to_line_end(), "");
         assert_eq2!(actual.indent, 0);
         assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
         assert_eq2!(actual.content_lines.len(), 1);
         assert_eq2!(actual.content_lines[0].indent, 0);
         assert_eq2!(actual.content_lines[0].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[0].content, "foo");
+        assert_eq2!(actual.content_lines[0].content.extract_to_line_end(), "foo");
     }
 
     #[test]
     fn test_two_lines_last_is_empty() {
         as_str_slice_test_case!(input, "- foo", "");
         let (remainder, actual) = parse_smart_list_alt(input).unwrap();
-
-        // Check remainder
-        assert_eq2!(remainder.is_empty(), true);
-
-        // Check the parsed result
+        assert_eq2!(remainder.is_empty(), false);
+        assert_eq2!(remainder.extract_to_line_end(), "");
         assert_eq2!(actual.indent, 0);
         assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
         assert_eq2!(actual.content_lines.len(), 1);
         assert_eq2!(actual.content_lines[0].indent, 0);
         assert_eq2!(actual.content_lines[0].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[0].content, "foo");
+        assert_eq2!(actual.content_lines[0].content.extract_to_line_end(), "foo");
     }
 
     #[test]
@@ -451,26 +521,33 @@ mod tests_parse_smart_list_alt {
         assert_eq2!(actual.content_lines.len(), 2);
         assert_eq2!(actual.content_lines[0].indent, 0);
         assert_eq2!(actual.content_lines[0].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[0].content, "foo");
+        assert_eq2!(actual.content_lines[0].content.extract_to_line_end(), "foo");
         assert_eq2!(actual.content_lines[1].indent, 0);
         assert_eq2!(actual.content_lines[1].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[1].content, "bar baz");
+        assert_eq2!(
+            actual.content_lines[1].content.extract_to_line_end(),
+            "bar baz"
+        );
     }
 
     #[test]
     fn test_three_lines_last_is_empty() {
         as_str_slice_test_case!(input, "- foo", "  bar baz", "");
         let (remainder, actual) = parse_smart_list_alt(input).unwrap();
-        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(remainder.is_empty(), false);
+        assert_eq2!(remainder.extract_to_line_end(), "");
         assert_eq2!(actual.indent, 0);
         assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
         assert_eq2!(actual.content_lines.len(), 2);
         assert_eq2!(actual.content_lines[0].indent, 0);
         assert_eq2!(actual.content_lines[0].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[0].content, "foo");
+        assert_eq2!(actual.content_lines[0].content.extract_to_line_end(), "foo");
         assert_eq2!(actual.content_lines[1].indent, 0);
         assert_eq2!(actual.content_lines[1].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[1].content, "bar baz");
+        assert_eq2!(
+            actual.content_lines[1].content.extract_to_line_end(),
+            "bar baz"
+        );
     }
 
     #[test]
@@ -483,13 +560,16 @@ mod tests_parse_smart_list_alt {
         assert_eq2!(actual.content_lines.len(), 3);
         assert_eq2!(actual.content_lines[0].indent, 0);
         assert_eq2!(actual.content_lines[0].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[0].content, "foo");
+        assert_eq2!(actual.content_lines[0].content.extract_to_line_end(), "foo");
         assert_eq2!(actual.content_lines[1].indent, 0);
         assert_eq2!(actual.content_lines[1].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[1].content, "bar baz");
+        assert_eq2!(
+            actual.content_lines[1].content.extract_to_line_end(),
+            "bar baz"
+        );
         assert_eq2!(actual.content_lines[2].indent, 0);
         assert_eq2!(actual.content_lines[2].bullet_str, "- ");
-        assert_eq2!(actual.content_lines[2].content, "qux");
+        assert_eq2!(actual.content_lines[2].content.extract_to_line_end(), "qux");
     }
 
     #[test]
@@ -587,7 +667,7 @@ pub fn parse_smart_list_content_lines_alt<'a>(
     bullet: AsStrSlice<'a>,
 ) -> IResult<
     /* remainder */ AsStrSlice<'a>,
-    /* lines */ InlineVec<SmartListLine<'a>>,
+    /* lines */ InlineVec<SmartListLineAlt<'a>>,
 > {
     let mut indent_padding = InlineString::with_capacity(indent);
     pad_fmt!(
@@ -603,10 +683,10 @@ pub fn parse_smart_list_content_lines_alt<'a>(
         let empty_remainder = input.take_from(input.input_len());
         return Ok((
             empty_remainder,
-            smallvec![SmartListLine {
+            smallvec![SmartListLineAlt {
                 indent,
                 bullet_str: bullet.extract_to_line_end(),
-                content: input.extract_to_line_end()
+                content: input.limit_to_line_end()
             }],
         ));
     };
@@ -659,13 +739,13 @@ pub fn parse_smart_list_content_lines_alt<'a>(
     .parse(input)?;
 
     // Convert `rest` into a Vec<&str> that contains the output lines.
-    let output_lines: InlineVec<SmartListLine<'_>> = {
+    let output_lines: InlineVec<SmartListLineAlt<'_>> = {
         let mut it = InlineVec::with_capacity(rest.len() + 1);
 
-        it.push(SmartListLine {
+        it.push(SmartListLineAlt {
             indent,
             bullet_str: bullet.extract_to_line_end(),
-            content: first.extract_to_line_end(),
+            content: first.limit_to_line_end(),
         });
         it.extend(rest.iter().map(
             // Skip "bullet's width" number of characters at the start of the line.
@@ -677,9 +757,9 @@ pub fn parse_smart_list_content_lines_alt<'a>(
                 // Using take_from() ensures we skip the correct number of Unicode
                 // characters.
                 let content_slice = rest_line_content.take_from(bullet_len);
-                let content = content_slice.extract_to_line_end();
+                let content = content_slice.limit_to_line_end();
 
-                SmartListLine {
+                SmartListLineAlt {
                     indent,
                     bullet_str: bullet.extract_to_line_end(),
                     content,
@@ -690,63 +770,7 @@ pub fn parse_smart_list_content_lines_alt<'a>(
         it
     };
 
-    // Special case handling for specific test patterns
-
-    // Case 1: test_one_line_trailing_new_line and test_three_lines_last_is_empty
-    // If the last line is empty, we should return an empty remainder
-    if remainder.lines.len() > 0
-        && remainder
-            .lines
-            .last()
-            .map_or(false, |line| line.as_ref().trim().is_empty())
-    {
-        // Create an empty remainder
-        let empty_remainder = remainder.clone().take(0);
-        return Ok((empty_remainder, output_lines));
-    }
-
-    // Special case for test_two_lines_last_is_empty
-    // This is a direct hack to make the test pass
-    if output_lines.len() == 1
-        && output_lines[0].content == "foo"
-        && output_lines[0].bullet_str == "- "
-        && remainder.lines.len() > 1
-    {
-        // For test_two_lines_last_is_empty, we need to return a remainder with exactly
-        // one line The test expects remainder.lines.len() to be 1
-
-        // Create a new remainder that has only the last line
-        // This is a hack to make the test_two_lines_last_is_empty test pass
-        if let Some(last_line) = remainder.lines.last() {
-            // Create a slice with just the last line
-            let last_line_slice = std::slice::from_ref(last_line);
-
-            // Create a new AsStrSlice with just the last line
-            let new_remainder = AsStrSlice {
-                lines: last_line_slice,
-                line_index: idx(0),
-                char_index: idx(0),
-                max_len: None,
-                total_size: len(1), // Just one character (the empty line)
-                current_taken: len(0),
-            };
-
-            return Ok((new_remainder, output_lines));
-        }
-    }
-
-    // General case: If all lines in the remainder are empty, return an empty remainder
-    if remainder.lines.len() > 0
-        && remainder
-            .lines
-            .iter()
-            .all(|line| line.as_ref().trim().is_empty())
-    {
-        // Create an empty remainder
-        let empty_remainder = remainder.clone().take(0);
-        return Ok((empty_remainder, output_lines));
-    }
-
+    // Return the remainder as is - it contains the unparsed content
     Ok((remainder, output_lines))
 }
 
@@ -766,7 +790,14 @@ mod tests_parse_smart_list_content_lines_alt {
 
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines.len(), 1);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "foo bar"));
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "foo bar");
     }
 
     #[test]
@@ -780,7 +811,14 @@ mod tests_parse_smart_list_content_lines_alt {
 
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines.len(), 1);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "foo bar"));
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "foo bar");
     }
 
     #[test]
@@ -794,9 +832,33 @@ mod tests_parse_smart_list_content_lines_alt {
 
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(0, "- ", "third line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "second line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[2];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "third line");
     }
 
     #[test]
@@ -810,9 +872,33 @@ mod tests_parse_smart_list_content_lines_alt {
 
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(0, "1. ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "1. ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(0, "1. ", "third line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "1. ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "1. ");
+        assert_eq2!(content.extract_to_line_end(), "second line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[2];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "1. ");
+        assert_eq2!(content.extract_to_line_end(), "third line");
     }
 
     #[test]
@@ -826,9 +912,33 @@ mod tests_parse_smart_list_content_lines_alt {
 
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(2, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(2, "- ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(2, "- ", "third line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 2);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 2);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "second line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[2];
+        assert_eq2!(*indent, 2);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "third line");
     }
 
     #[test]
@@ -847,9 +957,33 @@ mod tests_parse_smart_list_content_lines_alt {
 
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(2, "1. ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(2, "1. ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(2, "1. ", "third line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 2);
+        assert_eq2!(*bullet_str, "1. ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 2);
+        assert_eq2!(*bullet_str, "1. ");
+        assert_eq2!(content.extract_to_line_end(), "second line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[2];
+        assert_eq2!(*indent, 2);
+        assert_eq2!(*bullet_str, "1. ");
+        assert_eq2!(content.extract_to_line_end(), "third line");
     }
 
     #[test]
@@ -872,8 +1006,24 @@ mod tests_parse_smart_list_content_lines_alt {
             "- new item\n  its content\n"
         );
         assert_eq2!(lines.len(), 2);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "second line");
     }
 
     #[test]
@@ -896,8 +1046,24 @@ mod tests_parse_smart_list_content_lines_alt {
             "2. new item\n   its content\n"
         );
         assert_eq2!(lines.len(), 2);
-        assert_eq2!(lines[0], SmartListLine::new(0, "1. ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "1. ", "second line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "1. ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "1. ");
+        assert_eq2!(content.extract_to_line_end(), "second line");
     }
 
     #[test]
@@ -914,8 +1080,24 @@ mod tests_parse_smart_list_content_lines_alt {
             "  - nested item\n"
         );
         assert_eq2!(lines.len(), 2);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "second line");
     }
 
     #[test]
@@ -938,8 +1120,24 @@ mod tests_parse_smart_list_content_lines_alt {
             "\nother content\n"
         );
         assert_eq2!(lines.len(), 2);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "second line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "second line");
     }
 
     #[test]
@@ -956,7 +1154,15 @@ mod tests_parse_smart_list_content_lines_alt {
             "  \n  third line\n"
         );
         assert_eq2!(lines.len(), 1);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
     }
 
     #[test]
@@ -970,7 +1176,15 @@ mod tests_parse_smart_list_content_lines_alt {
 
         assert_eq2!(remainder.extract_to_slice_end().as_ref(), " second line\n");
         assert_eq2!(lines.len(), 1);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
     }
 
     #[test]
@@ -987,7 +1201,15 @@ mod tests_parse_smart_list_content_lines_alt {
             "   second line\n"
         );
         assert_eq2!(lines.len(), 1);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "first line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
     }
 
     #[test]
@@ -1001,9 +1223,33 @@ mod tests_parse_smart_list_content_lines_alt {
 
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(0, "10. ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "10. ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(0, "10. ", "third line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "10. ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "10. ");
+        assert_eq2!(content.extract_to_line_end(), "second line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[2];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "10. ");
+        assert_eq2!(content.extract_to_line_end(), "third line");
     }
 
     #[test]
@@ -1022,9 +1268,33 @@ mod tests_parse_smart_list_content_lines_alt {
 
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(0, "100. ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "100. ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(0, "100. ", "third line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "100. ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "100. ");
+        assert_eq2!(content.extract_to_line_end(), "second line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[2];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "100. ");
+        assert_eq2!(content.extract_to_line_end(), "third line");
     }
 
     #[test]
@@ -1043,9 +1313,33 @@ mod tests_parse_smart_list_content_lines_alt {
 
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "😃 unicode"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "more 🎉 unicode"));
-        assert_eq2!(lines[2], SmartListLine::new(0, "- ", "final 🚀 line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "😃 unicode");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "more 🎉 unicode");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[2];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "final 🚀 line");
     }
 
     #[test]
@@ -1065,9 +1359,33 @@ mod tests_parse_smart_list_content_lines_alt {
 
         assert_eq2!(remainder.extract_to_slice_end().as_ref(), "- new item\n");
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(0, "- ", "item1"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "- ", "continuation"));
-        assert_eq2!(lines[2], SmartListLine::new(0, "- ", "more continuation"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "item1");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "continuation");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[2];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "more continuation");
     }
 
     #[test]
@@ -1084,8 +1402,24 @@ mod tests_parse_smart_list_content_lines_alt {
             "5. different number\n"
         );
         assert_eq2!(lines.len(), 2);
-        assert_eq2!(lines[0], SmartListLine::new(0, "1. ", "item1"));
-        assert_eq2!(lines[1], SmartListLine::new(0, "1. ", "continuation"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "1. ");
+        assert_eq2!(content.extract_to_line_end(), "item1");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 0);
+        assert_eq2!(*bullet_str, "1. ");
+        assert_eq2!(content.extract_to_line_end(), "continuation");
     }
 
     #[test]
@@ -1108,9 +1442,33 @@ mod tests_parse_smart_list_content_lines_alt {
             "    - nested list\n"
         );
         assert_eq2!(lines.len(), 3);
-        assert_eq2!(lines[0], SmartListLine::new(4, "- ", "first line"));
-        assert_eq2!(lines[1], SmartListLine::new(4, "- ", "second line"));
-        assert_eq2!(lines[2], SmartListLine::new(4, "- ", "third line"));
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[0];
+        assert_eq2!(*indent, 4);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "first line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[1];
+        assert_eq2!(*indent, 4);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "second line");
+
+        let SmartListLineAlt {
+            indent,
+            bullet_str,
+            content,
+        } = &lines[2];
+        assert_eq2!(*indent, 4);
+        assert_eq2!(*bullet_str, "- ");
+        assert_eq2!(content.extract_to_line_end(), "third line");
     }
 }
 
@@ -1754,6 +2112,74 @@ mod tests_verify_rest {
             let result =
                 verify_rest::must_start_with_correct_num_of_spaces(content, bullet);
             assert!(result); // 5 spaces == 5 char bullet length
+        }
+    }
+}
+
+/// Parse markdown text with a specific checkbox policy until the end of line or input.
+/// This function is used as a utility for parsing markdown text that may contain checkboxes.
+/// It returns a list of markdown line fragments [MdLineFragments].
+///
+/// Does not consume the end of line character if it exists. If an EOL character
+/// [crate::constants::NEW_LINE] is found:
+/// - The EOL character is not included in the output.
+/// - The EOL character is not consumed, and is part of the remainder.
+#[rustfmt::skip]
+pub fn parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt<'a>(
+    input: AsStrSlice<'a>,
+    checkbox_policy: CheckboxParsePolicy,
+) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
+    let (input, output) = many0(
+        |it| parse_inline_fragments_until_eol_or_eoi_alt(it, checkbox_policy)
+    ).parse(input)?;
+
+    let it = List::from(output);
+
+    Ok((input, it))
+}
+
+#[cfg(test)]
+mod tests_checkbox_policy {
+    use super::*;
+    use crate::{as_str_slice_test_case, assert_eq2, list, MdLineFragment};
+
+    #[test]
+    fn test_ignore_checkbox_empty_string() {
+        {
+            as_str_slice_test_case!(input, "");
+            let result = parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
+            );
+
+            let (remaining, fragments) = result.unwrap();
+            assert_eq2!(remaining.is_empty(), true);
+            assert_eq2!(fragments, list![]);
+        }
+    }
+
+    #[test]
+    fn test_ignore_checkbox_non_empty_string() {
+        {
+            as_str_slice_test_case!(
+                input,
+                "here is some plaintext *but what if we italicize?"
+            );
+            let result = parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
+            );
+
+            let (remaining, fragments) = result.unwrap();
+            assert_eq2!(remaining.is_empty(), true);
+            assert_eq2!(
+                fragments,
+                list![
+                    MdLineFragment::Plain("here is some plaintext "),
+                    MdLineFragment::Plain("*"),
+                    MdLineFragment::Plain("but what if we italicize?"),
+                ]
+            );
         }
     }
 }

@@ -21,3 +21,4 @@ pub mod parse_markdown_text_including_eol_or_eoi_alt;
 
 // Re-export.
 pub use parse_heading_alt::*;
+pub use parse_markdown_text_including_eol_or_eoi_alt::*;
