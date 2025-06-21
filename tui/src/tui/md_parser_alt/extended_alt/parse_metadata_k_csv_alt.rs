@@ -100,7 +100,7 @@ fn parse_comma_separated_list_alt<'a>(
 
     // Check if there's any remaining input that contains a comma.
     // This ensures we reject inputs like "tag1,tag2" (without a space after the comma).
-    if remaining.contains(COMMA) {
+    if remaining.contains_in_current_line(COMMA) {
         return Err(nom::Err::Error(nom::error::Error::new(
             remaining,
             nom::error::ErrorKind::Verify,

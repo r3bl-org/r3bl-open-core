@@ -219,6 +219,10 @@
 
 - [ ] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_mardown_alt()`
 
+  - [ ] review `as_str_slice.rs` changes
+  - [ ] review this fix `fallback_parse_any_line_as_plain_alt()`
+  - [ ] continue migrating all the remaining tests into this file from `parse_markdown.rs`
+
 - [ ] maybe check `AsStrSlice::find_substring()` for performance penalty when looking ahead to find
       something in a really large `lines`. might be able to speed up this search using `line` and
       some match to calculate the "expected byte index"

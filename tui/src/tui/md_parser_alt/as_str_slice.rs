@@ -720,6 +720,17 @@ impl<'a> AsStrSlice<'a> {
         }
     }
 
+    /// This does not materialize the `AsStrSlice`. And it does not look at the entire
+    /// slice, but only at the current line. `AsStrSlice` is designed to work with output
+    /// from [str::lines()], which means it should not contain any
+    /// [crate::constants::NEW_LINE] characters in the `lines` slice.
+    ///
+    /// This method extracts the current line up to the end of the line, which is defined
+    /// as the end of the current line or the end of the slice, whichever comes first.
+    pub fn contains_in_current_line(&self, sub_str: &str) -> bool {
+        self.extract_to_line_end().contains(sub_str)
+    }
+
     /// Use [FindSubstring] to implement this function to check if a substring exists.
     /// This will try not to materialize the `AsStrSlice` if it can avoid it, but there
     /// are situations where it may have to (and allocate memory).
@@ -728,7 +739,34 @@ impl<'a> AsStrSlice<'a> {
     }
 
     /// This does not materialize the `AsStrSlice`.
-    pub fn is_empty(&self) -> bool { self.remaining_len() == len(0) }
+    ///
+    /// For [nom::Input] trait compatibility, this should return true when no more
+    /// characters can be consumed from the current position, taking into account
+    /// any `max_len` constraints.
+    pub fn is_empty(&self) -> bool {
+        // This code is simply the following, however, it is fast.
+        // self.remaining_len() == len(0)
+
+        // If max_len is set and is 0, we're empty.
+        if let Some(max_len) = self.max_len {
+            if max_len == len(0) {
+                return true;
+            }
+        }
+
+        // Check if we're beyond the available lines.
+        if self.line_index.as_usize() >= self.lines.len() {
+            return true;
+        }
+
+        // For empty lines array.
+        if self.lines.is_empty() {
+            return true;
+        }
+
+        // Use current_char() to determine emptiness - if no char available, we're empty.
+        self.current_char().is_none()
+    }
 
     /// Returns the number of characters remaining in this slice.
     ///
@@ -1072,7 +1110,8 @@ impl<'a> AsStrSlice<'a> {
             let start_col_index = self.char_index.as_usize();
             if !current_line.is_char_boundary(start_col_index) {
                 // If not at a valid boundary, use a safe approach: collect chars and
-                // rejoin.
+                // rejoin. This approach accumulates the chars into a String and not
+                // InlineString.
                 return Cow::Owned(
                     current_line
                         .chars()
@@ -1093,7 +1132,8 @@ impl<'a> AsStrSlice<'a> {
             // Ensure the end index is also at a valid char boundary.
             if !current_line.is_char_boundary(end_col_index) {
                 // If not at a valid boundary, use a safe approach: collect chars and
-                // rejoin.
+                // rejoin. This approach accumulates the chars into a String and not
+                // InlineString.
                 return Cow::Owned(
                     current_line
                         .chars()
@@ -1478,12 +1518,21 @@ impl<'a> Input for AsStrSlice<'a> {
     fn take(&self, count: CharacterIndexNomCompat) -> Self {
         // take() should return a slice containing the first 'count' characters.
         // Create a slice that starts at current position with max_len = count.
-        Self::with_limit(
-            self.lines,
-            self.line_index,
-            self.char_index,
-            Some(len(count)),
-        )
+        //
+        // If count is 0, we should return an empty slice that doesn't interfere with
+        // further parsing, rather than a slice that blocks all parsing.
+        if count == 0 {
+            // Return a slice that represents "empty content" but doesn't block parsing
+            // by setting max_len to 0 but keeping the same position.
+            Self::with_limit(self.lines, self.line_index, self.char_index, Some(len(0)))
+        } else {
+            Self::with_limit(
+                self.lines,
+                self.line_index,
+                self.char_index,
+                Some(len(count)),
+            )
+        }
     }
 
     /// Returns a slice starting from the `start` character position. This is a character
@@ -1517,14 +1566,24 @@ impl<'a> Input for AsStrSlice<'a> {
     /// ```
     fn take_from(&self, start: CharacterIndexNomCompat) -> Self {
         let mut result = self.clone();
+        let actual_advance = start.min(self.remaining_len().as_usize());
 
         // Advance to the start position.
-        for _ in 0..start.min(self.remaining_len().as_usize()) {
+        for _ in 0..actual_advance {
             result.advance();
         }
 
-        // Reset max_len since we're creating a new slice from the advanced position.
-        result.max_len = None;
+        // If we had a max_len limit, adjust it to account for the advanced position.
+        if let Some(max_len) = self.max_len {
+            if actual_advance >= max_len.as_usize() {
+                // We've advanced past the original limit, so the remaining slice is
+                // empty.
+                result.max_len = Some(len(0));
+            } else {
+                // Reduce the max_len by the amount we advanced.
+                result.max_len = Some(max_len - len(actual_advance));
+            }
+        }
 
         result
     }
@@ -3939,5 +3998,56 @@ mod tests_character_based_length_method {
         as_str_slice_test_case!(single_emoji, "😀");
         assert_eq2!(single_emoji.len_chars(), len(1)); // 1 character, not 4 bytes
         assert_eq2!(single_emoji.is_empty(), false);
+    }
+
+    #[test]
+    fn test_is_empty_comprehensive() {
+        use nom::Input;
+
+        use crate::{assert_eq2, idx, len, AsStrSlice, GCString};
+
+        // Empty slice
+        as_str_slice_test_case!(empty_slice, "");
+        assert_eq2!(empty_slice.is_empty(), true);
+
+        // Empty lines array
+        let empty_lines: Vec<GCString> = vec![];
+        let empty_slice = AsStrSlice::from(&empty_lines);
+        assert_eq2!(empty_slice.is_empty(), true);
+
+        // Normal slice
+        as_str_slice_test_case!(normal_slice, "hello");
+        assert_eq2!(normal_slice.is_empty(), false);
+
+        // Slice with max_len = 0
+        let lines = vec![GCString::from("hello")];
+        let zero_len_slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(0)));
+        assert_eq2!(zero_len_slice.is_empty(), true);
+
+        // Slice with line_index beyond available lines
+        let lines = vec![GCString::from("hello")];
+        let beyond_lines_slice = AsStrSlice::with_limit(&lines, idx(1), idx(0), None);
+        assert_eq2!(beyond_lines_slice.is_empty(), true);
+
+        // Slice with char_index beyond line length
+        let lines = vec![GCString::from("hello")];
+        let beyond_chars_slice = AsStrSlice::with_limit(&lines, idx(0), idx(10), None);
+        assert_eq2!(beyond_chars_slice.is_empty(), true);
+
+        // Slice after advancing to the end
+        let mut advanced_slice = normal_slice.clone();
+        for _ in 0..5 {
+            // "hello" has 5 characters
+            advanced_slice.advance();
+        }
+        assert_eq2!(advanced_slice.is_empty(), true);
+
+        // Multiple lines slice
+        as_str_slice_test_case!(multiline_slice, "line1", "line2");
+        assert_eq2!(multiline_slice.is_empty(), false);
+
+        // Multiple lines slice advanced to second line
+        let second_line_slice = multiline_slice.take_from(6); // Skip "line1\n"
+        assert_eq2!(second_line_slice.is_empty(), false);
     }
 }
