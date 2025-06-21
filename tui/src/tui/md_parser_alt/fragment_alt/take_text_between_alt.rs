@@ -51,7 +51,7 @@ pub fn take_text_between_delims_enclosed_err_on_new_line_alt<'i>(
     match take_text_between_alt(start_delim, end_delim, input) {
         Ok((remaining, output)) => {
             // If the output contains a new line, return an error.
-            if output.contains(NEW_LINE) {
+            if output.contains_in_current_line(NEW_LINE) {
                 DEBUG_MD_PARSER_STDOUT.then(|| {
                     println!(
                         "{} parser error out for input: {:?}",

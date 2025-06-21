@@ -29,7 +29,10 @@ use crate::{constants::NEW_LINE,
 pub fn parse_markdown_text_including_eol_or_eoi_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
-    if input.contains(NEW_LINE) {
+    // Do not use .contains() which materializes the remainder of the entire input.
+    // The assumption is that input should be the output of .lines(). In the case
+    // there is a "\n" in the input's current line, then this if statement kicks in.
+    if input.extract_to_line_end().contains(NEW_LINE) {
         inner::with_new_line(input)
     } else {
         inner::without_new_line(input)

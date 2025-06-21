@@ -40,7 +40,7 @@ pub fn parse_unique_kv_opt_eol_alt<'a>(
     // Can't nest `tag_name` in `output`. Early return in this case.
     // Check if the tag pattern appears in the parsed content or remainder.
     let sub_str = inline_string!("{tag_name}{COLON}{SPACE}");
-    if title_text.contains(sub_str.as_str()) | remainder.contains(sub_str.as_str()) {
+    if title_text.contains_in_current_line(sub_str.as_str()) | remainder.contains_in_current_line(sub_str.as_str()) {
         return Err(nom::Err::Error(nom::error::Error::new(
             input_clone, // "Can't have more than one tag_name in kv expr.",
             nom::error::ErrorKind::Fail,
