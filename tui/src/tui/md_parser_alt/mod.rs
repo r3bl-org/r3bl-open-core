@@ -40,6 +40,7 @@ pub mod as_str_slice;
 pub mod block_alt;
 pub mod extended_alt;
 pub mod fragment_alt;
+pub mod parse_markdown_alt;
 pub mod standard_alt;
 
 // Re-export.
@@ -47,4 +48,5 @@ pub use as_str_slice::*;
 pub use block_alt::*;
 pub use extended_alt::*;
 pub use fragment_alt::*;
+pub use parse_markdown_alt::*;
 pub use standard_alt::*;

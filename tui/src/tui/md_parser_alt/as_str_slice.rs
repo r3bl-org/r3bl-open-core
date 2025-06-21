@@ -2373,7 +2373,7 @@ mod tests_trim_whitespace_chars_start_current_line {
     #[test]
     fn test_trim_with_very_long_whitespace() {
         let long_whitespace = " ".repeat(100);
-        let line = format!("{}hello", long_whitespace);
+        let line = format!("{long_whitespace}hello");
         let line_1 = GCString::new(line);
         let line_2 = GCString::new("second line");
         let lines = vec![line_1, line_2];
