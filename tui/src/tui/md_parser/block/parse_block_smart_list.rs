@@ -41,7 +41,6 @@ use crate::{list,
             Lines,
             List,
             MdLineFragment,
-            SmartListIR,
             SmartListIRStr,
             SmartListLine,
             SmartListLineStr};
@@ -330,190 +329,6 @@ mod tests_parse_block_smart_list {
     }
 }
 
-/// Tests things that are final output (and not at the IR level).
-#[cfg(test)]
-mod tests_parse_smart_lists_in_markdown {
-    use crate::{assert_eq2, parse_markdown, MdDocument, PrettyPrintDebug};
-
-    #[test]
-    fn test_parse_valid_md_ol_with_indent() {
-        let input = [
-            "start",
-            "1. ol1",
-            "  2. ol2",
-            "     ol2.1",
-            "    3. ol3",
-            "       ol3.1",
-            "       ol3.2",
-            "end",
-            "",
-        ]
-        .join("\n");
-
-        let expected_output = [
-            "start",
-            "[  ┊1.│ol1┊  ]",
-            "[  ┊  2.│ol2┊ → ┊    │ol2.1┊  ]",
-            "[  ┊    3.│ol3┊ → ┊      │ol3.1┊ → ┊      │ol3.2┊  ]",
-            "end",
-        ];
-
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument<'_> = result.unwrap().1;
-
-        // md_doc.console_log_fg();
-        // remainder.console_log_bg();
-
-        assert_eq2!(remainder, "");
-        md_doc.inner.iter().zip(expected_output.iter()).for_each(
-            |(element, test_str)| {
-                let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
-                assert_eq2!(lhs, rhs);
-            },
-        );
-    }
-
-    #[test]
-    fn test_parse_valid_md_ul_with_indent() {
-        let input = [
-            "start",
-            "- ul1",
-            "  - ul2",
-            "    ul2.1",
-            "    - ul3",
-            "      ul3.1",
-            "      ul3.2",
-            "end",
-            "",
-        ]
-        .join("\n");
-
-        let expected_output = [
-            "start",
-            "[  ┊─┤ul1┊  ]",
-            "[  ┊───┤ul2┊ → ┊   │ul2.1┊  ]",
-            "[  ┊─────┤ul3┊ → ┊     │ul3.1┊ → ┊     │ul3.2┊  ]",
-            "end",
-        ];
-
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument<'_> = result.unwrap().1;
-
-        // console_log!(md_doc);
-        // console_log!(remainder);
-
-        assert_eq2!(remainder, "");
-        md_doc.inner.iter().zip(expected_output.iter()).for_each(
-            |(element, test_str)| {
-                let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
-                assert_eq2!(lhs, rhs);
-            },
-        );
-    }
-
-    #[test]
-    fn test_parse_valid_md_multiline_no_indent() {
-        let input = vec![
-            "start",
-            "- ul1",
-            "- ul2",
-            "  ul2.1",
-            "  ",
-            "- ul3",
-            "  ul3.1",
-            "  ul3.2",
-            "1. ol1",
-            "2. ol2",
-            "   ol2.1",
-            "3. ol3",
-            "   ol3.1",
-            "   ol3.2",
-            "- [ ] todo",
-            "- [x] done",
-            "end",
-            "",
-        ]
-        .join("\n");
-
-        let expected_output = [
-            "start",
-            "[  ┊─┤ul1┊  ]",
-            "[  ┊─┤ul2┊ → ┊ │ul2.1┊  ]",
-            "  ",
-            "[  ┊─┤ul3┊ → ┊ │ul3.1┊ → ┊ │ul3.2┊  ]",
-            "[  ┊1.│ol1┊  ]",
-            "[  ┊2.│ol2┊ → ┊  │ol2.1┊  ]",
-            "[  ┊3.│ol3┊ → ┊  │ol3.1┊ → ┊  │ol3.2┊  ]",
-            "[  ┊─┤[ ] todo┊  ]",
-            "[  ┊─┤[x] done┊  ]",
-            "end",
-        ];
-
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument<'_> = result.unwrap().1;
-
-        // console_log!(md_doc);
-        // console_log!(remainder);
-
-        assert_eq2!(remainder, "");
-        md_doc.inner.iter().zip(expected_output.iter()).for_each(
-            |(element, test_str)| {
-                let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
-                assert_eq2!(lhs, rhs);
-            },
-        );
-    }
-
-    #[test]
-    fn test_parse_valid_md_no_indent() {
-        let input = [
-            "start",
-            "- ul1",
-            "- ul2",
-            "1. ol1",
-            "2. ol2",
-            "- [ ] todo",
-            "- [x] done",
-            "end",
-            "",
-        ]
-        .join("\n");
-
-        let expected_output = [
-            "start",
-            "[  ┊─┤ul1┊  ]",
-            "[  ┊─┤ul2┊  ]",
-            "[  ┊1.│ol1┊  ]",
-            "[  ┊2.│ol2┊  ]",
-            "[  ┊─┤[ ] todo┊  ]",
-            "[  ┊─┤[x] done┊  ]",
-            "end",
-        ];
-
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument<'_> = result.unwrap().1;
-
-        // console_log!(md_doc);
-        // console_log!(remainder);
-
-        assert_eq2!(remainder, "");
-        md_doc.inner.iter().zip(expected_output.iter()).for_each(
-            |(element, test_str)| {
-                let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
-                assert_eq2!(lhs, rhs);
-            },
-        );
-    }
-}
-
 /// First line of `input` looks like this.
 ///
 /// ```text
@@ -618,7 +433,7 @@ mod tests_bullet_kinds {
 #[cfg(test)]
 mod tests_parse_smart_list {
     use super::*;
-    use crate::assert_eq2;
+    use crate::{assert_eq2, SmartListIR};
 
     #[test]
     fn test_invalid_ul_list() {

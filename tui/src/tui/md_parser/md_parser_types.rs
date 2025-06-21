@@ -229,6 +229,7 @@ impl<'a, T> SmartListLine<'a, T> {
 }
 
 // Type aliases for backward compatibility.
+
 pub type SmartListIRStr<'a> = SmartListIR<'a, &'a str>;
 pub type SmartListLineStr<'a> = SmartListLine<'a, &'a str>;
 pub type SmartListIRAlt<'a> = SmartListIR<'a, AsStrSlice<'a>>;

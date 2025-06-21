@@ -31,9 +31,9 @@
 
 use nom::{branch::alt,
           bytes::complete::{is_not, tag},
-          character::complete::{anychar, digit1, space0},
-          combinator::{map, opt, recognize, verify},
-          multi::{many0, many1},
+          character::complete::{anychar, digit1},
+          combinator::{opt, recognize, verify},
+          multi::many0,
           sequence::{preceded, terminated},
           FindSubstring,
           IResult,
@@ -41,10 +41,7 @@ use nom::{branch::alt,
           Parser};
 use smallvec::smallvec;
 
-use crate::{as_str_slice_test_case,
-            idx,
-            len,
-            list,
+use crate::{list,
             md_parser::constants::{CHECKED,
                                    LIST_PREFIX_BASE_WIDTH,
                                    NEW_LINE,
@@ -60,7 +57,6 @@ use crate::{as_str_slice_test_case,
             BulletKind,
             CharLengthExt,
             CheckboxParsePolicy,
-            GCString,
             InlineString,
             InlineVec,
             Lines,
@@ -70,16 +66,8 @@ use crate::{as_str_slice_test_case,
             NomErr,
             NomError,
             NomErrorKind,
-            SmartListIR,
             SmartListIRAlt,
-            SmartListLine,
             SmartListLineAlt};
-
-// TODO: parse_block_smart_list_alt()
-// TODO: mod tests_parse_list_item
-// TODO: mod tests_parse_indents
-// TODO: mod tests_parse_block_smart_list
-// TODO: mod tests_parse_smart_lists_in_markdown
 
 /// Public API for parsing a smart list in markdown.
 pub fn parse_block_smart_list_alt<'a>(
@@ -100,11 +88,20 @@ pub fn parse_block_smart_list_alt<'a>(
                 line.content.clone(),
                 parse_checkbox_policy,
             )?;
+
+        // Mark if this is the first line (to show or hide bullet).
+        let is_first_line = index == 0;
+
+        // Create bullet fragment and build complete line.
+        let bullet_fragments = create_bullet_fragment(bullet_kind, indent, is_first_line);
+        let complete_line = build_line_fragments(bullet_fragments, fragments_in_line);
+
+        output_lines.push(complete_line);
     }
 
-    todo!();
+    return Ok((remainder, (output_lines, bullet_kind, indent)));
 
-    // Helper function to determine checkbox parsing policy.
+    /// Helper function to determine checkbox parsing policy.
     fn determine_checkbox_policy(content: AsStrSlice<'_>) -> CheckboxParsePolicy {
         let checked = tiny_inline_string!("{}{}", CHECKED, SPACE);
         let unchecked = tiny_inline_string!("{}{}", UNCHECKED, SPACE);
@@ -116,14 +113,240 @@ pub fn parse_block_smart_list_alt<'a>(
             CheckboxParsePolicy::IgnoreCheckbox
         }
     }
+
+    /// Helper function to create bullet fragment.
+    fn create_bullet_fragment<'a>(
+        bullet_kind: BulletKind,
+        indent: usize,
+        is_first_line: bool,
+    ) -> List<MdLineFragment<'a>> {
+        match bullet_kind {
+            BulletKind::Ordered(number) => {
+                list![MdLineFragment::OrderedListBullet {
+                    indent,
+                    number,
+                    is_first_line
+                }]
+            }
+            BulletKind::Unordered => {
+                list![MdLineFragment::UnorderedListBullet {
+                    indent,
+                    is_first_line
+                }]
+            }
+        }
+    }
+
+    /// Helper function to build complete line fragments.
+    fn build_line_fragments<'a>(
+        mut bullet_fragments: List<MdLineFragment<'a>>,
+        content_fragments: List<MdLineFragment<'a>>,
+    ) -> List<MdLineFragment<'a>> {
+        if content_fragments.is_empty() {
+            // If the line is empty, then we need to insert a blank line.
+            bullet_fragments.push(MdLineFragment::Plain(""));
+        } else {
+            // Otherwise, we can just append the fragments.
+            bullet_fragments += content_fragments;
+        }
+
+        bullet_fragments
+    }
+}
+
+/// Tests things that are final output (and not at the IR level).
+#[cfg(test)]
+mod tests_parse_block_smart_list_alt {
+    use super::*;
+    use crate::{as_str_slice_test_case, assert_eq2};
+
+    #[test]
+    fn test_with_unicode() {
+        as_str_slice_test_case!(input, "- straight 😃 foo bar baz");
+        let (remainder, (lines, bullet_kind, indent)) =
+            parse_block_smart_list_alt(input).unwrap();
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(bullet_kind, BulletKind::Unordered);
+        assert_eq2!(indent, 0);
+        assert_eq2!(lines.len(), 1);
+        assert_eq2!(
+            &lines[0],
+            &list![
+                MdLineFragment::UnorderedListBullet {
+                    indent: 0,
+                    is_first_line: true
+                },
+                MdLineFragment::Plain("straight 😃 foo bar baz"),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_block_smart_list_with_checkbox() {
+        // Valid unchecked.
+        {
+            as_str_slice_test_case!(input, "- [ ] todo");
+            let (remainder, (lines, _bullet_kind, _indent)) =
+                parse_block_smart_list_alt(input).unwrap();
+            let first_line = lines.first().unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(
+                first_line,
+                &list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
+                    MdLineFragment::Checkbox(false),
+                    MdLineFragment::Plain(" todo"),
+                ]
+            );
+        }
+
+        // Valid checked.
+        {
+            as_str_slice_test_case!(input, "- [x] done");
+            let (remainder, (lines, _bullet_kind, _indent)) =
+                parse_block_smart_list_alt(input).unwrap();
+            let first_line = lines.first().unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(
+                first_line,
+                &list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
+                    MdLineFragment::Checkbox(true),
+                    MdLineFragment::Plain(" done"),
+                ]
+            );
+        }
+
+        // Invalid unchecked.
+        {
+            as_str_slice_test_case!(input, "- [ ]todo");
+            let (remainder, (lines, _bullet_kind, _indent)) =
+                parse_block_smart_list_alt(input).unwrap();
+            let first_line = lines.first().unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(
+                first_line,
+                &list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
+                    MdLineFragment::Plain("[ ]"),
+                    MdLineFragment::Plain("todo"),
+                ]
+            );
+        }
+
+        // Invalid checked.
+        {
+            as_str_slice_test_case!(input, "- [x]done");
+            let (remainder, (lines, _bullet_kind, _indent)) =
+                parse_block_smart_list_alt(input).unwrap();
+            let first_line = lines.first().unwrap();
+            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(
+                first_line,
+                &list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
+                    MdLineFragment::Plain("[x]"),
+                    MdLineFragment::Plain("done"),
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn test_valid_ul_list_1() {
+        as_str_slice_test_case!(input, "- foo", "  bar baz");
+        let expected = list! {
+            list![
+                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: true },
+                MdLineFragment::Plain("foo"),
+            ],
+            list![
+                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: false },
+                MdLineFragment::Plain("bar baz"),
+            ],
+        };
+        let (remainder, (lines, _bullet_kind, _indent)) =
+            parse_block_smart_list_alt(input).unwrap();
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(lines, expected);
+    }
+
+    #[test]
+    fn test_valid_ul_list_2() {
+        as_str_slice_test_case!(input, "- foo", "  bar baz", "- foo1", "  bar1 baz1");
+        let expected = list! {
+            list![
+                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: true },
+                MdLineFragment::Plain("foo"),
+            ],
+            list![
+                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: false },
+                MdLineFragment::Plain("bar baz"),
+            ],
+        };
+        let (remainder, (lines, _bullet_kind, _indent)) =
+            parse_block_smart_list_alt(input).unwrap();
+        assert_eq2!(remainder.extract_to_line_end(), "- foo1");
+        assert_eq2!(lines, expected);
+    }
+
+    #[test]
+    fn test_valid_ol_list_1() {
+        as_str_slice_test_case!(input, "1. foo", "   bar baz");
+        let expected = list! {
+            list![
+                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: true },
+                MdLineFragment::Plain("foo"),
+            ],
+            list![
+                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: false },
+                MdLineFragment::Plain("bar baz"),
+            ],
+        };
+        let (remainder, (lines, _bullet_kind, _indent)) =
+            parse_block_smart_list_alt(input).unwrap();
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(lines, expected);
+    }
+
+    #[test]
+    fn test_valid_ol_list_2() {
+        as_str_slice_test_case!(input, "1. foo", "   bar baz", "1. foo", "   bar baz");
+        let expected = list! {
+            list![
+                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: true },
+                MdLineFragment::Plain("foo"),
+            ],
+            list![
+                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: false },
+                MdLineFragment::Plain("bar baz"),
+            ],
+        };
+        let (remainder, (lines, _bullet_kind, _indent)) =
+            parse_block_smart_list_alt(input).unwrap();
+        assert_eq2!(remainder.extract_to_line_end(), "1. foo");
+        assert_eq2!(lines, expected);
+    }
 }
 
 /// Parses a complete smart list (ordered or unordered) from the input.
-/// Returns the parsed [SmartListIR] structure.
+/// Returns the parsed [crate::SmartListIR] structure.
 ///
 /// Examples:
-/// - "- item\n  continued" → [SmartListIR] with unordered bullet
-/// - "1. task\n   details" → [SmartListIR] with ordered bullet
+/// - "- item\n  continued" → [crate::SmartListIR] with unordered bullet
+/// - "1. task\n   details" → [crate::SmartListIR] with ordered bullet
 ///
 /// First line of `input` looks like this.
 ///
@@ -155,10 +378,10 @@ pub fn parse_block_smart_list_alt<'a>(
 ///
 /// This function parses a smart list from the input text and returns a tuple containing:
 /// - The remainder of the input that wasn't consumed
-/// - A [SmartListIR] object representing the parsed smart list
+/// - A [crate::SmartListIR] object representing the parsed smart list
 ///
 /// The function handles both ordered and unordered lists, with proper indentation.
-fn parse_smart_list_alt<'a>(
+pub fn parse_smart_list_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult</* remainder */ AsStrSlice<'a>, SmartListIRAlt<'a>> {
     // Validate indentation and get the trimmed input.
@@ -267,7 +490,7 @@ fn parse_ordered_list<'a>(
     /// Returns the bullet string and [BulletKind]. Examples:
     /// - "1. text" → ("1. ", BulletKind::Ordered(1))
     /// - "123. item" → ("123. ", BulletKind::Ordered(123))
-    fn parse_ordered_list_bullet<'a>(input_str: &'a str) -> IResult<&'a str, BulletKind> {
+    fn parse_ordered_list_bullet(input_str: &str) -> IResult<&str, BulletKind> {
         // Parse bullet pattern: "123. "
         let bullet_res: IResult<_, _, NomError<_>> =
             recognize(terminated(digit1, tag(ORDERED_LIST_PARTIAL_PREFIX)))

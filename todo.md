@@ -214,11 +214,8 @@
               functions
         - [x] `mod tests_parse_smart_list_alt`
       - [x] `mod tests_bullet_kinds`
-      - [ ] `parse_block_smart_list_alt()`
-      - [ ] `mod tests_parse_list_item`
-      - [ ] `mod tests_parse_indents`
-      - [ ] `mod tests_parse_block_smart_list`
-      - [ ] `mod tests_parse_smart_lists_in_markdown`
+      - [x] `parse_block_smart_list_alt()`
+      - [x] `mod tests_parse_block_smart_list`
 
 - [ ] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_mardown_alt()`
 
