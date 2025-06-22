@@ -37,6 +37,7 @@ pub fn parse_markdown_text_including_eol_or_eoi_alt<'a>(
         // Throw error for invalid input.
         return Err(NomErr::Error(NomError::new(input, NomErrorKind::CrLf)));
     } else {
+        // This checks for empty input.
         inner::without_new_line(input)
     }
 }
@@ -47,12 +48,9 @@ mod inner {
     /// Parse a single line of markdown text [MdLineFragments] not terminated by EOL [NEW_LINE].
     #[rustfmt::skip]
     pub fn without_new_line<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
-        // Nothing to parse, early return.
+        // Check if input is empty.
         if input.is_empty() {
-            return Err(nom::Err::Error(nom::error::Error::new(
-                input, // "Empty input.",
-                nom::error::ErrorKind::Fail,
-            )));
+            return Err(NomErr::Error(NomError::new(input, NomErrorKind::Eof)));
         }
 
         let (input, output) = many0(
