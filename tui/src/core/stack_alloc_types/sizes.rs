@@ -26,6 +26,8 @@
 // editor performance
 pub const DEFAULT_STRING_STORAGE_SIZE: usize = 16;
 
+use std::fmt::Display;
+
 use smallstr::SmallString;
 use smallvec::SmallVec;
 
@@ -37,6 +39,38 @@ pub type InlineVecStr<'a> = InlineVec<&'a str>;
 /// Stack allocated string storage for small strings. When this gets larger than
 /// [DEFAULT_STRING_STORAGE_SIZE], it will be [smallvec::SmallVec::spilled] on the heap.
 pub type InlineString = SmallString<[u8; DEFAULT_STRING_STORAGE_SIZE]>;
+
+/// Replacement for [std::borrow::Cow] that uses [InlineString] if it is owned.
+/// And `&str` if it is borrowed.
+#[derive(Clone, Debug, PartialEq)]
+pub enum InlineStringCow<'a> {
+    Borrowed(&'a str),
+    Owned(InlineString),
+}
+
+impl<'a> InlineStringCow<'a> {
+    pub fn new_empty_borrowed() -> Self { InlineStringCow::Borrowed("") }
+    pub fn new_borrowed(arg: &'a str) -> Self { InlineStringCow::Borrowed(arg) }
+    pub fn new_owned(arg: InlineString) -> Self { InlineStringCow::Owned(arg) }
+}
+
+impl AsRef<str> for InlineStringCow<'_> {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::Borrowed(s) => s,
+            Self::Owned(s) => s.as_str(),
+        }
+    }
+}
+
+impl Display for InlineStringCow<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Borrowed(as_ref_str) => write!(f, "{}", as_ref_str),
+            Self::Owned(as_ref_str) => write!(f, "{}", as_ref_str),
+        }
+    }
+}
 
 /// Stack allocated tiny string storage for small char sequences. When this gets larger
 /// than [DEFAULT_CHAR_STORAGE_SIZE], it will be [smallvec::SmallVec::spilled] on the

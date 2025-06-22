@@ -197,15 +197,13 @@
 
       - [x] Rename `MdBlock` -> `MdElement`
 
----
-
-- [ ] migrate `block` parsers into `block_alt` (part 2)
+- [x] migrate `block` parsers into `block_alt` (part 2)
 
   - block parsers:
 
     - [x] `parse_block_code.rs` -> `block_alt/parse_block_code_alt.rs`
 
-    - [ ] `parse_block_smart_list.rs` -> `block_alt/parse_block_smart_list_alt.rs`
+    - [x] `parse_block_smart_list.rs` -> `block_alt/parse_block_smart_list_alt.rs`
 
       - [x] `parse_smart_list_content_lines_alt()`
       - [x] `mod tests_parse_smart_list_content_lines_alt`
@@ -217,13 +215,15 @@
       - [x] `parse_block_smart_list_alt()`
       - [x] `mod tests_parse_block_smart_list`
 
+---
+
 - [ ] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_mardown_alt()`
 
-  - [ ] review `as_str_slice.rs` changes
-  - [ ] review this fix `fallback_parse_any_line_as_plain_alt()`
+  - [x] review `as_str_slice.rs` changes
+  - [x] review this fix `fallback_parse_any_line_as_plain_alt()`
   - [ ] continue migrating all the remaining tests into this file from `parse_markdown.rs`
 
-- [ ] maybe check `AsStrSlice::find_substring()` for performance penalty when looking ahead to find
+- [x] maybe check `AsStrSlice::find_substring()` for performance penalty when looking ahead to find
       something in a really large `lines`. might be able to speed up this search using `line` and
       some match to calculate the "expected byte index"
 
