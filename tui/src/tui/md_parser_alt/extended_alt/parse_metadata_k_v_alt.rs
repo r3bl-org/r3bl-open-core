@@ -40,7 +40,9 @@ pub fn parse_unique_kv_opt_eol_alt<'a>(
     // Can't nest `tag_name` in `output`. Early return in this case.
     // Check if the tag pattern appears in the parsed content or remainder.
     let sub_str = inline_string!("{tag_name}{COLON}{SPACE}");
-    if title_text.contains_in_current_line(sub_str.as_str()) | remainder.contains_in_current_line(sub_str.as_str()) {
+    if title_text.contains_in_current_line(sub_str.as_str())
+        | remainder.contains_in_current_line(sub_str.as_str())
+    {
         return Err(nom::Err::Error(nom::error::Error::new(
             input_clone, // "Can't have more than one tag_name in kv expr.",
             nom::error::ErrorKind::Fail,
@@ -69,6 +71,7 @@ mod test_parse_title_no_eol {
                 fg_black,
                 inline_string,
                 md_parser::constants::TITLE,
+                InlineStringCow,
                 NomErr,
                 NomErrorKind};
 
@@ -86,8 +89,8 @@ mod test_parse_title_no_eol {
             r = fg_black(rem_str).bg_yellow(),
         );
 
-        assert_eq2!(output_str, "Something");
-        assert_eq2!(rem_str, "");
+        assert_eq2!(output_str.as_ref(), "Something");
+        assert_eq2!(rem_str.as_ref(), "");
     }
 
     #[test]
@@ -104,8 +107,8 @@ mod test_parse_title_no_eol {
             r = fg_black(rem_str).bg_yellow(),
         );
 
-        assert_eq2!(output_str, "Something");
-        assert_eq2!(rem_str, "");
+        assert_eq2!(output_str.as_ref(), "Something");
+        assert_eq2!(rem_str.as_ref(), "");
     }
 
     #[test]
@@ -154,12 +157,12 @@ mod test_parse_title_no_eol {
             fg_black(input.extract_to_slice_end()).bg_cyan()
         );
 
-        let (rem, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+        let (rem, maybe_output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
-        let output_str = match output {
-            Some(o) => &o.extract_to_slice_end(),
-            None => "",
+        let output_str = match maybe_output {
+            Some(output) => &output.extract_to_slice_end(),
+            None => &InlineStringCow::new_empty_borrowed(),
         };
 
         println!(
@@ -168,8 +171,8 @@ mod test_parse_title_no_eol {
             r = fg_black(rem_str).bg_yellow(),
         );
 
-        assert_eq2!(output_str, "");
-        assert_eq2!(rem_str, "foo\nbar");
+        assert_eq2!(output_str.as_ref(), "");
+        assert_eq2!(rem_str.as_ref(), "foo\nbar");
     }
 
     #[test]
@@ -180,12 +183,12 @@ mod test_parse_title_no_eol {
             fg_black(input.extract_to_slice_end()).bg_cyan()
         );
 
-        let (rem, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+        let (rem, maybe_output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
-        let output_str = match output {
-            Some(o) => &o.extract_to_slice_end(),
-            None => "",
+        let output_str = match maybe_output {
+            Some(output) => &output.extract_to_slice_end(),
+            None => &InlineStringCow::new_empty_borrowed(),
         };
 
         println!(
@@ -194,8 +197,8 @@ mod test_parse_title_no_eol {
             r = fg_black(rem_str).bg_yellow(),
         );
 
-        assert_eq2!(rem_str, "foo\nbar");
-        assert_eq2!(output_str, " a");
+        assert_eq2!(rem_str.as_ref(), "foo\nbar");
+        assert_eq2!(output_str.as_ref(), " a");
     }
 
     #[test]
@@ -211,7 +214,7 @@ mod test_parse_title_no_eol {
         let rem_str = &rem.extract_to_slice_end();
         let output_str = match output {
             Some(o) => &o.extract_to_slice_end(),
-            None => "",
+            None => &InlineStringCow::new_empty_borrowed(),
         };
 
         println!(
@@ -219,7 +222,7 @@ mod test_parse_title_no_eol {
             o = fg_black(output_str).bg_green(),
             r = fg_black(rem_str).bg_yellow(),
         );
-        assert_eq2!(output_str, "");
-        assert_eq2!(rem_str, "\n# heading1\n## heading2");
+        assert_eq2!(output_str.as_ref(), "");
+        assert_eq2!(rem_str.as_ref(), "\n# heading1\n## heading2");
     }
 }

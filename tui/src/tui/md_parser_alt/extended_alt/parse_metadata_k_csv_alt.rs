@@ -128,9 +128,9 @@ mod test_parse_tags_opt_eol {
         as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3");
 
         let (input, output) = super::parse_csv_opt_eol_alt(TAGS, input).unwrap();
-        assert_eq2!(input.extract_to_slice_end(), "");
+        assert_eq2!(input.extract_to_slice_end().as_ref(), "");
 
-        // Create expected output with AsStrSlice values
+        // Create expected output with AsStrSlice values.
         let expected_tag1 = &[GCString::new("tag1")];
         let expected_tag2 = &[GCString::new("tag2")];
         let expected_tag3 = &[GCString::new("tag3")];
@@ -140,7 +140,7 @@ mod test_parse_tags_opt_eol {
             AsStrSlice::from(expected_tag3)
         ];
 
-        // Compare the string representations for easier debugging
+        // Compare the string representations for easier debugging.
         assert_eq2!(
             output
                 .iter()
@@ -172,7 +172,7 @@ mod test_parse_tags_opt_eol {
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         as_str_slice_test_case!(input5, "@tags: tag1, tag2,  tag3");
         let result = parse_csv_opt_eol_alt(TAGS, input5).unwrap();
-        assert_eq2!(result.0.extract_to_slice_end(), "",);
+        assert_eq2!(result.0.extract_to_slice_end().as_ref(), "",);
 
         // Create expected output with AsStrSlice values
         let expected_tag1 = &[GCString::new("tag1")];
@@ -205,7 +205,7 @@ mod test_parse_tags_opt_eol {
             as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3\n");
 
             let (input, output) = parse_csv_opt_eol_alt(TAGS, input).unwrap();
-            assert_eq2!(input.extract_to_slice_end(), "");
+            assert_eq2!(input.extract_to_slice_end().as_ref(), "");
 
             // Create expected output with AsStrSlice values
             let expected_tag1 = &[GCString::new("tag1")];
@@ -264,7 +264,7 @@ mod test_parse_tags_opt_eol {
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         as_str_slice_test_case!(input5, "@tags: tag1, tag2,  tag3\n");
         let result = parse_csv_opt_eol_alt(TAGS, input5).unwrap();
-        assert_eq2!(result.0.extract_to_slice_end(), "",);
+        assert_eq2!(result.0.extract_to_slice_end().as_ref(), "",);
 
         // Create expected output with AsStrSlice values
         let expected_tag1 = &[GCString::new("tag1")];
@@ -299,7 +299,7 @@ mod test_parse_tags_opt_eol {
         println!("Remainder: {:?}", input.extract_to_slice_end());
         println!("Output: {output:?}");
 
-        assert_eq2!(input.extract_to_slice_end(), "foo\nbar");
+        assert_eq2!(input.extract_to_slice_end().as_ref(), "foo\nbar");
 
         // Empty list case
         let expected = list![];

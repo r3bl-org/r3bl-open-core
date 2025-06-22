@@ -76,7 +76,7 @@
 //! iterate over "characters," you use `s.chars()`. This iterator decodes the
 //! UTF-8 bytes into char (Unicode Scalar Values).
 
-use std::{borrow::Cow, convert::AsRef, fmt::Display};
+use std::{convert::AsRef, fmt::Display};
 
 use nom::{Compare, CompareResult, FindSubstring, Input, Offset};
 
@@ -87,6 +87,8 @@ use crate::{bounds_check,
             BoundsStatus,
             DocumentStorage,
             GCString,
+            InlineString,
+            InlineStringCow,
             InlineVec,
             List,
             ParserByteCache,
@@ -1087,11 +1089,11 @@ impl<'a> AsStrSlice<'a> {
     ///
     /// This method behaves similarly to the [Display] trait implementation but respects
     /// the current position (`line_index`, `char_index`) and `max_len` limit.
-    pub fn extract_to_slice_end(&self) -> Cow<'a, str> {
+    pub fn extract_to_slice_end(&self) -> InlineStringCow<'a> {
         // Early return for invalid line_index (it has gone beyond the available lines in
         // the slice).
         bounds_check!(self.line_index, self.lines.len(), {
-            return Cow::Borrowed("");
+            return InlineStringCow::Borrowed("");
         });
 
         // For single line case, we can potentially return borrowed content.
@@ -1103,21 +1105,20 @@ impl<'a> AsStrSlice<'a> {
             // ⚠️ CRITICAL: char_index represents CHARACTER position, use chars().count()
             let line_char_count = current_line.len_chars();
             bounds_check!(self.char_index, line_char_count, {
-                return Cow::Borrowed("");
+                return InlineStringCow::Borrowed("");
             });
 
+            // ⚠️ **Unicode check**
             // Get the start index, ensuring it's at a valid char boundary.
             let start_col_index = self.char_index.as_usize();
             if !current_line.is_char_boundary(start_col_index) {
                 // If not at a valid boundary, use a safe approach: collect chars and
-                // rejoin. This approach accumulates the chars into a String and not
-                // InlineString.
-                return Cow::Owned(
-                    current_line
-                        .chars()
-                        .skip(start_col_index)
-                        .collect::<String>(),
-                );
+                // rejoin.
+                let mut acc = InlineString::new();
+                for ch in current_line.chars().skip(start_col_index) {
+                    acc.push(ch);
+                }
+                return InlineStringCow::Owned(acc);
             }
 
             let eol = current_line.len();
@@ -1129,25 +1130,30 @@ impl<'a> AsStrSlice<'a> {
                 }
             };
 
+            // ⚠️ **Unicode check**
             // Ensure the end index is also at a valid char boundary.
             if !current_line.is_char_boundary(end_col_index) {
                 // If not at a valid boundary, use a safe approach: collect chars and
                 // rejoin. This approach accumulates the chars into a String and not
                 // InlineString.
-                return Cow::Owned(
-                    current_line
-                        .chars()
-                        .skip(start_col_index)
-                        .take(end_col_index - start_col_index)
-                        .collect::<String>(),
-                );
+                let mut acc = InlineString::new();
+                for ch in current_line
+                    .chars()
+                    .skip(start_col_index)
+                    .take(end_col_index - start_col_index)
+                {
+                    acc.push(ch);
+                }
+                return InlineStringCow::Owned(acc);
             }
 
-            return Cow::Borrowed(&current_line[start_col_index..end_col_index]);
+            return InlineStringCow::Borrowed(
+                &current_line[start_col_index..end_col_index],
+            );
         }
 
         // Multi-line case: need to allocate and use synthetic newlines.
-        let mut acc = String::new();
+        let mut acc = InlineString::new();
         let mut self_clone = self.clone();
 
         while let Some(ch) = self_clone.current_char() {
@@ -1156,9 +1162,9 @@ impl<'a> AsStrSlice<'a> {
         }
 
         if acc.is_empty() {
-            Cow::Borrowed("")
+            InlineStringCow::Borrowed("")
         } else {
-            Cow::Owned(acc)
+            InlineStringCow::Owned(acc)
         }
     }
 
@@ -1906,7 +1912,7 @@ impl<'a> FindSubstring<&str> for AsStrSlice<'a> {
         let full_text = self.extract_to_slice_end();
 
         // Find the substring in the full text.
-        full_text.find(sub_str)
+        full_text.as_ref().find(sub_str)
     }
 }
 
@@ -2613,7 +2619,7 @@ mod tests_character_based_range_methods {
             let from_six = slice.char_from(6); // Should start from newline between lines
                                                // This extracts across lines with synthetic newlines
             let content = from_six.extract_to_slice_end();
-            assert!(content.contains("world🎉"));
+            assert!(content.as_ref().contains("world🎉"));
         }
     }
 

@@ -74,9 +74,9 @@ mod test_text_until_opt_eol {
             .parse(input)
             .unwrap();
         // Should return empty content when input immediately starts with newline
-        assert_eq2!(result.extract_to_slice_end(), "");
+        assert_eq2!(result.extract_to_slice_end().as_ref(), "");
         // Remainder should start from the newline
-        assert_eq2!(remainder.extract_to_slice_end(), "\nfoo\nbar");
+        assert_eq2!(remainder.extract_to_slice_end().as_ref(), "\nfoo\nbar");
     }
 
     #[test]
@@ -89,8 +89,8 @@ mod test_text_until_opt_eol {
         println!("{:8}: {:?}", "input", "_input_array");
         println!("{:8}: {:?}", "rem", rem);
         println!("{:8}: {:?}", "output", output);
-        assert_eq2!(output.extract_to_slice_end(), "Hello, world!");
-        assert_eq2!(rem.extract_to_slice_end(), "\n");
+        assert_eq2!(output.extract_to_slice_end().as_ref(), "Hello, world!");
+        assert_eq2!(rem.extract_to_slice_end().as_ref(), "\n");
     }
 
     #[test]
@@ -103,8 +103,8 @@ mod test_text_until_opt_eol {
         println!("\n{:8}: {:?}", "input", "_input_array");
         println!("{:8}: {:?}", "rem", rem);
         println!("{:8}: {:?}", "output", output);
-        assert_eq2!(output.extract_to_slice_end(), "Hello, world!");
-        assert_eq2!(rem.extract_to_slice_end(), "");
+        assert_eq2!(output.extract_to_slice_end().as_ref(), "Hello, world!");
+        assert_eq2!(rem.extract_to_slice_end().as_ref(), "");
     }
 
     #[test]
@@ -118,8 +118,8 @@ mod test_text_until_opt_eol {
             println!("\n{:8}: {:?}", "input", "_input_array");
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
-            assert_eq2!(output.extract_to_slice_end(), "");
-            assert_eq2!(rem.extract_to_slice_end(), "\nfoo\nbar");
+            assert_eq2!(output.extract_to_slice_end().as_ref(), "");
+            assert_eq2!(rem.extract_to_slice_end().as_ref(), "\nfoo\nbar");
         }
 
         // Multi-element input with empty line (new line only), "foo", and "bar".
@@ -134,8 +134,8 @@ mod test_text_until_opt_eol {
             println!("\n{:8}: {:?}", "input", "_input_array");
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
-            assert_eq2!(output.extract_to_slice_end(), "");
-            assert_eq2!(rem.extract_to_slice_end(), "\nfoo\nbar\n");
+            assert_eq2!(output.extract_to_slice_end().as_ref(), "");
+            assert_eq2!(rem.extract_to_slice_end().as_ref(), "\nfoo\nbar\n");
         }
     }
 }
