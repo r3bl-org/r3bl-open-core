@@ -33,7 +33,7 @@ use crate::{md_parser::constants::{self, NEW_LINE},
 /// This matches the heading tag and text until EOL. Outputs a tuple of [HeadingLevel] and
 /// [crate::FragmentsInOneLine].
 #[rustfmt::skip]
-pub fn parse_single_line_heading_auto_advance_alt<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, HeadingData<'a>> {
+pub fn parse_line_heading_advance_alt<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, HeadingData<'a>> {
     let (remainder, output) = parse_impl(input)?;
     Ok((remainder, output))
 }
@@ -133,7 +133,7 @@ mod tests {
         {
             as_str_slice_test_case!(input1, "# h1\n");
             let (remainder1, heading_data1) =
-                parse_single_line_heading_auto_advance_alt(input1).unwrap();
+                parse_line_heading_advance_alt(input1).unwrap();
             assert_eq2!(remainder1.to_string(), "");
             assert_eq2!(heading_data1.level, 1.into());
             assert_eq2!(heading_data1.text, "h1");
@@ -141,7 +141,7 @@ mod tests {
         {
             as_str_slice_test_case!(input2, "## h2\n");
             let (remainder2, heading_data2) =
-                parse_single_line_heading_auto_advance_alt(input2).unwrap();
+                parse_line_heading_advance_alt(input2).unwrap();
             assert_eq2!(remainder2.to_string(), "");
             assert_eq2!(heading_data2.level, 2.into());
             assert_eq2!(heading_data2.text, "h2");
@@ -149,7 +149,7 @@ mod tests {
         {
             as_str_slice_test_case!(input3, "###  h3\n");
             let (remainder3, heading_data3) =
-                parse_single_line_heading_auto_advance_alt(input3).unwrap();
+                parse_line_heading_advance_alt(input3).unwrap();
             assert_eq2!(remainder3.to_string(), "");
             assert_eq2!(heading_data3.level, 3.into());
             assert_eq2!(heading_data3.text, " h3");
@@ -157,7 +157,7 @@ mod tests {
         {
             as_str_slice_test_case!(input4, "#### h4\n");
             let (remainder4, heading_data4) =
-                parse_single_line_heading_auto_advance_alt(input4).unwrap();
+                parse_line_heading_advance_alt(input4).unwrap();
             assert_eq2!(remainder4.to_string(), "");
             assert_eq2!(heading_data4.level, 4.into());
             assert_eq2!(heading_data4.text, "h4");
@@ -165,7 +165,7 @@ mod tests {
         {
             as_str_slice_test_case!(input5, "##### h5\n");
             let (remainder5, heading_data5) =
-                parse_single_line_heading_auto_advance_alt(input5).unwrap();
+                parse_line_heading_advance_alt(input5).unwrap();
             assert_eq2!(remainder5.to_string(), "");
             assert_eq2!(heading_data5.level, 5.into());
             assert_eq2!(heading_data5.text, "h5");
@@ -173,7 +173,7 @@ mod tests {
         {
             as_str_slice_test_case!(input6, "###### h6\n");
             let (remainder6, heading_data6) =
-                parse_single_line_heading_auto_advance_alt(input6).unwrap();
+                parse_line_heading_advance_alt(input6).unwrap();
             assert_eq2!(remainder6.to_string(), "");
             assert_eq2!(heading_data6.level, 6.into());
             assert_eq2!(heading_data6.text, "h6");
@@ -181,7 +181,7 @@ mod tests {
         {
             as_str_slice_test_case!(input7, "####### h7\n");
             let (remainder7, heading_data7) =
-                parse_single_line_heading_auto_advance_alt(input7).unwrap();
+                parse_line_heading_advance_alt(input7).unwrap();
             assert_eq2!(remainder7.to_string(), "");
             assert_eq2!(heading_data7.level, 7.into());
             assert_eq2!(heading_data7.text, "h7");
@@ -189,14 +189,14 @@ mod tests {
         {
             as_str_slice_test_case!(input8, "### h3 *foo* **bar**\n");
             let (remainder8, heading_data8) =
-                parse_single_line_heading_auto_advance_alt(input8).unwrap();
+                parse_line_heading_advance_alt(input8).unwrap();
             assert_eq2!(remainder8.to_string(), "");
             assert_eq2!(heading_data8.level, 3.into());
             assert_eq2!(heading_data8.text, "h3 *foo* **bar**");
         }
         {
             as_str_slice_test_case!(input_err1, "###h3");
-            match parse_single_line_heading_auto_advance_alt(input_err1) {
+            match parse_line_heading_advance_alt(input_err1) {
                 Err(NomErr::Error(err)) => {
                     assert_eq2!(err.code, ErrorKind::Tag);
                 }
@@ -205,7 +205,7 @@ mod tests {
         }
         {
             as_str_slice_test_case!(input_err2, "####h4");
-            let result = parse_single_line_heading_auto_advance_alt(input_err2);
+            let result = parse_line_heading_advance_alt(input_err2);
             match result {
                 Err(NomErr::Error(err)) => {
                     assert_eq2!(err.input.to_string(), "h4");
@@ -216,7 +216,7 @@ mod tests {
         }
         {
             as_str_slice_test_case!(input_err3, "###");
-            let result = parse_single_line_heading_auto_advance_alt(input_err3);
+            let result = parse_line_heading_advance_alt(input_err3);
             match result {
                 Err(NomErr::Error(err)) => {
                     assert_eq2!(err.input.to_string(), "");
@@ -227,7 +227,7 @@ mod tests {
         }
         {
             as_str_slice_test_case!(input_err4, "");
-            let result = parse_single_line_heading_auto_advance_alt(input_err4);
+            let result = parse_line_heading_advance_alt(input_err4);
             match result {
                 Err(NomErr::Error(err)) => {
                     assert_eq2!(err.input.to_string(), "");
@@ -238,7 +238,7 @@ mod tests {
         }
         {
             as_str_slice_test_case!(input_err5, "#");
-            let result = parse_single_line_heading_auto_advance_alt(input_err5);
+            let result = parse_line_heading_advance_alt(input_err5);
             match result {
                 Err(NomErr::Error(err)) => {
                     assert_eq2!(err.input.to_string(), "");
@@ -253,7 +253,7 @@ mod tests {
     fn test_parse_header_with_new_line() {
         {
             as_str_slice_test_case!(input1, "# \n");
-            let result = parse_single_line_heading_auto_advance_alt(input1);
+            let result = parse_line_heading_advance_alt(input1);
             match result {
                 Err(NomErr::Error(err)) => {
                     assert_eq2!(err.input.to_string(), "\n");
@@ -269,7 +269,7 @@ mod tests {
         {
             as_str_slice_test_case!(input1, "# test");
             let (remainder, heading_data) =
-                parse_single_line_heading_auto_advance_alt(input1).unwrap();
+                parse_line_heading_advance_alt(input1).unwrap();
             assert_eq2!(remainder.to_string(), "");
             assert_eq2!(heading_data.level, 1.into());
             assert_eq2!(heading_data.text, "test");

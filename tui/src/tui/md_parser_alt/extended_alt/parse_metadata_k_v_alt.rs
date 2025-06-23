@@ -46,7 +46,7 @@ use crate::{inline_string,
 /// - `"@title: My Great Article\n"` → `Some("My Great Article")`
 /// - `"@title: Something"` -> `Some("Something")`
 /// - `"@date: Else"` -> `Some("Else")`
-pub fn parse_unique_kv_opt_eol_alt<'a>(
+pub fn parse_line_kv_advance_alt<'a>(
     tag_name: &'a str,
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, Option<AsStrSlice<'a>>> {
@@ -99,7 +99,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_not_quoted_no_eol() {
         as_str_slice_test_case!(input, "@title: Something");
-        let (rem, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+        let (rem, output) = parse_line_kv_advance_alt(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
         let output_str = &output.unwrap().extract_to_slice_end();
@@ -117,7 +117,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_not_quoted_with_eol() {
         as_str_slice_test_case!(input, "@title: Something\n");
-        let (rem, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+        let (rem, output) = parse_line_kv_advance_alt(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
         let output_str = &output.unwrap().extract_to_slice_end();
@@ -137,7 +137,7 @@ mod test_parse_title_no_eol {
         as_str_slice_test_case!(input, "@title: Something @title: Something");
         let input_clone = input.clone();
 
-        let res = parse_unique_kv_opt_eol_alt(TITLE, input);
+        let res = parse_line_kv_advance_alt(TITLE, input);
 
         assert_eq2!(res.is_err(), true);
         if let Err(NomErr::Error(ref e)) = res {
@@ -156,7 +156,7 @@ mod test_parse_title_no_eol {
         as_str_slice_test_case!(input, "@title: Something\n@title: Else\n");
         let input_clone = input.clone();
 
-        let res = parse_unique_kv_opt_eol_alt(TITLE, input);
+        let res = parse_line_kv_advance_alt(TITLE, input);
 
         assert_eq2!(res.is_err(), true);
         if let Err(NomErr::Error(ref e)) = res {
@@ -178,7 +178,7 @@ mod test_parse_title_no_eol {
             fg_black(input.extract_to_slice_end()).bg_cyan()
         );
 
-        let (rem, maybe_output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+        let (rem, maybe_output) = parse_line_kv_advance_alt(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
         let output_str = match maybe_output {
@@ -204,7 +204,7 @@ mod test_parse_title_no_eol {
             fg_black(input.extract_to_slice_end()).bg_cyan()
         );
 
-        let (rem, maybe_output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+        let (rem, maybe_output) = parse_line_kv_advance_alt(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
         let output_str = match maybe_output {
@@ -230,7 +230,7 @@ mod test_parse_title_no_eol {
             fg_black(input.extract_to_slice_end()).bg_cyan()
         );
 
-        let (rem, output) = parse_unique_kv_opt_eol_alt(TITLE, input).unwrap();
+        let (rem, output) = parse_line_kv_advance_alt(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
         let output_str = match output {

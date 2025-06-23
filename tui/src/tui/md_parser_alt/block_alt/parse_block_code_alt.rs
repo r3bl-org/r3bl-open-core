@@ -47,7 +47,7 @@ use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW
 /// | No language, no line      | `"```\n```\n"`                                             |
 /// | No language, multi line   | `"```\npip install foobar\npip install foobar\n```\n"`     |
 #[rustfmt::skip]
-pub fn parse_block_code_auto_advance_alt<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, List<CodeBlockLine<'a>>> {
+pub fn parse_block_code_advance_alt<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, List<CodeBlockLine<'a>>> {
     let (remainder, (lang, code)) = (
         parse_code_block_lang_including_eol_alt,
         parse_code_block_body_including_code_block_end_alt,
@@ -100,10 +100,17 @@ fn parse_code_block_lang_including_eol_alt<'a>(input: AsStrSlice<'a>) -> IResult
 /// 3. Returns the remainder of the input and the captured content.
 #[rustfmt::skip]
 fn parse_code_block_body_including_code_block_end_alt<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
-    let (remainder, output) = terminated(
-        take_until(CODE_BLOCK_END),
-        /* end (discard) */ tag(CODE_BLOCK_END),
-    ).parse(input)?;
+    // The extra trailing newline is added by AsStrSlice find_substring()
+    // which is used in the `take_until` parser. This has to be removed from the end
+    // using opt(tag(NEW_LINE)).
+    let (remainder, (output, _)) = (
+        terminated(
+            take_until(CODE_BLOCK_END),
+            /* end (discard) */ tag(CODE_BLOCK_END),
+        ),
+        opt(tag(NEW_LINE)),
+    )
+        .parse(input)?;
     Ok((remainder, output))
 }
 
@@ -118,7 +125,7 @@ fn parse_code_block_body_including_code_block_end_alt<'a>(input: AsStrSlice<'a>)
 /// Any lines of code between the opening and closing tags will be converted to
 /// [CodeBlockLine] objects with content type Text. The language identifier is attached to
 /// all [CodeBlockLine] objects.
-fn convert_into_code_block_lines_alt<'a>(
+pub fn convert_into_code_block_lines_alt<'a>(
     maybe_lang: Option<AsStrSlice<'a>>,
     lines: Vec<AsStrSlice<'a>>,
 ) -> List<CodeBlockLine<'a>> {
@@ -209,11 +216,11 @@ mod tests_parse_block_code_alt_single_line {
 
     #[test]
     fn test_parse_codeblock_trailing_extra() {
-        as_str_slice_test_case!(input, "```bash\npip install foobar\n```");
+        as_str_slice_test_case!(input, "```bash", "pip install foobar", "```");
         as_str_slice_test_case!(lang_slice, "bash");
         as_str_slice_test_case!(code_line, "pip install foobar");
         let code_lines = vec![code_line];
-        let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
         assert_eq2!(remainder.extract_to_slice_end().as_ref(), "");
         assert_eq2!(
             code_block_lines,
@@ -227,10 +234,11 @@ mod tests_parse_block_code_alt_single_line {
         {
             as_str_slice_test_case!(lang_slice, "bash");
             as_str_slice_test_case!(code_line, "pip install foobar");
-            as_str_slice_test_case!(input, "```bash\npip install foobar\n```\n");
+            as_str_slice_test_case!(input, "```bash", "pip install foobar", "```", "");
 
             let code_lines = vec![code_line];
-            let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+            let (remainder, code_block_lines) =
+                parse_block_code_advance_alt(input).unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
                 code_block_lines,
@@ -241,10 +249,11 @@ mod tests_parse_block_code_alt_single_line {
         // No line: "```bash\n```\n"
         {
             as_str_slice_test_case!(lang_slice, "bash");
-            as_str_slice_test_case!(input, "```bash\n```\n");
+            as_str_slice_test_case!(input, "```bash", "```", "");
 
             let code_lines = vec![];
-            let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+            let (remainder, code_block_lines) =
+                parse_block_code_advance_alt(input).unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
                 code_block_lines,
@@ -259,7 +268,8 @@ mod tests_parse_block_code_alt_single_line {
             as_str_slice_test_case!(input, "```bash\n\n```\n");
 
             let code_lines = vec![empty_line];
-            let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+            let (remainder, code_block_lines) =
+                parse_block_code_advance_alt(input).unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
                 code_block_lines,
@@ -284,7 +294,8 @@ mod tests_parse_block_code_alt_single_line {
             );
 
             let code_lines = vec![line1, line2, line3, line4, line5];
-            let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+            let (remainder, code_block_lines) =
+                parse_block_code_advance_alt(input).unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
                 code_block_lines,
@@ -299,7 +310,7 @@ mod tests_parse_block_code_alt_single_line {
         as_str_slice_test_case!(input, "```\npip install foobar\n```\n");
 
         let code_lines = vec![code_line];
-        let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(
             code_block_lines,
@@ -332,7 +343,7 @@ mod tests_parse_block_code_alt_lines {
         as_str_slice_test_case!(lang_slice, "bash");
         as_str_slice_test_case!(code_line, "pip install foobar");
         let code_lines = vec![code_line];
-        let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
         assert_eq2!(remainder.extract_to_slice_end().as_ref(), "");
         assert_eq2!(
             code_block_lines,
@@ -348,7 +359,8 @@ mod tests_parse_block_code_alt_lines {
         as_str_slice_test_case!(input, "```bash", "pip install foobar", "```");
 
         let code_lines = vec![code_line];
-        let (_remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
+        assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(
             code_block_lines,
             convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
@@ -362,7 +374,8 @@ mod tests_parse_block_code_alt_lines {
         as_str_slice_test_case!(input, "```bash", "```");
 
         let code_lines = vec![];
-        let (_remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
+        assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(
             code_block_lines,
             convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
@@ -377,7 +390,8 @@ mod tests_parse_block_code_alt_lines {
         as_str_slice_test_case!(input, "```bash", "", "```");
 
         let code_lines = vec![empty_line];
-        let (_remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
+        assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(
             code_block_lines,
             convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
@@ -406,11 +420,12 @@ mod tests_parse_block_code_alt_lines {
         );
 
         let code_lines = vec![line1, line2, empty_line3, empty_line4, empty_line5];
-        let (_remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
         assert_eq2!(
             code_block_lines,
             convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
         );
+        assert_eq2!(remainder.is_empty(), true);
     }
 
     #[test]
@@ -419,7 +434,8 @@ mod tests_parse_block_code_alt_lines {
         as_str_slice_test_case!(input, "```", "pip install foobar", "```");
 
         let code_lines = vec![code_line];
-        let (_remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
+        assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(
             code_block_lines,
             convert_into_code_block_lines_alt(None, code_lines)
@@ -436,11 +452,12 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_with_language() {
         // Test with language specified
         {
-            as_str_slice_test_case!(input, "```rust\n");
+            as_str_slice_test_case!(input, "```rust", "");
             let result = parse_code_block_lang_including_eol_alt(input);
 
             let (remainder, lang) = result.unwrap();
-            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(remainder.is_empty(), false);
+            assert_eq2!(remainder.extract_to_slice_end().as_ref(), "\n");
             assert_eq2!(lang.is_some(), true);
             assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "rust");
         }
@@ -450,11 +467,12 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_no_language() {
         // Test with no language specified (just ``` followed by newline)
         {
-            as_str_slice_test_case!(input, "```\n");
+            as_str_slice_test_case!(input, "```", "");
             let result = parse_code_block_lang_including_eol_alt(input);
 
             let (remainder, lang) = result.unwrap();
-            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(remainder.is_empty(), false);
+            assert_eq2!(remainder.extract_to_slice_end().as_ref(), "\n");
             assert_eq2!(lang.is_none(), true);
         }
     }
@@ -463,13 +481,14 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_with_remainder() {
         // Test with language and content after newline
         {
-            as_str_slice_test_case!(input, "```python\nprint('hello')\n```");
+            as_str_slice_test_case!(input, "```python", "print('hello')", "```");
             let result = parse_code_block_lang_including_eol_alt(input);
 
             let (remainder, lang) = result.unwrap();
+            dbg!(&remainder.extract_to_slice_end());
             assert_eq2!(
                 remainder.extract_to_slice_end().as_ref(),
-                "print('hello')\n```"
+                "print('hello')\n```\n"
             );
             assert_eq2!(lang.is_some(), true);
             assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "python");
@@ -480,11 +499,14 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_empty_language() {
         // Test with empty language (``` followed immediately by newline)
         {
-            as_str_slice_test_case!(input, "```\nsome code here");
+            as_str_slice_test_case!(input, "```", "some code here");
             let result = parse_code_block_lang_including_eol_alt(input);
 
             let (remainder, lang) = result.unwrap();
-            assert_eq2!(remainder.extract_to_slice_end().as_ref(), "some code here");
+            assert_eq2!(
+                remainder.extract_to_slice_end().as_ref(),
+                "some code here\n"
+            );
             assert_eq2!(lang.is_none(), true);
         }
     }
@@ -493,11 +515,12 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_with_spaces() {
         // Test with language that has spaces/attributes
         {
-            as_str_slice_test_case!(input, "```javascript {.line-numbers}\n");
+            as_str_slice_test_case!(input, "```javascript {.line-numbers}", "");
             let result = parse_code_block_lang_including_eol_alt(input);
 
             let (remainder, lang) = result.unwrap();
-            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(remainder.is_empty(), false);
+            assert_eq2!(remainder.extract_to_slice_end().as_ref(), "\n");
             assert_eq2!(lang.is_some(), true);
             assert_eq2!(
                 lang.unwrap().extract_to_slice_end().as_ref(),
@@ -529,11 +552,12 @@ mod tests_parse_code_block_lang_including_eol_alt {
         ];
 
         for lang in test_cases {
-            as_str_slice_test_case!(input, format!("```{}\n", lang));
+            as_str_slice_test_case!(input, format!("```{lang}"), "");
             let result = parse_code_block_lang_including_eol_alt(input);
 
             let (remainder, parsed_lang) = result.unwrap();
-            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(remainder.is_empty(), false);
+            assert_eq2!(remainder.extract_to_slice_end().as_ref(), "\n");
             assert_eq2!(parsed_lang.is_some(), true);
             assert_eq2!(parsed_lang.unwrap().extract_to_slice_end().as_ref(), lang);
         }
@@ -543,11 +567,12 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_with_numbers() {
         // Test language identifier with numbers
         {
-            as_str_slice_test_case!(input, "```c++11\n");
+            as_str_slice_test_case!(input, "```c++11", "");
             let result = parse_code_block_lang_including_eol_alt(input);
 
             let (remainder, lang) = result.unwrap();
-            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(remainder.is_empty(), false);
+            assert_eq2!(remainder.extract_to_slice_end().as_ref(), "\n");
             assert_eq2!(lang.is_some(), true);
             assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "c++11");
         }
@@ -557,11 +582,12 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_with_dashes() {
         // Test language identifier with dashes/hyphens
         {
-            as_str_slice_test_case!(input, "```objective-c\n");
+            as_str_slice_test_case!(input, "```objective-c", "");
             let result = parse_code_block_lang_including_eol_alt(input);
 
             let (remainder, lang) = result.unwrap();
-            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(remainder.is_empty(), false);
+            assert_eq2!(remainder.extract_to_slice_end().as_ref(), "\n");
             assert_eq2!(lang.is_some(), true);
             assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "objective-c");
         }
@@ -582,9 +608,8 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_missing_backticks_error() {
         // Test error case when CODE_BLOCK_START_PARTIAL is missing
         {
-            as_str_slice_test_case!(input, "rust\n");
+            as_str_slice_test_case!(input, "rust", "");
             let result = parse_code_block_lang_including_eol_alt(input);
-
             assert!(result.is_err());
         }
     }
@@ -593,9 +618,8 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_partial_backticks_error() {
         // Test error case with incomplete backticks
         {
-            as_str_slice_test_case!(input, "``rust\n");
+            as_str_slice_test_case!(input, "``rust", "");
             let result = parse_code_block_lang_including_eol_alt(input);
-
             assert!(result.is_err());
         }
     }
@@ -604,11 +628,11 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_case_sensitive() {
         // Test that language parsing is case sensitive
         {
-            as_str_slice_test_case!(input, "```RUST\n");
+            as_str_slice_test_case!(input, "```RUST", "");
             let result = parse_code_block_lang_including_eol_alt(input);
-
             let (remainder, lang) = result.unwrap();
-            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(remainder.is_empty(), false);
+            assert_eq2!(remainder.extract_to_slice_end().as_ref(), "\n");
             assert_eq2!(lang.is_some(), true);
             assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "RUST");
         }
@@ -618,11 +642,12 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_with_attributes() {
         // Test with GitHub-style language attributes
         {
-            as_str_slice_test_case!(input, "```rust,ignore\n");
+            as_str_slice_test_case!(input, "```rust,ignore", "");
             let result = parse_code_block_lang_including_eol_alt(input);
 
             let (remainder, lang) = result.unwrap();
-            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(remainder.is_empty(), false);
+            assert_eq2!(remainder.extract_to_slice_end().as_ref(), "\n");
             assert_eq2!(lang.is_some(), true);
             assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "rust,ignore");
         }
@@ -634,7 +659,6 @@ mod tests_parse_code_block_lang_including_eol_alt {
         {
             as_str_slice_test_case!(input, "```");
             let result = parse_code_block_lang_including_eol_alt(input);
-
             assert!(result.is_err());
         }
     }
@@ -643,11 +667,11 @@ mod tests_parse_code_block_lang_including_eol_alt {
     fn test_parse_code_block_lang_unicode_language() {
         // Test with unicode characters in language identifier (though uncommon)
         {
-            as_str_slice_test_case!(input, "```语言\n");
+            as_str_slice_test_case!(input, "```语言", "");
             let result = parse_code_block_lang_including_eol_alt(input);
-
             let (remainder, lang) = result.unwrap();
-            assert_eq2!(remainder.is_empty(), true);
+            assert_eq2!(remainder.is_empty(), false);
+            assert_eq2!(remainder.extract_to_slice_end().as_ref(), "\n");
             assert_eq2!(lang.is_some(), true);
             assert_eq2!(lang.unwrap().extract_to_slice_end().as_ref(), "语言");
         }
@@ -665,16 +689,19 @@ mod tests_parse_code_block_body_including_code_block_end_alt {
         {
             as_str_slice_test_case!(
                 input,
-                "fn main() {\n    println!(\"Hello\");\n}\n```"
+                "fn main() {",
+                "    println!(\"Hello\");",
+                "}",
+                "```"
             );
             let result = parse_code_block_body_including_code_block_end_alt(input);
-
             let (remainder, body) = result.unwrap();
-            assert_eq2!(remainder.is_empty(), true);
+            dbg!(&body.extract_to_slice_end().as_ref());
             assert_eq2!(
                 body.extract_to_slice_end().as_ref(),
                 "fn main() {\n    println!(\"Hello\");\n}\n"
             );
+            assert_eq2!(remainder.is_empty(), true);
         }
     }
 
@@ -708,15 +735,15 @@ mod tests_parse_code_block_body_including_code_block_end_alt {
     fn test_parse_code_block_body_with_remainder() {
         // Test with content after the closing tag
         {
-            as_str_slice_test_case!(input, "console.log('test');```\nSome text after");
+            as_str_slice_test_case!(input, "console.log('test');```", "Some text after");
             let result = parse_code_block_body_including_code_block_end_alt(input);
 
             let (remainder, body) = result.unwrap();
+            assert_eq2!(body.extract_to_slice_end().as_ref(), "console.log('test');");
             assert_eq2!(
                 remainder.extract_to_slice_end().as_ref(),
-                "\nSome text after"
+                "Some text after\n"
             );
-            assert_eq2!(body.extract_to_slice_end().as_ref(), "console.log('test');");
         }
     }
 
@@ -724,12 +751,13 @@ mod tests_parse_code_block_body_including_code_block_end_alt {
     fn test_parse_code_block_body_multiline_with_newlines() {
         // Test with multiple lines including empty lines
         {
-            as_str_slice_test_case!(input, "line1\n\nline3\n```");
+            as_str_slice_test_case!(input, "line1", "", "", "line3", "", "```");
             let result = parse_code_block_body_including_code_block_end_alt(input);
 
             let (remainder, body) = result.unwrap();
             assert_eq2!(remainder.is_empty(), true);
-            assert_eq2!(body.extract_to_slice_end().as_ref(), "line1\n\nline3\n");
+            dbg!(&body.extract_to_slice_end().as_ref());
+            assert_eq2!(body.extract_to_slice_end().as_ref(), "line1\n\n\nline3\n\n");
         }
     }
 
@@ -739,7 +767,9 @@ mod tests_parse_code_block_body_including_code_block_end_alt {
         {
             as_str_slice_test_case!(
                 input,
-                "let code = `template string`;\nlet other = `another`;\n```"
+                "let code = `template string`;",
+                "let other = `another`;",
+                "```"
             );
             let result = parse_code_block_body_including_code_block_end_alt(input);
 
@@ -784,7 +814,9 @@ mod tests_parse_code_block_body_including_code_block_end_alt {
             // cspell:disable
             as_str_slice_test_case!(
                 input,
-                "let emoji = \"😀🚀\";\nlet unicode = \"αβγδε\";\n```"
+                "let emoji = \"😀🚀\";",
+                "let unicode = \"αβγδε\";",
+                "```"
             );
             // cspell:enable
             let result = parse_code_block_body_including_code_block_end_alt(input);
@@ -798,7 +830,9 @@ mod tests_parse_code_block_body_including_code_block_end_alt {
         {
             as_str_slice_test_case!(
                 input,
-                "#!/bin/bash\necho \"$USER @ $(hostname)\"\n```"
+                "#!/bin/bash",
+                "echo \"$USER @ $(hostname)\"",
+                "```"
             );
             let result = parse_code_block_body_including_code_block_end_alt(input);
 
@@ -815,7 +849,7 @@ mod tests_parse_code_block_body_including_code_block_end_alt {
     fn test_parse_code_block_body_only_whitespace() {
         // Test with only whitespace content
         {
-            as_str_slice_test_case!(input, "   \n\t\n  ```");
+            as_str_slice_test_case!(input, "   ", "\t", "  ```");
             let result = parse_code_block_body_including_code_block_end_alt(input);
 
             let (remainder, body) = result.unwrap();
