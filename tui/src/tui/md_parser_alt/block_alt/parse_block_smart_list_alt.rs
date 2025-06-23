@@ -117,7 +117,7 @@ use crate::{list,
 /// - Input doesn't start with a valid list marker
 /// - List structure is malformed
 /// - Internal parsing of list content fails
-pub fn parse_block_smart_list_auto_advance_alt<'a>(
+pub fn parse_block_smart_list_advance_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, (Lines<'a>, BulletKind, usize)> {
     let (remainder, smart_list_ir) = parse_smart_list_alt(input)?;
@@ -211,7 +211,7 @@ mod tests_parse_block_smart_list_alt {
     fn test_with_unicode() {
         as_str_slice_test_case!(input, "- straight 😃 foo bar baz");
         let (remainder, (lines, bullet_kind, indent)) =
-            parse_block_smart_list_auto_advance_alt(input).unwrap();
+            parse_block_smart_list_advance_alt(input).unwrap();
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(bullet_kind, BulletKind::Unordered);
         assert_eq2!(indent, 0);
@@ -234,7 +234,7 @@ mod tests_parse_block_smart_list_alt {
         {
             as_str_slice_test_case!(input, "- [ ] todo");
             let (remainder, (lines, _bullet_kind, _indent)) =
-                parse_block_smart_list_auto_advance_alt(input).unwrap();
+                parse_block_smart_list_advance_alt(input).unwrap();
             let first_line = lines.first().unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
@@ -254,7 +254,7 @@ mod tests_parse_block_smart_list_alt {
         {
             as_str_slice_test_case!(input, "- [x] done");
             let (remainder, (lines, _bullet_kind, _indent)) =
-                parse_block_smart_list_auto_advance_alt(input).unwrap();
+                parse_block_smart_list_advance_alt(input).unwrap();
             let first_line = lines.first().unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
@@ -274,7 +274,7 @@ mod tests_parse_block_smart_list_alt {
         {
             as_str_slice_test_case!(input, "- [ ]todo");
             let (remainder, (lines, _bullet_kind, _indent)) =
-                parse_block_smart_list_auto_advance_alt(input).unwrap();
+                parse_block_smart_list_advance_alt(input).unwrap();
             let first_line = lines.first().unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
@@ -294,7 +294,7 @@ mod tests_parse_block_smart_list_alt {
         {
             as_str_slice_test_case!(input, "- [x]done");
             let (remainder, (lines, _bullet_kind, _indent)) =
-                parse_block_smart_list_auto_advance_alt(input).unwrap();
+                parse_block_smart_list_advance_alt(input).unwrap();
             let first_line = lines.first().unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
@@ -325,7 +325,7 @@ mod tests_parse_block_smart_list_alt {
             ],
         };
         let (remainder, (lines, _bullet_kind, _indent)) =
-            parse_block_smart_list_auto_advance_alt(input).unwrap();
+            parse_block_smart_list_advance_alt(input).unwrap();
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines, expected);
     }
@@ -344,7 +344,7 @@ mod tests_parse_block_smart_list_alt {
             ],
         };
         let (remainder, (lines, _bullet_kind, _indent)) =
-            parse_block_smart_list_auto_advance_alt(input).unwrap();
+            parse_block_smart_list_advance_alt(input).unwrap();
         assert_eq2!(remainder.extract_to_line_end(), "- foo1");
         assert_eq2!(lines, expected);
     }
@@ -363,7 +363,7 @@ mod tests_parse_block_smart_list_alt {
             ],
         };
         let (remainder, (lines, _bullet_kind, _indent)) =
-            parse_block_smart_list_auto_advance_alt(input).unwrap();
+            parse_block_smart_list_advance_alt(input).unwrap();
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines, expected);
     }
@@ -382,7 +382,7 @@ mod tests_parse_block_smart_list_alt {
             ],
         };
         let (remainder, (lines, _bullet_kind, _indent)) =
-            parse_block_smart_list_auto_advance_alt(input).unwrap();
+            parse_block_smart_list_advance_alt(input).unwrap();
         assert_eq2!(remainder.extract_to_line_end(), "1. foo");
         assert_eq2!(lines, expected);
     }

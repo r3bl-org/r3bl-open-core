@@ -41,6 +41,14 @@ use crate::{constants::NEW_LINE,
 /// - **Validates no newline characters** exist in the current line content
 /// - Designed to work with [`AsStrSlice`] character-based indexing for Unicode safety
 ///
+/// ## Parser Ordering
+/// This parser must come **after** the empty line parser
+/// ([`crate::parse_line_empty_advance_alt`]) in the parser chain because
+/// this text parser explicitly rejects empty input to prevent infinite loops. The empty
+/// line parser handles both completely empty lines and whitespace-only lines, allowing
+/// this text parser to focus solely on non-empty content. This ordering ensures proper
+/// whitespace handling throughout the document structure.
+///
 /// ## Inline Formatting Supported
 /// Parses and returns [`MdLineFragments`] containing:
 /// - **Plain text**: Regular content without formatting
@@ -57,7 +65,7 @@ use crate::{constants::NEW_LINE,
 ///
 /// ## Parser Chain Integration
 /// Works as part of the [`many0(alt(...))`](nom) parser chain in
-/// [`parse_markdown_alt()`](crate::parse_markdown_alt), typically as one of the last
+/// [`crate::parse_markdown_alt()`], typically as one of the last
 /// parsers to catch general text content that doesn't match specialized patterns.
 ///
 /// ## Unicode and Performance
@@ -79,10 +87,10 @@ use crate::{constants::NEW_LINE,
 /// - Internal fragment parsing fails
 ///
 /// ## Related Functions
-/// - [`parse_single_empty_line_auto_advance_alt()`]: Handles empty/whitespace-only lines
-/// - [`parse_inline_fragments_until_eol_or_eoi_alt()`]: Internal fragment parsing logic
-/// - [`parse_markdown_alt()`]: Main parser that orchestrates all text parsing
-pub fn parse_single_line_text_auto_advance_alt<'a>(
+/// - [`crate::parse_line_empty_advance_alt`]: Handles empty/whitespace-only lines
+/// - [`parse_inline_fragments_until_eol_or_eoi_alt`]: Internal fragment parsing logic
+/// - [`crate::parse_markdown_alt()`]: Main parser that orchestrates all text parsing
+pub fn parse_line_text_advance_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
     let current_line_contains_new_line = input.extract_to_line_end().contains(NEW_LINE);
@@ -247,7 +255,7 @@ mod tests_parse_markdown_text_including_eol_or_eoi {
     #[test]
     fn test_single_line_plain_text() {
         as_str_slice_test_case!(input, "foobar");
-        let res = parse_single_line_text_auto_advance_alt(input);
+        let res = parse_line_text_advance_alt(input);
         let (remainder, fragments) = res.unwrap();
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(fragments, list![MdLineFragment::Plain("foobar")])
@@ -256,7 +264,7 @@ mod tests_parse_markdown_text_including_eol_or_eoi {
     #[test]
     fn test_parse_hyperlink_markdown_text_1() {
         as_str_slice_test_case!(input, "This is a _hyperlink: [foo](http://google.com).");
-        let res = parse_single_line_text_auto_advance_alt(input);
+        let res = parse_line_text_advance_alt(input);
 
         let (remainder, fragments) = res.unwrap();
         assert_eq2!(remainder.is_empty(), true);
@@ -278,7 +286,7 @@ mod tests_parse_markdown_text_including_eol_or_eoi {
     #[test]
     fn test_parse_hyperlink_markdown_text_2() {
         as_str_slice_test_case!(input, "This is a *hyperlink: [foo](http://google.com).");
-        let res = parse_single_line_text_auto_advance_alt(input);
+        let res = parse_line_text_advance_alt(input);
 
         let (remainder, fragments) = res.unwrap();
         assert_eq2!(remainder.is_empty(), true);
@@ -300,14 +308,14 @@ mod tests_parse_markdown_text_including_eol_or_eoi {
     #[test]
     fn test_parse_hyperlink_markdown_text_3_err() {
         as_str_slice_test_case!(input, "this is a * [link](url).\nthis is a monkey");
-        let res = parse_single_line_text_auto_advance_alt(input);
+        let res = parse_line_text_advance_alt(input);
         assert!(res.is_err());
     }
 
     #[test]
     fn test_parse_hyperlink_markdown_text_3_ok() {
         as_str_slice_test_case!(input, "this is a * [link](url).this is a monkey");
-        let res = parse_single_line_text_auto_advance_alt(input);
+        let res = parse_line_text_advance_alt(input);
 
         let (remainder, fragments) = res.unwrap();
 
@@ -333,14 +341,14 @@ mod tests_parse_markdown_text_including_eol_or_eoi {
     #[test]
     fn test_parse_hyperlink_markdown_text_4_err() {
         as_str_slice_test_case!(input, "this is a _ [link](url) *\nthis is a monkey");
-        let res = parse_single_line_text_auto_advance_alt(input);
+        let res = parse_line_text_advance_alt(input);
         assert!(res.is_err());
     }
 
     #[test]
     fn test_parse_hyperlink_markdown_text_4_ok() {
         as_str_slice_test_case!(input, "this is a _ [link](url) *this is a monkey");
-        let res = parse_single_line_text_auto_advance_alt(input);
+        let res = parse_line_text_advance_alt(input);
 
         let (remainder, fragments) = res.unwrap();
 

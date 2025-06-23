@@ -58,7 +58,7 @@ use crate::{constants::{COMMA_CHAR, NEW_LINE_CHAR, SPACE_CHAR},
 /// - `"@tags: tag1, tag2, tag3\n"`
 /// - `"@authors: me, myself, i"`
 /// - `"@authors: me, myself, i\n"`
-pub fn parse_single_line_csv_auto_advance_alt<'a>(
+pub fn parse_line_csv_advance_alt<'a>(
     tag_name: &str,
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, List<AsStrSlice<'a>>> {
@@ -149,8 +149,7 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_no_eol() {
         as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3");
 
-        let (input, output) =
-            super::parse_single_line_csv_auto_advance_alt(TAGS, input).unwrap();
+        let (input, output) = super::parse_line_csv_advance_alt(TAGS, input).unwrap();
         assert_eq2!(input.extract_to_slice_end().as_ref(), "");
 
         // Create expected output with AsStrSlice values.
@@ -180,33 +179,21 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_no_eol_err_whitespace() {
         // First fragment mustn't have any space prefix.
         as_str_slice_test_case!(input1, "@tags:  tag1, tag2, tag3");
-        assert_eq2!(
-            parse_single_line_csv_auto_advance_alt(TAGS, input1).is_err(),
-            true,
-        );
+        assert_eq2!(parse_line_csv_advance_alt(TAGS, input1).is_err(), true,);
 
         // 2nd fragment onwards must have a single space prefix.
         as_str_slice_test_case!(input2, "@tags: tag1,tag2, tag3");
-        assert_eq2!(
-            parse_single_line_csv_auto_advance_alt(TAGS, input2).is_err(),
-            true,
-        );
+        assert_eq2!(parse_line_csv_advance_alt(TAGS, input2).is_err(), true,);
 
         as_str_slice_test_case!(input3, "@tags: tag1,  tag2,tag3");
-        assert_eq2!(
-            parse_single_line_csv_auto_advance_alt(TAGS, input3).is_err(),
-            true,
-        );
+        assert_eq2!(parse_line_csv_advance_alt(TAGS, input3).is_err(), true,);
 
         as_str_slice_test_case!(input4, "@tags: tag1, tag2,tag3");
-        assert_eq2!(
-            parse_single_line_csv_auto_advance_alt(TAGS, input4).is_err(),
-            true,
-        );
+        assert_eq2!(parse_line_csv_advance_alt(TAGS, input4).is_err(), true,);
 
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         as_str_slice_test_case!(input5, "@tags: tag1, tag2,  tag3");
-        let result = parse_single_line_csv_auto_advance_alt(TAGS, input5).unwrap();
+        let result = parse_line_csv_advance_alt(TAGS, input5).unwrap();
         assert_eq2!(result.0.extract_to_slice_end().as_ref(), "",);
 
         // Create expected output with AsStrSlice values
@@ -239,8 +226,7 @@ mod test_parse_tags_opt_eol {
         {
             as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3\n");
 
-            let (input, output) =
-                parse_single_line_csv_auto_advance_alt(TAGS, input).unwrap();
+            let (input, output) = parse_line_csv_advance_alt(TAGS, input).unwrap();
             assert_eq2!(input.extract_to_slice_end().as_ref(), "");
 
             // Create expected output with AsStrSlice values
@@ -269,14 +255,14 @@ mod test_parse_tags_opt_eol {
         {
             as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3\n]\n");
 
-            let result = parse_single_line_csv_auto_advance_alt(TAGS, input);
+            let result = parse_line_csv_advance_alt(TAGS, input);
             assert_eq2!(result.is_err(), false);
         }
 
         {
             as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3");
 
-            let result = parse_single_line_csv_auto_advance_alt(TAGS, input);
+            let result = parse_line_csv_advance_alt(TAGS, input);
             assert_eq2!(result.is_err(), false);
         }
     }
@@ -285,33 +271,21 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_with_eol_whitespace() {
         // First fragment mustn't have any space prefix.
         as_str_slice_test_case!(input1, "@tags:  tag1, tag2, tag3\n");
-        assert_eq2!(
-            parse_single_line_csv_auto_advance_alt(TAGS, input1).is_err(),
-            true,
-        );
+        assert_eq2!(parse_line_csv_advance_alt(TAGS, input1).is_err(), true,);
 
         // 2nd fragment onwards must have a single space prefix.
         as_str_slice_test_case!(input2, "@tags: tag1,tag2, tag3\n");
-        assert_eq2!(
-            parse_single_line_csv_auto_advance_alt(TAGS, input2).is_err(),
-            true,
-        );
+        assert_eq2!(parse_line_csv_advance_alt(TAGS, input2).is_err(), true,);
 
         as_str_slice_test_case!(input3, "@tags: tag1,  tag2,tag3\n");
-        assert_eq2!(
-            parse_single_line_csv_auto_advance_alt(TAGS, input3).is_err(),
-            true,
-        );
+        assert_eq2!(parse_line_csv_advance_alt(TAGS, input3).is_err(), true,);
 
         as_str_slice_test_case!(input4, "@tags: tag1, tag2,tag3\n");
-        assert_eq2!(
-            parse_single_line_csv_auto_advance_alt(TAGS, input4).is_err(),
-            true,
-        );
+        assert_eq2!(parse_line_csv_advance_alt(TAGS, input4).is_err(), true,);
 
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         as_str_slice_test_case!(input5, "@tags: tag1, tag2,  tag3\n");
-        let result = parse_single_line_csv_auto_advance_alt(TAGS, input5).unwrap();
+        let result = parse_line_csv_advance_alt(TAGS, input5).unwrap();
         assert_eq2!(result.0.extract_to_slice_end().as_ref(), "",);
 
         // Create expected output with AsStrSlice values
@@ -343,8 +317,7 @@ mod test_parse_tags_opt_eol {
         as_str_slice_test_case!(input, "@tags: \nfoo\nbar");
 
         println!("Input: {:?}", input.extract_to_slice_end());
-        let (input, output) =
-            parse_single_line_csv_auto_advance_alt(TAGS, input).unwrap();
+        let (input, output) = parse_line_csv_advance_alt(TAGS, input).unwrap();
         println!("Remainder: {:?}", input.extract_to_slice_end());
         println!("Output: {output:?}");
 

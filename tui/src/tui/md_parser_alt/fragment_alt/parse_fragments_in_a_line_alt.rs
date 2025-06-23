@@ -52,7 +52,7 @@ use crate::{fg_green,
 /// the entire input.
 ///
 /// Here's an example of the runtime iterations that may occur, which repeatedly run by
-/// functions like [crate::standard_alt::parse_single_line_text_auto_advance_alt()]:
+/// functions like [crate::standard_alt::parse_line_text_advance_alt()]:
 ///
 /// ```txt
 /// input: "foo *bar* _baz_ [link](url) ![image](url)"

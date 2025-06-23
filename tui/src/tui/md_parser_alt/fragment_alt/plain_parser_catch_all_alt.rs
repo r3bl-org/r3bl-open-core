@@ -67,7 +67,7 @@ use crate::{fg_blue,
 /// This is the lowest priority parser called by
 /// [crate::fragment_alt::parse_fragments_in_a_line_alt::parse_inline_fragments_until_eol_or_eoi_alt], which itself is called:
 /// 1. Repeatedly in a loop by functions like
-///    [crate::standard_alt::parse_single_line_text_auto_advance_alt()].
+///    [crate::standard_alt::parse_line_text_advance_alt()].
 /// 2. And by other similar functions.
 ///
 /// It will match anything that is not a special character. This is used to parse plain
@@ -89,8 +89,7 @@ use crate::{fg_blue,
 ///
 /// This gives the other more specialized parsers a chance to address these special
 /// characters (like italic, bold, links, etc.), when this function is called repeatedly:
-/// - By functions like
-///   [crate::standard_alt::parse_single_line_text_auto_advance_alt()],
+/// - By functions like [crate::standard_alt::parse_line_text_advance_alt()],
 /// - Which repeatedly calls [crate::fragment_alt::parse_fragments_in_a_line_alt::parse_inline_fragments_until_eol_or_eoi_alt]. This
 ///   function actually runs the specialized parsers.
 /// - Which calls this function repeatedly (if the specialized parsers don't match & error

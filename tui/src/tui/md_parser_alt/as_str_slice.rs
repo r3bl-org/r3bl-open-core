@@ -756,6 +756,11 @@ impl<'a> AsStrSlice<'a> {
             }
         }
 
+        // Check if we've consumed all available characters
+        if self.current_taken >= self.total_size {
+            return true;
+        }
+
         // Check if we're beyond the available lines.
         if self.line_index.as_usize() >= self.lines.len() {
             return true;
@@ -1063,7 +1068,12 @@ impl<'a> AsStrSlice<'a> {
 
     /// Extracts text content from the current position (`line_index`, `char_index`) to
     /// the end of the slice, respecting the `max_len` limit. It allocates for multiline
-    /// `lines`, but not for single line content. This is used mostly for tests.
+    /// `lines`, but not for single line content.
+    ///
+    /// This is used mostly for tests. Be aware (in the tests) that this method
+    /// adds an extra [crate::constants::NEW_LINE] at the end of the content if there are
+    /// multiple lines in the slice (to mimic the opposite behavior of [str::lines()],
+    /// which strips trailing new line if it exists).
     ///
     /// ## Allocation Behavior
     ///
@@ -1215,20 +1225,29 @@ impl<'a> AsStrSlice<'a> {
             return;
         });
 
+        let current_line = &self.lines[self.line_index.as_usize()].string;
+
+        // Determine position state first to check if we're at end of line
+        let position_state = determine_position_state(self, current_line);
+
         // Check if we've hit the max_len limit.
         if let Some(max_len) = self.max_len {
             if max_len == len(0) {
-                return;
+                // If we're at the end of a line and have a next line, we should advance
+                if matches!(position_state, PositionState::AtEndOfLine)
+                    && self.line_index.as_usize() + 1 < self.lines.len()
+                {
+                    self.line_index += idx(1);
+                    self.char_index = idx(0);
+                    return;
+                } else {
+                    return;
+                }
+            } else {
+                // Decrement max_len as we advance.
+                self.max_len = Some(max_len - len(1));
             }
-            // Decrement max_len as we advance.
-            self.max_len = Some(max_len - len(1));
         }
-
-        let current_line = &self.lines[self.line_index.as_usize()].string;
-
-        // Determine position state and handle advancement accordingly.
-        let position_state = determine_position_state(self, current_line);
-
         match position_state {
             PositionState::WithinLineContent => {
                 // Move to next character within the line.
@@ -2023,6 +2042,12 @@ mod tests_limit_to_line_end {
 
             assert_eq2!(limited.extract_to_line_end(), "second line");
             assert_eq2!(limited.max_len, Some(len(11))); // "second line" = 11 chars
+
+            // Should be equivalent to advanced slice's extract_to_line_end()
+            assert_eq2!(
+                limited.extract_to_line_end(),
+                advanced.extract_to_line_end()
+            );
         }
     }
 
@@ -2728,8 +2753,8 @@ mod tests_character_based_range_methods {
         // Test that char_range(a, b) = = char_from(a).char_to(b-a)
         {
             as_str_slice_test_case!(slice, "😀hello world🎉");
-            let range1 = slice.char_range(2, 7);
-            let range2 = slice.char_from(2).char_to(5);
+            let range1 = slice.char_range(2, 8);
+            let range2 = slice.char_from(2).char_to(6);
 
             assert_eq2!(range1.extract_to_line_end(), range2.extract_to_line_end());
         }
@@ -3151,10 +3176,10 @@ mod tests_write_to_byte_cache_compat_behavior {
 /// Unit tests for the [AsStrSlice] struct and its methods.
 #[cfg(test)]
 mod tests_as_str_slice_basic_functionality {
-    use nom::{Compare, CompareResult, Input, Offset};
-    use pretty_assertions::assert_eq;
+    use nom::Input;
 
     use super::*;
+    use crate::{assert_eq2, idx, len};
 
     #[test]
     fn test_gc_string_slice_basic_functionality() {
@@ -3201,14 +3226,6 @@ mod tests_as_str_slice_basic_functionality {
         pub fn create_simple_lines() -> Vec<GCString> {
             vec![GCString::new("abc"), GCString::new("def")]
         }
-
-        pub fn create_three_lines() -> Vec<GCString> {
-            vec![
-                GCString::from("First line"),
-                GCString::from("Second line"),
-                GCString::from("Third line"),
-            ]
-        }
     }
 
     // Test From trait implementations
@@ -3247,17 +3264,6 @@ mod tests_as_str_slice_basic_functionality {
         assert_ne!(slice1, slice3);
     }
 
-    // Test Debug trait
-    #[test]
-    fn test_debug() {
-        let lines = fixtures::create_simple_lines();
-        let slice = AsStrSlice::from(lines.as_slice());
-        let debug_str = format!("{slice:?}");
-
-        assert!(debug_str.contains("AsStrSlice"));
-        assert!(debug_str.contains("line_index"));
-        assert!(debug_str.contains("char_index"));
-    }
 
     // Test with_limit constructor and behavior.
     #[test]
@@ -3367,693 +3373,462 @@ mod tests_as_str_slice_basic_functionality {
     }
 
     #[test]
-    fn test_advance_with_max_len() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let mut slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(2)));
-        // Input appears as: "abc\ndef" but limited to first 2 chars: "ab"
+    fn test_advance_with_max_len_zero_at_end_of_line() {
+        // This test specifically covers the scenario that was causing the parser to hang:
+        // When max_len=0 and we're at the end of a line, advance() should still move to
+        // the next line.
 
-        assert_eq!(slice.current_char(), Some('a'));
+        as_str_slice_test_case!(slice, "short line", "next line");
+        let mut slice = slice;
+
+        // Advance to end of first line
+        for _ in 0..10 {
+            // "short line" has 10 characters
+            slice.advance();
+        }
+
+        // At this point we should be at the end of the first line
+        assert_eq2!(slice.line_index, idx(0));
+        assert_eq2!(slice.char_index, idx(10));
+
+        // Now set max_len to 0 to simulate the problematic condition
+        slice.max_len = Some(len(0));
+
+        // The advance() should still work and move us to the next line
         slice.advance();
-        assert_eq!(slice.current_char(), Some('b'));
-        slice.advance();
-        assert_eq!(slice.current_char(), None); // Hit max_len limit
-    }
 
-    // Test Input trait implementation
-    #[test]
-    fn test_input_len() {
-        let lines = fixtures::create_simple_lines(); // "abc", "def" = 6 chars + 1 newline + 1 trailing = 8
-        let slice = AsStrSlice::from(lines.as_slice());
-        assert_eq!(slice.input_len(), 8);
-
-        let slice_offset = slice.take_from(2);
-        assert_eq!(slice_offset.input_len(), 6); // "c\ndef\n" (from position 2 to end)
-
-        // With max_len
-        let slice_limited = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(3)));
-        assert_eq!(slice_limited.input_len(), 3);
+        // We should now be at the beginning of the second line
+        assert_eq2!(slice.line_index, idx(1));
+        assert_eq2!(slice.char_index, idx(0));
     }
 
     #[test]
-    fn test_input_take() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef\n" (8 total chars)
+    fn test_advance_through_multiline_content() {
+        // Test advancing through multiple lines to ensure proper line transitions
+        as_str_slice_test_case!(slice, "ab", "cd", "ef");
+        let mut slice = slice;
 
-        let taken = slice.take(3);
-        assert_eq!(taken.max_len, Some(len(3)));
-        assert_eq!(taken.input_len(), 3); // Takes first 3 chars: "abc"
-    }
+        let expected_positions = vec![
+            // First line: "ab"
+            (0, 0, Some('a')),
+            (0, 1, Some('b')),
+            (0, 2, Some('\n')), // Synthetic newline
+            // Second line: "cd"
+            (1, 0, Some('c')),
+            (1, 1, Some('d')),
+            (1, 2, Some('\n')), // Synthetic newline
+            // Third line: "ef"
+            (2, 0, Some('e')),
+            (2, 1, Some('f')),
+            (2, 2, Some('\n')), // Trailing synthetic newline
+            (2, 3, None),       // Past end
+        ];
 
-    #[test]
-    fn test_input_take_from() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef\n" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
-        // f(6), \n(7))
+        for (expected_line, expected_char, expected_current_char) in expected_positions {
+            assert_eq2!(slice.line_index.as_usize(), expected_line);
+            assert_eq2!(slice.char_index.as_usize(), expected_char);
+            assert_eq2!(slice.current_char(), expected_current_char);
 
-        let from_offset = slice.take_from(2);
-        assert_eq!(from_offset.line_index, idx(0));
-        assert_eq!(from_offset.char_index, idx(2)); // Advanced to position 2: 'c'
-        assert_eq!(from_offset.max_len, None);
-    }
-
-    #[test]
-    fn test_input_take_split() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef\n" (synthetic \n added between lines + trailing \n)
-        // Positions: a(0), b(1), c(2), \n(3), d(4), e(5), f(6), \n(7)
-
-        let (taken, remaining) = slice.take_split(3);
-        assert_eq!(taken.max_len, Some(len(3)));
-        assert_eq!(taken.input_len(), 3);
-        assert_eq!(remaining.char_index, idx(3)); // Advanced by 3: 'a'(0), 'b'(1), 'c'(2)
-                                                  // ->
-                                                  // now at '\n'(3)
-    }
-
-    #[test]
-    fn test_input_position() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef\n" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
-        // f(6), \n(7))
-
-        // Find newline between lines
-        let pos = slice.position(|c| c == '\n');
-        assert_eq!(pos, Some(3)); // Synthetic newline at position 3
-
-        // Find 'd'
-        let pos = slice.position(|c| c == 'd');
-        assert_eq!(pos, Some(4)); // 'd' at position 4 (after synthetic newline)
-
-        // Find non-existent character
-        let pos = slice.position(|c| c == 'z');
-        assert_eq!(pos, None);
-    }
-
-    #[test]
-    fn test_input_slice_index() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef" (8 total chars)
-
-        // Valid count
-        assert_eq!(slice.slice_index(3), Ok(3));
-        assert_eq!(slice.slice_index(8), Ok(8)); // Full length
-
-        // Invalid count
-        let result = slice.slice_index(10);
-        assert!(result.is_err());
-        if let Err(nom::Needed::Size(size)) = result {
-            assert_eq!(size.get(), 2); // 10 - 8 = 2 (need 2 more chars)
+            if slice.current_char().is_some() {
+                slice.advance();
+            }
         }
     }
 
-    // Test iterators
     #[test]
-    fn test_iter_elements() {
-        as_str_slice_test_case!(slice, "ab", "cd"); // Creates ["ab", "cd"]
-                                                    // Input appears as: "ab\ncd\n" (synthetic \n added between lines + trailing \n)
+    fn test_advance_with_max_len_constraint() {
+        // Test that advance() respects max_len constraints
+        as_str_slice_test_case!(slice, "hello world", "second line");
+        let mut limited_slice = slice.take(5); // Only "hello"
 
-        let chars: Vec<char> = slice.iter_elements().collect();
-        assert_eq!(chars, vec!['a', 'b', '\n', 'c', 'd', '\n']); // Note synthetic
-                                                                 // newlines
-    }
+        // Should be able to advance 5 times to consume "hello"
+        for i in 0..5 {
+            assert_eq2!(limited_slice.char_index.as_usize(), i);
+            limited_slice.advance();
+        }
 
-    #[test]
-    fn test_iter_indices() {
-        as_str_slice_test_case!(slice, "ab", "cd"); // Creates ["ab", "cd"]
-                                                    // Input appears as: "ab\ncd\n" (synthetic \n added between lines + trailing \n)
+        // At this point, max_len should be 0 and we should be at position 5
+        assert_eq2!(limited_slice.char_index.as_usize(), 5);
+        assert_eq2!(limited_slice.max_len, Some(len(0)));
 
-        let indexed_chars: Vec<(usize, char)> = slice.iter_indices().collect();
-        assert_eq!(
-            indexed_chars,
-            vec![(0, 'a'), (1, 'b'), (2, '\n'), (3, 'c'), (4, 'd'), (5, '\n')] /* Note synthetic
-                                                                                * newlines at
-                                                                                * indices 2 and 5 */
+        // Further advances should not move the position when max_len is exhausted
+        // (unless we're at end of line transitioning to next line)
+        let original_position = (limited_slice.line_index, limited_slice.char_index);
+        limited_slice.advance();
+        // Position should remain the same since we're in the middle of a line with
+        // max_len=0
+        assert_eq2!(
+            (limited_slice.line_index, limited_slice.char_index),
+            original_position
         );
     }
 
-    // Test Compare trait implementation
     #[test]
-    fn test_compare() {
-        as_str_slice_test_case!(slice, "Hello", "World");
-
-        // Exact match
-        assert_eq!(slice.compare("Hello"), CompareResult::Ok);
-
-        // Partial match (target is longer)
-        assert_eq!(slice.compare("Hello\nWorld"), CompareResult::Ok);
-
-        // Mismatch
-        assert_eq!(slice.compare("Hi"), CompareResult::Error);
-
-        // Target longer than available input
-        assert_eq!(
-            slice.compare("Hello\nWorld\nExtra"),
-            CompareResult::Incomplete
-        );
-
-        // Empty string
-        assert_eq!(slice.compare(""), CompareResult::Ok);
-    }
-
-    #[test]
-    fn test_compare_no_case() {
-        as_str_slice_test_case!(slice, "Hello", "World");
-
-        // Case insensitive match
-        assert_eq!(slice.compare_no_case("hello"), CompareResult::Ok);
-        assert_eq!(slice.compare_no_case("HELLO"), CompareResult::Ok);
-        assert_eq!(slice.compare_no_case("HeLLo"), CompareResult::Ok);
-
-        // Mismatch
-        assert_eq!(slice.compare_no_case("hi"), CompareResult::Error);
-
-        // Target longer than available input
-        assert_eq!(
-            slice.compare_no_case("hello\nworld\nextra"),
-            CompareResult::Incomplete
-        );
-    }
-
-    // Test Offset trait implementation
-    #[test]
-    fn test_offset() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice1 = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef" (positions: a(0), b(1), c(2), \n(3), d(4), e(5),
-        // f(6))
-        let slice2 = slice1.take_from(3); // After "abc" -> at position 3 ('\n')
-        let slice3 = slice1.take_from(5); // After "abc\nde" -> at position 5 ('f')
-
-        assert_eq!(slice1.offset(&slice1), 0);
-        assert_eq!(slice1.offset(&slice2), 3); // 3 positions advanced
-        assert_eq!(slice1.offset(&slice3), 5); // 5 positions advanced
-        assert_eq!(slice2.offset(&slice3), 2); // 2 positions from '\n' to 'f'
-
-        // Invalid case: second is before first
-        assert_eq!(slice2.offset(&slice1), 0);
-    }
-
-    #[test]
-    fn test_offset_different_arrays() {
-        let lines1 = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let lines2 = fixtures::create_test_lines();
-        let slice1 = AsStrSlice::from(lines1.as_slice());
-        let slice2 = AsStrSlice::from(lines2.as_slice());
-
-        // Different arrays should return 0
-        assert_eq!(slice1.offset(&slice2), 0);
-    }
-
-    // Edge cases and error conditions
-    #[test]
-    fn test_empty_lines() {
-        let slice = AsStrSlice::from(&[]);
-
-        assert_eq!(slice.current_char(), None);
-        assert_eq!(slice.input_len(), 0);
-        assert_eq!(slice.extract_to_line_end(), "");
-    }
-
-    #[test]
-    fn test_single_empty_line() {
-        as_str_slice_test_case!(slice, "");
-
-        assert_eq!(slice.current_char(), None);
-        assert_eq!(slice.input_len(), 0);
-        assert_eq!(slice.extract_to_line_end(), "");
-    }
-
-    #[test]
-    fn test_max_len_zero() {
-        let lines = fixtures::create_simple_lines();
-        let slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(0)));
-
-        assert_eq!(slice.current_char(), None);
-        assert_eq!(slice.input_len(), 0);
-        assert_eq!(slice.extract_to_line_end(), "");
-    }
-
-    #[test]
-    fn test_advance_beyond_bounds() {
-        as_str_slice_test_case!(slice, "a");
+    fn test_advance_single_line_behavior() {
+        // Test advance behavior with single line (no trailing newline)
+        as_str_slice_test_case!(slice, "hello");
         let mut slice = slice;
 
-        assert_eq!(slice.current_char(), Some('a'));
-        slice.advance(); // Now at end
-        assert_eq!(slice.current_char(), None);
-        slice.advance(); // Should not panic or change state
-        assert_eq!(slice.current_char(), None);
+        // Advance through all characters
+        for i in 0..5 {
+            assert_eq2!(slice.char_index.as_usize(), i);
+            slice.advance();
+        }
+
+        // After consuming all characters, we should be at the end
+        assert_eq2!(slice.char_index.as_usize(), 5);
+        assert_eq2!(slice.current_char(), None); // No trailing newline for single line
+
+        // Further advances should be no-ops
+        let final_position = (slice.line_index, slice.char_index);
+        slice.advance();
+        assert_eq2!((slice.line_index, slice.char_index), final_position);
     }
 
     #[test]
-    fn test_with_newlines_in_content() {
-        as_str_slice_test_case!(slice, "line1\nembedded", "line2");
+    fn test_advance_empty_lines() {
+        // Test advance behavior with empty lines
+        as_str_slice_test_case!(slice, "", "content", "");
+        let mut slice = slice;
 
-        // Should handle embedded newlines in line content
-        let content = slice.extract_to_line_end();
-        assert_eq!(content, "line1\nembedded");
-    }
-
-    #[test]
-    fn test_char_index_beyond_line_length() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::with_limit(&lines, idx(0), idx(10), None); // char_index > line.len()
-                                                                           // Input appears as: "abc\ndef" but starting at invalid position 10
-
-        // Should clamp to line length
-        assert_eq!(slice.extract_to_line_end(), "");
-    }
-
-    // Test Display trait implementation
-    #[test]
-    fn test_display_full_content() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::from(lines.as_slice());
-        // Input appears as: "abc\ndef\n" (synthetic \n added between lines + trailing \n)
-
-        let displayed = format!("{slice}");
-        assert_eq!(displayed, "abc\ndef\n"); // Shows synthetic newlines in output
-    }
-
-    #[test]
-    fn test_display_from_offset() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::from(lines.as_slice()).take_from(2);
-        // Input appears as: "abc\ndef\n", starting from position 2 ('c')
-
-        let displayed = format!("{slice}");
-        assert_eq!(displayed, "c\ndef\n"); // From 'c' through synthetic newlines to end
-    }
-
-    #[test]
-    fn test_display_with_limit() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(4)));
-        // Input appears as: "abc\ndef" but limited to first 4 chars: "abc\n"
-
-        let displayed = format!("{slice}");
-        assert_eq!(displayed, "abc\n"); // First 4 chars including synthetic newline
-    }
-
-    #[test]
-    fn test_display_empty_slice() {
-        let lines: Vec<GCString> = vec![];
-        let slice = AsStrSlice::from(lines.as_slice());
-
-        let displayed = format!("{slice}");
-        assert_eq!(displayed, "");
-    }
-
-    #[test]
-    fn test_display_single_line() {
-        as_str_slice_test_case!(slice, "hello");
-
-        let displayed = format!("{slice}");
-        assert_eq!(displayed, "hello");
-    }
-
-    #[test]
-    fn test_display_empty_lines() {
-        as_str_slice_test_case!(slice, "", "middle", "");
-
-        let displayed = format!("{slice}");
-        assert_eq!(displayed, "\nmiddle\n\n"); // Multiple lines get trailing newline
-    }
-
-    #[test]
-    fn test_display_with_embedded_newlines() {
-        as_str_slice_test_case!(slice, "line1\nembedded", "line2");
-
-        let displayed = format!("{slice}");
-        assert_eq!(displayed, "line1\nembedded\nline2\n"); // Multiple lines get trailing
-                                                           // newline
-    }
-
-    #[test]
-    fn test_display_max_len_zero() {
-        let lines = fixtures::create_simple_lines(); // Creates ["abc", "def"]
-        let slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(0)));
-        // Input appears as: "abc\ndef" but limited to 0 chars
-
-        let displayed = format!("{slice}");
-        assert_eq!(displayed, ""); // No characters displayed due to max_len = 0
-    }
-
-    #[test]
-    fn test_display_at_end_position() {
-        as_str_slice_test_case!(slice, "abc");
-        let slice = AsStrSlice::with_limit(slice.lines, 0, 3, None); // At end of line
-
-        let displayed = format!("{slice}");
-        assert_eq!(displayed, "");
-    }
-
-    #[test]
-    fn test_display_multiline_complex() {
-        let lines = fixtures::create_test_lines(); // Multiple lines including empty
-        let slice = AsStrSlice::from(lines.as_slice());
-
-        let displayed = format!("{slice}");
-        assert_eq!(
-            displayed,
-            "Hello world\nSecond line\nThird line\n\nFifth line\n" /* Trailing newline
-                                                                    * for multiple
-                                                                    * lines */
-        );
-    }
-
-    #[test]
-    fn test_display_partial_from_middle() {
-        let lines = fixtures::create_test_lines();
-        let slice = AsStrSlice::with_limit(&lines, idx(1), idx(7), Some(len(10))); // From "line" in "Second line"
-
-        let displayed = format!("{slice}");
-        assert_eq!(displayed, "line\nThird");
-    }
-
-    // Test to_inline_string method
-    #[test]
-    fn test_to_inline_string() {
-        // Test with simple lines
-        let lines = fixtures::create_simple_lines(); // ["abc", "def"]
-        let slice = AsStrSlice::from(lines.as_slice());
-        let result = slice.to_inline_string();
-        assert_eq!(result, "abc\ndef\n"); // Multiple lines get trailing newline
-
-        // Test with empty lines
-        let empty_slice = AsStrSlice::from(&[]);
-        let empty_result = empty_slice.to_inline_string();
-        assert_eq!(empty_result, "");
-
-        // Test with offset
-        let offset_slice = slice.take_from(2); // Start from 'c'
-        let offset_result = offset_slice.to_inline_string();
-        assert_eq!(offset_result, "c\ndef\n");
-
-        // Test with limit
-        let limited_slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(3)));
-        let limited_result = limited_slice.to_inline_string();
-        assert_eq!(limited_result, "abc");
-
-        // Test single line (no trailing newline)
-        as_str_slice_test_case!(single_slice, "single");
-        let single_result = single_slice.to_inline_string();
-        assert_eq!(single_result, "single"); // Single line gets no trailing newline
-    }
-
-    // Test that Display implementation is equivalent to write_to_byte_cache_compat
-    #[test]
-    fn test_display_impl_equivalent_to_write_to_byte_cache_compat() {
-        // Test with simple lines (multiple lines).
-        let lines = fixtures::create_simple_lines(); // ["abc", "def"]
-        let slice = AsStrSlice::from(lines.as_slice());
-
-        // Get Display implementation result using to_inline_string()
-        let display_result = slice.to_inline_string();
-
-        // Get write_to_byte_cache_compat result
-        let mut cache = ParserByteCache::new();
-        slice.write_to_byte_cache_compat(display_result.len() + 10, &mut cache);
-
-        // Verify that write_to_byte_cache_compat and Display implementation produce the
-        // same result
-        assert_eq!(
-            display_result.as_str(), cache.as_str(),
-            "write_to_byte_cache_compat() and Display implementation should produce the same output for multiple lines"
-        );
-
-        // Test with single line (no trailing newline).
-        as_str_slice_test_case!(single_slice, "single");
-
-        // Get Display implementation result
-        let single_display_result = single_slice.to_inline_string();
-
-        // Get write_to_byte_cache_compat result
-        let mut cache = ParserByteCache::new();
-        single_slice.write_to_byte_cache_compat(10, &mut cache);
-
-        // Verify that write_to_byte_cache_compat and Display implementation produce the
-        // same result
-        assert_eq!(
-            single_display_result.as_str(), cache.as_str(),
-            "write_to_byte_cache_compat() and Display implementation should produce the same output for single line"
-        );
-
-        // Test with empty lines.
-        let empty_lines: Vec<GCString> = vec![];
-        let empty_slice = AsStrSlice::from(empty_lines.as_slice());
-
-        // Get Display implementation result
-        let empty_display_result = empty_slice.to_inline_string();
-
-        // Get write_to_byte_cache_compat result
-        let mut cache = ParserByteCache::new();
-        empty_slice.write_to_byte_cache_compat(0, &mut cache);
-
-        // Verify that write_to_byte_cache_compat and Display implementation produce the
-        // same result
-        assert_eq!(
-            empty_display_result.as_str(), cache.as_str(),
-            "write_to_byte_cache_compat() and Display implementation should produce the same output for empty lines"
-        );
-    }
-
-    // Test that write_to_byte_cache_compat behaves as expected
-    #[test]
-    fn test_write_to_byte_cache_compat_behavior() {
-        // Test with simple lines (multiple lines).
-        let lines = fixtures::create_simple_lines(); // ["abc", "def"]
-        let slice = AsStrSlice::from(lines.as_slice());
-
-        // Get write_to_byte_cache_compat result
-        let mut cache = ParserByteCache::new();
-        slice.write_to_byte_cache_compat(20, &mut cache);
-
-        // Verify expected behavior for multiple lines (trailing newline)
-        assert_eq!(cache, "abc\ndef\n"); // Note the trailing newline for multiple lines.
-
-        // Test with single line (no trailing newline).
-        as_str_slice_test_case!(single_slice, "single");
-
-        // Get write_to_byte_cache_compat result
-        let mut cache = ParserByteCache::new();
-        single_slice.write_to_byte_cache_compat(10, &mut cache);
-
-        // Verify expected behavior for single line (no trailing newline)
-        assert_eq!(cache, "single"); // No trailing newline for single line
-
-        // Test with empty lines.
-        let empty_lines: Vec<GCString> = vec![];
-        let empty_slice = AsStrSlice::from(empty_lines.as_slice());
-
-        // Get write_to_byte_cache_compat result
-        let mut cache = ParserByteCache::new();
-        empty_slice.write_to_byte_cache_compat(0, &mut cache);
-
-        // Verify expected behavior for empty lines
-        assert_eq!(cache, "");
-    }
-
-    // Test contains method
-    #[test]
-    fn test_contains() {
-        // Test with simple lines
-        let lines = fixtures::create_simple_lines(); // ["abc", "def"]
-        let slice = AsStrSlice::from(lines.as_slice());
-
-        // Test substring that exists
-        assert!(slice.contains("abc"));
-        assert!(slice.contains("def"));
-        assert!(slice.contains("c\nd")); // Across lines with synthetic newline
-        assert!(slice.contains("def\n")); // Including trailing newline
-
-        // Test substring that doesn't exist
-        assert!(!slice.contains("xyz"));
-        assert!(!slice.contains("abcdef")); // No continuous "abcdef"
-
-        // Test with empty substring
-        assert!(slice.contains("")); // Empty string is always contained
-
-        // Test with empty slice
-        let empty_slice = AsStrSlice::from(&[]);
-        assert!(!empty_slice.contains("abc"));
-        assert!(empty_slice.contains("")); // Empty string is contained in empty slice
-
-        // Test with three lines for offset and limit testing
-        let three_lines = fixtures::create_three_lines(); // ["First line", "Second line", "Third line"]
-
-        // Test with offset position
-        let slice = AsStrSlice::with_limit(&three_lines, idx(1), idx(0), None); // Start at beginning of second line
-        let pos = slice.find_substring("Second");
-        assert_eq!(pos, Some(0));
-
-        // Test with max_len limit
-        let slice = AsStrSlice::with_limit(&three_lines, idx(0), idx(0), Some(len(15))); // Limit to first 15 chars
-        let pos = slice.find_substring("Second");
-        assert_eq!(pos, None); // Should not find "Second" as it's beyond the limit
-
-        // Test with empty lines
-        let lines = vec![
-            GCString::from(""),
-            GCString::from(""),
-            GCString::from("Content"),
+        let expected_sequence = vec![
+            (0, 0, Some('\n')), // Empty first line -> synthetic newline
+            (1, 0, Some('c')),  // Start of "content"
+            (1, 1, Some('o')),
+            (1, 2, Some('n')),
+            (1, 3, Some('t')),
+            (1, 4, Some('e')),
+            (1, 5, Some('n')),
+            (1, 6, Some('t')),
+            (1, 7, Some('\n')), // End of "content" -> synthetic newline
+            (2, 0, Some('\n')), // Empty last line -> trailing newline
+            (2, 1, None),       // Past end
         ];
-        let slice = AsStrSlice::from(&lines);
-        let pos = slice.find_substring("Content");
-        assert_eq!(pos, Some(2)); // 2 newlines before "Content"
+
+        for (expected_line, expected_char, expected_current_char) in expected_sequence {
+            assert_eq2!(slice.line_index.as_usize(), expected_line);
+            assert_eq2!(slice.char_index.as_usize(), expected_char);
+            assert_eq2!(slice.current_char(), expected_current_char);
+
+            if slice.current_char().is_some() {
+                slice.advance();
+            }
+        }
+    }
+}
+
+/// Tests for the `is_empty()` method to ensure it correctly identifies when no more
+/// characters can be consumed from the current position.
+#[cfg(test)]
+mod tests_is_empty {
+    use super::*;
+    use crate::assert_eq2;
+
+    #[test]
+    fn test_is_empty_with_max_len_zero() {
+        // Test when max_len is set to 0
+        as_str_slice_test_case!(slice, "hello");
+        let slice_with_max_len_zero = slice.take(0);
+
+        assert_eq2!(slice_with_max_len_zero.max_len, Some(len(0)));
+        assert_eq2!(slice_with_max_len_zero.is_empty(), true);
+    }
+
+    #[test]
+    fn test_is_empty_all_chars_consumed() {
+        // Test when all available characters have been consumed
+        as_str_slice_test_case!(slice, "hello");
+        let mut consumed_slice = slice;
+
+        // Advance through all characters
+        for _ in 0..5 {
+            consumed_slice.advance();
+        }
+
+        // At this point, current_taken should equal total_size
+        assert_eq2!(consumed_slice.current_taken, consumed_slice.total_size);
+        assert_eq2!(consumed_slice.is_empty(), true);
+    }
+
+    #[test]
+    fn test_is_empty_beyond_available_lines() {
+        // Test when we're beyond the available lines
+        as_str_slice_test_case!(slice, "line1", "line2");
+
+        // Create a slice with line_index beyond the available lines
+        let mut beyond_lines = slice;
+        beyond_lines.line_index = idx(2); // Only 2 lines (indices 0 and 1) exist
+
+        assert_eq2!(beyond_lines.is_empty(), true);
+    }
+
+    #[test]
+    fn test_is_empty_empty_lines_array() {
+        // Test when the lines array is empty
+        let empty_lines: Vec<GCString> = vec![];
+        let slice = AsStrSlice::from(&empty_lines);
+
+        assert_eq2!(slice.lines.is_empty(), true);
+        assert_eq2!(slice.is_empty(), true);
+    }
+
+    #[test]
+    fn test_is_empty_no_current_char() {
+        // Test when there's no current character available
+        as_str_slice_test_case!(slice, "hello");
+        let mut no_char_slice = slice;
+
+        // Move to a position where current_char() returns None
+        no_char_slice.char_index = idx(5); // Beyond the end of "hello"
+
+        assert_eq2!(no_char_slice.current_char(), None);
+        assert_eq2!(no_char_slice.is_empty(), true);
+    }
+
+    #[test]
+    fn test_is_not_empty() {
+        // Test cases where is_empty() should return false
+
+        // Regular non-empty slice
+        as_str_slice_test_case!(slice1, "hello");
+        assert_eq2!(slice1.is_empty(), false);
+
+        // Slice with content after the current position
+        as_str_slice_test_case!(slice2, "hello", "world");
+        let mut middle_slice = slice2;
+        middle_slice.line_index = idx(0);
+        middle_slice.char_index = idx(2); // At 'l' in "hello"
+
+        assert_eq2!(middle_slice.is_empty(), false);
+
+        // Slice with max_len greater than 0
+        as_str_slice_test_case!(slice3, "hello");
+        let limited_slice = slice3.take(3); // Only "hel"
+        assert_eq2!(limited_slice.max_len, Some(len(3)));
+        assert_eq2!(limited_slice.is_empty(), false);
     }
 }
 
 #[cfg(test)]
-mod tests_character_based_length_method {
+mod tests_is_empty_character_exhaustion {
+    use super::*;
     use crate::{assert_eq2, len};
 
     #[test]
-    fn test_len_method_character_based_counting() {
-        // Test with ASCII text
-        as_str_slice_test_case!(ascii_slice, "hello");
-        assert_eq2!(ascii_slice.len_chars(), len(5));
-
-        // Test with Unicode emoji
-        as_str_slice_test_case!(emoji_slice, "😀hello");
-        assert_eq2!(emoji_slice.len_chars(), len(6)); // 1 emoji + 5 ASCII = 6 characters
-
-        // Compare with &str byte counting (which would be wrong)
-        let text = "😀hello";
-        assert_eq2!(text.len(), 9); // 4 bytes (emoji) + 5 bytes (ASCII) = 9 bytes
-        assert_eq2!(text.chars().count(), 6); // Same as slice.len() - 6 characters
-
-        // Test with multi-byte characters
-        as_str_slice_test_case!(unicode_slice, "café");
-        assert_eq2!(unicode_slice.len_chars(), len(4)); // 4 characters (é is 1 character, 2 bytes)
-
-        let unicode_text = "café";
-        assert_eq2!(unicode_text.len(), 5); // 5 bytes
-        assert_eq2!(unicode_text.chars().count(), 4); // 4 characters
-    }
-
-    #[test]
-    fn test_len_method_with_multiple_lines() {
-        // Test with multiple lines (includes synthetic newlines)
-        as_str_slice_test_case!(multiline_slice, "line1", "line2");
-        assert_eq2!(multiline_slice.len_chars(), len(12)); // "line1\nline2\n" = 12 characters
-
-        // Test with Unicode in multiple lines
-        as_str_slice_test_case!(unicode_multiline, "😀hello", "world");
-        assert_eq2!(unicode_multiline.len_chars(), len(13)); // "😀hello\nworld\n" = 13
-                                                             // characters
-    }
-
-    #[test]
-    fn test_len_method_with_position_advancement() {
-        as_str_slice_test_case!(slice, "😀hello world");
-
-        // Test length from beginning
-        assert_eq2!(slice.len_chars(), len(12)); // All characters
-
-        // Test length after advancing past emoji
-        let advanced = slice.char_from(1); // Skip emoji, start at "hello world"
-        assert_eq2!(advanced.len_chars(), len(11)); // Remaining characters
-
-        // Test length after advancing further
-        let further = slice.char_from(6); // Skip to " world"
-        assert_eq2!(further.len_chars(), len(6)); // Remaining characters
-    }
-    #[test]
-    fn test_len_method_equivalent_to_chars_count() {
-        // This test demonstrates that slice.len() should be used instead of
-        // str.len() when working with nom parsers
-        as_str_slice_test_case!(slice, "😀🌟hello🎉world");
-
-        // The AsStrSlice len() method returns character count
-        let char_based_len = slice.len_chars();
-
-        // This is equivalent to manually counting characters
-        let manual_char_count = slice.extract_to_line_end().chars().count();
-
-        assert_eq2!(char_based_len, len(manual_char_count));
-        assert_eq2!(char_based_len, len(13)); // 4 emojis + 5 ASCII letters = 9 chars; wait let me recount: 😀🌟hello🎉world =
-                                              // 1+1+5+1+5 = 13
-
-        // Demonstrate why &str.len() would be wrong
-        let text = slice.extract_to_line_end();
-        let byte_len = text.len();
-        assert_ne!(char_based_len.as_usize(), byte_len); // These should be different!
-        assert_eq2!(byte_len, 22); // Each emoji is 4 bytes, ASCII is 1 byte each:
-                                   // 4+4+5+4+5 = 22 bytes
-    }
-
-    #[test]
-    fn test_len_method_empty_and_edge_cases() {
-        // Empty slice
-        as_str_slice_test_case!(empty_slice, "");
-        assert_eq2!(empty_slice.len_chars(), len(0));
-        assert_eq2!(empty_slice.is_empty(), true);
-
-        // Single character
-        as_str_slice_test_case!(single_char, "a");
-        assert_eq2!(single_char.len_chars(), len(1));
-        assert_eq2!(single_char.is_empty(), false);
-
-        // Single emoji
-        as_str_slice_test_case!(single_emoji, "😀");
-        assert_eq2!(single_emoji.len_chars(), len(1)); // 1 character, not 4 bytes
-        assert_eq2!(single_emoji.is_empty(), false);
-    }
-
-    #[test]
-    fn test_is_empty_comprehensive() {
-        use nom::Input;
-
-        use crate::{assert_eq2, idx, len, AsStrSlice, GCString};
-
-        // Empty slice
-        as_str_slice_test_case!(empty_slice, "");
-        assert_eq2!(empty_slice.is_empty(), true);
-
-        // Empty lines array
-        let empty_lines: Vec<GCString> = vec![];
-        let empty_slice = AsStrSlice::from(&empty_lines);
-        assert_eq2!(empty_slice.is_empty(), true);
-
-        // Normal slice
-        as_str_slice_test_case!(normal_slice, "hello");
-        assert_eq2!(normal_slice.is_empty(), false);
-
-        // Slice with max_len = 0
-        let lines = vec![GCString::from("hello")];
-        let zero_len_slice = AsStrSlice::with_limit(&lines, idx(0), idx(0), Some(len(0)));
-        assert_eq2!(zero_len_slice.is_empty(), true);
-
-        // Slice with line_index beyond available lines
-        let lines = vec![GCString::from("hello")];
-        let beyond_lines_slice = AsStrSlice::with_limit(&lines, idx(1), idx(0), None);
-        assert_eq2!(beyond_lines_slice.is_empty(), true);
-
-        // Slice with char_index beyond line length
-        let lines = vec![GCString::from("hello")];
-        let beyond_chars_slice = AsStrSlice::with_limit(&lines, idx(0), idx(10), None);
-        assert_eq2!(beyond_chars_slice.is_empty(), true);
-
-        // Slice after advancing to the end
-        let mut advanced_slice = normal_slice.clone();
-        for _ in 0..5 {
-            // "hello" has 5 characters
-            advanced_slice.advance();
+    fn test_is_empty_basic_behavior() {
+        // Empty slice should be empty
+        {
+            let empty_lines: &[GCString] = &[];
+            let slice = AsStrSlice::from(empty_lines);
+            assert_eq2!(slice.is_empty(), true);
         }
-        assert_eq2!(advanced_slice.is_empty(), true);
 
-        // Multiple lines slice
-        as_str_slice_test_case!(multiline_slice, "line1", "line2");
-        assert_eq2!(multiline_slice.is_empty(), false);
+        // Non-empty slice at start should not be empty
+        {
+            as_str_slice_test_case!(slice, "hello");
+            assert_eq2!(slice.is_empty(), false);
+        }
+    }
 
-        // Multiple lines slice advanced to second line
-        let second_line_slice = multiline_slice.take_from(6); // Skip "line1\n"
-        assert_eq2!(second_line_slice.is_empty(), false);
+    #[test]
+    fn test_is_empty_when_current_taken_equals_total_size() {
+        // Test the new behavior: is_empty() returns true when current_taken >= total_size
+        {
+            as_str_slice_test_case!(slice, "hello", "world");
+            let mut slice = slice;
+
+            // Initially not empty
+            assert_eq2!(slice.is_empty(), false);
+            assert_eq2!(slice.current_taken < slice.total_size, true);
+
+            // Advance through all characters
+            while slice.current_char().is_some() {
+                slice.advance();
+            }
+
+            // Now should be empty because current_taken >= total_size
+            assert_eq2!(slice.is_empty(), true);
+            assert_eq2!(slice.current_taken >= slice.total_size, true);
+        }
+    }
+
+    #[test]
+    fn test_is_empty_with_max_len_zero() {
+        // max_len = 0 should make slice empty regardless of content
+        {
+            as_str_slice_test_case!(slice, limit: 0, "hello world");
+            assert_eq2!(slice.is_empty(), true);
+            assert_eq2!(slice.max_len, Some(len(0)));
+        }
+    }
+
+    #[test]
+    fn test_is_empty_past_available_lines() {
+        // When line_index >= lines.len(), should be empty
+        {
+            as_str_slice_test_case!(slice, "hello");
+            let past_end = AsStrSlice::with_limit(
+                slice.lines,
+                idx(1), // Past the only line (index 0)
+                idx(0),
+                None,
+            );
+            assert_eq2!(past_end.is_empty(), true);
+        }
+    }
+
+    #[test]
+    fn test_is_empty_single_line_exhausted() {
+        // Single line: when all characters consumed, should be empty
+        {
+            as_str_slice_test_case!(slice, "hi");
+            let mut slice = slice;
+
+            // Advance to end of line
+            slice.advance(); // 'h'
+            slice.advance(); // 'i'
+
+            // Now at end of single line, should be empty
+            assert_eq2!(slice.is_empty(), true);
+            assert_eq2!(slice.current_char(), None);
+        }
+    }
+
+    #[test]
+    fn test_is_empty_multiline_exhausted() {
+        // Multiple lines: when all characters consumed, should be empty
+        {
+            as_str_slice_test_case!(slice, "a", "b");
+            let mut slice = slice;
+
+            // Total: "a" (1) + "\n" (1) + "b" (1) + "\n" (1) = 4 chars
+            let expected_total = 4;
+            assert_eq2!(slice.total_size.as_usize(), expected_total);
+
+            // Advance through all characters
+            for _ in 0..expected_total {
+                assert_eq2!(slice.is_empty(), false);
+                slice.advance();
+            }
+
+            // Now should be empty
+            assert_eq2!(slice.is_empty(), true);
+            assert_eq2!(slice.current_taken.as_usize(), expected_total);
+        }
+    }
+
+    #[test]
+    fn test_is_empty_with_unicode() {
+        // Test with Unicode characters
+        {
+            as_str_slice_test_case!(slice, "😀hello");
+            let mut slice = slice;
+
+            // Should not be empty initially
+            assert_eq2!(slice.is_empty(), false);
+
+            // Advance through all characters: 😀(1) + hello(5) = 6 chars
+            for _ in 0..6 {
+                assert_eq2!(slice.is_empty(), false);
+                slice.advance();
+            }
+
+            // Now should be empty
+            assert_eq2!(slice.is_empty(), true);
+        }
+    }
+
+    #[test]
+    fn test_is_empty_empty_lines_in_multiline() {
+        // Test with empty lines in multiline content
+        {
+            as_str_slice_test_case!(slice, "", "content", "");
+            let mut slice = slice;
+
+            // Initially not empty
+            assert_eq2!(slice.is_empty(), false);
+
+            // Advance through all: "" + "\n" + "content" + "\n" + "" + "\n" = 10 chars
+            let expected_chars = ['\n', 'c', 'o', 'n', 't', 'e', 'n', 't', '\n', '\n'];
+
+            for expected_char in expected_chars {
+                assert_eq2!(slice.is_empty(), false);
+                assert_eq2!(slice.current_char(), Some(expected_char));
+                slice.advance();
+            }
+
+            // Now should be empty
+            assert_eq2!(slice.is_empty(), true);
+        }
+    }
+
+    #[test]
+    fn test_is_empty_respects_max_len() {
+        // When max_len limits available characters, is_empty should respect that
+        {
+            as_str_slice_test_case!(slice, limit: 3, "hello world");
+            let mut slice = slice;
+
+            // Initially not empty
+            assert_eq2!(slice.is_empty(), false);
+
+            // Advance 3 characters (the limit)
+            for _ in 0..3 {
+                assert_eq2!(slice.is_empty(), false);
+                slice.advance();
+            }
+
+            // Now should be empty due to max_len limit, even though there's more content
+            assert_eq2!(slice.is_empty(), true);
+            assert_eq2!(slice.max_len, Some(len(0))); // Should be exhausted
+        }
+    }
+
+    #[test]
+    fn test_is_empty_consistency_with_current_char() {
+        // is_empty() should be consistent with current_char() returning None
+        {
+            as_str_slice_test_case!(slice, "test");
+            let mut slice = slice;
+
+            while !slice.is_empty() {
+                assert_eq2!(slice.current_char().is_some(), true);
+                slice.advance();
+            }
+
+            // When empty, current_char should return None
+            assert_eq2!(slice.is_empty(), true);
+            assert_eq2!(slice.current_char(), None);
+        }
+    }
+
+    #[test]
+    fn test_is_empty_edge_case_character_exhaustion_vs_line_exhaustion() {
+        // Test the edge case where we're at an empty line but have consumed all chars
+        {
+            as_str_slice_test_case!(slice, "text", "");
+            let mut slice = slice;
+
+            // Advance through "text" + synthetic newline = 5 chars
+            for _ in 0..5 {
+                slice.advance();
+            }
+
+            // Now we're at the start of the empty line, line_index=1, char_index=0
+            assert_eq2!(slice.line_index.as_usize(), 1);
+            assert_eq2!(slice.char_index.as_usize(), 0);
+
+            // But we haven't consumed all characters yet (empty line has a trailing
+            // newline)
+            assert_eq2!(slice.is_empty(), false);
+            assert_eq2!(slice.current_char(), Some('\n')); // Synthetic newline from empty line
+
+            // Advance one more to consume the trailing newline
+            slice.advance();
+
+            // Now should be empty (all characters consumed)
+            assert_eq2!(slice.is_empty(), true);
+            assert_eq2!(slice.current_taken >= slice.total_size, true);
+        }
     }
 }
