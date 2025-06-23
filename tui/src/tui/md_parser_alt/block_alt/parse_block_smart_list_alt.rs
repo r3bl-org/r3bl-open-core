@@ -69,8 +69,55 @@ use crate::{list,
             SmartListIRAlt,
             SmartListLineAlt};
 
-/// Public API for parsing a smart list in markdown.
-pub fn parse_block_smart_list_alt<'a>(
+/// Parse a complete smart list block with automatic multi-line advancement.
+///
+/// ## Purpose
+/// This is the **primary public API** for parsing smart lists in the R3BL TUI markdown
+/// parser. A "smart list" is a multi-line list structure that can be ordered (numbered),
+/// unordered (bulleted), or checkbox-based, with support for nested indentation and
+/// multi-line content.
+///
+/// ## Smart List Types Supported
+/// - **Unordered lists**: `- item`, `* item`
+/// - **Ordered lists**: `1. item`, `42. item`
+/// - **Checkbox lists**: `- [ ] todo`, `- [x] done`
+/// - **Nested lists**: With proper indentation handling
+///
+/// ## Input Format
+/// Expects input positioned at the start of a smart list block. The parser will
+/// automatically detect the list type and consume all consecutive lines that belong
+/// to the list structure, including:
+/// - Initial list item line
+/// - Continuation lines with proper indentation
+/// - Nested list items
+/// - Multi-line content within list items
+///
+/// ## Line Advancement
+/// This is a **multi-line block parser that auto-advances**. It consumes all lines
+/// that belong to the list structure and positions the remainder at the first line
+/// after the list block ends.
+///
+/// ## Return Value
+/// Returns a tuple containing:
+/// - `Lines<'a>`: Parsed and formatted list lines ready for rendering
+/// - `BulletKind`: The type of list bullets (Ordered(number) or Unordered)
+/// - `usize`: The base indentation level of the list
+///
+/// ## Examples
+/// ```text
+/// "- item1\n  continuation\n- item2\n"
+/// → (formatted_lines, BulletKind::Unordered, 0)
+///
+/// "  1. nested\n     content\n  2. more\n"
+/// → (formatted_lines, BulletKind::Ordered(1), 2)
+/// ```
+///
+/// ## Error Handling
+/// Returns `Err` if:
+/// - Input doesn't start with a valid list marker
+/// - List structure is malformed
+/// - Internal parsing of list content fails
+pub fn parse_block_smart_list_auto_advance_alt<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, (Lines<'a>, BulletKind, usize)> {
     let (remainder, smart_list_ir) = parse_smart_list_alt(input)?;
@@ -164,7 +211,7 @@ mod tests_parse_block_smart_list_alt {
     fn test_with_unicode() {
         as_str_slice_test_case!(input, "- straight 😃 foo bar baz");
         let (remainder, (lines, bullet_kind, indent)) =
-            parse_block_smart_list_alt(input).unwrap();
+            parse_block_smart_list_auto_advance_alt(input).unwrap();
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(bullet_kind, BulletKind::Unordered);
         assert_eq2!(indent, 0);
@@ -187,7 +234,7 @@ mod tests_parse_block_smart_list_alt {
         {
             as_str_slice_test_case!(input, "- [ ] todo");
             let (remainder, (lines, _bullet_kind, _indent)) =
-                parse_block_smart_list_alt(input).unwrap();
+                parse_block_smart_list_auto_advance_alt(input).unwrap();
             let first_line = lines.first().unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
@@ -207,7 +254,7 @@ mod tests_parse_block_smart_list_alt {
         {
             as_str_slice_test_case!(input, "- [x] done");
             let (remainder, (lines, _bullet_kind, _indent)) =
-                parse_block_smart_list_alt(input).unwrap();
+                parse_block_smart_list_auto_advance_alt(input).unwrap();
             let first_line = lines.first().unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
@@ -227,7 +274,7 @@ mod tests_parse_block_smart_list_alt {
         {
             as_str_slice_test_case!(input, "- [ ]todo");
             let (remainder, (lines, _bullet_kind, _indent)) =
-                parse_block_smart_list_alt(input).unwrap();
+                parse_block_smart_list_auto_advance_alt(input).unwrap();
             let first_line = lines.first().unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
@@ -247,7 +294,7 @@ mod tests_parse_block_smart_list_alt {
         {
             as_str_slice_test_case!(input, "- [x]done");
             let (remainder, (lines, _bullet_kind, _indent)) =
-                parse_block_smart_list_alt(input).unwrap();
+                parse_block_smart_list_auto_advance_alt(input).unwrap();
             let first_line = lines.first().unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
@@ -278,7 +325,7 @@ mod tests_parse_block_smart_list_alt {
             ],
         };
         let (remainder, (lines, _bullet_kind, _indent)) =
-            parse_block_smart_list_alt(input).unwrap();
+            parse_block_smart_list_auto_advance_alt(input).unwrap();
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines, expected);
     }
@@ -297,7 +344,7 @@ mod tests_parse_block_smart_list_alt {
             ],
         };
         let (remainder, (lines, _bullet_kind, _indent)) =
-            parse_block_smart_list_alt(input).unwrap();
+            parse_block_smart_list_auto_advance_alt(input).unwrap();
         assert_eq2!(remainder.extract_to_line_end(), "- foo1");
         assert_eq2!(lines, expected);
     }
@@ -316,7 +363,7 @@ mod tests_parse_block_smart_list_alt {
             ],
         };
         let (remainder, (lines, _bullet_kind, _indent)) =
-            parse_block_smart_list_alt(input).unwrap();
+            parse_block_smart_list_auto_advance_alt(input).unwrap();
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(lines, expected);
     }
@@ -335,7 +382,7 @@ mod tests_parse_block_smart_list_alt {
             ],
         };
         let (remainder, (lines, _bullet_kind, _indent)) =
-            parse_block_smart_list_alt(input).unwrap();
+            parse_block_smart_list_auto_advance_alt(input).unwrap();
         assert_eq2!(remainder.extract_to_line_end(), "1. foo");
         assert_eq2!(lines, expected);
     }

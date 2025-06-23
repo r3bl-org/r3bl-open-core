@@ -18,24 +18,49 @@ use nom::{bytes::complete::tag, combinator::opt, sequence::preceded, IResult, Pa
 
 use crate::{inline_string,
             md_parser::constants::{COLON, NEW_LINE, SPACE},
-            parser_take_text_until_eol_or_eoi_alt,
+            parser_take_text_until_eol_or_eoi_alt::parser_take_line_text_alt,
             AsStrSlice};
 
-/// - Sample parse input: `@title: Something` or `@date: Else`.
-/// - There may or may not be a newline at the end. If there is, it is consumed.
-/// - Can't nest the `tag_name` within the `output`. So there can only be one `tag_name`
-///   in the `output`.
+/// Parse metadata from a line like `@title: My Article Title`, `@date: 2023-12-25` or
+/// `@date: December 25, 2023`
+///
+/// ## Input format
+/// Expects a line starting with `tag_name` + colon + space, followed by the text.
+/// Leading/trailing whitespace around the text value is trimmed. The line may end with a
+/// newline or be at end-of-input. There can only be one `tag_name` in the text value. If
+/// you nest the `tag_name` within the text value it will return an error.
+///
+/// ## Line advancement
+/// This is a **single-line parser that auto-advances**. It consumes
+/// the optional trailing newline if present, making it consistent with heading parsers.
+/// The parser now properly advances the line position when a newline is encountered.
+///
+/// ## Returns
+/// - Either `Ok((remaining_input, Some(text)))` on success or `Ok((remaining_input,
+///   None))` if no text value is provided.
+/// - Or `Err` if the line doesn't start with `tag_name` + colon + space. Or if the
+///   `tag_name` appears more than once in the line.
+///
+/// ## Example
+/// - `"@date: 2023-12-25\n"` → `Some("2023-12-25")`
+/// - `"@title: My Great Article\n"` → `Some("My Great Article")`
+/// - `"@title: Something"` -> `Some("Something")`
+/// - `"@date: Else"` -> `Some("Else")`
 pub fn parse_unique_kv_opt_eol_alt<'a>(
     tag_name: &'a str,
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, Option<AsStrSlice<'a>>> {
     let input_clone = input.clone();
 
-    let (remainder, title_text) = preceded(
-        /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
-        /* output */ parser_take_text_until_eol_or_eoi_alt(),
+    // Parse the full pattern including optional newline in one go, like heading parser
+    let (remainder, (title_text, _)) = (
+        preceded(
+            /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
+            /* output */ parser_take_line_text_alt(),
+        ),
+        opt(tag(NEW_LINE)),
     )
-    .parse(input)?;
+        .parse(input)?;
 
     // Can't nest `tag_name` in `output`. Early return in this case.
     // Check if the tag pattern appears in the parsed content or remainder.
@@ -48,10 +73,6 @@ pub fn parse_unique_kv_opt_eol_alt<'a>(
             nom::error::ErrorKind::Fail,
         )));
     }
-
-    // If there is a newline, consume it since there may or may not be a newline at the
-    // end.
-    let (remainder, _) = opt(tag(NEW_LINE)).parse(remainder)?;
 
     // Special case: Early return when something like `@title: ` or `@title: \n` is found.
     if title_text.is_empty() {

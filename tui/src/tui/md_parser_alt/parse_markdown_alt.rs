@@ -15,14 +15,20 @@
  *   limitations under the License.
  */
 
-use nom::{branch::alt, combinator::map, multi::many0, IResult, Parser};
+use nom::{branch::alt,
+          bytes::complete::tag,
+          combinator::{map, opt},
+          multi::many0,
+          IResult,
+          Parser};
 
 use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
-            parse_block_code_alt,
-            parse_block_smart_list_alt,
-            parse_csv_opt_eol_alt,
-            parse_heading_until_eol_or_eoi_alt,
-            parse_markdown_text_including_eol_or_eoi_alt,
+            md_parser::constants::NEW_LINE,
+            parse_block_code_auto_advance_alt,
+            parse_block_smart_list_auto_advance_alt,
+            parse_single_line_csv_auto_advance_alt,
+            parse_single_line_heading_auto_advance_alt,
+            parse_single_line_text_auto_advance_alt,
             parse_unique_kv_opt_eol_alt,
             sizing_list_of::ListStorage,
             AsStrSlice,
@@ -34,12 +40,147 @@ use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
             NomError,
             NomErrorKind};
 
-/// Parse a markdown document using [`ensure_progress`] to guarantee complete input
-/// consumption.
+/// Primary public API for parsing markdown documents in the R3BL TUI editor component.
 ///
-/// Uses `many0(alt(...))` with parsers ordered by specificity. Each parser is wrapped
-/// with [`ensure_progress`] to prevent infinite loops and handle line advancement
-/// automatically.
+/// This is the main entry point used by the editor component to render
+/// [`crate::EditorContent`] when any changes are made. The function is designed for
+/// **high-performance operation** with minimal memory allocation and fast memory access
+/// patterns, which is critical for large documents that require quick parsing for syntax
+/// highlighting and rendering.
+///
+/// ## Performance Characteristics
+/// - **Zero-allocation parsing**: Uses [`AsStrSlice`] for virtual array access without
+///   copying
+/// - **Fast memory access**: Optimized for editor component real-time rendering
+///   requirements
+/// - **Unicode-safe**: Full support for UTF-8 and multi-byte grapheme cluster segments
+/// - **Panic-free**: Robust handling of Unicode emoji and complex text without crashes
+///
+/// ## Data Bridge Architecture
+/// The [`AsStrSlice`] input provides a crucial bridge between how data is stored in
+/// memory by the editor and how the nom parser expects to access it:
+/// - Takes output from [`str::lines()`] and creates a virtual array interface
+/// - Generates synthetic newlines to maintain line boundaries
+/// - Implements the [`nom::Input`] trait for seamless nom parser integration
+/// - Enables byte-level parsing while preserving the editor's line-based data structure
+///
+/// ## Parser Chain Design
+/// Uses [`many0(alt(...))`](nom) with parsers ordered by specificity. Each parser wrapped
+/// with [`ensure_progress_fail_safe`] to prevent infinite loops and handle line
+/// advancement automatically.
+///
+/// ### Parser Categories (in order of precedence)
+/// - **Metadata**: Title, tags, authors, date (structured document properties)
+/// - **Structure**: Headings (document hierarchy and navigation)
+/// - **Content**: Smart lists, code blocks, text, empty lines (document body)
+pub fn parse_markdown_alt<'a>(
+    input: AsStrSlice<'a>,
+) -> IResult<AsStrSlice<'a>, MdDocument<'a>> {
+    // Use `many0` to apply the parser repeatedly, with advancement checking.
+    let (rem, output_vec): (AsStrSlice<'a>, Vec<MdElement<'a>>) = many0(
+        // NOTE: The ordering of the parsers below matters.
+        alt((
+            ensure_progress_fail_safe(map(
+                |it| parse_unique_kv_opt_eol_alt(TITLE, it),
+                |maybe_title| match maybe_title {
+                    None => MdElement::Title(""),
+                    Some(title) => MdElement::Title(title.extract_to_line_end()),
+                },
+            )),
+            ensure_progress_fail_safe(map(
+                |it| parse_single_line_csv_auto_advance_alt(TAGS, it),
+                |list| {
+                    let acc: ListStorage<&str> =
+                        list.iter().map(|item| item.extract_to_line_end()).collect();
+                    MdElement::Tags(List::from(acc))
+                },
+            )),
+            ensure_progress_fail_safe(map(
+                |it| parse_single_line_csv_auto_advance_alt(AUTHORS, it),
+                |list| {
+                    let acc: ListStorage<&str> =
+                        list.iter().map(|item| item.extract_to_line_end()).collect();
+                    MdElement::Authors(List::from(acc))
+                },
+            )),
+            ensure_progress_fail_safe(map(
+                |it| parse_unique_kv_opt_eol_alt(DATE, it),
+                |maybe_date| match maybe_date {
+                    None => MdElement::Date(""),
+                    Some(date) => MdElement::Date(date.extract_to_line_end()),
+                },
+            )),
+            ensure_progress_fail_safe(map(
+                parse_single_line_heading_auto_advance_alt,
+                MdElement::Heading,
+            )),
+            ensure_progress_fail_safe(map(
+                parse_block_smart_list_auto_advance_alt,
+                MdElement::SmartList,
+            )),
+            ensure_progress_fail_safe(map(
+                parse_block_code_auto_advance_alt,
+                MdElement::CodeBlock,
+            )),
+            ensure_progress_fail_safe(map(
+                parse_single_empty_line_auto_advance_alt,
+                MdElement::Text,
+            )),
+            ensure_progress_fail_safe(map(
+                parse_single_line_text_auto_advance_alt,
+                MdElement::Text,
+            )),
+        )),
+    )
+    .parse(input)?;
+
+    let output_list = List::from(output_vec);
+
+    Ok((rem, output_list))
+}
+
+/// Parse empty or whitespace-only lines that the main text parser rejects.
+///
+/// ## Purpose
+/// The main text parser ([`parse_single_line_text_auto_advance_alt()`])
+/// explicitly rejects empty input to prevent infinite loops, so this specialized parser
+/// handles empty or whitespace-only lines that need to be preserved in the document
+/// structure.
+///
+/// ## Input format
+/// Accepts any line that contains only whitespace characters (spaces,
+/// tabs) or is completely empty. The line may or may not end with a newline character.
+///
+/// ## Line advancement
+/// This is a **single-line parser that auto-advances**. It consumes
+/// the optional trailing newline if present, making it consistent with other
+/// single-line parsers like headings and metadata parsers. The parser properly
+/// advances the line position when a newline is encountered.
+///
+/// ## Returns
+/// - Either `Ok((advanced_input, empty_MdLineFragments))` for whitespace-only lines,
+///   where the returned fragments list is empty.
+/// - Or `Err` if the current line contains any non-whitespace characters.
+///
+/// ## Example
+/// `"   \t  \n"` → `Ok((advanced_input, []))` (empty fragments list)
+pub fn parse_single_empty_line_auto_advance_alt<'a>(
+    input: AsStrSlice<'a>,
+) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
+    let current_line = input.extract_to_line_end();
+    if current_line.trim().is_empty() {
+        // Parse the empty line content and optional newline in one go, like other
+        // single-line parsers
+        let (remainder, _) = opt(tag(NEW_LINE)).parse(input)?;
+        let empty_fragments = List::from(vec![]);
+        Ok((remainder, empty_fragments))
+    } else {
+        Err(NomErr::Error(NomError::new(input, NomErrorKind::Tag)))
+    }
+}
+
+/// This is a failsafe wrapper that ensures the parser consumes the entire
+/// input line without stalling the progress of the parser.
 ///
 /// ## Ensures parser progress and handles automatic line advancement
 ///
@@ -61,20 +202,27 @@ use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
 /// Normalizes different parser advancement behaviors:
 ///
 /// - **Block parsers**: Handle their own multi-line advancement (e.g.,
-///   [`parse_block_smart_list_alt`], [`parse_block_code_alt`])
+///   [`parse_block_smart_list_auto_advance_alt`], [`parse_block_code_auto_advance_alt`])
+///   - these consume multiple lines and manage their own line advancement internally
 /// - **Single-line parsers with auto-advance**: Already advance to next line (e.g.,
-///   [`parse_heading_until_eol_or_eoi_alt`])
+///   [`parse_single_line_heading_auto_advance_alt`],
+///   [`parse_single_empty_line_auto_advance_alt`]) - these are structural parsers that
+///   inherently consume the entire line including line termination, so they naturally
+///   advance to the next line as part of their parsing logic
 /// - **Single-line parsers without auto-advance**: Only consume characters within line
-///   (e.g., metadata parsers, [`parse_empty_line`])
+///   - these are designed to extract specific content from within a line without
+///     consuming
+///   the line boundary, allowing for potential composition or partial line parsing
 ///
 /// For parsers that don't auto-advance, automatically moves to the next line after
-/// successful parsing.
+/// successful parsing. This serves as a failsafe for future parsers that might not
+/// implement auto-advance behavior.
 ///
 /// ## Error Handling
 ///
 /// Returns an error if no progress is detected, breaking the [`many0`] loop to prevent
 /// infinite parsing.
-fn ensure_progress<'a, F, O>(
+pub fn ensure_progress_fail_safe<'a, F, O>(
     mut parser: F,
 ) -> impl FnMut(AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, O>
 where
@@ -91,19 +239,19 @@ where
 
         match result {
             Ok((mut remainder, output)) => {
-                // First, check if the parser already made sufficient progress
+                // First, check if the parser already made sufficient progress.
                 let made_progress = remainder.current_taken > initial_position
                     || remainder.line_index > initial_line
                     || remainder.char_index > initial_char;
 
                 if made_progress {
-                    // Parser already made progress, return the result
+                    // Parser already made progress, return the result.
                     return Ok((remainder, output));
                 }
 
                 // Parser succeeded but didn't make progress - try to advance to next line
                 // This handles single-line parsers that parse successfully but don't
-                // advance
+                // advance.
                 if remainder.line_index < remainder.lines.len().saturating_sub(1).into() {
                     // Calculate how many characters we need to advance to get to the
                     // start of the next line
@@ -114,7 +262,7 @@ where
                         .unwrap_or(0);
 
                     // If we're still within the current line content, advance to the end
-                    // of the line
+                    // of the line.
                     if remainder.char_index.as_usize() < current_line_len {
                         let chars_to_advance =
                             current_line_len - remainder.char_index.as_usize();
@@ -123,10 +271,10 @@ where
                         }
                     }
 
-                    // Now advance past the end of line to get to the next line
+                    // Now advance past the end of line to get to the next line.
                     remainder.advance();
 
-                    // Verify we actually made progress after line advancement
+                    // Verify we actually made progress after line advancement.
                     if remainder.current_taken > initial_position
                         || remainder.line_index > initial_line
                         || remainder.char_index != initial_char
@@ -136,215 +284,11 @@ where
                 }
 
                 // If we still haven't made progress, return an error to break the many0
-                // loop
+                // loop.
                 Err(NomErr::Error(NomError::new(input, NomErrorKind::Verify)))
             }
             Err(e) => Err(e),
         }
-    }
-}
-
-/// Parse a markdown document with [`ensure_progress`] for complete input consumption.
-///
-/// Parser chain ordered by specificity. Each parser wrapped with [`ensure_progress`] to
-/// prevent infinite loops and handle line advancement.
-///
-/// ## Parser Categories
-/// - **Metadata**: Title, tags, authors, date
-/// - **Structure**: Headings
-/// - **Content**: Smart lists, code blocks, text, empty lines
-pub fn parse_markdown_alt<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, MdDocument<'a>> {
-    // Use many0 to apply the parser repeatedly, with unified advancement checking
-    let (remainder, output) = many0(
-        // NOTE: The ordering of the parsers below matters.
-        alt((
-            ensure_progress(map(parse_title_value, |maybe_title| match maybe_title {
-                None => MdElement::Title(""),
-                Some(title) => MdElement::Title(title.extract_to_line_end()),
-            })),
-            ensure_progress(map(parse_tags_list, |list| {
-                let acc: ListStorage<&str> =
-                    list.iter().map(|item| item.extract_to_line_end()).collect();
-                MdElement::Tags(List::from(acc))
-            })),
-            ensure_progress(map(parse_authors_list, |list| {
-                let acc: ListStorage<&str> =
-                    list.iter().map(|item| item.extract_to_line_end()).collect();
-                MdElement::Authors(List::from(acc))
-            })),
-            ensure_progress(map(parse_date_value, |maybe_date| match maybe_date {
-                None => MdElement::Date(""),
-                Some(date) => MdElement::Date(date.extract_to_line_end()),
-            })),
-            ensure_progress(map(parse_heading_until_eol_or_eoi_alt, MdElement::Heading)),
-            ensure_progress(map(parse_block_smart_list_alt, MdElement::SmartList)),
-            ensure_progress(map(parse_block_code_alt, MdElement::CodeBlock)),
-            ensure_progress(map(parse_empty_line, MdElement::Text)),
-            ensure_progress(map(
-                parse_markdown_text_including_eol_or_eoi_alt,
-                MdElement::Text,
-            )),
-        )),
-    )
-    .parse(input)?;
-    let it = List::from(output);
-    Ok((remainder, it))
-}
-
-/// Parse tags metadata from a line like `@tags: rust, parsing, markdown, documentation`.
-///
-/// ## Input format
-/// Expects a line starting with [`TAGS`] + colon + space followed by a
-/// comma-separated list of tag names. Whitespace around tag names is trimmed. Tags
-/// typically represent categories, keywords, or topics. The line may end with a newline
-/// or be at end-of-input.
-///
-/// ## Line advancement
-/// This is a **single-line parser that does NOT auto-advance**. It
-/// only consumes characters within the current line up to (but not including) the newline
-/// character. The [`ensure_progress`] wrapper detects this lack of line advancement and
-/// automatically moves to the next line after successful parsing. Without this wrapper,
-/// the parser would succeed but leave the input position unchanged, causing infinite
-/// loops.
-///
-/// ## Returns
-/// - Either `Ok((remaining_input, List<AsStrSlice>))` with the list of tag names on
-///   success.
-/// - Or `Err` if the line doesn't start with [`TAGS`] + colon + space or has invalid
-///   format.
-///
-/// ## Example
-/// `"@tags: rust, parsing, nom\n"` → `["rust", "parsing", "nom"]`
-fn parse_tags_list<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, List<AsStrSlice<'a>>> {
-    parse_csv_opt_eol_alt(TAGS, input)
-}
-
-/// Parse authors metadata from a line like `@authors: author1, author2, author3`.
-///
-/// ## Input format
-/// Expects a line starting with [`AUTHORS`] + colon + space, followed by
-/// a comma-separated list of author names. Whitespace around author names is trimmed. The
-/// line may end with a newline or be at end-of-input.
-///
-/// ## Line advancement
-/// This is a **single-line parser that does NOT auto-advance**. It
-/// only consumes characters within the current line up to (but not including) the newline
-/// character. The [`ensure_progress`] wrapper detects this lack of line advancement and
-/// automatically moves to the next line after successful parsing. Without this wrapper,
-/// the parser would succeed but leave the input position unchanged, causing infinite
-/// loops.
-///
-/// ## Returns
-/// - Either `Ok((remaining_input, List<AsStrSlice>))` with the list of author names on
-///   success.
-/// - Or `Err` if the line doesn't start with `[AUTHORS]:` or has invalid format.
-///
-/// ## Example
-/// `"@authors: Alice, Bob, Charlie\n"` → `["Alice", "Bob", "Charlie"]`
-fn parse_authors_list<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, List<AsStrSlice<'a>>> {
-    parse_csv_opt_eol_alt(AUTHORS, input)
-}
-
-/// Parse title metadata from a line like `@title: My Article Title`.
-///
-/// ## Input format
-/// Expects a line starting with [`TITLE`] + colon + space, followed by the title text.
-/// Leading/trailing whitespace around the title value is trimmed. The line may end with a
-/// newline or be at end-of-input.
-///
-/// ## Line advancement
-/// This is a **single-line parser that does NOT auto-advance**. It
-/// only consumes characters within the current line up to (but not including) the newline
-/// character. The [`ensure_progress`] wrapper detects this lack of line advancement and
-/// automatically moves to the next line after successful parsing. Without this wrapper,
-/// the parser would succeed but leave the input position unchanged, causing infinite
-/// loops.
-///
-/// ## Returns
-/// - Either `Ok((remaining_input, Some(title_text)))` on success or `Ok((remaining_input,
-///   None))` if no title value is provided.
-/// - Or `Err` if the line doesn't start with [`TITLE`] + colon + space.
-///
-/// ## Example
-/// `"@title: My Great Article\n"` → `Some("My Great Article")`
-fn parse_title_value<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, Option<AsStrSlice<'a>>> {
-    parse_unique_kv_opt_eol_alt(TITLE, input)
-}
-
-/// Parse date metadata from a line like `@date: 2023-12-25` or `@date: December 25,
-/// 2023`.
-///
-/// ## Input format
-/// Expects a line starting with [`DATE`] + colon + space, followed by a date in any
-/// format. The date format is not validated by this parser - it simply extracts the text
-/// after [`DATE`] + colon + space. Leading/trailing whitespace around the date value is
-/// trimmed. The line may end with a newline or be at end-of-input.
-///
-/// ## Line advancement
-/// This is a **single-line parser that does NOT auto-advance**. It
-/// only consumes characters within the current line up to (but not including) the newline
-/// character. The [`ensure_progress`] wrapper detects this lack of line advancement and
-/// automatically moves to the next line after successful parsing. Without this wrapper,
-/// the parser would succeed but leave the input position unchanged, causing infinite
-/// loops.
-///
-/// ## Returns
-/// - Either `Ok((remaining_input, Some(date_text)))` on success, or `Ok((remaining_input,
-///   None))` if no date value is provided.
-/// - Or `Err` if the line doesn't start with [`DATE`] + colon + space.
-///
-/// **Example**: `"@date: 2023-12-25\n"` → `Some("2023-12-25")`
-fn parse_date_value<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, Option<AsStrSlice<'a>>> {
-    parse_unique_kv_opt_eol_alt(DATE, input)
-}
-
-/// Parse empty or whitespace-only lines that the main text parser rejects.
-///
-/// ## Purpose
-/// The main text parser ([`parse_markdown_text_including_eol_or_eoi_alt()`])
-/// explicitly rejects empty input to prevent infinite loops, so this specialized parser
-/// handles empty or whitespace-only lines that need to be preserved in the document
-/// structure.
-///
-/// ## Input format
-/// Accepts any line that contains only whitespace characters (spaces,
-/// tabs) or is completely empty. The line may or may not end with a newline character.
-///
-/// ## Line advancement
-/// This is a **single-line parser that does NOT auto-advance**. It
-/// performs the empty/whitespace check but returns the same input position on success.
-/// The [`ensure_progress`] wrapper detects this lack of line advancement and
-/// automatically moves to the next line after successful parsing. Without this wrapper,
-/// the parser would succeed but leave the input position unchanged, causing infinite
-/// loops in the [`many0`] combinator.
-///
-/// ## Returns
-/// - Either `Ok((same_input, empty_MdLineFragments))` for whitespace-only lines, where
-///   the returned fragments list is empty.
-/// - Or `Err` if the current line contains any non-whitespace characters.
-///
-/// ## Example
-/// `"   \t  \n"` → `Ok((input, []))` (empty fragments list)
-fn parse_empty_line<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
-    let current_line = input.extract_to_line_end();
-    if current_line.trim().is_empty() {
-        let empty_fragments = List::from(vec![]);
-        // Return same input; ensure_progress wrapper handles line advancement.
-        Ok((input, empty_fragments))
-    } else {
-        Err(NomErr::Error(NomError::new(input, NomErrorKind::Tag)))
     }
 }
 
