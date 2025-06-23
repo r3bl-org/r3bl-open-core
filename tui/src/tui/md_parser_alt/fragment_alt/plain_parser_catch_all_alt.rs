@@ -189,7 +189,7 @@ fn parse_plain_text_until_special_char<'a>(
 
             // Given the character count information, extract the following from `input`:
             let new_output = input.take(output_char_count.as_usize());
-            let new_rem = input.skip_take(
+            let new_rem = input.skip_take_in_current_line(
                 /* skip this many */ output_char_count,
                 /* take this many */ rem_char_count,
             );
@@ -259,7 +259,7 @@ fn try_parse_single_special_char<'a>(
 
                 // Given the &str information, extract the following from `input`:
                 let new_output = input.take(output_len);
-                let new_rem = input.skip_take(
+                let new_rem = input.skip_take_in_current_line(
                     /* skip this many */ output_len,
                     /* take this many */ rem_len,
                 );

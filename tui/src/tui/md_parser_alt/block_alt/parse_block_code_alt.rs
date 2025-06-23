@@ -20,6 +20,7 @@ use nom::{branch::alt,
           combinator::{map, opt},
           sequence::{preceded, terminated},
           IResult,
+          Input,
           Parser};
 
 use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
@@ -99,7 +100,7 @@ fn parse_code_block_lang_including_eol_alt<'a>(input: AsStrSlice<'a>) -> IResult
 /// 2. Consumes the end marker itself (removing it from the returned content).
 /// 3. Returns the remainder of the input and the captured content.
 #[rustfmt::skip]
-fn parse_code_block_body_including_code_block_end_alt<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+pub fn parse_code_block_body_including_code_block_end_alt<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
     // The extra trailing newline is added by AsStrSlice find_substring()
     // which is used in the `take_until` parser. This has to be removed from the end
     // using opt(tag(NEW_LINE)).
@@ -157,8 +158,61 @@ pub fn convert_into_code_block_lines_alt<'a>(
 /// Split an [AsStrSlice] by newline. The idea is that a line is some text followed by a
 /// newline. An empty line is just a newline character.
 ///
-/// This function is the [AsStrSlice] equivalent of the original `split_by_new_line`
-/// function that works with string slices (&str).
+/// This function is the [AsStrSlice] equivalent of the original
+/// [`crate::split_by_new_line`] function that works with string slices (`&str`).
+///
+/// ## Why AsStrSlice behaves like a continuous string here
+///
+/// In this specific context, the [AsStrSlice] input doesn't represent discrete lines as
+/// one might expect from the name and how it is used everywhere else. Instead, it
+/// represents a continuous text span that may cross multiple underlying lines. This
+/// occurs because the input comes from
+/// [`parse_code_block_body_including_code_block_end_alt`], which extracts the content
+/// between code block markers "```" and "```" as a single continuous string.
+///
+/// For example, when parsing:
+///
+/// "```python"
+/// "import foobar"
+/// ""
+/// "foobar.pluralize('word')"
+/// "```"
+///
+/// The [`parse_code_block_body_including_code_block_end_alt`] function returns an
+/// [AsStrSlice] containing `"import foobar\n\nfoobar.pluralize('word')\n"` as a
+/// continuous span, even though it may span multiple lines in the original input.
+/// This function then needs to split this continuous content back into individual
+/// lines for proper code block processing.
+///
+/// ## Critical Implementation Details
+///
+/// ⚠️ **IMPORTANT**: This function uses `take_from()` and `take()` instead of
+/// `skip_take_in_current_line()` for proper line boundary handling. The
+/// `skip_take_in_current_line()` method doesn't correctly handle character positions that
+/// cross line boundaries in an [AsStrSlice].
+///
+/// When dealing with multiline content (like the output from
+/// `parse_code_block_body_including_code_block_end_alt`), the [AsStrSlice] represents
+/// a continuous string span that may cross multiple underlying lines. The
+/// `skip_take_in_current_line()` method treats `char_index` as a global offset, but
+/// [AsStrSlice] manages `char_index` as the position within the current line.
+///
+/// The `take_from()` and `take()` methods properly handle line transitions by using the
+/// `advance()` method internally, which correctly updates both `line_index` and
+/// `char_index` when crossing line boundaries.
+///
+/// ## Character vs byte handling
+///
+/// This function correctly handles Unicode/UTF-8 characters by using character counts
+/// (`len_chars()`) instead of byte counts (`len()`). This is essential for proper
+/// Unicode support, especially when handling emojis and other multi-byte UTF-8 sequences.
+///
+/// ## Compatibility with original function
+///
+/// This function maintains complete behavioral parity with the original
+/// [`crate::split_by_new_line`] function that works with `&str`. All compatibility
+/// tests should pass, ensuring identical behavior for all edge cases including empty
+/// strings, single newlines, trailing newlines, and mixed content.
 ///
 /// # Examples:
 /// | input          | output               |
@@ -168,7 +222,7 @@ pub fn convert_into_code_block_lines_alt<'a>(
 /// | ""             | `[]`                 |
 /// | "foo\nbar\n"   | `["foo", "bar"]`     |
 /// | "\nfoo\nbar\n" | `["", "foo", "bar"]` |
-fn split_by_new_line_alt<'a>(input: AsStrSlice<'a>) -> Vec<AsStrSlice<'a>> {
+pub fn split_by_new_line_alt<'a>(input: AsStrSlice<'a>) -> Vec<AsStrSlice<'a>> {
     if input.is_empty() {
         return Vec::new();
     }
@@ -178,30 +232,25 @@ fn split_by_new_line_alt<'a>(input: AsStrSlice<'a>) -> Vec<AsStrSlice<'a>> {
     let content_str = full_content.as_ref();
 
     // Split the string content and apply the same logic as the original.
-    let mut string_splits: Vec<&str> = content_str.split('\n').collect();
+    let mut string_splits: Vec<&str> = content_str.split(NEW_LINE).collect();
     if let Some(last_item) = string_splits.last() {
         if last_item.is_empty() {
             string_splits.pop();
         }
     }
 
-    // Convert each string slice back to AsStrSlice.
+    // Convert each string slice back to AsStrSlice using proper character positioning.
     let mut current_offset = 0;
     for split_str in string_splits {
-        if !split_str.is_empty() {
-            // ⚠️ CRITICAL: Convert byte length to character count
-            // split_str.len() returns BYTE count, but skip_take() expects CHARACTER count
-            let char_count = split_str.len_chars();
-            let segment_slice = input.skip_take(current_offset, char_count);
-            result.push(segment_slice);
-        } else {
-            // Handle empty segments (from "\n" cases).
-            let segment_slice = input.skip_take(current_offset, 0);
-            result.push(segment_slice);
-        }
+        // ⚠️ CRITICAL: Use take_from() instead of skip_take_in_current_line() for proper
+        // line boundary handling split_str.len() returns BYTE count, but we need
+        // CHARACTER count
+        let char_count = split_str.len_chars();
+        let segment_slice = input.take_from(current_offset).take(char_count.as_usize());
+        result.push(segment_slice);
+
         // Move past this segment and the newline character.
         // ⚠️ CRITICAL: Use character count, not byte count
-        let char_count = split_str.len_chars();
         current_offset += char_count.as_usize() + 1; // +1 for the newline character
     }
 
@@ -212,7 +261,7 @@ fn split_by_new_line_alt<'a>(input: AsStrSlice<'a>) -> Vec<AsStrSlice<'a>> {
 #[cfg(test)]
 mod tests_parse_block_code_alt_single_line {
     use super::*;
-    use crate::{as_str_slice_test_case, assert_eq2};
+    use crate::{as_str_slice_test_case, assert_eq2, convert_into_code_block_lines};
 
     #[test]
     fn test_parse_codeblock_trailing_extra() {
@@ -229,85 +278,85 @@ mod tests_parse_block_code_alt_single_line {
     }
 
     #[test]
-    fn test_parse_codeblock() {
-        // One line: "```bash\npip install foobar\n```\n"
-        {
-            as_str_slice_test_case!(lang_slice, "bash");
-            as_str_slice_test_case!(code_line, "pip install foobar");
-            as_str_slice_test_case!(input, "```bash", "pip install foobar", "```", "");
+    fn test_parse_codeblock_single_line() {
+        as_str_slice_test_case!(lang_slice, "bash");
+        as_str_slice_test_case!(code_line, "pip install foobar");
+        as_str_slice_test_case!(input, "```bash", "pip install foobar", "```", "");
 
-            let code_lines = vec![code_line];
-            let (remainder, code_block_lines) =
-                parse_block_code_advance_alt(input).unwrap();
-            assert_eq2!(remainder.is_empty(), true);
-            assert_eq2!(
-                code_block_lines,
-                convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
-            );
-        }
+        let code_lines = vec![code_line];
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(
+            code_block_lines,
+            convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
+        );
+    }
 
-        // No line: "```bash\n```\n"
-        {
-            as_str_slice_test_case!(lang_slice, "bash");
-            as_str_slice_test_case!(input, "```bash", "```", "");
+    #[test]
+    fn test_parse_codeblock_no_content() {
+        as_str_slice_test_case!(lang_slice, "bash");
+        as_str_slice_test_case!(input, "```bash", "```", "");
 
-            let code_lines = vec![];
-            let (remainder, code_block_lines) =
-                parse_block_code_advance_alt(input).unwrap();
-            assert_eq2!(remainder.is_empty(), true);
-            assert_eq2!(
-                code_block_lines,
-                convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
-            );
-        }
+        let code_lines = vec![];
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(
+            code_block_lines,
+            convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
+        );
+    }
 
-        // 1 empty line: "```bash\n\n```\n"
-        {
-            as_str_slice_test_case!(lang_slice, "bash");
-            as_str_slice_test_case!(empty_line, "");
-            as_str_slice_test_case!(input, "```bash\n\n```\n");
+    #[test]
+    fn test_parse_codeblock_single_empty_line() {
+        as_str_slice_test_case!(lang_slice, "bash");
+        as_str_slice_test_case!(empty_line, "");
+        as_str_slice_test_case!(input, "```bash", "", "```", "");
 
-            let code_lines = vec![empty_line];
-            let (remainder, code_block_lines) =
-                parse_block_code_advance_alt(input).unwrap();
-            assert_eq2!(remainder.is_empty(), true);
-            assert_eq2!(
-                code_block_lines,
-                convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
-            );
-        }
+        let code_lines = vec![empty_line];
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(
+            code_block_lines,
+            convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
+        );
+    }
 
-        // Multiple lines.
-        {
-            as_str_slice_test_case!(lang_slice, "python");
-            as_str_slice_test_case!(line1, "import foobar");
-            as_str_slice_test_case!(line2, "");
-            as_str_slice_test_case!(line3, "foobar.pluralize('word') # returns 'words'");
-            as_str_slice_test_case!(line4, "foobar.pluralize('goose') # returns 'geese'");
-            as_str_slice_test_case!(
-                line5,
-                "foobar.singularize('phenomena') # returns 'phenomenon'"
-            );
-            as_str_slice_test_case!(
-                input,
-                "```python\nimport foobar\n\nfoobar.pluralize('word') # returns 'words'\nfoobar.pluralize('goose') # returns 'geese'\nfoobar.singularize('phenomena') # returns 'phenomenon'\n```\n"
-            );
+    #[test]
+    fn test_parse_codeblock_multiple_lines() {
+        as_str_slice_test_case!(
+            input,
+            "```python",
+            "import foobar",
+            "",
+            "foobar.pluralize('word') # returns 'words'",
+            "foobar.pluralize('goose') # returns 'geese'",
+            "foobar.singularize('phenomena') # returns 'phenomenon'",
+            "```",
+            ""
+        );
 
-            let code_lines = vec![line1, line2, line3, line4, line5];
-            let (remainder, code_block_lines) =
-                parse_block_code_advance_alt(input).unwrap();
-            assert_eq2!(remainder.is_empty(), true);
-            assert_eq2!(
-                code_block_lines,
-                convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
-            );
-        }
+        let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
+
+        assert_eq2!(remainder.is_empty(), true);
+        assert_eq2!(
+            code_block_lines,
+            convert_into_code_block_lines(
+                Some("python"),
+                vec![
+                    "import foobar",
+                    "",
+                    "foobar.pluralize('word') # returns 'words'",
+                    "foobar.pluralize('goose') # returns 'geese'",
+                    "foobar.singularize('phenomena') # returns 'phenomenon'",
+                ]
+            )
+        );
     }
 
     #[test]
     fn test_parse_codeblock_no_language() {
         as_str_slice_test_case!(code_line, "pip install foobar");
-        as_str_slice_test_case!(input, "```\npip install foobar\n```\n");
+        as_str_slice_test_case!(input, "```", "pip install foobar", "```", "");
 
         let code_lines = vec![code_line];
         let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
@@ -404,9 +453,12 @@ mod tests_parse_block_code_alt_lines {
         as_str_slice_test_case!(lang_slice, "python");
         as_str_slice_test_case!(line1, "import foobar");
         as_str_slice_test_case!(line2, "");
-        as_str_slice_test_case!(empty_line3, "");
-        as_str_slice_test_case!(empty_line4, "");
-        as_str_slice_test_case!(empty_line5, "");
+        as_str_slice_test_case!(line3, "foobar.pluralize('word') # returns 'words'");
+        as_str_slice_test_case!(line4, "foobar.pluralize('goose') # returns 'geese'");
+        as_str_slice_test_case!(
+            line5,
+            "foobar.singularize('phenomena') # returns 'phenomenon'"
+        );
         as_str_slice_test_case!(
             input,
             "```python",
@@ -419,7 +471,7 @@ mod tests_parse_block_code_alt_lines {
             ""
         );
 
-        let code_lines = vec![line1, line2, empty_line3, empty_line4, empty_line5];
+        let code_lines = vec![line1, line2, line3, line4, line5];
         let (remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
         assert_eq2!(
             code_block_lines,
@@ -1281,6 +1333,64 @@ mod tests_compat_with_original_split_by_new_line {
                 "Parity failed for input: {:?}",
                 test_input
             );
+        }
+    }
+}
+
+#[cfg(test)]
+mod debug_tests {
+    use super::*;
+    use crate::as_str_slice_test_case;
+
+    #[test]
+    fn debug_test_parse_codeblock_multiple_lines() {
+        as_str_slice_test_case!(
+            input,
+            "```python",
+            "import foobar",
+            "",
+            "foobar.pluralize('word') # returns 'words'",
+            "foobar.pluralize('goose') # returns 'geese'",
+            "foobar.singularize('phenomena') # returns 'phenomenon'",
+            "```",
+            ""
+        );
+
+        println!("Input: {:?}", input.extract_to_slice_end().as_ref());
+
+        // Test the language parsing first
+        let input_clone = input.clone();
+        let (remainder_after_lang, lang) =
+            parse_code_block_lang_including_eol_alt(input_clone).unwrap();
+        let lang_str = lang.map(|l| l.extract_to_slice_end().as_ref().to_string());
+        println!("Language: {:?}", lang_str);
+        println!(
+            "Remainder after lang: {:?}",
+            remainder_after_lang.extract_to_slice_end().as_ref()
+        );
+
+        // Test the body parsing
+        let (remainder_after_body, body) =
+            parse_code_block_body_including_code_block_end_alt(remainder_after_lang)
+                .unwrap();
+        println!("Body: {:?}", body.extract_to_slice_end().as_ref());
+        println!(
+            "Remainder after body: {:?}",
+            remainder_after_body.extract_to_slice_end().as_ref()
+        );
+
+        // Test the splitting
+        let split_result = split_by_new_line_alt(body);
+        println!("Split result count: {}", split_result.len());
+        for (i, split) in split_result.iter().enumerate() {
+            println!("Split[{}]: {:?}", i, split.extract_to_slice_end().as_ref());
+        }
+
+        // Test the full parsing
+        let (_remainder, code_block_lines) = parse_block_code_advance_alt(input).unwrap();
+        println!("Final code block lines count: {}", code_block_lines.len());
+        for (i, line) in code_block_lines.iter().enumerate() {
+            println!("Line[{}]: {:?}", i, line);
         }
     }
 }

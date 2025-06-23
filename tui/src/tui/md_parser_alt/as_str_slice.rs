@@ -664,7 +664,57 @@ impl<'a> AsStrSlice<'a> {
         self.trim_whitespace_chars_start_current_line(&[SPACE_CHAR])
     }
 
-    pub fn skip_take(
+    /// Skip characters then take a limited number of characters within the current line.
+    ///
+    /// This method is optimized for **single-line operations** where you need to skip
+    /// some characters and then take a specific number of characters from the same
+    /// line. It's an atomic operation that's more efficient than chaining
+    /// `take_from(skip_count).take(take_count)` for single-line text processing.
+    ///
+    /// ## When to use this method
+    ///
+    /// ✅ **Use `skip_take_in_current_line()` when:**
+    /// - Working with text within a single line boundary
+    /// - Parsing inline elements (like emphasis, links, code spans)
+    /// - Processing results from `extract_to_line_end()` or similar single-line
+    ///   operations
+    /// - Need atomic skip+take operation for performance
+    ///
+    /// ## When to Use `take_from(skip_count).take(take_count)` instead
+    ///
+    /// ✅ **Use `input.take_from(skip_count).take(take_count)` when:**
+    /// - Working with multiline content that spans line boundaries
+    /// - Processing continuous text from functions like
+    ///   `parse_code_block_body_including_code_block_end_alt`
+    /// - Need to handle line transitions and character offsets across multiple lines
+    /// - Splitting multiline content into segments
+    ///
+    /// ## Technical details
+    ///
+    /// This method works by directly manipulating `char_index` within the current line
+    /// context. It doesn't call `advance()` internally, which means it doesn't handle
+    /// line boundary transitions. This makes it fast for single-line operations but
+    /// unsuitable for multiline content where character positions may cross line
+    /// boundaries.
+    ///
+    /// See [`crate::split_by_new_line_alt`] for an example of why multiline processing
+    /// requires `take_from` and `take` (part of the [nom::Input] impl) instead of this
+    /// method.
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// # use r3bl_tui::{as_str_slice_test_case, len};
+    /// // ✅ Good: Single-line processing
+    /// as_str_slice_test_case!(input, "Hello, World!");
+    /// let result = input.skip_take_in_current_line(7, 5); // Skip "Hello, ", take "World"
+    /// assert_eq!(result.extract_to_line_end(), "World");
+    ///
+    /// // ❌ Avoid: Multiline content - use take_from().take() instead
+    /// as_str_slice_test_case!(multiline, "Line 1", "Line 2", "Line 3");
+    /// // Don't use skip_take_in_current_line() for this - it won't handle line boundaries
+    /// ```
+    pub fn skip_take_in_current_line(
         &self,
         arg_skip_count: impl Into<Length>,
         arg_take_count: impl Into<Length>,
@@ -3263,7 +3313,6 @@ mod tests_as_str_slice_basic_functionality {
         let slice3 = slice1.take_from(1);
         assert_ne!(slice1, slice3);
     }
-
 
     // Test with_limit constructor and behavior.
     #[test]
