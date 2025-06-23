@@ -47,7 +47,7 @@ use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW
 /// | No language, no line      | `"```\n```\n"`                                             |
 /// | No language, multi line   | `"```\npip install foobar\npip install foobar\n```\n"`     |
 #[rustfmt::skip]
-pub fn parse_block_code_alt<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, List<CodeBlockLine<'a>>> {
+pub fn parse_block_code_auto_advance_alt<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, List<CodeBlockLine<'a>>> {
     let (remainder, (lang, code)) = (
         parse_code_block_lang_including_eol_alt,
         parse_code_block_body_including_code_block_end_alt,
@@ -213,7 +213,7 @@ mod tests_parse_block_code_alt_single_line {
         as_str_slice_test_case!(lang_slice, "bash");
         as_str_slice_test_case!(code_line, "pip install foobar");
         let code_lines = vec![code_line];
-        let (remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+        let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
         assert_eq2!(remainder.extract_to_slice_end().as_ref(), "");
         assert_eq2!(
             code_block_lines,
@@ -230,7 +230,7 @@ mod tests_parse_block_code_alt_single_line {
             as_str_slice_test_case!(input, "```bash\npip install foobar\n```\n");
 
             let code_lines = vec![code_line];
-            let (remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+            let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
                 code_block_lines,
@@ -244,7 +244,7 @@ mod tests_parse_block_code_alt_single_line {
             as_str_slice_test_case!(input, "```bash\n```\n");
 
             let code_lines = vec![];
-            let (remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+            let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
                 code_block_lines,
@@ -259,7 +259,7 @@ mod tests_parse_block_code_alt_single_line {
             as_str_slice_test_case!(input, "```bash\n\n```\n");
 
             let code_lines = vec![empty_line];
-            let (remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+            let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
                 code_block_lines,
@@ -284,7 +284,7 @@ mod tests_parse_block_code_alt_single_line {
             );
 
             let code_lines = vec![line1, line2, line3, line4, line5];
-            let (remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+            let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
             assert_eq2!(remainder.is_empty(), true);
             assert_eq2!(
                 code_block_lines,
@@ -299,7 +299,7 @@ mod tests_parse_block_code_alt_single_line {
         as_str_slice_test_case!(input, "```\npip install foobar\n```\n");
 
         let code_lines = vec![code_line];
-        let (remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+        let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
         assert_eq2!(remainder.is_empty(), true);
         assert_eq2!(
             code_block_lines,
@@ -332,7 +332,7 @@ mod tests_parse_block_code_alt_lines {
         as_str_slice_test_case!(lang_slice, "bash");
         as_str_slice_test_case!(code_line, "pip install foobar");
         let code_lines = vec![code_line];
-        let (remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+        let (remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
         assert_eq2!(remainder.extract_to_slice_end().as_ref(), "");
         assert_eq2!(
             code_block_lines,
@@ -348,7 +348,7 @@ mod tests_parse_block_code_alt_lines {
         as_str_slice_test_case!(input, "```bash", "pip install foobar", "```");
 
         let code_lines = vec![code_line];
-        let (_remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+        let (_remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
         assert_eq2!(
             code_block_lines,
             convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
@@ -362,7 +362,7 @@ mod tests_parse_block_code_alt_lines {
         as_str_slice_test_case!(input, "```bash", "```");
 
         let code_lines = vec![];
-        let (_remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+        let (_remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
         assert_eq2!(
             code_block_lines,
             convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
@@ -377,7 +377,7 @@ mod tests_parse_block_code_alt_lines {
         as_str_slice_test_case!(input, "```bash", "", "```");
 
         let code_lines = vec![empty_line];
-        let (_remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+        let (_remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
         assert_eq2!(
             code_block_lines,
             convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
@@ -406,7 +406,7 @@ mod tests_parse_block_code_alt_lines {
         );
 
         let code_lines = vec![line1, line2, empty_line3, empty_line4, empty_line5];
-        let (_remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+        let (_remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
         assert_eq2!(
             code_block_lines,
             convert_into_code_block_lines_alt(Some(lang_slice), code_lines)
@@ -419,7 +419,7 @@ mod tests_parse_block_code_alt_lines {
         as_str_slice_test_case!(input, "```", "pip install foobar", "```");
 
         let code_lines = vec![code_line];
-        let (_remainder, code_block_lines) = parse_block_code_alt(input).unwrap();
+        let (_remainder, code_block_lines) = parse_block_code_auto_advance_alt(input).unwrap();
         assert_eq2!(
             code_block_lines,
             convert_into_code_block_lines_alt(None, code_lines)

@@ -1074,8 +1074,8 @@ impl<'a> AsStrSlice<'a> {
     /// allocating.
     ///
     /// In the case there is only one line, this method will NOT allocate. This is why
-    /// [Cow] is used. If you are sure that you will always have a single line, you can
-    /// use [Self::extract_to_line_end()] instead, which does not
+    /// [InlineStringCow] is used. If you are sure that you will always have a single
+    /// line, you can use [Self::extract_to_line_end()] instead, which does not
     /// allocate.
     ///
     /// For multiline content this will allocate, since there is no contiguous chunk of
@@ -1085,7 +1085,7 @@ impl<'a> AsStrSlice<'a> {
     /// allocating.
     ///
     /// In the case there is only one line, this method will NOT allocate. This is why
-    /// [Cow] is used.
+    /// [InlineStringCow] is used.
     ///
     /// This method behaves similarly to the [Display] trait implementation but respects
     /// the current position (`line_index`, `char_index`) and `max_len` limit.

@@ -42,7 +42,7 @@ use crate::{md_parser::constants::NEW_LINE, AsStrSlice, NomError};
 /// | `"Hello, world!\n"` | `"\n"`         | `"Hello, world!"` |
 /// | `"Hello, world!"`   | `""`           | `"Hello, world!"` |
 #[rustfmt::skip]
-pub fn parser_take_text_until_eol_or_eoi_alt<'a>() ->
+pub fn parser_take_line_text_alt<'a>() ->
     impl Parser<AsStrSlice<'a>, Output = AsStrSlice<'a>, Error = NomError<AsStrSlice<'a>>>
 {
     recognize( /* match anychar up until a denied string below is encountered */
@@ -70,9 +70,7 @@ mod test_text_until_opt_eol {
     fn test_input_starts_with_new_line() {
         // Starts with new line.
         as_str_slice_test_case!(input, "\nfoo\nbar");
-        let (remainder, result) = parser_take_text_until_eol_or_eoi_alt()
-            .parse(input)
-            .unwrap();
+        let (remainder, result) = parser_take_line_text_alt().parse(input).unwrap();
         // Should return empty content when input immediately starts with newline
         assert_eq2!(result.extract_to_slice_end().as_ref(), "");
         // Remainder should start from the newline
@@ -83,9 +81,7 @@ mod test_text_until_opt_eol {
     fn test_input_with_eol() {
         // With EOL.
         as_str_slice_test_case!(input, "Hello, world!\n");
-        let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
-            .parse(input)
-            .unwrap();
+        let (rem, output) = parser_take_line_text_alt().parse(input).unwrap();
         println!("{:8}: {:?}", "input", "_input_array");
         println!("{:8}: {:?}", "rem", rem);
         println!("{:8}: {:?}", "output", output);
@@ -97,9 +93,7 @@ mod test_text_until_opt_eol {
     fn test_input_without_eol() {
         // Without EOL.
         as_str_slice_test_case!(input, "Hello, world!");
-        let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
-            .parse(input)
-            .unwrap();
+        let (rem, output) = parser_take_line_text_alt().parse(input).unwrap();
         println!("\n{:8}: {:?}", "input", "_input_array");
         println!("{:8}: {:?}", "rem", rem);
         println!("{:8}: {:?}", "output", output);
@@ -112,9 +106,7 @@ mod test_text_until_opt_eol {
         // Begins with EOL, then has some text, and ends with EOL.
         {
             as_str_slice_test_case!(input, "\nfoo\nbar");
-            let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
-                .parse(input)
-                .unwrap();
+            let (rem, output) = parser_take_line_text_alt().parse(input).unwrap();
             println!("\n{:8}: {:?}", "input", "_input_array");
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
@@ -128,9 +120,7 @@ mod test_text_until_opt_eol {
         // when there is more than 1 line.
         {
             as_str_slice_test_case!(input, "", "foo", "bar");
-            let (rem, output) = parser_take_text_until_eol_or_eoi_alt()
-                .parse(input)
-                .unwrap();
+            let (rem, output) = parser_take_line_text_alt().parse(input).unwrap();
             println!("\n{:8}: {:?}", "input", "_input_array");
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
