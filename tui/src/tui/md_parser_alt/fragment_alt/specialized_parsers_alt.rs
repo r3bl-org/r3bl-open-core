@@ -39,9 +39,9 @@ use crate::{fg_blue,
                                    UNDERSCORE},
             AsStrSlice,
             HyperlinkData,
-            NomErr,
-            NomError,
-            NomErrorKind,
+            NErr,
+            NError,
+            NErrorKind,
             DEBUG_MD_PARSER_STDOUT};
 
 pub fn parse_fragment_starts_with_underscore_err_on_new_line_alt<'a>(
@@ -193,9 +193,9 @@ pub fn parse_fragment_starts_with_backtick_err_on_new_line_alt<'a>(
                 input_clone
             );
         });
-        return Err(NomErr::Error(NomError {
+        return Err(NErr::Error(NError {
             input: output,
-            code: NomErrorKind::Tag,
+            code: NErrorKind::Tag,
         }));
     }
 
@@ -400,7 +400,7 @@ pub fn parse_fragment_starts_with_checkbox_checkbox_into_bool_alt<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, GCString, NomErr, NomErrorKind};
+    use crate::{assert_eq2, GCString, NErr, NErrorKind};
 
     #[test]
     fn test_parse_fragment_starts_with_underscore_err_on_new_line_alt() {
@@ -443,9 +443,9 @@ mod tests {
             let input = AsStrSlice::from(lines);
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -458,9 +458,9 @@ mod tests {
             let input = AsStrSlice::from(lines);
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -473,9 +473,9 @@ mod tests {
             let input = AsStrSlice::from(lines);
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -488,9 +488,9 @@ mod tests {
             let input = AsStrSlice::from(lines);
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -503,9 +503,9 @@ mod tests {
             let input = AsStrSlice::from(lines);
             let res = parse_fragment_starts_with_underscore_err_on_new_line_alt(input);
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -537,9 +537,9 @@ mod tests {
             let input = AsStrSlice::from(lines);
             let res = parse_fragment_starts_with_star_err_on_new_line_alt(input);
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -552,9 +552,9 @@ mod tests {
             let input = AsStrSlice::from(lines);
             let res = parse_fragment_starts_with_star_err_on_new_line_alt(input);
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -567,9 +567,9 @@ mod tests {
             let input = AsStrSlice::from(lines);
             let res = parse_fragment_starts_with_star_err_on_new_line_alt(input);
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -582,9 +582,9 @@ mod tests {
             let input = AsStrSlice::from(lines);
             let res = parse_fragment_starts_with_star_err_on_new_line_alt(input);
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -597,9 +597,9 @@ mod tests {
             let input = AsStrSlice::from(lines);
             let res = parse_fragment_starts_with_star_err_on_new_line_alt(input);
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -614,9 +614,9 @@ mod tests {
             let res = parse_fragment_starts_with_backtick_err_on_new_line_alt(input);
 
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), "");
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -628,9 +628,9 @@ mod tests {
             let res = parse_fragment_starts_with_backtick_err_on_new_line_alt(input);
 
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), "");
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -642,9 +642,9 @@ mod tests {
             let res = parse_fragment_starts_with_backtick_err_on_new_line_alt(input);
 
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), "`here is code");
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -656,9 +656,9 @@ mod tests {
             let res = parse_fragment_starts_with_backtick_err_on_new_line_alt(input);
 
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), "here is code`");
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -684,9 +684,9 @@ mod tests {
             let res = parse_fragment_starts_with_backtick_err_on_new_line_alt(input);
 
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), "`");
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -698,9 +698,9 @@ mod tests {
             let res = parse_fragment_starts_with_backtick_err_on_new_line_alt(input);
 
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), "");
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -726,9 +726,9 @@ mod tests {
             let res = parse_fragment_starts_with_backtick_err_on_new_line_alt(input);
 
             match res {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), "```");
-                    assert_eq2!(error.code, NomErrorKind::Tag);
+                    assert_eq2!(error.code, NErrorKind::Tag);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -819,7 +819,7 @@ mod tests {
 #[cfg(test)]
 mod tests_delim_matchers {
     use super::*;
-    use crate::{assert_eq2, GCString, NomErr, NomErrorKind};
+    use crate::{assert_eq2, GCString, NErr, NErrorKind};
 
     #[test]
     fn test_delim_matchers_count_delim_occurrences_until_eol() {
@@ -996,9 +996,9 @@ mod tests_delim_matchers {
                 input, "_",
             );
             match result {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -1013,9 +1013,9 @@ mod tests_delim_matchers {
                 input, "_",
             );
             match result {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -1030,9 +1030,9 @@ mod tests_delim_matchers {
                 input, "_",
             );
             match result {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }
@@ -1047,9 +1047,9 @@ mod tests_delim_matchers {
                 input, "_",
             );
             match result {
-                Err(NomErr::Error(error)) => {
+                Err(NErr::Error(error)) => {
                     assert_eq2!(error.input.extract_to_line_end(), err_input);
-                    assert_eq2!(error.code, NomErrorKind::Fail);
+                    assert_eq2!(error.code, NErrorKind::Fail);
                 }
                 _ => panic!("Expected error result"),
             }

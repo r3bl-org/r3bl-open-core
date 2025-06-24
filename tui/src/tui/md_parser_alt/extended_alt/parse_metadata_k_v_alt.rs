@@ -93,8 +93,8 @@ mod test_parse_title_no_eol {
                 inline_string,
                 md_parser::constants::TITLE,
                 InlineStringCow,
-                NomErr,
-                NomErrorKind};
+                NErr,
+                NErrorKind};
 
     #[test]
     fn test_not_quoted_no_eol() {
@@ -140,9 +140,9 @@ mod test_parse_title_no_eol {
         let res = parse_line_kv_advance_alt(TITLE, input);
 
         assert_eq2!(res.is_err(), true);
-        if let Err(NomErr::Error(ref e)) = res {
+        if let Err(NErr::Error(ref e)) = res {
             assert_eq2!(e.input, input_clone);
-            assert_eq2!(e.code, NomErrorKind::Fail);
+            assert_eq2!(e.code, NErrorKind::Fail);
         }
 
         println!(
@@ -159,9 +159,9 @@ mod test_parse_title_no_eol {
         let res = parse_line_kv_advance_alt(TITLE, input);
 
         assert_eq2!(res.is_err(), true);
-        if let Err(NomErr::Error(ref e)) = res {
+        if let Err(NErr::Error(ref e)) = res {
             assert_eq2!(e.input, input_clone);
-            assert_eq2!(e.code, NomErrorKind::Fail);
+            assert_eq2!(e.code, NErrorKind::Fail);
         }
 
         println!(

@@ -25,8 +25,8 @@ use crate::{fg_green,
             fg_red,
             md_parser::constants::NEW_LINE,
             AsStrSlice,
-            NomErr,
-            NomError,
+            NErr,
+            NError,
             DEBUG_MD_PARSER_STDOUT};
 
 /// Takes the text between the start and end delimiters. Will error out if this text
@@ -59,7 +59,7 @@ pub fn take_text_between_delims_enclosed_err_on_new_line_alt<'i>(
                         input_clone_dbg
                     );
                 });
-                Err(NomErr::Error(NomError {
+                Err(NErr::Error(NError {
                     input: output,
                     code: ErrorKind::CrLf,
                 }))

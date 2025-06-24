@@ -59,9 +59,9 @@ use crate::{fg_blue,
             specialized_parsers_alt,
             AsStrSlice,
             CharLengthExt as _,
-            NomErr,
-            NomError,
-            NomErrorKind,
+            NErr,
+            NError,
+            NErrorKind,
             DEBUG_MD_PARSER_STDOUT};
 
 /// This is the lowest priority parser called by
@@ -138,7 +138,7 @@ fn parse_plain_text_until_special_char<'a>(
     //    tag(LEFT_BRACKET), tag(NEW_LINE) )`
     let tag_vec = get_sp_char_set_3()
         .into_iter()
-        .map(tag::<&str, &str, NomError<&str>>)
+        .map(tag::<&str, &str, NError<&str>>)
         .collect::<Vec<_>>();
     let tag_tuple = {
         debug_assert_eq!(tag_vec.len(), 6);
@@ -199,14 +199,14 @@ fn parse_plain_text_until_special_char<'a>(
         Err(err) => {
             // Extract the ErrorKind from the original error
             let error_kind = match &err {
-                NomErr::Error(e) => e.code,
-                NomErr::Failure(e) => e.code,
-                NomErr::Incomplete(_) => NomErrorKind::Complete,
+                NErr::Error(e) => e.code,
+                NErr::Failure(e) => e.code,
+                NErr::Incomplete(_) => NErrorKind::Complete,
             };
 
             // Convert to proper NomError type for AsStrSlice
-            let nom_error = NomError::new(input, error_kind);
-            Err(NomErr::Error(nom_error))
+            let nom_error = NError::new(input, error_kind);
+            Err(NErr::Error(nom_error))
         }
     }
 }
@@ -233,7 +233,7 @@ fn try_parse_single_special_char<'a>(
 
             // Split the input, by returning the first part as plain text.
             let res: IResult<&str, &str> =
-                recognize(many1(tag::<&str, &str, NomError<&str>>(special_str)))
+                recognize(many1(tag::<&str, &str, NError<&str>>(special_str)))
                     .parse(input_clone_parsing.extract_to_line_end());
 
             // Convert &str back into AsStrSlice for Ok.
@@ -398,7 +398,7 @@ fn tuple6<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, GCString, NomErr};
+    use crate::{assert_eq2, GCString, NErr};
 
     #[test]
     fn test_check_input_starts_with() {
@@ -637,7 +637,7 @@ mod tests {
         match res {
             Ok(_) => panic!("Expected Err, got Ok"),
             Err(err) => match err {
-                NomErr::Error(error) => {
+                NErr::Error(error) => {
                     assert_eq2!(error.input.extract_to_line_end(), "");
                 }
                 _ => panic!("Expected Error, got different error type"),

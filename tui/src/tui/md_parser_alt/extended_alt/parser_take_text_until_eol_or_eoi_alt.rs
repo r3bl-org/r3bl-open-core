@@ -23,7 +23,7 @@ use nom::{branch::alt,
           sequence::preceded,
           Parser};
 
-use crate::{md_parser::constants::NEW_LINE, AsStrSlice, NomError};
+use crate::{md_parser::constants::NEW_LINE, AsStrSlice, NError};
 
 /// This returns a function, which implements [Parser]. So call `input()` on it
 /// or pass it to other `nom` combination functions.
@@ -43,7 +43,7 @@ use crate::{md_parser::constants::NEW_LINE, AsStrSlice, NomError};
 /// | `"Hello, world!"`   | `""`           | `"Hello, world!"` |
 #[rustfmt::skip]
 pub fn parser_take_line_text_alt<'a>() ->
-    impl Parser<AsStrSlice<'a>, Output = AsStrSlice<'a>, Error = NomError<AsStrSlice<'a>>>
+    impl Parser<AsStrSlice<'a>, Output = AsStrSlice<'a>, Error = NError<AsStrSlice<'a>>>
 {
     recognize( /* match anychar up until a denied string below is encountered */
         many0( /* may match nothing */
