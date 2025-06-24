@@ -15,1561 +15,26 @@
  *   limitations under the License.
  */
 
-//! ⚠️  CRITICAL WARNING: CHARACTER-BASED vs BYTE-BASED INDEXING
-//!
-//! This entire module uses CHARACTER-BASED indexing for Unicode/UTF-8 safety.
-//!
-//! NEVER mix byte-based operations (from nom's [FindSubstring], `&str[..]`) with
-//! character-based operations ([AsStrSlice] methods). This will cause panics or
-//! incorrect results when processing multi-byte UTF-8 characters like emojis.
-//!
-//! Safe patterns:
-//!   ✅ `let chars = slice.extract_to_line_end().chars().count();`
-//!   ✅ `let advanced = slice.take_from(char_count);`
-//!   ✅ `let content = slice.extract_to_line_end();`
-//!
-//! Dangerous patterns:
-//!   ❌ `let byte_pos = slice.find_substring("text").unwrap();`
-//!   ❌ `let wrong = slice.take_from(byte_pos); // byte pos as char pos!`
-//!   ❌ `let bad = &text[byte_start..byte_end]; // raw slice operator`
-//!
-//! When you must use [AsStrSlice::find_substring()] (which returns byte positions):
-//!   1. Use the byte position with take() to get a prefix
-//!   2. Count characters in the prefix: prefix.extract_to_line_end().chars().count()
-//!   3. Use the character count with take_from()
-//!
-//! ## nom Input and byte-based indexing
-//!
-//! [nom::Input] uses byte-based indexing, and `AsStrSlice` implementation of this
-//! trait carefully converts between character and byte based indexing.
-//!
-//! ## Rust, UTF-8, char, String, and &str
-//!
-//! This file uses character-based index, with the only exception to this is the
-//! implementation of [nom::Input] which is byte index based. Literally everything else
-//! uses character-based indexing. All the slice operations have been removed and replace
-//! with `char_*()` functions which use character-based indexing.
-//!
-//! Rust's [String] type does not store chars directly as a sequence of 4-byte
-//! values. Instead, [String] (and `&str` slices) are UTF-8 encoded. The [char] type
-//! is 4 bytes long.
-//!
-//! UTF-8 is a variable-width encoding. This means that different Unicode
-//! codepoints can take up a different number of bytes.
-//!
-//! - ASCII characters (0-127): These take 1 byte.
-//! - Most common European characters: These take 2 bytes.
-//! - Many Asian characters: These take 3 bytes.
-//! - Emoji and less common characters (including supplementary planes): These typically
-//!   take 4 bytes.
-//!
-//! Byte-based indexing: When you slice a [String] (or [&str]) using byte
-//! indices (e.g., `my_string[0..4]`), you are literally taking a slice of the
-//! raw UTF-8 bytes. This is efficient because it's a simple memory
-//! operation. However, if you slice in the middle of a multi-byte UTF-8
-//! character, you will create an invalid UTF-8 sequence, leading to a panic
-//! in Rust if you try to interpret it as a [&str]. Rust strings must be valid
-//! UTF-8.
-//!
-//! Character-based indexing (or grapheme clusters): There is no direct
-//! "character-based" indexing with `[]` in Rust for [String]s. If you want to
-//! iterate over "characters," you use `s.chars()`. This iterator decodes the
-//! UTF-8 bytes into char (Unicode Scalar Values).
-
 use std::{convert::AsRef, fmt::Display};
 
-use nom::{Compare, CompareResult, FindSubstring, Input, Offset};
+use nom::{Compare, CompareResult, FindSubstring, IResult, Input, Offset, Parser};
 
-use crate::{bounds_check,
-            constants::{NEW_LINE_CHAR, SPACE_CHAR, TAB_CHAR},
+use crate::{as_str_slice_mod::{AsStrSlice},
             core::tui_core::units::{idx, len, Index, Length},
-            BoundsCheck,
-            BoundsStatus,
-            DocumentStorage,
+            CharacterIndex,
+            CharacterIndexNomCompat,
+            CharacterLength,
             GCString,
-            InlineString,
-            InlineStringCow,
             InlineVec,
             List,
-            ParserByteCache,
-            PositionStatus,
-            PARSER_BYTE_CACHE_PAGE_SIZE};
-
-pub type NomErr<T> = nom::Err<T>;
-pub type NomError<T> = nom::error::Error<T>;
-pub type NomErrorKind = nom::error::ErrorKind;
-
-/// Marker type alias for [nom::Input] trait methods (which we can't change)
-/// to clarify a character based index type.
-pub type CharacterIndexNomCompat = usize;
-/// Marker type alias for [Length] to clarify character based length type.
-pub type CharacterLength = Length;
-/// Marker type alias for [Index] to clarify character based index type.
-pub type CharacterIndex = Index;
-
-/// Extension trait for getting the character length of string-like types.
-///
-/// This trait provides a unified interface for obtaining the character count
-/// of various string types. Unlike the standard `len()` method which returns
-/// byte length, this trait's `len_chars()` method returns the actual number
-/// of Unicode characters (code points) in the string.
-///
-/// This is particularly important when working with Unicode text that may
-/// contain multi-byte characters, emojis, or other complex Unicode sequences
-/// where byte length and character count differ significantly.
-///
-/// # Why This Matters
-///
-/// In UTF-8 encoded strings:
-/// - ASCII characters take 1 byte each
-/// - Non-ASCII characters can take 2-4 bytes each
-/// - Emojis and complex Unicode can take even more bytes
-///
-/// For example:
-/// - `"hello"` has 5 bytes and 5 characters
-/// - `"héllo"` has 6 bytes but 5 characters
-/// - `"hello 👋"` has 10 bytes but 7 characters
-///
-/// # Examples
-///
-/// ```
-/// use r3bl_tui::{CharLengthExt, Length};
-///
-/// let ascii_text = "hello";
-/// assert_eq!(ascii_text.len(), 5);        // 5 bytes
-/// assert_eq!(ascii_text.len_chars(), Length::new(5)); // 5 characters
-///
-/// let unicode_text = "hello 👋 world";
-/// assert_eq!(unicode_text.len(), 16);     // 16 bytes
-/// assert_eq!(unicode_text.len_chars(), Length::new(13)); // 13 characters
-///
-/// let mixed_text = "café";
-/// assert_eq!(mixed_text.len(), 5);        // 5 bytes (é is 2 bytes)
-/// assert_eq!(mixed_text.len_chars(), Length::new(4)); // 4 characters
-/// ```
-///
-/// # Use Cases
-///
-/// This trait is essential for:
-/// - Text editor cursor positioning
-/// - UI layout calculations with Unicode text
-/// - Parser position tracking in multi-byte text
-/// - String manipulation operations that need character-based indexing
-/// - Display width calculations for terminal applications
-///
-/// # Implementation Notes
-///
-/// The returned [`Length`] type provides type safety and ensures that
-/// character counts are not confused with byte counts or other numeric
-/// values in the codebase.
-pub trait CharLengthExt {
-    /// Returns the length of the string in characters, not bytes. That is, the number of
-    /// Unicode characters (code points) in the string.
-    ///
-    /// This method counts the actual Unicode characters rather than bytes,
-    /// making it suitable for operations that need to work with the logical
-    /// length of text as perceived by users.
-    ///
-    /// # Returns
-    ///
-    /// A [Length] representing the count of Unicode characters in the string.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use r3bl_tui::{CharLengthExt, Length};
-    ///
-    /// // ASCII text - characters match bytes
-    /// let text = "hello";
-    /// assert_eq!(text.len_chars(), Length::new(5));
-    ///
-    /// // Unicode text - characters differ from bytes
-    /// let text = "🚀 Rust";
-    /// assert_eq!(text.len_chars(), Length::new(6)); // rocket + space + R + u + s + t
-    ///
-    /// // Empty string
-    /// let text = "";
-    /// assert_eq!(text.len_chars(), Length::new(0));
-    ///
-    /// // Text with combining characters
-    /// let text = "e̊"; // e + combining ring above
-    /// assert_eq!(text.len_chars(), Length::new(2)); // 2 code points
-    /// ```
-    ///
-    /// # Performance
-    ///
-    /// This method iterates through the string to count characters, so it has
-    /// O(n) time complexity where n is the byte length of the string. For
-    /// performance-critical code that calls this method frequently on the same
-    /// string, consider caching the result.
-    fn len_chars(&self) -> Length;
-}
-
-impl CharLengthExt for &str {
-    fn len_chars(&self) -> Length { len(self.chars().count()) }
-}
-
-/// Wrapper type that implements [nom::Input] for &[GCString] or **any other type** that
-/// implements [`AsRef<str>`]. The [Clone] operations on this struct are really cheap.
-/// This wraps around the output of [str::lines()] and provides a way to adapt it for use
-/// as a "virtual array" or "virtual slice" of strings for `nom` parsers.
-///
-/// This struct generates synthetic new lines when it's [nom::Input] methods are used.
-/// to manipulate it. This ensures that it can make the underlying `line` struct "act"
-/// like it is a contiguous array of chars.
-///
-/// The key insight is that we're creating new instances that reference the same
-/// underlying `lines` data but with different bounds, which is how we avoid copying data.
-///
-/// ## Manually creating `lines` instead of using `str::lines()`
-///
-/// If you don't use [str::lines()] which strips [crate::constants::NEW_LINE] characters,
-/// then you have to make sure that each `line` does not have any
-/// [crate::constants::NEW_LINE] character in it. This is not enforced, since this struct
-/// does not allocate, and it can't take the provided `lines: &'a [T]` and remove any
-/// [crate::constants::NEW_LINE] characters from them, and generate a new `lines` slice.
-/// There are many tests that leverage this behavior, so it is not a problem in practice.
-/// However, this is something to be aware if you are "manually" creating the `line` slice
-/// that you pass to [AsStrSlice::from()].
-///
-/// ## Why?
-///
-/// The inception of this struct was to provide a way to have `nom` parsers work with the
-/// output type of [str::lines()], which is a slice of `&str`, that is stored in the
-/// [crate::EditorContent] struct. In order to use `nom` parsers with this output type,
-/// it was necessary to materialize the entire slice into a contiguous
-/// array of characters, which is not efficient for large documents. This materialization
-/// happened in the critical render loop of the TUI, which caused performance
-/// issues. This struct provides a way to avoid that materialization by
-/// providing a "virtual" slice of strings that can be used with `nom` parsers without
-/// materializing the entire slice. And it handles the synthetic new lines
-/// to boot! And it is cheap to clone!
-///
-/// ## Unicode/UTF-8 Support and Character vs Byte Indexing
-///
-/// **⚠️ CRITICAL: This implementation uses CHARACTER-BASED indexing throughout.**
-///
-/// This is essential for proper Unicode/UTF-8 support, especially when handling
-/// emojis and other multi-byte UTF-8 sequences. **Never mix byte-based operations
-/// with character-based operations** as this will cause incorrect behavior or panics
-/// when processing multi-byte UTF-8 characters like `😀`.
-///
-/// ### Key Implementation Details:
-///
-/// - **Character counting**: Uses `line.len_chars()` instead of `line.len()`
-/// - **Character indexing**: Uses `line.chars().nth(char_index)` instead of byte indexing
-/// - **Character slicing**: Uses `take_from(char_count)` instead of
-///   `&str[byte_start..byte_end]`
-/// - **Position tracking**: `char_index` represents character position, not byte position
-///
-/// ### The `char_index` Field:
-///
-/// The `char_index` field represents the character index within the current line. It is:
-/// - Used with `line.chars().nth(self.char_index)` to get characters.
-/// - Compared with line_char_count (from `line.len_chars()`).
-/// - Incremented by 1 to advance to the next character.
-/// - Reset to 0 when moving to a new line.
-///
-/// ### ⚠️ WARNING: Never Use Raw Slice Operators on UTF-8 Text
-///
-/// ```no_run
-/// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
-/// # use nom::Input;
-/// // ❌ DANGEROUS - Can panic or corrupt UTF-8 sequences
-/// let text = "😀hello world";
-/// let bad = &text[1..5]; // PANIC! Splits the emoji's UTF-8 sequence
-/// let bad = &text[4..];  // Might work but indices are unpredictable
-///
-/// // ✅ SAFE - Use AsStrSlice's character-aware methods
-/// as_str_slice_test_case!(slice, "😀hello world");
-/// let good = slice.take_from(1).extract_to_line_end(); // "hello world"
-/// let good = slice.take(5).extract_to_line_end();      // "😀hell"
-/// ```
-///
-/// ### Why Byte vs Character Indexing Matters:
-///
-/// In UTF-8, characters can be 1-4 bytes long:
-/// - ASCII characters (A-Z, 0-9): 1 byte each
-/// - Extended Latin (é, ñ): 2 bytes each
-/// - Most symbols and emojis (😀, ♥️): 3-4 bytes each
-///
-/// Using byte positions as character positions leads to:
-/// - **Panics** when slicing splits a multi-byte character
-/// - **Wrong content** when characters are skipped or duplicated
-/// - **Test failures** when expected vs actual content differs
-///
-/// ### Integration with `find_substring()`:
-///
-/// When using `nom`'s `FindSubstring::find_substring()`, remember that it returns
-/// **byte positions**, not character positions. Always convert:
-///
-/// ```no_run
-/// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
-/// # use nom::FindSubstring;
-/// # use nom::Input;
-/// // ❌ WRONG - using byte position as character position
-/// as_str_slice_test_case!(input, "hello\nworld");
-/// let byte_pos = input.find_substring("\n").unwrap();
-/// let wrong = input.take_from(byte_pos); // May panic with Unicode
-///
-/// // ✅ CORRECT - convert byte position to character position
-/// let byte_pos = input.find_substring("\n").unwrap();
-/// let first_part = input.take(byte_pos); // Use byte pos with take()
-/// let char_count = first_part.extract_to_line_end().chars().count();
-/// let correct = input.take_from(char_count); // Use char count with take_from()
-/// ```
-///
-/// ## Compatibility with [AsStrSlice::write_to_byte_cache_compat()]
-///
-/// [AsStrSlice] is designed to be fully compatible with how
-/// [AsStrSlice::write_to_byte_cache_compat()] processes text. Specifically, it handles
-/// trailing newlines the same way:
-///
-/// - **Trailing newlines are added**: When there are multiple lines, a trailing newline
-///   is added after the last line, matching the behavior of
-///   [AsStrSlice::write_to_byte_cache_compat()].
-/// - **Empty lines preserved**: Leading and middle empty lines are preserved as empty
-///   strings followed by newlines.
-/// - **Single line gets no trailing newline**: A single line with no additional lines
-///   produces no trailing newline.
-/// - **Multiple lines always get trailing newlines**: Each line gets a trailing newline,
-///   including the last one.
-///
-/// ## Incompatibility with [str::lines()]
-///
-/// **Important**: This behavior is intentionally different from [str::lines()]. When
-/// there are multiple lines and the last line is empty, [AsStrSlice] will add a trailing
-/// newline, whereas [str::lines()] would not. This is to maintain compatibility with
-/// [AsStrSlice::write_to_byte_cache_compat()].
-///
-/// Here are some examples of new line handling:
-///
-/// ```rust
-/// # use r3bl_tui::{GCString, AsStrSlice, as_str_slice_test_case};
-/// // Input with multiple lines
-/// as_str_slice_test_case!(slice, "a", "b");
-/// assert_eq!(slice.to_inline_string(), "a\nb\n");     // Trailing \n added
-///
-/// // Single line
-/// as_str_slice_test_case!(slice2, "single");
-/// assert_eq!(slice2.to_inline_string(), "single");     // No trailing \n
-///
-/// // Empty lines are preserved with newlines
-/// as_str_slice_test_case!(slice3, "", "a", "");
-/// assert_eq!(slice3.to_inline_string(), "\na\n\n");   // Each line followed by \n
-/// ```
-///
-/// ## Compatibility with [nom::Input]
-///
-/// Since this struct implements [nom::Input], it can be used in any function that can
-/// receive an argument that implements it. So you have flexibility in using the
-/// [AsStrSlice] type or the [nom::Input] type where appropriate.
-///
-/// Also it is preferable to use the following function signature:
-///
-/// ```
-/// # use r3bl_tui::AsStrSlice;
-/// # use nom::IResult;
-/// fn f<'a>(i: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> { unimplemented!() }
-/// ```
-///
-/// Instead of the overly generic and difficult to work with (this type of signature makes
-/// sense for the built-in parsers which are expected to work with any slice, but our use
-/// case is anchored in [AsStrSlice], which itself is very flexible):
-///
-/// ```
-/// # use r3bl_tui::AsStrSlice;
-/// # use nom::{IResult, Input, Compare, Offset, AsChar};
-/// # use std::fmt::Debug;
-/// fn f<'a, I>(input: I) -> IResult<I, I>
-/// where
-///       I: Input + Clone + Compare<&'a str> + Offset + Debug,
-///       I::Item: AsChar + Copy
-/// { unimplemented!() }
-/// ```
-#[derive(Debug, Clone, PartialEq)]
-pub struct AsStrSlice<'a, T: AsRef<str> = GCString>
-where
-    &'a [T]: Copy,
-{
-    /// The lines of text represented as a slice of [GCString] or any type that
-    /// implements [`AsRef<str>`].
-    pub lines: &'a [T],
-
-    /// Position tracking: (line_index, char_index_within_line).
-    /// Special case: if char_index == line.len(), we're at the synthetic newline.
-    pub line_index: CharacterIndex,
-
-    /// This represents the character index within the current line. It is:
-    /// - Used with `line.chars().nth(self.char_index)` to get characters.
-    /// - Compared with line_char_count (from `line.len_chars()`).
-    /// - Incremented by 1 to advance to the next character.
-    /// - Reset to 0 when moving to a new line.
-    pub char_index: CharacterIndex,
-
-    /// Optional maximum length limit for the slice. This is needed for
-    /// [AsStrSlice::take()] to work.
-    pub max_len: Option<CharacterLength>,
-
-    /// Total number of characters across all lines (including synthetic newlines).
-    /// For multiple lines, includes trailing newline after the last line.
-    pub total_size: CharacterLength,
-
-    /// Number of characters consumed from the beginning.
-    pub current_taken: CharacterLength,
-}
-
-/// Implement [From] trait to allow automatic conversion from &[GCString] to
-/// [AsStrSlice].
-impl<'a> From<&'a [GCString]> for AsStrSlice<'a> {
-    fn from(lines: &'a [GCString]) -> Self {
-        let total_size = Self::calculate_total_size(lines);
-        Self {
-            lines,
-            line_index: idx(0),
-            char_index: idx(0),
-            max_len: None,
-            total_size: len(total_size),
-            current_taken: len(0),
-        }
-    }
-}
-
-/// Implement [From] trait to allow automatic conversion from &[[GCString]; N] to
-/// [AsStrSlice]. Primary use case is for tests where the inputs are hardcoded as
-/// fixed-size arrays.
-impl<'a, const N: usize> From<&'a [GCString; N]> for AsStrSlice<'a> {
-    fn from(lines: &'a [GCString; N]) -> Self {
-        let lines_slice = lines.as_slice();
-        let total_size = Self::calculate_total_size(lines_slice);
-        Self {
-            lines: lines_slice,
-            line_index: idx(0),
-            char_index: idx(0),
-            max_len: None,
-            total_size: len(total_size),
-            current_taken: len(0),
-        }
-    }
-}
-
-/// Implement [From] trait to allow automatic conversion from &[`Vec<GCString>`] to
-/// [AsStrSlice].
-impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
-    fn from(lines: &'a Vec<GCString>) -> Self {
-        let total_size = Self::calculate_total_size(lines);
-        Self {
-            lines,
-            line_index: idx(0),
-            char_index: idx(0),
-            max_len: None,
-            total_size: len(total_size),
-            current_taken: len(0),
-        }
-    }
-}
-
-#[macro_export]
-macro_rules! as_str_slice_test_case {
-    ($var_name:ident, $($string_expr:expr),+ $(,)?) => {
-        #[allow(unused_variables)]
-        let _input_array = [$($crate::GCString::new($string_expr)),+];
-        let $var_name = $crate::AsStrSlice::from(&_input_array);
-    };
-    ($var_name:ident, limit: $max_len:expr, $($string_expr:expr),+ $(,)?) => {
-        #[allow(unused_variables)]
-        let _input_array = [$($crate::GCString::new($string_expr)),+];
-        let $var_name = $crate::AsStrSlice::with_limit(&_input_array, $crate::idx(0), $crate::idx(0), Some($crate::len($max_len)));
-    };
-}
-
-pub mod synthetic_new_line_for_current_char {
-    use super::*;
-
-    /// Determine the position state relative to the current line.
-    pub fn determine_position_state(this: &AsStrSlice<'_>, line: &str) -> PositionState {
-        // ⚠️ CRITICAL: char_index represents CHARACTER position, use
-        // check_content_position()
-        match this.char_index.check_content_position(line.len_chars()) {
-            PositionStatus::Within => PositionState::WithinLineContent,
-            PositionStatus::Boundary => PositionState::AtEndOfLine,
-            PositionStatus::Beyond => PositionState::PastEndOfLine,
-        }
-    }
-
-    /// Determine the document state based on the number of lines.
-    pub fn determine_document_state(lines_len: usize) -> DocumentState {
-        match lines_len {
-            1 => DocumentState::SingleLine,
-            _ => DocumentState::MultipleLines,
-        }
-    }
-
-    /// Determine the line location in the document.
-    pub fn determine_line_location(
-        line_index: Index,
-        lines_len: Length,
-    ) -> LineLocationInDocument {
-        match line_index < lines_len.convert_to_index() {
-            true => LineLocationInDocument::HasMoreLinesAfter,
-            false => LineLocationInDocument::LastLine,
-        }
-    }
-
-    /// Helper method to get character at current position within line content.
-    pub fn get_char_at_position(this: &AsStrSlice<'_>, line: &str) -> Option<char> {
-        // ⚠️ CRITICAL: char_index represents CHARACTER position, not byte position
-        // Use chars().nth() to get the character at the character position
-        line.chars().nth(this.char_index.as_usize())
-    }
-
-    /// Helper method to determine if we should return a synthetic newline character.
-    pub fn get_synthetic_newline_char(this: &AsStrSlice<'_>) -> Option<char> {
-        if this.line_index.as_usize() < this.lines.len() - 1 {
-            // There are more lines, return synthetic newline
-            Some(NEW_LINE_CHAR)
-        } else if this.lines.len() > 1 {
-            // We're at the last line of multiple lines, add trailing newline
-            Some(NEW_LINE_CHAR)
-        } else {
-            // Single line, no trailing newline
-            None
-        }
-    }
-
-    /// Represents the position state relative to the current line.
-    #[derive(Debug, Clone, Copy, PartialEq)]
-    pub enum PositionState {
-        /// Character index is within the line content (char_index < line.len())
-        WithinLineContent,
-        /// Character index is at the end of the line (char_index == line.len())
-        AtEndOfLine,
-        /// Character index is past the end of the line (char_index > line.len())
-        PastEndOfLine,
-    }
-
-    /// Represents the document structure.
-    #[derive(Debug, Clone, Copy, PartialEq)]
-    pub enum DocumentState {
-        /// Only one line in the document - no synthetic newlines
-        SingleLine,
-        /// Multiple lines in the document - synthetic newlines between and after lines
-        MultipleLines,
-    }
-
-    /// Represents the line position in the document.
-    #[derive(Debug, Clone, Copy, PartialEq)]
-    pub enum LineLocationInDocument {
-        /// We're at a line that has more lines after it
-        HasMoreLinesAfter,
-        /// We're at the very last line in the document
-        LastLine,
-    }
-}
-
-/// These methods are added to implement
-/// [crate::parse_fragment_plain_text_until_eol_or_eoi_alt] parser. Due to the nature of
-/// that parser, it uses `&str` internally for some parsing steps, and then the result of
-/// intermediate parsing in `&str` has to be converted into `AsStrSlice` again before
-/// it can be returned from that parser function.
-impl<'a> AsStrSlice<'a> {
-    /// Internal helper function that trims specified whitespace characters from the start
-    /// of the current line. This only operates on the contents of the current line.
-    ///
-    /// ⚠️ **Important: ASCII-Only Whitespace Trimming**
-    ///
-    /// This method **only trims specified ASCII characters**, not Unicode whitespace
-    /// characters. This is the correct behavior for Markdown parsing, as the Markdown
-    /// specification typically only recognizes ASCII spaces for list indentation and
-    /// text formatting.
-    ///
-    /// # Parameters
-    /// - `whitespace_chars`: A slice of characters to be considered as whitespace
-    ///
-    /// # Returns
-    /// A tuple containing:
-    /// - The number of characters trimmed
-    /// - The trimmed `AsStrSlice` instance
-    fn trim_whitespace_chars_start_current_line(
-        &self,
-        whitespace_chars: &[char],
-    ) -> (Length, Self) {
-        let mut result = self.clone();
-        let mut chars_trimmed = len(0);
-
-        // Use advance() instead of manual manipulation.
-        loop {
-            match result.current_char() {
-                Some(ch) if whitespace_chars.contains(&ch) => {
-                    result.advance(); // This properly handles both char_index and max_len
-                    chars_trimmed += len(1);
-                }
-                _ => break,
-            }
-        }
-
-        (chars_trimmed, result)
-    }
-
-    /// Remove leading whitespace from the start of the slice. This only operates on the
-    /// contents of the current line. Whitespace includes [SPACE_CHAR] and [TAB_CHAR].
-    ///
-    /// ⚠️ **Important: ASCII-Only Whitespace Trimming**
-    ///
-    /// This method **only trims ASCII spaces (U+0020) and ASCII tabs (U+0009)**, not
-    /// Unicode whitespace characters like em space (U+2003), non-breaking space
-    /// (U+00A0), or other Unicode whitespace. This is the correct behavior for
-    /// Markdown parsing, as the Markdown specification typically only recognizes
-    /// ASCII spaces for list indentation and text formatting.
-    ///
-    /// # Examples
-    /// ```
-    /// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
-    /// // ASCII whitespace - will be trimmed
-    /// as_str_slice_test_case!(slice, "  \thello");
-    /// let trimmed = slice.trim_start_current_line();
-    /// assert_eq!(trimmed.extract_to_line_end(), "hello");
-    ///
-    /// // Unicode whitespace - will NOT be trimmed
-    /// as_str_slice_test_case!(slice2, " \u{2003}hello");  // space + em space
-    /// let trimmed = slice2.trim_start_current_line();
-    /// assert_eq!(trimmed.extract_to_line_end(), "\u{2003}hello");  // em space preserved
-    /// ```
-    ///
-    /// This behavior ensures consistent Markdown parsing where Unicode spaces don't count
-    /// as valid indentation for lists and other block elements.
-    pub fn trim_start_current_line(&self) -> Self {
-        let (_, trimmed_slice) =
-            self.trim_whitespace_chars_start_current_line(&[SPACE_CHAR, TAB_CHAR]);
-        trimmed_slice
-    }
-
-    /// Handy check to verify that if the leading whitespace are trimmed from the start
-    /// of the current line, it is just an empty string. Needed for some parsers in
-    /// smart lists.
-    ///
-    /// ⚠️ **Note**: This method only considers ASCII spaces and tabs as whitespace
-    /// (via `trim_start_current_line()`), not Unicode whitespace characters. This
-    /// ensures consistent Markdown parsing behavior.
-    pub fn trim_start_current_line_is_empty(&self) -> bool {
-        self.trim_start_current_line()
-            .extract_to_line_end()
-            .is_empty()
-    }
-
-    /// Similar to [Self::trim_start_current_line()], but it trims leading spaces
-    /// and returns the number of space characters trimmed from the start
-    /// and the trimmed [AsStrSlice] instance.
-    pub fn trim_spaces_start_current_line(&self) -> (Length, Self) {
-        self.trim_whitespace_chars_start_current_line(&[SPACE_CHAR])
-    }
-
-    /// Skip characters then take a limited number of characters within the current line.
-    ///
-    /// This method is optimized for **single-line operations** where you need to skip
-    /// some characters and then take a specific number of characters from the same
-    /// line. It's an atomic operation that's more efficient than chaining
-    /// `take_from(skip_count).take(take_count)` for single-line text processing.
-    ///
-    /// ## When to use this method
-    ///
-    /// ✅ **Use `skip_take_in_current_line()` when:**
-    /// - Working with text within a single line boundary
-    /// - Parsing inline elements (like emphasis, links, code spans)
-    /// - Processing results from `extract_to_line_end()` or similar single-line
-    ///   operations
-    /// - Need atomic skip+take operation for performance
-    ///
-    /// ## When to Use `take_from(skip_count).take(take_count)` instead
-    ///
-    /// ✅ **Use `input.take_from(skip_count).take(take_count)` when:**
-    /// - Working with multiline content that spans line boundaries
-    /// - Processing continuous text from functions like
-    ///   `parse_code_block_body_including_code_block_end_alt`
-    /// - Need to handle line transitions and character offsets across multiple lines
-    /// - Splitting multiline content into segments
-    ///
-    /// ## Technical details
-    ///
-    /// This method works by directly manipulating `char_index` within the current line
-    /// context. It doesn't call `advance()` internally, which means it doesn't handle
-    /// line boundary transitions. This makes it fast for single-line operations but
-    /// unsuitable for multiline content where character positions may cross line
-    /// boundaries.
-    ///
-    /// See [`crate::split_by_new_line_alt`] for an example of why multiline processing
-    /// requires `take_from` and `take` (part of the [nom::Input] impl) instead of this
-    /// method.
-    ///
-    /// ## Examples
-    ///
-    /// ```rust
-    /// # use r3bl_tui::{as_str_slice_test_case, len};
-    /// // ✅ Good: Single-line processing
-    /// as_str_slice_test_case!(input, "Hello, World!");
-    /// let result = input.skip_take_in_current_line(7, 5); // Skip "Hello, ", take "World"
-    /// assert_eq!(result.extract_to_line_end(), "World");
-    ///
-    /// // ❌ Avoid: Multiline content - use take_from().take() instead
-    /// as_str_slice_test_case!(multiline, "Line 1", "Line 2", "Line 3");
-    /// // Don't use skip_take_in_current_line() for this - it won't handle line boundaries
-    /// ```
-    pub fn skip_take_in_current_line(
-        &self,
-        arg_skip_count: impl Into<Length>,
-        arg_take_count: impl Into<Length>,
-    ) -> Self {
-        let skip_count: Length = arg_skip_count.into();
-        let take_count: Length = arg_take_count.into();
-
-        Self {
-            lines: self.lines,
-            line_index: self.line_index,
-            char_index:
-            // Can't exceed the end of the slice. Set the new char_index
-            // based on the current char_index and skip_count.
-            {
-                let new_start_index_after_skip = self.char_index + skip_count;
-                let max_index = self.total_size.convert_to_index();
-                new_start_index_after_skip.min(max_index)
-            },
-            max_len:
-            // Can't exceed the end of the slice. This is the maximum length
-            // that can be taken after the new char_index is set.
-            {
-                let consumed_after_skip = self.current_taken + skip_count;
-                let available_space_after_skip = self.total_size - consumed_after_skip;
-                Some(
-                    take_count.min(available_space_after_skip)
-                )
-            },
-            total_size: self.total_size,
-            current_taken: self.current_taken,
-        }
-    }
-
-    /// Creates a new `AsStrSlice` that limits content consumption to a maximum character
-    /// count.
-    ///
-    /// This method creates a truncated view of the current slice by setting a character
-    /// limit at the specified `end_index`. The resulting slice will consume
-    /// characters from the current position up to (but not including) the `end_index`
-    /// character position.
-    pub fn take_until(&self, arg_end_index: impl Into<Index>) -> Self {
-        let end_index: Index = arg_end_index.into();
-        let new_char_index = self.char_index.min(end_index);
-
-        Self {
-            lines: self.lines,
-            line_index: self.line_index,
-            char_index: new_char_index,
-            max_len: {
-                let max_until_end = *end_index - *new_char_index;
-                Some(len(max_until_end))
-            },
-            total_size: self.total_size,
-            current_taken: self.current_taken,
-        }
-    }
-
-    /// This does not materialize the `AsStrSlice`. And it does not look at the entire
-    /// slice, but only at the current line. `AsStrSlice` is designed to work with output
-    /// from [str::lines()], which means it should not contain any
-    /// [crate::constants::NEW_LINE] characters in the `lines` slice.
-    ///
-    /// This method extracts the current line up to the end of the line, which is defined
-    /// as the end of the current line or the end of the slice, whichever comes first.
-    pub fn contains_in_current_line(&self, sub_str: &str) -> bool {
-        self.extract_to_line_end().contains(sub_str)
-    }
-
-    /// Use [FindSubstring] to implement this function to check if a substring exists.
-    /// This will try not to materialize the `AsStrSlice` if it can avoid it, but there
-    /// are situations where it may have to (and allocate memory).
-    pub fn contains(&self, sub_str: &str) -> bool {
-        self.find_substring(sub_str).is_some()
-    }
-
-    /// This does not materialize the `AsStrSlice`.
-    ///
-    /// For [nom::Input] trait compatibility, this should return true when no more
-    /// characters can be consumed from the current position, taking into account
-    /// any `max_len` constraints.
-    pub fn is_empty(&self) -> bool {
-        // This code is simply the following, however, it is fast.
-        // self.remaining_len() == len(0)
-
-        // If max_len is set and is 0, we're empty.
-        if let Some(max_len) = self.max_len {
-            if max_len == len(0) {
-                return true;
-            }
-        }
-
-        // Check if we've consumed all available characters
-        if self.current_taken >= self.total_size {
-            return true;
-        }
-
-        // Check if we're beyond the available lines.
-        if self.line_index.as_usize() >= self.lines.len() {
-            return true;
-        }
-
-        // For empty lines array.
-        if self.lines.is_empty() {
-            return true;
-        }
-
-        // Use current_char() to determine emptiness - if no char available, we're empty.
-        self.current_char().is_none()
-    }
-
-    /// Returns the number of characters remaining in this slice.
-    ///
-    /// ⚠️ **Character-Based Length**: This method returns the count of **characters**,
-    /// not bytes. This is essential for proper Unicode/UTF-8 support where characters
-    /// can be 1-4 bytes long.
-    ///
-    /// This method provides the same character-based counting that should be used
-    /// instead of `output.len()` and `rem.len()` in nom parsers when working with
-    /// `&str` results that need to be converted back to `AsStrSlice` positions.
-    ///
-    /// # Examples
-    /// ```
-    /// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case, len};
-    /// as_str_slice_test_case!(slice, "😀hello");
-    /// assert_eq!(slice.len_chars(), len(6)); // 1 emoji + 5 ASCII chars = 6 characters
-    ///
-    /// // Compare with &str.len() which returns byte count
-    /// let text = "😀hello";
-    /// assert_eq!(text.len(), 9); // 4 bytes (emoji) + 5 bytes (ASCII) = 9 bytes
-    /// assert_eq!(text.chars().count(), 6); // Same as slice.len_chars() - 6 characters
-    /// ```
-    ///
-    /// # Use in nom Parsers
-    /// When converting `&str` lengths back to `AsStrSlice` positions, use this pattern:
-    /// ```
-    /// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case, len};
-    /// as_str_slice_test_case!(input, "😀hello world");
-    ///
-    /// // ❌ WRONG - using byte length from &str
-    /// let text = input.extract_to_line_end();
-    /// let byte_len = text.len(); // This is BYTE count (dangerous for Unicode)
-    ///
-    /// // ✅ CORRECT - using character count
-    /// let char_count = text.chars().count(); // This is CHARACTER count (safe)
-    /// // Or even better, use the AsStrSlice len_chars() method:
-    /// let char_count_better = input.len_chars(); // CHARACTER count, not bytes
-    ///
-    /// assert_eq!(len(char_count), char_count_better); // Both should be equal
-    /// assert_eq!(char_count, 12); // 1 emoji + 11 ASCII chars
-    /// ```
-    ///
-    /// This method does not materialize the `AsStrSlice` content - it calculates
-    /// length efficiently without allocating strings.
-    pub fn len_chars(&self) -> Length { self.remaining_len() }
-
-    /// This does not materialize the `AsStrSlice`.
-    pub fn starts_with(&self, sub_str: &str) -> bool {
-        self.extract_to_line_end().starts_with(sub_str)
-    }
-
-    /// Use the [Display] implementation to materialize the [DocumentStorage] content.
-    /// Returns a string representation of the slice.
-    ///
-    /// ## Newline Behavior
-    ///
-    /// This method follows the same newline handling rules as described in the struct
-    /// documentation:
-    ///
-    /// - For multiple lines, a trailing newline is added after the last line.
-    /// - For a single line, no trailing newline is added.
-    /// - Empty lines are preserved with newlines.
-    ///
-    /// ## Incompatibility with [str::lines()]
-    ///
-    /// **Important**: This behavior is intentionally different from [str::lines()].
-    /// When there are multiple lines and the last line is empty, this method will add
-    /// a trailing newline, whereas [str::lines()] would not.
-    pub fn to_inline_string(&self) -> DocumentStorage {
-        let mut acc = DocumentStorage::new();
-        use std::fmt::Write as _;
-        _ = write!(acc, "{self}");
-        acc
-    }
-
-    /// Write the content of this slice to a byte cache.
-    ///
-    /// This is for compatibility with the legacy markdown parser, which expects a [&str]
-    /// input with trailing [crate::constants::NEW_LINE].
-    ///
-    /// ## Newline Behavior
-    ///
-    /// - It adds a trailing [crate::constants::NEW_LINE] to the end of the `acc` in case
-    ///   there is more than one line in `lines` field of [AsStrSlice].
-    /// - For a single line, no trailing newline is added.
-    /// - Empty lines are preserved with newlines.
-    ///
-    /// ## Incompatibility with [str::lines()]
-    ///
-    /// **Important**: This behavior is intentionally different from [str::lines()].
-    /// When there are multiple lines and the last line is empty, this method will add
-    /// a trailing newline, whereas [str::lines()] would not.
-    ///
-    /// This behavior is what was used in the legacy parser which takes [&str] as input,
-    /// rather than [AsStrSlice].
-    pub fn write_to_byte_cache_compat(
-        &self,
-        size_hint: usize,
-        acc: &mut ParserByteCache,
-    ) {
-        // Clear the cache before writing to it. And size it correctly.
-        acc.clear();
-        let amount_to_reserve = {
-            // Increase the capacity of the acc if necessary by rounding up to the
-            // nearest PARSER_BYTE_CACHE_PAGE_SIZE.
-            let page_size = PARSER_BYTE_CACHE_PAGE_SIZE;
-            let current_capacity = acc.capacity();
-            if size_hint > current_capacity {
-                let bytes_needed: usize = size_hint - current_capacity;
-                // Round up bytes_needed to the nearest page_size.
-                let pages_needed = bytes_needed.div_ceil(page_size);
-                pages_needed * page_size
-            } else {
-                0
-            }
-        };
-        acc.reserve(amount_to_reserve);
-
-        if self.lines.is_empty() {
-            return;
-        }
-
-        // Use the Display implementation which already handles the correct newline
-        // behavior.
-        use std::fmt::Write as _;
-        _ = write!(acc, "{self}");
-    }
-
-    /// Create a new slice with a maximum length limit.
-    pub fn with_limit(
-        lines: &'a [GCString],
-        arg_start_line: impl Into<Index>,
-        arg_start_char: impl Into<Index>,
-        max_len: Option<Length>,
-    ) -> Self {
-        let start_line: Index = arg_start_line.into();
-        let start_char: Index = arg_start_char.into();
-        let total_size = Self::calculate_total_size(lines);
-        let current_taken = Self::calculate_current_taken(lines, start_line, start_char);
-
-        Self {
-            lines,
-            line_index: start_line,
-            char_index: start_char,
-            max_len,
-            total_size,
-            current_taken,
-        }
-    }
-
-    /// Extracts text content from the current position (`line_index`, `char_index`) to
-    /// the end of the line (optionally limited by `max_len`).
-    ///
-    /// ⚠️ **Character-Based Extraction**: This method extracts content starting from the
-    /// current **character position** (not byte position) to the end of the line.
-    /// This is safe for Unicode/UTF-8 text and will never split multi-byte characters.
-    ///
-    /// Only use this over [Self::extract_to_slice_end()] if you need to extract the
-    /// remaining text in the current line (but not the entire slice).
-    ///
-    /// It handles various edge cases like:
-    /// - Being at the end of a line.
-    /// - Length limitations.
-    /// - Lines with embedded newline characters.
-    /// - Fallback to empty string for invalid positions.
-    ///
-    /// Returns a string reference to the slice content that is guaranteed to contain
-    /// valid UTF-8.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use r3bl_tui::{GCString, AsStrSlice};
-    /// # use nom::Input;
-    /// let lines = &[GCString::new("😀hello world"), GCString::new("Second line")];
-    /// let slice = AsStrSlice::from(lines);
-    ///
-    /// // Extract from beginning of first line.
-    /// let content = slice.extract_to_line_end();
-    /// assert_eq!(content, "😀hello world");
-    ///
-    /// // Extract with character position offset (safe for Unicode).
-    /// let slice_offset = slice.take_from(1); // Start after emoji character
-    /// assert_eq!(slice_offset.extract_to_line_end(), "hello world");
-    /// ```
-    ///
-    /// # Edge Cases
-    ///
-    /// - **Empty lines**: Returns empty string for empty lines
-    /// - **Out of bounds**: Returns empty string when `line_index >= lines.len()`
-    /// - **Character index beyond line**: Clamps `char_index` to line length
-    /// - **Zero max_len**: When `max_len` is `Some(0)`, returns empty string
-    /// - **Embedded newlines**: Don't do any special handling or processing of
-    ///   [crate::constants::NEW_LINE] chars inside the current line.
-    pub fn extract_to_line_end(&self) -> &'a str {
-        // Early returns for edge cases.
-        {
-            if self.lines.is_empty() {
-                return "";
-            }
-
-            bounds_check!(self.line_index, self.lines.len(), {
-                return "";
-            });
-
-            if let Some(max_len) = self.max_len {
-                if max_len == len(0) {
-                    return "";
-                }
-            }
-        }
-
-        // Early return if current_line does not exist.
-        let Some(current_line) = self.lines.get(self.line_index.as_usize()) else {
-            return "";
-        };
-
-        let current_line = current_line.as_ref();
-
-        // ⚠️ CRITICAL: Convert character index to byte index for safe slicing
-        // char_index represents CHARACTER position, but we need BYTE position for slicing
-        let char_position = self.char_index.as_usize();
-
-        // Convert character position to byte position
-        let safe_start_byte_index = if char_position == 0 {
-            0
-        } else {
-            // Find the byte position of the char_position-th character
-            current_line
-                .char_indices()
-                .nth(char_position)
-                .map(|(byte_idx, _)| byte_idx)
-                .unwrap_or(current_line.len()) // If beyond end, use end of string
-        };
-
-        // If we're past the end of the line, return empty.
-        if safe_start_byte_index >= current_line.len() {
-            return "";
-        }
-
-        let eol = current_line.len();
-        let safe_end_byte_index = match self.max_len {
-            None => eol,
-            Some(max_len) => {
-                // Convert max_len (character count) to byte position
-                let max_chars = char_position + max_len.as_usize();
-                current_line
-                    .char_indices()
-                    .nth(max_chars)
-                    .map(|(byte_idx, _)| byte_idx)
-                    .unwrap_or(eol) // If beyond end, use end of string
-            }
-        };
-
-        &current_line[safe_start_byte_index..safe_end_byte_index]
-    }
-
-    /// Creates a new `AsStrSlice` with `max_len` set to the length of content that
-    /// `extract_to_line_end()` would return. This effectively limits the slice to
-    /// only include the characters from the current position to the end of the current
-    /// line.
-    ///
-    /// This is useful when you want to create a slice that represents only the remaining
-    /// content in the current line, which can then be used with other methods while
-    /// maintaining the character-based limitation.
-    ///
-    /// # Returns
-    /// A new `AsStrSlice` with the same position but with `max_len` set to the character
-    /// count of the content from current position to end of line.
-    ///
-    /// # Examples
-    /// ```
-    /// # use r3bl_tui::{GCString, AsStrSlice};
-    /// # use nom::Input;
-    /// let lines = &[GCString::new("hello world"), GCString::new("second line")];
-    /// let slice = AsStrSlice::from(lines);
-    ///
-    /// // Get slice limited to current line content
-    /// let line_limited = slice.limit_to_line_end();
-    /// assert_eq!(line_limited.extract_to_line_end(), "hello world");
-    ///
-    /// // After taking some characters, limit to remaining line content
-    /// let advanced = slice.take_from(6); // Start from "world"
-    /// let limited = advanced.limit_to_line_end();
-    /// assert_eq!(limited.extract_to_line_end(), "world");
-    /// ```
-    pub fn limit_to_line_end(&self) -> Self {
-        let line = self.extract_to_line_end();
-        let line_char_count = line.len_chars().as_usize();
-        self.take(line_char_count)
-    }
-
-    /// Extracts text content from the current position (`line_index`, `char_index`) to
-    /// the end of the slice, respecting the `max_len` limit. It allocates for multiline
-    /// `lines`, but not for single line content.
-    ///
-    /// This is used mostly for tests. Be aware (in the tests) that this method
-    /// adds an extra [crate::constants::NEW_LINE] at the end of the content if there are
-    /// multiple lines in the slice (to mimic the opposite behavior of [str::lines()],
-    /// which strips trailing new line if it exists).
-    ///
-    /// ## Allocation Behavior
-    ///
-    /// For multiline content this will allocate, since there is no contiguous chunk of
-    /// memory that has `\n` in them, since these new lines are generated
-    /// synthetically when iterating this struct. Thus it is impossible to take
-    /// chunks from [Self::lines] and then "join" them with `\n` in between lines, WITHOUT
-    /// allocating.
-    ///
-    /// In the case there is only one line, this method will NOT allocate. This is why
-    /// [InlineStringCow] is used. If you are sure that you will always have a single
-    /// line, you can use [Self::extract_to_line_end()] instead, which does not
-    /// allocate.
-    ///
-    /// For multiline content this will allocate, since there is no contiguous chunk of
-    /// memory that has `\n` in them, since these new lines are generated
-    /// synthetically when iterating this struct. Thus it is impossible to take
-    /// chunks from [Self::lines] and then "join" them with `\n` in between lines, WITHOUT
-    /// allocating.
-    ///
-    /// In the case there is only one line, this method will NOT allocate. This is why
-    /// [InlineStringCow] is used.
-    ///
-    /// This method behaves similarly to the [Display] trait implementation but respects
-    /// the current position (`line_index`, `char_index`) and `max_len` limit.
-    pub fn extract_to_slice_end(&self) -> InlineStringCow<'a> {
-        // Early return for invalid line_index (it has gone beyond the available lines in
-        // the slice).
-        bounds_check!(self.line_index, self.lines.len(), {
-            return InlineStringCow::Borrowed("");
-        });
-
-        // For single line case, we can potentially return borrowed content.
-        if self.lines.len() == 1 {
-            let current_line = &self.lines[0].string;
-            let current_line: &str = current_line.as_ref();
-
-            // Check if we're already at the end.
-            // ⚠️ CRITICAL: char_index represents CHARACTER position, use chars().count()
-            let line_char_count = current_line.len_chars();
-            bounds_check!(self.char_index, line_char_count, {
-                return InlineStringCow::Borrowed("");
-            });
-
-            // ⚠️ **Unicode check**
-            // Get the start index, ensuring it's at a valid char boundary.
-            let start_col_index = self.char_index.as_usize();
-            if !current_line.is_char_boundary(start_col_index) {
-                // If not at a valid boundary, use a safe approach: collect chars and
-                // rejoin.
-                let mut acc = InlineString::new();
-                for ch in current_line.chars().skip(start_col_index) {
-                    acc.push(ch);
-                }
-                return InlineStringCow::Owned(acc);
-            }
-
-            let eol = current_line.len();
-            let end_col_index = match self.max_len {
-                None => eol,
-                Some(max_len) => {
-                    let limit = start_col_index + max_len.as_usize();
-                    (eol).min(limit)
-                }
-            };
-
-            // ⚠️ **Unicode check**
-            // Ensure the end index is also at a valid char boundary.
-            if !current_line.is_char_boundary(end_col_index) {
-                // If not at a valid boundary, use a safe approach: collect chars and
-                // rejoin. This approach accumulates the chars into a String and not
-                // InlineString.
-                let mut acc = InlineString::new();
-                for ch in current_line
-                    .chars()
-                    .skip(start_col_index)
-                    .take(end_col_index - start_col_index)
-                {
-                    acc.push(ch);
-                }
-                return InlineStringCow::Owned(acc);
-            }
-
-            return InlineStringCow::Borrowed(
-                &current_line[start_col_index..end_col_index],
-            );
-        }
-
-        // Multi-line case: need to allocate and use synthetic newlines.
-        let mut acc = InlineString::new();
-        let mut self_clone = self.clone();
-
-        while let Some(ch) = self_clone.current_char() {
-            acc.push(ch);
-            self_clone.advance();
-        }
-
-        if acc.is_empty() {
-            InlineStringCow::Borrowed("")
-        } else {
-            InlineStringCow::Owned(acc)
-        }
-    }
-
-    /// Get the current character without materializing the full string.
-    pub fn current_char(&self) -> Option<char> {
-        use synthetic_new_line_for_current_char::{determine_position_state,
-                                                  get_char_at_position,
-                                                  get_synthetic_newline_char,
-                                                  PositionState};
-
-        // Check if we've hit the max_len limit
-        if let Some(max_len) = self.max_len {
-            if max_len == len(0) {
-                return None;
-            }
-        }
-
-        // Early return for empty lines
-        if self.lines.is_empty() {
-            return None;
-        }
-
-        // Early return for invalid line_index (it has gone beyond the available lines in
-        // the slice).
-        if self.line_index.check_overflows(len(self.lines.len()))
-            == BoundsStatus::Overflowed
-        {
-            return None;
-        }
-
-        // Determine position state relative to the current line.
-        let current_line = &self.lines[self.line_index.as_usize()].string;
-        let position_state = determine_position_state(self, current_line);
-        match position_state {
-            PositionState::WithinLineContent => get_char_at_position(self, current_line),
-            PositionState::AtEndOfLine => get_synthetic_newline_char(self),
-            PositionState::PastEndOfLine => None,
-        }
-    }
-
-    /// Advance position by one character.
-    pub fn advance(&mut self) {
-        use synthetic_new_line_for_current_char::{determine_position_state,
-                                                  PositionState};
-
-        // Return early if the line index exceeds the available lines.
-        bounds_check!(self.line_index, self.lines.len(), {
-            return;
-        });
-
-        let current_line = &self.lines[self.line_index.as_usize()].string;
-
-        // Determine position state first to check if we're at end of line
-        let position_state = determine_position_state(self, current_line);
-
-        // Check if we've hit the max_len limit.
-        if let Some(max_len) = self.max_len {
-            if max_len == len(0) {
-                // If we're at the end of a line and have a next line, we should advance
-                if matches!(position_state, PositionState::AtEndOfLine)
-                    && self.line_index.as_usize() + 1 < self.lines.len()
-                {
-                    self.line_index += idx(1);
-                    self.char_index = idx(0);
-                    return;
-                } else {
-                    return;
-                }
-            } else {
-                // Decrement max_len as we advance.
-                self.max_len = Some(max_len - len(1));
-            }
-        }
-        match position_state {
-            PositionState::WithinLineContent => {
-                // Move to next character within the line.
-                // ⚠️ CRITICAL: char_index represents CHARACTER position, not byte
-                // position Simply increment by 1 to move to the next
-                // character
-                self.char_index += idx(1);
-                self.current_taken += len(1);
-            }
-
-            PositionState::AtEndOfLine => {
-                // We're at the end of the line - handle synthetic newlines.
-                if self.line_index.as_usize() < self.lines.len() - 1 {
-                    // There are more lines, advance past synthetic newline to next line.
-                    self.line_index += idx(1);
-                    self.char_index = idx(0);
-                    self.current_taken += len(1);
-                } else if self.lines.len() > 1 {
-                    // We're at the last line of multiple lines, advance past trailing
-                    // newline.
-                    self.char_index += idx(1); // Move past the synthetic trailing newline.
-                    self.current_taken += len(1);
-                }
-                // For single line, don't advance further.
-            }
-
-            PositionState::PastEndOfLine => {
-                // If we're past the end, don't advance further.
-                // This is a no-op case.
-            }
-        }
-    }
-
-    /// Get remaining length without materializing string.
-    fn remaining_len(&self) -> Length {
-        use synthetic_new_line_for_current_char::{determine_document_state,
-                                                  determine_position_state,
-                                                  DocumentState,
-                                                  PositionState};
-
-        // Early return for invalid line_index (it has gone beyond the available lines in
-        // the slice).
-        bounds_check!(self.line_index, self.lines.len(), {
-            return len(0);
-        });
-
-        // Early return for empty lines.
-        if self.lines.is_empty() {
-            return len(0);
-        }
-
-        // Determine document state
-        let document_state = determine_document_state(self.lines.len());
-
-        // For single line, no trailing newline. Return remaining chars in that line.
-        if let DocumentState::SingleLine = document_state {
-            let current_line = &self.lines[self.line_index.as_usize()].string;
-            let current_line: &str = current_line.as_ref();
-            let line_char_count = current_line.len_chars();
-            let chars_left_in_line =
-                match self.char_index.check_overflows(len(line_char_count)) {
-                    BoundsStatus::Overflowed => len(0),
-                    _ => line_char_count - len(self.char_index.as_usize()),
-                };
-
-            return match self.max_len {
-                None => len(chars_left_in_line),
-                Some(max_len) => len(chars_left_in_line.min(max_len)),
-            };
-        }
-
-        // Multiple lines case.
-        let mut total = 0;
-
-        // Count remaining chars in current line.
-        let current_line = &self.lines[self.line_index.as_usize()].string;
-        let current_line: &str = current_line.as_ref();
-        let position_state = determine_position_state(self, current_line);
-
-        if let PositionState::WithinLineContent = position_state {
-            let line_char_count = current_line.len_chars();
-            total += line_char_count.as_usize() - self.char_index.as_usize();
-        }
-
-        // Add synthetic newline after current line (always for multiple lines).
-        if position_state != PositionState::PastEndOfLine {
-            total += 1;
-        }
-
-        // Add all subsequent lines plus their synthetic newlines.
-        total += self
-            .lines
-            .iter()
-            // Skip the current line.
-            .skip(self.line_index.as_usize() + 1)
-            // Each subsequent line gets content + trailing newline.
-            .map(|line| AsRef::<str>::as_ref(&line.string).len_chars().as_usize() + 1)
-            .sum::<usize>();
-
-        // Apply max_len limit if set.
-        match self.max_len {
-            None => len(total),
-            Some(max_len) => len(total.min(max_len.as_usize())),
-        }
-    }
-
-    /// Calculate the total size of all lines including synthetic newlines.
-    /// For multiple lines, includes a trailing newline after the last line
-    /// to match write_to_byte_cache_compat() behavior.
-    fn calculate_total_size(lines: &[GCString]) -> Length {
-        use synthetic_new_line_for_current_char::{determine_document_state,
-                                                  DocumentState};
-
-        // Early return for empty lines.
-        if lines.is_empty() {
-            return len(0);
-        }
-
-        // Determine document state
-        let document_state = determine_document_state(lines.len());
-
-        // For single line, no trailing newline.
-        if let DocumentState::SingleLine = document_state {
-            // Single line gets no trailing newline.
-            return AsRef::<str>::as_ref(&lines[0].string).len_chars();
-        }
-
-        let mut total = 0;
-        for line in lines {
-            total += AsRef::<str>::as_ref(&line.string).len_chars().as_usize();
-        }
-
-        // For multiple lines:
-        // - Add synthetic newlines between lines (len - 1)
-        // - Add trailing newline after last line (+1)
-        total += lines.len(); // This gives us (len - 1) + 1 = len
-
-        len(total)
-    }
-
-    /// Calculate how many characters have been consumed up to the current position.
-    fn calculate_current_taken(
-        lines: &[GCString],
-        arg_line_index: impl Into<Index>,
-        arg_char_index: impl Into<Index>,
-    ) -> Length {
-        use synthetic_new_line_for_current_char::{determine_document_state,
-                                                  determine_line_location,
-                                                  determine_position_state,
-                                                  DocumentState,
-                                                  LineLocationInDocument,
-                                                  PositionState};
-
-        let line_index: Index = arg_line_index.into();
-        let char_index: Index = arg_char_index.into();
-
-        bounds_check!(line_index, lines.len(), {
-            return len(0);
-        });
-
-        let mut taken = 0;
-
-        // Add all complete lines before current line (at line_index).
-        for i in 0..line_index.as_usize() {
-            let line: &str = lines[i].string.as_ref();
-            taken += line.len_chars().as_usize();
-            // For multiple lines, add synthetic newline after each line.
-            if lines.len() > 1 {
-                taken += 1;
-            }
-        }
-
-        // If there aren't any more lines left after current line (at line_index) then
-        // return the total taken so far.
-        bounds_check!(line_index, lines.len(), {
-            return len(taken);
-        });
-
-        // Add characters consumed in current line (at line_index).
-        let current_line = &lines[line_index.as_usize()].string;
-        let current_line: &str = current_line.as_ref();
-        let line_char_count = current_line.len_chars();
-        taken += char_index.as_usize().min(line_char_count.as_usize());
-
-        // Create a temporary AsStrSlice to use with determine_position_state
-        let temp_slice = AsStrSlice {
-            lines,
-            line_index,
-            char_index,
-            max_len: None,
-            total_size: len(0), // Not used for position state determination
-            current_taken: len(0), // Not used for position state determination
-        };
-
-        // Determine states using the module functions
-        let position_state = determine_position_state(&temp_slice, current_line);
-        let document_state = determine_document_state(lines.len());
-        let line_location = determine_line_location(line_index, len(lines.len()));
-
-        // Clear decision matrix for when to add synthetic newlines
-        match (position_state, document_state, line_location) {
-            // At end of line in a multi-line document
-            (
-                PositionState::AtEndOfLine,
-                DocumentState::MultipleLines,
-                LineLocationInDocument::HasMoreLinesAfter,
-            ) => {
-                taken += 1; // Add synthetic newline between lines.
-            }
-
-            // At end of last line in a multi-line document
-            (
-                PositionState::AtEndOfLine,
-                DocumentState::MultipleLines,
-                LineLocationInDocument::LastLine,
-            ) => {
-                taken += 1; // Add trailing newline after last line.
-            }
-
-            // At end of line in a single-line document
-            (PositionState::AtEndOfLine, DocumentState::SingleLine, _) => {
-                // No synthetic newline for single lines.
-            }
-
-            // Within line content or past end - no synthetic newlines
-            (PositionState::WithinLineContent, _, _)
-            | (PositionState::PastEndOfLine, _, _) => {
-                // No synthetic newline to add.
-            }
-        }
-
-        len(taken)
-    }
-}
+            NErr,
+            NError,
+            NErrorKind};
 
 impl<'a> Input for AsStrSlice<'a> {
     type Item = char;
     type Iter = StringChars<'a>;
     type IterIndices = StringCharIndices<'a>;
-
-    /// Returns an iterator over the characters in the slice with their indices.
-    fn iter_indices(&self) -> Self::IterIndices { StringCharIndices::new(self.clone()) }
-
-    /// Returns an iterator over the characters in the slice.
-    fn iter_elements(&self) -> Self::Iter { StringChars::new(self.clone()) }
-
-    fn position<P>(&self, predicate: P) -> Option<usize>
-    where
-        P: Fn(Self::Item) -> bool,
-    {
-        let mut pos = 0;
-        let mut current = self.clone();
-
-        while let Some(ch) = current.current_char() {
-            if predicate(ch) {
-                return Some(pos);
-            }
-            current.advance();
-            pos += 1;
-        }
-
-        None
-    }
-
-    fn slice_index(&self, count: usize) -> Result<usize, nom::Needed> {
-        let remaining = self.remaining_len().as_usize();
-        if count <= remaining {
-            Ok(count)
-        } else {
-            Err(nom::Needed::new(count - remaining))
-        }
-    }
 
     fn input_len(&self) -> usize { self.remaining_len().as_usize() }
 
@@ -1667,6 +132,39 @@ impl<'a> Input for AsStrSlice<'a> {
         let taken = self.take(count);
         let remaining = self.take_from(count);
         (taken, remaining)
+    }
+
+    fn position<P>(&self, predicate: P) -> Option<usize>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        let mut pos = 0;
+        let mut current = self.clone();
+
+        while let Some(ch) = current.current_char() {
+            if predicate(ch) {
+                return Some(pos);
+            }
+            current.advance();
+            pos += 1;
+        }
+
+        None
+    }
+
+    /// Returns an iterator over the characters in the slice.
+    fn iter_elements(&self) -> Self::Iter { StringChars::new(self.clone()) }
+
+    /// Returns an iterator over the characters in the slice with their indices.
+    fn iter_indices(&self) -> Self::IterIndices { StringCharIndices::new(self.clone()) }
+
+    fn slice_index(&self, count: usize) -> Result<usize, nom::Needed> {
+        let remaining = self.remaining_len().as_usize();
+        if count <= remaining {
+            Ok(count)
+        } else {
+            Err(nom::Needed::new(count - remaining))
+        }
     }
 }
 
@@ -2034,542 +532,391 @@ impl<'a> Iterator for StringCharIndices<'a> {
     }
 }
 
-#[cfg(test)]
-mod tests_limit_to_line_end {
-    use super::*;
-    use crate::{assert_eq2, len};
+/// Represents the overall input state for parsing
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum InputState {
+    /// Input has been exhausted - no more content to parse
+    AtEndOfInput,
+    /// Input still has content available for parsing
+    HasMoreContent,
+}
 
-    #[test]
-    fn test_limit_to_line_end_basic() {
-        // Single line - limit to entire line
-        {
-            as_str_slice_test_case!(slice, "hello world");
-            let limited = slice.limit_to_line_end();
+/// Represents the advancement state after a parser operation
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum AdvancementState {
+    /// Parser advanced to a new line (ideal case)
+    AdvancedToNewLine,
+    /// Parser made progress within the current line
+    MadeCharProgress,
+    /// Parser successfully handled an empty line
+    HandledEmptyLine,
+    /// Parser made no progress at all
+    NoProgress,
+}
 
-            assert_eq2!(limited.extract_to_line_end(), "hello world");
-            assert_eq2!(limited.max_len, Some(len(11))); // "hello world" = 11 chars
+/// Captures the initial position state before parsing
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct InitialParsePosition {
+    pub line_index: CharacterIndex,
+    pub char_index: CharacterIndex,
+    pub current_taken: CharacterLength,
+}
 
-            // Should be equivalent to original extract_to_line_end()
-            assert_eq2!(limited.extract_to_line_end(), slice.extract_to_line_end());
+impl<'a> AsStrSlice<'a> {
+    /// Ensures parser advancement with fail-safe line progression for `AsStrSlice` input.
+    ///
+    /// This method guarantees that parsing always makes progress by advancing to the next
+    /// line when a parser succeeds but doesn't naturally advance lines. It prevents
+    /// infinite loops in parsing by implementing a fail-safe advancement mechanism.
+    ///
+    /// # How it works
+    ///
+    /// 1. **Input validation**: Checks if input is exhausted before attempting to parse
+    /// 2. **Parser application**: Applies the provided parser to a clone of the current
+    ///    input
+    /// 3. **Advancement analysis**: Determines what type of advancement occurred:
+    ///    - `AdvancedToNewLine`: Parser naturally advanced to next line (ideal case)
+    ///    - `MadeCharProgress`: Parser advanced within current line
+    ///    - `HandledEmptyLine`: Parser handled an empty/whitespace-only line
+    ///    - `NoProgress`: Parser made no advancement at all
+    /// 4. **Fail-safe handling**: For cases where parser didn't advance lines, manually
+    ///    advances to the beginning of the next line to ensure progress
+    ///
+    /// # State Management
+    ///
+    /// Uses clean enum-based state tracking:
+    /// - `InputState`: Distinguishes between exhausted input and available content
+    /// - `AdvancementState`: Categorizes different types of parser advancement
+    /// - `InitialParsePosition`: Captures position before parsing for comparison
+    ///
+    /// # Error Handling
+    ///
+    /// - Returns `Eof` error when input is exhausted
+    /// - Returns `Verify` error when parser makes no progress (prevents infinite loops)
+    /// - Propagates parser-specific errors unchanged
+    ///
+    /// # Usage Pattern
+    ///
+    /// This method is designed to be called within closure-based parser alternatives,
+    /// typically used with [`nom::branch::alt()`]:
+    ///
+    /// ```
+    /// # use r3bl_tui::*;
+    /// # use nom::{branch::alt, combinator::map, IResult};
+    /// # use nom::Parser as _;
+    /// #
+    /// # fn some_parser_function<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+    /// #     nom::bytes::complete::tag("test")(input)
+    /// # }
+    /// # fn another_parser_function<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+    /// #     nom::bytes::complete::tag("other")(input)
+    /// # }
+    /// # fn transform_output(s: AsStrSlice<'_>) -> String { s.extract_to_line_end().to_string() }
+    /// # fn another_transform(s: AsStrSlice<'_>) -> String { format!("transformed: {}", s.extract_to_line_end()) }
+    ///
+    /// // Example usage with a single parser
+    /// fn example_parser(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, String> {
+    ///     input.ensure_advance_with_parser(&mut map(
+    ///         some_parser_function,
+    ///         transform_output,
+    ///     ))
+    /// }
+    ///
+    /// // Helper functions for alt() usage (avoids closure lifetime issues)
+    /// fn parser_branch_1(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, String> {
+    ///     input.ensure_advance_with_parser(&mut map(
+    ///         some_parser_function,
+    ///         transform_output,
+    ///     ))
+    /// }
+    ///
+    /// fn parser_branch_2(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, String> {
+    ///     input.ensure_advance_with_parser(&mut map(
+    ///         another_parser_function,
+    ///         another_transform,
+    ///     ))
+    /// }
+    ///
+    /// // Example usage in alt() chain
+    /// fn parse_alternatives(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, String> {
+    ///     let mut parser = alt([parser_branch_1, parser_branch_2]);
+    ///     parser.parse(input)
+    /// }
+    /// ```
+    ///
+    /// # Parameters
+    ///
+    /// * `parser` - A mutable reference to a nom parser that operates on `AsStrSlice`
+    ///   input. The mutable reference is required by nom's `Parser` trait implementation.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok((remainder, output))` - Parser succeeded with guaranteed line advancement
+    /// * `Err(nom::Err)` - Parser failed or input was exhausted
+    ///
+    /// # See Also
+    ///
+    /// * `determine_input_state` - Input exhaustion detection
+    /// * `handle_parser_advancement` - Core advancement logic
+    /// * [`crate::ensure_advance_fail_safe_alt`] - Legacy wrapper function for backward
+    ///   compatibility (deprecated in favor of this method)
+    pub fn ensure_advance_with_parser<F, O>(
+        &self,
+        parser: &mut F,
+    ) -> IResult<AsStrSlice<'a>, O>
+    where
+        F: Parser<AsStrSlice<'a>, Output = O, Error = nom::error::Error<AsStrSlice<'a>>>,
+    {
+        // Check input state before attempting to parse.
+        let input_state = self.determine_input_state();
+        if let InputState::AtEndOfInput = input_state {
+            return Err(NErr::Error(NError::new(self.clone(), NErrorKind::Eof)));
         }
 
-        // Multiple lines - limit to first line only
-        {
-            as_str_slice_test_case!(slice, "first line", "second line", "third line");
-            let limited = slice.limit_to_line_end();
+        // Capture initial state and apply parser.
+        let initial_position = self.capture_initial_position();
+        let result = parser.parse(self.clone());
 
-            assert_eq2!(limited.extract_to_line_end(), "first line");
-            assert_eq2!(limited.max_len, Some(len(10))); // "first line" = 10 chars
-
-            // Should be equivalent to original extract_to_line_end()
-            assert_eq2!(limited.extract_to_line_end(), slice.extract_to_line_end());
+        match result {
+            Ok((remainder, output)) => {
+                let advancement_result =
+                    self.handle_parser_advancement(initial_position, remainder)?;
+                Ok((advancement_result, output))
+            }
+            Err(e) => Err(e),
         }
     }
 
-    #[test]
-    fn test_limit_to_line_end_with_position_offset() {
-        // Test with character offset in the middle of a line
+    /// Determines if input has been exhausted.
+    fn determine_input_state(&self) -> InputState {
+        if self.line_index >= self.lines.len().into()
+            || self.current_taken >= self.total_size
         {
-            as_str_slice_test_case!(slice, "hello world", "second line");
-            let advanced = slice.take_from(6); // Start from "world"
-            let limited = advanced.limit_to_line_end();
+            InputState::AtEndOfInput
+        } else {
+            InputState::HasMoreContent
+        }
+    }
 
-            assert_eq2!(limited.extract_to_line_end(), "world");
-            assert_eq2!(limited.max_len, Some(len(5))); // "world" = 5 chars
+    /// Captures the current position state before parsing.
+    fn capture_initial_position(&self) -> InitialParsePosition {
+        InitialParsePosition {
+            line_index: self.line_index,
+            char_index: self.char_index,
+            current_taken: self.current_taken,
+        }
+    }
 
-            // Should be equivalent to original extract_to_line_end()
-            assert_eq2!(
-                limited.extract_to_line_end(),
-                advanced.extract_to_line_end()
+    /// Determines what type of advancement occurred after parsing.
+    fn determine_advancement_state(
+        &self,
+        initial_position: InitialParsePosition,
+        remainder: &AsStrSlice<'a>,
+    ) -> AdvancementState {
+        // Check if parser advanced to a new line (ideal case).
+        if remainder.line_index > initial_position.line_index {
+            return AdvancementState::AdvancedToNewLine;
+        }
+
+        // Check if parser made progress within the current line.
+        let made_char_progress = remainder.current_taken > initial_position.current_taken
+            || remainder.char_index > initial_position.char_index;
+
+        if made_char_progress {
+            return AdvancementState::MadeCharProgress;
+        }
+
+        // Check if we're dealing with an empty line.
+        let current_line = remainder
+            .lines
+            .get(remainder.line_index.as_usize())
+            .map(|line| line.as_ref())
+            .unwrap_or("");
+
+        if current_line.trim().is_empty() {
+            return AdvancementState::HandledEmptyLine;
+        }
+
+        AdvancementState::NoProgress
+    }
+
+    /// Handles the advancement logic based on parser results.
+    fn handle_parser_advancement(
+        &self,
+        initial_position: InitialParsePosition,
+        remainder: AsStrSlice<'a>,
+    ) -> Result<AsStrSlice<'a>, NErr<NError<AsStrSlice<'a>>>> {
+        let advancement_state =
+            self.determine_advancement_state(initial_position, &remainder);
+
+        match advancement_state {
+            AdvancementState::AdvancedToNewLine => {
+                // Parser already made proper line advancement.
+                Ok(remainder)
+            }
+            AdvancementState::MadeCharProgress | AdvancementState::HandledEmptyLine => {
+                // Need to manually advance to next line.
+                self.advance_to_next_line(remainder)
+            }
+            AdvancementState::NoProgress => {
+                // Check if we're at end of input.
+                if remainder.determine_input_state() == InputState::AtEndOfInput {
+                    Err(NErr::Error(NError::new(self.clone(), NErrorKind::Eof)))
+                } else {
+                    // No progress made - return error to break parsing loop.
+                    Err(NErr::Error(NError::new(self.clone(), NErrorKind::Verify)))
+                }
+            }
+        }
+    }
+
+    /// Advances the slice to the beginning of the next line.
+    fn advance_to_next_line(
+        &self,
+        mut remainder: AsStrSlice<'a>,
+    ) -> Result<AsStrSlice<'a>, NErr<NError<AsStrSlice<'a>>>> {
+        // Ensure we're within valid line bounds.
+        if remainder.line_index >= remainder.lines.len().into() {
+            return Err(NErr::Error(NError::new(self.clone(), NErrorKind::Eof)));
+        }
+
+        // Get current line length.
+        let current_line_len = remainder
+            .lines
+            .get(remainder.line_index.as_usize())
+            .map(|line| line.as_ref().chars().count())
+            .unwrap_or(0);
+
+        // Advance to end of current line if not already there.
+        if remainder.char_index.as_usize() < current_line_len {
+            let chars_to_advance = current_line_len - remainder.char_index.as_usize();
+            for _ in 0..chars_to_advance {
+                remainder.advance();
+            }
+        }
+
+        // Check if we can advance to the next line.
+        if remainder.line_index.as_usize() < remainder.lines.len() - 1 {
+            // Create a fresh AsStrSlice at the next line with no max_len constraint.
+            let next_line_index = remainder.line_index + crate::idx(1);
+            remainder = AsStrSlice::with_limit(
+                remainder.lines,
+                next_line_index,
+                crate::idx(0), // Start at beginning of next line.
+                None,          // Remove max_len constraint
             );
         }
 
-        // Test at the beginning of second line
-        {
-            as_str_slice_test_case!(slice, "first", "second line");
-            let advanced = slice.take_from(6); // Move to second line (5 chars + 1 newline)
-            let limited = advanced.limit_to_line_end();
-
-            assert_eq2!(limited.extract_to_line_end(), "second line");
-            assert_eq2!(limited.max_len, Some(len(11))); // "second line" = 11 chars
-
-            // Should be equivalent to advanced slice's extract_to_line_end()
-            assert_eq2!(
-                limited.extract_to_line_end(),
-                advanced.extract_to_line_end()
-            );
-        }
+        Ok(remainder)
     }
 
-    #[test]
-    fn test_limit_to_line_end_unicode() {
-        // Test with Unicode characters including emojis
-        {
-            as_str_slice_test_case!(slice, "😀hello 🌍world", "next line");
-            let limited = slice.limit_to_line_end();
-
-            assert_eq2!(limited.extract_to_line_end(), "😀hello 🌍world");
-            assert_eq2!(limited.max_len, Some(len(13))); // 😀 + hello + space + 🌍 +
-                                                         // world = 13 chars
-        }
-
-        // Test with Unicode and position offset
-        {
-            as_str_slice_test_case!(slice, "😀hello 🌍world");
-            let advanced = slice.take_from(1); // Start after emoji
-            let limited = advanced.limit_to_line_end();
-
-            assert_eq2!(limited.extract_to_line_end(), "hello 🌍world");
-            assert_eq2!(limited.max_len, Some(len(12))); // hello + space + 🌍 + world =
-                                                         // 12 chars
-        }
+    /// Helper method to check if the current line is empty or whitespace-only.
+    pub fn is_current_line_empty_or_whitespace(&self) -> bool {
+        self.lines
+            .get(self.line_index.as_usize())
+            .map(|line| line.as_ref().trim().is_empty())
+            .unwrap_or(true)
     }
 
-    #[test]
-    fn test_limit_to_line_end_edge_cases() {
-        // Empty line
-        {
-            as_str_slice_test_case!(slice, "");
-            let limited = slice.limit_to_line_end();
-
-            assert_eq2!(limited.extract_to_line_end(), "");
-            assert_eq2!(limited.max_len, Some(len(0)));
-        }
-
-        // Empty line in the middle
-        {
-            as_str_slice_test_case!(slice, "first", "", "third");
-            let advanced = slice.take_from(6); // Move to empty line (5 chars + 1 newline)
-            let limited = advanced.limit_to_line_end();
-
-            assert_eq2!(limited.extract_to_line_end(), "");
-            assert_eq2!(limited.max_len, Some(len(0)));
-        }
-
-        // At end of line
-        {
-            as_str_slice_test_case!(slice, "hello");
-            let advanced = slice.take_from(5); // Move to end of line
-            let limited = advanced.limit_to_line_end();
-
-            assert_eq2!(limited.extract_to_line_end(), "");
-            assert_eq2!(limited.max_len, Some(len(0)));
-        }
-
-        // Beyond end of line (should be handled gracefully)
-        {
-            as_str_slice_test_case!(slice, "hello");
-            let advanced = slice.take_from(10); // Beyond end
-            let limited = advanced.limit_to_line_end();
-
-            assert_eq2!(limited.extract_to_line_end(), "");
-            assert_eq2!(limited.max_len, Some(len(0)));
-        }
-    }
-
-    #[test]
-    fn test_limit_to_line_end_with_existing_max_len() {
-        // Test when slice already has a max_len that's larger than line content
-        {
-            as_str_slice_test_case!(slice, limit: 20, "hello world");
-            let limited = slice.limit_to_line_end();
-
-            assert_eq2!(limited.extract_to_line_end(), "hello world");
-            assert_eq2!(limited.max_len, Some(len(11))); // Should be line length, not
-                                                         // original max_len
-        }
-
-        // Test when slice already has a max_len that's smaller than line content
-        {
-            as_str_slice_test_case!(slice, limit: 5, "hello world");
-            let limited = slice.limit_to_line_end();
-
-            assert_eq2!(limited.extract_to_line_end(), "hello");
-            assert_eq2!(limited.max_len, Some(len(5))); // Should be actual extracted
-                                                        // length
-        }
-    }
-
-    #[test]
-    fn test_limit_to_line_end_preserves_other_fields() {
-        // Verify that other fields are preserved correctly
-        {
-            as_str_slice_test_case!(slice, "first line", "second line");
-            let advanced = slice.take_from(3); // Move to position 3 in first line
-            let limited = advanced.limit_to_line_end();
-
-            // Check that position fields are preserved
-            assert_eq2!(limited.lines, advanced.lines);
-            assert_eq2!(limited.line_index, advanced.line_index);
-            assert_eq2!(limited.char_index, advanced.char_index);
-            assert_eq2!(limited.total_size, advanced.total_size);
-            assert_eq2!(limited.current_taken, advanced.current_taken);
-
-            // Only max_len should be different
-            assert_eq2!(limited.max_len, Some(len(7))); // "st line" = 7 chars
-        }
-    }
-
-    #[test]
-    fn test_limit_to_line_end_equivalence_with_take() {
-        // Verify that limit_to_line_end() produces same result as manual take()
-        {
-            as_str_slice_test_case!(slice, "hello world", "second line");
-
-            let line_content = slice.extract_to_line_end();
-            let char_count = line_content.chars().count();
-            let manual_limited = slice.take(char_count);
-            let auto_limited = slice.limit_to_line_end();
-
-            assert_eq2!(
-                auto_limited.extract_to_line_end(),
-                manual_limited.extract_to_line_end()
-            );
-            assert_eq2!(auto_limited.max_len, manual_limited.max_len);
-        }
-
-        // Test with position offset
-        {
-            as_str_slice_test_case!(slice, "hello world", "second line");
-            let advanced = slice.take_from(6);
-
-            let line_content = advanced.extract_to_line_end();
-            let char_count = line_content.chars().count();
-            let manual_limited = advanced.take(char_count);
-            let auto_limited = advanced.limit_to_line_end();
-
-            assert_eq2!(
-                auto_limited.extract_to_line_end(),
-                manual_limited.extract_to_line_end()
-            );
-            assert_eq2!(auto_limited.max_len, manual_limited.max_len);
-        }
-    }
-
-    #[test]
-    fn test_limit_to_line_end_multiple_calls() {
-        // Test that calling limit_to_line_end() multiple times is idempotent
-        {
-            as_str_slice_test_case!(slice, "hello world");
-            let limited1 = slice.limit_to_line_end();
-            let limited2 = limited1.limit_to_line_end();
-
-            assert_eq2!(
-                limited1.extract_to_line_end(),
-                limited2.extract_to_line_end()
-            );
-            assert_eq2!(limited1.max_len, limited2.max_len);
-        }
+    /// Helper method to get the current line as a string reference.
+    pub fn get_current_line(&self) -> Option<&str> {
+        self.lines
+            .get(self.line_index.as_usize())
+            .map(|line| line.as_ref())
     }
 }
 
 #[cfg(test)]
-mod tests_trim_whitespace_chars_start_current_line {
+mod tests_ensure_advance_with_parser {
+    use nom::{bytes::complete::tag, IResult};
+
     use super::*;
-    use crate::assert_eq2;
+    use crate::{assert_eq2, GCString};
 
-    #[test]
-    fn test_no_whitespace_to_trim() {
-        as_str_slice_test_case!(slice, "hello world", "second line");
-        let whitespace_chars = [' ', '\t', '\n'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(0));
-        assert_eq2!(result.current_char(), Some('h'));
-        assert_eq2!(result.extract_to_line_end(), "hello world");
+    fn simple_parser(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, AsStrSlice<'_>> {
+        tag("test")(input)
     }
 
-    #[test]
-    fn test_trim_single_space() {
-        as_str_slice_test_case!(slice, " hello world", "second line");
-        let whitespace_chars = [' ', '\t', '\n'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(1));
-        assert_eq2!(result.current_char(), Some('h'));
-        assert_eq2!(result.extract_to_line_end(), "hello world");
-    }
-
-    #[test]
-    fn test_trim_multiple_spaces() {
-        as_str_slice_test_case!(slice, "   hello world", "second line");
-        let whitespace_chars = [' ', '\t', '\n'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(3));
-        assert_eq2!(result.current_char(), Some('h'));
-        assert_eq2!(result.extract_to_line_end(), "hello world");
-    }
-
-    #[test]
-    fn test_trim_mixed_whitespace() {
-        as_str_slice_test_case!(slice, " \t  hello world", "second line");
-        let whitespace_chars = [' ', '\t', '\n'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(4));
-        assert_eq2!(result.current_char(), Some('h'));
-        assert_eq2!(result.extract_to_line_end(), "hello world");
-    }
-
-    #[test]
-    fn test_trim_only_specific_whitespace_chars() {
-        as_str_slice_test_case!(slice, " \t\nhello world", "second line");
-        let whitespace_chars = [' ', '\t']; // Don't include '\n'
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(2)); // Should stop at '\n'
-        assert_eq2!(result.current_char(), Some('\n'));
-    }
-
-    #[test]
-    fn test_trim_entire_line_of_whitespace() {
-        as_str_slice_test_case!(slice, "   \t  ", "second line");
-        let whitespace_chars = [' ', '\t'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(6));
-        assert_eq2!(result.current_char(), Some('\n')); // At synthetic newline
-    }
-
-    #[test]
-    fn test_trim_with_unicode_content() {
-        as_str_slice_test_case!(slice, "  😀hello🌟world", "second line");
-        let whitespace_chars = [' ', '\t'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(2));
-        assert_eq2!(result.current_char(), Some('😀'));
-        assert_eq2!(result.extract_to_line_end(), "😀hello🌟world");
-    }
-
-    #[test]
-    fn test_trim_unicode_whitespace() {
-        // Test with Unicode whitespace characters
-        as_str_slice_test_case!(slice, "\u{2000}\u{2001}hello", "second line"); // en-space, em-space
-        let whitespace_chars = ['\u{2000}', '\u{2001}', ' ', '\t'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(2));
-        assert_eq2!(result.current_char(), Some('h'));
-        assert_eq2!(result.extract_to_line_end(), "hello");
-    }
-
-    #[test]
-    fn test_trim_with_max_len_limit() {
-        as_str_slice_test_case!(slice, limit: 10, "   hello world", "second line");
-        let whitespace_chars = [' ', '\t'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(3));
-        assert_eq2!(result.current_char(), Some('h'));
-        assert_eq2!(result.max_len, Some(len(7))); // Original 10 - 3 trimmed = 7
-    }
-
-    #[test]
-    fn test_trim_with_max_len_exhausted_by_whitespace() {
-        as_str_slice_test_case!(slice, limit: 3, "   hello world", "second line");
-        let whitespace_chars = [' ', '\t'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(3));
-        assert_eq2!(result.current_char(), None); // Max length reached
-        assert_eq2!(result.max_len, Some(len(0))); // All consumed
-    }
-
-    #[test]
-    fn test_trim_with_max_len_partial_whitespace() {
-        as_str_slice_test_case!(slice, limit: 3, "     hello world", "second line");
-        let whitespace_chars = [' ', '\t'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(3)); // Can only trim 3 due to max_len
-        assert_eq2!(result.current_char(), None); // Hit max_len limit
-        assert_eq2!(result.max_len, Some(len(0)));
-    }
-
-    #[test]
-    fn test_trim_starting_mid_line() {
-        as_str_slice_test_case!(slice_orig, "abc   def", "second line");
-        let slice = slice_orig.take_from(3); // Start at the spaces
-        let whitespace_chars = [' ', '\t'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(3));
-        assert_eq2!(result.current_char(), Some('d'));
-        assert_eq2!(result.extract_to_line_end(), "def");
-    }
-
-    #[test]
-    fn test_trim_empty_line() {
-        as_str_slice_test_case!(slice, "", "second line");
-        let whitespace_chars = [' ', '\t'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(0));
-        assert_eq2!(result.current_char(), Some('\n')); // At synthetic newline
-                                                        // immediately
-    }
-
-    #[test]
-    fn test_trim_single_line_input() {
-        as_str_slice_test_case!(slice, "  hello");
-        let whitespace_chars = [' ', '\t'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        assert_eq2!(chars_trimmed, len(2));
-        assert_eq2!(result.current_char(), Some('h'));
-        assert_eq2!(result.extract_to_line_end(), "hello");
-    }
-
-    #[test]
-    fn test_trim_doesnt_cross_line_boundaries() {
-        as_str_slice_test_case!(slice, "hello", "  world");
-        let slice = slice.take_from(5); // Position at synthetic newline after "hello"
-        let whitespace_chars = [' ', '\t', '\n'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        // Should advance past the synthetic newline and then trim spaces on the next line
-        assert_eq2!(chars_trimmed, len(3)); // Newline + 2 spaces
-        assert_eq2!(result.line_index, idx(1)); // Moved to second line
-        assert_eq2!(result.char_index, idx(2)); // After spaces
-    }
-
-    #[test]
-    fn test_trim_with_custom_whitespace_set() {
-        as_str_slice_test_case!(slice, ".,!hello world", "second line");
-        let custom_chars = ['.', ',', '!'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&custom_chars);
-
-        assert_eq2!(chars_trimmed, len(3));
-        assert_eq2!(result.current_char(), Some('h'));
-        assert_eq2!(result.extract_to_line_end(), "hello world");
-    }
-
-    #[test]
-    fn test_trim_no_matching_chars() {
-        as_str_slice_test_case!(slice, "hello world", "second line");
-        let custom_chars = ['.', ',', '!'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&custom_chars);
-
-        assert_eq2!(chars_trimmed, len(0));
-        assert_eq2!(result.current_char(), Some('h'));
-        assert_eq2!(result, slice); // Should be unchanged
-    }
-
-    #[test]
-    fn test_trim_position_consistency() {
-        as_str_slice_test_case!(slice, "   hello world", "second line");
-        let whitespace_chars = [' ', '\t'];
-
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
-
-        // Verify that the result is consistent with manual advancement
-        let mut manual_result = slice.clone();
-        for _ in 0..chars_trimmed.as_usize() {
-            manual_result.advance();
+    fn empty_line_parser(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, ()> {
+        if input.is_current_line_empty_or_whitespace() {
+            Ok((input, ()))
+        } else {
+            Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                nom::error::ErrorKind::Tag,
+            )))
         }
-
-        assert_eq2!(result.line_index, manual_result.line_index);
-        assert_eq2!(result.char_index, manual_result.char_index);
-        assert_eq2!(result.current_char(), manual_result.current_char());
     }
 
     #[test]
-    fn test_trim_with_very_long_whitespace() {
-        let long_whitespace = " ".repeat(100);
-        let line = format!("{long_whitespace}hello");
-        let line_1 = GCString::new(line);
-        let line_2 = GCString::new("second line");
-        let lines = vec![line_1, line_2];
-        let slice = AsStrSlice::from(&lines);
-        let whitespace_chars = [' ', '\t'];
+    fn test_parser_advances_to_new_line() {
+        let lines = [GCString::new("test"), GCString::new("next")];
+        let input = AsStrSlice::from(&lines);
 
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+        let result = input.ensure_advance_with_parser(&mut simple_parser);
+        assert!(result.is_ok());
 
-        assert_eq2!(chars_trimmed, len(100));
-        assert_eq2!(result.current_char(), Some('h'));
-        assert_eq2!(result.extract_to_line_end(), "hello");
+        let (remainder, _) = result.unwrap();
+        assert_eq2!(remainder.line_index, crate::idx(1));
+        assert_eq2!(remainder.char_index, crate::idx(0));
     }
 
     #[test]
-    fn test_trim_edge_case_at_line_end() {
-        as_str_slice_test_case!(slice, "hello   ", "second line");
-        let slice = slice.take_from(5); // Position at first space after "hello"
-        let whitespace_chars = [' ', '\t'];
+    fn test_parser_handles_empty_line() {
+        let lines = [GCString::new(""), GCString::new("next")];
+        let input = AsStrSlice::from(&lines);
 
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+        let result = input.ensure_advance_with_parser(&mut empty_line_parser);
+        assert!(result.is_ok());
 
-        assert_eq2!(chars_trimmed, len(3));
-        assert_eq2!(result.current_char(), Some('\n')); // At synthetic newline
+        let (remainder, _) = result.unwrap();
+        assert_eq2!(remainder.line_index, crate::idx(1));
     }
 
     #[test]
-    fn test_trim_preserves_current_taken_tracking() {
-        as_str_slice_test_case!(slice, "  hello world", "second line");
-        let original_taken = slice.current_taken;
-        let whitespace_chars = [' ', '\t'];
+    fn test_parser_at_end_of_input() {
+        let lines = [GCString::new("test")];
+        let mut input = AsStrSlice::from(&lines);
+        input.line_index = crate::idx(1); // Beyond available lines
 
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+        let result = input.ensure_advance_with_parser(&mut simple_parser);
+        assert!(result.is_err());
 
-        assert_eq2!(result.current_taken, original_taken + chars_trimmed);
+        if let Err(nom::Err::Error(error)) = result {
+            assert_eq2!(error.code, nom::error::ErrorKind::Eof);
+        }
     }
 
     #[test]
-    fn test_trim_with_zero_length_input() {
-        as_str_slice_test_case!(slice, limit: 0, "hello");
-        let whitespace_chars = [' ', '\t'];
+    fn test_determine_input_state() {
+        let lines = [GCString::new("test")];
+        let input = AsStrSlice::from(&lines);
 
-        let (chars_trimmed, result) =
-            slice.trim_whitespace_chars_start_current_line(&whitespace_chars);
+        assert_eq2!(input.determine_input_state(), InputState::HasMoreContent);
 
-        assert_eq2!(chars_trimmed, len(0));
-        assert_eq2!(result.current_char(), None);
-        assert_eq2!(result, slice); // Should be unchanged
+        let mut exhausted_input = input;
+        exhausted_input.line_index = crate::idx(1);
+        assert_eq2!(
+            exhausted_input.determine_input_state(),
+            InputState::AtEndOfInput
+        );
+    }
+
+    #[test]
+    fn test_capture_initial_position() {
+        let lines = [GCString::new("test")];
+        let input = AsStrSlice::from(&lines);
+
+        let position = input.capture_initial_position();
+        assert_eq2!(position.line_index, input.line_index);
+        assert_eq2!(position.char_index, input.char_index);
+        assert_eq2!(position.current_taken, input.current_taken);
     }
 }
 
 #[cfg(test)]
 mod tests_as_str_slice_test_case {
-    use crate::assert_eq2;
+    use crate::{as_str_slice_test_case, assert_eq2};
 
     #[test]
     fn test_as_str_slice_creation() {
@@ -2594,7 +941,7 @@ mod tests_as_str_slice_test_case {
 
 #[cfg(test)]
 mod tests_character_based_range_methods {
-    use crate::{assert_eq2, len};
+    use crate::{as_str_slice_test_case, assert_eq2, len};
 
     #[test]
     fn test_char_range() {
@@ -2904,7 +1251,7 @@ mod tests_character_based_range_methods {
 #[cfg(test)]
 mod tests_compat_with_unicode_grapheme_cluster_segment_boundary {
     use super::*;
-    use crate::assert_eq2;
+    use crate::{assert_eq2, CharLengthExt as _};
 
     const EMOJI_CHAR: char = '\u{1F600}'; // 😀
     const INPUT_RAW: &str = "a😀b😀c";
@@ -3045,191 +1392,13 @@ mod tests_compat_with_unicode_grapheme_cluster_segment_boundary {
     }
 }
 
-/// These tests ensure compatibility with how [AsStrSlice::write_to_byte_cache_compat()]
-/// works. And ensuring that the [AsStrSlice] methods that are used to implement the
-/// [Display] trait do in fact make it behave like a "virtual" array or slice of strings
-/// that matches the behavior of [AsStrSlice::write_to_byte_cache_compat()].
-///
-/// This breaks compatibility with [str::lines()] behavior, but matches the behavior of
-/// [AsStrSlice::write_to_byte_cache_compat()] which adds trailing newlines for multiple
-/// lines.
-#[cfg(test)]
-mod tests_write_to_byte_cache_compat_behavior {
-    use super::*;
-
-    #[test]
-    fn test_empty_string() {
-        // Empty lines behavior.
-        {
-            let lines: Vec<GCString> = vec![];
-            let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), "");
-            assert_eq!(slice.lines.len(), 0);
-        }
-    }
-
-    #[test]
-    fn test_single_char_no_newline() {
-        // Single line behavior - no trailing newline for single lines.
-        {
-            as_str_slice_test_case!(slice, "a");
-            assert_eq!(slice.to_inline_string(), "a");
-            assert_eq!(slice.lines.len(), 1);
-        }
-    }
-
-    #[test]
-    fn test_two_chars_with_trailing_newline() {
-        // Multiple lines behavior - adds trailing newline for multiple lines.
-        {
-            as_str_slice_test_case!(slice, "a", "b");
-            assert_eq!(slice.to_inline_string(), "a\nb\n"); // Trailing \n added
-            assert_eq!(slice.lines.len(), 2);
-        }
-    }
-
-    #[test]
-    fn test_three_chars_with_trailing_newline() {
-        // Multiple lines behavior - adds trailing newline for multiple lines.
-        {
-            as_str_slice_test_case!(slice, "a", "b", "c");
-            assert_eq!(slice.to_inline_string(), "a\nb\nc\n"); // Trailing \n added
-            assert_eq!(slice.lines.len(), 3);
-        }
-    }
-
-    #[test]
-    fn test_empty_lines_with_trailing_newline() {
-        // Empty lines are preserved with newlines, plus trailing newline.
-        {
-            as_str_slice_test_case!(slice, "", "a", "");
-            assert_eq!(slice.to_inline_string(), "\na\n\n"); // Each line followed by \n
-            assert_eq!(slice.lines.len(), 3);
-        }
-    }
-
-    #[test]
-    fn test_only_empty_lines() {
-        // Multiple empty lines get trailing newline.
-        {
-            as_str_slice_test_case!(slice, "", "");
-            assert_eq!(slice.to_inline_string(), "\n\n"); // Two newlines plus trailing
-            assert_eq!(slice.lines.len(), 2);
-        }
-    }
-
-    #[test]
-    fn test_single_empty_line() {
-        // Single empty line gets no trailing newline.
-        {
-            as_str_slice_test_case!(slice, "");
-            assert_eq!(slice.to_inline_string(), ""); // No trailing newline for single line
-            assert_eq!(slice.lines.len(), 1);
-        }
-    }
-
-    #[test]
-    fn test_verify_write_to_byte_cache_compat_consistency() {
-        let test_helper = |slice: AsStrSlice<'_>| {
-            let slice_result = slice.to_inline_string();
-
-            // Get write_to_byte_cache_compat result
-            let mut cache = ParserByteCache::new();
-            slice.write_to_byte_cache_compat(slice_result.len() + 10, &mut cache);
-            let cache_result = cache.as_str();
-
-            // They should match exactly
-            assert_eq!(
-                slice_result, cache_result,
-                "Mismatch: AsStrSlice produced {slice_result:?}, write_to_byte_cache_compat produced {cache_result:?}"
-            );
-        };
-
-        // Empty
-        {
-            let slice = AsStrSlice::from(&[]);
-            test_helper(slice);
-        }
-
-        // Single line
-        {
-            as_str_slice_test_case!(slice, "single");
-            test_helper(slice);
-        }
-
-        // Two lines
-        {
-            as_str_slice_test_case!(slice, "a", "b");
-            test_helper(slice);
-        }
-
-        // With empty lines
-        {
-            as_str_slice_test_case!(slice, "", "middle", "");
-            test_helper(slice);
-        }
-
-        // Only empty lines
-        {
-            as_str_slice_test_case!(slice, "", "");
-            test_helper(slice);
-        }
-    }
-
-    #[test]
-    fn test_compare_with_str_lines() {
-        // This test explicitly demonstrates the incompatibility with str::lines()
-        // when there are multiple lines and the last line is empty.
-
-        // Case 1: Multiple lines with empty last line
-        {
-            // Create a string with multiple lines and empty last line
-            let str_with_empty_last_line = "line1\nline2\n";
-
-            // Using str::lines()
-            let str_lines: Vec<&str> = str_with_empty_last_line.lines().collect();
-            assert_eq!(str_lines, vec!["line1", "line2"]); // str::lines() ignores the empty last line
-
-            // Using AsStrSlice
-            as_str_slice_test_case!(slice, "line1", "line2");
-            let slice_result = slice.to_inline_string();
-            assert_eq!(slice_result.as_str(), "line1\nline2\n"); // AsStrSlice preserves the trailing newline
-
-            // Demonstrate the difference
-            let reconstructed_from_str_lines = str_lines.join("\n");
-            assert_eq!(reconstructed_from_str_lines, "line1\nline2"); // No trailing newline
-            assert_ne!(reconstructed_from_str_lines, slice_result.as_str()); // Different from AsStrSlice
-        }
-
-        // Case 2: Multiple lines with non-empty last line
-        {
-            // Create a string with multiple lines and non-empty last line
-            let str_with_non_empty_last_line = "line1\nline2";
-
-            // Using str::lines()
-            let str_lines: Vec<&str> = str_with_non_empty_last_line.lines().collect();
-            assert_eq!(str_lines, vec!["line1", "line2"]);
-
-            // Using AsStrSlice
-            as_str_slice_test_case!(slice, "line1", "line2");
-            let slice_result = slice.to_inline_string();
-            assert_eq!(slice_result.as_str(), "line1\nline2\n"); // AsStrSlice adds a trailing newline
-
-            // Demonstrate the difference
-            let reconstructed_from_str_lines = str_lines.join("\n");
-            assert_eq!(reconstructed_from_str_lines, "line1\nline2"); // No trailing newline
-            assert_ne!(reconstructed_from_str_lines, slice_result.as_str()); // Different from AsStrSlice
-        }
-    }
-}
-
 /// Unit tests for the [AsStrSlice] struct and its methods.
 #[cfg(test)]
 mod tests_as_str_slice_basic_functionality {
     use nom::Input;
 
     use super::*;
-    use crate::{assert_eq2, idx, len};
+    use crate::{as_str_slice_test_case, assert_eq2, idx, len};
 
     #[test]
     fn test_gc_string_slice_basic_functionality() {
@@ -3571,7 +1740,7 @@ mod tests_as_str_slice_basic_functionality {
 #[cfg(test)]
 mod tests_is_empty {
     use super::*;
-    use crate::assert_eq2;
+    use crate::{as_str_slice_test_case, assert_eq2};
 
     #[test]
     fn test_is_empty_with_max_len_zero() {
@@ -3661,7 +1830,7 @@ mod tests_is_empty {
 #[cfg(test)]
 mod tests_is_empty_character_exhaustion {
     use super::*;
-    use crate::{assert_eq2, len};
+    use crate::{as_str_slice_test_case, assert_eq2, len};
 
     #[test]
     fn test_is_empty_basic_behavior() {

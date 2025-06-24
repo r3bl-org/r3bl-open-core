@@ -22,9 +22,9 @@ use crate::{constants::NEW_LINE,
             AsStrSlice,
             List,
             MdLineFragments,
-            NomErr,
-            NomError,
-            NomErrorKind};
+            NErr,
+            NError,
+            NErrorKind};
 
 /// Parse a single line of markdown text with inline formatting and automatic line
 /// advancement.
@@ -96,7 +96,7 @@ pub fn parse_line_text_advance_alt<'a>(
     let current_line_contains_new_line = input.extract_to_line_end().contains(NEW_LINE);
     if current_line_contains_new_line {
         // Throw error for invalid input.
-        return Err(NomErr::Error(NomError::new(input, NomErrorKind::CrLf)));
+        return Err(NErr::Error(NError::new(input, NErrorKind::CrLf)));
     } else {
         // This checks for empty input.
         inner::without_new_line(input)
@@ -111,7 +111,7 @@ mod inner {
     pub fn without_new_line<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
         // Check if input is empty.
         if input.is_empty() {
-            return Err(NomErr::Error(NomError::new(input, NomErrorKind::Eof)));
+            return Err(NErr::Error(NError::new(input, NErrorKind::Eof)));
         }
 
         let (input, output) = many0(

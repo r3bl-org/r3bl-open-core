@@ -18,7 +18,6 @@
 use nom::{branch::alt, combinator::map, multi::many0, IResult, Parser};
 
 use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
-            idx,
             parse_block_code_advance_alt,
             parse_block_smart_list_advance_alt,
             parse_line_csv_advance_alt,
@@ -32,9 +31,9 @@ use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
             MdElement,
             MdLineFragment,
             MdLineFragments,
-            NomErr,
-            NomError,
-            NomErrorKind};
+            NErr,
+            NError,
+            NErrorKind};
 
 /// Primary public API for parsing markdown documents in the R3BL TUI editor component.
 ///
@@ -61,9 +60,9 @@ use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
 /// - Enables byte-level parsing while preserving the editor's line-based data structure
 ///
 /// ## Parser Chain Design
-/// Uses [`many0(alt(...))`](nom) with parsers ordered by specificity. Each parser wrapped
-/// with [`ensure_advance_fail_safe_alt`] to prevent infinite loops and handle line
-/// advancement automatically.
+/// Uses [`many0(alt(...))`](nom) with parsers ordered by specificity. Each parser is
+/// wrapped with [`AsStrSlice::ensure_advance_with_parser`] to prevent infinite loops and
+/// handle line advancement automatically.
 ///
 /// ### Parser Categories (in order of precedence)
 /// - **Metadata**: Title, tags, authors, date (structured document properties)
@@ -80,56 +79,83 @@ pub fn parse_markdown_alt<'a>(
     let (rem, output_vec): (AsStrSlice<'a>, Vec<MdElement<'a>>) = many0(
         // NOTE: The ordering of the parsers below matters.
         alt((
-            ensure_advance_fail_safe_alt(map(
-                |it| parse_line_kv_advance_alt(TITLE, it),
-                |maybe_title| match maybe_title {
-                    None => MdElement::Title(""),
-                    Some(title) => MdElement::Title(title.extract_to_line_end()),
-                },
-            )),
-            ensure_advance_fail_safe_alt(map(
-                |it| parse_line_csv_advance_alt(TAGS, it),
-                |list| {
-                    let acc: ListStorage<&str> =
-                        list.iter().map(|item| item.extract_to_line_end()).collect();
-                    MdElement::Tags(List::from(acc))
-                },
-            )),
-            ensure_advance_fail_safe_alt(map(
-                |it| parse_line_csv_advance_alt(AUTHORS, it),
-                |list| {
-                    let acc: ListStorage<&str> =
-                        list.iter().map(|item| item.extract_to_line_end()).collect();
-                    MdElement::Authors(List::from(acc))
-                },
-            )),
-            ensure_advance_fail_safe_alt(map(
-                |it| parse_line_kv_advance_alt(DATE, it),
-                |maybe_date| match maybe_date {
-                    None => MdElement::Date(""),
-                    Some(date) => MdElement::Date(date.extract_to_line_end()),
-                },
-            )),
-            ensure_advance_fail_safe_alt(map(
-                parse_line_heading_advance_alt,
-                MdElement::Heading,
-            )),
-            ensure_advance_fail_safe_alt(map(
-                parse_block_smart_list_advance_alt,
-                MdElement::SmartList,
-            )),
-            ensure_advance_fail_safe_alt(map(
-                parse_block_code_advance_alt,
-                MdElement::CodeBlock,
-            )),
-            ensure_advance_fail_safe_alt(map(
-                parse_line_empty_advance_alt,
-                MdElement::Text,
-            )),
-            ensure_advance_fail_safe_alt(map(
-                parse_line_text_advance_alt,
-                MdElement::Text,
-            )),
+            // Title metadata parser
+            |input: AsStrSlice<'a>| {
+                input.ensure_advance_with_parser(&mut map(
+                    |it| parse_line_kv_advance_alt(TITLE, it),
+                    |maybe_title| match maybe_title {
+                        None => MdElement::Title(""),
+                        Some(title) => MdElement::Title(title.extract_to_line_end()),
+                    },
+                ))
+            },
+            // Tags metadata parser
+            |input: AsStrSlice<'a>| {
+                input.ensure_advance_with_parser(&mut map(
+                    |it| parse_line_csv_advance_alt(TAGS, it),
+                    |list| {
+                        let acc: ListStorage<&str> =
+                            list.iter().map(|item| item.extract_to_line_end()).collect();
+                        MdElement::Tags(List::from(acc))
+                    },
+                ))
+            },
+            // Authors metadata parser
+            |input: AsStrSlice<'a>| {
+                input.ensure_advance_with_parser(&mut map(
+                    |it| parse_line_csv_advance_alt(AUTHORS, it),
+                    |list| {
+                        let acc: ListStorage<&str> =
+                            list.iter().map(|item| item.extract_to_line_end()).collect();
+                        MdElement::Authors(List::from(acc))
+                    },
+                ))
+            },
+            // Date metadata parser
+            |input: AsStrSlice<'a>| {
+                input.ensure_advance_with_parser(&mut map(
+                    |it| parse_line_kv_advance_alt(DATE, it),
+                    |maybe_date| match maybe_date {
+                        None => MdElement::Date(""),
+                        Some(date) => MdElement::Date(date.extract_to_line_end()),
+                    },
+                ))
+            },
+            // Heading parser
+            |input: AsStrSlice<'a>| {
+                input.ensure_advance_with_parser(&mut map(
+                    parse_line_heading_advance_alt,
+                    MdElement::Heading,
+                ))
+            },
+            // Smart list parser
+            |input: AsStrSlice<'a>| {
+                input.ensure_advance_with_parser(&mut map(
+                    parse_block_smart_list_advance_alt,
+                    MdElement::SmartList,
+                ))
+            },
+            // Code block parser
+            |input: AsStrSlice<'a>| {
+                input.ensure_advance_with_parser(&mut map(
+                    parse_block_code_advance_alt,
+                    MdElement::CodeBlock,
+                ))
+            },
+            // Empty line parser (must come before text parser)
+            |input: AsStrSlice<'a>| {
+                input.ensure_advance_with_parser(&mut map(
+                    parse_line_empty_advance_alt,
+                    MdElement::Text,
+                ))
+            },
+            // Text parser (catch-all)
+            |input: AsStrSlice<'a>| {
+                input.ensure_advance_with_parser(&mut map(
+                    parse_line_text_advance_alt,
+                    MdElement::Text,
+                ))
+            },
         )),
     )
     .parse(input)?;
@@ -203,7 +229,7 @@ pub fn parse_line_empty_advance_alt<'a>(
         };
         Ok((remainder, fragments))
     } else {
-        Err(NomErr::Error(NomError::new(input, NomErrorKind::Tag)))
+        Err(NErr::Error(NError::new(input, NErrorKind::Tag)))
     }
 }
 
@@ -267,105 +293,7 @@ pub fn ensure_advance_fail_safe_alt<'a, F, O>(
 where
     F: Parser<AsStrSlice<'a>, Output = O, Error = nom::error::Error<AsStrSlice<'a>>>,
 {
-    move |input: AsStrSlice<'a>| {
-        // Check if we're at the end of input before trying to parse
-        // We're at the end of input if we've gone past the last line OR consumed all
-        // available characters
-        if input.line_index >= input.lines.len().into()
-            || input.current_taken >= input.total_size
-        {
-            return Err(NomErr::Error(NomError::new(input, NomErrorKind::Eof)));
-        }
-
-        // Store the initial position to check for advancement
-        let initial_position = input.current_taken;
-        let initial_line = input.line_index;
-        let initial_char = input.char_index;
-
-        // Apply the parser
-        let result = parser.parse(input.clone());
-
-        match result {
-            Ok((mut remainder, output)) => {
-                // Check if the parser advanced to a new line (which is ideal)
-                let advanced_to_new_line = remainder.line_index > initial_line;
-
-                if advanced_to_new_line {
-                    // Parser already made proper line advancement, return the result.
-                    return Ok((remainder, output));
-                }
-
-                // Check if parser made progress within the current line
-                let made_char_progress = remainder.current_taken > initial_position
-                    || remainder.char_index > initial_char;
-
-                // For empty lines, even if no char progress was made, we should still
-                // advance
-                let current_line = remainder
-                    .lines
-                    .get(remainder.line_index.as_usize())
-                    .map(|line| line.string.as_str())
-                    .unwrap_or("");
-                let is_empty_line = current_line.trim().is_empty();
-
-                // For single-line parsers that made progress OR successfully parsed an
-                // empty line, we need to manually advance to the next
-                // line
-                if (made_char_progress || is_empty_line)
-                    && remainder.line_index < remainder.lines.len().into()
-                {
-                    // Calculate how many characters we need to advance to get to the
-                    // start of the next line
-                    let current_line_len = remainder
-                        .lines
-                        .get(remainder.line_index.as_usize())
-                        .map(|line| line.string.chars().count())
-                        .unwrap_or(0);
-
-                    // If we're still within the current line content, advance to the end
-                    // of the line.
-                    if remainder.char_index.as_usize() < current_line_len {
-                        let chars_to_advance =
-                            current_line_len - remainder.char_index.as_usize();
-                        for _ in 0..chars_to_advance {
-                            remainder.advance();
-                        }
-                    }
-
-                    // Check if we're at a valid position to advance to next line
-                    if remainder.line_index.as_usize() < remainder.lines.len() - 1 {
-                        // Create a fresh AsStrSlice at the next line with no max_len
-                        // constraint This prevents issues where
-                        // max_len=0 causes the parser to think input is empty
-                        let next_line_index = remainder.line_index + idx(1);
-                        remainder = AsStrSlice::with_limit(
-                            remainder.lines,
-                            next_line_index,
-                            idx(0), // Start at beginning of next line
-                            None,   // Remove max_len constraint
-                        );
-                    }
-
-                    // Return the result with proper line advancement
-                    return Ok((remainder, output));
-                }
-
-                // Check if we're at the end of input (no more content to parse)
-                // Only consider it end-of-input if we've exhausted all lines OR consumed
-                // all characters
-                if remainder.line_index >= remainder.lines.len().into()
-                    || remainder.current_taken >= remainder.total_size
-                {
-                    return Err(NomErr::Error(NomError::new(input, NomErrorKind::Eof)));
-                }
-
-                // If no progress was made at all, return an error to break the many0
-                // loop.
-                Err(NomErr::Error(NomError::new(input, NomErrorKind::Verify)))
-            }
-            Err(e) => Err(e),
-        }
-    }
+    move |input: AsStrSlice<'a>| input.ensure_advance_with_parser(&mut parser)
 }
 
 /// Tests things that are final output (and not at the IR level).

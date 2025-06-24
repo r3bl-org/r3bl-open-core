@@ -63,9 +63,9 @@ use crate::{list,
             List,
             MdLineFragment,
             MdLineFragments,
-            NomErr,
-            NomError,
-            NomErrorKind,
+            NErr,
+            NError,
+            NErrorKind,
             SmartListIRAlt,
             SmartListLineAlt};
 
@@ -445,7 +445,7 @@ pub fn parse_smart_list_alt<'a>(
     }
 
     // If neither unordered nor ordered list prefix matched, return an error.
-    Err(NomErr::Error(NomError::new(input, NomErrorKind::Fail)))
+    Err(NErr::Error(NError::new(input, NErrorKind::Fail)))
 }
 
 /// Validates that the list indentation is a multiple of the base width (e.g., 2 or 4
@@ -456,14 +456,14 @@ pub fn parse_smart_list_alt<'a>(
 /// - "  1. task" → (2, "1. task").
 fn validate_list_indentation<'a>(
     input: AsStrSlice<'a>,
-) -> Result<(usize, AsStrSlice<'a>), NomErr<NomError<AsStrSlice<'a>>>> {
+) -> Result<(usize, AsStrSlice<'a>), NErr<NError<AsStrSlice<'a>>>> {
     // Match empty spaces & count them into indent
     let (indent, input) = input.trim_spaces_start_current_line();
     let indent = indent.as_usize();
 
     // Indent has to be multiple of the base width, otherwise it's not a list item
     if indent % LIST_PREFIX_BASE_WIDTH != 0 {
-        return Err(NomErr::Error(NomError::new(input, NomErrorKind::Fail)));
+        return Err(NErr::Error(NError::new(input, NErrorKind::Fail)));
     }
 
     Ok((indent, input))
@@ -539,23 +539,23 @@ fn parse_ordered_list<'a>(
     /// - "123. item" → ("123. ", BulletKind::Ordered(123))
     fn parse_ordered_list_bullet(input_str: &str) -> IResult<&str, BulletKind> {
         // Parse bullet pattern: "123. "
-        let bullet_res: IResult<_, _, NomError<_>> =
+        let bullet_res: IResult<_, _, NError<_>> =
             recognize(terminated(digit1, tag(ORDERED_LIST_PARTIAL_PREFIX)))
                 .parse(input_str);
 
         let Ok((_, bullet_str)) = bullet_res else {
-            return Err(NomErr::Error(NomError::new(input_str, NomErrorKind::Tag)));
+            return Err(NErr::Error(NError::new(input_str, NErrorKind::Tag)));
         };
 
         // Validate bullet starts with digit
         if !bullet_str.starts_with(|c: char| c.is_ascii_digit()) {
-            return Err(NomErr::Error(NomError::new(input_str, NomErrorKind::Tag)));
+            return Err(NErr::Error(NError::new(input_str, NErrorKind::Tag)));
         }
 
         // Parse number from bullet
         let number_str = bullet_str.trim_end_matches(ORDERED_LIST_PARTIAL_PREFIX);
         let Ok(number) = number_str.parse::<usize>() else {
-            return Err(NomErr::Error(NomError::new(input_str, NomErrorKind::Digit)));
+            return Err(NErr::Error(NError::new(input_str, NErrorKind::Digit)));
         };
 
         Ok((bullet_str, BulletKind::Ordered(number)))
