@@ -19,6 +19,7 @@
 pub mod search_and_split;
 pub mod text_extraction;
 pub mod trim_whitespace;
+pub mod character_ops;
 
 // Re-export.
 // Note: Re-exports are available but not used in the current scope.
@@ -26,3 +27,4 @@ pub mod trim_whitespace;
 pub use search_and_split::*;
 pub use text_extraction::*;
 pub use trim_whitespace::*;
+pub use character_ops::*;

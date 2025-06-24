@@ -16,11 +16,17 @@
  */
 
 // Attach.
+pub mod compare;
 pub mod conversions;
+pub mod display_and_debug;
+pub mod find_substring;
 pub mod nom_input;
+pub mod offset;
 
 // Re-export.
-// Note: Re-exports are available but not used in the current scope.
-// They are kept for potential future use and external crate access.
+pub use compare::*;
 pub use conversions::*;
+pub use display_and_debug::*;
+pub use find_substring::*;
 pub use nom_input::*;
+pub use offset::*;
