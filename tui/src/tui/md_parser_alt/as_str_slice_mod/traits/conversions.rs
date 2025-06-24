@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{idx, len, AsStrSlice, GCString};
+use crate::{idx, len, AsStrSlice, GCString, InlineVec, List};
 
 /// Implement [From] trait to allow automatic conversion from &[GCString] to
 /// [AsStrSlice].
@@ -64,5 +64,15 @@ impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
             total_size: len(total_size),
             current_taken: len(0),
         }
+    }
+}
+
+/// Integrate with [crate::List] so that `List::from()` will work for
+/// `InlineVec<AsStrSlice>`.
+impl<'a> From<InlineVec<AsStrSlice<'a>>> for List<AsStrSlice<'a>> {
+    fn from(other: InlineVec<AsStrSlice<'a>>) -> Self {
+        let mut it = List::with_capacity(other.len());
+        it.extend(other);
+        it
     }
 }

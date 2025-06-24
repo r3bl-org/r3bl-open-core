@@ -15,10 +15,19 @@
  *   limitations under the License.
  */
 
-// Attach.
-pub mod advance_with_synthetic_new_line;
-pub mod line_advancement;
+use std::fmt::Display;
 
-// Re-export.
-pub use advance_with_synthetic_new_line::*;
-pub use line_advancement::*;
+use crate::AsStrSlice;
+
+/// Implement [Display] trait for [AsStrSlice].
+impl<'a> Display for AsStrSlice<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Materialize the text by collecting all characters from the current position.
+        let mut current = self.clone();
+        while let Some(ch) = current.current_char() {
+            write!(f, "{ch}")?;
+            current.advance();
+        }
+        Ok(())
+    }
+}

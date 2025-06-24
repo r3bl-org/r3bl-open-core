@@ -185,3 +185,97 @@ impl<'a> AsStrSlice<'a> {
         }
     }
 }
+
+/// Tests for the `is_empty()` method to ensure it correctly identifies when no more
+/// characters can be consumed from the current position.
+#[cfg(test)]
+mod tests_is_empty {
+    use nom::Input as _;
+
+    use super::*;
+    use crate::{as_str_slice_test_case, assert_eq2, idx, len, GCString};
+
+    #[test]
+    fn test_is_empty_with_max_len_zero() {
+        // Test when max_len is set to 0
+        as_str_slice_test_case!(slice, "hello");
+        let slice_with_max_len_zero = slice.take(0);
+
+        assert_eq2!(slice_with_max_len_zero.max_len, Some(len(0)));
+        assert_eq2!(slice_with_max_len_zero.is_empty(), true);
+    }
+
+    #[test]
+    fn test_is_empty_all_chars_consumed() {
+        // Test when all available characters have been consumed
+        as_str_slice_test_case!(slice, "hello");
+        let mut consumed_slice = slice;
+
+        // Advance through all characters
+        for _ in 0..5 {
+            consumed_slice.advance();
+        }
+
+        // At this point, current_taken should equal total_size
+        assert_eq2!(consumed_slice.current_taken, consumed_slice.total_size);
+        assert_eq2!(consumed_slice.is_empty(), true);
+    }
+
+    #[test]
+    fn test_is_empty_beyond_available_lines() {
+        // Test when we're beyond the available lines
+        as_str_slice_test_case!(slice, "line1", "line2");
+
+        // Create a slice with line_index beyond the available lines
+        let mut beyond_lines = slice;
+        beyond_lines.line_index = idx(2); // Only 2 lines (indices 0 and 1) exist
+
+        assert_eq2!(beyond_lines.is_empty(), true);
+    }
+
+    #[test]
+    fn test_is_empty_empty_lines_array() {
+        // Test when the lines array is empty
+        let empty_lines: Vec<GCString> = vec![];
+        let slice = AsStrSlice::from(&empty_lines);
+
+        assert_eq2!(slice.lines.is_empty(), true);
+        assert_eq2!(slice.is_empty(), true);
+    }
+
+    #[test]
+    fn test_is_empty_no_current_char() {
+        // Test when there's no current character available
+        as_str_slice_test_case!(slice, "hello");
+        let mut no_char_slice = slice;
+
+        // Move to a position where current_char() returns None
+        no_char_slice.char_index = idx(5); // Beyond the end of "hello"
+
+        assert_eq2!(no_char_slice.current_char(), None);
+        assert_eq2!(no_char_slice.is_empty(), true);
+    }
+
+    #[test]
+    fn test_is_not_empty() {
+        // Test cases where is_empty() should return false
+
+        // Regular non-empty slice
+        as_str_slice_test_case!(slice1, "hello");
+        assert_eq2!(slice1.is_empty(), false);
+
+        // Slice with content after the current position
+        as_str_slice_test_case!(slice2, "hello", "world");
+        let mut middle_slice = slice2;
+        middle_slice.line_index = idx(0);
+        middle_slice.char_index = idx(2); // At 'l' in "hello"
+
+        assert_eq2!(middle_slice.is_empty(), false);
+
+        // Slice with max_len greater than 0
+        as_str_slice_test_case!(slice3, "hello");
+        let limited_slice = slice3.take(3); // Only "hel"
+        assert_eq2!(limited_slice.max_len, Some(len(3)));
+        assert_eq2!(limited_slice.is_empty(), false);
+    }
+}

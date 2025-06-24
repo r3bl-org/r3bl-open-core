@@ -505,3 +505,147 @@ pub enum LineLocationInDocument {
     /// We're at the very last line in the document.
     LastLine,
 }
+
+#[cfg(test)]
+mod tests_compat_with_unicode_grapheme_cluster_segment_boundary {
+    use super::*;
+    use crate::{assert_eq2, len, CharLengthExt as _, GCString};
+
+    const EMOJI_CHAR: char = '\u{1F600}'; // 😀
+    const INPUT_RAW: &str = "a😀b😀c";
+    const EMOJI_AS_BYTES: [u8; 4] = [240, 159, 152, 128];
+
+    #[test]
+    fn test_utf8_encoding_char_string() {
+        // "😀", `char` is 4 bytes, this "😀" len_utf8() is 4. chars().count() is 1.
+        {
+            // Memory size of the char type itself (always 4 bytes in Rust).
+            assert_eq2!(std::mem::size_of::<char>(), 4);
+
+            // UTF-8 encoding length (how many bytes when encoded as UTF-8).
+            let utf8_len = EMOJI_CHAR.len_utf8();
+            assert_eq2!(utf8_len, 4);
+
+            // Put emoji in an Vec of u8.
+            let mut buffer: [u8; 4] = [0; 4];
+            EMOJI_CHAR.encode_utf8(&mut buffer);
+            assert_eq2!(buffer, EMOJI_AS_BYTES);
+
+            // Character count vs byte count.
+            let emoji_string = EMOJI_CHAR.to_string();
+            let emoji_str: &str = emoji_string.as_ref();
+            let byte_count = emoji_str.len();
+            assert_eq2!(byte_count, 4);
+            let char_count = emoji_str.len_chars(); // aka chars().count()
+            assert_eq2!(char_count, len(1));
+        }
+
+        // "a", char is 4 bytes, this "a" len_utf8() is 1. chars().count() is also 1.
+        {
+            // Test with a simple ASCII character 'a'
+            const ASCII_CHAR: char = 'a';
+            const ASCII_AS_BYTES: [u8; 1] = [97]; // ASCII value of 'a'
+
+            // Memory size of the char type itself (always 4 bytes in Rust).
+            assert_eq2!(std::mem::size_of::<char>(), 4);
+
+            // UTF-8 encoding length (how many bytes when encoded as UTF-8).
+            let utf8_len = ASCII_CHAR.len_utf8();
+            assert_eq2!(utf8_len, 1);
+
+            // Put ASCII char in a Vec of u8.
+            let mut buffer: [u8; 4] = [0; 4];
+            ASCII_CHAR.encode_utf8(&mut buffer);
+            // Only the first byte should match, rest should be 0
+            assert_eq2!(buffer[0], ASCII_AS_BYTES[0]);
+            assert_eq2!(buffer[1..], [0, 0, 0]);
+
+            // Character count vs byte count.
+            let ascii_string = ASCII_CHAR.to_string();
+            let ascii_str: &str = ascii_string.as_ref();
+            let byte_count = ascii_str.len();
+            assert_eq2!(byte_count, 1);
+            let char_count = ascii_str.len_chars(); // aka chars().count()
+            assert_eq2!(char_count, len(1));
+        }
+
+        // "1", char is 4 bytes, this "1" len_utf8() is 1. chars().count() is also 1.
+        {
+            // Test with a simple ASCII digit '1'
+            const DIGIT_CHAR: char = '1';
+            const DIGIT_AS_BYTES: [u8; 1] = [49]; // ASCII value of '1'
+
+            // Memory size of the char type itself (always 4 bytes in Rust).
+            assert_eq2!(std::mem::size_of::<char>(), 4);
+
+            // UTF-8 encoding length (how many bytes when encoded as UTF-8).
+            let utf8_len = DIGIT_CHAR.len_utf8();
+            assert_eq2!(utf8_len, 1);
+
+            // Put digit in a Vec of u8.
+            let mut buffer: [u8; 4] = [0; 4];
+            DIGIT_CHAR.encode_utf8(&mut buffer);
+            // Only the first byte should match, rest should be 0
+            assert_eq2!(buffer[0], DIGIT_AS_BYTES[0]);
+            assert_eq2!(buffer[1..], [0, 0, 0]);
+
+            // Character count vs byte count.
+            let digit_string = DIGIT_CHAR.to_string();
+            let digit_str: &str = digit_string.as_ref();
+            let byte_count = digit_str.len();
+            assert_eq2!(byte_count, 1);
+            let char_count = digit_str.len_chars(); // aka chars().count()
+            assert_eq2!(char_count, len(1));
+        }
+    }
+
+    #[test]
+    fn test_index_str_byte_count_vs_char_count() {
+        let input_string = format!("a{EMOJI_CHAR}b{EMOJI_CHAR}c");
+        let input_str = input_string.as_str();
+        assert_eq2!(input_str, INPUT_RAW);
+
+        // Size in memory.
+        let byte_count = input_str.len();
+        assert_eq2!(byte_count, 11);
+
+        // UTF-8 encoded chars in the string.
+        let char_count = input_str.len_chars(); // aka chars().count()
+        assert_eq2!(char_count, len(5));
+
+        // Index bytes in the input_str.
+        let input_str_bytes = input_str.as_bytes();
+        assert_eq2!(input_str_bytes[0], b'a');
+        assert_eq2!(input_str_bytes[1..=4], EMOJI_AS_BYTES);
+        assert_eq2!(input_str_bytes[5], b'b');
+        assert_eq2!(input_str_bytes[6..=9], EMOJI_AS_BYTES);
+        assert_eq2!(input_str_bytes[10], b'c');
+
+        // Index chars in the input_str using Chars iterator.
+        let mut input_str_chars = input_str.chars();
+        assert_eq2!(input_str_chars.next(), Some('a'));
+        assert_eq2!(input_str_chars.next(), Some('😀'));
+        assert_eq2!(input_str_chars.next(), Some('b'));
+        assert_eq2!(input_str_chars.next(), Some('😀'));
+        assert_eq2!(input_str_chars.next(), Some('c'));
+        assert_eq2!(input_str_chars.next(), None);
+    }
+
+    #[test]
+    fn test_input_contains_emoji() {
+        let lines: Vec<GCString> =
+            vec![GCString::from(INPUT_RAW), GCString::from(INPUT_RAW)];
+        let slice = AsStrSlice::from(&lines);
+        assert_eq2!(slice.lines.len(), 2);
+        assert_eq2!(
+            slice.to_inline_string(),
+            format!("{INPUT_RAW}\n{INPUT_RAW}\n")
+        );
+        assert_eq2!(slice.lines[0].as_ref(), INPUT_RAW);
+        assert_eq2!(slice.lines[1].as_ref(), INPUT_RAW);
+        assert_eq2!(slice.lines[0].string, INPUT_RAW);
+        assert_eq2!(slice.lines[1].string, INPUT_RAW);
+        assert_eq2!(slice.lines[0].string.len(), INPUT_RAW.len());
+        assert_eq2!(slice.lines[1].string.len(), INPUT_RAW.len());
+    }
+}

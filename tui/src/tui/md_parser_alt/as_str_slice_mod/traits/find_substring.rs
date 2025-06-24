@@ -15,10 +15,18 @@
  *   limitations under the License.
  */
 
-// Attach.
-pub mod advance_with_synthetic_new_line;
-pub mod line_advancement;
+use nom::FindSubstring;
 
-// Re-export.
-pub use advance_with_synthetic_new_line::*;
-pub use line_advancement::*;
+use crate::AsStrSlice;
+
+/// Implement [FindSubstring] trait for [AsStrSlice]. This is required by the
+/// [nom::bytes::complete::take_until] parser function.
+impl<'a> FindSubstring<&str> for AsStrSlice<'a> {
+    fn find_substring(&self, sub_str: &str) -> Option<usize> {
+        // Convert the AsStrSlice to a string representation.
+        let full_text = self.extract_to_slice_end();
+
+        // Find the substring in the full text.
+        full_text.as_ref().find(sub_str)
+    }
+}
