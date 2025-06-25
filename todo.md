@@ -223,7 +223,7 @@
   - [x] review this fix `fallback_parse_any_line_as_plain_alt()`
   - [.] break up `as_str_slice.rs` into `as_str_slice_mod`
   - [.] continue migrating all the remaining tests into this file from `parse_markdown.rs`
-  - [ ] check performance of block code parser which materializes strings to look for enclosing
+  - [x] check performance of block code parser which materializes strings to look for enclosing
         three-backticks. this is avoidable, by using `lines` to check which ones only contain
         three-backticks and keep track of how many lines are involved, and then convert them into
         start and end char indices for the `AsStrSlice`
