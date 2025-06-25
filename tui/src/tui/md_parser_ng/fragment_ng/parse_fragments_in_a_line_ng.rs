@@ -712,5 +712,92 @@ mod tests_parse_fragment {
                 Err(err) => panic!("Expected Ok, got Err: {err:?}"),
             }
         }
+
+        // Inline code with Unicode (emoji).
+        // "`code 🎯`" -> should be ok
+        {
+            as_str_slice_test_case!(input, "`code 🎯`");
+            let res = parse_inline_fragments_until_eol_or_eoi_ng(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
+            );
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    assert_eq2!(out, MdLineFragment::InlineCode("code 🎯"));
+                }
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_unicode_inline_code_ng() {
+        // Test Unicode inline code parsing - should parse as InlineCode, not Plain
+        {
+            as_str_slice_test_case!(input, "`code 🎯`");
+            let res = parse_inline_fragments_until_eol_or_eoi_ng(
+                input,
+                CheckboxParsePolicy::IgnoreCheckbox,
+            );
+
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    // This should be InlineCode, not Plain
+                    match out {
+                        MdLineFragment::InlineCode(code) => {
+                            assert_eq2!(code, "code 🎯");
+                        }
+                        MdLineFragment::Plain(text) => {
+                            panic!("Expected InlineCode but got Plain: {:?}", text);
+                        }
+                        _ => panic!("Expected InlineCode but got: {:?}", out),
+                    }
+                }
+                Err(err) => panic!("Expected Ok, got Err: {err:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_unicode_inline_code_comprehensive() {
+        // Test various Unicode characters in inline code
+        let test_cases = vec![
+            ("`emoji 🎯`", "emoji 🎯"),
+            ("`accented café`", "accented café"),
+            ("`chinese 中文`", "chinese 中文"),
+            ("`math ∀x∈ℝ`", "math ∀x∈ℝ"),
+            ("`mixed Hello🌍世界`", "mixed Hello🌍世界"),
+        ];
+
+        for (input, expected_content) in test_cases {
+            as_str_slice_test_case!(slice, input);
+            let res = parse_inline_fragments_until_eol_or_eoi_ng(
+                slice,
+                CheckboxParsePolicy::IgnoreCheckbox,
+            );
+
+            match res {
+                Ok((rem, out)) => {
+                    assert_eq2!(rem.extract_to_line_end(), "");
+                    match out {
+                        MdLineFragment::InlineCode(code) => {
+                            assert_eq2!(
+                                code,
+                                expected_content,
+                                "Failed for input: {}",
+                                input
+                            );
+                        }
+                        _ => panic!(
+                            "Expected InlineCode for input '{}' but got: {:?}",
+                            input, out
+                        ),
+                    }
+                }
+                Err(err) => panic!("Expected Ok for input '{}', got Err: {err:?}", input),
+            }
+        }
     }
 }

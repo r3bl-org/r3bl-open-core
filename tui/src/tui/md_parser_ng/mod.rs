@@ -42,7 +42,8 @@
 //!
 //! ### Core Components
 //!
-//! - **[`parse_markdown_ng`]**: Main entry point for parsing complete markdown documents
+//! - **[`parse_markdown_ng()`]**: Main entry point for parsing complete markdown
+//!   documents
 //! - **[`AsStrSlice`]**: Virtual array abstraction with [`nom::Input`] compatibility
 //! - **Parser Modules**: Specialized parsers for different markdown elements
 //!
