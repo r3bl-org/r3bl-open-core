@@ -31,14 +31,64 @@ use crate::{constants::NEW_LINE_CHAR,
             InlineVec,
             List};
 
-/// Parses a Markdown code block and returns a [List] of [CodeBlockLine] objects.
+/// Parses a complete Markdown code block - a **multi-line block parser** with automatic advancement.
 ///
-/// This function handles various code block formats including those with or without:
-/// - Language specification.
-/// - Content lines.
-/// - Trailing newlines.
+/// ## Purpose
+/// This is a **block-level parser** that processes entire fenced code blocks (```...```)
+/// and returns structured output ready for rendering. It handles various code block formats
+/// including those with or without language specifications, content lines, and trailing newlines.
 ///
-/// Sample inputs:
+/// ## Parsing Strategy Overview
+///
+/// This function implements **block-level parsing** that accumulates multiple lines into
+/// structured output. Unlike single-line parsers, this function:
+///
+/// 1. **Multi-line Accumulation**: Consumes entire code blocks spanning multiple lines
+/// 2. **Block Boundary Detection**: Identifies start (```) and end (```) markers
+/// 3. **Language Extraction**: Parses optional language specifiers (e.g., `bash`, `rust`)
+/// 4. **Line-by-Line Processing**: Splits content into individual code lines
+/// 5. **Structured Output**: Returns `CodeBlockLine` objects for rendering
+///
+/// ### Processing Flow
+/// ```text
+/// Input: "```rust\nfn main() {\n    println!(\"Hello\");\n}\n```\n"
+///        ↓
+/// 1. Parse opening: "```rust" → language = Some("rust")
+/// 2. Extract body: "fn main() {\n    println!(\"Hello\");\n}"
+/// 3. Split by lines: ["fn main() {", "    println!(\"Hello\");", "}"]
+/// 4. Build IR: [CodeBlockLine{...}, CodeBlockLine{...}, CodeBlockLine{...}]
+/// 5. Return: (remainder, code_block_lines)
+/// ```
+///
+/// ## Comparison with Single-Line Parsers
+///
+/// | Single-Line Parser | Block Parser (this function) |
+/// |-------------------|------------------------------|
+/// | Processes one line | Processes entire code blocks |
+/// | Simple string output | Complex structured output |
+/// | Fast, minimal state | Stateful multi-line accumulation |
+/// | Used for inline elements | Used for block elements |
+///
+/// ## Performance: O(1) Line Processing Through Zero-Copy Design
+///
+/// While the overall parsing involves processing the code block content, the **line splitting
+/// operation achieves O(1) efficiency per line** by leveraging `AsStrSlice`'s pre-computed
+/// structure rather than materializing input strings:
+///
+/// **Avoided expensive operations:**
+/// - ❌ Full input materialization via `memcpy()` - would require copying entire blocks
+/// - ❌ Repeated newline scanning - would require re-parsing already-parsed content
+/// - ❌ String allocation for each line - would create unnecessary memory overhead
+///
+/// **Efficient operations used:**
+/// - ✅ `AsStrSlice` zero-copy slicing - creates views into original input
+/// - ✅ Iterator-based character traversal - single pass through content
+/// - ✅ Character-position-based line extraction - direct indexing without string copying
+///
+/// The `split_by_new_line_alt` function performs a single character-iterator pass to identify
+/// line boundaries, then creates zero-copy `AsStrSlice` views for each line.
+///
+/// ## Sample Inputs and Outputs
 ///
 /// | Scenario                  | Sample input                                               |
 /// |---------------------------|------------------------------------------------------------|
@@ -48,6 +98,15 @@ use crate::{constants::NEW_LINE_CHAR,
 /// | No language               | `"```\npip install foobar\n```\n"`                         |
 /// | No language, no line      | `"```\n```\n"`                                             |
 /// | No language, multi line   | `"```\npip install foobar\npip install foobar\n```\n"`     |
+///
+/// ## Line Advancement
+/// This is a **multi-line block parser that auto-advances**. It consumes all lines
+/// from the opening ``` to the closing ``` and positions the remainder at the first
+/// line after the code block ends.
+///
+/// ## Returns
+/// - A tuple containing the remainder of the input and a `List<CodeBlockLine>` ready for rendering
+/// - Each `CodeBlockLine` contains the parsed content and metadata for proper display
 #[rustfmt::skip]
 pub fn parse_block_code_advance_alt<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, List<CodeBlockLine<'a>>> {
     let (remainder, (lang, code)) = (

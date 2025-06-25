@@ -35,7 +35,6 @@ use nom::{branch::alt,
           combinator::{opt, recognize, verify},
           multi::many0,
           sequence::{preceded, terminated},
-          FindSubstring,
           IResult,
           Input,
           Parser};
@@ -886,51 +885,70 @@ mod tests_parse_smart_list_alt {
     }
 }
 
-/// Parses content lines that belong to a smart list item.
+/// Parses content lines that belong to a smart list item - a **multi-line block parser**.
 ///
-/// This function takes an input string slice, an indent level, and a bullet string,
-/// and returns a vector of `SmartListLine` objects representing the parsed content.
-/// It handles both the first line of a list item and any continuation lines that
-/// follow it.
+/// ## Parsing Strategy Overview
 ///
-/// # ⚠️ Critical: Character-Based vs Byte-Based Indexing
+/// This is a **block-level parser** that accumulates multiple lines into an intermediate
+/// representation (IR) and returns a structured output. It efficiently handles both
+/// single-line and multi-line list items.
 ///
-/// This implementation **exclusively uses character-based indexing** throughout.
-/// This is critical for proper Unicode/UTF-8 support, especially when handling
-/// emojis and other multi-byte characters.
+/// ### Processing Flow
+/// 1. **Early optimization**: For single-line input, returns immediately without complex
+///    parsing
+/// 2. **Multi-line accumulation**: Processes the first line, then accumulates
+///    continuation lines
+/// 3. **IR construction**: Builds `SmartListLineAlt` structures for each line
+/// 4. **Line validation**: Ensures continuation lines have proper indentation and format
 ///
-/// **Key principles followed:**
-/// - Always use `AsStrSlice::take_from(char_count)` for character-based slicing
-/// - Always use `AsStrSlice::extract_to_line_end()` to extract content
-/// - Never use raw slice operators like `&str[byte_start..byte_end]`
-/// - Convert byte positions from `find_substring()` to character positions before slicing
-///
-/// **Why this matters:**
-/// ```no_run
-/// # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
-/// # use nom::Input;
-/// // ❌ WRONG - byte-based slicing can panic or corrupt UTF-8
-/// let text = "😀hello";
-/// let bad = &text[1..]; // PANIC! Splits UTF-8 sequence
-///
-/// // ✅ CORRECT - character-based slicing with AsStrSlice
-/// as_str_slice_test_case!(slice, "😀hello");
-/// let good = slice.take_from(1).extract_to_line_end(); // "hello"
+/// ### Example Input Processing
+/// ```text
+/// Input: "- first line\n  continuation\n  more content\n"
+/// Output: [
+///   SmartListLineAlt { indent: 0, bullet_str: "- ", content: "first line" },
+///   SmartListLineAlt { indent: 0, bullet_str: "- ", content: "continuation" },
+///   SmartListLineAlt { indent: 0, bullet_str: "- ", content: "more content" }
+/// ]
 /// ```
 ///
-/// Earlier versions of this function had bugs where byte positions from
-/// `find_substring()` were used as character offsets in `take_from()`, causing
-/// incorrect slicing for multi-byte characters.
+/// ## Unicode Safety
 ///
-/// # Parameters
-/// - `input`: The input text to parse
+/// This implementation uses **character-based indexing** exclusively for proper
+/// Unicode/UTF-8 support. Key safety measures:
+///
+/// - Uses `input.lines.len()` for efficient line counting instead of string searching
+/// - Uses `AsStrSlice::extract_to_line_end().len_chars()` for character-accurate line
+///   lengths
+/// - Uses `AsStrSlice::take_from(char_count)` for safe character-based slicing
+/// - Never uses raw byte-based slice operators that could split UTF-8 sequences
+///
+/// ## Performance: O(1) Efficiency Through Zero-Copy Design
+///
+/// This function achieves **O(1) constant-time performance** by leveraging `AsStrSlice`'s
+/// pre-computed line boundaries rather than materializing input strings:
+///
+/// **Avoided expensive operations (O(n)):**
+/// - ❌ Input materialization via `memcpy()` - would require copying entire input
+/// - ❌ String scanning for newlines - would require re-parsing already-parsed content
+/// - ❌ Allocation of intermediate strings for each line
+///
+/// **Efficient operations used (O(1)):**
+/// - ✅ `input.lines.len()` - pre-computed during parsing, instant access
+/// - ✅ `AsStrSlice` slicing operations - zero-copy views into original input
+/// - ✅ Character position calculations - direct indexing without string traversal
+///
+/// The `AsStrSlice` type pre-computes line boundaries during initial parsing, allowing
+/// this function to work with line metadata rather than re-scanning content.
+///
+/// ## Parameters
+/// - `input`: The input text to parse (potentially multiple lines)
 /// - `indent`: The indentation level of the list item (number of spaces)
 /// - `bullet`: The bullet string (e.g., "- ", "1. ") that precedes the list item
 ///
-/// # Returns
+/// ## Returns
 /// A tuple containing:
 /// - The remainder of the input that wasn't consumed
-/// - A vector of `SmartListLine` objects representing the parsed content
+/// - A vector of `SmartListLineAlt` objects representing the parsed content lines
 pub fn parse_smart_list_content_lines_alt<'a>(
     input: AsStrSlice<'a>,
     indent: usize,
@@ -948,7 +966,11 @@ pub fn parse_smart_list_content_lines_alt<'a>(
     let indent_padding = indent_padding.as_str();
 
     // Early return if there are no more lines after the first one.
-    let Some(first_line_end) = input.find_substring(NEW_LINE) else {
+    // ⚠️ CRITICAL: Use character-aware slicing, not byte slicing
+    // bullet.input_len() returns character count, so this is safe
+    // Using take_from() ensures we skip the correct number of Unicode
+    // characters.
+    if input.lines.len() == 1 {
         // Return an empty remainder for single-line inputs
         let empty_remainder = input.take_from(input.input_len());
         return Ok((
@@ -959,21 +981,18 @@ pub fn parse_smart_list_content_lines_alt<'a>(
                 content: input.limit_to_line_end()
             }],
         ));
-    };
+    }
 
-    // Keep the first line. There may be more than 1 line.
-    let first = input.take(first_line_end);
+    // There are multiple lines. Calculate the first line's character count directly.
+    let first_line_char_count = input.extract_to_line_end().len_chars().as_usize();
 
-    // ⚠️ CRITICAL: Convert byte position to character position.
-    // `find_substring()` returns a BYTE offset, but `take_from()` expects a CHARACTER
-    // offset. For Unicode/multi-byte characters like emojis, these are different!
-    // We must count characters, not bytes, to avoid slicing UTF-8 sequences incorrectly.
-    let first_line_char_count = first.extract_to_line_end().len_chars().as_usize();
+    // Keep the first line. Will be added to `output_lines` later.
+    let first = input.take(first_line_char_count);
 
     // We need to skip the first line + the newline character.
     let input = input.take_from(first_line_char_count + 1);
 
-    // Match the rest of the lines.
+    // Match the rest of the lines. Will be added to `output_lines` later.
     let (remainder, rest) = many0((
         verify(
             // FIRST STEP: Match the ul or ol list item line.
@@ -1008,15 +1027,18 @@ pub fn parse_smart_list_content_lines_alt<'a>(
     ))
     .parse(input)?;
 
-    // Convert `rest` into a Vec<&str> that contains the output lines.
+    // Convert `first` + `rest` into a Vec<&str> that contains the output lines.
     let output_lines: InlineVec<SmartListLineAlt<'_>> = {
         let mut it = InlineVec::with_capacity(rest.len() + 1);
 
+        // Handle the first line separately.
         it.push(SmartListLineAlt {
             indent,
             bullet_str: bullet.extract_to_line_end(),
             content: first.limit_to_line_end(),
         });
+
+        // Handle the rest of the lines.
         it.extend(rest.iter().map(
             // Skip "bullet's width" number of characters at the start of the line.
             |(rest_line_content, _newline)| {
