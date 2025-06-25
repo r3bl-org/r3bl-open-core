@@ -19,7 +19,7 @@ use std::convert::AsRef;
 
 use nom::{IResult, Parser};
 
-use crate::{as_str_slice_mod::AsStrSlice,
+use crate::{as_str_slice::AsStrSlice,
             CharacterIndex,
             CharacterLength,
             NErr,

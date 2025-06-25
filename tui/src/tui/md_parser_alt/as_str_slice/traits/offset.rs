@@ -17,7 +17,7 @@
 
 use nom::Offset;
 
-use crate::as_str_slice_mod::AsStrSlice;
+use crate::as_str_slice::AsStrSlice;
 
 /// Implement [Offset] trait for [AsStrSlice]. This is required for the
 /// [nom::combinator::recognize] parser to work.

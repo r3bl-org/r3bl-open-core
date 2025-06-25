@@ -221,13 +221,13 @@
 
   - [x] review `as_str_slice.rs` changes
   - [x] review this fix `fallback_parse_any_line_as_plain_alt()`
-  - [.] break up `as_str_slice.rs` into `as_str_slice_mod`
-  - [.] continue migrating all the remaining tests into this file from `parse_markdown.rs`
+  - [x] break up `as_str_slice.rs` into `as_str_slice_mod`
   - [x] check performance of block code parser which materializes strings to look for enclosing
         three-backticks. this is avoidable, by using `lines` to check which ones only contain
         three-backticks and keep track of how many lines are involved, and then convert them into
         start and end char indices for the `AsStrSlice`
   - [ ] do the same performance check (don't materialize) for the block smart list parser
+  - [.] continue migrating all the remaining tests into this file from `parse_markdown.rs`
 
 - [ ] maybe check `AsStrSlice::find_substring()` for performance penalty when looking ahead to find
       something in a really large `lines`. might be able to speed up this search using `line` and
