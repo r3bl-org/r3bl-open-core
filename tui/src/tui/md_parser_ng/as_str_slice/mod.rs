@@ -99,6 +99,7 @@ pub mod traits;
 // Re-export.
 pub use core::*;
 
+pub use compatibility::*;
 pub use iterators::*;
 pub use operations::*;
 pub use position::*;

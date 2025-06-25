@@ -23,8 +23,8 @@ use nom::{branch::alt,
           Parser};
 
 use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
+            md_parser_ng::as_str_slice::compatibility::convert_into_code_block_lines,
             CodeBlockLine,
-            CodeBlockLineContent,
             List};
 
 /// Sample inputs:
@@ -91,37 +91,6 @@ fn parse_code_block_body_including_code_block_end(input: &str) -> IResult<&str, 
     Ok((remainder, output))
 }
 
-/// At a minimum, a [CodeBlockLine] will be 2 lines of text.
-/// 1. The first line will be the language of the code block, eg: "```rs\n" or "```\n".
-/// 2. The second line will be the end of the code block, eg: "```\n" Then there may be
-///    some number of lines of text in the middle. These lines are stored in the
-///    [content](CodeBlockLine.content) field.
-pub fn convert_into_code_block_lines<'input>(
-    lang: Option<&'input str>,
-    lines: Vec<&'input str>,
-) -> List<CodeBlockLine<'input>> {
-    let mut acc = List::with_capacity(lines.len() + 2);
-
-    acc += CodeBlockLine {
-        language: lang,
-        content: CodeBlockLineContent::StartTag,
-    };
-
-    for line in lines {
-        acc += CodeBlockLine {
-            language: lang,
-            content: CodeBlockLineContent::Text(line),
-        };
-    }
-
-    acc += CodeBlockLine {
-        language: lang,
-        content: CodeBlockLineContent::EndTag,
-    };
-
-    acc
-}
-
 /// Split a string by newline. The idea is that a line is some text followed by a newline.
 /// An empty line is just a newline character.
 ///
@@ -146,7 +115,7 @@ pub fn split_by_new_line(input: &str) -> Vec<&str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, list};
+    use crate::{assert_eq2, list, CodeBlockLineContent};
 
     #[test]
     fn test_parse_codeblock_split_by_eol() {
