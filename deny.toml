@@ -4,6 +4,7 @@
 
 [licenses]
 allow = [
+    "Unicode-3.0",
     "CDLA-Permissive-2.0",
     "MIT",
     "Apache-2.0",
@@ -11,24 +12,24 @@ allow = [
     "ISC",
     "BSD-3-Clause",
     "Zlib",
-    "OpenSSL",
-    "ISC",
+    # "OpenSSL",
+    # "ISC",
     "MPL-2.0",
 ]
 
 # Add exceptions for ring crate
-[[licenses.exceptions]]
-name = "ring"
-version = "=0.17.8"
-allow = ["OpenSSL", "ISC", "MIT"]
+# [[licenses.exceptions]]
+# name = "ring"
+# version = "=0.17.8"
+# allow = ["OpenSSL", "ISC", "MIT"]
 
-[[licenses.exceptions]]
-name = "unicode-ident"
-allow = ["Unicode-DFS-2016"]
+# [[licenses.exceptions]]
+# name = "unicode-ident"
+# allow = ["Unicode-DFS-2016"]
 
-[[licenses.exceptions]]
-name = "is_ci"
-allow = ["ISC"]
+# [[licenses.exceptions]]
+# name = "is_ci"
+# allow = ["ISC"]
 
 [advisories]
 # If you add a crate in the array below, eg: `yaml-rust@0.4.5` then it will be checked to
@@ -37,6 +38,6 @@ allow = ["ISC"]
 ignore = [
     "RUSTSEC-2024-0320", # "instant@0.1.13"
     "RUSTSEC-2024-0384", # "hashbrown@0.15.0"
-    "RUSTSEC-2024-0402", # "yaml-rust@0.4.5"
-    "RUSTSEC-2024-0421", # "idna v0.5.0"
+    # "RUSTSEC-2024-0402", # "yaml-rust@0.4.5"
+    # "RUSTSEC-2024-0421", # "idna v0.5.0"
 ]
