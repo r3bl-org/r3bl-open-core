@@ -15,14 +15,47 @@
  *   limitations under the License.
  */
 
+//! Implementation of `nom::Input` trait for `AsStrSlice`.
+//!
+//! # Character-Based Indexing
+//!
+//! **Important**: All `usize` values in this implementation represent **character
+//! positions** and **character counts**, not byte positions or byte counts. This is
+//! crucial for handling Unicode text correctly, including multi-byte characters like
+//! emojis.
+//!
+//! Since [AsStrSlice] works with [char] (see [Iterator::Item]), all `usize` values in the
+//! interface represent character-based indices and offsets. However, since we can't
+//! change the `nom::Input` trait signature, we use type aliases to clarify this:
+//!
+//! - [CharacterIndexNomCompat]: Character index, not byte index
+//! - [CharacterCountNomCompat]: Character count, not byte count
+//!
+//! ## Converting Between Byte and Character Positions
+//!
+//! If you have byte positions (e.g., from `find_substring()`), you must convert them to
+//! character positions before using methods like `take_from()`:
+//!
+//! ```rust
+//! # use r3bl_tui::{AsStrSlice, GCString, as_str_slice_test_case};
+//! # use nom::{FindSubstring, Input};
+//! as_str_slice_test_case!(slice, "hello world");
+//! let byte_pos = slice.find_substring("world").unwrap();
+//! let prefix = slice.take(byte_pos); // take() accepts byte positions
+//! let char_count = prefix.extract_to_line_end().chars().count(); // Convert to chars
+//! let from_char = slice.take_from(char_count); // take_from() needs char positions
+//! ```
+
 use nom::Input;
 
 use crate::{as_str_slice::AsStrSlice,
             core::tui_core::units::len,
+            CharacterCountNomCompat,
             CharacterIndexNomCompat,
             StringCharIndices,
             StringChars};
 
+/// Implementation of `nom::Input` trait for `AsStrSlice`.
 impl<'a> Input for AsStrSlice<'a> {
     type Item = char;
     type Iter = StringChars<'a>;
@@ -31,11 +64,6 @@ impl<'a> Input for AsStrSlice<'a> {
     fn input_len(&self) -> usize { self.remaining_len().as_usize() }
 
     /// Returns a slice containing the first `count` characters from the current position.
-    /// This is a character index due to the [Self::Item] assignment to [char].
-    ///
-    /// ⚠️ **Character-Based Operation**: This method takes `count` **characters**, not
-    /// bytes. This is safe for Unicode/UTF-8 text including emojis and multi-byte
-    /// characters.
     ///
     /// # Example
     /// ```
@@ -45,8 +73,6 @@ impl<'a> Input for AsStrSlice<'a> {
     /// let first_two = slice.take(2); // Gets "😀h" (2 characters)
     /// // NOT "😀" + partial byte sequence which would panic
     /// ```
-    ///
-    /// This works with the `max_len` field of [AsStrSlice].
     fn take(&self, count: CharacterIndexNomCompat) -> Self {
         // take() should return a slice containing the first 'count' characters.
         // Create a slice that starts at current position with max_len = count.
@@ -67,12 +93,7 @@ impl<'a> Input for AsStrSlice<'a> {
         }
     }
 
-    /// Returns a slice starting from the `start` character position. This is a character
-    /// index due to the [Self::Item] assignment to [char].
-    ///
-    /// ⚠️ **Character-Based Operation**: The `start` parameter is a **character offset**,
-    /// not a byte offset. This is critical for Unicode/UTF-8 safety - never pass byte
-    /// positions from operations like `find_substring()` directly to this method.
+    /// Returns a slice starting from the `start` character position.
     ///
     /// # Example
     /// ```
@@ -120,13 +141,13 @@ impl<'a> Input for AsStrSlice<'a> {
         result
     }
 
-    fn take_split(&self, count: usize) -> (Self, Self) {
+    fn take_split(&self, count: CharacterCountNomCompat) -> (Self, Self) {
         let taken = self.take(count);
         let remaining = self.take_from(count);
         (taken, remaining)
     }
 
-    fn position<P>(&self, predicate: P) -> Option<usize>
+    fn position<P>(&self, predicate: P) -> Option<CharacterIndexNomCompat>
     where
         P: Fn(Self::Item) -> bool,
     {
@@ -150,7 +171,10 @@ impl<'a> Input for AsStrSlice<'a> {
     /// Returns an iterator over the characters in the slice with their indices.
     fn iter_indices(&self) -> Self::IterIndices { StringCharIndices::new(self.clone()) }
 
-    fn slice_index(&self, count: usize) -> Result<usize, nom::Needed> {
+    fn slice_index(
+        &self,
+        count: CharacterCountNomCompat,
+    ) -> Result<CharacterIndexNomCompat, nom::Needed> {
         let remaining = self.remaining_len().as_usize();
         if count <= remaining {
             Ok(count)
