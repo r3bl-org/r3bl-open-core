@@ -403,7 +403,7 @@ mod tests {
     use crate::{assert_eq2, GCString, NErr, NErrorKind};
 
     #[test]
-    fn test_parse_fragment_starts_with_underscore_err_on_new_line_alt() {
+    fn test_underscore_fragment_parsing_fails_on_newline() {
         // "_here is italic_" -> ok
         {
             let lines = &[GCString::new("_here is italic_")];
@@ -513,7 +513,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_fragment_starts_with_star_err_on_new_line_alt() {
+    fn test_asterisk_fragment_parsing_fails_on_newline() {
         // "*here is bold*" -> ok
         {
             let lines = &[GCString::new("*here is bold*")];
@@ -607,7 +607,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_fragment_starts_with_backtick_err_on_new_line_alt() {
+    fn test_backtick_fragment_parsing_fails_on_newline() {
         {
             let lines = &[GCString::new("")];
             let input = AsStrSlice::from(lines);
@@ -736,7 +736,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_fragment_starts_with_left_link_err_on_new_line_alt() {
+    fn test_link_fragment_parsing_fails_on_newline() {
         {
             let lines = &[GCString::new("![alt text](image.jpg)")];
             let input = AsStrSlice::from(lines);
@@ -763,7 +763,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_fragment_checkbox_into_str() {
+    fn test_checkbox_fragment_parsing_returns_string() {
         // Test [x] checkbox.
         {
             let lines = &[GCString::new("[x] here is a checkbox")];
@@ -789,7 +789,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_fragment_checkbox_into_bool() {
+    fn test_checkbox_fragment_parsing_returns_boolean() {
         // Test [x] checkbox.
         {
             let lines = &[GCString::new("[x] here is a checkbox")];
@@ -822,7 +822,7 @@ mod tests_delim_matchers {
     use crate::{assert_eq2, GCString, NErr, NErrorKind};
 
     #[test]
-    fn test_delim_matchers_count_delim_occurrences_until_eol() {
+    fn test_delimiter_occurrence_counting_until_line_end() {
         // Test basic underscore counting
         {
             let lines = &[GCString::new("_hello_world_")];
@@ -922,7 +922,7 @@ mod tests_delim_matchers {
     }
 
     #[test]
-    fn test_delim_matchers_take_starts_with_delim_no_new_line() {
+    fn test_delimiter_extraction_without_newline_termination() {
         // Test successful case with underscore - paired delimiters
         {
             let lines = &[GCString::new("_hello_")];

@@ -99,7 +99,7 @@ mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
     use crate::{assert_eq2, list, MdLineFragment};
 
     #[test]
-    fn test_ignore_checkbox_empty_string() {
+    fn test_parse_block_markdown_text_with_checkbox_policy_empty_string() {
         assert_eq2!(
             parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
                 "",
@@ -110,7 +110,7 @@ mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
     }
 
     #[test]
-    fn test_ignore_checkbox_non_empty_string() {
+    fn test_parse_block_markdown_text_with_checkbox_policy_non_empty_string() {
         assert_eq2!(
             parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
                 "here is some plaintext *but what if we italicize?",
@@ -134,7 +134,7 @@ mod tests_parse_block_markdown_text_inner {
     use crate::{assert_eq2, list, MdLineFragment};
 
     #[test]
-    fn test_inner_parse_block_markdown_text_with_eol() {
+    fn test_parse_block_markdown_text_with_new_line() {
         assert_eq2!(
             inner::parse_block_markdown_text_with_new_line("\n"),
             Ok(("", list![]))
@@ -194,7 +194,7 @@ mod tests_parse_block_markdown_text_inner {
     }
 
     #[test]
-    fn test_parse_multiple_plain_text_fragments_in_single_line() {
+    fn test_parse_block_markdown_text_with_multiple_plain_text_fragments() {
         let it = inner::parse_block_markdown_text_with_new_line("this _bar\n");
         println!("it: {it:#?}");
         assert_eq2!(
@@ -218,7 +218,7 @@ mod tests_parse_block_markdown_text {
     use crate::{assert_eq2, list, HyperlinkData, MdLineFragment};
 
     #[test]
-    fn test_parse_hyperlink_markdown_text_1() {
+    fn test_parse_block_markdown_text_with_hyperlink_1() {
         let input = "This is a _hyperlink: [foo](http://google.com).";
         let it = parse_block_markdown_text_with_or_without_new_line(input);
         // println!("it: {:#?}", it);
@@ -241,7 +241,7 @@ mod tests_parse_block_markdown_text {
     }
 
     #[test]
-    fn test_parse_hyperlink_markdown_text_2() {
+    fn test_parse_block_markdown_text_with_hyperlink_2() {
         let input = "This is a *hyperlink: [foo](http://google.com).";
         let it = parse_block_markdown_text_with_or_without_new_line(input);
         // println!("it: {:#?}", it);
@@ -264,7 +264,7 @@ mod tests_parse_block_markdown_text {
     }
 
     #[test]
-    fn test_parse_hyperlink_markdown_text_3() {
+    fn test_parse_block_markdown_text_with_hyperlink_and_newline_1() {
         let input = "this is a * [link](url).\nthis is a * monkey";
         let it = parse_block_markdown_text_with_or_without_new_line(input);
         // println!("it: {:#?}", it);
@@ -287,7 +287,7 @@ mod tests_parse_block_markdown_text {
     }
 
     #[test]
-    fn test_parse_hyperlink_markdown_text_4() {
+    fn test_parse_block_markdown_text_with_hyperlink_and_newline_2() {
         let input = "this is a _ [link](url) *\nthis is a * monkey";
         // println!("input: {:#?}", input);
         let result = parse_block_markdown_text_with_or_without_new_line(input);
