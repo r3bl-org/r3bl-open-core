@@ -21,7 +21,7 @@
 //! proper Unicode/UTF-8 support. All functions in this file follow these principles:
 //!
 //! 1. Use [AsStrSlice] methods (`take_from`, `extract_to_line_end`) for slicing.
-//! 2. Convert byte positions from nom's [FindSubstring] to character positions.
+//! 2. Convert byte positions from nom's [nom::FindSubstring] to character positions.
 //! 3. Never use raw slice operators (&str[byte_start..byte_end]) on UTF-8 text.
 //! 4. Count characters with `.chars().count()`, not bytes with `.len()`, or just use the
 //!    [CharLengthExt] which adds a safe `len_chars()` method on `&str`.

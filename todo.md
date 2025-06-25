@@ -215,9 +215,7 @@
       - [x] `parse_block_smart_list_alt()`
       - [x] `mod tests_parse_block_smart_list`
 
----
-
-- [ ] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_mardown_alt()`
+- [x] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_mardown_alt()`
 
   - [x] review `as_str_slice.rs` changes
   - [x] review this fix `fallback_parse_any_line_as_plain_alt()`
@@ -230,43 +228,27 @@
   - [x] check `AsStrSlice::find_substring()` for performance penalty when looking ahead to find
         something in a really large `lines`. might be able to speed up this search using `line` and
         some match to calculate the "expected byte index"
-  - [.] continue migrating all the remaining tests into this file from `parse_markdown.rs`
+  - [x] continue migrating all the remaining tests into this file from `parse_markdown.rs`
 
 ---
 
+- [ ] rename `md_parser_alt` to `md_parser_ng`; all `_alt` -> `_ng`
 - [ ] remove `md_parser` mod and `md_parser_alt` mod is the new one; update
       `md_parser_syn_hi_impl.rs` to use this. provide a new `bool` flag that allows the new `_alt`
       parser active instead of the old one (keep them all in the code for now)
+
+---
 
 - vec -> inlinevec
 
   - [ ] change all `Vec` to `InlineVec` in `parse_markdown_alt.rs`
 
-- [ ] remove println!() except in tests
-- [ ] fix clippy warnings
-- [ ] add docs for everything
-- [ ] Title
-- [ ] Tags
-- [ ] Authors
-- [ ] Date
-- [ ] Heading
-- [ ] SmartList
-- [ ] CodeBlock
-- [ ] Text
-
-- lines approach (discard?)
-
-  - [ ] convert `VecEditorContentLines` into a newtype
-  - [ ] impl `nom::Input` for `VecEditorContentLines`
-  - [ ] need to change `try_parse_and_highlight()`?
-  - [ ] change `parse_markdown()` (et al) so it can recieve something other than `&str`
+- fix "`rust`" parsing in syn hi code (should support both "rust" and "rs")
 
 - table
 
   - [ ] impl md table parser
   - [ ] impl syn hi for this
-
-- fix "`rust`" parsing in syn hi code (should support both "rust" and "rs")
 
 # modernize `choose` and `giti` codebase: https://github.com/r3bl-org/r3bl-open-core/issues/427
 
