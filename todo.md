@@ -233,9 +233,10 @@
 ---
 
 - [ ] rename `md_parser_alt` to `md_parser_ng`; all `_alt` -> `_ng`
-- [ ] remove `md_parser` mod and `md_parser_alt` mod is the new one; update
-      `md_parser_syn_hi_impl.rs` to use this. provide a new `bool` flag that allows the new `_alt`
-      parser active instead of the old one (keep them all in the code for now)
+- [ ] remove all compiler warnings
+- [ ] update `md_parser_syn_hi_impl.rs` to use this. provide a new `bool` flag that allows the new
+      `_ng` parser active instead of the old one (keep them all in the code for now). there is 1
+      function that is shared between the two, so move that to `_ng` for smart code block tests.
 
 ---
 

@@ -599,7 +599,7 @@ can think of composing your code in the following way:
 
 Typically your [App] will look like this:
 
-```rs
+```rust
 #[derive(Default)]
 pub struct AppMain {
   // Might have some app data here as well.
@@ -951,7 +951,7 @@ what is supported and what is not.
 
 An implementation of lolcat color wheel is provided. Here's an example.
 
-```rs
+```rust
 use r3bl_tui::*;
 
 let mut lolcat = LolcatBuilder::new()
