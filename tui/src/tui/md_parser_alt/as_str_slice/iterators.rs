@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{as_str_slice_mod::AsStrSlice,
+use crate::{as_str_slice::AsStrSlice,
             core::tui_core::units::{idx, Index}};
 
 /// Iterator over the characters in an [AsStrSlice].

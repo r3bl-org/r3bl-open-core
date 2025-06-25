@@ -19,7 +19,7 @@ use std::convert::AsRef;
 
 use nom::{Compare, CompareResult};
 
-use crate::as_str_slice_mod::AsStrSlice;
+use crate::as_str_slice::AsStrSlice;
 
 /// The `Compare` trait in nom is not symmetric - you need to implement it in both
 /// directions if you want to use both types interchangeably with the `tag` function.

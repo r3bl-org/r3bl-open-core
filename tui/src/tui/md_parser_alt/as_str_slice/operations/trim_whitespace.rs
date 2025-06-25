@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{as_str_slice_mod::AsStrSlice,
+use crate::{as_str_slice::AsStrSlice,
             constants::{SPACE_CHAR, TAB_CHAR},
             core::tui_core::units::{len, Length}};
 

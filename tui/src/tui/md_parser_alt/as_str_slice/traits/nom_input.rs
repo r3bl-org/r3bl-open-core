@@ -17,7 +17,7 @@
 
 use nom::Input;
 
-use crate::{as_str_slice_mod::AsStrSlice,
+use crate::{as_str_slice::AsStrSlice,
             core::tui_core::units::len,
             CharacterIndexNomCompat,
             StringCharIndices,
