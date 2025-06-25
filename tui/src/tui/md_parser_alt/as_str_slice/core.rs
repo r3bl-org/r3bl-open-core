@@ -24,8 +24,13 @@ pub type NError<T> = nom::error::Error<T>;
 pub type NErrorKind = nom::error::ErrorKind;
 
 /// Marker type alias for [nom::Input] trait methods (which we can't change)
-/// to clarify a character based index type.
+/// to clarify a character based index type. Since [AsStrSlice] itself works with
+/// [char], see [Iterator::Item], all the `usize` in the interface related to
+/// index and offset are actually character based. However, since we can't change
+/// [nom::Input], this type alias is a way to "mark" that the `usize` in question in some
+/// of the relevant methods are actually character based offset or index.
 pub type CharacterIndexNomCompat = usize;
+pub type CharacterCountNomCompat = usize;
 /// Marker type alias for [Length] to clarify character based length type.
 pub type CharacterLength = Length;
 /// Marker type alias for [Index] to clarify character based index type.

@@ -227,9 +227,9 @@
         three-backticks and keep track of how many lines are involved, and then convert them into
         start and end char indices for the `AsStrSlice`
   - [x] do the same performance check (don't materialize) for the block smart list parser
-  - [.] check `AsStrSlice::find_substring()` for performance penalty when looking ahead to find
-    something in a really large `lines`. might be able to speed up this search using `line` and some
-    match to calculate the "expected byte index"
+  - [x] check `AsStrSlice::find_substring()` for performance penalty when looking ahead to find
+        something in a really large `lines`. might be able to speed up this search using `line` and
+        some match to calculate the "expected byte index"
   - [.] continue migrating all the remaining tests into this file from `parse_markdown.rs`
 
 ---

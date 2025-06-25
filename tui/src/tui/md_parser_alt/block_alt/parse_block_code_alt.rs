@@ -955,8 +955,9 @@ mod tests_parse_code_block_body_including_code_block_end_alt {
 
     #[test]
     fn test_parse_code_block_body_unicode_content() {
-        // Test that the parser fails when given unicode characters in code content
-        // This is expected behavior as the current implementation doesn't support unicode
+        // Test that the parser now correctly handles unicode characters in code content
+        // This demonstrates that our improved find_substring implementation supports
+        // Unicode
         {
             // cspell:disable
             as_str_slice_test_case!(
@@ -967,7 +968,20 @@ mod tests_parse_code_block_body_including_code_block_end_alt {
             );
             // cspell:enable
             let result = parse_code_block_body_including_code_block_end_alt(input);
-            assert!(result.is_err());
+            assert!(
+                result.is_ok(),
+                "Parser should now handle Unicode content correctly"
+            );
+
+            let (remainder, body) = result.unwrap();
+            assert!(
+                remainder.is_empty(),
+                "Should consume all input including closing backticks"
+            );
+
+            let body_content = body.extract_to_slice_end();
+            let expected_content = "let emoji = \"😀🚀\";\nlet unicode = \"αβγδε\";\n";
+            assert_eq2!(body_content.as_ref(), expected_content);
         }
     }
 
