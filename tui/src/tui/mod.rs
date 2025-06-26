@@ -34,6 +34,9 @@ pub const DEBUG_MD_PARSER: bool = false;
 /// work.
 pub const DEBUG_MD_PARSER_STDOUT: bool = false;
 
+/// Enable or disable NG MD parser.
+pub const ENABLE_MD_PARSER_NG: bool = true;
+
 /// Enable or disable syntax highlighting debug logging.
 pub const DEBUG_TUI_SYN_HI: bool = false;
 

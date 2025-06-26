@@ -51,6 +51,13 @@ pub struct EditorEngine {
     pub syntax_set: SyntaxSet,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
     pub theme: Theme,
+    /// This is an **optional** field that is used to somewhat speed up the legacy
+    /// Markdown parser [crate::parse_markdown()]. It is not used by the NG parser
+    /// [crate::parse_markdown_ng()]. It is lazily created if the legacy parser is
+    /// used, and it is re-used every time the document is re-parsed.
+    ///
+    /// ## Only used with the legacy Markdown parser
+    ///
     /// This is a byte cache that is used to write the entire editor content into, with
     /// CRLF added, so that it can be parsed by the Markdown parser in order to apply
     /// syntax highlighting using [crate::try_parse_and_highlight()].
@@ -65,7 +72,7 @@ pub struct EditorEngine {
     /// cache every time we need to parse the document. This cache is re-used every time
     /// the document is re-parsed (which happens every time a change is made to the
     /// document).
-    pub parser_byte_cache: ParserByteCache,
+    pub parser_byte_cache: Option<ParserByteCache>,
     pub ast_cache: Option<StyleUSSpanLines>,
 }
 
@@ -90,7 +97,7 @@ impl EditorEngine {
             config_options,
             syntax_set: SyntaxSet::load_defaults_newlines(),
             theme: try_load_r3bl_theme().unwrap_or_else(|_| load_default_theme()),
-            parser_byte_cache: ParserByteCache::new(),
+            parser_byte_cache: None,
             ast_cache: None,
         }
     }
