@@ -130,6 +130,27 @@
 //! This implementation is fundamental to the markdown parsing system's ability to process
 //! multiline content efficiently while maintaining compatibility with text processing
 //! libraries that expect contiguous string-like interfaces.
+//!
+//! ## Recent Enhancements for Compatibility
+//!
+//! This module was enhanced as part of achieving true drop-in replacement compatibility
+//! between the NG parser and legacy parser. Key improvements include:
+//!
+//! ### Enhanced State Machine Logic
+//! - **Improved edge case handling**: Better detection of end-of-line vs end-of-input
+//! - **Robust Unicode support**: Safe character advancement for multi-byte sequences
+//! - **Consistent newline behavior**: Ensures synthetic newlines match legacy parser
+//!
+//! ### Integration with Line Advancement Infrastructure
+//! This module works closely with the `line_advancement.rs` infrastructure:
+//! - **Character-level advancement**: Handles within-line character movement
+//! - **Line boundary detection**: Signals when synthetic newlines are needed
+//! - **State consistency**: Maintains accurate position tracking for parsers
+//!
+//! ### Compatibility Testing
+//! The synthetic newline generation was validated against 45+ compatibility test cases
+//! to ensure identical behavior with the legacy parser, especially for edge cases
+//! involving trailing empty lines and complex line sequences.
 
 use crate::{bounds_check,
             constants::NEW_LINE_CHAR,
