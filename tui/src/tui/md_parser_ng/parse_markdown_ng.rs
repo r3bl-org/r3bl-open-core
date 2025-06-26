@@ -21,9 +21,9 @@ use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
             list,
             parse_block_code_advance_ng,
             parse_block_smart_list_advance_ng,
-            parse_line_csv_advance_ng,
-            parse_line_heading_advance_ng,
-            parse_line_kv_advance_ng,
+            parse_line_csv_no_advance_ng,
+            parse_line_heading_no_advance_ng,
+            parse_line_kv_no_advance_ng,
             parse_line_text_advance_ng,
             sizing_list_of::ListStorage,
             AsStrSlice,
@@ -118,7 +118,7 @@ pub fn parse_markdown_ng<'a>(
             // Title metadata parser
             |input: AsStrSlice<'a>| {
                 input.ensure_advance_with_parser(&mut map(
-                    |it| parse_line_kv_advance_ng(TITLE, it),
+                    |it| parse_line_kv_no_advance_ng(TITLE, it),
                     |maybe_title| match maybe_title {
                         None => MdElement::Title(""),
                         Some(title) => MdElement::Title(title.extract_to_line_end()),
@@ -128,7 +128,7 @@ pub fn parse_markdown_ng<'a>(
             // Tags metadata parser
             |input: AsStrSlice<'a>| {
                 input.ensure_advance_with_parser(&mut map(
-                    |it| parse_line_csv_advance_ng(TAGS, it),
+                    |it| parse_line_csv_no_advance_ng(TAGS, it),
                     |list| {
                         let acc: ListStorage<&str> =
                             list.iter().map(|item| item.extract_to_line_end()).collect();
@@ -139,7 +139,7 @@ pub fn parse_markdown_ng<'a>(
             // Authors metadata parser
             |input: AsStrSlice<'a>| {
                 input.ensure_advance_with_parser(&mut map(
-                    |it| parse_line_csv_advance_ng(AUTHORS, it),
+                    |it| parse_line_csv_no_advance_ng(AUTHORS, it),
                     |list| {
                         let acc: ListStorage<&str> =
                             list.iter().map(|item| item.extract_to_line_end()).collect();
@@ -150,7 +150,7 @@ pub fn parse_markdown_ng<'a>(
             // Date metadata parser
             |input: AsStrSlice<'a>| {
                 input.ensure_advance_with_parser(&mut map(
-                    |it| parse_line_kv_advance_ng(DATE, it),
+                    |it| parse_line_kv_no_advance_ng(DATE, it),
                     |maybe_date| match maybe_date {
                         None => MdElement::Date(""),
                         Some(date) => MdElement::Date(date.extract_to_line_end()),
@@ -160,7 +160,7 @@ pub fn parse_markdown_ng<'a>(
             // Heading parser
             |input: AsStrSlice<'a>| {
                 input.ensure_advance_with_parser(&mut map(
-                    parse_line_heading_advance_ng,
+                    parse_line_heading_no_advance_ng,
                     MdElement::Heading,
                 ))
             },
