@@ -35,16 +35,16 @@
 //!
 //! ### Position states
 //!
-//! 1. **WithinLineContent**: Character index is within the current line's content
+//! 1. **`WithinLineContent`**: Character index is within the current line's content
 //!    - Simply increment `char_index` to move to the next character
 //!    - This is the most common case for normal text processing
 //!
-//! 2. **AtEndOfLine**: Character index is at the end of the current line
+//! 2. **`AtEndOfLine`**: Character index is at the end of the current line
 //!    - For multiline documents: inject a synthetic `\n` character
 //!    - Advance to the next line or handle trailing newlines appropriately
 //!    - For single-line documents: no synthetic newline is added
 //!
-//! 3. **PastEndOfLine**: Character index exceeds the current line's length
+//! 3. **`PastEndOfLine`**: Character index exceeds the current line's length
 //!    - No-op case - don't advance further to prevent invalid states
 //!
 //! ## Synthetic newline generation rules
@@ -65,13 +65,13 @@
 //!
 //! ### Decision matrix
 //!
-//! | Position State | Document Type | Line Location | Action |
-//! |----------------|---------------|---------------|---------|
-//! | AtEndOfLine | MultipleLines | HasMoreLinesAfter | Add synthetic `\n`, advance to next line |
-//! | AtEndOfLine | MultipleLines | LastLine | Add trailing synthetic `\n` |
-//! | AtEndOfLine | SingleLine | - | No synthetic newline |
-//! | WithinLineContent | Any | Any | Advance `char_index` within line |
-//! | PastEndOfLine | Any | Any | No-op |
+//! | Position State        | Document Type   | Line Location        | Action                                   |
+//! |-----------------------|-----------------|----------------------|------------------------------------------|
+//! | `AtEndOfLine`         | `MultipleLines` | `HasMoreLinesAfter`  | Add synthetic `\n`, advance to next line |
+//! | `AtEndOfLine`         | `MultipleLines` | `LastLine`           | Add trailing synthetic `\n`              |
+//! | `AtEndOfLine`         | `SingleLine`    | -                    | No synthetic newline                     |
+//! | `WithinLineContent`   | Any             | Any                  | Advance `char_index` within line         |
+//! | `PastEndOfLine`       | Any             | Any                  | No-op                                    |
 //!
 //! ## Unicode safety
 //!
@@ -131,23 +131,23 @@
 //! multiline content efficiently while maintaining compatibility with text processing
 //! libraries that expect contiguous string-like interfaces.
 //!
-//! ## Recent Enhancements for Compatibility
+//! ## Enhancements for compatibility
 //!
 //! This module was enhanced as part of achieving true drop-in replacement compatibility
 //! between the NG parser and legacy parser. Key improvements include:
 //!
-//! ### Enhanced State Machine Logic
+//! ### Enhanced state machine logic
 //! - **Improved edge case handling**: Better detection of end-of-line vs end-of-input
 //! - **Robust Unicode support**: Safe character advancement for multi-byte sequences
 //! - **Consistent newline behavior**: Ensures synthetic newlines match legacy parser
 //!
-//! ### Integration with Line Advancement Infrastructure
+//! ### Integration with line advancement infrastructure
 //! This module works closely with the `line_advancement.rs` infrastructure:
 //! - **Character-level advancement**: Handles within-line character movement
 //! - **Line boundary detection**: Signals when synthetic newlines are needed
 //! - **State consistency**: Maintains accurate position tracking for parsers
 //!
-//! ### Compatibility Testing
+//! ### Compatibility testing
 //! The synthetic newline generation was validated against 45+ compatibility test cases
 //! to ensure identical behavior with the legacy parser, especially for edge cases
 //! involving trailing empty lines and complex line sequences.

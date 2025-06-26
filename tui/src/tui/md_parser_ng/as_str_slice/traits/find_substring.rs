@@ -126,11 +126,13 @@ impl<'a> AsStrSlice<'a> {
     /// positions.
     ///
     /// We explicitly convert byte positions to character positions:
-    /// ```rust
+    /// ```no_run
+    /// # let line_str = "";
+    /// # let sub_str = "";
     /// line_str.find(sub_str).map(|byte_pos| {
     ///     // Convert byte position to character position
     ///     line_str[..byte_pos].chars().count()
-    /// })
+    /// });
     /// ```
     /// ## Character-to-Byte Index Conversion Algorithm
     ///
@@ -141,13 +143,16 @@ impl<'a> AsStrSlice<'a> {
     /// **Example**: `"prefix🎯middle"` where 🎯 is 4 bytes but 1 character
     /// ```text
     /// Char pos: p(0) r(1) e(2) f(3) i(4) x(5) 🎯(6) m(7) i(8) d(9) d(10)
-    /// Byte pos:      p(0) r(1) e(2) f(3) i(4) x(5) 🎯(6-9) m(10) i(11) d(12)
+    /// Byte pos: p(0) r(1) e(2) f(3) i(4) x(5) 🎯(6-9) m(10) i(11) d(12)
+    /// ```
     ///
-    /// If `line_start_pos = 7` (character 'm'), we need byte position 10 to slice correctly.
+    /// If `line_start_pos = 7` (character 'm'), we need byte position 10 to slice
+    /// correctly.
     ///
     /// **Algorithm**: Using [`str::char_indices()`] for safe conversion
     /// 1. `char_indices()` yields `(byte_pos, char)` pairs for each character.
-    /// 2. `.nth(line_start_pos)` gets the line_start_pos-th character and its byte position.
+    /// 2. `.nth(line_start_pos)` gets the line_start_pos-th character and its byte
+    ///    position.
     /// 3. This gives us the exact byte boundary where our character starts.
     /// 4. `&line_str[start_byte_pos..]` creates a valid UTF-8 slice without copying.
     ///

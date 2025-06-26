@@ -26,29 +26,29 @@ use crate::{as_str_slice::AsStrSlice,
             NError,
             NErrorKind};
 
-/// Represents the overall input state for parsing
+/// Represents the overall input state for parsing.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InputState {
-    /// Input has been exhausted - no more content to parse
+    /// Input has been exhausted - no more content to parse.
     AtEndOfInput,
-    /// Input still has content available for parsing
+    /// Input still has content available for parsing.
     HasMoreContent,
 }
 
-/// Represents the advancement state after a parser operation
+/// Represents the advancement state after a parser operation.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AdvancementState {
-    /// Parser advanced to a new line (ideal case)
+    /// Parser advanced to a new line (ideal case).
     AdvancedToNewLine,
-    /// Parser made progress within the current line
+    /// Parser made progress within the current line.
     MadeCharProgress,
-    /// Parser successfully handled an empty line
+    /// Parser successfully handled an empty line.
     HandledEmptyLine,
-    /// Parser made no progress at all
+    /// Parser made no progress at all.
     NoProgress,
 }
 
-/// Captures the initial position state before parsing
+/// Captures the initial position state before parsing.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct InitialParsePosition {
     pub line_index: CharacterIndex,
@@ -63,20 +63,21 @@ impl<'a> AsStrSlice<'a> {
     /// line when a parser succeeds but doesn't naturally advance lines. It prevents
     /// infinite loops in parsing by implementing a fail-safe advancement mechanism.
     ///
-    /// ## Critical Role in Fixing Compatibility Issues
+    /// ## Critical role in fixing compatibility issues
     ///
     /// This method was **essential for achieving true drop-in replacement compatibility**
     /// between the NG parser and the legacy parser. It provides a unified, robust
-    /// infrastructure for line advancement that eliminates the need for custom advancement
-    /// logic in individual parsers.
+    /// infrastructure for line advancement that eliminates the need for custom
+    /// advancement logic in individual parsers.
     ///
-    /// ### Key Improvements Made
-    /// - **Fixed input exhaustion detection**: Now uses line-based rather than character-based
+    /// ### Key improvements made
+    /// - **Fixed input exhaustion detection**: Now uses line-based rather than
+    ///   character-based
     /// - **Enhanced last line handling**: Properly advances past final lines
     /// - **Consistent behavior**: All parsers use the same advancement infrastructure
     /// - **Edge case coverage**: Handles trailing empty lines and complex line sequences
     ///
-    /// ## Enhanced Algorithm (Post-Fix)
+    /// ## Enhanced algorithm (post-fix)
     ///
     /// The algorithm was refined through extensive compatibility testing:
     ///
@@ -101,9 +102,9 @@ impl<'a> AsStrSlice<'a> {
     ///    - Provides clear "past end" state for consistent behavior
     /// ```
     ///
-    /// ## Fixed Edge Cases with Examples
+    /// ## Fixed edge cases with examples
     ///
-    /// ### Trailing Empty Lines
+    /// ### Trailing empty lines
     /// ```text
     /// Input: "Line 1\n\n\nLine 2\n\n"
     /// Lines: ["Line 1", "", "", "Line 2", ""]
@@ -113,7 +114,7 @@ impl<'a> AsStrSlice<'a> {
     /// Result: 5 MdElement::Text entries (matching legacy parser exactly)
     /// ```
     ///
-    /// ### Only Newlines Input
+    /// ### Only newlines input
     /// ```text
     /// Input: "\n\n\n"
     /// Lines: ["", "", ""]
@@ -123,7 +124,7 @@ impl<'a> AsStrSlice<'a> {
     /// Result: Perfect compatibility with legacy parser
     /// ```
     ///
-    /// ### Complex Line Sequences
+    /// ### Complex line sequences
     /// ```text
     /// Input: "# Title\n\nContent\n\n## Section\n\n"
     /// Before: Inconsistent empty line handling
@@ -139,26 +140,28 @@ impl<'a> AsStrSlice<'a> {
     ///    advances to the beginning of the next line or past the final line to ensure
     ///    progress and proper completion
     ///
-    /// ## State Management Improvements
+    /// ## State management improvements
     ///
     /// Uses refined enum-based state tracking:
-    /// - `InputState`: Line-based exhaustion detection (fixed to handle trailing empty lines)
+    /// - `InputState`: Line-based exhaustion detection (fixed to handle trailing empty
+    ///   lines)
     /// - `AdvancementState`: Categorizes different types of parser advancement
     /// - `InitialParsePosition`: Captures position before parsing for comparison
     ///
-    /// ## Enhanced Error Handling
+    /// ## Enhanced error handling
     ///
     /// - Returns `Eof` error only when `line_index >= lines.len()` (line-based detection)
     /// - Returns `Verify` error when parser makes no progress (prevents infinite loops)
     /// - Propagates parser-specific errors unchanged
-    /// - Handles edge case where `current_taken >= total_size` but lines remain to process
+    /// - Handles edge case where `current_taken >= total_size` but lines remain to
+    ///   process
     ///
-    /// ## Usage Patterns
+    /// ## Usage patterns
     ///
     /// This method is designed to be called within closure-based parser alternatives,
     /// typically used with [`nom::branch::alt()`]:
     ///
-    /// ```
+    /// ```no_run
     /// # use r3bl_tui::*;
     /// # use nom::{branch::alt, combinator::map, IResult};
     /// # use nom::Parser as _;
@@ -172,14 +175,10 @@ impl<'a> AsStrSlice<'a> {
     /// # fn transform_output(s: AsStrSlice<'_>) -> String { s.extract_to_line_end().to_string() }
     /// # fn another_transform(s: AsStrSlice<'_>) -> String { format!("transformed: {}", s.extract_to_line_end()) }
     ///
-    /// // Example: Empty line parser using ensure_advance_with_parser
-    /// fn parse_empty_line(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, MdLineFragments<'_>> {
-    ///     input.ensure_advance_with_parser(&mut |input: AsStrSlice<'_>| {
-    ///         let current_line = input.extract_to_line_end();
-    ///         if !current_line.is_empty() {
-    ///             return Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag)));
-    ///         }
-    ///         Ok((input, List::from(vec![]))) // Return empty fragments
+    /// // Parse empty line with proper advancement
+    /// fn parse_empty_line<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
+    ///     input.ensure_advance_with_parser(&mut |input: AsStrSlice<'a>| {
+    ///         Ok((input.clone(), List::from(vec![])))
     ///     })
     /// }
     ///
@@ -205,7 +204,7 @@ impl<'a> AsStrSlice<'a> {
     /// }
     /// ```
     ///
-    /// ## Critical Use Case: Trailing Empty Lines
+    /// ## Critical use case: trailing empty lines
     ///
     /// This method was enhanced to handle the critical edge case where input like
     /// `"Line 1\n\n\nLine 2\n\n"` ends with empty lines. Before the fix:
@@ -227,13 +226,12 @@ impl<'a> AsStrSlice<'a> {
     /// * `Ok((remainder, output))` - Parser succeeded with guaranteed line advancement
     /// * `Err(nom::Err)` - Parser failed or input was exhausted
     ///
-    /// ## See Also
+    /// ## See also
     ///
     /// * `determine_input_state` - Enhanced input exhaustion detection (line-based)
     /// * `handle_parser_advancement` - Core advancement logic with empty line support
     /// * `advance_to_next_line` - Enhanced last line handling
-    /// * [`crate::ensure_advance_fail_safe_ng`] - Legacy wrapper function for backward
-    ///   compatibility (deprecated in favor of this method)
+
     pub fn ensure_advance_with_parser<F, O>(
         &self,
         parser: &mut F,
@@ -263,14 +261,15 @@ impl<'a> AsStrSlice<'a> {
 
     /// Determines if input has been exhausted using line-based detection.
     ///
-    /// ## Enhanced Algorithm
+    /// ## Enhanced algorithm
     ///
-    /// This method was enhanced to fix a critical issue with trailing empty line processing.
-    /// Previously, it incorrectly considered input exhausted when `current_taken >= total_size`,
-    /// which caused problems with inputs like `"Line 1\n\n\nLine 2\n\n"` where all character
-    /// content was consumed but final empty lines remained unprocessed.
+    /// This method was enhanced to fix a critical issue with trailing empty line
+    /// processing. Previously, it incorrectly considered input exhausted when
+    /// `current_taken >= total_size`, which caused problems with inputs like `"Line
+    /// 1\n\n\nLine 2\n\n"` where all character content was consumed but final empty
+    /// lines remained unprocessed.
     ///
-    /// ## Current Logic
+    /// ## Current logic
     ///
     /// Input is considered exhausted **only** when `line_index >= lines.len()`, meaning
     /// we've moved past all available lines. This ensures:
@@ -278,27 +277,25 @@ impl<'a> AsStrSlice<'a> {
     /// - Character consumption doesn't prematurely terminate line processing
     /// - Complete compatibility with legacy parser behavior
     ///
-    /// ## Use Cases
+    /// ## Use cases
     ///
-    /// ### Trailing Empty Lines (Fixed)
+    /// ### Trailing empty lines
     /// ```text
     /// Input: "Line 1\n\n\nLine 2\n\n"
     /// Lines: ["Line 1", "", "", "Line 2", ""]
-    ///
-    /// At line 4 (last empty line):
-    /// - Old logic: current_taken=17, total_size=17 → AtEndOfInput (WRONG)
-    /// - New logic: line_index=4, lines.len()=5 → HasMoreContent (CORRECT)
     /// ```
     ///
-    /// ### Only Newlines Input (Fixed)
+    /// At line 4 (last empty line):
+    /// - New logic: line_index=4, lines.len()=5 → HasMoreContent
+    ///
+    /// ### Only newlines input (fixed)
     /// ```text
     /// Input: "\n\n\n"
     /// Lines: ["", "", ""]
+    /// ```
     ///
     /// At line 2 (last empty line):
-    /// - Old logic: current_taken=3, total_size=3 → AtEndOfInput (WRONG)
-    /// - New logic: line_index=2, lines.len()=3 → HasMoreContent (CORRECT)
-    /// ```
+    /// - New logic: line_index=2, lines.len()=3 → HasMoreContent
     fn determine_input_state(&self) -> InputState {
         // Enhanced line-based exhaustion detection
         // Input is exhausted only if we've gone past all available lines
@@ -383,66 +380,64 @@ impl<'a> AsStrSlice<'a> {
         }
     }
 
-    /// Advances the slice to the beginning of the next line with enhanced last line handling.
+    /// Advances the slice to the beginning of the next line with enhanced last line
+    /// handling.
     ///
-    /// ## Enhanced Algorithm
+    /// ## Enhanced algorithm
     ///
     /// This method was enhanced to properly handle the critical case of advancing past
-    /// the final line in a document. This is essential for processing trailing empty lines
-    /// and ensuring complete input consumption.
+    /// the final line in a document. This is essential for processing trailing empty
+    /// lines and ensuring complete input consumption.
     ///
-    /// ## Algorithm Steps
+    /// ## Algorithm steps
     ///
     /// 1. **Validation**: Ensures we're within valid line bounds
-    /// 2. **Line completion**: Advances to the end of the current line if not already there
+    /// 2. **Line completion**: Advances to the end of the current line if not already
+    ///    there
     /// 3. **Next line advancement**: Two cases:
     ///    - **Not last line**: Creates fresh AsStrSlice at next line (standard case)
     ///    - **Last line**: Sets `line_index = lines.len()` to indicate completion
     ///
-    /// ## Critical Last Line Handling
+    /// ## Critical last line handling
     ///
-    /// The key enhancement is how the last line is handled:
+    /// The key enhancement is how the last line is handled. There was a critical
+    /// compatibility issue where the parser would not advance past the last line,
+    /// causing infinite loops or incomplete parsing. The current implementation
+    /// addresses this by:
+    /// - Sets `line_index = lines.len()` (beyond array bounds).
+    /// - Sets `char_index = 0` for clean state.
+    /// - Signals completion without advancing current_taken beyond bounds.
     ///
-    /// ```text
-    /// Before (caused issues):
-    /// - Did nothing when at last line
-    /// - Parser remained at last line, causing infinite loops or incomplete parsing
+    /// ## Use cases
     ///
-    /// After (fixed):
-    /// - Sets line_index = lines.len() (beyond array bounds)
-    /// - Sets char_index = 0 for clean state
-    /// - Signals completion without advancing current_taken beyond bounds
-    /// ```
-    ///
-    /// ## Use Cases
-    ///
-    /// ### Trailing Empty Line Processing
+    /// ### Trailing empty line processing
     /// ```text
     /// Input: "Line 1\n\n\nLine 2\n\n"
     /// Lines: ["Line 1", "", "", "Line 2", ""]  // 5 lines, indices 0-4
-    ///
-    /// When processing line 4 (last empty line):
-    /// 1. Parser recognizes empty line, creates Text([])
-    /// 2. advance_to_next_line called with remainder at line 4
-    /// 3. Since line 4 is last line (4 == 5-1):
-    ///    - Sets line_index = 5 (beyond array)
-    ///    - Sets char_index = 0
-    /// 4. Next parser cycle: determine_input_state() sees line_index=5 >= lines.len()=5
-    /// 5. Returns AtEndOfInput, terminating parsing cleanly
     /// ```
     ///
-    /// ### Multiple Consecutive Empty Lines
+    /// When processing line 4 (last empty line):
+    /// 1. Parser recognizes empty line, creates `Text([])`
+    /// 2. advance_to_next_line called with remainder at line 4
+    /// 3. Since line 4 is last line (4 == 5-1):
+    ///    - Sets `line_index = 5` (beyond array)
+    ///    - Sets `char_index = 0`
+    /// 4. Next parser cycle: `determine_input_state()` sees `line_index=5 >=
+    ///    lines.len()=5`
+    /// 5. Returns `AtEndOfInput`, terminating parsing cleanly
+    ///
+    /// ### Multiple consecutive empty lines
     /// ```text
     /// Input: "\n\n\n"
     /// Lines: ["", "", ""]  // 3 lines, indices 0-2
+    /// ```
     ///
     /// Processing sequence:
-    /// 1. Line 0: empty → Text([]), advance to line 1
-    /// 2. Line 1: empty → Text([]), advance to line 2
-    /// 3. Line 2: empty → Text([]), advance sets line_index=3
-    /// 4. Next cycle: 3 >= 3 → AtEndOfInput → parsing complete
-    /// ```
-    fn advance_to_next_line(
+    /// 1. Line 0: empty → `Text([])`, advance to line 1
+    /// 2. Line 1: empty → `Text([])`, advance to line 2
+    /// 3. Line 2: empty → `Text([])`, advance sets `line_index=3`
+    /// 4. Next cycle: `3 >= 3` → `AtEndOfInput` → parsing complete
+    pub fn advance_to_next_line(
         &self,
         mut remainder: AsStrSlice<'a>,
     ) -> Result<AsStrSlice<'a>, NErr<NError<AsStrSlice<'a>>>> {

@@ -24,382 +24,64 @@ use crate::{AsStrSlice,
             ParserByteCache,
             PARSER_BYTE_CACHE_PAGE_SIZE};
 
-impl<'a> AsStrSlice<'a> {
-    /// Write the content of this slice to a byte cache.
-    ///
-    /// This is for compatibility with the legacy markdown parser, which expects a [&str]
-    /// input with trailing [crate::constants::NEW_LINE].
-    ///
-    /// ## Newline Behavior
-    ///
-    /// - It adds a trailing [crate::constants::NEW_LINE] to the end of the `acc` in case
-    ///   there is more than one line in `lines` field of [AsStrSlice].
-    /// - For a single line, no trailing newline is added.
-    /// - Empty lines are preserved with newlines.
-    ///
-    /// ## Incompatibility with [str::lines()]
-    ///
-    /// **Important**: This behavior is intentionally different from [str::lines()].
-    /// When there are multiple lines and the last line is empty, this method will add
-    /// a trailing newline, whereas [str::lines()] would not.
-    ///
-    /// This behavior is what was used in the legacy parser which takes [&str] as input,
-    /// rather than [AsStrSlice].
-    pub fn write_to_byte_cache_compat(
-        &self,
-        size_hint: usize,
-        acc: &mut ParserByteCache,
-    ) {
-        // Clear the cache before writing to it. And size it correctly.
-        acc.clear();
-        let amount_to_reserve = {
-            // Increase the capacity of the acc if necessary by rounding up to the
-            // nearest PARSER_BYTE_CACHE_PAGE_SIZE.
-            let page_size = PARSER_BYTE_CACHE_PAGE_SIZE;
-            let current_capacity = acc.capacity();
-            if size_hint > current_capacity {
-                let bytes_needed: usize = size_hint - current_capacity;
-                // Round up bytes_needed to the nearest page_size.
-                let pages_needed = bytes_needed.div_ceil(page_size);
-                pages_needed * page_size
-            } else {
-                0
-            }
-        };
-        acc.reserve(amount_to_reserve);
-
-        if self.lines.is_empty() {
-            return;
-        }
-
-        // Use the Display implementation which already handles the correct newline
-        // behavior.
-        _ = write!(acc, "{self}");
-    }
-}
-
-/// Shared function used by both old and new code block parsers.
+/// ## Compatibility test suite
 ///
-/// At a minimum, a [CodeBlockLine] will be 2 lines of text.
-/// 1. The first line will be the language of the code block, eg: "```rs\n" or "```\n".
-/// 2. The second line will be the end of the code block, eg: "```\n" Then there may be
-///    some number of lines of text in the middle. These lines are stored in the
-///    [content](CodeBlockLine.content) field.
-pub fn convert_into_code_block_lines<'input>(
-    lang: Option<&'input str>,
-    lines: Vec<&'input str>,
-) -> List<CodeBlockLine<'input>> {
-    let mut acc = List::with_capacity(lines.len() + 2);
-
-    acc += CodeBlockLine {
-        language: lang,
-        content: CodeBlockLineContent::StartTag,
-    };
-
-    for line in lines {
-        acc += CodeBlockLine {
-            language: lang,
-            content: CodeBlockLineContent::Text(line),
-        };
-    }
-
-    acc += CodeBlockLine {
-        language: lang,
-        content: CodeBlockLineContent::EndTag,
-    };
-
-    acc
-}
-
-/// These tests ensure compatibility with how [AsStrSlice::write_to_byte_cache_compat()]
-/// works. And ensuring that the [AsStrSlice] methods that are used to implement the
-/// [Display] trait do in fact make it behave like a "virtual" array or slice of strings
-/// that matches the behavior of [AsStrSlice::write_to_byte_cache_compat()].
+/// This module contains tests that ensure the NG parser (`parse_markdown_ng`)
+/// produces identical output to the legacy parser (`parse_markdown`) for all
+/// markdown inputs, including challenging edge cases.
 ///
-/// This breaks compatibility with [str::lines()] behavior, but matches the behavior of
-/// [AsStrSlice::write_to_byte_cache_compat()] which adds trailing newlines for multiple
-/// lines.
-#[cfg(test)]
-mod tests_write_to_byte_cache_compat_behavior {
-    use super::*;
-    use crate::{as_str_slice_test_case, GCString, ParserByteCache};
-
-    #[test]
-    fn test_empty_string() {
-        // Empty lines behavior.
-        {
-            let lines: Vec<GCString> = vec![];
-            let slice = AsStrSlice::from(&lines);
-            assert_eq!(slice.to_inline_string(), "");
-            assert_eq!(slice.lines.len(), 0);
-        }
-    }
-
-    #[test]
-    fn test_single_char_no_newline() {
-        // Single line behavior - no trailing newline for single lines.
-        {
-            as_str_slice_test_case!(slice, "a");
-            assert_eq!(slice.to_inline_string(), "a");
-            assert_eq!(slice.lines.len(), 1);
-        }
-    }
-
-    #[test]
-    fn test_two_chars_with_trailing_newline() {
-        // Multiple lines behavior - adds trailing newline for multiple lines.
-        {
-            as_str_slice_test_case!(slice, "a", "b");
-            assert_eq!(slice.to_inline_string(), "a\nb\n"); // Trailing \n added
-            assert_eq!(slice.lines.len(), 2);
-        }
-    }
-
-    #[test]
-    fn test_three_chars_with_trailing_newline() {
-        // Multiple lines behavior - adds trailing newline for multiple lines.
-        {
-            as_str_slice_test_case!(slice, "a", "b", "c");
-            assert_eq!(slice.to_inline_string(), "a\nb\nc\n"); // Trailing \n added
-            assert_eq!(slice.lines.len(), 3);
-        }
-    }
-
-    #[test]
-    fn test_empty_lines_with_trailing_newline() {
-        // Empty lines are preserved with newlines, plus trailing newline.
-        {
-            as_str_slice_test_case!(slice, "", "a", "");
-            assert_eq!(slice.to_inline_string(), "\na\n\n"); // Each line followed by \n
-            assert_eq!(slice.lines.len(), 3);
-        }
-    }
-
-    #[test]
-    fn test_only_empty_lines() {
-        // Multiple empty lines get trailing newline.
-        {
-            as_str_slice_test_case!(slice, "", "");
-            assert_eq!(slice.to_inline_string(), "\n\n"); // Two newlines plus trailing
-            assert_eq!(slice.lines.len(), 2);
-        }
-    }
-
-    #[test]
-    fn test_single_empty_line() {
-        // Single empty line gets no trailing newline.
-        {
-            as_str_slice_test_case!(slice, "");
-            assert_eq!(slice.to_inline_string(), ""); // No trailing newline for single line
-            assert_eq!(slice.lines.len(), 1);
-        }
-    }
-
-    #[test]
-    fn test_verify_write_to_byte_cache_compat_consistency() {
-        let test_helper = |slice: AsStrSlice<'_>| {
-            let slice_result = slice.to_inline_string();
-
-            // Get write_to_byte_cache_compat result
-            let mut cache = ParserByteCache::new();
-            slice.write_to_byte_cache_compat(slice_result.len() + 10, &mut cache);
-            let cache_result = cache.as_str();
-
-            // They should match exactly
-            assert_eq!(
-                slice_result, cache_result,
-                "Mismatch: AsStrSlice produced {slice_result:?}, write_to_byte_cache_compat produced {cache_result:?}"
-            );
-        };
-
-        // Empty
-        {
-            let slice = AsStrSlice::from(&[]);
-            test_helper(slice);
-        }
-
-        // Single line
-        {
-            as_str_slice_test_case!(slice, "single");
-            test_helper(slice);
-        }
-
-        // Two lines
-        {
-            as_str_slice_test_case!(slice, "a", "b");
-            test_helper(slice);
-        }
-
-        // With empty lines
-        {
-            as_str_slice_test_case!(slice, "", "middle", "");
-            test_helper(slice);
-        }
-
-        // Only empty lines
-        {
-            as_str_slice_test_case!(slice, "", "");
-            test_helper(slice);
-        }
-    }
-
-    #[test]
-    fn test_compare_with_str_lines() {
-        // This test explicitly demonstrates the incompatibility with str::lines()
-        // when there are multiple lines and the last line is empty.
-
-        // Case 1: Multiple lines with empty last line
-        {
-            // Create a string with multiple lines and empty last line
-            let str_with_empty_last_line = "line1\nline2\n";
-
-            // Using str::lines()
-            let str_lines: Vec<&str> = str_with_empty_last_line.lines().collect();
-            assert_eq!(str_lines, vec!["line1", "line2"]); // str::lines() ignores the empty last line
-
-            // Using AsStrSlice
-            as_str_slice_test_case!(slice, "line1", "line2");
-            let slice_result = slice.to_inline_string();
-            assert_eq!(slice_result.as_str(), "line1\nline2\n"); // AsStrSlice preserves the trailing newline
-
-            // Demonstrate the difference
-            let reconstructed_from_str_lines = str_lines.join("\n");
-            assert_eq!(reconstructed_from_str_lines, "line1\nline2"); // No trailing newline
-            assert_ne!(reconstructed_from_str_lines, slice_result.as_str()); // Different from AsStrSlice
-        }
-
-        // Case 2: Multiple lines with non-empty last line
-        {
-            // Create a string with multiple lines and non-empty last line
-            let str_with_non_empty_last_line = "line1\nline2";
-
-            // Using str::lines()
-            let str_lines: Vec<&str> = str_with_non_empty_last_line.lines().collect();
-            assert_eq!(str_lines, vec!["line1", "line2"]);
-
-            // Using AsStrSlice
-            as_str_slice_test_case!(slice, "line1", "line2");
-            let slice_result = slice.to_inline_string();
-            assert_eq!(slice_result.as_str(), "line1\nline2\n"); // AsStrSlice adds a trailing newline
-
-            // Demonstrate the difference
-            let reconstructed_from_str_lines = str_lines.join("\n");
-            assert_eq!(reconstructed_from_str_lines, "line1\nline2"); // No trailing newline
-            assert_ne!(reconstructed_from_str_lines, slice_result.as_str()); // Different from AsStrSlice
-        }
-    }
-}
-
-/// # Comprehensive Compatibility Test Suite
+/// ## Parser comparison with real world use cases
 ///
-/// This module contains an extensive test suite that ensures the NG parser
-/// (`parse_markdown_ng`) produces identical output to the legacy parser
-/// (`parse_markdown`) for all markdown inputs, including challenging edge cases.
+/// There are two main paths for parsing markdown in the R3BL TUI editor:
+/// 1. NG parser path: Convert &[`crate::GCString`] to [`AsStrSlice`] (no copy) ->
+///    [`crate::parse_markdown_ng()`]
+/// 2. Legacy parser path: &[`crate::GCString`] -> materialized string (full copy) ->
+///    [`crate::parse_markdown()`]
 ///
-/// ## Purpose and Achievement
+/// ## Test categories
 ///
-/// **Mission**: Achieve true drop-in replacement compatibility between NG and legacy
-/// parsers. **Status**: ✅ **COMPLETE** - All 45+ test cases pass with identical output.
+/// The test suite covers the following categories:
 ///
-/// ## Real world use cases to compare NG and legacy parsers
+/// ### Basic text handling
+/// - Empty strings and single/multiple line inputs
+/// - Edge cases (empty lines, whitespace variations, trailing spaces)
 ///
-/// There are two main paths for parsing markdown in the R3BL TUI editor, from the
-/// common source of truth, which is [`crate::EditorContent`], which uses
-/// [`crate::sizing::VecEditorContentLines`] internally to store the data, which is just
-/// an inline vec of [`crate::GCString`].
-/// 1. NG parser path: Convert `&[GCString]` to [`AsStrSlice`] (🐇 no copy) ->
-///    parse_markdown_ng
-/// 2. Legacy parser path: &[GCString] -> materialized string (🦥 full copy) ->
-///    parse_markdown
+/// ### Core markdown features
+/// - Headings (all levels H1-H6)
+/// - Text formatting (bold, italic, inline code)
+/// - Mixed and nested formatting
+/// - Lists (ordered, unordered, nested, checkboxes)
+/// - Links and images (simple and complex)
+/// - Code blocks (with/without language, empty blocks)
 ///
-/// ## Test Categories
+/// ### Advanced features
+/// - Metadata (@title, @tags, @authors, @date)
+/// - Complex documents with mixed content
+/// - Code blocks within lists
 ///
-/// ### 1. Edge Case Coverage (Primary Focus)
-/// - **Trailing empty lines**: `"Line 1\n\n\nLine 2\n\n"` → identical parsing
-/// - **Only newlines**: `"\n\n\n"` → produces 3 empty `Text([])` elements
-/// - **Complex sequences**: Mixed content with various empty line patterns
-/// - **Whitespace variations**: Tabs, spaces, mixed whitespace handling
+/// ### Edge cases and error handling
+/// - Unicode and special characters
+/// - Malformed syntax and unclosed formatting
+/// - Whitespace and newline handling variations
 ///
-/// ### 2. Core Markdown Features
-/// - **Headings**: All levels (H1-H6) with various formatting
-/// - **Text formatting**: Bold, italic, inline code, mixed formatting
-/// - **Lists**: Ordered, unordered, nested, with complex content
-/// - **Links and images**: Various URL formats, reference links
-/// - **Code blocks**: With and without language specifiers
+/// ### Debug and development tests
+/// - Debug utilities for parser comparison
+/// - Known issue verification (Unicode inline code fix)
+/// - Failing case analysis
 ///
-/// ### 3. Unicode and Special Characters
-/// - **Emoji support**: `🎯`, `📝`, complex emoji sequences
-/// - **Accented characters**: Various Unicode normalization forms
-/// - **Multi-byte sequences**: Proper character boundary handling
-/// - **Special symbols**: Mathematical, currency, technical symbols
+/// ## Test methodology
 ///
-/// ### 4. Malformed and Edge Content
-/// - **Unclosed formatting**: Unmatched bold/italic markers
-/// - **Malformed syntax**: Invalid markdown constructs
-/// - **Empty documents**: Various empty input scenarios
-/// - **Large documents**: Performance and correctness validation
+/// Each test follows a comparison pattern:
+/// 1. Convert input string to `&[GCString]` (simulating editor content)
+/// 2. Legacy parser path: materialize to string -> `parse_markdown(&str)`
+/// 3. NG parser path: use `AsStrSlice` directly -> `parse_markdown_ng(AsStrSlice)`
+/// 4. Compare results: both must succeed/fail consistently with identical output
+/// 5. Validate remainder consistency between parsers
 ///
-/// ## Critical Test Cases Solved
+/// ## Known limitations
 ///
-/// ### Empty Line Processing
-/// ```text
-/// Test: "Line 1\n\n\nLine 2\n\n"
-/// Legacy: [Text("Line 1"), Text([]), Text([]), Text("Line 2"), Text([])]
-/// NG Before: [Text("Line 1"), Text([]), Text([]), Text("Line 2")] ❌ Missing final empty
-/// NG After: [Text("Line 1"), Text([]), Text([]), Text("Line 2"), Text([])] ✅ Perfect match
-/// ```
-///
-/// ### Newline-Only Input
-/// ```text
-/// Test: "\n\n\n"
-/// Legacy: [Text([]), Text([]), Text([])]
-/// NG Before: Parser error ❌
-/// NG After: [Text([]), Text([]), Text([])] ✅ Perfect match
-/// ```
-///
-/// ## Test Methodology
-///
-/// Each test follows a rigorous comparison pattern:
-/// 1. **Parse with legacy**: Get expected output from legacy parser
-/// 2. **Parse with NG**: Get actual output from NG parser
-/// 3. **Deep comparison**: Element-by-element comparison with detailed reporting
-/// 4. **Remainder validation**: Ensure both parsers consume input identically
-/// 5. **Debug output**: Comprehensive logging for any mismatches
-///
-/// ## Infrastructure Benefits
-///
-/// ### AsStrSlice Compatibility Layer
-/// - **Bidirectional conversion**: String ↔ AsStrSlice with perfect fidelity
-/// - **Newline preservation**: Maintains exact line boundaries from original input
-/// - **Unicode safety**: Character-based operations throughout
-///
-/// ### Comprehensive Reporting
-/// - **Detailed mismatches**: Shows exactly where outputs differ
-/// - **Element-by-element**: Precise comparison of parsed elements
-/// - **Debug helpers**: Visualizes input processing and line boundaries
-///
-/// ## Usage for Development
-///
-/// ```bash
-/// # Run all compatibility tests
-/// cargo test tui::md_parser_ng::as_str_slice::compatibility
-///
-/// # Run specific edge case tests
-/// cargo test test_edge_case_empty_lines
-/// cargo test test_only_newlines
-/// cargo test test_trailing_spaces
-/// ```
-///
-/// ## Maintenance and Extension
-///
-/// When adding new markdown features or edge cases:
-/// 1. Add test case to this module with legacy parser as reference
-/// 2. Ensure both parsers produce identical output
-/// 3. Add debug output if needed for complex cases
-/// 4. Update documentation with new test coverage
-///
-/// This comprehensive test suite is the foundation for maintaining compatibility
-/// as both parsers evolve and ensures confidence in the drop-in replacement capability.
+/// - One comprehensive test is skipped due to known differences in code block spacing
+/// - Some tests include debug output for development purposes
 #[cfg(test)]
 mod tests_parse_markdown_compatibility {
     use crate::{parse_markdown,
@@ -412,58 +94,79 @@ mod tests_parse_markdown_compatibility {
     /// This simulates the real-world usage in try_parse_and_highlight where both parsers
     /// start from the same &[GCString] source but take different paths.
     fn test_compatibility_helper(test_name: &str, input_str: &str) {
-        // Step 1: Convert input to &[GCString] (the common source of truth, simulating
-        // editor content)
-        let gc_lines: Vec<GCString> = input_str.lines().map(GCString::from).collect();
-        let slice = AsStrSlice::from(gc_lines.as_slice());
+        // Step 1 - Convert input_str to &[GCString]:
+        // The common source of truth, simulating editor content.
+        let gcs_lines: Vec<GCString> = input_str.lines().map(GCString::from).collect();
+        let source_of_truth = AsStrSlice::from(gcs_lines.as_slice());
 
-        // Step 2: Legacy parser path: &[GCString] -> materialized string ->
-        // parse_markdown
-        let size_hint = gc_lines.iter().map(|line| line.len().as_usize() + 1).sum();
+        // Step 2 - Legacy parser path:
+        // &[GCString] -> materialize string -> parse_markdown(&str)
+        // Transform gc_lines into a materialized string.
+        let size_hint = gcs_lines.iter().map(|line| line.len().as_usize() + 1).sum();
         let mut materialized_cache = ParserByteCache::with_capacity(size_hint);
-        slice.write_to_byte_cache_compat(size_hint, &mut materialized_cache);
+        source_of_truth.write_to_byte_cache_compat(size_hint, &mut materialized_cache);
         let materialized_input = materialized_cache.as_str();
-        let legacy_result = parse_markdown(materialized_input); // Step 3: NG parser path: &[GCString] -> AsStrSlice -> parse_markdown_ng
-                                                                // (uses the original slice, not the materialized string)
-        let test_ng_result = parse_markdown_ng(slice);
+        let legacy_result = parse_markdown(materialized_input);
 
-        // Both should either succeed or fail
-        let legacy_success = legacy_result.is_ok();
-        let ng_success = test_ng_result.is_ok();
+        // Step 3 - NG parser path:
+        // &[GCString] -> AsStrSlice -> parse_markdown_ng(AsStrSlice)
+        // Uses the original slice, not the materialized string.
+        let ng_result = parse_markdown_ng(source_of_truth);
 
-        if legacy_success != ng_success {
-            panic!(
-                "{}: Results don't match. Legacy: {}, NG: {}",
-                test_name, legacy_success, ng_success
-            );
-        }
+        // Step 4 - Compare results:
+        // Both succeed → Compare their results
+        // Both fail → Test passes (consistent failure)
+        // One succeeds, one fails → Test should fail with a clear message
 
-        if legacy_success {
-            let (legacy_remainder, legacy_doc) = legacy_result.unwrap();
-            let (ng_remainder, ng_doc) = test_ng_result.unwrap();
+        // Both parsers should either succeed or fail consistently.
+        assert_eq!(
+            legacy_result.is_ok(),
+            ng_result.is_ok(),
+            "{}: One parser succeeded while the other failed. Legacy: {}, NG: {}",
+            test_name,
+            legacy_result.is_ok(),
+            ng_result.is_ok()
+        );
 
-            // Check remainders are equivalent - allow for trailing newline differences
-            let ng_remainder_str = ng_remainder.to_inline_string();
-            let legacy_remainder_trimmed = legacy_remainder.trim_end();
-            let ng_remainder_trimmed = ng_remainder_str.trim_end();
+        // Both parsers should either succeed or fail consistently.
+        match (legacy_result.is_ok(), ng_result.is_ok()) {
+            (true, true) => {
+                // Both succeeded - compare their results.
+                let (legacy_remainder, legacy_doc) = legacy_result.unwrap();
+                let (ng_remainder, ng_doc) = ng_result.unwrap();
 
-            // Both should be empty after trimming trailing whitespace, or exactly match
-            if legacy_remainder != ng_remainder_str.as_str() {
-                // Allow for trailing newline differences (known issue)
+                // Check documents are equivalent. This MUST be an EXACT match. This is
+                // the actual compatibility test.
                 assert_eq!(
-                    legacy_remainder_trimmed, ng_remainder_trimmed,
-                    "{}: Remainders don't match after trimming. Legacy: {:?}, NG: {:?}",
-                    test_name, legacy_remainder_trimmed, ng_remainder_trimmed
+                    legacy_doc, ng_doc,
+                    "{}: Documents don't match.\nLegacy: {:#?}\nNG: {:#?}",
+                    test_name, legacy_doc, ng_doc
+                );
+
+                // Materialize the NG remainder. Then compare them to ensure they match.
+                // The remainder gets thrown away in the editor, so this is just for
+                // consistency checking.
+                let ng_remainder_str = ng_remainder.to_inline_string();
+                if legacy_remainder != ng_remainder_str.as_str() {
+                    panic!(
+                        "The legacy and NG parser remainders don't match.\n\
+                            Legacy: {:?}\nNG: {:?}\nTest: {}",
+                        legacy_remainder, ng_remainder_str, test_name
+                    );
+                }
+            }
+            (false, false) => {
+                // Both failed - test passes (consistent failure is valid).
+            }
+            _ => {
+                // One parser succeeded while the other failed.
+                panic!(
+                    "{}: One parser succeeded while the other failed. Legacy: {}, NG: {}",
+                    test_name,
+                    legacy_result.is_ok(),
+                    ng_result.is_ok()
                 );
             }
-
-            // Check documents are equivalent - temporarily disable normalization to see
-            // differences
-            assert_eq!(
-                legacy_doc, ng_doc,
-                "{}: Documents don't match.\nLegacy: {:#?}\nNG: {:#?}",
-                test_name, legacy_doc, ng_doc
-            );
         }
     }
 
@@ -920,5 +623,271 @@ mod tests_parse_markdown_compatibility {
         debug_parser_processing("edge_case_empty_lines", "Line 1\n\n\nLine 2\n\n");
         debug_parser_processing("simple_inline_code", "first\n`second`");
         debug_parser_processing("inline_code_variations", "`simple code`\n`code with spaces`\n`code-with-dashes`\n`code_with_underscores`");
+    }
+}
+
+impl<'a> AsStrSlice<'a> {
+    /// Write the content of this slice to a byte cache.
+    ///
+    /// This is for compatibility with the legacy markdown parser, which expects a [&str]
+    /// input with trailing [crate::constants::NEW_LINE].
+    ///
+    /// ## Newline behavior
+    ///
+    /// - It adds a trailing [crate::constants::NEW_LINE] to the end of the `acc` in case
+    ///   there is more than one line in `lines` field of [AsStrSlice].
+    /// - For a single line, no trailing newline is added.
+    /// - Empty lines are preserved with newlines.
+    ///
+    /// ## Incompatibility with [str::lines()]
+    ///
+    /// **Important**: This behavior is intentionally different from [str::lines()].
+    /// When there are multiple lines and the last line is empty, this method will add
+    /// a trailing newline, whereas [str::lines()] would not.
+    ///
+    /// This behavior is what was used in the legacy parser which takes [&str] as input,
+    /// rather than [AsStrSlice].
+    pub fn write_to_byte_cache_compat(
+        &self,
+        size_hint: usize,
+        acc: &mut ParserByteCache,
+    ) {
+        // Clear the cache before writing to it. And size it correctly.
+        acc.clear();
+        let amount_to_reserve = {
+            // Increase the capacity of the acc if necessary by rounding up to the
+            // nearest PARSER_BYTE_CACHE_PAGE_SIZE.
+            let page_size = PARSER_BYTE_CACHE_PAGE_SIZE;
+            let current_capacity = acc.capacity();
+            if size_hint > current_capacity {
+                let bytes_needed: usize = size_hint - current_capacity;
+                // Round up bytes_needed to the nearest page_size.
+                let pages_needed = bytes_needed.div_ceil(page_size);
+                pages_needed * page_size
+            } else {
+                0
+            }
+        };
+        acc.reserve(amount_to_reserve);
+
+        if self.lines.is_empty() {
+            return;
+        }
+
+        // Use the Display implementation which already handles the correct newline
+        // behavior.
+        _ = write!(acc, "{self}");
+    }
+}
+
+/// Shared function used by both old and new code block parsers.
+///
+/// At a minimum, a [CodeBlockLine] will be 2 lines of text.
+/// 1. The first line will be the language of the code block, eg: "```rs\n" or "```\n".
+/// 2. The second line will be the end of the code block, eg: "```\n" Then there may be
+///    some number of lines of text in the middle. These lines are stored in the
+///    [content](CodeBlockLine.content) field.
+pub fn convert_into_code_block_lines<'input>(
+    lang: Option<&'input str>,
+    lines: Vec<&'input str>,
+) -> List<CodeBlockLine<'input>> {
+    let mut acc = List::with_capacity(lines.len() + 2);
+
+    acc += CodeBlockLine {
+        language: lang,
+        content: CodeBlockLineContent::StartTag,
+    };
+
+    for line in lines {
+        acc += CodeBlockLine {
+            language: lang,
+            content: CodeBlockLineContent::Text(line),
+        };
+    }
+
+    acc += CodeBlockLine {
+        language: lang,
+        content: CodeBlockLineContent::EndTag,
+    };
+
+    acc
+}
+
+/// These tests ensure compatibility with how [AsStrSlice::write_to_byte_cache_compat()]
+/// works. And ensuring that the [AsStrSlice] methods that are used to implement the
+/// [Display] trait do in fact make it behave like a "virtual" array or slice of strings
+/// that matches the behavior of [AsStrSlice::write_to_byte_cache_compat()].
+///
+/// This breaks compatibility with [str::lines()] behavior, but matches the behavior of
+/// [AsStrSlice::write_to_byte_cache_compat()] which adds trailing newlines for multiple
+/// lines.
+#[cfg(test)]
+mod tests_write_to_byte_cache_compat_behavior {
+    use super::*;
+    use crate::{as_str_slice_test_case, GCString, ParserByteCache};
+
+    #[test]
+    fn test_empty_string() {
+        // Empty lines behavior.
+        {
+            let lines: Vec<GCString> = vec![];
+            let slice = AsStrSlice::from(&lines);
+            assert_eq!(slice.to_inline_string(), "");
+            assert_eq!(slice.lines.len(), 0);
+        }
+    }
+
+    #[test]
+    fn test_single_char_no_newline() {
+        // Single line behavior - no trailing newline for single lines.
+        {
+            as_str_slice_test_case!(slice, "a");
+            assert_eq!(slice.to_inline_string(), "a");
+            assert_eq!(slice.lines.len(), 1);
+        }
+    }
+
+    #[test]
+    fn test_two_chars_with_trailing_newline() {
+        // Multiple lines behavior - adds trailing newline for multiple lines.
+        {
+            as_str_slice_test_case!(slice, "a", "b");
+            assert_eq!(slice.to_inline_string(), "a\nb\n"); // Trailing \n added
+            assert_eq!(slice.lines.len(), 2);
+        }
+    }
+
+    #[test]
+    fn test_three_chars_with_trailing_newline() {
+        // Multiple lines behavior - adds trailing newline for multiple lines.
+        {
+            as_str_slice_test_case!(slice, "a", "b", "c");
+            assert_eq!(slice.to_inline_string(), "a\nb\nc\n"); // Trailing \n added
+            assert_eq!(slice.lines.len(), 3);
+        }
+    }
+
+    #[test]
+    fn test_empty_lines_with_trailing_newline() {
+        // Empty lines are preserved with newlines, plus trailing newline.
+        {
+            as_str_slice_test_case!(slice, "", "a", "");
+            assert_eq!(slice.to_inline_string(), "\na\n\n"); // Each line followed by \n
+            assert_eq!(slice.lines.len(), 3);
+        }
+    }
+
+    #[test]
+    fn test_only_empty_lines() {
+        // Multiple empty lines get trailing newline.
+        {
+            as_str_slice_test_case!(slice, "", "");
+            assert_eq!(slice.to_inline_string(), "\n\n"); // Two newlines plus trailing
+            assert_eq!(slice.lines.len(), 2);
+        }
+    }
+
+    #[test]
+    fn test_single_empty_line() {
+        // Single empty line gets no trailing newline.
+        {
+            as_str_slice_test_case!(slice, "");
+            assert_eq!(slice.to_inline_string(), ""); // No trailing newline for single line
+            assert_eq!(slice.lines.len(), 1);
+        }
+    }
+
+    #[test]
+    fn test_verify_write_to_byte_cache_compat_consistency() {
+        let test_helper = |slice: AsStrSlice<'_>| {
+            let slice_result = slice.to_inline_string();
+
+            // Get write_to_byte_cache_compat result
+            let mut cache = ParserByteCache::new();
+            slice.write_to_byte_cache_compat(slice_result.len() + 10, &mut cache);
+            let cache_result = cache.as_str();
+
+            // They should match exactly
+            assert_eq!(
+                slice_result, cache_result,
+                "Mismatch: AsStrSlice produced {slice_result:?}, write_to_byte_cache_compat produced {cache_result:?}"
+            );
+        };
+
+        // Empty
+        {
+            let slice = AsStrSlice::from(&[]);
+            test_helper(slice);
+        }
+
+        // Single line
+        {
+            as_str_slice_test_case!(slice, "single");
+            test_helper(slice);
+        }
+
+        // Two lines
+        {
+            as_str_slice_test_case!(slice, "a", "b");
+            test_helper(slice);
+        }
+
+        // With empty lines
+        {
+            as_str_slice_test_case!(slice, "", "middle", "");
+            test_helper(slice);
+        }
+
+        // Only empty lines
+        {
+            as_str_slice_test_case!(slice, "", "");
+            test_helper(slice);
+        }
+    }
+
+    #[test]
+    fn test_compare_with_str_lines() {
+        // This test explicitly demonstrates the incompatibility with str::lines()
+        // when there are multiple lines and the last line is empty.
+
+        // Case 1: Multiple lines with empty last line
+        {
+            // Create a string with multiple lines and empty last line
+            let str_with_empty_last_line = "line1\nline2\n";
+
+            // Using str::lines()
+            let str_lines: Vec<&str> = str_with_empty_last_line.lines().collect();
+            assert_eq!(str_lines, vec!["line1", "line2"]); // str::lines() ignores the empty last line
+
+            // Using AsStrSlice
+            as_str_slice_test_case!(slice, "line1", "line2");
+            let slice_result = slice.to_inline_string();
+            assert_eq!(slice_result.as_str(), "line1\nline2\n"); // AsStrSlice preserves the trailing newline
+
+            // Demonstrate the difference
+            let reconstructed_from_str_lines = str_lines.join("\n");
+            assert_eq!(reconstructed_from_str_lines, "line1\nline2"); // No trailing newline
+            assert_ne!(reconstructed_from_str_lines, slice_result.as_str()); // Different from AsStrSlice
+        }
+
+        // Case 2: Multiple lines with non-empty last line
+        {
+            // Create a string with multiple lines and non-empty last line
+            let str_with_non_empty_last_line = "line1\nline2";
+
+            // Using str::lines()
+            let str_lines: Vec<&str> = str_with_non_empty_last_line.lines().collect();
+            assert_eq!(str_lines, vec!["line1", "line2"]);
+
+            // Using AsStrSlice
+            as_str_slice_test_case!(slice, "line1", "line2");
+            let slice_result = slice.to_inline_string();
+            assert_eq!(slice_result.as_str(), "line1\nline2\n"); // AsStrSlice adds a trailing newline
+
+            // Demonstrate the difference
+            let reconstructed_from_str_lines = str_lines.join("\n");
+            assert_eq!(reconstructed_from_str_lines, "line1\nline2"); // No trailing newline
+            assert_ne!(reconstructed_from_str_lines, slice_result.as_str()); // Different from AsStrSlice
+        }
     }
 }
