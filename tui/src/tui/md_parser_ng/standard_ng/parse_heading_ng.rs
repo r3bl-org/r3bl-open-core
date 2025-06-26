@@ -21,18 +21,17 @@ use nom::{bytes::complete::{tag, take_while1},
           Input,
           Parser};
 
-use crate::{md_parser::constants, AsStrSlice, GCString, HeadingData, HeadingLevel};
+use crate::{md_parser::constants,
+            AsStrSlice,
+            CharLengthExt,
+            GCString,
+            HeadingData,
+            HeadingLevel};
 
 /// This matches the heading tag and text within the current line only.
 /// Line advancement is handled by the infrastructure via ensure_advance_with_parser.
 #[rustfmt::skip]
 pub fn parse_line_heading_no_advance_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, HeadingData<'a>> {
-    let (remainder, output) = parse_impl(input)?;
-    Ok((remainder, output))
-}
-
-#[rustfmt::skip]
-fn parse_impl<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, HeadingData<'a>> {
     // Only parse within the current line - no line advancement concerns
     let current_line = input.extract_to_line_end();
     if current_line.is_empty() {
@@ -45,10 +44,13 @@ fn parse_impl<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, HeadingData<
     // Parse heading tag (# ## ### etc.)
     let (input, level) = parse_heading_tag_ng(input)?;
 
-    // Parse the rest of the current line as heading text
+    // Parse the rest of the current line as heading text.
     let remaining_text = input.extract_to_line_end();
 
-    Ok((input, HeadingData { level, text: remaining_text }))
+    // Consume the remaining text from the input (make sure to respect unicode characters).
+    let consumed_input = input.take_from(remaining_text.len_chars().as_usize());
+
+    Ok((consumed_input, HeadingData { level, text: remaining_text }))
 }
 
 /// Matches one or more `#` chars, consumes it, and outputs [Level].
@@ -72,189 +74,200 @@ mod tests {
     use crate::{as_str_slice_test_case, assert_eq2};
 
     #[test]
-    fn test_parse_header_tag() {
-        as_str_slice_test_case!(input1, "# ");
-        let (remainder1, level1) = parse_heading_tag_ng(input1).unwrap();
-        assert_eq2!(remainder1.to_string(), "");
-        assert_eq2!(level1, 1.into());
+    fn test_parse_header_tag_level1() {
+        as_str_slice_test_case!(input, "# ");
+        let (remainder, level) = parse_heading_tag_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(level, 1.into());
+    }
 
-        as_str_slice_test_case!(input2, "### ");
-        let (remainder2, level2) = parse_heading_tag_ng(input2).unwrap();
-        assert_eq2!(remainder2.to_string(), "");
-        assert_eq2!(level2, 3.into());
+    #[test]
+    fn test_parse_header_tag_level3() {
+        as_str_slice_test_case!(input, "### ");
+        let (remainder, level) = parse_heading_tag_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(level, 3.into());
+    }
 
-        as_str_slice_test_case!(input3, "# h1");
-        let (remainder3, level3) = parse_heading_tag_ng(input3).unwrap();
-        assert_eq2!(remainder3.to_string(), "h1");
-        assert_eq2!(level3, 1.into());
+    #[test]
+    fn test_parse_header_tag_with_text() {
+        as_str_slice_test_case!(input, "# h1");
+        let (remainder, level) = parse_heading_tag_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "h1");
+        assert_eq2!(level, 1.into());
+    }
 
-        as_str_slice_test_case!(input5, " ");
-        match parse_heading_tag_ng(input5) {
+    #[test]
+    fn test_parse_header_tag_space_only() {
+        as_str_slice_test_case!(input, " ");
+        match parse_heading_tag_ng(input) {
             Err(NomErr::Error(err)) => {
                 assert_eq2!(err.code, ErrorKind::TakeWhile1);
             }
             _ => panic!("Expected an error"),
         }
+    }
 
-        as_str_slice_test_case!(input6, "#");
-        match parse_heading_tag_ng(input6) {
+    #[test]
+    fn test_parse_header_tag_hash_only() {
+        as_str_slice_test_case!(input, "#");
+        match parse_heading_tag_ng(input) {
             Err(NomErr::Error(err)) => {
                 assert_eq2!(err.code, ErrorKind::Tag);
             }
             _ => panic!("Expected an error"),
         }
-
-        as_str_slice_test_case!(input7, "####### ");
-        let (remainder7, level7) = parse_heading_tag_ng(input7).unwrap();
-        assert_eq2!(remainder7.to_string(), "");
-        assert_eq2!(level7, 7.into());
     }
 
     #[test]
-    fn test_parse_header() {
-        {
-            as_str_slice_test_case!(input1, "# h1\n");
-            let (remainder1, heading_data1) =
-                parse_line_heading_no_advance_ng(input1).unwrap();
-            assert_eq2!(remainder1.to_string(), "");
-            assert_eq2!(heading_data1.level, 1.into());
-            assert_eq2!(heading_data1.text, "h1");
-        }
-        {
-            as_str_slice_test_case!(input2, "## h2\n");
-            let (remainder2, heading_data2) =
-                parse_line_heading_no_advance_ng(input2).unwrap();
-            assert_eq2!(remainder2.to_string(), "");
-            assert_eq2!(heading_data2.level, 2.into());
-            assert_eq2!(heading_data2.text, "h2");
-        }
-        {
-            as_str_slice_test_case!(input3, "###  h3\n");
-            let (remainder3, heading_data3) =
-                parse_line_heading_no_advance_ng(input3).unwrap();
-            assert_eq2!(remainder3.to_string(), "");
-            assert_eq2!(heading_data3.level, 3.into());
-            assert_eq2!(heading_data3.text, " h3");
-        }
-        {
-            as_str_slice_test_case!(input4, "#### h4\n");
-            let (remainder4, heading_data4) =
-                parse_line_heading_no_advance_ng(input4).unwrap();
-            assert_eq2!(remainder4.to_string(), "");
-            assert_eq2!(heading_data4.level, 4.into());
-            assert_eq2!(heading_data4.text, "h4");
-        }
-        {
-            as_str_slice_test_case!(input5, "##### h5\n");
-            let (remainder5, heading_data5) =
-                parse_line_heading_no_advance_ng(input5).unwrap();
-            assert_eq2!(remainder5.to_string(), "");
-            assert_eq2!(heading_data5.level, 5.into());
-            assert_eq2!(heading_data5.text, "h5");
-        }
-        {
-            as_str_slice_test_case!(input6, "###### h6\n");
-            let (remainder6, heading_data6) =
-                parse_line_heading_no_advance_ng(input6).unwrap();
-            assert_eq2!(remainder6.to_string(), "");
-            assert_eq2!(heading_data6.level, 6.into());
-            assert_eq2!(heading_data6.text, "h6");
-        }
-        {
-            as_str_slice_test_case!(input7, "####### h7\n");
-            let (remainder7, heading_data7) =
-                parse_line_heading_no_advance_ng(input7).unwrap();
-            assert_eq2!(remainder7.to_string(), "");
-            assert_eq2!(heading_data7.level, 7.into());
-            assert_eq2!(heading_data7.text, "h7");
-        }
-        {
-            as_str_slice_test_case!(input8, "### h3 *foo* **bar**\n");
-            let (remainder8, heading_data8) =
-                parse_line_heading_no_advance_ng(input8).unwrap();
-            assert_eq2!(remainder8.to_string(), "");
-            assert_eq2!(heading_data8.level, 3.into());
-            assert_eq2!(heading_data8.text, "h3 *foo* **bar**");
-        }
-        {
-            as_str_slice_test_case!(input_err1, "###h3");
-            match parse_line_heading_no_advance_ng(input_err1) {
-                Err(NomErr::Error(err)) => {
-                    assert_eq2!(err.code, ErrorKind::Tag);
-                }
-                _ => panic!("Expected an error"),
-            };
-        }
-        {
-            as_str_slice_test_case!(input_err2, "####h4");
-            let result = parse_line_heading_no_advance_ng(input_err2);
-            match result {
-                Err(NomErr::Error(err)) => {
-                    assert_eq2!(err.input.to_string(), "h4");
-                    assert_eq2!(err.code, ErrorKind::Tag);
-                }
-                _ => panic!("Expected an error"),
+    fn test_parse_header_tag_level7() {
+        as_str_slice_test_case!(input, "####### ");
+        let (remainder, level) = parse_heading_tag_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(level, 7.into());
+    }
+
+    #[test]
+    fn test_parse_header_h1() {
+        as_str_slice_test_case!(input, "# h1");
+        let (remainder, heading_data) = parse_line_heading_no_advance_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(heading_data.level, 1.into());
+        assert_eq2!(heading_data.text, "h1");
+    }
+
+    #[test]
+    fn test_parse_header_h2() {
+        as_str_slice_test_case!(input, "## h2");
+        let (remainder, heading_data) = parse_line_heading_no_advance_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(heading_data.level, 2.into());
+        assert_eq2!(heading_data.text, "h2");
+    }
+
+    #[test]
+    fn test_parse_header_h3_with_extra_space() {
+        as_str_slice_test_case!(input, "###  h3");
+        let (remainder, heading_data) = parse_line_heading_no_advance_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(heading_data.level, 3.into());
+        assert_eq2!(heading_data.text, " h3");
+    }
+
+    #[test]
+    fn test_parse_header_h4() {
+        as_str_slice_test_case!(input, "#### h4");
+        let (remainder, heading_data) = parse_line_heading_no_advance_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(heading_data.level, 4.into());
+        assert_eq2!(heading_data.text, "h4");
+    }
+
+    #[test]
+    fn test_parse_header_h5() {
+        as_str_slice_test_case!(input, "##### h5");
+        let (remainder, heading_data) = parse_line_heading_no_advance_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(heading_data.level, 5.into());
+        assert_eq2!(heading_data.text, "h5");
+    }
+
+    #[test]
+    fn test_parse_header_h6() {
+        as_str_slice_test_case!(input, "###### h6");
+        let (remainder, heading_data) = parse_line_heading_no_advance_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(heading_data.level, 6.into());
+        assert_eq2!(heading_data.text, "h6");
+    }
+
+    #[test]
+    fn test_parse_header_h7() {
+        as_str_slice_test_case!(input, "####### h7");
+        let (remainder, heading_data) = parse_line_heading_no_advance_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(heading_data.level, 7.into());
+        assert_eq2!(heading_data.text, "h7");
+    }
+
+    #[test]
+    fn test_parse_header_with_markdown_formatting() {
+        as_str_slice_test_case!(input, "### h3 *foo* **bar**");
+        let (remainder, heading_data) = parse_line_heading_no_advance_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(heading_data.level, 3.into());
+        assert_eq2!(heading_data.text, "h3 *foo* **bar**");
+    }
+
+    #[test]
+    fn test_parse_header_error_no_space_after_hash() {
+        as_str_slice_test_case!(input, "###h3");
+        match parse_line_heading_no_advance_ng(input) {
+            Err(NomErr::Error(err)) => {
+                assert_eq2!(err.code, ErrorKind::Tag);
             }
-        }
-        {
-            as_str_slice_test_case!(input_err3, "###");
-            let result = parse_line_heading_no_advance_ng(input_err3);
-            match result {
-                Err(NomErr::Error(err)) => {
-                    assert_eq2!(err.input.to_string(), "");
-                    assert_eq2!(err.code, ErrorKind::Tag);
-                }
-                _ => panic!("Expected an error"),
+            _ => panic!("Expected an error"),
+        };
+    }
+
+    #[test]
+    fn test_parse_header_error_no_space_after_hash_h4() {
+        as_str_slice_test_case!(input, "####h4");
+        let result = parse_line_heading_no_advance_ng(input);
+        match result {
+            Err(NomErr::Error(err)) => {
+                assert_eq2!(err.input.to_string(), "h4");
+                assert_eq2!(err.code, ErrorKind::Tag);
             }
-        }
-        {
-            as_str_slice_test_case!(input_err4, "");
-            let result = parse_line_heading_no_advance_ng(input_err4);
-            match result {
-                Err(NomErr::Error(err)) => {
-                    assert_eq2!(err.input.to_string(), "");
-                    assert_eq2!(err.code, ErrorKind::Tag);
-                }
-                _ => panic!("Expected an error"),
-            }
-        }
-        {
-            as_str_slice_test_case!(input_err5, "#");
-            let result = parse_line_heading_no_advance_ng(input_err5);
-            match result {
-                Err(NomErr::Error(err)) => {
-                    assert_eq2!(err.input.to_string(), "");
-                    assert_eq2!(err.code, ErrorKind::Tag);
-                }
-                _ => panic!("Expected an error"),
-            }
+            _ => panic!("Expected an error"),
         }
     }
 
     #[test]
-    fn test_parse_header_with_new_line() {
-        {
-            as_str_slice_test_case!(input1, "# \n");
-            let result = parse_line_heading_no_advance_ng(input1);
-            match result {
-                Err(NomErr::Error(err)) => {
-                    assert_eq2!(err.input.to_string(), "\n");
-                    assert_eq2!(err.code, ErrorKind::Tag);
-                }
-                _ => panic!("Expected an error"),
+    fn test_parse_header_error_hash_only() {
+        as_str_slice_test_case!(input, "###");
+        let result = parse_line_heading_no_advance_ng(input);
+        match result {
+            Err(NomErr::Error(err)) => {
+                assert_eq2!(err.input.to_string(), "");
+                assert_eq2!(err.code, ErrorKind::Tag);
             }
+            _ => panic!("Expected an error"),
+        }
+    }
+
+    #[test]
+    fn test_parse_header_error_empty_input() {
+        as_str_slice_test_case!(input, "");
+        let result = parse_line_heading_no_advance_ng(input);
+        match result {
+            Err(NomErr::Error(err)) => {
+                assert_eq2!(err.input.to_string(), "");
+                assert_eq2!(err.code, ErrorKind::Tag);
+            }
+            _ => panic!("Expected an error"),
+        }
+    }
+
+    #[test]
+    fn test_parse_header_error_single_hash() {
+        as_str_slice_test_case!(input, "#");
+        let result = parse_line_heading_no_advance_ng(input);
+        match result {
+            Err(NomErr::Error(err)) => {
+                assert_eq2!(err.input.to_string(), "");
+                assert_eq2!(err.code, ErrorKind::Tag);
+            }
+            _ => panic!("Expected an error"),
         }
     }
 
     #[test]
     fn test_parse_header_with_no_new_line() {
-        {
-            as_str_slice_test_case!(input1, "# test");
-            let (remainder, heading_data) =
-                parse_line_heading_no_advance_ng(input1).unwrap();
-            assert_eq2!(remainder.to_string(), "");
-            assert_eq2!(heading_data.level, 1.into());
-            assert_eq2!(heading_data.text, "test");
-        }
+        as_str_slice_test_case!(input, "# test");
+        let (remainder, heading_data) = parse_line_heading_no_advance_ng(input).unwrap();
+        assert_eq2!(remainder.to_string(), "");
+        assert_eq2!(heading_data.level, 1.into());
+        assert_eq2!(heading_data.text, "test");
     }
 }

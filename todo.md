@@ -242,9 +242,24 @@
 
 ---
 
-- [ ] update `md_parser_syn_hi_impl.rs` to use this. provide a new `bool` flag that allows the new
+- [x] update `md_parser_syn_hi_impl.rs` to use this. provide a new `bool` flag that allows the new
       `_ng` parser active instead of the old one (keep them all in the code for now). there is 1
       function that is shared between the two, so move that to `_ng` for smart code block tests.
+- [ ] add a new test case in `parse_heading_ng()` test cases, and use the markdown constant from the
+      demo examples for the editor, which currently shows up in 2 places (consolidate them into
+      one):
+  - `get_real_world_content()` in
+    `tui/src/tui/md_parser_ng/as_str_slice/compatibility_test_suite.rs`
+  - `get_default_content()` in `tui/examples/tui_apps/ex_editor/state.rs`
+- [ ] make quality and compatibility improvments to `md_parse_ng` now that it is attached to the
+      test examples. there is an extra new line at the bottom of the editor for some reason that
+      does not show up with the legacy parser.
+- [ ] use `cargo bench` in `compatibility_test_suite.rs` to compare the relative performance of both
+      legacy and NG parsers
+- [ ] would it be possible to cache the AST returned by `parse_markdown_ng()`? is this a tree
+      structure or an array structure? how to mark areas as dirty? how to reparse only sections that
+      have changed? this might speed up parsing a whole lot, if the entire thing does not have to be
+      re-parsed? need to verify all of this and not just use intuition.
 
 ---
 
