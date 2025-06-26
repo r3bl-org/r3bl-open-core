@@ -38,6 +38,7 @@ use crate::{generate_ordered_list_item_bullet,
             join,
             new_style,
             parse_markdown,
+            parse_markdown_ng,
             tui::{md_parser::constants::{AUTHORS,
                                          BACK_TICK,
                                          CHECKED_OUTPUT,
@@ -79,7 +80,8 @@ use crate::{generate_ordered_list_item_bullet,
             StyleUSSpanLines,
             TextColorizationPolicy,
             TuiStyle,
-            TuiStyledTexts};
+            TuiStyledTexts,
+            ENABLE_MD_PARSER_NG};
 
 /// This is the main function that the [crate::editor] uses this in order to display the
 /// markdown to the user.It is responsible for converting:
@@ -100,40 +102,62 @@ pub fn try_parse_and_highlight(
     editor_text_lines: &[GCString],
     maybe_current_box_computed_style: &Option<TuiStyle>,
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
-    parser_byte_cache: Option<&mut ParserByteCache>,
+    parser_byte_cache: &mut Option<ParserByteCache>,
 ) -> CommonResult<StyleUSSpanLines> {
     // XMARK: Parse markdown from editor and render it
 
-    // PERF: This is a known performance bottleneck. The underlying storage mechanism for
-    // content in the editor will have to change (from Vec<String>) for this to be
-    // possible.
+    let document_result = if ENABLE_MD_PARSER_NG {
+        // Use the new NG parser.
+        let slice = AsStrSlice::from(editor_text_lines);
+        parse_markdown_ng(slice)
+            .map(|(_rem, document)| {
+                debug_assert!(_rem.is_empty());
+                document
+            })
+            .map_err(|_| ())
+    } else {
+        // Use the legacy parser.
 
-    // Convert the editor text into a InlineString (unfortunately requires allocating to
-    // get the new lines back, since they're stripped out when loading content into the
-    // editor buffer struct).
+        // PERF: This is a known performance bottleneck. The underlying storage mechanism
+        // for content in the editor will have to change (from Vec<String>) for
+        // this to be possible.
 
-    let slice = AsStrSlice::from(editor_text_lines);
+        // Convert the editor text into a InlineString (unfortunately requires allocating
+        // to get the new lines back, since they're stripped out when loading
+        // content into the editor buffer struct).
 
-    let size_hint = editor_text_lines
-        .iter()
-        .map(|line| line.len().as_usize() + 1 /* for new line */)
-        .sum();
+        let slice = AsStrSlice::from(editor_text_lines);
 
-    // Use the parser_byte_cache if it exists, otherwise create a new one with the
-    // size_hint.
-    let acc = match parser_byte_cache {
-        // If the parser_byte_cache exists, we can write to it directly.
-        Some(parser_byte_cache) => parser_byte_cache,
-        // If it doesn't exist, we create a new one with the size hint.
-        None => &mut ParserByteCache::with_capacity(size_hint),
+        let size_hint = editor_text_lines
+            .iter()
+            .map(|line| line.len().as_usize() + 1 /* for new line */)
+            .sum();
+
+        // Use the parser_byte_cache if it exists, otherwise create a new one with the
+        // size_hint.
+        let acc = match parser_byte_cache {
+            // If the parser_byte_cache exists, we can write to it directly.
+            Some(parser_byte_cache) => parser_byte_cache,
+            // If it doesn't exist, we create a new one with the size hint. Save it back
+            // to the parser_byte_cache for reuse next time.
+            None => {
+                *parser_byte_cache = Some(ParserByteCache::with_capacity(size_hint));
+                parser_byte_cache.as_mut().unwrap()
+            }
+        };
+
+        slice.write_to_byte_cache_compat(size_hint, acc);
+        parse_markdown(acc)
+            .map(|(_rem, document)| {
+                debug_assert!(_rem.is_empty());
+                document
+            })
+            .map_err(|_| ())
     };
 
-    slice.write_to_byte_cache_compat(size_hint, acc);
-    let result_md_ast = parse_markdown(acc);
-
     // Try and parse `editor_text_to_string` into a `Document`.
-    match result_md_ast {
-        Ok((_remainder, document)) => Ok(StyleUSSpanLines::from_document(
+    match document_result {
+        Ok(document) => Ok(StyleUSSpanLines::from_document(
             &document,
             maybe_current_box_computed_style,
             maybe_syntect_tuple,
@@ -161,7 +185,7 @@ mod tests_try_parse_and_highlight {
                 &editor_text_lines,
                 &Some(current_box_computed_style),
                 None,
-                None,
+                &mut None,
             )?;
 
             println!(
