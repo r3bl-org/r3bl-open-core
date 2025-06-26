@@ -14,10 +14,10 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use nom::{bytes::complete::tag, combinator::opt, sequence::preceded, IResult, Parser};
+use nom::{bytes::complete::tag, sequence::preceded, IResult, Parser};
 
 use crate::{inline_string,
-            md_parser::constants::{COLON, NEW_LINE, SPACE},
+            md_parser::constants::{COLON, SPACE},
             parser_take_text_until_eol_or_eoi_ng::parser_take_line_text_ng,
             AsStrSlice};
 
@@ -26,14 +26,12 @@ use crate::{inline_string,
 ///
 /// ## Input format
 /// Expects a line starting with `tag_name` + colon + space, followed by the text.
-/// Leading/trailing whitespace around the text value is trimmed. The line may end with a
-/// newline or be at end-of-input. There can only be one `tag_name` in the text value. If
-/// you nest the `tag_name` within the text value it will return an error.
+/// Leading/trailing whitespace around the text value is trimmed. Only parses within
+/// the current line - line advancement is handled by the infrastructure.
 ///
 /// ## Line advancement
-/// This is a **single-line parser that auto-advances**. It consumes
-/// the optional trailing newline if present, making it consistent with heading parsers.
-/// The parser now properly advances the line position when a newline is encountered.
+/// This is a **single-line parser with no advancement**. Line advancement is handled
+/// by `ensure_advance_with_parser` in the main parser infrastructure.
 ///
 /// ## Returns
 /// - Either `Ok((remaining_input, Some(text)))` on success or `Ok((remaining_input,
@@ -42,25 +40,22 @@ use crate::{inline_string,
 ///   `tag_name` appears more than once in the line.
 ///
 /// ## Example
-/// - `"@date: 2023-12-25\n"` → `Some("2023-12-25")`
-/// - `"@title: My Great Article\n"` → `Some("My Great Article")`
+/// - `"@date: 2023-12-25"` → `Some("2023-12-25")`
+/// - `"@title: My Great Article"` → `Some("My Great Article")`
 /// - `"@title: Something"` -> `Some("Something")`
 /// - `"@date: Else"` -> `Some("Else")`
-pub fn parse_line_kv_advance_ng<'a>(
+pub fn parse_line_kv_no_advance_ng<'a>(
     tag_name: &'a str,
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, Option<AsStrSlice<'a>>> {
     let input_clone = input.clone();
 
-    // Parse the full pattern including optional newline in one go, like heading parser
-    let (remainder, (title_text, _)) = (
-        preceded(
-            /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
-            /* output */ parser_take_line_text_ng(),
-        ),
-        opt(tag(NEW_LINE)),
+    // Parse only the current line content, without newline handling
+    let (remainder, title_text) = preceded(
+        /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
+        /* output */ parser_take_line_text_ng(),
     )
-        .parse(input)?;
+    .parse(input)?;
 
     // Can't nest `tag_name` in `output`. Early return in this case.
     // Check if the tag pattern appears in the parsed content or remainder.
@@ -99,7 +94,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_not_quoted_no_eol() {
         as_str_slice_test_case!(input, "@title: Something");
-        let (rem, output) = parse_line_kv_advance_ng(TITLE, input).unwrap();
+        let (rem, output) = parse_line_kv_no_advance_ng(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
         let output_str = &output.unwrap().extract_to_slice_end();
@@ -117,7 +112,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_not_quoted_with_eol() {
         as_str_slice_test_case!(input, "@title: Something\n");
-        let (rem, output) = parse_line_kv_advance_ng(TITLE, input).unwrap();
+        let (rem, output) = parse_line_kv_no_advance_ng(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
         let output_str = &output.unwrap().extract_to_slice_end();
@@ -137,7 +132,7 @@ mod test_parse_title_no_eol {
         as_str_slice_test_case!(input, "@title: Something @title: Something");
         let input_clone = input.clone();
 
-        let res = parse_line_kv_advance_ng(TITLE, input);
+        let res = parse_line_kv_no_advance_ng(TITLE, input);
 
         assert_eq2!(res.is_err(), true);
         if let Err(NErr::Error(ref e)) = res {
@@ -156,7 +151,7 @@ mod test_parse_title_no_eol {
         as_str_slice_test_case!(input, "@title: Something\n@title: Else\n");
         let input_clone = input.clone();
 
-        let res = parse_line_kv_advance_ng(TITLE, input);
+        let res = parse_line_kv_no_advance_ng(TITLE, input);
 
         assert_eq2!(res.is_err(), true);
         if let Err(NErr::Error(ref e)) = res {
@@ -178,7 +173,7 @@ mod test_parse_title_no_eol {
             fg_black(input.extract_to_slice_end()).bg_cyan()
         );
 
-        let (rem, maybe_output) = parse_line_kv_advance_ng(TITLE, input).unwrap();
+        let (rem, maybe_output) = parse_line_kv_no_advance_ng(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
         let output_str = match maybe_output {
@@ -193,7 +188,7 @@ mod test_parse_title_no_eol {
         );
 
         assert_eq2!(output_str.as_ref(), "");
-        assert_eq2!(rem_str.as_ref(), "foo\nbar");
+        assert_eq2!(rem_str.as_ref(), "\nfoo\nbar");
     }
 
     #[test]
@@ -204,7 +199,7 @@ mod test_parse_title_no_eol {
             fg_black(input.extract_to_slice_end()).bg_cyan()
         );
 
-        let (rem, maybe_output) = parse_line_kv_advance_ng(TITLE, input).unwrap();
+        let (rem, maybe_output) = parse_line_kv_no_advance_ng(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
         let output_str = match maybe_output {
@@ -218,7 +213,7 @@ mod test_parse_title_no_eol {
             r = fg_black(rem_str).bg_yellow(),
         );
 
-        assert_eq2!(rem_str.as_ref(), "foo\nbar");
+        assert_eq2!(rem_str.as_ref(), "\nfoo\nbar");
         assert_eq2!(output_str.as_ref(), " a");
     }
 
@@ -230,7 +225,7 @@ mod test_parse_title_no_eol {
             fg_black(input.extract_to_slice_end()).bg_cyan()
         );
 
-        let (rem, output) = parse_line_kv_advance_ng(TITLE, input).unwrap();
+        let (rem, output) = parse_line_kv_no_advance_ng(TITLE, input).unwrap();
 
         let rem_str = &rem.extract_to_slice_end();
         let output_str = match output {

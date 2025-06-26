@@ -90,6 +90,8 @@
 
 // Attach.
 pub mod compatibility;
+#[cfg(test)]
+pub mod compatibility_test_suite;
 pub mod core;
 pub mod iterators;
 pub mod operations;

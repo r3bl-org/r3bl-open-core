@@ -16,7 +16,7 @@
  */
 
 use nom::{bytes::complete::{tag, take_while1},
-          combinator::{opt, verify},
+          combinator::verify,
           multi::many0,
           sequence::preceded,
           IResult,
@@ -25,7 +25,7 @@ use nom::{bytes::complete::{tag, take_while1},
 use crate::{constants::{COMMA_CHAR, NEW_LINE_CHAR, SPACE_CHAR},
             inline_vec,
             list,
-            md_parser::constants::{COLON, COMMA, NEW_LINE, SPACE},
+            md_parser::constants::{COLON, COMMA, SPACE},
             parser_take_text_until_eol_or_eoi_ng::parser_take_line_text_ng,
             AsStrSlice,
             InlineVec,
@@ -41,9 +41,10 @@ use crate::{constants::{COMMA_CHAR, NEW_LINE_CHAR, SPACE_CHAR},
 /// or be at end-of-input.
 ///
 /// ## Line advancement
-/// This is a **single-line parser that auto-advances**. It consumes
-/// the optional trailing newline if present, making it consistent with heading parsers.
-/// The parser now properly advances the line position when a newline is encountered.
+/// This is a **single-line parser with NO advancement**. It only parses the current line
+/// content and does NOT consume trailing newlines. Line advancement is handled by the
+/// infrastructure (`ensure_advance_with_parser`), following the same architectural
+/// pattern as the heading and key-value parsers.
 ///
 /// ## Returns
 /// - Either `Ok((remaining_input, List<AsStrSlice>))` with the list of tag names on
@@ -52,25 +53,20 @@ use crate::{constants::{COMMA_CHAR, NEW_LINE_CHAR, SPACE_CHAR},
 ///   or has invalid format.
 ///
 /// ## Example
-/// - `"@authors: Alice, Bob, Charlie\n"` → `["Alice", "Bob", "Charlie"]`
-/// - `"@tags: rust, parsing, nom\n"` → `["rust", "parsing", "nom"]`
+/// - `"@authors: Alice, Bob, Charlie"` → `["Alice", "Bob", "Charlie"]`
+/// - `"@tags: rust, parsing, nom"` → `["rust", "parsing", "nom"]`
 /// - `"@tags: tag1, tag2, tag3"`
-/// - `"@tags: tag1, tag2, tag3\n"`
 /// - `"@authors: me, myself, i"`
-/// - `"@authors: me, myself, i\n"`
-pub fn parse_line_csv_advance_ng<'a>(
+pub fn parse_line_csv_no_advance_ng<'a>(
     tag_name: &str,
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, List<AsStrSlice<'a>>> {
-    // Parse the full pattern including optional newline, like heading parser
-    let (rem_new, (tags_text, _)) = (
-        preceded(
-            /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
-            /* output */ parser_take_line_text_ng(),
-        ),
-        opt(tag(NEW_LINE)),
+    // Parse only the current line content, without newline handling
+    let (rem_new, tags_text) = preceded(
+        /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
+        /* output */ parser_take_line_text_ng(),
     )
-        .parse(input)?;
+    .parse(input)?;
 
     // Special case: Early return when just a `@tags: ` is found.
     if tags_text.is_empty() {
@@ -149,7 +145,7 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_no_eol() {
         as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3");
 
-        let (input, output) = super::parse_line_csv_advance_ng(TAGS, input).unwrap();
+        let (input, output) = super::parse_line_csv_no_advance_ng(TAGS, input).unwrap();
         assert_eq2!(input.extract_to_slice_end().as_ref(), "");
 
         // Create expected output with AsStrSlice values.
@@ -179,22 +175,22 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_no_eol_err_whitespace() {
         // First fragment mustn't have any space prefix.
         as_str_slice_test_case!(input1, "@tags:  tag1, tag2, tag3");
-        assert_eq2!(parse_line_csv_advance_ng(TAGS, input1).is_err(), true,);
+        assert_eq2!(parse_line_csv_no_advance_ng(TAGS, input1).is_err(), true,);
 
         // 2nd fragment onwards must have a single space prefix.
         as_str_slice_test_case!(input2, "@tags: tag1,tag2, tag3");
-        assert_eq2!(parse_line_csv_advance_ng(TAGS, input2).is_err(), true,);
+        assert_eq2!(parse_line_csv_no_advance_ng(TAGS, input2).is_err(), true,);
 
         as_str_slice_test_case!(input3, "@tags: tag1,  tag2,tag3");
-        assert_eq2!(parse_line_csv_advance_ng(TAGS, input3).is_err(), true,);
+        assert_eq2!(parse_line_csv_no_advance_ng(TAGS, input3).is_err(), true,);
 
         as_str_slice_test_case!(input4, "@tags: tag1, tag2,tag3");
-        assert_eq2!(parse_line_csv_advance_ng(TAGS, input4).is_err(), true,);
+        assert_eq2!(parse_line_csv_no_advance_ng(TAGS, input4).is_err(), true,);
 
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         as_str_slice_test_case!(input5, "@tags: tag1, tag2,  tag3");
-        let result = parse_line_csv_advance_ng(TAGS, input5).unwrap();
-        assert_eq2!(result.0.extract_to_slice_end().as_ref(), "",);
+        let result = parse_line_csv_no_advance_ng(TAGS, input5).unwrap();
+        assert_eq2!(result.0.extract_to_slice_end().as_ref(), "");
 
         // Create expected output with AsStrSlice values
         let expected_tag1 = &[GCString::new("tag1")];
@@ -226,8 +222,8 @@ mod test_parse_tags_opt_eol {
         {
             as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3\n");
 
-            let (input, output) = parse_line_csv_advance_ng(TAGS, input).unwrap();
-            assert_eq2!(input.extract_to_slice_end().as_ref(), "");
+            let (input, output) = parse_line_csv_no_advance_ng(TAGS, input).unwrap();
+            assert_eq2!(input.extract_to_slice_end().as_ref(), "\n");
 
             // Create expected output with AsStrSlice values
             let expected_tag1 = &[GCString::new("tag1")];
@@ -255,14 +251,14 @@ mod test_parse_tags_opt_eol {
         {
             as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3\n]\n");
 
-            let result = parse_line_csv_advance_ng(TAGS, input);
+            let result = parse_line_csv_no_advance_ng(TAGS, input);
             assert_eq2!(result.is_err(), false);
         }
 
         {
             as_str_slice_test_case!(input, "@tags: tag1, tag2, tag3");
 
-            let result = parse_line_csv_advance_ng(TAGS, input);
+            let result = parse_line_csv_no_advance_ng(TAGS, input);
             assert_eq2!(result.is_err(), false);
         }
     }
@@ -271,22 +267,22 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_with_eol_whitespace() {
         // First fragment mustn't have any space prefix.
         as_str_slice_test_case!(input1, "@tags:  tag1, tag2, tag3\n");
-        assert_eq2!(parse_line_csv_advance_ng(TAGS, input1).is_err(), true,);
+        assert_eq2!(parse_line_csv_no_advance_ng(TAGS, input1).is_err(), true,);
 
         // 2nd fragment onwards must have a single space prefix.
         as_str_slice_test_case!(input2, "@tags: tag1,tag2, tag3\n");
-        assert_eq2!(parse_line_csv_advance_ng(TAGS, input2).is_err(), true,);
+        assert_eq2!(parse_line_csv_no_advance_ng(TAGS, input2).is_err(), true,);
 
         as_str_slice_test_case!(input3, "@tags: tag1,  tag2,tag3\n");
-        assert_eq2!(parse_line_csv_advance_ng(TAGS, input3).is_err(), true,);
+        assert_eq2!(parse_line_csv_no_advance_ng(TAGS, input3).is_err(), true,);
 
         as_str_slice_test_case!(input4, "@tags: tag1, tag2,tag3\n");
-        assert_eq2!(parse_line_csv_advance_ng(TAGS, input4).is_err(), true,);
+        assert_eq2!(parse_line_csv_no_advance_ng(TAGS, input4).is_err(), true,);
 
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         as_str_slice_test_case!(input5, "@tags: tag1, tag2,  tag3\n");
-        let result = parse_line_csv_advance_ng(TAGS, input5).unwrap();
-        assert_eq2!(result.0.extract_to_slice_end().as_ref(), "",);
+        let result = parse_line_csv_no_advance_ng(TAGS, input5).unwrap();
+        assert_eq2!(result.0.extract_to_slice_end().as_ref(), "\n");
 
         // Create expected output with AsStrSlice values
         let expected_tag1 = &[GCString::new("tag1")];
@@ -317,11 +313,11 @@ mod test_parse_tags_opt_eol {
         as_str_slice_test_case!(input, "@tags: \nfoo\nbar");
 
         println!("Input: {:?}", input.extract_to_slice_end());
-        let (input, output) = parse_line_csv_advance_ng(TAGS, input).unwrap();
+        let (input, output) = parse_line_csv_no_advance_ng(TAGS, input).unwrap();
         println!("Remainder: {:?}", input.extract_to_slice_end());
         println!("Output: {output:?}");
 
-        assert_eq2!(input.extract_to_slice_end().as_ref(), "foo\nbar");
+        assert_eq2!(input.extract_to_slice_end().as_ref(), "\nfoo\nbar");
 
         // Empty list case
         let expected = list![];
