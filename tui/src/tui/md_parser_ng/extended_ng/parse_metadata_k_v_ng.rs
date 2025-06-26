@@ -124,7 +124,8 @@ mod test_parse_title_no_eol {
         );
 
         assert_eq2!(output_str.as_ref(), "Something");
-        assert_eq2!(rem_str.as_ref(), "");
+        assert_eq2!(rem_str.as_ref(), "\n"); // Updated: no advancement pattern leaves
+                                             // newline
     }
 
     #[test]
@@ -239,6 +240,9 @@ mod test_parse_title_no_eol {
             r = fg_black(rem_str).bg_yellow(),
         );
         assert_eq2!(output_str.as_ref(), "");
-        assert_eq2!(rem_str.as_ref(), "\n# heading1\n## heading2");
+        assert_eq2!(rem_str.as_ref(), "\n\n# heading1\n## heading2"); // Updated: no
+                                                                      // advancement
+                                                                      // pattern
+                                                                      // leaves newline
     }
 }

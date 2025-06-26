@@ -790,8 +790,7 @@ mod tests_parse_markdown_compatibility {
         use crate::{as_str_slice_test_case,
                     parse_block_smart_list_advance_ng,
                     parse_line_empty_advance_ng,
-                    parse_line_heading_no_advance_ng,
-                    parse_markdown_ng};
+                    parse_line_heading_no_advance_ng};
 
         // Test step by step what happens after heading parsing
         {
