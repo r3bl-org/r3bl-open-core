@@ -231,16 +231,17 @@
   - [x] continue migrating all the remaining tests into this file from `parse_markdown.rs`
 
 - [x] rename `md_parser_alt` to `md_parser_ng`; all `_alt` -> `_ng`
-- [x] remove all compiler warnings
+
+  - [x] remove all compiler warnings
+  - [x] extract 1 common function between both legacy and ng parser (used in block code parser)
+  - [.] create compat tests between legacy and ng parser
+    - [x] fix `find_substring()` which wasn't handling unicode correctly leading to failure of
+          `InlineCode` parsing of "`foo💕bar`" in `parse_inline_fragments_until_eol_or_eoi_ng()`
+    - [x] make sure that the new trailing `NEW_LINE` generation of the `_ng` parser is respected in
+          the `compatibility.rs` tests
 
 ---
 
-- [x] extract 1 common function between both legacy and ng parser (used in block code parser)
-- [.] create compat tests between legacy and ng parser
-  - [x] fix `find_substring()` which wasn't handling unicode correctly leading to failure of
-        `InlineCode` parsing of "`foo💕bar`" in `parse_inline_fragments_until_eol_or_eoi_ng()`
-  - [.] make sure that the new trailing `NEW_LINE` generation of the `_ng` parser is respected in
-    the `compatibility.rs` tests
 - [ ] update `md_parser_syn_hi_impl.rs` to use this. provide a new `bool` flag that allows the new
       `_ng` parser active instead of the old one (keep them all in the code for now). there is 1
       function that is shared between the two, so move that to `_ng` for smart code block tests.
@@ -253,7 +254,7 @@
 
 - fix "`rust`" parsing in syn hi code (should support both "rust" and "rs")
 
-- table
+- markdown table support
 
   - [ ] impl md table parser
   - [ ] impl syn hi for this
