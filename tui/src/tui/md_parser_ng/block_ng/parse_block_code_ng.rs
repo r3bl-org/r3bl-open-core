@@ -125,6 +125,35 @@ pub fn parse_block_code_advance_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSl
     Ok((remainder, convert_into_code_block_lines_ng(lang, lines)))
 }
 
+/// Parse code blocks without consuming trailing newlines.
+///
+/// This is a **multi-line block parser with NO advancement**. It parses the code block
+/// content but does NOT consume trailing newlines. Line advancement is handled by the
+/// infrastructure (`ensure_advance_with_parser`), following the same architectural
+/// pattern as the heading, key-value, and CSV parsers.
+///
+/// ## Line Advancement
+/// Line advancement is handled by `ensure_advance_with_parser` in the main parser
+/// infrastructure. This prevents interference with empty line detection.
+///
+/// ## Returns
+/// - A tuple containing the remainder of the input and a `List<CodeBlockLine>` ready for rendering
+/// - Each `CodeBlockLine` contains the parsed content and metadata for proper display
+#[rustfmt::skip]
+pub fn parse_block_code_no_advance_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, List<CodeBlockLine<'a>>> {
+    let (remainder, (lang, code)) = (
+        parse_code_block_lang_including_eol_ng,
+        parse_code_block_body_including_code_block_end_ng,
+    )
+        .parse(input)?;
+
+    // Do NOT consume optional newline - let infrastructure handle line advancement
+    let acc = split_by_new_line_ng(code);
+    let lines = acc.as_slice();
+
+    Ok((remainder, convert_into_code_block_lines_ng(lang, lines)))
+}
+
 /// Parse the language identifier from a code block's opening line.
 /// Returns `Some(language)` if a language is specified, or `None` if no language is specified.
 /// Consumes the [NEW_LINE] if it exists.

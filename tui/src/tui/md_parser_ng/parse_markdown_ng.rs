@@ -19,7 +19,7 @@ use nom::{branch::alt, combinator::map, multi::many0, IResult, Parser};
 
 use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
             list,
-            parse_block_code_advance_ng,
+            md_parser_ng::block_ng::parse_block_code_no_advance_ng,
             parse_block_smart_list_advance_ng,
             parse_line_csv_no_advance_ng,
             parse_line_heading_no_advance_ng,
@@ -174,7 +174,7 @@ pub fn parse_markdown_ng<'a>(
             // Code block parser
             |input: AsStrSlice<'a>| {
                 input.ensure_advance_with_parser(&mut map(
-                    parse_block_code_advance_ng,
+                    parse_block_code_no_advance_ng,
                     MdElement::CodeBlock,
                 ))
             },
