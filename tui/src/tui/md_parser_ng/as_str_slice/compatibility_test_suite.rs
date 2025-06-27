@@ -75,7 +75,8 @@
 /// - Some tests include debug output for development purposes
 #[cfg(test)]
 mod tests_parse_markdown_compatibility {
-    use crate::{parse_markdown,
+    use crate::{get_real_world_editor_content,
+                parse_markdown,
                 parse_markdown_ng,
                 AsStrSlice,
                 GCString,
@@ -164,6 +165,20 @@ mod tests_parse_markdown_compatibility {
     #[test]
     fn test_simple_inline_code() {
         test_compatibility_helper("simple_inline_code", "first\n`second`");
+    }
+
+    #[test]
+    fn test_inline_code_variations() {
+        test_compatibility_helper(
+            "inline_code_variations",
+            "`simple code`\n`code with spaces`\n`code-with-dashes`\n`code_with_underscores`"
+        );
+    }
+
+    #[test]
+    fn test_inline_code_with_unicode() {
+        // This test verifies that the Unicode inline code issue has been fixed
+        test_compatibility_helper("inline_code_with_unicode", "`code 🎯`");
     }
 
     #[test]
@@ -319,85 +334,8 @@ mod tests_parse_markdown_compatibility {
     fn test_comprehensive_document() {
         // Use real-world content from tui/examples/tui_apps/ex_editor/state.rs
         // This includes emojis in headings and other complex markdown features
-        let comprehensive_input = get_real_world_content();
+        let comprehensive_input = get_real_world_editor_content().join("\n");
         test_compatibility_helper("comprehensive_document", &comprehensive_input);
-    }
-
-    #[test]
-    fn test_debug_comprehensive_document() {
-        // Debug version of the comprehensive document test to help identify parsing
-        // issues
-        let comprehensive_input = get_real_world_content();
-        debug_parser_processing("comprehensive_document", &comprehensive_input);
-    }
-
-    /// Returns the real-world markdown content from the ex_editor example.
-    /// This content includes emojis in headings, nested lists, code blocks, metadata,
-    /// and other complex markdown features that help identify parser compatibility
-    /// issues.
-    fn get_real_world_content() -> String {
-        let lines = &[
-            "0         1         2         3         4         5         6",
-            "0123456789012345678901234567890123456789012345678901234567890",
-            "@title: untitled",
-            "@tags: foo, bar, baz",
-            "@authors: xyz, abc",
-            "@date: 12-12-1234",
-            "",
-            "# This approach will not be easy. You are required to fly straight😀",
-            "## Did he take those two new droids with him? They hit accelerator.😀 We will deal with your Rebel friends. Commence primary ignition.😀",
-            "",
-            "1. line 1 of 2",
-            "2. line 2 of 2",
-            "",
-            "This is _not italic [link](https://r3bl.com) not bold* etc.",
-            "",
-            "```ts",
-            "let a=1;",
-            "```",
-            "",
-            "`foo`",
-            "",
-            "*bar*",
-            "**baz**",
-            "",
-            "```rs",
-            "let a=1;",
-            "```",
-            "",
-            "- [x] done",
-            "- [ ] todo",
-            "",
-            "# Random writing from star wars text lorem ipsum generator",
-            "",
-            "1. A hyperlink [link](https://forcemipsum.com/)",
-            "   inline code `code`",
-            "    2. Did you hear that?",
-            "       They've shut down the main reactor.",
-            "       We'll be destroyed for sure.",
-            "       This is madness!",
-            "       We're doomed!",
-            "",
-            "## Random writing from star trek text lorem ipsum generator",
-            "",
-            "- Logic is the beginning of wisdom, not the end. ",
-            "  A hyperlink [link](https://fungenerators.com/lorem-ipsum/startrek/)",
-            "  I haven't faced death. I've cheated death. ",
-            "  - I've tricked my way out of death and patted myself on the back for my ingenuity; ",
-            "    I know nothing. It's not safe out here. ",
-            "    - Madness has no purpose. Or reason. But it may have a goal.",
-            "      Without them to strengthen us, we will weaken and die. ",
-            "      You remove those obstacles.",
-            "      - But one man can change the present!  Without freedom of choice there is no creativity. ",
-            "        I object to intellect without discipline; I object to power without constructive purpose. ",
-            "        - Live Long and Prosper. To Boldly Go Where No Man Has Gone Before",
-            "          It's a — far, far better thing I do than I have ever done before",
-            "          - A far better resting place I go to than I have ever know",
-            "            Something Spock was trying to tell me on my birthday",
-            "",
-        ];
-
-        lines.join("\n")
     }
 
     #[test]
@@ -426,14 +364,6 @@ mod tests_parse_markdown_compatibility {
         test_compatibility_helper(
             "mixed_list_types",
             "- Unordered item\n1. Ordered item\n- [ ] Checkbox item\n2. Another ordered",
-        );
-    }
-
-    #[test]
-    fn test_inline_code_variations() {
-        test_compatibility_helper(
-            "inline_code_variations",
-            "`simple code`\n`code with spaces`\n`code-with-dashes`\n`code_with_underscores`"
         );
     }
 
@@ -538,115 +468,6 @@ mod tests_parse_markdown_compatibility {
     }
 
     #[test]
-    fn test_debug_newline_handling() {
-        let input_str = "Line 1\n\n\nLine 2\n\n";
-
-        // Test what str.lines() produces
-        let str_lines: Vec<&str> = input_str.lines().collect();
-        println!("str.lines() produces: {:?}", str_lines);
-
-        // Test what AsStrSlice produces when converted back
-        let gc_lines: Vec<GCString> =
-            str_lines.iter().map(|&line| GCString::from(line)).collect();
-        let slice = AsStrSlice::from(gc_lines.as_slice());
-        let as_str_slice_string = slice.to_inline_string();
-        println!(
-            "AsStrSlice converts back to: {:?}",
-            as_str_slice_string.as_str()
-        );
-
-        // Compare with original
-        println!("Original input: {:?}", input_str);
-        println!(
-            "Are they equal? {}",
-            input_str == as_str_slice_string.as_str()
-        );
-
-        // Test legacy parser
-        let legacy_result = parse_markdown(input_str);
-        if let Ok((remainder, _)) = legacy_result {
-            println!("Legacy remainder: {:?}", remainder);
-        }
-
-        // Test new parser
-        let ng_result = parse_markdown_ng(slice);
-        if let Ok((remainder, _)) = ng_result {
-            println!("NG remainder: {:?}", remainder.to_inline_string().as_str());
-        }
-    }
-    #[test]
-    fn test_inline_code_with_unicode_now_fixed() {
-        // This test verifies that the Unicode inline code issue has been fixed
-        test_compatibility_helper("inline_code_with_unicode", "`code 🎯`");
-
-        println!("✅ Fixed: NG parser now correctly parses Unicode in inline code");
-        println!("Both parsers: `code 🎯` -> InlineCode(\"code 🎯\")");
-    }
-
-    /// Debug function to understand exactly how inputs are being processed
-    fn debug_parser_processing(test_name: &str, input_str: &str) {
-        println!("\n=== Debug: {} ===", test_name);
-        println!("Original input: {:?}", input_str);
-
-        // Show what str.lines() produces
-        let str_lines: Vec<&str> = input_str.lines().collect();
-        println!("str.lines() produces: {:?}", str_lines);
-
-        // Show AsStrSlice conversion
-        let gc_lines: Vec<GCString> =
-            str_lines.iter().map(|&line| GCString::from(line)).collect();
-        let slice = AsStrSlice::from(gc_lines.as_slice());
-        println!("AsStrSlice has {} lines", slice.lines.len());
-        for (i, line) in slice.lines.iter().enumerate() {
-            println!("  Line {}: {:?}", i, line.string.as_str());
-        }
-        let slice_as_string = slice.to_inline_string();
-        println!(
-            "AsStrSlice converts back to: {:?}",
-            slice_as_string.as_str()
-        );
-
-        // Test legacy parser with ORIGINAL input
-        let legacy_result = parse_markdown(input_str);
-        if let Ok((remainder, doc)) = legacy_result {
-            println!("Legacy (original) remainder: {:?}", remainder);
-            println!("Legacy (original) doc has {} elements:", doc.inner.len());
-            for (i, element) in doc.inner.iter().enumerate() {
-                println!("  Element {}: {:?}", i, element);
-            }
-        }
-
-        // Test legacy parser with CONVERTED input (same as NG)
-        let legacy_converted_result = parse_markdown(slice_as_string.as_str());
-        if let Ok((remainder, doc)) = legacy_converted_result {
-            println!("Legacy (converted) remainder: {:?}", remainder);
-            println!("Legacy (converted) doc has {} elements:", doc.inner.len());
-            for (i, element) in doc.inner.iter().enumerate() {
-                println!("  Element {}: {:?}", i, element);
-            }
-        }
-
-        // Test new parser
-        let ng_result = parse_markdown_ng(slice);
-        if let Ok((remainder, doc)) = ng_result {
-            println!("NG remainder: {:?}", remainder.to_inline_string().as_str());
-            println!("NG doc has {} elements:", doc.inner.len());
-            for (i, element) in doc.inner.iter().enumerate() {
-                println!("  Element {}: {:?}", i, element);
-            }
-        }
-        println!("=========================\n");
-    }
-
-    #[test]
-    fn test_debug_failing_cases() {
-        // Debug the three failing cases
-        debug_parser_processing("edge_case_empty_lines", "Line 1\n\n\nLine 2\n\n");
-        debug_parser_processing("simple_inline_code", "first\n`second`");
-        debug_parser_processing("inline_code_variations", "`simple code`\n`code with spaces`\n`code-with-dashes`\n`code_with_underscores`");
-    }
-
-    #[test]
     fn test_emoji_in_headings() {
         // Test simple emoji in H1 heading
         test_compatibility_helper("emoji_h1_simple", "# Heading with emoji 😀");
@@ -693,323 +514,4 @@ mod tests_parse_markdown_compatibility {
         // Test with H1 to see if it's specific to H2
         test_compatibility_helper("emoji_h1_with_list", "# Heading 😀\n\n1. List item");
     }
-
-    #[test]
-    fn test_debug_emoji_multiline() {
-        // Debug the multiline emoji heading issue
-        debug_parser_processing("emoji_h2_multiline", "## Heading 😀\n\n1. List item");
-        debug_parser_processing("emoji_h2_long_multiline", "## Did he take those two new droids with him? They hit accelerator.😀 We will deal with your Rebel friends. Commence primary ignition.😀\n\n1. line 1 of 2");
-    }
-
-    #[test]
-    fn test_debug_heading_emoji_isolation() {
-        use crate::{as_str_slice_test_case, parse_line_heading_no_advance_ng};
-
-        // Test simple emoji heading alone
-        {
-            as_str_slice_test_case!(input1, "## Heading 😀");
-            let result1 = parse_line_heading_no_advance_ng(input1);
-            match result1 {
-                Ok((remainder, heading_data)) => {
-                    println!("✅ Simple emoji heading parsed successfully:");
-                    println!("   Level: {}", heading_data.level.level);
-                    println!("   Text: '{}'", heading_data.text);
-                    println!("   Remainder: '{}'", remainder.to_string());
-                    println!("   Remainder is empty: {}", remainder.is_empty());
-                }
-                Err(e) => {
-                    println!("❌ Simple emoji heading failed: {:?}", e);
-                }
-            }
-        }
-
-        // Test emoji heading with following content (multiline)
-        {
-            as_str_slice_test_case!(input2, "## Heading 😀", "", "Next line content");
-            let result2 = parse_line_heading_no_advance_ng(input2);
-            match result2 {
-                Ok((remainder, heading_data)) => {
-                    println!("✅ Multiline emoji heading parsed successfully:");
-                    println!("   Level: {}", heading_data.level.level);
-                    println!("   Text: '{}'", heading_data.text);
-                    println!("   Remainder: '{}'", remainder.to_string());
-                    println!("   Remainder is empty: {}", remainder.is_empty());
-                    println!(
-                        "   Remainder line index: {}",
-                        remainder.line_index.as_usize()
-                    );
-                    println!("   Total lines: {}", remainder.lines.len());
-                }
-                Err(e) => {
-                    println!("❌ Multiline emoji heading failed: {:?}", e);
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_debug_main_parser_emoji_issue() {
-        use crate::{as_str_slice_test_case, parse_markdown_ng};
-
-        // Test the exact problematic case from our comprehensive test
-        {
-            as_str_slice_test_case!(input, "## Did he take those two new droids with him? They hit accelerator.😀 We will deal with your Rebel friends. Commence primary ignition.😀", "", "1. line 1 of 2");
-
-            println!("=== INPUT ===");
-            println!("Total lines: {}", input.lines.len());
-            for (i, line) in input.lines.iter().enumerate() {
-                println!("Line {}: '{}'", i, line.as_ref());
-            }
-            println!("=============");
-
-            let result = parse_markdown_ng(input);
-            match result {
-                Ok((remainder, document)) => {
-                    println!("✅ NG parser succeeded:");
-                    println!("   Document elements: {}", document.len());
-                    for (i, element) in document.iter().enumerate() {
-                        println!("   Element {}: {:?}", i, element);
-                    }
-                    println!("   Remainder: '{}'", remainder.to_string());
-                    println!("   Remainder is empty: {}", remainder.is_empty());
-                    println!(
-                        "   Remainder line index: {}",
-                        remainder.line_index.as_usize()
-                    );
-                    println!("   Total remainder lines: {}", remainder.lines.len());
-                }
-                Err(e) => {
-                    println!("❌ NG parser failed: {:?}", e);
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_debug_line_by_line_parsing() {
-        use crate::{as_str_slice_test_case,
-                    parse_block_smart_list_advance_ng,
-                    parse_line_empty_advance_ng,
-                    parse_line_heading_no_advance_ng};
-
-        // Test step by step what happens after heading parsing
-        {
-            as_str_slice_test_case!(input, "## Did he take those two new droids with him? They hit accelerator.😀 We will deal with your Rebel friends. Commence primary ignition.😀", "", "1. line 1 of 2");
-
-            println!("=== STEP BY STEP PARSING ===");
-            println!("Input has {} lines", input.lines.len());
-
-            // Step 1: Parse heading
-            println!("\n1. Parsing heading...");
-            let (remainder_after_heading, heading) =
-                parse_line_heading_no_advance_ng(input).unwrap();
-            println!("   Heading: {:?}", heading);
-            println!(
-                "   After heading - line_index: {}, total_lines: {}",
-                remainder_after_heading.line_index.as_usize(),
-                remainder_after_heading.lines.len()
-            );
-            println!(
-                "   Current line: '{}'",
-                remainder_after_heading
-                    .get_current_line()
-                    .unwrap_or("<none>")
-            );
-
-            // Step 2: Parse empty line
-            println!("\n2. Parsing empty line...");
-            let empty_result = parse_line_empty_advance_ng(remainder_after_heading);
-            match empty_result {
-                Ok((remainder_after_empty, empty_fragments)) => {
-                    println!("   Empty line parsed: {:?}", empty_fragments);
-                    println!(
-                        "   After empty - line_index: {}, total_lines: {}",
-                        remainder_after_empty.line_index.as_usize(),
-                        remainder_after_empty.lines.len()
-                    );
-                    println!(
-                        "   Current line: '{}'",
-                        remainder_after_empty.get_current_line().unwrap_or("<none>")
-                    );
-
-                    // Step 3: Parse list
-                    println!("\n3. Parsing list...");
-                    let list_result =
-                        parse_block_smart_list_advance_ng(remainder_after_empty);
-                    match list_result {
-                        Ok((remainder_after_list, list)) => {
-                            println!("   List parsed: {:?}", list);
-                            println!(
-                                "   After list - line_index: {}, total_lines: {}",
-                                remainder_after_list.line_index.as_usize(),
-                                remainder_after_list.lines.len()
-                            );
-                            println!(
-                                "   Remainder is_empty: {}",
-                                remainder_after_list.is_empty()
-                            );
-                        }
-                        Err(e) => {
-                            println!("   ❌ List parsing failed: {:?}", e);
-                        }
-                    }
-                }
-                Err(e) => {
-                    println!("   ❌ Empty line parsing failed: {:?}", e);
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_debug_heading_parser_advance() {
-        use crate::{as_str_slice_test_case, parse_line_heading_no_advance_ng};
-
-        println!("=== Testing main heading parser advancement ===");
-
-        // Test heading followed by empty line and content
-        as_str_slice_test_case!(input, "# Heading 😀", "", "Next line");
-        println!("Input lines: {}", input.lines.len());
-        for (i, line) in input.lines.iter().enumerate() {
-            println!("  Line {}: '{}'", i, line.as_ref());
-        }
-
-        let result = parse_line_heading_no_advance_ng(input);
-        match result {
-            Ok((remainder, heading_data)) => {
-                println!(
-                    "✅ Heading parsed: level={:?}, text='{}'",
-                    heading_data.level, heading_data.text
-                );
-                println!(
-                    "   Remainder line index: {}",
-                    remainder.line_index.as_usize()
-                );
-                println!(
-                    "   Remainder char index: {}",
-                    remainder.char_index.as_usize()
-                );
-                println!("   Remainder is empty: {}", remainder.is_empty());
-
-                if let Some(current_line) = remainder.get_current_line() {
-                    println!("   Current line after parsing: '{}'", current_line);
-                } else {
-                    println!("   No current line - parser went past all lines");
-                }
-
-                // Show what's left to parse
-                println!("   Full remainder: '{}'", remainder.to_string());
-            }
-            Err(e) => {
-                println!("❌ Heading parsing failed: {:?}", e);
-            }
-        }
-    }
-
-    #[test]
-    fn test_debug_heading_parser_detailed() {
-        use crate::{as_str_slice_test_case,
-                    parse_line_empty_advance_ng,
-                    parse_line_heading_no_advance_ng};
-
-        println!("=== Detailed heading parser investigation ===");
-
-        // Test heading followed by empty line and content
-        as_str_slice_test_case!(input, "# Heading 😀", "", "Next line");
-        println!("Input representation: '{}'", input.to_string());
-        println!("Input lines: {}", input.lines.len());
-        for (i, line) in input.lines.iter().enumerate() {
-            println!("  Line {}: '{}'", i, line.as_ref());
-        }
-        println!(
-            "Starting position: line={}, char={}",
-            input.line_index.as_usize(),
-            input.char_index.as_usize()
-        );
-
-        // Parse the heading
-        let result = parse_line_heading_no_advance_ng(input);
-        match result {
-            Ok((after_heading, heading_data)) => {
-                println!(
-                    "✅ Heading parsed: level={:?}, text='{}'",
-                    heading_data.level, heading_data.text
-                );
-                println!(
-                    "   After heading - line index: {}",
-                    after_heading.line_index.as_usize()
-                );
-                println!(
-                    "   After heading - char index: {}",
-                    after_heading.char_index.as_usize()
-                );
-                println!("   After heading - is empty: {}", after_heading.is_empty());
-                println!(
-                    "   After heading - full content: '{}'",
-                    after_heading.to_string()
-                );
-
-                if let Some(current_line) = after_heading.get_current_line() {
-                    println!("   After heading - current line: '{}'", current_line);
-                } else {
-                    println!("   After heading - no current line");
-                }
-
-                // Now try to parse the empty line
-                if !after_heading.is_empty() {
-                    println!("\n--- Trying to parse empty line ---");
-                    let empty_result = parse_line_empty_advance_ng(after_heading);
-                    match empty_result {
-                        Ok((after_empty, _)) => {
-                            println!("✅ Empty line parsed");
-                            println!(
-                                "   After empty - line index: {}",
-                                after_empty.line_index.as_usize()
-                            );
-                            println!(
-                                "   After empty - char index: {}",
-                                after_empty.char_index.as_usize()
-                            );
-                            println!(
-                                "   After empty - is empty: {}",
-                                after_empty.is_empty()
-                            );
-                            println!(
-                                "   After empty - full content: '{}'",
-                                after_empty.to_string()
-                            );
-
-                            if let Some(current_line) = after_empty.get_current_line() {
-                                println!(
-                                    "   After empty - current line: '{}'",
-                                    current_line
-                                );
-                            } else {
-                                println!("   After empty - no current line");
-                            }
-                        }
-                        Err(e) => {
-                            println!("❌ Empty line parsing failed: {:?}", e);
-                        }
-                    }
-                } else {
-                    println!("❌ No content left after heading to parse empty line");
-                }
-            }
-            Err(e) => {
-                println!("❌ Heading parsing failed: {:?}", e);
-            }
-        }
-    }
-
-    // TODO: Fix these debug tests - they have method signature issues
-    // #[test]
-    // fn test_debug_as_str_slice_advancement() {
-    //     // This test needs to be fixed - AsStrSlice doesn't have peek_char/advance_char
-    // methods }
-
-    // #[test]
-    // fn test_debug_tag_newline() {
-    //     // This test needs to be fixed - advance() doesn't return a value
-    // }
 }
