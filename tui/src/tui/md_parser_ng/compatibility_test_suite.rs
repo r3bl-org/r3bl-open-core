@@ -98,12 +98,12 @@ mod tests_parse_markdown_compatibility {
         let mut materialized_cache = ParserByteCache::with_capacity(size_hint);
         source_of_truth.write_to_byte_cache_compat(size_hint, &mut materialized_cache);
         let materialized_input = materialized_cache.as_str();
-        let legacy_result = parse_markdown(materialized_input);
+        let og_res = parse_markdown(materialized_input);
 
         // Step 3 - NG parser path:
         // &[GCString] -> AsStrSlice -> parse_markdown_ng(AsStrSlice)
         // Uses the original slice, not the materialized string.
-        let ng_result = parse_markdown_ng(source_of_truth);
+        let ng_res = parse_markdown_ng(source_of_truth);
 
         // Step 4 - Compare results:
         // Both succeed → Compare their results
@@ -112,38 +112,37 @@ mod tests_parse_markdown_compatibility {
 
         // Both parsers should either succeed or fail consistently.
         assert_eq!(
-            legacy_result.is_ok(),
-            ng_result.is_ok(),
-            "{}: One parser succeeded while the other failed. Legacy: {}, NG: {}",
-            test_name,
-            legacy_result.is_ok(),
-            ng_result.is_ok()
+            og_res.is_ok(),
+            ng_res.is_ok(),
+            // Panic message if assertion fails.
+            "{a}: One parser succeeded while the other failed. Legacy: {b}, NG: {c}",
+            a = test_name,
+            b = og_res.is_ok(),
+            c = ng_res.is_ok()
         );
 
         // Both parsers should either succeed or fail consistently.
-        match (legacy_result.is_ok(), ng_result.is_ok()) {
+        match (og_res.is_ok(), ng_res.is_ok()) {
             (true, true) => {
                 // Both succeeded - compare their results.
-                let (legacy_remainder, legacy_doc) = legacy_result.unwrap();
-                let (ng_remainder, ng_doc) = ng_result.unwrap();
+                let (og_rem, og_doc) = og_res.unwrap();
+                let (ng_rem, ng_doc) = ng_res.unwrap();
 
                 // Check documents are equivalent. This MUST be an EXACT match. This is
                 // the actual compatibility test.
                 assert_eq!(
-                    legacy_doc, ng_doc,
-                    "{}: Documents don't match.\nLegacy: {:#?}\nNG: {:#?}",
-                    test_name, legacy_doc, ng_doc
+                    og_doc, ng_doc,
+                    "{test_name}: Documents don't match.\nLegacy: {og_doc:#?}\nNG: {ng_doc:#?}",
                 );
 
                 // Materialize the NG remainder. Then compare them to ensure they match.
                 // The remainder gets thrown away in the editor, so this is just for
                 // consistency checking.
-                let ng_remainder_str = ng_remainder.to_inline_string();
-                if legacy_remainder != ng_remainder_str.as_str() {
+                let ng_remainder_str = ng_rem.to_inline_string();
+                if og_rem != ng_remainder_str.as_str() {
                     panic!(
                         "The legacy and NG parser remainders don't match.\n\
-                            Legacy: {:?}\nNG: {:?}\nTest: {}",
-                        legacy_remainder, ng_remainder_str, test_name
+                            Legacy: {og_rem:?}\nNG: {ng_remainder_str:?}\nTest: {test_name}",
                     );
                 }
             }
@@ -155,8 +154,8 @@ mod tests_parse_markdown_compatibility {
                 panic!(
                     "{}: One parser succeeded while the other failed. Legacy: {}, NG: {}",
                     test_name,
-                    legacy_result.is_ok(),
-                    ng_result.is_ok()
+                    og_res.is_ok(),
+                    ng_res.is_ok()
                 );
             }
         }

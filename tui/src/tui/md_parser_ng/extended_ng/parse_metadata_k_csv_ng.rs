@@ -139,6 +139,7 @@ mod test_parse_tags_opt_eol {
     use crate::{as_str_slice_test_case,
                 assert_eq2,
                 md_parser::constants::TAGS,
+                AsStrSlice,
                 GCString};
 
     #[test]

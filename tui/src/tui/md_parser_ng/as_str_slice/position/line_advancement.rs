@@ -231,7 +231,6 @@ impl<'a> AsStrSlice<'a> {
     /// * `determine_input_state` - Enhanced input exhaustion detection (line-based)
     /// * `handle_parser_advancement` - Core advancement logic with empty line support
     /// * `advance_to_next_line` - Enhanced last line handling
-
     pub fn ensure_advance_with_parser<F, O>(
         &self,
         parser: &mut F,

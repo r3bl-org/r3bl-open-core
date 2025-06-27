@@ -351,7 +351,7 @@ mod tests_find_substring_optimized {
         let test_cases = vec!["simple", "🎯emoji", "café", "中文", "∀x∈ℝ"];
 
         for test_str in test_cases {
-            let input = format!("prefix{}suffix", test_str);
+            let input = format!("prefix{test_str}suffix");
             as_str_slice_test_case!(slice, &input);
 
             // Get result from optimized path (used when search doesn't contain newlines)
@@ -363,8 +363,7 @@ mod tests_find_substring_optimized {
 
             assert_eq!(
                 optimized_result, fallback_result,
-                "Optimized and fallback should match for '{}'",
-                test_str
+                "Optimized and fallback should match for '{test_str}'",
             );
         }
     }
@@ -430,7 +429,7 @@ mod tests_find_substring_optimized {
 
         // Create a large slice to test performance characteristics
         let large_lines: Vec<String> = (0..1000)
-            .map(|i| format!("Line {} with emoji 🎯 and content", i))
+            .map(|i| format!("Line {i} with emoji 🎯 and content"))
             .collect();
         let gc_lines: Vec<crate::GCString> = large_lines
             .iter()
@@ -488,7 +487,7 @@ mod tests_find_substring_optimized {
         for (input, search) in test_cases {
             as_str_slice_test_case!(slice, input);
             let result = slice.find_substring(search);
-            assert!(result.is_some(), "Should find '{}' in '{}'", search, input);
+            assert!(result.is_some(), "Should find '{search}' in '{input}'");
 
             // Test advancing through the string doesn't break on character boundaries
             let mut advanced = slice.clone();

@@ -96,7 +96,7 @@ pub fn parse_line_text_advance_ng<'a>(
     let current_line_contains_new_line = input.extract_to_line_end().contains(NEW_LINE);
     if current_line_contains_new_line {
         // Throw error for invalid input.
-        return Err(NErr::Error(NError::new(input, NErrorKind::CrLf)));
+        Err(NErr::Error(NError::new(input, NErrorKind::CrLf)))
     } else {
         // This checks for empty input.
         inner::without_new_line(input)

@@ -191,9 +191,9 @@ impl ColorWheel {
                 self.gradient_length_kind = GradientLengthKind::Lolcat(builder.seed);
             }
 
-            ColorWheelConfig::Rgb(stops, _, _) => {
+            ColorWheelConfig::Rgb(color_stops, _, _) => {
                 // Generate new gradient.
-                let new_gradient = generate_truecolor_gradient(stops, steps);
+                let new_gradient = generate_truecolor_gradient(color_stops, steps);
                 self.gradient_length_kind =
                     GradientLengthKind::ColorWheel(new_gradient.len());
                 self.gradient_kind = GradientKind::ColorWheel(new_gradient);
@@ -454,11 +454,11 @@ impl ColorWheel {
             pub fn gen_style_fg_bg_color_for(
                 maybe_style: Option<TuiStyle>,
                 next_fg_color: Option<TuiColor>,
-                next_bg_color: Option<TuiColor>,
+                next_background_color: Option<TuiColor>,
             ) -> TuiStyle {
                 let mut it = TuiStyle {
                     color_fg: next_fg_color,
-                    color_bg: next_bg_color,
+                    color_bg: next_background_color,
                     ..Default::default()
                 };
                 it += &maybe_style;

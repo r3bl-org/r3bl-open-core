@@ -117,7 +117,7 @@ impl<'a> AsStrSlice<'a> {
     /// ## Examples
     ///
     /// ```rust
-    /// # use r3bl_tui::{as_str_slice_test_case, len};
+    /// # use r3bl_tui::{GCString, AsStrSlice, as_str_slice_test_case, len};
     /// // ✅ Good: Single-line processing
     /// as_str_slice_test_case!(input, "Hello, World!");
     /// let result = input.skip_take_in_current_line(7, 5); // Skip "Hello, ", take "World"
@@ -192,8 +192,7 @@ impl<'a> AsStrSlice<'a> {
 mod tests_is_empty {
     use nom::Input as _;
 
-    use super::*;
-    use crate::{as_str_slice_test_case, assert_eq2, idx, len, GCString};
+    use crate::{as_str_slice_test_case, assert_eq2, idx, len, AsStrSlice, GCString};
 
     #[test]
     fn test_is_empty_with_max_len_zero() {

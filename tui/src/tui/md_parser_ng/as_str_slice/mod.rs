@@ -89,20 +89,29 @@
 //! documentation on the [`AsStrSlice`] struct.**
 
 // Attach.
+#[rustfmt::skip]
 pub mod compatibility;
-#[cfg(test)]
-pub mod compatibility_test_suite;
-pub mod core;
+#[rustfmt::skip]
+pub mod as_str_slice_core;
+#[rustfmt::skip]
 pub mod iterators;
+#[rustfmt::skip]
 pub mod operations;
+#[rustfmt::skip]
 pub mod position;
+#[rustfmt::skip]
 pub mod traits;
 
 // Re-export.
-pub use core::*;
-
+#[rustfmt::skip] 
+pub use as_str_slice_core::*;
+#[rustfmt::skip] 
 pub use compatibility::*;
+#[rustfmt::skip] 
 pub use iterators::*;
+#[rustfmt::skip] 
 pub use operations::*;
+#[rustfmt::skip] 
 pub use position::*;
+#[rustfmt::skip] 
 pub use traits::*;
