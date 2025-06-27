@@ -121,8 +121,7 @@ pub fn convert_into_code_block_lines<'input>(
 /// lines.
 #[cfg(test)]
 mod tests_write_to_byte_cache_compat_behavior {
-    use super::*;
-    use crate::{as_str_slice_test_case, GCString, ParserByteCache};
+    use crate::{as_str_slice_test_case, AsStrSlice, GCString, ParserByteCache};
 
     #[test]
     fn test_empty_string() {

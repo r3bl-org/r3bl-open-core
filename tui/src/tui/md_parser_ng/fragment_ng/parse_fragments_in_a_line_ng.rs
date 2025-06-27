@@ -133,7 +133,12 @@ mod tests_parse_fragment {
               Err as NomErr};
 
     use super::*;
-    use crate::{as_str_slice_test_case, assert_eq2, idx, GCString, HyperlinkData};
+    use crate::{as_str_slice_test_case,
+                assert_eq2,
+                idx,
+                AsStrSlice,
+                GCString,
+                HyperlinkData};
 
     #[test]
     fn test_parse_plain_text_no_new_line1() {
@@ -750,9 +755,9 @@ mod tests_parse_fragment {
                             assert_eq2!(code, "code 🎯");
                         }
                         MdLineFragment::Plain(text) => {
-                            panic!("Expected InlineCode but got Plain: {:?}", text);
+                            panic!("Expected InlineCode but got Plain: {text:?}");
                         }
-                        _ => panic!("Expected InlineCode but got: {:?}", out),
+                        _ => panic!("Expected InlineCode but got: {out:?}"),
                     }
                 }
                 Err(err) => panic!("Expected Ok, got Err: {err:?}"),
@@ -791,12 +796,11 @@ mod tests_parse_fragment {
                             );
                         }
                         _ => panic!(
-                            "Expected InlineCode for input '{}' but got: {:?}",
-                            input, out
+                            "Expected InlineCode for input '{input}' but got: {out:?}"
                         ),
                     }
                 }
-                Err(err) => panic!("Expected Ok for input '{}', got Err: {err:?}", input),
+                Err(err) => panic!("Expected Ok for input '{input}', got Err: {err:?}"),
             }
         }
     }

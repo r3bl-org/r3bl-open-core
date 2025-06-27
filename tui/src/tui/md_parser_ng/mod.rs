@@ -102,6 +102,10 @@ pub use fragment_ng::*;
 pub use parse_markdown_ng::*;
 pub use standard_ng::*;
 
+// Attach test sources.
+#[cfg(test)]
+pub mod compatibility_test_suite;
+
 // Export for tests and examples.
 /// Returns the real-world markdown content from the ex_editor example.
 /// This content includes emojis in headings, nested lists, code blocks, metadata,
@@ -166,6 +170,90 @@ pub fn get_real_world_editor_content() -> &'static [&'static str] {
         "          It’s a — far, far better thing I do than I have ever done before",
         "          - A far better resting place I go to than I have ever know",
         "            Something Spock was trying to tell me on my birthday",
-        "",
+        "", /* trailing empty line added here on purpose */
     ]
+}
+
+/// Macro for quickly creating an [`AsStrSlice`] test instance from one or more string
+/// literals.
+///
+/// This macro is intended for use in tests and examples, allowing you to easily construct
+/// an [`AsStrSlice`] from a list of string slices. It automatically wraps each string in
+/// a [`crate::GCString`] and creates an array, which is then passed to
+/// [`AsStrSlice::from()`].
+///
+/// You can also specify an optional character length limit using the `limit:` syntax,
+/// which will call [`AsStrSlice::with_limit()`] instead.
+///
+/// # Examples
+///
+/// Basic usage with multiple lines:
+/// ```
+/// use r3bl_tui::{as_str_slice_test_case, AsStrSlice, GCString};
+/// as_str_slice_test_case!(slice, "hello", "world");
+/// assert_eq!(slice.to_inline_string(), "hello\nworld\n");
+/// ```
+///
+/// Single line:
+/// ```
+/// use r3bl_tui::{as_str_slice_test_case, AsStrSlice, GCString};
+/// as_str_slice_test_case!(slice, "single line");
+/// assert_eq!(slice.to_inline_string(), "single line");
+/// ```
+///
+/// With a character length limit:
+/// ```
+/// use r3bl_tui::{as_str_slice_test_case, AsStrSlice, GCString};
+/// as_str_slice_test_case!(slice, limit: 5, "abcdef", "ghijk");
+/// assert_eq!(slice.to_inline_string(), "abcde");
+/// ```
+///
+/// Empty lines are preserved:
+/// ```
+/// use r3bl_tui::{as_str_slice_test_case, AsStrSlice, GCString};
+/// as_str_slice_test_case!(slice, "", "foo", "");
+/// assert_eq!(slice.to_inline_string(), "\nfoo\n\n");
+/// ```
+///
+/// # Compiler warning about `macro_export` macros from the current crate cannot be referred to by absolute paths
+///
+/// This macro had to be moved from `as_str_slice_core.rs` to this top-level `mod.rs` to
+/// silence this compiler warning, soon to be turned into an error.
+#[macro_export]
+macro_rules! as_str_slice_test_case {
+    ($var_name:ident, $($string_expr:expr),+ $(,)?) => {
+        #[allow(unused_variables)]
+        let _input_array_binding = [$($crate::GCString::new($string_expr)),+];
+        let $var_name = $crate::AsStrSlice::from(&_input_array_binding);
+    };
+    ($var_name:ident, limit: $max_len:expr, $($string_expr:expr),+ $(,)?) => {
+        #[allow(unused_variables)]
+        let _input_array_binding = [$($crate::GCString::new($string_expr)),+];
+        let $var_name = $crate::AsStrSlice::with_limit(&_input_array_binding, $crate::idx(0), $crate::idx(0), Some($crate::len($max_len)));
+    };
+}
+
+#[cfg(test)]
+mod tests_as_str_slice_test_case {
+    use crate::assert_eq2;
+
+    #[test]
+    fn test_as_str_slice_creation() {
+        // Single string.
+        as_str_slice_test_case!(input, "@title: Something");
+        assert_eq2!(input.lines.len(), 1);
+        assert_eq2!(input.lines[0].as_ref(), "@title: Something");
+
+        // Multiple strings.
+        as_str_slice_test_case!(input, "@title: Something", "more content", "even more");
+        assert_eq2!(input.lines.len(), 3);
+        assert_eq2!(input.lines[0].as_ref(), "@title: Something");
+        assert_eq2!(input.lines[1].as_ref(), "more content");
+        assert_eq2!(input.lines[2].as_ref(), "even more");
+
+        // With trailing comma (optional).
+        as_str_slice_test_case!(input, "@title: Something",);
+        assert_eq2!(input.lines.len(), 1);
+        assert_eq2!(input.lines[0].as_ref(), "@title: Something");
+    }
 }

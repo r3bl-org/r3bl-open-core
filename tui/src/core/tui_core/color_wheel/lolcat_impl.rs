@@ -40,13 +40,14 @@ impl Default for Lolcat {
 
 impl Debug for Lolcat {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        return write! { f,
-          "lolcat: [{}, {}, {}, {}]",
-          pretty_print_f64(*self.color_wheel_control.seed),
-          pretty_print_f64(*self.color_wheel_control.spread),
-          pretty_print_f64(*self.color_wheel_control.frequency),
-          self.color_wheel_control.color_change_speed
-        };
+        return write!(
+            f,
+            "lolcat: [{}, {}, {}, {}]",
+            pretty_print_f64(*self.color_wheel_control.seed),
+            pretty_print_f64(*self.color_wheel_control.spread),
+            pretty_print_f64(*self.color_wheel_control.frequency),
+            self.color_wheel_control.color_change_speed
+        );
 
         /// More info: <https://stackoverflow.com/questions/63214346/how-to-truncate-f64-to-2-decimal-places>
         fn pretty_print_f64(before: f64) -> f64 { f64::trunc(before * 100.0) / 100.0 }

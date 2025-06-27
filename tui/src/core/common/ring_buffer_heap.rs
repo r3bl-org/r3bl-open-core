@@ -16,14 +16,14 @@
  */
 
 //! A fixed-size ring buffer implementation using heap allocation. For stack allocated
-//! version, take a look at [super::RingBufferStack].
+//! version, take a look at [`super::RingBufferStack`].
 
 use std::fmt::Debug;
 
 use super::RingBuffer;
 use crate::{len, Index, Length};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RingBufferHeap<T, const N: usize> {
     internal_storage: Vec<Option<T>>,
     head: usize,
@@ -37,7 +37,7 @@ impl<T, const N: usize> Default for RingBufferHeap<T, N> {
 
 impl<T, const N: usize> RingBufferHeap<T, N> {
     pub fn new() -> Self {
-        RingBufferHeap {
+        Self {
             internal_storage: Vec::with_capacity(N),
             head: 0,
             tail: 0,

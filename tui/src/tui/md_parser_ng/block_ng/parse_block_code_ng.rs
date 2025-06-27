@@ -354,9 +354,9 @@ pub fn split_by_new_line_ng<'a>(input: AsStrSlice<'a>) -> InlineVec<AsStrSlice<'
 
     // Iterator-based approach: single pass through characters to find newline positions
     // Using the existing StringChars iterator from iterators.rs
-    let mut iter = input.iter_elements();
+    let iter = input.iter_elements();
 
-    while let Some(ch) = iter.next() {
+    for ch in iter {
         if ch == NEW_LINE_CHAR {
             // Found a newline - create a slice from line_start to current_pos
             let line_length = current_pos - line_start;
@@ -1209,7 +1209,7 @@ mod tests_split_by_new_line_ng {
     // Helper function to convert AsStrSlice results to strings for comparison
     fn slice_results_to_strings(slices: &[AsStrSlice<'_>]) -> Vec<String> {
         slices
-            .into_iter()
+            .iter()
             .map(|slice| slice.extract_to_slice_end().to_string())
             .collect()
     }
@@ -1270,7 +1270,7 @@ mod tests_compat_with_original_split_by_new_line {
     // Helper function to convert AsStrSlice results to strings for easy comparison
     fn slice_results_to_strings(slices: &[AsStrSlice<'_>]) -> Vec<String> {
         slices
-            .into_iter()
+            .iter()
             .map(|slice| slice.extract_to_slice_end().to_string())
             .collect()
     }
@@ -1501,7 +1501,7 @@ mod debug_tests {
         let (remainder_after_lang, lang) =
             parse_code_block_lang_including_eol_ng(input_clone).unwrap();
         let lang_str = lang.map(|l| l.extract_to_slice_end().as_ref().to_string());
-        println!("Language: {:?}", lang_str);
+        println!("Language: {lang_str:?}");
         println!(
             "Remainder after lang: {:?}",
             remainder_after_lang.extract_to_slice_end().as_ref()
@@ -1528,7 +1528,7 @@ mod debug_tests {
         let (_remainder, code_block_lines) = parse_block_code_advance_ng(input).unwrap();
         println!("Final code block lines count: {}", code_block_lines.len());
         for (i, line) in code_block_lines.iter().enumerate() {
-            println!("Line[{}]: {:?}", i, line);
+            println!("Line[{i}]: {line:?}");
         }
     }
 }

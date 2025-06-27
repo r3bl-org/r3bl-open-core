@@ -66,8 +66,8 @@ impl AsRef<str> for InlineStringCow<'_> {
 impl Display for InlineStringCow<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Borrowed(as_ref_str) => write!(f, "{}", as_ref_str),
-            Self::Owned(as_ref_str) => write!(f, "{}", as_ref_str),
+            Self::Borrowed(as_ref_str) => write!(f, "{as_ref_str}"),
+            Self::Owned(as_ref_str) => write!(f, "{as_ref_str}"),
         }
     }
 }
@@ -82,7 +82,7 @@ pub const DEFAULT_CHAR_STORAGE_SIZE: usize = 4;
 /// [DEFAULT_DOCUMENT_SIZE], it will be [smallvec::SmallVec::spilled] on the heap.
 pub type DocumentStorage = SmallString<[u8; DEFAULT_DOCUMENT_SIZE]>;
 /// 128KB, or approximately 2200 lines of Markdown text (assuming 60 chars per line).
-pub const DEFAULT_DOCUMENT_SIZE: usize = 131072;
+pub const DEFAULT_DOCUMENT_SIZE: usize = 131_072;
 
 // 16KB buffer for reasonable performance on Linux, which typically has a 4KB page size. A
 // page is a fixed sized block of memory, and memory is managed in terms of pages. It is
