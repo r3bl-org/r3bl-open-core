@@ -254,11 +254,13 @@ impl<'a> AsStrSlice<'a> {
             let current_line = &self.lines[self.line_index.as_usize()].string;
             let current_line: &str = current_line.as_ref();
             let line_char_count = current_line.len_chars();
-            let chars_left_in_line =
-                match self.char_index.check_overflows(len(line_char_count)) {
-                    BoundsStatus::Overflowed => len(0),
-                    BoundsStatus::Within => line_char_count - len(self.char_index.as_usize()),
-                };
+            let chars_left_in_line = match self
+                .char_index
+                .check_overflows(len(line_char_count))
+            {
+                BoundsStatus::Overflowed => len(0),
+                BoundsStatus::Within => line_char_count - len(self.char_index.as_usize()),
+            };
 
             return match self.max_len {
                 None => len(chars_left_in_line),
@@ -480,9 +482,10 @@ pub fn determine_line_location(
     line_index: Index,
     lines_len: Length,
 ) -> LineLocationInDocument {
-    match line_index < lines_len.convert_to_index() {
-        true => LineLocationInDocument::HasMoreLinesAfter,
-        false => LineLocationInDocument::LastLine,
+    if line_index < lines_len.convert_to_index() {
+        LineLocationInDocument::HasMoreLinesAfter
+    } else {
+        LineLocationInDocument::LastLine
     }
 }
 

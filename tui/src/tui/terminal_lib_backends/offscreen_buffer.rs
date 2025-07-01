@@ -350,9 +350,10 @@ mod pixel_char_line_impl {
             }
 
             pub fn does_current_range_exist(current_range: &[usize]) -> CurrentRange {
-                match current_range.is_empty() {
-                    true => CurrentRange::DoesNotExist,
-                    false => CurrentRange::Exists,
+                if current_range.is_empty() {
+                    CurrentRange::DoesNotExist
+                } else {
+                    CurrentRange::Exists
                 }
             }
         }

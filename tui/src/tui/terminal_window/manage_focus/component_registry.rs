@@ -54,9 +54,10 @@ where
         map: &mut ComponentRegistryMap<S, AS>,
         id: FlexBoxId,
     ) -> ContainsResult {
-        match map.contains_key(&id) {
-            true => ContainsResult::DoesContain,
-            false => ContainsResult::DoesNotContain,
+        if map.contains_key(&id) {
+            ContainsResult::DoesContain
+        } else {
+            ContainsResult::DoesNotContain
         }
     }
 
