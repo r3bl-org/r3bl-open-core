@@ -15,7 +15,17 @@
  *   limitations under the License.
  */
 
-use super::ColorWheelControl;
+//! Helper functions for color calculations and conversions.
+//!
+//! This module provides utility functions for color wheel operations:
+//! - `calc_fg_color()` - Calculates appropriate foreground color for contrast
+//! - `get_color_tuple()` - Generates RGB color values from ColorWheelControl
+//! - `clamp()` - Safely converts f64 to u8 values
+//!
+//! These functions handle the mathematical calculations for color generation
+//! and ensure proper contrast ratios. Previously located in `color_wheel_core/color_helpers.rs`.
+
+use super::types::ColorWheelControl;
 use crate::LossyConvertToByte as _;
 
 /// More info on luminance:

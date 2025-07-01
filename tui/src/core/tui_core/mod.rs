@@ -16,10 +16,19 @@
  */
 
 //! All the modules this crate are in support of the `r3bl_tui` crate.
+//!
+//! ## Module Organization
+//!
+//! - `color_wheel` - Comprehensive color wheel functionality (rainbow text, gradients, lolcat)
+//! - `dimens` - Dimension and layout utilities
+//! - `graphemes` - Unicode grapheme cluster handling
+//! - `spinner_impl` - Loading spinner implementations
+//! - `tui_style` - Text styling and formatting
+//! - `tui_styled_text` - Styled text containers and utilities
+//! - `units` - Type-safe unit types for layout
 
 // Attach sources.
 pub mod color_wheel;
-pub mod color_wheel_core;
 pub mod dimens;
 pub mod graphemes;
 pub mod spinner_impl;
@@ -29,7 +38,6 @@ pub mod units;
 
 // Re-export.
 pub use color_wheel::*;
-pub use color_wheel_core::*;
 pub use dimens::*;
 pub use graphemes::*;
 pub use spinner_impl::*;

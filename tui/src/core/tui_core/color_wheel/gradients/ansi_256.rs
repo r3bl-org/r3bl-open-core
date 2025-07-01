@@ -15,6 +15,16 @@
  *   limitations under the License.
  */
 
+//! ANSI 256 color gradient definitions and utilities.
+//!
+//! This module provides predefined color gradients using the ANSI 256 color palette.
+//! It includes:
+//! - `Ansi256GradientIndex` - Enum of available gradient types
+//! - `ANSI_256_GRADIENTS` - Static array of gradient color sequences
+//! - `get_gradient_array_for()` - Function to retrieve gradient colors by index
+//!
+//! Previously located in `color_wheel_core/ansi_256_color_gradients.rs`.
+
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Ansi256GradientIndex {

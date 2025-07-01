@@ -19,11 +19,9 @@ use sizing::VecSteps;
 use smallstr::SmallString;
 use smallvec::SmallVec;
 
-use super::{Lolcat, LolcatBuilder, Seed};
+use super::{lolcat::{Lolcat, LolcatBuilder}, types::Seed};
 use crate::{global_color_support,
-            Ansi256GradientIndex,
             ColorSupport,
-            Colorize,
             TuiColor};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
@@ -83,7 +81,7 @@ pub enum ColorWheelConfig {
         /* steps */ u8,
     ),
     RgbRandom(/* speed */ ColorWheelSpeed),
-    Ansi256(Ansi256GradientIndex, ColorWheelSpeed),
+    Ansi256(super::gradients::Ansi256GradientIndex, ColorWheelSpeed),
     Lolcat(LolcatBuilder),
 }
 
@@ -94,7 +92,7 @@ impl ColorWheelConfig {
             matches!(
                 config,
                 ColorWheelConfig::Lolcat(LolcatBuilder {
-                    colorization_strategy: Colorize::BothBackgroundAndForeground,
+                    colorization_strategy: super::lolcat::Colorize::BothBackgroundAndForeground,
                     ..
                 })
             )
@@ -135,7 +133,7 @@ impl ColorWheelConfig {
 
                 // Grayscale fallback.
                 ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::GrayscaleMediumGrayToWhite,
+                    super::gradients::Ansi256GradientIndex::GrayscaleMediumGrayToWhite,
                     ColorWheelSpeed::Medium,
                 )
             }
@@ -151,13 +149,13 @@ impl ColorWheelConfig {
 
                 // Grayscale fallback.
                 ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::GrayscaleMediumGrayToWhite,
+                    super::gradients::Ansi256GradientIndex::GrayscaleMediumGrayToWhite,
                     ColorWheelSpeed::Medium,
                 )
             }
             // Grayscale fallback.
             _ => ColorWheelConfig::Ansi256(
-                Ansi256GradientIndex::GrayscaleMediumGrayToWhite,
+                super::gradients::Ansi256GradientIndex::GrayscaleMediumGrayToWhite,
                 ColorWheelSpeed::Medium,
             ),
         }
