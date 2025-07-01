@@ -280,17 +280,13 @@ mod app_main_impl_app_trait {
                         has_focus,
                         state,
                     ) {
-                        match err.downcast_ref::<CommonError>() {
-                            // err is of concrete type CommonError.
-                            Some(common_error) => {
-                                // % is Display, ? is Debug.
-                                tracing::error!(
-                                    message = "📣 Error activating simple modal",
-                                    error = ?common_error
-                                );
-                            }
-                            // err is not of concrete type CommonError.
-                            _ => { /* do nothing */ }
+                        if let Some(common_error) = err.downcast_ref::<CommonError>() {
+                            // % is Display, ? is Debug.
+                            tracing::error!(
+                                message = "📣 Error activating simple modal",
+                                error = ?common_error
+                            );
+                        } else { /* do nothing */
                         }
                     }
 

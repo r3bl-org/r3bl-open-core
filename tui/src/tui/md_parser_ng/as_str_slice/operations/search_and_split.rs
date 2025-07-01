@@ -128,6 +128,7 @@ impl<'a> AsStrSlice<'a> {
     /// as_str_slice_test_case!(multiline, "Line 1", "Line 2", "Line 3");
     /// // Don't use skip_take_in_current_line() for this - it won't handle line boundaries
     /// ```
+    #[must_use]
     pub fn skip_take_in_current_line(
         &self,
         arg_skip_count: impl Into<Length>,
@@ -169,6 +170,7 @@ impl<'a> AsStrSlice<'a> {
     /// limit at the specified `end_index`. The resulting slice will consume
     /// characters from the current position up to (but not including) the `end_index`
     /// character position.
+    #[must_use]
     pub fn take_until(&self, arg_end_index: impl Into<Index>) -> Self {
         let end_index: Index = arg_end_index.into();
         let new_char_index = self.char_index.min(end_index);

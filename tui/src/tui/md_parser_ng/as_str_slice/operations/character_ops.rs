@@ -50,6 +50,7 @@ impl<'a> AsStrSlice<'a> {
     /// # Parameters
     /// - `start`: The starting character position (inclusive)
     /// - `end`: The ending character position (exclusive)
+    #[must_use]
     pub fn char_range(
         &self,
         arg_start: impl Into<CharacterIndex>,
@@ -90,6 +91,7 @@ impl<'a> AsStrSlice<'a> {
     ///
     /// # Parameters
     /// - `start`: The starting character position (inclusive)
+    #[must_use]
     pub fn char_from(&self, arg_start: impl Into<CharacterIndex>) -> Self {
         let start = arg_start.into().as_usize();
         self.take_from(start)
@@ -114,6 +116,7 @@ impl<'a> AsStrSlice<'a> {
     ///
     /// # Parameters
     /// - `end`: The ending character position (exclusive)
+    #[must_use]
     pub fn char_to(&self, arg_end: impl Into<CharacterIndex>) -> Self {
         let end = arg_end.into().as_usize();
         self.take(end)
@@ -143,6 +146,7 @@ impl<'a> AsStrSlice<'a> {
     /// # Parameters
     /// - `start`: The starting character position (inclusive)
     /// - `end`: The ending character position (inclusive)
+    #[must_use]
     pub fn char_range_inclusive(
         &self,
         arg_start: impl Into<CharacterIndex>,

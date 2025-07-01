@@ -127,10 +127,10 @@ impl HasFocus {
             if self.is_modal_set() {
                 let msg = inline_string!(
                     "Modal id is already set to {a}. Can't set it to {b}.",
-                    a = match self.get_id() {
-                        Some(existing_id) => tiny_inline_string!("{existing_id:?}"),
-                        None => tiny_inline_string!("None"),
-                    },
+                    a = self.get_id().map_or_else(
+                        /* None */ || tiny_inline_string!("None"),
+                        /* Some */ |id| tiny_inline_string!("{id:?}")
+                    ),
                     b = tiny_inline_string!("{id:?}")
                 );
                 return CommonError::new_error_result_with_only_msg(&msg);

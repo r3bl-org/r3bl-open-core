@@ -275,47 +275,40 @@ pub mod convert_key_event {
         fn process_only_key_event_kind_press(
             key_event: KeyEvent,
         ) -> Result<KeyPress, ()> {
-            match key_event {
-                // If character keys, then ignore SHIFT or NONE modifiers.
-                KeyEvent {
+            if let KeyEvent {
                     code: KeyCode::Char(character),
                     modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT, // Ignore SHIFT.
                     .. // Ignore `state`. We know `kind`=`KeyEventKind::Press`.
-                } => {
-                    generate_character_key(character)
-                },
-                // Non character keys.
-                _ => {
-                    let maybe_modifiers_keys_mask = try_convert_key_modifiers(&key_event.modifiers);
-                    let maybe_key: Option<Key> = copy_code_from_key_event(&key_event);
-                    if let Some(key) = maybe_key {
-                        if let Some(mask) = maybe_modifiers_keys_mask {
-                            generate_non_character_key_with_modifiers(key, mask)
-                        } else {
-                            generate_non_character_key_without_modifiers(key)
-                        }
+                } = key_event {
+                Ok(generate_character_key(character))
+            } else {
+                let maybe_modifiers_keys_mask = try_convert_key_modifiers(&key_event.modifiers);
+                let maybe_key: Option<Key> = copy_code_from_key_event(&key_event);
+                if let Some(key) = maybe_key {
+                    if let Some(mask) = maybe_modifiers_keys_mask {
+                        Ok(generate_non_character_key_with_modifiers(key, mask))
                     } else {
-                        Err(())
+                        Ok(generate_non_character_key_without_modifiers(key))
                     }
+                } else {
+                    Err(())
                 }
             }
         }
 
-        fn generate_character_key(character: char) -> Result<KeyPress, ()> {
-            Ok(key_press! { @char character })
+        fn generate_character_key(character: char) -> KeyPress {
+            key_press! { @char character }
         }
 
-        fn generate_non_character_key_without_modifiers(
-            key: Key,
-        ) -> Result<KeyPress, ()> {
-            Ok(KeyPress::Plain { key })
+        fn generate_non_character_key_without_modifiers(key: Key) -> KeyPress {
+            KeyPress::Plain { key }
         }
 
         fn generate_non_character_key_with_modifiers(
             key: Key,
             mask: ModifierKeysMask,
-        ) -> Result<KeyPress, ()> {
-            Ok(KeyPress::WithModifiers { mask, key })
+        ) -> KeyPress {
+            KeyPress::WithModifiers { mask, key }
         }
 
         match key_event {
@@ -413,17 +406,17 @@ pub mod convert_key_event {
                 SpecialKeyExt::KeypadBegin,
             ))
             .into(),
-            KC::Media(media_key) => match_enhanced_media_key(media_key),
+            KC::Media(media_key) => match_enhanced_media_key(media_key).into(),
             KC::Modifier(modifier_key_code) => {
-                match_enhanced_modifier_key_code(modifier_key_code)
+                match_enhanced_modifier_key_code(modifier_key_code).into()
             }
         }
     }
 
-    fn match_enhanced_media_key(media_key: MediaKeyCode) -> Option<Key> {
+    fn match_enhanced_media_key(media_key: MediaKeyCode) -> Key {
         // Make the code easier to read below using this alias.
         type KC = MediaKeyCode;
-        Some(match media_key {
+        match media_key {
             KC::Play => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Play)),
             KC::Pause => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Pause)),
             KC::Stop => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Stop)),
@@ -457,15 +450,15 @@ pub mod convert_key_event {
             KC::MuteVolume => {
                 Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::MuteVolume))
             }
-        })
+        }
     }
 
     fn match_enhanced_modifier_key_code(
         modifier_key_code: ModifierKeyCode,
-    ) -> Option<Key> {
+    ) -> Key {
         // Make the code easier to read below using this alias.
         type KC = ModifierKeyCode;
-        Some(match modifier_key_code {
+        match modifier_key_code {
             KC::LeftShift => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
                 ModifierKeyEnum::LeftShift,
             )),
@@ -508,6 +501,6 @@ pub mod convert_key_event {
             KC::IsoLevel5Shift => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
                 ModifierKeyEnum::IsoLevel5Shift,
             )),
-        })
+        }
     }
 }

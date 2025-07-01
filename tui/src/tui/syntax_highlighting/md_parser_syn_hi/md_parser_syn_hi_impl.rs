@@ -142,16 +142,12 @@ pub fn try_parse_and_highlight(
 
         // Use the parser_byte_cache if it exists, otherwise create a new one with the
         // size_hint.
-        let acc = match parser_byte_cache {
-            // If the parser_byte_cache exists, we can write to it directly.
-            Some(parser_byte_cache) => parser_byte_cache,
-            // If it doesn't exist, we create a new one with the size hint. Save it back
-            // to the parser_byte_cache for reuse next time.
-            None => {
-                *parser_byte_cache = Some(ParserByteCache::with_capacity(size_hint));
-                parser_byte_cache.as_mut().unwrap()
-            }
-        };
+        if parser_byte_cache.is_none() {
+            *parser_byte_cache = Some(ParserByteCache::with_capacity(size_hint));
+        }
+        let acc = parser_byte_cache
+            .as_mut()
+            .expect("parser_byte_cache is guaranteed to be Some");
 
         slice.write_to_byte_cache_compat(size_hint, acc);
         parse_markdown(acc)
