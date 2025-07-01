@@ -458,6 +458,7 @@
 pub mod choose_api;
 pub mod readline_async_api;
 pub mod spinner;
+pub mod spinner_impl;
 pub mod readline_async_impl;
 pub mod choose_impl;
 
@@ -467,6 +468,7 @@ pub use choose_impl::*;
 pub use readline_async_api::*;
 pub use readline_async_impl::*;
 pub use spinner::*;
+pub use spinner_impl::*;
 
 // r3bl-open-core crates.
 use crate::{InlineString, StdMutex};
