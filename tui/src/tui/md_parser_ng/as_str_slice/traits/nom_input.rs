@@ -24,8 +24,8 @@
 //! crucial for handling Unicode text correctly, including multi-byte characters like
 //! emojis.
 //!
-//! Since [`AsStrSlice`] works with [char] (see [`Iterator::Item`]), all `usize` values in the
-//! interface represent character-based indices and offsets. However, since we can't
+//! Since [`AsStrSlice`] works with [char] (see [`Iterator::Item`]), all `usize` values in
+//! the interface represent character-based indices and offsets. However, since we can't
 //! change the `nom::Input` trait signature, we use type aliases to clarify this:
 //!
 //! - [`CharacterIndexNomCompat`]: Character index, not byte index
@@ -49,7 +49,7 @@
 use nom::Input;
 
 use crate::{as_str_slice::AsStrSlice,
-            core::tui_core::units::len,
+            core::units::len,
             CharacterCountNomCompat,
             CharacterIndexNomCompat,
             StringCharIndices,

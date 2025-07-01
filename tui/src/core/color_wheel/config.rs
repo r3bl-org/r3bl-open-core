@@ -27,7 +27,7 @@ use crate::{global_color_support,
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
 /// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
 /// the heap.
-pub(in crate::core::tui_core) mod sizing {
+pub(in crate::core) mod sizing {
     use super::*;
 
     pub type StringHexColor = SmallString<[u8; MAX_HEX_COLOR_STRING_SIZE]>;

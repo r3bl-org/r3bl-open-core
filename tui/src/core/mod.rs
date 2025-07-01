@@ -143,30 +143,42 @@
 
 // Connect to source file.
 pub mod ansi;
+pub mod color_wheel;
 pub mod common;
 pub mod decl_macros;
+pub mod dimens;
 pub mod glyphs;
+pub mod graphemes;
 pub mod log;
 pub mod misc;
 pub mod script;
+pub mod spinner_impl;
 pub mod stack_alloc_types;
 pub mod storage;
 pub mod term;
 pub mod terminal_io;
 pub mod test_fixtures;
-pub mod tui_core;
+pub mod tui_style;
+pub mod tui_styled_text;
+pub mod units;
 
 // Re-export.
 pub use ansi::*;
+pub use color_wheel::*;
 pub use common::*;
 pub use decl_macros::*;
+pub use dimens::*;
 pub use glyphs::*;
+pub use graphemes::*;
 pub use log::*;
 pub use misc::*;
 pub use script::*;
+pub use spinner_impl::*;
 pub use stack_alloc_types::*;
 pub use storage::*;
 pub use term::*;
 pub use terminal_io::*;
 pub use test_fixtures::*;
-pub use tui_core::*;
+pub use tui_style::*;
+pub use tui_styled_text::*;
+pub use units::*;

@@ -16,7 +16,7 @@
  */
 
 use crate::{as_str_slice::AsStrSlice,
-            core::tui_core::units::{idx, Index}};
+            core::units::{idx, Index}};
 
 /// Iterator over the characters in an [`AsStrSlice`].
 pub struct StringChars<'a> {

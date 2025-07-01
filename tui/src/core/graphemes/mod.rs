@@ -172,9 +172,9 @@
 //!     to save the cursor at this point, then print the 2nd part of the string, then call
 //!     `RestorePosition` to restore the cursor to where it "should" be.
 //!
-//! Please take a look at [`crate::tui_core::graphemes::GCString`] for the following
+//! Please take a look at [`crate::graphemes::GCString`] for the following
 //! items:
-//! - Methods in [`mod@crate::tui_core::graphemes::gc_string`] for more details on how the
+//! - Methods in [`mod@crate::graphemes::gc_string`] for more details on how the
 //!   conversion between "display" (or `display_col_index`), ie, [`crate::ColIndex`] and
 //!   "logical" or "segment", ie, [`SegIndex`] is done.
 //! - The choices that were made in the design of the [`GCString`] struct for performance

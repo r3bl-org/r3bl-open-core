@@ -17,7 +17,7 @@
 
 use crate::{as_str_slice::AsStrSlice,
             constants::{SPACE_CHAR, TAB_CHAR},
-            core::tui_core::units::{len, Length}};
+            core::units::{len, Length}};
 
 impl<'a> AsStrSlice<'a> {
     /// Internal helper function that trims specified whitespace characters from the start

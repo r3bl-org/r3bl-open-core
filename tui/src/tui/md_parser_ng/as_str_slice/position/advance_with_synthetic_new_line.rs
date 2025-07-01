@@ -154,7 +154,7 @@
 
 use crate::{bounds_check,
             constants::NEW_LINE_CHAR,
-            core::tui_core::units::{Index, Length},
+            core::units::{Index, Length},
             idx,
             len,
             AsStrSlice,

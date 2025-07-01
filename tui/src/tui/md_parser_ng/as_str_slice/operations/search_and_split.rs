@@ -16,7 +16,7 @@
  */
 
 use crate::{as_str_slice::AsStrSlice,
-            core::tui_core::units::{len, Index, Length},
+            core::units::{len, Index, Length},
             GCString};
 
 impl<'a> AsStrSlice<'a> {
