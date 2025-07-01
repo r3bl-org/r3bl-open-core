@@ -386,11 +386,10 @@ mod api {
             &mut self,
             arg_row_height: impl Into<RowHeight>,
             arg_max_row_height: impl Into<RowHeight>,
-        ) -> Self {
+        ) {
             let value: RowHeight = arg_row_height.into();
             let max: RowHeight = arg_max_row_height.into();
             *self.row_index = std::cmp::min(*self.row_index + *value, *max);
-            *self
         }
 
         /// Decrement row index by `value`.

@@ -193,13 +193,13 @@ mod single_column_component_impl_component_trait {
                     let line_1_trunc = line_1_gcs.trunc_end_to_fit(box_bounds_size);
 
                     render_ops! {
-                      @add_to render_ops
-                      =>
+                        @add_to render_ops
+                        =>
                         RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_cursor_pos),
                         RenderOp::ApplyColors(current_box.get_computed_style()),
                         RenderOp::PaintTextWithAttributes(
-                          line_1_trunc.into(),
-                          current_box.get_computed_style(),
+                            line_1_trunc.into(),
+                            current_box.get_computed_style(),
                         ),
                         RenderOp::ResetColor
                     };
@@ -210,13 +210,15 @@ mod single_column_component_impl_component_trait {
                     let line_2_gcs = line_2.grapheme_string();
                     let line_2_trunc_str = line_2_gcs.trunc_end_to_fit(box_bounds_size);
                     let line_2_trunc_gcs = line_2_trunc_str.grapheme_string();
+                    content_cursor_pos
+                        .add_row_with_bounds(ch(1), box_bounds_size.row_height);
 
                     render_ops! {
-                      @add_to render_ops
-                      =>
+                        @add_to render_ops
+                        =>
                         RenderOp::MoveCursorPositionRelTo(
-                          box_origin_pos,
-                          content_cursor_pos.add_row_with_bounds(ch(1), box_bounds_size.row_height)
+                            box_origin_pos,
+                            content_cursor_pos,
                         ),
                         RenderOp::ApplyColors(current_box.get_computed_style()),
                     };
@@ -235,18 +237,19 @@ mod single_column_component_impl_component_trait {
                 }
 
                 // Paint is_focused.
+                content_cursor_pos.add_row_with_bounds(ch(1), box_bounds_size.row_height);
                 render_ops! {
-                  @add_to render_ops
-                  =>
+                    @add_to render_ops
+                    =>
                     RenderOp::MoveCursorPositionRelTo(
-                      box_origin_pos,
-                      content_cursor_pos.add_row_with_bounds(ch(1), box_bounds_size.row_height)
+                        box_origin_pos,
+                        content_cursor_pos,
                     ),
                     if has_focus.does_current_box_have_focus(current_box) {
-                      RenderOp::PaintTextWithAttributes("👀".into(), None)
+                        RenderOp::PaintTextWithAttributes("👀".into(), None)
                     }
                     else {
-                      RenderOp::PaintTextWithAttributes(" ".into(), None)
+                        RenderOp::PaintTextWithAttributes(" ".into(), None)
                     }
                 };
 
