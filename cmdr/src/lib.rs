@@ -28,8 +28,8 @@
 //! - [Changelog](#changelog)
 //! - [Learn how these crates are built, provide
 //!   feedback](#learn-how-these-crates-are-built-provide-feedback)
-//! - [Run giti binary target](#run-giti-binary-target)
-//! - [Run edi binary target](#run-edi-binary-target)
+//! - [Run `giti` binary target](#run-giti-binary-target)
+//! - [Run `edi` binary target](#run-edi-binary-target)
 //! - [Build, run, test tasks](#build-run-test-tasks)
 //!   - [Prerequisites](#prerequisites)
 //!   - [Nushell scripts to build, run, test etc.](#nushell-scripts-to-build-run-test-etc)
