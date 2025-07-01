@@ -381,6 +381,7 @@ mod api {
 
         /// Increment row index by `value`, while making sure it will never exceed
         /// `max_row`.
+        #[allow(clippy::return_self_not_must_use)]
         pub fn add_row_with_bounds(
             &mut self,
             arg_row_height: impl Into<RowHeight>,
@@ -408,6 +409,7 @@ mod api {
         }
 
         /// Increment col index by `value`. Returns a copy of `Pos`.
+        #[allow(clippy::return_self_not_must_use)]
         pub fn add_col(&mut self, arg_col_width: impl Into<ColWidth>) -> Self {
             let width: ColWidth = arg_col_width.into();
             *self.col_index += *width;

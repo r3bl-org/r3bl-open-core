@@ -155,12 +155,12 @@ mod user_interaction {
 
         // Early return if the command fails.
         let Ok((_, branch_info)) = res else {
-            return noop();
+            return Ok(noop());
         };
 
         // Early return if there are no branches to select from.
         if branch_info.other_branches.is_empty() {
-            return noop();
+            return Ok(noop());
         }
 
         let header_with_instructions = {
@@ -186,17 +186,17 @@ mod user_interaction {
 
         // Early return if the user did not select a branch.
         let Some(user_choice) = maybe_user_choice else {
-            return noop();
+            return Ok(noop());
         };
 
         // Actually checkout the user selected branch.
         command_execute::checkout_branch(&user_choice, &branch_info.current_branch).await
     }
 
-    fn noop() -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        Ok(CommandRunResult::Noop(
+    fn noop() -> CommandRunResult<CommandRunDetails> {
+        CommandRunResult::Noop(
             ui_str::branch_checkout_display::no_suitable_branch_available_msg(),
             details::empty(),
-        ))
+        )
     }
 }

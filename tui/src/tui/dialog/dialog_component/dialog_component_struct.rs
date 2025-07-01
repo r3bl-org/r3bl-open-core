@@ -156,70 +156,65 @@ where
 
         let id = *id;
 
-        match state.get_mut_dialog_buffer(id) {
-            // Happy branch.
-            Some(_) => {
-                match DialogEngineApi::apply_event::<S, AS>(
-                    state,
-                    id,
-                    dialog_engine,
-                    input_event,
-                )? {
-                    // Handler user's choice.
-                    DialogEngineApplyResponse::DialogChoice(dialog_choice) => {
-                        has_focus.reset_modal_id();
+        if state.get_mut_dialog_buffer(id).is_some() {
+            use DialogEngineApplyResponse::*;
 
-                        DEBUG_TUI_MOD.then(|| {
-                            // % is Display, ? is Debug.
-                            tracing::debug!(
-                                message = "🐝 restore focus to non modal",
-                                has_focus = ?has_focus
-                            );
-                        });
+            match DialogEngineApi::apply_event::<S, AS>(
+                state,
+                id,
+                dialog_engine,
+                input_event,
+            )? {
+                // Handler user's choice.
+                DialogChoice(dialog_choice) => {
+                    has_focus.reset_modal_id();
 
-                        // Run the handler (if any) w/ `dialog_choice`.
-                        if let Some(fun) = &on_dialog_press_handler {
-                            fun(
-                                dialog_choice,
-                                state,
-                                &mut main_thread_channel_sender.clone(),
-                            );
-                        }
+                    DEBUG_TUI_MOD.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::debug!(
+                            message = "🐝 restore focus to non modal",
+                            has_focus = ?has_focus
+                        );
+                    });
 
-                        // Trigger re-render, now that focus has been restored to
-                        // non-modal component.
-                        Ok(EventPropagation::ConsumedRender)
+                    // Run the handler (if any) w/ `dialog_choice`.
+                    if let Some(fun) = &on_dialog_press_handler {
+                        fun(
+                            dialog_choice,
+                            state,
+                            &mut main_thread_channel_sender.clone(),
+                        );
                     }
 
-                    // Handler user input that has updated the
-                    // dialog_buffer.editor_buffer.
-                    DialogEngineApplyResponse::UpdateEditorBuffer => {
-                        // Run the handler (if any) w/ `new_editor_buffer`.
-                        if let Some(it) = &on_dialog_editor_change_handler {
-                            it(state, &mut main_thread_channel_sender.clone());
-                        }
-
-                        // The handler should dispatch action to change state since
-                        // dialog_buffer.editor_buffer is updated.
-                        Ok(EventPropagation::ConsumedRender)
-                    }
-
-                    // Handle user input that has updated the results panel.
-                    DialogEngineApplyResponse::SelectScrollResultsPanel => {
-                        Ok(EventPropagation::ConsumedRender)
-                    }
-
-                    // All else.
-                    DialogEngineApplyResponse::Noop => Ok(EventPropagation::Propagate),
+                    // Trigger re-render, now that focus has been restored to
+                    // non-modal component.
+                    Ok(EventPropagation::ConsumedRender)
                 }
+
+                // Handler user input that has updated the
+                // dialog_buffer.editor_buffer.
+                UpdateEditorBuffer => {
+                    // Run the handler (if any) w/ `new_editor_buffer`.
+                    if let Some(it) = &on_dialog_editor_change_handler {
+                        it(state, &mut main_thread_channel_sender.clone());
+                    }
+
+                    // The handler should dispatch action to change state since
+                    // dialog_buffer.editor_buffer is updated.
+                    Ok(EventPropagation::ConsumedRender)
+                }
+
+                // Handle user input that has updated the results panel.
+                SelectScrollResultsPanel => Ok(EventPropagation::ConsumedRender),
+
+                // All else.
+                Noop => Ok(EventPropagation::Propagate),
             }
-            // Error branch.
-            _ => {
-                let msg = format!(
-                    "🐝 DialogComponent::handle_event: dialog_buffer is None for id: {id:?}"
-                );
-                CommonError::new_error_result(CommonErrorType::NotFound, &msg)
-            }
+        } else {
+            let msg = format!(
+                "🐝 DialogComponent::handle_event: dialog_buffer is None for id: {id:?}"
+            );
+            CommonError::new_error_result(CommonErrorType::NotFound, &msg)
         }
     }
 }
