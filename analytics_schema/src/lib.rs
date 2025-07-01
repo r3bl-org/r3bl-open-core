@@ -171,20 +171,27 @@
 #![warn(clippy::map_unwrap_or)]
 #![warn(clippy::missing_panics_doc)]
 #![warn(clippy::unwrap_in_result)]
+#![warn(clippy::unused_self)]
+#![warn(clippy::single_char_pattern)]
+#![warn(clippy::manual_let_else)]
+#![warn(clippy::unnecessary_semicolon)]
+#![warn(clippy::cast_precision_loss)]
 #![warn(clippy::if_not_else)]
 #![warn(clippy::unnecessary_wraps)]
 #![warn(clippy::single_match_else)]
 #![warn(clippy::return_self_not_must_use)]
-// This triggers legitimate use of passing a Copy arg by value to a function.
-#![allow(clippy::needless_pass_by_value)]
+#![warn(clippy::match_bool)]
+#![warn(clippy::comparison_chain)]
+#![allow(clippy::needless_pass_by_value)] // This triggers legitimate use of passing a Copy arg by value to a function.
+#![allow(clippy::similar_names)] // This triggers legitimate variable names.
+
+/// This is copied from `r3bl_core` crate's `common_type_aliases.rs` file.
+pub const DEFAULT_TINY_VEC_SIZE: usize = 16;
+/// This is copied from `r3bl_core` create's `common_type_aliases.rs` file.
+pub type TinyVecBackingStore<T> = smallvec::SmallVec<[T; DEFAULT_TINY_VEC_SIZE]>;
 
 // Attach.
 pub mod analytics_data;
 
 // Re-export.
 pub use analytics_data::*;
-
-/// This is copied from `r3bl_core` crate's `common_type_aliases.rs` file.
-pub const DEFAULT_TINY_VEC_SIZE: usize = 16;
-/// This is copied from `r3bl_core` create's `common_type_aliases.rs` file.
-pub type TinyVecBackingStore<T> = smallvec::SmallVec<[T; DEFAULT_TINY_VEC_SIZE]>;

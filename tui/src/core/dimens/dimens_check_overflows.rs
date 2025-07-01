@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use std::cmp::Ordering;
+
 use super::{ColIndex, ColWidth, RowHeight, RowIndex};
 use crate::{BoundsCheck, BoundsStatus, PositionStatus};
 
@@ -33,12 +35,10 @@ impl BoundsCheck<RowHeight> for RowIndex {
         let this = *self;
         let length = content_length.as_usize();
 
-        if this.as_usize() < length {
-            PositionStatus::Within
-        } else if this.as_usize() == length {
-            PositionStatus::Boundary
-        } else {
-            PositionStatus::Beyond
+        match this.as_usize().cmp(&length) {
+            Ordering::Less => PositionStatus::Within,
+            Ordering::Equal => PositionStatus::Boundary,
+            Ordering::Greater => PositionStatus::Beyond,
         }
     }
 }
@@ -58,12 +58,10 @@ impl BoundsCheck<ColWidth> for ColIndex {
         let this = *self;
         let length = content_length.as_usize();
 
-        if this.as_usize() < length {
-            PositionStatus::Within
-        } else if this.as_usize() == length {
-            PositionStatus::Boundary
-        } else {
-            PositionStatus::Beyond
+        match this.as_usize().cmp(&length) {
+            Ordering::Less => PositionStatus::Within,
+            Ordering::Equal => PositionStatus::Boundary,
+            Ordering::Greater => PositionStatus::Beyond,
         }
     }
 }
@@ -82,12 +80,10 @@ impl BoundsCheck<RowIndex> for RowIndex {
         let this = *self;
         let length = content_length.as_usize();
 
-        if this.as_usize() < length {
-            PositionStatus::Within
-        } else if this.as_usize() == length {
-            PositionStatus::Boundary
-        } else {
-            PositionStatus::Beyond
+        match this.as_usize().cmp(&length) {
+            Ordering::Less => PositionStatus::Within,
+            Ordering::Equal => PositionStatus::Boundary,
+            Ordering::Greater => PositionStatus::Beyond,
         }
     }
 }

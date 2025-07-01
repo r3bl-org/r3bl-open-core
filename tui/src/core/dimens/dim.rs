@@ -177,9 +177,10 @@ mod api {
             let min_width = size.col_width;
             let min_height = size.row_height;
 
-            match self.col_width < min_width || self.row_height < min_height {
-                false => SufficientSize::IsLargeEnough,
-                true => SufficientSize::IsTooSmall,
+            if self.col_width < min_width || self.row_height < min_height {
+                SufficientSize::IsTooSmall
+            } else {
+                SufficientSize::IsLargeEnough
             }
         }
     }
