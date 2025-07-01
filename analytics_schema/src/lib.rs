@@ -19,6 +19,18 @@
 //!
 //! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
 //!
+//! # Table of contents
+//!
+//! <!-- TOC -->
+//!
+//! - [Why R3BL?](#why-r3bl)
+//! - [Introduction](#introduction)
+//! - [Changelog](#changelog)
+//! - [Learn how these crates are built, provide
+//!   feedback](#learn-how-these-crates-are-built-provide-feedback)
+//!
+//! <!-- /TOC -->
+//! 
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
 //! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span
@@ -92,17 +104,6 @@
 //! [repo](https://github.com/r3bl-org/r3bl-open-core/) provide lots of useful
 //! functionality to help you build TUI (text user interface) apps, along w/ general
 //! niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
-//!
-//! # Table of contents
-//!
-//! <!-- TOC -->
-//!
-//! - [Introduction](#introduction)
-//! - [Changelog](#changelog)
-//! - [Learn how these crates are built, provide
-//!   feedback](#learn-how-these-crates-are-built-provide-feedback)
-//!
-//! <!-- /TOC -->
 //!
 //! # Introduction
 //!

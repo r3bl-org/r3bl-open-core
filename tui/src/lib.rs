@@ -21,6 +21,8 @@
 // - <https://symbl.cc/en/collections/brackets/>
 // - <https://symbl.cc/en/collections/crosses/>
 
+//! # Why R3BL?
+//!
 //! <img
 //! src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true"
 //! height="256px">
@@ -28,17 +30,14 @@
 //! # Table of contents
 //!
 //! <!-- TOC -->
+//! - [Why R3BL?](#why-r3bl)
 //! - [Introduction](#introduction)
 //! - [Framework highlights](#framework-highlights)
 //! - [Full TUI, Partial TUI, and async
 //!   readline](#full-tui-partial-tui-and-async-readline)
-//!   - [Full TUI (async, raw mode, full screen) for immersive TUI
-//!     apps](#full-tui-async-raw-mode-full-screen-for-immersive-tui-apps)
-//!   - [Partial TUI (async, partial raw mode, async readline) for choice based user
-//!     interaction](#
-//!     partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
-//!   - [Partial TUI (async, partial raw mode, async readline) for async
-//!     REPL](#partial-tui-async-partial-raw-mode-async-readline-for-async-repl)
+//!   - [Partial TUI for simple choice](#partial-tui-for-simple-choice)
+//!   - [Partial TUI for REPL](#partial-tui-for-repl)
+//!   - [Full TUI for immersive apps](#full-tui-for-immersive-apps)
 //!   - [Power via composition](#power-via-composition)
 //! - [Changelog](#changelog)
 //! - [Learn how these crates are built, provide
@@ -47,19 +46,17 @@
 //! - [Nushell scripts to build, run, test etc.](#nushell-scripts-to-build-run-test-etc)
 //! - [Examples to get you started](#examples-to-get-you-started)
 //!   - [Video of the demo in action](#video-of-the-demo-in-action)
-//! - [How does layout, rendering, and event handling work in
-//!   general?](#how-does-layout-rendering-and-event-handling-work-in-general)
-//! - [Switching from shared memory to message passing architecture after
-//!   v0.3.10](#switching-from-shared-memory-to-message-passing-architecture-after-v0310)
-//! - [Input and output devices](#input-and-output-devices)
-//! - [Life of an input event for a Full TUI
-//!   app](#life-of-an-input-event-for-a-full-tui-app)
-//! - [Life of a signal (aka "out of band
-//!   event")](#life-of-a-signal-aka-out-of-band-event)
+//! - [Layout, rendering, and event handling](#layout-rendering-and-event-handling)
+//! - [Architecture overview, is message passing, was shared
+//!   memory](#architecture-overview-is-message-passing-was-shared-memory)
+//! - [I/O devices for full TUI, choice, and
+//!   REPL](#io-devices-for-full-tui-choice-and-repl)
+//! - [Life of an input event](#life-of-an-input-event-for-a-full-tui-app)
+//! - [Life of a signal (out of band event)](#life-of-a-signal-aka-out-of-band-event)
 //! - [The window](#the-window)
 //! - [Layout and styling](#layout-and-styling)
-//! - [Component, `ComponentRegistry`, focus management, and event
-//!   routing](#component-componentregistry-focus-management-and-event-routing)
+//! - [Component registry, event routing, focus
+//!   mgmt](#component-registry-event-routing-focus-mgmt)
 //! - [Input event specificity](#input-event-specificity)
 //! - [Rendering and painting](#rendering-and-painting)
 //!   - [Offscreen buffer](#offscreen-buffer)
@@ -70,12 +67,10 @@
 //! - [Painting the caret](#painting-the-caret)
 //! - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
 //!   - [Two callback functions](#two-callback-functions)
-//!   - [How to use this dialog to make an HTTP request & pipe the results into a
-//!     selection area?](#
-//!     how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
+//!   - [Dialog HTTP requests and results](#dialog-http-requests-and-results)
 //! - [How to make HTTP requests](#how-to-make-http-requests)
-//! - [Custom Markdown MD parsing and custom syntax
-//!   highlighting](#custom-markdown-md-parsing-and-custom-syntax-highlighting)
+//!   - [Custom Markdown parsing and syntax
+//!     highlighting](#custom-markdown-parsing-and-syntax-highlighting)
 //! - [Grapheme support](#grapheme-support)
 //! - [Lolcat support](#lolcat-support)
 //! - [Issues and PRs](#issues-and-prs)
@@ -209,7 +204,7 @@
 //! - [Build with Naz: TTY playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
 //! - [Build with Naz: async readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
 //!
-//! ## Partial TUI (async, partial raw mode, async readline) for choice based user interaction
+//! ## Partial TUI for simple choice
 //!
 //! [`mod@readline_async::choose_api`] allows you to build less interactive apps that ask
 //! a user user to make choices from a list of options and then use a decision tree to
@@ -224,7 +219,7 @@
 //! giti
 //! ```
 //!
-//! ## Partial TUI (async, partial raw mode, async readline) for async REPL
+//! ## Partial TUI for REPL
 //!
 //! [`mod@readline_async::readline_async_api`] gives you the ability to easily ask for
 //! user input in a line editor. You can customize the prompt, and other behaviors, like
@@ -249,7 +244,7 @@
 //!
 //! 1. <https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server>
 //! 2. <https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples>
-//! ## Full TUI (async, raw mode, full screen) for immersive TUI apps
+//! ## Full TUI for immersive apps
 //!
 //! **The bulk of this document is about this**. [`mod@tui::terminal_window_api`] gives
 //! you "raw mode", "alternate screen" and "full screen" support, while being totally
@@ -367,7 +362,7 @@
 //!
 //! ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 //!
-//! # How does layout, rendering, and event handling work in general for a Full TUI app?
+//! # Layout, rendering, and event handling
 //!
 //! ```text
 //! ╭───────────────────────────────────────────────╮
@@ -417,7 +412,7 @@
 //!   [App] trait object. Typically this will then get routed to the [Component] that
 //!   currently has focus.
 //!
-//! # Switching from shared memory to message passing architecture after v0.3.10
+//! # Architecture overview, is message passing, was shared memory
 //!
 //! Versions of this crate <= `0.3.10` used shared memory to communicate between the
 //! background threads and the main thread. This was done using the async `Arc<RwLock<T>>`
@@ -443,7 +438,7 @@
 //! > 1. <https://rits.github-pages.ucl.ac.uk/intro-hpchtc/morea/lesson2/reading4.html>
 //! > 2. <https://www.javatpoint.com/shared-memory-vs-message-passing-in-operating-system>
 //!
-//! # Input and output devices (for Full TUI, Partial TUI, and async readline)
+//! # I/O devices for full TUI, choice, and REPL
 //!
 //! [Dependency injection](https://developerlife.com/category/DI) is used to inject the
 //! required resources into the `main_event_loop` function. This allows for easy testing
@@ -617,7 +612,7 @@
 //!    for each render! Your app's state is mutable and is stored in the [`GlobalData`]
 //!    struct. You can handle out of band events as well using the signal mechanism.
 //!
-//! # Component, `ComponentRegistry`, focus management, and event routing
+//! # Component registry, event routing, focus mgmt
 //!
 //! Typically your [App] will look like this:
 //!
@@ -918,7 +913,7 @@
 //! 2. `on_dialog_editors_changed_handler()` - this will be called if the user types
 //!    something into the editor.
 //!
-//! ## How to use this dialog to make an HTTP request & pipe the results into a selection area?
+//! ## Dialog HTTP requests and results
 //!
 //! So far we have covered the use case for a simple modal dialog box. In order to provide
 //! auto-completion capabilities, via some kind of web service, there needs to be a
@@ -936,7 +931,7 @@
 //! that shows the pros and cons of using each:
 //! - [Rust Crates for Networking and HTTP Foundations](https://blessed.rs/crates#section-networking-subsection-http-foundations)
 //!
-//! ## Custom Markdown (MD) parsing and custom syntax highlighting
+//! ## Custom Markdown parsing and syntax highlighting
 //!
 //! The code for parsing and syntax highlighting is in [`try_parse_and_highlight`].
 //!
