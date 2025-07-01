@@ -215,7 +215,7 @@ use crate::{ch,
 /// # Example
 ///
 /// ```
-/// use r3bl_tui::tui_core::graphemes::GCString;
+/// use r3bl_tui::graphemes::GCString;
 ///
 /// let ustr = GCString::new("Hello, 世界");
 /// println!("Display width: {it:?}", it = ustr.display_width);
@@ -318,11 +318,12 @@ mod tests_iterator {
         assert_eq!(iter.next(), None);
     }
 
-        #[test]
+    #[test]
     fn test_into_iterator_implementation() {
         let gc_string = GCString::new("Hello, 世界🥞");
 
-        // Test that we can use the GCString directly in a for loop (this is why IntoIterator is needed!)
+        // Test that we can use the GCString directly in a for loop (this is why
+        // IntoIterator is needed!)
         let mut collected = Vec::new();
         for segment in &gc_string {
             collected.push(segment.to_string());

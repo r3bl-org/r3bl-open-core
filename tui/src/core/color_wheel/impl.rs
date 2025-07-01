@@ -63,7 +63,7 @@ use crate::{ast,
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
 /// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
 /// the heap.
-pub(in crate::core::tui_core) mod sizing {
+pub(in crate::core) mod sizing {
     use super::*;
 
     pub type VecConfigs = SmallVec<[ColorWheelConfig; MAX_CONFIGS]>;

@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{core::tui_core::units::{Index, Length},
+use crate::{core::units::{Index, Length},
             len,
             GCString};
 

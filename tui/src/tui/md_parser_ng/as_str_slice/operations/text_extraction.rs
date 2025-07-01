@@ -176,7 +176,7 @@ impl<'a> AsStrSlice<'a> {
     ///   [`crate::constants::NEW_LINE`] chars inside the current line.
     #[must_use]
     pub fn extract_to_line_end(&self) -> &'a str {
-        use crate::core::tui_core::units::len;
+        use crate::core::units::len;
 
         // Early returns for edge cases.
         {

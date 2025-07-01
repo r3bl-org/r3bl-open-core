@@ -103,10 +103,10 @@ use crate::{caret_locate,
 /// ## `caret_raw`
 ///
 /// This is the "display" col index (grapheme-cluster-based) and not "logical" col index
-/// (byte-based) position (both are defined in [`crate::tui_core::graphemes`]).
+/// (byte-based) position (both are defined in [`crate::graphemes`]).
 ///
-/// > Please review [crate::tui_core::graphemes::GCString], specifically the
-/// > methods in [mod@crate::tui_core::graphemes::gc_string] for more details on how
+/// > Please review [crate::graphemes::GCString], specifically the
+/// > methods in [mod@crate::graphemes::gc_string] for more details on how
 /// > the conversion between "display" and "logical" indices is done.
 /// >
 /// > This results from the fact that `UTF-8` is a variable width text encoding scheme,

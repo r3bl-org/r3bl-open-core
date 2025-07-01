@@ -21,7 +21,7 @@ use smallvec::SmallVec;
 
 use crate::TuiStyle;
 
-pub(in crate::core::tui_core::tui_styled_text) mod sizing {
+pub(in crate::core::tui_styled_text) mod sizing {
     use super::*;
 
     /// Default internal storage for [`TuiStyledText`], which is very small.

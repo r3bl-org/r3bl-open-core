@@ -17,7 +17,7 @@
 
 use nom::Input;
 
-use crate::{as_str_slice::AsStrSlice, core::tui_core::units::Length, CharacterIndex};
+use crate::{as_str_slice::AsStrSlice, core::units::Length, CharacterIndex};
 
 /// Character-based range methods for safe Unicode/UTF-8 text processing.
 ///
