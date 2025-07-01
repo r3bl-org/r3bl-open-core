@@ -15,6 +15,15 @@
  *   limitations under the License.
  */
 
+//! Policy enums for controlling color wheel behavior.
+//!
+//! This module defines strategy patterns for color wheel operations:
+//! - `GradientGenerationPolicy` - Controls how gradients are generated and reused
+//! - `TextColorizationPolicy` - Controls how text is colorized (per character vs per word)
+//!
+//! These policies allow fine-grained control over performance vs quality tradeoffs
+//! and different styling approaches. Previously located in `color_wheel_core/policies.rs`.
+
 use crate::TuiStyle;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]

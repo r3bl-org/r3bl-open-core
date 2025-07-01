@@ -15,6 +15,16 @@
  *   limitations under the License.
  */
 
+//! True color (RGB) gradient generation functionality.
+//!
+//! This module provides functions for generating smooth color gradients using
+//! true color (24-bit RGB) values:
+//! - `generate_truecolor_gradient()` - Creates gradients from hex color stops
+//! - `generate_random_truecolor_gradient()` - Creates gradients with random colors
+//!
+//! Uses the `colorgrad` crate for smooth interpolation between color stops.
+//! Previously located in `color_wheel_core/truecolor_gradient.rs`.
+
 use colorgrad::Gradient;
 use rand::{rngs::ThreadRng, Rng};
 
