@@ -1050,8 +1050,10 @@
 #![warn(clippy::unnecessary_wraps)]
 #![warn(clippy::single_match_else)]
 #![warn(clippy::return_self_not_must_use)]
-// This triggers legitimate use of passing a Copy arg by value to a function.
-#![allow(clippy::needless_pass_by_value)]
+#![warn(clippy::match_bool)]
+#![warn(clippy::comparison_chain)]
+#![allow(clippy::needless_pass_by_value)] // This triggers legitimate use of passing a Copy arg by value to a function.
+#![allow(clippy::similar_names)] // This triggers legitimate variable names.
 
 // Attach.
 pub mod core;

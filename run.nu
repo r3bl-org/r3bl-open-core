@@ -318,7 +318,8 @@ def clippy [] {
         cargo clippy --fix --allow-dirty -- -W clippy::unnecessary_wraps
         cargo clippy --fix --allow-dirty -- -W clippy::single_match_else
         cargo clippy --fix --allow-dirty -- -W clippy::return_self_not_must_use
-        # cargo clippy --fix --allow-dirty -- -W clippy::missing_errors_doc
+        cargo clippy --fix --allow-dirty -- -W clippy::match_bool
+        cargo clippy --fix --allow-dirty -- -W clippy::comparison_chain
         cargo fmt --all
         cd ..
     }

@@ -297,12 +297,15 @@
 #![warn(clippy::single_char_pattern)]
 #![warn(clippy::manual_let_else)]
 #![warn(clippy::unnecessary_semicolon)]
+#![warn(clippy::cast_precision_loss)]
 #![warn(clippy::if_not_else)]
 #![warn(clippy::unnecessary_wraps)]
 #![warn(clippy::single_match_else)]
 #![warn(clippy::return_self_not_must_use)]
-// This triggers legitimate use of passing a Copy arg by value to a function.
-#![allow(clippy::needless_pass_by_value)]
+#![warn(clippy::match_bool)]
+#![warn(clippy::comparison_chain)]
+#![allow(clippy::needless_pass_by_value)] // This triggers legitimate use of passing a Copy arg by value to a function.
+#![allow(clippy::similar_names)] // This triggers legitimate variable names.
 
 pub const DEVELOPMENT_MODE: bool = true;
 pub const DEBUG_ANALYTICS_CLIENT_MOD: bool = true;

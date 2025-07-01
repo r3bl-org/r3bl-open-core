@@ -41,6 +41,8 @@
 //! assert_eq!(bounds_status, BoundsStatus::Within);
 //! ```
 
+use std::cmp::Ordering;
+
 use super::{BoundsCheck, BoundsStatus, Index, Length, PositionStatus};
 
 impl BoundsCheck<Length> for Index {
@@ -58,12 +60,10 @@ impl BoundsCheck<Length> for Index {
         let this = *self;
         let length = content_length.as_usize();
 
-        if this.as_usize() < length {
-            PositionStatus::Within
-        } else if this.as_usize() == length {
-            PositionStatus::Boundary
-        } else {
-            PositionStatus::Beyond
+        match this.as_usize().cmp(&length) {
+            Ordering::Less => PositionStatus::Within,
+            Ordering::Equal => PositionStatus::Boundary,
+            Ordering::Greater => PositionStatus::Beyond,
         }
     }
 }
@@ -82,12 +82,10 @@ impl BoundsCheck<Index> for Index {
         let this = *self;
         let length = content_length.as_usize();
 
-        if this.as_usize() < length {
-            PositionStatus::Within
-        } else if this.as_usize() == length {
-            PositionStatus::Boundary
-        } else {
-            PositionStatus::Beyond
+        match this.as_usize().cmp(&length) {
+            Ordering::Less => PositionStatus::Within,
+            Ordering::Equal => PositionStatus::Boundary,
+            Ordering::Greater => PositionStatus::Beyond,
         }
     }
 }
