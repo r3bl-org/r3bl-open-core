@@ -222,48 +222,20 @@ pub mod branch_delete_display {
         let delim = fmt::dim(",\n  - ");
         let colon = fmt::colon();
 
-        match maybe_output {
-            Some(output) => {
-                let std_err = &String::from_utf8_lossy(&output.stderr);
-                match branches.len() {
-                    1 => {
-                        let branch_name = &branches[0];
-                        inline_string!(
-                            "{a}{b} {c}!\n\n{d}",
-                            a = fmt::error("Failed to delete branch"),
-                            b = colon,
-                            c = branch_name,
-                            d = std_err
-                        )
-                    }
-                    _ => {
-                        // Join the branch names with a specific delimiter, adding a
-                        // bullet point before each subsequent branch.
-                        let mut joined_branches = InlineString::new();
-                        join_fmt!(
-                            fmt: joined_branches,
-                            from: branches,
-                            each: it,
-                            // Delimiter includes newline and bullet for subsequent items.
-                            delim: delim,
-                            format: "{}", fmt::error(it),
-                        );
-
-                        // Construct the final error message.
-                        inline_string!(
-                            "{a}{b} {c}{d}\n{e}",
-                            a = fmt::error("Failed to delete branches"),
-                            b = colon,
-                            c = prefix,
-                            d = joined_branches,
-                            e = std_err
-                        )
-                    }
-                }
-            }
-            None => {
-                // Join the branch names with a specific delimiter, adding a bullet point
-                // before each subsequent branch.
+        if let Some(output) = maybe_output {
+            let std_err = &String::from_utf8_lossy(&output.stderr);
+            if branches.len() == 1 {
+                let branch_name = &branches[0];
+                inline_string!(
+                    "{a}{b} {c}!\n\n{d}",
+                    a = fmt::error("Failed to delete branch"),
+                    b = colon,
+                    c = branch_name,
+                    d = std_err
+                )
+            } else {
+                // Join the branch names with a specific delimiter, adding a
+                // bullet point before each subsequent branch.
                 let mut joined_branches = InlineString::new();
                 join_fmt!(
                     fmt: joined_branches,
@@ -276,14 +248,36 @@ pub mod branch_delete_display {
 
                 // Construct the final error message.
                 inline_string!(
-                    "{a}{b} {c}{d}",
-                    a = fmt::error("Failed to run command to delete branches"),
+                    "{a}{b} {c}{d}\n{e}",
+                    a = fmt::error("Failed to delete branches"),
                     b = colon,
-                    // Add bullet prefix for the first item in the list.
                     c = prefix,
-                    d = joined_branches
+                    d = joined_branches,
+                    e = std_err
                 )
             }
+        } else {
+            // Join the branch names with a specific delimiter, adding a bullet point
+            // before each subsequent branch.
+            let mut joined_branches = InlineString::new();
+            join_fmt!(
+                fmt: joined_branches,
+                from: branches,
+                each: it,
+                // Delimiter includes newline and bullet for subsequent items.
+                delim: delim,
+                format: "{}", fmt::error(it),
+            );
+
+            // Construct the final error message.
+            inline_string!(
+                "{a}{b} {c}{d}",
+                a = fmt::error("Failed to run command to delete branches"),
+                b = colon,
+                // Add bullet prefix for the first item in the list.
+                c = prefix,
+                d = joined_branches
+            )
         }
     }
 

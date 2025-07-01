@@ -64,38 +64,35 @@ pub fn exists() -> bool {
 }
 
 pub fn create() -> CommonResult<PathBuf> {
-    match try_get_config_folder_path() {
-        Some(config_folder_path) => {
-            let result_create_dir_all = fs::create_dir_all(&config_folder_path);
-            match result_create_dir_all {
-                Ok(()) => {
-                    DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
-                        // % is Display, ? is Debug.
-                        tracing::debug!(
-                            message = "Successfully created config folder.",
-                            config_folder = ?config_folder_path
-                        );
-                    });
-                    Ok(config_folder_path)
-                }
-                Err(error) => {
+    if let Some(config_folder_path) = try_get_config_folder_path() {
+        let result_create_dir_all = fs::create_dir_all(&config_folder_path);
+        match result_create_dir_all {
+            Ok(()) => {
+                DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
                     // % is Display, ? is Debug.
-                    tracing::error!(
-                        message = "Could not create config folder.",
-                        error = ?error
+                    tracing::debug!(
+                        message = "Successfully created config folder.",
+                        config_folder = ?config_folder_path
                     );
-                    CommonError::new_error_result_with_only_type(
-                        CommonErrorType::ConfigFolderCountNotBeCreated,
-                    )
-                }
+                });
+                Ok(config_folder_path)
+            }
+            Err(error) => {
+                // % is Display, ? is Debug.
+                tracing::error!(
+                    message = "Could not create config folder.",
+                    error = ?error
+                );
+                CommonError::new_error_result_with_only_type(
+                    CommonErrorType::ConfigFolderCountNotBeCreated,
+                )
             }
         }
-        None => {
-            // % is Display, ? is Debug.
-            tracing::error!(message = "Could not access config folder.", error = "None");
-            CommonError::new_error_result_with_only_type(
-                CommonErrorType::ConfigFolderPathCouldNotBeAccessed,
-            )
-        }
+    } else {
+        // % is Display, ? is Debug.
+        tracing::error!(message = "Could not access config folder.", error = "None");
+        CommonError::new_error_result_with_only_type(
+            CommonErrorType::ConfigFolderPathCouldNotBeAccessed,
+        )
     }
 }

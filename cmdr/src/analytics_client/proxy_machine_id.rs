@@ -45,46 +45,43 @@ pub fn load_id_from_file_or_generate_and_save_it() -> InlineString {
             );
 
             // Try to read the file directly into InlineString
-            match res_read_from_file {
-                Ok(()) => {
-                    DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
-                        // % is Display, ? is Debug.
-                        tracing::debug!(
-                            message = "Successfully read proxy machine ID from file.",
-                            contents = %content
+            if let Ok(()) = res_read_from_file {
+                DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::debug!(
+                        message = "Successfully read proxy machine ID from file.",
+                        contents = %content
+                    );
+                });
+                content
+            } else {
+                let new_id = friendly_random_id::generate_friendly_random_id();
+                let res_write_to_file =
+                    write_to_file::try_write_str_to_file(&id_file_path, &new_id);
+                match res_write_to_file {
+                    Ok(()) => {
+                        report_analytics::start_task_to_generate_event(
+                            "".to_string(),
+                            AnalyticsAction::MachineIdProxyCreate,
                         );
-                    });
-                    content
-                }
-                Err(_) => {
-                    let new_id = friendly_random_id::generate_friendly_random_id();
-                    let res_write_to_file =
-                        write_to_file::try_write_str_to_file(&id_file_path, &new_id);
-                    match res_write_to_file {
-                        Ok(()) => {
-                            report_analytics::start_task_to_generate_event(
-                                "".to_string(),
-                                AnalyticsAction::MachineIdProxyCreate,
-                            );
-                            DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
-                                // % is Display, ? is Debug.
-                                tracing::debug!(
-                                        message = "Successfully wrote proxy machine ID to file.",
-                                        new_id = %new_id
-                                    );
-                            });
-                        }
-                        Err(error) => {
+                        DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
                             // % is Display, ? is Debug.
-                            tracing::error!(
-                                message = "Could not write proxy machine ID to file.",
-                                error = ?error
-                            );
-                        }
+                            tracing::debug!(
+                                    message = "Successfully wrote proxy machine ID to file.",
+                                    new_id = %new_id
+                                );
+                        });
                     }
-
-                    new_id
+                    Err(error) => {
+                        // % is Display, ? is Debug.
+                        tracing::error!(
+                            message = "Could not write proxy machine ID to file.",
+                            error = ?error
+                        );
+                    }
                 }
+
+                new_id
             }
         }
         Err(_) => friendly_random_id::generate_friendly_random_id(),

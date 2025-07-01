@@ -229,26 +229,20 @@ pub fn dec_caret_col_by(
             let need_to_scroll_left =
                 caret_scroll_index::col_index_for_width(col_amt) > caret_raw.col_index;
 
-            match need_to_scroll_left {
-                // Just move caret left by col_amt.
-                false => {
-                    caret_raw.col_index -= col_amt;
-                }
-                // Adjust caret and scroll_offset.
-                true => {
-                    // Move caret left by col_amt.
-                    caret_raw.col_index -= col_amt;
+            // Move caret left by col_amt.
+            caret_raw.col_index -= col_amt;
 
-                    // Move scroll left by diff.
-                    scr_ofs.col_index -= {
-                        // Due to scroll reasons, the `lhs` is the same value as the
-                        // `col_amt`, ie, it goes past the viewport width. See the
-                        // `scroll_col_index_for_width()` for more details.
-                        let lhs = caret_scroll_index::col_index_for_width(col_amt);
-                        let rhs = caret_raw.col_index;
-                        lhs - rhs
-                    };
-                }
+            // Adjust scroll_offset if needed.
+            if need_to_scroll_left {
+                // Move scroll left by diff.
+                scr_ofs.col_index -= {
+                    // Due to scroll reasons, the `lhs` is the same value as the
+                    // `col_amt`, ie, it goes past the viewport width. See the
+                    // `scroll_col_index_for_width()` for more details.
+                    let lhs = caret_scroll_index::col_index_for_width(col_amt);
+                    let rhs = caret_raw.col_index;
+                    lhs - rhs
+                };
             }
         }
     }

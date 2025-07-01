@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-//! Main ColorWheel implementation.
+//! Main `ColorWheel` implementation.
 //!
 //! This module contains the primary `ColorWheel` struct and its implementation,
 //! providing the main interface for color wheel functionality:
@@ -24,7 +24,7 @@
 //! - Support for RGB, ANSI 256, and Lolcat color modes
 //! - Iterator interface for color cycling
 //!
-//! The ColorWheel automatically adapts to terminal capabilities and provides
+//! The `ColorWheel` automatically adapts to terminal capabilities and provides
 //! a unified interface for all color wheel operations. Previously located
 //! in `color_wheel/color_wheel_impl.rs`.
 
