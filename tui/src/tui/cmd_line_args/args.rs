@@ -30,7 +30,7 @@ pub struct EditorArgsMut<'a> {
     pub buffer: &'a mut EditorBuffer,
 }
 
-/// [DialogEngine] args struct that holds references.
+/// [`DialogEngine`] args struct that holds references.
 ///
 /// ![Editor component lifecycle
 /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)

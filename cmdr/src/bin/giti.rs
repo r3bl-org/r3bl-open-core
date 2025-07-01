@@ -54,7 +54,7 @@ async fn main() -> CommonResult<()> {
 
     upgrade_check::start_task_to_check_if_upgrade_is_needed();
     report_analytics::start_task_to_generate_event(
-        "".to_string(),
+        String::new(),
         AnalyticsAction::GitiAppStart,
     );
 
@@ -93,10 +93,10 @@ pub async fn launch_giti(cli_arg: CLIArg) {
     }
 }
 
-/// Unknown and unrecoverable errors: readline_async or choose not working.
+/// Unknown and unrecoverable errors: `readline_async` or choose not working.
 pub fn report_unrecoverable_errors(report: miette::Report) {
     report_analytics::start_task_to_generate_event(
-        "".to_string(),
+        String::new(),
         AnalyticsAction::GitiFailedToRun,
     );
 

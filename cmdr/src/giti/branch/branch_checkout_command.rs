@@ -65,12 +65,14 @@ mod command_execute {
     pub async fn checkout_branch_if_not_current(
         branch_name: &str,
     ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
+        use git::local_branch_ops::BranchExists;
+
         let (res, _cmd) = git::local_branch_ops::try_get_local_branches().await;
         let (_, branch_info) = res?;
 
         // Early return if the branch does not exist locally.
         match branch_info.exists_locally(branch_name) {
-            git::local_branch_ops::BranchExists::No => {
+            BranchExists::No => {
                 let it = CommandRunResult::Noop(
                     ui_str::branch_checkout_display::error_branch_does_not_exist_msg(
                         branch_name,
@@ -79,7 +81,7 @@ mod command_execute {
                 );
                 return Ok(it);
             }
-            _ => { /* do nothing and continue */ }
+            BranchExists::Yes => { /* do nothing and continue */ }
         }
 
         // Early return if the branch_name is already checked out.
@@ -117,7 +119,7 @@ mod command_execute {
         let (res_output, cmd) =
             git::try_checkout_existing_local_branch(branch_name).await;
         match res_output {
-            Ok(_) => {
+            Ok(()) => {
                 let it = CommandRunResult::Run(
                     ui_str::branch_checkout_display::info_checkout_success_msg(
                         branch_name,

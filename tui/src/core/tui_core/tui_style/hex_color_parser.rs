@@ -15,8 +15,9 @@
  *   limitations under the License.
  */
 
-//! This module contains a parser that parses a hex color string into a [RgbValue] struct.
-//! The hex color string can be in the following format: `#RRGGBB`, eg: `#FF0000` for red.
+//! This module contains a parser that parses a hex color string into a [`RgbValue`]
+//! struct. The hex color string can be in the following format: `#RRGGBB`, eg: `#FF0000`
+//! for red.
 
 use std::num::ParseIntError;
 
@@ -27,7 +28,7 @@ use nom::{bytes::complete::{tag, take_while_m_n},
 
 use super::RgbValue;
 
-/// Parse function that generate an [RgbValue] struct from a valid hex color string.
+/// Parse function that generate an [`RgbValue`] struct from a valid hex color string.
 pub fn parse_hex_color(input: &str) -> IResult<&str, RgbValue> {
     let (input, _) = tag("#")(input)?;
     let (input, (red, green, blue)) =

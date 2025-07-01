@@ -33,9 +33,10 @@ impl Default for AnalyticsRecord {
 }
 
 impl AnalyticsRecord {
-    pub fn new() -> AnalyticsRecord {
+    #[must_use]
+    pub fn new() -> Self {
         let events = smallvec![];
-        AnalyticsRecord { events }
+        Self { events }
     }
 }
 
@@ -61,7 +62,8 @@ impl AnalyticsEvent {
     /// This is meant to be called on the client, before the data is sent to the server.
     /// The time is not set here since it will be set on the server-side.
     #[allow(clippy::new_ret_no_self)]
-    pub fn new(
+    #[must_use]
+    pub const fn new(
         proxy_user_id: String,
         proxy_machine_id: String,
         action: String,
@@ -74,19 +76,21 @@ impl AnalyticsEvent {
     }
 }
 
-/// Convert [AnalyticsEventNoTimestamp] to [AnalyticsEvent].
+/// Convert [`AnalyticsEventNoTimestamp`] to [`AnalyticsEvent`].
 impl From<AnalyticsEventNoTimestamp> for AnalyticsEvent {
-    fn from(incoming: AnalyticsEventNoTimestamp) -> AnalyticsEvent {
+    fn from(incoming: AnalyticsEventNoTimestamp) -> Self {
         let result_timestamp_ms = SystemTime::now().duration_since(UNIX_EPOCH);
 
         let timestamp_ms = match result_timestamp_ms {
-            Ok(duration_since_epoch) => duration_since_epoch.as_millis() as u64,
+            Ok(duration_since_epoch) => {
+                u64::try_from(duration_since_epoch.as_millis()).unwrap_or(0)
+            }
             Err(_) => 0,
         };
 
         let uuid = Uuid::new_v4().to_string();
 
-        AnalyticsEvent {
+        Self {
             proxy_user_id: incoming.proxy_user_id,
             proxy_machine_id: incoming.proxy_machine_id,
             action: incoming.action,

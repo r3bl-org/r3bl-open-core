@@ -82,8 +82,9 @@ macro_rules! throws_with_return {
     }};
 }
 
-/// Syntactic sugar to run a conditional statement. You can use [bool::then()] instead of
-/// this macro in most case, except for when you need to return something from the block.
+/// Syntactic sugar to run a conditional statement. You can use [`bool::then()`] instead
+/// of this macro in most case, except for when you need to return something from the
+/// block.
 ///
 /// # Example
 ///
@@ -313,7 +314,7 @@ macro_rules! assert_eq2 {
 /// Send a signal to the main thread of app to render. The two things to pass in this
 /// macro are
 /// 1. Sender
-/// 2. AppEvent (Signal to MPSC channel)
+/// 2. `AppEvent` (Signal to MPSC channel)
 #[macro_export]
 macro_rules! send_signal {
     (

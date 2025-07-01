@@ -36,6 +36,7 @@ impl<T, const N: usize> Default for RingBufferHeap<T, N> {
 }
 
 impl<T, const N: usize> RingBufferHeap<T, N> {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             internal_storage: Vec::with_capacity(N),
@@ -103,7 +104,7 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
     }
 
     /// Remove from head (ie, remove the newest item). This is the opposite of
-    /// [Self::remove].
+    /// [`Self::remove`].
     fn remove_head(&mut self) -> Option<T> {
         if self.count == 0 {
             return None;
@@ -150,12 +151,21 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
 }
 
 impl<T, const N: usize> RingBufferHeap<T, N> {
+    #[must_use]
     pub fn iter(&self) -> RingBufferHeapIterator<'_, T, N> {
         RingBufferHeapIterator {
             ring_buffer: self,
             iterator_index: 0,
         }
     }
+}
+
+/// This implementation allows the ring buffer to be used in a for loop directly.
+impl<'a, T, const N: usize> IntoIterator for &'a RingBufferHeap<T, N> {
+    type Item = &'a T;
+    type IntoIter = RingBufferHeapIterator<'a, T, N>;
+
+    fn into_iter(self) -> Self::IntoIter { self.iter() }
 }
 
 pub struct RingBufferHeapIterator<'a, T, const N: usize> {
@@ -436,5 +446,57 @@ mod tests {
 
         assert_eq!(ring_buffer.first().unwrap(), "World");
         assert_eq!(ring_buffer.last().unwrap(), "Rust");
+    }
+
+    #[test]
+    fn test_into_iterator_implementation() {
+        let mut ring_buffer: RingBufferHeap<SmallStringBackingStore, 3> =
+            RingBufferHeap::new();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
+
+        // Test that we can use the ring buffer directly in a for loop (this is why
+        // IntoIterator is needed!)
+        let mut collected = Vec::new();
+        for item in &ring_buffer {
+            collected.push(item.clone());
+        }
+
+        assert_eq!(collected.len(), 3);
+        assert_eq!(collected[0], "Hello");
+        assert_eq!(collected[1], "World");
+        assert_eq!(collected[2], "Rust");
+
+        // Test using for loop with explicit into_iter() call
+        let mut explicit_collected = Vec::new();
+        for item in (&ring_buffer).into_iter() {
+            explicit_collected.push(item.clone());
+        }
+        assert_eq!(collected, explicit_collected);
+
+        // Test using for loop to find specific items
+        let mut found_world = false;
+        for item in &ring_buffer {
+            if item == "World" {
+                found_world = true;
+                break;
+            }
+        }
+        assert!(found_world);
+
+        // Test using for loop with enumerate to get indices
+        for (index, item) in (&ring_buffer).into_iter().enumerate() {
+            match index {
+                0 => assert_eq!(item, "Hello"),
+                1 => assert_eq!(item, "World"),
+                2 => assert_eq!(item, "Rust"),
+                _ => panic!("Unexpected index: {index}"),
+            }
+        }
+
+        // Compare with manual iter() usage (without for loop)
+        let iter_results: Vec<_> = ring_buffer.iter().cloned().collect();
+        assert_eq!(iter_results, collected);
     }
 }

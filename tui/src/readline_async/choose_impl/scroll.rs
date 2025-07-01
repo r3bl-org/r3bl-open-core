@@ -17,7 +17,7 @@
 
 //! ### Vertical scrolling and viewport
 //!
-//! When you call [locate_cursor_in_viewport] function, it returns a location that is
+//! When you call [`locate_cursor_in_viewport`] function, it returns a location that is
 //! relative to the viewport. The viewport is the visible area of the terminal.
 //!
 //! ```text
@@ -39,7 +39,7 @@
 //!                    ╰─────────────────────╯
 //! ```
 //!
-//! What the [CaretVerticalViewportLocation] enum represents:
+//! What the [`CaretVerticalViewportLocation`] enum represents:
 //!
 //! ```text
 //!    ╭0────────────────────╮ <- AtAbsoluteTop
@@ -74,14 +74,14 @@ pub enum CaretVerticalViewportLocation {
     NotFound,
 }
 
-pub fn get_scroll_adjusted_row_index(
+#[must_use] pub fn get_scroll_adjusted_row_index(
     raw_caret_row_index: ChUnit,
     scroll_offset_row_index: ChUnit,
 ) -> ChUnit {
     raw_caret_row_index + scroll_offset_row_index
 }
 
-pub fn locate_cursor_in_viewport(
+#[must_use] pub fn locate_cursor_in_viewport(
     raw_caret_row_index: ChUnit,
     scroll_offset_row_index: ChUnit,
     display_height: ChUnit,

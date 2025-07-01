@@ -174,27 +174,31 @@ impl<'a> AsStrSlice<'a> {
 
         let current_line = &self.lines[self.line_index.as_usize()].string;
 
-        // Determine position state first to check if we're at end of line
+        // Determine position state first to check if we're at end of line.
         let position_state = determine_position_state(self, current_line);
 
         // Check if we've hit the max_len limit.
         if let Some(max_len) = self.max_len {
+            // Early return if max_len is zero.
             if max_len == len(0) {
-                // If we're at the end of a line and have a next line, we should advance
+                // Special case: if at end of line with more lines available, advance to
+                // next line.
                 if matches!(position_state, PositionState::AtEndOfLine)
                     && self.line_index.as_usize() + 1 < self.lines.len()
                 {
                     self.line_index += idx(1);
                     self.char_index = idx(0);
                     return;
-                } else {
-                    return;
                 }
-            } else {
-                // Decrement max_len as we advance.
-                self.max_len = Some(max_len - len(1));
+
+                // Max length reached, stop advancing.
+                return;
             }
+
+            // Consume one character from remaining max_len.
+            self.max_len = Some(max_len - len(1));
         }
+
         match position_state {
             PositionState::WithinLineContent => {
                 // Move to next character within the line.
@@ -229,6 +233,7 @@ impl<'a> AsStrSlice<'a> {
     }
 
     /// Get remaining length without materializing string.
+    #[must_use]
     pub fn remaining_len(&self) -> Length {
         // Early return for invalid line_index (it has gone beyond the available lines in
         // the slice).
@@ -252,7 +257,7 @@ impl<'a> AsStrSlice<'a> {
             let chars_left_in_line =
                 match self.char_index.check_overflows(len(line_char_count)) {
                     BoundsStatus::Overflowed => len(0),
-                    _ => line_char_count - len(self.char_index.as_usize()),
+                    BoundsStatus::Within => line_char_count - len(self.char_index.as_usize()),
                 };
 
             return match self.max_len {
@@ -298,7 +303,8 @@ impl<'a> AsStrSlice<'a> {
 
     /// Calculate the total size of all lines including synthetic newlines.
     /// For multiple lines, includes a trailing newline after the last line
-    /// to match write_to_byte_cache_compat() behavior.
+    /// to match `write_to_byte_cache_compat()` behavior.
+    #[must_use]
     pub fn calculate_total_size(lines: &[GCString]) -> Length {
         // Early return for empty lines.
         if lines.is_empty() {
@@ -405,8 +411,7 @@ impl<'a> AsStrSlice<'a> {
             }
 
             // Within line content or past end - no synthetic newlines
-            (PositionState::WithinLineContent, _, _)
-            | (PositionState::PastEndOfLine, _, _) => {
+            (PositionState::WithinLineContent | PositionState::PastEndOfLine, _, _) => {
                 // No synthetic newline to add.
             }
         }
@@ -415,6 +420,7 @@ impl<'a> AsStrSlice<'a> {
     }
 
     /// Get the current character without materializing the full string.
+    #[must_use]
     pub fn current_char(&self) -> Option<char> {
         // Check if we've hit the max_len limit
         if let Some(max_len) = self.max_len {
@@ -448,6 +454,7 @@ impl<'a> AsStrSlice<'a> {
 }
 
 /// Determine the position state relative to the current line.
+#[must_use]
 pub fn determine_position_state(this: &AsStrSlice<'_>, line: &str) -> PositionState {
     // ⚠️ CRITICAL: char_index represents CHARACTER position, use
     // check_content_position()
@@ -459,6 +466,7 @@ pub fn determine_position_state(this: &AsStrSlice<'_>, line: &str) -> PositionSt
 }
 
 /// Determine the document state based on the number of lines.
+#[must_use]
 pub fn determine_document_state(lines_len: usize) -> DocumentState {
     match lines_len {
         1 => DocumentState::SingleLine,
@@ -467,6 +475,7 @@ pub fn determine_document_state(lines_len: usize) -> DocumentState {
 }
 
 /// Determine the line location in the document.
+#[must_use]
 pub fn determine_line_location(
     line_index: Index,
     lines_len: Length,
@@ -478,6 +487,7 @@ pub fn determine_line_location(
 }
 
 /// Helper method to get character at current position within line content.
+#[must_use]
 pub fn get_char_at_position(this: &AsStrSlice<'_>, line: &str) -> Option<char> {
     // ⚠️ CRITICAL: char_index represents CHARACTER position, not byte position.
     // Use chars().nth() to get the character at the character position.
@@ -485,6 +495,7 @@ pub fn get_char_at_position(this: &AsStrSlice<'_>, line: &str) -> Option<char> {
 }
 
 /// Helper method to determine if we should return a synthetic newline character.
+#[must_use]
 pub fn get_synthetic_newline_char(this: &AsStrSlice<'_>) -> Option<char> {
     if this.line_index.as_usize() < this.lines.len() - 1 {
         // There are more lines, return synthetic newline.
@@ -501,11 +512,11 @@ pub fn get_synthetic_newline_char(this: &AsStrSlice<'_>) -> Option<char> {
 /// Represents the position state relative to the current line.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PositionState {
-    /// Character index is within the line content (char_index < line.len())
+    /// Character index is within the line content (`char_index` < `line.len()`)
     WithinLineContent,
-    /// Character index is at the end of the line (char_index == line.len())
+    /// Character index is at the end of the line (`char_index` == `line.len()`)
     AtEndOfLine,
-    /// Character index is past the end of the line (char_index > line.len())
+    /// Character index is past the end of the line (`char_index` > `line.len()`)
     PastEndOfLine,
 }
 

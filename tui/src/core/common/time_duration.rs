@@ -21,12 +21,12 @@ use std::{fmt::{Display, Formatter, Result},
 use crate::ok;
 
 /// This is a wrapper struct around [Duration] so that we can "implement"
-/// [std::fmt::Write] for it. This allows us to format the duration in a human readable
+/// [`std::fmt::Write`] for it. This allows us to format the duration in a human readable
 /// format.
 ///
 /// For performance reasons this struct does not heap allocate the string, in its
-/// [std::fmt::Display] trait implementation and simply uses the [std::fmt::Formatter] to
-/// [core::fmt::Write] to a backing store (in some other struct).`
+/// [`std::fmt::Display`] trait implementation and simply uses the [`std::fmt::Formatter`]
+/// to [`core::fmt::Write`] to a backing store (in some other struct).
 ///
 /// To create one, you can use the [From] trait to convert from a [Duration].
 ///
@@ -44,19 +44,23 @@ pub struct TimeDuration {
 mod accessor {
     use super::*;
     impl TimeDuration {
+        #[must_use]
         pub fn get_only_micros(&self) -> u32 { self.inner.subsec_micros() % 1_000 }
 
+        #[must_use]
         pub fn get_only_millis(&self) -> u32 { self.inner.subsec_millis() }
 
+        #[must_use]
         pub fn get_only_secs(&self) -> u64 { self.inner.as_secs() }
 
+        #[must_use]
         pub fn get_as_fps(&self) -> u32 {
             let num_of_micros_in_one_sec = 1_000_000;
             let total_micros = self.inner.as_secs() * num_of_micros_in_one_sec
-                + self.inner.subsec_micros() as u64;
+                + u64::from(self.inner.subsec_micros());
             // Avoid division by zero.
             if total_micros > 0 {
-                (num_of_micros_in_one_sec / total_micros) as u32
+                u32::try_from(num_of_micros_in_one_sec / total_micros).unwrap_or(u32::MAX)
             } else {
                 0
             }

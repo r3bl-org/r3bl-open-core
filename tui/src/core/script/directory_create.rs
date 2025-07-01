@@ -27,7 +27,7 @@ use crate::{fs_path,
             fs_path::{FsOpError, FsOpResult},
             ok};
 
-#[derive(Debug, Display, Default)]
+#[derive(Debug, Display, Default, Copy, Clone, PartialEq, Eq)]
 pub enum MkdirOptions {
     #[default]
     CreateIntermediateDirectories,
@@ -36,12 +36,12 @@ pub enum MkdirOptions {
 }
 
 /// Creates a new directory at the specified path.
-/// - Depending on the [MkdirOptions] the directories can be created destructively or
+/// - Depending on the [`MkdirOptions`] the directories can be created destructively or
 ///   non-destructively.
 /// - Any intermediate folders that don't exist will be created.
 ///
 /// If any permissions issues occur or the directory can't be created due to
-/// inconsistent [MkdirOptions] then an error is returned.
+/// inconsistent [`MkdirOptions`] then an error is returned.
 pub fn try_mkdir(new_path: impl AsRef<Path>, options: MkdirOptions) -> FsOpResult<()> {
     let new_path = new_path.as_ref();
 
@@ -84,22 +84,20 @@ pub fn try_mkdir(new_path: impl AsRef<Path>, options: MkdirOptions) -> FsOpResul
 
 fn handle_err(err: std::io::Error) -> FsOpResult<()> {
     match err.kind() {
-        ErrorKind::PermissionDenied => {
+        ErrorKind::PermissionDenied | ErrorKind::ReadOnlyFilesystem => {
             FsOpResult::Err(FsOpError::PermissionDenied(err.to_string()))
         }
         ErrorKind::InvalidInput => {
             FsOpResult::Err(FsOpError::InvalidName(err.to_string()))
         }
-        ErrorKind::ReadOnlyFilesystem => {
-            FsOpResult::Err(FsOpError::PermissionDenied(err.to_string()))
-        }
+
         _ => FsOpResult::Err(FsOpError::IoError(err)),
     }
 }
 
 fn create_dir_all(new_path: &Path) -> FsOpResult<()> {
     match fs::create_dir_all(new_path) {
-        Ok(_) => ok!(),
+        Ok(()) => ok!(),
         Err(err) => handle_err(err),
     }
 }

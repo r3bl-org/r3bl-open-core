@@ -18,7 +18,7 @@
 use crate::{AnsiValue, RgbValue};
 
 pub trait TransformColor {
-    /// Returns a [RgbValue] representation of the `self` color.
+    /// Returns a [`RgbValue`] representation of the `self` color.
     fn as_rgb(&self) -> RgbValue;
 
     /// Returns the index of a color in 256-color ANSI palette approximating the `self`

@@ -17,14 +17,14 @@
 
 //! ⚠️  IMPORTANT: CHARACTER-BASED INDEXING THROUGHOUT
 //!
-//! This module uses AsStrSlice which operates on CHARACTER-BASED indexing for
+//! This module uses `AsStrSlice` which operates on CHARACTER-BASED indexing for
 //! proper Unicode/UTF-8 support. All functions in this file follow these principles:
 //!
-//! 1. Use [AsStrSlice] methods (`take_from`, `extract_to_line_end`) for slicing.
-//! 2. Convert byte positions from nom's [nom::FindSubstring] to character positions.
-//! 3. Never use raw slice operators (&str[byte_start..byte_end]) on UTF-8 text.
+//! 1. Use [`AsStrSlice`] methods (`take_from`, `extract_to_line_end`) for slicing.
+//! 2. Convert byte positions from nom's [`nom::FindSubstring`] to character positions.
+//! 3. Never use raw slice operators (&str[`byte_start..byte_end`]) on UTF-8 text.
 //! 4. Count characters with `.chars().count()`, not bytes with `.len()`, or just use the
-//!    [CharLengthExt] which adds a safe `len_chars()` method on `&str`.
+//!    [`CharLengthExt`] which adds a safe `len_chars()` method on `&str`.
 //!
 //! This ensures proper handling of emojis and multi-byte UTF-8 characters.
 //! See the main function documentation for detailed examples and warnings.
@@ -119,6 +119,8 @@ use crate::{list,
 pub fn parse_block_smart_list_advance_ng<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, (Lines<'a>, BulletKind, usize)> {
+    use parse_block_smart_list_advance_ng_helper::*;
+
     let (remainder, smart_list_ir) = parse_smart_list_ng(input)?;
 
     let indent = smart_list_ir.indent;
@@ -145,10 +147,14 @@ pub fn parse_block_smart_list_advance_ng<'a>(
         output_lines.push(complete_line);
     }
 
-    return Ok((remainder, (output_lines, bullet_kind, indent)));
+    Ok((remainder, (output_lines, bullet_kind, indent)))
+}
+
+mod parse_block_smart_list_advance_ng_helper {
+    use super::*;
 
     /// Helper function to determine checkbox parsing policy.
-    fn determine_checkbox_policy(content: AsStrSlice<'_>) -> CheckboxParsePolicy {
+    pub fn determine_checkbox_policy(content: AsStrSlice<'_>) -> CheckboxParsePolicy {
         let checked = tiny_inline_string!("{}{}", CHECKED, SPACE);
         let unchecked = tiny_inline_string!("{}{}", UNCHECKED, SPACE);
         if content.starts_with(checked.as_str())
@@ -161,7 +167,7 @@ pub fn parse_block_smart_list_advance_ng<'a>(
     }
 
     /// Helper function to create bullet fragment.
-    fn create_bullet_fragment<'a>(
+    pub fn create_bullet_fragment<'a>(
         bullet_kind: BulletKind,
         indent: usize,
         is_first_line: bool,
@@ -184,7 +190,7 @@ pub fn parse_block_smart_list_advance_ng<'a>(
     }
 
     /// Helper function to build complete line fragments.
-    fn build_line_fragments<'a>(
+    pub fn build_line_fragments<'a>(
         mut bullet_fragments: List<MdLineFragment<'a>>,
         content_fragments: List<MdLineFragment<'a>>,
     ) -> List<MdLineFragment<'a>> {
@@ -388,11 +394,11 @@ mod tests_parse_block_smart_list_ng {
 }
 
 /// Parses a complete smart list (ordered or unordered) from the input.
-/// Returns the parsed [crate::SmartListIR] structure.
+/// Returns the parsed [`crate::SmartListIR`] structure.
 ///
 /// Examples:
-/// - "- item\n  continued" → [crate::SmartListIR] with unordered bullet
-/// - "1. task\n   details" → [crate::SmartListIR] with ordered bullet
+/// - "- item\n  continued" → [`crate::SmartListIR`] with unordered bullet
+/// - "1. task\n   details" → [`crate::SmartListIR`] with ordered bullet
 ///
 /// First line of `input` looks like this.
 ///
@@ -424,7 +430,7 @@ mod tests_parse_block_smart_list_ng {
 ///
 /// This function parses a smart list from the input text and returns a tuple containing:
 /// - The remainder of the input that wasn't consumed
-/// - A [crate::SmartListIR] object representing the parsed smart list
+/// - A [`crate::SmartListIR`] object representing the parsed smart list
 ///
 /// The function handles both ordered and unordered lists, with proper indentation.
 pub fn parse_smart_list_ng<'a>(
@@ -461,7 +467,7 @@ fn validate_list_indentation<'a>(
     let indent = indent.as_usize();
 
     // Indent has to be multiple of the base width, otherwise it's not a list item
-    if indent % LIST_PREFIX_BASE_WIDTH != 0 {
+    if !indent.is_multiple_of(LIST_PREFIX_BASE_WIDTH) {
         return Err(NErr::Error(NError::new(input, NErrorKind::Fail)));
     }
 
@@ -470,8 +476,8 @@ fn validate_list_indentation<'a>(
 
 /// Parse an unordered list item with the given indentation level.
 ///
-/// If successful, returns the parsed [SmartListIR] structure. Examples:
-/// - "- item" → [SmartListIR] with [BulletKind::Unordered]
+/// If successful, returns the parsed [`SmartListIR`] structure. Examples:
+/// - "- item" → [`SmartListIR`] with [`BulletKind::Unordered`]
 fn parse_unordered_list<'a>(
     input: AsStrSlice<'a>,
     indent: usize,
@@ -496,46 +502,17 @@ fn parse_unordered_list<'a>(
 
 /// Parse an ordered list item with the given indentation level.
 ///
-/// If successful, returns the parsed [SmartListIR] structure. Examples:
-/// - "1. item" → SmartListIR with BulletKind::Ordered(1)
-/// - "42. task" → SmartListIR with BulletKind::Ordered(42)
+/// If successful, returns the parsed [`SmartListIR`] structure. Examples:
+/// - "1. item" → `SmartListIR` with `BulletKind::Ordered(1)`
+/// - "42. task" → `SmartListIR` with `BulletKind::Ordered(42)`
 fn parse_ordered_list<'a>(
     input: AsStrSlice<'a>,
     indent: usize,
 ) -> IResult<AsStrSlice<'a>, SmartListIRAlt<'a>> {
-    let input_str = input.extract_to_line_end();
-
-    // Parse and validate bullet.
-    let (bullet_str, bullet_kind) =
-        parse_ordered_list_bullet(input_str).map_err(|_| {
-            nom::Err::Error(nom::error::Error::new(
-                input.clone(),
-                nom::error::ErrorKind::Digit,
-            ))
-        })?;
-
-    // Split input at bullet boundary
-    let bullet_len = bullet_str.len_chars().as_usize();
-    let (bullet_slice, input) = input.take_split(bullet_len);
-
-    // Parse content lines
-    let (input, content_lines) =
-        parse_smart_list_content_lines_ng(input, indent, bullet_slice)?;
-
-    // Return result
-    return Ok((
-        input,
-        SmartListIRAlt {
-            indent,
-            bullet_kind,
-            content_lines,
-        },
-    ));
-
     /// Try to extract and validate ordered list bullet from input string.
-    /// Returns the bullet string and [BulletKind]. Examples:
-    /// - "1. text" → ("1. ", BulletKind::Ordered(1))
-    /// - "123. item" → ("123. ", BulletKind::Ordered(123))
+    /// Returns the bullet string and [`BulletKind`]. Examples:
+    /// - "1. text" → ("1. ", `BulletKind::Ordered(1)`)
+    /// - "123. item" → ("123. ", `BulletKind::Ordered(123)`)
     fn parse_ordered_list_bullet(input_str: &str) -> IResult<&str, BulletKind> {
         // Parse bullet pattern: "123. "
         let bullet_res: IResult<_, _, NError<_>> =
@@ -559,6 +536,35 @@ fn parse_ordered_list<'a>(
 
         Ok((bullet_str, BulletKind::Ordered(number)))
     }
+
+    let input_str = input.extract_to_line_end();
+
+    // Parse and validate bullet.
+    let (bullet_str, bullet_kind) =
+        parse_ordered_list_bullet(input_str).map_err(|_| {
+            nom::Err::Error(nom::error::Error::new(
+                input.clone(),
+                nom::error::ErrorKind::Digit,
+            ))
+        })?;
+
+    // Split input at bullet boundary
+    let bullet_len = bullet_str.len_chars().as_usize();
+    let (bullet_slice, input) = input.take_split(bullet_len);
+
+    // Parse content lines
+    let (input, content_lines) =
+        parse_smart_list_content_lines_ng(input, indent, bullet_slice)?;
+
+    // Return result
+    Ok((
+        input,
+        SmartListIRAlt {
+            indent,
+            bullet_kind,
+            content_lines,
+        },
+    ))
 }
 
 #[cfg(test)]
@@ -1851,7 +1857,7 @@ mod verify_rest {
     /// This function is used to determine the indentation level of a line.
     /// It only counts space characters (ASCII 32), not other whitespace like tabs.
     ///
-    /// ⚠️ **Character-Based Iteration**: Uses AsStrSlice's character-aware iteration
+    /// ⚠️ **Character-Based Iteration**: Uses `AsStrSlice`'s character-aware iteration
     /// to safely count spaces in Unicode text.
     ///
     /// # Parameters
@@ -2410,10 +2416,10 @@ mod tests_verify_rest {
 
 /// Parse markdown text with a specific checkbox policy until the end of line or input.
 /// This function is used as a utility for parsing markdown text that may contain checkboxes.
-/// It returns a list of markdown line fragments [MdLineFragments].
+/// It returns a list of markdown line fragments [`MdLineFragments`].
 ///
 /// Does not consume the end of line character if it exists. If an EOL character
-/// [crate::constants::NEW_LINE] is found:
+/// [`crate::constants::NEW_LINE`] is found:
 /// - The EOL character is not included in the output.
 /// - The EOL character is not consumed, and is part of the remainder.
 #[rustfmt::skip]

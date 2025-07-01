@@ -23,8 +23,8 @@ use tokio::{io::AsyncWriteExt as _,
 
 use crate::ok;
 
-/// Disambiguate the [tokio::process::Command] type from the [std::process::Command] type.
-/// Here are the key differences between them:
+/// Disambiguate the [`tokio::process::Command`] type from the [`std::process::Command`]
+/// type. Here are the key differences between them:
 ///
 /// 1. **Execution Model**: tokio's `Command` is asynchronous and doesn't block the
 ///    thread, while std's `Command` is synchronous and blocks until completion.
@@ -39,7 +39,7 @@ use crate::ok;
 ///    blocking is acceptable.
 pub type TokioCommand = tokio::process::Command;
 
-/// This macro to create a [TokioCommand] that receives a set of arguments and
+/// This macro to create a [`TokioCommand`] that receives a set of arguments and
 /// returns it.
 ///
 /// # Example of command and args
@@ -81,7 +81,7 @@ pub type TokioCommand = tokio::process::Command;
 /// }
 /// ```
 ///
-/// # Examples of using the [Run] trait and [tokio::process::Command::output()].
+/// # Examples of using the [Run] trait and [`tokio::process::Command::output()`].
 ///
 /// ```
 /// # use r3bl_tui::command;

@@ -17,23 +17,25 @@
 
 //! A caret represents the insertion point or cursor in a text buffer. It can be one of
 //! two kinds:
-//! - [CaretRaw]: A struct that represents the "raw" position is the `col_index` and
+//! - [`CaretRaw`]: A struct that represents the "raw" position is the `col_index` and
 //!   `row_index` of the caret INSIDE the viewport, without making any adjustments for
 //!   scrolling.
-//! - [CaretScrAdj]: A struct that represents the "scroll adjusted" position is the
+//! - [`CaretScrAdj`]: A struct that represents the "scroll adjusted" position is the
 //!   `col_index` and `row_index` of the caret OUTSIDE the viewport, after making
 //!   adjustments for scrolling.
 //!
 //! # The many ways to create one
 //!
 //! - This API uses the `impl Into<struct>` pattern and [Add] `+` operator overloading to
-//!   allow for easy conversion between [CaretRaw] and [CaretScrAdj].
-//! - You can use the [caret_raw()], [caret_scr_adj()] functions to create a [CaretRaw],
-//!   [CaretScrAdj] struct respectively. These functions can take a sequence of [Add]ed
-//!   [Pos] and [ScrOfs] as input, or tuples of them in any order.
+//!   allow for easy conversion between [`CaretRaw`] and [`CaretScrAdj`].
+//! - You can use the [`caret_raw()`], [`caret_scr_adj()`] functions to create a
+//!   [`CaretRaw`], [`CaretScrAdj`] struct respectively. These functions can take a
+//!   sequence of [Add]ed [Pos] and [`ScrOfs`] as input, or tuples of them in any order.
 //! - Just using using the [Add] `+` operator:
-//!     - You can use [Add] to convert: [ScrOfs] + [CaretRaw], into: a [CaretScrAdj].
-//!     - You can use [Add] to convert: [CaretScrAdj] + [ScrOfs], into: a [CaretRaw].
+//!     - You can use [Add] to convert: [`ScrOfs`] + [`CaretRaw`], into: a
+//!       [`CaretScrAdj`].
+//!     - You can use [Add] to convert: [`CaretScrAdj`] + [`ScrOfs`], into: a
+//!       [`CaretRaw`].
 //!
 //! # Examples
 //!

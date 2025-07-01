@@ -25,15 +25,16 @@ use crate::{config::sizing::{StringHexColor, VecSteps},
 /// * `steps` - The number of steps to take between each color stop.
 ///
 /// # Returns
-/// A vector of [crate::TuiColor] objects representing the gradient.
+/// A vector of [`crate::TuiColor`] objects representing the gradient.
+#[must_use]
 pub fn generate_random_truecolor_gradient(steps: u8) -> VecSteps {
-    let stops = [
+    let random_stops = [
         random_color::generate(),
         random_color::generate(),
         random_color::generate(),
     ];
 
-    generate_truecolor_gradient(&stops, steps)
+    generate_truecolor_gradient(&random_stops, steps)
 }
 
 /// # Arguments
@@ -41,24 +42,25 @@ pub fn generate_random_truecolor_gradient(steps: u8) -> VecSteps {
 /// * `steps` - The number of steps to take between each color stop.
 ///
 /// # Returns
-/// A vector of [crate::TuiColor] objects representing the gradient.
-pub fn generate_truecolor_gradient(stops: &[StringHexColor], steps: u8) -> VecSteps {
+/// A vector of [`crate::TuiColor`] objects representing the gradient.
+#[must_use]
+pub fn generate_truecolor_gradient(stops: &[StringHexColor], num_steps: u8) -> VecSteps {
+    type Number = f32;
+
     let result_gradient = colorgrad::GradientBuilder::new()
         .html_colors(stops)
         .build::<colorgrad::LinearGradient>();
 
-    type Number = f32;
-
     match result_gradient {
         Ok(gradient) => {
-            let fractional_step: Number = (1 as Number) / steps as Number;
+            let fractional_step: Number = 1.0 / Number::from(num_steps);
 
             // Create an acc with the same capacity as the number of steps. And pre-fill
             // it with black.
             let mut acc = VecSteps::new();
 
-            for step_count in 0..steps {
-                let color = gradient.at(fractional_step * step_count as Number);
+            for step_count in 0..num_steps {
+                let color = gradient.at(fractional_step * Number::from(step_count));
                 let color = color.to_rgba8();
                 acc.push(tui_color!(color[0], color[1], color[2]));
             }
@@ -99,16 +101,17 @@ mod random_color {
             1.0,
         );
 
-        color_to_hex_string(random_color)
+        color_to_hex_string(&random_color)
     }
 
-    /// Copied from [colorgrad::Color::to_hex_string], and modified to return a
-    /// [StringHexColor] instead of a [String].
-    pub fn color_to_hex_string(color: colorgrad::Color) -> StringHexColor {
+    /// Copied from [`colorgrad::Color::to_hex_string`], and modified to return a
+    /// [`StringHexColor`] instead of a [String].
+    pub fn color_to_hex_string(color: &colorgrad::Color) -> StringHexColor {
+        use std::fmt::Write as _;
+
         let [r, g, b, a] = color.to_rgba8();
 
         let mut acc = StringHexColor::new();
-        use std::fmt::Write as _;
         if a < 255 {
             _ = write!(acc, "#{r:02x}{g:02x}{b:02x}{a:02x}");
         } else {

@@ -58,7 +58,7 @@
 //!   event")](#life-of-a-signal-aka-out-of-band-event)
 //! - [The window](#the-window)
 //! - [Layout and styling](#layout-and-styling)
-//! - [Component, ComponentRegistry, focus management, and event
+//! - [Component, `ComponentRegistry`, focus management, and event
 //!   routing](#component-componentregistry-focus-management-and-event-routing)
 //! - [Input event specificity](#input-event-specificity)
 //! - [Rendering and painting](#rendering-and-painting)
@@ -211,8 +211,8 @@
 //!
 //! ## Partial TUI (async, partial raw mode, async readline) for choice based user interaction
 //!
-//! [mod@readline_async::choose_api] allows you to build less interactive apps that ask a
-//! user user to make choices from a list of options and then use a decision tree to
+//! [`mod@readline_async::choose_api`] allows you to build less interactive apps that ask
+//! a user user to make choices from a list of options and then use a decision tree to
 //! perform actions.
 //!
 //! An example of this is this "Partial TUI" app `giti` in the
@@ -226,9 +226,9 @@
 //!
 //! ## Partial TUI (async, partial raw mode, async readline) for async REPL
 //!
-//! [mod@readline_async::readline_async_api] gives you the ability to easily ask for user
-//! input in a line editor. You can customize the prompt, and other behaviors, like input
-//! history.
+//! [`mod@readline_async::readline_async_api`] gives you the ability to easily ask for
+//! user input in a line editor. You can customize the prompt, and other behaviors, like
+//! input history.
 //!
 //! Using this, you can build your own async shell programs using "async readline &
 //! stdout". Use advanced features like showing indeterminate progress spinners, and even
@@ -249,12 +249,11 @@
 //!
 //! 1. <https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server>
 //! 2. <https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples>
-//!
 //! ## Full TUI (async, raw mode, full screen) for immersive TUI apps
 //!
-//! **The bulk of this document is about this**. [mod@tui::terminal_window_api] gives you
-//! "raw mode", "alternate screen" and "full screen" support, while being totally async.
-//! An example of this is the "Full TUI" app `edi` in the
+//! **The bulk of this document is about this**. [`mod@tui::terminal_window_api`] gives
+//! you "raw mode", "alternate screen" and "full screen" support, while being totally
+//! async. An example of this is the "Full TUI" app `edi` in the
 //! [`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
 //! can install & run this with the following command:
 //!
@@ -332,7 +331,7 @@
 //! | `nu run.nu test`                          | Run tests                                         |
 //! | `nu run.nu clippy`                        | Run clippy                                        |
 //! | `nu run.nu docs`                          | Build docs                                        |
-//! | `nu run.nu serve-docs`                    | Serve docs over VSCode Remote SSH session         |
+//! | `nu run.nu serve-docs`                    | Serve docs over `VSCode` Remote SSH session         |
 //! | `nu run.nu rustfmt`                       | Run rustfmt                                       |
 //!
 //! The following commands will watch for changes in the source folder and re-run:
@@ -389,30 +388,31 @@
 //!   trait.
 //! - The main event loop takes an [App] trait object and starts listening for input
 //!   events. It enters raw mode, and paints to an alternate screen buffer, leaving your
-//!   original scroll back buffer and history intact. When you request_shutdown this TUI
+//!   original scroll back buffer and history intact. When you `request_shutdown` this TUI
 //!   app, it will return your terminal to where you'd left off.
-//! - The [main_event_loop] is where many global structs live which are shared across the
-//!   lifetime of your app. These include the following:
-//!   - [HasFocus]
-//!   - [ComponentRegistryMap]
-//!   - [GlobalData] which contains the following
+//! - The [`main_event_loop`] is where many global structs live which are shared across
+//!   the lifetime of your app. These include the following:
+//!   - [`HasFocus`]
+//!   - [`ComponentRegistryMap`]
+//!   - [`GlobalData`] which contains the following
 //!     - Global application state. This is mutable. Whenever an input event or signal is
 //!       processed the entire [App] gets re-rendered. This is the unidirectional data
 //!       flow architecture inspired by React and Elm.
 //! - Your [App] trait impl is the main entry point for laying out the entire application.
-//!   Before the first render, the [App] is initialized (via a call to [App::app_init]),
+//!   Before the first render, the [App] is initialized (via a call to [`App::app_init`]),
 //!   and is responsible for creating all the [Component]s that it uses, and saving them
-//!   to the [ComponentRegistryMap].
-//!   - State is stored in many places. Globally at the [GlobalData] level, and also in
+//!   to the [`ComponentRegistryMap`].
+//!   - State is stored in many places. Globally at the [`GlobalData`] level, and also in
 //!     [App], and also in [Component].
-//! - This sets everything up so that [App::app_render], [App::app_handle_input_event],
-//!   and [App::app_handle_signal] can be called at a later time.
-//! - The [App::app_render] method is responsible for creating the layout by using
-//!   [Surface] and [FlexBox] to arrange whatever [Component]'s are in the
-//!   [ComponentRegistryMap].
-//! - The [App::app_handle_input_event] method is responsible for handling events that are
-//!   sent to the [App] trait when user input is detected from the keyboard or mouse.
-//!   Similarly the [App::app_handle_signal] deals with signals that are sent from
+//! - This sets everything up so that [`App::app_render`],
+//!   [`App::app_handle_input_event`], and [`App::app_handle_signal`] can be called at a
+//!   later time.
+//! - The [`App::app_render`] method is responsible for creating the layout by using
+//!   [Surface] and [`FlexBox`] to arrange whatever [Component]'s are in the
+//!   [`ComponentRegistryMap`].
+//! - The [`App::app_handle_input_event`] method is responsible for handling events that
+//!   are sent to the [App] trait when user input is detected from the keyboard or mouse.
+//!   Similarly the [`App::app_handle_signal`] deals with signals that are sent from
 //!   background threads (Tokio tasks) to the main thread, which then get routed to the
 //!   [App] trait object. Typically this will then get routed to the [Component] that
 //!   currently has focus.
@@ -449,7 +449,8 @@
 //! required resources into the `main_event_loop` function. This allows for easy testing
 //! and for modularity and extensibility in the codebase. The `r3bl_terminal_async` crate
 //! shares the same infrastructure for input and output devices. In fact the
-//! [crate::InputDevice] and [crate::OutputDevice] structs are in the `r3bl_core` crate.
+//! [`crate::InputDevice`] and [`crate::OutputDevice`] structs are in the `r3bl_core`
+//! crate.
 //!
 //! 1. The advantage of this approach is that for testing, test fixtures can be used to
 //!    perform end-to-end testing of the TUI.
@@ -523,18 +524,18 @@
 //! sets up a main loop, and lays out all the 3 components, sizes, positions, and then
 //! paints them. Then it asynchronously listens for input events (no threads are blocked).
 //! When the user types something, this input is processed by the main loop of
-//! [TerminalWindow].
+//! [`TerminalWindow`].
 //!
-//! 1. The [Component] that is in [FlexBox] with `id=1` currently has focus.
+//! 1. The [Component] that is in [`FlexBox`] with `id=1` currently has focus.
 //! 2. When an input event comes in from the user (key press or mouse input) it is routed
-//!    to the [App] first, before [TerminalWindow] looks at the event.
+//!    to the [App] first, before [`TerminalWindow`] looks at the event.
 //! 3. The specificity of the event handler in [App] is higher than the default input
-//!    handler in [TerminalWindow]. Further, the specificity of the [Component] that
+//!    handler in [`TerminalWindow`]. Further, the specificity of the [Component] that
 //!    currently has focus is the highest. In other words, the input event gets routed by
 //!    the [App] to the [Component] that currently has focus ([Component] id=1 in our
 //!    example).
 //! 4. Since it is not guaranteed that some [Component] will have focus, this input event
-//!    can then be handled by [App], and if not, then by [TerminalWindow]'s default
+//!    can then be handled by [App], and if not, then by [`TerminalWindow`]'s default
 //!    handler. If the default handler doesn't process it, then it is simply ignored.
 //! 5. In this journey, as the input event is moved between all these different entities,
 //!    each entity decides whether it wants to handle the input event or not. If it does,
@@ -545,8 +546,8 @@
 //! synchronous operation and thus it is safe to mutate state directly in this code path.
 //! This is why there is no sophisticated locking in place. You can mutate the state
 //! directly in
-//! - [App::app_handle_input_event]
-//! - [Component::handle_event]
+//! - [`App::app_handle_input_event`]
+//! - [`Component::handle_event`]
 //!
 //! # Life of a signal (aka "out of band event")
 //!
@@ -559,24 +560,24 @@
 //! thread to the main thread. This is how you can handle "out of band" events or signals.
 //!
 //! To provide support for these "out of band" events or signals, the [App] trait has a
-//! method called [App::app_handle_signal]. This is where you can handle signals that are
-//! sent from background threads. One of the arguments to this associated function is a
-//! `signal`. This signal needs to contain all the data that is needed for a state
+//! method called [`App::app_handle_signal`]. This is where you can handle signals that
+//! are sent from background threads. One of the arguments to this associated function is
+//! a `signal`. This signal needs to contain all the data that is needed for a state
 //! mutation to occur on the main thread. So the background thread has the responsibility
 //! of doing some work (eg: making an HTTP request), getting some information as a result,
 //! and then packaging that information into a `signal` and sending it to the main thread.
-//! The main thread then handles this signal by calling the [App::app_handle_signal]
+//! The main thread then handles this signal by calling the [`App::app_handle_signal`]
 //! method. This method can then mutate the state of the [App] and return an
-//! [EventPropagation] enum indicating whether the main thread should repaint the UI or
+//! [`EventPropagation`] enum indicating whether the main thread should repaint the UI or
 //! not.
 //!
 //! So far we have covered what happens when the [App] receives a signal. Who sends this
 //! signal? Who actually creates the `tokio::spawn` task that sends this signal? This can
-//! happen anywhere in the [App] and [Component]. Any code that has access to [GlobalData]
-//! can use the [crate::send_signal!] macro to send a signal in a background task.
-//! However, only the [App] can receive the signal and do something with it, which is
-//! usually apply the signal to update the state and then tell the main thread to repaint
-//! the UI.
+//! happen anywhere in the [App] and [Component]. Any code that has access to
+//! [`GlobalData`] can use the [`crate::send_signal`!] macro to send a signal in a
+//! background task. However, only the [App] can receive the signal and do something with
+//! it, which is usually apply the signal to update the state and then tell the main
+//! thread to repaint the UI.
 //!
 //! Now that we have seen this whirlwind overview of the life of an input event, let's
 //! look at the details in each of the sections below.
@@ -584,19 +585,19 @@
 //! # The window
 //!
 //! The main building blocks of a TUI app are:
-//! 1. [TerminalWindow] - You can think of this as the main "window" of the app. All the
+//! 1. [`TerminalWindow`] - You can think of this as the main "window" of the app. All the
 //!    content of your app is painted inside of this "window". And the "window"
 //!    conceptually maps to the screen that is contained inside your terminal emulator
 //!    program (eg: tilix, Terminal.app, etc). Your TUI app will end up taking up 100% of
 //!    the screen space of this terminal emulator. It will also enter raw mode, and paint
 //!    to an alternate screen buffer, leaving your original scroll back buffer and history
-//!    intact. When you request_shutdown this TUI app, it will return your terminal to
+//!    intact. When you `request_shutdown` this TUI app, it will return your terminal to
 //!    where you'd left off. You don't write this code, this is something that you use.
 //! 2. [App] - This is where you write your code. You pass in a [App] to the
-//!    [TerminalWindow] to bootstrap your TUI app. You can just use [App] to build your
+//!    [`TerminalWindow`] to bootstrap your TUI app. You can just use [App] to build your
 //!    app, if it is a simple one & you don't really need any sophisticated layout or
-//!    styling. But if you want layout and styling, now we have to deal with [FlexBox],
-//!    [Component], and [crate::TuiStyle].
+//!    styling. But if you want layout and styling, now we have to deal with [`FlexBox`],
+//!    [Component], and [`crate::TuiStyle`].
 //!
 //! # Layout and styling
 //!
@@ -610,13 +611,13 @@
 //!    can give them a direction and even relative sizing out of 100%).
 //! 2. As you approach the "leaf" nodes of your layout, you will find [Component] trait
 //!    objects. These are black boxes which are sized, positioned, and painted _relative_
-//!    to their parent box. They get to handle input events and render [RenderOp]s into a
-//!    [RenderPipeline]. This is kind of like virtual DOM in React. This queue of commands
-//!    is collected from all the components and ultimately painted to the screen, for each
-//!    render! Your app's state is mutable and is stored in the [GlobalData] struct. You
-//!    can handle out of band events as well using the signal mechanism.
+//!    to their parent box. They get to handle input events and render [`RenderOp`]s into
+//!    a [`RenderPipeline`]. This is kind of like virtual DOM in React. This queue of
+//!    commands is collected from all the components and ultimately painted to the screen,
+//!    for each render! Your app's state is mutable and is stored in the [`GlobalData`]
+//!    struct. You can handle out of band events as well using the signal mechanism.
 //!
-//! # Component, ComponentRegistry, focus management, and event routing
+//! # Component, `ComponentRegistry`, focus management, and event routing
 //!
 //! Typically your [App] will look like this:
 //!
@@ -629,26 +630,26 @@
 //! ```
 //!
 //! As we look at [Component] & [App] more closely we will find a curious thing
-//! [ComponentRegistry] (that is managed by the [App]). The reason this exists is for
-//! input event routing. The input events are routed to the [Component] that currently has
-//! focus.
+//! [`ComponentRegistry`] (that is managed by the [App]). The reason this exists is for
+//! input event routing. The input events are routed to the [`Component`] that currently
+//! has focus.
 //!
-//! The [HasFocus] struct takes care of this. This provides 2 things:
+//! The [`HasFocus`] struct takes care of this. This provides 2 things:
 //!
-//! 1. It holds an `id` of a [FlexBox] / [Component] that has focus.
-//! 2. It also holds a map that holds a [crate::Pos] for each `id`. This is used to
+//! 1. It holds an `id` of a [`FlexBox`] / [`Component`] that has focus.
+//! 2. It also holds a map that holds a [`crate::Pos`] for each `id`. This is used to
 //!    represent a cursor (whatever that means to your app & component). This cursor is
 //!    maintained for each `id`. This allows a separate cursor for each [Component] that
 //!    has focus. This is needed to build apps like editors and viewers that maintains a
 //!    cursor position between focus switches.
 //!
-//! Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent
+//! Another thing to keep in mind is that the [App] and [`TerminalWindow`] is persistent
 //! between re-renders.
 //!
 //! # Input event specificity
 //!
-//! [TerminalWindow] gives [App] first dibs when it comes to handling input events.
-//! [ComponentRegistry::route_event_to_focused_component] can be used to route events
+//! [`TerminalWindow`] gives [App] first dibs when it comes to handling input events.
+//! [`ComponentRegistry::route_event_to_focused_component`] can be used to route events
 //! directly to components that have focus. If it punts handling this event, it will be
 //! handled by the default input event handler. And if nothing there matches this event,
 //! then it is simply dropped.
@@ -867,7 +868,7 @@
 //! A modal dialog box is different than a normal reusable component. This is because:
 //!
 //! 1. It paints on top of the entire screen (in front of all other components, in
-//!    ZOrder::Glass, and outside of any layouts using `FlexBox`es).
+//!    `ZOrder::Glass`, and outside of any layouts using `FlexBox`es).
 //! 2. Is "activated" by a keyboard shortcut (hidden otherwise). Once activated, the user
 //!    can accept or cancel the dialog box. And this results in a callback being called
 //!    with the result.
@@ -937,11 +938,11 @@
 //!
 //! ## Custom Markdown (MD) parsing and custom syntax highlighting
 //!
-//! The code for parsing and syntax highlighting is in [try_parse_and_highlight].
+//! The code for parsing and syntax highlighting is in [`try_parse_and_highlight`].
 //!
 //! A custom Markdown parser is provided to provide some extensions over the standard
-//! Markdown syntax. The parser code is in the [parse_markdown()] function. Here are some
-//! of the extensions:
+//! Markdown syntax. The parser code is in the [`parse_markdown()`] function. Here are
+//! some of the extensions:
 //! - Metadata title (eg: `@title: <title_text>`). Similar to front matter.
 //! - Metadata tags (eg: `@tags: <tag1>, <tag2>`).
 //! - Metadata authors (eg: `@authors: <author1>, <author2>`).
@@ -950,11 +951,11 @@
 //! Some other changes are adding support for smart lists. These are lists that span
 //! multiple lines of text. And indentation levels are tracked. This information is used
 //! to render the list items in a way that is visually appealing.
-//! - The code for parsing smart lists is in [parse_smart_list].
-//! - The code for syntax highlighting is in [StyleUSSpanLines::from_document].
+//! - The code for parsing smart lists is in [`parse_smart_list`].
+//! - The code for syntax highlighting is in [`StyleUSSpanLines::from_document`].
 //!
 //! Also, `syntect` crate is still used by the editor component
-//! [crate::editor_engine::engine_public_api::render_engine()] to syntax highlight the
+//! [`crate::editor_engine::engine_public_api::render_engine()`] to syntax highlight the
 //! text inside code blocks of Markdown documents.
 //!
 //! An alternative approach to doing this was considered using the crate `markdown-rs`,
@@ -965,7 +966,7 @@
 //! # Grapheme support
 //!
 //! Unicode is supported (to an extent). There are some caveats. The
-//! [crate::GCString] struct has lots of great information on this graphemes and
+//! [`crate::GCString`] struct has lots of great information on this graphemes and
 //! what is supported and what is not.
 //!
 //! # Lolcat support
@@ -988,7 +989,7 @@
 //! lolcat.next_color();
 //! ```
 //!
-//! This [crate::Lolcat] that is returned by `build()` is safe to re-use.
+//! This [`crate::Lolcat`] that is returned by `build()` is safe to re-use.
 //! - The colors it cycles through are "stable" meaning that once constructed via the
 //!   [builder](crate::LolcatBuilder) (which sets the speed, seed, and delta that
 //!   determine where the color wheel starts when it is used). For eg, when used in a
@@ -996,7 +997,7 @@
 //!   function of this component will produce the same generated colors over and over
 //!   again.
 //! - If you want to change where the color wheel "begins", you have to change the speed,
-//!   seed, and delta of this [crate::Lolcat] instance.
+//!   seed, and delta of this [`crate::Lolcat`] instance.
 //!
 //! # Issues and PRs
 //!
@@ -1006,10 +1007,50 @@
 
 // https://github.com/rust-lang/rust-clippy
 // https://rust-lang.github.io/rust-clippy/master/index.html
+// - `#!` (Inner Attribute): The `!` indicates that this is an inner attribute. Inner
+//   attributes apply to the entire item containing them. When you use
+//   #![warn(clippy::<Lint>)] at the crate level (i.e., in your lib.rs or main.rs), it
+//   will make Clippy emit a warning for any `Lint` violations found anywhere within that
+//   entire crate. If placed inside a module, it would apply to that module and all its
+//   sub-modules.
+// - `#` (Outer Attribute): This is an outer attribute. Outer attributes apply to the item
+//   immediately following them.
 #![warn(clippy::all)]
 #![warn(clippy::unwrap_in_result)]
 #![warn(rust_2018_idioms)]
-#![allow(clippy::literal_string_with_formatting_args)]
+#![warn(clippy::doc_markdown)]
+#![warn(clippy::redundant_closure)]
+#![warn(clippy::redundant_closure_for_method_calls)]
+#![warn(clippy::cast_sign_loss)]
+#![warn(clippy::cast_lossless)]
+#![warn(clippy::cast_possible_truncation)]
+#![warn(clippy::semicolon_if_nothing_returned)]
+#![warn(clippy::must_use_candidate)]
+#![warn(clippy::items_after_statements)]
+#![warn(clippy::manual_is_multiple_of)]
+#![warn(clippy::needless_return)]
+#![warn(clippy::unreadable_literal)]
+#![warn(clippy::redundant_closure)]
+#![warn(clippy::redundant_else)]
+#![warn(clippy::iter_without_into_iter)]
+#![warn(clippy::explicit_iter_loop)]
+#![warn(clippy::ignored_unit_patterns)]
+#![warn(clippy::match_wildcard_for_single_variants)]
+#![warn(clippy::default_trait_access)]
+#![warn(clippy::manual_instant_elapsed)]
+#![warn(clippy::map_unwrap_or)]
+#![warn(clippy::missing_panics_doc)]
+#![warn(clippy::unwrap_in_result)]
+#![warn(clippy::unused_self)]
+#![warn(clippy::single_char_pattern)]
+#![warn(clippy::manual_let_else)]
+#![warn(clippy::unnecessary_semicolon)]
+#![warn(clippy::cast_precision_loss)]
+#![warn(clippy::if_not_else)]
+#![warn(clippy::unnecessary_wraps)]
+#![warn(clippy::single_match_else)]
+#![warn(clippy::return_self_not_must_use)]
+#![warn(clippy::needless_pass_by_value)]
 
 // Attach.
 pub mod core;

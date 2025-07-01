@@ -34,6 +34,7 @@ pub enum SpinnerColor {
 
 impl SpinnerColor {
     /// Gradients: <https://uigradients.com/#JShine>
+    #[must_use]
     pub fn default_color_wheel() -> SpinnerColor {
         let color_wheel_config = ColorWheelConfig::Rgb(
             // Stops.

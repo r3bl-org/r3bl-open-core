@@ -17,6 +17,7 @@
 
 use nom::{branch::alt, combinator::map, multi::many0, IResult, Parser};
 
+use super::as_str_slice::as_str_slice_core::AsStrSlice;
 use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
             list,
             md_parser_ng::block_ng::parse_block_code_no_advance_ng,
@@ -26,7 +27,6 @@ use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
             parse_line_kv_no_advance_ng,
             parse_line_text_advance_ng,
             sizing_list_of::ListStorage,
-            AsStrSlice,
             List,
             MdDocument,
             MdElement,
@@ -50,9 +50,9 @@ use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
 /// [`crate::sizing::VecEditorContentLines`] internally to store the data, which is just
 /// an inline vec of [`crate::GCString`].
 /// 1. NG parser path: Convert `&[GCString]` to [`AsStrSlice`] (🐇 no copy) ->
-///    parse_markdown_ng
-/// 2. Legacy parser path: &[crate::GCString] -> materialized string (🦥 full copy) ->
-///    parse_markdown
+///    `parse_markdown_ng`
+/// 2. Legacy parser path: &[`crate::GCString`] -> materialized string (🦥 full copy) ->
+///    `parse_markdown`
 ///
 /// ## Drop-in replacement
 ///
@@ -62,17 +62,17 @@ use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
 /// ## Architectural features
 ///
 /// ### Line advancement infrastructure
-/// - Unified advancement via ensure_advance_with_parser
+/// - Unified advancement via `ensure_advance_with_parser`
 /// - Consistent edge case handling
 /// - Robust last line processing
 ///
 /// ### Input exhaustion detection
-/// - Line-based detection (line_index >= lines.len())
+/// - Line-based detection (`line_index` >= `lines.len()`)
 /// - Processes all lines including trailing empty ones
 /// - Complete input consumption guaranteed
 ///
 /// ### Empty line parser
-/// - Infrastructure-based approach (uses state detection in [mod@crate::as_str_slice].
+/// - Infrastructure-based approach (uses state detection in [`mod@crate::as_str_slice`].
 /// - Leverages `ensure_advance_with_parser`.
 /// - Simple, robust, maintainable.
 ///
@@ -131,7 +131,7 @@ pub fn parse_markdown_ng<'a>(
                     |it| parse_line_csv_no_advance_ng(TAGS, it),
                     |list| {
                         let acc: ListStorage<&str> =
-                            list.iter().map(|item| item.extract_to_line_end()).collect();
+                            list.iter().map(AsStrSlice::extract_to_line_end).collect();
                         MdElement::Tags(List::from(acc))
                     },
                 ))
@@ -142,7 +142,7 @@ pub fn parse_markdown_ng<'a>(
                     |it| parse_line_csv_no_advance_ng(AUTHORS, it),
                     |list| {
                         let acc: ListStorage<&str> =
-                            list.iter().map(|item| item.extract_to_line_end()).collect();
+                            list.iter().map(AsStrSlice::extract_to_line_end).collect();
                         MdElement::Authors(List::from(acc))
                     },
                 ))
@@ -221,7 +221,7 @@ pub fn parse_markdown_ng<'a>(
 /// 1. Check if current line is completely empty (not whitespace-only).
 /// 2. If empty: return success with empty fragments list.
 /// 3. If not empty: return error (let other parsers handle).
-/// 4. Let ensure_advance_with_parser handle ALL advancement logic.
+/// 4. Let `ensure_advance_with_parser` handle ALL advancement logic.
 ///
 /// ## Edge cases
 ///
@@ -246,7 +246,7 @@ pub fn parse_markdown_ng<'a>(
 ///
 /// Every empty line consistently produces `Text([])` element
 ///
-/// ## Integration with ensure_advance_with_parser
+/// ## Integration with `ensure_advance_with_parser`
 /// This function demonstrates the correct pattern for using `ensure_advance_with_parser`:
 /// 1. **Parser checks**: Determine if it can handle the current input.
 /// 2. **Success case**: Create appropriate output, return same input.

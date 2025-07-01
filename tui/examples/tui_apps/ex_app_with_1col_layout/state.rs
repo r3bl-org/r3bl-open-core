@@ -20,10 +20,6 @@ use std::fmt::{Debug, Formatter};
 use r3bl_tui::InlineVec;
 use smallvec::smallvec;
 
-/// Reducer.
-#[derive(Default)]
-pub struct Reducer;
-
 /// Action.
 #[derive(Default, Clone, Debug)]
 #[non_exhaustive]

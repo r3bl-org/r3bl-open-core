@@ -31,23 +31,23 @@ use crate::{md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
 // XMARK: Main Markdown parser entry point
 
 /// This is the main parser entry point, aka, the root parser. It takes a string slice and
-/// if it can be parsed, returns a [MdDocument] that represents the parsed Markdown.
+/// if it can be parsed, returns a [`MdDocument`] that represents the parsed Markdown.
 ///
-/// 1. [crate::MdLineFragments] roughly corresponds to a line of parsed text.
-/// 2. [MdDocument] contains all the blocks that are parsed from a Markdown string slice.
+/// 1. [`crate::MdLineFragments`] roughly corresponds to a line of parsed text.
+/// 2. [`MdDocument`] contains all the blocks that are parsed from a Markdown string slice.
 ///
-/// Each item in this [MdDocument] corresponds to a block of Markdown [MdElement], which can
+/// Each item in this [`MdDocument`] corresponds to a block of Markdown [`MdElement`], which can
 /// be one of the following variants:
-/// 1. Metadata title. The parsers in [crate::parse_metadata_kv] file handle this.
-/// 2. Metadata tags. The parsers in [crate::parse_metadata_kcsv] file handle this.
-/// 3. Heading (which contains a [crate::HeadingLevel] & [crate::MdLineFragments]).
+/// 1. Metadata title. The parsers in [`crate::parse_metadata_kv`] file handle this.
+/// 2. Metadata tags. The parsers in [`crate::parse_metadata_kcsv`] file handle this.
+/// 3. Heading (which contains a [`crate::HeadingLevel`] & [`crate::MdLineFragments`]).
 /// 4. Smart ordered & unordered list (which itself contains a [Vec] of
-///    [crate::MdLineFragments]. The parsers in [mod@parse_block_smart_list] file handle
+///    [`crate::MdLineFragments`]. The parsers in [`mod@parse_block_smart_list`] file handle
 ///    this.
 /// 5. Code block (which contains string slices of the language & code). The parsers in
-///    [mod@parse_block_code] file handle this.
-/// 6. line (which contains a [crate::MdLineFragments]). The parsers in
-///    [mod@crate::fragment] handle this.
+///    [`mod@parse_block_code`] file handle this.
+/// 6. line (which contains a [`crate::MdLineFragments`]). The parsers in
+///    [`mod@crate::fragment`] handle this.
 #[rustfmt::skip]
 pub fn parse_markdown<'a>(input: &'a str) -> IResult<&'a str, MdDocument<'a>> {
     let (input, output) = many0(

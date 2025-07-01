@@ -82,7 +82,7 @@ pub async fn handle_branch_delete_command(
                     .await;
             }
             // Do nothing.
-            _ => {
+            parse_user_choice::Selection::ExitProgram => {
                 return Ok(CommandRunResult::Noop(
                     ui_str::branch_delete_display::info_chose_not_to_msg(),
                     details::empty(),
@@ -270,7 +270,7 @@ mod command_execute {
         debug_assert!(!branches.is_empty());
         let (res_output, cmd) = git::try_delete_branches(branches).await;
         match res_output {
-            Ok(_) => {
+            Ok(()) => {
                 let it = CommandRunResult::Run(
                     ui_str::branch_delete_display::info_success_msg(branches),
                     details::with_details(branches.clone()),

@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-//! This module is responsible for converting a [MdDocument] into a [StyleUSSpanLines].
+//! This module is responsible for converting a [`MdDocument`] into a
+//! [`StyleUSSpanLines`].
 
 use smallvec::smallvec;
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
@@ -83,10 +84,10 @@ use crate::{generate_ordered_list_item_bullet,
             TuiStyledTexts,
             ENABLE_MD_PARSER_NG};
 
-/// This is the main function that the [crate::editor] uses this in order to display the
+/// This is the main function that the [`crate::editor`] uses this in order to display the
 /// markdown to the user.It is responsible for converting:
-/// - from a &[Vec] of [GCString] which comes from the [crate::editor],
-/// - into a [StyleUSSpanLines], which the [crate::editor] will clip & render.
+/// - from a &[Vec] of [`GCString`] which comes from the [`crate::editor`],
+/// - into a [`StyleUSSpanLines`], which the [`crate::editor`] will clip & render.
 ///
 /// # Arguments
 /// - `editor_text_lines` - The text that the user has typed into the editor.
@@ -94,10 +95,16 @@ use crate::{generate_ordered_list_item_bullet,
 /// - `maybe_syntect_tuple` - The syntax set and theme that the editor should use to
 ///   highlight the text.
 /// - `parser_byte_cache` - A cache that is used to store the byte array that results from
-///   adding CRLF back into the document [crate::sizing::VecEditorContentLines]. This is
+///   adding CRLF back into the document [`crate::sizing::VecEditorContentLines`]. This is
 ///   used to avoid re-allocating this struct every time the document is re-parsed, which
 ///   requires this byte array to be re-created with CRLF added to the document contents
 ///   (which may have changed).
+///
+/// # Panics
+///
+/// This will panic if the lock is poisoned, which can happen if a thread
+/// panics while holding the lock. To avoid panics, ensure that the code that
+/// locks the mutex does not panic while holding the lock.
 pub fn try_parse_and_highlight(
     editor_text_lines: &[GCString],
     maybe_current_box_computed_style: &Option<TuiStyle>,
@@ -162,7 +169,7 @@ pub fn try_parse_and_highlight(
             maybe_current_box_computed_style,
             maybe_syntect_tuple,
         )),
-        Err(_) => {
+        Err(()) => {
             CommonError::new_error_result_with_only_type(CommonErrorType::ParsingError)
         }
     }
@@ -224,6 +231,7 @@ impl PrettyPrintDebug for StyleUSSpanLines {
 }
 
 impl StyleUSSpanLines {
+    #[must_use]
     pub fn from_document(
         document: &MdDocument<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
@@ -241,7 +249,7 @@ impl StyleUSSpanLines {
         lines
     }
 
-    /// Based on [crate::global_color_support::detect] & language we have the
+    /// Based on [`crate::global_color_support::detect`] & language we have the
     /// following:
     /// ```text
     /// |               | Truecolor      | ANSI           |
@@ -251,6 +259,7 @@ impl StyleUSSpanLines {
     /// ```
     ///
     /// Case 1: Fallback
+    #[allow(clippy::doc_markdown)]
     /// - 1st line        : "```": `get_foreground_dim_style()`, lang:
     ///   `get_code_block_lang_style()`
     /// - 2nd line .. end : content: `get_inline_code_style()`
@@ -261,6 +270,7 @@ impl StyleUSSpanLines {
     ///   `get_code_block_lang_style()`
     /// - 2nd line .. end : use syntect to highlight
     /// - last line       : "```": `get_foreground_dim_style()`
+    #[must_use]
     pub fn from_block_codeblock(
         code_block_lines: &CodeBlockLines<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
@@ -274,6 +284,7 @@ impl StyleUSSpanLines {
                         try_get_syntax_ref,
                         tui::constants::CODE_BLOCK_START_PARTIAL};
 
+            #[allow(clippy::similar_names)]
             pub fn try_use_syntect(
                 code_block_lines: &CodeBlockLines<'_>,
                 maybe_current_box_computed_style: &Option<TuiStyle>,
@@ -347,6 +358,7 @@ impl StyleUSSpanLines {
                 Some(acc_lines_output)
             }
 
+            #[allow(clippy::similar_names)]
             pub fn use_fallback(
                 code_block_lines: &CodeBlockLines<'_>,
                 maybe_current_box_computed_style: &Option<TuiStyle>,
@@ -407,6 +419,8 @@ impl StyleUSSpanLines {
         }
     }
 
+    #[allow(clippy::similar_names)]
+    #[must_use]
     pub fn from_block_smart_list(
         input_ul_lines: &Lines<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
@@ -430,9 +444,11 @@ impl StyleUSSpanLines {
         acc_lines_output
     }
 
-    /// Each [MdElement] needs to be translated into a line. The [MdElement::CodeBlock] is
-    /// the only block that needs to be translated into multiple lines. This is why the
-    /// return type is a [StyleUSSpanLines] (and not a single line).
+    /// Each [`MdElement`] needs to be translated into a line. The
+    /// [`MdElement::CodeBlock`] is the only block that needs to be translated into
+    /// multiple lines. This is why the return type is a [`StyleUSSpanLines`] (and not
+    /// a single line).
+    #[must_use]
     pub fn from_block(
         block: &MdElement<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
@@ -479,7 +495,7 @@ impl StyleUSSpanLines {
                 lines.push(StyleUSSpanLine::from_fragments(
                     fragments_in_one_line,
                     maybe_current_box_computed_style,
-                ))
+                ));
             }
             MdElement::SmartList((list_lines, _bullet_kind, _indent)) => {
                 lines += StyleUSSpanLines::from_block_smart_list(
@@ -547,13 +563,14 @@ impl StyleUSSpan {
         ]
     }
 
-    /// Each [MdLineFragment] needs to be translated into a [StyleUSSpan] or [Vec] of
-    /// [StyleUSSpan]s.
+    /// Each [`MdLineFragment`] needs to be translated into a [`StyleUSSpan`] or [Vec] of
+    /// [`StyleUSSpan`]s.
     ///
-    /// 1. These are then rolled up into a [StyleUSSpanLine] by
+    /// 1. These are then rolled up into a [`StyleUSSpanLine`] by
     ///    [StyleUSSpanLine::from_fragments](StyleUSSpanLine::from_fragments) ...
-    /// 2. ... which is then rolled up into [StyleUSSpanLines] by
+    /// 2. ... which is then rolled up into [`StyleUSSpanLines`] by
     ///    [StyleUSSpanLine::from_block](StyleUSSpanLine::from_block).
+    #[must_use]
     pub fn from_fragment(
         fragment: &MdLineFragment<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
@@ -690,6 +707,7 @@ impl PrettyPrintDebug for StyleUSSpanLine {
 }
 
 impl StyleUSSpanLine {
+    #[must_use]
     pub fn from_fragments(
         fragments_in_one_line: &FragmentsInOneLine<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
@@ -705,8 +723,8 @@ impl StyleUSSpanLine {
         List { inner: acc }
     }
 
-    /// This is a sample [HeadingData] that needs to be converted into a
-    /// [StyleUSSpanLine].
+    /// This is a sample [`HeadingData`] that needs to be converted into a
+    /// [`StyleUSSpanLine`].
     ///
     /// ```text
     /// #░heading░*foo*░**bar**
@@ -718,6 +736,7 @@ impl StyleUSSpanLine {
     /// |    + Fragment::Plain("heading░")
     /// + Level::Heading1
     /// ```
+    #[must_use]
     pub fn from_heading_data(
         heading_data: &HeadingData<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
@@ -782,7 +801,7 @@ mod tests_style_us_span_lines_from {
                 CodeBlockLine,
                 HeadingLevel};
 
-    /// Test each [MdLineFragment] variant is converted by
+    /// Test each [`MdLineFragment`] variant is converted by
     /// [StyleUSSpan::from_fragment](StyleUSSpan::from_fragment).
     mod from_fragment {
         use super::*;
@@ -906,7 +925,7 @@ mod tests_style_us_span_lines_from {
                             ),
                         "R3BL",
                     )
-                )
+                );
             };
 
             // "]"
@@ -1076,7 +1095,7 @@ mod tests_style_us_span_lines_from {
         }
     }
 
-    /// Test each variant of [MdBlockElement] is converted by
+    /// Test each variant of [`MdBlockElement`] is converted by
     /// [StyleUSSpanLines::from_block](StyleUSSpanLines::from_block).
     mod from_block {
         use super::*;

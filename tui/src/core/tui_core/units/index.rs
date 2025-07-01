@@ -25,9 +25,9 @@ use crate::ch;
 /// Represents an index position in character units.
 ///
 /// An Index is a 0-based measurement that represents a position within a component
-/// in the terminal UI, such as a row or column position. It wraps a [ChUnit] value.
+/// in the terminal UI, such as a row or column position. It wraps a [`ChUnit`] value.
 ///
-/// Index values can be created using the [Index::new] method, the [idx] function,
+/// Index values can be created using the [`Index::new`] method, the [idx] function,
 /// or by converting from various numeric types.
 ///
 /// The relationship between [Index] and [Length] is that:
@@ -57,7 +57,7 @@ pub struct Index(pub ChUnit);
 
 /// Creates a new [Index] from a value that can be converted into an Index.
 ///
-/// This is a convenience function that is equivalent to calling [Index::new].
+/// This is a convenience function that is equivalent to calling [`Index::new`].
 ///
 /// # Examples
 ///
@@ -81,15 +81,18 @@ mod construct {
     impl Index {
         pub fn new(arg_col_index: impl Into<Index>) -> Self { arg_col_index.into() }
 
+        #[must_use]
         pub fn as_usize(&self) -> usize { self.0.into() }
 
         /// This is for use with [crossterm] crate.
+        #[must_use]
         pub fn as_u16(&self) -> u16 { self.0.into() }
 
         /// Add 1 to the index (0 based) to convert it to a length (1 based). The
         /// intention of this function is to meaningfully convert a [Index] to a
         /// [Length]. This is useful in situations where you need to find what the
         /// length is at this index.
+        #[must_use]
         pub fn convert_to_length(&self) -> Length { Length(self.0 + ch(1)) }
     }
 

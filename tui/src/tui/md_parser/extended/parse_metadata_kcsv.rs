@@ -76,9 +76,8 @@ fn parse_comma_separated_list(input: &str) -> IResult<&str, InlineVec<&str>> {
                     "Only item must not start with space.",
                     nom::error::ErrorKind::Fail,
                 )));
-            } else {
-                trimmed_acc.push(only_item);
             }
+            trimmed_acc.push(only_item);
         }
         _ => {
             // More than one item:
@@ -94,9 +93,8 @@ fn parse_comma_separated_list(input: &str) -> IResult<&str, InlineVec<&str>> {
                     "First item must not start with space.",
                     nom::error::ErrorKind::Fail,
                 )));
-            } else {
-                trimmed_acc.push(first_item);
             }
+            trimmed_acc.push(first_item);
 
             // Rest of items must be prefixed with a space.
             for rest_item in my_iter {

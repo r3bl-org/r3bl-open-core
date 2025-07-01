@@ -30,7 +30,8 @@ use crate::{common::fmt, get_self_bin_emoji};
 pub mod upgrade_install {
     use super::*;
 
-    /// Ran `cargo install ...` and this process exited with zero request_shutdown code.
+    /// Ran `cargo install ...` and this process exited with zero `request_shutdown` code.
+    #[must_use]
     pub fn install_success_msg() -> InlineString {
         inline_string!(
             "✅ {a} {b} {c}{d}\n",
@@ -41,8 +42,9 @@ pub mod upgrade_install {
         )
     }
 
-    /// Ran `cargo install ...` but this process exited with non-zero request_shutdown
+    /// Ran `cargo install ...` but this process exited with non-zero `request_shutdown`
     /// code.
+    #[must_use]
     pub fn install_not_success_msg(status: ExitStatus) -> InlineString {
         inline_string!(
             "❌ {a} {b} {c}{d}\n",
@@ -57,6 +59,7 @@ pub mod upgrade_install {
     }
 
     /// Could not run `cargo install $crate_name` itself.
+    #[must_use]
     pub fn install_failed_to_run_command_msg(err: Error) -> InlineString {
         inline_string!(
             "❌ {a}{b} {c}{e} {d}{b}\n{f}",
@@ -79,6 +82,7 @@ pub mod upgrade_install {
         )
     }
 
+    #[must_use]
     pub fn fail_send_sigint_msg(err: Error) -> InlineString {
         inline_string!(
             "{a}{b}\n{c}",
@@ -88,6 +92,7 @@ pub mod upgrade_install {
         )
     }
 
+    #[must_use]
     pub fn send_sigint_msg() -> InlineString {
         inline_string!(
             "{a}{c}",
@@ -96,16 +101,19 @@ pub mod upgrade_install {
         )
     }
 
+    #[must_use]
     pub fn stop_msg() -> InlineString {
         inline_string!("{a}", a = fmt::dim("Installation ended."))
     }
 
     /// No formatting on this string, since the spinner will apply its own animated lolcat
     /// formatting.
+    #[must_use]
     pub fn indeterminate_progress_msg_raw() -> String {
         format!("Installing {a}... ", a = get_self_crate_name())
     }
 
+    #[must_use]
     pub fn readline_async_exit_msg() -> InlineString {
         inline_string!(
             "{a} {b} {c}{d} 🎉",
@@ -120,11 +128,14 @@ pub mod upgrade_install {
 pub mod upgrade_check {
     use super::*;
 
+    #[must_use]
     pub fn yes_msg_raw() -> &'static str { "Yes, upgrade now" }
 
+    #[must_use]
     pub fn no_msg_raw() -> &'static str { "No, thanks" }
 
     /// No formatting on this string, as the formatting is applied by the caller.
+    #[must_use]
     pub fn ask_user_msg_raw() -> InlineString {
         inline_string!(
             "Would you like to upgrade {a} now?",
@@ -132,6 +143,7 @@ pub mod upgrade_check {
         )
     }
 
+    #[must_use]
     pub fn upgrade_is_required_msg() -> InlineString {
         let plain_text_exit_msg = inline_string!(
             "\n{a}\n{b}\n",
@@ -155,6 +167,7 @@ pub mod upgrade_check {
 pub mod goodbye_greetings {
     use super::*;
 
+    #[must_use]
     pub fn thanks_msg() -> InlineString {
         let goodbye_msg = match var("USER") {
             Ok(username) => inline_string!(

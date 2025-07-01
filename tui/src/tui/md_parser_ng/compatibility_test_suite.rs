@@ -82,9 +82,10 @@ mod tests_parse_markdown_compatibility {
                 GCString,
                 ParserByteCache};
 
-    /// Helper function to test compatibility between parse_markdown and parse_markdown_ng
-    /// This simulates the real-world usage in try_parse_and_highlight where both parsers
-    /// start from the same &[GCString] source but take different paths.
+    /// Helper function to test compatibility between `parse_markdown` and
+    /// `parse_markdown_ng` This simulates the real-world usage in
+    /// `try_parse_and_highlight` where both parsers start from the same &[`GCString`]
+    /// source but take different paths.
     fn test_compatibility_helper(test_name: &str, input_str: &str) {
         // Step 1 - Convert input_str to &[GCString]:
         // The common source of truth, simulating editor content.

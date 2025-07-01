@@ -18,7 +18,7 @@
 use crate::{RenderOp, RenderOps, TuiStyledTexts};
 
 pub fn render_tui_styled_texts_into(texts: &TuiStyledTexts, render_ops: &mut RenderOps) {
-    for styled_text in texts.inner.iter() {
+    for styled_text in &texts.inner {
         let style = styled_text.get_style();
         render_ops.push(RenderOp::ApplyColors(Some(*style)));
         render_ops.push(RenderOp::PaintTextWithAttributes(

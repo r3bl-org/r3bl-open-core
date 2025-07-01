@@ -21,10 +21,10 @@ use std::{fmt::Debug,
 use crate::{height, usize, ChUnit, RowHeight};
 
 /// The vertical index in a grid of characters, starting at 0, which is the first row.
-/// This is one part of a [crate::Pos] position and is different from [crate::RowHeight],
-/// which is one part of a [crate::Size].
+/// This is one part of a [`crate::Pos`] position and is different from
+/// [`crate::RowHeight`], which is one part of a [`crate::Size`].
 ///
-/// You can use the [crate::row()] to create a new instance.
+/// You can use the [`crate::row()`] to create a new instance.
 ///
 /// # Examples
 ///
@@ -50,14 +50,18 @@ mod constructor {
     impl RowIndex {
         pub fn new(arg_row_index: impl Into<RowIndex>) -> Self { arg_row_index.into() }
 
+        #[must_use]
         pub fn as_usize(&self) -> usize { usize(self.0) }
 
         /// This is for use with [crossterm] crate.
+        #[must_use]
         pub fn as_u16(&self) -> u16 { self.0.into() }
 
         /// Add 1 to the index to convert it to a height. The intention of this function
-        /// is to meaningfully convert a [RowIndex] to a [RowHeight]. This is useful in
-        /// situations where you need to find what the height is at this row index.
+        /// is to meaningfully convert a [`RowIndex`] to a [`RowHeight`]. This is useful
+        /// in situations where you need to find what the height is at this row
+        /// index.
+        #[must_use]
         pub fn convert_to_height(&self) -> RowHeight { height(self.0 + 1) }
     }
 

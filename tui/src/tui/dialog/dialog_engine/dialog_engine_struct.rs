@@ -41,31 +41,31 @@ use crate::{get_terminal_width_no_default,
 /// instead.
 ///
 /// Holds data related to rendering in between render calls. This is not stored in the
-/// [crate::DialogBuffer] struct, which lives in the app's state. The store provides the
+/// [`crate::DialogBuffer`] struct, which lives in the app's state. The store provides the
 /// underlying document or buffer struct that holds the actual document.
 ///
 /// In order to change the document, you can use the
-/// [DialogEngineApi::apply_event](crate::DialogEngineApi::apply_event) method which takes
-/// [crate::InputEvent] and tries to execute it against this buffer.
+/// [`DialogEngineApi::apply_event`](crate::DialogEngineApi::apply_event) method which
+/// takes [`crate::InputEvent`] and tries to execute it against this buffer.
 #[derive(Clone, Default, Debug)]
 pub struct DialogEngine {
     pub dialog_options: DialogEngineConfigOptions,
     pub editor_engine: EditorEngine,
-    /// This [ColorWheel] is used to render the dialog box. It is created when
-    /// [new()](DialogEngine::new) is called.
+    /// This [`ColorWheel`] is used to render the dialog box. It is created when
+    /// [`new()`](DialogEngine::new) is called.
     /// - The colors it cycles through are "stable" meaning that once constructed via the
-    ///   [ColorWheel::new()](ColorWheel::new) (which sets the options that determine
+    ///   [`ColorWheel::new()`](ColorWheel::new) (which sets the options that determine
     ///   where the color wheel starts when it is used). For eg, between repeated calls
-    ///   to [DialogEngineApi::render_engine](crate::DialogEngineApi::render_engine)
-    ///   which uses the same [ColorWheel] instance, the generated colors will be the
+    ///   to [`DialogEngineApi::render_engine`](crate::DialogEngineApi::render_engine)
+    ///   which uses the same [`ColorWheel`] instance, the generated colors will be the
     ///   same.
     /// - If you want to change where the color wheel "begins", you have to change
-    ///   [ColorWheelConfig] options used to create this instance.
+    ///   [`ColorWheelConfig`] options used to create this instance.
     pub color_wheel: ColorWheel,
     /// This is evaluated and saved when
-    /// [DialogEngineApi::render_engine](crate::DialogEngineApi::render_engine) is
-    /// called. The dialog box is rendered outside of any layout [crate::FlexBox] or
-    /// [crate::Surface], so it just paints itself to the screen on top of everything
+    /// [`DialogEngineApi::render_engine`](crate::DialogEngineApi::render_engine) is
+    /// called. The dialog box is rendered outside of any layout [`crate::FlexBox`] or
+    /// [`crate::Surface`], so it just paints itself to the screen on top of everything
     /// else.
     pub maybe_flex_box: Option<(
         /* window size: */ Size,
@@ -78,6 +78,7 @@ pub struct DialogEngine {
 }
 
 impl DialogEngine {
+    #[must_use]
     pub fn new(
         dialog_options: DialogEngineConfigOptions,
         editor_options: EditorEngineConfig,
@@ -114,8 +115,8 @@ impl DialogEngine {
         }
     }
 
-    /// Clean up any state in the engine, eg: selected_row_index or
-    /// scroll_offset_row_index.
+    /// Clean up any state in the engine, eg: `selected_row_index` or
+    /// `scroll_offset_row_index`.
     pub fn reset(&mut self) {
         self.selected_row_index = row(0);
         self.scroll_offset_row_index = row(0);

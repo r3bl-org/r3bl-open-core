@@ -20,7 +20,7 @@ use std::fmt::Debug;
 use super::SegIndex;
 use crate::{usize, ChUnit, ColIndex, ColWidth};
 
-/// `Seg` represents a grapheme cluster segment within a [super::GCString].
+/// `Seg` represents a grapheme cluster segment within a [`super::GCString`].
 ///
 /// A Unicode "grapheme" is a user-perceived character.
 /// - For `UTF-8` encoded text, a grapheme can be a single byte or up to 4 bytes.
@@ -42,22 +42,22 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 ///
 /// Let's take the example of `🙏🏽`. This is a jumbo emoji that is an amalgamation of
 /// multiple code points.
-/// - If you use [str::chars()] to parse this, you would get two separate [char]: `'🙏' +
-///   '🏽'`.
-/// - However, [unicode_segmentation::UnicodeSegmentation] represents this as a single
-///   grapheme cluster. This is why we use [unicode_segmentation::UnicodeSegmentation] to
-///   handle grapheme clusters.
+/// - If you use [`str::chars()`] to parse this, you would get two separate [char]: `'🙏'`
+///   + `'🏽'`.
+/// - However, [`unicode_segmentation::UnicodeSegmentation`] represents this as a single
+///   grapheme cluster. This is why we use [`unicode_segmentation::UnicodeSegmentation`]
+///   to handle grapheme clusters.
 ///
 /// # Performance, memory latency, access, allocation
 ///
 /// 1. This struct does not allocate anything and is [Copy].
-/// 2. The [super::GCString] owns the memory, and this struct is a "view" into parts of
+/// 2. The [`super::GCString`] owns the memory, and this struct is a "view" into parts of
 ///    it, where each part is a grapheme cluster, and each of them is represented by this
 ///    struct.
 ///
 /// This struct provides information about a single grapheme cluster, including its byte
 /// indices within the original string, its display width, its logical index within the
-/// [super::GCString], its byte size, and its starting display column index.
+/// [`super::GCString`], its byte size, and its starting display column index.
 ///
 /// ## Fields
 ///
@@ -66,9 +66,9 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 /// - `end_byte_index`: The ending byte index of the grapheme cluster within the original
 ///   string.
 /// - `display_width`: The display width of the grapheme cluster, as calculated by
-///   [unicode_width::UnicodeWidthChar].
+///   [`unicode_width::UnicodeWidthChar`].
 /// - `seg_index`: The index of this grapheme cluster within the
-///   [super::GCString::segments] vector.
+///   [`super::GCString::segments`] vector.
 /// - `bytes_size`: The number of bytes this grapheme cluster occupies in the original
 ///   string.
 /// - `start_display_col_index`: The display column index at which this grapheme cluster
@@ -77,8 +77,8 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 /// ## Purpose
 ///
 /// The `Seg` struct is used to efficiently represent and manipulate grapheme clusters
-/// within a [super::GCString]. It allows for easy access to the underlying string slice,
-/// as well as information about its display width and position.
+/// within a [`super::GCString`]. It allows for easy access to the underlying string
+/// slice, as well as information about its display width and position.
 ///
 /// # UTF-8 is variable length encoding
 ///
@@ -108,8 +108,8 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 ///
 /// ## Usage
 ///
-/// This struct is primarily used internally by the [super::GCString] struct. However, it
-/// can also be used directly to access information about individual grapheme clusters.
+/// This struct is primarily used internally by the [`super::GCString`] struct. However,
+/// it can also be used directly to access information about individual grapheme clusters.
 ///
 /// ## Example
 ///
@@ -128,35 +128,35 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 #[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct Seg {
     /// The start index (bytes), in the string slice, used to generate the
-    /// [super::GCString] that this grapheme cluster represents.
+    /// [`super::GCString`] that this grapheme cluster represents.
     pub start_byte_index: ChUnit,
 
     /// The end index (bytes), in the string slice, used to generate the
-    /// [super::GCString] that this grapheme cluster represents.
+    /// [`super::GCString`] that this grapheme cluster represents.
     pub end_byte_index: ChUnit,
 
     /// Display width of the grapheme cluster calculated using
-    /// [unicode_width::UnicodeWidthChar]. The display width (aka `unicode_width`) may
-    /// not be the same as the byte size [Self::bytes_size].
+    /// [`unicode_width::UnicodeWidthChar`]. The display width (aka `unicode_width`) may
+    /// not be the same as the byte size [`Self::bytes_size`].
     pub display_width: ColWidth,
 
-    /// The index of this entry in the [super::GCString::segments].
+    /// The index of this entry in the [`super::GCString::segments`].
     pub seg_index: SegIndex,
 
     /// The number of bytes this grapheme cluster occupies in the original string slice.
-    /// The display width, aka [Self::display_width], may not be the same as the byte
+    /// The display width, aka [`Self::display_width`], may not be the same as the byte
     /// size.
     pub bytes_size: usize,
 
-    /// Display col index [ColIndex] (in the original string slice) at which this
+    /// Display col index [`ColIndex`] (in the original string slice) at which this
     /// grapheme cluster starts. The "offset" in the name means that this is relative
     /// to the start of the original string slice.
-    /// - It is used to determine whether a given display col index [ColIndex] is within
-    ///   the bounds of this grapheme cluster or not.
+    /// - It is used to determine whether a given display col index [`ColIndex`] is
+    ///   within the bounds of this grapheme cluster or not.
     pub start_display_col_index: ColIndex,
 }
 
-/// Pretty print for [crate::Seg] that is compact and easier to read. The default
+/// Pretty print for [`crate::Seg`] that is compact and easier to read. The default
 /// implementation takes up too much space and makes it difficult to debug.
 impl Debug for Seg {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -175,7 +175,7 @@ impl Debug for Seg {
 
 impl Seg {
     /// Get the string slice for the grapheme cluster segment. The `string` parameter is
-    /// any type that can be converted into a `&str`, such as [super::GCString].
+    /// any type that can be converted into a `&str`, such as [`super::GCString`].
     pub fn get_str<'a>(&self, arg_str: &'a (impl AsRef<str> + ?Sized)) -> &'a str {
         let str = arg_str.as_ref();
         let start_index = usize(self.start_byte_index);

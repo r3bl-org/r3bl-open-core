@@ -16,9 +16,9 @@
  */
 
 //! The main entry point (function) for this Markdown parsing module is
-//! [parse_markdown()].
+//! [`parse_markdown()`].
 //! - It takes a string slice.
-//! - And returns a vector of [MdElement]s.
+//! - And returns a vector of [`MdElement`]s.
 //!
 //! This module contains a fully functional Markdown parser. This parser supports standard
 //! Markdown syntax as well as some extensions that are added to make it work w/
@@ -26,16 +26,16 @@
 //!
 //! Here are some entry points into the codebase.
 //!
-//! 1. The main function [parse_markdown()] that does the parsing of a string slice into a
-//!    [MdDocument]. The tests are provided alongside the code itself. And you can follow
-//!    along to see how other smaller parsers are used to build up this big one that
-//!    parses the whole of the Markdown document.
-//! 2. The [mod@md_parser_types] contain all the types that are used to represent the
-//!    Markdown document model, such as [MdDocument], [MdElement], [MdLineFragment] and
-//!    all the other intermediate types & enums required for parsing.
+//! 1. The main function [`parse_markdown()`] that does the parsing of a string slice into
+//!    a [`MdDocument`]. The tests are provided alongside the code itself. And you can
+//!    follow along to see how other smaller parsers are used to build up this big one
+//!    that parses the whole of the Markdown document.
+//! 2. The [`mod@md_parser_types`] contain all the types that are used to represent the
+//!    Markdown document model, such as [`MdDocument`], [`MdElement`], [`MdLineFragment`]
+//!    and all the other intermediate types & enums required for parsing.
 //! 3. All the parsers related to parsing metadata specific for [R3BL](https://r3bl.com)
 //!    applications, which are not standard Markdown can be found in
-//!    [mod@parse_metadata_kv] and [mod@parse_metadata_kcsv].
+//!    [`mod@parse_metadata_kv`] and [`mod@parse_metadata_kcsv`].
 //! 4. All the parsers that are related to parsing the main "blocks" of Markdown, such as
 //!    order lists, unordered lists, code blocks, text blocks, heading blocks, can be
 //!    found in [mod@block].
@@ -46,7 +46,7 @@
 //!
 //! You can read all about this parser in [this blog post on
 //! developerlife.com](https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/).
-//! You can watch a [video](https://youtu.be/SbwvSHZRb1E) about this parser on the YouTube
+//! You can watch a [video](https://youtu.be/SbwvSHZRb1E) about this parser on the `YouTube`
 //! developerlife.com channel.
 //!
 //! To learn about nom fundamentals, here are some resources:
@@ -90,7 +90,7 @@
 //! The nature of `nom` parsers is to simply error out when they don't match. And leave
 //! the `input` untouched, so that another parser have a go at it again. The nature of
 //! these parsing functions is kind of recursive in nature. So it's important identify
-//! edge and request_shutdown cases up front before diving into the parsing logic. You
+//! edge and `request_shutdown` cases up front before diving into the parsing logic. You
 //! will see this used in parsers which look for something more specific, if its not
 //! found, they error out, and allow less specific parsers to have a go at it, and so on.
 //!
@@ -126,37 +126,37 @@
 //! ```
 //!
 //! The last one on the list in the diagram above is
-//! [parse_block_markdown_text_with_or_without_new_line()]. Let's zoom into this function
-//! and see how it is composed.
+//! [`parse_block_markdown_text_with_or_without_new_line()`]. Let's zoom into this
+//! function and see how it is composed.
 //!
 //! ## The "catch all" parser, which is the most complicated, and the lowest priority
 //!
 //! The most complicated parser is the "catch all" parser or the "plain text" parser. This
 //! parser is the last one in the chain and it simply consumes the rest of the input and
 //! turns it into a `MdBlock::Text`. This parser is the most complicated because it has to
-//! deal with all the edge cases and request_shutdown cases that other parsers have not
+//! deal with all the edge cases and `request_shutdown` cases that other parsers have not
 //! dealt with. Such as special characters like `` ` ``, `*`, `_`, etc. They are all
 //! listed here:
 //!
 //! - If the input does not start with a special char in this `get_sp_char_set_2()`, then
 //!   this is the "Normal case". In this case the input is split at the first occurrence
 //!   of a special char in `get_sp_char_set_3()`. The "before" part is
-//!   [MdLineFragment::Plain] and the "after" part is parsed again by a more specific
+//!   [`MdLineFragment::Plain`] and the "after" part is parsed again by a more specific
 //!   parser.
 //! - If the input starts with a special char in this `get_sp_char_set_2()` and it is not
 //!   in the `get_sp_char_set_1()` with only 1 occurrence, then the behavior is different
 //!   "Edge case -> Normal case". Otherwise the behavior is "Edge case -> Special case".
 //!   - "Edge case -> Normal case" takes all the characters until `\n` or end of input and
-//!     turns it into a [MdLineFragment::Plain].
+//!     turns it into a [`MdLineFragment::Plain`].
 //!   - "Edge case -> Special case" splits the `input` before and after the special char.
-//!     The "before" part is turned into a [MdLineFragment::Plain] and the "after" part is
-//!     parsed again by a more specific parser.
+//!     The "before" part is turned into a [`MdLineFragment::Plain`] and the "after" part
+//!     is parsed again by a more specific parser.
 //!
 //! The reason this parser gets called repeatedly is because it is the last one in the
 //! chain. Its the lowest priority parser called by
-//! [parse_inline_fragments_until_eol_or_eoi()], which itself is called:
-//! 1. Repeatedly in a loop by [parse_block_markdown_text_with_or_without_new_line()].
-//! 2. And by [parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()].
+//! [`parse_inline_fragments_until_eol_or_eoi()`], which itself is called:
+//! 1. Repeatedly in a loop by [`parse_block_markdown_text_with_or_without_new_line()`].
+//! 2. And by [`parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()`].
 
 // External use.
 pub mod atomics;

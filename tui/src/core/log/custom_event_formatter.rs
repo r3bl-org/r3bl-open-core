@@ -15,11 +15,113 @@
  *   limitations under the License.
  */
 
-//! To use this [CustomEventFormatter] with the `tracing` crate, you must register it with
-//! the `tracing_subscriber` crate. This is done in [crate::create_fmt!]. Here's an
+//! # Custom event formatter for tracing
+//!
+//! This module provides a custom event formatter ([`CustomEventFormatter`]) for the
+//! [`tracing`] crate that produces beautifully formatted, colorized log output optimized
+//! for terminal UIs. The formatter is designed to work seamlessly with the R3BL TUI
+//! library's color scheme and terminal handling capabilities.
+//!
+//! ## Features
+//!
+//! - **Rich visual formatting**: Produces colorized output with timestamps, log levels,
+//!   span context, and structured field content
+//! - **Terminal-aware**: Automatically adapts to terminal width and handles Unicode/emoji
+//!   content correctly
+//! - **Two-line format**: Each log entry consists of a header line (timestamp, level,
+//!   message) and body lines (additional field content)
+//! - **Text wrapping**: Long content is intelligently wrapped to fit terminal width
+//! - **Color-coded levels**: Different log levels (ERROR, WARN, INFO, DEBUG, TRACE) have
+//!   distinct colors and sigils
+//!
+//! ## Log entry structure
+//!
+//! Each formatted log entry follows this structure:
+//! ```text
+//! <timestamp> [span_context] <level_sigil>: <spacer><message_heading>
+//! <spacer><bullet> <field_name>
+//! <spacer>  <field_value_wrapped_to_terminal_width>
+//! <spacer><separator_line>
+//! ```
+//!
+//! ## Usage examples
+//!
+//! ### Basic setup
+//!
+//! To use this formatter with the `tracing` crate, register it with `tracing_subscriber`:
+//!
+//! ```no_run
+//! use tracing_subscriber::{fmt::SubscriberBuilder, registry::LookupSpan};
+//! use r3bl_tui::log::{CustomEventFormatter, try_initialize_logging_global, DisplayPreference};
+//! use r3bl_tui::SharedWriter;
+//!
+//! // Method 1: Direct registration with tracing_subscriber
+//! let subscriber = SubscriberBuilder::default()
+//!     .event_format(CustomEventFormatter)
+//!     .finish();
+//!
+//! // Method 2: Using R3BL's helper function (recommended)
+//! # async fn fun() -> Result<(), Box<dyn std::error::Error>> {
+//! try_initialize_logging_global(DisplayPreference::Stdout)?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! # }
+//! ```
+//!
+//! ### Logging with dynamic messages
+//!
+//! The formatter supports dynamic message composition using the special `message` field:
+//!
+//! ```rust
+//! use tracing::info;
+//! use r3bl_tui::inline_string;
+//!
+//! // Using the message field for dynamic content
+//! let counter = 42;
+//! info!(
+//!     message = %inline_string!("[{}] Task completed successfully!", counter),
+//!     "duration_ms" = 150,
+//!     "task_id" = "task_001"
+//! );
+//! ```
+//!
+//! ## Special field handling
+//!
+//! The formatter has special handling for the `message` field to enable dynamic content:
+//!
+//! - When a field is named "message", its value becomes the heading text
+//! - The value is set to an empty string to prevent duplicate display
+//! - Other fields become key-value pairs in the body
+//! - Empty field values are automatically skipped to avoid blank lines
+//!
+//! ## Color scheme
+//!
+//! The formatter uses a carefully designed color scheme:
+//! - **ERROR**: Pink/red tones for critical issues
+//! - **WARN**: Orange tones for warnings
+//! - **INFO**: Salmon/orange tones for general information
+//! - **DEBUG**: Yellow tones for debugging information
+//! - **TRACE**: Purple tones for detailed tracing
+//! - **Body text**: Subtle gray tones for readability
+//! - **Headings**: Colorful "lolcat" rainbow effect for visual appeal
+//!
+//! ## Architecture
+//!
+//! The module is structured with:
+//! - [`CustomEventFormatter`]: Main formatter struct implementing [`FormatEvent`]
+//! - [`FieldContentParams`]: Parameter struct to avoid "too many arguments" clippy
+//!   warnings
+//! - [`VisitEventAndPopulateOrderedMapWithFields`]: Custom field visitor for structured
+//!   data
+//! - Helper methods for formatting timestamps, log levels, and content
+//! - Constants module with color definitions and formatting parameters
+//!
+//! To use this [`CustomEventFormatter`] with the `tracing` crate, you must register it
+//! with the `tracing_subscriber` crate. This is done in [`crate::create_fmt`!]. Here's an
 //! example of how you can do this with the `tracing` crate:
 //!
-//! ```
+//! ### Basic registration example
+//!
+//! ```rust
 //! # use tracing_subscriber::{fmt::SubscriberBuilder, registry::LookupSpan};
 //! # use r3bl_tui::log::CustomEventFormatter;
 //! let subscriber = SubscriberBuilder::default()
@@ -27,23 +129,25 @@
 //!     .finish();
 //! ```
 //!
-//! The reason for the strange logic in the
-//! [VisitEventAndPopulateOrderedMapWithFields::record_debug] function and the
-//! [CustomEventFormatter::format_event] skipping empty field values (ie, empty body
-//! lines) is that we wanted to be able to have a `message` field where a String can be
-//! used instead of "stringify!" which just dumps the string literal. This does not allow
-//! the message to be a variable, which means it can't be composed using other glyphs,
-//! such as the ones from [crate::glyphs]. To get around this limitation, the following
-//! logic was implemented.
+//! ## Implementation details
 //!
-//! The tracing crate deals with records that have fields. Each field has a name and
-//! value. The `message` field name is special and is automatically injected in cases
-//! where a call to `info!`, `warn!`, `error!`, etc. only has 1 expression, eg:
-//! `info!(foobar);`, `info!("foobar");` or `info!(format!("{}{}", "foo", "bar"));`.
+//! The reason for the special logic in
+//! [`VisitEventAndPopulateOrderedMapWithFields::record_debug`] and the
+//! [`CustomEventFormatter::format_event`] method regarding empty field values is to
+//! enable dynamic message composition. This allows the `message` field to contain
+//! variable content (such as strings built with [`crate::glyphs`]) rather than being
+//! limited to string literals.
 //!
-//! So to be able to create "dynamic" headings or field names, you have to explicitly use
-//! the `message` field name. Its value can then be any expression. There are lots of
-//! examples in the tests below.
+//! The tracing crate treats the `message` field specially - it's automatically injected
+//! when logging macros are called with a single expression:
+//! - `info!(foobar)` - becomes `message = "foobar"`
+//! - `info!("foobar")` - becomes `message = "foobar"`
+//! - `info!(format!("{}{}", "foo", "bar"))` - becomes `message = "foobar"`
+//!
+//! For R3BL crates, the convention is:
+//! - The `message` field forms the colorful header line
+//! - Additional fields form key-value pairs in the body
+//! - Empty field values are skipped to avoid blank lines
 
 use std::fmt::{self};
 
@@ -83,16 +187,14 @@ use crate::{ast,
 #[derive(Debug, Default)]
 pub struct CustomEventFormatter;
 
-pub fn build_spacer(max_display_width: ColWidth) -> InlineString {
-    let mut acc_padding = InlineString::with_capacity(max_display_width.as_usize());
-    pad_fmt!(
-        fmt: acc_padding,
-        pad_str: ENTRY_SEPARATOR_CHAR,
-        repeat_count: max_display_width.as_usize()
-    );
-
-    // Format spacer.
-    fg_color(tui_color!(dark_lizard_green), &acc_padding).to_small_str()
+/// Parameters for formatting field content.
+pub struct FieldContentParams<'a> {
+    heading: &'a str,
+    body: &'a str,
+    line_width_used: ColWidth,
+    max_display_width: ColWidth,
+    text_wrap_options: &'a Options<'a>,
+    spacer: &'a str,
 }
 
 // Colors: <https://en.wikipedia.org/wiki/ANSI_escape_code>
@@ -127,47 +229,20 @@ pub mod custom_event_formatter_constants {
     pub const TRACE_FG_COLOR: RgbValue =       RgbValue{red:186,green: 85,blue: 211};
 }
 
-impl<S, N> FormatEvent<S, N> for CustomEventFormatter
-where
-    S: Subscriber + for<'a> LookupSpan<'a>,
-    N: for<'a> FormatFields<'a> + 'static,
-{
-    /// Format the event into 2 lines:
-    /// 1. Heading: Timestamp, span context, level and message truncated to the available
-    ///    visible width (90 columns).
-    /// 2. Body: Body text wrapped to 90 columns wide.
-    ///
-    /// This function takes into account text that can contain emoji.
-    ///
-    /// The reason for the strange logic in
-    /// [VisitEventAndPopulateOrderedMapWithFields::record_debug] and the
-    /// [CustomEventFormatter::format_event] skipping empty field value lines is that we
-    /// wanted to be able to have a `message` field where a String can be used instead of
-    /// "stringify!" which just dumps the string literal. This does not allow the message
-    /// to be a variable, which means it can't be composed using other glyphs, such as the
-    /// ones from [crate::glyphs]. To get around this limitation, the following logic
-    /// was implemented.
-    fn format_event(
-        &self,
-        ctx: &tracing_subscriber::fmt::FmtContext<'_, S, N>,
-        mut f: tracing_subscriber::fmt::format::Writer<'_>,
-        event: &Event<'_>,
+mod helpers {
+    use super::*;
+
+    /// Write formatted timestamp to the writer.
+    pub fn write_timestamp(
+        f: &mut tracing_subscriber::fmt::format::Writer<'_>,
+        spacer: &str,
     ) -> fmt::Result {
-        // Get spacer.
-        let spacer = glyphs::SPACER_GLYPH;
-        let spacer_display_width = GCString::width(spacer);
-
-        // Length accumulator (for line width calculations).
-        let mut line_width_used = width(0);
-
-        // Custom timestamp.
         let timestamp = Local::now();
         let timestamp_str = inline_string!(
             "{sp}{ts}{sp}",
             ts = timestamp.format("%I:%M%P"),
             sp = spacer
         );
-        line_width_used += GCString::width(&timestamp_str);
         let timestamp_str_fmt = ast(
             timestamp_str,
             new_style!(
@@ -176,12 +251,20 @@ where
                 color_bg: {TuiColor::Rgb(HEADING_BG_COLOR)}
             ),
         );
-        write!(f, "\n{timestamp_str_fmt}")?;
+        write!(f, "\n{timestamp_str_fmt}")
+    }
 
-        // Custom span context.
+    /// Write formatted span context to the writer.
+    pub fn write_span_context<S, N>(
+        ctx: &tracing_subscriber::fmt::FmtContext<'_, S, N>,
+        f: &mut tracing_subscriber::fmt::format::Writer<'_>,
+    ) -> fmt::Result
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+        N: for<'a> FormatFields<'a> + 'static,
+    {
         if let Some(scope) = ctx.lookup_current() {
             let scope_str = inline_string!("[{}] ", scope.name());
-            line_width_used += GCString::width(&scope_str);
             let scope_str_fmt = ast(
                 scope_str,
                 new_style!(
@@ -190,24 +273,17 @@ where
                     color_bg: {TuiColor::Rgb(HEADING_BG_COLOR)}
                 ),
             );
-            write!(f, "{scope_str_fmt}")?;
+            write!(f, "{scope_str_fmt}")
+        } else {
+            Ok(())
         }
+    }
 
-        // Custom metadata formatting. For eg:
-        //
-        // metadata: Metadata {
-        //     name: "event src/bin/gen-certs.rs:110",
-        //     target: "gen_certs",
-        //     level: Level(
-        //         Debug,
-        //     ),
-        //     module_path: "gen_certs",
-        //     location: src/bin/gen-certs.rs:110,
-        //     fields: {msg, body},
-        //     callsite: Identifier(0x5a46fb928d40),
-        //     kind: Kind(EVENT),
-        // }
-
+    /// Get level string and style based on the event's log level.
+    pub fn get_level_info(
+        event: &Event<'_>,
+        spacer: &str,
+    ) -> (InlineString, crate::TuiStyle) {
         let mut style = new_style!();
         let level_str = match *event.metadata().level() {
             tracing::Level::ERROR => {
@@ -233,70 +309,167 @@ where
         };
         style.color_bg = Some(TuiColor::Rgb(HEADING_BG_COLOR));
         style.bold = Some(tui_style_attrib::Bold);
+        (level_str, style)
+    }
 
-        let level_str_display_width = GCString::width(&level_str);
+    /// Write formatted log level to the writer.
+    pub fn write_log_level(
+        f: &mut tracing_subscriber::fmt::format::Writer<'_>,
+        event: &Event<'_>,
+        spacer: &str,
+    ) -> fmt::Result {
+        let (level_str, style) = helpers::get_level_info(event, spacer);
         let level_str_fmt = ast(level_str, style);
+        write!(f, "{level_str_fmt}")
+    }
+
+    /// Calculate line width used by timestamp, span context, and level.
+    pub fn calculate_header_width<S, N>(
+        ctx: &tracing_subscriber::fmt::FmtContext<'_, S, N>,
+        event: &Event<'_>,
+        spacer: &str,
+    ) -> ColWidth
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+        N: for<'a> FormatFields<'a> + 'static,
+    {
+        let spacer_display_width = GCString::width(spacer);
+        let mut line_width_used = width(0);
+
+        // Timestamp width
+        let timestamp = Local::now();
+        let timestamp_str = inline_string!(
+            "{sp}{ts}{sp}",
+            ts = timestamp.format("%I:%M%P"),
+            sp = spacer
+        );
+        line_width_used += GCString::width(&timestamp_str);
+
+        // Span context width
+        if let Some(scope) = ctx.lookup_current() {
+            let scope_str = inline_string!("[{}] ", scope.name());
+            line_width_used += GCString::width(&scope_str);
+        }
+
+        // Level width
+        let (level_str, _) = helpers::get_level_info(event, spacer);
+        let level_str_display_width = GCString::width(&level_str);
         line_width_used += spacer_display_width;
         line_width_used += level_str_display_width;
-        write!(f, "{level_str_fmt}")?;
 
-        // Custom field formatting. For eg:
-        //
-        // fields: ValueSet {
-        //     msg: "pwd at end",
-        //     body: "Ok(\"/home/nazmul/github/rust-scratch/tls\")",
-        //     callsite: Identifier(0x5a46fb928d40),
-        // }
-        //
-        // Instead of:
-        // ctx.field_format().format_fields(writer.by_ref(), event)?;
+        line_width_used
+    }
 
+    /// Write formatted field content (heading and body).
+    pub fn write_field_content(
+        f: &mut tracing_subscriber::fmt::format::Writer<'_>,
+        FieldContentParams {
+            heading,
+            body,
+            line_width_used,
+            max_display_width,
+            text_wrap_options,
+            spacer,
+        }: FieldContentParams<'_>,
+    ) -> fmt::Result {
+        let spacer_display_width = GCString::width(spacer);
+
+        // Write heading line
+        let heading = remove_escaped_quotes(heading);
+        let line_1_width = {
+            let it = max_display_width - line_width_used - spacer_display_width;
+            width(*it)
+        };
+        let line_1_text = inline_string!(
+            "{spacer}{heading}",
+            spacer = spacer,
+            heading = truncate_from_right(&heading, line_1_width, false)
+        );
+        let line_1_text_fmt =
+            ColorWheel::lolcat_into_string(&line_1_text, Some(new_style!(bold)));
+        writeln!(f, "{line_1_text_fmt}")?;
+
+        // Write body lines
+        if !body.is_empty() {
+            let body = remove_escaped_quotes(body);
+            let body = wrap(&body, text_wrap_options);
+            for body_line in &body {
+                let body_line = truncate_from_right(body_line, max_display_width, true);
+                let body_line_fmt = ast(
+                    body_line,
+                    new_style!(
+                        color_fg: {TuiColor::Rgb(BODY_FG_COLOR)}
+                    ),
+                );
+                writeln!(f, "{body_line_fmt}")?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl<S, N> FormatEvent<S, N> for CustomEventFormatter
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+{
+    /// Format the event into 2 lines:
+    /// 1. Heading: Timestamp, span context, level and message truncated to the available
+    ///    visible width (90 columns).
+    /// 2. Body: Body text wrapped to 90 columns wide.
+    ///
+    /// This function takes into account text that can contain emoji.
+    ///
+    /// The reason for the strange logic in
+    /// [`VisitEventAndPopulateOrderedMapWithFields::record_debug`] and the
+    /// [`CustomEventFormatter::format_event`] skipping empty field value lines is that we
+    /// wanted to be able to have a `message` field where a String can be used instead of
+    /// "stringify!" which just dumps the string literal. This does not allow the message
+    /// to be a variable, which means it can't be composed using other glyphs, such as the
+    /// ones from [`crate::glyphs`]. To get around this limitation, the following logic
+    /// was implemented.
+    fn format_event(
+        &self,
+        ctx: &tracing_subscriber::fmt::FmtContext<'_, S, N>,
+        mut f: tracing_subscriber::fmt::format::Writer<'_>,
+        event: &Event<'_>,
+    ) -> fmt::Result {
+        let spacer = glyphs::SPACER_GLYPH;
+
+        // Write header components (timestamp, span context, log level).
+        helpers::write_timestamp(&mut f, spacer)?;
+        helpers::write_span_context(ctx, &mut f)?;
+        helpers::write_log_level(&mut f, event, spacer)?;
+
+        // Calculate header width for field content formatting.
+        let line_width_used = helpers::calculate_header_width(ctx, event, spacer);
+
+        // Extract and format field content.
         let mut order_map = OrderedMap::<InlineString, InlineString>::default();
         event.record(&mut VisitEventAndPopulateOrderedMapWithFields {
             inner: &mut order_map,
         });
 
-        // This is actually the terminal width of the process, not necessarily the
-        // terminal width of the process that is viewing the log output.
         let max_display_width = get_terminal_width();
-
         let text_wrap_options = Options::new(usize(*max_display_width))
             .initial_indent(FIRST_LINE_PREFIX)
             .subsequent_indent(SUBSEQUENT_LINE_PREFIX)
             .word_separator(WordSeparator::UnicodeBreakProperties);
 
+        // Write field content.
         for (heading, body) in order_map.iter() {
-            // Write heading line.
-            let heading = remove_escaped_quotes(heading);
-            line_width_used += spacer_display_width;
-            let line_1_width = {
-                let it = max_display_width - line_width_used;
-                width(*it)
-            };
-            let line_1_text = inline_string!(
-                "{spacer}{heading}",
-                heading = truncate_from_right(&heading, line_1_width, false)
-            );
-            let line_1_text_fmt =
-                ColorWheel::lolcat_into_string(&line_1_text, Some(new_style!(bold)));
-            writeln!(f, "{line_1_text_fmt}")?;
-
-            // Write body line(s).
-            if !body.is_empty() {
-                let body = remove_escaped_quotes(body);
-                let body = wrap(&body, &text_wrap_options);
-                for body_line in body.iter() {
-                    let body_line =
-                        truncate_from_right(body_line, max_display_width, true);
-                    let body_line_fmt = ast(
-                        body_line,
-                        new_style!(
-                            color_fg: {TuiColor::Rgb(BODY_FG_COLOR)}
-                        ),
-                    );
-                    writeln!(f, "{body_line_fmt}")?;
-                }
-            }
+            helpers::write_field_content(
+                &mut f,
+                FieldContentParams {
+                    heading,
+                    body,
+                    line_width_used,
+                    max_display_width,
+                    text_wrap_options: &text_wrap_options,
+                    spacer,
+                },
+            )?;
         }
 
         // Write the terminating line separator.
@@ -310,12 +483,12 @@ pub struct VisitEventAndPopulateOrderedMapWithFields<'a> {
 
 impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
     /// The reason for the strange logic in
-    /// [VisitEventAndPopulateOrderedMapWithFields::record_debug] and the
-    /// [CustomEventFormatter::format_event] skipping empty field value lines is that we
+    /// [`VisitEventAndPopulateOrderedMapWithFields::record_debug`] and the
+    /// [`CustomEventFormatter::format_event`] skipping empty field value lines is that we
     /// wanted to be able to have a `message` field where a String can be used instead of
     /// "stringify!" which just dumps the string literal. This does not allow the message
     /// to be a variable, which means it can't be composed using other glyphs, such as the
-    /// ones from [crate::glyphs]. To get around this limitation, the following logic
+    /// ones from [`crate::glyphs`]. To get around this limitation, the following logic
     /// was implemented.
     ///
     /// There is some strange logic in here to handle the `message` field. The `message`
@@ -336,7 +509,7 @@ impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
     ///
     /// When a field only has "message" field name, then it's value is taken to be the
     /// name. And the value is then set to an empty string. Empty values cause the
-    /// [CustomEventFormatter::format_event] to skip writing the body line.
+    /// [`CustomEventFormatter::format_event`] to skip writing the body line.
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         let field_name = field.name();
         let field_value = inline_string!("{:?}", value);
@@ -346,6 +519,19 @@ impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
             self.inner.insert(field_name.into(), field_value);
         }
     }
+}
+
+#[must_use]
+pub fn build_spacer(max_display_width: ColWidth) -> InlineString {
+    let mut acc_padding = InlineString::with_capacity(max_display_width.as_usize());
+    pad_fmt!(
+        fmt: acc_padding,
+        pad_str: ENTRY_SEPARATOR_CHAR,
+        repeat_count: max_display_width.as_usize()
+    );
+
+    // Format spacer.
+    fg_color(tui_color!(dark_lizard_green), &acc_padding).to_small_str()
 }
 
 #[cfg(test)]

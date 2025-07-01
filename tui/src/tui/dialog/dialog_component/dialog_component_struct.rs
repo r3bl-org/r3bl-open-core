@@ -38,9 +38,9 @@ use crate::{common::{CommonError, CommonErrorType, CommonResult},
             SurfaceBounds,
             DEBUG_TUI_MOD};
 
-/// This is a shim which allows the reusable [DialogEngine] to be used in the context of
+/// This is a shim which allows the reusable [`DialogEngine`] to be used in the context of
 /// [Component]. The main methods here simply pass thru all their arguments to the
-/// [DialogEngine].
+/// [`DialogEngine`].
 #[derive(Debug, Default)]
 pub struct DialogComponent<S, AS>
 where
@@ -59,7 +59,7 @@ where
     pub id: FlexBoxId,
     pub dialog_engine: DialogEngine,
     /// Make sure to dispatch actions to handle the user's dialog choice
-    /// [crate::DialogChoice].
+    /// [`crate::DialogChoice`].
     pub on_dialog_press_handler: Option<OnDialogPressFn<S, AS>>,
     /// Make sure to dispatch an action to update the dialog buffer's editor buffer.
     pub on_dialog_editor_change_handler: Option<OnDialogEditorChangeFn<S, AS>>,
@@ -78,15 +78,15 @@ where
     /// This shim simply calls
     /// [DialogEngineApi::render_engine](DialogEngineApi::render_engine) w/ all the
     /// necessary arguments:
-    /// - Global scope: [GlobalData] containing the app's state.
-    /// - Has focus: [HasFocus] containing whether the current box has focus.
-    /// - Surface bounds: [SurfaceBounds] containing the bounds of the current box.
+    /// - Global scope: [`GlobalData`] containing the app's state.
+    /// - Has focus: [`HasFocus`] containing whether the current box has focus.
+    /// - Surface bounds: [`SurfaceBounds`] containing the bounds of the current box.
     ///
     /// Note:
-    /// 1. The 3rd argument `_current_box` [FlexBox] is ignored since the dialog component
-    ///    breaks out of whatever box the layout places it in, and ends up painting itself
-    ///    over the entire screen.
-    /// 2. However, [SurfaceBounds] is saved for later use. And it is used to restrict
+    /// 1. The 3rd argument `_current_box` [`FlexBox`] is ignored since the dialog
+    ///    component breaks out of whatever box the layout places it in, and ends up
+    ///    painting itself over the entire screen.
+    /// 2. However, [`SurfaceBounds`] is saved for later use. And it is used to restrict
     ///    where the dialog can be placed on the screen.
     fn render(
         &mut self,
@@ -126,12 +126,12 @@ where
     /// This shim simply calls
     /// [DialogEngineApi::apply_event](DialogEngineApi::apply_event) w/ all the necessary
     /// arguments:
-    /// - Global scope: [GlobalData] containing the app's state.
-    /// - User input (from [crate::main_event_loop]): [InputEvent].
-    /// - Has focus: [HasFocus] containing whether the current box has focus.
+    /// - Global scope: [`GlobalData`] containing the app's state.
+    /// - User input (from [`crate::main_event_loop`]): [`InputEvent`].
+    /// - Has focus: [`HasFocus`] containing whether the current box has focus.
     ///
-    /// Usually a component must have focus in order for the [crate::App] to
-    /// [route_event_to_focused_component](crate::ComponentRegistry::route_event_to_focused_component)
+    /// Usually a component must have focus in order for the [`crate::App`] to
+    /// [`route_event_to_focused_component`](crate::ComponentRegistry::route_event_to_focused_component)
     /// in the first place.
     fn handle_event(
         &mut self,
@@ -184,7 +184,7 @@ where
                                 state,
                                 &mut main_thread_channel_sender.clone(),
                             );
-                        };
+                        }
 
                         // Trigger re-render, now that focus has been restored to
                         // non-modal component.
@@ -197,7 +197,7 @@ where
                         // Run the handler (if any) w/ `new_editor_buffer`.
                         if let Some(it) = &on_dialog_editor_change_handler {
                             it(state, &mut main_thread_channel_sender.clone());
-                        };
+                        }
 
                         // The handler should dispatch action to change state since
                         // dialog_buffer.editor_buffer is updated.
@@ -210,7 +210,7 @@ where
                     }
 
                     // All else.
-                    _ => Ok(EventPropagation::Propagate),
+                    DialogEngineApplyResponse::Noop => Ok(EventPropagation::Propagate),
                 }
             }
             // Error branch.
@@ -229,7 +229,7 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
-    /// The on_dialog_press_handler is a lambda that is called if the user presses enter
+    /// The `on_dialog_press_handler` is a lambda that is called if the user presses enter
     /// or escape. Typically this results in a Redux action being created and then
     /// dispatched to the given store.
     pub fn new(

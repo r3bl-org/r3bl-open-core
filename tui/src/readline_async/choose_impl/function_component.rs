@@ -15,7 +15,6 @@
  *   limitations under the License.
  */
 
-
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
                 terminal::{Clear, ClearType}};
 
@@ -49,8 +48,8 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
                 /* not including the header */ self.calculate_items_viewport_height(state) +
                 /* for header row(s) */ self.calculate_header_viewport_height(state);
 
-            // Allocate space. This is required so that the commands to move the cursor up and
-            // down shown below will work.
+            // Allocate space. This is required so that the commands to move the cursor up
+            // and down shown below will work.
             for _ in 0..*viewport_height {
                 println!();
             }
@@ -75,9 +74,9 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
 
             let viewport_height = match state.get_resize_hint() {
                 // Resize happened.
-                Some(ResizeHint::GotBigger)
-                | Some(ResizeHint::NoChange)
-                | Some(ResizeHint::GotSmaller) => {
+                Some(
+                    ResizeHint::GotBigger | ResizeHint::NoChange | ResizeHint::GotSmaller,
+                ) => {
                     /* not including the header */
                     self.calculate_items_viewport_height(state) +
                     /* for header row(s) */

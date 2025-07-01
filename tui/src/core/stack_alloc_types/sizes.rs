@@ -32,15 +32,16 @@ use smallstr::SmallString;
 use smallvec::SmallVec;
 
 /// Intermediate struct used to insert a grapheme cluster segment into an existing unicode
-/// string. When this gets larger than [INLINE_VEC_SIZE], it will be
-/// [smallvec::SmallVec::spilled] on the heap.
+/// string. When this gets larger than [`INLINE_VEC_SIZE`], it will be
+/// [`smallvec::SmallVec::spilled`] on the heap.
 pub type InlineVecStr<'a> = InlineVec<&'a str>;
 
 /// Stack allocated string storage for small strings. When this gets larger than
-/// [DEFAULT_STRING_STORAGE_SIZE], it will be [smallvec::SmallVec::spilled] on the heap.
+/// [`DEFAULT_STRING_STORAGE_SIZE`], it will be [`smallvec::SmallVec::spilled`] on the
+/// heap.
 pub type InlineString = SmallString<[u8; DEFAULT_STRING_STORAGE_SIZE]>;
 
-/// Replacement for [std::borrow::Cow] that uses [InlineString] if it is owned.
+/// Replacement for [`std::borrow::Cow`] that uses [`InlineString`] if it is owned.
 /// And `&str` if it is borrowed.
 #[derive(Clone, Debug, PartialEq)]
 pub enum InlineStringCow<'a> {
@@ -49,8 +50,11 @@ pub enum InlineStringCow<'a> {
 }
 
 impl<'a> InlineStringCow<'a> {
+    #[must_use]
     pub fn new_empty_borrowed() -> Self { InlineStringCow::Borrowed("") }
+    #[must_use]
     pub fn new_borrowed(arg: &'a str) -> Self { InlineStringCow::Borrowed(arg) }
+    #[must_use]
     pub fn new_owned(arg: InlineString) -> Self { InlineStringCow::Owned(arg) }
 }
 
@@ -73,13 +77,13 @@ impl Display for InlineStringCow<'_> {
 }
 
 /// Stack allocated tiny string storage for small char sequences. When this gets larger
-/// than [DEFAULT_CHAR_STORAGE_SIZE], it will be [smallvec::SmallVec::spilled] on the
+/// than [`DEFAULT_CHAR_STORAGE_SIZE`], it will be [`smallvec::SmallVec::spilled`] on the
 /// heap.
 pub type TinyInlineString = SmallString<[u8; DEFAULT_CHAR_STORAGE_SIZE]>;
 pub const DEFAULT_CHAR_STORAGE_SIZE: usize = 4;
 
 /// Stack allocated string storage for small documents. When this gets larger than
-/// [DEFAULT_DOCUMENT_SIZE], it will be [smallvec::SmallVec::spilled] on the heap.
+/// [`DEFAULT_DOCUMENT_SIZE`], it will be [`smallvec::SmallVec::spilled`] on the heap.
 pub type DocumentStorage = SmallString<[u8; DEFAULT_DOCUMENT_SIZE]>;
 /// 128KB, or approximately 2200 lines of Markdown text (assuming 60 chars per line).
 pub const DEFAULT_DOCUMENT_SIZE: usize = 131_072;
@@ -90,7 +94,7 @@ pub const DEFAULT_DOCUMENT_SIZE: usize = 131_072;
 // memory, physical memory, and memory mapped files.
 pub const DEFAULT_READ_BUFFER_SIZE: usize = 16384;
 
-/// Stack allocated list, that can [smallvec::SmallVec::spilled] into the heap if it gets
-/// larger than [INLINE_VEC_SIZE].
+/// Stack allocated list, that can [`smallvec::SmallVec::spilled`] into the heap if it
+/// gets larger than [`INLINE_VEC_SIZE`].
 pub type InlineVec<T> = SmallVec<[T; INLINE_VEC_SIZE]>;
 pub const INLINE_VEC_SIZE: usize = 8;

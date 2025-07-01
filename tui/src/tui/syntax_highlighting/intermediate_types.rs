@@ -24,11 +24,11 @@
 //!    Markdown parser).
 //!
 //! In both cases:
-//! 1. The source document comes from a [crate::editor] component, which is a [Vec] of
-//!    [GCString] (Unicode strings).
+//! 1. The source document comes from a [`crate::editor`] component, which is a [Vec] of
+//!    [`GCString`] (Unicode strings).
 //! 2. This intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area of
 //!    the editor component (based on scroll state in the viewport). And finally that is
-//!    converted to a [crate::TuiStyledTexts].
+//!    converted to a [`crate::TuiStyledTexts`].
 
 use crate::{get_foreground_dim_style,
             get_metadata_tags_marker_style,
@@ -69,6 +69,7 @@ impl Default for StyleUSSpan {
 }
 
 impl StyleUSSpan {
+    #[must_use]
     pub fn new(style: TuiStyle, arg_text: &str) -> Self {
         Self {
             style,
@@ -77,14 +78,15 @@ impl StyleUSSpan {
     }
 }
 
-/// A line of text is made up of multiple [StyleUSSpan]s.
+/// A line of text is made up of multiple [`StyleUSSpan`]s.
 pub type StyleUSSpanLine = List<StyleUSSpan>;
 
-/// A document is made up of multiple [StyleUSSpanLine]s.
+/// A document is made up of multiple [`StyleUSSpanLine`]s.
 pub type StyleUSSpanLines = List<StyleUSSpanLine>;
 
 impl StyleUSSpanLine {
     /// Eg: "@tags: [tag1, tag2, tag3]"
+    #[must_use]
     pub fn from_csvp(
         key: &str,
         tag_list: &List<&'_ str>,
@@ -121,6 +123,7 @@ impl StyleUSSpanLine {
     }
 
     /// Eg: "@title: Something"
+    #[must_use]
     pub fn from_kvp(
         key: &str,
         text: &str,
@@ -155,7 +158,8 @@ impl StyleUSSpanLine {
     }
 
     /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line
-    /// is represented as a [List] of ([TuiStyle], [GCString])`s.
+    /// is represented as a [List] of ([`TuiStyle`], [`GCString`])'s.
+    #[must_use]
     pub fn clip(
         &self,
         scr_ofs: ScrOfs,
@@ -181,27 +185,25 @@ impl StyleUSSpanLine {
 
             let mut clipped_text_fragment = InlineString::new();
 
-            for seg_str in text_gcs.iter() {
+            for seg_str in text_gcs {
                 for character in seg_str.chars() {
                     match matcher.match_next(character) {
                         CharacterMatchResult::Keep => {
                             clipped_text_fragment.push(character);
-                            continue;
+                            /* continue */
                         }
                         CharacterMatchResult::Reset => {
                             clipped_text_fragment.clear();
-                            continue;
+                            /* continue */
                         }
                         CharacterMatchResult::ResetAndKeep => {
                             clipped_text_fragment.clear();
                             clipped_text_fragment.push(character);
-                            continue;
+                            /* continue */
                         }
+                        CharacterMatchResult::Skip => { /* continue */ }
                         CharacterMatchResult::Finished => {
                             break;
-                        }
-                        CharacterMatchResult::Skip => {
-                            continue;
                         }
                     }
                 }
@@ -215,6 +217,7 @@ impl StyleUSSpanLine {
         TuiStyledTexts::from(list)
     }
 
+    #[must_use]
     pub fn display_width(&self) -> ColWidth {
         let mut display_width = width(0);
         for span in self.iter() {
@@ -223,6 +226,7 @@ impl StyleUSSpanLine {
         display_width
     }
 
+    #[must_use]
     pub fn get_plain_text(&self) -> InlineString {
         let mut plain_text_acc = InlineString::new();
         for span in self.iter() {
@@ -233,6 +237,7 @@ impl StyleUSSpanLine {
     }
 
     /// Clip the content `[scroll_offset.col .. max cols]`.
+    #[must_use]
     pub fn get_plain_text_clipped(
         &self,
         scroll_offset_col_index: ColIndex,
@@ -266,7 +271,7 @@ mod convert {
     }
 }
 
-/// Make sure that the code to clip styled text to a range [ start_col .. end_col ] works.
+/// Make sure that the code to clip styled text to a range [ `start_col` .`end_col`ol ] works.
 /// The list of styled unicode string represents a single line of text in an editor
 /// component.
 #[cfg(test)]

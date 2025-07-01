@@ -105,27 +105,28 @@ macro_rules! key_press {
     };
 }
 
-/// This is equivalent to [crossterm::event::KeyEvent] except that it is cleaned up
+/// This is equivalent to [`crossterm::event::KeyEvent`] except that it is cleaned up
 /// semantically and impossible states are removed.
 ///
 /// It enables the TUI framework to use a different backend other than `crossterm` in the
-/// future. Apps written using this framework use [KeyPress] and not
-/// [crossterm::event::KeyEvent]. See [convert_key_event] for more information on the
+/// future. Apps written using this framework use [`KeyPress`] and not
+/// [`crossterm::event::KeyEvent`]. See [`convert_key_event`] for more information on the
 /// conversion.
 ///
-/// Please use the [key_press!] macro instead of directly constructing this struct.
+/// Please use the [`key_press`!] macro instead of directly constructing this struct.
 ///
 /// # Kitty keyboard protocol support limitations
 ///
 /// 1. `Keypress` explicitly matches on `KeyEventKind::Press` as of crossterm 0.25.0. It
-///    added a new field in KeyEvent, called
+///    added a new field in `KeyEvent`, called
 ///    [`kind`](https://github.com/crossterm-rs/crossterm/blob/10d1dc246dcd708b4902d53a542f732cba32ce99/src/event.rs#L645).
 ///    Currently in terminals that do NOT support [kitty keyboard
 ///    protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), in other words most
 ///    terminals, the `kind` is always `Press`. This is made explicit in the code.
 ///
-/// 2. Also, the [KeyEvent]'s `state` is totally ignored in the conversion to [KeyPress].
-///    The [crossterm::event::KeyEventState] isn't even considered in the conversion code.
+/// 2. Also, the [`KeyEvent`]'s `state` is totally ignored in the conversion to
+///    [`KeyPress`]. The [`crossterm::event::KeyEventState`] isn't even considered in the
+///    conversion code.
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum KeyPress {
     Plain { key: Key },
@@ -138,8 +139,8 @@ pub enum Key {
     /// - `a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z`
     /// - `A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z`
     /// - `1, 2, 3, 4, 5, 6, 7, 8, 9, 0`
-    /// - `!, @, #, $, %, ^, &, *, (, ), _, +, -, =, [, ], {, }, |, \, ,, ., /, <, >, ?,
-    ///   `, ~`
+    /// - `!, @, #, $, %, ^, &, *, (, ), _, +, -, =`
+    /// - `[, ], {, }, |, \, ,, ., /, <, >, ?, ~`
     Character(char),
     SpecialKey(SpecialKey),
     FunctionKey(FunctionKey),
@@ -158,11 +159,11 @@ pub enum Key {
     /// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
     /// - [`PushKeyboardEnhancementFlags`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
     ///
-    /// **Note:** [MediaKey] and [SpecialKey] can be read if:
+    /// **Note:** [`MediaKey`] and [`SpecialKey`] can be read if:
     /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` has been enabled with
     /// `PushKeyboardEnhancementFlags`.
     ///
-    /// **Note:** [ModifierKeyEnum] can only be read if **both**
+    /// **Note:** [`ModifierKeyEnum`] can only be read if **both**
     /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` and
     /// `KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES` have been enabled
     /// with `PushKeyboardEnhancementFlags`.
@@ -229,14 +230,14 @@ pub enum SpecialKey {
     Esc,
 }
 
-/// Typecast / convert [KeyEvent] to [KeyPress].
+/// Typecast / convert [`KeyEvent`] to [`KeyPress`].
 ///
 /// There is special handling of displayable characters in this conversion. This occurs if
-/// the [KeyEvent] is a [KeyCode::Char].
+/// the [`KeyEvent`] is a [`KeyCode::Char`].
 ///
 /// An example is typing "X" by pressing "Shift + X" on the keyboard, which shows up in
-/// crossterm as "Shift + X". In this case, the [KeyModifiers] `SHIFT` and `NONE` are
-/// ignored when converted into a [KeyPress]. This means the following:
+/// crossterm as "Shift + X". In this case, the [`KeyModifiers`] `SHIFT` and `NONE` are
+/// ignored when converted into a [`KeyPress`]. This means the following:
 ///
 /// ```text
 /// ╔════════════════════╦════════════════════════════════════════════════════════════════╗
@@ -262,7 +263,7 @@ pub mod convert_key_event {
 
     impl TryFrom<KeyEvent> for KeyPress {
         type Error = ();
-        /// Convert [KeyEvent] to [KeyPress].
+        /// Convert [`KeyEvent`] to [`KeyPress`].
         fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> {
             special_handling_of_character_key_event(key_event)
         }
@@ -271,45 +272,33 @@ pub mod convert_key_event {
     pub(crate) fn special_handling_of_character_key_event(
         key_event: KeyEvent,
     ) -> Result<KeyPress, ()> {
-        return match key_event {
-      KeyEvent {
-        kind: KeyEventKind::Press,
-        .. /* ignore everything else: code, modifiers, etc */
-      } => {
-        process_only_key_event_kind_press(key_event)
-      }
-      _=> {
-        Err(())
-      }
-    };
-
         fn process_only_key_event_kind_press(
             key_event: KeyEvent,
         ) -> Result<KeyPress, ()> {
             match key_event {
-        // If character keys, then ignore SHIFT or NONE modifiers.
-        KeyEvent {
-          code: KeyCode::Char(character),
-          modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT, // Ignore SHIFT.
-          .. // Ignore `state`. We know `kind`=`KeyEventKind::Press`.
-        } => {
-          generate_character_key(character)
-        },
-        // Non character keys.
-        _ => {
-          let maybe_modifiers_keys_mask= try_convert_key_modifiers(&key_event.modifiers);
-          let maybe_key: Option<Key> = copy_code_from_key_event(&key_event);
-          if let Some(key) = maybe_key {
-            if let Some(mask) = maybe_modifiers_keys_mask {
-              generate_non_character_key_with_modifiers(key, mask)
-            } else {
-              generate_non_character_key_without_modifiers(key)
+                // If character keys, then ignore SHIFT or NONE modifiers.
+                KeyEvent {
+                    code: KeyCode::Char(character),
+                    modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT, // Ignore SHIFT.
+                    .. // Ignore `state`. We know `kind`=`KeyEventKind::Press`.
+                } => {
+                    generate_character_key(character)
+                },
+                // Non character keys.
+                _ => {
+                    let maybe_modifiers_keys_mask = try_convert_key_modifiers(&key_event.modifiers);
+                    let maybe_key: Option<Key> = copy_code_from_key_event(&key_event);
+                    if let Some(key) = maybe_key {
+                        if let Some(mask) = maybe_modifiers_keys_mask {
+                            generate_non_character_key_with_modifiers(key, mask)
+                        } else {
+                            generate_non_character_key_without_modifiers(key)
+                        }
+                    } else {
+                        Err(())
+                    }
+                }
             }
-          } else {
-            Err(())
-          }
-        }
-      }
         }
 
         fn generate_character_key(character: char) -> Result<KeyPress, ()> {
@@ -328,10 +317,22 @@ pub mod convert_key_event {
         ) -> Result<KeyPress, ()> {
             Ok(KeyPress::WithModifiers { mask, key })
         }
+
+        match key_event {
+            KeyEvent {
+                kind: KeyEventKind::Press,
+                .. /* ignore everything else: code, modifiers, etc */
+            } => {
+                process_only_key_event_kind_press(key_event)
+            }
+            _ => {
+                Err(())
+            }
+        }
     }
 
     /// Macro to insulate this library from changes in crossterm
-    /// [crossterm::event::KeyEvent] constructor & fields.
+    /// [`crossterm::event::KeyEvent`] constructor & fields.
     #[macro_export]
     macro_rules! crossterm_keyevent {
         (
@@ -360,6 +361,7 @@ pub mod convert_key_event {
         }
     }
 
+    #[must_use]
     pub fn copy_code_from_key_event(key_event: &KeyEvent) -> Option<Key> {
         // Make the code easier to read below using this alias.
         type KC = KeyCode;

@@ -27,7 +27,7 @@ const OS_SPECIFIC_ENV_PATH_SEPARATOR: &str = ";";
 #[cfg(not(target_os = "windows"))]
 const OS_SPECIFIC_ENV_PATH_SEPARATOR: &str = ":";
 
-#[derive(Debug, Display, EnumString)]
+#[derive(Debug, Display, EnumString, Copy, Clone, PartialEq, Eq)]
 pub enum EnvKeys {
     #[strum(serialize = "PATH")]
     Path,
@@ -64,6 +64,7 @@ pub type EnvVarsSlice<'a> = &'a [(String, String)];
 /// assert_eq!(path_envs_ref, path_envs_ref_clone);
 /// assert_eq!(path_envs_ref, path_envs_ref_2);
 /// ```
+#[must_use]
 pub fn gen_path_env_vars(path_value: &str) -> EnvVars {
     vec![(EnvKeys::Path.to_string(), path_value.to_string())]
 }

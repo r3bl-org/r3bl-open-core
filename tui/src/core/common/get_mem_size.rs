@@ -19,27 +19,30 @@ pub trait GetMemSize {
     fn get_mem_size(&self) -> usize;
 }
 
-/// Calculates the total memory size of a slice of items that implement [GetMemSize].
+/// Calculates the total memory size of a slice of items that implement [`GetMemSize`].
 /// This is useful when you need to calculate the total memory size of a collection of
-/// items (eg [Vec] or [smallvec::SmallVec] of [crate::GCString]).
+/// items (eg [Vec] or [`smallvec::SmallVec`] of [`crate::GCString`]).
+#[must_use]
 pub fn slice_size<T: GetMemSize>(slice: &[T]) -> usize {
-    slice.iter().map(|item| item.get_mem_size()).sum::<usize>()
+    slice.iter().map(GetMemSize::get_mem_size).sum::<usize>()
 }
 
 /// Calculates the total memory size of an iterator of items that implement
-/// [GetMemSize]. This is useful when you need to calculate the total memory size of
-/// an iterator of items (eg: from [crate::RingBufferHeap] or
-/// [crate::RingBufferStack]) that contains items that are [Option] of [GetMemSize].
+/// [`GetMemSize`]. This is useful when you need to calculate the total memory size of
+/// an iterator of items (eg: from [`crate::RingBufferHeap`] or
+/// [`crate::RingBufferStack`]) that contains items that are [Option] of [`GetMemSize`].
+#[must_use]
 pub fn iter_size<T: GetMemSize, I: Iterator<Item = Option<T>>>(iter: I) -> usize {
-    iter.map(|item| item.as_ref().map_or(0, |item| item.get_mem_size()))
+    iter.map(|item| item.as_ref().map_or(0, GetMemSize::get_mem_size))
         .sum::<usize>()
 }
 
+#[must_use]
 pub fn ring_buffer_size<T: GetMemSize, const N: usize>(
     ring_buffer: &crate::RingBufferHeap<T, N>,
 ) -> usize {
     ring_buffer
         .iter()
-        .map(|item| item.get_mem_size())
+        .map(GetMemSize::get_mem_size)
         .sum::<usize>()
 }

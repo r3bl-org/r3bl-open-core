@@ -34,6 +34,7 @@ pub enum CaretRowLocationInBuffer {
 }
 
 /// Locate the col.
+#[must_use]
 pub fn locate_col(editor_buffer: &EditorBuffer) -> CaretColLocationInLine {
     if col_is_at_start_of_line(editor_buffer) {
         CaretColLocationInLine::AtStart
@@ -63,6 +64,7 @@ fn col_is_at_end_of_line(buffer: &EditorBuffer) -> bool {
 }
 
 /// Locate the row.
+#[must_use]
 pub fn locate_row(buffer: &EditorBuffer) -> CaretRowLocationInBuffer {
     if row_is_at_top_of_buffer(buffer) {
         CaretRowLocationInBuffer::AtTop
@@ -121,6 +123,7 @@ pub mod caret_scroll_index {
     ///   └─────▴────┘
     ///   C0123456789
     /// ```
+    #[must_use]
     pub fn col_index_for_width(col_amt: ColWidth) -> ColIndex {
         col_amt.convert_to_col_index() /* -1 */ + col(1) /* +1 */
     }
@@ -128,6 +131,7 @@ pub mod caret_scroll_index {
     /// This is the same number as the given height, just in different "unit". The caret
     /// max index which is the scroll index goes 1 past the end of the given height's
     /// index.
+    #[must_use]
     pub fn row_index_for_height(row_amt: RowHeight) -> RowIndex {
         row_amt.convert_to_row_index() /* -1 */ + row(1) /* +1 */
     }

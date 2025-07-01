@@ -65,22 +65,6 @@ mod tests {
 
     /// Main container "container".
     fn create_main_container(surface: &mut Surface) -> CommonResult<()> {
-        throws!({
-            surface.box_start(FlexBoxProps {
-                id: FlexBoxId::from(0),
-                dir: LayoutDirection::Horizontal,
-                requested_size_percent: req_size_pc!(width:100, height:100),
-                maybe_styles: get_tui_styles! { @from: surface.stylesheet, [0] },
-            })?;
-
-            make_container_assertions(surface)?;
-
-            create_left_col(surface)?;
-            create_right_col(surface)?;
-
-            surface.box_end()?;
-        });
-
         fn make_container_assertions(surface: &Surface) -> CommonResult<()> {
             throws!({
                 let layout_item = surface.stack_of_boxes.first().unwrap();
@@ -113,23 +97,26 @@ mod tests {
                 );
             });
         }
+
+        throws!({
+            surface.box_start(FlexBoxProps {
+                id: FlexBoxId::from(0),
+                dir: LayoutDirection::Horizontal,
+                requested_size_percent: req_size_pc!(width:100, height:100),
+                maybe_styles: get_tui_styles! { @from: surface.stylesheet, [0] },
+            })?;
+
+            make_container_assertions(surface)?;
+
+            create_left_col(surface)?;
+            create_right_col(surface)?;
+
+            surface.box_end()?;
+        });
     }
 
     /// Left column 1.
     fn create_left_col(surface: &mut Surface) -> CommonResult<()> {
-        throws!({
-            // With macro.
-            box_start! {
-              in:                     surface,
-              id:                     FlexBoxId::from(1),
-              dir:                    LayoutDirection::Vertical,
-              requested_size_percent: req_size_pc!(width:50, height:100),
-              styles:                 [1]
-            }
-            make_left_col_assertions(surface)?;
-            box_end!(in: surface);
-        });
-
         fn make_left_col_assertions(surface: &Surface) -> CommonResult<()> {
             throws!({
                 let layout_item = surface.stack_of_boxes.last().unwrap();
@@ -159,23 +146,24 @@ mod tests {
                 );
             });
         }
+
+        throws!({
+            // With macro.
+            box_start! {
+              in:                     surface,
+              id:                     FlexBoxId::from(1),
+              dir:                    LayoutDirection::Vertical,
+              requested_size_percent: req_size_pc!(width:50, height:100),
+              styles:                 [1]
+            }
+            make_left_col_assertions(surface)?;
+            box_end!(in: surface);
+        });
     }
 
     /// Right column 2.
     fn create_right_col(surface: &mut Surface) -> CommonResult<()> {
-        throws!({
-            // No macro.
-            surface.box_start(FlexBoxProps {
-                maybe_styles: get_tui_styles! { @from: surface.stylesheet, [2] },
-                id: FlexBoxId::from(2),
-                dir: LayoutDirection::Vertical,
-                requested_size_percent: req_size_pc!(width:50, height:100),
-            })?;
-            make_right_col_assertions(surface)?;
-            surface.box_end()?;
-        });
-
-        fn make_right_col_assertions(surface: &Surface) -> CommonResult<()> {
+                fn make_right_col_assertions(surface: &Surface) -> CommonResult<()> {
             throws!({
                 let current_box = surface.stack_of_boxes.last().unwrap();
                 assert_eq2!(current_box.id, FlexBoxId::from(2));
@@ -202,6 +190,19 @@ mod tests {
                 );
             });
         }
+
+        throws!({
+            // No macro.
+            surface.box_start(FlexBoxProps {
+                maybe_styles: get_tui_styles! { @from: surface.stylesheet, [2] },
+                id: FlexBoxId::from(2),
+                dir: LayoutDirection::Vertical,
+                requested_size_percent: req_size_pc!(width:50, height:100),
+            })?;
+            make_right_col_assertions(surface)?;
+            surface.box_end()?;
+        });
+
     }
 
     /// Create a stylesheet containing styles using DSL.

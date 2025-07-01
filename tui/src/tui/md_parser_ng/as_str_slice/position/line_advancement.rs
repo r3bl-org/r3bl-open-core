@@ -20,6 +20,7 @@ use std::convert::AsRef;
 use nom::{IResult, Parser};
 
 use crate::{as_str_slice::AsStrSlice,
+            idx,
             CharacterIndex,
             CharacterLength,
             NErr,
@@ -285,7 +286,7 @@ impl<'a> AsStrSlice<'a> {
     /// ```
     ///
     /// At line 4 (last empty line):
-    /// - New logic: line_index=4, lines.len()=5 → HasMoreContent
+    /// - New logic: `line_index=4`, lines.len()=5 → `HasMoreContent`
     ///
     /// ### Only newlines input (fixed)
     /// ```text
@@ -294,7 +295,7 @@ impl<'a> AsStrSlice<'a> {
     /// ```
     ///
     /// At line 2 (last empty line):
-    /// - New logic: line_index=2, lines.len()=3 → HasMoreContent
+    /// - New logic: `line_index=2`, lines.len()=3 → `HasMoreContent`
     fn determine_input_state(&self) -> InputState {
         // Enhanced line-based exhaustion detection
         // Input is exhausted only if we've gone past all available lines
@@ -318,7 +319,6 @@ impl<'a> AsStrSlice<'a> {
 
     /// Determines what type of advancement occurred after parsing.
     fn determine_advancement_state(
-        &self,
         initial_position: InitialParsePosition,
         remainder: &AsStrSlice<'a>,
     ) -> AdvancementState {
@@ -339,8 +339,7 @@ impl<'a> AsStrSlice<'a> {
         let current_line = remainder
             .lines
             .get(remainder.line_index.as_usize())
-            .map(|line| line.as_ref())
-            .unwrap_or("");
+            .map_or("", std::convert::AsRef::as_ref);
 
         if current_line.trim().is_empty() {
             return AdvancementState::HandledEmptyLine;
@@ -356,7 +355,7 @@ impl<'a> AsStrSlice<'a> {
         remainder: AsStrSlice<'a>,
     ) -> Result<AsStrSlice<'a>, NErr<NError<AsStrSlice<'a>>>> {
         let advancement_state =
-            self.determine_advancement_state(initial_position, &remainder);
+            Self::determine_advancement_state(initial_position, &remainder);
 
         match advancement_state {
             AdvancementState::AdvancedToNewLine => {
@@ -394,7 +393,7 @@ impl<'a> AsStrSlice<'a> {
     /// 2. **Line completion**: Advances to the end of the current line if not already
     ///    there
     /// 3. **Next line advancement**: Two cases:
-    ///    - **Not last line**: Creates fresh AsStrSlice at next line (standard case)
+    ///    - **Not last line**: Creates fresh `AsStrSlice` at next line (standard case)
     ///    - **Last line**: Sets `line_index = lines.len()` to indicate completion
     ///
     /// ## Critical last line handling
@@ -405,7 +404,7 @@ impl<'a> AsStrSlice<'a> {
     /// addresses this by:
     /// - Sets `line_index = lines.len()` (beyond array bounds).
     /// - Sets `char_index = 0` for clean state.
-    /// - Signals completion without advancing current_taken beyond bounds.
+    /// - Signals completion without advancing `current_taken` beyond bounds.
     ///
     /// ## Use cases
     ///
@@ -417,7 +416,7 @@ impl<'a> AsStrSlice<'a> {
     ///
     /// When processing line 4 (last empty line):
     /// 1. Parser recognizes empty line, creates `Text([])`
-    /// 2. advance_to_next_line called with remainder at line 4
+    /// 2. `advance_to_next_line` called with remainder at line 4
     /// 3. Since line 4 is last line (4 == 5-1):
     ///    - Sets `line_index = 5` (beyond array)
     ///    - Sets `char_index = 0`
@@ -449,8 +448,7 @@ impl<'a> AsStrSlice<'a> {
         let current_line_len = remainder
             .lines
             .get(remainder.line_index.as_usize())
-            .map(|line| line.as_ref().chars().count())
-            .unwrap_or(0);
+            .map_or(0, |line| line.as_ref().chars().count());
 
         // Advance to end of current line if not already there.
         if remainder.char_index.as_usize() < current_line_len {
@@ -463,36 +461,37 @@ impl<'a> AsStrSlice<'a> {
         // Check if we can advance to the next line.
         if remainder.line_index.as_usize() < remainder.lines.len() - 1 {
             // Create a fresh AsStrSlice at the next line with no max_len constraint.
-            let next_line_index = remainder.line_index + crate::idx(1);
+            let next_line_index = remainder.line_index + idx(1);
             remainder = AsStrSlice::with_limit(
                 remainder.lines,
                 next_line_index,
-                crate::idx(0), // Start at beginning of next line.
-                None,          // Remove max_len constraint
+                idx(0), // Start at beginning of next line.
+                None,   // Remove max_len constraint
             );
         } else {
             // We're at the last line - advance to indicate we've processed it
             // but position ourselves at line_index = lines.len() to indicate completion
             remainder.line_index = remainder.lines.len().into();
-            remainder.char_index = crate::idx(0);
+            remainder.char_index = idx(0);
         }
 
         Ok(remainder)
     }
 
     /// Helper method to check if the current line is empty or whitespace-only.
+    #[must_use]
     pub fn is_current_line_empty_or_whitespace(&self) -> bool {
         self.lines
             .get(self.line_index.as_usize())
-            .map(|line| line.as_ref().trim().is_empty())
-            .unwrap_or(true)
+            .is_none_or(|line| line.as_ref().trim().is_empty())
     }
 
     /// Helper method to get the current line as a string reference.
+    #[must_use]
     pub fn get_current_line(&self) -> Option<&str> {
         self.lines
             .get(self.line_index.as_usize())
-            .map(|line| line.as_ref())
+            .map(std::convert::AsRef::as_ref)
     }
 }
 
@@ -527,8 +526,8 @@ mod tests_ensure_advance_with_parser {
         assert!(result.is_ok());
 
         let (remainder, _) = result.unwrap();
-        assert_eq2!(remainder.line_index, crate::idx(1));
-        assert_eq2!(remainder.char_index, crate::idx(0));
+        assert_eq2!(remainder.line_index, idx(1));
+        assert_eq2!(remainder.char_index, idx(0));
     }
 
     #[test]
@@ -539,15 +538,15 @@ mod tests_ensure_advance_with_parser {
         let result = input.ensure_advance_with_parser(&mut empty_line_parser);
         assert!(result.is_ok());
 
-        let (remainder, _) = result.unwrap();
-        assert_eq2!(remainder.line_index, crate::idx(1));
+        let (remainder, ()) = result.unwrap();
+        assert_eq2!(remainder.line_index, idx(1));
     }
 
     #[test]
     fn test_parser_at_end_of_input() {
         let lines = [GCString::new("test")];
         let mut input = AsStrSlice::from(&lines);
-        input.line_index = crate::idx(1); // Beyond available lines
+        input.line_index = idx(1); // Beyond available lines
 
         let result = input.ensure_advance_with_parser(&mut simple_parser);
         assert!(result.is_err());
@@ -565,7 +564,7 @@ mod tests_ensure_advance_with_parser {
         assert_eq2!(input.determine_input_state(), InputState::HasMoreContent);
 
         let mut exhausted_input = input;
-        exhausted_input.line_index = crate::idx(1);
+        exhausted_input.line_index = idx(1);
         assert_eq2!(
             exhausted_input.determine_input_state(),
             InputState::AtEndOfInput

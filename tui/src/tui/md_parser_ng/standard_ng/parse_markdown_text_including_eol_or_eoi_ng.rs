@@ -106,7 +106,7 @@ pub fn parse_line_text_advance_ng<'a>(
 mod inner {
     use super::*;
 
-    /// Parse a single line of markdown text [MdLineFragments] not terminated by EOL [NEW_LINE].
+    /// Parse a single line of markdown text [`MdLineFragments`] not terminated by EOL [`NEW_LINE`].
     #[rustfmt::skip]
     pub fn without_new_line<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
         // Check if input is empty.
@@ -258,7 +258,7 @@ mod tests_parse_markdown_text_including_eol_or_eoi {
         let res = parse_line_text_advance_ng(input);
         let (remainder, fragments) = res.unwrap();
         assert_eq2!(remainder.is_empty(), true);
-        assert_eq2!(fragments, list![MdLineFragment::Plain("foobar")])
+        assert_eq2!(fragments, list![MdLineFragment::Plain("foobar")]);
     }
 
     #[test]

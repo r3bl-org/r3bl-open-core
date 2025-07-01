@@ -21,9 +21,9 @@ use tokio::process::Command;
 
 use crate::InlineString;
 
-/// Hold all the possible outcomes of executing a [tokio::process::Command]. This is used
-/// to report the success or failure to a user (display via stdout output) or operator
-/// (debug via log output).
+/// Hold all the possible outcomes of executing a [`tokio::process::Command`]. This is
+/// used to report the success or failure to a user (display via stdout output) or
+/// operator (debug via log output).
 #[derive(Debug)]
 pub enum CommandRunResult<T: Debug + Display> {
     /// Command was not run (probably because the command would be a no-op).
@@ -32,15 +32,15 @@ pub enum CommandRunResult<T: Debug + Display> {
         /* command-specific details */ T,
     ),
 
-    /// Command ran, and produced success request_shutdown code.
+    /// Command ran, and produced success `request_shutdown` code.
     Run(
         /* success message */ InlineString,
         /* command-specific details */ T,
         /* command */ Command,
     ),
 
-    /// Command ran and produced non-zero request_shutdown code. Or it failed to run, and
-    /// never got the chance to generate an request_shutdown code.
+    /// Command ran and produced non-zero `request_shutdown` code. Or it failed to run,
+    /// and never got the chance to generate an `request_shutdown` code.
     Fail(
         /* error message */ InlineString,
         /* command */ Command,
@@ -48,7 +48,7 @@ pub enum CommandRunResult<T: Debug + Display> {
     ),
 }
 
-/// Display impl for [CommandRunResult]. This also generates log output.
+/// Display impl for [`CommandRunResult`]. This also generates log output.
 pub(crate) mod display_impl_for_command_run_result {
     use std::fmt::{Debug, Display, Formatter};
 
@@ -87,7 +87,7 @@ pub(crate) mod display_impl_for_command_run_result {
                     tracing::info!(
                         message = %header,
                         success_msg = %success_msg,
-                        cmd_details = %fmt_details_str(cmd_details)?,
+                        cmd_details = %fmt_details_str(cmd_details),
                         cmd = %fmt_cmd_str(cmd)?
                     );
                     // Display output.
@@ -104,7 +104,7 @@ pub(crate) mod display_impl_for_command_run_result {
                     tracing::warn!(
                         message = %header,
                         noop_msg = %noop_msg,
-                        cmd_details = %fmt_details_str(cmd_details)?
+                        cmd_details = %fmt_details_str(cmd_details)
                     );
                     // Display output.
                     write!(
@@ -118,18 +118,17 @@ pub(crate) mod display_impl_for_command_run_result {
         }
     }
 
-    pub fn fmt_details_str<T: Display>(details: &T) -> StdResult<InlineString, Error> {
+    pub fn fmt_details_str<T: Display>(details: &T) -> InlineString {
         let details_str = inline_string!("{details}");
-        let fmt_details_str = fg_slate_gray(&details_str).to_small_str();
-        Ok(fmt_details_str)
+        fg_slate_gray(&details_str).to_small_str()
     }
 
     /// Format the command as a string for display.
     pub fn fmt_cmd_str(cmd: &Command) -> StdResult<InlineString, Error> {
+        use std::fmt::Write as _;
+
         // Convert the tokio::process::Command to a standard Command.
         let cmd = cmd.as_std();
-
-        use std::fmt::Write as _;
 
         let cmd_str = {
             let mut acc = InlineString::new();

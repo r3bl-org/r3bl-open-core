@@ -17,10 +17,10 @@
 
 use crate::terminal_lib_backends::{InputEvent, Key, KeyPress, SpecialKey};
 
-/// Provide a conversion from [crate::InputEvent] to [DialogEvent].
+/// Provide a conversion from [`crate::InputEvent`] to [`DialogEvent`].
 ///
-/// This makes it easier to write event handlers that consume [crate::InputEvent] and then
-/// process events in [crate::DialogComponent] and [crate::DialogEngine].
+/// This makes it easier to write event handlers that consume [`crate::InputEvent`] and
+/// then process events in [`crate::DialogComponent`] and [`crate::DialogEngine`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DialogEvent {
     EnterPressed,
@@ -32,10 +32,11 @@ mod dialog_event_impl {
     use super::*;
 
     impl DialogEvent {
-        /// Tries to convert the given [InputEvent] into a [DialogEvent].
-        /// - Enter and Esc are also matched against to return [DialogEvent::EnterPressed]
-        ///   and [DialogEvent::EscPressed]
+        /// Tries to convert the given [`InputEvent`] into a [`DialogEvent`].
+        /// - Enter and Esc are also matched against to return
+        ///   [`DialogEvent::EnterPressed`] and [`DialogEvent::EscPressed`]
         /// - Otherwise, [Err] is returned.
+        #[must_use]
         pub fn from(input_event: InputEvent) -> Self {
             if let InputEvent::Keyboard(keypress) = input_event {
                 match keypress {

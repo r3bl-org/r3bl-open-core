@@ -62,10 +62,12 @@ impl Animator {
         self.animator_kill_channel = Some(start_animator_task(channel_sender));
     }
 
+    #[must_use]
     pub fn is_animation_started(&self) -> bool {
         matches!(&self.animator_kill_channel, Some(_handle))
     }
 
+    #[must_use]
     pub fn is_animation_not_started(&self) -> bool { !self.is_animation_started() }
 
     pub fn stop(&mut self) -> CommonResult<()> {

@@ -119,7 +119,7 @@
 //! # Introduction
 //!
 //! `choose_impl` allows you to add simple interactivity to your CLI app. It is not a full
-//! TUI, neither is it like [crate::ReadlineAsyncContext]. It simply allows you to provide
+//! TUI, neither is it like [`crate::ReadlineAsyncContext`]. It simply allows you to provide
 //! a list of items and ask the user to choose one or more of them.
 //!
 //! # Examples
@@ -157,7 +157,7 @@
 //! ```
 //!
 //! The following example illustrates how you can use this as a library. The function that
-//! does the work of rendering the UI is called [crate::choose()]. It takes a list of
+//! does the work of rendering the UI is called [`crate::choose()`]. It takes a list of
 //! items and returns the selected item or items (depending on the selection mode). If the
 //! user does not select anything, it returns `None`. The function also takes the maximum
 //! height and width of the display, and the selection mode (single select or multiple
@@ -207,7 +207,7 @@
 //!
 //! We provide a single function:
 //!
-//! - [crate::choose()]: Use this API if you want to display a list of items in an async
+//! - [`crate::choose()`]: Use this API if you want to display a list of items in an async
 //!   context, with a single or multi-line header.
 //!
 //! ## choose
@@ -217,7 +217,7 @@
 //!
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/0ae722bb-8cd1-47b1-a293-1a96e84d24d0)
 //!
-//! [crate::choose()] code example:
+//! [`crate::choose()`] code example:
 //!
 //! ```
 //! # use r3bl_tui::*;
@@ -408,7 +408,7 @@
 //! | `nu run.nu test`                          | Run tests                                  |
 //! | `nu run.nu clippy`                        | Run clippy                                 |
 //! | `nu run.nu docs`                          | Build docs                                 |
-//! | `nu run.nu serve-docs`                    | Serve docs over VSCode Remote SSH session. |
+//! | `nu run.nu serve-docs`                    | Serve docs over `VSCode` Remote SSH session. |
 //! | `nu run.nu upgrade-deps`                  | Upgrade deps                               |
 //! | `nu run.nu rustfmt`                       | Run rustfmt                                |
 //!

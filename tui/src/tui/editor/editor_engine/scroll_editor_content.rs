@@ -16,10 +16,11 @@
  */
 
 //! For more information on scrolling, take a look at the
-//! [super::scroll_editor_content::inc_caret_col_by] docs. The functions in this module
-//! need information from both [EditorBuffer] and [super::EditorEngine] in order to work.
-//! - [EditorBuffer] provides [crate::EditorContent].
-//! - [super::EditorEngine] provides [super::EditorEngine::viewport()].
+//! [`super::scroll_editor_content::inc_caret_col_by`] docs. The functions in this module
+//! need information from both [`EditorBuffer`] and [`super::EditorEngine`] in order to
+//! work.
+//! - [`EditorBuffer`] provides [`crate::EditorContent`].
+//! - [`super::EditorEngine`] provides [`super::EditorEngine::viewport()`].
 
 use std::cmp::Ordering;
 
@@ -80,12 +81,12 @@ use crate::{caret_scroll_index,
 ///
 /// And scroll offset will be adjusted to show the end of the line. So the numbers will be
 /// as follows:
-/// - caret_raw: col(9) + row(0)
-/// - scr_ofs:   col(6) + row(0)
+/// - `caret_raw`: col(9) + row(0)
+/// - `scr_ofs`:   col(6) + row(0)
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
+/// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
 /// nature of `UTF-8` and its variable width characters, where the memory size is not the
 /// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
@@ -114,8 +115,8 @@ pub fn inc_caret_col_by(
 /// then scroll.
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
+/// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
 /// nature of `UTF-8` and its variable width characters, where the memory size is not the
 /// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
@@ -135,8 +136,8 @@ pub fn clip_caret_to_content_width(args: EditorArgsMut<'_>) {
 }
 
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
+/// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
 /// nature of `UTF-8` and its variable width characters, where the memory size is not the
 /// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
@@ -174,12 +175,12 @@ pub fn set_caret_col_to(
     }
 }
 
-/// This does not simply decrement the caret.col_index but mutates scroll_offset if
+/// This does not simply decrement the `caret.col_index` but mutates `scroll_offset` if
 /// scrolling is active.
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
+/// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
 /// nature of `UTF-8` and its variable width characters, where the memory size is not the
 /// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
@@ -254,8 +255,8 @@ pub fn dec_caret_col_by(
 }
 
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
+/// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
 /// nature of `UTF-8` and its variable width characters, where the memory size is not the
 /// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
@@ -266,11 +267,11 @@ pub fn reset_caret_col(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) {
     *caret_raw.col_index = ch(0);
 }
 
-/// Decrement caret.row_index by 1, and adjust scrolling if active. This won't check
+/// Decrement `caret.row_index` by 1, and adjust scrolling if active. This won't check
 /// whether it is inside or outside the buffer content boundary. You should check that
 /// before calling this function.
 ///
-/// This does not simply decrement the caret.row_index but mutates scroll_offset if
+/// This does not simply decrement the `caret.row_index` but mutates `scroll_offset` if
 /// scrolling is active. This can end up deactivating vertical scrolling as well.
 ///
 /// > Since caret.row_index can never be negative, this function must handle changes to
@@ -278,8 +279,8 @@ pub fn reset_caret_col(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) {
 /// > [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
+/// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
 /// nature of `UTF-8` and its variable width characters, where the memory size is not the
 /// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
@@ -324,13 +325,13 @@ pub fn dec_caret_row(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) -> RowIndex
             // Safe to minus 1, since scroll_offset.row_index can never be negative.
             scr_ofs.row_index -= height(1);
         }
-    };
+    }
 
     (*caret_raw + *scr_ofs).row_index
 }
 
-/// Try to increment caret.row_index by row_amt. This will not scroll past the bottom of
-/// the buffer. It will also activate scrolling if needed.
+/// Try to increment `caret.row_index` by `row_amt`. This will not scroll past the bottom
+/// of the buffer. It will also activate scrolling if needed.
 ///
 /// ```text
 /// +---------------------+
@@ -408,7 +409,7 @@ pub fn change_caret_row_by(
     }
 }
 
-/// Clip desired_caret_adj_row (to the max buffer length) if it overflows past the
+/// Clip `desired_caret_adj_row` (to the max buffer length) if it overflows past the
 /// bottom of the buffer.
 pub fn clip_caret_row_to_content_height(
     buffer: &EditorBuffer,
@@ -422,18 +423,18 @@ pub fn clip_caret_row_to_content_height(
     }
 }
 
-/// Increment caret.row_index by 1, and adjust scrolling if active. This won't check
+/// Increment `caret.row_index` by 1, and adjust scrolling if active. This won't check
 /// whether it is inside or outside the buffer content boundary. You should check that
 /// before calling this function.
 ///
 /// Returns the new scroll adjusted caret row.
 ///
-/// This increments the caret.row_index and can activate vertical scrolling if the
-/// caret.row_index goes past the viewport height.
+/// This increments the `caret.row_index` and can activate vertical scrolling if the
+/// `caret.row_index` goes past the viewport height.
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [crate::validate_buffer_mut::EditorBufferMut], which runs this function:
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation]. Due to the
+/// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
+/// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
 /// nature of `UTF-8` and its variable width characters, where the memory size is not the
 /// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position

@@ -156,7 +156,7 @@ pub fn parse_block_code_no_advance_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsSt
 
 /// Parse the language identifier from a code block's opening line.
 /// Returns `Some(language)` if a language is specified, or `None` if no language is specified.
-/// Consumes the [NEW_LINE] if it exists.
+/// Consumes the [`NEW_LINE`] if it exists.
 #[rustfmt::skip]
 fn parse_code_block_lang_including_eol_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, Option<AsStrSlice<'a>>> {
     alt((
@@ -182,6 +182,7 @@ fn parse_code_block_lang_including_eol_ng<'a>(input: AsStrSlice<'a>) -> IResult<
 
 /// Parse the body of a code block until the end marker is reached.
 ///
+#[allow(clippy::doc_markdown)]
 /// This function extracts all content between the current position and the code block end marker
 /// (indicated by the [CODE_BLOCK_END] constant, which is "```").
 ///
@@ -206,16 +207,17 @@ pub fn parse_code_block_body_including_code_block_end_ng<'a>(input: AsStrSlice<'
 }
 
 /// Converts a language identifier and a vector of code lines into a List of
-/// [CodeBlockLine] objects. The resulting List will always contain at least 2
-/// [CodeBlockLine] objects:
-/// 1. A [CodeBlockLine] with content type StartTag representing the opening of the code
-///    block.
-/// 2. A [CodeBlockLine] with content type EndTag representing the closing of the code
+/// [`CodeBlockLine`] objects. The resulting List will always contain at least 2
+/// [`CodeBlockLine`] objects:
+/// 1. A [`CodeBlockLine`] with content type `StartTag` representing the opening of the
+///    code block.
+/// 2. A [`CodeBlockLine`] with content type `EndTag` representing the closing of the code
 ///    block.
 ///
 /// Any lines of code between the opening and closing tags will be converted to
-/// [CodeBlockLine] objects with content type Text. The language identifier is attached to
-/// all [CodeBlockLine] objects.
+/// [`CodeBlockLine`] objects with content type Text. The language identifier is attached
+/// to all [`CodeBlockLine`] objects.
+#[must_use]
 pub fn convert_into_code_block_lines_ng<'a>(
     maybe_lang: Option<AsStrSlice<'a>>,
     lines: &[AsStrSlice<'a>],
@@ -245,12 +247,12 @@ pub fn convert_into_code_block_lines_ng<'a>(
     acc
 }
 
-/// Split an [AsStrSlice] by newline using an efficient iterator-based approach.
+/// Split an [`AsStrSlice`] by newline using an efficient iterator-based approach.
 ///
 /// The idea is that a line is some text followed by a newline. An empty line is just a
 /// newline character.
 ///
-/// This function is the [AsStrSlice] equivalent of the original
+/// This function is the [`AsStrSlice`] equivalent of the original
 /// [`crate::split_by_new_line`] function that works with string slices (`&str`).
 ///
 /// ## Performance Optimization
@@ -305,15 +307,15 @@ pub fn convert_into_code_block_lines_ng<'a>(
 /// - **Consistent with codebase**: Follows the same patterns used throughout the
 ///   `AsStrSlice` implementation
 ///
-/// ## Context: Why AsStrSlice behaves like a continuous string here
+/// ## Context: Why `AsStrSlice` behaves like a continuous string here
 ///
-/// In this specific context, the [AsStrSlice] input represents a continuous text span
+/// In this specific context, the [`AsStrSlice`] input represents a continuous text span
 /// that may cross multiple underlying lines. This occurs because the input comes from
 /// [`parse_code_block_body_including_code_block_end_ng`], which extracts the content
 /// between code block markers "```" and "```" as a single continuous string.
 ///
 /// For example, when parsing a markdown code block like:
-///
+#[allow(clippy::doc_markdown)]
 /// - Line 1: "```python"
 /// - Line 2: "import foobar"
 /// - Line 3: ""
@@ -321,7 +323,7 @@ pub fn convert_into_code_block_lines_ng<'a>(
 /// - Line 5: "```"
 ///
 /// The [`parse_code_block_body_including_code_block_end_ng`] function returns an
-/// [AsStrSlice] containing `"import foobar\n\nfoobar.pluralize('word')\n"` as a
+/// [`AsStrSlice`] containing `"import foobar\n\nfoobar.pluralize('word')\n"` as a
 /// continuous span. This function then splits this continuous content back into
 /// individual lines for proper code block processing.
 ///
@@ -343,6 +345,7 @@ pub fn convert_into_code_block_lines_ng<'a>(
 /// | ""             | `[]`                 |
 /// | "foo\nbar\n"   | `["foo", "bar"]`     |
 /// | "\nfoo\nbar\n" | `["", "foo", "bar"]` |
+#[must_use]
 pub fn split_by_new_line_ng<'a>(input: AsStrSlice<'a>) -> InlineVec<AsStrSlice<'a>> {
     if input.is_empty() {
         return InlineVec::new();
@@ -494,8 +497,8 @@ mod tests_parse_block_code_ng_single_line {
 
 /// These tests are very similar to the tests in `tests_parse_block_code_ng` module.
 /// There is a key difference. These tests simulate what real input from the
-/// [crate::EditorContent] looks like. The editor reads a file and calls `.lines()` on it,
-/// which strips any trailing [NEW_LINE] lines. Here's an example to demonstrate this:
+/// [`crate::EditorContent`] looks like. The editor reads a file and calls `.lines()` on it,
+/// which strips any trailing [`NEW_LINE`] lines. Here's an example to demonstrate this:
 /// ```
 /// let input = "```bash\npip install foobar\n```\n";
 /// let count = input.lines().count(); // Last "\n" gets eaten by lines()

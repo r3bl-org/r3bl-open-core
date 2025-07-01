@@ -38,9 +38,9 @@ impl RenderPipeline {
     /// Convert the render pipeline to an offscreen buffer.
     ///
     /// 1. This does not require any specific implementation of crossterm or termion.
-    /// 2. This is the intermediate representation (IR) of a [RenderPipeline]. In order to
-    ///    turn this IR into actual paint commands for the terminal, you must use the
-    ///    [super::OffscreenBufferPaint] trait implementations.
+    /// 2. This is the intermediate representation (IR) of a [`RenderPipeline`]. In order
+    ///    to turn this IR into actual paint commands for the terminal, you must use the
+    ///    [`super::OffscreenBufferPaint`] trait implementations.
     pub fn convert(
         &self,
         window_size: Size,
@@ -48,9 +48,9 @@ impl RenderPipeline {
     ) {
         let mut local_data = RenderOpsLocalData::default();
 
-        for z_order in ZOrder::get_render_order().iter() {
+        for z_order in &ZOrder::get_render_order() {
             if let Some(render_ops_vec) = self.get(z_order) {
-                for render_ops in render_ops_vec.iter() {
+                for render_ops in render_ops_vec {
                     for render_op in render_ops.iter() {
                         process_render_op(
                             render_op,
@@ -172,11 +172,11 @@ pub fn print_plain_text(
     let window_max_display_col_count = *my_offscreen_buffer.window_size.col_width;
     let text_fits_in_window =
         *clip_1_gcs.display_width <= window_max_display_col_count - ch(display_col_index);
-    let clip_2_str = if !text_fits_in_window {
+    let clip_2_str = if text_fits_in_window {
+        clip_1_str
+    } else {
         let adj_max = window_max_display_col_count - ch(display_col_index);
         clip_1_gcs.trunc_end_to_fit(width(*adj_max))
-    } else {
-        clip_1_str
     };
     let clip_2_gcs = clip_2_str.grapheme_string();
 
@@ -368,7 +368,7 @@ pub fn print_plain_text(
 /// Render plain to an offscreen buffer.
 ///
 /// This will modify the `my_offscreen_buffer` argument. For plain text it supports
-/// counting [crate::Seg]s. The display width of each segment is
+/// counting [`crate::Seg`]s. The display width of each segment is
 /// taken into account when filling the offscreen buffer.
 pub fn print_text_with_attributes(
     arg_text_ref: &str,

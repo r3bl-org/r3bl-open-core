@@ -55,7 +55,7 @@ pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
 }
 
 /// Take text until an optional EOL character is found, or end of input is reached.
-/// Consumes the [NEW_LINE] if it exists.
+/// Consumes the [`NEW_LINE`] if it exists.
 #[rustfmt::skip]
 fn parse_code_block_lang_including_eol(input: &str) -> IResult<&str, Option<&str>> {
     alt((
@@ -80,8 +80,8 @@ fn parse_code_block_lang_including_eol(input: &str) -> IResult<&str, Option<&str
 }
 
 /// Parse the body of a code block until the end of the code block is reached.
-/// The end of the code block is indicated by the [CODE_BLOCK_END] constant.
-/// Consumes the [CODE_BLOCK_END] if it exists.
+/// The end of the code block is indicated by the [`CODE_BLOCK_END`] constant.
+/// Consumes the [`CODE_BLOCK_END`] if it exists.
 #[rustfmt::skip]
 fn parse_code_block_body_including_code_block_end(input: &str) -> IResult<&str, &str> {
     let (remainder, output) = terminated(
@@ -102,6 +102,7 @@ fn parse_code_block_body_including_code_block_end(input: &str) -> IResult<&str, 
 /// | ""             | `[] `                |
 /// | "foo\nbar\n"   | `["foo", "bar"] `    |
 /// | "\nfoo\nbar\n" | `["", "foo", "bar"]` |
+#[must_use]
 pub fn split_by_new_line(input: &str) -> Vec<&str> {
     let mut acc: Vec<&str> = input.split('\n').collect();
     if let Some(last_item) = acc.last() {

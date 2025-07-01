@@ -78,7 +78,7 @@ async fn main() -> CommonResult<()> {
                     ui_templates::handle_multiple_files_not_supported_yet(cli_arg).await
                 {
                     report_analytics::start_task_to_generate_event(
-                        "".to_string(),
+                        String::new(),
                         AnalyticsAction::EdiFileOpenMultiple,
                     );
                     launcher::run_app(Some(file_path)).await?;

@@ -18,13 +18,13 @@
 //! A single line of Markdown may have many fragments, eg: `**bold**`, `*italic*`,
 //! `[link](http://r3bl.com)`, etc.
 //!
-//! As opposed to markdown [crate::block]s (like code block or smart lists) which may span
-//! multiple lines.
+//! As opposed to markdown [`crate::block`]s (like code block or smart lists) which may
+//! span multiple lines.
 //!
 //! Fragments may be found in every single line of text. These parsers extract each
 //! fragment into either a string slice or some other intermediate representation.
 //!
-//! To see this in action, set the [crate::DEBUG_MD_PARSER_STDOUT] to true, and run all
+//! To see this in action, set the [`crate::DEBUG_MD_PARSER_STDOUT`] to true, and run all
 //! the tests in this file.
 
 use nom::{branch::alt, combinator::map, IResult, Parser};
@@ -48,11 +48,11 @@ use crate::{fg_green,
 // XMARK: Parser for a single line of markdown
 
 /// Parse a single chunk of Markdown text (found in a single line of text) into a
-/// [MdLineFragment]. If there is no [crate::constants::NEW_LINE] character, then parse
+/// [`MdLineFragment`]. If there is no [`crate::constants::NEW_LINE`] character, then parse
 /// the entire input.
 ///
 /// Here's an example of the runtime iterations that may occur, which repeatedly run by
-/// functions like [crate::standard_ng::parse_line_text_advance_ng()]:
+/// functions like [`crate::standard_ng::parse_line_text_advance_ng()`]:
 ///
 /// ```txt
 /// input: "foo *bar* _baz_ [link](url) ![image](url)"
@@ -63,7 +63,7 @@ use crate::{fg_green,
 /// etc.
 /// ```
 ///
-/// To see this in action, set the [crate::DEBUG_MD_PARSER] to true, and run all
+/// To see this in action, set the [`crate::DEBUG_MD_PARSER`] to true, and run all
 /// the tests in this file.
 #[rustfmt::skip]
 pub fn parse_inline_fragments_until_eol_or_eoi_ng<'a>(

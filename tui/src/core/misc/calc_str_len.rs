@@ -21,8 +21,8 @@ use sha2::{Digest, Sha256};
 use crate::{u16, GCString};
 
 /// Enum representing different methods for calculating the length of a string. The
-/// [Self::calculate] function memoizes the length of the string for the
-/// [StringLength::StripAnsi] variant to speed up computations.
+/// [`Self::calculate`] function memoizes the length of the string for the
+/// [`StringLength::StripAnsi`] variant to speed up computations.
 ///
 /// # Variants
 ///
@@ -62,8 +62,8 @@ impl StringLength {
     ///
     /// | Variant                   | Cached | Speedup |
     /// |---------------------------|--------|---------|
-    /// | [StringLength::Unicode]   | No     | None    |
-    /// | [StringLength::StripAnsi] | Yes    | 70x     |
+    /// | [`StringLength::Unicode`]   | No     | None    |
+    /// | [`StringLength::StripAnsi`] | Yes    | 70x     |
     /* cspell:disable-next-line */
     /// Eg: For input: `"\u{1b}[31mfoo\u{1b}[0m";` on a 13th Gen Intel® Core™ i5-13600K
     /// machine with 64GB of RAM running Ubuntu 24.04, the execution times are:
@@ -91,9 +91,10 @@ impl StringLength {
     /// [SHA256](sha2) produces a 256-bit (32-byte) hash value, typically rendered as a
     /// hexadecimal number. However, here we are converting it to a u32. Here's an example
     /// of how long it takes to run on `foo`: 25.695µs. To provide some perspective of how
-    /// long this is, it takes about the same time to run [StringLength::Unicode] on the
+    /// long this is, it takes about the same time to run [`StringLength::Unicode`] on the
     /// same input, on a 13th Gen Intel® Core™ i5-13600K machine with 64GB of RAM running
     /// Ubuntu 24.04.
+    #[must_use]
     pub fn calculate_sha256(text: &str) -> u32 {
         let mut hasher = Sha256::new();
         hasher.update(text);
@@ -139,11 +140,11 @@ mod tests {
         let input = "foo";
         let (hash, duration) = timed!({
             let hash = StringLength::calculate_sha256(input);
-            assert_eq!(hash, 1806968364);
+            assert_eq!(hash, 1_806_968_364);
             hash
         });
         println!("Execution time - string_length(Sha256): {duration:?}");
-        assert_eq!(hash, 1806968364);
+        assert_eq!(hash, 1_806_968_364);
     }
 
     #[test]
@@ -154,14 +155,14 @@ mod tests {
 
         assert!(!memoized_len_map.contains_key(input));
 
-        let (_, duration_uncached) = timed!({
+        let ((), duration_uncached) = timed!({
             let len = StringLength::StripAnsi.calculate(input, memoized_len_map);
             assert_eq!(len, 3);
             assert!(memoized_len_map.contains_key(input));
         });
         println!("Execution time - U string_length(StripAnsi): {duration_uncached:?}");
 
-        let (_, duration_cached) = timed!({
+        let ((), duration_cached) = timed!({
             let len = StringLength::StripAnsi.calculate(input, memoized_len_map);
             assert_eq!(len, 3);
             assert!(memoized_len_map.contains_key(input));
@@ -176,7 +177,7 @@ mod tests {
 
         assert!(!memoized_len_map.contains_key(input));
 
-        let (_, duration_uncached) = timed!({
+        let ((), duration_uncached) = timed!({
             let len = StringLength::Unicode.calculate(input, memoized_len_map);
             assert_eq!(len, 3);
             assert!(!memoized_len_map.contains_key(input));

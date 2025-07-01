@@ -18,20 +18,20 @@
 use crate::{AsStrSlice, InlineVec, List};
 
 /// This corresponds to a single Markdown document, which is produced after a successful
-/// parse operation [crate::parse_markdown()].
+/// parse operation [`crate::parse_markdown()`].
 pub type MdDocument<'a> = List<MdElement<'a>>;
 
-/// Alias for [MdDocument].
+/// Alias for [`MdDocument`].
 pub type Blocks<'a> = MdDocument<'a>;
 
 /// This roughly corresponds to a single line of text. Each line is made up of one or more
-/// [MdLineFragment].
+/// [`MdLineFragment`].
 pub type MdLineFragments<'a> = List<MdLineFragment<'a>>;
 
-/// Alias for [MdLineFragments].
+/// Alias for [`MdLineFragments`].
 pub type FragmentsInOneLine<'a> = MdLineFragments<'a>;
 
-/// Alias for [List] of [FragmentsInOneLine].
+/// Alias for [List] of [`FragmentsInOneLine`].
 pub type Lines<'a> = List<FragmentsInOneLine<'a>>;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -66,7 +66,7 @@ pub enum MdElement<'a> {
     Authors(List<&'a str>),
 }
 
-/// These are things that show up in a single line of Markdown text [MdLineFragments].
+/// These are things that show up in a single line of Markdown text [`MdLineFragments`].
 /// They do not include other Markdown blocks (like code blocks, lists, headings, etc).
 #[derive(Clone, Debug, PartialEq)]
 pub enum MdLineFragment<'a> {
@@ -98,6 +98,7 @@ mod hyperlink_data_impl {
     use super::*;
 
     impl<'a> HyperlinkData<'a> {
+        #[must_use]
         pub fn new(text: &'a str, url: &'a str) -> Self { Self { text, url } }
     }
 
@@ -177,7 +178,7 @@ pub struct CodeBlockLine<'a> {
     pub content: CodeBlockLineContent<'a>,
 }
 
-/// Alias for [List] of [CodeBlockLine].
+/// Alias for [List] of [`CodeBlockLine`].
 pub type CodeBlockLines<'a> = List<CodeBlockLine<'a>>;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -195,8 +196,8 @@ pub enum BulletKind {
 
 /// Holds a single list item for a given indent level. This may contain multiple lines
 /// which are stored in the `content_lines` field. Take a look at
-/// [crate::md_parser::parse_block_smart_list::parse_smart_list] or
-/// [crate::md_parser_ng::parse_block_smart_list_ng::parse_smart_list_ng]
+/// [`crate::md_parser::parse_block_smart_list::parse_smart_list`] or
+/// [`crate::md_parser_ng::parse_block_smart_list_ng::parse_smart_list_ng`]
 /// for more details.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SmartListIR<'a, T> {

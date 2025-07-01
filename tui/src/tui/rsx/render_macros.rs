@@ -16,7 +16,7 @@
  */
 
 /// Render the component in the current box (which is retrieved from the surface). This is
-/// the "normal" way to render a component, in the FlexBox that is currently being laid
+/// the "normal" way to render a component, in the `FlexBox` that is currently being laid
 /// out.
 #[macro_export]
 macro_rules! render_component_in_current_box {

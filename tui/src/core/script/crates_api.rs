@@ -49,9 +49,8 @@ pub async fn try_get_latest_release_version_from_crates_io(
     let response = response.error_for_status().into_diagnostic()?;
     let response: serde_json::Value = response.json().await.into_diagnostic()?;
 
-    let version = match response[CRATE][MAX_VERSION].as_str() {
-        Some(version) => version,
-        None => miette::bail!("Failed to get version from JSON: {:?}", response),
+    let Some(version) = response[CRATE][MAX_VERSION].as_str() else {
+        miette::bail!("Failed to get version from JSON: {:?}", response)
     };
 
     ok!(version.to_owned())

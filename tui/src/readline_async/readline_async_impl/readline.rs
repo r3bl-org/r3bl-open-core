@@ -115,7 +115,7 @@ const CTRL_D: crossterm::event::Event =
 ///    This is used to get input from the user. However, for testing you can provide your
 ///    own implementation of this trait.
 /// 2. [`OutputDevice`] which contains a resource that implements
-///    [crate::SafeRawTerminal]. This trait represents a raw terminal. It is typically
+///    [`crate::SafeRawTerminal`]. This trait represents a raw terminal. It is typically
 ///    implemented by [`std::io::Stdout`]. This is used to write to the terminal. However,
 ///    for testing you can provide your own implementation of this trait.
 ///
@@ -180,7 +180,7 @@ const CTRL_D: crossterm::event::Event =
 /// 1. While retrieving input with [`readline()`][Readline::readline].
 /// 2. By calling [`manage_shared_writer_output::flush_internal()`].
 ///
-/// You can provide your own implementation of [crate::SafeRawTerminal], like
+/// You can provide your own implementation of [`crate::SafeRawTerminal`], like
 /// [`OutputDevice`], via [dependency injection](https://developerlife.com/category/DI/),
 /// so that you can mock terminal output for testing. You can also extend this struct to
 /// adapt your own terminal output using this mechanism. Essentially anything that
@@ -205,12 +205,12 @@ pub struct Readline {
     /// Collects lines that are written to the terminal while the terminal is paused.
     pub safe_is_paused_buffer: SafePauseBuffer,
 
-    /// - Is [Some] if a [crate::Spinner] is currently active. This works with the signal
-    ///   [LineStateControlSignal::SpinnerActive]; this is used to set the
-    ///   [crate::Spinner::shutdown_sender]. Also works with the
-    ///   [LineStateControlSignal::Pause] signal.
-    /// - Is [None] if no [crate::Spinner] is active. Also works with the
-    ///   [LineStateControlSignal::Resume] signal.
+    /// - Is [Some] if a [`crate::Spinner`] is currently active. This works with the signal
+    ///   [`LineStateControlSignal::SpinnerActive`]; this is used to set the
+    ///   [`crate::Spinner::shutdown_sender`]. Also works with the
+    ///   [`LineStateControlSignal::Pause`] signal.
+    /// - Is [None] if no [`crate::Spinner`] is active. Also works with the
+    ///   [`LineStateControlSignal::Resume`] signal.
     pub safe_spinner_is_active: Arc<StdMutex<Option<broadcast::Sender<()>>>>,
 
     /// Shutdown channel.
@@ -273,11 +273,11 @@ pub enum ControlFlowLimited<E> {
 /// # Task creation, shutdown and cleanup
 ///
 /// The task spawned by
-/// [manage_shared_writer_output::spawn_task_to_monitor_line_control_channel()] doesn't
-/// need to be shutdown, since it will simply request_shutdown when the [`Readline`]
+/// [`manage_shared_writer_output::spawn_task_to_monitor_line_control_channel()`] doesn't
+/// need to be shutdown, since it will simply `request_shutdown` when the [`Readline`]
 /// instance is dropped. The loop awaits on the channel, and when the [`Readline`]
 /// instance is dropped, the channel is dropped as well, since the
-/// [tokio::sync::mpsc::channel()]'s [tokio::sync::mpsc::Sender] is dropped when the
+/// [`tokio::sync::mpsc::channel()`]'s [`tokio::sync::mpsc::Sender`] is dropped when the
 /// [`SharedWriter`] associated with the [`Readline`] is dropped.
 ///
 /// # Support for buffering & writing output from [`SharedWriter`]s
@@ -346,6 +346,12 @@ pub mod manage_shared_writer_output {
 
     /// Process a line control signal. And actually write the line or buffered lines to
     /// the terminal.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     pub fn process_line_control_signal(
         line_control_signal: LineStateControlSignal,
         self_safe_is_paused_buffer: SafePauseBuffer,
@@ -403,7 +409,7 @@ pub mod manage_shared_writer_output {
                     return ControlFlowLimited::ReturnError(ReadlineError::IO(
                         io::Error::other("failed to pause terminal"),
                     ));
-                };
+                }
             }
 
             // Resume the terminal.
@@ -416,7 +422,7 @@ pub mod manage_shared_writer_output {
                     return ControlFlowLimited::ReturnError(ReadlineError::IO(
                         io::Error::other("failed to resume terminal"),
                     ));
-                };
+                }
                 let _ = flush_internal(
                     self_safe_is_paused_buffer,
                     new_value,
@@ -440,6 +446,12 @@ pub mod manage_shared_writer_output {
     }
 
     /// Flush all writers to terminal and erase the prompt string.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     pub fn flush_internal<'a>(
         self_safe_is_paused_buffer: SafePauseBuffer,
         is_paused: LineStateLiveness,
@@ -483,14 +495,20 @@ impl Drop for Readline {
 impl Readline {
     /// Create a new instance with an associated [`SharedWriter`]. To customize the
     /// behavior of this instance, you can use the following methods:
-    /// - [Self::should_print_line_on]
-    /// - [Self::set_max_history]
+    /// - [`Self::should_print_line_on`]
+    /// - [`Self::set_max_history`]
     ///
     /// There is an artificial delay of
-    /// [READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY] added in this method so
+    /// [`READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY`] added in this method so
     /// that the initial display of the cursor does not appear janky. In turn this makes
-    /// the caller of this method [crate::ReadlineAsyncContext::try_new()] have to wait
+    /// the caller of this method [`crate::ReadlineAsyncContext::try_new()`] have to wait
     /// that amount as well.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub async fn try_new(
         prompt: String,
@@ -587,6 +605,12 @@ impl Readline {
     }
 
     /// Change the prompt.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn update_prompt(
         &mut self,
@@ -601,6 +625,12 @@ impl Readline {
     }
 
     /// Clear the screen.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn clear(&mut self) -> CommonResultWithError<(), ReadlineError> {
         let term = lock_output_device_as_mut!(self.output_device);
@@ -613,7 +643,13 @@ impl Readline {
         Ok(())
     }
 
-    /// Set maximum history length. The default length is [crate::HISTORY_SIZE_MAX].
+    /// Set maximum history length. The default length is [`crate::HISTORY_SIZE_MAX`].
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     pub fn set_max_history(&mut self, max_size: usize) {
         let mut history = self.safe_history.lock().unwrap();
         history.max_size = max_size;
@@ -629,6 +665,12 @@ impl Readline {
     ///
     /// `control_c` similarly controls the behavior for when the user presses `Ctrl+C`.
     /// The default value for this is `false`.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     pub fn should_print_line_on(&mut self, enter: bool, control_c: bool) {
         let mut line_state = self.safe_line_state.lock().unwrap();
         line_state.should_print_line_on_enter = enter;
@@ -639,13 +681,19 @@ impl Readline {
     /// <kbd>Enter</kbd> is pressed with some user input.
     ///
     /// Note that this function can be called repeatedly in a loop. It will return each
-    /// line of input as it is entered (and return / request_shutdown). The
-    /// [crate::ReadlineAsyncContext] can be re-used, since the [crate::SharedWriter]
+    /// line of input as it is entered (and return / `request_shutdown`). The
+    /// [`crate::ReadlineAsyncContext`] can be re-used, since the [`crate::SharedWriter`]
     /// is cloned, and the terminal is kept in `raw mode` until the associated
-    /// [crate::Readline] is dropped.
+    /// [`crate::Readline`] is dropped.
     ///
     /// Polling function for [`Self::readline`], manages all input and output. Returns
-    /// either an [ReadlineEvent] or an [ReadlineError].
+    /// either an [`ReadlineEvent`] or an [`ReadlineError`].
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     pub async fn readline(
         &mut self,
     ) -> CommonResultWithError<ReadlineEvent, ReadlineError> {
@@ -700,6 +748,11 @@ impl Readline {
 pub mod readline_internal {
     use super::*;
 
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     pub fn apply_event_to_line_state_and_render(
         result_crossterm_event: miette::Result<crossterm::event::Event>,
         self_line_state: SafeLineState,

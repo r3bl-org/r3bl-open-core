@@ -37,10 +37,11 @@ where
 
 impl TerminalWindow {
     /// This is the main event loop for the entire application. It is responsible for
-    /// handling all input events, and dispatching them to the [crate::App] for
-    /// processing. It is also responsible for rendering the [crate::App] after each input
-    /// event. It is also responsible for handling all signals sent from the [crate::App]
-    /// to the main event loop (eg: request_shutdown, re-render, apply app signal, etc).
+    /// handling all input events, and dispatching them to the [`crate::App`] for
+    /// processing. It is also responsible for rendering the [`crate::App`] after each
+    /// input event. It is also responsible for handling all signals sent from the
+    /// [`crate::App`] to the main event loop (eg: `request_shutdown`, re-render,
+    /// apply app signal, etc).
     pub async fn main_event_loop<S, AS>(
         app: BoxedSafeApp<S, AS>,
         exit_keys: &[InputEvent],

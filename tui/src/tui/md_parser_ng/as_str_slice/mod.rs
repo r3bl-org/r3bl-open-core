@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-//! # AsStrSlice Module - Unicode-Safe Virtual String Array for nom Parsers
+//! # `AsStrSlice` Module - Unicode-Safe Virtual String Array for nom Parsers
 //!
 //! This module provides `AsStrSlice`, a wrapper type that enables efficient `nom` parsing
 //! over multi-line text without materializing the entire content into a single string.

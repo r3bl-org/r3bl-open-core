@@ -19,8 +19,8 @@ use std::ops::{Deref, DerefMut};
 
 use crate::ChUnit;
 
-/// Represents a byte index inside of the underlying [crate::InlineString] of
-/// [super::GCString].
+/// Represents a byte index inside of the underlying [`crate::InlineString`] of
+/// [`super::GCString`].
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct ByteIndex(pub usize);
 

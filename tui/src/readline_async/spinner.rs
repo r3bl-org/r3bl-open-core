@@ -36,32 +36,32 @@ use crate::{contains_ansi_escape_sequence,
             StdoutIsPipedResult,
             TTYResult};
 
-/// `Spinner` works in conjunction with [crate::ReadlineAsyncContext] to provide a spinner
-/// in the terminal for long running tasks.
+/// `Spinner` works in conjunction with [`crate::ReadlineAsyncContext`] to provide a
+/// spinner in the terminal for long running tasks.
 ///
 /// While the spinner is active, the async terminal output is paused. Also, when `Ctrl+C`
 /// or `Ctrl+D` is pressed, while both the readline **is active**, and a spinner **is
 /// active**, the spinner will be stopped, but the readline will continue to run. This
 /// behavior will not work unless **both** are active:
-/// - The readline is active, when [crate::ReadlineAsyncContext::read_line()] is called.
-/// - The spinner is active, when [Spinner::try_start()] is called.
+/// - The readline is active, when [`crate::ReadlineAsyncContext::read_line()`] is called.
+/// - The spinner is active, when [`Spinner::try_start()`] is called.
 ///
-/// This behavior is handled by [crate::ReadlineAsyncContext], with some coordination with
-/// `Spinner`. The spinner has to tell the [crate::ReadlineAsyncContext] before it starts,
-/// and provide a way to stop the spinner when `Ctrl+C` or `Ctrl+D` is pressed. Here are
-/// the details:
+/// This behavior is handled by [`crate::ReadlineAsyncContext`], with some coordination
+/// with `Spinner`. The spinner has to tell the [`crate::ReadlineAsyncContext`] before it
+/// starts, and provide a way to stop the spinner when `Ctrl+C` or `Ctrl+D` is pressed.
+/// Here are the details:
 ///
-/// - In [Self::try_start_task()], the `Spinner` will send a [LineStateControlSignal],
-///   containing a `shutdown_sender` of type [tokio::sync::broadcast::Sender<()>], signal
-///   to the [SharedWriter] instance of the [crate::ReadlineAsyncContext].
-///   - This tells the [crate::ReadlineAsyncContext] that a spinner is active.
+/// - In [`Self::try_start_task()`], the `Spinner` will send a [`LineStateControlSignal`],
+///   containing a `shutdown_sender` of type [`tokio::sync::broadcast::Sender`<()>],
+///   signal to the [`SharedWriter`] instance of the [`crate::ReadlineAsyncContext`].
+///   - This tells the [`crate::ReadlineAsyncContext`] that a spinner is active.
 ///   - It also gives a way to stop the spinner via the `shutdown_sender`.
 ///
 /// - With this teed up, when `Ctrl+C` or `Ctrl+D` is intercepted by
-///   [crate::ReadlineAsyncContext] in
-///   [crate::readline_internal::apply_event_to_line_state_and_render()], this will result
-///   in a `()` to be sent to [crate::Readline::safe_spinner_is_active], which shuts the
-///   spinner down.
+///   [`crate::ReadlineAsyncContext`] in
+///   [`crate::readline_internal::apply_event_to_line_state_and_render()`], this will
+///   result in a `()` to be sent to [`crate::Readline::safe_spinner_is_active`], which
+///   shuts the spinner down.
 ///
 /// # Usage Example
 ///
@@ -101,7 +101,7 @@ pub struct Spinner {
     pub shutdown_sender: broadcast::Sender<()>,
     safe_is_shutdown: SafeBool,
     /// This is used to signal when the task has completely shutdown. Use the
-    /// [Self::wait_for_shutdown()].
+    /// [`Self::wait_for_shutdown()`].
     maybe_shutdown_complete_rx: Option<tokio::sync::oneshot::Receiver<()>>,
 }
 
@@ -181,17 +181,30 @@ impl Spinner {
     /// This is meant for the task that spawned this [Spinner] to check if it should
     /// shutdown, due to:
     /// 1. The user pressing `Ctrl+C` or `Ctrl+D`.
-    /// 2. Or the [Spinner::request_shutdown] got called.
+    /// 2. Or the [`Spinner::request_shutdown`] got called.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
+    #[must_use]
     pub fn is_shutdown(&self) -> bool { *self.safe_is_shutdown.lock().unwrap() }
 
     /// Start and manage a task that will run in the background. This is where the spinner
     /// is started and the task is spawned. This will also pause the terminal output while
-    /// the spinner is active. This will continue running until [Self::request_shutdown()]
-    /// is called, which simply sends a message to the shutdown channel, so that this
-    /// task can shut itself down.
+    /// the spinner is active. This will continue running until
+    /// [`Self::request_shutdown()`] is called, which simply sends a message to the
+    /// shutdown channel, so that this task can shut itself down.
     ///
-    /// This method also sets up a [tokio::sync::oneshot::channel] to allow
-    /// [Self::await_shutdown()] to know when the task has completely finished.
+    /// This method also sets up a [`tokio::sync::oneshot::channel`] to allow
+    /// [`Self::await_shutdown()`] to know when the task has completely finished.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     pub async fn try_start_task(&mut self) -> miette::Result<()> {
         // Tell readline that spinner is active & register the spinner shutdown sender.
         if let Some(shared_writer) = self.maybe_shared_writer.as_ref() {
@@ -207,7 +220,7 @@ impl Spinner {
                 .line_state_control_channel_sender
                 .send(LineStateControlSignal::Pause)
                 .await;
-        };
+        }
 
         let mut shutdown_receiver = self.shutdown_sender.subscribe();
 
@@ -318,14 +331,14 @@ impl Spinner {
         ok!()
     }
 
-    /// Shutdown the task started by [Self::try_start_task()]. This method only sends the
-    /// shutdown signal and returns immediately without waiting for the spinner task to
-    /// completely shutdown. To wait for the task to actually finish shutting down, call
-    /// [Self::await_shutdown()] after this method.
+    /// Shutdown the task started by [`Self::try_start_task()`]. This method only sends
+    /// the shutdown signal and returns immediately without waiting for the spinner
+    /// task to completely shutdown. To wait for the task to actually finish shutting
+    /// down, call [`Self::await_shutdown()`] after this method.
     pub async fn request_shutdown(&mut self) { _ = self.shutdown_sender.send(()); }
 
     /// Waits for the spinner task to completely shutdown. This can be used after calling
-    /// [Self::request_shutdown()] to ensure the task has fully completed. This consumes
+    /// [`Self::request_shutdown()`] to ensure the task has fully completed. This consumes
     /// self, and ensures this instance is dropped after the task has completed and
     /// can't be used again.
     pub async fn await_shutdown(mut self) {

@@ -134,6 +134,7 @@ mod app_main_constructor {
 
     impl AppMain {
         /// Note that this needs to be initialized before it can be used.
+        #[must_use]
         pub fn new_boxed() -> BoxedSafeApp<State, AppSignal> {
             let it = Self;
             Box::new(it)
@@ -191,7 +192,7 @@ mod app_main_impl_app_trait {
                     "https://github.com/r3bl-org/r3bl-open-core/issues/new/choose";
                 let result_open = open::that(link_url);
                 match result_open {
-                    Ok(_) => {
+                    Ok(()) => {
                         DEBUG_TUI_MOD.then(|| {
                             // % is Display, ? is Debug.
                             tracing::debug!(
@@ -291,7 +292,7 @@ mod app_main_impl_app_trait {
                             // err is not of concrete type CommonError.
                             _ => { /* do nothing */ }
                         }
-                    };
+                    }
 
                     return Ok(EventPropagation::ConsumedRender);
                 }
@@ -422,14 +423,6 @@ mod modal_dialog_ask_for_filename_to_save_file {
         };
 
         let boxed_dialog_component = {
-            let it = DialogComponent::new_boxed(
-                FlexBoxId::from(Id::ComponentSimpleDialogAskForFilenameToSaveFile),
-                dialog_options,
-                editor_options,
-                on_dialog_press_handler,
-                on_dialog_editor_change_handler,
-            );
-
             fn on_dialog_press_handler(
                 dialog_choice: DialogChoice,
                 state: &mut State,
@@ -506,7 +499,13 @@ mod modal_dialog_ask_for_filename_to_save_file {
             ) {
             }
 
-            it
+            DialogComponent::new_boxed(
+                FlexBoxId::from(Id::ComponentSimpleDialogAskForFilenameToSaveFile),
+                dialog_options,
+                editor_options,
+                on_dialog_press_handler,
+                on_dialog_editor_change_handler,
+            )
         };
 
         ComponentRegistry::put(
@@ -723,7 +722,7 @@ mod status_bar {
         );
 
         let styled_texts: TuiStyledTexts = {
-            let mut it = Default::default();
+            let mut it = TuiStyledTexts::default();
             it += app_text_styled_texts;
             it += tui_styled_text! { @style: separator_style , @text: " │ "};
             it += tui_styled_text! { @style: new_style!(dim) , @text: "Save: Ctrl+S "};

@@ -36,11 +36,11 @@ use crate::{clipboard_support::ClipboardService,
             SpecialKey,
             DEBUG_TUI_COPY_PASTE};
 
-/// Events that can be applied to the [EditorEngine] to modify an [EditorBuffer].
+/// Events that can be applied to the [`EditorEngine`] to modify an [`EditorBuffer`].
 ///
-/// By providing a conversion from [InputEvent] to [EditorEvent] it becomes easier to
-/// write event handlers that consume [InputEvent] and then execute [EditorEvent] on an
-/// [EditorBuffer].
+/// By providing a conversion from [`InputEvent`] to [`EditorEvent`] it becomes easier to
+/// write event handlers that consume [`InputEvent`] and then execute [`EditorEvent`] on
+/// an [`EditorBuffer`].
 #[derive(Clone, PartialEq, Eq)]
 pub enum EditorEvent {
     InsertChar(char),
@@ -392,7 +392,7 @@ impl EditorEvent {
                     CaretDirection::Down => {
                         engine_internal_api::down(buffer, engine, SelectMode::Disabled);
                     }
-                };
+                }
             }
 
             EditorEvent::InsertString(chunk) => {
@@ -477,7 +477,7 @@ impl EditorEvent {
                     clipboard,
                 );
             }
-        };
+        }
     }
 
     pub fn apply_editor_events<S, AS>(

@@ -19,8 +19,8 @@ use nom::FindSubstring;
 
 use crate::{constants::NEW_LINE, AsStrSlice, CharLengthExt, CharacterIndexNomCompat};
 
-/// Implement [FindSubstring] trait for [AsStrSlice]. This is required by the
-/// [nom::bytes::complete::take_until] parser function.
+/// Implement [`FindSubstring`] trait for [`AsStrSlice`]. This is required by the
+/// [`nom::bytes::complete::take_until`] parser function.
 ///
 /// ## Performance Benefits
 ///
@@ -52,8 +52,8 @@ use crate::{constants::NEW_LINE, AsStrSlice, CharLengthExt, CharacterIndexNomCom
 /// Returns an `Option<CharacterIndexNomCompat>` where the [`CharacterIndexNomCompat`] or
 /// `usize` is the character-based index, and not the byte-based index. Here's why and
 /// how:
-/// - Since [AsStrSlice] itself works with [char], see [crate::StringChars]'s
-///   [Iterator::Item] impl, all the `usize` in the interface related to index and offset
+/// - Since [`AsStrSlice`] itself works with [char], see [`crate::StringChars`]'s
+///   [`Iterator::Item`] impl, all the `usize` in the interface related to index and offset
 ///   are actually character based.
 /// - The [`CharacterIndexNomCompat`] type alias marks that this `usize` represents a
 ///   character offset, working around nom's constraint that we cannot modify the
@@ -202,8 +202,7 @@ impl<'a> AsStrSlice<'a> {
                 let mut char_indices = line_str.char_indices();
                 let start_byte_pos = char_indices
                     .nth(line_start_pos) // Skip to the line_start_pos-th character.
-                    .map(|(byte_pos, _)| byte_pos) // Extract byte position of that character.
-                    .unwrap_or(line_str.len()); // If past end, use string length.
+                    .map_or(line_str.len(), |(byte_pos, _)| byte_pos); // If past end, use string length.
 
                 if start_byte_pos < line_str.len() {
                     // Create string slice starting from correct byte boundary.

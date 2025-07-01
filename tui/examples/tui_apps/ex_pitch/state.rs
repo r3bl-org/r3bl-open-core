@@ -163,14 +163,14 @@ mod debug_format_helpers {
 
     impl Debug for State {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            write! {f,
-"State [
+            write!(
+                f,
+                "State [
   - current_slide_index:\n{:?}
   - editor_buffers:\n{:?}
 ]",
-                    self.current_slide_index,
-                    self.editor_buffers,
-            }
+                self.current_slide_index, self.editor_buffers,
+            )
         }
     }
 }

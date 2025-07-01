@@ -26,10 +26,10 @@ use crate::{ch,
             DEFAULT_SYN_HI_FILE_EXT};
 
 /// Please do not construct this struct directly and use
-/// [new_empty](DialogBuffer::new_empty) instead.
+/// [`new_empty`](DialogBuffer::new_empty) instead.
 ///
-/// Stores the data for a modal dialog. It contains the text content in an [EditorBuffer]
-/// and a title that is displayed.
+/// Stores the data for a modal dialog. It contains the text content in an
+/// [`EditorBuffer`] and a title that is displayed.
 #[derive(Clone, PartialEq)]
 pub struct DialogBuffer {
     pub editor_buffer: EditorBuffer,
@@ -38,6 +38,7 @@ pub struct DialogBuffer {
 }
 
 impl DialogBuffer {
+    #[must_use]
     pub fn get_results_count(&self) -> ChUnit {
         if let Some(ref it) = self.maybe_results {
             ch(it.len())
@@ -48,6 +49,7 @@ impl DialogBuffer {
 }
 
 impl DialogBuffer {
+    #[must_use]
     pub fn new_empty() -> Self {
         DialogBuffer {
             editor_buffer: EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None),
@@ -63,16 +65,19 @@ mod impl_debug_format {
     impl Debug for DialogBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             let maybe_results: &dyn Debug = fmt_option!(&self.maybe_results);
-            write! { f,
-"DialogBuffer [
+            write!(
+                f,
+                "DialogBuffer [
   - title: {title}
   - maybe_results: {results:?}
   - editor_buffer.content: {content}
 ]",
-              title = self.title,
-              results = maybe_results,
-              content = self.editor_buffer.get_as_string_with_comma_instead_of_newlines()
-            }
+                title = self.title,
+                results = maybe_results,
+                content = self
+                    .editor_buffer
+                    .get_as_string_with_comma_instead_of_newlines()
+            )
         }
     }
 }

@@ -36,16 +36,16 @@ use crate::{ok,
             DEBUG_TUI_MOD};
 
 /// This is a global data structure that holds state for the entire application
-/// [crate::App] and the terminal window [crate::TerminalWindow] itself.
+/// [`crate::App`] and the terminal window [`crate::TerminalWindow`] itself.
 ///
 /// # Fields
 /// - The `window_size` holds the [Size] of the terminal window.
-/// - The `maybe_saved_offscreen_buffer` holds the last rendered [OffscreenBuffer].
-/// - The `main_thread_channel_sender` is used to send [TerminalWindowMainThreadSignal]s
+/// - The `maybe_saved_offscreen_buffer` holds the last rendered [`OffscreenBuffer`].
+/// - The `main_thread_channel_sender` is used to send [`TerminalWindowMainThreadSignal`]s
 /// - The `state` holds the application's state.
 /// - The `output_device` is the terminal's output device (anything that implements
-///   [crate::SafeRawTerminal] which can be [std::io::stdout] or [crate::SharedWriter],
-///   etc.`).
+///   [`crate::SafeRawTerminal`] which can be [`std::io::stdout`] or
+///   [`crate::SharedWriter`], etc.).
 pub struct GlobalData<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
@@ -95,7 +95,7 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
-    /// Create a new instance of [GlobalData] with the given parameters.
+    /// Create a new instance of [`GlobalData`] with the given parameters.
     pub fn try_to_create_instance(
         main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
         state: S,
@@ -107,14 +107,14 @@ where
         AS: Debug + Default + Clone + Sync + Send,
     {
         let mut it = GlobalData {
-            window_size: Default::default(),
-            maybe_saved_offscreen_buffer: Default::default(),
+            window_size: Size::default(),
+            maybe_saved_offscreen_buffer: Option::default(),
             state,
             main_thread_channel_sender,
             output_device,
             offscreen_buffer_pool,
             hud_report: TelemetryReportLineStorage::new(),
-            spinner_helper: Default::default(),
+            spinner_helper: SpinnerHelper::default(),
         };
 
         it.set_size(initial_size);
@@ -135,23 +135,23 @@ where
 
     pub fn get_size(&self) -> Size { self.window_size }
 
-    /// Generate display output for the HUD report by writing it to [Self::hud_report], a
-    /// pre-allocated (and re-used) string buffer [TelemetryReportLineStorage], which is
-    /// stack allocated.
+    /// Generate display output for the HUD report by writing it to [`Self::hud_report`],
+    /// a pre-allocated (and re-used) string buffer [`TelemetryReportLineStorage`],
+    /// which is stack allocated.
     ///
-    /// Look at the [std::fmt::Display] implementation of [TelemetryHudReport] for details
-    /// on how the report is formatted.
+    /// Look at the [`std::fmt::Display`] implementation of [`TelemetryHudReport`] for
+    /// details on how the report is formatted.
     pub fn set_hud_report(&mut self, new: TelemetryHudReport) {
-        self.hud_report.clear();
         use std::fmt::Write as _;
+        self.hud_report.clear();
         _ = write!(self.hud_report, "{new}");
     }
 
     const EMPTY_HUD_REPORT_STATIC: &str = "⮺ Collecting data ⠎";
     const EMPTY_HUD_REPORT_PREFIX_SPINNER: &str = "⮺ Collecting data ";
 
-    /// If [Self::set_hud_report()] has not been called, this will return an empty string
-    /// with a static message.
+    /// If [`Self::set_hud_report()`] has not been called, this will return an empty
+    /// string with a static message.
     pub fn get_hud_report_no_spinner(&self) -> &str {
         if self.hud_report.is_empty() {
             Self::EMPTY_HUD_REPORT_STATIC
@@ -160,10 +160,11 @@ where
         }
     }
 
-    /// If [Self::set_hud_report()] has not been called, this will return an empty string
-    /// with a "dynamic" message where a spinner glyph changes every time this method is
-    /// called.
+    /// If [`Self::set_hud_report()`] has not been called, this will return an empty
+    /// string with a "dynamic" message where a spinner glyph changes every time this
+    /// method is called.
     pub fn get_hud_report_with_spinner(&mut self) -> &str {
+        use std::fmt::Write as _;
         if self.hud_report.is_empty() {
             let count = self.spinner_helper.count;
             let style = &mut self.spinner_helper.spinner_style;
@@ -173,7 +174,6 @@ where
             );
 
             self.spinner_helper.empty_message.clear();
-            use std::fmt::Write as _;
             _ = write!(
                 self.spinner_helper.empty_message,
                 "{a}{b}",

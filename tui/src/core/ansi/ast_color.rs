@@ -32,11 +32,11 @@ use crate::{convert_rgb_into_ansi256,
             TransformColor};
 
 /// This is the "top-level" color type that is used in this crate. For example this is
-/// used in [super::ASTStyle] to represent the foreground and background colors.
+/// used in [`super::ASTStyle`] to represent the foreground and background colors.
 /// - The other color types are "lower-level" and are used to convert between different
 ///   color types.
-/// - The [TransformColor] trait is used to convert between a "top-level" color type and a
-///   "lower-level" color type.
+/// - The [`TransformColor`] trait is used to convert between a "top-level" color type and
+///   a "lower-level" color type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ASTColor {
     Rgb(RgbValue),

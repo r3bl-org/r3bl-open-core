@@ -17,14 +17,14 @@
 
 // XMARK: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
 
-/// A macro to pad a [crate::InlineString] (which is allocated elsewhere) with a
+/// A macro to pad a [`crate::InlineString`] (which is allocated elsewhere) with a
 /// specified string repeated a specified number of times.
 ///
 /// # Arguments
 ///
 /// * `fmt: $acc` - The accumulator to write the padding into. It can be [String],
-///   [crate::InlineString], [crate::TinyInlineString], or [std::fmt::Formatter],
-///   basically anything that implements [std::fmt::Write].
+///   [`crate::InlineString`], [`crate::TinyInlineString`], or [`std::fmt::Formatter`],
+///   basically anything that implements [`std::fmt::Write`].
 /// * `pad_str: $pad_str` - The string to use for padding.
 /// * `repeat_count: $repeat_count` - The number of times to repeat the padding string.
 ///
@@ -92,14 +92,14 @@ mod tests_pad_fmt {
     }
 }
 
-/// This macro is similar to [crate::join!] except that it also receives a
-/// [std::fmt::Formatter] to write the display output into without allocating
+/// This macro is similar to [`crate::join`!] except that it also receives a
+/// [`std::fmt::Formatter`] to write the display output into without allocating
 /// anything. It does not return any errors.
 ///
 /// # Arguments
 ///
-/// - `fmt` can be a [String], [crate::InlineString], [crate::TinyInlineString], or
-///   [std::fmt::Formatter], basically anything that implements [std::fmt::Write].
+/// - `fmt` can be a [String], [`crate::InlineString`], [`crate::TinyInlineString`], or
+///   [`std::fmt::Formatter`], basically anything that implements [`std::fmt::Write`].
 /// - `from` is the collection to iterate over.
 /// - `each` is the identifier for each item in the collection.
 /// - `delim` is the delimiter to insert between items.
@@ -152,22 +152,22 @@ mod join_fmt_tests {
     fn test_join_fmt() {
         let items = ["apple", "banana", "cherry"];
         let foo = Foo {
-            items: items.iter().map(|s| s.to_string()).collect(),
+            items: items.iter().map(ToString::to_string).collect(),
         };
         let result = format!("{foo}");
         assert_eq!(result, "'apple', 'banana', 'cherry'");
     }
 }
 
-/// This macro is similar to [crate::join_with_index!] except that it also receives a
-/// [std::fmt::Formatter] to write the display output into without allocating
+/// This macro is similar to [`crate::join_with_index`!] except that it also receives a
+/// [`std::fmt::Formatter`] to write the display output into without allocating
 /// anything.
 ///
 /// # Arguments
 ///
 /// * `fmt: $acc` - The accumulator to write the padding into. It can be [String],
-///   [crate::InlineString], [crate::TinyInlineString], or [std::fmt::Formatter],
-///   basically anything that implements [std::fmt::Write].
+///   [`crate::InlineString`], [`crate::TinyInlineString`], or [`std::fmt::Formatter`],
+///   basically anything that implements [`std::fmt::Write`].
 /// * `from: $collection` - The collection to iterate over.
 /// * `each: $item` - The identifier for each item in the collection.
 /// * `index: $index` - The identifier for the index of each item in the collection.
@@ -223,7 +223,7 @@ mod join_with_index_fmt_tests {
     fn test_join_with_index_fmt() {
         let items = ["apple", "banana", "cherry"];
         let foo = Foo {
-            items: items.iter().map(|s| s.to_string()).collect(),
+            items: items.iter().map(ToString::to_string).collect(),
         };
         let result = format!("{foo}");
         assert_eq!(result, "[0]'apple', [1]'banana', [2]'cherry'");

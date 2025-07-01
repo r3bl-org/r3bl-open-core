@@ -22,20 +22,20 @@ use crate::{ch, col, ChUnit, ColIndex};
 
 /// Width is column count, i.e., the number of columns that a UI component occupies.
 ///
-/// This is one part of a [crate::Size] and is different from the [crate::ColIndex]
+/// This is one part of a [`crate::Size`] and is different from the [`crate::ColIndex`]
 /// (position).
 ///
-/// You can use the [crate::width()] to create a new instance.
+/// You can use the [`crate::width()`] to create a new instance.
 ///
 /// # Working with col index
 ///
-/// You can't safely add or subtract a [crate::ColIndex] from this `Width`; since without
-/// knowing your specific use case ahead of time, it isn't possible to provide a default
-/// implementation without leading to unintended consequences. You can do the reverse
-/// safely.
+/// You can't safely add or subtract a [`crate::ColIndex`] from this `Width`; since
+/// without knowing your specific use case ahead of time, it isn't possible to provide a
+/// default implementation without leading to unintended consequences. You can do the
+/// reverse safely.
 ///
-/// To add or subtract a [crate::ColIndex] from this `Width`, you can call
-/// [Self::convert_to_col_index()] and apply whatever logic makes sense for your use
+/// To add or subtract a [`crate::ColIndex`] from this `Width`, you can call
+/// [`Self::convert_to_col_index()`] and apply whatever logic makes sense for your use
 /// case.
 ///
 /// There is a special case for scrolling horizontally, and creates a selection range,
@@ -73,6 +73,7 @@ mod construct {
         ///
         /// The following holds true:
         /// - last col index == width - 1 (which is this function)
+        #[must_use]
         pub fn convert_to_col_index(&self) -> ColIndex { col(self.0 - ch(1)) }
     }
 

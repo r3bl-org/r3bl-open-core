@@ -21,17 +21,19 @@
 
 use std::cmp::Ordering::Less;
 
-use crate::{AnsiValue, RgbValue};
+use crate::{AnsiValue, LossyConvertToByte as _, RgbValue};
 
 pub mod color_utils {
+    #[must_use]
     pub fn linear_to_srgb(intensity: f64) -> f64 {
         if intensity <= 0.003_130_8 {
             12.92 * intensity
         } else {
-            1.055 * intensity.powf(1.0 / 2.4) - 0.055
+            1.055f64.mul_add(intensity.powf(1.0 / 2.4), -0.055)
         }
     }
 
+    #[must_use]
     pub fn srgb_to_linear(intensity: f64) -> f64 {
         if intensity < 0.04045 {
             intensity / 12.92
@@ -41,6 +43,7 @@ pub mod color_utils {
     }
 
     /// More info: <https://goodcalculators.com/rgb-to-grayscale-conversion-calculator/>
+    #[must_use]
     pub fn convert_grayscale(color: (u8, u8, u8)) -> (u8, u8, u8) {
         // See https://en.wikipedia.org/wiki/Grayscale#Converting_color_to_grayscale
         const SCALE: f64 = 256.0;
@@ -51,19 +54,18 @@ pub mod color_utils {
         let blue = srgb_to_linear(f64::from(color.2) / SCALE);
 
         // Converting to grayscale.
-        let gray_linear = red * 0.299 + green * 0.587 + blue * 0.114;
+        let gray_linear = 0.299f64.mul_add(red, 0.587f64.mul_add(green, 0.114 * blue));
 
         // Gamma correction.
         let gray_srgb = linear_to_srgb(gray_linear);
 
-        (
-            (gray_srgb * SCALE) as u8,
-            (gray_srgb * SCALE) as u8,
-            (gray_srgb * SCALE) as u8,
-        )
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let gray_value = (gray_srgb * SCALE) as u8;
+        (gray_value, gray_value, gray_value)
     }
 }
 
+#[must_use]
 pub fn convert_rgb_into_ansi256(rgb_color: RgbValue) -> AnsiValue {
     let luminance_approximation: usize = calculate_luminance(rgb_color).into();
     let gray_ansi256_index: u8 = ANSI256_FROM_GRAY[luminance_approximation];
@@ -83,11 +85,12 @@ pub fn convert_rgb_into_ansi256(rgb_color: RgbValue) -> AnsiValue {
     let approximate_difference_to_cube_mapped_color =
         calculate_relative_diff_between_colors(rgb_color, cube_rgb_color);
 
-    match approximate_difference_to_cube_mapped_color
+    if let Less = approximate_difference_to_cube_mapped_color
         .cmp(&approximate_difference_to_grayscale)
     {
-        Less => cube_ansi256_index.into(),
-        _ => gray_ansi256_index.into(),
+        cube_ansi256_index.into()
+    } else {
+        gray_ansi256_index.into()
     }
 }
 
@@ -100,6 +103,7 @@ mod cube_mapping {
         pub cube_rgb_color: RgbValue,
     }
 
+    #[must_use]
     pub fn calculate_cube_mapping_for_rgb_color(
         rgb_color: RgbValue,
     ) -> CubeMappingResult {
@@ -132,7 +136,8 @@ mod cube_mapping {
         red_or_green_or_blue_value: u32,
     }
 
-    pub fn calculate_cube_index_red(red_value: u8) -> CubeIndexResult {
+    #[must_use]
+    pub const fn calculate_cube_index_red(red_value: u8) -> CubeIndexResult {
         let CubeIndexResult {
             ansi256_index: index,
             red_or_green_or_blue_value,
@@ -144,7 +149,8 @@ mod cube_mapping {
         }
     }
 
-    pub fn calculate_cube_index_green(green_value: u8) -> CubeIndexResult {
+    #[must_use]
+    pub const fn calculate_cube_index_green(green_value: u8) -> CubeIndexResult {
         let CubeIndexResult {
             ansi256_index: cube_index,
             red_or_green_or_blue_value,
@@ -156,14 +162,16 @@ mod cube_mapping {
         }
     }
 
-    pub fn calculate_cube_index_blue(blue_value: u8) -> CubeIndexResult {
+    #[must_use]
+    pub const fn calculate_cube_index_blue(blue_value: u8) -> CubeIndexResult {
         find_closest(blue_value, 35, 115, 155, 195, 235)
     }
 
-    /// - ANSI 256 colors are represented as a 6×6×6 cube.
-    /// - On each axis, the six indices map to [0, 95, 135, 175, 215, 255] RGB component
+    /// - ANSI 256 colors are represented as a `6×6×6` cube.
+    /// - On each axis, the six indices map to `[0, 95, 135, 175, 215, 255]` RGB component
     ///   values.
-    pub fn find_closest(
+    #[must_use]
+    pub const fn find_closest(
         value: u8,
         index_1: u8,
         index_2: u8,
@@ -192,18 +200,33 @@ mod cube_mapping {
     }
 
     /// More info: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/Understanding_Colors_and_Luminance#luminance_and_perception>.
+    #[must_use]
     pub fn calculate_luminance(rgb: RgbValue) -> u8 {
         let RgbValue { red, green, blue } = rgb;
-        let number = red as f32 * red as f32 * 0.2126729_f32
-            + green as f32 * green as f32 * 0.7151521_f32
-            + blue as f32 * blue as f32 * 0.0721750_f32;
-        number.sqrt() as u8
+        let red_f32 = f32::from(red);
+        let green_f32 = f32::from(green);
+        let blue_f32 = f32::from(blue);
+
+        let red_squared = red_f32 * red_f32;
+        let green_squared = green_f32 * green_f32;
+        let blue_squared = blue_f32 * blue_f32;
+
+        let number = 0.212_672_9_f32.mul_add(
+            red_squared,
+            0.715_152_1_f32.mul_add(green_squared, 0.072_175_f32 * blue_squared),
+        );
+
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let it = number.sqrt() as u8;
+
+        it
     }
 
     /// Calculates relative "diff" between two colors.
     /// - `d(x, x) = 0` and `d(x, y) < d(x, z)`, implies `x` being closer to `y` than to
     ///   `z`.
     /// - More info: <https://www.compuphase.com/cmetric.htm>.
+    #[must_use]
     pub fn calculate_relative_diff_between_colors(
         this: RgbValue,
         other: RgbValue,
@@ -220,20 +243,36 @@ mod cube_mapping {
             blue: other_blue,
         } = other;
 
-        let red_sum = (this_red as i32) + (other_red as i32);
-        let red = (this_red as i32) - (other_red as i32);
-        let green = (this_green as i32) - (other_green as i32);
-        let blue = (this_blue as i32) - (other_blue as i32);
-        let distance = (1024 + red_sum) * red * red
-            + 2048 * green * green
-            + (1534 - red_sum) * blue * blue;
-        distance as u32
+        let red_sum = i32::from(this_red) + i32::from(other_red);
+        let red = i32::from(this_red) - i32::from(other_red);
+        let green = i32::from(this_green) - i32::from(other_green);
+        let blue = i32::from(this_blue) - i32::from(other_blue);
+
+        let red_factor = 1024 + red_sum;
+        let green_factor = 2048;
+        let blue_factor = 1534 - red_sum;
+
+        let distance = red_factor * red * red
+            + green_factor * green * green
+            + blue_factor * blue * blue;
+
+        #[allow(clippy::cast_sign_loss)]
+        let it = distance as u32;
+
+        it
     }
 }
-pub use cube_mapping::*;
+pub use cube_mapping::{calculate_cube_index_blue,
+                       calculate_cube_index_green,
+                       calculate_cube_index_red,
+                       calculate_cube_mapping_for_rgb_color,
+                       calculate_luminance,
+                       calculate_relative_diff_between_colors,
+                       find_closest,
+                       CubeMappingResult};
 
 mod convert_between_rgb_and_u32 {
-    use crate::RgbValue;
+    use super::*;
 
     impl From<RgbValue> for u32 {
         fn from(rgb: RgbValue) -> Self {
@@ -242,16 +281,25 @@ mod convert_between_rgb_and_u32 {
                 green: g,
                 blue: b,
             } = rgb;
-            ((r as u32) << 16) + ((g as u32) << 8) + (b as u32)
+            // When combining RGB values into a 32-bit color, each component occupies
+            // distinct bit ranges:
+            // - **`Red (r)`**: bits `16-23` (shifted left by `16`)
+            // - **`Green (g)`**: bits `8-15` (shifted left by `8`)
+            // - **`Blue (b)`**: bits `0-7` (no shift)
+            // Since these bit ranges **`don't overlap`**, `addition` (`+`) and `bitwise
+            // OR` (`|`) produce the same result
+            (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b)
         }
     }
 
     impl From<u32> for RgbValue {
         fn from(rgb: u32) -> Self {
+            // The `as` keyword is the designated tool for primitive, potentially lossy
+            // conversions like f32 to u8.
             RgbValue {
-                red: (rgb >> 16) as u8,
-                green: (rgb >> 8) as u8,
-                blue: rgb as u8,
+                red: (rgb >> 16).to_u8_lossy(),
+                green: (rgb >> 8).to_u8_lossy(),
+                blue: (rgb).to_u8_lossy(),
             }
         }
     }
@@ -280,13 +328,15 @@ pub mod ansi_constants {
 
     /// ANSI Color Palette.
     /// - `u32` value encodes R (u8), G (u8), B(u8).
-    /// - [RgbValue::from](crate::RgbValue::from) can be used to convert `u32` into
+    /// - [`RgbValue::from`](crate::RgbValue::from) can be used to convert `u32` into
     ///   `RgbValue`.
+    /// - Hex literals are in the format `0xRRGGBB` without separators for consistency.
+    #[allow(clippy::unreadable_literal)]
     pub static ANSI_COLOR_PALETTE: [u32; 256] = [
         // The 16 system colors as by xterm (the default).
         0x000000, 0xcd0000, 0x00cd00, 0xcdcd00, 0x0000ee, 0xcd00cd, 0x00cdcd, 0xe5e5e5,
         0x7f7f7f, 0xff0000, 0x00ff00, 0xffff00, 0x5c5cff, 0xff00ff, 0x00ffff, 0xffffff,
-        // 6×6×6 cube.
+        // `6×6×6` cube.
         0x000000, 0x00005f, 0x000087, 0x0000af, 0x0000d7, 0x0000ff, 0x005f00, 0x005f5f,
         0x005f87, 0x005faf, 0x005fd7, 0x005fff, 0x008700, 0x00875f, 0x008787, 0x0087af,
         0x0087d7, 0x0087ff, 0x00af00, 0x00af5f, 0x00af87, 0x00afaf, 0x00afd7, 0x00afff,
@@ -320,7 +370,7 @@ pub mod ansi_constants {
         0xa8a8a8, 0xb2b2b2, 0xbcbcbc, 0xc6c6c6, 0xd0d0d0, 0xdadada, 0xe4e4e4, 0xeeeeee,
     ];
 }
-pub use ansi_constants::*;
+pub use ansi_constants::{ANSI256_FROM_GRAY, ANSI_COLOR_PALETTE};
 
 #[cfg(test)]
 mod tests {

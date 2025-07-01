@@ -26,25 +26,25 @@ use crate::{inline_string,
             FlexBoxId,
             InlineVec};
 
-/// This is a global (scoped to an [crate::App]) struct that is used to store the `id` of
-/// the [FlexBox] that has keyboard focus.
+/// This is a global (scoped to an [`crate::App`]) struct that is used to store the `id`
+/// of the [`FlexBox`] that has keyboard focus.
 ///
 /// There are 2 types of keyboard focus:
 /// 1. Non modal focus - This is just a single `id` that is stored. To change focus a new
 ///    `id` is set in its place. Internally a `Vec` of capacity 2 is used to store this
 ///    and the modal `id`.
 /// 2. Modal focus - There can only be one modal at a time. When a modal is active, the
-///    `id` of the [FlexBox] that had focus before the modal was activated is saved. When
-///    the modal is closed, the `id` of the [FlexBox] that had focus before the modal was
-///    activated is restored.
+///    `id` of the [`FlexBox`] that had focus before the modal was activated is saved.
+///    When the modal is closed, the `id` of the [`FlexBox`] that had focus before the
+///    modal was activated is restored.
 ///
 /// # Modal `id`, which is used by modal dialog box
 ///
 /// 1. Only one modal can be active at any time.
-/// 2. When a modal is active, the `id` of the [FlexBox] that had focus before the modal
+/// 2. When a modal is active, the `id` of the [`FlexBox`] that had focus before the modal
 ///    was activated is saved.
-/// 3. When the modal is closed, the `id` of the [FlexBox] that had focus before the modal
-///    was activated is restored.
+/// 3. When the modal is closed, the `id` of the [`FlexBox`] that had focus before the
+///    modal was activated is restored.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct HasFocus {
     /// This `id` has keyboard focus. This is global.
@@ -60,16 +60,25 @@ impl Default for HasFocus {
 }
 
 impl HasFocus {
-    /// Check to see whether [set_id][HasFocus::set_id] has been called.
+    /// Check to see whether [`set_id`][HasFocus::set_id] has been called.
+    #[must_use]
     pub fn is_empty(&self) -> bool { self.id_vec.is_empty() }
 
-    /// Check to see whether [set_id][HasFocus::set_id] has been called.
+    /// Check to see whether [`set_id`][HasFocus::set_id] has been called.
+    #[must_use]
     pub fn is_set(&self) -> bool { !self.is_empty() }
 
-    /// Get the `id` of the [FlexBox] that has keyboard focus.
+    /// Get the `id` of the [`FlexBox`] that has keyboard focus.
+    #[must_use]
     pub fn get_id(&self) -> Option<FlexBoxId> { self.id_vec.last().copied() }
 
-    /// Set the `id` of the [FlexBox] that has keyboard focus.
+    /// Set the `id` of the [`FlexBox`] that has keyboard focus.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     pub fn set_id(&mut self, id: FlexBoxId) {
         if self.id_vec.is_empty() {
             self.id_vec.push(id);
@@ -80,6 +89,13 @@ impl HasFocus {
     }
 
     /// Check whether the given `id` currently has keyboard focus.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
+    #[must_use]
     pub fn does_id_have_focus(&self, id: FlexBoxId) -> bool {
         if self.id_vec.is_empty() {
             false
@@ -89,7 +105,8 @@ impl HasFocus {
         }
     }
 
-    /// Check whether the `id` of the [FlexBox] currently has keyboard focus.
+    /// Check whether the `id` of the [`FlexBox`] currently has keyboard focus.
+    #[must_use]
     pub fn does_current_box_have_focus(&self, current_box: FlexBox) -> bool {
         self.does_id_have_focus(current_box.id)
     }
@@ -97,7 +114,7 @@ impl HasFocus {
 
 impl HasFocus {
     /// Pushes the `id` to the `id_vec`. The previous `id` is saved and can be restored
-    /// with [reset_modal_id](HasFocus::reset_modal_id).
+    /// with [`reset_modal_id`](HasFocus::reset_modal_id).
     pub fn try_set_modal_id(&mut self, id: FlexBoxId) -> CommonResult<()> {
         throws!({
             // Must have a non modal id already set.
@@ -125,9 +142,11 @@ impl HasFocus {
     }
 
     /// Checks whether any modal `id` is set.
+    #[must_use]
     pub fn is_modal_set(&self) -> bool { self.id_vec.len() == 2 }
 
     /// Checks whether the given `id` is the modal `id`.
+    #[must_use]
     pub fn is_modal_id(&self, id: FlexBoxId) -> bool {
         self.is_modal_set() && self.does_id_have_focus(id)
     }

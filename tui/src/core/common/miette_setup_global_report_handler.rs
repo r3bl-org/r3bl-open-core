@@ -38,15 +38,14 @@
 //!   [`GraphicalReportHandler`
 //!   struct](https://docs.rs/miette/latest/miette/struct.GraphicalReportHandler.html)
 //!   which is the "real" handler struct.
-//! - The [miette::set_hook] function is used to register a custom error report handler. Here's
-//!   an [example in a
-//!   test](https://github.com/zkat/miette/blob/6ea86a2248854acf88df345814b6c97d31b8b4d9/tests/test_location.rs#L39)
+//! - The [`miette::set_hook`] function is used to register a custom error report handler.
+//!   Here's an [example in a test](https://github.com/zkat/miette/blob/6ea86a2248854acf88df345814b6c97d31b8b4d9/tests/test_location.rs#L39)
 //!   which registers a custom hook / report handler.
 
 use miette::MietteHandlerOpts;
 use tracing::debug;
 
-/// The [miette::ErrorHook] is lazily evaluated.
+/// The [`miette::ErrorHook`] is lazily evaluated.
 ///
 /// The terminal width will be calculated just at the time of the global error handler
 /// being used. So if an error never occurs, then the terminal width will never be

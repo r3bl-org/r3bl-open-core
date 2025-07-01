@@ -78,7 +78,7 @@ pub enum DialogEngineApplyResponse {
     Noop,
 }
 
-/// Things you can do with a [DialogEngine].
+/// Things you can do with a [`DialogEngine`].
 pub struct DialogEngineApi;
 
 impl DialogEngineApi {
@@ -167,7 +167,7 @@ impl DialogEngineApi {
                     dialog_engine,
                     self_id,
                     state,
-                )?;
+                );
                 if !results_panel_ops.is_empty() {
                     it.push(ZOrder::Glass, results_panel_ops);
                 }
@@ -190,13 +190,13 @@ impl DialogEngineApi {
         Ok(pipeline)
     }
 
-    /// Event based interface for the editor. This executes the [InputEvent] and returns
+    /// Event based interface for the editor. This executes the [`InputEvent`] and returns
     /// one of the following:
-    /// - [DialogEngineApplyResponse::DialogChoice] => <kbd>Enter</kbd> or <kbd>Esc</kbd>
-    ///   was pressed.
-    /// - [DialogEngineApplyResponse::UpdateEditorBuffer] => the editor buffer was
+    /// - [`DialogEngineApplyResponse::DialogChoice`] => <kbd>Enter</kbd> or
+    ///   <kbd>Esc</kbd> was pressed.
+    /// - [`DialogEngineApplyResponse::UpdateEditorBuffer`] => the editor buffer was
     ///   updated.
-    /// - [DialogEngineApplyResponse::Noop] => otherwise.
+    /// - [`DialogEngineApplyResponse::Noop`] => otherwise.
     pub fn apply_event<S, AS>(
         mut_state: &mut S,
         self_id: FlexBoxId,
@@ -250,10 +250,8 @@ impl DialogEngineApi {
             EditorEngineApplyEventResult::Applied => {
                 Ok(DialogEngineApplyResponse::UpdateEditorBuffer)
             }
-            _ =>
-            // Otherwise, return noop.
-            {
-                Ok(DialogEngineApplyResponse::Noop)
+            EditorEngineApplyEventResult::NotApplied => {
+                Ok(DialogEngineApplyResponse::Noop) /* Otherwise, return noop. */
             }
         }
     }
@@ -272,7 +270,7 @@ pub enum DisplayConstants {
 mod internal_impl {
     use super::*;
 
-    /// Return the [FlexBox] for the dialog to be rendered in.
+    /// Return the [`FlexBox`] for the dialog to be rendered in.
     ///
     /// - In non-modal contexts (which this is not), this is determined by the layout
     ///   engine.
@@ -493,7 +491,7 @@ mod internal_impl {
             ));
 
             pipeline.push(ZOrder::Glass, ops);
-        };
+        }
 
         Ok(pipeline)
     }
@@ -504,7 +502,7 @@ mod internal_impl {
         dialog_engine: &DialogEngine,
         self_id: FlexBoxId,
         state: &mut S,
-    ) -> CommonResult<RenderOps>
+    ) -> RenderOps
     where
         S: Default + Clone + Debug + Sync + Send + HasDialogBuffers,
     {
@@ -513,7 +511,7 @@ mod internal_impl {
         if let Some(dialog_buffer) = state.get_mut_dialog_buffer(self_id) {
             if let Some(results) = dialog_buffer.maybe_results.as_ref() {
                 if !results.is_empty() {
-                    paint_results(
+                    render_results_panel_inner::paint_results(
                         &mut it,
                         origin_pos,
                         bounds_size,
@@ -522,9 +520,13 @@ mod internal_impl {
                     );
                 }
             }
-        };
+        }
 
-        return Ok(it);
+        it
+    }
+
+    mod render_results_panel_inner {
+        use super::*;
 
         pub fn paint_results(
             ops: &mut RenderOps,
@@ -704,6 +706,8 @@ mod internal_impl {
         bounds_size: Size,
         dialog_engine: &mut DialogEngine,
     ) -> RenderOps {
+        use render_border_helper::{IsFirstLine, IsLastLine};
+
         let mut ops = render_ops!();
 
         let inner_spaces = SPACER.repeat({
@@ -721,16 +725,6 @@ mod internal_impl {
                 let row_index = origin_pos.row_index + row(row_idx);
                 col_index + row_index
             };
-
-            enum IsFirstLine {
-                Yes,
-                No,
-            }
-
-            enum IsLastLine {
-                Yes,
-                No,
-            }
 
             let is_first_line = if row_idx == 0 {
                 IsFirstLine::Yes
@@ -806,7 +800,7 @@ mod internal_impl {
                     );
                 }
                 _ => {}
-            };
+            }
 
             // Paint separator for results panel if in autocomplete mode.
             match dialog_engine.dialog_options.mode {
@@ -849,6 +843,18 @@ mod internal_impl {
         ops
     }
 
+    mod render_border_helper {
+        pub enum IsFirstLine {
+            Yes,
+            No,
+        }
+
+        pub enum IsLastLine {
+            Yes,
+            No,
+        }
+    }
+
     pub fn try_handle_dialog_choice(
         input_event: InputEvent,
         maybe_dialog_buffer: Option<&mut DialogBuffer>,
@@ -882,8 +888,9 @@ mod internal_impl {
             DialogEvent::EscPressed => {
                 return Some(DialogChoice::No);
             }
-            _ => {}
+            DialogEvent::None => {}
         }
+
         None
     }
 
@@ -999,8 +1006,8 @@ mod test_dialog_api_make_flex_box_for_dialog {
     use crate::{assert_eq2, dialog_engine_api::internal_impl, Surface};
 
     /// More info on `is` and downcasting:
-    /// - https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any
-    /// - https://ysantos.com/blog/downcast-rust
+    /// - <https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any>
+    /// - <https://ysantos.com/blog/downcast-rust>
     #[test]
     fn make_flex_box_for_dialog_simple_display_size_too_small() {
         let surface = Surface::default();
@@ -1043,8 +1050,8 @@ mod test_dialog_api_make_flex_box_for_dialog {
     }
 
     /// More info on `is` and downcasting:
-    /// - https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any
-    /// - https://ysantos.com/blog/downcast-rust
+    /// - <https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any>
+    /// - <https://ysantos.com/blog/downcast-rust>
     #[test]
     fn make_flex_box_for_dialog_autocomplete_display_size_too_small() {
         let surface = Surface::default();

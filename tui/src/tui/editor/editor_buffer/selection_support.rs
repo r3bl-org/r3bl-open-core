@@ -43,10 +43,11 @@ use crate::{caret_scr_adj,
             Size,
             DEBUG_TUI_COPY_PASTE};
 
-/// Usually [EditorBuffer::get_mut()] and [EditorBuffer::get_mut_no_drop()] need a
-/// viewport to be passed in (from the [crate::EditorEngine]). However, in this module, we
-/// don't need a viewport, nor do we have access to the [crate::EditorEngine], so we use
-/// this dummy viewport.
+/// Usually [`EditorBuffer::get_mut()`] and [`EditorBuffer::get_mut_no_drop()`] need a
+/// viewport to be passed in (from the [`crate::EditorEngine`]). However, in this module,
+/// we don't need a viewport, nor do we have access to the [`crate::EditorEngine`], so we
+/// use this dummy viewport.
+#[must_use]
 pub fn dummy_viewport() -> Size {
     width(ChUnitPrimitiveType::MAX) + height(ChUnitPrimitiveType::MAX)
 }
@@ -114,7 +115,7 @@ pub fn handle_selection_single_line_caret_movement(
                     m = underline(&inline_string!("{:?}", range.locate_column(curr))),
                     n = "direction",
                     o = fg_green(&inline_string!("{:?}", SelectionRange::caret_movement_direction_left_right(prev, curr)))
-                )
+                );
     });
 
     // XMARK: For reference, algo for left, right selection
@@ -374,7 +375,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
                 }
             }
         }
-        _ => {}
+        cmp::Ordering::Equal => {}
     }
 }
 
@@ -857,7 +858,7 @@ mod multiline_select_helpers {
                         row_index,
                         (start, end).into(),
                         caret_vertical_movement_direction,
-                    )
+                    );
                 }
             }
         }

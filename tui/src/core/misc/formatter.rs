@@ -18,9 +18,9 @@
 use crate::InlineString;
 
 /// This macro is used to format an option. If the option is [Some], it will return the
-/// value. It is meant for use with [std::fmt::Formatter::debug_struct].
+/// value. It is meant for use with [`std::fmt::Formatter::debug_struct`].
 ///
-/// When using this, make sure to import [FormatOptionMsg] as well, like this:
+/// When using this, make sure to import [`FormatOptionMsg`] as well, like this:
 ///
 /// ```
 /// use r3bl_tui::{fmt_option, FormatOptionMsg};

@@ -38,6 +38,7 @@ pub struct PatternMatcherStateMachine<'a> {
 }
 
 impl<'a> PatternMatcherStateMachine<'a> {
+    #[must_use]
     pub fn new(pattern: &'a str, scroll_offset_col_index: Option<ColIndex>) -> Self {
         Self {
             pattern,
@@ -47,6 +48,7 @@ impl<'a> PatternMatcherStateMachine<'a> {
         }
     }
 
+    #[must_use]
     pub fn get_current_index(&self) -> usize { self.current_index }
 
     pub fn match_next(&mut self, character_to_test: char) -> CharacterMatchResult {

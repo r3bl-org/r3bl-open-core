@@ -69,7 +69,7 @@ mod tests_download {
         )
         .await
         {
-            Ok(Ok(_)) => {
+            Ok(Ok(())) => {
                 assert!(destination_file.exists());
             }
             Ok(Err(err)) => {
@@ -93,7 +93,7 @@ mod tests_download {
         )
         .await
         {
-            Ok(Ok(_)) => {
+            Ok(Ok(())) => {
                 assert!(destination_file.exists());
             }
             Ok(Err(err)) => {

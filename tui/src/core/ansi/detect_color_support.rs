@@ -21,7 +21,7 @@ use std::{env,
 /// Global variable which can be used to:
 /// 1. Override the color support.
 /// 2. Memoize the value of the color support result from running
-///    [global_color_support::detect].
+///    [`global_color_support::detect`].
 ///
 /// This is a global variable because it is used in multiple places in the codebase, and
 /// it is really dependent on the environment.
@@ -34,10 +34,11 @@ pub mod global_color_support {
     /// This is the main function that is used to determine whether color is supported.
     /// And if so what type of color is supported.
     ///
-    /// - If the value has been set using [set_override], then that value will be
+    /// - If the value has been set using [`set_override`], then that value will be
     ///   returned.
     /// - Otherwise, the value will be determined calling
-    ///   [examine_env_vars_to_determine_color_support].
+    ///   [`examine_env_vars_to_determine_color_support`].
+    #[must_use]
     pub fn detect() -> ColorSupport {
         match try_get_override() {
             Ok(it) => match it {
@@ -46,12 +47,12 @@ pub mod global_color_support {
                 ColorSupport::Grayscale => ColorSupport::Grayscale,
                 ColorSupport::NoColor => ColorSupport::NoColor,
             },
-            Err(_) => examine_env_vars_to_determine_color_support(Stream::Stdout),
+            Err(()) => examine_env_vars_to_determine_color_support(Stream::Stdout),
         }
     }
 
     /// Override the color support. Regardless of the value of the environment variables
-    /// the value you set here will be used when you call [detect()].
+    /// the value you set here will be used when you call [`detect()`].
     ///
     /// # Testing support
     ///
@@ -71,8 +72,8 @@ pub mod global_color_support {
     }
 
     /// Get the color support override value.
-    /// - If the value has been set using [global_color_support::set_override], then that
-    ///   value will be returned.
+    /// - If the value has been set using [`global_color_support::set_override`], then
+    ///   that value will be returned.
     /// - Otherwise, an error will be returned.
     #[allow(clippy::result_unit_err, static_mut_refs)]
     pub fn try_get_override() -> Result<ColorSupport, ()> {
@@ -83,29 +84,31 @@ pub mod global_color_support {
 
 /// Determine whether color is supported heuristically. This is based on the environment
 /// variables.
+#[must_use]
 pub fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSupport {
     if env_no_color()
-        || as_str(&env::var("TERM")) == Ok("dumb")
+        || env::var("TERM").is_ok_and(|v| v == "dumb")
         || !(is_a_tty(stream) || env::var("IGNORE_IS_TERMINAL").is_ok_and(|v| v != "0"))
     {
         return ColorSupport::NoColor;
     }
 
     if env::consts::OS == "macos" {
-        if as_str(&env::var("TERM_PROGRAM")) == Ok("Apple_Terminal")
-            && env::var("TERM").map(|term| check_256_color(&term)) == Ok(true)
+        if env::var("TERM_PROGRAM").is_ok_and(|v| v == "Apple_Terminal")
+            && env::var("TERM").is_ok_and(|term| check_256_color(&term))
         {
             return ColorSupport::Ansi256;
         }
 
-        if as_str(&env::var("TERM_PROGRAM")) == Ok("iTerm.app")
-            || as_str(&env::var("COLORTERM")) == Ok("truecolor")
+        if env::var("TERM_PROGRAM").is_ok_and(|v| v == "iTerm.app")
+            || env::var("COLORTERM").is_ok_and(|v| v == "truecolor")
         {
             return ColorSupport::Truecolor;
         }
     }
 
-    if env::consts::OS == "linux" && as_str(&env::var("COLORTERM")) == Ok("truecolor") {
+    if env::consts::OS == "linux" && env::var("COLORTERM").is_ok_and(|v| v == "truecolor")
+    {
         return ColorSupport::Truecolor;
     }
 
@@ -114,7 +117,7 @@ pub fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSuppo
     }
 
     if env::var("COLORTERM").is_ok()
-        || env::var("TERM").map(|term| check_ansi_color(&term)) == Ok(true)
+        || env::var("TERM").is_ok_and(|term| check_ansi_color(&term))
         || env::var("CLICOLOR").is_ok_and(|v| v != "0")
         || is_ci::uncached()
     {
@@ -173,6 +176,7 @@ mod convert_between_color_and_i8 {
 mod helpers {
     use super::*;
 
+    #[must_use]
     pub fn is_a_tty(stream: Stream) -> bool {
         use std::io::IsTerminal as _;
         match stream {
@@ -181,10 +185,12 @@ mod helpers {
         }
     }
 
+    #[must_use]
     pub fn check_256_color(term: &str) -> bool {
         term.ends_with("256") || term.ends_with("256color")
     }
 
+    #[must_use]
     pub fn check_ansi_color(term: &str) -> bool {
         term.starts_with("screen")
             || term.starts_with("vscode")
@@ -198,6 +204,7 @@ mod helpers {
             || term.contains("linux")
     }
 
+    #[must_use]
     pub fn env_no_color() -> bool {
         match as_str(&env::var("NO_COLOR")) {
             Ok("0") | Err(_) => false,

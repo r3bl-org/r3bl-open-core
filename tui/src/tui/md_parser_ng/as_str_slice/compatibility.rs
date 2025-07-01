@@ -28,23 +28,23 @@ impl<'a> AsStrSlice<'a> {
     /// Write the content of this slice to a byte cache.
     ///
     /// This is for compatibility with the legacy markdown parser, which expects a [&str]
-    /// input with trailing [crate::constants::NEW_LINE].
+    /// input with trailing [`crate::constants::NEW_LINE`].
     ///
     /// ## Newline behavior
     ///
-    /// - It adds a trailing [crate::constants::NEW_LINE] to the end of the `acc` in case
-    ///   there is more than one line in `lines` field of [AsStrSlice].
+    /// - It adds a trailing [`crate::constants::NEW_LINE`] to the end of the `acc` in
+    ///   case there is more than one line in `lines` field of [`AsStrSlice`].
     /// - For a single line, no trailing newline is added.
     /// - Empty lines are preserved with newlines.
     ///
-    /// ## Incompatibility with [str::lines()]
+    /// ## Incompatibility with [`str::lines()`]
     ///
-    /// **Important**: This behavior is intentionally different from [str::lines()].
+    /// **Important**: This behavior is intentionally different from [`str::lines()`].
     /// When there are multiple lines and the last line is empty, this method will add
-    /// a trailing newline, whereas [str::lines()] would not.
+    /// a trailing newline, whereas [`str::lines()`] would not.
     ///
     /// This behavior is what was used in the legacy parser which takes [&str] as input,
-    /// rather than [AsStrSlice].
+    /// rather than [`AsStrSlice`].
     pub fn write_to_byte_cache_compat(
         &self,
         size_hint: usize,
@@ -78,17 +78,19 @@ impl<'a> AsStrSlice<'a> {
     }
 }
 
+#[allow(clippy::doc_markdown)]
 /// Shared function used by both old and new code block parsers.
 ///
-/// At a minimum, a [CodeBlockLine] will be 2 lines of text.
+/// At a minimum, a [`CodeBlockLine`] will be 2 lines of text.
 /// 1. The first line will be the language of the code block, eg: "```rs\n" or "```\n".
 /// 2. The second line will be the end of the code block, eg: "```\n" Then there may be
 ///    some number of lines of text in the middle. These lines are stored in the
 ///    [content](CodeBlockLine.content) field.
-pub fn convert_into_code_block_lines<'input>(
-    lang: Option<&'input str>,
-    lines: Vec<&'input str>,
-) -> List<CodeBlockLine<'input>> {
+#[must_use]
+pub fn convert_into_code_block_lines<'a>(
+    lang: Option<&'a str>,
+    lines: Vec<&'a str>,
+) -> List<CodeBlockLine<'a>> {
     let mut acc = List::with_capacity(lines.len() + 2);
 
     acc += CodeBlockLine {
@@ -111,13 +113,13 @@ pub fn convert_into_code_block_lines<'input>(
     acc
 }
 
-/// These tests ensure compatibility with how [AsStrSlice::write_to_byte_cache_compat()]
-/// works. And ensuring that the [AsStrSlice] methods that are used to implement the
-/// [Display] trait do in fact make it behave like a "virtual" array or slice of strings
-/// that matches the behavior of [AsStrSlice::write_to_byte_cache_compat()].
+/// These tests ensure compatibility with how [`AsStrSlice::write_to_byte_cache_compat()`]
+/// works. And ensuring that the [`AsStrSlice`] methods that are used to implement the
+/// [`Display`] trait do in fact make it behave like a "virtual" array or slice of strings
+/// that matches the behavior of [`AsStrSlice::write_to_byte_cache_compat()`].
 ///
-/// This breaks compatibility with [str::lines()] behavior, but matches the behavior of
-/// [AsStrSlice::write_to_byte_cache_compat()] which adds trailing newlines for multiple
+/// This breaks compatibility with [`str::lines()`] behavior, but matches the behavior of
+/// [`AsStrSlice::write_to_byte_cache_compat()`] which adds trailing newlines for multiple
 /// lines.
 #[cfg(test)]
 mod tests_write_to_byte_cache_compat_behavior {

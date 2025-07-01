@@ -16,21 +16,21 @@
  */
 
 //! This is the lowest priority parser called by
-//! [crate::parse_inline_fragments_until_eol_or_eoi()].
+//! [`crate::parse_inline_fragments_until_eol_or_eoi()`].
 //!
 //! It matches anything that is not a special character. This is used to parse plain text.
 //! It works with the specialized parsers in
-//! [crate::parse_inline_fragments_until_eol_or_eoi()] such as:
-//! - [crate::parse_fragment_starts_with_underscore_err_on_new_line()],
-//! - [crate::parse_fragment_starts_with_star_err_on_new_line()],
-//! - [crate::parse_fragment_starts_with_backtick_err_on_new_line()], etc.
+//! [`crate::parse_inline_fragments_until_eol_or_eoi()`] such as:
+//! - [`crate::parse_fragment_starts_with_underscore_err_on_new_line()`],
+//! - [`crate::parse_fragment_starts_with_star_err_on_new_line()`],
+//! - [`crate::parse_fragment_starts_with_backtick_err_on_new_line()`], etc.
 //!
 //! It also works hand in hand with
-//! [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()] which is
+//! [`specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()`] which is
 //! used by the specialized parsers.
 //!
-//! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
-//! in [crate::parse_fragments_in_a_line].
+//! To see this in action, set the [`DEBUG_MD_PARSER_STDOUT`] to true, and run all the
+//! tests in [`crate::parse_fragments_in_a_line`].
 
 use nom::{branch::alt,
           bytes::complete::{tag, take_till1},
@@ -57,10 +57,10 @@ use crate::{fg_blue,
 // XMARK: Lowest priority parser for "plain text" Markdown fragment
 
 /// This is the lowest priority parser called by
-/// [crate::parse_inline_fragments_until_eol_or_eoi()], which itself is called:
+/// [`crate::parse_inline_fragments_until_eol_or_eoi()`], which itself is called:
 /// 1. Repeatedly in a loop by
-///    [crate::parse_block_markdown_text_with_or_without_new_line()].
-/// 2. And by [crate::parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()].
+///    [`crate::parse_block_markdown_text_with_or_without_new_line()`].
+/// 2. And by [`crate::parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()`].
 ///
 /// It will match anything that is not a special character. This is used to parse plain
 /// text.
@@ -72,8 +72,8 @@ use crate::{fg_blue,
 ///
 /// This gives the other more specialized parsers a chance to address these special
 /// characters (like italic, bold, links, etc.), when this function is called repeatedly:
-/// - By [crate::parse_block_markdown_text_with_or_without_new_line()],
-/// - Which repeatedly calls [crate::parse_inline_fragments_until_eol_or_eoi()]. This
+/// - By [`crate::parse_block_markdown_text_with_or_without_new_line()`],
+/// - Which repeatedly calls [`crate::parse_inline_fragments_until_eol_or_eoi()`]. This
 ///   function actually runs the specialized parsers.
 /// - Which calls this function repeatedly (if the specialized parsers don't match & error
 ///   out). This serves as a "catch all" parser.
@@ -84,7 +84,13 @@ use crate::{fg_blue,
 /// the input.
 ///
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
-/// See: [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()].
+/// See: [`specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()`].
+///
+/// # Panics
+///
+/// This will panic if the lock is poisoned, which can happen if a thread
+/// panics while holding the lock. To avoid panics, ensure that the code that
+/// locks the mutex does not panic while holding the lock.
 pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str> {
     DEBUG_MD_PARSER_STDOUT.then(|| {
         println!("\n{} plain parser, input: {:?}", fg_magenta("██"), input);
@@ -203,7 +209,7 @@ fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 /// This is used to detect the `Edge case -> Normal case` where the input starts with any
 /// of these special characters, and the input is taken until the first new line, and
 /// return as plain text. Unless both of the following are true:
-/// 1. input is in [get_sp_char_set_1()] and,
+/// 1. input is in [`get_sp_char_set_1()`] and,
 /// 2. count is 1.
 fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
     get_sp_char_set_1()
@@ -218,9 +224,9 @@ fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
 /// This is a special set of chars called `set_3`.
 ///
 /// This is used to detect the `Normal case` where the input does not start with any of
-/// the special characters in [get_sp_char_set_2()]. The input is taken until the first
+/// the special characters in [`get_sp_char_set_2()`]. The input is taken until the first
 /// special character, and split there. This returns the chunk until the first special
-/// character as [crate::MdLineFragment::Plain], and the remainder of the input gets a
+/// character as [`crate::MdLineFragment::Plain`], and the remainder of the input gets a
 /// chance to be parsed by the specialized parsers.
 fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
     get_sp_char_set_2()

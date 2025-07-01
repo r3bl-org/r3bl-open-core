@@ -49,6 +49,8 @@ use crate::{list,
 pub fn parse_block_smart_list(
     input: &str,
 ) -> IResult<&str, (Lines<'_>, BulletKind, usize)> {
+    use parse_block_smart_list_helper::*;
+
     let (remainder, smart_list_ir) = parse_smart_list(input)?;
 
     let indent = smart_list_ir.indent;
@@ -76,10 +78,14 @@ pub fn parse_block_smart_list(
         output_lines.push(complete_line);
     }
 
-    return Ok((remainder, (output_lines, bullet_kind, indent)));
+    Ok((remainder, (output_lines, bullet_kind, indent)))
+}
+
+mod parse_block_smart_list_helper {
+    use super::*;
 
     // Helper function to determine checkbox parsing policy.
-    fn determine_checkbox_policy(content: &str) -> CheckboxParsePolicy {
+    pub fn determine_checkbox_policy(content: &str) -> CheckboxParsePolicy {
         let checked = tiny_inline_string!("{}{}", CHECKED, SPACE);
         let unchecked = tiny_inline_string!("{}{}", UNCHECKED, SPACE);
 
@@ -93,7 +99,7 @@ pub fn parse_block_smart_list(
     }
 
     // Helper function to create bullet fragment.
-    fn create_bullet_fragment<'a>(
+    pub fn create_bullet_fragment<'a>(
         bullet_kind: BulletKind,
         indent: usize,
         is_first_line: bool,
@@ -116,7 +122,7 @@ pub fn parse_block_smart_list(
     }
 
     // Helper function to build complete line fragments.
-    fn build_line_fragments<'a>(
+    pub fn build_line_fragments<'a>(
         mut bullet_fragments: List<MdLineFragment<'a>>,
         content_fragments: List<MdLineFragment<'a>>,
     ) -> List<MdLineFragment<'a>> {
@@ -367,7 +373,7 @@ pub fn parse_smart_list(
     ).parse(input)?;
 
     // Indent has to be multiple of the base width, otherwise it's not a list item.
-    if indent % LIST_PREFIX_BASE_WIDTH != 0 {
+    if !indent.is_multiple_of(LIST_PREFIX_BASE_WIDTH) {
         return Err(nom::Err::Error(nom::error::Error::new(
             "Indent must be a multiple of LIST_PREFIX_INDENT_SIZE",
             nom::error::ErrorKind::Fail,
@@ -545,7 +551,7 @@ mod tests_parse_smart_list {
         );
     }
 
-    /// One line (with trailing new_line): "- foo\n".
+    /// One line with trailing [`NEW_LINE`]: "- foo\n".
     #[test]
     fn test_one_line_trailing_new_line() {
         let input = "- foo\n";
@@ -1060,9 +1066,9 @@ mod verify_rest {
         count
     }
 
-    /// - Eg: "  - ul2", indent: 0, my_bullet_str_len: 2 => true
-    /// - Eg: "  ul2.1", indent: 2, my_bullet_str_len: 4 => true
-    /// - Eg: "  u13.1", indent: 4, my_bullet_str_len: 6 => true
+    /// - Eg: "  - ul2", indent: 0, `my_bullet_str_len`: 2 => true
+    /// - Eg: "  ul2.1", indent: 2, `my_bullet_str_len`: 4 => true
+    /// - Eg: "  u13.1", indent: 4, `my_bullet_str_len`: 6 => true
     pub fn must_start_with_correct_num_of_spaces(it: &str, my_bullet_str: &str) -> bool {
         let it_spaces_at_start = count_spaces_at_start(it);
         it_spaces_at_start == my_bullet_str.len()

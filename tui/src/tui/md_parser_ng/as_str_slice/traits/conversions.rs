@@ -17,8 +17,8 @@
 
 use crate::{idx, len, AsStrSlice, GCString, InlineVec, List};
 
-/// Implement [From] trait to allow automatic conversion from &[GCString] to
-/// [AsStrSlice].
+/// Implement [From] trait to allow automatic conversion from &[`GCString`] to
+/// [`AsStrSlice`].
 impl<'a> From<&'a [GCString]> for AsStrSlice<'a> {
     fn from(lines: &'a [GCString]) -> Self {
         let total_size = Self::calculate_total_size(lines);
@@ -33,8 +33,8 @@ impl<'a> From<&'a [GCString]> for AsStrSlice<'a> {
     }
 }
 
-/// Implement [From] trait to allow automatic conversion from &[[GCString]; N] to
-/// [AsStrSlice]. Primary use case is for tests where the inputs are hardcoded as
+/// Implement [From] trait to allow automatic conversion from &[[`GCString`]; N] to
+/// [`AsStrSlice`]. Primary use case is for tests where the inputs are hardcoded as
 /// fixed-size arrays.
 impl<'a, const N: usize> From<&'a [GCString; N]> for AsStrSlice<'a> {
     fn from(lines: &'a [GCString; N]) -> Self {
@@ -52,7 +52,7 @@ impl<'a, const N: usize> From<&'a [GCString; N]> for AsStrSlice<'a> {
 }
 
 /// Implement [From] trait to allow automatic conversion from &[`Vec<GCString>`] to
-/// [AsStrSlice].
+/// [`AsStrSlice`].
 impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
     fn from(lines: &'a Vec<GCString>) -> Self {
         let total_size = Self::calculate_total_size(lines);
@@ -67,7 +67,7 @@ impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
     }
 }
 
-/// Integrate with [crate::List] so that `List::from()` will work for
+/// Integrate with [`crate::List`] so that `List::from()` will work for
 /// `InlineVec<AsStrSlice>`.
 impl<'a> From<InlineVec<AsStrSlice<'a>>> for List<AsStrSlice<'a>> {
     fn from(other: InlineVec<AsStrSlice<'a>>) -> Self {

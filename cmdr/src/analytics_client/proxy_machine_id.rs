@@ -23,8 +23,14 @@ use r3bl_tui::{InlineString,
 use super::{AnalyticsAction, config_folder, report_analytics};
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
-/// Read the file contents from [config_folder::get_id_file_path] and return it as a
+/// Read the file contents from [`config_folder::get_id_file_path`] and return it as a
 /// string if it exists and can be read.
+///
+/// # Panics
+///
+/// This will panic if the lock is poisoned, which can happen if a thread
+/// panics while holding the lock. To avoid panics, ensure that the code that
+/// locks the mutex does not panic while holding the lock.
 pub fn load_id_from_file_or_generate_and_save_it() -> InlineString {
     match config_folder::create() {
         Ok(config_folder_path) => {
@@ -40,7 +46,7 @@ pub fn load_id_from_file_or_generate_and_save_it() -> InlineString {
 
             // Try to read the file directly into InlineString
             match res_read_from_file {
-                Ok(_) => {
+                Ok(()) => {
                     DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug!(
@@ -55,7 +61,7 @@ pub fn load_id_from_file_or_generate_and_save_it() -> InlineString {
                     let res_write_to_file =
                         write_to_file::try_write_str_to_file(&id_file_path, &new_id);
                     match res_write_to_file {
-                        Ok(_) => {
+                        Ok(()) => {
                             report_analytics::start_task_to_generate_event(
                                 "".to_string(),
                                 AnalyticsAction::MachineIdProxyCreate,

@@ -37,6 +37,7 @@ impl<'a> AsStrSlice<'a> {
     /// A tuple containing:
     /// - The number of characters trimmed
     /// - The trimmed `AsStrSlice` instance
+    #[must_use]
     pub fn trim_whitespace_chars_start_current_line(
         &self,
         whitespace_chars: &[char],
@@ -59,7 +60,7 @@ impl<'a> AsStrSlice<'a> {
     }
 
     /// Remove leading whitespace from the start of the slice. This only operates on the
-    /// contents of the current line. Whitespace includes [SPACE_CHAR] and [TAB_CHAR].
+    /// contents of the current line. Whitespace includes [`SPACE_CHAR`] and [`TAB_CHAR`].
     ///
     /// ⚠️ **Important: ASCII-Only Whitespace Trimming**
     ///
@@ -85,6 +86,7 @@ impl<'a> AsStrSlice<'a> {
     ///
     /// This behavior ensures consistent Markdown parsing where Unicode spaces don't count
     /// as valid indentation for lists and other block elements.
+    #[must_use]
     pub fn trim_start_current_line(&self) -> Self {
         let (_, trimmed_slice) =
             self.trim_whitespace_chars_start_current_line(&[SPACE_CHAR, TAB_CHAR]);
@@ -98,15 +100,17 @@ impl<'a> AsStrSlice<'a> {
     /// ⚠️ **Note**: This method only considers ASCII spaces and tabs as whitespace
     /// (via `trim_start_current_line()`), not Unicode whitespace characters. This
     /// ensures consistent Markdown parsing behavior.
+    #[must_use]
     pub fn trim_start_current_line_is_empty(&self) -> bool {
         self.trim_start_current_line()
             .extract_to_line_end()
             .is_empty()
     }
 
-    /// Similar to [Self::trim_start_current_line()], but it trims leading spaces
+    /// Similar to [`Self::trim_start_current_line()`], but it trims leading spaces
     /// and returns the number of space characters trimmed from the start
-    /// and the trimmed [AsStrSlice] instance.
+    /// and the trimmed [`AsStrSlice`] instance.
+    #[must_use]
     pub fn trim_spaces_start_current_line(&self) -> (Length, Self) {
         self.trim_whitespace_chars_start_current_line(&[SPACE_CHAR])
     }

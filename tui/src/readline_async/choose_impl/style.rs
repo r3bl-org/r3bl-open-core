@@ -17,8 +17,8 @@
 
 use crate::{new_style, tui_color, TuiStyle};
 
-/// This is different from [crate::TuiStylesheet], since this encapsulates styling
-/// information that is specific to [crate::choose()] that are not generalized.
+/// This is different from [`crate::TuiStylesheet`], since this encapsulates styling
+/// information that is specific to [`crate::choose()`] that are not generalized.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StyleSheet {
     pub focused_and_selected_style: TuiStyle,
@@ -28,6 +28,7 @@ pub struct StyleSheet {
     pub header_style: TuiStyle,
 }
 
+#[must_use]
 pub fn get_default_style() -> TuiStyle {
     new_style!(
         color_fg: {tui_color!(medium_gray)} color_bg: {tui_color!(night_blue)}
@@ -69,6 +70,7 @@ impl Default for StyleSheet {
 }
 
 impl StyleSheet {
+    #[must_use]
     pub fn sea_foam_style() -> Self {
         let focused_and_selected_style = TuiStyle {
             color_fg: tui_color!(bright_cyan).into(),
@@ -104,6 +106,7 @@ impl StyleSheet {
         }
     }
 
+    #[must_use]
     pub fn hot_pink_style() -> Self {
         let focused_and_selected_style = TuiStyle {
             color_fg: tui_color!(hot_pink).into(),

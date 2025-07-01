@@ -36,7 +36,7 @@ pub fn start_task_to_generate_event(proxy_user_id: String, action: AnalyticsActi
     unsafe {
         if !ANALYTICS_REPORTING_ENABLED {
             return;
-        };
+        }
     }
 
     tokio::spawn(async move {

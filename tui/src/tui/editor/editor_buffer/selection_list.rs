@@ -63,8 +63,8 @@ mod sizing {
 /// range). This list is always sorted by row index.
 ///
 /// Note that both column indices are:
-/// - [crate::CaretScrAdj]
-/// - And not [crate::CaretRaw]
+/// - [`crate::CaretScrAdj`]
+/// - And not [`crate::CaretRaw`]
 #[derive(Clone, PartialEq, Default)]
 pub struct SelectionList {
     list: InlineVec<SelectionListItem>,
@@ -129,6 +129,7 @@ pub enum DirectionChangeResult {
 
 // Functionality.
 impl SelectionList {
+    #[must_use]
     pub fn get_caret_at_start_of_range_scroll_adjusted(
         &self,
         _with: DeleteSelectionWith, /* Makes no difference for now. */
@@ -147,6 +148,7 @@ impl SelectionList {
         Some(caret_scr_adj(pos))
     }
 
+    #[must_use]
     pub fn get_selected_lines<'a>(
         &self,
         buffer: &'a EditorBuffer,
@@ -170,6 +172,7 @@ impl SelectionList {
 
     /// This is used by the editor to get the ordered row indices, so they can be used to
     /// iterate through the selection map for selecting text.
+    #[must_use]
     pub fn get_ordered_indices(&self) -> VecRowIndex {
         let mut acc = VecRowIndex::with_capacity(self.list.len());
         for (row_index, _) in &self.list {
@@ -181,10 +184,12 @@ impl SelectionList {
     }
 
     /// Primarily for testing.
+    #[must_use]
     pub fn get_ordered_list(&self) -> &InlineVec<(RowIndex, SelectionRange)> {
         &self.list
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool { self.list.is_empty() }
 
     pub fn clear(&mut self) {
@@ -196,6 +201,7 @@ impl SelectionList {
         self.list.iter().map(|(index, range)| (index, range))
     }
 
+    #[must_use]
     pub fn get(&self, row_index: RowIndex) -> Option<SelectionRange> {
         self.list.iter().find_map(|(index, range)| {
             if *index == row_index {
@@ -209,9 +215,10 @@ impl SelectionList {
     /// Compares the given direction (`current_direction`) with the
     /// `maybe_previous_direction` field.
     /// - If there is no existing previous direction, it returns
-    ///   [DirectionChangeResult::DirectionIsTheSame].
-    /// - Otherwise it compares the two and returns [DirectionChangeResult] (whether the
+    ///   [`DirectionChangeResult::DirectionIsTheSame`].
+    /// - Otherwise it compares the two and returns [`DirectionChangeResult`] (whether the
     ///   direction has changed or not).
+    #[must_use]
     pub fn has_caret_movement_direction_changed(
         &self,
         current_direction: CaretMovementDirection,
@@ -256,14 +263,15 @@ impl SelectionList {
 
     pub fn remove_previous_direction(&mut self) { self.maybe_previous_direction = None; }
 
-    /// Is there a selection range for the row_index of `row_index_arg` in the map?
-    /// - The `list` field contains tuples of [RowIndex] and [SelectionRange].
+    /// Is there a selection range for the `row_index` of `row_index_arg` in the map?
+    /// - The `list` field contains tuples of [`RowIndex`] and [`SelectionRange`].
     /// - So if the `row_index` can't be found in the map, it means that the row is not
-    ///   selected, aka [RowLocationInSelectionList::Overflow].
+    ///   selected, aka [`RowLocationInSelectionList::Overflow`].
     /// - Otherwise it means that some range of columns in that row is selected, aka
-    ///   [RowLocationInSelectionList::Contained].
+    ///   [`RowLocationInSelectionList::Contained`].
+    #[must_use]
     pub fn locate_row(&self, query_row_index: RowIndex) -> RowLocationInSelectionList {
-        for (row_index, _) in self.list.iter() {
+        for (row_index, _) in &self.list {
             if &query_row_index == row_index {
                 return RowLocationInSelectionList::Contained;
             }
@@ -286,8 +294,9 @@ mod impl_debug_format {
     const EMPTY_STR: &str = "--empty--";
 
     impl SelectionList {
-        /// Get the output from [Self::to_unformatted_string] and format it with colors.
+        /// Get the output from [`Self::to_unformatted_string`] and format it with colors.
         /// And return that.
+        #[must_use]
         pub fn to_formatted_string(&self) -> InlineString {
             let mut selection_list_string = self.to_unformatted_string();
 
@@ -323,12 +332,13 @@ mod impl_debug_format {
             }
         }
 
-        /// Returns a [InlineVec] of [InlineString] that represent the selection map.
+        /// Returns a [`InlineVec`] of [`InlineString`] that represent the selection map.
+        #[must_use]
         pub fn to_unformatted_string(&self) -> ItemsOwned {
             let mut vec_output: InlineVec<InlineString> = {
                 let mut acc = smallvec![];
                 let sorted_indices = self.get_ordered_indices();
-                for row_index in sorted_indices.iter() {
+                for row_index in &sorted_indices {
                     if let Some(selected_range) = self.get(*row_index) {
                         acc.push(inline_string!(
                             "{first_ch} {sep}row: {row_idx:?}, col: [{col_start:?}{dots}{col_end:?}]{sep}",

@@ -20,7 +20,7 @@ use crate::{RingBuffer, RingBufferStack, Size};
 
 const OFFSCREEN_BUFFER_POOL_SIZE: usize = 3;
 
-/// Creating [OffscreenBuffer]s is expensive, so we keep a pool of them to reuse. This
+/// Creating [`OffscreenBuffer`]s is expensive, so we keep a pool of them to reuse. This
 /// struct manages the pool. When a buffer is needed, it can be taken from the pool. When
 /// a buffer is no longer needed, it can be given back to the pool. If you take a buffer
 /// and don't give it back, it is lost from the pool (and will be dropped).
@@ -30,6 +30,7 @@ pub struct OffscreenBufferPool {
 }
 
 impl OffscreenBufferPool {
+    #[must_use]
     pub fn new(window_size: Size) -> Self {
         let mut pool = RingBufferStack::new();
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
@@ -77,13 +78,15 @@ impl OffscreenBufferPool {
             self.pool
                 .push(OffscreenBuffer::new_with_capacity_initialized(
                     self.window_size,
-                ))
+                ));
         }
     }
 
     /// Returns the number of buffers currently in the pool.
+    #[must_use]
     pub fn len(&self) -> usize { self.pool.len().as_usize() }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool { self.pool.is_empty() }
 }
 

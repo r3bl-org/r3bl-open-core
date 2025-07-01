@@ -21,15 +21,16 @@ use std::{io::Result,
 
 use tokio::io::{AsyncRead, AsyncWrite};
 
-/// A mock struct for the [tokio::net::TcpStream].
+/// A mock struct for the [`tokio::net::TcpStream`].
 /// - Alternative to [`tokio_test::io::Builder`](https://docs.rs/tokio-test/latest/tokio_test/io/struct.Builder.html)
 ///   in the `tokio-test` crate.
-/// - The difference is that [MockAsyncStream] allows access to the expected write buffer.
+/// - The difference is that [`MockAsyncStream`] allows access to the expected write
+///   buffer.
 pub struct MockAsyncStream {
     pub expected_buffer: Vec<u8>,
 }
 
-/// Implement the [AsyncWrite] trait for the mock struct. This struct also automatically
+/// Implement the [`AsyncWrite`] trait for the mock struct. This struct also automatically
 /// implements [Unpin], because it contains no self-referencing pointers.
 impl AsyncWrite for MockAsyncStream {
     fn poll_write(
@@ -50,7 +51,7 @@ impl AsyncWrite for MockAsyncStream {
     }
 }
 
-/// Implement the [AsyncRead] trait for the mock struct. This struct also automatically
+/// Implement the [`AsyncRead`] trait for the mock struct. This struct also automatically
 /// implements [Unpin], because it contains no self-referencing pointers.
 impl AsyncRead for MockAsyncStream {
     fn poll_read(

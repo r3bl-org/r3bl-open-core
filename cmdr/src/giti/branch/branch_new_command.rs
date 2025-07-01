@@ -65,7 +65,7 @@ mod command_execute {
 
         let (res_output, cmd) = git::try_create_and_switch_to_branch(&branch_name).await;
         match res_output {
-            Ok(_) => {
+            Ok(()) => {
                 let it = CommandRunResult::Run(
                     ui_str::branch_create_display::info_create_success(&branch_name),
                     details::with_details(branch_name),

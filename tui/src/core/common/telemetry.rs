@@ -21,8 +21,7 @@ use std::{collections::HashMap,
 use smallstr::SmallString;
 use strum_macros::{Display, EnumString};
 
-use crate::{f64,
-            glyphs,
+use crate::{glyphs,
             Pc,
             RateLimitStatus,
             RateLimiter,
@@ -66,14 +65,14 @@ pub mod telemetry_default_constants {
 /// a report of the response times.
 ///
 /// 1. The report is rate limited to run once every `n sec`, where `n` is the time
-///    duration defined in [Self::rate_limiter_generate_report].
+///    duration defined in [`Self::rate_limiter_generate_report`].
 /// 2. You can also filter out the lowest response times by providing a minimum duration
-///    filter in [Self::min_duration_filter].
+///    filter in [`Self::min_duration_filter`].
 ///
 /// # Examples
 ///
-/// You have a lot of flexibility in constructing this, using [mod@telemetry_constructor]
-/// and the [Telemetry::new] constructor function.
+/// You have a lot of flexibility in constructing this, using
+/// [`mod@telemetry_constructor`] and the [`Telemetry::new`] constructor function.
 ///
 /// ```
 /// use std::time::Duration;
@@ -95,7 +94,7 @@ pub struct Telemetry<const N: usize> {
     pub start_timestamp: Instant,
     /// Pre-allocated buffer to store the report (after generating it). This is a cache
     /// that is used to avoid generating the report too frequently (rate limited with
-    /// [Self::rate_limiter_generate_report]).
+    /// [`Self::rate_limiter_generate_report`]).
     pub report: TelemetryHudReport,
     pub rate_limiter_generate_report: RateLimiter,
     pub min_duration_filter: Option<Duration>,
@@ -123,14 +122,16 @@ pub struct TelemetryAtom {
 }
 
 impl TelemetryAtom {
+    #[must_use]
     pub fn new(duration: Duration, hint: TelemetryAtomHint) -> Self {
         Self { duration, hint }
     }
 
+    #[must_use]
     pub fn as_duration(&self) -> Duration { self.duration }
 }
 
-/// - Calls the [Telemetry::record_start_auto_stop] method.
+/// - Calls the [`Telemetry::record_start_auto_stop`] method.
 /// - Runs `$block`, and then drops the handle to stop recording the response time.
 /// - Finally it calls `$after_block`.
 #[macro_export]
@@ -157,7 +158,7 @@ pub mod telemetry_constructor {
     }
 
     impl From<()> for ResponseTimesRingBufferOptions {
-        fn from(_: ()) -> Self {
+        fn from((): ()) -> Self {
             Self {
                 rate_limit_min_time_threshold:
                     telemetry_default_constants::RATE_LIMIT_TIME_THRESHOLD,
@@ -200,7 +201,7 @@ pub mod telemetry_constructor {
             Self {
                 ring_buffer: RingBufferStack::new(),
                 start_timestamp: Instant::now(),
-                report: Default::default(),
+                report: TelemetryHudReport::default(),
                 rate_limiter_generate_report: RateLimiter::new(
                     options.rate_limit_min_time_threshold,
                 ),
@@ -208,8 +209,9 @@ pub mod telemetry_constructor {
             }
         }
 
+        #[must_use]
         pub fn session_duration(&self) -> TimeDuration {
-            let it = Instant::now() - self.start_timestamp;
+            let it = self.start_timestamp.elapsed();
             TimeDuration::from(it)
         }
     }
@@ -289,40 +291,82 @@ mod calculator {
     use super::*;
 
     impl<const N: usize> Telemetry<N> {
+        #[must_use]
         pub fn average(&self) -> Option<TimeDuration> {
             // Calling sum() on an empty iterator will return 0.
             if self.ring_buffer.is_empty() {
                 return None;
             }
-            let sum: Duration = self.ring_buffer.iter().map(|it| it.as_duration()).sum();
+            let sum: Duration = self
+                .ring_buffer
+                .iter()
+                .map(TelemetryAtom::as_duration)
+                .sum();
             let avg: Duration = sum / self.ring_buffer.len().as_u32();
             Some(TimeDuration::from(avg))
         }
 
         pub fn min(&self) -> Option<TimeDuration> {
             // Calling min() on an empty iterator will return None.
-            let maybe_min = self.ring_buffer.iter().map(|it| it.as_duration()).min();
+            let maybe_min = self
+                .ring_buffer
+                .iter()
+                .map(TelemetryAtom::as_duration)
+                .min();
             maybe_min.map(TimeDuration::from)
         }
 
         pub fn max(&self) -> Option<TimeDuration> {
             // Calling min() on an empty iterator will return None.
-            let maybe_max = self.ring_buffer.iter().map(|it| it.as_duration()).max();
+            let maybe_max = self
+                .ring_buffer
+                .iter()
+                .map(TelemetryAtom::as_duration)
+                .max();
             maybe_max.map(TimeDuration::from)
         }
 
         /// Find the most common cluster of durations within a specified range (e.g., ±10
         /// microseconds, defined in
-        /// [telemetry_default_constants::CLUSTER_SENSITIVITY_RANGE]) in an array
-        /// of [Duration].
+        /// [`telemetry_default_constants::CLUSTER_SENSITIVITY_RANGE`]) in an array
+        /// of [`Duration`].
         ///
-        /// Use a [HashMap] to count occurrences of durations, bucketing them based on the
-        /// specified range. For each duration, determine which bucket it falls into based
-        /// on the range. Find the bucket with the maximum count.
+        /// This function creates a **frequency histogram** of duration measurements using
+        /// a bucketing strategy to group similar durations together. This approach is
+        /// more useful for performance analysis than exact timing matches, since
+        /// exact matches are rare in real-world telemetry data.
         ///
-        /// Returns the representative duration for the most common bucket and the
-        /// percentage of occurrences of that bucket.
+        /// ## Algorithm
+        ///
+        /// 1. **Bucketing**: Each duration is converted to microseconds and divided by
+        ///    the cluster sensitivity range to create bucket keys that group similar
+        ///    durations.
+        /// 2. **Counting**: A `HashMap` counts occurrences of each bucket key.
+        /// 3. **Finding Maximum**: The bucket with the highest count is selected.
+        /// 4. **Percentage Calculation**: Uses integer arithmetic to calculate what
+        ///    percentage of measurements fall into the most common bucket.
+        ///
+        /// ## Example
+        ///
+        /// Given durations: [100μs, 110μs, 120μs, 200μs, 210μs] and cluster range = 50μs:
+        /// - 100μs, 110μs, 120μs → bucket key 2 (100/50, 110/50, 120/50) → count: 3
+        /// - 200μs, 210μs → bucket key 4 (200/50, 210/50) → count: 2
+        ///
+        /// Result: bucket 2 has the highest count (3), representing 60% of measurements.
+        /// The function returns the representative duration for bucket 2 (100μs) along
+        /// with the percentage (60%) and the most frequent hint for that bucket.
+        ///
+        /// ## Returns
+        ///
+        /// Returns the representative duration for the most common bucket, the
+        /// percentage of occurrences of that bucket, and the most frequent hint
+        /// associated with that bucket.
+        #[must_use]
         pub fn median(&self) -> Option<(Duration, Pc, TelemetryAtomHint)> {
+            // The count can't be greater than N.
+            type BucketCount = u16;
+            debug_assert!(BucketCount::MAX as usize >= N);
+
             if self.ring_buffer.is_empty() {
                 return None;
             }
@@ -342,19 +386,15 @@ mod calculator {
                 return Some((median, pc, first_atom.hint));
             }
 
-            // The count can't be greater than N.
-            type BucketCount = u8;
-            debug_assert!(BucketCount::MAX as usize >= N);
-
             // Count occurrences of each duration in buckets.
             let range_micros =
                 telemetry_default_constants::CLUSTER_SENSITIVITY_RANGE.as_micros();
-            let count_map =
+            let count_map: HashMap<u128, BucketCount> =
                 self.ring_buffer
                     .iter()
                     .fold(HashMap::new(), |mut map, atom| {
                         let key = atom.as_duration().as_micros() / range_micros;
-                        *map.entry(key).or_insert(0) += 1;
+                        *map.entry(key).or_default() += 1;
                         map
                     });
 
@@ -374,20 +414,35 @@ mod calculator {
                 })
                 .into_iter()
                 .max_by_key(|&(_, count)| count)
-                .map(|(hint, _)| hint)
-                .unwrap_or(TelemetryAtomHint::None);
+                .map_or(TelemetryAtomHint::None, |(hint, _)| hint);
 
-            let lhs = f64(max_count);
-            let rhs = f64(*self.ring_buffer.len());
-            let percent = lhs / rhs * 100.0;
+            // Calculate percentage using integer arithmetic (avoiding floating point)
+            let ring_buffer_len = **self.ring_buffer.len();
+            let percent = if ring_buffer_len > 0 {
+                // Use checked multiplication to avoid overflow, similar to compress.rs
+                // Convert BucketCount to u16 for the calculation to avoid overflow
+                let max_count_u16 = max_count;
+                match max_count_u16.checked_mul(100) {
+                    Some(product) => product / ring_buffer_len,
+                    None => {
+                        // Overflow case: max_count is very large
+                        // Fallback calculation that avoids overflow
+                        max_count_u16 / (ring_buffer_len / 100).max(1)
+                    }
+                }
+            } else {
+                0
+            };
             let percent = Pc::try_and_convert(percent)?;
 
             if max_key == 0 {
                 None
             } else {
                 // Calculate the representative duration for the most common bucket
+                let max_key_u64 = u64::try_from(max_key).ok()?;
+                let range_micros_u64 = u64::try_from(range_micros).ok()?;
                 let representative_duration =
-                    Duration::from_micros(max_key as u64 * range_micros as u64);
+                    Duration::from_micros(max_key_u64 * range_micros_u64);
                 Some((
                     representative_duration,
                     percent,
@@ -404,7 +459,7 @@ mod report_generator {
     impl<const N: usize> Telemetry<N> {
         /// Generate a report of the response times.
         /// - This function is rate limited to run once every `n sec`, where `n` is the
-        ///   time duration defined in [Self::rate_limiter_generate_report].
+        ///   time duration defined in [`Self::rate_limiter_generate_report`].
         /// - If called more frequently, it will return the cached result.
         /// - The `generate_report` function is actually responsible for generating the
         ///   report (and saving it).
@@ -415,10 +470,7 @@ mod report_generator {
                 .rate_limiter_generate_report
                 .get_status_and_update_last_run(Instant::now())
             {
-                RateLimitStatus::NotStarted => {
-                    self.generate_report();
-                }
-                RateLimitStatus::Expired => {
+                RateLimitStatus::NotStarted | RateLimitStatus::Expired => {
                     self.generate_report();
                 }
                 RateLimitStatus::Active => { /* Do nothing & return cached report */ }
@@ -495,6 +547,7 @@ impl Display for TelemetryHudReport {
 }
 
 impl TelemetryHudReport {
+    #[must_use]
     pub fn is_empty(&self) -> bool { self.avg.inner == Duration::default() }
 }
 
@@ -597,9 +650,9 @@ mod tests_display_format {
     }
 }
 
-/// Note that in all these tests, we are generally using the [Telemetry::default]
+/// Note that in all these tests, we are generally using the [`Telemetry::default`]
 /// instance, which has baked into it lots of default configuration values from
-/// [mod@telemetry_default_constants] for filtering, rate limiting, etc.
+/// [`mod@telemetry_default_constants`] for filtering, rate limiting, etc.
 #[cfg(test)]
 mod tests_record {
     use std::thread::sleep;
@@ -634,7 +687,7 @@ mod tests_record {
         let mut response_times = create_default_telemetry();
 
         assert!(response_times.start_timestamp > ts_1);
-        assert!(response_times.session_duration() <= (Instant::now() - ts_1).into());
+        assert!(response_times.session_duration() <= ts_1.elapsed().into());
 
         assert_eq!(
             response_times.try_record(TelemetryAtom::new(

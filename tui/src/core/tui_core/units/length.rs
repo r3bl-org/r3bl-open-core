@@ -26,9 +26,9 @@ use crate::ch;
 ///
 /// A Length is a 1-based measurement (as opposed to 0-based indices) that represents
 /// the size or extent of something in the terminal UI, such as the width or height
-/// of a component. It wraps a [ChUnit] value.
+/// of a component. It wraps a [`ChUnit`] value.
 ///
-/// Length values can be created using the [Length::new] method, the [len] function,
+/// Length values can be created using the [`Length::new`] method, the [len] function,
 /// or by converting from various numeric types.
 ///
 /// # Examples
@@ -53,7 +53,7 @@ pub struct Length(pub ChUnit);
 
 /// Creates a new [Length] from a value that can be converted into a Length.
 ///
-/// This is a convenience function that is equivalent to calling [Length::new].
+/// This is a convenience function that is equivalent to calling [`Length::new`].
 ///
 /// # Examples
 ///
@@ -77,9 +77,11 @@ mod construct {
     impl Length {
         pub fn new(arg_length: impl Into<Length>) -> Self { arg_length.into() }
 
+        #[must_use]
         pub fn as_usize(&self) -> usize { self.0.into() }
 
         /// This is for use with [crossterm] crate.
+        #[must_use]
         pub fn as_u16(&self) -> u16 { self.0.into() }
 
         /// Subtract 1 from length to get the last index. I.e.: `length = last index + 1`.
@@ -90,6 +92,7 @@ mod construct {
         ///
         /// The following holds true:
         /// - last index == length - 1 (which is this function)
+        #[must_use]
         pub fn convert_to_index(&self) -> Index {
             let it = self.0 - ch(1);
             idx(it)

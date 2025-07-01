@@ -49,6 +49,7 @@ mod convert_to_vec_string {
 
     impl ItemsOwned {
         /// Convert `ItemsOwned` to `Vec<String>`.
+        #[must_use]
         pub fn to_vec(&self) -> Vec<String> { self.into() }
     }
 
@@ -56,7 +57,7 @@ mod convert_to_vec_string {
     /// types.
     impl From<ItemsOwned> for Vec<String> {
         fn from(items: ItemsOwned) -> Self {
-            items.0.iter().map(|s| s.to_string()).collect()
+            items.0.iter().map(ToString::to_string).collect()
         }
     }
 
@@ -64,7 +65,7 @@ mod convert_to_vec_string {
     /// types.
     impl From<&ItemsOwned> for Vec<String> {
         fn from(items: &ItemsOwned) -> Self {
-            items.0.iter().map(|s| s.to_string()).collect()
+            items.0.iter().map(ToString::to_string).collect()
         }
     }
 }
@@ -73,8 +74,10 @@ mod constructors {
     use super::*;
 
     impl ItemsOwned {
+        #[must_use]
         pub fn new() -> Self { ItemsOwned(InlineVec::new()) }
 
+        #[must_use]
         pub fn with_capacity(capacity: usize) -> Self {
             ItemsOwned(InlineVec::with_capacity(capacity))
         }
@@ -84,7 +87,7 @@ mod constructors {
 mod iter_impl {
     use super::*;
 
-    /// FromIterator for [ItemsOwned] for `collect()`.
+    /// `FromIterator` for [`ItemsOwned`] for `collect()`.
     impl FromIterator<InlineString> for ItemsOwned {
         fn from_iter<I: IntoIterator<Item = InlineString>>(iter: I) -> Self {
             let inline_vec = iter.into_iter().collect::<InlineVec<InlineString>>();
@@ -92,7 +95,7 @@ mod iter_impl {
         }
     }
 
-    /// Iterate over a reference to [ItemsOwned].
+    /// Iterate over a reference to [`ItemsOwned`].
     impl<'a> IntoIterator for &'a ItemsOwned {
         type Item = &'a InlineString;
         type IntoIter = std::slice::Iter<'a, InlineString>;
@@ -100,11 +103,11 @@ mod iter_impl {
         fn into_iter(self) -> Self::IntoIter { self.0.iter() }
     }
 
-    /// Iterate over [ItemsOwned].
+    /// Iterate over [`ItemsOwned`].
     impl IntoIterator for ItemsOwned {
         type Item = InlineString;
 
-        /// Use the IntoIter type that matches what InlineVec returns.
+        /// Use the `IntoIter` type that matches what `InlineVec` returns.
         type IntoIter = <InlineVec<InlineString> as IntoIterator>::IntoIter;
 
         fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }

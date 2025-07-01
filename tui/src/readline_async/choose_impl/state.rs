@@ -32,7 +32,8 @@ pub struct State {
     /// Does not include the header row.
     pub max_display_height: ChUnit,
     pub max_display_width: ChUnit,
-    /// This is not adjusted for [scroll_offset_row_index](State::scroll_offset_row_index).
+    /// This is not adjusted for
+    /// [`scroll_offset_row_index`](State::scroll_offset_row_index).
     pub raw_caret_row_index: ChUnit,
     pub scroll_offset_row_index: ChUnit,
     pub items: ItemsOwned,
@@ -122,28 +123,12 @@ impl CalculateResizeHint for State {
     fn get_resize_hint(&self) -> Option<ResizeHint> { self.resize_hint.clone() }
 
     fn set_resize_hint(&mut self, new_size: Size) {
-        self.resize_hint = if let Some(old_size) = self.window_size {
-            if new_size != old_size {
-                if (new_size.col_width > old_size.col_width)
-                    || (new_size.row_height > old_size.row_height)
-                {
-                    Some(ResizeHint::GotBigger)
-                } else if (new_size.col_width < old_size.col_width)
-                    || (new_size.row_height < old_size.row_height)
-                {
-                    Some(ResizeHint::GotSmaller)
-                } else {
-                    Some(ResizeHint::NoChange)
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        self.resize_hint = self
+            .window_size
+            .and_then(|old_size| Self::calculate_resize_hint(old_size, new_size));
 
         if self.window_size.is_some() {
-            self.set_size(new_size)
+            self.set_size(new_size);
         }
     }
 
@@ -160,6 +145,7 @@ pub enum ResizeHint {
 
 impl State {
     /// This the row index that currently has keyboard focus.
+    #[must_use]
     pub fn get_focused_index(&self) -> ChUnit {
         get_scroll_adjusted_row_index(
             self.raw_caret_row_index,
@@ -167,6 +153,7 @@ impl State {
         )
     }
 
+    #[must_use]
     pub fn locate_cursor_in_viewport(&self) -> CaretVerticalViewportLocation {
         locate_cursor_in_viewport(
             self.raw_caret_row_index,
@@ -174,5 +161,25 @@ impl State {
             self.max_display_height,
             self.items.len().into(),
         )
+    }
+
+    /// Helper method to determine resize hint based on old and new sizes.
+    fn calculate_resize_hint(old_size: Size, new_size: Size) -> Option<ResizeHint> {
+        if new_size == old_size {
+            return None;
+        }
+
+        let width_increased = new_size.col_width > old_size.col_width;
+        let height_increased = new_size.row_height > old_size.row_height;
+        let width_decreased = new_size.col_width < old_size.col_width;
+        let height_decreased = new_size.row_height < old_size.row_height;
+
+        if width_increased || height_increased {
+            Some(ResizeHint::GotBigger)
+        } else if width_decreased || height_decreased {
+            Some(ResizeHint::GotSmaller)
+        } else {
+            Some(ResizeHint::NoChange)
+        }
     }
 }

@@ -24,12 +24,13 @@ pub struct MockSocket {
     pub server_write: WriteHalf<DuplexStream>,
 }
 
-/// A “channel” is created by [tokio::io::duplex] that can be used as in-memory IO
+/// A “channel” is created by [`tokio::io::duplex`] that can be used as in-memory IO
 /// types.
 ///
 /// Given a "channel":
 /// 1. Writing to the first of the pairs will allow that data to be read from the other.
 /// 2. Writing to the other pair will allow that data to be read from the first.
+#[must_use]
 pub fn get_mock_socket_halves() -> MockSocket {
     let (client_stream, server_stream) = duplex(1024);
 

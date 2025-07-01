@@ -435,7 +435,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
                         DefaultInputEventHandler::no_consume(input_event, exit_keys);
                     if let Continuation::Exit = check_if_exit_keys_pressed {
                         request_exit_by_sending_signal(main_thread_channel_sender);
-                    };
+                    }
                 }
             }
 

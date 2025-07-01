@@ -28,6 +28,7 @@ pub struct OrderedMap<K, V> {
 }
 
 impl<K: std::hash::Hash + Eq + Clone, V> OrderedMap<K, V> {
+    #[must_use]
     pub fn new() -> Self {
         OrderedMap {
             keys: smallvec![],

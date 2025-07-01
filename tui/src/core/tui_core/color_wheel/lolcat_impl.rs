@@ -26,7 +26,7 @@ use crate::{color_helpers,
             TuiStyle,
             TuiStyledTexts};
 
-/// Please use the [LolcatBuilder] to create this struct (lots of documentation is
+/// Please use the [`LolcatBuilder`] to create this struct (lots of documentation is
 /// provided here). Please do not use this struct directly.
 #[derive(Clone, Copy, PartialEq)]
 pub struct Lolcat {
@@ -40,29 +40,29 @@ impl Default for Lolcat {
 
 impl Debug for Lolcat {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        return write!(
+        /// More info: <https://stackoverflow.com/questions/63214346/how-to-truncate-f64-to-2-decimal-places>
+        fn pretty_print_f64(before: f64) -> f64 { f64::trunc(before * 100.0) / 100.0 }
+
+        write!(
             f,
             "lolcat: [{}, {}, {}, {}]",
             pretty_print_f64(*self.color_wheel_control.seed),
             pretty_print_f64(*self.color_wheel_control.spread),
             pretty_print_f64(*self.color_wheel_control.frequency),
             self.color_wheel_control.color_change_speed
-        );
-
-        /// More info: <https://stackoverflow.com/questions/63214346/how-to-truncate-f64-to-2-decimal-places>
-        fn pretty_print_f64(before: f64) -> f64 { f64::trunc(before * 100.0) / 100.0 }
+        )
     }
 }
 
 impl Lolcat {
-    /// This function does not respect [crate::global_color_support::detect()]
+    /// This function does not respect [`crate::global_color_support::detect()`]
     /// (it will always colorize to truecolor regardless of terminal limitations). Use
-    /// [crate::ColorWheel] if you want to respect
-    /// [crate::global_color_support::detect].
+    /// [`crate::ColorWheel`] if you want to respect
+    /// [`crate::global_color_support::detect`].
     pub fn colorize_to_styled_texts(&mut self, us: &GCString) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
 
-        for seg_str in us.iter() {
+        for seg_str in us {
             let new_color = color_helpers::get_color_tuple(&self.color_wheel_control);
             let derived_from_new_color = color_helpers::calc_fg_color(new_color);
 

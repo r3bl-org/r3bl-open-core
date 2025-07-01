@@ -26,13 +26,13 @@ pub type Row = RowIndex;
 pub type Col = ColIndex;
 
 /// `Pos` is a struct that holds the `row` and `col` indices of a character in a text
-/// buffer. [RowIndex] and [ColIndex] are the types of the `row` and `col` indices
+/// buffer. [`RowIndex`] and [`ColIndex`] are the types of the `row` and `col` indices
 /// respectively. This ensures that it isn't possible to use a `col` when you intended to
 /// use a `row` and vice versa.
 ///
-/// Also [crate::ScrOfs] is a "newtype" built around `Pos`, since a scroll offset is just
-/// a position after all, but semantically it is used for different reasons in the API. It
-/// is used to declare a different intention on how `Pos` is used.
+/// Also [`crate::ScrOfs`] is a "newtype" built around `Pos`, since a scroll offset is
+/// just a position after all, but semantically it is used for different reasons in the
+/// API. It is used to declare a different intention on how `Pos` is used.
 ///
 /// Here is a visual representation of how position and sizing work for the layout
 /// engine.
@@ -54,12 +54,12 @@ pub type Col = ColIndex;
 /// # The many ways to create one
 ///
 /// This API uses the `impl Into<struct>` pattern and [Add] `+` operator overloading to
-/// allow for easy conversion between [crate::ChUnit] and [RowIndex]/[ColIndex].
-/// - You can use [crate::pos()] function and pass it a [RowIndex] and [ColIndex] tuple,
-///   or pass a sequence of them with the [Add] `+` operator.
+/// allow for easy conversion between [`crate::ChUnit`] and [`RowIndex`]/[`ColIndex`].
+/// - You can use [`crate::pos()`] function and pass it a [`RowIndex`] and [`ColIndex`]
+///   tuple, or pass a sequence of them with the [Add] `+` operator.
 /// - Just using the [Add] `+` operator:
-///     - You can use [Add] to convert: [RowIndex] + [ColIndex], into: a `Pos`.
-///     - You can use [Add] to convert: [ColIndex] + [RowIndex], into: a `Pos`.
+///     - You can use [Add] to convert: [`RowIndex`] + [`ColIndex`], into: a `Pos`.
+///     - You can use [Add] to convert: [`ColIndex`] + [`RowIndex`], into: a `Pos`.
 ///
 /// # Examples
 ///
@@ -416,7 +416,7 @@ mod api {
 
         /// Increment col index by `col_amt`, while making sure it will never exceed
         /// `max_col_amt`. This function is not concerned with scrolling or
-        /// [crate::ScrOfs].
+        /// [`crate::ScrOfs`].
         ///
         /// Note that a caret is allowed to "go past" the end of the max index, so max
         /// index + 1 is a valid position.

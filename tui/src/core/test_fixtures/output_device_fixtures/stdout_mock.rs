@@ -27,9 +27,9 @@ use crate::{InlineVec, StdMutex};
 /// The inner `buffer` will not be cloned, just the [Arc] will be cloned.
 ///
 /// The main constructors are:
-/// - [StdoutMock::default]
-/// - [StdoutMock::new]
-/// - [super::OutputDeviceExt::new_mock()]
+/// - [`StdoutMock::default`]
+/// - [`StdoutMock::new`]
+/// - [`super::OutputDeviceExt::new_mock()`]
 #[derive(Clone)]
 pub struct StdoutMock {
     pub buffer: Arc<StdMutex<InlineVec<u8>>>,
@@ -44,19 +44,38 @@ impl Default for StdoutMock {
 }
 
 impl StdoutMock {
+    #[must_use]
     pub fn new() -> Self { Self::default() }
 }
 
 impl StdoutMock {
+    /// # Panics
+    ///
+    /// This method will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
+    #[must_use]
     pub fn get_copy_of_buffer(&self) -> InlineVec<u8> {
         self.buffer.lock().unwrap().clone()
     }
 
+    /// # Panics
+    ///
+    /// This method will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
+    #[must_use]
     pub fn get_copy_of_buffer_as_string(&self) -> String {
         let buffer_data = self.buffer.lock().unwrap();
         String::from_utf8(buffer_data.to_vec()).expect("utf8")
     }
 
+    /// # Panics
+    ///
+    /// This method will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
+    #[must_use]
     pub fn get_copy_of_buffer_as_string_strip_ansi(&self) -> String {
         let buffer_data = self.buffer.lock().unwrap();
         let buffer_data = strip(buffer_data.to_vec());

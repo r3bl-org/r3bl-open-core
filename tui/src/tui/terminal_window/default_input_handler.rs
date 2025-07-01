@@ -21,8 +21,9 @@ use crate::InputEvent;
 pub struct DefaultInputEventHandler;
 
 impl DefaultInputEventHandler {
-    /// This function does **not** consume the `input_event` argument. [InputEvent]
+    /// This function does **not** consume the `input_event` argument. [`InputEvent`]
     /// implements [Copy] (no need to pass references into this function).
+    #[must_use]
     pub fn no_consume(
         input_event: InputEvent,
         exit_keys: &[InputEvent],

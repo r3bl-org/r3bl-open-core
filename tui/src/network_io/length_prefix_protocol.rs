@@ -35,7 +35,7 @@ use crate::{bincode_serde, compress, ok, protocol_types::*};
 pub mod protocol_constants {
     use super::*;
 
-    pub const MAGIC_NUMBER: u64 = 0xDEADBEEFCAFEBABE;
+    pub const MAGIC_NUMBER: u64 = 0xACED_FACE_BABE_CAFE; // DEED, CEDE, FADE
     pub const PROTOCOL_VERSION: u64 = 1;
     pub const TIMEOUT_DURATION: Duration = Duration::from_secs(1);
     pub const MAX_PAYLOAD_SIZE: u64 = 10_000_000;
@@ -44,12 +44,12 @@ pub mod protocol_constants {
 /// Extend the protocol to validate that it is connecting to the correct type of server,
 /// by implementing the following handshake mechanism:
 ///
-/// # Client side - [handshake::try_connect_or_timeout]
+/// # Client side - [`handshake::try_connect_or_timeout`]
 /// 1. The client **writes** a "magic number" or protocol identifier, and version number
 ///    as the first message when establishing a connection.
 /// 2. This number is then **read** back from the server to ensure that it is valid.
 ///
-/// # Server side - [handshake::try_accept_or_timeout]
+/// # Server side - [`handshake::try_accept_or_timeout`]
 /// 1. The server **reads** the magic number and protocol version number, and checks to
 ///    make sure they are valid.
 /// 2. It then **writes** the magic number back to the client (for it to validate).
@@ -122,7 +122,7 @@ pub mod handshake {
 
         match result {
             Ok(handshake_result) => match handshake_result {
-                Ok(_) => ok!(),
+                Ok(()) => ok!(),
                 Err(handshake_err) => {
                     miette::bail!(
                         "Handshake failed due to: {}",
@@ -224,7 +224,7 @@ pub mod byte_io {
         Ok(())
     }
 
-    /// Ready the payload from the client. Use the length-prefix [LengthPrefixType],
+    /// Ready the payload from the client. Use the length-prefix [`LengthPrefixType`],
     /// binary payload, protocol.
     /// - The trait bounds on this function are so that this function can be tested w/ a
     ///   mock from `tokio_test::io::Builder`.
@@ -242,7 +242,13 @@ pub mod byte_io {
         }
 
         // Read the payload.
-        let mut payload_buffer = vec![0; size_of_payload as usize];
+
+        // This an intentional cast to `usize` because the payload size is a
+        // `LengthPrefixType`, which is a `u64`.
+        #[allow(clippy::cast_possible_truncation)]
+        let size_of_payload = size_of_payload as usize;
+
+        let mut payload_buffer = vec![0; size_of_payload];
         buf_reader
             .read_exact(&mut payload_buffer)
             .await

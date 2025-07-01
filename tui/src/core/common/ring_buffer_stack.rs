@@ -17,7 +17,7 @@
 
 //! A fixed-size ring buffer implementation using stack allocation. Be careful of the size
 //! of the buffer, since if it is too large, you might get a stack overflow error. For a
-//! heap allocated version, take a look at [super::RingBufferHeap].
+//! heap allocated version, take a look at [`super::RingBufferHeap`].
 
 use std::fmt::Debug;
 
@@ -37,9 +37,10 @@ impl<T, const N: usize> Default for RingBufferStack<T, N> {
 }
 
 impl<T, const N: usize> RingBufferStack<T, N> {
+    #[must_use]
     pub fn new() -> Self {
         RingBufferStack {
-            internal_storage: [(); N].map(|_| None),
+            internal_storage: [(); N].map(|()| None),
             head: 0,
             tail: 0,
             count: 0,
@@ -97,7 +98,7 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferStack<T, N> {
     }
 
     /// Remove from head (ie, remove the newest item). This is the opposite of
-    /// [Self::remove].
+    /// [`Self::remove`].
     fn remove_head(&mut self) -> Option<T> {
         if self.count == 0 {
             return None;
@@ -146,6 +147,14 @@ impl<T, const N: usize> RingBufferStack<T, N> {
             iterator_index: 0,
         }
     }
+}
+
+/// This implementation allows the ring buffer to be used in a for loop directly.
+impl<'a, T, const N: usize> IntoIterator for &'a RingBufferStack<T, N> {
+    type Item = &'a T;
+    type IntoIter = RingBufferStackIterator<'a, T, N>;
+
+    fn into_iter(self) -> Self::IntoIter { self.iter() }
 }
 
 pub struct RingBufferStackIterator<'a, T, const N: usize> {
@@ -422,5 +431,66 @@ mod tests {
 
         assert_eq!(ring_buffer.first().unwrap(), "World");
         assert_eq!(ring_buffer.last().unwrap(), "Rust");
+    }
+
+    #[test]
+    fn test_into_iterator_implementation() {
+        let mut ring_buffer: RingBufferStack<SmallStringBackingStore, 3> =
+            RingBufferStack::new();
+        ring_buffer.add("Hello".into());
+        ring_buffer.add("World".into());
+        ring_buffer.add("Rust".into());
+
+        // Test that we can use the ring buffer directly in a for loop (this is why
+        // IntoIterator is needed!)
+        let mut collected = Vec::new();
+        for item in &ring_buffer {
+            collected.push(item.clone());
+        }
+
+        assert_eq!(collected.len(), 3);
+        assert_eq!(collected[0], "Hello");
+        assert_eq!(collected[1], "World");
+        assert_eq!(collected[2], "Rust");
+
+        // Test using for loop with explicit into_iter() call
+        let mut explicit_collected = Vec::new();
+        for item in (&ring_buffer).into_iter() {
+            explicit_collected.push(item.clone());
+        }
+        assert_eq!(collected, explicit_collected);
+
+        // Test using for loop to find specific items
+        let mut found_rust = false;
+        for item in &ring_buffer {
+            if item == "Rust" {
+                found_rust = true;
+                break;
+            }
+        }
+        assert!(found_rust);
+
+        // Test using for loop with enumerate to get indices
+        for (index, item) in (&ring_buffer).into_iter().enumerate() {
+            match index {
+                0 => assert_eq!(item, "Hello"),
+                1 => assert_eq!(item, "World"),
+                2 => assert_eq!(item, "Rust"),
+                _ => panic!("Unexpected index: {index}"),
+            }
+        }
+
+        // Test using for loop to count items that meet a condition
+        let mut count_long_names = 0;
+        for item in &ring_buffer {
+            if item.len() >= 5 {
+                count_long_names += 1;
+            }
+        }
+        assert_eq!(count_long_names, 2); // "Hello" and "World"
+
+        // Compare with manual iter() usage (without for loop)
+        let iter_results: Vec<_> = ring_buffer.iter().cloned().collect();
+        assert_eq!(iter_results, collected);
     }
 }

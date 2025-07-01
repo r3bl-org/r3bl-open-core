@@ -18,16 +18,22 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::Deref};
 
-use crate::{ch, glyphs, ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType};
+use crate::{ch,
+            glyphs,
+            ChUnit,
+            ChUnitPrimitiveType,
+            CommonError,
+            CommonErrorType,
+            LossyConvertToByte};
 
 /// Represents an integer value between 0 and 100 (inclusive). You can't directly create
 /// it, since it has to validate that the value is between 0 and 100. You can create it
 /// one of two ways (depending on how you want to handle out-of-range errors):
 ///
-/// 1. Using the [crate::pc!] macro, which returns a [Result] type so that you can handle
-///    any conversion-out-of-range errors.
-/// 2. Using the [Pc::try_and_convert] method, which returns an [Option] type, so that you
-///    can handle any conversion-out-of-range errors.
+/// 1. Using the [`crate::pc`!] macro, which returns a [Result] type so that you can
+///    handle any conversion-out-of-range errors.
+/// 2. Using the [`Pc::try_and_convert`] method, which returns an [Option] type, so that
+///    you can handle any conversion-out-of-range errors.
 ///
 /// # Fields
 /// - `value`: The percentage value as an unsigned 8-bit integer.
@@ -35,17 +41,17 @@ use crate::{ch, glyphs, ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorTyp
 /// # Traits Implementations
 ///
 /// - [Deref]: Dereferences to [u8].
-/// - [std::fmt::Debug]: Formats the percentage value followed by a `%` sign.
-/// - [TryFrom]: Attempts to convert a [ChUnitPrimitiveType] to a `pc`.
-/// - [TryFrom]: Attempts to convert an [i32] to a `pc`.
+/// - [`std::fmt::Debug`]: Formats the percentage value followed by a `%` sign.
+/// - [`TryFrom`]: Attempts to convert a [`ChUnitPrimitiveType`] to a `pc`.
+/// - [`TryFrom`]: Attempts to convert an [i32] to a `pc`.
 ///
 /// # How to use it
 ///
-/// - [crate::pc!]: A macro that attempts to convert a given expression to `pc`. Returns
+/// - [`crate::pc`!]: A macro that attempts to convert a given expression to `pc`. Returns
 ///   [Err] if the value is not between 0 and 100.
-/// - [Pc::try_and_convert]: Attempts to convert a given [ChUnit] value to `pc`. Returns
-///   [None] if the value is not between 0 and 100.
-/// - [Pc::apply_to]: Returns the calculated percentage of the given value.
+/// - [`Pc::try_and_convert`]: Attempts to convert a given [`ChUnit`] value to `pc`.
+///   Returns [None] if the value is not between 0 and 100.
+/// - [`Pc::apply_to`]: Returns the calculated percentage of the given value.
 ///
 /// # Example
 ///
@@ -70,7 +76,7 @@ pub struct Pc {
     value: u8,
 }
 
-/// Create a [crate::Pc] instance from the given value. It returns a `Result` type.
+/// Create a [`crate::Pc`] instance from the given value. It returns a `Result` type.
 #[macro_export]
 macro_rules! pc {
     (
@@ -108,7 +114,7 @@ impl TryFrom<ChUnitPrimitiveType> for Pc {
 impl TryFrom<i32> for Pc {
     type Error = miette::Error;
     fn try_from(arg: i32) -> miette::Result<Pc> {
-        match Pc::try_and_convert(arg as u16) {
+        match Pc::try_and_convert(arg) {
             Some(pc) => Ok(pc),
             None => CommonError::new_error_result(
                 CommonErrorType::ValueOutOfRange,
@@ -123,11 +129,15 @@ impl TryFrom<i32> for Pc {
 /// Return `None` if the given value is not between 0 and 100.
 impl Pc {
     pub fn try_and_convert(arg_num: impl Into<ChUnit>) -> Option<Pc> {
-        let item = *arg_num.into();
-        if !(0..=100).contains(&item) {
+        let num = arg_num.into();
+        let num: ChUnitPrimitiveType = *num;
+        if !(0..=100).contains(&num) {
             return None;
         }
-        Pc { value: item as u8 }.into()
+        Pc {
+            value: num.to_u8_lossy(),
+        }
+        .into()
     }
 
     /// Given the value, calculate the result of the percentage.
@@ -142,14 +152,16 @@ impl Pc {
     /// let result = percent.apply_to(value);
     /// assert_eq!(result, ch(2500));
     /// ```
+    #[must_use]
     pub fn apply_to(&self, value: ChUnit) -> ChUnit {
         let percentage_int = self.value;
         let percentage_f32 = f32::from(percentage_int) / 100.0;
         let result_f32 = percentage_f32 * f32::from(*value);
-        let converted_value = result_f32.trunc() as ChUnitPrimitiveType;
-        ch(converted_value)
+        // Use ChUnit's built-in f32 conversion instead of manual casting.
+        ch(result_f32.trunc())
     }
 
+    #[must_use]
     pub fn as_glyph(&self) -> &'static str {
         match self.value {
             0..=25 => glyphs::STATS_25P_GLYPH,

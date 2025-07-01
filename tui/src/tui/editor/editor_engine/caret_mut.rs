@@ -27,10 +27,13 @@ use crate::{caret_locate::{self,
             empty_check_early_return,
             multiline_disabled_check_early_return,
             row,
+            wide_segments::ContainsWideSegments,
+            width,
             CaretDirection,
             EditorArgsMut,
             EditorBuffer,
-            EditorEngine};
+            EditorEngine,
+            SegString};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     empty_check_early_return!(buffer, @Nothing);
@@ -187,9 +190,9 @@ pub fn page_down(
     );
 }
 
-/// Depending on [SelectMode], this acts as a:
+/// Depending on [`SelectMode`], this acts as a:
 /// - Convenience function for simply calling [left] repeatedly.
-/// - Convenience function for simply calling [scroll_editor_content::reset_caret_col].
+/// - Convenience function for simply calling [`scroll_editor_content::reset_caret_col`].
 pub fn to_start_of_line(
     buffer: &mut EditorBuffer,
     engine: &mut EditorEngine,
@@ -219,9 +222,9 @@ pub fn to_start_of_line(
     }
 }
 
-/// Depending on [SelectMode], this acts as a:
+/// Depending on [`SelectMode`], this acts as a:
 /// - Convenience function for simply calling [right] repeatedly.
-/// - Convenience function for simply calling [scroll_editor_content::set_caret_col_to].
+/// - Convenience function for simply calling [`scroll_editor_content::set_caret_col_to`].
 pub fn to_end_of_line(
     buffer: &mut EditorBuffer,
     engine: &mut EditorEngine,
@@ -320,15 +323,15 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
     match caret_col_loc_in_line {
         // Special case of empty line w/ caret at start.
         CaretColLocationInLine::AtStart if line_is_empty => {
-            inner::right_at_end(buffer, engine);
+            right_helper::right_at_end(buffer, engine);
         }
         CaretColLocationInLine::AtStart | CaretColLocationInLine::InMiddle => {
-            inner::right_normal(buffer, engine);
+            right_helper::right_normal(buffer, engine);
         }
         CaretColLocationInLine::AtEnd => {
-            inner::right_at_end(buffer, engine);
+            right_helper::right_at_end(buffer, engine);
         }
-    };
+    }
 
     // This is only set if sel_mod is enabled.
     let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
@@ -339,129 +342,146 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
         maybe_prev_caret,
         maybe_curr_caret,
     );
+}
 
-    return;
+mod right_helper {
+    use super::*;
 
-    mod inner {
-        use super::*;
-        use crate::{wide_segments::ContainsWideSegments, width, SegString};
+    /// 1. Check for wide unicode character to the right of the caret.
+    /// 2. [`validate::apply_change`] checks for wide unicode character at the start of
+    ///    the viewport.
+    pub fn right_normal(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+    ) -> Option<()> {
+        let SegString {
+            width: unicode_width_at_caret,
+            ..
+        } = buffer.string_at_caret()?;
 
-        /// 1. Check for wide unicode character to the right of the caret.
-        /// 2. [validate::apply_change] checks for wide unicode character at the start of
-        ///    the viewport.
-        pub fn right_normal(
-            buffer: &mut EditorBuffer,
-            engine: &mut EditorEngine,
-        ) -> Option<()> {
-            let SegString {
-                width: unicode_width_at_caret,
-                ..
-            } = buffer.string_at_caret()?;
+        let max_display_width = buffer.get_line_display_width_at_caret_scr_adj();
 
-            let max_display_width = buffer.get_line_display_width_at_caret_scr_adj();
+        let maybe_char_to_right_of_caret = buffer.string_to_right_of_caret();
 
-            let maybe_char_to_right_of_caret = buffer.string_to_right_of_caret();
+        match maybe_char_to_right_of_caret {
+            Some(right_of_caret_seg_string) => {
+                let chunk_to_right_of_caret_gcs = right_of_caret_seg_string.string;
 
-            match maybe_char_to_right_of_caret {
-                Some(right_of_caret_seg_string) => {
-                    let chunk_to_right_of_caret_gcs = right_of_caret_seg_string.string;
+                match chunk_to_right_of_caret_gcs.contains_wide_segments() {
+                    ContainsWideSegments::Yes => {
+                        let jump_by_col_width = chunk_to_right_of_caret_gcs.display_width
+                            + unicode_width_at_caret;
+                        let move_left_by_amt = chunk_to_right_of_caret_gcs.display_width;
+                        {
+                            let buffer_mut = buffer.get_mut(engine.viewport());
 
-                    match chunk_to_right_of_caret_gcs.contains_wide_segments() {
-                        ContainsWideSegments::Yes => {
-                            let jump_by_col_width = chunk_to_right_of_caret_gcs
-                                .display_width
-                                + unicode_width_at_caret;
-                            let move_left_by_amt =
-                                chunk_to_right_of_caret_gcs.display_width;
-                            {
-                                let buffer_mut = buffer.get_mut(engine.viewport());
-
-                                scroll_editor_content::inc_caret_col_by(
-                                    buffer_mut.inner.caret_raw,
-                                    buffer_mut.inner.scr_ofs,
-                                    jump_by_col_width,
-                                    max_display_width,
-                                    buffer_mut.inner.vp.col_width,
-                                );
-                            }
-                            if move_left_by_amt > width(0) {
-                                // When buffer_mut goes out of scope, it will be dropped &
-                                // validation performed.
-                                {
-                                    let buffer_mut = buffer.get_mut(engine.viewport());
-
-                                    scroll_editor_content::dec_caret_col_by(
-                                        buffer_mut.inner.caret_raw,
-                                        buffer_mut.inner.scr_ofs,
-                                        move_left_by_amt,
-                                    );
-                                }
-                            }
+                            scroll_editor_content::inc_caret_col_by(
+                                buffer_mut.inner.caret_raw,
+                                buffer_mut.inner.scr_ofs,
+                                jump_by_col_width,
+                                max_display_width,
+                                buffer_mut.inner.vp.col_width,
+                            );
                         }
-                        ContainsWideSegments::No => {
+                        if move_left_by_amt > width(0) {
                             // When buffer_mut goes out of scope, it will be dropped &
                             // validation performed.
                             {
                                 let buffer_mut = buffer.get_mut(engine.viewport());
 
-                                scroll_editor_content::inc_caret_col_by(
+                                scroll_editor_content::dec_caret_col_by(
                                     buffer_mut.inner.caret_raw,
                                     buffer_mut.inner.scr_ofs,
-                                    unicode_width_at_caret,
-                                    max_display_width,
-                                    buffer_mut.inner.vp.col_width,
+                                    move_left_by_amt,
                                 );
                             }
                         }
                     }
-                }
+                    ContainsWideSegments::No => {
+                        // When buffer_mut goes out of scope, it will be dropped &
+                        // validation performed.
+                        {
+                            let buffer_mut = buffer.get_mut(engine.viewport());
 
-                None => {
-                    // When buffer_mut goes out of scope, it will be dropped &
-                    // validation performed.
-                    {
-                        let buffer_mut = buffer.get_mut(engine.viewport());
-
-                        scroll_editor_content::inc_caret_col_by(
-                            buffer_mut.inner.caret_raw,
-                            buffer_mut.inner.scr_ofs,
-                            unicode_width_at_caret,
-                            max_display_width,
-                            buffer_mut.inner.vp.col_width,
-                        );
+                            scroll_editor_content::inc_caret_col_by(
+                                buffer_mut.inner.caret_raw,
+                                buffer_mut.inner.scr_ofs,
+                                unicode_width_at_caret,
+                                max_display_width,
+                                buffer_mut.inner.vp.col_width,
+                            );
+                        }
                     }
                 }
             }
 
-            None
-        }
-
-        pub fn right_at_end(buffer: &mut EditorBuffer, engine: &mut EditorEngine) {
-            if buffer.next_line_below_caret_to_string().is_some() {
-                // If there is a line below the caret, move the caret to the start of
-                // the next line.
-
+            None => {
                 // When buffer_mut goes out of scope, it will be dropped &
                 // validation performed.
                 {
                     let buffer_mut = buffer.get_mut(engine.viewport());
 
-                    scroll_editor_content::inc_caret_row(
+                    scroll_editor_content::inc_caret_col_by(
                         buffer_mut.inner.caret_raw,
                         buffer_mut.inner.scr_ofs,
-                        buffer_mut.inner.vp.row_height,
-                    );
-
-                    scroll_editor_content::reset_caret_col(
-                        buffer_mut.inner.caret_raw,
-                        buffer_mut.inner.scr_ofs,
+                        unicode_width_at_caret,
+                        max_display_width,
+                        buffer_mut.inner.vp.col_width,
                     );
                 }
+            }
+        }
+
+        None
+    }
+
+    pub fn right_at_end(buffer: &mut EditorBuffer, engine: &mut EditorEngine) {
+        if buffer.next_line_below_caret_to_string().is_some() {
+            // If there is a line below the caret, move the caret to the start of
+            // the next line.
+
+            // When buffer_mut goes out of scope, it will be dropped &
+            // validation performed.
+            {
+                let buffer_mut = buffer.get_mut(engine.viewport());
+
+                scroll_editor_content::inc_caret_row(
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
+                    buffer_mut.inner.vp.row_height,
+                );
+
+                scroll_editor_content::reset_caret_col(
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
+                );
             }
         }
     }
 }
 
+/// ```text
+/// Caret : ⮬, ❱
+///
+/// Start of line (move to end of previous line if available):
+/// R ┌──────────┐
+/// 0 ❱line1     │
+/// 1 │line2     │
+///   └⮬─────────┘
+///   C0123456789
+///
+/// Middle of line (move left by one character):
+/// R ┌──────────┐
+/// 0 ❱line1     │
+///   └──⮬───────┘
+///   C0123456789
+///
+/// End of line (move left by one character):
+/// R ┌──────────┐
+/// 0 ❱line1     │
+///   └────⮬─────┘
+///   C0123456789
+/// ```
 pub fn left(
     buffer: &mut EditorBuffer,
     editor: &mut EditorEngine,
@@ -474,51 +494,13 @@ pub fn left(
 
     match locate_col(buffer) {
         CaretColLocationInLine::AtStart => {
-            if buffer.prev_line_above_caret().is_some() {
-                // If there is a line above the caret, move the caret to the end of
-                // the previous line.
-
-                // When buffer_mut goes out of scope, it will be dropped &
-                // validation performed.
-                {
-                    let buffer_mut = buffer.get_mut(editor.viewport());
-
-                    scroll_editor_content::dec_caret_row(
-                        buffer_mut.inner.caret_raw,
-                        buffer_mut.inner.scr_ofs,
-                    );
-                }
-
-                caret_mut::to_end_of_line(buffer, editor, SelectMode::Disabled);
-            }
+            left_helper::left_at_start(buffer, editor);
         }
         CaretColLocationInLine::AtEnd => {
-            let seg_slice = buffer.string_at_end_of_line_at_caret_scr_adj()?;
-            // When buffer_mut goes out of scope, it will be dropped &
-            // validation performed.
-            {
-                let buffer_mut = buffer.get_mut(editor.viewport());
-
-                scroll_editor_content::dec_caret_col_by(
-                    buffer_mut.inner.caret_raw,
-                    buffer_mut.inner.scr_ofs,
-                    seg_slice.width,
-                );
-            }
+            left_helper::left_at_end(buffer, editor);
         }
         CaretColLocationInLine::InMiddle => {
-            let left_seg_string = buffer.string_to_left_of_caret()?;
-            // When buffer_mut goes out of scope, it will be dropped & validation
-            // performed.
-            {
-                let buffer_mut = buffer.get_mut(editor.viewport());
-
-                scroll_editor_content::dec_caret_col_by(
-                    buffer_mut.inner.caret_raw,
-                    buffer_mut.inner.scr_ofs,
-                    left_seg_string.width,
-                );
-            }
+            left_helper::left_in_middle(buffer, editor);
         }
     }
 
@@ -533,4 +515,60 @@ pub fn left(
     );
 
     None
+}
+
+mod left_helper {
+    use super::*;
+
+    pub fn left_at_start(buffer: &mut EditorBuffer, editor: &mut EditorEngine) {
+        if buffer.prev_line_above_caret().is_some() {
+            // If there is a line above the caret, move the caret to the end of
+            // the previous line.
+
+            // When buffer_mut goes out of scope, it will be dropped &
+            // validation performed.
+            {
+                let buffer_mut = buffer.get_mut(editor.viewport());
+
+                scroll_editor_content::dec_caret_row(
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
+                );
+            }
+
+            caret_mut::to_end_of_line(buffer, editor, SelectMode::Disabled);
+        }
+    }
+
+    pub fn left_at_end(buffer: &mut EditorBuffer, editor: &mut EditorEngine) {
+        if let Some(seg_slice) = buffer.string_at_end_of_line_at_caret_scr_adj() {
+            // When buffer_mut goes out of scope, it will be dropped &
+            // validation performed.
+            {
+                let buffer_mut = buffer.get_mut(editor.viewport());
+
+                scroll_editor_content::dec_caret_col_by(
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
+                    seg_slice.width,
+                );
+            }
+        }
+    }
+
+    pub fn left_in_middle(buffer: &mut EditorBuffer, editor: &mut EditorEngine) {
+        if let Some(left_seg_string) = buffer.string_to_left_of_caret() {
+            // When buffer_mut goes out of scope, it will be dropped & validation
+            // performed.
+            {
+                let buffer_mut = buffer.get_mut(editor.viewport());
+
+                scroll_editor_content::dec_caret_col_by(
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
+                    left_seg_string.width,
+                );
+            }
+        }
+    }
 }

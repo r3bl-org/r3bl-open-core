@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-/// A macro to create a [crate::InlineString] (which is allocated and returned) with a
+/// A macro to create a [`crate::InlineString`] (which is allocated and returned) with a
 /// specified format. No heap allocation via [String] creation occurs when the `$format`
 /// expression is executed.
 ///
@@ -28,15 +28,15 @@ macro_rules! inline_string {
     (
         $($format:tt)*
         ) => {{
-            let mut acc = $crate::InlineString::new();
             use std::fmt::Write as _;
+            let mut acc = $crate::InlineString::new();
             _ = write!(&mut acc, $($format)*);
             acc
         }};
 }
 
-/// A macro to create a [crate::TinyInlineString] (which is allocated and returned) with a
-/// specified format. No heap allocation via [String] creation occurs when the `$format`
+/// A macro to create a [`crate::TinyInlineString`] (which is allocated and returned) with
+/// a specified format. No heap allocation via [String] creation occurs when the `$format`
 /// expression is executed.
 ///
 /// # Arguments
@@ -48,15 +48,15 @@ macro_rules! tiny_inline_string {
     (
         $($format:tt)*
     ) => {{
-        let mut acc = $crate::TinyInlineString::new();
         use std::fmt::Write as _;
+        let mut acc = $crate::TinyInlineString::new();
         _ = write!(&mut acc, $($format)*);
         acc
     }};
 }
 
-/// A macro to create a [smallvec::SmallVec] using the provided elements.
-/// This is just a wrapper around [smallvec::smallvec!].
+/// A macro to create a [`smallvec::SmallVec`] using the provided elements.
+/// This is just a wrapper around [`smallvec::smallvec`!].
 #[macro_export]
 macro_rules! inline_vec {
     ( $( $elem:expr ),* $(,)? ) => {{

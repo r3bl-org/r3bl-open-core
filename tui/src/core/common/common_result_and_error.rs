@@ -25,10 +25,11 @@ use std::{error::Error,
 
 /// Type alias to make it easy to work with:
 /// 1. [`core::result::Result`]
-/// 2. [miette::Result] and [miette::Report], which are [std::error::Error] wrappers.
+/// 2. [`miette::Result`] and [`miette::Report`], which are [`std::error::Error`]
+///    wrappers.
 ///
 /// - It is basically `miette::Result<T, miette::Report>`.
-/// - Works hand in hand w/ [CommonError] and any other type of error.
+/// - Works hand in hand w/ [`CommonError`] and any other type of error.
 ///
 /// # Example
 ///
@@ -114,7 +115,7 @@ impl Display for CommonError {
 }
 
 impl CommonError {
-    /// Both [CommonError::error_type] and [CommonError::error_message] available.
+    /// Both [`CommonError::error_type`] and [`CommonError::error_message`] available.
     #[allow(clippy::all)]
     pub fn new_error_result<T>(err_type: CommonErrorType, msg: &str) -> CommonResult<T> {
         Err(miette::miette!(CommonError {
@@ -123,7 +124,7 @@ impl CommonError {
         }))
     }
 
-    /// Only [CommonError::error_type] available, and no [CommonError::error_message].
+    /// Only [`CommonError::error_type`] available, and no [`CommonError::error_message`].
     pub fn new_error_result_with_only_type<T>(
         err_type: CommonErrorType,
     ) -> CommonResult<T> {
@@ -133,7 +134,7 @@ impl CommonError {
         }))
     }
 
-    /// Only [CommonError::error_message] available, and no [CommonError::error_type].
+    /// Only [`CommonError::error_message`] available, and no [`CommonError::error_type`].
     pub fn new_error_result_with_only_msg<T>(msg: &str) -> CommonResult<T> {
         Err(miette::miette!(CommonError {
             error_type: CommonErrorType::default(),

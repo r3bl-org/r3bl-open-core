@@ -19,21 +19,21 @@
 //! fragments.
 //!
 //! This is the lowest priority parser called by
-//! [crate::fragment_ng::parse_fragments_in_a_line_ng::parse_inline_fragments_until_eol_or_eoi_ng].
+//! [`crate::fragment_ng::parse_fragments_in_a_line_ng::parse_inline_fragments_until_eol_or_eoi_ng`].
 //!
 //! It matches anything that is not a special character. This is used to parse plain text.
 //! It works with the specialized parsers in
-//! [crate::fragment_ng::parse_fragments_in_a_line_ng::parse_inline_fragments_until_eol_or_eoi_ng] such as:
-//! - [crate::fragment_ng::parse_fragment_starts_with_underscore_err_on_new_line_ng],
-//! - [crate::fragment_ng::parse_fragment_starts_with_star_err_on_new_line_ng],
-//! - [crate::fragment_ng::parse_fragment_starts_with_backtick_err_on_new_line_ng],
+//! [`crate::fragment_ng::parse_fragments_in_a_line_ng::parse_inline_fragments_until_eol_or_eoi_ng`] such as:
+//! - [`crate::fragment_ng::parse_fragment_starts_with_underscore_err_on_new_line_ng`],
+//! - [`crate::fragment_ng::parse_fragment_starts_with_star_err_on_new_line_ng`],
+//! - [`crate::fragment_ng::parse_fragment_starts_with_backtick_err_on_new_line_ng`],
 //! - etc.
 //!
 //! It also works hand in hand with
-//! [crate::specialized_parsers_ng::delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi()] which is
+//! [`crate::specialized_parsers_ng::delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi()`] which is
 //! used by the specialized parsers.
 //!
-//! To see this in action, set the [crate::DEBUG_MD_PARSER_STDOUT] to true, and run all
+//! To see this in action, set the [`crate::DEBUG_MD_PARSER_STDOUT`] to true, and run all
 //! the tests in this module.
 
 use nom::{branch::alt,
@@ -65,9 +65,9 @@ use crate::{fg_blue,
             DEBUG_MD_PARSER_STDOUT};
 
 /// This is the lowest priority parser called by
-/// [crate::fragment_ng::parse_fragments_in_a_line_ng::parse_inline_fragments_until_eol_or_eoi_ng], which itself is called:
+/// [`crate::fragment_ng::parse_fragments_in_a_line_ng::parse_inline_fragments_until_eol_or_eoi_ng`], which itself is called:
 /// 1. Repeatedly in a loop by functions like
-///    [crate::standard_ng::parse_line_text_advance_ng()].
+///    [`crate::standard_ng::parse_line_text_advance_ng()`].
 /// 2. And by other similar functions.
 ///
 /// It will match anything that is not a special character. This is used to parse plain
@@ -78,8 +78,8 @@ use crate::{fg_blue,
 ///    - Takes text until the first special character is encountered
 ///    - Splits the input at that point and returns the plain text and remainder
 /// 2. Special edge case: Input starts with a single special character
-///    ([crate::md_parser::constants::UNDERSCORE], [crate::md_parser::constants::STAR],
-///    [crate::md_parser::constants::BACK_TICK])
+///    ([`crate::md_parser::constants::UNDERSCORE`],
+///    [`crate::md_parser::constants::STAR`], [`crate::md_parser::constants::BACK_TICK`])
 ///    - Handles the case where there is no closing delimiter
 ///    - Returns the special character as plain text
 /// 3. Normal edge case: Input starts with special characters but doesn't match any
@@ -89,8 +89,8 @@ use crate::{fg_blue,
 ///
 /// This gives the other more specialized parsers a chance to address these special
 /// characters (like italic, bold, links, etc.), when this function is called repeatedly:
-/// - By functions like [crate::standard_ng::parse_line_text_advance_ng()],
-/// - Which repeatedly calls [crate::fragment_ng::parse_fragments_in_a_line_ng::parse_inline_fragments_until_eol_or_eoi_ng]. This
+/// - By functions like [`crate::standard_ng::parse_line_text_advance_ng()`],
+/// - Which repeatedly calls [`crate::fragment_ng::parse_fragments_in_a_line_ng::parse_inline_fragments_until_eol_or_eoi_ng`]. This
 ///   function actually runs the specialized parsers.
 /// - Which calls this function repeatedly (if the specialized parsers don't match & error
 ///   out). This serves as a "catch all" parser.
@@ -101,7 +101,7 @@ use crate::{fg_blue,
 /// until the end of the input.
 ///
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
-/// See: [crate::specialized_parsers_ng::delim_matchers::count_delim_occurrences_until_eol_or_eoi].
+/// See: [`crate::specialized_parsers_ng::delim_matchers::count_delim_occurrences_until_eol_or_eoi`].
 pub fn parse_fragment_plain_text_until_eol_or_eoi_ng<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
@@ -214,7 +214,7 @@ fn parse_plain_text_until_special_char<'a>(
 /// Handle the special edge case: when input starts with a single special character.
 ///
 /// This function handles the case where the input starts with a single special character
-/// (UNDERSCORE, STAR, BACK_TICK) and there is no closing delimiter.
+/// (UNDERSCORE, STAR, `BACK_TICK`) and there is no closing delimiter.
 fn try_parse_single_special_char<'a>(
     input: &AsStrSlice<'a>,
 ) -> Option<IResult<AsStrSlice<'a>, AsStrSlice<'a>>> {
@@ -302,7 +302,7 @@ fn parse_plain_text_until_newline<'a>(
 
 /// Returns a set of special characters that require special handling.
 ///
-/// This set contains characters (UNDERSCORE, STAR, BACK_TICK) that are used for
+/// This set contains characters (UNDERSCORE, STAR, `BACK_TICK`) that are used for
 /// formatting in Markdown (like italic, bold, code). These characters must have at least
 /// 2 occurrences to be parsed by the specialized parsers. If only 1 occurrence is found,
 /// then the `handle_special_edge_case` function will handle it by returning the character
@@ -311,8 +311,8 @@ fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 
 /// Returns an extended set of special characters for detecting the normal edge case.
 ///
-/// This set extends `get_sp_char_set_1()` with additional characters (LEFT_IMAGE,
-/// LEFT_BRACKET) that are used to detect when the input starts with special characters.
+/// This set extends `get_sp_char_set_1()` with additional characters (`LEFT_IMAGE`,
+/// `LEFT_BRACKET`) that are used to detect when the input starts with special characters.
 /// In such cases, the `handle_normal_edge_case` function will take text until the first
 /// new line, unless the special edge case applies:
 /// 1. The character is in `get_sp_char_set_1()` and,
@@ -337,7 +337,7 @@ fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
 
 /// Returns a complete set of special characters for the normal case.
 ///
-/// This set extends `get_sp_char_set_2()` with NEW_LINE character. It's used in the
+/// This set extends `get_sp_char_set_2()` with `NEW_LINE` character. It's used in the
 /// `handle_normal_case` function to detect when to stop parsing plain text. When any of
 /// these characters is encountered, the input is split at that point. The text before
 /// the special character is returned as plain text, and the remainder gets a chance to

@@ -84,13 +84,13 @@ impl DefaultIoDevices {
 
 /// Async function to choose an item from a list of items.
 ///
-/// It takes a list of items, and returns the selected item or items (depending on the selection
-/// mode). If the user does not select anything, it returns `None`. The function also takes the
-/// maximum height and width of the display, and the selection mode (single select or multiple
-/// select).
+/// It takes a list of items, and returns the selected item or items (depending on the
+/// selection mode). If the user does not select anything, it returns `None`. The function
+/// also takes the maximum height and width of the display, and the selection mode (single
+/// select or multiple select).
 ///
-/// If the terminal is *fully* un-interactive, it returns `None`. This is useful so that it won't
-/// block `cargo test` or when run in non-interactive CI/CD environments.
+/// If the terminal is *fully* un-interactive, it returns `None`. This is useful so that
+/// it won't block `cargo test` or when run in non-interactive CI/CD environments.
 ///
 /// # Arguments
 ///
@@ -100,12 +100,12 @@ impl DefaultIoDevices {
 /// * `maybe_max_width` - Optional: the maximum width of the list.
 /// * `how` - The selection mode.
 /// * `stylesheet` - The style to use for the list.
-/// * `io` - The input and output devices to use. Call [DefaultIoDevices::as_mut_tuple()] if you
-///   don't want to specify anything here.
+/// * `io` - The input and output devices to use. Call
+///   [`DefaultIoDevices::as_mut_tuple()`] if you don't want to specify anything here.
 ///   * `output_device` - The output device to use.
 ///   * `input_device` - The input device to use.
-///   * `maybe_shared_writer` - The shared writer to use, if ReadlineAsync is in use, and the async
-///     stdout needs to be paused when this function is running.
+///   * `maybe_shared_writer` - The shared writer to use, if `ReadlineAsync` is in use,
+///     and the async stdout needs to be paused when this function is running.
 pub async fn choose<'a>(
     arg_header: impl Into<Header>,
     arg_options_to_choose_from: impl Into<ItemsOwned>,
@@ -276,16 +276,13 @@ fn keypress_handler(state: &mut State, ie: InputEvent) -> EventLoopResult {
                 | CaretVerticalViewportLocation::AtAbsoluteTop => {
                     // Do nothing.
                 }
-
                 CaretVerticalViewportLocation::AboveTopOfViewport
                 | CaretVerticalViewportLocation::AtTopOfViewport => {
                     state.scroll_offset_row_index -= 1;
                 }
-
                 CaretVerticalViewportLocation::InMiddleOfViewport => {
                     state.raw_caret_row_index -= 1;
                 }
-
                 CaretVerticalViewportLocation::AtBottomOfViewport
                 | CaretVerticalViewportLocation::BelowBottomOfViewport
                 | CaretVerticalViewportLocation::AtAbsoluteBottom => {
@@ -334,18 +331,20 @@ fn keypress_handler(state: &mut State, ie: InputEvent) -> EventLoopResult {
         }
 
         // Escape or Ctrl + c.
-        InputEvent::Keyboard(KeyPress::Plain {
-            key: Key::SpecialKey(SpecialKey::Esc),
-        })
-        | InputEvent::Keyboard(KeyPress::WithModifiers {
-            key: Key::Character('c'),
-            mask:
-                ModifierKeysMask {
-                    ctrl_key_state: KeyState::Pressed,
-                    shift_key_state: KeyState::NotPressed,
-                    alt_key_state: KeyState::NotPressed,
-                },
-        }) => {
+        InputEvent::Keyboard(
+            KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Esc),
+            }
+            | KeyPress::WithModifiers {
+                key: Key::Character('c'),
+                mask:
+                    ModifierKeysMask {
+                        ctrl_key_state: KeyState::Pressed,
+                        shift_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
+            },
+        ) => {
             DEVELOPMENT_MODE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "Esc");
@@ -379,7 +378,7 @@ fn keypress_handler(state: &mut State, ie: InputEvent) -> EventLoopResult {
                 }
                 // Item not found in selected_items so add it.
                 (Some(it), None) => state.selected_items.push(it.clone()),
-            };
+            }
 
             EventLoopResult::ContinueAndRerender
         }

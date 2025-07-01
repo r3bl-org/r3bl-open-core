@@ -23,12 +23,13 @@ use crate::{glyphs::{ELLIPSIS_GLYPH, SPACER_GLYPH},
             InlineString};
 
 /// Tests whether the given text contains an ANSI escape sequence.
+#[must_use]
 pub fn contains_ansi_escape_sequence(text: &str) -> bool {
     text.chars().any(|it| it == '\x1b')
 }
 
 /// Replace escaped quotes with unescaped quotes. The escaped quotes are generated
-/// when [std::fmt::Debug] is used to format the output using [format!], eg:
+/// when [`std::fmt::Debug`] is used to format the output using [format!], eg:
 /// ```
 /// use r3bl_tui::remove_escaped_quotes;
 ///
@@ -37,11 +38,13 @@ pub fn contains_ansi_escape_sequence(text: &str) -> bool {
 /// let s = remove_escaped_quotes(&s);
 /// assert_eq!(s, "Hello, world!");
 /// ```
+#[must_use]
 pub fn remove_escaped_quotes(s: &str) -> String {
-    s.replace("\\\"", "\"").replace("\"", "")
+    s.replace("\\\"", "\"").replace('"', "")
 }
 
 /// Take into account the fact that there maybe emoji in the string.
+#[must_use]
 pub fn truncate_from_right(
     string: &str,
     arg_width: impl Into<ColWidth>,
@@ -75,6 +78,7 @@ pub fn truncate_from_right(
     }
 }
 
+#[must_use]
 pub fn truncate_from_left(
     string: &str,
     arg_width: impl Into<ColWidth>,

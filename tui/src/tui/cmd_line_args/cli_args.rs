@@ -15,8 +15,8 @@
  *   limitations under the License.
  */
 
-/// Helper trait and impl to convert [std::env::Args] to a [`Vec<String>`] after removing
-/// the first item (which is the path to the executable).
+/// Helper trait and impl to convert [`std::env::Args`] to a [`Vec<String>`] after
+/// removing the first item (which is the path to the executable).
 pub trait ArgsToStrings {
     fn filter_and_convert_to_strings(&self) -> Vec<String>;
     fn as_str(my_vec: &[String]) -> Vec<&str>;

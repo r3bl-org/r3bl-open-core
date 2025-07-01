@@ -33,22 +33,22 @@ pub trait LayoutManagement {
 
 /// Methods that actually perform the layout and positioning.
 pub trait PerformPositioningAndSizing {
-    /// Update `box_cursor_pos`. This needs to be called before adding a new [FlexBox].
+    /// Update `box_cursor_pos`. This needs to be called before adding a new [`FlexBox`].
     fn update_insertion_pos_for_next_box(
         &mut self,
         allocated_size: Size,
     ) -> CommonResult<Pos>;
 
-    /// Get the [FlexBox] at the "top" of the `stack`.
+    /// Get the [`FlexBox`] at the "top" of the `stack`.
     fn current_box(&mut self) -> CommonResult<&mut FlexBox>;
 
     fn no_boxes_added(&self) -> bool;
 
-    /// Add the first [FlexBox] to the [crate::Surface].
+    /// Add the first [`FlexBox`] to the [`crate::Surface`].
     /// 1. This one is explicitly sized.
     /// 2. there can be only one.
     fn add_root_box(&mut self, props: FlexBoxProps) -> CommonResult<()>;
 
-    /// Add non-root [FlexBox].
+    /// Add non-root [`FlexBox`].
     fn add_non_root_box(&mut self, props: FlexBoxProps) -> CommonResult<()>;
 }

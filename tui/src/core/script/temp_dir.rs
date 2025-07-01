@@ -35,9 +35,9 @@ impl TempDir {
 }
 
 /// Create a temporary directory. The directory is automatically deleted when the
-/// [TempDir] struct is dropped.
+/// [`TempDir`] struct is dropped.
 ///
-/// You might want to use the [crate::try_create_temp_dir_and_cd!] macro instead,
+/// You might want to use the [`crate::try_create_temp_dir_and_cd`!] macro instead,
 /// which creates a subdirectory inside the temp dir and changes to that subdirectory.
 pub fn try_create_temp_dir() -> miette::Result<TempDir> {
     let root = std::env::temp_dir();
@@ -51,10 +51,10 @@ pub fn try_create_temp_dir() -> miette::Result<TempDir> {
 /// Macro to create a temp dir, a sub dir inside it, and change to that sub dir. It
 /// returns a tuple containing:
 ///
-/// 1. [TempDir] struct that contains the path to the newly created temp dir (the root).
+/// 1. [`TempDir`] struct that contains the path to the newly created temp dir (the root).
 ///    Hold on to this and only drop it when you are done with the temp dir (since it will
 ///    be deleted when dropped).
-/// 2. The [std::path::PathBuf] to the newly sub dir (inside the newly created temp dir
+/// 2. The [`std::path::PathBuf`] to the newly sub dir (inside the newly created temp dir
 ///    root).
 ///
 /// # Example
@@ -101,16 +101,16 @@ macro_rules! try_create_temp_dir_and_cd {
 
 // XMARK: Clever Rust, use of Drop to perform transaction close / end.
 
-/// Automatically delete the temporary directory when the [TempDir] struct is dropped.
+/// Automatically delete the temporary directory when the [`TempDir`] struct is dropped.
 impl Drop for TempDir {
     fn drop(&mut self) { _ = std::fs::remove_dir_all(&self.inner); }
 }
 
-/// Allow access to the inner [std::path::Path] easily when using other APIs.
+/// Allow access to the inner [`std::path::Path`] easily when using other APIs.
 ///
 /// Implementing the [Deref] trait that exposes the inner [Path] is useful when using
-/// other APIs that expect a [Path] instead of a [TempDir], such as:
-/// - [std::path::Path::join]
+/// other APIs that expect a [Path] instead of a [`TempDir`], such as:
+/// - [`std::path::Path::join`]
 ///
 /// # Example
 ///
@@ -125,7 +125,7 @@ impl Deref for TempDir {
     fn deref(&self) -> &Self::Target { &self.inner }
 }
 
-/// Implement the [Display] trait to allow printing the [TempDir] struct.
+/// Implement the [Display] trait to allow printing the [`TempDir`] struct.
 /// This is useful when debugging or logging using:
 /// - [println!]
 ///
@@ -144,10 +144,10 @@ impl Display for TempDir {
 
 /// Allow access to the inner [Path] easily when using other APIs.
 ///
-/// Implementing the [AsRef] trait that exposes the inner [Path] is useful when using
-/// other APIs that expect a [Path] instead of a [TempDir], such as:
-/// - [std::fs::create_dir_all]
-/// - [std::fs::remove_dir_all]
+/// Implementing the [`AsRef`] trait that exposes the inner [Path] is useful when using
+/// other APIs that expect a [Path] instead of a [`TempDir`], such as:
+/// - [`std::fs::create_dir_all`]
+/// - [`std::fs::remove_dir_all`]
 ///
 /// # Example
 ///

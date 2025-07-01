@@ -28,7 +28,7 @@ use crate::{ch,
             InlineVecStr,
             TinyInlineString};
 
-/// Please use [crate::new_style!] declarative macro to generate code for this struct.
+/// Please use [`crate::new_style`!] declarative macro to generate code for this struct.
 ///
 /// The following is handled by the [Default] implementation of `TuiStyle`:
 /// - For the macro, if `id` isn't supplied, then [None] is used. This represents the
@@ -95,6 +95,7 @@ pub mod tui_style_attrib {
     pub struct Id(pub u8);
 
     impl Id {
+        #[must_use]
         pub fn eq(maybe_id: Option<Id>, other: u8) -> bool {
             match maybe_id {
                 None => false,
@@ -102,13 +103,14 @@ pub mod tui_style_attrib {
             }
         }
 
+        #[must_use]
         pub fn fmt_id(maybe_id: Option<Id>) -> TinyInlineString {
-            let mut acc = TinyInlineString::new();
             use std::fmt::Write as _;
+            let mut acc = TinyInlineString::new();
             match maybe_id {
                 None => _ = write!(acc, "id: N/A"),
                 Some(id) => _ = write!(acc, "id: {}", id.0),
-            };
+            }
             acc
         }
     }
@@ -161,16 +163,6 @@ mod addition {
     }
 
     pub fn add_styles(lhs: TuiStyle, rhs: TuiStyle) -> TuiStyle {
-        // Computed style has no id.
-        let mut new_style: TuiStyle = TuiStyle {
-            id: None,
-            computed: Some(tui_style_attrib::Computed),
-            ..TuiStyle::default()
-        };
-
-        apply_style_flag(&mut new_style, &lhs);
-        apply_style_flag(&mut new_style, &rhs);
-
         // other (if set) overrides new_style.
         fn apply_style_flag(new_style: &mut TuiStyle, other: &TuiStyle) {
             if other.color_fg.is_some() {
@@ -204,6 +196,16 @@ mod addition {
                 new_style.strikethrough = other.strikethrough;
             }
         }
+
+        // Computed style has no id.
+        let mut new_style: TuiStyle = TuiStyle {
+            id: None,
+            computed: Some(tui_style_attrib::Computed),
+            ..TuiStyle::default()
+        };
+
+        apply_style_flag(&mut new_style, &lhs);
+        apply_style_flag(&mut new_style, &rhs);
 
         // Aggregate paddings.
         let aggregate_padding: ChUnit =
@@ -255,7 +257,7 @@ mod style_helpers {
                 acc_attrs.push("computed");
             } else {
                 acc_attrs.push(&id_str);
-            };
+            }
 
             if self.bold.is_some() {
                 acc_attrs.push("bold");

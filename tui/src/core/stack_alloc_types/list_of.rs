@@ -15,24 +15,26 @@
  *   limitations under the License.
  */
 
-//! This module provides a custom [List] struct that wraps around a [SmallVec] to provide
-//! additional functionality and traits implementations for ease of use within the `tui`
-//! crate. Specifically so that the  [From] trait can be implemented for [List] of
+//! This module provides a custom [List] struct that wraps around a [`SmallVec`] to
+//! provide additional functionality and traits implementations for ease of use within the
+//! `tui` crate. Specifically so that the  [From] trait can be implemented for [List] of
 //! `T`. Where `T` is any number of types in the tui crate.
 //!
 //! The [List] struct is designed to be a more flexible and efficient alternative to a
 //! standard [Vec], with the ability to implement custom traits and macros.
 //! 1. This gets around the orphan rule for implementing standard library traits.
-//! 2. Using a [SmallVec] allows for stack allocation rather than heap allocation. Its
+//! 2. Using a [`SmallVec`] allows for stack allocation rather than heap allocation. Its
 //!    internal backing store is essentially an array-vec. Starts out as a stack allocated
 //!    array which can spill over into the heap if needed.
 //!
 //! # Features
 //!
-//! - Implements [AddAssign] trait for adding items, other lists, and vectors to the list.
-//! - Implements [From] trait for converting from [ListStorage] and [Vec] to [List].
-//! - Implements [Deref] and [DerefMut] traits for easy access to the inner [SmallVec].
-//! - Provides a [crate::list!] macro for convenient list creation.
+//! - Implements [`AddAssign`] trait for adding items, other lists, and vectors to the
+//!   list.
+//! - Implements [From] trait for converting from [`ListStorage`] and [Vec] to [List].
+//! - Implements [Deref] and [`DerefMut`] traits for easy access to the inner
+//!   [`SmallVec`].
+//! - Provides a [`crate::list`!] macro for convenient list creation.
 //!
 //! # Examples
 //!
@@ -70,12 +72,14 @@ pub struct List<T> {
 }
 
 impl<T> List<T> {
+    #[must_use]
     pub fn with_capacity(size: usize) -> Self {
         Self {
             inner: ListStorage::with_capacity(size),
         }
     }
 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             inner: ListStorage::new(),
