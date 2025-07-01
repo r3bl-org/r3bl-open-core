@@ -19,7 +19,7 @@
 //!
 //! This module provides utility functions for color wheel operations:
 //! - `calc_fg_color()` - Calculates appropriate foreground color for contrast
-//! - `get_color_tuple()` - Generates RGB color values from ColorWheelControl
+//! - `get_color_tuple()` - Generates RGB color values from `ColorWheelControl`
 //! - `clamp()` - Safely converts f64 to u8 values
 //!
 //! These functions handle the mathematical calculations for color generation

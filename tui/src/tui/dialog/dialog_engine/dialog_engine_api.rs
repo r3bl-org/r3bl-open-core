@@ -598,43 +598,40 @@ mod internal_impl {
                 ));
 
                 // Set style to underline if selected row & paint.
-                match selected_row_index.eq(&row_index) {
+                if selected_row_index.eq(&row_index) {
                     // This is the selected row.
-                    true => {
-                        let my_selected_style = match dialog_engine
-                            .dialog_options
-                            .maybe_style_results_panel
-                        {
-                            // Update existing style.
-                            Some(style) => TuiStyle {
-                                underline: Some(tui_style_attrib::Underline),
-                                ..style
-                            },
-                            // No existing style, so create a new style w/ only underline.
-                            _ => TuiStyle {
-                                underline: Some(tui_style_attrib::Underline),
-                                ..Default::default()
-                            },
-                        }
-                        .into();
-                        // Paint the text for the row.
-                        ops.push(RenderOp::ApplyColors(my_selected_style));
-                        ops.push(RenderOp::PaintTextWithAttributes(
-                            clipped_text.into_owned(),
-                            my_selected_style,
-                        ));
+                    let my_selected_style = match dialog_engine
+                        .dialog_options
+                        .maybe_style_results_panel
+                    {
+                        // Update existing style.
+                        Some(style) => TuiStyle {
+                            underline: Some(tui_style_attrib::Underline),
+                            ..style
+                        },
+                        // No existing style, so create a new style w/ only underline.
+                        _ => TuiStyle {
+                            underline: Some(tui_style_attrib::Underline),
+                            ..Default::default()
+                        },
                     }
+                    .into();
+                    // Paint the text for the row.
+                    ops.push(RenderOp::ApplyColors(my_selected_style));
+                    ops.push(RenderOp::PaintTextWithAttributes(
+                        clipped_text.into_owned(),
+                        my_selected_style,
+                    ));
+                } else {
                     // Regular row, not selected.
-                    false => {
-                        // Paint the text for the row.
-                        ops.push(RenderOp::ApplyColors(
-                            dialog_engine.dialog_options.maybe_style_results_panel,
-                        ));
-                        ops.push(RenderOp::PaintTextWithAttributes(
-                            clipped_text.into_owned(),
-                            dialog_engine.dialog_options.maybe_style_results_panel,
-                        ));
-                    }
+                    // Paint the text for the row.
+                    ops.push(RenderOp::ApplyColors(
+                        dialog_engine.dialog_options.maybe_style_results_panel,
+                    ));
+                    ops.push(RenderOp::PaintTextWithAttributes(
+                        clipped_text.into_owned(),
+                        dialog_engine.dialog_options.maybe_style_results_panel,
+                    ));
                 }
             }
         }

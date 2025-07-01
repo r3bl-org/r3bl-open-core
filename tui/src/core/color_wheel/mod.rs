@@ -18,13 +18,13 @@
 //! This module provides comprehensive color wheel functionality for terminal applications.
 //! 
 //! ## Organization:
-//! - `types` - Core data types (Seed, ColorWheelControl, etc.)
+//! - `types` - Core data types (`Seed`, `ColorWheelControl`, etc.)
 //! - `config` - Configuration types and utilities
 //! - `gradients` - ANSI 256 and truecolor gradient generation
 //! - `helpers` - Color calculation utilities
 //! - `policies` - Text colorization policies
 //! - `lolcat` - Lolcat-style colorization API
-//! - `impl` - Main ColorWheel implementation
+//! - `impl` - Main `ColorWheel` implementation
 
 // Attach sources.
 pub mod config;

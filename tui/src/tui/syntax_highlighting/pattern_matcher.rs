@@ -76,24 +76,21 @@ impl<'a> PatternMatcherStateMachine<'a> {
             return CharacterMatchResult::Finished;
         };
 
-        match current_pattern_char == character_to_test {
-            true => {
-                self.current_index += 1;
-                CharacterMatchResult::Keep
-            }
-            false => {
-                // Does this match the first character of the pattern?
-                if let Some(first_pattern_char) = self.pattern.chars().next() {
-                    if character_to_test == first_pattern_char {
-                        self.current_index = 1;
-                        return CharacterMatchResult::ResetAndKeep;
-                    }
+        if current_pattern_char == character_to_test {
+            self.current_index += 1;
+            CharacterMatchResult::Keep
+        } else {
+            // Does this match the first character of the pattern?
+            if let Some(first_pattern_char) = self.pattern.chars().next() {
+                if character_to_test == first_pattern_char {
+                    self.current_index = 1;
+                    return CharacterMatchResult::ResetAndKeep;
                 }
-
-                // Normal reset.
-                self.current_index = 0;
-                CharacterMatchResult::Reset
             }
+
+            // Normal reset.
+            self.current_index = 0;
+            CharacterMatchResult::Reset
         }
     }
 }

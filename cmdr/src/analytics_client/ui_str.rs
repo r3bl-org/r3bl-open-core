@@ -169,19 +169,16 @@ pub mod goodbye_greetings {
 
     #[must_use]
     pub fn thanks_msg() -> InlineString {
-        let goodbye_msg = match var("USER") {
-            Ok(username) => inline_string!(
-                "Goodbye, 👋 {a}. Thanks for using {b} {c}!",
-                a = username,
-                b = get_self_bin_emoji(),
-                c = get_self_bin_name()
-            ),
-            Err(_) => inline_string!(
-                "Goodbye, 👋. Thanks for using {a} {b}!",
-                a = get_self_bin_emoji(),
-                b = get_self_bin_name()
-            ),
-        };
+        let goodbye_msg = if let Ok(username) = var("USER") { inline_string!(
+            "Goodbye, 👋 {a}. Thanks for using {b} {c}!",
+            a = username,
+            b = get_self_bin_emoji(),
+            c = get_self_bin_name()
+        ) } else { inline_string!(
+            "Goodbye, 👋. Thanks for using {a} {b}!",
+            a = get_self_bin_emoji(),
+            b = get_self_bin_name()
+        ) };
 
         let star_us_msg = inline_string!(
             "{a}\n{b}",
