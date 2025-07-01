@@ -129,9 +129,10 @@ impl LayoutManagement for Surface {
 
     fn box_start(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
         throws!({
-            match self.no_boxes_added() {
-                true => self.add_root_box(flex_box_props),
-                false => self.add_non_root_box(flex_box_props),
+            if self.no_boxes_added() {
+                self.add_root_box(flex_box_props)
+            } else {
+                self.add_non_root_box(flex_box_props)
             }?;
         });
     }

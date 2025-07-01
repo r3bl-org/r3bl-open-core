@@ -256,23 +256,22 @@ pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
         );
     });
 
-    match editor_buffer.is_file_extension_default() {
-        // Render using custom MD parser.
-        true => syn_hi_r3bl_path::render_content(
+    if editor_buffer.is_file_extension_default() {
+        syn_hi_r3bl_path::render_content(
             editor_buffer,
             max_display_row_count,
             render_ops,
             editor_engine,
             max_display_col_count,
-        ),
-        // Render using syntect.
-        false => syn_hi_syntect_path::render_content(
+        );
+    } else {
+        syn_hi_syntect_path::render_content(
             editor_buffer,
             max_display_row_count,
             render_ops,
             editor_engine,
             max_display_col_count,
-        ),
+        );
     }
 }
 
