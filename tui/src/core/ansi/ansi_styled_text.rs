@@ -22,7 +22,13 @@ use strum_macros::EnumCount;
 
 use crate::{inline_string,
             tui_color,
-            tui_style::tui_style_attrib::*,
+            tui_style::tui_style_attrib::{Bold,
+                                          Dim,
+                                          Hidden,
+                                          Italic,
+                                          Reverse,
+                                          Strikethrough,
+                                          Underline},
             ASTColor,
             ColIndex,
             ColWidth,
@@ -33,20 +39,20 @@ use crate::{inline_string,
             SgrCode,
             TuiStyle};
 
-/// Please don't create this struct directly, use [crate::ast()], [crate::ast_line!],
-/// [crate::ast_lines!] or the constructor functions like [fg_red()], [fg_green()],
-/// [fg_blue()], etc.
+/// Please don't create this struct directly, use [`crate::ast()`], [`crate::ast_line`!],
+/// [`crate::ast_lines`!] or the constructor functions like [`fg_red()`], [`fg_green()`],
+/// [`fg_blue()`], etc.
 ///
 /// The main struct that we have to consider is `AnsiStyledText` or `AST`. It has two
 /// fields:
 /// - `text` - the text to print.
-/// - `styles` - a list of [ASTStyle] to apply to the text. This is owned in a stack
+/// - `styles` - a list of [`ASTStyle`] to apply to the text. This is owned in a stack
 ///   allocated buffer, which can spill to the heap if it gets larger than
 ///   `sizing::MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE`.
-/// - Once created, either directly or using constructor functions like [fg_red()], you
-///   can then use [Self::bg_dark_gray()] to add a background color to the text.
-/// - If you want even more flexibility you can use constructor function [fg_color()] and
-///   [Self::bg_color()] to create a styled text with a specific RGB color.
+/// - Once created, either directly or using constructor functions like [`fg_red()`], you
+///   can then use [`Self::bg_dark_gray()`] to add a background color to the text.
+/// - If you want even more flexibility you can use constructor function [`fg_color()`]
+///   and [`Self::bg_color()`] to create a styled text with a specific RGB color.
 ///
 /// # Example usage:
 ///
@@ -95,8 +101,8 @@ use crate::{inline_string,
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AnsiStyledText {
     pub text: InlineString,
-    /// You can supply this directly, or use [crate::new_style!] to create a
-    /// [crate::TuiStyle] and convert it to this type using `.into()`.
+    /// You can supply this directly, or use [`crate::new_style`!] to create a
+    /// [`crate::TuiStyle`] and convert it to this type using `.into()`.
     pub styles: ASTextStyles,
 }
 
@@ -110,16 +116,17 @@ pub type ASTextStyles = sizing::InlineVecASTextStyles;
 pub(in crate::core::ansi) mod sizing {
     use super::*;
 
-    /// Attributes are: color_fg, color_bg, bold, dim, italic, underline, reverse, hidden,
-    /// etc. which are in [crate::ASTStyle].
+    /// Attributes are: `color_fg`, `color_bg`, bold, dim, italic, underline, reverse,
+    /// hidden, etc. which are in [`crate::ASTStyle`].
     pub const MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE: usize = 12;
     pub type InlineVecASTextStyles =
         SmallVec<[ASTStyle; MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE]>;
 }
 
-/// Easy to use constructor function, instead of creating a new [AnsiStyledText] struct
+/// Easy to use constructor function, instead of creating a new [`AnsiStyledText`] struct
 /// directly. If you need to assemble a bunch of these together, you can use
-/// [crate::ast_line!] to create a list of them.
+/// [`crate::ast_line!`] to create a list of them.
+#[must_use]
 pub fn ast(arg_text: impl AsRef<str>, arg_styles: impl Into<ASTextStyles>) -> ASText {
     ASText {
         text: arg_text.as_ref().into(),
@@ -127,9 +134,9 @@ pub fn ast(arg_text: impl AsRef<str>, arg_styles: impl Into<ASTextStyles>) -> AS
     }
 }
 
-/// String together a bunch of [AnsiStyledText] structs into a single
+/// String together a bunch of [`AnsiStyledText`] structs into a single
 /// [`crate::InlineVec<AnsiStyledText>`]. This is useful for creating a list of
-/// [AnsiStyledText] structs that can be printed on a single line.
+/// [`AnsiStyledText`] structs that can be printed on a single line.
 #[macro_export]
 macro_rules! ast_line {
     (
@@ -184,19 +191,24 @@ pub mod ansi_styled_text_impl {
             println!("{self}");
         }
 
-        pub fn print(&self) {}
+        pub fn print(&self) {
+            print!("{self}");
+        }
 
-        /// This is different from the [Display] trait implementation, because it doesn't
-        /// allocate a new [String], but instead allocates an inline buffer on the stack.
+        /// This is different from the [`Display`] trait implementation, because it
+        /// doesn't allocate a new [`String`], but instead allocates an inline
+        /// buffer on the stack.
+        #[must_use]
         pub fn to_small_str(&self) -> InlineString { inline_string!("{self}") }
 
         /// This is a convenience function to clip the text to a certain display width.
         /// You can also clip it to any given start and end index (inclusive).
+        #[must_use]
         pub fn clip(&self, arg_options: impl Into<ASTextConvertOptions>) -> ASText {
             let ir_text = self.convert(arg_options);
 
             let mut acc = InlineString::with_capacity(self.text.len());
-            for pixel_char in ir_text.iter() {
+            for pixel_char in &ir_text {
                 if let PixelChar::PlainText {
                     text,
                     maybe_style: _,
@@ -213,11 +225,11 @@ pub mod ansi_styled_text_impl {
             }
         }
 
-        /// Converts the text to a vector of [PixelChar]s. This is used for rendering the
-        /// text on the screen.
-        /// - To clip the text to a certain display width you can pass in the [ColWidth]
+        /// Converts the text to a vector of [`PixelChar`]s. This is used for rendering
+        /// the text on the screen.
+        /// - To clip the text to a certain display width you can pass in the [`ColWidth`]
         ///   to this function.
-        /// - To convert the entire text, just pass in [ASTextConvertOptions::default()]
+        /// - To convert the entire text, just pass in [`ASTextConvertOptions::default()`]
         ///   function.
         /// - To convert a range of text, pass in the start and end indices. Note that it
         ///   will be inclusive (not the default Rust behavior), so the end index will be
@@ -245,7 +257,7 @@ pub mod ansi_styled_text_impl {
                 let mut acc: InlineVec<PixelChar> =
                     InlineVec::with_capacity(self.text.len());
                 let gc_string = GCString::from(&self.text);
-                for item in gc_string.iter() {
+                for item in &gc_string {
                     let pixel_char = PixelChar::PlainText {
                         text: item.into(),
                         maybe_style: maybe_tui_style,
@@ -285,6 +297,7 @@ pub mod ansi_styled_text_impl {
 
 // The following functions are convenience functions for providing ANSI attributes.
 
+#[must_use]
 pub fn bold(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -292,6 +305,7 @@ pub fn bold(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn italic(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -299,6 +313,7 @@ pub fn italic(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn underline(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -306,6 +321,7 @@ pub fn underline(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn strikethrough(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -313,6 +329,7 @@ pub fn strikethrough(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn dim(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -320,6 +337,7 @@ pub fn dim(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn dim_underline(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -329,6 +347,7 @@ pub fn dim_underline(text: impl AsRef<str>) -> ASText {
 
 // The following function is a convenience function for providing any color.
 
+#[must_use]
 pub fn fg_color(arg_color: impl Into<ASTColor>, text: &str) -> ASText {
     ASText {
         text: text.into(),
@@ -339,6 +358,7 @@ pub fn fg_color(arg_color: impl Into<ASTColor>, text: &str) -> ASText {
 // The following functions are convenience functions for providing ANSI colors.
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+#[must_use]
 pub fn fg_dark_gray(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -347,6 +367,7 @@ pub fn fg_dark_gray(text: impl AsRef<str>) -> ASText {
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+#[must_use]
 pub fn fg_black(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -355,6 +376,7 @@ pub fn fg_black(text: impl AsRef<str>) -> ASText {
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+#[must_use]
 pub fn fg_yellow(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -363,6 +385,7 @@ pub fn fg_yellow(text: impl AsRef<str>) -> ASText {
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+#[must_use]
 pub fn fg_green(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -371,6 +394,7 @@ pub fn fg_green(text: impl AsRef<str>) -> ASText {
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+#[must_use]
 pub fn fg_blue(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -379,6 +403,7 @@ pub fn fg_blue(text: impl AsRef<str>) -> ASText {
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+#[must_use]
 pub fn fg_red(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -387,6 +412,7 @@ pub fn fg_red(text: impl AsRef<str>) -> ASText {
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+#[must_use]
 pub fn fg_white(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -395,6 +421,7 @@ pub fn fg_white(text: impl AsRef<str>) -> ASText {
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+#[must_use]
 pub fn fg_cyan(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -403,6 +430,7 @@ pub fn fg_cyan(text: impl AsRef<str>) -> ASText {
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
+#[must_use]
 pub fn fg_magenta(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -412,6 +440,7 @@ pub fn fg_magenta(text: impl AsRef<str>) -> ASText {
 
 // The following colors are a convenience for using the [crate::tui_color!] macro.
 
+#[must_use]
 pub fn fg_medium_gray(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -419,6 +448,7 @@ pub fn fg_medium_gray(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_light_cyan(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -426,6 +456,7 @@ pub fn fg_light_cyan(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_light_purple(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -433,6 +464,7 @@ pub fn fg_light_purple(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_deep_purple(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -440,6 +472,7 @@ pub fn fg_deep_purple(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_soft_pink(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -447,6 +480,7 @@ pub fn fg_soft_pink(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_hot_pink(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -454,6 +488,7 @@ pub fn fg_hot_pink(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_light_yellow_green(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -463,6 +498,7 @@ pub fn fg_light_yellow_green(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_dark_teal(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -470,6 +506,7 @@ pub fn fg_dark_teal(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_bright_cyan(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -477,6 +514,7 @@ pub fn fg_bright_cyan(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_dark_purple(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -484,6 +522,7 @@ pub fn fg_dark_purple(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_sky_blue(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -491,6 +530,7 @@ pub fn fg_sky_blue(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_lavender(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -498,6 +538,7 @@ pub fn fg_lavender(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_dark_lizard_green(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -507,6 +548,7 @@ pub fn fg_dark_lizard_green(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_orange(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -514,6 +556,7 @@ pub fn fg_orange(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_silver_metallic(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -523,6 +566,7 @@ pub fn fg_silver_metallic(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_lizard_green(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -530,6 +574,7 @@ pub fn fg_lizard_green(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_pink(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -537,6 +582,7 @@ pub fn fg_pink(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_dark_pink(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -544,6 +590,7 @@ pub fn fg_dark_pink(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_frozen_blue(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -551,6 +598,7 @@ pub fn fg_frozen_blue(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_guards_red(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -558,6 +606,7 @@ pub fn fg_guards_red(text: impl AsRef<str>) -> ASText {
     }
 }
 
+#[must_use]
 pub fn fg_slate_gray(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
@@ -566,74 +615,87 @@ pub fn fg_slate_gray(text: impl AsRef<str>) -> ASText {
 }
 
 impl ASText {
+    #[must_use]
     pub fn dim(mut self) -> Self {
         self.styles.push(ASTStyle::Dim);
         self
     }
 
+    #[must_use]
     pub fn italic(mut self) -> Self {
         self.styles.push(ASTStyle::Italic);
         self
     }
 
+    #[must_use]
     pub fn bold(mut self) -> Self {
         self.styles.push(ASTStyle::Bold);
         self
     }
 
+    #[must_use]
     pub fn underline(mut self) -> Self {
         self.styles.push(ASTStyle::Underline);
         self
     }
 
+    #[must_use]
     pub fn bg_color(mut self, arg_color: impl Into<ASTColor>) -> Self {
         let color: ASTColor = arg_color.into();
         self.styles.push(ASTStyle::Background(color));
         self
     }
 
+    #[must_use]
     pub fn fg_color(mut self, arg_color: impl Into<ASTColor>) -> Self {
         let color: ASTColor = arg_color.into();
         self.styles.push(ASTStyle::Foreground(color));
         self
     }
 
+    #[must_use]
     pub fn bg_cyan(mut self) -> Self {
         self.styles
             .push(ASTStyle::Background(ASTColor::Ansi(51.into())));
         self
     }
 
+    #[must_use]
     pub fn bg_yellow(mut self) -> Self {
         self.styles
             .push(ASTStyle::Background(ASTColor::Ansi(226.into())));
         self
     }
 
+    #[must_use]
     pub fn bg_green(mut self) -> Self {
         self.styles
             .push(ASTStyle::Background(ASTColor::Ansi(34.into())));
         self
     }
 
+    #[must_use]
     pub fn bg_slate_gray(mut self) -> Self {
         self.styles
             .push(ASTStyle::Background(crate::tui_color!(slate_gray).into()));
         self
     }
 
+    #[must_use]
     pub fn bg_dark_gray(mut self) -> Self {
         self.styles
             .push(ASTStyle::Background(ASTColor::Ansi(236.into())));
         self
     }
 
+    #[must_use]
     pub fn bg_night_blue(mut self) -> Self {
         self.styles
             .push(ASTStyle::Background(tui_color!(night_blue).into()));
         self
     }
 
+    #[must_use]
     pub fn bg_moonlight_blue(mut self) -> Self {
         self.styles
             .push(ASTStyle::Background(tui_color!(moonlight_blue).into()));
@@ -641,10 +703,11 @@ impl ASText {
     }
 }
 
-/// This enum isn't the same as the [TuiStyle] struct. This enum can only hold a single
-/// variant. The [TuiStyle] struct can hold multiple variants. This is a low level enum
-/// that shouldn't be used directly. It is best to use [TuiStyle] and [crate::new_style!]
-/// to create a [TuiStyle] and convert it to this type using `.into()`.
+/// This enum isn't the same as the [`TuiStyle`] struct. This enum can only hold a single
+/// variant. The [`TuiStyle`] struct can hold multiple variants. This is a low level enum
+/// that shouldn't be used directly. It is best to use [`TuiStyle`] and
+/// [`crate::new_style`!] to create a [`TuiStyle`] and convert it to this type using
+/// `.into()`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumCount)]
 pub enum ASTStyle {
     Foreground(ASTColor),
@@ -670,10 +733,10 @@ mod convert_vec_ast_style_to_tui_style {
             for style in styles {
                 match style {
                     ASTStyle::Foreground(color) => {
-                        tui_style.color_fg = Some(color.into())
+                        tui_style.color_fg = Some(color.into());
                     }
                     ASTStyle::Background(color) => {
-                        tui_style.color_bg = Some(color.into())
+                        tui_style.color_bg = Some(color.into());
                     }
                     ASTStyle::Bold => tui_style.bold = Some(Bold),
                     ASTStyle::Dim => tui_style.dim = Some(Dim),
@@ -682,7 +745,7 @@ mod convert_vec_ast_style_to_tui_style {
                     ASTStyle::Invert => tui_style.reverse = Some(Reverse),
                     ASTStyle::Hidden => tui_style.hidden = Some(Hidden),
                     ASTStyle::Strikethrough => {
-                        tui_style.strikethrough = Some(Strikethrough)
+                        tui_style.strikethrough = Some(Strikethrough);
                     }
                     // TuiStyle doesn't have direct equivalents for these:
                     ASTStyle::Overline | ASTStyle::RapidBlink | ASTStyle::SlowBlink => {}

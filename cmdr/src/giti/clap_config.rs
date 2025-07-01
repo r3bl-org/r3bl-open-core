@@ -18,6 +18,7 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use r3bl_tui::ItemsOwned;
 
+#[must_use]
 pub fn get_giti_command_subcommand_names(arg: CLICommand) -> ItemsOwned {
     match arg {
         CLICommand::Branch { .. } => BranchSubcommand::value_variants()

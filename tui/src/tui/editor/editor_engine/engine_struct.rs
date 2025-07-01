@@ -26,25 +26,25 @@ use crate::{load_default_theme,
             Size,
             StyleUSSpanLines};
 
-/// Do not create this struct directly. Please use [new()](EditorEngine::new) instead.
+/// Do not create this struct directly. Please use [`new()`](EditorEngine::new) instead.
 ///
 /// Holds data related to rendering in between render calls. This struct is mutable when
 /// render is called. That is not the case with state, which is immutable during render
 /// phase.
 ///
-/// 1. This is not stored in the [crate::EditorBuffer] struct, which lives in the app's
+/// 1. This is not stored in the [`crate::EditorBuffer`] struct, which lives in the app's
 ///    state. The state provides the underlying document or buffer struct that holds the
 ///    actual document.
-/// 2. Rather, this struct is stored in the [crate::EditorComponent] struct, which lives
-///    inside of the [crate::App].
+/// 2. Rather, this struct is stored in the [`crate::EditorComponent`] struct, which lives
+///    inside of the [`crate::App`].
 ///
 /// In order to change the document, you can use the
-/// [crate::engine_public_api::apply_event] method which takes [crate::InputEvent] and
-/// tries to convert it to an [crate::EditorEvent] and then execute them against this
+/// [`crate::engine_public_api::apply_event`] method which takes [`crate::InputEvent`] and
+/// tries to convert it to an [`crate::EditorEvent`] and then execute them against this
 /// buffer.
 #[derive(Clone, Debug)]
 pub struct EditorEngine {
-    /// Set by [crate::engine_public_api::render_engine].
+    /// Set by [`crate::engine_public_api::render_engine`].
     pub current_box: PartialFlexBox,
     pub config_options: EditorEngineConfig,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
@@ -52,21 +52,21 @@ pub struct EditorEngine {
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
     pub theme: Theme,
     /// This is an **optional** field that is used to somewhat speed up the legacy
-    /// Markdown parser [crate::parse_markdown()]. It is not used by the NG parser
-    /// [crate::parse_markdown_ng()]. It is lazily created if the legacy parser is
+    /// Markdown parser [`crate::parse_markdown()`]. It is not used by the NG parser
+    /// [`crate::parse_markdown_ng()`]. It is lazily created if the legacy parser is
     /// used, and it is re-used every time the document is re-parsed.
     ///
     /// ## Only used with the legacy Markdown parser
     ///
     /// This is a byte cache that is used to write the entire editor content into, with
     /// CRLF added, so that it can be parsed by the Markdown parser in order to apply
-    /// syntax highlighting using [crate::try_parse_and_highlight()].
-    /// [crate::EditorContent] stores the document as a
-    /// [crate::sizing::VecEditorContentLines] which has all the CRLF removed. This cache
-    /// is used to add the CRLF back in.
+    /// syntax highlighting using [`crate::try_parse_and_highlight()`].
+    /// [`crate::EditorContent`] stores the document as a
+    /// [`crate::sizing::VecEditorContentLines`] which has all the CRLF removed. This
+    /// cache is used to add the CRLF back in.
     ///
     /// The actual Markdown parser that needs this cache is here
-    /// [crate::parse_markdown()].
+    /// [`crate::parse_markdown()`].
     ///
     /// The reason to have this as a field in this struct, is to avoid re-allocating this
     /// cache every time we need to parse the document. This cache is re-used every time
@@ -80,20 +80,21 @@ pub struct EditorEngine {
 pub type ParserByteCache = DocumentStorage;
 
 /// This is the page size amount by which to grow the
-/// [crate::EditorEngine::parser_byte_cache] so that it is done efficiently and not by 1
+/// [`crate::EditorEngine::parser_byte_cache`] so that it is done efficiently and not by 1
 /// or 2 bytes at time.
 pub const PARSER_BYTE_CACHE_PAGE_SIZE: usize = 1024;
 
 impl Default for EditorEngine {
-    fn default() -> Self { EditorEngine::new(Default::default()) }
+    fn default() -> Self { EditorEngine::new(EditorEngineConfig::default()) }
 }
 
 impl EditorEngine {
-    /// Syntax highlighting support - [SyntaxSet] and [Theme] are a very expensive objects
-    /// to create, so re-use them.
+    /// Syntax highlighting support - [`SyntaxSet`] and [Theme] are a very expensive
+    /// objects to create, so re-use them.
+    #[must_use]
     pub fn new(config_options: EditorEngineConfig) -> Self {
         Self {
-            current_box: Default::default(),
+            current_box: PartialFlexBox::default(),
             config_options,
             syntax_set: SyntaxSet::load_defaults_newlines(),
             theme: try_load_r3bl_theme().unwrap_or_else(|_| load_default_theme()),
@@ -105,7 +106,7 @@ impl EditorEngine {
     pub fn viewport(&self) -> Size { self.current_box.style_adjusted_bounds_size }
 
     pub fn set_ast_cache(&mut self, ast_cache: StyleUSSpanLines) {
-        self.ast_cache = Some(ast_cache)
+        self.ast_cache = Some(ast_cache);
     }
 
     pub fn clear_ast_cache(&mut self) { self.ast_cache = None }

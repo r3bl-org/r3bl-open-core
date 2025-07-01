@@ -18,7 +18,7 @@
 use super::{FlexBoxId, LayoutDirection};
 use crate::{InlineVec, Pos, ReqSizePc, Size, TuiStyle};
 
-/// Properties that are needed to create a [crate::FlexBox].
+/// Properties that are needed to create a [`crate::FlexBox`].
 #[derive(Clone, Debug, Default)]
 pub struct FlexBoxProps {
     pub id: FlexBoxId,
@@ -27,7 +27,7 @@ pub struct FlexBoxProps {
     pub maybe_styles: Option<InlineVec<TuiStyle>>,
 }
 
-/// Properties that are needed to create a [crate::Surface].
+/// Properties that are needed to create a [`crate::Surface`].
 #[derive(Clone, Debug, Default)]
 pub struct SurfaceProps {
     pub pos: Pos,

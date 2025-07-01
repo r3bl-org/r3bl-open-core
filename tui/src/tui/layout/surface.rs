@@ -105,7 +105,7 @@ impl LayoutManagement for Surface {
                         &self.stack_of_boxes,
                         "Stack of boxes should be empty",
                     ),
-                )?
+                )?;
             }
             self.origin_pos = pos;
             self.box_size = size;
@@ -122,7 +122,7 @@ impl LayoutManagement for Surface {
                         &self.stack_of_boxes,
                         "Stack of boxes should be empty",
                     ),
-                )?
+                )?;
             }
         });
     }
@@ -132,7 +132,7 @@ impl LayoutManagement for Surface {
             match self.no_boxes_added() {
                 true => self.add_root_box(flex_box_props),
                 false => self.add_non_root_box(flex_box_props),
-            }?
+            }?;
         });
     }
 
@@ -146,7 +146,7 @@ impl LayoutManagement for Surface {
                         &self.stack_of_boxes,
                         "Stack of boxes should not be empty",
                     ),
-                )?
+                )?;
             }
             self.stack_of_boxes.pop();
         });
@@ -160,7 +160,7 @@ impl PerformPositioningAndSizing for Surface {
         if self.no_boxes_added() {
             LayoutError::new_error_result_with_only_type(
                 LayoutErrorType::StackOfBoxesShouldNotBeEmpty,
-            )?
+            )?;
         }
         if let Some(it) = self.stack_of_boxes.last_mut() {
             Ok(it)
@@ -173,12 +173,12 @@ impl PerformPositioningAndSizing for Surface {
 
     fn no_boxes_added(&self) -> bool { self.stack_of_boxes.is_empty() }
 
-    /// Must be called *before* the new [FlexBox] is added to the stack of boxes otherwise
-    /// [LayoutErrorType::ErrorCalculatingNextBoxPos] error is returned.
+    /// Must be called *before* the new [`FlexBox`] is added to the stack of boxes
+    /// otherwise [`LayoutErrorType::ErrorCalculatingNextBoxPos`] error is returned.
     ///
-    /// This updates the `box_cursor_pos` of the current [FlexBox].
+    /// This updates the `box_cursor_pos` of the current [`FlexBox`].
     ///
-    /// Returns the [Pos] where the next [FlexBox] can be added to the stack of boxes.
+    /// Returns the [Pos] where the next [`FlexBox`] can be added to the stack of boxes.
     fn update_insertion_pos_for_next_box(
         &mut self,
         allocated_size: Size,
@@ -267,7 +267,7 @@ impl PerformPositioningAndSizing for Surface {
 }
 
 /// - If `is_root` is true:
-///   - The `insertion_pos_for_next_box` is origin_pos + padding adjustment (from style)
+///   - The `insertion_pos_for_next_box` is `origin_pos` + padding adjustment (from style)
 /// - If `is_root` is false:
 ///   - The `insertion_pos_for_next_box` is `None` non-root box; it needs to be calculated
 ///     by `update_box_cursor_pos_for_next_box_insertion()`
@@ -368,7 +368,7 @@ fn cascade_styles(
 
     if let Some(parent_style) = parent_box.get_computed_style() {
         style_vec.push(parent_style);
-    };
+    }
 
     if let Some(ref self_styles) = self_box_props.maybe_styles {
         self_styles.iter().for_each(|style| style_vec.push(*style));

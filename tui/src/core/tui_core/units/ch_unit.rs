@@ -18,9 +18,9 @@
 use std::{fmt::{Debug, Formatter},
           ops::{Add, AddAssign, Deref, Div, Mul, MulAssign, Sub, SubAssign}};
 
-use crate::{add_unsigned, mul_unsigned, sub_unsigned};
+use crate::{add_unsigned, mul_unsigned, sub_unsigned, LossyConvertToByte as _};
 
-/// The backing field that is used to represent a [ChUnit] in memory.
+/// The backing field that is used to represent a [`ChUnit`] in memory.
 pub type ChUnitPrimitiveType = u16;
 
 /// Represents a character unit or `ch` unit.
@@ -30,8 +30,8 @@ pub type ChUnitPrimitiveType = u16;
 /// - The terminal displaying the Rust binary build using the tui library will ultimately
 ///   determine the actual width and height of a character.
 /// - In order to create values of `ch` unit, use [ch].
-/// - The underlying primitive type for [ChUnit] is [ChUnitPrimitiveType]. The use of the
-///   type alias allows for this to be changed in the future if needed.
+/// - The underlying primitive type for [`ChUnit`] is [`ChUnitPrimitiveType`]. The use of
+///   the type alias allows for this to be changed in the future if needed.
 /// - This unit is unsigned and supports basic arithmetic operations with arguments that
 ///   have negative values.
 /// - It has extensive support for conversion to and from other types.
@@ -41,10 +41,13 @@ pub struct ChUnit {
 }
 
 impl ChUnit {
+    #[must_use]
     pub fn new(value: ChUnitPrimitiveType) -> Self { Self { value } }
 
+    #[must_use]
     pub fn as_usize(&self) -> usize { usize(*self) }
 
+    #[must_use]
     pub fn as_u32(&self) -> u32 { u32(*self) }
 }
 
@@ -221,44 +224,54 @@ pub mod ch_unit_math_ops {
     }
 }
 
-/// Convert to other types [prim@f64], [prim@isize], [prim@usize], etc. from [ChUnit].
+/// Convert to other types [prim@f64], [prim@isize], [prim@usize], etc. from [`ChUnit`].
 pub mod convert_to_other_types_from_ch {
     use super::*;
-
-    impl From<ChUnit> for u8 {
-        fn from(arg: ChUnit) -> Self { arg.value as u8 }
-    }
-
-    impl From<ChUnit> for f64 {
-        fn from(arg: ChUnit) -> Self { arg.value as f64 }
-    }
-
-    impl From<ChUnit> for isize {
-        fn from(arg: ChUnit) -> Self { arg.value as isize }
-    }
-
-    impl From<ChUnit> for i32 {
-        fn from(arg: ChUnit) -> Self { arg.value as i32 }
-    }
-
-    impl From<ChUnit> for u32 {
-        fn from(arg: ChUnit) -> Self { arg.value as u32 }
-    }
-
-    impl From<ChUnit> for i16 {
-        fn from(arg: ChUnit) -> Self { arg.value as i16 }
-    }
-
-    impl From<ChUnit> for usize {
-        fn from(arg: ChUnit) -> Self { arg.value as usize }
-    }
 
     impl From<ChUnit> for ChUnitPrimitiveType {
         fn from(arg: ChUnit) -> Self { arg.value }
     }
+
+    impl From<ChUnit> for u8 {
+        fn from(arg: ChUnit) -> Self { arg.value.to_u8_lossy() }
+    }
+
+    impl From<ChUnit> for f64 {
+        fn from(arg: ChUnit) -> Self { f64::from(arg.value) }
+    }
+
+    impl From<ChUnit> for i32 {
+        fn from(arg: ChUnit) -> Self { i32::from(arg.value) }
+    }
+
+    impl From<ChUnit> for u32 {
+        fn from(arg: ChUnit) -> Self { u32::from(arg.value) }
+    }
+
+    impl From<ChUnit> for usize {
+        fn from(arg: ChUnit) -> Self { usize::from(arg.value) }
+    }
+
+    impl From<ChUnit> for i16 {
+        fn from(arg: ChUnit) -> Self {
+            // No i16::from(u16) conversion, so we use the `as` keyword.
+            // A u16 can hold values up to 65,535, but i16 can only hold values up to
+            // 32,767. Values like 40,000 would overflow.
+            arg.value as i16
+        }
+    }
+
+    impl From<ChUnit> for isize {
+        fn from(arg: ChUnit) -> Self {
+            // No isize::from(u16) conversion, so we use the `as` keyword.
+            // On 16-bit platforms (though rare), isize is equivalent to i16, so the same
+            // problem applies as i16::from(u16) conversion.
+            arg.value as isize
+        }
+    }
 }
 
-/// Convert from other types [prim@f64], [prim@isize], [prim@usize], etc. to [ChUnit].
+/// Convert from other types [prim@f64], [prim@isize], [prim@usize], etc. to [`ChUnit`].
 pub mod convert_from_other_types_to_ch {
     use super::*;
 
@@ -270,9 +283,16 @@ pub mod convert_from_other_types_to_ch {
     /// - Even if it fails, return `0` and consume the error.
     fn f64_to_u16(value: f64) -> Result<u16, String> {
         let value = value.round(); // Remove the fractional part by rounding up or down.
-        if value < 0.0 || value > u16::MAX as f64 {
+        if value < 0.0 || value > f64::from(u16::MAX) {
             return Err(format!("Failed to convert {value} to u16: out of range"));
         }
+        // Convert the f64 to u16, which is safe now since we checked the range.
+        // The value is guaranteed to be in the range [0, 65535].
+        // The `as` keyword is the designated tool for primitive, potentially lossy
+        // conversions. This trait provides a consistent interface for converting
+        // various numeric types to [`u8`] with appropriate bounds checking where needed.
+        #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::cast_sign_loss)]
         Ok(value as u16)
     }
 
@@ -313,6 +333,14 @@ pub mod convert_from_other_types_to_ch {
     impl From<isize> for ChUnit {
         fn from(value: isize) -> Self {
             Self {
+                // The `as` keyword is the designated tool for primitive, potentially
+                // lossy conversions. This trait provides a consistent
+                // interface for converting various numeric types to
+                // [`ChUnitPrimitiveType`] with appropriate bounds checking where
+                // needed.
+                #[allow(clippy::cast_possible_truncation)]
+                #[allow(clippy::cast_possible_truncation)]
+                #[allow(clippy::cast_sign_loss)]
                 value: value.try_into().unwrap_or(value as ChUnitPrimitiveType),
             }
         }
@@ -320,7 +348,7 @@ pub mod convert_from_other_types_to_ch {
 
     impl From<u8> for ChUnit {
         fn from(it: u8) -> Self {
-            let value = it as ChUnitPrimitiveType;
+            let value = ChUnitPrimitiveType::from(it);
             Self { value }
         }
     }
@@ -332,6 +360,14 @@ pub mod convert_from_other_types_to_ch {
     impl From<usize> for ChUnit {
         fn from(value: usize) -> Self {
             Self {
+                // The `as` keyword is the designated tool for primitive, potentially
+                // lossy conversions. This trait provides a consistent
+                // interface for converting various numeric types to
+                // [`ChUnitPrimitiveType`] with appropriate bounds checking where
+                // needed.
+                #[allow(clippy::cast_possible_truncation)]
+                #[allow(clippy::cast_possible_truncation)]
+                #[allow(clippy::cast_sign_loss)]
                 value: value.try_into().unwrap_or(value as ChUnitPrimitiveType),
             }
         }
@@ -340,6 +376,14 @@ pub mod convert_from_other_types_to_ch {
     impl From<i32> for ChUnit {
         fn from(value: i32) -> Self {
             Self {
+                // The `as` keyword is the designated tool for primitive, potentially
+                // lossy conversions. This trait provides a consistent
+                // interface for converting various numeric types to
+                // [`ChUnitPrimitiveType`] with appropriate bounds checking where
+                // needed.
+                #[allow(clippy::cast_possible_truncation)]
+                #[allow(clippy::cast_possible_truncation)]
+                #[allow(clippy::cast_sign_loss)]
                 value: value.try_into().unwrap_or(value as ChUnitPrimitiveType),
             }
         }
@@ -348,6 +392,14 @@ pub mod convert_from_other_types_to_ch {
     impl From<u32> for ChUnit {
         fn from(value: u32) -> Self {
             Self {
+                // The `as` keyword is the designated tool for primitive, potentially
+                // lossy conversions. This trait provides a consistent
+                // interface for converting various numeric types to
+                // [`ChUnitPrimitiveType`] with appropriate bounds checking where
+                // needed.
+                #[allow(clippy::cast_possible_truncation)]
+                #[allow(clippy::cast_possible_truncation)]
+                #[allow(clippy::cast_sign_loss)]
                 value: value.try_into().unwrap_or(value as ChUnitPrimitiveType),
             }
         }
@@ -356,6 +408,14 @@ pub mod convert_from_other_types_to_ch {
     impl From<i16> for ChUnit {
         fn from(value: i16) -> Self {
             Self {
+                // The `as` keyword is the designated tool for primitive, potentially
+                // lossy conversions. This trait provides a consistent
+                // interface for converting various numeric types to
+                // [`ChUnitPrimitiveType`] with appropriate bounds checking where
+                // needed.
+                #[allow(clippy::cast_possible_truncation)]
+                #[allow(clippy::cast_possible_truncation)]
+                #[allow(clippy::cast_sign_loss)]
                 value: value.try_into().unwrap_or(value as ChUnitPrimitiveType),
             }
         }

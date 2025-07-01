@@ -29,7 +29,7 @@ use crate::md_parser::constants::NEW_LINE;
 /// EOL character is found:
 /// - The EOL character is not included in the output.
 /// - The EOL character is not consumed, and is part of the remainder.
-/// - The EOL character is defined by [NEW_LINE] string constant.
+/// - The EOL character is defined by [`NEW_LINE`] string constant.
 ///
 /// Here are some examples:
 ///

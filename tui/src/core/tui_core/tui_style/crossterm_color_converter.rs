@@ -25,7 +25,7 @@ use crate::{global_color_support,
             TuiColor};
 
 #[rustfmt::skip]
-pub fn convert_from_crossterm_color_to_tui_color(value: crossterm::style::Color) -> TuiColor {
+#[must_use] pub fn convert_from_crossterm_color_to_tui_color(value: crossterm::style::Color) -> TuiColor {
     match value {
         // Basic colors.
         crossterm::style::Color::Reset       => TuiColor::Reset,
@@ -61,7 +61,8 @@ pub fn convert_from_crossterm_color_to_tui_color(value: crossterm::style::Color)
 }
 
 /// Respect the color support of the terminal and downgrade the color if needed. This
-/// really only applies to the [TuiColor::Rgb] variant.
+/// really only applies to the [`TuiColor::Rgb`] variant.
+#[must_use]
 pub fn convert_from_tui_color_to_crossterm_color(
     from_tui_color: TuiColor,
 ) -> crossterm::style::Color {

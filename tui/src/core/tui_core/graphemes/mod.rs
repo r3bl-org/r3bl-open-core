@@ -73,11 +73,11 @@
 //! 🏾‍ + 👨 + 🤝‍ + 👨 +  🏿 = 👨🏾‍🤝‍👨🏿
 //! ```
 //!
-//! Let's say you're browsing this source file in VSCode. The `UTF-8` string this Rust
-//! source file is rendered by VSCode correctly. But this is not how it looks in a
+//! Let's say you're browsing this source file in `VSCode`. The `UTF-8` string this Rust
+//! source file is rendered by `VSCode` correctly. But this is not how it looks in a
 //! terminal. And the size of the string in memory isn't clear either from looking at the
-//! string in VSCode. It isn't apparent that you can't just index into the string at byte
-//! boundaries.
+//! string in `VSCode`. It isn't apparent that you can't just index into the string at
+//! byte boundaries.
 //!
 //! To further complicate things, the output looks different on different terminals &
 //! OSes. The function `test_crossterm_grapheme_cluster_width_calc()` (shown below) uses
@@ -172,14 +172,14 @@
 //!     to save the cursor at this point, then print the 2nd part of the string, then call
 //!     `RestorePosition` to restore the cursor to where it "should" be.
 //!
-//! Please take a look at [crate::tui_core::graphemes::GCString] for the following
+//! Please take a look at [`crate::tui_core::graphemes::GCString`] for the following
 //! items:
-//! - Methods in [mod@crate::tui_core::graphemes::gc_string] for more details on how the
-//!   conversion between "display" (or `display_col_index`), ie, [crate::ColIndex] and
-//!   "logical" or "segment", ie, [SegIndex] is done.
-//! - The choices that were made in the design of the [GCString] struct for performance to
-//!   minimize memory latency (for access and allocation). The results might surprise you,
-//!   as intuition around performance is often not reliable.
+//! - Methods in [`mod@crate::tui_core::graphemes::gc_string`] for more details on how the
+//!   conversion between "display" (or `display_col_index`), ie, [`crate::ColIndex`] and
+//!   "logical" or "segment", ie, [`SegIndex`] is done.
+//! - The choices that were made in the design of the [`GCString`] struct for performance
+//!   to minimize memory latency (for access and allocation). The results might surprise
+//!   you, as intuition around performance is often not reliable.
 
 // Attach sources.
 pub mod byte_index;

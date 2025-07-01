@@ -76,12 +76,15 @@ pub fn start_task_to_check_if_upgrade_is_needed() {
 }
 
 /// Gets version number from `Cargo.toml` (at compile time).
+#[must_use]
 pub fn get_self_version() -> &'static str { env!("CARGO_PKG_VERSION") }
 
 /// Returns the crate name from `Cargo.toml` (at compile time).
+#[must_use]
 pub fn get_self_crate_name() -> &'static str { env!("CARGO_PKG_NAME") }
 
 /// Get the filename of currently running executable (at run time).
+#[must_use]
 pub fn get_self_bin_name() -> InlineString {
     current_exe()
         .ok()
@@ -95,6 +98,7 @@ pub fn get_self_bin_name() -> InlineString {
 }
 
 /// Get the emoji representing the currently running executable (at run time).
+#[must_use]
 pub fn get_self_bin_emoji() -> String {
     match get_self_bin_name().as_str() {
         "giti" => "🐱".to_string(),
@@ -201,7 +205,7 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
 
                     // Try to kill the process, with start_kill() which is non-blocking.
                     match child.start_kill() {
-                        Ok(_) => {
+                        Ok(()) => {
                             println!("{}", ui_str::upgrade_install::send_sigint_msg());
                             _ = child.wait().await;
                         }

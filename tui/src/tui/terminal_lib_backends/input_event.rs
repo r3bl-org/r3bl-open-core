@@ -21,7 +21,7 @@ use crossterm::event::{Event::{self},
 use super::{KeyPress, MouseInput};
 use crate::{height, width, Size};
 
-/// Please see [KeyPress] for more information about handling keyboard input.
+/// Please see [`KeyPress`] for more information about handling keyboard input.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum InputEvent {
@@ -41,6 +41,7 @@ mod helpers {
     use super::*;
 
     impl InputEvent {
+        #[must_use]
         pub fn matches_keypress(&self, other: KeyPress) -> bool {
             if let InputEvent::Keyboard(this) = self {
                 if this == &other {
@@ -50,6 +51,7 @@ mod helpers {
             false
         }
 
+        #[must_use]
         pub fn matches_any_of_these_keypresses(&self, others: &[KeyPress]) -> bool {
             for other in others {
                 if self.matches_keypress(*other) {
@@ -63,6 +65,7 @@ mod helpers {
     impl InputEvent {
         /// Checks to see whether the `input_event` matches any of the `exit_keys`.
         /// Returns `true` if it does and `false` otherwise.
+        #[must_use]
         pub fn matches(&self, exit_keys: &[InputEvent]) -> bool {
             for exit_key in exit_keys {
                 if self == exit_key {
@@ -79,27 +82,24 @@ pub(crate) mod converters {
 
     impl TryFrom<Event> for InputEvent {
         type Error = ();
-        /// Typecast / convert [Event] to [InputEvent].
+        /// Typecast / convert [Event] to [`InputEvent`].
         fn try_from(event: Event) -> Result<Self, Self::Error> {
+            use crossterm::event::Event as CTEvent;
             match event {
-                crossterm::event::Event::Key(key_event) => Ok(key_event.try_into()?),
-                crossterm::event::Event::Mouse(mouse_event) => Ok(mouse_event.into()),
-                crossterm::event::Event::Resize(columns, rows) => {
+                CTEvent::Key(key_event) => Ok(key_event.try_into()?),
+                CTEvent::Mouse(mouse_event) => Ok(mouse_event.into()),
+                CTEvent::Resize(columns, rows) => {
                     Ok(InputEvent::Resize(width(columns) + height(rows)))
                 }
-                crossterm::event::Event::FocusGained => {
-                    Ok(InputEvent::Focus(FocusEvent::Gained))
-                }
-                crossterm::event::Event::FocusLost => {
-                    Ok(InputEvent::Focus(FocusEvent::Lost))
-                }
-                _ => Err(()),
+                CTEvent::FocusGained => Ok(InputEvent::Focus(FocusEvent::Gained)),
+                CTEvent::FocusLost => Ok(InputEvent::Focus(FocusEvent::Lost)),
+                CTEvent::Paste(_) => Err(()),
             }
         }
     }
 
     impl From<MouseEvent> for InputEvent {
-        /// Typecast / convert [MouseEvent] to [InputEvent::Mouse].
+        /// Typecast / convert [`MouseEvent`] to [`InputEvent::Mouse`].
         fn from(mouse_event: MouseEvent) -> Self { InputEvent::Mouse(mouse_event.into()) }
     }
 

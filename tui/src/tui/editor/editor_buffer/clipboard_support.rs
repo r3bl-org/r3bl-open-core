@@ -81,18 +81,7 @@ pub fn paste_from_clipboard(
     match result {
         Ok(clipboard_text) => {
             // If the clipboard text does not contain a new line, then insert the text.
-            if !clipboard_text.contains(NEW_LINE) {
-                engine_internal_api::insert_str_at_caret(
-                    EditorArgsMut {
-                        engine: args.engine,
-                        buffer: args.buffer,
-                    },
-                    clipboard_text.as_str(),
-                );
-            }
-            // If the clipboard text contains a new line, then insert the text line by
-            // line.
-            else {
+            if clipboard_text.contains(NEW_LINE) {
                 let lines = clipboard_text.split(NEW_LINE);
                 let line_count = lines.clone().count();
                 for (line_index, line) in lines.enumerate() {
@@ -111,6 +100,14 @@ pub fn paste_from_clipboard(
                         });
                     }
                 }
+            } else {
+                engine_internal_api::insert_str_at_caret(
+                    EditorArgsMut {
+                        engine: args.engine,
+                        buffer: args.buffer,
+                    },
+                    clipboard_text.as_str(),
+                );
             }
 
             DEBUG_TUI_COPY_PASTE.then(|| {

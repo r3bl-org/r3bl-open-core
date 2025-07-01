@@ -32,7 +32,7 @@ use crate::{ok, InlineString};
 ///   `r3bl_terminal_async` crate).
 /// - It also returns a `Readline` instance associated with the writer.
 ///
-/// # Nothing is output without terminating with a newline, unless you call [SharedWriter::flush()]
+/// # Nothing is output without terminating with a newline, unless you call [`SharedWriter::flush()`]
 ///
 /// This is the nature of buffered writing in POSIX. It isn't really specific to this
 /// crate.
@@ -63,6 +63,7 @@ pub struct SharedWriter {
 }
 
 impl SharedWriter {
+    #[must_use]
     pub fn new_mock() -> (mpsc::Receiver<LineStateControlSignal>, SharedWriter) {
         let (line_sender, line_receiver) = mpsc::channel(1_000);
         let shared_writer = SharedWriter::new(line_sender);
@@ -89,6 +90,7 @@ pub enum LineStateControlSignal {
 impl SharedWriter {
     /// Creates a new instance of `SharedWriter` with an empty buffer and a
     /// [`tokio::sync::mpsc::Sender`] end of the channel.
+    #[must_use]
     pub fn new(line_sender: mpsc::Sender<LineStateControlSignal>) -> Self {
         Self {
             buffer: InlineString::new(),
@@ -101,8 +103,8 @@ impl SharedWriter {
 
 /// Custom [Clone] implementation for [`SharedWriter`]. This ensures that each new
 /// instance gets its own buffer to write data into. And a [Clone] of the
-/// [Self::line_state_control_channel_sender], so all the [`LineStateControlSignal`]s end
-/// up in the same `line` [tokio::sync::mpsc::channel] that lives in the `Readline`
+/// [`Self::line_state_control_channel_sender`], so all the [`LineStateControlSignal`]s
+/// end up in the same `line` [`tokio::sync::mpsc::channel`] that lives in the `Readline`
 /// instance (in the `r3bl_terminal_async` crate).
 impl Clone for SharedWriter {
     fn clone(&self) -> Self {
@@ -138,7 +140,7 @@ impl Write for SharedWriter {
                 .line_state_control_channel_sender
                 .try_send(LineStateControlSignal::Line(self_buffer.clone()))
             {
-                Ok(_) => {
+                Ok(()) => {
                     self_buffer.clear();
                 }
                 Err(_) => {
@@ -147,7 +149,7 @@ impl Write for SharedWriter {
                     }
                 }
             }
-        };
+        }
 
         Ok(payload.len())
     }
@@ -157,7 +159,7 @@ impl Write for SharedWriter {
             .line_state_control_channel_sender
             .try_send(LineStateControlSignal::Line(self.buffer.clone()))
         {
-            Ok(_) => {
+            Ok(()) => {
                 self.buffer.clear();
             }
             Err(_) => {

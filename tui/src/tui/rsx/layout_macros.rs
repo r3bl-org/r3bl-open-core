@@ -25,7 +25,7 @@ macro_rules! box_end {
     };
 }
 
-/// When calling this, make sure to make a corresponding call to [box_end!].
+/// When calling this, make sure to make a corresponding call to [`box_end`!].
 #[macro_export]
 macro_rules! box_start {
     (

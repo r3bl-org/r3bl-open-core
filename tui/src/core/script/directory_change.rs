@@ -28,7 +28,7 @@ use crate::{fs_path::{FsOpError, FsOpResult},
 /// runs the block of code for the test, and then restores the original working directory.
 ///
 /// You might need to run tests that use this function in an isolated process. See tests
-/// in [mod@super::fs_path] as an example of how to do this.
+/// in [`mod@super::fs_path`] as an example of how to do this.
 #[macro_export]
 macro_rules! with_saved_pwd {
     ($block:block) => {{
@@ -49,7 +49,7 @@ macro_rules! with_saved_pwd {
 /// it.
 pub fn try_cd(new_dir: impl AsRef<Path>) -> FsOpResult<()> {
     match env::set_current_dir(new_dir.as_ref()) {
-        Ok(_) => ok!(),
+        Ok(()) => ok!(),
         Err(err) => match err.kind() {
             ErrorKind::NotFound => {
                 FsOpResult::Err(FsOpError::DirectoryDoesNotExist(err.to_string()))

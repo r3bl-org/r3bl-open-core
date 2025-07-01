@@ -23,7 +23,7 @@ use crate::{md_parser::constants::NEW_LINE,
             List,
             MdLineFragments};
 
-/// Parse a markdown text [crate::FragmentsInOneLine] in the input (no EOL required).
+/// Parse a markdown text [`crate::FragmentsInOneLine`] in the input (no EOL required).
 #[rustfmt::skip]
 pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
     input: &str,
@@ -50,7 +50,7 @@ pub fn parse_block_markdown_text_with_or_without_new_line(
 mod inner {
     use super::*;
 
-    /// Parse a single line of markdown text [crate::FragmentsInOneLine] terminated by EOL.
+    /// Parse a single line of markdown text [`crate::FragmentsInOneLine`] terminated by EOL.
     #[rustfmt::skip]
     pub fn parse_block_markdown_text_with_new_line(
         input: &str,
@@ -70,7 +70,7 @@ mod inner {
         Ok((input, it))
     }
 
-    /// Parse a single line of markdown text [crate::FragmentsInOneLine] not terminated by EOL.
+    /// Parse a single line of markdown text [`crate::FragmentsInOneLine`] not terminated by EOL.
     #[rustfmt::skip]
     pub fn parse_block_markdown_text_without_new_line(input: &str) -> IResult<&str, MdLineFragments<'_>> {
         // Nothing to parse, early return.

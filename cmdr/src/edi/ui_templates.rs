@@ -38,7 +38,7 @@ pub async fn handle_multiple_files_not_supported_yet(
     let file_path_options = cli_arg
         .file_paths
         .iter()
-        .map(|file| file.as_str())
+        .map(String::as_str)
         .collect::<InlineVec<_>>();
     let header_with_instructions = {
         let last_line = ast_line![ast(

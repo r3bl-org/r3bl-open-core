@@ -19,8 +19,8 @@ use std::{fmt::{Debug, Formatter, Result},
 
 use crate::{ColIndex, Pos, RowIndex};
 
-/// `ScrOfs` is just a "newtype" built on top of (wrapping) [crate::Pos]. You can use this
-/// exactly like a [crate::Pos], when you deref it using `*` prefix, but it's more
+/// `ScrOfs` is just a "newtype" built on top of (wrapping) [`crate::Pos`]. You can use
+/// this exactly like a [`crate::Pos`], when you deref it using `*` prefix, but it's more
 /// semantically meaningful to use this when you're dealing with the offset of a position
 /// on the screen.
 ///

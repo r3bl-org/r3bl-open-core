@@ -1302,8 +1302,8 @@ mod test_editor_ops {
     /// width, or unicode width).
     ///
     /// 🙏🏽 = U+1F64F + U+1F3FD
-    /// 1. https://unicodeplus.com/U+1F64F
-    /// 2. https://unicodeplus.com/U+1F3FD
+    /// 1. <https://unicodeplus.com/U+1F64F>
+    /// 2. <https://unicodeplus.com/U+1F3FD>
     #[test]
     fn editor_scroll_right_horizontal_long_line_with_jumbo_emoji() {
         // Setup.

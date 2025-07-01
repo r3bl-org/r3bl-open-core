@@ -19,11 +19,11 @@ use crossterm::event::KeyModifiers;
 
 /// The `ModifierKeysMask` struct is used to represent the state of the modifier keys
 /// (shift, ctrl, alt) on the keyboard. It is meant to be a replacement of the bitflags
-/// approach that `crossterm` takes in representing it's [KeyModifiers] struct.
+/// approach that `crossterm` takes in representing it's [`KeyModifiers`] struct.
 ///
 /// There is no representation for an empty state (no modifier keys are pressed) in this
-/// struct. If you look at [try_convert_key_modifiers()] on how it converts from
-/// [KeyModifiers], you will see that it returns [None] if the given [KeyModifiers] is
+/// struct. If you look at [`try_convert_key_modifiers()`] on how it converts from
+/// [`KeyModifiers`], you will see that it returns [None] if the given [`KeyModifiers`] is
 /// empty.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ModifierKeysMask {
@@ -56,21 +56,25 @@ impl From<bool> for MatchResult {
 }
 
 impl ModifierKeysMask {
+    #[must_use]
     pub fn with_shift(mut self) -> Self {
         self.shift_key_state = KeyState::Pressed;
         self
     }
 
+    #[must_use]
     pub fn with_ctrl(mut self) -> Self {
         self.ctrl_key_state = KeyState::Pressed;
         self
     }
 
+    #[must_use]
     pub fn with_alt(mut self) -> Self {
         self.alt_key_state = KeyState::Pressed;
         self
     }
 
+    #[must_use]
     pub fn new() -> Self {
         ModifierKeysMask {
             shift_key_state: KeyState::NotPressed,
@@ -80,9 +84,9 @@ impl ModifierKeysMask {
     }
 
     /// Check `other` for
-    /// [crossterm::event::KeyModifiers](crossterm::event::KeyModifiers::SHIFT) bit. Check
-    /// `other` for `CONTROL` bit. Check `other` for `ALT` bit. If all bits match `self`
-    /// then return `true`, otherwise return `false`.
+    /// [`crossterm::event::KeyModifiers`](crossterm::event::KeyModifiers::SHIFT) bit.
+    /// Check `other` for `CONTROL` bit. Check `other` for `ALT` bit. If all bits
+    /// match `self` then return `true`, otherwise return `false`.
     ///
     /// Difference in meaning between `intersects` and `contains`:
     /// - `intersects` -> means that the given bit shows up in your variable, but it might
@@ -100,9 +104,10 @@ impl ModifierKeysMask {
 }
 
 /// If the given `modifiers` are empty, then return [None]. Otherwise, return a
-/// [ModifierKeysMask] with the bits set according to the given `modifiers`. This prevents
-/// having to add a field in [ModifierKeysMask] to represent an empty state (no modifier
-/// keys are pressed).
+/// [`ModifierKeysMask`] with the bits set according to the given `modifiers`. This
+/// prevents having to add a field in [`ModifierKeysMask`] to represent an empty state (no
+/// modifier keys are pressed).
+#[must_use]
 pub fn try_convert_key_modifiers(modifiers: &KeyModifiers) -> Option<ModifierKeysMask> {
     if modifiers.is_empty() {
         None

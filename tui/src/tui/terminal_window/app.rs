@@ -20,10 +20,10 @@ use std::fmt::Debug;
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
 use crate::{CommonResult, InputEvent, RenderPipeline};
 
-/// An app is typically a holder for [crate::ComponentRegistry].
+/// An app is typically a holder for [`crate::ComponentRegistry`].
 ///
-/// It lays out a bunch of [crate::Component]s on its [crate::Surface] which do all the
-/// work of rendering and input event handling.
+/// It lays out a bunch of [`crate::Component`]s on its [`crate::Surface`] which do all
+/// the work of rendering and input event handling.
 ///
 /// There are examples of structs that implement this train in the [examples
 /// module](https://github.com/r3bl-org/r3bl-open-core/blob/autocomplete/tui/examples/demo/ex_editor/app.rs).
@@ -38,8 +38,8 @@ pub trait App {
     type AS: Debug + Default + Clone + Sync + Send;
 
     /// This is called once at the beginning of the app's lifecycle. It is used to
-    /// initialize the [ComponentRegistryMap] and [HasFocus] structs. It is called before
-    /// the first render by the [crate::TerminalWindow::main_event_loop].
+    /// initialize the [`ComponentRegistryMap`] and [`HasFocus`] structs. It is called
+    /// before the first render by the [`crate::TerminalWindow::main_event_loop`].
     fn app_init(
         &mut self,
         component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
@@ -48,9 +48,9 @@ pub trait App {
 
     /// At a high level:
     /// - Use the `input_event` to dispatch an action to the store if needed.
-    /// - It returns an [EventPropagation].
+    /// - It returns an [`EventPropagation`].
     ///
-    /// More than likely a bunch of other [crate::Component::handle_event]s will perform
+    /// More than likely a bunch of other [`crate::Component::handle_event`]s will perform
     /// the actual event handling.
     fn app_handle_input_event(
         &mut self,
@@ -62,9 +62,9 @@ pub trait App {
 
     /// At a high level:
     /// - Use the `action` to dispatch an action to the store if needed.
-    /// - It returns an [EventPropagation].
+    /// - It returns an [`EventPropagation`].
     ///
-    /// More than likely a bunch of other [crate::Component::handle_event]s will perform
+    /// More than likely a bunch of other [`crate::Component::handle_event`]s will perform
     /// the actual event handling.
     fn app_handle_signal(
         &mut self,
@@ -75,10 +75,10 @@ pub trait App {
     ) -> CommonResult<EventPropagation>;
 
     /// Use the state to render the output (via crossterm). The state is immutable. If you
-    /// want to change it then it should be done in the [App::app_handle_input_event]
+    /// want to change it then it should be done in the [`App::app_handle_input_event`]
     /// method.
     ///
-    /// More than likely a bunch of other [crate::Component::render]s will perform the
+    /// More than likely a bunch of other [`crate::Component::render`]s will perform the
     /// actual rendering.
     fn app_render(
         &mut self,

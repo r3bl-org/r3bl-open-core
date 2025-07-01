@@ -66,6 +66,7 @@ macro_rules! get_tui_styles {
 }
 
 impl TuiStylesheet {
+    #[must_use]
     pub fn new() -> Self { Self::default() }
 
     pub fn add_style(&mut self, style: TuiStyle) -> CommonResult<()> {
@@ -96,6 +97,7 @@ impl TuiStylesheet {
     }
 
     /// Returns [None] if no style in `ids` [Vec] is found.
+    #[must_use]
     pub fn find_styles_by_ids(&self, ids: &[u8]) -> Option<InlineVec<TuiStyle>> {
         let mut styles = InlineVec::<TuiStyle>::new();
 
@@ -112,6 +114,7 @@ impl TuiStylesheet {
         }
     }
 
+    #[must_use]
     pub fn compute(styles: &Option<InlineVec<TuiStyle>>) -> Option<TuiStyle> {
         if let Some(styles) = styles {
             let mut computed = TuiStyle::default();
@@ -123,10 +126,10 @@ impl TuiStylesheet {
     }
 }
 
-/// Macro to make building [TuiStylesheet] easy.
+/// Macro to make building [`TuiStylesheet`] easy.
 ///
-/// This returns a [CommonResult] because it checks to see that all [TuiStyle]s that are
-/// added have an `id`. If they don't, then an a [CommonError] is thrown. This is to
+/// This returns a [`CommonResult`] because it checks to see that all [`TuiStyle`]s that
+/// are added have an `id`. If they don't, then an a [`CommonError`] is thrown. This is to
 /// ensure that valid styles are added to a stylesheet. Without an `id`, they can't be
 /// retrieved after they're added here, rendering them useless.
 ///
@@ -184,8 +187,8 @@ macro_rules! tui_stylesheet {
 ///
 /// Rust does not support operator overloading, and the method to add a single style has a
 /// different signature than the one to add a vector of styles. To get around this, the
-/// [TryAdd] trait is implemented for both [TuiStyle] and [`Vec<Style>`]. Then the
-/// [tui_stylesheet!] macro can "pseudo overload" them.
+/// [`TryAdd`] trait is implemented for both [`TuiStyle`] and [`Vec<Style>`]. Then the
+/// [`tui_stylesheet`!] macro can "pseudo overload" them.
 pub trait TryAdd<OtherType = Self> {
     fn try_add(&mut self, other: OtherType) -> CommonResult<()>;
 }

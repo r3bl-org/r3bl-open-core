@@ -22,9 +22,41 @@ use crate::{color_utils,
             common::{CommonError, CommonErrorType, CommonResult},
             convert_rgb_into_ansi256,
             ASTColor,
+            LossyConvertToByte as _,
             TransformColor,
             ANSI_COLOR_PALETTE};
 
+/// Creates a [`TuiColor`] instance using various convenient syntaxes.
+///
+/// # Usage
+///
+/// ```rust
+/// use r3bl_tui::tui_color;
+///
+/// // Named colors
+/// let red = tui_color!(red);
+/// let lizard_green = tui_color!(lizard_green);
+///
+/// // RGB values
+/// let custom = tui_color!(255, 128, 0);
+///
+/// // ANSI color codes
+/// let ansi = tui_color!(ansi 42);
+///
+/// // Hex colors (note: will panic on invalid format)
+/// let hex = tui_color!(hex "#ff8000");
+/// ```
+///
+/// # Panics
+///
+/// The `hex` variant will panic if the provided hex color string is not in a valid
+/// format. Valid formats include: `#RGB`, `#RRGGBB`. Examples of invalid formats that
+/// will panic:
+/// - `#ff000` (5 characters instead of 6)
+/// - `"gggggg"` (missing # prefix)
+/// - `#zzzzzz` (invalid hex characters)
+///
+/// For fallible hex color parsing, use [`RgbValue::try_from_hex_color`] instead.
 #[macro_export]
 macro_rules! tui_color {
     (medium_gray) => {
@@ -217,10 +249,10 @@ macro_rules! tui_color {
     };
 }
 
-/// Please use the macro [crate::tui_color!] to create a new [TuiColor] instances, instead
-/// of directly manipulating this struct.
+/// Please use the macro [`crate::tui_color`!] to create a new [`TuiColor`] instances,
+/// instead of directly manipulating this struct.
 ///
-/// A [TuiColor] can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`.
+/// A [`TuiColor`] can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`.
 /// - It is safe to use just `RgbValue` since the library will degrade gracefully to ANSI
 ///   256 or grayscale based on terminal emulator capabilities at runtime, which are
 ///   provided by
@@ -317,13 +349,15 @@ mod rgb_value_impl_block {
     }
 
     impl RgbValue {
+        #[must_use]
         pub fn from_u8(red: u8, green: u8, blue: u8) -> Self { Self { red, green, blue } }
 
+        #[must_use]
         pub fn from_f32(red: f32, green: f32, blue: f32) -> Self {
             Self {
-                red: (red * 255.0) as u8,
-                green: (green * 255.0) as u8,
-                blue: (blue * 255.0) as u8,
+                red: (red * 255.0).to_u8_lossy(),
+                green: (green * 255.0).to_u8_lossy(),
+                blue: (blue * 255.0).to_u8_lossy(),
             }
         }
 
@@ -336,6 +370,10 @@ mod rgb_value_impl_block {
             }
         }
 
+        /// # Panics
+        ///
+        /// This function will panic if the input string is not a valid hex color format.
+        #[must_use]
         pub fn from_hex(input: &str) -> RgbValue {
             match parse_hex_color(input) {
                 Ok((_, color)) => color,
@@ -497,14 +535,16 @@ mod construct {
     }
 
     impl AnsiValue {
+        #[must_use]
         pub fn new(color: u8) -> Self { Self { index: color } }
     }
 }
 
 /// This is useful when you want to mix and match the two crates. For example, you can use
-/// a nice color from `tui_color!(lizard_green)` and then convert it to an ASTColor using
-/// `ASTColor::from(tui_color)`. So you're no longer limited to the basic colors when
-/// using `ASTColor` in your code (which happens when generating colorized log output).
+/// a nice color from `tui_color!(lizard_green)` and then convert it to an `ASTColor`
+/// using `ASTColor::from(tui_color)`. So you're no longer limited to the basic colors
+/// when using `ASTColor` in your code (which happens when generating colorized log
+/// output).
 mod convert_to_ast_color {
     use super::*;
 
@@ -533,7 +573,8 @@ mod convert_to_ast_color {
     }
 }
 
-/// This is useful when you want to go between different variants of the [TuiColor] enum.
+/// This is useful when you want to go between different variants of the [`TuiColor`]
+/// enum.
 mod convert_between_variants {
     use super::*;
 
@@ -608,24 +649,24 @@ mod tests {
         }
     }
 
-    /// https://www.ditig.com/256-colors-cheat-sheet
-    /// ANSI: 57 BlueViolet
+    /// <https://www.ditig.com/256-colors-cheat-sheet>
+    /// ANSI: 57 `BlueViolet`
     /// RGB: #5f00ff rgb(95,0,255)
     #[test]
     fn test_ansi_to_rgb() {
         let ansi = AnsiValue::new(57);
         let rgb = RgbValue::from(ansi);
-        assert_eq2!(rgb, RgbValue::from_u8(95, 0, 255))
+        assert_eq2!(rgb, RgbValue::from_u8(95, 0, 255));
     }
 
-    /// https://www.ditig.com/256-colors-cheat-sheet
-    /// ANSI: 57 BlueViolet
+    /// <https://www.ditig.com/256-colors-cheat-sheet>
+    /// ANSI: 57 `BlueViolet`
     /// RGB: #5f00ff rgb(95,0,255)
     #[test]
     fn test_rgb_to_ansi() {
         let rgb = RgbValue::from_u8(95, 0, 255);
         let ansi = AnsiValue::from(rgb);
-        assert_eq2!(ansi, AnsiValue::new(57))
+        assert_eq2!(ansi, AnsiValue::new(57));
     }
 
     #[test]

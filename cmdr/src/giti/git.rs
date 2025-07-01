@@ -25,7 +25,7 @@ use super::CURRENT_BRANCH_PREFIX;
 /// 2. The command itself.
 pub type ResultAndCommand<T> = (CommonResult<T>, Command);
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RepoStatus {
     Dirty,
     Clean,
@@ -134,13 +134,13 @@ pub mod local_branch_ops {
     /// Information about local git branches:
     /// - The currently checked out branch.
     /// - List of other local branches (excluding the current one).
-    #[derive(Debug, PartialEq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     pub struct LocalBranchInfo {
         pub current_branch: InlineString,
         pub other_branches: ItemsOwned,
     }
 
-    #[derive(Debug, PartialEq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     pub enum BranchExists {
         Yes,
         No,
@@ -149,7 +149,7 @@ pub mod local_branch_ops {
     /// Get all the local branches as a tuple.
     ///
     /// 1. The first item in the tuple contains the current branch is prefixed with
-    ///    [CURRENT_BRANCH_PREFIX].
+    ///    [`CURRENT_BRANCH_PREFIX`].
     ///
     ///   ```text
     ///   [
@@ -158,7 +158,7 @@ pub mod local_branch_ops {
     ///   ]
     ///   ```
     ///
-    /// 2. The second item in the tuple contains [LocalBranchInfo].
+    /// 2. The second item in the tuple contains [`LocalBranchInfo`].
     pub async fn try_get_local_branches()
     -> ResultAndCommand<(ItemsOwned, LocalBranchInfo)> {
         let (res, cmd) = try_get_branch_info().await;
@@ -181,6 +181,7 @@ pub mod local_branch_ops {
     }
 
     impl LocalBranchInfo {
+        #[must_use]
         pub fn exists_locally(&self, branch_name: &str) -> BranchExists {
             if branch_name == self.current_branch.as_str()
                 || self.other_branches.iter().any(|b| b == branch_name)
@@ -200,9 +201,10 @@ pub mod local_branch_ops {
         /// ```text
         /// "(◕‿◕) main"
         /// ```
+        #[must_use]
         pub fn mark_branch_current(branch_name: &str) -> InlineString {
-            let mut acc = InlineString::new();
             use std::fmt::Write as _;
+            let mut acc = InlineString::new();
             _ = write!(acc, "{CURRENT_BRANCH_PREFIX} {branch_name}");
             acc
         }
@@ -216,6 +218,7 @@ pub mod local_branch_ops {
         /// ```text
         /// "main"
         /// ```
+        #[must_use]
         pub fn trim_current_prefix_from_branch(branch: &str) -> &str {
             branch.trim_start_matches(CURRENT_BRANCH_PREFIX).trim()
         }
@@ -297,11 +300,11 @@ mod tests {
     use super::*;
 
     /// Helper function to setup a basic git repository with an initial commit Returns a
-    /// tuple of (temp_dir_root, git_folder_path, initial_branch_name). When the
+    /// tuple of (`temp_dir_root`, `git_folder_path`, `initial_branch_name`). When the
     /// `temp_dir_root` is dropped it will clean remove that folder.
     ///
-    /// This function also uses [r3bl_tui::try_cd()] so make sure to wrap all tests that
-    /// call this function with [serial_test].
+    /// This function also uses [`r3bl_tui::try_cd()`] so make sure to wrap all tests that
+    /// call this function with [`serial_test`].
     async fn helper_setup_git_repo_with_commit() -> miette::Result<(
         /* temp_dir_root: don't drop this immediately using `_` */ TempDir,
         /* initial_branch_name */ InlineString,

@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-//! Using [crossterm::event::poll] is non-blocking, but also inefficient. The following
+//! Using [`crossterm::event::poll`] is non-blocking, but also inefficient. The following
 //! code will generate some CPU utilization while idling.
 //!
 //! ```
@@ -36,7 +36,7 @@
 //! }
 //! ```
 //!
-//! The following code uses [crossterm::event::read] and blocks the thread that its
+//! The following code uses [`crossterm::event::read`] and blocks the thread that its
 //! running on.
 //!
 //! ```

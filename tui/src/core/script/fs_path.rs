@@ -15,8 +15,8 @@
  *   limitations under the License.
  */
 
-//! Note that [PathBuf] is owned and [Path] is a slice into it.
-//! - So replace `&`[PathBuf] with a `&`[Path].
+//! Note that [`PathBuf`] is owned and [Path] is a slice into it.
+//! - So replace `&`[`PathBuf`] with a `&`[Path].
 //! - More details [here](https://rust-lang.github.io/rust-clippy/master/index.html#ptr_arg).
 
 use std::{env,
@@ -30,7 +30,7 @@ use thiserror::Error;
 
 use crate::ok;
 
-/// Use this macro to make it more ergonomic to work with [PathBuf]s.
+/// Use this macro to make it more ergonomic to work with [`PathBuf`]s.
 ///
 /// # Example - create a new path
 ///
@@ -138,14 +138,14 @@ pub enum FsOpError {
 pub type FsOpResult<T> = miette::Result<T, FsOpError>;
 
 /// Checks whether the directory exist. If won't provide any errors if there are
-/// permissions issues or the directory is invalid. Use [try_directory_exists] if you
+/// permissions issues or the directory is invalid. Use [`try_directory_exists`] if you
 /// want to handle these errors.
 pub fn directory_exists(directory: impl AsRef<Path>) -> bool {
     fs::metadata(directory).is_ok_and(|metadata| metadata.is_dir())
 }
 
 /// Checks whether the file exists. If won't provide any errors if there are permissions
-/// issues or the file is invalid. Use [try_file_exists] if you want to handle these
+/// issues or the file is invalid. Use [`try_file_exists`] if you want to handle these
 /// errors.
 pub fn file_exists(file: impl AsRef<Path>) -> bool {
     fs::metadata(file).is_ok_and(|metadata| metadata.is_file())
@@ -153,7 +153,7 @@ pub fn file_exists(file: impl AsRef<Path>) -> bool {
 
 /// Checks whether the directory exist. If there are issues with permissions for
 /// directory access or invalid directory it will return an error. Use
-/// [directory_exists] if you want to ignore these errors.
+/// [`directory_exists`] if you want to ignore these errors.
 pub fn try_directory_exists(directory_path: impl AsRef<Path>) -> FsOpResult<bool> {
     match fs::metadata(directory_path) {
         Ok(metadata) => {
@@ -174,7 +174,7 @@ pub fn try_directory_exists(directory_path: impl AsRef<Path>) -> FsOpResult<bool
 }
 
 /// Checks whether the file exist. If there are issues with permissions for file access
-/// or invalid file it will return an error. Use [file_exists] if you want to ignore
+/// or invalid file it will return an error. Use [`file_exists`] if you want to ignore
 /// these errors.
 pub fn try_file_exists(file_path: impl AsRef<Path>) -> FsOpResult<bool> {
     match fs::metadata(file_path) {
@@ -193,7 +193,7 @@ pub fn try_file_exists(file_path: impl AsRef<Path>) -> FsOpResult<bool> {
     }
 }
 
-/// Returns the current working directory of the process as a [PathBuf] (owned). If
+/// Returns the current working directory of the process as a [`PathBuf`] (owned). If
 /// there are issues with permissions for directory access or invalid directory it
 /// will return an error.
 ///
@@ -213,6 +213,7 @@ pub fn try_pwd() -> FsOpResult<PathBuf> {
 
 /// Returns the [Path] slice as a string.
 /// - Eg: `"/home/user/some/path"`
+#[must_use]
 pub fn path_as_string(path: &Path) -> String { path.display().to_string() }
 
 /// Writes the given content to the file named `file_name` in the specified `folder`.

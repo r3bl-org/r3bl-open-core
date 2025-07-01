@@ -52,9 +52,9 @@ use crate::{col,
 /// size is 4. The next cell after it will have to contain nothing or void.
 ///
 /// Why? This is because the col & row indices of the grid map to display col & row
-/// indices of the terminal screen. By inserting a [PixelChar::Void] pixel char in the
+/// indices of the terminal screen. By inserting a [`PixelChar::Void`] pixel char in the
 /// next cell, we signal the rendering logic to skip it since it has already been painted.
-/// And this is different than a [PixelChar::Spacer] which has to be painted!
+/// And this is different than a [`PixelChar::Spacer`] which has to be painted!
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct OffscreenBuffer {
     pub buffer: PixelCharLines,
@@ -77,7 +77,7 @@ impl GetMemSize for OffscreenBuffer {
 pub mod diff_chunks {
     use super::*;
 
-    /// This is a wrapper type so the [std::fmt::Debug] can be implemented for it, that
+    /// This is a wrapper type so the [`std::fmt::Debug`] can be implemented for it, that
     /// won't conflict with [List]'s implementation of the trait.
     #[derive(Clone, Default, PartialEq)]
     pub struct PixelCharDiffChunks {
@@ -150,6 +150,7 @@ mod offscreen_buffer_impl {
     impl OffscreenBuffer {
         /// Checks for differences between self and other. Returns a list of positions and
         /// pixel chars if there are differences (from other).
+        #[must_use]
         pub fn diff(&self, other: &Self) -> Option<PixelCharDiffChunks> {
             if self.window_size != other.window_size {
                 return None;
@@ -173,11 +174,12 @@ mod offscreen_buffer_impl {
         }
 
         /// Create a new buffer and fill it with empty chars.
+        #[must_use]
         pub fn new_with_capacity_initialized(window_size: Size) -> Self {
             Self {
                 buffer: PixelCharLines::new_with_capacity_initialized(window_size),
                 window_size,
-                my_pos: Default::default(),
+                my_pos: Pos::default(),
                 my_fg_color: None,
                 my_bg_color: None,
             }
@@ -218,6 +220,7 @@ mod pixel_char_lines_impl {
     }
 
     impl PixelCharLines {
+        #[must_use]
         pub fn new_with_capacity_initialized(window_size: Size) -> Self {
             let window_height = window_size.row_height;
             let window_width = window_size.col_width;
@@ -247,14 +250,15 @@ mod pixel_char_line_impl {
 
     impl Debug for PixelCharLine {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            // Pretty print only so many chars per line (depending on the terminal width
+            // in which log.fish is run).
+            const MAX_PIXEL_CHARS_PER_LINE: usize = 6;
+
             let mut void_indices: InlineVec<usize> = smallvec![];
             let mut spacer_indices: InlineVec<usize> = smallvec![];
             let mut void_count: InlineVec<TinyInlineString> = smallvec![];
             let mut spacer_count: InlineVec<TinyInlineString> = smallvec![];
 
-            // Pretty print only so many chars per line (depending on the terminal width
-            // in which log.fish is run).
-            const MAX_PIXEL_CHARS_PER_LINE: usize = 6;
             let mut char_count = 0;
 
             // Loop: for each PixelChar in a line (pixel_chars_lines[row_index]).
@@ -268,7 +272,7 @@ mod pixel_char_line_impl {
                         spacer_count.push(TinyInlineString::from(col_index.to_string()));
                         spacer_indices.push(col_index);
                     }
-                    _ => {}
+                    PixelChar::PlainText { .. } => {}
                 }
 
                 // Index message.
@@ -320,9 +324,6 @@ mod pixel_char_line_impl {
         values: &[usize],
         f: &mut fmt::Formatter<'_>,
     ) -> std::fmt::Result {
-        // Track state thru loop iteration.
-        let mut acc_current_range: InlineVec<usize> = smallvec![];
-
         mod helpers {
             pub enum Peek {
                 NextItemContinuesRange,
@@ -355,6 +356,9 @@ mod pixel_char_line_impl {
                 }
             }
         }
+
+        // Track state thru loop iteration.
+        let mut acc_current_range: InlineVec<usize> = smallvec![];
 
         // Main loop.
         for (index, value) in values.iter().enumerate() {
@@ -414,6 +418,7 @@ mod pixel_char_line_impl {
     // This represents a single row on the screen (i.e. a line of text).
     impl PixelCharLine {
         /// Create a new row with the given width and fill it with the empty chars.
+        #[must_use]
         pub fn new_with_capacity_initialized(window_width: ColWidth) -> Self {
             Self {
                 pixel_chars: smallvec![PixelChar::Spacer; window_width.as_usize()],
@@ -498,11 +503,11 @@ mod pixel_char_impl {
                         _ => {
                             write!(acc_tmp, "'{text}'")?;
                         }
-                    };
+                    }
                     let trunc_output = truncate(&acc_tmp, WIDTH);
                     write!(f, " {} {trunc_output: ^WIDTH$}", fg_magenta("P"))?;
                 }
-            };
+            }
 
             ok!()
         }

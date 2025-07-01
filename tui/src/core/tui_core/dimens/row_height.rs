@@ -22,20 +22,21 @@ use crate::{ch, row, ChUnit, RowIndex};
 
 /// Height is row count, i.e., the number of rows that a UI component occupies.
 ///
-/// This is one part of a [crate::Size] and is different from the [crate::RowIndex]
+/// This is one part of a [`crate::Size`] and is different from the [`crate::RowIndex`]
 /// (position).
 ///
-/// You can use the [crate::height()] to create a new instance.
+/// You can use the [`crate::height()`] to create a new instance.
 ///
 /// # Working with row index
 ///
-/// You can't safely add or subtract a [crate::RowIndex] from this `Height`; since without
-/// knowing your specific use case ahead of time, it isn't possible to provide a default
-/// implementation without leading to unintended consequences. You can do the reverse
-/// safely.
+/// You can't safely add or subtract a [`crate::RowIndex`] from this `Height`; since
+/// without knowing your specific use case ahead of time, it isn't possible to provide a
+/// default implementation without leading to unintended consequences. You can do the
+/// reverse safely.
 ///
-/// To add or subtract a [crate::RowIndex] from this `Height`, you can call
-/// [Self::convert_to_row_index()] and apply whatever logic makes sense for your use case.
+/// To add or subtract a [`crate::RowIndex`] from this `Height`, you can call
+/// [`Self::convert_to_row_index()`] and apply whatever logic makes sense for your use
+/// case.
 ///
 /// There is a special case for scrolling vertically and clips rendering output to max
 /// display rows which is handled by
@@ -73,6 +74,7 @@ mod constructor {
         ///
         /// The following holds true:
         /// - `last row index == height - 1` (which is this function)
+        #[must_use]
         pub fn convert_to_row_index(&self) -> RowIndex { row(self.0 - ch(1)) }
     }
 

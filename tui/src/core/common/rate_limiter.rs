@@ -18,10 +18,10 @@
 use std::time::{Duration, Instant};
 
 /// This enum represents the status of the rate limiter:
-/// - [RateLimitStatus::NotStarted]: The rate limiter has not been run yet.
-/// - [RateLimitStatus::Expired]: The rate limiter has been run, but the time since the
+/// - [`RateLimitStatus::NotStarted`]: The rate limiter has not been run yet.
+/// - [`RateLimitStatus::Expired`]: The rate limiter has been run, but the time since the
 ///   last run exceeds the minimum threshold.
-/// - [RateLimitStatus::Active]: The rate limiter has been run, and the time since the
+/// - [`RateLimitStatus::Active`]: The rate limiter has been run, and the time since the
 ///   last run is within the minimum threshold.
 #[derive(Debug, PartialEq)]
 pub enum RateLimitStatus {
@@ -35,14 +35,14 @@ pub enum RateLimitStatus {
 /// the time since the last run and determines if the rate limit is hit or not. Follow
 /// these steps to use it:
 ///
-/// 1. Create a [Self::new] instance of this struct with the desired minimum time
+/// 1. Create a [`Self::new`] instance of this struct with the desired minimum time
 ///    threshold.
-/// 2. Before running your expensive operation, call [Self::get_status] with the current
-///    time. You can use teh [Self::get_status_and_update_last_run] method to do the
+/// 2. Before running your expensive operation, call [`Self::get_status`] with the current
+///    time. You can use teh [`Self::get_status_and_update_last_run`] method to do the
 ///    following automatically:
-///    - If the status is [RateLimitStatus::NotStarted] or [RateLimitStatus::Expired], run
-///      the operation and update the last run time with [Self::update_last_run].
-///    - Otherwise, it is [RateLimitStatus::Active] and don't run the operation.
+///    - If the status is [`RateLimitStatus::NotStarted`] or [`RateLimitStatus::Expired`],
+///      run the operation and update the last run time with [`Self::update_last_run`].
+///    - Otherwise, it is [`RateLimitStatus::Active`] and don't run the operation.
 #[derive(Debug, PartialEq)]
 pub struct RateLimiter {
     /// An `Option<Instant>` that stores the last run time.
@@ -52,6 +52,7 @@ pub struct RateLimiter {
 }
 
 impl RateLimiter {
+    #[must_use]
     pub fn new(min_time_threshold: Duration) -> Self {
         Self {
             last_run: None,
@@ -61,19 +62,19 @@ impl RateLimiter {
 
     /// This method is useful if you want to run the operation only if the rate limit is
     /// not hit. When called, it will automatically update the last run time if the rate
-    /// limit is not hit (so you don't have to call [Self::update_last_run] manually.
+    /// limit is not hit (so you don't have to call [`Self::update_last_run`] manually.
     pub fn get_status_and_update_last_run(&mut self, now: Instant) -> RateLimitStatus {
         let status = self.get_status(now);
         match status {
             RateLimitStatus::NotStarted | RateLimitStatus::Expired => {
-                self.update_last_run(now)
+                self.update_last_run(now);
             }
-            _ => {}
+            RateLimitStatus::Active => {}
         }
         status
     }
 
-    /// You probably want to use this instead [Self::get_status_and_update_last_run].
+    /// You probably want to use this instead [`Self::get_status_and_update_last_run`].
     pub fn get_status(&mut self, now: Instant) -> RateLimitStatus {
         match self.last_run {
             None => RateLimitStatus::NotStarted,

@@ -22,9 +22,9 @@ use crate::{usize, width, ChUnit, ColWidth};
 
 /// The horizontal index in a grid of characters, starting at 0, which is the first
 /// column.
-/// - This is one part of a [crate::Pos] (position), and is different from
-///   [crate::ColWidth], which is one part of a [crate::Size].
-/// - You can use the [crate::col()] to create a new instance.
+/// - This is one part of a [`crate::Pos`] (position), and is different from
+///   [`crate::ColWidth`], which is one part of a [`crate::Size`].
+/// - You can use the [`crate::col()`] to create a new instance.
 ///
 /// # Examples
 ///
@@ -50,14 +50,17 @@ mod constructor {
     impl ColIndex {
         pub fn new(arg_col_index: impl Into<ColIndex>) -> Self { arg_col_index.into() }
 
+        #[must_use]
         pub fn as_usize(&self) -> usize { usize(self.0) }
 
         /// This is for use with [crossterm] crate.
+        #[must_use]
         pub fn as_u16(&self) -> u16 { self.0.into() }
 
         /// Add 1 to the index to convert it to a width. The intention of this function is
-        /// to meaningfully convert a [ColIndex] to a [ColWidth]. This is useful in
+        /// to meaningfully convert a [`ColIndex`] to a [`ColWidth`]. This is useful in
         /// situations where you need to find what the width is at this row index.
+        #[must_use]
         pub fn convert_to_width(&self) -> ColWidth { width(self.0 + 1) }
     }
 
@@ -102,8 +105,8 @@ mod ops {
     }
 
     impl SubAssign<ColIndex> for ColIndex {
-        /// This simply subtracts the value of the RHS [ColIndex] instance from the LHS
-        /// [ColIndex].
+        /// This simply subtracts the value of the RHS [`ColIndex`] instance from the LHS
+        /// [`ColIndex`].
         fn sub_assign(&mut self, rhs: ColIndex) {
             let diff = **self - *rhs;
             *self = col(diff);

@@ -26,7 +26,7 @@ use crate::SharedWriter;
 
 /// - `tracing_log_file_path_and_prefix`: [String] is the file path and prefix to use for
 ///   the log file. Eg: `/tmp/tcp_api_server` or `tcp_api_server`.
-/// - `DisplayPreference`: [DisplayPreference] is the preferred display to use for
+/// - `DisplayPreference`: [`DisplayPreference`] is the preferred display to use for
 ///   logging.
 #[derive(Debug, Clone, PartialEq)]
 pub enum WriterConfig {
@@ -133,15 +133,15 @@ impl Debug for DisplayPreference {
 /// This configuration also allows you to set the log level.
 ///
 /// # Fields
-/// - `writer_config`: [WriterConfig] to choose where to write the logs.
-/// - `level`: [LevelFilter] - The log level to use for tracing.
+/// - `writer_config`: [`WriterConfig`] to choose where to write the logs.
+/// - `level`: [`LevelFilter`] - The log level to use for tracing.
 ///
 /// # Methods
 /// You can use the following methods to initialize the tracing system with this
 /// configuration:
-/// - [Self::install_global()]: This will install the global tracing subscriber. There can
-///   only be one, and it can't be unset, once set, or changed.
-/// - [Self::install_thread_local()]: This will install the tracing subscriber for the
+/// - [`Self::install_global()`]: This will install the global tracing subscriber. There
+///   can only be one, and it can't be unset, once set, or changed.
+/// - [`Self::install_thread_local()`]: This will install the tracing subscriber for the
 ///   current thread.
 #[derive(Debug)]
 pub struct TracingConfig {
@@ -149,8 +149,8 @@ pub struct TracingConfig {
     pub level_filter: LevelFilter,
 }
 
-/// Simply initialize the tracing system with the provided [TracingConfig]. You can either
-/// use a local or global subscriber, based on your needs.
+/// Simply initialize the tracing system with the provided [`TracingConfig`]. You can
+/// either use a local or global subscriber, based on your needs.
 ///
 /// 1. Global default subscriber, which once set, can't be unset or changed.
 ///    - This is great for apps.
@@ -164,24 +164,26 @@ impl TracingConfig {
     /// stdout, etc. This is set per thread. So you can have more than one, assuming you
     /// have more than one thread.
     ///
-    /// This function will return a [tracing::dispatcher::DefaultGuard]. You should drop
+    /// This function will return a [`tracing::dispatcher::DefaultGuard`]. You should drop
     /// this guard when you're done with the tracing system. This will reset the tracing
     /// system to its previous state for that thread.
     pub fn install_thread_local(self) -> miette::Result<dispatcher::DefaultGuard> {
-        try_create_layers(self)
+        try_create_layers(&self)
             .map(|layers| tracing_subscriber::registry().with(layers).set_default())
     }
 
     /// Global scope is used in production, for an app that needs to log to a file or
     /// stdout, etc. Once set, this can't be unset or changed.
     pub fn install_global(self) -> miette::Result<()> {
-        try_create_layers(self)
+        try_create_layers(&self)
             .map(|layers| tracing_subscriber::registry().with(layers).init())
     }
 }
 
 impl TracingConfig {
+    #[must_use]
     pub fn get_writer_config(&self) -> WriterConfig { self.writer_config.clone() }
 
+    #[must_use]
     pub fn get_level_filter(&self) -> LevelFilter { self.level_filter }
 }

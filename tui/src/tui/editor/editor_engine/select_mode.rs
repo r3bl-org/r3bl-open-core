@@ -29,10 +29,11 @@ pub enum SelectMode {
 }
 
 impl SelectMode {
+    #[must_use]
     pub fn get_caret_scr_adj(&self, buffer: &EditorBuffer) -> Option<CaretScrAdj> {
         match self {
             SelectMode::Enabled => Some(buffer.get_caret_scr_adj()),
-            _ => None,
+            SelectMode::Disabled => None,
         }
     }
 
@@ -45,11 +46,11 @@ impl SelectMode {
     /// # Arguments
     /// - `editor_buffer` - The buffer to update. This holds the selection map.
     /// - `maybe_previous_caret_display_pos` - The previous position of the caret.
-    ///    - This maybe [None] if [SelectMode] is [SelectMode::Disabled].
-    ///    - This has to be [Some] if [SelectMode::Enabled].
+    ///    - This maybe [None] if [`SelectMode`] is [`SelectMode::Disabled`].
+    ///    - This has to be [Some] if [`SelectMode::Enabled`].
     /// - `maybe_current_caret_display_pos` - The current position of the caret.
-    ///    - This maybe [None] if [SelectMode] is [SelectMode::Disabled].
-    ///    - This has to be [Some] if [SelectMode::Enabled].
+    ///    - This maybe [None] if [`SelectMode`] is [`SelectMode::Disabled`].
+    ///    - This has to be [Some] if [`SelectMode::Enabled`].
     pub fn handle_selection_single_line_caret_movement(
         &self,
         editor_buffer: &mut EditorBuffer,
@@ -74,9 +75,9 @@ impl SelectMode {
                     editor_buffer,
                     prev, // `prev.row_index` is same as `current.row_index`.
                     curr,
-                )
+                );
             }
-        };
+        }
 
         None
     }
@@ -110,7 +111,7 @@ impl SelectMode {
                      ),
                  }
             }
-        };
+        }
 
         None
     }

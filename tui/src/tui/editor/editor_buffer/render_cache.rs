@@ -20,12 +20,12 @@
 //! content of the editor buffer changes, or if the scroll offset or window size changes.
 //!
 //! - The key is derived from the scroll offset and window size.
-//! - The value is a [RenderOps] struct that contains the render operations to render the
-//!   content of the editor buffer to the screen.
+//! - The value is a [`RenderOps`] struct that contains the render operations to render
+//!   the content of the editor buffer to the screen.
 //!
 //! In the future, if there is a need to store multiple entries in the cache, the cache
-//! can be implemented as a [crate::RingBuffer] or [crate::InlineVec] of
-//! [CacheEntry] structs.
+//! can be implemented as a [`crate::RingBuffer`] or [`crate::InlineVec`] of
+//! [`CacheEntry`] structs.
 
 use std::ops::{Deref, DerefMut};
 
@@ -41,11 +41,12 @@ use crate::{engine_public_api,
 pub(in crate::tui::editor::editor_buffer) mod key {
     use super::*;
 
-    /// Cache key is combination of scroll_offset and window_size.
+    /// Cache key is combination of `scroll_offset` and `window_size`.
     #[derive(Clone, Debug, PartialEq)]
     pub struct Key((ScrOfs, Size));
 
     impl Key {
+        #[must_use]
         pub fn new(scr_ofs: ScrOfs, window_size: Size) -> Self {
             (scr_ofs, window_size).into()
         }
@@ -178,7 +179,7 @@ mod tests {
     use super::*;
     use crate::{assert_eq2, col, height, render_ops, row, scr_ofs, width, RenderOp};
 
-    /// Fake render_ops to be used in the tests.
+    /// Fake `render_ops` to be used in the tests.
     fn get_render_ops_og() -> RenderOps {
         render_ops!(
             @new

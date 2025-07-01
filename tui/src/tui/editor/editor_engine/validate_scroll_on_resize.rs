@@ -22,10 +22,29 @@ use crate::{caret_scroll_index, ch, BoundsCheck as _, BoundsStatus, EditorArgsMu
 // - https://symbl.cc/en/unicode/blocks/arrows/
 // - https://symbl.cc/en/collections/brackets/
 
+#[derive(Debug, Copy, Clone)]
+pub enum CaretColWithinVp {
+    Yes,
+    No,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum CaretAtSideOfVp {
+    Left,
+    Right,
+}
+
+#[derive(Debug, Copy, Clone)]
+enum CaretLocRelativeToVp {
+    Within,
+    Above,
+    Below,
+}
+
 /// Check whether caret is vertically within the viewport.
 /// - If it isn't then scroll by mutating:
-///   1. [crate::EditorContent::caret_raw]'s row , so it is within the viewport.
-///   2. [crate::EditorContent::scr_ofs]'s row, to actually apply scrolling.
+///   1. [`crate::EditorContent::caret_raw`]'s row , so it is within the viewport.
+///   2. [`crate::EditorContent::scr_ofs`]'s row, to actually apply scrolling.
 /// - Otherwise, no changes are made.
 pub fn validate_scroll_on_resize(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
@@ -36,8 +55,8 @@ pub fn validate_scroll_on_resize(args: EditorArgsMut<'_>) {
 /// Handle vertical scrolling (make sure caret is within viewport).
 ///
 /// Check whether caret is in the viewport.
-/// - If to top of viewport, then adjust scr_ofs & set it.
-/// - If to bottom of viewport, then adjust scr_ofs & set it.
+/// - If to top of viewport, then adjust `scr_ofs` & set it.
+/// - If to bottom of viewport, then adjust `scr_ofs` & set it.
 /// - If in viewport, then do nothing.
 ///
 /// ```text
@@ -83,14 +102,8 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
         }
     }
 
+    // Check whether caret is within viewport.
     {
-        #[derive(Debug, Copy, Clone)]
-        enum CaretLocRelativeToVp {
-            Within,
-            Above,
-            Below,
-        }
-
         let caret_scr_adj_row_index = buffer.get_caret_scr_adj().row_index;
         let scr_ofs_row_index = buffer.get_scr_ofs().row_index;
 
@@ -131,8 +144,8 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
 /// Handle horizontal scrolling (make sure caret is within viewport).
 ///
 /// Check whether caret is in the viewport.
-/// - If to left of viewport, then adjust scr_ofs & set it.
-/// - If to right of viewport, then adjust scr_ofs & set it.
+/// - If to left of viewport, then adjust `scr_ofs` & set it.
+/// - If to right of viewport, then adjust `scr_ofs` & set it.
 /// - If in viewport, then do nothing.
 ///
 /// ```text
@@ -151,16 +164,6 @@ fn validate_horizontal_scroll(args: EditorArgsMut<'_>) {
 
     let caret_scr_adj_col_index = buffer.get_caret_scr_adj().col_index;
     let scr_ofs_col_index = buffer.get_scr_ofs().col_index;
-
-    enum CaretColWithinVp {
-        Yes,
-        No,
-    }
-
-    enum CaretAtSideOfVp {
-        Left,
-        Right,
-    }
 
     let is_within = if caret_scr_adj_col_index >= scr_ofs_col_index
         && caret_scr_adj_col_index < scr_ofs_col_index + viewport_width

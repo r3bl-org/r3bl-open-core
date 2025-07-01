@@ -24,7 +24,7 @@ use crate::{idx, Index, RingBuffer as _};
 /// The current index in the history buffer.
 ///
 /// This index is used to keep track of the current version in the history buffer. It
-/// works with the history buffer [super::history::EditorHistory] to allow undoing and
+/// works with the history buffer [`super::history::EditorHistory`] to allow undoing and
 /// redoing actions.
 ///
 /// - If it's `None`, then the current index is at the start of the history buffer. This
@@ -45,8 +45,8 @@ mod construct {}
 /// history buffer.
 ///
 /// - It encodes all the possible states that the current index can be in as it is
-///   manipulated using [Self::inc] and [Self::dec].
-/// - This state information can be queried using [Self::locate].
+///   manipulated using [`Self::inc`] and [`Self::dec`].
+/// - This state information can be queried using [`Self::locate`].
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum CurIndexLoc {
     /// The history buffer is empty. Regardless of the current index, there are no
@@ -62,6 +62,7 @@ pub enum CurIndexLoc {
 
 impl CurIndexLoc {
     /// Determine the location of the current index in the history buffer.
+    #[must_use]
     pub fn locate(cur_index: &CurIndex, versions: &sizing::HistoryBuffer) -> CurIndexLoc {
         if versions.is_empty() {
             // Is empty.
@@ -89,11 +90,10 @@ impl CurIndexLoc {
     ///   empty, this does nothing.
     pub fn inc(cur_index: &mut CurIndex, versions: &sizing::HistoryBuffer) {
         match Self::locate(cur_index, versions) {
-            Self::EmptyHistory => {
-                // Is empty. Nothing to increment.
-            }
-            Self::End(_) => {
-                // Already at end of history buffer. Nothing to increment.
+            Self::EmptyHistory | Self::End(_) => {
+                // Either:
+                // - EmptyHistory -> Nothing to increment.
+                // - Already at end of history buffer -> Nothing to increment.
             }
             Self::Start => {
                 // Set index to Some(0) from None.
@@ -138,6 +138,7 @@ impl CurIndexLoc {
 
 impl CurIndex {
     /// If `self.0` is None, it will be converted to 0.
+    #[must_use]
     pub fn as_index(self) -> Index { self.0.unwrap_or(idx(0)) }
 
     /// Reset the current index to the start of the history buffer.

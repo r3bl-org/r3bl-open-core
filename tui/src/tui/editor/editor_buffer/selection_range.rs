@@ -29,10 +29,11 @@ use crate::{caret_scr_adj,
             ScrOfs};
 
 /// Represents a range of characters in a line. The col indices are scroll adjusted (and
-/// not raw). The row indices are not used, and clobbered with [ChUnitPrimitiveType::MAX].
+/// not raw). The row indices are not used, and clobbered with
+/// [`ChUnitPrimitiveType::MAX`].
 ///
 /// The range is not inclusive of the item at the end index, which means that when you
-/// call [crate::SelectionRange::clip_to_range()] the item at the end index will not be
+/// call [`crate::SelectionRange::clip_to_range()`] the item at the end index will not be
 /// part of the result (this is shown in the example below). The indices are all display
 /// column indices, not logical ones.
 ///
@@ -46,22 +47,22 @@ use crate::{caret_scr_adj,
 /// ```
 ///
 /// - `"▓▓"` = `"😃"`
-/// - [crate::SelectionRange::clip_to_range()] : "e😃"
+/// - [`crate::SelectionRange::clip_to_range()`] : "e😃"
 ///
 /// This range can't be instantiated directly via the struct, you have to use the tuple
-/// conversion. Even though the struct holds two [CaretScrAdj] values, it does not use the
-/// [crate::RowIndex] fields.
+/// conversion. Even though the struct holds two [`CaretScrAdj`] values, it does not use
+/// the [`crate::RowIndex`] fields.
 #[derive(Default, Clone, PartialEq, Copy)]
 pub struct SelectionRange {
     /// This is not "raw", this is "scroll adjusted".
     /// - It represents the display width at which the selection starts.
-    /// - The [crate::RowIndex] field is not used and is clobbered with
-    ///   [ChUnitPrimitiveType::MAX] after initialization.
+    /// - The [`crate::RowIndex`] field is not used and is clobbered with
+    ///   [`ChUnitPrimitiveType::MAX`] after initialization.
     /// - The display width is used, to support variable width characters. `UTF-8`
     ///   encoding uses between 1 and 4 bytes to encode a character, e.g.: `"H"` is 1
     ///   byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces,
     ///   e.g.: `"H"` is 1 space wide, and `"😄"` is two spaces wide
-    ///   [crate::GCString::width()] and [crate::GCString::width_char()].
+    ///   [`crate::GCString::width()`] and [`crate::GCString::width_char()`].
     start: CaretScrAdj,
     /// This is not "raw", this is "scroll adjusted".
     /// - It represents the display width at which the selection ends. The display width
@@ -72,7 +73,7 @@ pub struct SelectionRange {
     ///   encoding uses between 1 and 4 bytes to encode a character, e.g.: `"H"` is 1
     ///   byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces,
     ///   e.g. `"H"` is 1 space wide, and `"😄"` is two spaces wide
-    ///   [crate::GCString::width()] and [crate::GCString::width_char()].
+    ///   [`crate::GCString::width()`] and [`crate::GCString::width_char()`].
     end: CaretScrAdj,
 }
 
@@ -82,14 +83,14 @@ pub enum ScrollOffsetColLocationInRange {
     Underflow,
 }
 
-/// The only way to construct a [SelectionRange] is by converting a tuple of [CaretScrAdj]
-/// values into a [SelectionRange].
+/// The only way to construct a [`SelectionRange`] is by converting a tuple of
+/// [`CaretScrAdj`] values into a [`SelectionRange`].
 mod convert {
     use super::*;
 
     impl From<(CaretScrAdj, CaretScrAdj)> for SelectionRange {
-        /// The [crate::RowIndex] fields of each tuple value are not used. They are just
-        /// set to the maximum value of [ChUnitPrimitiveType].
+        /// The [`crate::RowIndex`] fields of each tuple value are not used. They are just
+        /// set to the maximum value of [`ChUnitPrimitiveType`].
         fn from((start, end): (CaretScrAdj, CaretScrAdj)) -> Self {
             let start = caret_scr_adj(start.col_index + row(ChUnitPrimitiveType::MAX));
             let end = caret_scr_adj(end.col_index + row(ChUnitPrimitiveType::MAX));
@@ -99,26 +100,31 @@ mod convert {
 }
 
 impl SelectionRange {
+    #[must_use]
     pub fn start(&self) -> ColIndex { self.start.col_index }
 
+    #[must_use]
     pub fn end(&self) -> ColIndex { self.end.col_index }
 
     /// Due to the nature of selection ranges, the index values are actually display
     /// widths. And sometimes it is useful to type cast them as a width, e.g.: when using
-    /// with [crate::SelectionRange::clip_to_range()].
+    /// with [`crate::SelectionRange::clip_to_range()`].
+    #[must_use]
     pub fn get_start_display_col_index_as_width(&self) -> ColWidth {
         width(*self.start.col_index)
     }
 
     /// Returns a tuple of the start and end display column indices. This is just a
     /// convenience function that prevents the need to access the fields directly to get
-    /// the two [ColIndex] values.
+    /// the two [`ColIndex`] values.
+    #[must_use]
     pub fn as_tuple(&self) -> (ColIndex, ColIndex) {
         (self.start.col_index, self.end.col_index)
     }
 
     /// Uses `SelectionRange` to calculate width and simply calls
-    /// [crate::GCString::clip()].
+    /// [`crate::GCString::clip()`].
+    #[must_use]
     pub fn clip_to_range<'a>(&self, us: &'a GCString) -> &'a str {
         let (start_display_col_index, end_display_col_index) = self.as_tuple();
         let max_display_width_col_count =
@@ -128,6 +134,7 @@ impl SelectionRange {
 }
 
 impl SelectionRange {
+    #[must_use]
     pub fn locate_scroll_offset_col(
         &self,
         scroll_offset: ScrOfs,
@@ -158,6 +165,7 @@ pub enum CaretMovementDirection {
 }
 
 impl SelectionRange {
+    #[must_use]
     pub fn caret_movement_direction(
         prev: CaretScrAdj,
         curr: CaretScrAdj,
@@ -169,6 +177,7 @@ impl SelectionRange {
         }
     }
 
+    #[must_use]
     pub fn caret_movement_direction_up_down(
         prev: CaretScrAdj,
         curr: CaretScrAdj,
@@ -180,6 +189,7 @@ impl SelectionRange {
         }
     }
 
+    #[must_use]
     pub fn caret_movement_direction_left_right(
         prev: CaretScrAdj,
         curr: CaretScrAdj,
@@ -199,7 +209,8 @@ impl SelectionRange {
     ///   │  ⎩4 = end_display_col_index
     ///   ⎩1 = start_display_col_index
     /// ```
-    /// - [crate::SelectionRange::clip_to_range()] : "ell"
+    /// - [`crate::SelectionRange::clip_to_range()`] : "ell"
+    #[must_use]
     pub fn locate_column(&self, caret: CaretScrAdj) -> CaretLocationInRange {
         if caret.col_index < self.start.col_index {
             CaretLocationInRange::Underflow
@@ -210,7 +221,8 @@ impl SelectionRange {
         }
     }
 
-    /// Alternatively you can also just use a tuple of [ColIndex] to represent the range.
+    /// Alternatively you can also just use a tuple of [`ColIndex`] to represent the
+    /// range.
     ///
     /// # Examples
     ///
@@ -226,6 +238,7 @@ impl SelectionRange {
     ///     caret_scr_adj(row(0) + col(4))
     /// );
     /// ```
+    #[must_use]
     pub fn new(start: CaretScrAdj, end: CaretScrAdj) -> Self { Self { start, end } }
 
     /// ```text
@@ -236,6 +249,7 @@ impl SelectionRange {
     ///   │  ⎩end_display_col_index + col_amt
     ///   ⎩start_display_col_index
     /// ```
+    #[must_use]
     pub fn grow_end_by(&self, col_amt: ColWidth) -> Self {
         let mut copy = *self;
         copy.end.col_index += col_amt;
@@ -250,6 +264,7 @@ impl SelectionRange {
     ///   │  ⎩end_display_col_index - col_amt
     ///   ⎩start_display_col_index
     /// ```
+    #[must_use]
     pub fn shrink_end_by(&self, col_amt: ColWidth) -> Self {
         let mut copy = *self;
         copy.end.col_index -= col_amt;
@@ -264,6 +279,7 @@ impl SelectionRange {
     ///   │  ⎩end_display_col_index
     ///   ⎩start_display_col_index - col_amt
     /// ```
+    #[must_use]
     pub fn grow_start_by(&self, col_amt: ColWidth) -> Self {
         let mut copy = *self;
         copy.start.col_index -= col_amt;
@@ -278,6 +294,7 @@ impl SelectionRange {
     ///   │  ⎩end_display_col_index
     ///   ⎩start_display_col_index - col_amt
     /// ```
+    #[must_use]
     pub fn shrink_start_by(&self, col_amt: ColWidth) -> Self {
         let mut copy = *self;
         copy.start.col_index += col_amt;

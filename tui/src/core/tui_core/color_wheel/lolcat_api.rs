@@ -18,7 +18,11 @@
 use std::borrow::Cow;
 
 use super::{Lolcat, Seed, SeedDelta};
-use crate::{ColorChangeSpeed, GCString, GCStringExt as _, TuiStyledTexts};
+use crate::{ColorChangeSpeed,
+            ColorWheelControl,
+            GCString,
+            GCStringExt as _,
+            TuiStyledTexts};
 
 pub fn colorize_to_styled_texts(
     lolcat: &mut Lolcat,
@@ -29,24 +33,22 @@ pub fn colorize_to_styled_texts(
     lolcat.colorize_to_styled_texts(&string_gcs)
 }
 
+#[must_use]
 pub fn lolcat_each_char_in_unicode_string(
     us: &GCString,
     lolcat: Option<&mut Lolcat>,
 ) -> TuiStyledTexts {
     let mut saved_orig_speed = None;
 
-    let mut my_lolcat: Cow<'_, Lolcat> = match lolcat {
-        Some(lolcat_arg) => {
-            saved_orig_speed = Some(lolcat_arg.color_wheel_control.color_change_speed);
-            lolcat_arg.color_wheel_control.color_change_speed = ColorChangeSpeed::Rapid;
-            Cow::Borrowed(lolcat_arg)
-        }
-        None => {
-            let lolcat_temp = LolcatBuilder::new()
-                .set_color_change_speed(ColorChangeSpeed::Rapid)
-                .build();
-            Cow::Owned(lolcat_temp)
-        }
+    let mut my_lolcat: Cow<'_, Lolcat> = if let Some(lolcat_arg) = lolcat {
+        saved_orig_speed = Some(lolcat_arg.color_wheel_control.color_change_speed);
+        lolcat_arg.color_wheel_control.color_change_speed = ColorChangeSpeed::Rapid;
+        Cow::Borrowed(lolcat_arg)
+    } else {
+        let lolcat_temp = LolcatBuilder::new()
+            .set_color_change_speed(ColorChangeSpeed::Rapid)
+            .build();
+        Cow::Owned(lolcat_temp)
     };
 
     let it = my_lolcat.to_mut().colorize_to_styled_texts(us);
@@ -88,7 +90,7 @@ pub fn lolcat_each_char_in_unicode_string(
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LolcatBuilder {
     /// Rate at which the color changes when
-    /// [colorize_to_styled_texts](Lolcat::colorize_to_styled_texts) is called.
+    /// [`colorize_to_styled_texts`](Lolcat::colorize_to_styled_texts) is called.
     pub color_change_speed: ColorChangeSpeed,
     /// Initial color of the wheel.
     pub seed: Seed,
@@ -121,13 +123,16 @@ impl Default for LolcatBuilder {
 }
 
 impl LolcatBuilder {
+    #[must_use]
     pub fn new() -> Self { Self::default() }
 
+    #[must_use]
     pub fn set_background_mode(mut self, background_mode: Colorize) -> Self {
         self.colorization_strategy = background_mode;
         self
     }
 
+    #[must_use]
     pub fn set_color_change_speed(
         mut self,
         color_change_speed: ColorChangeSpeed,
@@ -136,20 +141,23 @@ impl LolcatBuilder {
         self
     }
 
+    #[must_use]
     pub fn set_seed(mut self, arg_seed: impl Into<Seed>) -> Self {
         self.seed = arg_seed.into();
         self
     }
 
+    #[must_use]
     pub fn set_seed_delta(mut self, arg_seed_delta: impl Into<SeedDelta>) -> Self {
         self.seed_delta = arg_seed_delta.into();
         self
     }
 
+    #[must_use]
     pub fn build(self) -> Lolcat {
         let mut new_lolcat = Lolcat {
             seed_delta: self.seed_delta,
-            color_wheel_control: Default::default(),
+            color_wheel_control: ColorWheelControl::default(),
         };
 
         new_lolcat.color_wheel_control.color_change_speed = self.color_change_speed;

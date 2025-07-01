@@ -169,16 +169,17 @@ pub mod constructor {
         fn default() -> Self {
             Self {
                 editor_buffers: create_hash_map_of_editor_buffers(None),
-                dialog_buffers: Default::default(),
+                dialog_buffers: HashMap::default(),
             }
         }
     }
 
+    #[must_use]
     pub fn new(maybe_file_path: Option<&str>) -> State {
         match maybe_file_path {
             Some(_) => State {
                 editor_buffers: create_hash_map_of_editor_buffers(maybe_file_path),
-                dialog_buffers: Default::default(),
+                dialog_buffers: HashMap::default(),
             },
             None => State::default(),
         }
@@ -225,7 +226,7 @@ pub mod file_utils {
     }
 
     /// This is just a wrapper around
-    /// [into_existing::read_from_file::try_read_file_path_into_inline_string()].
+    /// [`into_existing::read_from_file::try_read_file_path_into_inline_string()`].
     pub fn read_file_into_storage(maybe_file_path: Option<&str>) -> DocumentStorage {
         // Create an empty document storage.
         let mut acc = DocumentStorage::new();
@@ -236,7 +237,7 @@ pub mod file_utils {
             match into_existing::read_from_file::try_read_file_path_into_inline_string(
                 &mut acc, file_path,
             ) {
-                Ok(_) => {
+                Ok(()) => {
                     DEBUG_TUI_MOD.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug!(
@@ -272,7 +273,7 @@ pub mod file_utils {
             );
             let result_file_write = std::fs::write(&*file_path, &content);
             match result_file_write {
-                Ok(_) => {
+                Ok(()) => {
                     DEBUG_TUI_MOD.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug!(
@@ -330,14 +331,14 @@ mod impl_debug_format {
 
     impl Debug for State {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            write! {
+            write!(
                 f,
-"State [
+                "State [
   - dialog_buffers:\n{:?}
   - editor_buffers:\n{:?}
 ]",
                 self.dialog_buffers, self.editor_buffers,
-            }
+            )
         }
     }
 }

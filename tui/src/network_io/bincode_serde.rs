@@ -37,7 +37,7 @@ pub fn try_serialize<T: Serialize>(data: &T) -> miette::Result<Buffer> {
 }
 
 /// You must provide the `T` type to deserialize the payload. Deserialize the payload
-/// (of &[Buffer]) using the [bincode] crate. Returns a [miette::Result] of `T`.
+/// (of &[Buffer]) using the [bincode] crate. Returns a [`miette::Result`] of `T`.
 ///
 /// # Arguments
 ///

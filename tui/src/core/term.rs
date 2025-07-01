@@ -21,6 +21,7 @@ use crate::{height, width, ColWidth, Size};
 pub const DEFAULT_WIDTH: u16 = 80;
 use std::io::IsTerminal as _;
 
+#[must_use]
 pub fn get_terminal_width_no_default() -> Option<ColWidth> {
     match get_size() {
         Ok(size) => Some(size.col_width),
@@ -29,6 +30,7 @@ pub fn get_terminal_width_no_default() -> Option<ColWidth> {
 }
 
 /// Get the terminal width. If there is a problem, return the default width.
+#[must_use]
 pub fn get_terminal_width() -> ColWidth {
     match get_size() {
         Ok(size) => size.col_width,
@@ -56,22 +58,24 @@ pub enum StdoutIsPipedResult {
 
 /// If you run `echo "test" | cargo run` the following will return true.
 /// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
+#[must_use]
 pub fn is_stdin_piped() -> StdinIsPipedResult {
-    if !std::io::stdin().is_terminal() {
-        StdinIsPipedResult::StdinIsPiped
-    } else {
+    if std::io::stdin().is_terminal() {
         StdinIsPipedResult::StdinIsNotPiped
+    } else {
+        StdinIsPipedResult::StdinIsPiped
     }
 }
 
 /// If you run `cargo run | grep foo` the following will return true.
 /// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
+#[must_use]
 pub fn is_stdout_piped() -> StdoutIsPipedResult {
     use std::io::IsTerminal as _;
-    if !std::io::stdout().is_terminal() {
-        StdoutIsPipedResult::StdoutIsPiped
-    } else {
+    if std::io::stdout().is_terminal() {
         StdoutIsPipedResult::StdoutIsNotPiped
+    } else {
+        StdoutIsPipedResult::StdoutIsPiped
     }
 }
 
@@ -81,31 +85,35 @@ pub enum TTYResult {
     IsNotInteractive,
 }
 
-/// Returns [TTYResult::IsInteractive] if stdin, stdout, and stderr are *all* fully
+/// Returns [`TTYResult::IsInteractive`] if stdin, stdout, and stderr are *all* fully
 /// interactive.
 ///
 /// There are situations where some can be interactive and others not, such as when piping
 /// is active.
+#[must_use]
 pub fn is_fully_interactive_terminal() -> TTYResult {
     let is_tty: bool = std::io::stdin().is_terminal();
-    match is_tty {
-        true => TTYResult::IsInteractive,
-        false => TTYResult::IsNotInteractive,
+    if is_tty {
+        TTYResult::IsInteractive
+    } else {
+        TTYResult::IsNotInteractive
     }
 }
 
-/// Returns [TTYResult::IsNotInteractive] if stdin, stdout, and stderr are *all* fully
+/// Returns [`TTYResult::IsNotInteractive`] if stdin, stdout, and stderr are *all* fully
 /// uninteractive. This happens when `cargo test` runs.
 ///
 /// There are situations where some can be interactive and others not, such as when piping
 /// is active.
+#[must_use]
 pub fn is_fully_uninteractive_terminal() -> TTYResult {
     let stdin_is_tty: bool = std::io::stdin().is_terminal();
     let stdout_is_tty: bool = std::io::stdout().is_terminal();
     let stderr_is_tty: bool = std::io::stderr().is_terminal();
-    match !stdin_is_tty && !stdout_is_tty && !stderr_is_tty {
-        true => TTYResult::IsNotInteractive,
-        false => TTYResult::IsInteractive,
+    if !stdin_is_tty && !stdout_is_tty && !stderr_is_tty {
+        TTYResult::IsNotInteractive
+    } else {
+        TTYResult::IsInteractive
     }
 }
 

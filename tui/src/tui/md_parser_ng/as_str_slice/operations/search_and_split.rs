@@ -22,9 +22,10 @@ use crate::{as_str_slice::AsStrSlice,
 impl<'a> AsStrSlice<'a> {
     /// This does not materialize the `AsStrSlice`.
     ///
-    /// For [nom::Input] trait compatibility, this should return true when no more
+    /// For [`nom::Input`] trait compatibility, this should return true when no more
     /// characters can be consumed from the current position, taking into account
     /// any `max_len` constraints.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         // This code is simply the following, however, it is fast.
         // self.remaining_len() == len(0)
@@ -111,7 +112,7 @@ impl<'a> AsStrSlice<'a> {
     /// boundaries.
     ///
     /// See [`crate::split_by_new_line_ng`] for an example of why multiline processing
-    /// requires `take_from` and `take` (part of the [nom::Input] impl) instead of this
+    /// requires `take_from` and `take` (part of the [`nom::Input`] impl) instead of this
     /// method.
     ///
     /// ## Examples

@@ -16,7 +16,7 @@
  */
 
 //! These are the colors use to highlight the MD document. These are all sensitive to
-//! [ColorSupport] constraints. You can find ANSI colors
+//! [`ColorSupport`] constraints. You can find ANSI colors
 //! [here](https://www.ditig.com/256-colors-cheat-sheet).
 
 use smallvec::smallvec;
@@ -33,6 +33,7 @@ use crate::{global_color_support,
             TuiStyle};
 
 /// This style is for any selected range in the document.
+#[must_use]
 pub fn get_selection_style() -> TuiStyle {
     let color_fg = tui_color!(hex "#dddddd");
     let color_bg = tui_color!(hex "#ff00ff");
@@ -44,6 +45,7 @@ pub fn get_selection_style() -> TuiStyle {
 
 /// This style is for the foreground text of the entire document. This is the default
 /// style. It is overridden by other styles like bold, italic, etc. below.
+#[must_use]
 pub fn get_foreground_style() -> TuiStyle {
     new_style!(
         color_fg: {
@@ -51,15 +53,17 @@ pub fn get_foreground_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#c1b3d0"),
                 ColorSupport::Ansi256 => tui_color!(ansi 244), // Grey50.
                 ColorSupport::Grayscale => tui_color!(white),
-                _ => tui_color!(white),
+                ColorSupport::NoColor => tui_color!(white),
             }
         }
     )
 }
 
+#[allow(clippy::doc_markdown)]
 /// This style is for things like `[`, `]`, `*`, "`", etc. They are dimmed so that they
 /// don't distract from the main content they are wrapping like a link or inline code
 /// block, etc.
+#[must_use]
 pub fn get_foreground_dim_style() -> TuiStyle {
     get_foreground_style()
         + new_style!(
@@ -69,6 +73,7 @@ pub fn get_foreground_dim_style() -> TuiStyle {
 }
 
 /// This is just for the bold content, not the enclosing `**`.
+#[must_use]
 pub fn get_bold_style() -> TuiStyle {
     new_style! (
         bold
@@ -77,13 +82,14 @@ pub fn get_bold_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#dacd24"),
                 ColorSupport::Ansi256 => tui_color!(ansi 226), // Yellow1.
                 ColorSupport::Grayscale => tui_color!(yellow),
-                _ => tui_color!(yellow),
+                ColorSupport::NoColor => tui_color!(yellow),
             }
         }
     )
 }
 
 /// This is just for the bold content, not the enclosing `*`.
+#[must_use]
 pub fn get_italic_style() -> TuiStyle {
     new_style!(
         italic
@@ -92,13 +98,14 @@ pub fn get_italic_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#a59e3a"),
                 ColorSupport::Ansi256 => tui_color!(ansi 208), // DarkOrange.
                 ColorSupport::Grayscale => tui_color!(dark_yellow),
-                _ => tui_color!(dark_yellow),
+                ColorSupport::NoColor => tui_color!(dark_yellow),
             }
         }
     )
 }
 
 /// This is just for the bold content, not the enclosing `***`.
+#[must_use]
 pub fn get_bold_italic_style() -> TuiStyle {
     new_style!(
         bold italic
@@ -107,13 +114,15 @@ pub fn get_bold_italic_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#dacd24"),
                 ColorSupport::Ansi256 => tui_color!(ansi 184), // Yellow3.
                 ColorSupport::Grayscale => tui_color!(yellow),
-                _ => tui_color!(yellow),
+                ColorSupport::NoColor => tui_color!(yellow),
             }
         }
     )
 }
 
+#[allow(clippy::doc_markdown)]
 /// This is just for the bold content, not the enclosing "`".
+#[must_use]
 pub fn get_inline_code_style() -> TuiStyle {
     new_style!(
         color_fg: {
@@ -121,13 +130,14 @@ pub fn get_inline_code_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#ce55b7"),
                 ColorSupport::Ansi256 => tui_color!(ansi 169), // HotPink2.
                 ColorSupport::Grayscale => tui_color!(magenta),
-                _ => tui_color!(magenta),
+                ColorSupport::NoColor => tui_color!(magenta),
             }
         }
     )
 }
 
 /// This is just for the link text not the enclosing `[` and `]`.
+#[must_use]
 pub fn get_link_text_style() -> TuiStyle {
     new_style!(
         color_fg: {
@@ -135,13 +145,14 @@ pub fn get_link_text_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#4f86ed"),
                 ColorSupport::Ansi256 => tui_color!(ansi 33), // DodgerBlue1.
                 ColorSupport::Grayscale => tui_color!(blue),
-                _ => tui_color!(blue),
+                ColorSupport::NoColor => tui_color!(blue),
             }
         }
     )
 }
 
 /// This is just for the link url not the enclosing `(` and `)`.
+#[must_use]
 pub fn get_link_url_style() -> TuiStyle {
     new_style!(
         underline
@@ -150,13 +161,14 @@ pub fn get_link_url_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#16adf3"),
                 ColorSupport::Ansi256 => tui_color!(ansi 39), // DeepSkyBlue1.
                 ColorSupport::Grayscale => tui_color!(blue),
-                _ => tui_color!(blue),
+                ColorSupport::NoColor => tui_color!(blue),
             }
         }
     )
 }
 
 /// This is for the entire checkbox span (checked).
+#[must_use]
 pub fn get_checkbox_checked_style() -> TuiStyle {
     new_style!(
         bold dim
@@ -170,6 +182,7 @@ pub fn get_checkbox_checked_style() -> TuiStyle {
 }
 
 /// This is for the entire checkbox span (unchecked).
+#[must_use]
 pub fn get_checkbox_unchecked_style() -> TuiStyle {
     new_style!(
         bold
@@ -183,6 +196,7 @@ pub fn get_checkbox_unchecked_style() -> TuiStyle {
 }
 
 /// This is for the bullet or numbered bullet of a list item, not the content.
+#[must_use]
 pub fn get_list_bullet_style() -> TuiStyle {
     new_style!(
         color_fg: {
@@ -194,14 +208,17 @@ pub fn get_list_bullet_style() -> TuiStyle {
     )
 }
 
+#[must_use]
 pub fn get_code_block_lang_style() -> TuiStyle {
     get_inline_code_style() + new_style!(italic)
 }
 
+#[must_use]
 pub fn get_code_block_content_style() -> TuiStyle { get_inline_code_style() }
 
 /// - Bg color: #4f86ed
 /// - Fg color: black
+#[must_use]
 pub fn get_metadata_title_marker_style() -> TuiStyle {
     new_style!(
         color_fg: {tui_color!(black)}
@@ -210,7 +227,7 @@ pub fn get_metadata_title_marker_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#4f86ed"), // Soft blue.
                 ColorSupport::Ansi256 => tui_color!(ansi 39), // DeepSkyBlue1.
                 ColorSupport::Grayscale => tui_color!(cyan), // There is no equivalent.
-                _ => tui_color!(cyan),
+                ColorSupport::NoColor => tui_color!(cyan),
             }
         }
     )
@@ -218,6 +235,7 @@ pub fn get_metadata_title_marker_style() -> TuiStyle {
 
 /// - Fg color: #4fcbd4
 /// - Bg color: #444444
+#[must_use]
 pub fn get_metadata_title_value_style() -> TuiStyle {
     new_style!(
         color_fg: {
@@ -225,7 +243,7 @@ pub fn get_metadata_title_value_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#4fcbd4"), // Moderate cyan.
                 ColorSupport::Ansi256 => tui_color!(ansi 51), // Cyan1.
                 ColorSupport::Grayscale => tui_color!(cyan),
-                _ => tui_color!(cyan),
+                ColorSupport::NoColor => tui_color!(cyan),
             }
         }
         color_bg: {
@@ -233,7 +251,7 @@ pub fn get_metadata_title_value_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#444444"), // Very dark gray.
                 ColorSupport::Ansi256 => tui_color!(ansi 238), // Grey27.
                 ColorSupport::Grayscale => tui_color!(dark_gray),
-                _ => tui_color!(dark_gray),
+                ColorSupport::NoColor => tui_color!(dark_gray),
             }
         }
     )
@@ -241,6 +259,7 @@ pub fn get_metadata_title_value_style() -> TuiStyle {
 
 /// - Bg color: #ad83da
 /// - Fg color: black
+#[must_use]
 pub fn get_metadata_tags_marker_style() -> TuiStyle {
     new_style!(
         color_fg: {tui_color!(black)}
@@ -249,7 +268,7 @@ pub fn get_metadata_tags_marker_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#ad83da"), // Very soft violet.
                 ColorSupport::Ansi256 => tui_color!(ansi 133), // MediumOrchid3. There is no equivalent.
                 ColorSupport::Grayscale => tui_color!(yellow), // There is no equivalent.
-                _ => tui_color!(yellow),
+                ColorSupport::NoColor => tui_color!(yellow),
             }
         }
     )
@@ -257,6 +276,7 @@ pub fn get_metadata_tags_marker_style() -> TuiStyle {
 
 /// - Fg color: #e2a1e3
 /// - Bg color: #303030
+#[must_use]
 pub fn get_metadata_tags_values_style() -> TuiStyle {
     new_style!(
         color_fg: {
@@ -264,7 +284,7 @@ pub fn get_metadata_tags_values_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#e2a1e3"), // Soft violet.
                 ColorSupport::Ansi256 => tui_color!(ansi 45), // Turquoise2
                 ColorSupport::Grayscale => tui_color!(cyan), // There is no equivalent.
-                _ => tui_color!(cyan)
+                ColorSupport::NoColor => tui_color!(cyan)
             }
         }
         color_bg: {
@@ -272,7 +292,7 @@ pub fn get_metadata_tags_values_style() -> TuiStyle {
                 ColorSupport::Truecolor => tui_color!(hex "#303030"), // Very dark gray.
                 ColorSupport::Ansi256 => tui_color!(ansi 236), // Grey19.
                 ColorSupport::Grayscale => tui_color!(dark_gray),
-                _ => tui_color!(dark_gray)
+                ColorSupport::NoColor => tui_color!(dark_gray)
             }
         }
     )
@@ -284,6 +304,7 @@ const STEPS: u8 = 20;
 
 /// Currently unique coloring of up to 6 heading levels are supported.
 /// More info on gradients: <https://uigradients.com/>.
+#[must_use]
 pub fn create_color_wheel_from_heading_data(
     heading_data: &HeadingData<'_>,
 ) -> ColorWheel {

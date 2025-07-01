@@ -24,14 +24,14 @@
 //! - It is a wrapper around the [kv] crate, to make it trivially simple to use. There are
 //!   only 4 functions that allow you access to the capabilities of the key/value embedded
 //!   store.
-//!   - [load_or_create_store]
-//!   - [load_or_create_bucket_from_store]
-//!   - [insert_into_bucket]
-//!   - [get_from_bucket]
-//!   - [remove_from_bucket]
-//!   - [is_key_contained_in_bucket]
+//!   - [`load_or_create_store`]
+//!   - [`load_or_create_bucket_from_store`]
+//!   - [`insert_into_bucket`]
+//!   - [`get_from_bucket`]
+//!   - [`remove_from_bucket`]
+//!   - [`is_key_contained_in_bucket`]
 //! - And provide lots of really fine grained errors, using [miette] and [thiserror] (see
-//!   [kv_error]).
+//!   [`kv_error`]).
 //!
 //! 1. The values are serialized to [Bincode] (from Rust struct) before they are saved.
 //! 2. The values are deserialized from [Bincode] (to Rust struct) after they are loaded.
@@ -49,7 +49,7 @@
 //!
 //! In my testing, I've run multiple processes that write to the key/value store at the
 //! same time, and it works as expected. Even with multiple processes writing to the
-//! store, the iterator [kv::Bucket::iter] can be used to read the current state of the
+//! store, the iterator [`kv::Bucket::iter`] can be used to read the current state of the
 //! db, as expected.
 
 use std::fmt::{Debug, Display};
@@ -60,18 +60,19 @@ use serde::{Deserialize, Serialize};
 
 use crate::fg_cyan;
 
-/// Convenience type alias for the [kv::Bucket] type.
-/// 1. A [kv::Bucket] is created from a [Store].
-/// 2. A [kv::Bucket] is given a name, and there may be many [kv::Bucket]s in a [Store].
-/// 3. A [kv::Bucket] provides typed access to a section of the key/value store [kv].
+/// Convenience type alias for the [`kv::Bucket`] type.
+/// 1. A [`kv::Bucket`] is created from a [Store].
+/// 2. A [`kv::Bucket`] is given a name, and there may be many [`kv::Bucket`]s in a
+///    [Store].
+/// 3. A [`kv::Bucket`] provides typed access to a section of the key/value store [kv].
 ///
-/// The [kv::Bucket] stores the following key/value pairs.
+/// The [`kv::Bucket`] stores the following key/value pairs.
 /// - `KeyT`: The generic type `<KeyT>`. This will not be serialized or deserialized. This
-///   also has a trait bound on [kv::Key]. See [insert_into_bucket] for an example of
+///   also has a trait bound on [`kv::Key`]. See [`insert_into_bucket`] for an example of
 ///   this.
 /// - `ValueT`: This type makes it concrete that [Bincode] will be used to serialize and
 ///   deserialize the data from the generic type `<ValueT>`, which has trait bounds on
-///   [Serialize], [Deserialize]. See [insert_into_bucket] for an example of this.
+///   [Serialize], [Deserialize]. See [`insert_into_bucket`] for an example of this.
 pub type KVBucket<'a, KeyT, ValueT> = kv::Bucket<'a, KeyT, Bincode<ValueT>>;
 
 mod default_settings {
@@ -97,8 +98,8 @@ mod default_settings {
     }
 }
 
-/// Create the db folder if it doesn't request_shutdown. Otherwise load it from the folder
-/// on disk. Note there are no lifetime annotations on this function. All the other
+/// Create the db folder if it doesn't `request_shutdown`. Otherwise load it from the
+/// folder on disk. Note there are no lifetime annotations on this function. All the other
 /// functions below do have lifetime annotations, since they are all tied to the lifetime
 /// of the returned [Store].
 #[tracing::instrument]
@@ -270,10 +271,7 @@ pub fn is_key_contained_in_bucket<
     tracing::debug!(
         message = "🔼 Check if key is contained in bucket",
         key = %key.to_string(),
-        value = %match it {
-            true => "true",
-            false => "false",
-        }
+        value = %if it { "true" } else { "false" }
     );
 
     Ok(it)
@@ -484,17 +482,17 @@ mod kv_tests {
                 let mut iter = e.chain();
                 // First.
                 assert_eq!(
-                    iter.next().map(|it| it.to_string()).unwrap(),
+                    iter.next().map(ToString::to_string).unwrap(),
                     "🔼 Could not load key/value pair from bucket"
                 );
 
                 // Second.
-                let second = iter.next().map(|it| it.to_string()).unwrap();
+                let second = iter.next().map(ToString::to_string).unwrap();
                 assert!(second.contains("Error in Sled: Collection"));
                 assert!(second.contains("does not exist"));
 
                 // Third.
-                let third = iter.next().map(|it| it.to_string()).unwrap();
+                let third = iter.next().map(ToString::to_string).unwrap();
                 assert!(third.contains("Collection"));
                 assert!(third.contains("does not exist"));
             }

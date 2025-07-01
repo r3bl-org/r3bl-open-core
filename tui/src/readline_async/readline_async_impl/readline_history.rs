@@ -29,14 +29,14 @@ pub struct History {
 }
 
 impl History {
-    pub fn new() -> (Self, UnboundedReceiver<String>) {
+    #[must_use] pub fn new() -> (Self, UnboundedReceiver<String>) {
         let (sender, receiver) = tokio::sync::mpsc::unbounded_channel::<String>();
         (
             Self {
-                entries: Default::default(),
+                entries: VecDeque::default(),
                 max_size: HISTORY_SIZE_MAX,
                 sender,
-                current_position: Default::default(),
+                current_position: Option::default(),
             },
             receiver,
         )

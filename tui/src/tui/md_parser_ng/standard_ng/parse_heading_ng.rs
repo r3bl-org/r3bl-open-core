@@ -29,7 +29,7 @@ use crate::{md_parser::constants,
             HeadingLevel};
 
 /// This matches the heading tag and text within the current line only.
-/// Line advancement is handled by the infrastructure via ensure_advance_with_parser.
+/// Line advancement is handled by the infrastructure via `ensure_advance_with_parser`.
 #[rustfmt::skip]
 pub fn parse_line_heading_no_advance_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, HeadingData<'a>> {
     // Only parse within the current line - no line advancement concerns
@@ -207,7 +207,7 @@ mod tests {
                 assert_eq2!(err.code, ErrorKind::Tag);
             }
             _ => panic!("Expected an error"),
-        };
+        }
     }
 
     #[test]

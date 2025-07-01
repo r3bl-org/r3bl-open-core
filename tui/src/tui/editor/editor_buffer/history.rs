@@ -26,10 +26,10 @@ use crate::{format_as_kilobytes_with_commas, idx, RingBuffer as _};
 /// - It uses a ring buffer (`versions`) to store the different states of the
 ///   `EditorContent`.
 /// - It works hand in hand with the `current_index` field points to the current state in
-///   the `versions` buffer. Please see the [super::history::CurIndex] for details on how
-///   the `current_index` works.
+///   the `versions` buffer. Please see the [`super::history::CurIndex`] for details on
+///   how the `current_index` works.
 ///
-/// # Pushing a new state [self::EditorHistory::add]
+/// # Pushing a new state [`self::EditorHistory::add`]
 ///
 /// 1. If the `current_index` is not the last index in the `versions` buffer, the history
 ///    from `current_index + 1` to the end of the buffer is truncated (removed). This
@@ -37,14 +37,14 @@ use crate::{format_as_kilobytes_with_commas, idx, RingBuffer as _};
 /// 2. A copy of the current `EditorContent` is added to the `versions` buffer.
 /// 3. The `current_index` is incremented to point to the newly added state.
 ///
-/// # Undoing [self::EditorHistory::undo]
+/// # Undoing [`self::EditorHistory::undo`]
 ///
 /// 1. If the history is empty, return `None`.
 /// 2. If the current index is at the start of the history, return `None`.
 /// 3. Decrement the `current_index`.
 /// 4. Return the `EditorContent` at the new `current_index` from the `versions` buffer.
 ///
-/// # Redoing [self::EditorHistory::redo]
+/// # Redoing [`self::EditorHistory::redo`]
 ///
 /// 1. If the history is empty, return `None`.
 /// 2. If the current index is at the end of the history, return `None`.
@@ -57,7 +57,7 @@ use crate::{format_as_kilobytes_with_commas, idx, RingBuffer as _};
 ///   full, adding a new state will overwrite the oldest state in the buffer.
 /// - The caret position is retained during undo / redo operations. However, not all
 ///   editor events will trigger a new state to be added to the history buffer. See
-///   [crate::editor_engine::engine_public_api::apply_event()] to see which events
+///   [`crate::editor_engine::engine_public_api::apply_event()`] to see which events
 ///   actually get added to the editor history buffer.
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorHistory {
@@ -66,6 +66,7 @@ pub struct EditorHistory {
 }
 
 impl EditorHistory {
+    #[must_use]
     pub fn is_empty(&self) -> bool { self.versions.is_empty() }
 
     pub fn clear(&mut self) {
@@ -75,6 +76,7 @@ impl EditorHistory {
 
     /// Get the current index in the history buffer. If the buffer is empty, this will
     /// return `None`.
+    #[must_use]
     pub fn current_index(&self) -> Option<CurIndex> {
         if self.is_empty() {
             None
@@ -85,7 +87,7 @@ impl EditorHistory {
 
     /// This function adds a state to the history buffer. It is called whenever the
     /// content of the editor changes. Once this is called, the current index is
-    /// incremented. And [EditorHistory::undo()] can be called to undo.
+    /// incremented. And [`EditorHistory::undo()`] can be called to undo.
     ///
     /// Any dangling redos are truncated when a new state is added to the buffer.
     pub fn add(&mut self, content: EditorContent) {
@@ -108,7 +110,7 @@ impl EditorHistory {
     /// This is the underlying function that enables undo. It changes the current index to
     /// the previous index in the versions buffer.
     ///
-    /// Once called, you can use [EditorHistory::redo()] to redo, as long as the
+    /// Once called, you can use [`EditorHistory::redo()`] to redo, as long as the
     /// current index is not at the end of the versions buffer.
     pub fn undo(&mut self) -> Option<EditorContent> {
         match self.locate_current_index() {
@@ -135,8 +137,8 @@ impl EditorHistory {
     /// This is the underlying function that enables redo. It changes the current index to
     /// the next index in the versions buffer.
     ///
-    /// You can call [EditorHistory::undo()] to undo, as long as the current index is not
-    /// at the start of the versions buffer.
+    /// You can call [`EditorHistory::undo()`] to undo, as long as the current index is
+    /// not at the start of the versions buffer.
     pub fn redo(&mut self) -> Option<EditorContent> {
         match self.locate_current_index() {
             CurIndexLoc::EmptyHistory => {
@@ -157,7 +159,8 @@ impl EditorHistory {
         }
     }
 
-    /// Convenience method that calls [CurIndexLoc::locate()].
+    /// Convenience method that calls [`CurIndexLoc::locate()`].
+    #[must_use]
     pub fn locate_current_index(&self) -> CurIndexLoc {
         CurIndexLoc::locate(&self.current_index, &self.versions)
     }
@@ -172,13 +175,13 @@ mod impl_debug_format {
             let self_mem_size = self.get_mem_size();
             let size_fmt = format_as_kilobytes_with_commas(self_mem_size);
 
-            write! {
+            write!(
                 f,
-            "EditorHistory [index: {index:?} | versions.len(): {len} | size: {size}]",
+                "EditorHistory [index: {index:?} | versions.len(): {len} | size: {size}]",
                 len = self.versions.len().as_usize(),
                 size = size_fmt,
                 index = self.current_index.0
-            }
+            )
         }
     }
 }

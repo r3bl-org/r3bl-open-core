@@ -64,8 +64,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
         // Flush everything to the terminal.
         if !skip_flush {
-            RenderOp::default().flush(locked_output_device)
-        };
+            RenderOp::default().flush(locked_output_device);
+        }
 
         // Debug output.
         DEBUG_TUI_SHOW_PIPELINE.then(|| {
@@ -96,8 +96,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
         // Flush everything to the terminal.
         if !skip_flush {
-            RenderOp::default().flush(locked_output_device)
-        };
+            RenderOp::default().flush(locked_output_device);
+        }
 
         // Debug output.
         DEBUG_TUI_SHOW_PIPELINE.then(|| {
@@ -109,8 +109,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         });
     }
 
-    /// Process each [PixelChar] in [OffscreenBuffer] and generate a [RenderOp] for it.
-    /// Return a [RenderOps] containing all the [RenderOp]s.
+    /// Process each [`PixelChar`] in [`OffscreenBuffer`] and generate a [`RenderOp`] for
+    /// it. Return a [`RenderOps`] containing all the [`RenderOp`]s.
     ///
     /// > Note that each [PixelChar] gets the full [TuiStyle] embedded in it (not just a
     /// > part of it that is different than the previous char). This means that it is
@@ -121,7 +121,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     /// Here's the algorithm used in this function using pseudo-code:
     /// - When going thru every `PixelChar` in a line:
     ///   - If the `PixelChar` is `Void`, `Spacer`, or `PlainText` then handle
-    ///     (pixel_char_str, pixel_char_style)
+    ///     (`pixel_char_str`, `pixel_char_style`)
     ///     - `temp_line_buffer`: accumulates over loop iterations.
     ///     - `flush_temp_line_buffer()`: flushes.
     ///   - Make sure to flush at the:
@@ -211,12 +211,12 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
             it.push(RenderOp::MoveCursorPositionAbs(*position));
             it.push(RenderOp::ResetColor);
             match pixel_char {
-                PixelChar::Void => continue,
+                PixelChar::Void => { /* continue */ }
                 PixelChar::Spacer => {
                     it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                         SPACER_GLYPH.into(),
                         None,
-                    ))
+                    ));
                 }
                 PixelChar::PlainText {
                     text, maybe_style, ..
@@ -225,7 +225,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                     it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                         InlineString::from_str(text),
                         *maybe_style,
-                    ))
+                    ));
                 }
             }
         }
@@ -318,7 +318,7 @@ mod render_helpers {
         *context.display_col_index_for_line += *display_width;
 
         // Clear the buffer!
-        context.buffer_plain_text.clear()
+        context.buffer_plain_text.clear();
     }
 }
 

@@ -43,8 +43,8 @@ macro_rules! lock_output_device_as_mut {
 
 /// This struct represents an output device that can be used to write to the terminal.
 /// - It is safe to clone.
-/// - To write to it, see the examples in [Self::lock()] or [lock_output_device_as_mut]
-///   macro.
+/// - To write to it, see the examples in [`Self::lock()`] or
+///   [`lock_output_device_as_mut`] macro.
 #[derive(Clone)]
 pub struct OutputDevice {
     pub resource: SafeRawTerminal,
@@ -56,6 +56,7 @@ impl Default for OutputDevice {
 }
 
 impl OutputDevice {
+    #[must_use]
     pub fn new_stdout() -> Self {
         Self {
             resource: Arc::new(StdMutex::new(std::io::stdout())),
@@ -63,6 +64,7 @@ impl OutputDevice {
         }
     }
 
+    #[must_use]
     pub fn new_stderr() -> Self {
         Self {
             resource: Arc::new(StdMutex::new(std::io::stderr())),
@@ -86,6 +88,12 @@ impl OutputDevice {
     /// access the underlying resource in a thread-safe manner. The `MutexGuard` ensures
     /// that the resource is locked for the duration of the guard's lifetime, preventing
     /// other threads from accessing it simultaneously.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the mutex is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     pub fn lock(&self) -> std::sync::MutexGuard<'_, SendRawTerminal> {
         self.resource.lock().unwrap()
     }

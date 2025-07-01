@@ -30,16 +30,17 @@ use crate::{ok,
             LockedOutputDevice,
             RenderOps};
 
-/// Macro to make it easier to create a [RenderPipeline]. It works w/ [RenderOp] items. It
-/// allows them to be added in sequence, and then flushed at the end.
-/// 1. This pipeline is meant to hold a list of [RenderOp] items.
-/// 2. Once all the [RenderOp] items are added to the correct [ZOrder]s they can then be
-///    flushed at the end in order to [paint](RenderPipeline::paint()) them to the screen.
-/// 3. [get_render_order()](ZOrder::get_render_order) contains the priority that is used
-///    to paint the different groups of [RenderOp] items.
+/// Macro to make it easier to create a [`RenderPipeline`]. It works w/ [`RenderOp`]
+/// items. It allows them to be added in sequence, and then flushed at the end.
+/// 1. This pipeline is meant to hold a list of [`RenderOp`] items.
+/// 2. Once all the [`RenderOp`] items are added to the correct [`ZOrder`]s they can then
+///    be flushed at the end in order to [paint](RenderPipeline::paint()) them to the
+///    screen.
+/// 3. [`get_render_order()`](ZOrder::get_render_order) contains the priority that is used
+///    to paint the different groups of [`RenderOp`] items.
 ///
-/// This adds given [RenderOp]s to a [RenderOps] and adds that the the pipeline, but does
-/// not flush anything. It will return a [RenderPipeline].
+/// This adds given [`RenderOp`]s to a [`RenderOps`] and adds that the the pipeline, but
+/// does not flush anything. It will return a [`RenderPipeline`].
 ///
 /// Here's an example.
 ///
@@ -71,7 +72,7 @@ use crate::{ok,
 /// Decl macro docs:
 /// - <https://veykril.github.io/tlborm/decl-macros/macros-methodical.html#repetitions>
 ///
-/// HashMap docs:
+/// `HashMap` docs:
 /// - <https://doc.rust-lang.org/std/collections/struct.HashMap.html#examples>
 #[macro_export]
 macro_rules! render_pipeline {
@@ -150,7 +151,7 @@ macro_rules! render_pipeline {
 
 type PipelineMap = HashMap<ZOrder, InlineVec<RenderOps>>;
 
-/// See [render_pipeline!] for the documentation. Also consider using it instead of this
+/// See [`render_pipeline`!] for the documentation. Also consider using it instead of this
 /// struct directly for convenience.
 ///
 /// Here's an example.
@@ -166,7 +167,7 @@ type PipelineMap = HashMap<ZOrder, InlineVec<RenderOps>>;
 /// ```
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct RenderPipeline {
-    /// [RenderOps] to paint for each [ZOrder].
+    /// [`RenderOps`] to paint for each [`ZOrder`].
     pub pipeline_map: PipelineMap,
 }
 
@@ -189,7 +190,7 @@ impl RenderPipeline {
         }
     }
 
-    /// Add the given [RenderOps] to the pipeline at the given [ZOrder].
+    /// Add the given [`RenderOps`] to the pipeline at the given [`ZOrder`].
     pub fn push(&mut self, z_order: ZOrder, render_ops: RenderOps) {
         match self.pipeline_map.entry(z_order) {
             // Insert render_ops into existing set.
@@ -204,9 +205,10 @@ impl RenderPipeline {
         }
     }
 
-    /// At the given [ZOrder] there can be a [InlineVec] of [RenderOps]. Grab
-    /// all the [RenderOps] in the set, get all their [RenderOp] and return them in a
-    /// [InlineVec].
+    /// At the given [`ZOrder`] there can be a [`InlineVec`] of [`RenderOps`]. Grab
+    /// all the [`RenderOps`] in the set, get all their [`RenderOp`] and return them in a
+    /// [`InlineVec`].
+    #[must_use]
     pub fn get_all_render_op_in(&self, z_order: ZOrder) -> Option<InlineVec<RenderOp>> {
         let vec_render_ops = self.pipeline_map.get(&z_order)?;
         let mut vec_render_op: InlineVec<RenderOp> = smallvec![];
@@ -233,8 +235,8 @@ impl RenderPipeline {
         // fn #24
     }
 
-    /// Move the [RenderOps] in the 'from' [ZOrder] (in self) to the 'to' [ZOrder] (in
-    /// self).
+    /// Move the [`RenderOps`] in the 'from' [`ZOrder`] (in self) to the 'to' [`ZOrder`]
+    /// (in self).
     pub fn hoist(&mut self, z_order_from: ZOrder, z_order_to: ZOrder) {
         // If the 'from' [ZOrder] is not in the pipeline, then there's nothing to do.
         if !self.pipeline_map.contains_key(&z_order_from) {

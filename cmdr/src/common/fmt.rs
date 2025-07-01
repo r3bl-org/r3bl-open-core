@@ -25,12 +25,16 @@ use r3bl_tui::{InlineString,
                fg_soft_pink,
                inline_string};
 
+#[must_use]
 pub fn colon() -> InlineString { dim(":") }
 
+#[must_use]
 pub fn comma() -> InlineString { dim(",") }
 
+#[must_use]
 pub fn period() -> InlineString { dim(".") }
 
+#[must_use]
 pub fn exclamation() -> InlineString { dim("!") }
 
 /// Normal or default text style.

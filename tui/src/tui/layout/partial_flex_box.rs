@@ -20,7 +20,7 @@ use std::fmt::Debug;
 use super::{FlexBox, FlexBoxId};
 use crate::{Pos, Size, TuiStyle};
 
-/// Holds a subset of the fields in [FlexBox] that are required by the editor and dialog
+/// Holds a subset of the fields in [`FlexBox`] that are required by the editor and dialog
 /// engines.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct PartialFlexBox {
@@ -31,8 +31,10 @@ pub struct PartialFlexBox {
 }
 
 impl PartialFlexBox {
+    #[must_use]
     pub fn get_computed_style(&self) -> Option<TuiStyle> { self.maybe_computed_style }
 
+    #[must_use]
     pub fn get_style_adjusted_pos_and_dim(&self) -> (Pos, Size) {
         (
             self.style_adjusted_origin_pos,

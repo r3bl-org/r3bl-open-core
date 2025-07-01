@@ -55,7 +55,7 @@ macro_rules! tui_styled_texts {
     };
 }
 
-/// Use [tui_styled_texts!] macro for easier construction.
+/// Use [`tui_styled_texts`!] macro for easier construction.
 #[derive(Clone, Default)]
 pub struct TuiStyledTexts {
     pub inner: VecTuiStyledText,
@@ -65,8 +65,10 @@ mod impl_ops {
     use super::*;
 
     impl TuiStyledTexts {
+        #[must_use]
         pub fn len(&self) -> usize { self.inner.len() }
 
+        #[must_use]
         pub fn is_empty(&self) -> bool { self.inner.is_empty() }
     }
 
@@ -101,6 +103,7 @@ mod impl_display {
     }
 
     impl TuiStyledTexts {
+        #[must_use]
         pub fn display_width(&self) -> ColWidth {
             let plain_text = self.to_plain_text();
 

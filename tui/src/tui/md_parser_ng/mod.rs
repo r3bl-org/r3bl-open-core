@@ -53,14 +53,14 @@
 //! Most parsers in this module are **line parsers** that process a single line of text
 //! and return the remainder. These include:
 //!
-//! - **[mod@standard_ng]**: Common markdown elements (headings, text)
-//! - **[mod@extended_ng]**: Specialized formats (metadata, key-value pairs)
-//! - **[mod@fragment_ng]**: Inline elements (bold, italic, links, code spans)
+//! - **[`mod@standard_ng`]**: Common markdown elements (headings, text)
+//! - **[`mod@extended_ng`]**: Specialized formats (metadata, key-value pairs)
+//! - **[`mod@fragment_ng`]**: Inline elements (bold, italic, links, code spans)
 //!
 //! ### Block Parsers
 //! **Block parsers** handle multi-line structures that span across line boundaries:
 //!
-//! - **[mod@block_ng]**: Multi-line elements (code blocks, smart lists with nesting)
+//! - **[`mod@block_ng`]**: Multi-line elements (code blocks, smart lists with nesting)
 //!
 //! ## Virtual Array Technology
 //!
@@ -107,10 +107,11 @@ pub use standard_ng::*;
 pub mod compatibility_test_suite;
 
 // Export for tests and examples.
-/// Returns the real-world markdown content from the ex_editor example.
+/// Returns the real-world markdown content from the `ex_editor` example.
 /// This content includes emojis in headings, nested lists, code blocks, metadata,
 /// and other complex markdown features that help identify parser compatibility
 /// issues.
+#[must_use]
 pub fn get_real_world_editor_content() -> &'static [&'static str] {
     &[
         "0         1         2         3         4         5         6",

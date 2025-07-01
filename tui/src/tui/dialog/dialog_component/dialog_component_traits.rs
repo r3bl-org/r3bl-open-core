@@ -22,9 +22,9 @@ use crate::{DialogBuffer, FlexBoxId, InlineString, TerminalWindowMainThreadSigna
 /// This marker trait is meant to be implemented by whatever state struct is being used to
 /// store the dialog buffer for this re-usable editor component.
 ///
-/// It is used in the `where` clause of the [crate::DialogComponent] to ensure that the
+/// It is used in the `where` clause of the [`crate::DialogComponent`] to ensure that the
 /// generic type `S` implements this trait, guaranteeing that it holds a single
-/// [DialogBuffer].
+/// [`DialogBuffer`].
 pub trait HasDialogBuffers {
     fn get_mut_dialog_buffer(&mut self, id: FlexBoxId) -> Option<&mut DialogBuffer>;
 }

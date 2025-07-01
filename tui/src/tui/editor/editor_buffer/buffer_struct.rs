@@ -45,55 +45,56 @@ use crate::{caret_locate,
             DEFAULT_SYN_HI_FILE_EXT};
 
 /// Stores the data for a single editor buffer. Please do not construct this struct
-/// directly and use [new_empty](EditorBuffer::new_empty) instead.
+/// directly and use [`new_empty`](EditorBuffer::new_empty) instead.
 ///
 /// 1. This struct is stored in the app's state.
-/// 2. And it is paired w/ [crate::EditorEngine] at runtime; which is responsible for
+/// 2. And it is paired w/ [`crate::EditorEngine`] at runtime; which is responsible for
 ///    rendering it to TUI, and handling user input.
 ///
 /// # Change state during render
 ///
 /// This struct is not mutable during render phase. If you need to make changes during
-/// the render phase, then you should use the [crate::EditorEngine] struct, which is
+/// the render phase, then you should use the [`crate::EditorEngine`] struct, which is
 /// mutable during render phase.
 ///
 /// # Modifying the buffer
 ///
-/// [crate::InputEvent] is converted into an [crate::EditorEvent] (by
-/// [crate::engine_public_api::apply_event], which is then used to modify the
-/// [EditorBuffer] via:
-/// 1. [crate::EditorEvent::apply_editor_event]
-/// 2. [crate::EditorEvent::apply_editor_events]
+/// [`crate::InputEvent`] is converted into an [`crate::EditorEvent`] (by
+/// [`crate::engine_public_api::apply_event`], which is then used to modify the
+/// [`EditorBuffer`] via:
+/// 1. [`crate::EditorEvent::apply_editor_event`]
+/// 2. [`crate::EditorEvent::apply_editor_events`]
 ///
 /// In order for the commands to be executed, the functions in
-/// [mod@crate::editor_engine::engine_internal_api] are used.
+/// [`mod@crate::editor_engine::engine_internal_api`] are used.
 ///
 /// These functions take any one of the following args:
-/// 1. [crate::EditorArgsMut]
-/// 3. [EditorBuffer] and [crate::EditorEngine]
+/// 1. [`crate::EditorArgsMut`]
+/// 3. [`EditorBuffer`] and [`crate::EditorEngine`]
 ///
 /// # Accessing and mutating the fields (w/ validation)
 ///
 /// All the fields in this struct are private. In order to access them you have to use the
 /// accessor associated functions. To mutate them, you have to use the
-/// [get_mut](EditorBuffer::get_mut) method, which returns a struct of mutable references
-/// to the fields. This struct [crate::EditorBufferMut] implements the [Drop] trait, which
-/// allows for validation
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation] operations to
+/// [`get_mut`](EditorBuffer::get_mut) method, which returns a struct of mutable
+/// references to the fields. This struct [`crate::EditorBufferMut`] implements the [Drop]
+/// trait, which allows for validation
+/// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`] operations to
 /// be applied post mutation.
 ///
 /// # Kinds of caret positions
 ///
 /// There are two variants for the caret position value:
-/// 1. [CaretRaw] - this is the position of the caret (unadjusted for `scr_ofs`) and this
-///    represents the position of the caret in the viewport.
-/// 2. [CaretScrAdj] - this is the position of the caret (adjusted for `scr_ofs`) and
+/// 1. [`CaretRaw`] - this is the position of the caret (unadjusted for `scr_ofs`) and
+///    this represents the position of the caret in the viewport.
+/// 2. [`CaretScrAdj`] - this is the position of the caret (adjusted for `scr_ofs`) and
 ///    represents the position of the caret in the buffer (not the viewport).
 ///
 /// # Fields
 ///
 /// Please don't mutate these fields directly, they are not marked `pub` to guard from
-/// unintentional mutation. To mutate or access it, use [get_mut](EditorBuffer::get_mut).
+/// unintentional mutation. To mutate or access it, use
+/// [`get_mut`](EditorBuffer::get_mut).
 ///
 /// ## `lines`
 ///
@@ -102,7 +103,7 @@ use crate::{caret_locate,
 /// ## `caret_raw`
 ///
 /// This is the "display" col index (grapheme-cluster-based) and not "logical" col index
-/// (byte-based) position (both are defined in [crate::tui_core::graphemes]).
+/// (byte-based) position (both are defined in [`crate::tui_core::graphemes`]).
 ///
 /// > Please review [crate::tui_core::graphemes::GCString], specifically the
 /// > methods in [mod@crate::tui_core::graphemes::gc_string] for more details on how
@@ -118,9 +119,9 @@ use crate::{caret_locate,
 /// > - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA)
 ///
 /// 1. It represents the current caret position (relative to the
-///    [style_adjusted_origin_pos](crate::FlexBox::style_adjusted_origin_pos) of the
-///    enclosing [crate::FlexBox]).
-/// 2. It works w/ [crate::RenderOp::MoveCursorPositionRelTo] as well.
+///    [`style_adjusted_origin_pos`](crate::FlexBox::style_adjusted_origin_pos) of the
+///    enclosing [`crate::FlexBox`]).
+/// 2. It works w/ [`crate::RenderOp::MoveCursorPositionRelTo`] as well.
 ///
 /// > 💡 For the diagrams below, the caret is where `⮬` and `❱` intersects.
 ///
@@ -151,7 +152,7 @@ use crate::{caret_locate,
 /// ## `scr_ofs`
 ///
 /// The col and row offset for scrolling if active. This is not marked pub to guard
-/// against unintentional mutation. To access it, use [get_mut](EditorBuffer::get_mut).
+/// against unintentional mutation. To access it, use [`get_mut`](EditorBuffer::get_mut).
 ///
 /// # Vertical scrolling and viewport
 ///
@@ -191,14 +192,14 @@ use crate::{caret_locate,
 ///
 /// This is used for syntax highlighting. It is a 2-character string, eg: `rs` or `md`
 /// that is used to look up the syntax highlighting rules for the language in
-/// [find_syntax_by_extension[syntect::parsing::SyntaxSet::find_syntax_by_extension].
+/// [`find_syntax_by_extension`[`syntect::parsing::SyntaxSet::find_syntax_by_extension`].
 ///
 /// ## `selection_map`
 ///
-/// The [SelectionList] is used to keep track of the selections in the buffer. Each entry
-/// in the list represents a row of text in the buffer.
-/// - The row index is the key [crate::RowIndex].
-/// - The value is the [crate::SelectionRange].
+/// The [`SelectionList`] is used to keep track of the selections in the buffer. Each
+/// entry in the list represents a row of text in the buffer.
+/// - The row index is the key [`crate::RowIndex`].
+/// - The value is the [`crate::SelectionRange`].
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorBuffer {
     pub content: EditorContent,
@@ -209,11 +210,11 @@ pub struct EditorBuffer {
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorContent {
     pub lines: sizing::VecEditorContentLines,
-    /// The caret is stored as a "raw" [EditorContent::caret_raw].
+    /// The caret is stored as a "raw" [`EditorContent::caret_raw`].
     /// - This is the col and row index that is relative to the viewport.
     /// - In order to get the "scroll adjusted" caret position, use
-    ///   [EditorBuffer::get_caret_scr_adj], which incorporates the
-    ///   [EditorContent::scr_ofs].
+    ///   [`EditorBuffer::get_caret_scr_adj`], which incorporates the
+    ///   [`EditorContent::scr_ofs`].
     pub caret_raw: CaretRaw,
     pub scr_ofs: ScrOfs,
     pub maybe_file_extension: Option<TinyInlineString>,
@@ -227,6 +228,7 @@ mod construct {
     impl EditorBuffer {
         /// Marker method to make it easy to search for where an empty instance is
         /// created.
+        #[must_use]
         pub fn new_empty(
             maybe_file_extension: Option<&str>,
             maybe_file_path: Option<&str>,
@@ -234,8 +236,8 @@ mod construct {
             let it = Self {
                 content: EditorContent {
                     lines: { smallvec!["".grapheme_string()] },
-                    maybe_file_extension: maybe_file_extension.map(|it| it.into()),
-                    maybe_file_path: maybe_file_path.map(|it| it.into()),
+                    maybe_file_extension: maybe_file_extension.map(Into::into),
+                    maybe_file_path: maybe_file_path.map(Into::into),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -316,12 +318,14 @@ pub mod content_display_width {
     use super::*;
 
     impl EditorBuffer {
+        #[must_use]
         pub fn get_max_row_index(&self) -> RowIndex {
             // Subtract 1 from the height to get the last row index.
             height(self.get_lines().len()).convert_to_row_index()
         }
 
         /// Get line display with at caret's scroll adjusted row index.
+        #[must_use]
         pub fn get_line_display_width_at_caret_scr_adj(&self) -> ColWidth {
             Self::impl_get_line_display_width_at_caret_scr_adj(
                 self.get_caret_raw(),
@@ -331,7 +335,8 @@ pub mod content_display_width {
         }
 
         /// Get line display with at caret's scroll adjusted row index. Use this when you
-        /// don't have access to this struct. Eg: in [crate::EditorBufferMut].
+        /// don't have access to this struct. Eg: in [`crate::EditorBufferMut`].
+        #[must_use]
         pub fn impl_get_line_display_width_at_caret_scr_adj(
             caret_raw: CaretRaw,
             scr_ofs: ScrOfs,
@@ -348,6 +353,7 @@ pub mod content_display_width {
         }
 
         /// Get line display with at given scroll adjusted row index.
+        #[must_use]
         pub fn get_line_display_width_at_row_index(
             &self,
             row_index: RowIndex,
@@ -357,6 +363,7 @@ pub mod content_display_width {
 
         /// Get line display with at given scroll adjusted row index. Use this when you
         /// don't have access to this struct.
+        #[must_use]
         pub fn impl_get_line_display_width_at_row_index(
             row_index: RowIndex,
             lines: &sizing::VecEditorContentLines,
@@ -376,10 +383,12 @@ pub mod content_near_caret {
     use super::*;
 
     impl EditorBuffer {
+        #[must_use]
         pub fn line_at_caret_is_empty(&self) -> bool {
             self.get_line_display_width_at_caret_scr_adj() == width(0)
         }
 
+        #[must_use]
         pub fn line_at_caret_scr_adj(&self) -> Option<&GCString> {
             if self.is_empty() {
                 return None;
@@ -389,6 +398,7 @@ pub mod content_near_caret {
             Some(line)
         }
 
+        #[must_use]
         pub fn string_at_end_of_line_at_caret_scr_adj(&self) -> Option<SegString> {
             if self.is_empty() {
                 return None;
@@ -403,6 +413,7 @@ pub mod content_near_caret {
             None
         }
 
+        #[must_use]
         pub fn string_to_right_of_caret(&self) -> Option<SegString> {
             if self.is_empty() {
                 return None;
@@ -416,6 +427,7 @@ pub mod content_near_caret {
             }
         }
 
+        #[must_use]
         pub fn string_to_left_of_caret(&self) -> Option<SegString> {
             if self.is_empty() {
                 return None;
@@ -429,6 +441,7 @@ pub mod content_near_caret {
             }
         }
 
+        #[must_use]
         pub fn prev_line_above_caret(&self) -> Option<&GCString> {
             if self.is_empty() {
                 return None;
@@ -443,6 +456,7 @@ pub mod content_near_caret {
             Some(line)
         }
 
+        #[must_use]
         pub fn string_at_caret(&self) -> Option<SegString> {
             if self.is_empty() {
                 return None;
@@ -453,6 +467,7 @@ pub mod content_near_caret {
             Some(seg_string)
         }
 
+        #[must_use]
         pub fn next_line_below_caret_to_string(&self) -> Option<&GCString> {
             if self.is_empty() {
                 return None;
@@ -469,6 +484,7 @@ pub mod access_and_mutate {
     use super::*;
 
     impl EditorBuffer {
+        #[must_use]
         pub fn is_file_extension_default(&self) -> bool {
             match self.content.maybe_file_extension {
                 Some(ref ext) => ext == DEFAULT_SYN_HI_FILE_EXT,
@@ -476,10 +492,12 @@ pub mod access_and_mutate {
             }
         }
 
+        #[must_use]
         pub fn has_file_extension(&self) -> bool {
             self.content.maybe_file_extension.is_some()
         }
 
+        #[must_use]
         pub fn get_maybe_file_extension(&self) -> Option<&str> {
             match self.content.maybe_file_extension {
                 Some(ref s) => Some(s.as_str()),
@@ -487,25 +505,32 @@ pub mod access_and_mutate {
             }
         }
 
+        #[must_use]
         pub fn is_empty(&self) -> bool { self.content.lines.is_empty() }
 
+        #[must_use]
         pub fn line_at_row_index(&self, row_index: RowIndex) -> Option<&GCString> {
             self.content.lines.get(row_index.as_usize())
         }
 
+        #[must_use]
         pub fn len(&self) -> RowHeight { height(self.content.lines.len()) }
 
+        #[must_use]
         pub fn get_lines(&self) -> &sizing::VecEditorContentLines { &self.content.lines }
 
+        #[must_use]
         pub fn get_as_string_with_comma_instead_of_newlines(&self) -> InlineString {
             self.get_as_string_with_separator(", ")
         }
 
+        #[must_use]
         pub fn get_as_string_with_newlines(&self) -> InlineString {
             self.get_as_string_with_separator("\n")
         }
 
-        /// Helper function to format the [EditorBuffer] as a delimited string.
+        /// Helper function to format the [`EditorBuffer`] as a delimited string.
+        #[must_use]
         pub fn get_as_string_with_separator(&self, separator: &str) -> InlineString {
             with_mut!(
                 InlineString::new(),
@@ -558,26 +583,29 @@ pub mod access_and_mutate {
             self.history.clear();
         }
 
+        #[must_use]
         pub fn get_caret_raw(&self) -> CaretRaw { self.content.caret_raw }
 
+        #[must_use]
         pub fn get_caret_scr_adj(&self) -> CaretScrAdj {
             self.content.caret_raw + self.content.scr_ofs
         }
 
+        #[must_use]
         pub fn get_scr_ofs(&self) -> ScrOfs { self.content.scr_ofs }
 
-        /// Even though this struct is mutable by editor_ops.rs, this method is provided
+        /// Even though this struct is mutable by `editor_ops.rs`, this method is provided
         /// to mark when mutable access is made to this struct.
         ///
         /// This makes it easy to determine what code mutates this struct, since it is
-        /// necessary to validate things after mutation quite a bit in editor_ops.rs.
+        /// necessary to validate things after mutation quite a bit in `editor_ops.rs`.
         ///
-        /// [crate::EditorBufferMut] implements the [Drop] trait, which ensures that any
-        /// validation changes are applied after making changes to the [EditorBuffer].
+        /// [`crate::EditorBufferMut`] implements the [Drop] trait, which ensures that any
+        /// validation changes are applied after making changes to the [`EditorBuffer`].
         ///
-        /// Note that if `vp` is [crate::dummy_viewport()] that means that the viewport
-        /// argument was not passed in from a [crate::EditorEngine], since this method can
-        /// be called without having an instance of that type.
+        /// Note that if `vp` is [`crate::dummy_viewport()`] that means that the viewport
+        /// argument was not passed in from a [`crate::EditorEngine`], since this method
+        /// can be called without having an instance of that type.
         pub fn get_mut(&mut self, vp: Size) -> EditorBufferMutWithDrop<'_> {
             EditorBufferMutWithDrop::new(
                 &mut self.content.lines,
@@ -588,10 +616,10 @@ pub mod access_and_mutate {
             )
         }
 
-        /// This is a special case of [EditorBuffer::get_mut] where the [Drop] trait is
+        /// This is a special case of [`EditorBuffer::get_mut`] where the [Drop] trait is
         /// not used to perform validation checks after mutation. This is useful when you
         /// don't want to run validation checks after mutation, which happens when the
-        /// window is resized using [mod@crate::validate_scroll_on_resize].
+        /// window is resized using [`mod@crate::validate_scroll_on_resize`].
         pub fn get_mut_no_drop(&mut self, vp: Size) -> EditorBufferMutNoDrop<'_> {
             EditorBufferMutNoDrop::new(
                 &mut self.content.lines,
@@ -602,10 +630,12 @@ pub mod access_and_mutate {
             )
         }
 
+        #[must_use]
         pub fn has_selection(&self) -> bool { !self.content.sel_list.is_empty() }
 
         pub fn clear_selection(&mut self) { self.content.sel_list.clear(); }
 
+        #[must_use]
         pub fn get_selection_list(&self) -> &SelectionList { &self.content.sel_list }
     }
 }
@@ -615,15 +645,15 @@ mod debug_format {
 
     impl Debug for EditorBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            write! {
+            write!(
                 f,
-"EditorBuffer [
+                "EditorBuffer [
   - content: {content:?}
   - history: {history:?}
 ]",
                 content = self.content,
                 history = self.history,
-            }
+            )
         }
     }
 

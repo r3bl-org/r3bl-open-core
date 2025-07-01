@@ -48,7 +48,10 @@ const FRUIT_NAMES: [&str; 20] = [
     "pomegranate",
 ];
 
+#[must_use]
 pub fn generate_friendly_strongly_random_id() -> InlineString {
+    use std::fmt::Write as _;
+
     let mut rng: ThreadRng = rand::rng();
 
     let pet = PET_NAMES[rng.random_range(0..PET_NAMES.len())];
@@ -61,13 +64,15 @@ pub fn generate_friendly_strongly_random_id() -> InlineString {
 
     let uuid = uuid::Uuid::new_v4();
 
-    use std::fmt::Write as _;
     _ = write!(acc, "{pet}-{fruit}-{number:03}-{uuid}");
 
     acc
 }
 
+#[must_use]
 pub fn generate_friendly_random_id() -> InlineString {
+    use std::fmt::Write as _;
+
     let mut rng: ThreadRng = rand::rng();
 
     let pet = PET_NAMES[rng.random_range(0..PET_NAMES.len())];
@@ -77,7 +82,7 @@ pub fn generate_friendly_random_id() -> InlineString {
     let mut acc = InlineString::with_capacity(
         pet.len() + fruit.len() + 3 + 2, // 3 for the number, 2 for the dashes
     );
-    use std::fmt::Write as _;
+
     _ = write!(acc, "{pet}-{fruit}-{number:03}");
 
     acc
@@ -89,10 +94,10 @@ mod tests {
 
     #[test]
     fn test_all_constants_are_lowercase() {
-        for name in PET_NAMES.iter() {
+        for name in &PET_NAMES {
             assert_eq!(name, &name.to_lowercase());
         }
-        for name in FRUIT_NAMES.iter() {
+        for name in &FRUIT_NAMES {
             assert_eq!(name, &name.to_lowercase());
         }
     }

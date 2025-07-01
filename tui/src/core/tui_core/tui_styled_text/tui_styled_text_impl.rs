@@ -24,7 +24,7 @@ use crate::TuiStyle;
 pub(in crate::core::tui_core::tui_styled_text) mod sizing {
     use super::*;
 
-    /// Default internal storage for [TuiStyledText], which is very small.
+    /// Default internal storage for [`TuiStyledText`], which is very small.
     pub(crate) type StringTuiStyledText = SmallString<[u8; MAX_CHARS_IN_SMALL_STRING]>;
     const MAX_CHARS_IN_SMALL_STRING: usize = 8;
 
@@ -32,7 +32,7 @@ pub(in crate::core::tui_core::tui_styled_text) mod sizing {
     const MAX_ITEMS_IN_SMALL_VEC: usize = 32;
 }
 
-/// Macro to make building [TuiStyledText] easy.
+/// Macro to make building [`TuiStyledText`] easy.
 ///
 /// Here's an example.
 /// ```
@@ -52,7 +52,7 @@ macro_rules! tui_styled_text {
     };
 }
 
-/// Use [tui_styled_text!] macro for easier construction.
+/// Use [`tui_styled_text`!] macro for easier construction.
 #[derive(Debug, Clone)]
 pub struct TuiStyledText {
     pub style: TuiStyle,
@@ -76,7 +76,9 @@ impl TuiStyledText {
         }
     }
 
+    #[must_use]
     pub fn get_text(&self) -> &str { self.text.as_str() }
 
+    #[must_use]
     pub fn get_style(&self) -> &TuiStyle { &self.style }
 }

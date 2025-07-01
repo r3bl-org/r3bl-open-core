@@ -22,6 +22,7 @@ use crate::common::fmt;
 
 pub const CURRENT_BRANCH_PREFIX: &str = "(◕‿◕)";
 
+#[must_use]
 pub fn unrecoverable_error_msg(report: miette::Report) -> InlineString {
     inline_string!(
         "{a}{b}\n{c}",
@@ -31,20 +32,24 @@ pub fn unrecoverable_error_msg(report: miette::Report) -> InlineString {
     )
 }
 
+#[must_use]
 pub fn noop_msg() -> InlineString { fmt::normal("Nothing was selected to run.") }
 
+#[must_use]
 pub fn invalid_branch_sub_command_msg() -> InlineString {
     fmt::normal("Nothing was selected to run, since the branch sub command is invalid.")
 }
 
 /// This is unformatted text. The formatting is applied by the caller.
-pub fn please_select_branch_sub_command_msg_raw() -> &'static str {
+#[must_use]
+pub const fn please_select_branch_sub_command_msg_raw() -> &'static str {
     "Please select a branch subcommand:"
 }
 
 pub mod modified_files_display {
     use super::*;
 
+    #[must_use]
     pub fn warn_modified_files_exist_msg(branch_name: &str) -> InlineString {
         inline_string!(
             "{a}{b} {c}{d}",
@@ -60,10 +65,12 @@ pub mod branch_checkout_display {
     use super::*;
 
     /// This is unformatted text. The formatted is applied by the caller.
-    pub fn select_branch_to_switch_to_msg_raw() -> &'static str {
+    #[must_use]
+    pub const fn select_branch_to_switch_to_msg_raw() -> &'static str {
         "Select a branch to switch to:"
     }
 
+    #[must_use]
     pub fn info_checkout_success_msg(
         branch_name: &str,
         current_branch: &str,
@@ -75,10 +82,12 @@ pub mod branch_checkout_display {
         }
     }
 
+    #[must_use]
     pub fn no_suitable_branch_available_msg() -> InlineString {
         fmt::normal("No suitable branch is available for checkout.")
     }
 
+    #[must_use]
     pub fn info_already_on_current_branch_msg(branch_name: &str) -> InlineString {
         inline_string!(
             "{a} {b}{c}",
@@ -88,6 +97,7 @@ pub mod branch_checkout_display {
         )
     }
 
+    #[must_use]
     pub fn info_switched_to_branch_msg(branch_name: &str) -> InlineString {
         inline_string!(
             "{a} {b}{c}",
@@ -97,6 +107,7 @@ pub mod branch_checkout_display {
         )
     }
 
+    #[must_use]
     pub fn error_branch_does_not_exist_msg(branch_name: &str) -> InlineString {
         inline_string!(
             "{a}{b} {c}{d}",
@@ -107,6 +118,7 @@ pub mod branch_checkout_display {
         )
     }
 
+    #[must_use]
     pub fn error_failed_to_checkout_branch_msg(branch_name: &str) -> InlineString {
         inline_string!(
             "{a}{b} {c}{d}",
@@ -121,6 +133,7 @@ pub mod branch_checkout_display {
 pub mod branch_create_display {
     use super::*;
 
+    #[must_use]
     pub fn enter_branch_name_you_want_to_create() -> InlineString {
         inline_string!(
             "{a}{b}{c} ",
@@ -130,11 +143,13 @@ pub mod branch_create_display {
         )
     }
 
-    /// This is the [r3bl_tui::CommandRunResult::Noop] message.
+    /// This is the [`r3bl_tui::CommandRunResult::Noop`] message.
+    #[must_use]
     pub fn info_no_branch_created() -> InlineString {
         fmt::normal("No new branch was created.")
     }
 
+    #[must_use]
     pub fn info_create_success(branch_name: &str) -> InlineString {
         inline_string!(
             "{a} ✅ {b}.",
@@ -143,6 +158,7 @@ pub mod branch_create_display {
         )
     }
 
+    #[must_use]
     pub fn info_branch_already_exists(branch_name: &str) -> InlineString {
         inline_string!(
             "{a} {b} {c}!",
@@ -152,6 +168,7 @@ pub mod branch_create_display {
         )
     }
 
+    #[must_use]
     pub fn error_failed_to_create_new_branch(branch_name: &str) -> InlineString {
         inline_string!(
             "{a} {b}!",
@@ -164,15 +181,18 @@ pub mod branch_create_display {
 pub mod branch_delete_display {
     use super::*;
 
+    #[must_use]
     pub fn info_unable_to_msg() -> InlineString {
         fmt::normal("Branch not found or is currently checked out.")
     }
 
+    #[must_use]
     pub fn info_chose_not_to_msg() -> InlineString {
         fmt::normal("You chose not to delete any branches.")
     }
 
     /// Put each deleted branch in a separate line.
+    #[must_use]
     pub fn info_success_msg(branches: &ItemsOwned) -> InlineString {
         debug_assert!(!branches.is_empty());
 
@@ -191,6 +211,7 @@ pub mod branch_delete_display {
         acc
     }
 
+    #[must_use]
     pub fn error_failed_msg(
         branches: &ItemsOwned,
         maybe_output: Option<Output>,
@@ -267,19 +288,26 @@ pub mod branch_delete_display {
     }
 
     /// This is unformatted text. The formatting is applied by the caller.
-    pub fn yes_single_branch_msg_raw() -> &'static str { "Yes, delete branch" }
+    #[must_use]
+    pub const fn yes_single_branch_msg_raw() -> &'static str { "Yes, delete branch" }
 
     /// This is unformatted text. The formatting is applied by the caller.
-    pub fn yes_multiple_branches_msg_raw() -> &'static str { "Yes, delete branches" }
+    #[must_use]
+    pub const fn yes_multiple_branches_msg_raw() -> &'static str {
+        "Yes, delete branches"
+    }
 
     /// This is unformatted text. The formatting is applied by the caller.
-    pub fn exit_msg_raw() -> &'static str { "Exit" }
+    #[must_use]
+    pub const fn exit_msg_raw() -> &'static str { "Exit" }
 
     /// This is unformatted text. The formatting is applied by the caller.
-    pub fn select_branches_msg_raw() -> &'static str {
+    #[must_use]
+    pub const fn select_branches_msg_raw() -> &'static str {
         "Please select branches you want to delete:"
     }
 
+    #[must_use]
     pub fn confirm_single_branch_msg(branch_name: &str) -> InlineString {
         inline_string!(
             "{a}{b} {c}",
@@ -289,13 +317,14 @@ pub mod branch_delete_display {
         )
     }
 
+    #[must_use]
     pub fn confirm_multiple_branches_msg(
         num_of_branches: usize,
         branches_to_delete: &ItemsOwned,
     ) -> InlineString {
-        debug_assert!(branches_to_delete.len() > 1);
-
         use std::fmt::Write as _;
+
+        debug_assert!(branches_to_delete.len() > 1);
 
         let mut prefixed_branches_joined = InlineString::new();
         for (index, branch) in branches_to_delete.iter().enumerate() {

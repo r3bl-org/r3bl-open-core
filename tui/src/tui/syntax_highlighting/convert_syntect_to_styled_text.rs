@@ -18,17 +18,17 @@
 //! This module contains code for converting between syntect styled texts and tui styled
 //! texts.
 //!
-//! A [Vec] or [crate::List] of styled text represents a single line of text in an editor
-//! component, which is the output of a syntax highlighter (that takes plain text and
-//! returns the styled text).
+//! A [Vec] or [`crate::List`] of styled text represents a single line of text in an
+//! editor component, which is the output of a syntax highlighter (that takes plain text
+//! and returns the styled text).
 //!
 //! There is a major difference in doing this conversion which is:
 //! - tui styled texts are styled unicode strings,
 //! - while syntect styled texts are styled plain text strings.
 //!
 //! This requires the conversion code to perform the following steps:
-//! 1. Convert the syntect [SyntectStyleStrSpanLine] into a [StyleUSSpanLine].
-//! 2. Then convert [StyleUSSpanLine] into a [TuiStyledTexts].
+//! 1. Convert the syntect [`SyntectStyleStrSpanLine`] into a [`StyleUSSpanLine`].
+//! 2. Then convert [`StyleUSSpanLine`] into a [`TuiStyledTexts`].
 
 use syntect::parsing::SyntaxSet;
 
@@ -36,6 +36,7 @@ use super::{StyleUSSpan, StyleUSSpanLine};
 use crate::{tui_color,
             tui_style_attrib,
             tui_styled_text,
+            List,
             TuiColor,
             TuiStyle,
             TuiStyledTexts};
@@ -50,7 +51,7 @@ type SyntectColor = syntect::highlighting::Color;
 /// spans in a line of text.
 pub type SyntectStyleStrSpan<'a> = (SyntectStyle, &'a str);
 
-/// A line of text is made up of multiple [SyntectStyleStrSpan]s.
+/// A line of text is made up of multiple [`SyntectStyleStrSpan`]s.
 pub type SyntectStyleStrSpanLine<'a> = Vec<SyntectStyleStrSpan<'a>>;
 
 pub fn try_get_syntax_ref<'a>(
@@ -60,6 +61,7 @@ pub fn try_get_syntax_ref<'a>(
     syntax_set.find_syntax_by_extension(file_extension)
 }
 
+#[must_use]
 pub fn convert_style_from_syntect_to_tui(st_style: SyntectStyle) -> TuiStyle {
     TuiStyle {
         color_fg: Some(convert_color_from_syntect_to_tui(st_style.foreground)),
@@ -80,24 +82,17 @@ pub fn convert_style_from_syntect_to_tui(st_style: SyntectStyle) -> TuiStyle {
     }
 }
 
+#[must_use]
 pub fn convert_color_from_syntect_to_tui(st_color: SyntectColor) -> TuiColor {
     tui_color!(st_color.r, st_color.g, st_color.b)
 }
 
+#[must_use]
 pub fn convert_highlighted_line_from_syntect_to_tui(
     syntect_highlighted_line: SyntectStyleStrSpanLine<'_>,
 ) -> StyleUSSpanLine {
-    let mut it = convert(&syntect_highlighted_line);
-
-    // Remove the background color from each style in the theme.
-    for span in it.iter_mut() {
-        span.style.remove_bg_color();
-    }
-
-    return it;
-
     fn convert(vec_styled_str: &SyntectStyleStrSpanLine<'_>) -> StyleUSSpanLine {
-        let mut it: StyleUSSpanLine = Default::default();
+        let mut it: StyleUSSpanLine = List::default();
 
         for (style, text) in vec_styled_str {
             let my_style = convert_style_from_syntect_to_tui(*style);
@@ -106,8 +101,18 @@ pub fn convert_highlighted_line_from_syntect_to_tui(
 
         it
     }
+
+    let mut it = convert(&syntect_highlighted_line);
+
+    // Remove the background color from each style in the theme.
+    for span in it.iter_mut() {
+        span.style.remove_bg_color();
+    }
+
+    it
 }
 
+#[must_use]
 pub fn convert_span_line_from_syntect_to_tui_styled_texts(
     syntect_styles: &SyntectStyleStrSpanLine<'_>,
 ) -> TuiStyledTexts {
@@ -401,7 +406,7 @@ mod tests_convert_style_and_color {
     }
 
     #[test]
-    fn test_stylesheet() {
+    fn test_stylesheet_find_style_by_id() {
         let mut stylesheet = TuiStylesheet::new();
 
         let style1 = make_a_style(1);
@@ -414,47 +419,57 @@ mod tests_convert_style_and_color {
         result.unwrap();
         assert_eq2!(stylesheet.styles.len(), 2);
 
-        // Test find_style_by_id.
-        {
-            // No macro.
-            assert_eq2!(
-                stylesheet.find_style_by_id(1).unwrap().id,
-                tui_style_attrib::id(1)
-            );
-            assert_eq2!(
-                stylesheet.find_style_by_id(2).unwrap().id,
-                tui_style_attrib::id(2)
-            );
-            assert!(stylesheet.find_style_by_id(3).is_none());
-            // Macro.
-            assert_eq2!(
-                get_tui_style!(@from: stylesheet, 1).unwrap().id,
-                tui_style_attrib::id(1)
-            );
-            assert_eq2!(
-                get_tui_style!(@from: stylesheet, 2).unwrap().id,
-                tui_style_attrib::id(2)
-            );
-            assert!(get_tui_style!(@from: stylesheet, 3).is_none());
+        // No macro.
+        assert_eq2!(
+            stylesheet.find_style_by_id(1).unwrap().id,
+            tui_style_attrib::id(1)
+        );
+        assert_eq2!(
+            stylesheet.find_style_by_id(2).unwrap().id,
+            tui_style_attrib::id(2)
+        );
+        assert!(stylesheet.find_style_by_id(3).is_none());
+        // Macro.
+        assert_eq2!(
+            get_tui_style!(@from: stylesheet, 1).unwrap().id,
+            tui_style_attrib::id(1)
+        );
+        assert_eq2!(
+            get_tui_style!(@from: stylesheet, 2).unwrap().id,
+            tui_style_attrib::id(2)
+        );
+        assert!(get_tui_style!(@from: stylesheet, 3).is_none());
+    }
+
+    #[test]
+    fn test_stylesheet_find_styles_by_ids() {
+        fn assertions_for_find_styles_by_ids(result: &Option<InlineVec<TuiStyle>>) {
+            assert_eq2!(result.as_ref().unwrap().len(), 2);
+            assert_eq2!(result.as_ref().unwrap()[0].id, tui_style_attrib::id(1));
+            assert_eq2!(result.as_ref().unwrap()[1].id, tui_style_attrib::id(2));
         }
 
-        // Test find_styles_by_ids.
-        {
-            // Contains.
-            assertions_for_find_styles_by_ids(&stylesheet.find_styles_by_ids(&[1, 2]));
-            assertions_for_find_styles_by_ids(&get_tui_styles!(
-                @from: &stylesheet,
-                [1, 2]
-            ));
-            fn assertions_for_find_styles_by_ids(result: &Option<InlineVec<TuiStyle>>) {
-                assert_eq2!(result.as_ref().unwrap().len(), 2);
-                assert_eq2!(result.as_ref().unwrap()[0].id, tui_style_attrib::id(1));
-                assert_eq2!(result.as_ref().unwrap()[1].id, tui_style_attrib::id(2));
-            }
-            // Does not contain.
-            assert_eq2!(stylesheet.find_styles_by_ids(&[3, 4]), None);
-            assert_eq2!(get_tui_styles!(@from: stylesheet, [3, 4]), None);
-        }
+        let mut stylesheet = TuiStylesheet::new();
+
+        let style1 = make_a_style(1);
+        let result = stylesheet.add_style(style1);
+        result.unwrap();
+        assert_eq2!(stylesheet.styles.len(), 1);
+
+        let style2 = make_a_style(2);
+        let result = stylesheet.add_style(style2);
+        result.unwrap();
+        assert_eq2!(stylesheet.styles.len(), 2);
+
+        // Contains.
+        assertions_for_find_styles_by_ids(&stylesheet.find_styles_by_ids(&[1, 2]));
+        assertions_for_find_styles_by_ids(&get_tui_styles!(
+            @from: &stylesheet,
+            [1, 2]
+        ));
+        // Does not contain.
+        assert_eq2!(stylesheet.find_styles_by_ids(&[3, 4]), None);
+        assert_eq2!(get_tui_styles!(@from: stylesheet, [3, 4]), None);
     }
 
     #[test]

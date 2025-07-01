@@ -38,11 +38,12 @@ pub enum LineStateLiveness {
 }
 
 impl LineStateLiveness {
+    #[must_use]
     pub fn is_paused(&self) -> bool { matches!(self, LineStateLiveness::Paused) }
 }
 
 /// This struct actually handles the line editing, and rendering. This works hand in hand
-/// with the [crate::Readline] to make sure that the line is rendered correctly, with
+/// with the [`crate::Readline`] to make sure that the line is rendered correctly, with
 /// pause and resume support.
 pub struct LineState {
     /// Unicode line.
@@ -62,7 +63,7 @@ pub struct LineState {
     /// After pressing enter, should we print the line just submitted?
     pub should_print_line_on_enter: bool,
 
-    /// After pressing control_c should we print the line just cancelled?
+    /// After pressing `control_c` should we print the line just cancelled?
     pub should_print_line_on_control_c: bool,
 
     pub last_line_length: usize,
@@ -93,6 +94,7 @@ macro_rules! early_return_if_paused {
 }
 
 impl LineState {
+    #[must_use]
     pub fn new(prompt: String, term_size: (u16, u16)) -> Self {
         let mut memoized_len_map = MemoizedLenMap::new();
         let current_column =
@@ -114,15 +116,16 @@ impl LineState {
     }
 
     /// Update the paused state, which affects the following:
-    /// - Rendering the output from multiple [crate::SharedWriter]s. When paused nothing
-    ///   is rendered from them, and things like the [crate::Spinner] can be active.
-    /// - Handling user input while the [crate::Readline::readline] is awaiting user input
-    ///   (which is equivalent to awaiting [crate::ReadlineAsyncContext::read_line]).
+    /// - Rendering the output from multiple [`crate::SharedWriter`]s. When paused nothing
+    ///   is rendered from them, and things like the [`crate::Spinner`] can be active.
+    /// - Handling user input while the [`crate::Readline::readline`] is awaiting user
+    ///   input (which is equivalent to awaiting
+    ///   [`crate::ReadlineAsyncContext::read_line`]).
     ///
     /// This should not be called directly. Instead, use the mechanism provided by the
     /// following:
-    /// - [crate::SharedWriter::line_state_control_channel_sender]
-    /// - [tokio::sync::mpsc::channel]
+    /// - [`crate::SharedWriter::line_state_control_channel_sender`]
+    /// - [`tokio::sync::mpsc::channel`]
     pub fn set_paused(
         &mut self,
         is_paused: LineStateLiveness,
@@ -133,7 +136,7 @@ impl LineState {
 
         // When going from paused → unpaused, we need to clear and render the line.
         if !is_paused.is_paused() {
-            self.clear_and_render_and_flush(term)?
+            self.clear_and_render_and_flush(term)?;
         }
 
         ok!()
@@ -169,12 +172,21 @@ impl LineState {
     fn move_cursor(&mut self, change: isize) -> io::Result<()> {
         if change > 0 {
             let count = self.line.graphemes(true).count();
+
+            // We know that change is positive, so we can safely cast it to usize.
+            #[allow(clippy::cast_sign_loss)]
+            let change_usize = change as usize;
+
             self.line_cursor_grapheme =
-                usize::min(self.line_cursor_grapheme + change as usize, count);
+                usize::min(self.line_cursor_grapheme + change_usize, count);
         } else {
-            self.line_cursor_grapheme =
-                self.line_cursor_grapheme.saturating_sub((-change) as usize);
+            // Use unsigned_abs() to convert negative change to positive amount to
+            // subtract.
+            self.line_cursor_grapheme = self
+                .line_cursor_grapheme
+                .saturating_sub(change.unsigned_abs());
         }
+
         let (pos, str) = self.current_grapheme().unwrap_or((0, ""));
         let pos = pos + str.len();
 
@@ -271,9 +283,14 @@ impl LineState {
 
         // If last written data was not newline, restore the cursor
         if !self.last_line_completed {
+            // This cast is intentional to ensure that the last line length is
+            // represented as a u16, which is the type expected by crossterm's
+            // `MoveRight` command.
+            #[allow(clippy::cast_possible_truncation)]
+            let last_line_length_u16 = self.last_line_length as u16;
             term.queue(cursor::MoveUp(1))?
                 .queue(cursor::MoveToColumn(0))?
-                .queue(cursor::MoveRight(self.last_line_length as u16))?;
+                .queue(cursor::MoveRight(last_line_length_u16))?;
         }
 
         // Write data in a way that newlines also act as carriage returns
@@ -287,7 +304,9 @@ impl LineState {
         // If data does not end with newline, save the cursor and write newline for prompt
         // Usually data does end in newline due to the buffering of SharedWriter, but
         // sometimes it may not (i.e. if .flush() is called)
-        if !self.last_line_completed {
+        if self.last_line_completed {
+            self.last_line_length = 0;
+        } else {
             self.last_line_length += data.len();
             // Make sure that last_line_length wraps around when doing multiple writes
             if self.last_line_length >= self.term_size.0 as usize {
@@ -295,8 +314,6 @@ impl LineState {
                 writeln!(term)?;
             }
             writeln!(term)?; // Move to beginning of line and make new line
-        } else {
-            self.last_line_length = 0;
         }
 
         term.queue(cursor::MoveToColumn(0))?;
@@ -349,12 +366,17 @@ impl LineState {
     ) -> Result<(), ReadlineError> {
         early_return_if_paused!(self @Unit);
 
-        self.move_cursor(-100000)?;
+        self.move_cursor(-100_000)?;
         self.clear_and_render_and_flush(term)?;
 
         ok!()
     }
 
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn apply_event_and_render(
         &mut self,
@@ -401,7 +423,7 @@ impl LineState {
                     if let Some((pos, str)) = self.current_grapheme() {
                         let pos = pos + str.len();
                         self.line.drain(0..pos);
-                        self.move_cursor(-100000)?;
+                        self.move_cursor(-100_000)?;
                         self.clear_and_render_and_flush(term)?;
                     }
                 }
@@ -442,7 +464,7 @@ impl LineState {
                     early_return_if_paused!(self @None);
 
                     self.reset_cursor(term)?;
-                    self.move_cursor(-100000)?;
+                    self.move_cursor(-100_000)?;
                     self.set_cursor(term)?;
 
                     term.flush()?;
@@ -453,7 +475,7 @@ impl LineState {
                     early_return_if_paused!(self @None);
 
                     self.reset_cursor(term)?;
-                    self.move_cursor(100000)?;
+                    self.move_cursor(100_000)?;
                     self.set_cursor(term)?;
 
                     term.flush()?;
@@ -476,7 +498,7 @@ impl LineState {
                         let change = pos as isize - self.line_cursor_grapheme as isize;
                         self.move_cursor(change + 1)?;
                     } else {
-                        self.move_cursor(-100000)?
+                        self.move_cursor(-100_000)?;
                     }
                     self.set_cursor(term)?;
 
@@ -497,8 +519,8 @@ impl LineState {
                         let change = pos as isize - self.line_cursor_grapheme as isize;
                         self.move_cursor(change)?;
                     } else {
-                        self.move_cursor(10000)?;
-                    };
+                        self.move_cursor(100_000)?;
+                    }
                     self.set_cursor(term)?;
 
                     term.flush()?;
@@ -570,13 +592,13 @@ impl LineState {
                     }
                     KeyCode::Home => {
                         self.reset_cursor(term)?;
-                        self.move_cursor(-100000)?;
+                        self.move_cursor(-100_000)?;
                         self.set_cursor(term)?;
                         term.flush()?;
                     }
                     KeyCode::End => {
                         self.reset_cursor(term)?;
-                        self.move_cursor(100000)?;
+                        self.move_cursor(100_000)?;
                         self.set_cursor(term)?;
                         term.flush()?;
                     }
@@ -586,7 +608,7 @@ impl LineState {
                             self.line.clear();
                             self.line += line;
                             self.clear(term)?;
-                            self.move_cursor(100000)?;
+                            self.move_cursor(100_000)?;
                             self.render_and_flush(term)?;
                         }
                     }
@@ -597,7 +619,7 @@ impl LineState {
                             self.line.clear();
                             self.line += line;
                             self.clear(term)?;
-                            self.move_cursor(100000)?;
+                            self.move_cursor(100_000)?;
                             self.render_and_flush(term)?;
                         }
                     }

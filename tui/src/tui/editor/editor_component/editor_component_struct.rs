@@ -42,11 +42,11 @@ use crate::{editor_engine::engine_public_api,
             DEFAULT_SYN_HI_FILE_EXT};
 
 #[derive(Debug)]
-/// This is a shim which allows the reusable [EditorEngine] to be used in the context of
-/// [crate::Component] and [crate::App].
+/// This is a shim which allows the reusable [`EditorEngine`] to be used in the context of
+/// [`crate::Component`] and [`crate::App`].
 ///
 /// The main methods here simply pass thru all their
-/// arguments to the [EditorEngine].
+/// arguments to the [`EditorEngine`].
 pub struct EditorComponent<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
@@ -98,11 +98,11 @@ pub mod editor_component_impl_component_trait {
 
         fn get_id(&self) -> FlexBoxId { self.data.id }
 
-        /// This shim simply calls [engine_public_api::render_engine] w/ all the
+        /// This shim simply calls [`engine_public_api::render_engine`] w/ all the
         /// necessary arguments:
-        /// - Global scope: [GlobalData] containing app state.
-        /// - Current box: [FlexBox] containing the current box's bounds.
-        /// - Has focus: [HasFocus] containing whether the current box has focus.
+        /// - Global scope: [`GlobalData`] containing app state.
+        /// - Current box: [`FlexBox`] containing the current box's bounds.
+        /// - Has focus: [`HasFocus`] containing whether the current box has focus.
         fn render(
             &mut self,
             global_data: &mut GlobalData<S, AS>,
@@ -132,13 +132,13 @@ pub mod editor_component_impl_component_trait {
             )
         }
 
-        /// This shim simply calls [engine_public_api::apply_event] w/ all the
+        /// This shim simply calls [`engine_public_api::apply_event`] w/ all the
         /// necessary arguments:
-        /// - Global scope: [GlobalData] (containing app state).
-        /// - User input (from [crate::main_event_loop]): [InputEvent].
+        /// - Global scope: [`GlobalData`] (containing app state).
+        /// - User input (from [`crate::main_event_loop`]): [`InputEvent`].
         ///
-        /// Usually a component must have focus in order for the [crate::App] to
-        /// [route_event_to_focused_component](crate::ComponentRegistry::route_event_to_focused_component)
+        /// Usually a component must have focus in order for the [`crate::App`] to
+        /// [`route_event_to_focused_component`](crate::ComponentRegistry::route_event_to_focused_component)
         /// in the first place.
         fn handle_event(
             &mut self,
@@ -202,9 +202,9 @@ pub mod constructor {
         S: Debug + Default + Clone + Sync + Send + HasEditorBuffers + 'static,
         AS: Debug + Default + Clone + Sync + Send + 'static,
     {
-        /// The on_change_handler is a lambda that is called if the editor buffer changes.
-        /// Typically this results in a Redux action being created and then
-        /// dispatched to the given store.
+        /// The `on_change_handler` is a lambda that is called if the editor buffer
+        /// changes. Typically this results in a Redux action being created and
+        /// then dispatched to the given store.
         pub fn new(
             id: FlexBoxId,
             config_options: EditorEngineConfig,

@@ -56,12 +56,12 @@ pub fn parse_fragment_starts_with_star_err_on_new_line_ng<'a>(
     delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(input, STAR)
 }
 
-/// For use with specialized parsers for: [crate::constants::UNDERSCORE],
-/// [crate::constants::STAR], and [crate::constants::BACK_TICK]. See:
-/// [crate::parse_fragment_plain_text_no_new_line()].
+/// For use with specialized parsers for: [`crate::constants::UNDERSCORE`],
+/// [`crate::constants::STAR`], and [`crate::constants::BACK_TICK`]. See:
+/// [`crate::parse_fragment_plain_text_no_new_line()`].
 ///
-/// To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
-/// in [crate::parse_fragments_in_a_line].
+/// To see this in action, set the [`DEBUG_MD_PARSER_STDOUT`] to true, and run all the
+/// tests in [`crate::parse_fragments_in_a_line`].
 pub mod delim_matchers {
     use nom::multi::many1;
 
@@ -73,6 +73,7 @@ pub mod delim_matchers {
     /// 1. does the input start with the delimiter?
     /// 2. is the input the delimiter?
     /// 3. the delimiter.
+    #[must_use]
     pub fn count_delim_occurrences_until_eol_or_eoi<'a>(
         input: AsStrSlice<'a>,
         delim: &'a str,

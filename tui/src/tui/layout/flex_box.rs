@@ -45,6 +45,7 @@ pub struct FlexBox {
 }
 
 impl FlexBox {
+    #[must_use]
     pub fn get_computed_style(&self) -> Option<TuiStyle> { self.maybe_computed_style }
 }
 

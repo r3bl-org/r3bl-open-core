@@ -15,12 +15,12 @@
  *   limitations under the License.
  */
 
-//! For use with specialized parsers for: [crate::constants::UNDERSCORE],
-//! [crate::constants::STAR], and [crate::constants::BACK_TICK]. See:
-//! [crate::parse_fragment_plain_text_no_new_line()].
+//! For use with specialized parsers for: [`crate::constants::UNDERSCORE`],
+//! [`crate::constants::STAR`], and [`crate::constants::BACK_TICK`]. See:
+//! [`crate::parse_fragment_plain_text_no_new_line()`].
 //!
-//! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
-//! in [crate::parse_fragments_in_a_line].
+//! To see this in action, set the [`DEBUG_MD_PARSER_STDOUT`] to true, and run all the
+//! tests in [`crate::parse_fragments_in_a_line`].
 
 use nom::{bytes::complete::tag,
           combinator::recognize,
@@ -40,6 +40,7 @@ use crate::{fg_blue,
 /// 1. does the input start with the delimiter?
 /// 2. is the input the delimiter?
 /// 3. the delimiter.
+#[must_use]
 pub fn count_delim_occurrences_until_eol<'i>(
     input: &'i str,
     delim: &'i str,
@@ -56,8 +57,8 @@ pub fn count_delim_occurrences_until_eol<'i>(
     )
 }
 
-/// See: [parse_fragment_plain_text_no_new_li
-/// ne1()].
+/// See: [`parse_fragment_plain_text_no_new_li`
+/// `ne1()`].
 #[rustfmt::skip]
 pub fn take_starts_with_delim_no_new_line<'i>(
     input: &'i str,

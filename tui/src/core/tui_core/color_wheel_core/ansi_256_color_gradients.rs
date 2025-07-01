@@ -84,6 +84,7 @@ pub static ANSI_256_GRADIENTS: [ANSIColorArray; 15] = [
     ANSIColorArray(&[22, 23, 24, 25, 26, 27]),
 ];
 
+#[must_use]
 pub fn get_gradient_array_for(
     ansi_256_gradient_index: Ansi256GradientIndex,
 ) -> &'static [u8] {
@@ -93,12 +94,12 @@ pub fn get_gradient_array_for(
 #[cfg(test)]
 mod ansi_256_gradients_test {
     use super::*;
-    use crate::assert_eq2;
+    use crate::{assert_eq2, LossyConvertToByte};
 
     #[test]
     fn test_all() {
         for (index, gradient) in ANSI_256_GRADIENTS.iter().enumerate() {
-            let gradient_index = Ansi256GradientIndex::from(index as u8);
+            let gradient_index = Ansi256GradientIndex::from(index.to_u8_lossy());
             assert_eq2!(gradient.0, get_gradient_array_for(gradient_index));
         }
     }

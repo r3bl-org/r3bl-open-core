@@ -55,7 +55,7 @@ impl Display for LayoutError {
 
 /// Implement constructor that is compatible w/ [`CommonResult<T>`].
 impl LayoutError {
-    /// Only [LayoutError::error_type] available, and no [LayoutError::error_message].
+    /// Only [`LayoutError::error_type`] available, and no [`LayoutError::error_message`].
     pub fn new_error_result_with_only_type<T>(
         err_type: LayoutErrorType,
     ) -> CommonResult<T> {
@@ -65,7 +65,7 @@ impl LayoutError {
         }))
     }
 
-    /// Both [LayoutError::error_type] and [LayoutError::error_message] available.
+    /// Both [`LayoutError::error_type`] and [`LayoutError::error_message`] available.
     pub fn new_error_result<T>(
         err_type: LayoutErrorType,
         msg: String,
@@ -76,6 +76,7 @@ impl LayoutError {
         }))
     }
 
+    #[must_use]
     pub fn format_msg_with_stack_len(stack_of_boxes: &[FlexBox], msg: &str) -> String {
         format!("{msg}, stack_of_boxes.len(): {}", stack_of_boxes.len())
     }

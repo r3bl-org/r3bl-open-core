@@ -99,14 +99,15 @@ mod impl_debug_format {
 
     impl Debug for State {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            write! { f,
-"State [
+            write!(
+                f,
+                "State [
 - dialog_buffers_map: {dialog:?}
 - editor_buffers_map: {editor:?}
 ]",
-                    dialog = self.dialog_buffers,
-                    editor = self.editor_buffers,
-            }
+                dialog = self.dialog_buffers,
+                editor = self.editor_buffers,
+            )
         }
     }
 }

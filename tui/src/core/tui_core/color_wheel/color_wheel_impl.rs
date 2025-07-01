@@ -27,6 +27,8 @@ use super::{config::sizing::VecSteps,
             ColorWheelSpeed,
             GradientKind,
             GradientLengthKind,
+            Lolcat,
+            LolcatBuilder,
             Seed};
 use crate::{ast,
             ch,
@@ -53,8 +55,8 @@ use crate::{ast,
             TuiStyledTexts};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
-/// reason these are exceeded, then they will [smallvec::SmallVec::spilled] over into the
-/// heap.
+/// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
+/// the heap.
 pub(in crate::core::tui_core) mod sizing {
     use super::*;
 
@@ -101,17 +103,18 @@ impl ColorWheel {
     /// memoize it when this function is called.
     ///
     /// 1. The heavy lifting is done when
-    ///    [generate_color_wheel](ColorWheel::generate_color_wheel) is called.
+    ///    [`generate_color_wheel`](ColorWheel::generate_color_wheel) is called.
     /// 2. When you use
-    ///    [colorize_into_styled_texts](ColorWheel::colorize_into_styled_texts) it will
+    ///    [`colorize_into_styled_texts`](ColorWheel::colorize_into_styled_texts) it will
     ///    also also call this method.
     ///
     /// # Arguments
     /// 1. `configs`: A list of color wheel configs. The order of the configs is not
     ///    important. However, at the very least, one Truecolor config & one ANSI 256
     ///    config should be provided. The fallback is always grayscale. See
-    ///    [ColorWheelConfig::narrow_config_based_on_color_support],
-    ///    [crate::global_color_support::detect] for more info.
+    ///    [`ColorWheelConfig::narrow_config_based_on_color_support`],
+    ///    [`crate::global_color_support::detect`] for more info.
+    #[must_use]
     pub fn new(configs: VecConfigs) -> Self {
         Self {
             configs,
@@ -122,27 +125,26 @@ impl ColorWheel {
             counter: ch(0),
         }
     }
-}
 
-impl ColorWheel {
     /// This method will return the index of the current color in the gradient. If the
     /// color wheel is a lolcat, then the seed * 1000 is returned. If the gradient has
     /// not been computed yet, then 0 is returned.
+    #[must_use]
     pub fn get_index(&self) -> ChUnit {
         match self.gradient_kind {
             GradientKind::ColorWheel(_) => self.index,
-            GradientKind::Lolcat(lolcat) => {
-                let seed = (*lolcat.color_wheel_control.seed * 1000.0) as usize;
-                ch(seed)
-            }
+            GradientKind::Lolcat(lolcat) => lolcat_helper::convert_lolcat_seed_to_index(
+                lolcat.color_wheel_control.seed,
+            ),
             GradientKind::NotCalculatedYet => ch(0),
         }
     }
 
     /// This method will return the length of the gradient. This is
-    /// [GradientLengthKind::NotCalculatedYet] if the gradient has not been computed &
+    /// [`GradientLengthKind::NotCalculatedYet`] if the gradient has not been computed &
     /// memoized yet via a call to
     /// [`generate_color_wheel`](ColorWheel::generate_color_wheel).
+    #[must_use]
     pub fn get_gradient_len(&self) -> GradientLengthKind { self.gradient_length_kind }
 
     pub fn get_gradient_kind(&mut self) -> &mut GradientKind { &mut self.gradient_kind }
@@ -167,63 +169,32 @@ impl ColorWheel {
         let my_config =
             ColorWheelConfig::narrow_config_based_on_color_support(&self.configs);
 
-        let steps: u8 = match maybe_steps_override {
-            // 1. Try use steps from `steps_override`.
-            Some(steps_override) => steps_override,
-            None => {
-                // 2. Try use steps from `ColorWheelConfig`.
-                if let ColorWheelConfig::Rgb(_, _, steps_from_config) = my_config {
-                    steps_from_config
-                }
-                // 3. Otherwise use the default.
-                else {
-                    Defaults::Steps as u8
-                }
-            }
-        };
+        let steps: u8 =
+            gradient_generation_helper::determine_steps(maybe_steps_override, &my_config);
 
         // Generate new gradient and replace the old one.
         // More info: https://github.com/Ogeon/palette/tree/master/palette#gradients
         match &my_config {
             ColorWheelConfig::Lolcat(builder) => {
-                self.gradient_kind = GradientKind::Lolcat(builder.build());
-                self.index = ch(0);
-                self.gradient_length_kind = GradientLengthKind::Lolcat(builder.seed);
+                gradient_generation_helper::set_lolcat_gradient(self, builder);
             }
 
             ColorWheelConfig::Rgb(color_stops, _, _) => {
                 // Generate new gradient.
                 let new_gradient = generate_truecolor_gradient(color_stops, steps);
-                self.gradient_length_kind =
-                    GradientLengthKind::ColorWheel(new_gradient.len());
-                self.gradient_kind = GradientKind::ColorWheel(new_gradient);
-                self.index = ch(0);
+                gradient_generation_helper::set_gradient_and_length(self, new_gradient);
             }
 
             ColorWheelConfig::RgbRandom(_) => {
                 // Generate new random gradient.
                 let new_gradient = generate_random_truecolor_gradient(steps);
-                self.gradient_length_kind =
-                    GradientLengthKind::ColorWheel(new_gradient.len());
-                self.gradient_kind = GradientKind::ColorWheel(new_gradient);
-                self.index = ch(0);
+                gradient_generation_helper::set_gradient_and_length(self, new_gradient);
             }
 
             ColorWheelConfig::Ansi256(index, _) => {
-                let gradient_vec = {
-                    let gradient_array = get_gradient_array_for(*index);
-                    let size_hint = gradient_array.len();
-                    let mut gradient_vec: VecSteps = VecSteps::with_capacity(size_hint);
-                    for color_u8 in gradient_array {
-                        // gradient_vec.push(TuiColor::Ansi(AnsiValue::new(*color_u8)));
-                        gradient_vec.push(tui_color!(ansi * color_u8));
-                    }
-                    gradient_vec
-                };
-                self.gradient_length_kind =
-                    GradientLengthKind::ColorWheel(gradient_vec.len());
-                self.gradient_kind = GradientKind::ColorWheel(gradient_vec);
-                self.index = ch(0);
+                let gradient_vec =
+                    gradient_generation_helper::generate_ansi256_gradient(*index);
+                gradient_generation_helper::set_gradient_and_length(self, gradient_vec);
             }
         }
 
@@ -246,63 +217,16 @@ impl ColorWheel {
         // Early return if lolcat.
         if let ColorWheelConfig::Lolcat(_) = &my_config {
             return if let GradientKind::Lolcat(lolcat) = &mut self.gradient_kind {
-                let new_color =
-                    color_helpers::get_color_tuple(&lolcat.color_wheel_control);
-                lolcat.color_wheel_control.seed +=
-                    Seed::from(lolcat.color_wheel_control.color_change_speed);
-                Some(tui_color!(new_color.0, new_color.1, new_color.2))
+                Some(lolcat_helper::generate_next_lolcat_color(lolcat))
             } else {
                 None
             };
         }
 
         // Determine if the index should be changed (depending on the speed).
-        let should_change_index: bool = {
-            let mut it = false;
-            match my_config {
-                ColorWheelConfig::Rgb(_, ColorWheelSpeed::Fast, _)
-                | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Fast)
-                | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Fast) => {
-                    if self.counter == ch(ColorWheelSpeed::Fast as u8) {
-                        // Reset counter & change index below.
-                        self.counter = ch(1);
-                        it = true;
-                    } else {
-                        // Increment counter, used for speed control.
-                        self.counter += 1;
-                    }
-                }
-
-                ColorWheelConfig::Rgb(_, ColorWheelSpeed::Medium, _)
-                | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Medium)
-                | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Medium) => {
-                    if self.counter == ch(ColorWheelSpeed::Medium as u8) {
-                        // Reset counter & change index below.
-                        self.counter = ch(1);
-                        it = true;
-                    } else {
-                        // Increment counter, used for speed control.
-                        self.counter += 1;
-                    }
-                }
-
-                ColorWheelConfig::Rgb(_, ColorWheelSpeed::Slow, _)
-                | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Slow)
-                | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Slow) => {
-                    if self.counter == ch(ColorWheelSpeed::Slow as u8) {
-                        // Reset counter & change index below.
-                        self.counter = ch(1);
-                        it = true;
-                    } else {
-                        // Increment counter, used for speed control.
-                        self.counter += 1;
-                    }
-                }
-
-                _ => {}
-            };
-            it
-        };
+        let (should_change_index, new_counter) =
+            color_wheel_navigation::should_update_index(&my_config, self.counter);
+        self.counter = new_counter;
 
         let GradientKind::ColorWheel(gradient) = &mut self.gradient_kind else {
             return None;
@@ -310,42 +234,15 @@ impl ColorWheel {
 
         // Actually change the index if it should be changed.
         if should_change_index {
-            return match self.index_direction {
-                ColorWheelDirection::Forward => {
-                    self.index += 1;
-
-                    // Hit the end of the gradient, so reverse the direction.
-                    if self.index == ch(gradient.len())
-                        && self.index_direction == ColorWheelDirection::Forward
-                    {
-                        self.index_direction = ColorWheelDirection::Reverse;
-                        self.index -= 2;
-                    }
-
-                    // Return the color for the correct index.
-                    let color = gradient.get(usize(self.index))?;
-                    Some(*color)
-                }
-                ColorWheelDirection::Reverse => {
-                    self.index -= 1;
-
-                    // Hit the start of the gradient, so reverse the direction.
-                    if self.index == ch(0)
-                        && self.index_direction == ColorWheelDirection::Reverse
-                    {
-                        self.index_direction = ColorWheelDirection::Forward;
-                    }
-
-                    // Return the color for the correct index.
-                    let color = gradient.get(usize(self.index))?;
-                    Some(*color)
-                }
-            };
+            color_wheel_navigation::update_index_with_direction(
+                &mut self.index,
+                &mut self.index_direction,
+                gradient.len(),
+            );
         }
 
         // Return the color for the correct index.
-        let color = gradient.get(usize(self.index))?;
-        Some(*color)
+        color_wheel_navigation::get_color_at_index(gradient, self.index)
     }
 
     /// This method will reset the index to zero.
@@ -363,7 +260,8 @@ impl ColorWheel {
         self.index_direction = ColorWheelDirection::Forward;
     }
 
-    /// Simplified version of [ColorWheel::colorize_into_string] with some defaults.
+    /// Simplified version of [`ColorWheel::colorize_into_string`] with some defaults.
+    #[must_use]
     pub fn lolcat_into_string(
         text: &str,
         maybe_default_style: Option<TuiStyle>,
@@ -376,7 +274,8 @@ impl ColorWheel {
         )
     }
 
-    /// See [ColorWheel::lolcat_into_string] for an easy to use version of this function.
+    /// See [`ColorWheel::lolcat_into_string`] for an easy to use version of this
+    /// function.
     pub fn colorize_into_string(
         &mut self,
         string: &str,
@@ -405,20 +304,20 @@ impl ColorWheel {
     }
 
     /// This method gives you fine grained control over the color wheel. It returns a
-    /// gradient-colored string. It respects the [crate::ColorSupport]
+    /// gradient-colored string. It respects the [`crate::ColorSupport`]
     /// restrictions for the terminal.
     ///
     /// # Colorization Policy
     ///
-    /// - [GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength] - The
+    /// - [`GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength`] - The
     ///   first time this method is called it will generate a gradient w/ the number of
     ///   steps. Subsequent calls will use the same gradient and index **if** the number
     ///   of steps is the same. However, if the number of steps are different, then a new
     ///   gradient will be generated & the index reset.
     ///
-    /// - [GradientGenerationPolicy::ReuseExistingGradientAndIndex] - The first time this
-    ///   method is called it will generate a gradient w/ the number of steps. Subsequent
-    ///   calls will use the same gradient and index.
+    /// - [`GradientGenerationPolicy::ReuseExistingGradientAndIndex`] - The first time
+    ///   this method is called it will generate a gradient w/ the number of steps.
+    ///   Subsequent calls will use the same gradient and index.
     pub fn colorize_into_styled_texts(
         &mut self,
         us: &GCString,
@@ -434,134 +333,125 @@ impl ColorWheel {
         text_colorization_policy: TextColorizationPolicy,
         us: &GCString,
     ) -> TuiStyledTexts {
-        mod inner {
-            use super::*;
-
-            // Inner function.
-            pub fn gen_style_fg_color_for(
-                maybe_style: Option<TuiStyle>,
-                next_color: Option<TuiColor>,
-            ) -> TuiStyle {
-                let mut it = TuiStyle {
-                    color_fg: next_color,
-                    ..Default::default()
-                };
-                it += &maybe_style;
-                it
-            }
-
-            // Inner function.
-            pub fn gen_style_fg_bg_color_for(
-                maybe_style: Option<TuiStyle>,
-                next_fg_color: Option<TuiColor>,
-                next_background_color: Option<TuiColor>,
-            ) -> TuiStyle {
-                let mut it = TuiStyle {
-                    color_fg: next_fg_color,
-                    color_bg: next_background_color,
-                    ..Default::default()
-                };
-                it += &maybe_style;
-                it
-            }
-        }
-
-        let mut acc = TuiStyledTexts::default();
-
-        // Handle special case for lolcat background mode is true.
         if ColorWheelConfig::config_contains_bg_lolcat(&self.configs) {
-            let maybe_style = match text_colorization_policy {
-                TextColorizationPolicy::ColorEachCharacter(maybe_style) => maybe_style,
-                TextColorizationPolicy::ColorEachWord(maybe_style) => maybe_style,
-            };
-
-            // Loop: Colorize each (next) character w/ (next) color.
-            for next_seg_str in us.iter() {
-                let maybe_next_bg_color = self.next_color();
-
-                if let Some(next_bg_color) = maybe_next_bg_color {
-                    let maybe_bg_color = match next_bg_color {
-                        TuiColor::Rgb(RgbValue {
-                            red: bg_red,
-                            green: bg_green,
-                            blue: bg_blue,
-                        }) => Some((bg_red, bg_green, bg_blue)),
-                        TuiColor::Ansi(ansi_value) => {
-                            let rgb_value = RgbValue::from(ansi_value);
-                            Some((rgb_value.red, rgb_value.green, rgb_value.blue))
-                        }
-                        TuiColor::Basic(basic_color) => {
-                            match RgbValue::try_from_tui_color(TuiColor::Basic(
-                                basic_color,
-                            )) {
-                                Ok(RgbValue { red, green, blue }) => {
-                                    Some((red, green, blue))
-                                }
-                                Err(_) => None,
-                            }
-                        }
-                        TuiColor::Reset => None,
-                    };
-
-                    if let Some((bg_red, bg_green, bg_blue)) = maybe_bg_color {
-                        let (fg_red, fg_green, fg_blue) =
-                            color_helpers::calc_fg_color((bg_red, bg_green, bg_blue));
-                        acc += tui_styled_text!(
-                            @style: inner::gen_style_fg_bg_color_for(
-                                maybe_style,
-                                Some(tui_color!(fg_red, fg_green, fg_blue)),
-                                Some(tui_color!(bg_red, bg_green, bg_blue)),
-                            ),
-                            @text: next_seg_str,
-                        );
-                    } else {
-                        acc += tui_styled_text!(
-                            @style: inner::gen_style_fg_bg_color_for(maybe_style, None, None,),
-                            @text: next_seg_str,
-                        );
-                    }
-                } else {
-                    acc += tui_styled_text!(
-                        @style: inner::gen_style_fg_bg_color_for(maybe_style, None, None,),
-                        @text: next_seg_str,
-                    );
-                }
-            }
-
-            return acc;
+            self.generate_styled_texts_for_lolcat_bg(text_colorization_policy, us)
+        } else {
+            self.generate_styled_texts_regular(text_colorization_policy, us)
         }
+    }
 
-        // Handle regular case.
-        match text_colorization_policy {
-            TextColorizationPolicy::ColorEachCharacter(maybe_style) => {
-                for next_seg_str in us.iter() {
-                    // Loop: Colorize each (next) character w/ (next) color.
-                    acc += tui_styled_text!(
-                        @style: inner::gen_style_fg_color_for(maybe_style, self.next_color()),
-                        @text: next_seg_str,
-                    );
-                }
-            }
-            TextColorizationPolicy::ColorEachWord(maybe_style) => {
-                // More info on peekable: https://stackoverflow.com/a/67872822/2085356
-                let mut peekable = us.string.split_ascii_whitespace().peekable();
-                while let Some(next_word) = peekable.next() {
-                    // Loop: Colorize each (next) word w/ (next) color.
-                    acc += tui_styled_text!(
-                        @style: inner::gen_style_fg_color_for(maybe_style, self.next_color()),
-                        @text: next_word,
-                    );
-                    if peekable.peek().is_some() {
-                        acc += tui_styled_text!(
-                            @style: TuiStyle::default(),
-                            @text: SPACER,
-                        );
-                    }
-                }
-            }
+    /// Handle special case for lolcat background mode.
+    fn generate_styled_texts_for_lolcat_bg(
+        &mut self,
+        text_colorization_policy: TextColorizationPolicy,
+        us: &GCString,
+    ) -> TuiStyledTexts {
+        let mut acc = TuiStyledTexts::default();
+        let maybe_style =
+            lolcat_bg_helper::extract_style_from_policy(text_colorization_policy);
+
+        // Loop: Colorize each (next) character w/ (next) color.
+        for next_seg_str in us {
+            let styled_text =
+                self.create_lolcat_bg_styled_text(maybe_style, next_seg_str);
+            acc += styled_text;
         }
 
         acc
+    }
+
+    /// Handle regular colorization cases.
+    fn generate_styled_texts_regular(
+        &mut self,
+        text_colorization_policy: TextColorizationPolicy,
+        us: &GCString,
+    ) -> TuiStyledTexts {
+        match text_colorization_policy {
+            TextColorizationPolicy::ColorEachCharacter(maybe_style) => {
+                self.colorize_each_character(maybe_style, us)
+            }
+            TextColorizationPolicy::ColorEachWord(maybe_style) => {
+                self.colorize_each_word(maybe_style, us)
+            }
+        }
+    }
+
+    /// Colorize each character with a different color.
+    fn colorize_each_character(
+        &mut self,
+        maybe_style: Option<TuiStyle>,
+        us: &GCString,
+    ) -> TuiStyledTexts {
+        let mut acc = TuiStyledTexts::default();
+        for next_seg_str in us {
+            acc += tui_styled_text!(
+                @style: generate_styled_texts_helper::gen_style_fg_color_for(maybe_style, self.next_color()),
+                @text: next_seg_str,
+            );
+        }
+        acc
+    }
+
+    /// Colorize each word with a different color.
+    fn colorize_each_word(
+        &mut self,
+        maybe_style: Option<TuiStyle>,
+        us: &GCString,
+    ) -> TuiStyledTexts {
+        let mut acc = TuiStyledTexts::default();
+        // More info on peekable: https://stackoverflow.com/a/67872822/2085356
+        let mut peekable = us.string.split_ascii_whitespace().peekable();
+        while let Some(next_word) = peekable.next() {
+            // Loop: Colorize each (next) word w/ (next) color.
+            acc += tui_styled_text!(
+                @style: generate_styled_texts_helper::gen_style_fg_color_for(maybe_style, self.next_color()),
+                @text: next_word,
+            );
+            if peekable.peek().is_some() {
+                acc += tui_styled_text!(
+                    @style: TuiStyle::default(),
+                    @text: SPACER,
+                );
+            }
+        }
+        acc
+    }
+
+    /// Create a styled text for lolcat background mode.
+    fn create_lolcat_bg_styled_text(
+        &mut self,
+        maybe_style: Option<TuiStyle>,
+        text: &str,
+    ) -> TuiStyledText {
+        let maybe_next_bg_color = self.next_color();
+
+        if let Some(next_bg_color) = maybe_next_bg_color {
+            let maybe_bg_color =
+                lolcat_bg_helper::convert_tui_color_to_rgb_tuple(next_bg_color);
+
+            if let Some((bg_red, bg_green, bg_blue)) = maybe_bg_color {
+                let (fg_red, fg_green, fg_blue) =
+                    color_helpers::calc_fg_color((bg_red, bg_green, bg_blue));
+                tui_styled_text!(
+                    @style: generate_styled_texts_helper::gen_style_fg_bg_color_for(
+                        maybe_style,
+                        Some(tui_color!(fg_red, fg_green, fg_blue)),
+                        Some(tui_color!(bg_red, bg_green, bg_blue)),
+                    ),
+                    @text: text,
+                )
+            } else {
+                tui_styled_text!(
+                    @style: generate_styled_texts_helper::gen_style_fg_bg_color_for(maybe_style, None, None,),
+                    @text: text,
+                )
+            }
+        } else {
+            tui_styled_text!(
+                @style: generate_styled_texts_helper::gen_style_fg_bg_color_for(maybe_style, None, None,),
+                @text: text,
+            )
+        }
     }
 
     fn generate_gradient(
@@ -602,7 +492,228 @@ impl ColorWheel {
 
                 self.reset_index();
             }
+        }
+    }
+}
+
+mod generate_styled_texts_helper {
+    use super::*;
+
+    // Inner function.
+    pub fn gen_style_fg_color_for(
+        maybe_style: Option<TuiStyle>,
+        next_color: Option<TuiColor>,
+    ) -> TuiStyle {
+        let mut it = TuiStyle {
+            color_fg: next_color,
+            ..Default::default()
         };
+        it += &maybe_style;
+        it
+    }
+
+    // Inner function.
+    pub fn gen_style_fg_bg_color_for(
+        maybe_style: Option<TuiStyle>,
+        next_fg_color: Option<TuiColor>,
+        next_background_color: Option<TuiColor>,
+    ) -> TuiStyle {
+        let mut it = TuiStyle {
+            color_fg: next_fg_color,
+            color_bg: next_background_color,
+            ..Default::default()
+        };
+        it += &maybe_style;
+        it
+    }
+}
+
+/// Helper module for color wheel index management and navigation.
+mod color_wheel_navigation {
+    use super::*;
+
+    /// Determine if the color wheel index should be updated based on speed settings.
+    pub fn should_update_index(
+        config: &ColorWheelConfig,
+        counter: ChUnit,
+    ) -> (bool, ChUnit) {
+        let speed_threshold = match config {
+            ColorWheelConfig::Rgb(_, ColorWheelSpeed::Fast, _)
+            | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Fast)
+            | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Fast) => {
+                ColorWheelSpeed::Fast as u8
+            }
+            ColorWheelConfig::Rgb(_, ColorWheelSpeed::Medium, _)
+            | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Medium)
+            | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Medium) => {
+                ColorWheelSpeed::Medium as u8
+            }
+            ColorWheelConfig::Rgb(_, ColorWheelSpeed::Slow, _)
+            | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Slow)
+            | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Slow) => {
+                ColorWheelSpeed::Slow as u8
+            }
+            _ => return (false, counter),
+        };
+
+        if counter == ch(speed_threshold) {
+            (true, ch(1)) // Reset counter and update index
+        } else {
+            (false, counter + 1) // Increment counter, don't update index
+        }
+    }
+
+    /// Update the color wheel index and handle direction changes.
+    pub fn update_index_with_direction(
+        index: &mut ChUnit,
+        direction: &mut ColorWheelDirection,
+        gradient_len: usize,
+    ) -> Option<TuiColor> {
+        match *direction {
+            ColorWheelDirection::Forward => {
+                *index += 1;
+
+                // Hit the end of the gradient, reverse direction
+                if *index == ch(gradient_len) {
+                    *direction = ColorWheelDirection::Reverse;
+                    *index -= 2;
+                }
+            }
+            ColorWheelDirection::Reverse => {
+                *index -= 1;
+
+                // Hit the start of the gradient, forward direction
+                if *index == ch(0) {
+                    *direction = ColorWheelDirection::Forward;
+                }
+            }
+        }
+        None // Color will be retrieved separately
+    }
+
+    /// Get color at the current index from the gradient.
+    pub fn get_color_at_index(gradient: &VecSteps, index: ChUnit) -> Option<TuiColor> {
+        gradient.get(usize(index)).copied()
+    }
+}
+
+/// Helper module for lolcat-specific operations.
+mod lolcat_helper {
+    use super::*;
+
+    /// Handle lolcat color generation and seed advancement.
+    pub fn generate_next_lolcat_color(lolcat: &mut Lolcat) -> TuiColor {
+        let new_color = color_helpers::get_color_tuple(&lolcat.color_wheel_control);
+        lolcat.color_wheel_control.seed +=
+            Seed::from(lolcat.color_wheel_control.color_change_speed);
+        tui_color!(new_color.0, new_color.1, new_color.2)
+    }
+
+    /// Convert lolcat seed to [`ChUnit`] for indexing.
+    pub fn convert_lolcat_seed_to_index(seed: Seed) -> ChUnit {
+        let seed_f64 = *seed * 1000.0;
+        let converted_seed = if seed_f64.is_finite() && seed_f64 >= 0.0 {
+            // Use the largest integer exactly representable by f64
+            // (2^MANTISSA_DIGITS) to avoid precision loss when clamping.
+            #[allow(clippy::cast_precision_loss)]
+            const MAX_SAFE_F64_INT: f64 = (1u64 << f64::MANTISSA_DIGITS) as f64;
+            let clamped_seed = seed_f64.min(MAX_SAFE_F64_INT).round();
+            // Safe conversion - clamped_seed is guaranteed to be in valid range
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let seed_u64 = clamped_seed as u64;
+            usize::try_from(seed_u64).unwrap_or(0)
+        } else {
+            0
+        };
+        ch(converted_seed)
+    }
+}
+
+/// Helper module for gradient generation operations.
+mod gradient_generation_helper {
+    use super::*;
+
+    /// Determine the number of steps for gradient generation.
+    pub fn determine_steps(
+        maybe_steps_override: Option<u8>,
+        config: &ColorWheelConfig,
+    ) -> u8 {
+        match maybe_steps_override {
+            // 1. Try use steps from `steps_override`.
+            Some(steps_override) => steps_override,
+            None => {
+                // 2. Try use steps from `ColorWheelConfig`.
+                if let ColorWheelConfig::Rgb(_, _, steps_from_config) = config {
+                    *steps_from_config
+                }
+                // 3. Otherwise use the default.
+                else {
+                    Defaults::Steps as u8
+                }
+            }
+        }
+    }
+
+    /// Generate gradient for Ansi256 color configuration.
+    pub fn generate_ansi256_gradient(index: Ansi256GradientIndex) -> VecSteps {
+        let gradient_array = get_gradient_array_for(index);
+        let size_hint = gradient_array.len();
+        let mut gradient_vec: VecSteps = VecSteps::with_capacity(size_hint);
+        for color_u8 in gradient_array {
+            gradient_vec.push(tui_color!(ansi * color_u8));
+        }
+        gradient_vec
+    }
+
+    /// Set the gradient and length based on the generated gradient.
+    pub fn set_gradient_and_length(color_wheel: &mut ColorWheel, gradient: VecSteps) {
+        color_wheel.gradient_length_kind = GradientLengthKind::ColorWheel(gradient.len());
+        color_wheel.gradient_kind = GradientKind::ColorWheel(gradient);
+        color_wheel.index = ch(0);
+    }
+
+    /// Set up lolcat gradient configuration.
+    pub fn set_lolcat_gradient(color_wheel: &mut ColorWheel, builder: &LolcatBuilder) {
+        color_wheel.gradient_kind = GradientKind::Lolcat(builder.build());
+        color_wheel.index = ch(0);
+        color_wheel.gradient_length_kind = GradientLengthKind::Lolcat(builder.seed);
+    }
+}
+
+/// Helper module for lolcat background functionality.
+mod lolcat_bg_helper {
+    use super::*;
+
+    /// Extract the style from the text colorization policy for lolcat background mode.
+    pub fn extract_style_from_policy(
+        text_colorization_policy: TextColorizationPolicy,
+    ) -> Option<TuiStyle> {
+        match text_colorization_policy {
+            TextColorizationPolicy::ColorEachCharacter(maybe_style)
+            | TextColorizationPolicy::ColorEachWord(maybe_style) => maybe_style,
+        }
+    }
+
+    /// Convert a [`TuiColor`] to an RGB tuple for use as background color.
+    pub fn convert_tui_color_to_rgb_tuple(color: TuiColor) -> Option<(u8, u8, u8)> {
+        match color {
+            TuiColor::Rgb(RgbValue {
+                red: bg_red,
+                green: bg_green,
+                blue: bg_blue,
+            }) => Some((bg_red, bg_green, bg_blue)),
+            TuiColor::Ansi(ansi_value) => {
+                let rgb_value = RgbValue::from(ansi_value);
+                Some((rgb_value.red, rgb_value.green, rgb_value.blue))
+            }
+            TuiColor::Basic(basic_color) => {
+                match RgbValue::try_from_tui_color(TuiColor::Basic(basic_color)) {
+                    Ok(RgbValue { red, green, blue }) => Some((red, green, blue)),
+                    Err(_) => None,
+                }
+            }
+            TuiColor::Reset => None,
+        }
     }
 }
 
@@ -658,7 +769,7 @@ mod tests_color_wheel_rgb {
                     ColorWheelSpeed::Medium,
                 ),
             );
-            global_color_support::clear_override()
+            global_color_support::clear_override();
         }
 
         // Set ColorSupport override to: Truecolor.
@@ -673,7 +784,7 @@ mod tests_color_wheel_rgb {
                     Defaults::Steps as u8,
                 ),
             );
-            global_color_support::clear_override()
+            global_color_support::clear_override();
         }
 
         // Set ColorSupport override to: Grayscale.
@@ -687,7 +798,7 @@ mod tests_color_wheel_rgb {
                     ColorWheelSpeed::Medium,
                 ),
             );
-            global_color_support::clear_override()
+            global_color_support::clear_override();
         }
     }
 
@@ -787,7 +898,7 @@ mod tests_color_wheel_rgb {
         // Next call to next() should advance the index again to 1.
         assert_eq2!(color_wheel.next_color().unwrap(), tui_color!(26, 26, 26));
 
-        global_color_support::clear_override()
+        global_color_support::clear_override();
     }
 
     /// This strange test is needed because the color wheel uses a global variable to
@@ -836,7 +947,7 @@ mod tests_color_wheel_rgb {
             Some(tui_color!(0, 0, 0))
         );
 
-        global_color_support::clear_override()
+        global_color_support::clear_override();
     }
 
     /// This strange test is needed because the color wheel uses a global variable to
@@ -908,7 +1019,7 @@ mod tests_color_wheel_rgb {
             Some(tui_color!(102, 102, 102))
         );
 
-        global_color_support::clear_override()
+        global_color_support::clear_override();
     }
 
     /// This strange test is needed because the color wheel uses a global variable to
@@ -945,6 +1056,6 @@ mod tests_color_wheel_rgb {
             "\u{1b}[38;2;0;0;0mH\u{1b}[0m\u{1b}[38;2;0;0;0mE\u{1b}[0m\u{1b}[38;2;23;23;23mL\u{1b}[0m\u{1b}[38;2;23;23;23mL\u{1b}[0m\u{1b}[38;2;46;46;46mO\u{1b}[0m\u{1b}[38;2;46;46;46m \u{1b}[0m\u{1b}[38;2;70;70;70mW\u{1b}[0m\u{1b}[38;2;70;70;70mO\u{1b}[0m\u{1b}[38;2;93;93;93mR\u{1b}[0m\u{1b}[38;2;93;93;93mL\u{1b}[0m\u{1b}[38;2;116;116;116mD\u{1b}[0m"
         );
 
-        global_color_support::clear_override()
+        global_color_support::clear_override();
     }
 }

@@ -69,9 +69,9 @@ impl Display for CommandRunDetails {
                     A = details.maybe_checked_out_branch
                 )
             }
-            CommandRunDetails::Commit => write!(f, " Commit"),
-            CommandRunDetails::Remote => write!(f, " Remote"),
-            CommandRunDetails::Noop => write!(f, " Noop"),
+            Self::Commit => write!(f, " Commit"),
+            Self::Remote => write!(f, " Remote"),
+            Self::Noop => write!(f, " Noop"),
         }
     }
 }

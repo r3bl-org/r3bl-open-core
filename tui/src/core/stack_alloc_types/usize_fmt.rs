@@ -18,7 +18,8 @@
 //! This module handles conversion of [usize] to a fixed size [u8] array. This is useful
 //! when you want to convert a [usize] to a string slice without heap allocation. The
 //! maximum number of digits that a [usize] can have is 20.
-//! - This is because the maximum value of [usize] is [std::usize::MAX] which is 2^64 - 1.
+//! - This is because the maximum value of [usize] is [`std::usize::MAX`] which is 2^64 -
+//!   1.
 //! - The number of digits needed to represent this number is 20.
 //!
 //! # Constants
@@ -61,6 +62,7 @@
 /// - <https://doc.rust-lang.org/std/primitive.u64.html>
 pub const USIZE_FMT_MAX_DIGITS: usize = 20;
 
+#[must_use]
 pub fn usize_to_u8_array(num: usize) -> [u8; USIZE_FMT_MAX_DIGITS] {
     debug_assert_usize_fits_20_digits();
 
@@ -75,7 +77,7 @@ pub fn usize_to_u8_array(num: usize) -> [u8; USIZE_FMT_MAX_DIGITS] {
     }
 
     while num_copy > 0 && index > 0 {
-        let digit = (num_copy % 10) as u8;
+        let digit = u8::try_from(num_copy % 10).unwrap_or(0);
         result[index] = b'0' + digit; // Convert digit to ASCII character
         num_copy /= 10;
         index -= 1;
@@ -88,6 +90,13 @@ pub fn usize_to_u8_array(num: usize) -> [u8; USIZE_FMT_MAX_DIGITS] {
 /// It also trims the string slice to remove any trailing zeros. The call to
 /// `unwrap()` in this function should never panic because the input is a valid [u8]
 /// array.
+///
+/// # Panics
+///
+/// This function will panic if the input [u8] array is not a valid UTF-8 sequence.
+/// This should never happen because the input is a fixed size [u8] array that is
+/// guaranteed to contain only ASCII digits (0-9) and null bytes (0).
+#[must_use]
 pub fn convert_to_string_slice(arg: &[u8; USIZE_FMT_MAX_DIGITS]) -> &str {
     let result_str = std::str::from_utf8(arg);
     debug_assert!(
@@ -100,7 +109,7 @@ pub fn convert_to_string_slice(arg: &[u8; USIZE_FMT_MAX_DIGITS]) -> &str {
 }
 
 /// This is just a sanity check done in the debug release to makes sure that the
-/// maximum value of [usize] can be represented with [USIZE_FMT_MAX_DIGITS] decimal
+/// maximum value of [usize] can be represented with [`USIZE_FMT_MAX_DIGITS`] decimal
 /// digits.
 fn debug_assert_usize_fits_20_digits() {
     // Calculate the maximum value of usize
@@ -127,7 +136,7 @@ mod tests_usize_fmt {
 
     #[test]
     fn test_usize_to_u8_array() {
-        let num = 1234567890;
+        let num = 1_234_567_890;
         let result = usize_to_u8_array(num);
         let result_str = convert_to_string_slice(&result);
         assert_eq!(result_str, "1234567890");

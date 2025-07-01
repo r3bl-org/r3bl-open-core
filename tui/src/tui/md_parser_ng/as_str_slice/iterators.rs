@@ -18,13 +18,14 @@
 use crate::{as_str_slice::AsStrSlice,
             core::tui_core::units::{idx, Index}};
 
-/// Iterator over the characters in an [AsStrSlice].
+/// Iterator over the characters in an [`AsStrSlice`].
 pub struct StringChars<'a> {
     slice: AsStrSlice<'a>,
 }
 
 impl<'a> StringChars<'a> {
     /// Creates a new iterator over the characters in the given slice.
+    #[must_use]
     pub fn new(slice: AsStrSlice<'a>) -> Self { Self { slice } }
 }
 
@@ -40,13 +41,14 @@ impl<'a> Iterator for StringChars<'a> {
     }
 }
 
-/// Iterator over the characters in an [AsStrSlice] with their indices.
+/// Iterator over the characters in an [`AsStrSlice`] with their indices.
 pub struct StringCharIndices<'a> {
     slice: AsStrSlice<'a>,
     position: Index,
 }
 
 impl<'a> StringCharIndices<'a> {
+    #[must_use]
     pub fn new(slice: AsStrSlice<'a>) -> Self {
         Self {
             slice,

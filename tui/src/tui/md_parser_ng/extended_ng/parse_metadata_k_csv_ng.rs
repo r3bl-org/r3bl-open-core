@@ -163,11 +163,11 @@ mod test_parse_tags_opt_eol {
         assert_eq2!(
             output
                 .iter()
-                .map(|s| s.extract_to_slice_end())
+                .map(AsStrSlice::extract_to_slice_end)
                 .collect::<Vec<_>>(),
             expected
                 .iter()
-                .map(|s| s.extract_to_slice_end())
+                .map(AsStrSlice::extract_to_slice_end)
                 .collect::<Vec<_>>()
         );
     }
@@ -208,11 +208,11 @@ mod test_parse_tags_opt_eol {
             result
                 .1
                 .iter()
-                .map(|s| s.extract_to_slice_end())
+                .map(AsStrSlice::extract_to_slice_end)
                 .collect::<Vec<_>>(),
             expected
                 .iter()
-                .map(|s| s.extract_to_slice_end())
+                .map(AsStrSlice::extract_to_slice_end)
                 .collect::<Vec<_>>()
         );
     }
@@ -240,11 +240,11 @@ mod test_parse_tags_opt_eol {
             assert_eq2!(
                 output
                     .iter()
-                    .map(|s| s.extract_to_slice_end())
+                    .map(AsStrSlice::extract_to_slice_end)
                     .collect::<Vec<_>>(),
                 expected
                     .iter()
-                    .map(|s| s.extract_to_slice_end())
+                    .map(AsStrSlice::extract_to_slice_end)
                     .collect::<Vec<_>>()
             );
         }
@@ -300,11 +300,11 @@ mod test_parse_tags_opt_eol {
             result
                 .1
                 .iter()
-                .map(|s| s.extract_to_slice_end())
+                .map(AsStrSlice::extract_to_slice_end)
                 .collect::<Vec<_>>(),
             expected
                 .iter()
-                .map(|s| s.extract_to_slice_end())
+                .map(AsStrSlice::extract_to_slice_end)
                 .collect::<Vec<_>>()
         );
     }

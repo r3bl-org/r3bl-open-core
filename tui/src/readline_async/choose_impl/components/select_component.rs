@@ -15,13 +15,37 @@
  *   limitations under the License.
  */
 
-
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 style::{Print, ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType}};
 use miette::IntoDiagnostic;
 
-use crate::{ast, ch, choose_apply_style, col, fg_blue, get_terminal_width, inline_string, lock_output_device_as_mut, pad_fmt, queue_commands, throws, usize, width, AnsiStyledText, ChUnit, CommonResult, FunctionComponent, GCStringExt, Header, HowToChoose, InlineString, InlineVec, OutputDevice, State, StyleSheet, DEVELOPMENT_MODE};
+use crate::{ast,
+            ch,
+            choose_apply_style,
+            col,
+            fg_blue,
+            get_terminal_width,
+            inline_string,
+            lock_output_device_as_mut,
+            pad_fmt,
+            queue_commands,
+            throws,
+            usize,
+            width,
+            AnsiStyledText,
+            ChUnit,
+            CommonResult,
+            FunctionComponent,
+            GCStringExt,
+            Header,
+            HowToChoose,
+            InlineString,
+            InlineVec,
+            OutputDevice,
+            State,
+            StyleSheet,
+            DEVELOPMENT_MODE};
 
 pub struct SelectComponent {
     pub output_device: OutputDevice,
@@ -186,14 +210,16 @@ impl FunctionComponent<State> for SelectComponent {
                     let mut maybe_clipped_text_vec: InlineVec<InlineVec<InlineString>> =
                         InlineVec::with_capacity(header_lines.len());
 
-                    for header_line in header_lines.iter() {
+                    for header_line in header_lines {
                         let mut header_line_modified = InlineVec::new();
 
-                        'inner: for last_span in header_line.iter() {
-                            let span_text = &last_span.text;
+                        'inner: for span_in_header_line in header_line {
+                            let span_text = &span_in_header_line.text;
                             let span_text_gcs = span_text.grapheme_string();
                             let span_us_display_width = *span_text_gcs.display_width;
 
+                            // If this span exceeds available space, clip it and stop
+                            // processing the rest of the spans in this line.
                             if span_us_display_width > available_space_col_count {
                                 // Clip the text to available space.
                                 let clipped_text_str = span_text_gcs
@@ -202,36 +228,37 @@ impl FunctionComponent<State> for SelectComponent {
                                     inline_string!("{clipped_text_str}...");
                                 header_line_modified.push(clipped_text);
                                 break 'inner;
-                            } else {
-                                available_space_col_count -= span_us_display_width;
+                            }
 
-                                // If last item in the header, then fill the remaining
-                                // space with spaces.
-                                let maybe_header_line_last_span: Option<&AnsiStyledText> =
-                                    header_line.last();
+                            available_space_col_count -= span_us_display_width;
 
-                                if let Some(header_line_last_span) =
-                                    maybe_header_line_last_span
-                                {
-                                    if last_span == header_line_last_span {
-                                        // Because text is not clipped, we add back the 3 we subtracted
-                                        // earlier for the "...".
-                                        let num_of_spaces: ChUnit =
-                                            available_space_col_count + ch(3);
+                            // If last item in the header, then fill the remaining
+                            // space with spaces.
+                            let maybe_header_line_last_span: Option<&AnsiStyledText> =
+                                header_line.last();
 
-                                        let mut span_with_spaces = span_text.to_owned();
-                                        pad_fmt!(
-                                            fmt: span_with_spaces,
-                                            pad_str: " ",
-                                            repeat_count: num_of_spaces.as_usize()
-                                        );
+                            if let Some(header_line_last_span) =
+                                maybe_header_line_last_span
+                            {
+                                if span_in_header_line == header_line_last_span {
+                                    // Because text is not clipped, we add back the 3
+                                    // we subtracted
+                                    // earlier for the "...".
+                                    let num_of_spaces: ChUnit =
+                                        available_space_col_count + ch(3);
 
-                                        header_line_modified.push(span_with_spaces);
-                                    } else {
-                                        header_line_modified.push(span_text.to_owned());
-                                    }
+                                    let mut span_with_spaces = span_text.to_owned();
+                                    pad_fmt!(
+                                        fmt: span_with_spaces,
+                                        pad_str: " ",
+                                        repeat_count: num_of_spaces.as_usize()
+                                    );
+
+                                    header_line_modified.push(span_with_spaces);
+                                } else {
+                                    header_line_modified.push(span_text.to_owned());
                                 }
-                            };
+                            }
                         }
 
                         // Reset the available space.
@@ -258,7 +285,7 @@ impl FunctionComponent<State> for SelectComponent {
                         .map(|header_line| {
                             header_line
                                 .iter()
-                                .map(|header_span| header_span.to_string())
+                                .map(ToString::to_string)
                                 .collect::<Vec<String>>()
                                 .join("")
                         })
@@ -285,12 +312,6 @@ impl FunctionComponent<State> for SelectComponent {
 
             // Print each line in viewport.
             for viewport_row_index in 0..*items_viewport_height {
-                let data_row_index: usize =
-                    (data_row_index_start + viewport_row_index).into();
-                let caret_row_scroll_adj =
-                    ch(viewport_row_index) + state.scroll_offset_row_index;
-                let data_item = &state.items[data_row_index];
-
                 // Invert colors for selected items.
                 #[derive(Debug, Clone, Copy)]
                 enum SelectionStateStyle {
@@ -311,6 +332,12 @@ impl FunctionComponent<State> for SelectComponent {
                     Yes,
                     No,
                 }
+
+                let data_row_index: usize =
+                    (data_row_index_start + viewport_row_index).into();
+                let caret_row_scroll_adj =
+                    ch(viewport_row_index) + state.scroll_offset_row_index;
+                let data_item = &state.items[data_row_index];
 
                 let selected =
                     if state.selected_items.iter().any(|item| item == data_item) {
@@ -431,7 +458,9 @@ impl FunctionComponent<State> for SelectComponent {
                 MoveToPreviousLine(*items_viewport_height + *header_viewport_height),
             };
 
-            lock_output_device_as_mut!(self.output_device).flush().into_diagnostic()?;
+            lock_output_device_as_mut!(self.output_device)
+                .flush()
+                .into_diagnostic()?;
         });
     }
 }
@@ -509,9 +538,7 @@ mod tests {
 
         let generated_output = stdout_mock.get_copy_of_buffer_as_string();
 
-        println!(
-            "generated_output = writer.get_buffer(): \n\n{generated_output:#?}\n\n"
-        );
+        println!("generated_output = writer.get_buffer(): \n\n{generated_output:#?}\n\n");
 
         let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;5;153m\u{1b}[48;5;235m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;46m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◉ Item 1                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 2                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 3                              \u{1b}[1E\u{1b}[0m\u{1b}[4F";
         assert_eq!(generated_output, expected_output);

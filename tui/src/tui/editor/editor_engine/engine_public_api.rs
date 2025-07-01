@@ -16,7 +16,7 @@
  */
 
 //! Functions that implement the public (re-exported in `mod.rs`) event based API of the
-//! editor engine. See [mod@super::engine_internal_api] for the internal and functional
+//! editor engine. See [`mod@super::engine_internal_api`] for the internal and functional
 //! API.
 use syntect::easy::HighlightLines;
 
@@ -118,8 +118,8 @@ fn input_event_matches_navigation_keys(input_event: InputEvent) -> bool {
     ])
 }
 
-/// Event based interface for the editor. This converts the [InputEvent] into an
-/// [EditorEvent] and then executes it. Returns a new [EditorBuffer] if the operation
+/// Event based interface for the editor. This converts the [`InputEvent`] into an
+/// [`EditorEvent`] and then executes it. Returns a new [`EditorBuffer`] if the operation
 /// was applied otherwise returns [None].
 pub fn apply_event(
     buffer: &mut EditorBuffer,
@@ -143,7 +143,7 @@ pub fn apply_event(
         if triggers_undo_redo(&editor_event) & buffer.history.is_empty() {
             engine.clear_ast_cache();
             buffer.add();
-        };
+        }
 
         // Actually apply the editor event, which might produce a new buffer.
         EditorEvent::apply_editor_event(engine, buffer, editor_event.clone(), clipboard);
@@ -273,7 +273,7 @@ pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
             editor_engine,
             max_display_col_count,
         ),
-    };
+    }
 }
 
 // XMARK: Render selection
@@ -383,6 +383,7 @@ pub fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
     }
 }
 
+#[must_use]
 pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
     let RenderArgs {
         has_focus,
@@ -445,11 +446,11 @@ pub enum EditorEngineApplyEventResult {
 mod syn_hi_r3bl_path {
     use super::*;
 
-    /// Try convert [Vec] of [US] to [MdDocument]:
+    /// Try convert [Vec] of [US] to [`MdDocument`]:
     /// - Step 1: Get the lines from the buffer using
-    ///   [editor_buffer.get_lines()](EditorBuffer::get_lines()).
-    /// - Step 2: Convert the lines into a [List] of [StyleUSSpanLine] using
-    ///   [try_parse_and_highlight()]. If this fails then take the path of no syntax
+    ///   [`editor_buffer.get_lines()`](EditorBuffer::get_lines()).
+    /// - Step 2: Convert the lines into a [List] of [`StyleUSSpanLine`] using
+    ///   [`try_parse_and_highlight()`]. If this fails then take the path of no syntax
     ///   highlighting else take the path of syntax highlighting.
     pub fn render_content(
         editor_buffer: &EditorBuffer,
@@ -636,10 +637,10 @@ mod syn_hi_syntect_path {
     }
 
     /// Try and load syntax highlighting for the current line. It might seem lossy to
-    /// create a new [HighlightLines] for each line, but if this struct is re-used then it
-    /// will not be able to highlight the lines correctly in the editor component. This
-    /// struct is mutated when it is used to highlight a line, so it must be re-created
-    /// for each line.
+    /// create a new [`HighlightLines`] for each line, but if this struct is re-used then
+    /// it will not be able to highlight the lines correctly in the editor component.
+    /// This struct is mutated when it is used to highlight a line, so it must be
+    /// re-created for each line.
     fn try_get_syntect_highlighted_line<'a>(
         editor_engine: &'a mut EditorEngine,
         editor_buffer: &EditorBuffer,

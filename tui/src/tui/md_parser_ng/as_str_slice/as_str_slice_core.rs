@@ -23,11 +23,11 @@ pub type NErr<T> = nom::Err<T>;
 pub type NError<T> = nom::error::Error<T>;
 pub type NErrorKind = nom::error::ErrorKind;
 
-/// Marker type alias for [nom::Input] trait methods (which we can't change)
-/// to clarify a character based index type. Since [AsStrSlice] itself works with
-/// [char], see [Iterator::Item], all the `usize` in the interface related to
+/// Marker type alias for [`nom::Input`] trait methods (which we can't change)
+/// to clarify a character based index type. Since [`AsStrSlice`] itself works with
+/// [char], see [`Iterator::Item`], all the `usize` in the interface related to
 /// index and offset are actually character based. However, since we can't change
-/// [nom::Input], this type alias is a way to "mark" that the `usize` in question in some
+/// [`nom::Input`], this type alias is a way to "mark" that the `usize` in question in some
 /// of the relevant methods are actually character based offset or index.
 pub type CharacterIndexNomCompat = usize;
 pub type CharacterCountNomCompat = usize;
@@ -36,12 +36,12 @@ pub type CharacterLength = Length;
 /// Marker type alias for [Index] to clarify character based index type.
 pub type CharacterIndex = Index;
 
-/// Wrapper type that implements [nom::Input] for &[GCString] or **any other type** that
+/// Wrapper type that implements [`nom::Input`] for &[`GCString`] or **any other type** that
 /// implements [`AsRef<str>`]. The [Clone] operations on this struct are really cheap.
-/// This wraps around the output of [str::lines()] and provides a way to adapt it for use
+/// This wraps around the output of [`str::lines()`] and provides a way to adapt it for use
 /// as a "virtual array" or "virtual slice" of strings for `nom` parsers.
 ///
-/// This struct generates synthetic new lines when it's [nom::Input] methods are used.
+/// This struct generates synthetic new lines when it's [`nom::Input`] methods are used.
 /// to manipulate it. This ensures that it can make the underlying `line` struct "act"
 /// like it is a contiguous array of chars.
 ///
@@ -50,20 +50,20 @@ pub type CharacterIndex = Index;
 ///
 /// ## Manually creating `lines` instead of using `str::lines()`
 ///
-/// If you don't use [str::lines()] which strips [crate::constants::NEW_LINE] characters,
+/// If you don't use [`str::lines()`] which strips [`crate::constants::NEW_LINE`] characters,
 /// then you have to make sure that each `line` does not have any
-/// [crate::constants::NEW_LINE] character in it. This is not enforced, since this struct
+/// [`crate::constants::NEW_LINE`] character in it. This is not enforced, since this struct
 /// does not allocate, and it can't take the provided `lines: &'a [T]` and remove any
-/// [crate::constants::NEW_LINE] characters from them, and generate a new `lines` slice.
+/// [`crate::constants::NEW_LINE`] characters from them, and generate a new `lines` slice.
 /// There are many tests that leverage this behavior, so it is not a problem in practice.
 /// However, this is something to be aware if you are "manually" creating the `line` slice
-/// that you pass to [AsStrSlice::from()].
+/// that you pass to [`AsStrSlice::from()`].
 ///
 /// ## Why?
 ///
 /// The inception of this struct was to provide a way to have `nom` parsers work with the
-/// output type of [str::lines()], which is a slice of `&str`, that is stored in the
-/// [crate::EditorContent] struct. In order to use `nom` parsers with this output type,
+/// output type of [`str::lines()`], which is a slice of `&str`, that is stored in the
+/// [`crate::EditorContent`] struct. In order to use `nom` parsers with this output type,
 /// it was necessary to materialize the entire slice into a contiguous
 /// array of characters, which is not efficient for large documents. This materialization
 /// happened in the critical render loop of the TUI, which caused performance
@@ -77,7 +77,7 @@ pub type CharacterIndex = Index;
 /// **This implementation uses CHARACTER-BASED indexing for Unicode/UTF-8 safety.**
 ///
 /// NEVER mix byte-based operations (from nom's `FindSubstring`, `&str[..]`) with
-/// character-based operations ([AsStrSlice] methods). This will cause panics or
+/// character-based operations ([`AsStrSlice`] methods). This will cause panics or
 /// incorrect results when processing multi-byte UTF-8 characters like emojis.
 ///
 /// ### Safe patterns:
@@ -91,19 +91,19 @@ pub type CharacterIndex = Index;
 /// - ❌ `let bad = &text[byte_start..byte_end]; // raw slice operator`
 ///
 /// ### When you must use `find_substring()` (which returns byte positions):
-/// 1. Use the byte position with take() to get a prefix
+/// 1. Use the byte position with `take()` to get a prefix
 /// 2. Count characters in the prefix: `prefix.extract_to_line_end().chars().count()`
-/// 3. Use the character count with take_from()
+/// 3. Use the character count with `take_from()`
 ///
 /// ### nom Input and byte-based indexing
 ///
-/// [nom::Input] uses byte-based indexing, and `AsStrSlice`'s implementation of this
+/// [`nom::Input`] uses byte-based indexing, and `AsStrSlice`'s implementation of this
 /// trait carefully converts between character and byte based indexing.
 ///
 /// ### Rust, UTF-8, char, String, and &str
 ///
 /// This implementation uses character-based indexing, with the only exception being the
-/// implementation of [nom::Input] which is byte index based. Literally everything else
+/// implementation of [`nom::Input`] which is byte index based. Literally everything else
 /// uses character-based indexing. All slice operations have been removed and replaced
 /// with `char_*()` functions which use character-based indexing.
 ///
@@ -145,7 +145,7 @@ pub type CharacterIndex = Index;
 ///
 /// The `char_index` field represents the character index within the current line. It is:
 /// - Used with `line.chars().nth(self.char_index)` to get characters.
-/// - Compared with line_char_count (from `line.len_chars()`).
+/// - Compared with `line_char_count` (from `line.len_chars()`).
 /// - Incremented by 1 to advance to the next character.
 /// - Reset to 0 when moving to a new line.
 ///
@@ -198,15 +198,15 @@ pub type CharacterIndex = Index;
 /// let correct = input.take_from(char_count); // Use char count with take_from()
 /// ```
 ///
-/// ## Compatibility with [AsStrSlice::write_to_byte_cache_compat()]
+/// ## Compatibility with [`AsStrSlice::write_to_byte_cache_compat()`]
 ///
-/// [AsStrSlice] is designed to be fully compatible with how
-/// [AsStrSlice::write_to_byte_cache_compat()] processes text. Specifically, it handles
+/// [`AsStrSlice`] is designed to be fully compatible with how
+/// [`AsStrSlice::write_to_byte_cache_compat()`] processes text. Specifically, it handles
 /// trailing newlines the same way:
 ///
 /// - **Trailing newlines are added**: When there are multiple lines, a trailing newline
 ///   is added after the last line, matching the behavior of
-///   [AsStrSlice::write_to_byte_cache_compat()].
+///   [`AsStrSlice::write_to_byte_cache_compat()`].
 /// - **Empty lines preserved**: Leading and middle empty lines are preserved as empty
 ///   strings followed by newlines.
 /// - **Single line gets no trailing newline**: A single line with no additional lines
@@ -214,12 +214,12 @@ pub type CharacterIndex = Index;
 /// - **Multiple lines always get trailing newlines**: Each line gets a trailing newline,
 ///   including the last one.
 ///
-/// ## Incompatibility with [str::lines()]
+/// ## Incompatibility with [`str::lines()`]
 ///
-/// **Important**: This behavior is intentionally different from [str::lines()]. When
-/// there are multiple lines and the last line is empty, [AsStrSlice] will add a trailing
-/// newline, whereas [str::lines()] would not. This is to maintain compatibility with
-/// [AsStrSlice::write_to_byte_cache_compat()].
+/// **Important**: This behavior is intentionally different from [`str::lines()`]. When
+/// there are multiple lines and the last line is empty, [`AsStrSlice`] will add a trailing
+/// newline, whereas [`str::lines()`] would not. This is to maintain compatibility with
+/// [`AsStrSlice::write_to_byte_cache_compat()`].
 ///
 /// Here are some examples of new line handling:
 ///
@@ -238,11 +238,11 @@ pub type CharacterIndex = Index;
 /// assert_eq!(slice3.to_inline_string(), "\na\n\n");   // Each line followed by \n
 /// ```
 ///
-/// ## Compatibility with [nom::Input]
+/// ## Compatibility with [`nom::Input`]
 ///
-/// Since this struct implements [nom::Input], it can be used in any function that can
+/// Since this struct implements [`nom::Input`], it can be used in any function that can
 /// receive an argument that implements it. So you have flexibility in using the
-/// [AsStrSlice] type or the [nom::Input] type where appropriate.
+/// [`AsStrSlice`] type or the [`nom::Input`] type where appropriate.
 ///
 /// Also it is preferable to use the following function signature:
 ///
@@ -254,7 +254,7 @@ pub type CharacterIndex = Index;
 ///
 /// Instead of the overly generic and difficult to work with (this type of signature makes
 /// sense for the built-in parsers which are expected to work with any slice, but our use
-/// case is anchored in [AsStrSlice], which itself is very flexible):
+/// case is anchored in [`AsStrSlice`], which itself is very flexible):
 ///
 /// ```
 /// # use r3bl_tui::AsStrSlice;
@@ -271,17 +271,17 @@ pub struct AsStrSlice<'a, T: AsRef<str> = GCString>
 where
     &'a [T]: Copy,
 {
-    /// The lines of text represented as a slice of [GCString] or any type that
+    /// The lines of text represented as a slice of [`GCString`] or any type that
     /// implements [`AsRef<str>`].
     pub lines: &'a [T],
 
-    /// Position tracking: (line_index, char_index_within_line).
-    /// Special case: if char_index == line.len(), we're at the synthetic newline.
+    /// Position tracking: (`line_index`, `char_index_within_line`).
+    /// Special case: if `char_index` == `line.len()`, we're at the synthetic newline.
     pub line_index: CharacterIndex,
 
     /// This represents the character index within the current line. It is:
     /// - Used with `line.chars().nth(self.char_index)` to get characters.
-    /// - Compared with line_char_count (from `line.len_chars()`).
+    /// - Compared with `line_char_count` (from `line.len_chars()`).
     /// - Incremented by 1 to advance to the next character.
     /// - Reset to 0 when moving to a new line.
     pub char_index: CharacterIndex,
@@ -400,7 +400,7 @@ impl CharLengthExt for &str {
     fn len_chars(&self) -> Length { len(self.chars().count()) }
 }
 
-/// Unit tests for the [crate::AsStrSlice] struct and its methods.
+/// Unit tests for the [`crate::AsStrSlice`] struct and its methods.
 #[cfg(test)]
 mod tests_as_str_slice_basic_functionality {
     use nom::Input;

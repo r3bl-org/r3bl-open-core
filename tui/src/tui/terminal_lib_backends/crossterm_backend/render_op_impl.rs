@@ -49,7 +49,7 @@ use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color
             TuiColor,
             TuiStyle};
 
-/// Struct representing the implementation of [RenderOp] for crossterm terminal backend.
+/// Struct representing the implementation of [`RenderOp`] for crossterm terminal backend.
 /// This empty struct is needed since the [Flush] trait needs to be implemented.
 pub struct RenderOpImplCrossterm;
 
@@ -104,7 +104,7 @@ mod impl_trait_paint_render_op {
                         locked_output_device,
                         "ClearScreen",
                         Clear(ClearType::All),
-                    )
+                    );
                 }
                 RenderOp::SetFgColor(color) => {
                     RenderOpImplCrossterm::set_fg_color(*color, locked_output_device);
@@ -113,7 +113,7 @@ mod impl_trait_paint_render_op {
                     RenderOpImplCrossterm::set_bg_color(*color, locked_output_device);
                 }
                 RenderOp::ResetColor => {
-                    queue_render_op!(locked_output_device, "ResetColor", ResetColor)
+                    queue_render_op!(locked_output_device, "ResetColor", ResetColor);
                 }
                 RenderOp::ApplyColors(style) => {
                     RenderOpImplCrossterm::apply_colors(style, locked_output_device);
@@ -198,7 +198,7 @@ mod impl_self {
                 locked_output_device,
                 format!("MoveCursorPosition(col: {:?}, row: {:?})", col, row),
                 MoveTo(col, row)
-            )
+            );
         }
 
         pub fn raw_mode_exit(
@@ -269,7 +269,7 @@ mod impl_self {
                 locked_output_device,
                 format!("SetBgColor({color:?})"),
                 SetBackgroundColor(color),
-            )
+            );
         }
 
         pub fn paint_text_with_attributes(
@@ -304,7 +304,7 @@ mod impl_self {
             );
         }
 
-        /// Use [crossterm::style::Color] to set crossterm Colors.
+        /// Use [`crossterm::style::Color`] to set crossterm Colors.
         /// Docs: <https://docs.rs/crossterm/latest/crossterm/style/index.html#colors>
         pub fn apply_colors(
             maybe_style: &Option<TuiStyle>,

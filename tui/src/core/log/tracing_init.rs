@@ -22,8 +22,8 @@ use super::{DisplayPreference, WriterConfig};
 use crate::log::{rolling_file_appender_impl, tracing_config::TracingConfig};
 
 /// Avoid gnarly type annotations by using a macro to create the `fmt` layer. Note that
-/// [tracing_subscriber::fmt::format::Pretty] and
-/// [tracing_subscriber::fmt::format::Compact] are mutually exclusive.
+/// [`tracing_subscriber::fmt::format::Pretty`] and
+/// [`tracing_subscriber::fmt::format::Compact`] are mutually exclusive.
 #[macro_export]
 macro_rules! create_fmt {
     () => {
@@ -50,7 +50,7 @@ pub type DynLayer<S> = dyn Layer<S> + Send + Sync + 'static;
 /// `try_create_layers(..).map(|layers|
 /// tracing_subscriber::registry().with(layers).init());`
 pub fn try_create_layers(
-    tracing_config: TracingConfig,
+    tracing_config: &TracingConfig,
 ) -> miette::Result<Option<Vec<Box<DynLayer<tracing_subscriber::Registry>>>>> {
     // Create the layers based on the writer configuration.
     let layers = {
@@ -208,7 +208,7 @@ mod tests {
             level_filter: LevelFilter::DEBUG,
         };
 
-        let layers = try_create_layers(tracing_config).unwrap().unwrap();
+        let layers = try_create_layers(&tracing_config).unwrap().unwrap();
         assert_eq!(layers.len(), 3);
         assert!(std::path::Path::new(&file_path).exists());
     }
@@ -218,7 +218,7 @@ mod tests {
 mod fixtures {
     use crate::custom_event_formatter_constants::*;
 
-    /// See [crate::CustomEventFormatter] for more details.
+    /// See [`crate::CustomEventFormatter`] for more details.
     pub fn get_expected() -> Vec<String> {
         vec![
             format!("{ERROR_SIGIL}{LEVEL_SUFFIX}"),
@@ -276,10 +276,10 @@ mod test_tracing_shared_writer_output {
 
         println!("output: {output}");
 
-        for it in get_expected().iter() {
+        for it in &get_expected() {
             assert!(output.contains(it));
         }
 
-        drop(default_guard)
+        drop(default_guard);
     }
 }

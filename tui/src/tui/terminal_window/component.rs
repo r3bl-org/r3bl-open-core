@@ -26,7 +26,7 @@ use crate::{CommonResult,
             Surface,
             SurfaceBounds};
 
-/// See [crate::App].
+/// See [`crate::App`].
 pub trait Component<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
@@ -40,17 +40,17 @@ where
     fn get_id(&self) -> FlexBoxId;
 
     /// Use the state to render the output. The state is immutable. If you want to change
-    /// it then it should be done in the [Component::handle_event] method. Here are
+    /// it then it should be done in the [`Component::handle_event`] method. Here are
     /// all the arguments that are passed in (which can be used to render the output):
     ///
     /// - Arguments:
     ///   - Get from `current_box`:
-    ///     - box_origin_pos: Position
-    ///     - box_bounding_size: Size
-    ///     - maybe_box_style: `Option<Style>`
+    ///     - `box_origin_pos`: Position
+    ///     - `box_bounding_size`: Size
+    ///     - `maybe_box_style`: `Option<Style>`
     ///   - Get from `state`:
     ///     - Content to render
-    ///     - get_focus_id(): String to determine if this component has keyboard focus
+    ///     - `get_focus_id()`: String to determine if this component has keyboard focus
     ///       (might affect the way it gets rendered)
     ///   - Maybe use `shared_store`:
     ///     - Dispatch an action if needed
@@ -59,7 +59,7 @@ where
     ///       than the size of the window)
     ///
     /// - Returns:
-    ///   - [RenderPipeline] which must be rendered by the caller
+    ///   - [`RenderPipeline`] which must be rendered by the caller
     ///
     /// - Clipping, scrolling, overdrawing:
     ///   - Each implementation of this trait is solely responsible of taking care of
@@ -72,19 +72,19 @@ where
         has_focus: &mut HasFocus,
     ) -> CommonResult<RenderPipeline>;
 
-    /// If this component has focus [HasFocus] then this method will be called to handle
+    /// If this component has focus [`HasFocus`] then this method will be called to handle
     /// input event that is meant for it.
     ///
     /// More granularly, here is the journey:
     /// 1. This method might end up calling on an underlying engine function & pass the
     ///    `input_event` & state (from the redux store) to it.
     ///    - Engines tend to have a corresponding `apply_event` method which returns a new
-    ///      result or response type, eg: [crate::DialogEngineApplyResponse] or
-    ///      [crate::EditorEngineApplyEventResult].
+    ///      result or response type, eg: [`crate::DialogEngineApplyResponse`] or
+    ///      [`crate::EditorEngineApplyEventResult`].
     /// 2. Then the response or result is used to run a callback function that was passed
     ///    in when the component was created (which will then end up dispatching an action
     ///    to the redux store).
-    /// 3. Finally an [EventPropagation] is returned to let the caller know whether the
+    /// 3. Finally an [`EventPropagation`] is returned to let the caller know whether the
     ///    `input_event` was consumed or not & whether it should re-render (outside of a
     ///    redux store state change).
     fn handle_event(

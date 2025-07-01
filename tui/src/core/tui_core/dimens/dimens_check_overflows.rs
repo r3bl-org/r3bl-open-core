@@ -103,11 +103,11 @@ mod tests_bounds_check_overflows {
         let overflowed = [col(5), col(6), col(7)];
         let width = width(5);
 
-        for col_index in within.iter() {
+        for col_index in &within {
             assert_eq!(col_index.check_overflows(width), BoundsStatus::Within);
         }
 
-        for col_index in overflowed.iter() {
+        for col_index in &overflowed {
             assert_eq!(col_index.check_overflows(width), BoundsStatus::Overflowed);
         }
     }
@@ -118,11 +118,11 @@ mod tests_bounds_check_overflows {
         let overflowed = [row(5), row(6), row(7)];
         let height = height(5);
 
-        for row_index in within.iter() {
+        for row_index in &within {
             assert_eq!(row_index.check_overflows(height), BoundsStatus::Within);
         }
 
-        for row_index in overflowed.iter() {
+        for row_index in &overflowed {
             assert_eq!(row_index.check_overflows(height), BoundsStatus::Overflowed);
         }
     }
@@ -133,11 +133,11 @@ mod tests_bounds_check_overflows {
         let overflowed = [row(6), row(7)];
         let max = row(5);
 
-        for row_index in within.iter() {
+        for row_index in &within {
             assert_eq!(row_index.check_overflows(max), BoundsStatus::Within);
         }
 
-        for row_index in overflowed.iter() {
+        for row_index in &overflowed {
             assert_eq!(row_index.check_overflows(max), BoundsStatus::Overflowed);
         }
     }

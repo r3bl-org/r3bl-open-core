@@ -113,12 +113,12 @@
 //!   - [Input Editing Behavior](#input-editing-behavior)
 //! - [Examples](#examples)
 //! - [How to use this crate](#how-to-use-this-crate)
-//!   - [ReadlineAsync::try_new, which is the main entry point for most use
+//!   - [`ReadlineAsync::try_new`, which is the main entry point for most use
 //!     cases](#terminalasynctry_new-which-is-the-main-entry-point-for-most-use-cases)
 //!   - [Readline overview please see the docs for this struct for
 //!     details](#readline-overview-please-see-the-docs-for-this-struct-for-details)
-//!   - [Spinner::try_start](#spinnertry_start)
-//! - [Build this crate with Naz on YouTube](#build-this-crate-with-naz-on-youtube)
+//!   - [`Spinner::try_start`](#spinnertry_start)
+//! - [Build this crate with Naz on `YouTube`](#build-this-crate-with-naz-on-youtube)
 //! - [Why another async readline crate?](#why-another-async-readline-crate)
 //!   - [References for blocking and thread cancellation in
 //!     Rust](#references-for-blocking-and-thread-cancellation-in-rust)
@@ -139,7 +139,7 @@
 //! 1. Because
 //!    [`read_line()`](https://doc.rust-lang.org/std/io/struct.Stdin.html#method.read_line)
 //!    is blocking. And there is no way to terminate an OS thread that is blocking in
-//!    Rust. To do this, you have to request_shutdown the process (who's thread is blocked in
+//!    Rust. To do this, you have to `request_shutdown` the process (who's thread is blocked in
 //!    `read_line()`).
 //!
 //!     - There is no way to get `read_line()` unblocked once it is blocked.
@@ -150,7 +150,7 @@
 //!     - Even if that task is wrapped in a [`thread::spawn()` or
 //!       `thread::spawn_blocking()`](https://tokio.rs/tokio/tutorial/spawning), it isn't
 //!       possible to cancel or abort that thread, without cooperatively asking it to
-//!       request_shutdown. To see what this type of code looks like, take a look at
+//!       `request_shutdown`. To see what this type of code looks like, take a look at
 //!       [this](https://github.com/nazmulidris/rust-scratch/blob/fcd730c4b17ed0b09ff2c1a7ac4dd5b4a0c66e49/tcp-api-server/src/client_task.rs#L275).
 //!
 //! 2. Another problem is that when a thread is blocked in `read_line()`, and you have to
@@ -166,7 +166,7 @@
 //! Here is a video of the `readline_async` and `spinner` examples in this crate, in
 //! action:
 //!
-//! ![readline_async_video](https://github.com/r3bl-org/r3bl-open-core/tree/main/docs/r3bl_terminal_async_clip_ffmpeg.gif?raw=true)
+//! ![`readline_async_video`](https://github.com/r3bl-org/r3bl-open-core/tree/main/docs/r3bl_terminal_async_clip_ffmpeg.gif?raw=true)
 //!
 //! # Changelog
 //!
@@ -190,7 +190,7 @@
 //! 1. Read user input from the terminal line by line, while your program concurrently
 //!    writes lines to the same terminal.
 //!    - One [`Readline`] instance can be used to spawn
-//!      many async `stdout` writers, [crate::SharedWriter], that can write to the
+//!      many async `stdout` writers, [`crate::SharedWriter`], that can write to the
 //!      terminal concurrently.
 //!    - For most users the [`ReadlineAsyncContext`] struct is the simplest
 //!      way to use this crate. You rarely have to access the underlying [`Readline`] or
@@ -214,7 +214,7 @@
 //!    the concurrent output is supported even for your tracing logs to `stdout`.
 //!
 //! 4. You can also plug in your own terminal, like `stdout`, or `stderr`, or any other
-//!    terminal that implements [crate::SendRawTerminal] trait for more details.
+//!    terminal that implements [`crate::SendRawTerminal`] trait for more details.
 //!
 //! This crate can detect when your terminal is not in interactive mode. E.g.: when you pipe
 //! the output of your program to another program. In this case, the `readline` feature is
@@ -235,26 +235,26 @@
 //! ## Pause and resume support
 //!
 //! The pause and resume functionality is implemented using:
-//! - [LineState::is_paused] - Used to check if the line state is paused and affects
+//! - [`LineState::is_paused`] - Used to check if the line state is paused and affects
 //!   rendering and input.
-//! - [LineState::set_paused] - Use to set the paused state via the
-//!   [crate::SharedWriter] below. This can't be called directly (outside the crate
+//! - [`LineState::set_paused`] - Use to set the paused state via the
+//!   [`crate::SharedWriter`] below. This can't be called directly (outside the crate
 //!   itself).
-//! - [crate::SharedWriter::line_state_control_channel_sender] - Mechanism used to
+//! - [`crate::SharedWriter::line_state_control_channel_sender`] - Mechanism used to
 //!   manipulate the paused state.
 //!
-//! The [Readline::try_new] or [ReadlineAsyncContext::try_new] create a `line_channel` to send and
-//! receive [crate::LineStateControlSignal]:
-//! 1. The sender end of this channel is moved to the [crate::SharedWriter]. So any
-//!    [crate::SharedWriter] can be used to send [crate::LineStateControlSignal]s
+//! The [`Readline::try_new`] or [`ReadlineAsyncContext::try_new`] create a `line_channel` to send and
+//! receive [`crate::LineStateControlSignal`]:
+//! 1. The sender end of this channel is moved to the [`crate::SharedWriter`]. So any
+//!    [`crate::SharedWriter`] can be used to send [`crate::LineStateControlSignal`]s
 //!    to the channel, which will be processed in the task started, just for this, in
-//!    [Readline::try_new]. This is the primary mechanism to switch between pause and resume.
-//!    Some helper functions are provided in [ReadlineAsyncContext::pause] and
-//!    [ReadlineAsyncContext::resume], though you can just send the signals directly to the
+//!    [`Readline::try_new`]. This is the primary mechanism to switch between pause and resume.
+//!    Some helper functions are provided in [`ReadlineAsyncContext::pause`] and
+//!    [`ReadlineAsyncContext::resume`], though you can just send the signals directly to the
 //!    channel's sender via the
-//!    [crate::SharedWriter::line_state_control_channel_sender].
-//! 2. The receiver end of this [tokio::sync::mpsc::channel] is moved to the task that is
-//!    spawned by [Readline::try_new]. This is where the actual work is done when signals are
+//!    [`crate::SharedWriter::line_state_control_channel_sender`].
+//! 2. The receiver end of this [`tokio::sync::mpsc::channel`] is moved to the task that is
+//!    spawned by [`Readline::try_new`]. This is where the actual work is done when signals are
 //!    sent via the sender (described above).
 //!
 //! While the [Readline] is suspended, no input is possible, and only <kbd>Ctrl+C</kbd>
@@ -305,7 +305,7 @@
 //! 3. If you use [`std::writeln!`] then there's no need to [`ReadlineAsyncContext::flush()`]
 //!    because the `\n` will flush the buffer. When there's no `\n` in the buffer, or you
 //!    are using [`std::write!`] then you might need to call [`ReadlineAsyncContext::flush()`].
-//! 4. You can use the [crate::rla_println!] and [crate::rla_println_prefixed!] methods to
+//! 4. You can use the [`crate::rla_println`!] and [`crate::rla_println_prefixed`!] methods to
 //!    easily write concurrent output to the `stdout` ([`crate::SharedWriter`]).
 //! 5. You can also get access to the underlying [`Readline`] via the
 //!    [`Readline::readline`] field. Details on this struct are listed below. For most use
@@ -358,7 +358,7 @@
 //! [`Spinner`]s also has cancellation support. Once a spinner is started,
 //! <kbd>Ctrl+C</kbd> and <kbd>Ctrl+D</kbd> are directed to the spinner, to cancel it.
 //! Spinners can also be checked for completion or cancellation by long running tasks, to
-//! ensure that they request_shutdown as a response to user cancellation. Take a look at the
+//! ensure that they `request_shutdown` as a response to user cancellation. Take a look at the
 //! `examples/readline_async.rs` file to get an understanding of how to use this API.
 //!
 //! The third change is that [`ReadlineAsyncContext::try_new()`] now accepts prompts that can
@@ -383,7 +383,7 @@
 //! # }
 //! ```
 //!
-//! # Build this crate with Naz on YouTube
+//! # Build this crate with Naz on `YouTube`
 //!
 //! Watch the following videos to learn more about how this crate was built:
 //!
@@ -481,8 +481,8 @@ pub type SafeHistory = Arc<StdMutex<History>>;
 
 pub type SafeBool = Arc<StdMutex<bool>>;
 
-/// This is a buffer of [crate::DEFAULT_STRING_STORAGE_SIZE] 80 rows x
-/// [crate::DEFAULT_PAUSE_BUFFER_SIZE] 128 columns (chars). This buffer collects output
+/// This is a buffer of [`crate::DEFAULT_STRING_STORAGE_SIZE`] 80 rows x
+/// [`crate::DEFAULT_PAUSE_BUFFER_SIZE`] 128 columns (chars). This buffer collects output
 /// while the async terminal is paused.
 pub type PauseBuffer = SmallVec<[InlineString; DEFAULT_PAUSE_BUFFER_SIZE]>;
 pub const DEFAULT_PAUSE_BUFFER_SIZE: usize = 128;

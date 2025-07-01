@@ -24,12 +24,12 @@
 //! crucial for handling Unicode text correctly, including multi-byte characters like
 //! emojis.
 //!
-//! Since [AsStrSlice] works with [char] (see [Iterator::Item]), all `usize` values in the
+//! Since [`AsStrSlice`] works with [char] (see [`Iterator::Item`]), all `usize` values in the
 //! interface represent character-based indices and offsets. However, since we can't
 //! change the `nom::Input` trait signature, we use type aliases to clarify this:
 //!
-//! - [CharacterIndexNomCompat]: Character index, not byte index
-//! - [CharacterCountNomCompat]: Character count, not byte count
+//! - [`CharacterIndexNomCompat`]: Character index, not byte index
+//! - [`CharacterCountNomCompat`]: Character count, not byte count
 //!
 //! ## Converting Between Byte and Character Positions
 //!

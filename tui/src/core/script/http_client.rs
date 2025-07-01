@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use std::borrow::ToOwned;
+
 use miette::IntoDiagnostic;
 
 mod constants {
@@ -25,10 +27,10 @@ pub fn create_client_with_user_agent(
     user_agent: Option<&str>,
 ) -> miette::Result<reqwest::Client> {
     let it = reqwest::Client::builder()
-        .user_agent(user_agent.map_or_else(
-            || constants::USER_AGENT.to_owned(),
-            |user_agent| user_agent.to_owned(),
-        ))
+        .user_agent(
+            user_agent
+                .map_or_else(|| constants::USER_AGENT.to_owned(), ToOwned::to_owned),
+        )
         .build();
     it.into_diagnostic()
 }

@@ -42,7 +42,7 @@ use crate::{ch,
 
 /// `GCString` represents a [String] as a sequence of grapheme cluster segments, and *not*
 /// just scalar values or single code points, like `🙏`. This is to provide support for
-/// "jumbo" emoji like `🙏🏽` is represented by a [super::Seg].
+/// "jumbo" emoji like `🙏🏽` is represented by a [`super::Seg`].
 ///
 /// A Unicode "grapheme" is a user-perceived character. For `UTF-8` encoded text, a
 /// grapheme can be a single byte or up to 4 bytes. A "grapheme cluster" can be multiple
@@ -78,19 +78,19 @@ use crate::{ch,
 ///
 /// # Grapheme cluster segments
 ///
-/// Why not just use [str::chars()] to get the grapheme cluster segments? [str::chars()]
-/// is not sufficient for handling grapheme clusters. It only handles Unicode scalar
-/// values, or code points, which are not the same as grapheme clusters. For example, the
-/// `😀` emoji is a single grapheme cluster which is also represented by a single code
-/// point. In this case, [str::chars()] is ok to use.
+/// Why not just use [`str::chars()`] to get the grapheme cluster segments?
+/// [`str::chars()`] is not sufficient for handling grapheme clusters. It only handles
+/// Unicode scalar values, or code points, which are not the same as grapheme clusters.
+/// For example, the `😀` emoji is a single grapheme cluster which is also represented by
+/// a single code point. In this case, [`str::chars()`] is ok to use.
 ///
 /// Let's take the example of `🙏🏽`. This is a jumbo emoji which is a amalgamation of
 /// multiple code points.
-/// - [str::chars()] would represent it two separate [char]: `'🙏' + '🏽'`.
-/// - However, [unicode_segmentation::UnicodeSegmentation] represents this as a single
+/// - [`str::chars()`] would represent it two separate [char]: `'🙏' + '🏽'`.
+/// - However, [`unicode_segmentation::UnicodeSegmentation`] represents this as a single
 ///   grapheme cluster.
 ///
-/// This is why we use [unicode_segmentation::UnicodeSegmentation] to handle grapheme
+/// This is why we use [`unicode_segmentation::UnicodeSegmentation`] to handle grapheme
 /// clusters.
 ///
 /// # Display column index, and segment index
@@ -158,7 +158,7 @@ use crate::{ch,
 /// lack of allocation to prove faster, but it turned out to be slower! Intuition around
 /// performance is not reliable, and it is best to measure and test each design choice.
 ///
-/// Having said this, the [super::Seg] struct is designed to be as lightweight as
+/// Having said this, the [`super::Seg`] struct is designed to be as lightweight as
 /// possible, with only the necessary properties for representing a grapheme cluster. It
 /// does not own any data and only stores references to the original string slice. This
 /// does not impact performance significantly, due to the nature in which it is used. So
@@ -170,21 +170,21 @@ use crate::{ch,
 /// There are two iterators. One for users of the struct, and another for use in a more
 /// un-abstract way, usually for internal use by the `r3bl_tui` codebase.
 ///
-/// 1. [Self::iter]: Returns an iterator over the grapheme segments in the `GCString`.
+/// 1. [`Self::iter`]: Returns an iterator over the grapheme segments in the `GCString`.
 ///    This iterator returns the `&str` segments in the order they appear in the
 ///    underlying string. This makes it easy to iterate over the segments as `&str`
 ///    without knowing about the [Seg] struct.
-/// 2. [Self::seg_iter]: Returns an iterator over the grapheme segments in the `GCString`.
-///    This iterator returns the [Seg] segments in the order they appear in the underlying
-///    string. This makes it easy to iterate over the segments as [Seg] and all the low
-///    level details on byte offsets, display width, etc.
+/// 2. [`Self::seg_iter`]: Returns an iterator over the grapheme segments in the
+///    `GCString`. This iterator returns the [Seg] segments in the order they appear in
+///    the underlying string. This makes it easy to iterate over the segments as [Seg] and
+///    all the low level details on byte offsets, display width, etc.
 ///
 /// # Features
 ///
 /// - `GCString`: Struct for representing Unicode strings with grapheme cluster
 ///   segmentation.
-/// - [Self::new]: A constructor function for creating a `GCString` from a string slice.
-/// - [Self::width]: A utility function for calculating the display width of a string
+/// - [`Self::new`]: A constructor function for creating a `GCString` from a string slice.
+/// - [`Self::width`]: A utility function for calculating the display width of a string
 ///   slice.
 ///
 /// # Traits
@@ -207,9 +207,9 @@ use crate::{ch,
 ///
 /// This module relies on the following external crates:
 ///
-/// - [unicode_segmentation::UnicodeSegmentation]: For splitting strings into grapheme
+/// - [`unicode_segmentation::UnicodeSegmentation`]: For splitting strings into grapheme
 ///   clusters.
-/// - [unicode_width::UnicodeWidthStr]: For calculating the display width of Unicode
+/// - [`unicode_width::UnicodeWidthStr`]: For calculating the display width of Unicode
 ///   characters.
 ///
 /// # Example
@@ -258,17 +258,19 @@ mod iterator {
     }
 
     impl GCString {
-        /// This is used to get the [Self::segments] of the grapheme string. This is used
-        /// for debugging and testing purposes, in addition to low level implementation of
-        /// things (like rendering) in the `r3bl_tui` crate. If you don't care about these
-        /// details and simply want a sequence of `&str`, then use the [Self::iter] method
-        /// to get an iterator over the grapheme segments.
+        /// This is used to get the [`Self::segments`] of the grapheme string. This is
+        /// used for debugging and testing purposes, in addition to low level
+        /// implementation of things (like rendering) in the `r3bl_tui` crate. If
+        /// you don't care about these details and simply want a sequence of
+        /// `&str`, then use the [`Self::iter`] method to get an iterator over the
+        /// grapheme segments.
         pub fn seg_iter(&self) -> impl Iterator<Item = &Seg> { self.segments.iter() }
 
         /// Returns an iterator over the grapheme segments in the `GCString` as a sequence
         /// of `&str`. You don't have to worry about the [Seg] struct. If you care about
-        /// the internal details, use the [Self::seg_iter()] method that returns an
-        /// iterator over the [Self::segments].
+        /// the internal details, use the [`Self::seg_iter()`] method that returns an
+        /// iterator over the [`Self::segments`].
+        #[must_use]
         pub fn iter(&self) -> GCStringIterator<'_> {
             GCStringIterator {
                 gc_string: self,
@@ -277,9 +279,18 @@ mod iterator {
         }
 
         /// Returns the segment at the given index.
+        #[must_use]
         pub fn get_segment(&self, index: usize) -> Option<&str> {
             self.segments.get(index).map(|seg| seg.get_str(self))
         }
+    }
+
+    /// This implementation allows the [`GCString`] to be used in a for loop directly.
+    impl<'a> IntoIterator for &'a GCString {
+        type Item = &'a str;
+        type IntoIter = GCStringIterator<'a>;
+
+        fn into_iter(self) -> Self::IntoIter { self.iter() }
     }
 }
 
@@ -306,13 +317,78 @@ mod tests_iterator {
         assert_eq!(iter.next(), Some("🙏🏽"));
         assert_eq!(iter.next(), None);
     }
+
+        #[test]
+    fn test_into_iterator_implementation() {
+        let gc_string = GCString::new("Hello, 世界🥞");
+
+        // Test that we can use the GCString directly in a for loop (this is why IntoIterator is needed!)
+        let mut collected = Vec::new();
+        for segment in &gc_string {
+            collected.push(segment.to_string());
+        }
+
+        assert_eq!(collected.len(), 10);
+        assert_eq!(collected[0], "H");
+        assert_eq!(collected[1], "e");
+        assert_eq!(collected[6], " ");
+        assert_eq!(collected[7], "世");
+        assert_eq!(collected[8], "界");
+        assert_eq!(collected[9], "🥞");
+
+        // Test using for loop with explicit into_iter() call
+        let mut explicit_collected = Vec::new();
+        for segment in (&gc_string).into_iter() {
+            explicit_collected.push(segment.to_string());
+        }
+        assert_eq!(collected, explicit_collected);
+
+        // Test using for loop to find specific graphemes
+        let mut found_emoji = false;
+        for segment in &gc_string {
+            if segment == "🥞" {
+                found_emoji = true;
+                break;
+            }
+        }
+        assert!(found_emoji);
+
+        // Test using for loop with enumerate to get indices
+        for (index, segment) in (&gc_string).into_iter().enumerate() {
+            match index {
+                0 => assert_eq!(segment, "H"),
+                1 => assert_eq!(segment, "e"),
+                7 => assert_eq!(segment, "世"),
+                8 => assert_eq!(segment, "界"),
+                9 => assert_eq!(segment, "🥞"),
+                _ => {} // Other segments are valid too
+            }
+        }
+
+        // Test using for loop to count specific types of characters
+        let mut ascii_count = 0;
+        let mut unicode_count = 0;
+        for segment in &gc_string {
+            if segment.is_ascii() {
+                ascii_count += 1;
+            } else {
+                unicode_count += 1;
+            }
+        }
+        assert_eq!(ascii_count, 7); // "H", "e", "l", "l", "o", ",", " "
+        assert_eq!(unicode_count, 3); // "世", "界", "🥞"
+
+        // Compare with manual iter() usage (without for loop)
+        let iter_results: Vec<_> = gc_string.iter().map(ToString::to_string).collect();
+        assert_eq!(iter_results, collected);
+    }
 }
 
 pub fn grapheme_string(arg_from: impl Into<GCString>) -> GCString { arg_from.into() }
 
 /// Static sizing information for the `GCString` struct. This is used to calculate
-/// the stack size of the struct (before it is [smallvec::SmallVec::spilled] to the heap,
-/// if it becomes necessary).
+/// the stack size of the struct (before it is [`smallvec::SmallVec::spilled`] to the
+/// heap, if it becomes necessary).
 mod sizing {
     use super::*;
     use crate::GetMemSize;
@@ -356,10 +432,10 @@ mod basic {
     }
 
     impl GCString {
-        /// Constructor function that creates a [GCString] from a string slice. The actual
-        /// grapheme cluster segment parsing is done using
-        /// [unicode_segmentation::UnicodeSegmentation]. This is far more sophisticated
-        /// than just using [str::chars()]. And it handles grapheme cluster segments and
+        /// Constructor function that creates a [`GCString`] from a string slice. The
+        /// actual grapheme cluster segment parsing is done using
+        /// [`unicode_segmentation::UnicodeSegmentation`]. This is far more sophisticated
+        /// than just using [`str::chars()`]. And it handles grapheme cluster segments and
         /// not just code points / Unicode scalar values. This handles things like jumbo
         /// emoji like `🙏🏽`.
         pub fn new(arg_str: impl AsRef<str>) -> GCString {
@@ -403,12 +479,15 @@ mod basic {
         }
 
         /// Returns the number of grapheme clusters in this grapheme string. This is the
-        /// the same as the length of the [Self::segments].
+        /// the same as the length of the [`Self::segments`].
+        #[must_use]
         pub fn len(&self) -> SegWidth { self.segments.len().into() }
 
+        #[must_use]
         pub fn is_empty(&self) -> bool { self.len() == seg_width(0) }
 
         /// Returns the maximum segment index of this grapheme string.
+        #[must_use]
         pub fn get_max_seg_index(&self) -> SegIndex { self.len().convert_to_seg_index() }
 
         /// Utility function to calculate the display width of a character or string
@@ -418,6 +497,7 @@ mod basic {
             width(UnicodeWidthStr::width(str))
         }
 
+        #[must_use]
         pub fn width_char(c: char) -> ColWidth {
             let value = UnicodeWidthChar::width(c).unwrap_or(0);
             width(value)
@@ -426,9 +506,9 @@ mod basic {
         /// Given the grapheme cluster segment index, return the corresponding [Seg]
         /// struct.
         ///
-        /// The `index` argument can be different types like [ColIndex] and [ByteIndex],
-        /// which can both be converted to [SegIndex] by [Add]ing it to a
-        /// [GCString].
+        /// The `index` argument can be different types like [`ColIndex`] and
+        /// [`ByteIndex`], which can both be converted to [`SegIndex`] by [Add]ing
+        /// it to a [`GCString`].
         ///
         /// Here's a visual depiction of the different indices.
         ///
@@ -664,6 +744,7 @@ pub mod at_display_col_index {
         /// ❯ DC: display column index | DW: display width
         /// ❯ R: row index | SI: segment index
         /// ```
+        #[must_use]
         pub fn get_string_at_end(&self) -> Option<SegString> {
             let seg = self.last()?;
             Some((*seg, self).into())
@@ -671,9 +752,9 @@ pub mod at_display_col_index {
     }
 }
 
-/// This struct is returned by the methods in this module [mod@at_display_col_index].
+/// This struct is returned by the methods in this module [`mod@at_display_col_index`].
 ///
-/// It represents a slice of the original [GCString] and owns data. It is used to
+/// It represents a slice of the original [`GCString`] and owns data. It is used to
 /// represent segments of the original string that are returned as a result of various
 /// computations, eg: `r3bl_core::GCString::get_string_at_right_of()`, etc.
 ///
@@ -681,7 +762,7 @@ pub mod at_display_col_index {
 /// that creates it, not as a result of mutation).
 #[derive(PartialEq, Eq)]
 pub struct SegString {
-    /// The grapheme cluster slice, as a [GCString]. This is a copy of the slice
+    /// The grapheme cluster slice, as a [`GCString`]. This is a copy of the slice
     /// from the original string.
     pub string: GCString,
     /// The display width of the slice.
@@ -694,7 +775,7 @@ pub struct SegString {
 mod seg_string_result_impl {
     use super::*;
 
-    /// Easily convert a [Seg] and a [GCString] into a [SegString].
+    /// Easily convert a [Seg] and a [`GCString`] into a [`SegString`].
     impl From<(Seg, &GCString)> for SegString {
         fn from((seg, gs): (Seg, &GCString)) -> SegString {
             SegString {
@@ -705,7 +786,7 @@ mod seg_string_result_impl {
         }
     }
 
-    /// Short and readable debug output for [SegString].
+    /// Short and readable debug output for [`SegString`].
     impl Debug for SegString {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(
@@ -718,17 +799,17 @@ mod seg_string_result_impl {
 }
 
 /// Convert between different types of indices. This unifies the API so that different
-/// index types are all converted into [SegIndex] for use with this struct. Here's the
+/// index types are all converted into [`SegIndex`] for use with this struct. Here's the
 /// list:
-/// - [GCString] + [ByteIndex] = [Option]<[SegIndex]>
-/// - [GCString] + [ColIndex] = [Option]<[SegIndex]>
-/// - [GCString] + [SegIndex] = [Option]<[ColIndex]>
+/// - [`GCString`] + [`ByteIndex`] = [Option]<[`SegIndex`]>
+/// - [`GCString`] + [`ColIndex`] = [Option]<[`SegIndex`]>
+/// - [`GCString`] + [`SegIndex`] = [Option]<[`ColIndex`]>
 mod convert {
     use super::*;
 
     /// Convert a `byte_index` to a `seg_index`.
     ///
-    /// Try and convert a [GCString] + [ByteIndex] to a grapheme index [SegIndex].
+    /// Try and convert a [`GCString`] + [`ByteIndex`] to a grapheme index [`SegIndex`].
     impl Add<ByteIndex> for &GCString {
         type Output = Option<SegIndex>;
 
@@ -736,7 +817,7 @@ mod convert {
         /// underlying string.
         fn add(self, byte_index: ByteIndex) -> Self::Output {
             let byte_index = *byte_index;
-            for seg in self.segments.iter() {
+            for seg in &self.segments {
                 let start = usize(seg.start_byte_index);
                 let end = usize(seg.end_byte_index);
                 if byte_index >= start && byte_index < end {
@@ -749,8 +830,8 @@ mod convert {
 
     /// Convert a `display_col_index` to a `seg_index`.
     ///
-    /// Try and convert a [GCString] + [ColIndex] (display column index) to a
-    /// grapheme index [SegIndex].
+    /// Try and convert a [`GCString`] + [`ColIndex`] (display column index) to a
+    /// grapheme index [`SegIndex`].
     impl Add<ColIndex> for &GCString {
         type Output = Option<SegIndex>;
 
@@ -772,7 +853,7 @@ mod convert {
 
     /// Convert a `seg_index` to `display_col_index`.
     ///
-    /// Try and convert a [GCString] + [SegIndex] to a [ColIndex] (display column
+    /// Try and convert a [`GCString`] + [`SegIndex`] to a [`ColIndex`] (display column
     /// index).
     impl Add<SegIndex> for &GCString {
         type Output = Option<ColIndex>;
@@ -798,6 +879,7 @@ pub mod wide_segments {
     impl GCString {
         /// Checks if the `GCString` contains any wide segments. A wide segment is
         /// defined as a segment with a display width greater than 1, eg: `📦` or `🙏🏽`.
+        #[must_use]
         pub fn contains_wide_segments(&self) -> ContainsWideSegments {
             if self.segments.iter().any(|seg| seg.display_width > width(1)) {
                 ContainsWideSegments::Yes
@@ -954,14 +1036,14 @@ pub mod trunc_start {
 
             for segment in self.seg_iter() {
                 let seg_display_width = segment.display_width;
-                if *skip_col_count != ch(0) {
-                    // Skip segment.unicode_width.
-                    skip_col_count -= seg_display_width;
-                    string_start_byte_index += segment.bytes_size;
-                } else {
+                if *skip_col_count == ch(0) {
                     // We are done skipping.
                     break;
                 }
+
+                // Skip segment.unicode_width.
+                skip_col_count -= seg_display_width;
+                string_start_byte_index += segment.bytes_size;
             }
 
             &self.string[string_start_byte_index..]
@@ -974,7 +1056,7 @@ mod pad {
     use super::*;
 
     impl GCString {
-        /// Returns a new [InlineString] that is the result of padding `self.string` to
+        /// Returns a new [`InlineString`] that is the result of padding `self.string` to
         /// fit the given width w/ the given spacer character.
         ///
         /// Here's a visual depiction of the different indices.
@@ -1041,7 +1123,7 @@ mod pad {
         }
 
         /// If `self.string`'s display width is less than `display_width`, this returns a
-        /// padding [InlineString] consisting of the `pad_str` repeated to make up the
+        /// padding [`InlineString`] consisting of the `pad_str` repeated to make up the
         /// difference. Otherwise, if `self.string` is already as wide or wider than
         /// `display_width`, it returns `None`.
         ///
@@ -1141,14 +1223,14 @@ mod clip {
                 for seg in self.seg_iter() {
                     let seg_display_width = seg.display_width;
                     // Skip scroll_offset_col_index columns.
-                    if *skip_col_count != ch(0) {
-                        // Skip segment.unicode_width.
-                        skip_col_count -= seg_display_width;
-                        it += seg.bytes_size;
-                    } else {
+                    if *skip_col_count == ch(0) {
                         // We are done skipping.
                         break;
                     }
+
+                    // Skip segment.unicode_width.
+                    skip_col_count -= seg_display_width;
+                    it += seg.bytes_size;
                 }
                 it
             };
@@ -1160,18 +1242,16 @@ mod clip {
                 for seg in self.seg_iter() {
                     let seg_display_width = seg.display_width;
                     // Skip scroll_offset_col_index columns (again).
-                    if *skip_col_count != ch(0) {
-                        // Skip segment.unicode_width.
-                        skip_col_count -= seg_display_width;
-                        it += seg.bytes_size;
-                    }
-                    // Clip max_display_col_count columns.
-                    else {
+                    if *skip_col_count == ch(0) {
                         if avail_col_count < seg_display_width {
                             break;
                         }
                         it += seg.bytes_size;
                         avail_col_count -= seg_display_width;
+                    } else {
+                        // Skip segment.unicode_width.
+                        skip_col_count -= seg_display_width;
+                        it += seg.bytes_size;
                     }
                 }
                 it
@@ -1188,8 +1268,8 @@ mod mutate {
 
     impl GCString {
         /// Inserts the given `chunk` in the correct position of the `string`, and returns
-        /// a new ([InlineString], [ColWidth]) tuple:
-        /// 1. The new [InlineString] produced containing the inserted chunk.
+        /// a new ([`InlineString`], [`ColWidth`]) tuple:
+        /// 1. The new [`InlineString`] produced containing the inserted chunk.
         /// 2. The unicode width / display width of the inserted `chunk`.
         ///
         /// Here's a visual depiction of the different indices.
@@ -1240,7 +1320,7 @@ mod mutate {
                 Some(seg_index) => vec.insert(usize(*seg_index), chunk),
                 // Add to end of self.string.
                 None => vec.push(chunk),
-            };
+            }
 
             // Generate a new InlineString from acc and return it and the unicode width of
             // the character.
@@ -1250,7 +1330,7 @@ mod mutate {
             )
         }
 
-        /// Returns a new [InlineString] that is the result of deleting the character at
+        /// Returns a new [`InlineString`] that is the result of deleting the character at
         /// the given `display_col_index`.
         ///
         /// Here's a visual depiction of the different indices.
@@ -1334,8 +1414,8 @@ mod mutate {
         /// cluster.
         ///
         /// Returns two new tuples:
-        /// 1. *left* [InlineString],
-        /// 2. *right* [InlineString].
+        /// 1. *left* [`InlineString`],
+        /// 2. *right* [`InlineString`].
         ///
         /// Here's a visual depiction of the different indices.
         ///
@@ -1414,7 +1494,7 @@ mod tests {
                 width,
                 SegString};
 
-    /// Helper function to create a [SegString] for testing. Keeps the width of the
+    /// Helper function to create a [`SegString`] for testing. Keeps the width of the
     /// lines of code in each test to a minimum (for easier readability).
     fn ssr(
         arg_gc_string: impl Into<GCString>,

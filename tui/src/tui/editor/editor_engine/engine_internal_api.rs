@@ -16,7 +16,7 @@
  */
 
 //! Functions that implement the internal (not re-exported in `mod.rs`) & functional API
-//! of the editor engine. See [mod@super::engine_public_api] for the public event based
+//! of the editor engine. See [`mod@super::engine_public_api`] for the public event based
 //! API.
 
 use super::{caret_mut, content_mut, DeleteSelectionWith, SelectMode};
@@ -73,6 +73,7 @@ pub fn select_all(buffer: &mut EditorBuffer, sel_mod: SelectMode) {
 
 pub fn clear_selection(buffer: &mut EditorBuffer) { buffer.clear_selection(); }
 
+#[must_use]
 pub fn line_at_caret_to_string(buffer: &EditorBuffer) -> Option<&GCString> {
     buffer.line_at_caret_scr_adj()
 }

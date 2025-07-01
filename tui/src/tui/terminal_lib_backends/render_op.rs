@@ -31,7 +31,7 @@ use crate::{ok,
             TuiColor,
             TuiStyle};
 
-/// Here's an example. Refer to [RenderOps] for more details.
+/// Here's an example. Refer to [`RenderOps`] for more details.
 ///
 /// ```
 /// use r3bl_tui::*;
@@ -118,7 +118,7 @@ macro_rules! render_ops {
   };
 }
 
-/// For ease of use, please use the [render_ops!] macro.
+/// For ease of use, please use the [`render_ops`!] macro.
 ///
 /// It is a collection of *atomic* paint operations (aka [`RenderOps`] at various
 /// [`super::ZOrder`]s); each [`RenderOps`] is made up of a [vec] of [`RenderOp`]. It
@@ -138,7 +138,7 @@ macro_rules! render_ops {
 /// 3. So there are no side effects when re-ordering or omitting painting an atomic paint
 ///    operation (eg in the case where it has already been painted before).
 ///
-/// Here's an example. Consider using the macro for convenience (see [render_ops!]).
+/// Here's an example. Consider using the macro for convenience (see [`render_ops`!]).
 ///
 /// ```
 /// use r3bl_tui::*;
@@ -151,7 +151,7 @@ macro_rules! render_ops {
 /// ```
 ///
 /// # Paint optimization
-/// Due to the compositor [super::OffscreenBuffer], there is no need to optimize the
+/// Due to the compositor [`super::OffscreenBuffer`], there is no need to optimize the
 /// individual paint operations. You don't have to manage your own whitespace or doing
 /// clear before paint! 🎉 The compositor takes care of that for you!
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -184,7 +184,7 @@ pub mod render_ops_impl {
             is_mock: bool,
         ) {
             let mut local_data = RenderOpsLocalData::default();
-            for render_op in self.list.iter() {
+            for render_op in &self.list {
                 RenderOps::route_paint_render_op_to_backend(
                     &mut local_data,
                     skip_flush,
@@ -236,11 +236,11 @@ pub mod render_ops_impl {
 
     impl Debug for RenderOps {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            const DELIM: &str = "\n  - ";
+
             let mut iter = self.iter();
 
             _ = write!(f, "RenderOps.len(): {}", self.list.len());
-
-            const DELIM: &str = "\n  - ";
 
             // First line.
             if let Some(first) = iter.next() {
@@ -264,14 +264,14 @@ pub enum RenderOp {
     ExitRawMode,
 
     /// This is always painted on top. [Pos] is the absolute column and row on the
-    /// terminal screen. This uses [super::sanitize_and_save_abs_pos] to clean up the
+    /// terminal screen. This uses [`super::sanitize_and_save_abs_pos`] to clean up the
     /// given [Pos].
     MoveCursorPositionAbs(/* absolute position */ Pos),
 
     /// This is always painted on top. 1st [Pos] is the origin column and row, and the
     /// 2nd [Pos] is the offset column and row. They are added together to move the
     /// absolute position on the terminal screen. Then
-    /// [RenderOp::MoveCursorPositionAbs] is used.
+    /// [`RenderOp::MoveCursorPositionAbs`] is used.
     MoveCursorPositionRelTo(
         /* origin position */ Pos,
         /* relative position */ Pos,
@@ -279,33 +279,33 @@ pub enum RenderOp {
 
     ClearScreen,
 
-    /// Directly set the fg color for crossterm w/out using [TuiStyle].
+    /// Directly set the fg color for crossterm w/out using [`TuiStyle`].
     SetFgColor(TuiColor),
 
-    /// Directly set the bg color for crossterm w/out using [TuiStyle].
+    /// Directly set the bg color for crossterm w/out using [`TuiStyle`].
     SetBgColor(TuiColor),
 
     ResetColor,
 
-    /// Translate [TuiStyle] into fg and bg colors for crossterm. Note that this does not
-    /// apply attributes (bold, italic, underline, strikethrough, etc). If you need to
-    /// apply attributes, use [RenderOp::PaintTextWithAttributes] instead.
+    /// Translate [`TuiStyle`] into fg and bg colors for crossterm. Note that this does
+    /// not apply attributes (bold, italic, underline, strikethrough, etc). If you
+    /// need to apply attributes, use [`RenderOp::PaintTextWithAttributes`] instead.
     ApplyColors(Option<TuiStyle>),
 
-    /// Translate [TuiStyle] into *only* attributes for crossterm (bold, italic,
+    /// Translate [`TuiStyle`] into *only* attributes for crossterm (bold, italic,
     /// underline, strikethrough, etc) and not colors. If you need to apply color, use
-    /// [RenderOp::ApplyColors] instead.
+    /// [`RenderOp::ApplyColors`] instead.
     ///
-    /// 1. If the [InlineString] argument is plain text (no ANSI sequences) then it will
-    ///    be clipped available width of the terminal screen).
+    /// 1. If the [`InlineString`] argument is plain text (no ANSI sequences) then it
+    ///    will be clipped available width of the terminal screen).
     ///
-    /// 2. If the [InlineString] argument contains ANSI sequences then it will be printed
-    ///    as-is. You are responsible for handling clipping of the text to the bounds of
-    ///    the terminal screen.
+    /// 2. If the [`InlineString`] argument contains ANSI sequences then it will be
+    ///    printed as-is. You are responsible for handling clipping of the text to the
+    ///    bounds of the terminal screen.
     PaintTextWithAttributes(InlineString, Option<TuiStyle>),
 
     /// This is **not** meant for use directly by apps. It is to be used only by the
-    /// [super::OffscreenBuffer]. This operation skips the checks for content width
+    /// [`super::OffscreenBuffer`]. This operation skips the checks for content width
     /// padding & clipping, and window bounds clipping. These are not needed when the
     /// compositor is painting an offscreen buffer, since when the offscreen buffer was
     /// created the two render ops above were used which already handle the clipping and
@@ -324,9 +324,9 @@ mod render_op_impl {
     }
 
     impl Debug for RenderOp {
-        /// When [crate::RenderPipeline] is printed as debug, each [RenderOp] is printed
-        /// using this method. Also [crate::queue_render_op!] does not use this; it has
-        /// its own way of logging output.
+        /// When [`crate::RenderPipeline`] is printed as debug, each [`RenderOp`] is
+        /// printed using this method. Also [`crate::queue_render_op`!] does not
+        /// use this; it has its own way of logging output.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {

@@ -19,8 +19,8 @@ use nom::Offset;
 
 use crate::as_str_slice::AsStrSlice;
 
-/// Implement [Offset] trait for [AsStrSlice]. This is required for the
-/// [nom::combinator::recognize] parser to work.
+/// Implement [Offset] trait for [`AsStrSlice`]. This is required for the
+/// [`nom::combinator::recognize`] parser to work.
 impl<'a> Offset for AsStrSlice<'a> {
     fn offset(&self, second: &Self) -> usize {
         // Calculate the character offset between two AsStrSlice instances.

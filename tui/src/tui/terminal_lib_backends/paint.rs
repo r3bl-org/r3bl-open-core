@@ -43,13 +43,19 @@ pub trait PaintRenderOp {
     );
 }
 
-/// Paint the render pipeline. The render pipeline contains a list of [crate::RenderOps]
-/// for each [crate::ZOrder]. This function is responsible for:
-/// 1. Actually executing those [crate::RenderOps] in the correct order.
+/// Paint the render pipeline. The render pipeline contains a list of [`crate::RenderOps`]
+/// for each [`crate::ZOrder`]. This function is responsible for:
+/// 1. Actually executing those [`crate::RenderOps`] in the correct order.
 /// 2. And routing the execution to the correct backend specified in
-///    [TERMINAL_LIB_BACKEND].
+///    [`TERMINAL_LIB_BACKEND`].
 ///
-/// See [crate::RenderOps] for more details of "atomic paint operations".
+/// See [`crate::RenderOps`] for more details of "atomic paint operations".
+///
+/// # Panics
+///
+/// This will panic if the lock is poisoned, which can happen if a thread
+/// panics while holding the lock. To avoid panics, ensure that the code that
+/// locks the mutex does not panic while holding the lock.
 pub fn paint<S, AS>(
     pipeline: &RenderPipeline,
     flush_kind: FlushKind,
@@ -60,6 +66,50 @@ pub fn paint<S, AS>(
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
+    fn perform_diff_paint(
+        diff_chunks: &PixelCharDiffChunks,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
+                let render_ops = crossterm_impl.render_diff(diff_chunks);
+                crossterm_impl.paint_diff(
+                    render_ops,
+                    window_size,
+                    locked_output_device,
+                    is_mock,
+                );
+            }
+            TerminalLibBackend::Termion => unimplemented!(),
+        }
+    }
+
+    fn perform_full_paint(
+        offscreen_buffer: &OffscreenBuffer,
+        flush_kind: FlushKind,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
+                let render_ops = crossterm_impl.render(offscreen_buffer);
+                crossterm_impl.paint(
+                    render_ops,
+                    flush_kind,
+                    window_size,
+                    locked_output_device,
+                    is_mock,
+                );
+            }
+            TerminalLibBackend::Termion => unimplemented!(),
+        }
+    }
+
     // If this is None, then a full paint will be performed & the offscreen buffer will be
     // saved to global_data.
     let maybe_saved_offscreen_buffer = global_data.maybe_saved_offscreen_buffer.clone();
@@ -108,69 +158,26 @@ pub fn paint<S, AS>(
 
     // Give back the buffer to the pool.
     if let Some(old_buffer) = global_data.maybe_saved_offscreen_buffer.take() {
-        global_data.offscreen_buffer_pool.give_back(old_buffer)
+        global_data.offscreen_buffer_pool.give_back(old_buffer);
     }
 
     // Save the buffer to global_data.
     global_data.maybe_saved_offscreen_buffer = Some(buffer_from_pool);
-
-    fn perform_diff_paint(
-        diff_chunks: &PixelCharDiffChunks,
-        window_size: Size,
-        locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
-    ) {
-        match TERMINAL_LIB_BACKEND {
-            TerminalLibBackend::Crossterm => {
-                let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
-                let render_ops = crossterm_impl.render_diff(diff_chunks);
-                crossterm_impl.paint_diff(
-                    render_ops,
-                    window_size,
-                    locked_output_device,
-                    is_mock,
-                );
-            }
-            TerminalLibBackend::Termion => unimplemented!(),
-        }
-    }
-
-    fn perform_full_paint(
-        offscreen_buffer: &OffscreenBuffer,
-        flush_kind: FlushKind,
-        window_size: Size,
-        locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
-    ) {
-        match TERMINAL_LIB_BACKEND {
-            TerminalLibBackend::Crossterm => {
-                let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
-                let render_ops = crossterm_impl.render(offscreen_buffer);
-                crossterm_impl.paint(
-                    render_ops,
-                    flush_kind,
-                    window_size,
-                    locked_output_device,
-                    is_mock,
-                );
-            }
-            TerminalLibBackend::Termion => unimplemented!(),
-        }
-    }
 }
 
 /// 1. Ensure that the [Pos] is within the bounds of the terminal window using
-///    [RenderOpsLocalData].
+///    [`RenderOpsLocalData`].
 /// 2. If the [Pos] is outside the bounds of the window then it is clamped to the nearest
 ///    edge of the window. This clamped [Pos] is returned.
-/// 3. This also saves the clamped [Pos] to [RenderOpsLocalData].
+/// 3. This also saves the clamped [Pos] to [`RenderOpsLocalData`].
 ///
-/// Note that printing [crate::SPACER_GLYPH] by
-/// [crate::render_pipeline_to_offscreen_buffer::process_render_op] will trigger clipping
-/// the [Pos] to the nearest edge of the window. This is OK. This is because the spacer is
-/// painted at the very last column of the terminal window due to the way in which the
-/// spacers are repeated. No checks are supposed to be done when [crate::OffscreenBuffer]
-/// is painting, so there is no clean way to skip this clipping check.
+/// Note that printing [`crate::SPACER_GLYPH`] by
+/// [`crate::render_pipeline_to_offscreen_buffer::process_render_op`] will trigger
+/// clipping the [Pos] to the nearest edge of the window. This is OK. This is because the
+/// spacer is painted at the very last column of the terminal window due to the way in
+/// which the spacers are repeated. No checks are supposed to be done when
+/// [`crate::OffscreenBuffer`] is painting, so there is no clean way to skip this clipping
+/// check.
 ///
 /// See the `test_sanitize_and_save_abs_pos` for more details on the behavior of this
 /// function.

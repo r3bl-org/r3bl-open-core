@@ -36,18 +36,20 @@ use crate::{bounds_check,
 impl<'a> AsStrSlice<'a> {
     /// This does not materialize the `AsStrSlice`. And it does not look at the entire
     /// slice, but only at the current line. `AsStrSlice` is designed to work with output
-    /// from [str::lines()], which means it should not contain any
-    /// [crate::constants::NEW_LINE] characters in the `lines` slice.
+    /// from [`str::lines()`], which means it should not contain any
+    /// [`crate::constants::NEW_LINE`] characters in the `lines` slice.
     ///
     /// This method extracts the current line up to the end of the line, which is defined
     /// as the end of the current line or the end of the slice, whichever comes first.
+    #[must_use]
     pub fn contains_in_current_line(&self, sub_str: &str) -> bool {
         self.extract_to_line_end().contains(sub_str)
     }
 
-    /// Use [nom::FindSubstring] to implement this function to check if a substring
+    /// Use [`nom::FindSubstring`] to implement this function to check if a substring
     /// exists. This will try not to materialize the `AsStrSlice` if it can avoid it,
     /// but there are situations where it may have to (and allocate memory).
+    #[must_use]
     pub fn contains(&self, sub_str: &str) -> bool {
         self.find_substring(sub_str).is_some()
     }
@@ -95,15 +97,17 @@ impl<'a> AsStrSlice<'a> {
     ///
     /// This method does not materialize the `AsStrSlice` content - it calculates
     /// length efficiently without allocating strings.
+    #[must_use]
     pub fn len_chars(&self) -> Length { self.remaining_len() }
 
     /// This does not materialize the `AsStrSlice`.
+    #[must_use]
     pub fn starts_with(&self, sub_str: &str) -> bool {
         self.extract_to_line_end().starts_with(sub_str)
     }
 
-    /// Use the [std::fmt::Display] implementation to materialize the [DocumentStorage]
-    /// content. Returns a string representation of the slice.
+    /// Use the [`std::fmt::Display`] implementation to materialize the
+    /// [`DocumentStorage`] content. Returns a string representation of the slice.
     ///
     /// ## Newline Behavior
     ///
@@ -114,11 +118,12 @@ impl<'a> AsStrSlice<'a> {
     /// - For a single line, no trailing newline is added.
     /// - Empty lines are preserved with newlines.
     ///
-    /// ## Incompatibility with [str::lines()]
+    /// ## Incompatibility with [`str::lines()`]
     ///
-    /// **Important**: This behavior is intentionally different from [str::lines()].
+    /// **Important**: This behavior is intentionally different from [`str::lines()`].
     /// When there are multiple lines and the last line is empty, this method will add
-    /// a trailing newline, whereas [str::lines()] would not.
+    /// a trailing newline, whereas [`str::lines()`] would not.
+    #[must_use]
     pub fn to_inline_string(&self) -> DocumentStorage {
         let mut acc = DocumentStorage::new();
         _ = write!(acc, "{self}");
@@ -132,7 +137,7 @@ impl<'a> AsStrSlice<'a> {
     /// current **character position** (not byte position) to the end of the line.
     /// This is safe for Unicode/UTF-8 text and will never split multi-byte characters.
     ///
-    /// Only use this over [Self::extract_to_slice_end()] if you need to extract the
+    /// Only use this over [`Self::extract_to_slice_end()`] if you need to extract the
     /// remaining text in the current line (but not the entire slice).
     ///
     /// It handles various edge cases like:
@@ -166,9 +171,10 @@ impl<'a> AsStrSlice<'a> {
     /// - **Empty lines**: Returns empty string for empty lines
     /// - **Out of bounds**: Returns empty string when `line_index >= lines.len()`
     /// - **Character index beyond line**: Clamps `char_index` to line length
-    /// - **Zero max_len**: When `max_len` is `Some(0)`, returns empty string
+    /// - **Zero `max_len`**: When `max_len` is `Some(0)`, returns empty string
     /// - **Embedded newlines**: Don't do any special handling or processing of
-    ///   [crate::constants::NEW_LINE] chars inside the current line.
+    ///   [`crate::constants::NEW_LINE`] chars inside the current line.
+    #[must_use]
     pub fn extract_to_line_end(&self) -> &'a str {
         use crate::core::tui_core::units::len;
 
@@ -208,8 +214,7 @@ impl<'a> AsStrSlice<'a> {
             current_line
                 .char_indices()
                 .nth(char_position)
-                .map(|(byte_idx, _)| byte_idx)
-                .unwrap_or(current_line.len()) // If beyond end, use end of string
+                .map_or(current_line.len(), |(byte_idx, _)| byte_idx) // If beyond end, use end of string
         };
 
         // If we're past the end of the line, return empty.
@@ -226,8 +231,7 @@ impl<'a> AsStrSlice<'a> {
                 current_line
                     .char_indices()
                     .nth(max_chars)
-                    .map(|(byte_idx, _)| byte_idx)
-                    .unwrap_or(eol) // If beyond end, use end of string
+                    .map_or(eol, |(byte_idx, _)| byte_idx) // If beyond end, use end of string
             }
         };
 
@@ -263,6 +267,7 @@ impl<'a> AsStrSlice<'a> {
     /// let limited = advanced.limit_to_line_end();
     /// assert_eq!(limited.extract_to_line_end(), "world");
     /// ```
+    #[must_use]
     pub fn limit_to_line_end(&self) -> Self {
         let line = self.extract_to_line_end();
         let line_char_count = line.len_chars().as_usize();
@@ -274,35 +279,36 @@ impl<'a> AsStrSlice<'a> {
     /// `lines`, but not for single line content.
     ///
     /// This is used mostly for tests. Be aware (in the tests) that this method
-    /// adds an extra [crate::constants::NEW_LINE] at the end of the content if there are
-    /// multiple lines in the slice (to mimic the opposite behavior of [str::lines()],
-    /// which strips trailing new line if it exists).
+    /// adds an extra [`crate::constants::NEW_LINE`] at the end of the content if there
+    /// are multiple lines in the slice (to mimic the opposite behavior of
+    /// [`str::lines()`], which strips trailing new line if it exists).
     ///
     /// ## Allocation Behavior
     ///
     /// For multiline content this will allocate, since there is no contiguous chunk of
     /// memory that has `\n` in them, since these new lines are generated
     /// synthetically when iterating this struct. Thus it is impossible to take
-    /// chunks from [Self::lines] and then "join" them with `\n` in between lines, WITHOUT
-    /// allocating.
+    /// chunks from [`Self::lines`] and then "join" them with `\n` in between lines,
+    /// WITHOUT allocating.
     ///
     /// In the case there is only one line, this method will NOT allocate. This is why
-    /// [InlineStringCow] is used. If you are sure that you will always have a single
-    /// line, you can use [Self::extract_to_line_end()] instead, which does not
+    /// [`InlineStringCow`] is used. If you are sure that you will always have a single
+    /// line, you can use [`Self::extract_to_line_end()`] instead, which does not
     /// allocate.
     ///
     /// For multiline content this will allocate, since there is no contiguous chunk of
     /// memory that has `\n` in them, since these new lines are generated
     /// synthetically when iterating this struct. Thus it is impossible to take
-    /// chunks from [Self::lines] and then "join" them with `\n` in between lines, WITHOUT
-    /// allocating.
+    /// chunks from [`Self::lines`] and then "join" them with `\n` in between lines,
+    /// WITHOUT allocating.
     ///
     /// In the case there is only one line, this method will NOT allocate. This is why
-    /// [InlineStringCow] is used.
+    /// [`InlineStringCow`] is used.
     ///
-    /// This method behaves similarly to the [std::fmt::Display] trait implementation but
-    /// respects the current position (`line_index`, `char_index`) and `max_len`
+    /// This method behaves similarly to the [`std::fmt::Display`] trait implementation
+    /// but respects the current position (`line_index`, `char_index`) and `max_len`
     /// limit.
+    #[must_use]
     pub fn extract_to_slice_end(&self) -> InlineStringCow<'a> {
         // Early return for invalid line_index (it has gone beyond the available lines in
         // the slice).

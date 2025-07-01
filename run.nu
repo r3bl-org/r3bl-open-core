@@ -47,6 +47,7 @@ def main [...args: string] {
         "check" => {check}
         "check-watch" => {check-watch}
         "clippy" => {clippy}
+        "clippy-pedantic" => {clippy-pedantic}
         "clippy-watch" => {clippy-watch}
         "rustfmt" => {rustfmt}
         "upgrade-deps" => {upgrade-deps}
@@ -81,6 +82,7 @@ def print-help [command: string] {
         print $'    (ansi green)check(ansi reset)'
         print $'    (ansi green)check-watch(ansi reset)'
         print $'    (ansi green)clippy(ansi reset)'
+        print $'    (ansi green)clippy-pedantic(ansi reset)'
         print $'    (ansi green)clippy-watch(ansi reset)'
         print $'    (ansi green)rustfmt(ansi reset)'
         print $'    (ansi green)upgrade-deps(ansi reset)'
@@ -98,10 +100,10 @@ def print-help [command: string] {
 
 def build-server [] {
     # Where you source files live.
-    let orgn_path = "/home/nazmul/github/r3bl-open-core/"
+    let orig_path = "/home/nazmul/github/r3bl-open-core/"
     # Copy files to here.
     let dest_host = "nazmul-laptop.local"
-    let dest_path = $"($dest_host):($orgn_path)"
+    let dest_path = $"($dest_host):($orig_path)"
 
     # Function to run rsync. Simple.
     def run_rsync [] {
@@ -111,10 +113,10 @@ def build-server [] {
         let prefix = "┤ "
         let hanging_prefix = "├ "
         let tab = (char tab)
-        let msg_1 = $'(ansi yellow)($orgn_path)(ansi reset)'
+        let msg_1 = $'(ansi yellow)($orig_path)(ansi reset)'
         let msg_2 = $'(ansi blue)($dest_path)(ansi reset)'
         print $"($prefix)from:($tab)($msg_1)($crlf)($hanging_prefix)to:($tab)($msg_2)"
-        rsync -q -avz --delete --exclude 'target/' $orgn_path $dest_path
+        rsync -q -avz --delete --exclude 'target/' $orig_path $dest_path
 
         print $'(ansi cyan_underline)Rsync complete(ansi reset)'
     }
@@ -130,7 +132,7 @@ def build-server [] {
             "-e", "delete",
             "-e", "move" ,
             "--exclude", "target" ,
-            $orgn_path,
+            $orig_path,
         ]
 
         print $'(ansi green_bold) (ansi yellow)($inotify_command)(ansi reset) (ansi blue)($inotify_args)(ansi reset)'
@@ -152,8 +154,11 @@ def watch-all-tests [] {
 }
 
 # https://thelinuxcode.com/create-ramdisk-linux/
+#
+# Create a RAM disk at ./target using tmpfs (8GB, noatime, nodiratime).
+# - Checks if already mounted using `findmnt -t tmpfs target`.
+# - If not mounted, removes any existing target/ dir, creates it, and mounts tmpfs.
 def ramdisk-create [] {
-    # Use findmnt -t tmpfs target_foo to check if the ramdisk is mounted.
     if (findmnt -t tmpfs target | is-empty) {
         print $'(ansi green_bold)Ramdisk is not mounted. Creating ramdisk...(ansi reset)'
     } else {
@@ -167,6 +172,10 @@ def ramdisk-create [] {
 }
 
 # https://thelinuxcode.com/create-ramdisk-linux/
+#
+# Delete the RAM disk at ./target if mounted.
+# - Checks if mounted using `findmnt -t tmpfs target`.
+# - If mounted, unmounts and removes the directory.
 def ramdisk-delete [] {
     if (findmnt -t tmpfs target | is-empty) {
         print $'(ansi blue_bold)Ramdisk is not mounted. Nothing to do...(ansi reset)'
@@ -179,6 +188,9 @@ def ramdisk-delete [] {
     sudo rmdir target/
 }
 
+# Install useful cargo tools for workspace development and CI/CD.
+# - Some tools may already be installed; this will update them if so.
+# - Note: cargo-watch is no longer maintained (as of Oct 2024).
 def install-cargo-tools [] {
     cargo install bacon
     cargo install cargo-workspaces
@@ -194,7 +206,10 @@ def install-cargo-tools [] {
     cargo install cargo-nextest
 }
 
+# Run all major checks and tasks for the workspace.
+# - Installs some cargo tools, builds, tests, runs clippy, docs, audits, and formats.
 def all [] {
+    # Installs and runs all major checks and tools for the workspace.
     cargo install cargo-deny
     cargo install cargo-unmaintained
     cargo install cargo-readme
@@ -209,6 +224,7 @@ def all [] {
 
 # Runs everything that all does, except for cargo-unmaintained and cargo-deny.
 def all-cicd [] {
+    # Runs all major checks and tools for CI/CD, except for cargo-unmaintained and cargo-deny.
     cargo install cargo-readme
     build
     test
@@ -263,14 +279,56 @@ def check-watch [] {
     cargo watch -x 'check --workspace'
 }
 
+# Check the `tui/src/lib.rs` and `cmdr/src/lib.rs` to make sure that the same
+# "lints" that are fixed here also generate warnings when Clippy runs.
 def clippy [] {
     for folder in ($workspace_folders) {
         cd $folder
         print $'(ansi magenta)≡ Running cargo clippy in ($folder) .. ≡(ansi reset)'
         cargo fix --allow-dirty --allow-staged
+        cargo clippy --fix --allow-dirty -- -W clippy::manual_is_multiple_of
+        cargo clippy --fix --allow-dirty -- -W clippy::needless_return
+        cargo clippy --fix --allow-dirty -- -W clippy::doc_markdown
+        cargo clippy --fix --allow-dirty -- -W clippy::redundant_closure
+        cargo clippy --fix --allow-dirty -- -W clippy::redundant_closure_for_method_calls
+        cargo clippy --fix --allow-dirty -- -W clippy::cast_sign_loss
+        cargo clippy --fix --allow-dirty -- -W clippy::cast_lossless
+        cargo clippy --fix --allow-dirty -- -W clippy::cast_possible_truncation
+        cargo clippy --fix --allow-dirty -- -W clippy::semicolon_if_nothing_returned
+        cargo clippy --fix --allow-dirty -- -W clippy::must_use_candidate
+        cargo clippy --fix --allow-dirty -- -W clippy::items_after_statements
+        cargo clippy --fix --allow-dirty -- -W clippy::unreadable_literal
+        cargo clippy --fix --allow-dirty -- -W clippy::redundant_closure
+        cargo clippy --fix --allow-dirty -- -W clippy::redundant_else
+        cargo clippy --fix --allow-dirty -- -W clippy::iter_without_into_iter
+        cargo clippy --fix --allow-dirty -- -W clippy::explicit_iter_loop
+        cargo clippy --fix --allow-dirty -- -W clippy::ignored_unit_patterns
+        cargo clippy --fix --allow-dirty -- -W clippy::match_wildcard_for_single_variants
+        cargo clippy --fix --allow-dirty -- -W clippy::default_trait_access
+        cargo clippy --fix --allow-dirty -- -W clippy::manual_instant_elapsed
+        cargo clippy --fix --allow-dirty -- -W clippy::map_unwrap_or
+        cargo clippy --fix --allow-dirty -- -W clippy::missing_panics_doc
+        cargo clippy --fix --allow-dirty -- -W clippy::unwrap_in_result
+        cargo clippy --fix --allow-dirty -- -W clippy::unused_self
+        cargo clippy --fix --allow-dirty -- -W clippy::single_char_pattern
+        cargo clippy --fix --allow-dirty -- -W clippy::manual_let_else
+        cargo clippy --fix --allow-dirty -- -W clippy::unnecessary_semicolon
+        cargo clippy --fix --allow-dirty -- -W clippy::cast_precision_loss
+        cargo clippy --fix --allow-dirty -- -W clippy::if_not_else
+        cargo clippy --fix --allow-dirty -- -W clippy::unnecessary_wraps
+        cargo clippy --fix --allow-dirty -- -W clippy::single_match_else
+        cargo clippy --fix --allow-dirty -- -W clippy::return_self_not_must_use
+        cargo clippy --fix --allow-dirty -- -W clippy::needless_pass_by_value
+        # cargo clippy --fix --allow-dirty -- -W clippy::missing_errors_doc
         cargo fmt --all
         cd ..
     }
+}
+
+def clippy-pedantic [] {
+    # Don't use experimental linting options: -W clippy::nursery
+    cargo clippy -- -W clippy::all -W clippy::pedantic out+err> ~/Downloads/clippy-fix-pedantic.txt
+    bat ~/Downloads/clippy-fix-pedantic.txt --paging=always --color=always
 }
 
 def clippy-watch [] {

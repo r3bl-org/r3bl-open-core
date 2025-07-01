@@ -28,8 +28,8 @@ use crate::{md_parser::constants::{self, NEW_LINE},
             HeadingData,
             HeadingLevel};
 
-/// This matches the heading tag and text until EOL. Outputs a tuple of [HeadingLevel] and
-/// [crate::FragmentsInOneLine].
+/// This matches the heading tag and text until EOL. Outputs a tuple of [`HeadingLevel`] and
+/// [`crate::FragmentsInOneLine`].
 #[rustfmt::skip]
 pub fn parse_block_heading_opt_eol(input: &str) -> IResult<&str, HeadingData<'_>> {
     let (remainder, output) = parse(input)?;

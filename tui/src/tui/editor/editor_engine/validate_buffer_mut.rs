@@ -15,18 +15,18 @@
  *   limitations under the License.
  */
 
-//! [EditorBufferMut] holds a few important mutable references to the editor buffer. It
+//! [`EditorBufferMut`] holds a few important mutable references to the editor buffer. It
 //! also contains some data copied from the editor engine. This is necessary when you need
 //! to mutate the buffer and then run validation checks on the buffer.
 //!
 //! The ["newtype"
 //! pattern](https://doc.rust-lang.org/rust-by-example/generics/new_types.html) is used
-//! here to wrap the underlying [EditorBufferMut] struct, so that it be used in one of two
-//! distinct use cases:
-//! 1. Once [EditorBuffer::get_mut()] is called, the buffer is mutated and then the
-//!    validation checks are run. This is done by using [EditorBufferMutWithDrop].
+//! here to wrap the underlying [`EditorBufferMut`] struct, so that it be used in one of
+//! two distinct use cases:
+//! 1. Once [`EditorBuffer::get_mut()`] is called, the buffer is mutated and then the
+//!    validation checks are run. This is done by using [`EditorBufferMutWithDrop`].
 //! 2. If you don't want the buffer to be mutated, then you can use
-//!    [EditorBufferMutNoDrop] by calling [EditorBuffer::get_mut_no_drop()].
+//!    [`EditorBufferMutNoDrop`] by calling [`EditorBuffer::get_mut_no_drop()`].
 
 use super::scroll_editor_content;
 use crate::{col,
@@ -46,10 +46,10 @@ pub struct EditorBufferMut<'a> {
     pub scr_ofs: &'a mut ScrOfs,
     pub sel_list: &'a mut SelectionList,
     /// - Viewport width is optional because it's only needed for caret validation. And
-    ///   you can get it from [crate::EditorEngine]. You can pass `0` if you don't have
+    ///   you can get it from [`crate::EditorEngine`]. You can pass `0` if you don't have
     ///   it.
     /// - Viewport height is optional because it's only needed for caret validation. And
-    ///   you can get it from [crate::EditorEngine]. You can pass `0` if you don't have
+    ///   you can get it from [`crate::EditorEngine`]. You can pass `0` if you don't have
     ///   it.
     pub vp: Size,
 }
@@ -60,6 +60,7 @@ mod editor_buffer_mut_impl_block {
     impl EditorBufferMut<'_> {
         /// Returns the display width of the line at the caret (at it's scroll adjusted
         /// row index).
+        #[must_use]
         pub fn get_line_display_width_at_caret_scr_adj_row_index(&self) -> ColWidth {
             EditorBuffer::impl_get_line_display_width_at_caret_scr_adj(
                 *self.caret_raw,
@@ -112,7 +113,7 @@ mod editor_buffer_mut_no_drop_impl_block {
 // "newtype" idiom / pattern.
 
 /// See the [Drop] implementation of `EditorBufferMut` which runs
-/// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
+/// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`].
 ///
 /// Due to the nature of `UTF-8` and its variable width characters, where the memory size
 /// is not the same as display size. Eg: `a` is 1 byte and 1 display width (unicode
@@ -141,10 +142,10 @@ mod editor_buffer_mut_with_drop_impl_block {
     }
 
     impl Drop for EditorBufferMutWithDrop<'_> {
-        /// Once [crate::validate_buffer_mut::EditorBufferMut] is used to modify the
+        /// Once [`crate::validate_buffer_mut::EditorBufferMut`] is used to modify the
         /// buffer, it needs to run the validation checks to ensure that the
         /// buffer is in a valid state. This is done using
-        /// [crate::validate_buffer_mut::perform_validation_checks_after_mutation].
+        /// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`].
         ///
         /// Due to the nature of `UTF-8` and its variable width characters, where the
         /// memory size is not the same as display size. Eg: `a` is 1 byte and 1
@@ -157,13 +158,13 @@ mod editor_buffer_mut_with_drop_impl_block {
 }
 
 /// In addition to mutating the buffer, this function runs the following validations on
-/// the [EditorBuffer]'s:
+/// the [`EditorBuffer`]'s:
 /// 1. `caret`:
 ///    - the caret is in not in the middle of a unicode segment character.
 ///    - if it is then it moves the caret.
 /// 2. `scroll_offset`:
 ///    - make sure that it's not in the middle of a wide unicode segment character.
-///    - if it is then it moves the scroll_offset and caret.
+///    - if it is then it moves the `scroll_offset` and caret.
 ///
 /// The drop implementation is split out into this separate function since that is how it
 /// used to be written in earlier versions of the codebase, it used to be called
@@ -234,7 +235,7 @@ pub fn is_scroll_offset_in_middle_of_grapheme_cluster(
     {
         let diff = segment.display_width - display_width_of_str_at_caret;
         return Some(diff);
-    };
+    }
 
     None
 }
@@ -248,8 +249,8 @@ pub fn adjust_scroll_offset_because_in_middle_of_grapheme_cluster(
     None
 }
 
-/// This function is visible inside the editor_ops.rs module only. It is not meant to
-/// be called directly, but instead is called by the [Drop] impl of [EditorBufferMut].
+/// This function is visible inside the `editor_ops.rs` module only. It is not meant to
+/// be called directly, but instead is called by the [Drop] impl of [`EditorBufferMut`].
 pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
     editor_buffer_mut: &mut EditorBufferMutWithDrop<'_>,
 ) -> Option<()> {

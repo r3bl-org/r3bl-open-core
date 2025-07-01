@@ -33,7 +33,7 @@ use r3bl_tui::{ASText,
 const FIRST_COLUMN_WIDTH: usize = 20;
 
 /// Helper function to format two strings into columns. The first column has a fixed width
-/// defined by [FIRST_COLUMN_WIDTH].
+/// defined by [`FIRST_COLUMN_WIDTH`].
 fn fmt_two_col(col_1: &str, col_2: &str) -> String {
     // Truncate col_1 if longer than FIRST_COLUMN_WIDTH, or pad it if shorter.
     let processed_col_1 = truncate_from_right(col_1, FIRST_COLUMN_WIDTH, true);
@@ -43,10 +43,11 @@ fn fmt_two_col(col_1: &str, col_2: &str) -> String {
 
 /// This is the instruction header for the multi select list. It is used when the user can
 /// select multiple items from the list. The instructions are displayed at the top of the
-/// list. This is easily converted into a [r3bl_tui::choose_impl::Header::MultiLine].
+/// list. This is easily converted into a [`r3bl_tui::choose_impl::Header::MultiLine`].
 ///
 /// The last line is passed in as a parameter to allow for customization. This is useful
 /// when the list is long and the instructions are at the top.
+#[must_use]
 pub fn prefix_multi_select_instruction_header(
     last_lines: InlineVec<InlineVec<ASText>>,
 ) -> InlineVec<InlineVec<AnsiStyledText>> {
@@ -74,7 +75,9 @@ pub fn prefix_multi_select_instruction_header(
 
 /// This is the instruction header for the single select list. It is used when the user
 /// can only select one item from the list. The instructions are displayed at the top of
-/// the list. This is easily converted into a [r3bl_tui::choose_impl::Header::MultiLine].
+/// the list. This is easily converted into a
+/// [`r3bl_tui::choose_impl::Header::MultiLine`].
+#[must_use]
 pub fn prefix_single_select_instruction_header(
     last_lines: InlineVec<InlineVec<ASText>>,
 ) -> InlineVec<InlineVec<ASText>> {
@@ -94,12 +97,14 @@ pub fn prefix_single_select_instruction_header(
     acc
 }
 
+#[must_use]
 pub fn header_style_default() -> TuiStyle {
     new_style! (
         color_fg: {tui_color! (frozen_blue)} color_bg: {tui_color! (moonlight_blue)}
     )
 }
 
+#[must_use]
 pub fn header_style_primary() -> TuiStyle {
     new_style!(
         color_fg: {tui_color!(yellow)} color_bg: {tui_color!(moonlight_blue)}

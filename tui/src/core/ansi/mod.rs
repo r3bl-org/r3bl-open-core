@@ -172,10 +172,10 @@
 //! styled_text.println();
 //! ```
 //!
-//! For more examples, please read the documentation for [AnsiStyledText]. Please don't
-//! create this struct directly, use [crate::ast()], [crate::ast_line!],
-//! [crate::ast_lines!] or the constructor functions like [fg_red()], [fg_green()],
-//! [fg_blue()], etc.
+//! For more examples, please read the documentation for [`AnsiStyledText`]. Please don't
+//! create this struct directly, use [`crate::ast()`], [`crate::ast_line!`],
+//! [`crate::ast_lines`!] or the constructor functions like [`fg_red()`], [`fg_green()`],
+//! [`fg_blue()`], etc.
 //!
 //!
 //! Please a look at the
@@ -207,7 +207,7 @@
 //! | `nu run.nu test`                           | Run tests                                                                                           |
 //! | `nu run.nu clippy`                         | Run clippy                                                                                          |
 //! | `nu run.nu docs`                           | Build docs                                                                                          |
-//! | `nu run.nu serve-docs`                     | Serve docs. Useful if you SSH into a remote machine via VSCode and want to view the docs locally     |
+//! | `nu run.nu serve-docs`                     | Serve docs. Useful if you SSH into a remote machine via `VSCode` and want to view the docs locally     |
 //! | `nu run.nu upgrade-deps`                   | Upgrade dependencies                                                                                |
 //! | `nu run.nu rustfmt`                        | Run rustfmt                                                                                         |
 //!

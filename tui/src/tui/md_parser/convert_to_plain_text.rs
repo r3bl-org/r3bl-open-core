@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-//! This module is responsible for converting all the [MdLineFragment] into plain text
+//! This module is responsible for converting all the [`MdLineFragment`] into plain text
 //! w/out any formatting.
 
 use std::fmt::Write as _;
@@ -187,6 +187,7 @@ impl PrettyPrintDebug for MdLineFragment<'_> {
     }
 }
 
+#[must_use]
 pub fn generate_ordered_list_item_bullet(
     indent: &usize,
     number: &usize,
@@ -226,6 +227,7 @@ pub fn generate_ordered_list_item_bullet(
     acc
 }
 
+#[must_use]
 pub fn generate_unordered_list_item_bullet(
     indent: &usize,
     is_first_line: &bool,

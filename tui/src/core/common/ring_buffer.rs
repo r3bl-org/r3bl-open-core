@@ -18,8 +18,8 @@
 use crate::{idx, len, Index, InlineVec, Length};
 
 /// There are two implementations of this trait:
-/// - [super::RingBufferStack] which uses a fixed-size array on the stack.
-/// - [super::RingBufferHeap] which uses a [Vec] on the heap.
+/// - [`super::RingBufferStack`] which uses a fixed-size array on the stack.
+/// - [`super::RingBufferHeap`] which uses a [Vec] on the heap.
 pub trait RingBuffer<T, const N: usize> {
     fn len(&self) -> Length;
 
@@ -51,9 +51,9 @@ pub trait RingBuffer<T, const N: usize> {
     /// this trait.
     fn as_slice_raw(&self) -> &[Option<T>];
 
-    /// Take a [RingBuffer::as_slice_raw] which yields an slice of [`Option<&T>`], then
+    /// Take a [`RingBuffer::as_slice_raw`] which yields an slice of [`Option<&T>`], then
     /// remove the [None] items, and return a [`InlineVec<&T>`].
-    /// - This uses [Iterator::filter_map] function.
+    /// - This uses [`Iterator::filter_map`] function.
     /// - Even though `T` is not cloned, the collection has to be allocated and moved to
     ///   the caller, via return. A slice can't be returned because it would be owned by
     ///   this function.

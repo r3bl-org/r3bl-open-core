@@ -19,7 +19,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::{ch, ChUnit};
 
-/// Represents a grapheme segment index inside of [super::GCString].
+/// Represents a grapheme segment index inside of [`super::GCString`].
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct SegIndex(pub ChUnit);
 
@@ -30,12 +30,14 @@ mod seg_index_impl_block {
 
     impl SegIndex {
         /// Converts the segment index to a width, by adding 1.
+        #[must_use]
         pub fn convert_to_seg_width(&self) -> SegWidth {
             let index = self.0;
             let width = index + 1;
             seg_width(width)
         }
 
+        #[must_use]
         pub fn as_usize(&self) -> usize { self.0.as_usize() }
     }
 
@@ -62,7 +64,7 @@ mod seg_index_impl_block {
 }
 
 /// Represents a count of the number of grapheme segments inside of
-/// [super::GCString]. The width is max index (zero based) + 1.
+/// [`super::GCString`]. The width is max index (zero based) + 1.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct SegWidth(pub ChUnit);
 
@@ -73,12 +75,14 @@ mod seg_width_impl_block {
 
     impl SegWidth {
         /// Converts the width to a segment index, by subtracting 1.
+        #[must_use]
         pub fn convert_to_seg_index(&self) -> SegIndex {
             let width = self.0;
             let index = width - 1;
             seg_index(index)
         }
 
+        #[must_use]
         pub fn as_usize(&self) -> usize { self.0.as_usize() }
     }
 

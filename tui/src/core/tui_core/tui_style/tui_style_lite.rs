@@ -20,9 +20,9 @@
 /// - Note that all the symbols that are values must be passed in enclosing `{` and `}`.
 /// - Commas are not used to separate the tokens in the macro.
 /// - All the attributes are simply symbols like `bold`, `italic`, `dim`, `underline`,
-///   `reverse`, that correspond to the field names of [crate::TuiStyle].
+///   `reverse`, that correspond to the field names of [`crate::TuiStyle`].
 /// - If you set the `computed` attribute, then it will set the `id` to `u8::MAX`. This is
-///   what [crate::TuiStyle] does.
+///   what [`crate::TuiStyle`] does.
 ///
 /// Example:
 ///

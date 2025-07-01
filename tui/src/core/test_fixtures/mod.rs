@@ -101,8 +101,8 @@
 //! - [Changelog](#changelog)
 //! - [Learn how these crates are built, provide
 //!   feedback](#learn-how-these-crates-are-built-provide-feedback)
-//! - [async_stream_fixtures](#async_stream_fixtures)
-//! - [stdout_fixtures](#stdout_fixtures)
+//! - [`async_stream_fixtures`](#async_stream_fixtures)
+//! - [`stdout_fixtures`](#stdout_fixtures)
 //!
 //! <!-- /TOC -->
 //!
@@ -137,7 +137,7 @@
 //! - If you like consuming written content, here's our developer [site](https://developerlife.com/).
 //! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 //!
-//! # async_stream_fixtures
+//! # `async_stream_fixtures`
 //!
 //! Here's an example of how create a stream of `T` from a `Vec<T>`.
 //!
@@ -189,7 +189,7 @@
 //! }
 //! ```
 //!
-//! # stdout_fixtures
+//! # `stdout_fixtures`
 //!
 //! Here's an example of how to use this.
 //!

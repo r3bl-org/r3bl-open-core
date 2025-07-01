@@ -30,7 +30,7 @@ pub enum ConfigPaths {
 }
 
 impl Display for ConfigPaths {
-    /// This generates a `to_string()` method used by [get_id_file_path].
+    /// This generates a `to_string()` method used by [`get_id_file_path`].
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let path = match self {
             ConfigPaths::R3BLTopLevelFolderName => "r3bl-cmdr",
@@ -41,11 +41,13 @@ impl Display for ConfigPaths {
 }
 
 /// This is where the config file is stored.
+#[must_use]
 pub fn get_id_file_path(path: PathBuf) -> PathBuf {
     path.join(format!("{}", ConfigPaths::ProxyMachineIdFile))
 }
 
 /// This is where the config folder is.
+#[must_use]
 pub fn try_get_config_folder_path() -> Option<PathBuf> {
     let home_config_folder_path = config_dir()?;
     let config_file_path =
@@ -53,6 +55,7 @@ pub fn try_get_config_folder_path() -> Option<PathBuf> {
     Some(config_file_path)
 }
 
+#[must_use]
 pub fn exists() -> bool {
     match try_get_config_folder_path() {
         Some(config_file_path) => config_file_path.exists(),
@@ -65,7 +68,7 @@ pub fn create() -> CommonResult<PathBuf> {
         Some(config_folder_path) => {
             let result_create_dir_all = fs::create_dir_all(&config_folder_path);
             match result_create_dir_all {
-                Ok(_) => {
+                Ok(()) => {
                     DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug!(

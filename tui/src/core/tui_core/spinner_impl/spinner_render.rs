@@ -72,6 +72,7 @@ pub fn render_tick(
     }
 }
 
+#[must_use]
 pub fn render_final_tick(
     style: &SpinnerStyle,
     final_message: &str,
@@ -80,11 +81,11 @@ pub fn render_final_tick(
     let text = final_message.grapheme_string();
     let text_trunc = text.trunc_end_to_fit(display_width);
     match style.template {
-        SpinnerTemplate::Braille => text_trunc.into(),
-        SpinnerTemplate::Block => text_trunc.into(),
+        SpinnerTemplate::Braille | SpinnerTemplate::Block => text_trunc.into(),
     }
 }
 
+#[must_use]
 pub fn get_next_tick_glyph(style: &SpinnerStyle, count: usize) -> InlineString {
     match style.template {
         SpinnerTemplate::Braille => {

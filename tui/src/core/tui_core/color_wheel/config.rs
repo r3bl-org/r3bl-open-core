@@ -27,8 +27,8 @@ use crate::{global_color_support,
             TuiColor};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
-/// reason these are exceeded, then they will [smallvec::SmallVec::spilled] over into the
-/// heap.
+/// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
+/// the heap.
 pub(in crate::core::tui_core) mod sizing {
     use super::*;
 
@@ -51,16 +51,17 @@ pub mod defaults {
     }
 
     /// Provides an owned copy of the default gradient stops.
+    #[must_use]
     pub fn get_default_gradient_stops() -> VecStops {
         let size_hint = DEFAULT_GRADIENT_STOPS.len();
         let mut stops = VecStops::with_capacity(size_hint);
-        for &stop in DEFAULT_GRADIENT_STOPS.iter() {
+        for &stop in &DEFAULT_GRADIENT_STOPS {
             stops.push(stop.into());
         }
         stops
     }
 
-    /// Use [get_default_gradient_stops] to get the default gradient stops.
+    /// Use [`get_default_gradient_stops`] to get the default gradient stops.
     /// More info: <https://www.colorhexa.com/>
     const DEFAULT_GRADIENT_STOPS: [&str; 3] = [
         /* cyan */ "#00ffff", /* magenta */ "#ff00ff",
@@ -87,6 +88,7 @@ pub enum ColorWheelConfig {
 }
 
 impl ColorWheelConfig {
+    #[must_use]
     pub fn config_contains_bg_lolcat(configs: &[ColorWheelConfig]) -> bool {
         configs.iter().any(|config| {
             matches!(
@@ -101,6 +103,7 @@ impl ColorWheelConfig {
 
     // Narrow down the given configs into a single one based on color_support (and global
     // override)
+    #[must_use]
     pub fn narrow_config_based_on_color_support(
         configs: &[ColorWheelConfig],
     ) -> ColorWheelConfig {
@@ -184,7 +187,7 @@ pub enum GradientKind {
 }
 
 /// Gradient has to be generated before this will be anything other than
-/// [GradientLengthKind::NotCalculatedYet].
+/// [`GradientLengthKind::NotCalculatedYet`].
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum GradientLengthKind {
     ColorWheel(usize),
