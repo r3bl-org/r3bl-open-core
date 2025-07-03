@@ -19,6 +19,9 @@ documentation = "https://docs.rs/r3bl_tui"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
+[lints]
+workspace = true
+
 [lib]
 name = "r3bl_tui"
 path = "src/lib.rs"

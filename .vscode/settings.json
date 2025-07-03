@@ -62,6 +62,7 @@
     "editorbuffer",
     "editorcomponent",
     "editorengine",
+    "elidable",
     "enigo",
     "enumflags",
     "flamegraph",

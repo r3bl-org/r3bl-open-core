@@ -19,9 +19,11 @@ authors = [
     "Nadia Idris <nadia@developerlife.com>",
 ]
 documentation = "https://docs.rs/r3bl-cmdr"
-
 # More info on default-run: https://stackoverflow.com/a/51790493/2085356
 default-run = "rc"
+
+[lints]
+workspace = true
 
 [[bin]]
 name = "giti"

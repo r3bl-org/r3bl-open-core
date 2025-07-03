@@ -257,59 +257,6 @@
 //! | `nu run.nu install-cargo-tools` | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go)                                                                                         |
 //! | `nu run.nu check-licenses`      | Use `cargo-deny` to audit all licenses used in the Rust workspace                                                                                                                                                                                      |
 
-// https://github.com/rust-lang/rust-clippy
-// https://rust-lang.github.io/rust-clippy/master/index.html
-// - `#!` (Inner Attribute): The `!` indicates that this is an inner attribute. Inner
-//   attributes apply to the entire item containing them. When you use
-//   #![warn(clippy::<Lint>)] at the crate level (i.e., in your lib.rs or main.rs), it
-//   will make Clippy emit a warning for any `Lint` violations found anywhere within that
-//   entire crate. If placed inside a module, it would apply to that module and all its
-//   sub-modules.
-// - `#` (Outer Attribute): This is an outer attribute. Outer attributes apply to the item
-//   immediately following them.
-#![warn(clippy::all)]
-#![warn(clippy::unwrap_in_result)]
-#![warn(rust_2018_idioms)]
-#![warn(clippy::doc_markdown)]
-#![warn(clippy::redundant_closure)]
-#![warn(clippy::redundant_closure_for_method_calls)]
-#![warn(clippy::cast_sign_loss)]
-#![warn(clippy::cast_lossless)]
-#![warn(clippy::cast_possible_truncation)]
-#![warn(clippy::semicolon_if_nothing_returned)]
-#![warn(clippy::must_use_candidate)]
-#![warn(clippy::items_after_statements)]
-#![warn(clippy::manual_is_multiple_of)]
-#![warn(clippy::needless_return)]
-#![warn(clippy::unreadable_literal)]
-#![warn(clippy::redundant_closure)]
-#![warn(clippy::redundant_else)]
-#![warn(clippy::iter_without_into_iter)]
-#![warn(clippy::explicit_iter_loop)]
-#![warn(clippy::ignored_unit_patterns)]
-#![warn(clippy::match_wildcard_for_single_variants)]
-#![warn(clippy::default_trait_access)]
-#![warn(clippy::manual_instant_elapsed)]
-#![warn(clippy::map_unwrap_or)]
-#![warn(clippy::missing_panics_doc)]
-#![warn(clippy::unwrap_in_result)]
-#![warn(clippy::unused_self)]
-#![warn(clippy::single_char_pattern)]
-#![warn(clippy::manual_let_else)]
-#![warn(clippy::unnecessary_semicolon)]
-#![warn(clippy::cast_precision_loss)]
-#![warn(clippy::if_not_else)]
-#![warn(clippy::unnecessary_wraps)]
-#![warn(clippy::single_match_else)]
-#![warn(clippy::return_self_not_must_use)]
-#![warn(clippy::match_bool)]
-#![warn(clippy::comparison_chain)]
-#![warn(clippy::elidable_lifetime_names)]
-#![warn(clippy::wildcard_imports)]
-#![warn(unused_imports)] // rustc lint
-#![allow(clippy::needless_pass_by_value)] // This triggers legitimate use of passing a Copy arg by value to a function.
-#![allow(clippy::similar_names)] // This triggers legitimate variable names.
-
 pub const DEVELOPMENT_MODE: bool = true;
 pub const DEBUG_ANALYTICS_CLIENT_MOD: bool = true;
 

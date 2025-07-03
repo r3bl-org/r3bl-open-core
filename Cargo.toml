@@ -11,6 +11,11 @@ resolver = "3"
 [workspace.metadata.unmaintained]
 ignore = ["gethostname", "objs", "home", "proc-macro-error", "wayland-commons"]
 
+#
+# Lint configuration for both `rustc` and `clippy`.
+#
+
+# 1) `cargo clippy` lint configuration for `rustc`.
 # https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html
 # https://www.linkedin.com/posts/marcoieni_i-finally-found-some-time-to-review-all-the-activity-7307355034642452481-EVLZ
 [workspace.lints.rust]
@@ -33,3 +38,58 @@ unit_bindings = "warn"
 unsafe_attr_outside_unsafe = "warn"
 unused = "warn"
 unused_import_braces = "warn"
+
+# 2) `cargo clippy` lint configuration for `clippy`.
+# https://rust-lang.github.io/rust-clippy/master/index.html
+[workspace.lints.clippy]
+#
+# Reasonable defaults for clippy lints.
+#
+all = { level = "warn", priority = -1 }
+#
+# Explicitly set the level for each lint. This might be redundant with `all`.
+#
+unwrap_in_result = "warn"
+doc_markdown = "warn"
+redundant_closure = "warn"
+redundant_closure_for_method_calls = "warn"
+cast_sign_loss = "warn"
+cast_lossless = "warn"
+cast_possible_truncation = "warn"
+semicolon_if_nothing_returned = "warn"
+must_use_candidate = "warn"
+items_after_statements = "warn"
+manual_is_multiple_of = "warn"
+needless_return = "warn"
+unreadable_literal = "warn"
+redundant_else = "warn"
+iter_without_into_iter = "warn"
+explicit_iter_loop = "warn"
+ignored_unit_patterns = "warn"
+match_wildcard_for_single_variants = "warn"
+default_trait_access = "warn"
+manual_instant_elapsed = "warn"
+map_unwrap_or = "warn"
+missing_panics_doc = "warn"
+unused_self = "warn"
+single_char_pattern = "warn"
+manual_let_else = "warn"
+unnecessary_semicolon = "warn"
+cast_precision_loss = "warn"
+if_not_else = "warn"
+unnecessary_wraps = "warn"
+single_match_else = "warn"
+return_self_not_must_use = "warn"
+match_bool = "warn"
+comparison_chain = "warn"
+elidable_lifetime_names = "warn"
+wildcard_imports = "warn"
+#
+# Explicitly allow these lints to avoid noise.
+#
+needless_pass_by_value = "allow"  # This triggers legitimate use of passing a Copy arg by value to a function.
+similar_names = "allow"  # This triggers legitimate variable names.
+# Additional pedantic lints to suppress
+missing_errors_doc = "allow"
+too_many_lines = "allow"
+match_same_arms = "allow"
