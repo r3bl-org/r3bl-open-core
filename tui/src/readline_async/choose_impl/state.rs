@@ -60,7 +60,7 @@ pub enum Header {
 /// - `InlineString`,
 /// - `String`, etc.
 mod convert_to_header {
-    use super::*;
+    use super::{AnsiStyledText, Header, InlineVec, InlineString};
 
     impl From<Vec<Vec<AnsiStyledText>>> for Header {
         fn from(header: Vec<Vec<AnsiStyledText>>) -> Self {

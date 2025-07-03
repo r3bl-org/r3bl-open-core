@@ -45,7 +45,7 @@ impl Debug for ColIndex {
 pub fn col(arg_col_index: impl Into<ColIndex>) -> ColIndex { arg_col_index.into() }
 
 mod constructor {
-    use super::*;
+    use super::{ColIndex, usize, ColWidth, width, ChUnit};
 
     impl ColIndex {
         pub fn new(arg_col_index: impl Into<ColIndex>) -> Self { arg_col_index.into() }
@@ -86,7 +86,7 @@ mod constructor {
 }
 
 mod ops {
-    use super::*;
+    use super::{Deref, ColIndex, ChUnit, DerefMut, Sub, col, SubAssign, Add, AddAssign, ColWidth, Mul};
 
     impl Deref for ColIndex {
         type Target = ChUnit;

@@ -58,7 +58,7 @@ use crate::{constants::NEW_LINE, AsStrSlice, CharLengthExt, CharacterIndexNomCom
 /// - The [`CharacterIndexNomCompat`] type alias marks that this `usize` represents a
 ///   character offset, working around nom's constraint that we cannot modify the
 ///   `FindSubstring` trait signature.
-impl<'a> FindSubstring<&str> for AsStrSlice<'a> {
+impl FindSubstring<&str> for AsStrSlice<'_> {
     fn find_substring(&self, sub_str: &str) -> Option<CharacterIndexNomCompat> {
         // Early return for empty substring or empty slice.
         if sub_str.is_empty() {
@@ -81,7 +81,7 @@ impl<'a> FindSubstring<&str> for AsStrSlice<'a> {
     }
 }
 
-impl<'a> AsStrSlice<'a> {
+impl AsStrSlice<'_> {
     /// Fallback implementation that materializes the full slice.
     /// Used when the substring contains newlines or other complex patterns.
     ///

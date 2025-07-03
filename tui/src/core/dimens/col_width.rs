@@ -60,7 +60,7 @@ impl Debug for ColWidth {
 pub fn width(arg_col_width: impl Into<ColWidth>) -> ColWidth { arg_col_width.into() }
 
 mod construct {
-    use super::*;
+    use super::{ColWidth, ColIndex, col, ch, ChUnit};
 
     impl ColWidth {
         pub fn new(arg_col_width: impl Into<ColWidth>) -> Self { arg_col_width.into() }
@@ -99,7 +99,7 @@ mod construct {
 }
 
 mod ops {
-    use super::*;
+    use super::{Deref, ColWidth, ChUnit, DerefMut, Add, AddAssign, Sub, SubAssign, Div, width};
 
     impl Deref for ColWidth {
         type Target = ChUnit;

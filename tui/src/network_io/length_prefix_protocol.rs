@@ -30,10 +30,10 @@ use tokio::{io::{AsyncRead,
                  BufWriter},
             time::timeout};
 
-use crate::{bincode_serde, compress, ok, protocol_types::*};
+use crate::{bincode_serde, compress, ok, protocol_types::LengthPrefixType};
 
 pub mod protocol_constants {
-    use super::*;
+    use super::Duration;
 
     pub const MAGIC_NUMBER: u64 = 0xACED_FACE_BABE_CAFE; // DEED, CEDE, FADE
     pub const PROTOCOL_VERSION: u64 = 1;
@@ -54,7 +54,7 @@ pub mod protocol_constants {
 ///    make sure they are valid.
 /// 2. It then **writes** the magic number back to the client (for it to validate).
 pub mod handshake {
-    use super::*;
+    use super::{ok, AsyncWrite, AsyncRead, timeout, protocol_constants, IntoDiagnostic, AsyncWriteExt, AsyncReadExt};
 
     /// Client side handshake.
     pub async fn try_connect_or_timeout<W: AsyncWrite + Unpin, R: AsyncRead + Unpin>(
@@ -189,7 +189,7 @@ mod tests_handshake {
 }
 
 pub mod byte_io {
-    use super::*;
+    use super::{AsyncWrite, Serialize, BufWriter, bincode_serde, compress, IntoDiagnostic, AsyncWriteExt, LengthPrefixType, AsyncRead, Deserialize, BufReader, AsyncReadExt, protocol_constants};
 
     /// Write the payload to the client. Use the length-prefix, binary payload, protocol.
     /// - The trait bounds on this function are so that this function can be tested w/ a

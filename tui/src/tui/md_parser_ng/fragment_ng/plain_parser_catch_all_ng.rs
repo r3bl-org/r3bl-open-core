@@ -102,9 +102,9 @@ use crate::{fg_blue,
 ///
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
 /// See: [`crate::specialized_parsers_ng::delim_matchers::count_delim_occurrences_until_eol_or_eoi`].
-pub fn parse_fragment_plain_text_until_eol_or_eoi_ng<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+pub fn parse_fragment_plain_text_until_eol_or_eoi_ng(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, AsStrSlice<'_>> {
     DEBUG_MD_PARSER_STDOUT.then(|| {
         println!("\n{} plain parser, input: {:?}", fg_magenta("██"), input);
     });
@@ -129,9 +129,9 @@ pub fn parse_fragment_plain_text_until_eol_or_eoi_ng<'a>(
 /// This function processes input that doesn't start with special characters by taking
 /// text until the first special character is encountered. It then splits the input at
 /// that point and returns the plain text and remainder.
-fn parse_plain_text_until_special_char<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+fn parse_plain_text_until_special_char(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, AsStrSlice<'_>> {
     // `tag_tuple` replaces the following:
     // `( tag(UNDERSCORE),   tag(STAR),
     //    tag(BACK_TICK),    tag(LEFT_IMAGE),
@@ -276,9 +276,9 @@ fn try_parse_single_special_char<'a>(
 ///
 /// This function handles the case where the input starts with special characters
 /// but doesn't match any specialized parser. It takes text until the first new line.
-fn parse_plain_text_until_newline<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+fn parse_plain_text_until_newline(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, AsStrSlice<'_>> {
     // Take till the first new line or until the end of input. This does not consume
     // the new line.
     // For this not to return an error, at least 1 char must exist in

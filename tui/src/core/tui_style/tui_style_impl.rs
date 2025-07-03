@@ -89,7 +89,7 @@ pub struct TuiStyle {
 }
 
 pub mod tui_style_attrib {
-    use super::*;
+    use super::{Debug, TinyInlineString, Deref};
 
     #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
     pub struct Id(pub u8);
@@ -155,7 +155,7 @@ pub mod tui_style_attrib {
 }
 
 mod addition {
-    use super::*;
+    use super::{Add, TuiStyle, tui_style_attrib, ChUnit, ch, AddAssign};
 
     impl Add for TuiStyle {
         type Output = Self;
@@ -243,7 +243,7 @@ mod addition {
 }
 
 mod style_helpers {
-    use super::*;
+    use super::{join, tiny_inline_string, join_fmt, ok, Debug, TuiStyle, Formatter, tui_style_attrib, InlineVecStr, ch, Display, TinyInlineString};
 
     impl Debug for TuiStyle {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -366,7 +366,7 @@ mod style_helpers {
 }
 
 mod style_impl {
-    use super::*;
+    use super::TuiStyle;
 
     impl TuiStyle {
         pub fn remove_bg_color(&mut self) { self.color_bg = None; }

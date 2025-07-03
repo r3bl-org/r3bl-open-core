@@ -71,7 +71,7 @@ pub type OnEditorBufferChangeFn<A> =
     fn(FlexBoxId, Sender<TerminalWindowMainThreadSignal<A>>);
 
 pub mod editor_component_impl_component_trait {
-    use super::*;
+    use super::{throws_with_return, HasEditorBuffers, Debug, FlexBoxId, EditorBuffer, DEFAULT_SYN_HI_FILE_EXT, Component, EditorComponent, GlobalData, FlexBox, SurfaceBounds, HasFocus, CommonResult, RenderPipeline, EditorComponentData, engine_public_api, InputEvent, EventPropagation, SystemClipboard, EditorEngineApplyEventResult};
 
     fn get_existing_mut_editor_buffer_from_state_or_create_new_one<S>(
         mut_state: &mut S,
@@ -195,7 +195,7 @@ pub mod editor_component_impl_component_trait {
 }
 
 pub mod constructor {
-    use super::*;
+    use super::{EditorComponent, Debug, HasEditorBuffers, FlexBoxId, EditorEngineConfig, OnEditorBufferChangeFn, EditorComponentData, EditorEngine, BoxedSafeComponent};
 
     impl<S, AS> EditorComponent<S, AS>
     where

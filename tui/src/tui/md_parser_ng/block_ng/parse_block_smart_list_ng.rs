@@ -119,7 +119,7 @@ use crate::{list,
 pub fn parse_block_smart_list_advance_ng<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, (Lines<'a>, BulletKind, usize)> {
-    use parse_block_smart_list_advance_ng_helper::*;
+    use parse_block_smart_list_advance_ng_helper::{determine_checkbox_policy, create_bullet_fragment, build_line_fragments};
 
     let (remainder, smart_list_ir) = parse_smart_list_ng(input)?;
 
@@ -151,7 +151,7 @@ pub fn parse_block_smart_list_advance_ng<'a>(
 }
 
 mod parse_block_smart_list_advance_ng_helper {
-    use super::*;
+    use super::{tiny_inline_string, list, AsStrSlice, CheckboxParsePolicy, CHECKED, SPACE, UNCHECKED, BulletKind, List, MdLineFragment};
 
     /// Helper function to determine checkbox parsing policy.
     pub fn determine_checkbox_policy(content: AsStrSlice<'_>) -> CheckboxParsePolicy {
@@ -433,9 +433,9 @@ mod tests_parse_block_smart_list_ng {
 /// - A [`crate::SmartListIR`] object representing the parsed smart list
 ///
 /// The function handles both ordered and unordered lists, with proper indentation.
-pub fn parse_smart_list_ng<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult</* remainder */ AsStrSlice<'a>, SmartListIRAlt<'a>> {
+pub fn parse_smart_list_ng(
+    input: AsStrSlice<'_>,
+) -> IResult</* remainder */ AsStrSlice<'_>, SmartListIRAlt<'_>> {
     // Validate indentation and get the trimmed input.
     let (indent, input) = validate_list_indentation(input)?;
 
@@ -459,9 +459,9 @@ pub fn parse_smart_list_ng<'a>(
 /// If successful, returns the indent size and trimmed input. Examples:
 /// - "    - item" → (4, "- item"),
 /// - "  1. task" → (2, "1. task").
-fn validate_list_indentation<'a>(
-    input: AsStrSlice<'a>,
-) -> Result<(usize, AsStrSlice<'a>), NErr<NError<AsStrSlice<'a>>>> {
+fn validate_list_indentation(
+    input: AsStrSlice<'_>,
+) -> Result<(usize, AsStrSlice<'_>), NErr<NError<AsStrSlice<'_>>>> {
     // Match empty spaces & count them into indent
     let (indent, input) = input.trim_spaces_start_current_line();
     let indent = indent.as_usize();
@@ -478,10 +478,10 @@ fn validate_list_indentation<'a>(
 ///
 /// If successful, returns the parsed [`SmartListIR`] structure. Examples:
 /// - "- item" → [`SmartListIR`] with [`BulletKind::Unordered`]
-fn parse_unordered_list<'a>(
-    input: AsStrSlice<'a>,
+fn parse_unordered_list(
+    input: AsStrSlice<'_>,
     indent: usize,
-) -> IResult<AsStrSlice<'a>, SmartListIRAlt<'a>> {
+) -> IResult<AsStrSlice<'_>, SmartListIRAlt<'_>> {
     // Match the bullet: Unordered => "- ".
     let (input, bullet) = tag(UNORDERED_LIST_PREFIX).parse(input)?;
 
@@ -505,10 +505,10 @@ fn parse_unordered_list<'a>(
 /// If successful, returns the parsed [`SmartListIR`] structure. Examples:
 /// - "1. item" → `SmartListIR` with `BulletKind::Ordered(1)`
 /// - "42. task" → `SmartListIR` with `BulletKind::Ordered(42)`
-fn parse_ordered_list<'a>(
-    input: AsStrSlice<'a>,
+fn parse_ordered_list(
+    input: AsStrSlice<'_>,
     indent: usize,
-) -> IResult<AsStrSlice<'a>, SmartListIRAlt<'a>> {
+) -> IResult<AsStrSlice<'_>, SmartListIRAlt<'_>> {
     /// Try to extract and validate ordered list bullet from input string.
     /// Returns the bullet string and [`BulletKind`]. Examples:
     /// - "1. text" → ("1. ", `BulletKind::Ordered(1)`)
@@ -1771,7 +1771,7 @@ mod tests_parse_smart_list_content_lines_ng {
 }
 
 mod verify_rest {
-    use super::*;
+    use super::{AsStrSlice, UNORDERED_LIST_PREFIX, Input, ORDERED_LIST_PARTIAL_PREFIX, SPACE_CHAR};
 
     /// Checks if the input string does not start with a list prefix.
     ///
@@ -1791,8 +1791,8 @@ mod verify_rest {
     ///
     /// # Parameters
     /// - `input`: The input text to check
-    pub fn list_contents_does_not_start_with_list_prefix<'a>(
-        input: AsStrSlice<'a>,
+    pub fn list_contents_does_not_start_with_list_prefix(
+        input: AsStrSlice<'_>,
     ) -> bool {
         let trimmed_input = input.trim_start_current_line();
 
@@ -1866,7 +1866,7 @@ mod verify_rest {
     /// # Returns
     /// The number of space characters at the beginning of the input.
     /// If the input is all spaces or empty, returns the total length of the input.
-    pub fn count_spaces_at_start<'a>(input: AsStrSlice<'a>) -> usize {
+    pub fn count_spaces_at_start(input: AsStrSlice<'_>) -> usize {
         let mut count: usize = 0;
         let mut current = input.clone();
 
@@ -2423,10 +2423,10 @@ mod tests_verify_rest {
 /// - The EOL character is not included in the output.
 /// - The EOL character is not consumed, and is part of the remainder.
 #[rustfmt::skip]
-pub fn parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_ng<'a>(
-    input: AsStrSlice<'a>,
+pub fn parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_ng(
+    input: AsStrSlice<'_>,
     checkbox_policy: CheckboxParsePolicy,
-) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
+) -> IResult<AsStrSlice<'_>, MdLineFragments<'_>> {
     let (input, output) = many0(
         |it| parse_inline_fragments_until_eol_or_eoi_ng(it, checkbox_policy)
     ).parse(input)?;

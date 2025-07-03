@@ -153,7 +153,7 @@ use std::fmt::{self};
 
 use chrono::Local;
 use const_format::formatcp;
-use custom_event_formatter_constants::*;
+use custom_event_formatter_constants::{BODY_FG_COLOR_BRIGHT, HEADING_BG_COLOR, ERROR_FG_COLOR, ERROR_SIGIL, LEVEL_SUFFIX, WARN_FG_COLOR, WARN_SIGIL, INFO_FG_COLOR, INFO_SIGIL, DEBUG_FG_COLOR, DEBUG_SIGIL, TRACE_FG_COLOR, TRACE_SIGIL, BODY_FG_COLOR, FIRST_LINE_PREFIX, SUBSEQUENT_LINE_PREFIX, ENTRY_SEPARATOR_CHAR};
 use textwrap::{wrap, Options, WordSeparator};
 use tracing::{field::{Field, Visit},
               Event,
@@ -200,7 +200,7 @@ pub struct FieldContentParams<'a> {
 // Colors: <https://en.wikipedia.org/wiki/ANSI_escape_code>
 #[rustfmt::skip]
 pub mod custom_event_formatter_constants {
-    use super::*;
+    use super::{formatcp, glyphs, RgbValue};
 
     pub const FIRST_LINE_PREFIX: &str = formatcp!(
         "{sp}{ch}{sp}",
@@ -230,7 +230,7 @@ pub mod custom_event_formatter_constants {
 }
 
 mod helpers {
-    use super::*;
+    use super::{inline_string, new_style, fmt, Local, ast, TuiColor, BODY_FG_COLOR_BRIGHT, HEADING_BG_COLOR, Subscriber, LookupSpan, FormatFields, Event, InlineString, ERROR_FG_COLOR, ERROR_SIGIL, LEVEL_SUFFIX, WARN_FG_COLOR, WARN_SIGIL, INFO_FG_COLOR, INFO_SIGIL, DEBUG_FG_COLOR, DEBUG_SIGIL, TRACE_FG_COLOR, TRACE_SIGIL, tui_style_attrib, helpers, ColWidth, GCString, width, FieldContentParams, remove_escaped_quotes, truncate_from_right, ColorWheel, wrap, BODY_FG_COLOR};
 
     /// Write formatted timestamp to the writer.
     pub fn write_timestamp(

@@ -66,10 +66,10 @@ use crate::{fg_green,
 /// To see this in action, set the [`crate::DEBUG_MD_PARSER`] to true, and run all
 /// the tests in this file.
 #[rustfmt::skip]
-pub fn parse_inline_fragments_until_eol_or_eoi_ng<'a>(
-    input: AsStrSlice<'a>,
+pub fn parse_inline_fragments_until_eol_or_eoi_ng(
+    input: AsStrSlice<'_>,
     checkbox_policy: CheckboxParsePolicy,
-) -> IResult<AsStrSlice<'a>, MdLineFragment<'a>> {
+) -> IResult<AsStrSlice<'_>, MdLineFragment<'_>> {
     // The order of the following parsers is important. The highest priority parser is at
     // the top. The lowest priority parser is at the bottom. This is because the first
     // parser that matches will be the one that is used.

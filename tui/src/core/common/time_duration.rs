@@ -42,7 +42,7 @@ pub struct TimeDuration {
 }
 
 mod accessor {
-    use super::*;
+    use super::TimeDuration;
     impl TimeDuration {
         #[must_use]
         pub fn get_only_micros(&self) -> u32 { self.inner.subsec_micros() % 1_000 }
@@ -69,7 +69,7 @@ mod accessor {
 }
 
 mod adapters {
-    use super::*;
+    use super::{TimeDuration, Duration};
     impl std::ops::Deref for TimeDuration {
         type Target = Duration;
 
@@ -78,7 +78,7 @@ mod adapters {
 }
 
 mod converters {
-    use super::*;
+    use super::{Duration, TimeDuration};
 
     impl From<Duration> for TimeDuration {
         fn from(duration: Duration) -> Self { Self { inner: duration } }
@@ -94,7 +94,7 @@ mod converters {
 }
 
 mod display_formatter {
-    use super::*;
+    use super::{ok, Display, TimeDuration, Formatter, Result};
 
     impl Display for TimeDuration {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

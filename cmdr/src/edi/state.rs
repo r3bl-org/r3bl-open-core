@@ -14,27 +14,11 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::{collections::HashMap,
-          ffi::OsStr,
-          fmt::{Debug, Formatter, Result},
-          path::Path};
+use std::collections::HashMap;
 
-use r3bl_tui::{DEBUG_TUI_MOD,
-               DEFAULT_SYN_HI_FILE_EXT,
-               DialogBuffer,
-               DocumentStorage,
-               EditorBuffer,
-               FlexBoxId,
-               HasDialogBuffers,
-               HasEditorBuffers,
-               InlineString,
-               TinyInlineString,
-               fg_green,
-               fg_red,
-               inline_string,
-               into_existing};
+use r3bl_tui::{DialogBuffer, EditorBuffer, FlexBoxId};
 
-use crate::{AnalyticsAction, edi::Id, report_analytics};
+use crate::edi::Id;
 
 #[derive(Clone, PartialEq)]
 pub struct State {
@@ -46,7 +30,7 @@ pub struct State {
 mod state_tests {
     use r3bl_tui::{FlexBoxId, InlineVec, friendly_random_id};
 
-    use super::*;
+    use super::{constructor, file_utils};
     use crate::edi::Id;
 
     #[test]
@@ -163,7 +147,11 @@ mod state_tests {
 }
 
 pub mod constructor {
-    use super::*;
+    use std::collections::HashMap;
+
+    use r3bl_tui::{EditorBuffer, FlexBoxId};
+
+    use super::{Id, State, file_utils};
 
     impl Default for State {
         fn default() -> Self {
@@ -208,7 +196,19 @@ pub mod constructor {
 }
 
 pub mod file_utils {
-    use super::*;
+    use std::{ffi::OsStr, path::Path};
+
+    use r3bl_tui::{DEBUG_TUI_MOD,
+                   DEFAULT_SYN_HI_FILE_EXT,
+                   DocumentStorage,
+                   InlineString,
+                   TinyInlineString,
+                   fg_green,
+                   fg_red,
+                   inline_string,
+                   into_existing};
+
+    use crate::{AnalyticsAction, report_analytics};
 
     pub fn get_file_extension(maybe_file_path: Option<&str>) -> TinyInlineString {
         if let Some(file_path) = maybe_file_path {
@@ -295,7 +295,9 @@ pub mod file_utils {
 }
 
 mod impl_editor_support {
-    use super::*;
+    use r3bl_tui::{EditorBuffer, FlexBoxId, HasEditorBuffers};
+
+    use super::State;
 
     impl HasEditorBuffers for State {
         fn get_mut_editor_buffer(&mut self, id: FlexBoxId) -> Option<&mut EditorBuffer> {
@@ -317,7 +319,9 @@ mod impl_editor_support {
 }
 
 mod impl_dialog_support {
-    use super::*;
+    use r3bl_tui::{DialogBuffer, FlexBoxId, HasDialogBuffers};
+
+    use super::State;
 
     impl HasDialogBuffers for State {
         fn get_mut_dialog_buffer(&mut self, id: FlexBoxId) -> Option<&mut DialogBuffer> {
@@ -327,7 +331,9 @@ mod impl_dialog_support {
 }
 
 mod impl_debug_format {
-    use super::*;
+    use std::fmt::{Debug, Formatter, Result};
+
+    use super::State;
 
     impl Debug for State {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

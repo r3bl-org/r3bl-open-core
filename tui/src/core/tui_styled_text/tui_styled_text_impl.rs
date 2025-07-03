@@ -22,7 +22,7 @@ use smallvec::SmallVec;
 use crate::TuiStyle;
 
 pub(in crate::core::tui_styled_text) mod sizing {
-    use super::*;
+    use super::{SmallString, SmallVec, TuiStyledText};
 
     /// Default internal storage for [`TuiStyledText`], which is very small.
     pub(crate) type StringTuiStyledText = SmallString<[u8; MAX_CHARS_IN_SMALL_STRING]>;

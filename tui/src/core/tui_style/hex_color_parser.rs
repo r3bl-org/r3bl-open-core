@@ -37,7 +37,7 @@ pub fn parse_hex_color(input: &str) -> IResult<&str, RgbValue> {
 }
 
 mod hex_primary {
-    use super::*;
+    use super::{IResult, Parser, map_res, take_while_m_n, ParseIntError};
 
     pub fn parse(input: &str) -> IResult<&str, u8> {
         map_res(take_while_m_n(2, 2, is_hex_digit), from_hex).parse(input)

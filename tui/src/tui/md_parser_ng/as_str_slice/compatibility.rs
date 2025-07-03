@@ -24,7 +24,7 @@ use crate::{AsStrSlice,
             ParserByteCache,
             PARSER_BYTE_CACHE_PAGE_SIZE};
 
-impl<'a> AsStrSlice<'a> {
+impl AsStrSlice<'_> {
     /// Write the content of this slice to a byte cache.
     ///
     /// This is for compatibility with the legacy markdown parser, which expects a [&str]

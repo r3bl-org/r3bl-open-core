@@ -29,7 +29,7 @@ pub enum DialogEvent {
 }
 
 mod dialog_event_impl {
-    use super::*;
+    use super::{DialogEvent, InputEvent, KeyPress, Key, SpecialKey};
 
     impl DialogEvent {
         /// Tries to convert the given [`InputEvent`] into a [`DialogEvent`].

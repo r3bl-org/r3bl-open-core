@@ -59,7 +59,7 @@ use crate::InlineVecStr;
 /// This needs to be accessible by the rest of the crate, and anyone using the [List]
 /// struct.
 pub mod sizing_list_of {
-    use super::*;
+    use super::SmallVec;
     pub type ListStorage<T> = SmallVec<[T; DEFAULT_LIST_STORAGE_SIZE]>;
     const DEFAULT_LIST_STORAGE_SIZE: usize = 8;
 }

@@ -38,7 +38,7 @@ pub enum FocusEvent {
 }
 
 mod helpers {
-    use super::*;
+    use super::{InputEvent, KeyPress};
 
     impl InputEvent {
         #[must_use]
@@ -78,7 +78,7 @@ mod helpers {
 }
 
 pub(crate) mod converters {
-    use super::*;
+    use super::{Event, InputEvent, width, height, FocusEvent, MouseEvent, KeyEvent};
 
     impl TryFrom<Event> for InputEvent {
         type Error = ();

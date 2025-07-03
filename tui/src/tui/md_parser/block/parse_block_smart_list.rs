@@ -49,7 +49,7 @@ use crate::{list,
 pub fn parse_block_smart_list(
     input: &str,
 ) -> IResult<&str, (Lines<'_>, BulletKind, usize)> {
-    use parse_block_smart_list_helper::*;
+    use parse_block_smart_list_helper::{determine_checkbox_policy, create_bullet_fragment, build_line_fragments};
 
     let (remainder, smart_list_ir) = parse_smart_list(input)?;
 
@@ -82,7 +82,7 @@ pub fn parse_block_smart_list(
 }
 
 mod parse_block_smart_list_helper {
-    use super::*;
+    use super::{tiny_inline_string, list, CheckboxParsePolicy, CHECKED, SPACE, UNCHECKED, BulletKind, List, MdLineFragment};
 
     // Helper function to determine checkbox parsing policy.
     pub fn determine_checkbox_policy(content: &str) -> CheckboxParsePolicy {
@@ -1038,7 +1038,7 @@ mod tests_parse_smart_list_content_lines {
 }
 
 mod verify_rest {
-    use super::*;
+    use super::{IResult, Parser, recognize, alt, tag, UNORDERED_LIST_PREFIX, terminated, digit1, ORDERED_LIST_PARTIAL_PREFIX, SPACE_CHAR};
 
     /// Return true if:
     /// - No ul items (at any indent).

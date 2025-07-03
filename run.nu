@@ -286,6 +286,7 @@ def clippy [] {
         cd $folder
         print $'(ansi magenta)≡ Running cargo clippy in ($folder) .. ≡(ansi reset)'
         cargo fix --allow-dirty --allow-staged
+        cargo clippy --fix --allow-dirty -- -W clippy::pedantic
         cargo clippy --fix --allow-dirty -- -W clippy::manual_is_multiple_of
         cargo clippy --fix --allow-dirty -- -W clippy::needless_return
         cargo clippy --fix --allow-dirty -- -W clippy::doc_markdown
@@ -320,6 +321,9 @@ def clippy [] {
         cargo clippy --fix --allow-dirty -- -W clippy::return_self_not_must_use
         cargo clippy --fix --allow-dirty -- -W clippy::match_bool
         cargo clippy --fix --allow-dirty -- -W clippy::comparison_chain
+        cargo clippy --fix --allow-dirty -- -W clippy::elidable_lifetime_names
+        cargo clippy --fix --allow-dirty -- -W clippy::wildcard_imports
+        cargo clippy --fix --allow-dirty -- -W unused_imports # rustc lint
         cargo fmt --all
         cd ..
     }
@@ -327,8 +331,8 @@ def clippy [] {
 
 def clippy-pedantic [] {
     # Don't use experimental linting options: -W clippy::nursery
-    cargo clippy -- -W clippy::all -W clippy::pedantic out+err> ~/Downloads/clippy-fix-pedantic.txt
-    bat ~/Downloads/clippy-fix-pedantic.txt --paging=always --color=always
+    cargo clippy -- -W clippy::all -W clippy::pedantic out+err> ~/Downloads/clippy-fix-pedantic.rs
+    bat ~/Downloads/clippy-fix-pedantic.rs --paging=always --color=always
 }
 
 def clippy-watch [] {

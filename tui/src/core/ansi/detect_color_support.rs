@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{env,
-          sync::atomic::{AtomicI8, Ordering}};
+use std::env;
 
 /// Global variable which can be used to:
 /// 1. Override the color support.
@@ -26,7 +25,8 @@ use std::{env,
 /// This is a global variable because it is used in multiple places in the codebase, and
 /// it is really dependent on the environment.
 pub mod global_color_support {
-    use super::*;
+    use std::sync::atomic::{AtomicI8, Ordering};
+    use super::{ColorSupport, Stream, examine_env_vars_to_determine_color_support};
 
     static mut COLOR_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
     const NOT_SET_VALUE: i8 = -1;
@@ -72,7 +72,7 @@ pub mod global_color_support {
     }
 
     /// Get the color support override value.
-    /// - If the value has been set using [`global_color_support::set_override`], then
+    /// - If the value has been set using [`crate::global_color_support::set_override`], then
     ///   that value will be returned.
     /// - Otherwise, an error will be returned.
     #[allow(clippy::result_unit_err, static_mut_refs)]
@@ -174,7 +174,7 @@ mod convert_between_color_and_i8 {
 }
 
 mod helpers {
-    use super::*;
+    use super::{Stream, as_str, env};
 
     #[must_use]
     pub fn is_a_tty(stream: Stream) -> bool {

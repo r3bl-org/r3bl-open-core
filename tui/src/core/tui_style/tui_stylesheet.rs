@@ -93,7 +93,7 @@ impl TuiStylesheet {
         self.styles
             .iter()
             .find(|style| tui_style_attrib::Id::eq(style.id, id))
-            .cloned()
+            .copied()
     }
 
     /// Returns [None] if no style in `ids` [Vec] is found.

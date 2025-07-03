@@ -76,7 +76,7 @@ use crate::fg_cyan;
 pub type KVBucket<'a, KeyT, ValueT> = kv::Bucket<'a, KeyT, Bincode<ValueT>>;
 
 mod default_settings {
-    use super::*;
+    use super::Debug;
 
     #[derive(Debug, strum_macros::EnumString, Hash, PartialEq, Eq, Clone, Copy)]
     pub enum Keys {
@@ -329,7 +329,7 @@ pub mod kv_error {
         ExecuteTransaction,
     }
 }
-use kv_error::*;
+use kv_error::KvErrorCouldNot;
 
 use crate::inline_string;
 

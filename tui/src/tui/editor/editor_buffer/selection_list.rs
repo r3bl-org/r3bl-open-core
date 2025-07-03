@@ -42,7 +42,12 @@ use crate::{caret_scr_adj,
             SelectionRange};
 
 mod sizing {
-    use super::*;
+    use super::{CaretMovementDirection,
+                GetMemSize,
+                RowIndex,
+                SelectionList,
+                SelectionListItem,
+                SmallVec};
     pub(crate) type VecRowIndex = SmallVec<[RowIndex; ROW_INDEX_SIZE]>;
 
     const ROW_INDEX_SIZE: usize = 32;
@@ -288,7 +293,21 @@ pub enum RowLocationInSelectionList {
 
 // Formatter for Debug and Display.
 mod impl_debug_format {
-    use super::*;
+    use super::{fg_color,
+                inline_string,
+                join,
+                smallvec,
+                tui_color,
+                Debug,
+                InlineString,
+                InlineVec,
+                ItemsOwned,
+                SelectionList,
+                CUT_GLYPH,
+                DIRECTION_GLYPH,
+                ELLIPSIS_GLYPH,
+                TIRE_MARKS_GLYPH,
+                VERT_LINE_DASHED_GLYPH};
 
     const PAD_LEFT: &str = "      ";
     const EMPTY_STR: &str = "--empty--";

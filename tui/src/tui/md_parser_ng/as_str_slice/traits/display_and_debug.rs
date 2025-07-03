@@ -20,7 +20,7 @@ use std::fmt::Display;
 use crate::AsStrSlice;
 
 /// Implement [Display] trait for [`AsStrSlice`].
-impl<'a> Display for AsStrSlice<'a> {
+impl Display for AsStrSlice<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Materialize the text by collecting all characters from the current position.
         let mut current = self.clone();

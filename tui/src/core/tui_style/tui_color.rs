@@ -499,7 +499,7 @@ pub struct AnsiValue {
 }
 
 mod ansi_value_impl_block {
-    use super::*;
+    use super::{AnsiValue, TransformColor, ANSI_COLOR_PALETTE, RgbValue, color_utils, convert_rgb_into_ansi256};
 
     impl From<u8> for AnsiValue {
         fn from(index: u8) -> Self { Self { index } }
@@ -528,7 +528,7 @@ mod ansi_value_impl_block {
 }
 
 mod construct {
-    use super::*;
+    use super::{RgbValue, AnsiValue};
 
     impl Default for RgbValue {
         fn default() -> Self { Self::from_u8(255, 255, 255) }
@@ -546,7 +546,7 @@ mod construct {
 /// when using `ASTColor` in your code (which happens when generating colorized log
 /// output).
 mod convert_to_ast_color {
-    use super::*;
+    use super::{TuiColor, ASTColor, RgbValue};
 
     impl From<TuiColor> for ASTColor {
         fn from(tui_color: TuiColor) -> Self {
@@ -576,7 +576,7 @@ mod convert_to_ast_color {
 /// This is useful when you want to go between different variants of the [`TuiColor`]
 /// enum.
 mod convert_between_variants {
-    use super::*;
+    use super::{RgbValue, AnsiValue, TransformColor, TuiColor};
 
     impl From<RgbValue> for AnsiValue {
         fn from(rgb_value: RgbValue) -> Self {
@@ -1013,7 +1013,7 @@ mod tests {
 }
 
 mod debug_helpers {
-    use super::*;
+    use super::{Debug, TuiColor, RgbValue, ANSIBasicColor};
 
     impl Debug for TuiColor {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

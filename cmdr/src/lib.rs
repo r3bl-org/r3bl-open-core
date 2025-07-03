@@ -304,6 +304,9 @@
 #![warn(clippy::return_self_not_must_use)]
 #![warn(clippy::match_bool)]
 #![warn(clippy::comparison_chain)]
+#![warn(clippy::elidable_lifetime_names)]
+#![warn(clippy::wildcard_imports)]
+#![warn(unused_imports)] // rustc lint
 #![allow(clippy::needless_pass_by_value)] // This triggers legitimate use of passing a Copy arg by value to a function.
 #![allow(clippy::similar_names)] // This triggers legitimate variable names.
 

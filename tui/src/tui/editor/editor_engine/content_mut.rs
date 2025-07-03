@@ -43,14 +43,14 @@ pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
     let row_index_scr_adj = caret_scr_adj.row_index;
 
     if buffer.line_at_row_index(row_index_scr_adj).is_some() {
-        insert_into_existing_line(EditorArgsMut { buffer, engine }, caret_scr_adj, chunk);
+        insert_into_existing_line(EditorArgsMut { engine, buffer }, caret_scr_adj, chunk);
     } else {
         fill_in_missing_lines_up_to_row(
-            EditorArgsMut { buffer, engine },
+            EditorArgsMut { engine, buffer },
             row_index_scr_adj,
         );
         insert_chunk_into_new_line(
-            EditorArgsMut { buffer, engine },
+            EditorArgsMut { engine, buffer },
             caret_scr_adj,
             chunk,
         );
@@ -75,24 +75,24 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
     match locate_col(buffer) {
         CaretColLocationInLine::AtEnd => {
             insert_new_line_at_caret_helper::insert_new_line_at_end_of_current_line(
-                EditorArgsMut { buffer, engine },
+                EditorArgsMut { engine, buffer },
             );
         }
         CaretColLocationInLine::AtStart => {
             insert_new_line_at_caret_helper::insert_new_line_at_start_of_current_line(
-                EditorArgsMut { buffer, engine },
+                EditorArgsMut { engine, buffer },
             );
         }
         CaretColLocationInLine::InMiddle => {
             insert_new_line_at_caret_helper::insert_new_line_at_middle_of_current_line(
-                EditorArgsMut { buffer, engine },
+                EditorArgsMut { engine, buffer },
             );
         }
     }
 }
 
 mod insert_new_line_at_caret_helper {
-    use super::*;
+    use super::{EditorArgsMut, scroll_editor_content, GCStringExt};
 
     // Handle inserting a new line at the end of the current line.
     pub fn insert_new_line_at_end_of_current_line(args: EditorArgsMut<'_>) {
@@ -205,7 +205,7 @@ pub fn delete_at_caret(
 }
 
 mod delete_at_caret_helper {
-    use super::*;
+    use super::{inline_string, EditorBuffer, EditorEngine, GCStringExt};
 
     /// ```text
     /// R ┌──────────┐
@@ -296,7 +296,7 @@ pub fn backspace_at_caret(
 }
 
 mod backspace_at_caret_helper {
-    use super::*;
+    use super::{inline_string, EditorBuffer, EditorEngine, ColIndex, GCStringExt, scroll_editor_content, row, caret_scroll_index};
 
     /// ```text
     /// R ┌──────────┐
@@ -444,7 +444,7 @@ pub fn delete_selected(
 }
 
 mod delete_selected_helper {
-    use super::*;
+    use super::{EditorBuffer, InlineVec, RowIndex, HashMap, InlineString, col, caret_scroll_index, EditorEngine, GCStringExt, DeleteSelectionWith};
 
     pub fn analyze_selections(
         buffer: &EditorBuffer,
@@ -628,7 +628,7 @@ fn fill_in_missing_lines_up_to_row(args: EditorArgsMut<'_>, row_index: RowIndex)
 
     // Fill in any missing lines.
     if buffer.get_lines().get(max_row_index).is_none() {
-        for row_index in 0..max_row_index + 1 {
+        for row_index in 0..=max_row_index {
             if buffer.get_lines().get(row_index).is_none() {
                 // When buffer_mut goes out of scope, it will be dropped & validation
                 // performed.

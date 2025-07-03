@@ -49,7 +49,7 @@ use crate::{md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
 /// 6. line (which contains a [`crate::MdLineFragments`]). The parsers in
 ///    [`mod@crate::fragment`] handle this.
 #[rustfmt::skip]
-pub fn parse_markdown<'a>(input: &'a str) -> IResult<&'a str, MdDocument<'a>> {
+pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument<'_>> {
     let (input, output) = many0(
         // NOTE: The ordering of the parsers below matters.
         alt((

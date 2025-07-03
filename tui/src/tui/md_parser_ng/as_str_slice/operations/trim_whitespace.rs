@@ -19,7 +19,7 @@ use crate::{as_str_slice::AsStrSlice,
             constants::{SPACE_CHAR, TAB_CHAR},
             core::units::{len, Length}};
 
-impl<'a> AsStrSlice<'a> {
+impl AsStrSlice<'_> {
     /// Internal helper function that trims specified whitespace characters from the start
     /// of the current line. This only operates on the contents of the current line.
     ///

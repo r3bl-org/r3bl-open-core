@@ -157,7 +157,7 @@ where
         let id = *id;
 
         if state.get_mut_dialog_buffer(id).is_some() {
-            use DialogEngineApplyResponse::*;
+            use DialogEngineApplyResponse::{DialogChoice, UpdateEditorBuffer, SelectScrollResultsPanel, Noop};
 
             match DialogEngineApi::apply_event::<S, AS>(
                 state,

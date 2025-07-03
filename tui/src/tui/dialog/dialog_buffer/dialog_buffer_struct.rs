@@ -60,7 +60,7 @@ impl DialogBuffer {
 }
 
 mod impl_debug_format {
-    use super::*;
+    use super::{fmt_option, Debug, DialogBuffer, Formatter, Result};
 
     impl Debug for DialogBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

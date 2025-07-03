@@ -39,7 +39,7 @@ use crate::{engine_public_api,
             Size};
 
 pub(in crate::tui::editor::editor_buffer) mod key {
-    use super::*;
+    use super::{ScrOfs, Size};
 
     /// Cache key is combination of `scroll_offset` and `window_size`.
     #[derive(Clone, Debug, PartialEq)]
@@ -62,7 +62,7 @@ pub use key::*;
 // Allow code below to all the symbols in this mod.
 
 pub(in crate::tui::editor::editor_buffer) mod cache_entry {
-    use super::{key::Key, *};
+    use super::{key::Key, RenderOps};
 
     /// Cache entry is a combination of a single key and single value.
     #[derive(Clone, Debug, PartialEq)]
@@ -93,7 +93,7 @@ pub struct RenderCache {
 }
 
 mod render_cache_impl_block {
-    use super::*;
+    use super::{Deref, RenderCache, cache_entry, DerefMut, Key, RenderOps, CacheEntry, EditorBuffer, EditorEngine, Size, HasFocus, UseRenderCache, engine_public_api, RenderArgs};
 
     impl Deref for RenderCache {
         type Target = Option<cache_entry::CacheEntry>;

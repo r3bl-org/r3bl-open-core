@@ -107,7 +107,7 @@ pub struct Pos {
 pub fn pos(arg_pos: impl Into<Pos>) -> Pos { arg_pos.into() }
 
 mod constructor {
-    use super::*;
+    use super::{Pos, RowIndex, ColIndex, Add};
 
     impl Pos {
         pub fn new(arg_pos: impl Into<Pos>) -> Self { arg_pos.into() }
@@ -155,7 +155,7 @@ mod constructor {
 }
 
 mod convert {
-    use super::*;
+    use super::{Pos, RowIndex, ColIndex};
 
     impl From<Pos> for RowIndex {
         fn from(pos: Pos) -> Self { pos.row_index }
@@ -167,7 +167,7 @@ mod convert {
 }
 
 mod ops {
-    use super::*;
+    use super::{Mul, Size, Pos, ColWidth, RowHeight, Add, Sub, AddAssign, SubAssign};
     use crate::{col, row, ChUnit};
 
     // Dim is equivalent to (ColWidthCount, RowHeightCount).
@@ -349,7 +349,7 @@ mod ops {
 }
 
 mod api {
-    use super::*;
+    use super::{Pos, ch, RowIndex, RowHeight, ColIndex, ColWidth};
 
     // Reset API.
     impl Pos {
@@ -463,7 +463,7 @@ mod api {
 }
 
 mod debug {
-    use super::*;
+    use super::{Debug, Pos, Formatter, Result};
 
     impl Debug for Pos {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

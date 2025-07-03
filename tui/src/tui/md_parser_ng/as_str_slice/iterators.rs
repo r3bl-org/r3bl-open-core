@@ -29,7 +29,7 @@ impl<'a> StringChars<'a> {
     pub fn new(slice: AsStrSlice<'a>) -> Self { Self { slice } }
 }
 
-impl<'a> Iterator for StringChars<'a> {
+impl Iterator for StringChars<'_> {
     type Item = char;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -57,7 +57,7 @@ impl<'a> StringCharIndices<'a> {
     }
 }
 
-impl<'a> Iterator for StringCharIndices<'a> {
+impl Iterator for StringCharIndices<'_> {
     type Item = (usize, char);
 
     fn next(&mut self) -> Option<Self::Item> {

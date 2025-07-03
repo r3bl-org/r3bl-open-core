@@ -45,7 +45,7 @@ impl Debug for RowIndex {
 pub fn row(arg_row_index: impl Into<RowIndex>) -> RowIndex { arg_row_index.into() }
 
 mod constructor {
-    use super::*;
+    use super::{RowIndex, usize, RowHeight, height, ChUnit};
 
     impl RowIndex {
         pub fn new(arg_row_index: impl Into<RowIndex>) -> Self { arg_row_index.into() }
@@ -87,7 +87,7 @@ mod constructor {
 }
 
 mod ops {
-    use super::*;
+    use super::{Deref, RowIndex, ChUnit, DerefMut, Sub, SubAssign, Add, AddAssign, RowHeight, Mul};
 
     impl Deref for RowIndex {
         type Target = ChUnit;
