@@ -30,7 +30,7 @@ use crate::{InlineVec, StdMutex};
 /// - [`StdoutMock::default`]
 /// - [`StdoutMock::new`]
 /// - [`super::OutputDeviceExt::new_mock()`]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct StdoutMock {
     pub buffer: Arc<StdMutex<InlineVec<u8>>>,
 }

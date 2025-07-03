@@ -20,6 +20,7 @@ use std::fmt::Debug;
 use super::{main_event_loop_impl, BoxedSafeApp, GlobalData};
 use crate::{get_size, CommonResult, FlexBoxId, InputDevice, InputEvent, OutputDevice};
 
+#[derive(Debug)]
 pub struct TerminalWindow;
 
 #[derive(Debug)]

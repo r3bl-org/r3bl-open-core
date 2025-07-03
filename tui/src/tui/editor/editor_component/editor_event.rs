@@ -41,7 +41,7 @@ use crate::{clipboard_support::ClipboardService,
 /// By providing a conversion from [`InputEvent`] to [`EditorEvent`] it becomes easier to
 /// write event handlers that consume [`InputEvent`] and then execute [`EditorEvent`] on
 /// an [`EditorBuffer`].
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum EditorEvent {
     InsertChar(char),
     InsertString(String),
@@ -62,7 +62,7 @@ pub enum EditorEvent {
     Redo,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SelectionAction {
     OneCharLeft,
     OneCharRight,
@@ -76,7 +76,7 @@ pub enum SelectionAction {
     Esc,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum CaretDirection {
     Up,
     Down,

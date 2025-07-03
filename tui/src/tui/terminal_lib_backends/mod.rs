@@ -47,6 +47,7 @@
 //! - Sodium:
 //!   - repo: <https://github.com/redox-os/sodium>
 
+#[derive(Debug)]
 pub enum TerminalLibBackend {
     Crossterm,
     Termion,

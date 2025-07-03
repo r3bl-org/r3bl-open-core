@@ -30,6 +30,7 @@ pub enum CharacterMatchResult {
 ///
 /// It is meant to be used to perform text clipping on a single line of text, so that the
 /// syntax highlighted version is clipped the same as the plain text version.
+#[derive(Debug)]
 pub struct PatternMatcherStateMachine<'a> {
     pattern: &'a str,
     current_index: usize,

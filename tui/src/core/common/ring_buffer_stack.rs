@@ -157,6 +157,7 @@ impl<'a, T, const N: usize> IntoIterator for &'a RingBufferStack<T, N> {
     fn into_iter(self) -> Self::IntoIter { self.iter() }
 }
 
+#[derive(Debug)]
 pub struct RingBufferStackIterator<'a, T, const N: usize> {
     ring_buffer: &'a RingBufferStack<T, N>,
     iterator_index: usize,

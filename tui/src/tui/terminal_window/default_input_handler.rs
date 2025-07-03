@@ -18,6 +18,7 @@
 use super::Continuation;
 use crate::InputEvent;
 
+#[derive(Debug)]
 pub struct DefaultInputEventHandler;
 
 impl DefaultInputEventHandler {

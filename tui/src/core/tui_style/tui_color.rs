@@ -281,7 +281,7 @@ pub enum TuiColor {
     Ansi(AnsiValue),
 }
 
-#[derive(Clone, PartialEq, Eq, Copy, Hash)]
+#[derive(Clone, PartialEq, Eq, Copy, Hash, Debug)]
 pub enum ANSIBasicColor {
     /// Black color.
     Black,

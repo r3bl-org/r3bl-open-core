@@ -51,6 +51,7 @@ use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color
 
 /// Struct representing the implementation of [`RenderOp`] for crossterm terminal backend.
 /// This empty struct is needed since the [Flush] trait needs to be implemented.
+#[derive(Debug)]
 pub struct RenderOpImplCrossterm;
 
 mod impl_trait_paint_render_op {

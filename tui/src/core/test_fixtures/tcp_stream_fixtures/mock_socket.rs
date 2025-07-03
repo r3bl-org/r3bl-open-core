@@ -17,6 +17,7 @@
 
 use tokio::io::{duplex, split, DuplexStream, ReadHalf, WriteHalf};
 
+#[derive(Debug)]
 pub struct MockSocket {
     pub client_read: ReadHalf<DuplexStream>,
     pub client_write: WriteHalf<DuplexStream>,

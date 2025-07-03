@@ -204,6 +204,7 @@ use crate::{ast,
 pub struct CustomEventFormatter;
 
 /// Parameters for formatting field content.
+#[derive(Debug)]
 pub struct FieldContentParams<'a> {
     heading: &'a str,
     body: &'a str,
@@ -528,6 +529,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct VisitEventAndPopulateOrderedMapWithFields<'a> {
     pub inner: &'a mut OrderedMap<InlineString, InlineString>,
 }

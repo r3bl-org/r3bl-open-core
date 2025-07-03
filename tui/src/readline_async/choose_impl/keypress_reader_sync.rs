@@ -21,6 +21,7 @@ pub trait KeyPressReader {
     fn read_key_press(&mut self) -> Option<InputEvent>;
 }
 
+#[derive(Debug)]
 pub struct CrosstermKeyPressReader;
 
 impl KeyPressReader for CrosstermKeyPressReader {
@@ -30,6 +31,7 @@ impl KeyPressReader for CrosstermKeyPressReader {
     }
 }
 
+#[derive(Debug)]
 pub struct TestVecKeyPressReader {
     pub key_press_vec: Vec<InputEvent>,
     pub index: Option<usize>,

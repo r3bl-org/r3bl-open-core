@@ -286,6 +286,7 @@ def clippy [] {
         cd $folder
         print $'(ansi magenta)≡ Running cargo clippy in ($folder) .. ≡(ansi reset)'
         cargo fix --allow-dirty --allow-staged
+        # clippy lints.
         cargo clippy --fix --allow-dirty -- -W clippy::pedantic
         cargo clippy --fix --allow-dirty -- -W clippy::manual_is_multiple_of
         cargo clippy --fix --allow-dirty -- -W clippy::needless_return
@@ -322,7 +323,9 @@ def clippy [] {
         cargo clippy --fix --allow-dirty -- -W clippy::comparison_chain
         cargo clippy --fix --allow-dirty -- -W clippy::elidable_lifetime_names
         cargo clippy --fix --allow-dirty -- -W clippy::wildcard_imports
-        cargo clippy --fix --allow-dirty -- -W unused_imports # rustc lint
+        # rustc lints.
+        cargo clippy --fix --allow-dirty -- -W unused_imports
+        cargo clippy --fix --allow-dirty -- -W missing_debug_implementations
         cargo fmt --all
         cd ..
     }

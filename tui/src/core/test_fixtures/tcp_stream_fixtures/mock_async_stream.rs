@@ -26,6 +26,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 ///   in the `tokio-test` crate.
 /// - The difference is that [`MockAsyncStream`] allows access to the expected write
 ///   buffer.
+#[derive(Debug)]
 pub struct MockAsyncStream {
     pub expected_buffer: Vec<u8>,
 }

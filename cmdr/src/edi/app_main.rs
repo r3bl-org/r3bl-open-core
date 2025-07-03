@@ -117,6 +117,7 @@ mod id_impl {
 }
 
 /// The main app struct.
+#[derive(Debug)]
 pub struct AppMain;
 
 mod app_main_constructor {

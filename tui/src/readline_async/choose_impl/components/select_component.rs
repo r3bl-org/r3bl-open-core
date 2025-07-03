@@ -47,6 +47,7 @@ use crate::{ast,
             StyleSheet,
             DEVELOPMENT_MODE};
 
+#[allow(missing_debug_implementations)]
 pub struct SelectComponent {
     pub output_device: OutputDevice,
     pub style: StyleSheet,

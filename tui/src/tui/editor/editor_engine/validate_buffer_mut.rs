@@ -40,6 +40,7 @@ use crate::{col,
             SelectionList,
             Size};
 
+#[derive(Debug)]
 pub struct EditorBufferMut<'a> {
     pub lines: &'a mut VecEditorContentLines,
     pub caret_raw: &'a mut CaretRaw,
@@ -55,7 +56,14 @@ pub struct EditorBufferMut<'a> {
 }
 
 mod editor_buffer_mut_impl_block {
-    use super::{EditorBufferMut, ColWidth, EditorBuffer, VecEditorContentLines, CaretRaw, ScrOfs, SelectionList, Size};
+    use super::{CaretRaw,
+                ColWidth,
+                EditorBuffer,
+                EditorBufferMut,
+                ScrOfs,
+                SelectionList,
+                Size,
+                VecEditorContentLines};
 
     impl EditorBufferMut<'_> {
         /// Returns the display width of the line at the caret (at it's scroll adjusted
@@ -87,12 +95,19 @@ mod editor_buffer_mut_impl_block {
     }
 }
 
+#[derive(Debug)]
 pub struct EditorBufferMutNoDrop<'a> {
     pub inner: EditorBufferMut<'a>,
 }
 
 mod editor_buffer_mut_no_drop_impl_block {
-    use super::{EditorBufferMutNoDrop, VecEditorContentLines, CaretRaw, ScrOfs, SelectionList, Size, EditorBufferMut};
+    use super::{CaretRaw,
+                EditorBufferMut,
+                EditorBufferMutNoDrop,
+                ScrOfs,
+                SelectionList,
+                Size,
+                VecEditorContentLines};
 
     impl EditorBufferMutNoDrop<'_> {
         pub fn new<'a>(
@@ -120,12 +135,20 @@ mod editor_buffer_mut_no_drop_impl_block {
 /// segment width display). `😄` is 3 bytes but it's display width is 2! To ensure that
 /// caret position and scroll offset positions are not in the middle of a unicode segment
 /// character, we need to run the validation checks.
+#[derive(Debug)]
 pub struct EditorBufferMutWithDrop<'a> {
     pub inner: EditorBufferMut<'a>,
 }
 
 mod editor_buffer_mut_with_drop_impl_block {
-    use super::{EditorBufferMutWithDrop, VecEditorContentLines, CaretRaw, ScrOfs, SelectionList, Size, EditorBufferMut, perform_validation_checks_after_mutation};
+    use super::{perform_validation_checks_after_mutation,
+                CaretRaw,
+                EditorBufferMut,
+                EditorBufferMutWithDrop,
+                ScrOfs,
+                SelectionList,
+                Size,
+                VecEditorContentLines};
 
     impl EditorBufferMutWithDrop<'_> {
         pub fn new<'a>(

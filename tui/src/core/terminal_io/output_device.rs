@@ -46,6 +46,7 @@ macro_rules! lock_output_device_as_mut {
 /// - To write to it, see the examples in [`Self::lock()`] or
 ///   [`lock_output_device_as_mut`] macro.
 #[derive(Clone)]
+#[allow(missing_debug_implementations)]
 pub struct OutputDevice {
     pub resource: SafeRawTerminal,
     pub is_mock: bool,

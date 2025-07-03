@@ -19,6 +19,7 @@ use crate::{as_str_slice::AsStrSlice,
             core::units::{idx, Index}};
 
 /// Iterator over the characters in an [`AsStrSlice`].
+#[derive(Debug)]
 pub struct StringChars<'a> {
     slice: AsStrSlice<'a>,
 }
@@ -42,6 +43,7 @@ impl Iterator for StringChars<'_> {
 }
 
 /// Iterator over the characters in an [`AsStrSlice`] with their indices.
+#[derive(Debug)]
 pub struct StringCharIndices<'a> {
     slice: AsStrSlice<'a>,
     position: Index,

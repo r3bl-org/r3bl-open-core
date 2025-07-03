@@ -19,6 +19,7 @@ use std::fmt::{Formatter, Result};
 
 use crate::{DebugFormatRenderOp, RenderOp, RenderOp::{Noop, EnterRawMode, ExitRawMode, ClearScreen, ResetColor, SetFgColor, SetBgColor, ApplyColors, MoveCursorPositionAbs, MoveCursorPositionRelTo, CompositorNoClipTruncPaintTextWithAttributes, PaintTextWithAttributes}, TuiStyle};
 
+#[derive(Debug)]
 pub struct CrosstermDebugFormatRenderOp;
 
 impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
