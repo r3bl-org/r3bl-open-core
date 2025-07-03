@@ -8,6 +8,9 @@ documentation = "https://docs.rs/analytics_schema"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
+[lints]
+workspace = true
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
