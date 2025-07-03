@@ -146,7 +146,7 @@ impl CurIndex {
 }
 
 mod ops {
-    use super::*;
+    use super::{Deref, CurIndex, Index, DerefMut};
 
     impl Deref for CurIndex {
         type Target = Option<Index>;
@@ -160,7 +160,7 @@ mod ops {
 }
 
 mod convert {
-    use super::*;
+    use super::{CurIndex, Index};
 
     impl From<usize> for CurIndex {
         fn from(val: usize) -> Self { CurIndex(Some(Index(val.into()))) }

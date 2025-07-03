@@ -127,7 +127,7 @@ pub async fn handle_branch_delete_command(
 }
 
 mod details {
-    use super::*;
+    use super::{CommandRunDetails, BranchDeleteDetails, ItemsOwned};
 
     pub fn empty() -> CommandRunDetails {
         let it = BranchDeleteDetails {
@@ -151,7 +151,7 @@ mod details {
 mod user_interaction {
     use r3bl_tui::inline_vec;
 
-    use super::*;
+    use super::{ast_line, smallvec, ItemsOwned, CommonResult, ast, ui_str, common, prefix_multi_select_instruction_header, DefaultIoDevices, choose, height, HowToChoose, StyleSheet, InlineString, parse_user_choice, InlineVec, ASText, prefix_single_select_instruction_header};
 
     pub async fn select_branches_to_delete(
         branch_options: ItemsOwned,
@@ -262,7 +262,7 @@ mod user_interaction {
 }
 
 mod command_execute {
-    use super::*;
+    use super::{ItemsOwned, CommonResult, CommandRunResult, CommandRunDetails, git, ui_str, details};
 
     pub async fn delete_selected_branches(
         branches: &ItemsOwned,
@@ -291,7 +291,7 @@ mod command_execute {
 }
 
 mod parse_user_choice {
-    use super::*;
+    use super::{ItemsOwned, ui_str};
 
     pub enum Selection {
         Delete,

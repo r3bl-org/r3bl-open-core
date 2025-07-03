@@ -52,7 +52,7 @@ pub enum CommandRunResult<T: Debug + Display> {
 pub(crate) mod display_impl_for_command_run_result {
     use std::fmt::{Debug, Display, Formatter};
 
-    use super::*;
+    use super::{CommandRunResult, FmtResult, Command, StdResult, Error};
     use crate::{fg_lizard_green,
                 fg_orange,
                 fg_pink,

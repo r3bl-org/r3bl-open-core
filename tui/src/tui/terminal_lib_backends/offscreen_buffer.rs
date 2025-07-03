@@ -75,7 +75,7 @@ impl GetMemSize for OffscreenBuffer {
 }
 
 pub mod diff_chunks {
-    use super::*;
+    use super::{Deref, List, PixelChar, Pos};
 
     /// This is a wrapper type so the [`std::fmt::Debug`] can be implemented for it, that
     /// won't conflict with [List]'s implementation of the trait.
@@ -98,7 +98,22 @@ pub mod diff_chunks {
 }
 
 mod offscreen_buffer_impl {
-    use super::*;
+    use super::{col,
+                fg_green,
+                fmt,
+                inline_string,
+                ok,
+                row,
+                Debug,
+                Deref,
+                DerefMut,
+                List,
+                OffscreenBuffer,
+                PixelChar,
+                PixelCharDiffChunks,
+                PixelCharLines,
+                Pos,
+                Size};
 
     impl Debug for PixelCharDiffChunks {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -204,7 +219,15 @@ pub struct PixelCharLines {
 }
 
 mod pixel_char_lines_impl {
-    use super::*;
+    use super::{get_mem_size,
+                smallvec,
+                Deref,
+                DerefMut,
+                GetMemSize,
+                InlineVec,
+                PixelCharLine,
+                PixelCharLines,
+                Size};
 
     impl GetMemSize for PixelCharLines {
         fn get_mem_size(&self) -> usize { get_mem_size::slice_size(self.lines.as_ref()) }
@@ -246,7 +269,19 @@ impl GetMemSize for PixelCharLine {
 }
 
 mod pixel_char_line_impl {
-    use super::*;
+    use super::{dim_underline,
+                fmt,
+                ok,
+                smallvec,
+                tiny_inline_string,
+                ColWidth,
+                Debug,
+                Deref,
+                DerefMut,
+                InlineVec,
+                PixelChar,
+                PixelCharLine,
+                TinyInlineString};
 
     impl Debug for PixelCharLine {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -468,7 +503,15 @@ const EMPTY_CHAR: char = '╳';
 const VOID_CHAR: char = '❯';
 
 mod pixel_char_impl {
-    use super::*;
+    use super::{fg_magenta,
+                fmt,
+                ok,
+                Debug,
+                InlineString,
+                PixelChar,
+                Write,
+                EMPTY_CHAR,
+                VOID_CHAR};
 
     impl Default for PixelChar {
         fn default() -> Self { Self::Spacer }

@@ -108,7 +108,7 @@ use crate::{constants::NEW_LINE_CHAR,
 /// - A tuple containing the remainder of the input and a `List<CodeBlockLine>` ready for rendering
 /// - Each `CodeBlockLine` contains the parsed content and metadata for proper display
 #[rustfmt::skip]
-pub fn parse_block_code_advance_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, List<CodeBlockLine<'a>>> {
+pub fn parse_block_code_advance_ng(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, List<CodeBlockLine<'_>>> {
     let (remainder, (lang, code)) = (
         parse_code_block_lang_including_eol_ng,
         parse_code_block_body_including_code_block_end_ng,
@@ -140,7 +140,7 @@ pub fn parse_block_code_advance_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSl
 /// - A tuple containing the remainder of the input and a `List<CodeBlockLine>` ready for rendering
 /// - Each `CodeBlockLine` contains the parsed content and metadata for proper display
 #[rustfmt::skip]
-pub fn parse_block_code_no_advance_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, List<CodeBlockLine<'a>>> {
+pub fn parse_block_code_no_advance_ng(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, List<CodeBlockLine<'_>>> {
     let (remainder, (lang, code)) = (
         parse_code_block_lang_including_eol_ng,
         parse_code_block_body_including_code_block_end_ng,
@@ -158,7 +158,7 @@ pub fn parse_block_code_no_advance_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsSt
 /// Returns `Some(language)` if a language is specified, or `None` if no language is specified.
 /// Consumes the [`NEW_LINE`] if it exists.
 #[rustfmt::skip]
-fn parse_code_block_lang_including_eol_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, Option<AsStrSlice<'a>>> {
+fn parse_code_block_lang_including_eol_ng(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, Option<AsStrSlice<'_>>> {
     alt((
         // Either - Successfully parse both code block language & text.
         map(
@@ -191,7 +191,7 @@ fn parse_code_block_lang_including_eol_ng<'a>(input: AsStrSlice<'a>) -> IResult<
 /// 2. Consumes the end marker itself (removing it from the returned content).
 /// 3. Returns the remainder of the input and the captured content.
 #[rustfmt::skip]
-pub fn parse_code_block_body_including_code_block_end_ng<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+pub fn parse_code_block_body_including_code_block_end_ng(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, AsStrSlice<'_>> {
     // The extra trailing newline is added by AsStrSlice find_substring()
     // which is used in the `take_until` parser. This has to be removed from the end
     // using opt(tag(NEW_LINE)).
@@ -346,7 +346,7 @@ pub fn convert_into_code_block_lines_ng<'a>(
 /// | "foo\nbar\n"   | `["foo", "bar"]`     |
 /// | "\nfoo\nbar\n" | `["", "foo", "bar"]` |
 #[must_use]
-pub fn split_by_new_line_ng<'a>(input: AsStrSlice<'a>) -> InlineVec<AsStrSlice<'a>> {
+pub fn split_by_new_line_ng(input: AsStrSlice<'_>) -> InlineVec<AsStrSlice<'_>> {
     if input.is_empty() {
         return InlineVec::new();
     }

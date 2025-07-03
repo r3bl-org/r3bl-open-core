@@ -45,7 +45,7 @@ pub fn items_owned(arg_owned_items: impl Into<ItemsOwned>) -> ItemsOwned {
 }
 
 mod convert_to_vec_string {
-    use super::*;
+    use super::ItemsOwned;
 
     impl ItemsOwned {
         /// Convert `ItemsOwned` to `Vec<String>`.
@@ -71,7 +71,7 @@ mod convert_to_vec_string {
 }
 
 mod constructors {
-    use super::*;
+    use super::{ItemsOwned, InlineVec};
 
     impl ItemsOwned {
         #[must_use]
@@ -85,7 +85,7 @@ mod constructors {
 }
 
 mod iter_impl {
-    use super::*;
+    use super::{FromIterator, InlineString, ItemsOwned, InlineVec};
 
     /// `FromIterator` for [`ItemsOwned`] for `collect()`.
     impl FromIterator<InlineString> for ItemsOwned {
@@ -117,7 +117,7 @@ mod iter_impl {
 mod convert_into_items_owned {
     use smallvec::SmallVec;
 
-    use super::*;
+    use super::{ItemsOwned, InlineVec, InlineString};
 
     // XMARK: Clever Rust, to make it easy to work with arrays of any size, eg: `&["1",
     // "2"]`, `vec!["1", "2"]`, `vec!["1".to_string(), "2".to_string()]`
@@ -212,7 +212,7 @@ mod convert_into_items_owned {
 }
 
 mod deref_deref_mut_impl {
-    use super::*;
+    use super::{Deref, ItemsOwned, InlineVec, InlineString, DerefMut};
 
     impl Deref for ItemsOwned {
         type Target = InlineVec<InlineString>;

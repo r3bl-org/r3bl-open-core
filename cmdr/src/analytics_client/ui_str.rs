@@ -28,7 +28,13 @@ use super::upgrade_check::{get_self_bin_name, get_self_crate_name};
 use crate::{common::fmt, get_self_bin_emoji};
 
 pub mod upgrade_install {
-    use super::*;
+    use super::{Display,
+                Error,
+                ExitStatus,
+                InlineString,
+                fmt,
+                get_self_crate_name,
+                inline_string};
 
     /// Ran `cargo install ...` and this process exited with zero `request_shutdown` code.
     #[must_use]
@@ -126,7 +132,14 @@ pub mod upgrade_install {
 }
 
 pub mod upgrade_check {
-    use super::*;
+    use super::{ColorWheel,
+                GradientGenerationPolicy,
+                InlineString,
+                TextColorizationPolicy,
+                get_self_bin_name,
+                get_self_crate_name,
+                glyphs,
+                inline_string};
 
     #[must_use]
     pub fn yes_msg_raw() -> &'static str { "Yes, upgrade now" }
@@ -165,20 +178,29 @@ pub mod upgrade_check {
 }
 
 pub mod goodbye_greetings {
-    use super::*;
+    use super::{ColorWheel,
+                InlineString,
+                get_self_bin_emoji,
+                get_self_bin_name,
+                inline_string,
+                var};
 
     #[must_use]
     pub fn thanks_msg() -> InlineString {
-        let goodbye_msg = if let Ok(username) = var("USER") { inline_string!(
-            "Goodbye, 👋 {a}. Thanks for using {b} {c}!",
-            a = username,
-            b = get_self_bin_emoji(),
-            c = get_self_bin_name()
-        ) } else { inline_string!(
-            "Goodbye, 👋. Thanks for using {a} {b}!",
-            a = get_self_bin_emoji(),
-            b = get_self_bin_name()
-        ) };
+        let goodbye_msg = if let Ok(username) = var("USER") {
+            inline_string!(
+                "Goodbye, 👋 {a}. Thanks for using {b} {c}!",
+                a = username,
+                b = get_self_bin_emoji(),
+                c = get_self_bin_name()
+            )
+        } else {
+            inline_string!(
+                "Goodbye, 👋. Thanks for using {a} {b}!",
+                a = get_self_bin_emoji(),
+                b = get_self_bin_name()
+            )
+        };
 
         let star_us_msg = inline_string!(
             "{a}\n{b}",

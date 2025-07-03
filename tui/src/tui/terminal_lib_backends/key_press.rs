@@ -259,7 +259,7 @@ pub enum SpecialKey {
 /// Docs:
 ///  - [Crossterm KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
 pub mod convert_key_event {
-    use super::*;
+    use super::{KeyEvent, KeyPress, KeyCode, KeyModifiers, try_convert_key_modifiers, Key, ModifierKeysMask, KeyEventKind, FunctionKey, SpecialKey, Enhanced, SpecialKeyExt, MediaKeyCode, MediaKey, ModifierKeyCode, ModifierKeyEnum};
 
     impl TryFrom<KeyEvent> for KeyPress {
         type Error = ();

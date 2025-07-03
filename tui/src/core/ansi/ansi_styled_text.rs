@@ -114,7 +114,7 @@ pub type ASTextLines = InlineVec<ASTextLine>;
 pub type ASTextStyles = sizing::InlineVecASTextStyles;
 
 pub(in crate::core::ansi) mod sizing {
-    use super::*;
+    use super::{ASTStyle, SmallVec};
 
     /// Attributes are: `color_fg`, `color_bg`, bold, dim, italic, underline, reverse,
     /// hidden, etc. which are in [`crate::ASTStyle`].
@@ -169,7 +169,16 @@ macro_rules! ast_lines {
 }
 
 pub mod ansi_styled_text_impl {
-    use super::*;
+    use super::{inline_string,
+                ASText,
+                AnsiStyledText,
+                ColIndex,
+                ColWidth,
+                GCString,
+                InlineString,
+                InlineVec,
+                PixelChar,
+                TuiStyle};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct ASTextConvertOptions {
@@ -195,8 +204,8 @@ pub mod ansi_styled_text_impl {
             print!("{self}");
         }
 
-        /// This is different from the [`Display`] trait implementation, because it
-        /// doesn't allocate a new [`String`], but instead allocates an inline
+        /// This is different from the [`std::fmt::Display`] trait implementation, because
+        /// it doesn't allocate a new [`String`], but instead allocates an inline
         /// buffer on the stack.
         #[must_use]
         pub fn to_small_str(&self) -> InlineString { inline_string!("{self}") }
@@ -725,7 +734,16 @@ pub enum ASTStyle {
 }
 
 mod convert_vec_ast_style_to_tui_style {
-    use super::*;
+    use super::{ASTStyle,
+                ASTextStyles,
+                Bold,
+                Dim,
+                Hidden,
+                Italic,
+                Reverse,
+                Strikethrough,
+                TuiStyle,
+                Underline};
 
     impl From<ASTextStyles> for TuiStyle {
         fn from(styles: ASTextStyles) -> Self {
@@ -757,7 +775,7 @@ mod convert_vec_ast_style_to_tui_style {
 }
 
 mod convert_tui_style_to_vec_ast_style {
-    use super::{sizing::InlineVecASTextStyles, *};
+    use super::{sizing, sizing::InlineVecASTextStyles, ASTStyle, TuiStyle};
 
     impl From<TuiStyle> for sizing::InlineVecASTextStyles {
         fn from(tui_style: TuiStyle) -> Self {
@@ -887,7 +905,7 @@ mod style_impl {
 }
 
 mod display_trait_impl {
-    use super::*;
+    use super::{ASText, Display, Formatter, Result, SgrCode};
 
     impl Display for ASText {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

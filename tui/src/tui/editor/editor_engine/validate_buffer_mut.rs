@@ -55,7 +55,7 @@ pub struct EditorBufferMut<'a> {
 }
 
 mod editor_buffer_mut_impl_block {
-    use super::*;
+    use super::{EditorBufferMut, ColWidth, EditorBuffer, VecEditorContentLines, CaretRaw, ScrOfs, SelectionList, Size};
 
     impl EditorBufferMut<'_> {
         /// Returns the display width of the line at the caret (at it's scroll adjusted
@@ -92,7 +92,7 @@ pub struct EditorBufferMutNoDrop<'a> {
 }
 
 mod editor_buffer_mut_no_drop_impl_block {
-    use super::*;
+    use super::{EditorBufferMutNoDrop, VecEditorContentLines, CaretRaw, ScrOfs, SelectionList, Size, EditorBufferMut};
 
     impl EditorBufferMutNoDrop<'_> {
         pub fn new<'a>(
@@ -125,7 +125,7 @@ pub struct EditorBufferMutWithDrop<'a> {
 }
 
 mod editor_buffer_mut_with_drop_impl_block {
-    use super::*;
+    use super::{EditorBufferMutWithDrop, VecEditorContentLines, CaretRaw, ScrOfs, SelectionList, Size, EditorBufferMut, perform_validation_checks_after_mutation};
 
     impl EditorBufferMutWithDrop<'_> {
         pub fn new<'a>(

@@ -335,7 +335,7 @@ impl EditorEvent {
             EditorEvent::InsertChar(character) => {
                 Self::delete_text_if_selected(engine, buffer);
                 engine_internal_api::insert_str_at_caret(
-                    EditorArgsMut { buffer, engine },
+                    EditorArgsMut { engine, buffer },
                     &String::from(character),
                 );
             }
@@ -343,8 +343,8 @@ impl EditorEvent {
             EditorEvent::InsertNewLine => {
                 Self::delete_text_if_selected(engine, buffer);
                 engine_internal_api::insert_new_line_at_caret(EditorArgsMut {
-                    buffer,
                     engine,
+                    buffer,
                 });
             }
 
@@ -398,14 +398,14 @@ impl EditorEvent {
             EditorEvent::InsertString(chunk) => {
                 Self::delete_text_if_selected(engine, buffer);
                 engine_internal_api::insert_str_at_caret(
-                    EditorArgsMut { buffer, engine },
+                    EditorArgsMut { engine, buffer },
                     &chunk,
                 );
             }
 
             EditorEvent::Resize(_) => {
                 // Check to see whether scroll is valid.
-                validate_scroll_on_resize(EditorArgsMut { buffer, engine });
+                validate_scroll_on_resize(EditorArgsMut { engine, buffer });
             }
 
             EditorEvent::Home => {
@@ -473,7 +473,7 @@ impl EditorEvent {
             EditorEvent::Paste => {
                 Self::delete_text_if_selected(engine, buffer);
                 engine_internal_api::paste_clipboard_content_into_editor(
-                    EditorArgsMut { buffer, engine },
+                    EditorArgsMut { engine, buffer },
                     clipboard,
                 );
             }

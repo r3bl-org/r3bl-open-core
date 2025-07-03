@@ -137,7 +137,7 @@ impl Deref for ChUnit {
 }
 
 pub mod ch_unit_math_ops {
-    use super::*;
+    use super::{mul_unsigned, add_unsigned, sub_unsigned, MulAssign, ChUnit, Add, ch, AddAssign, Sub, SubAssign, Mul, Div};
 
     impl MulAssign<ChUnit> for ChUnit {
         fn mul_assign(&mut self, rhs: Self) {
@@ -253,6 +253,7 @@ pub mod convert_to_other_types_from_ch {
     }
 
     impl From<ChUnit> for i16 {
+        #[allow(clippy::cast_possible_wrap)]
         fn from(arg: ChUnit) -> Self {
             // No i16::from(u16) conversion, so we use the `as` keyword.
             // A u16 can hold values up to 65,535, but i16 can only hold values up to
@@ -262,6 +263,7 @@ pub mod convert_to_other_types_from_ch {
     }
 
     impl From<ChUnit> for isize {
+        #[allow(clippy::cast_possible_wrap)]
         fn from(arg: ChUnit) -> Self {
             // No isize::from(u16) conversion, so we use the `as` keyword.
             // On 16-bit platforms (though rare), isize is equivalent to i16, so the same
@@ -273,7 +275,7 @@ pub mod convert_to_other_types_from_ch {
 
 /// Convert from other types [prim@f64], [prim@isize], [prim@usize], etc. to [`ChUnit`].
 pub mod convert_from_other_types_to_ch {
-    use super::*;
+    use super::{ChUnit, ChUnitPrimitiveType};
 
     /// Safely convert the f64 to u16 by rounding it. The conversion can fail if the value
     /// is out of range of u16 (negative number or greater than max u16 capacity).

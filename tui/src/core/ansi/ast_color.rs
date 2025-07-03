@@ -44,7 +44,7 @@ pub enum ASTColor {
 }
 
 mod ast_color_impl_block {
-    use super::*;
+    use super::{ASTColor, AnsiValue, RgbValue, TransformColor, ANSI_COLOR_PALETTE, convert_rgb_into_ansi256};
 
     impl Default for ASTColor {
         fn default() -> Self { ASTColor::Rgb((0, 0, 0).into()) }

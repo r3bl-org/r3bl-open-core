@@ -119,7 +119,7 @@ pub fn convert_span_line_from_syntect_to_tui_styled_texts(
     let mut acc = TuiStyledTexts::default();
     for (syntect_style, text) in syntect_styles {
         let my_style = convert_style_from_syntect_to_tui(*syntect_style);
-        acc += tui_styled_text!(@style: my_style, @text: text.to_string());
+        acc += tui_styled_text!(@style: my_style, @text: (*text).to_string());
     }
     acc
 }

@@ -47,7 +47,7 @@ pub const fn please_select_branch_sub_command_msg_raw() -> &'static str {
 }
 
 pub mod modified_files_display {
-    use super::*;
+    use super::{inline_string, InlineString, fmt};
 
     #[must_use]
     pub fn warn_modified_files_exist_msg(branch_name: &str) -> InlineString {
@@ -62,7 +62,7 @@ pub mod modified_files_display {
 }
 
 pub mod branch_checkout_display {
-    use super::*;
+    use super::{inline_string, InlineString, fmt};
 
     /// This is unformatted text. The formatted is applied by the caller.
     #[must_use]
@@ -131,7 +131,7 @@ pub mod branch_checkout_display {
 }
 
 pub mod branch_create_display {
-    use super::*;
+    use super::{inline_string, InlineString, fmt};
 
     #[must_use]
     pub fn enter_branch_name_you_want_to_create() -> InlineString {
@@ -179,7 +179,7 @@ pub mod branch_create_display {
 }
 
 pub mod branch_delete_display {
-    use super::*;
+    use super::{inline_string, join_fmt, InlineString, fmt, ItemsOwned, Output};
 
     #[must_use]
     pub fn info_unable_to_msg() -> InlineString {

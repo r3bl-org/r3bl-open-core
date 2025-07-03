@@ -223,7 +223,13 @@ pub struct EditorContent {
 }
 
 mod construct {
-    use super::*;
+    use super::{glyphs,
+                inline_string,
+                smallvec,
+                EditorBuffer,
+                EditorContent,
+                GCStringExt,
+                DEBUG_TUI_MOD};
 
     impl EditorBuffer {
         /// Marker method to make it easy to search for where an empty instance is
@@ -258,7 +264,7 @@ mod construct {
 }
 
 pub mod versions {
-    use super::*;
+    use super::{EditorBuffer, DEBUG_TUI_COPY_PASTE};
 
     impl EditorBuffer {
         pub fn add(&mut self) {
@@ -315,7 +321,14 @@ pub mod versions {
 
 /// Relating to line display width at caret row or given row index (scroll adjusted).
 pub mod content_display_width {
-    use super::*;
+    use super::{height,
+                sizing,
+                width,
+                CaretRaw,
+                ColWidth,
+                EditorBuffer,
+                RowIndex,
+                ScrOfs};
 
     impl EditorBuffer {
         #[must_use]
@@ -380,7 +393,7 @@ pub mod content_display_width {
 
 /// Relating to content around the caret.
 pub mod content_near_caret {
-    use super::*;
+    use super::{caret_locate, row, width, EditorBuffer, GCString, SegString};
 
     impl EditorBuffer {
         #[must_use]
@@ -481,7 +494,23 @@ pub mod content_near_caret {
 }
 
 pub mod access_and_mutate {
-    use super::*;
+    use super::{height,
+                sizing,
+                with_mut,
+                CaretRaw,
+                CaretScrAdj,
+                EditorBuffer,
+                EditorBufferMutNoDrop,
+                EditorBufferMutWithDrop,
+                GCString,
+                GCStringExt,
+                InlineString,
+                RowHeight,
+                RowIndex,
+                ScrOfs,
+                SelectionList,
+                Size,
+                DEFAULT_SYN_HI_FILE_EXT};
 
     impl EditorBuffer {
         #[must_use]
@@ -641,7 +670,12 @@ pub mod access_and_mutate {
 }
 
 mod debug_format {
-    use super::*;
+    use super::{format_as_kilobytes_with_commas,
+                Debug,
+                EditorBuffer,
+                EditorContent,
+                Formatter,
+                Result};
 
     impl Debug for EditorBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

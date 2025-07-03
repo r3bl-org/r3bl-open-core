@@ -163,7 +163,7 @@ impl ReadlineAsyncContext {
         let (shutdown_complete_sender, _) = shutdown_complete_channel;
 
         let (readline, stdout) = Readline::try_new(
-            prompt.to_owned(),
+            prompt.clone(),
             output_device,
             input_device,
             shutdown_complete_sender.clone(),

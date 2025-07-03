@@ -86,7 +86,7 @@ pub enum ScrollOffsetColLocationInRange {
 /// The only way to construct a [`SelectionRange`] is by converting a tuple of
 /// [`CaretScrAdj`] values into a [`SelectionRange`].
 mod convert {
-    use super::*;
+    use super::{caret_scr_adj, row, CaretScrAdj, ChUnitPrimitiveType, SelectionRange};
 
     impl From<(CaretScrAdj, CaretScrAdj)> for SelectionRange {
         /// The [`crate::RowIndex`] fields of each tuple value are not used. They are just
@@ -303,7 +303,7 @@ impl SelectionRange {
 }
 
 mod range_impl_debug_format {
-    use super::*;
+    use super::{Debug, SelectionRange};
 
     impl Debug for SelectionRange {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -36,7 +36,7 @@ pub struct ScrOfs(pub Pos);
 pub fn scr_ofs(arg_scr_ofs: impl Into<ScrOfs>) -> ScrOfs { arg_scr_ofs.into() }
 
 mod basic {
-    use super::*;
+    use super::{ScrOfs, Pos, RowIndex, ColIndex, Deref, DerefMut};
 
     impl ScrOfs {
         pub fn new(arg_pos: impl Into<ScrOfs>) -> Self { arg_pos.into() }
@@ -66,7 +66,7 @@ mod basic {
 }
 
 mod debug {
-    use super::*;
+    use super::{Debug, ScrOfs, Formatter, Result};
 
     impl Debug for ScrOfs {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

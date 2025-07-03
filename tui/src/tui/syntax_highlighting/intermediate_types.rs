@@ -251,7 +251,7 @@ impl StyleUSSpanLine {
 }
 
 mod convert {
-    use super::*;
+    use super::{tui_styled_text, TuiStyle, StyleUSSpan, StyleUSSpanLine, TuiStyledTexts};
 
     impl From<(&TuiStyle, &str)> for StyleUSSpan {
         fn from((style, text): (&TuiStyle, &str)) -> Self { Self::new(*style, text) }

@@ -275,7 +275,7 @@ impl StyleUSSpanLines {
         mod inner {
             use syntect::easy::HighlightLines;
 
-            use super::*;
+            use super::{CodeBlockLines, TuiStyle, SyntaxSet, Theme, StyleUSSpanLines, StyleUSSpanLine, CodeBlockLineContent, List, StyleUSSpan, get_foreground_dim_style, get_code_block_lang_style, get_code_block_content_style};
             use crate::{convert_syntect_to_styled_text,
                         try_get_syntax_ref,
                         tui::constants::CODE_BLOCK_START_PARTIAL};
@@ -771,7 +771,7 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
     fn from(styled_texts: TuiStyledTexts) -> Self {
         let mut it = StyleUSSpanLine::default();
         // More info on `into_iter`: <https://users.rust-lang.org/t/move-value-from-an-iterator/46172>
-        for styled_text in styled_texts.inner.into_iter() {
+        for styled_text in styled_texts.inner {
             let style = styled_text.get_style();
             let text = styled_text.get_text();
             it.inner.push(StyleUSSpan::new(*style, text));

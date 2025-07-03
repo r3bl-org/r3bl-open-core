@@ -48,8 +48,8 @@ enum CaretLocRelativeToVp {
 /// - Otherwise, no changes are made.
 pub fn validate_scroll_on_resize(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
-    validate_vertical_scroll(EditorArgsMut { buffer, engine });
-    validate_horizontal_scroll(EditorArgsMut { buffer, engine });
+    validate_vertical_scroll(EditorArgsMut { engine, buffer });
+    validate_horizontal_scroll(EditorArgsMut { engine, buffer });
 }
 
 /// Handle vertical scrolling (make sure caret is within viewport).

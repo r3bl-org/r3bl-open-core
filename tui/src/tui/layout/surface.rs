@@ -54,7 +54,7 @@ pub struct SurfaceBounds {
 }
 
 mod surface_bounds_impl {
-    use super::*;
+    use super::{Surface, SurfaceBounds};
 
     impl From<&Surface> for SurfaceBounds {
         fn from(surface: &Surface) -> Self {

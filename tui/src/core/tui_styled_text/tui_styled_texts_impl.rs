@@ -62,7 +62,7 @@ pub struct TuiStyledTexts {
 }
 
 mod impl_ops {
-    use super::*;
+    use super::{TuiStyledTexts, AddAssign, TuiStyledText, Index};
 
     impl TuiStyledTexts {
         #[must_use]
@@ -88,7 +88,7 @@ mod impl_ops {
 }
 
 mod impl_display {
-    use super::*;
+    use super::{ConvertToPlainText, TuiStyledTexts, InlineString, GCString};
     use crate::{join, ColWidth};
 
     impl ConvertToPlainText for TuiStyledTexts {
@@ -113,7 +113,7 @@ mod impl_display {
 }
 
 mod impl_debug {
-    use super::*;
+    use super::{join_with_index_fmt, ok, Debug, TuiStyledTexts};
 
     impl Debug for TuiStyledTexts {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

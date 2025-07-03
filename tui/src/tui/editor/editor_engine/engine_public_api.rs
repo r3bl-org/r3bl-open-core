@@ -174,8 +174,8 @@ pub fn render_engine(
 
         if buffer.is_empty() {
             render_empty_state(RenderArgs {
-                buffer,
                 engine,
+                buffer,
                 has_focus,
             })
         } else {
@@ -192,16 +192,16 @@ pub fn render_engine(
 
             render_selection(
                 RenderArgs {
-                    buffer,
                     engine,
+                    buffer,
                     has_focus,
                 },
                 &mut render_ops,
             );
             render_caret(
                 RenderArgs {
-                    buffer,
                     engine,
+                    buffer,
                     has_focus,
                 },
                 &mut render_ops,
@@ -443,7 +443,7 @@ pub enum EditorEngineApplyEventResult {
 }
 
 mod syn_hi_r3bl_path {
-    use super::*;
+    use super::{throws, inline_string, EditorBuffer, RowHeight, RenderOps, EditorEngine, ColWidth, CommonResult, StyleUSSpanLines, try_parse_and_highlight, DEBUG_TUI_SYN_HI, PrettyPrintDebug, usize, row, caret_scroll_index, RenderOp, col, render_tui_styled_texts_into};
 
     /// Try convert [Vec] of [US] to [`MdDocument`]:
     /// - Step 1: Get the lines from the buffer using
@@ -545,7 +545,7 @@ mod syn_hi_r3bl_path {
 }
 
 mod syn_hi_syntect_path {
-    use super::*;
+    use super::{EditorBuffer, RowHeight, RenderOps, EditorEngine, ColWidth, usize, row, caret_scroll_index, RowIndex, GCString, RenderOp, col, no_syn_hi_path, convert_syntect_to_styled_text, render_tui_styled_texts_into, try_get_syntax_ref, HighlightLines};
 
     pub fn render_content(
         editor_buffer: &EditorBuffer,
@@ -656,7 +656,7 @@ mod syn_hi_syntect_path {
 }
 
 mod no_syn_hi_path {
-    use super::*;
+    use super::{EditorBuffer, RowHeight, RenderOps, EditorEngine, ColWidth, usize, row, caret_scroll_index, RowIndex, GCString, RenderOp, col, no_syn_hi_path};
 
     pub fn render_content(
         editor_buffer: &EditorBuffer,

@@ -44,7 +44,7 @@ pub async fn handle_branch_checkout_command(
 }
 
 mod details {
-    use super::*;
+    use super::{CommandRunDetails, BranchCheckoutDetails};
 
     pub fn empty() -> CommandRunDetails {
         CommandRunDetails::BranchCheckout(BranchCheckoutDetails {
@@ -60,7 +60,14 @@ mod details {
 }
 
 mod command_execute {
-    use super::*;
+    use super::{CommandRunDetails,
+                CommandRunResult,
+                CommonResult,
+                RepoStatus,
+                details,
+                git,
+                try_is_working_directory_clean,
+                ui_str};
 
     pub async fn checkout_branch_if_not_current(
         branch_name: &str,
@@ -147,7 +154,7 @@ mod command_execute {
 mod user_interaction {
     use r3bl_tui::inline_vec;
 
-    use super::*;
+    use super::{ast_line, CommonResult, CommandRunResult, CommandRunDetails, git, ast, ui_str, prefix_single_select_instruction_header, DefaultIoDevices, choose, height, HowToChoose, StyleSheet, command_execute, details};
 
     pub async fn handle_branch_selection()
     -> CommonResult<CommandRunResult<CommandRunDetails>> {

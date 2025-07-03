@@ -109,7 +109,7 @@ pub enum SufficientSize {
 }
 
 mod constructor {
-    use super::*;
+    use super::{Size, ColWidth, RowHeight, Add};
 
     impl Size {
         pub fn new(arg_dim: impl Into<Size>) -> Self { arg_dim.into() }
@@ -157,7 +157,7 @@ mod constructor {
 }
 
 mod convert {
-    use super::*;
+    use super::{Size, ColWidth, RowHeight};
 
     impl From<Size> for ColWidth {
         fn from(size: Size) -> Self { size.col_width }
@@ -169,7 +169,7 @@ mod convert {
 }
 
 mod api {
-    use super::*;
+    use super::{Size, SufficientSize};
 
     impl Size {
         pub fn fits_min_size(&self, arg_min_size: impl Into<Size>) -> SufficientSize {
@@ -187,7 +187,7 @@ mod api {
 }
 
 mod debug {
-    use super::*;
+    use super::{Debug, Size};
 
     impl Debug for Size {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -202,7 +202,7 @@ mod debug {
 }
 
 mod ops {
-    use super::*;
+    use super::{Sub, Size, Add, SubAssign, ChUnit, AddAssign};
 
     impl Sub<Size> for Size {
         type Output = Size;

@@ -23,7 +23,7 @@ use crate::as_str_slice::AsStrSlice;
 
 /// The `Compare` trait in nom is not symmetric - you need to implement it in both
 /// directions if you want to use both types interchangeably with the `tag` function.
-impl<'a> Compare<&str> for AsStrSlice<'a> {
+impl Compare<&str> for AsStrSlice<'_> {
     fn compare(&self, t: &str) -> CompareResult {
         let mut current = self.clone();
         let mut target_chars = t.chars();

@@ -54,7 +54,16 @@ use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color
 pub struct RenderOpImplCrossterm;
 
 mod impl_trait_paint_render_op {
-    use super::*;
+    use super::{queue_render_op,
+                Clear,
+                ClearType,
+                LockedOutputDevice,
+                PaintRenderOp,
+                RenderOp,
+                RenderOpImplCrossterm,
+                RenderOpsLocalData,
+                ResetColor,
+                Size};
 
     impl PaintRenderOp for RenderOpImplCrossterm {
         fn paint(
@@ -142,7 +151,13 @@ mod impl_trait_paint_render_op {
 }
 
 pub mod impl_trait_flush {
-    use super::*;
+    use super::{flush_now,
+                Clear,
+                ClearType,
+                Flush,
+                LockedOutputDevice,
+                RenderOpImplCrossterm,
+                ResetColor};
 
     impl Flush for RenderOpImplCrossterm {
         fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
@@ -161,7 +176,33 @@ pub mod impl_trait_flush {
 }
 
 mod impl_self {
-    use super::*;
+    use super::{convert_from_tui_color_to_crossterm_color,
+                crossterm,
+                disable_raw_mode_now,
+                enable_raw_mode_now,
+                flush_now,
+                perform_paint,
+                queue_render_op,
+                sanitize_and_save_abs_pos,
+                Clear,
+                ClearType,
+                Cow,
+                DisableMouseCapture,
+                EnableMouseCapture,
+                EnterAlternateScreen,
+                Hide,
+                LeaveAlternateScreen,
+                LockedOutputDevice,
+                MoveTo,
+                Pos,
+                RenderOpImplCrossterm,
+                RenderOpsLocalData,
+                SetBackgroundColor,
+                SetForegroundColor,
+                Show,
+                Size,
+                TuiColor,
+                TuiStyle};
 
     impl RenderOpImplCrossterm {
         pub fn move_cursor_position_rel_to(
@@ -340,7 +381,19 @@ mod impl_self {
 }
 
 mod perform_paint {
-    use super::*;
+    use super::{queue_render_op,
+                sanitize_and_save_abs_pos,
+                smallvec,
+                Attribute,
+                Cow,
+                GCString,
+                InlineVec,
+                LockedOutputDevice,
+                Print,
+                RenderOpsLocalData,
+                SetAttribute,
+                Size,
+                TuiStyle};
 
     #[derive(Debug)]
     pub struct PaintArgs<'a> {

@@ -64,7 +64,7 @@ use crate::{ast,
 /// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
 /// the heap.
 pub(in crate::core) mod sizing {
-    use super::*;
+    use super::{SmallVec, ColorWheelConfig};
 
     pub type VecConfigs = SmallVec<[ColorWheelConfig; MAX_CONFIGS]>;
     const MAX_CONFIGS: usize = 2;
@@ -503,7 +503,7 @@ impl ColorWheel {
 }
 
 mod generate_styled_texts_helper {
-    use super::*;
+    use super::{TuiStyle, TuiColor};
 
     // Inner function.
     pub fn gen_style_fg_color_for(
@@ -536,7 +536,7 @@ mod generate_styled_texts_helper {
 
 /// Helper module for color wheel index management and navigation.
 mod color_wheel_navigation {
-    use super::*;
+    use super::{ColorWheelConfig, ChUnit, ColorWheelSpeed, ch, ColorWheelDirection, TuiColor, VecSteps, usize};
 
     /// Determine if the color wheel index should be updated based on speed settings.
     pub fn should_update_index(
@@ -605,7 +605,7 @@ mod color_wheel_navigation {
 
 /// Helper module for lolcat-specific operations.
 mod lolcat_helper {
-    use super::*;
+    use super::{tui_color, Lolcat, TuiColor, helpers, Seed, ChUnit, ch};
 
     /// Handle lolcat color generation and seed advancement.
     pub fn generate_next_lolcat_color(lolcat: &mut Lolcat) -> TuiColor {
@@ -637,7 +637,7 @@ mod lolcat_helper {
 
 /// Helper module for gradient generation operations.
 mod gradient_generation_helper {
-    use super::*;
+    use super::{tui_color, ColorWheelConfig, Defaults, Ansi256GradientIndex, VecSteps, get_gradient_array_for, ColorWheel, GradientLengthKind, GradientKind, ch, LolcatBuilder};
 
     /// Determine the number of steps for gradient generation.
     pub fn determine_steps(
@@ -688,7 +688,7 @@ mod gradient_generation_helper {
 
 /// Helper module for lolcat background functionality.
 mod lolcat_bg_helper {
-    use super::*;
+    use super::{TextColorizationPolicy, TuiStyle, TuiColor, RgbValue};
 
     /// Extract the style from the text colorization policy for lolcat background mode.
     pub fn extract_style_from_policy(

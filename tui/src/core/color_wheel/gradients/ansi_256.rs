@@ -48,7 +48,7 @@ pub enum Ansi256GradientIndex {
 
 impl From<u8> for Ansi256GradientIndex {
     fn from(value: u8) -> Self {
-        use Ansi256GradientIndex::*;
+        use Ansi256GradientIndex::GrayscaleMediumGrayToWhite;
         match value {
             0..=14 => unsafe { std::mem::transmute::<u8, Ansi256GradientIndex>(value) },
             _ => GrayscaleMediumGrayToWhite, // Default fallback.

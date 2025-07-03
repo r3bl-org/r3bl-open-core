@@ -391,7 +391,7 @@ pub fn grapheme_string(arg_from: impl Into<GCString>) -> GCString { arg_from.int
 /// the stack size of the struct (before it is [`smallvec::SmallVec::spilled`] to the
 /// heap, if it becomes necessary).
 mod sizing {
-    use super::*;
+    use super::{ColWidth, GCString, Seg, SmallVec};
     use crate::GetMemSize;
 
     pub type SegmentArray = SmallVec<[Seg; VEC_SEGMENT_SIZE]>;
@@ -545,7 +545,7 @@ mod basic {
 /// Methods to make it easy to work with getting owned string (from slices) at a given
 /// display col index.
 pub mod at_display_col_index {
-    use super::*;
+    use super::{ch, seg_index, ColIndex, GCString, Seg, SegString};
 
     impl GCString {
         /// If the given `display_col_index` falls in the middle of a grapheme cluster,
@@ -774,7 +774,7 @@ pub struct SegString {
 }
 
 mod seg_string_result_impl {
-    use super::*;
+    use super::{grapheme_string, Debug, GCString, Seg, SegString};
 
     /// Easily convert a [Seg] and a [`GCString`] into a [`SegString`].
     impl From<(Seg, &GCString)> for SegString {
@@ -806,7 +806,7 @@ mod seg_string_result_impl {
 /// - [`GCString`] + [`ColIndex`] = [Option]<[`SegIndex`]>
 /// - [`GCString`] + [`SegIndex`] = [Option]<[`ColIndex`]>
 mod convert {
-    use super::*;
+    use super::{seg_index, usize, Add, ByteIndex, ColIndex, GCString, SegIndex};
 
     /// Convert a `byte_index` to a `seg_index`.
     ///
@@ -869,7 +869,7 @@ mod convert {
 
 /// Methods for easily detecting wide segments in the grapheme string.
 pub mod wide_segments {
-    use super::*;
+    use super::{width, Debug, GCString};
 
     #[derive(Debug, Clone, Copy, PartialEq)]
     pub enum ContainsWideSegments {
@@ -894,7 +894,7 @@ pub mod wide_segments {
 /// Methods for easily truncating grapheme cluster segments (at the end) for common TUI
 /// use cases.
 pub mod trunc_end {
-    use super::*;
+    use super::{ch, usize, ColWidth, GCString};
 
     impl GCString {
         /// Returns a string slice from `self.string` w/ the segments removed from the end
@@ -1001,7 +1001,7 @@ pub mod trunc_end {
 /// Methods for easily truncating grapheme cluster segments (from the start) for common
 /// TUI use cases.
 pub mod trunc_start {
-    use super::*;
+    use super::{ch, ColWidth, GCString};
 
     impl GCString {
         /// Removes segments from the start of the string so that `col_count` (width) is
@@ -1054,7 +1054,7 @@ pub mod trunc_start {
 
 /// Methods for easily padding grapheme cluster segments for common TUI use cases.
 mod pad {
-    use super::*;
+    use super::{pad_fmt, width, ColWidth, GCString, InlineString};
 
     impl GCString {
         /// Returns a new [`InlineString`] that is the result of padding `self.string` to
@@ -1176,7 +1176,7 @@ mod pad {
 
 /// Methods for easily clipping grapheme cluster segments for common TUI use cases.
 mod clip {
-    use super::*;
+    use super::{ch, ColIndex, ColWidth, GCString};
 
     impl GCString {
         /// Clip the content starting from `arg_start_at_col_index` and take as many
@@ -1265,7 +1265,16 @@ mod clip {
 
 /// Methods for easily modifying grapheme cluster segments for common TUI use cases.
 mod mutate {
-    use super::*;
+    use super::{ch,
+                join,
+                seg_width,
+                usize,
+                width,
+                ColIndex,
+                ColWidth,
+                GCString,
+                InlineString,
+                InlineVecStr};
 
     impl GCString {
         /// Inserts the given `chunk` in the correct position of the `string`, and returns

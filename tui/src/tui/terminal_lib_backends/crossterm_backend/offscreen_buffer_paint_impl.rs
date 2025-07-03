@@ -128,7 +128,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     ///     - End of line.
     ///     - When style changes.
     fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOps {
-        use render_helpers::*;
+        use render_helpers::Context;
 
         let mut context = Context::new();
 
@@ -235,7 +235,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 }
 
 mod render_helpers {
-    use super::*;
+    use super::{render_ops, ColIndex, RowIndex, InlineString, TuiStyle, RenderOps, col, row, render_helpers, RenderOp, GCString};
 
     #[derive(Debug, Clone)]
     pub struct Context {

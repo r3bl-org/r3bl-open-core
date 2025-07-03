@@ -164,7 +164,7 @@ use crate::{bounds_check,
             GCString,
             PositionStatus};
 
-impl<'a> AsStrSlice<'a> {
+impl AsStrSlice<'_> {
     /// Advance position by one character.
     pub fn advance(&mut self) {
         // Return early if the line index exceeds the available lines.

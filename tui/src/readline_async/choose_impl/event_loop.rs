@@ -48,7 +48,7 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
     on_keypress: impl Fn(&mut S, InputEvent) -> EventLoopResult,
     input_device: &mut InputDevice,
 ) -> CommonResult<EventLoopResult> {
-    use EventLoopResult::*;
+    use EventLoopResult::ExitWithError;
 
     return_if_not_interactive_terminal!(Ok(ExitWithError));
 
@@ -84,7 +84,7 @@ pub fn enter_event_loop_sync<S: CalculateResizeHint>(
     on_keypress: impl Fn(&mut S, InputEvent) -> EventLoopResult,
     key_press_reader: &mut impl KeyPressReader,
 ) -> CommonResult<EventLoopResult> {
-    use EventLoopResult::*;
+    use EventLoopResult::ExitWithError;
 
     return_if_not_interactive_terminal!(Ok(ExitWithError));
 
@@ -141,7 +141,7 @@ fn handle_event_loop_result<S: CalculateResizeHint>(
     result: EventLoopResult,
     state: &mut S,
 ) -> Option<EventLoopResult> {
-    use EventLoopResult::*;
+    use EventLoopResult::{ContinueAndRerenderAndClear, ContinueAndRerender, Continue, Select, ExitWithResult, ExitWithoutResult, ExitWithError};
 
     match result {
         ContinueAndRerenderAndClear => {

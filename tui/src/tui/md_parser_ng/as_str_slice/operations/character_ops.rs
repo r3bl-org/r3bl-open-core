@@ -23,7 +23,7 @@ use crate::{as_str_slice::AsStrSlice, core::units::Length, CharacterIndex};
 ///
 /// These methods provide convenient range operations that work with character positions
 /// instead of byte positions, ensuring proper Unicode handling.
-impl<'a> AsStrSlice<'a> {
+impl AsStrSlice<'_> {
     /// Character-based range [start..end] - safe for Unicode/UTF-8 text.
     ///
     /// Returns a slice containing characters from `start` to `end` (exclusive).

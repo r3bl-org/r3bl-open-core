@@ -173,7 +173,7 @@ pub struct RenderOpsLocalData {
 }
 
 pub mod render_ops_impl {
-    use super::*;
+    use super::{ok, RenderOps, Size, LockedOutputDevice, RenderOpsLocalData, RenderOp, TERMINAL_LIB_BACKEND, TerminalLibBackend, PaintRenderOp, RenderOpImplCrossterm, Deref, InlineVec, DerefMut, AddAssign, Debug};
 
     impl RenderOps {
         pub fn execute_all(
@@ -317,7 +317,7 @@ pub enum RenderOp {
 }
 
 mod render_op_impl {
-    use super::*;
+    use super::{RenderOp, Debug, DebugFormatRenderOp, Formatter, Result, TERMINAL_LIB_BACKEND, TerminalLibBackend, CrosstermDebugFormatRenderOp};
 
     impl Default for RenderOp {
         fn default() -> Self { Self::Noop }
@@ -339,7 +339,7 @@ mod render_op_impl {
 }
 
 mod render_op_impl_trait_flush {
-    use super::*;
+    use super::{Flush, RenderOp, LockedOutputDevice, TERMINAL_LIB_BACKEND, TerminalLibBackend, RenderOpImplCrossterm};
 
     impl Flush for RenderOp {
         fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {

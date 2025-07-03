@@ -205,8 +205,8 @@ pub struct Readline {
     /// Collects lines that are written to the terminal while the terminal is paused.
     pub safe_is_paused_buffer: SafePauseBuffer,
 
-    /// - Is [Some] if a [`crate::Spinner`] is currently active. This works with the signal
-    ///   [`LineStateControlSignal::SpinnerActive`]; this is used to set the
+    /// - Is [Some] if a [`crate::Spinner`] is currently active. This works with the
+    ///   signal [`LineStateControlSignal::SpinnerActive`]; this is used to set the
     ///   [`crate::Spinner::shutdown_sender`]. Also works with the
     ///   [`LineStateControlSignal::Pause`] signal.
     /// - Is [None] if no [`crate::Spinner`] is active. Also works with the
@@ -295,10 +295,27 @@ pub enum ControlFlowLimited<E> {
 /// [`PauseBuffer`]. When the terminal is resumed, the buffer is drained and the output is
 /// written to the terminal.
 pub mod manage_shared_writer_output {
-    use super::*;
+    use super::{broadcast,
+                io,
+                join,
+                lock_output_device_as_mut,
+                mpsc,
+                Arc,
+                CommonResultWithError,
+                ControlFlowLimited,
+                LineState,
+                LineStateControlSignal,
+                LineStateLiveness,
+                OutputDevice,
+                PauseBuffer,
+                ReadlineError,
+                SafeLineState,
+                SafePauseBuffer,
+                SendRawTerminal,
+                StdMutex};
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.
-    /// - The sender end of the channel is in [`SharedWriter`].
+    /// - The sender end of the channel is in [`crate::SharedWriter`].
     pub fn spawn_task_to_monitor_line_control_channel(
         /* Move */
         mut line_control_channel_receiver: mpsc::Receiver<LineStateControlSignal>,
@@ -452,10 +469,10 @@ pub mod manage_shared_writer_output {
     /// This will panic if the lock is poisoned, which can happen if a thread
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
-    pub fn flush_internal<'a>(
+    pub fn flush_internal(
         self_safe_is_paused_buffer: SafePauseBuffer,
         is_paused: LineStateLiveness,
-        mut line_state: std::sync::MutexGuard<'a, LineState>,
+        mut line_state: std::sync::MutexGuard<'_, LineState>,
         term: &mut SendRawTerminal,
     ) -> CommonResultWithError<(), ReadlineError> {
         // If paused, then return!
@@ -499,10 +516,10 @@ impl Readline {
     /// - [`Self::set_max_history`]
     ///
     /// There is an artificial delay of
-    /// [`READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY`] added in this method so
-    /// that the initial display of the cursor does not appear janky. In turn this makes
-    /// the caller of this method [`crate::ReadlineAsyncContext::try_new()`] have to wait
-    /// that amount as well.
+    /// [`READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY`] added in this method
+    /// so that the initial display of the cursor does not appear janky. In turn this
+    /// makes the caller of this method [`crate::ReadlineAsyncContext::try_new()`]
+    /// have to wait that amount as well.
     ///
     /// # Panics
     ///
@@ -746,7 +763,17 @@ impl Readline {
 }
 
 pub mod readline_internal {
-    use super::*;
+    use super::{broadcast,
+                Arc,
+                ControlFlowExtended,
+                ReadlineError,
+                ReadlineEvent,
+                SafeHistory,
+                SafeLineState,
+                StdMutex,
+                Write,
+                CTRL_C,
+                CTRL_D};
 
     /// # Panics
     ///

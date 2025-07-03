@@ -30,7 +30,7 @@ use crate::{glyphs,
             TimeDuration};
 
 pub mod telemetry_sizing {
-    use super::*;
+    use super::SmallString;
 
     pub type TelemetryReportLineStorage = SmallString<[u8; TELEMETRY_REPORT_STRING_SIZE]>;
 
@@ -40,7 +40,7 @@ pub mod telemetry_sizing {
 /// These are the default constants for the telemetry module. They are reasonable
 /// defaults, but you can override them to suit your needs.
 pub mod telemetry_default_constants {
-    use super::*;
+    use super::Duration;
 
     /// The size of the ring buffer to store the response times.
     pub const RING_BUFFER_SIZE: usize = 100;
@@ -150,7 +150,7 @@ macro_rules! telemetry_record {
 }
 
 pub mod telemetry_constructor {
-    use super::*;
+    use super::{Duration, telemetry_default_constants, Telemetry, RingBufferStack, Instant, TelemetryHudReport, RateLimiter, TimeDuration};
 
     pub struct ResponseTimesRingBufferOptions {
         pub rate_limit_min_time_threshold: Duration,

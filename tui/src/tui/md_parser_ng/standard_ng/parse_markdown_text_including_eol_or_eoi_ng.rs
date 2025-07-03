@@ -90,9 +90,9 @@ use crate::{constants::NEW_LINE,
 /// - [`crate::parse_line_empty_advance_ng`]: Handles empty/whitespace-only lines
 /// - [`parse_inline_fragments_until_eol_or_eoi_ng`]: Internal fragment parsing logic
 /// - [`crate::parse_markdown_ng()`]: Main parser that orchestrates all text parsing
-pub fn parse_line_text_advance_ng<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
+pub fn parse_line_text_advance_ng(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, MdLineFragments<'_>> {
     let current_line_contains_new_line = input.extract_to_line_end().contains(NEW_LINE);
     if current_line_contains_new_line {
         // Throw error for invalid input.
@@ -104,11 +104,11 @@ pub fn parse_line_text_advance_ng<'a>(
 }
 
 mod inner {
-    use super::*;
+    use super::{AsStrSlice, IResult, MdLineFragments, NErr, NError, NErrorKind, Parser, many0, parse_inline_fragments_until_eol_or_eoi_ng, CheckboxParsePolicy, List};
 
     /// Parse a single line of markdown text [`MdLineFragments`] not terminated by EOL [`NEW_LINE`].
     #[rustfmt::skip]
-    pub fn without_new_line<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, MdLineFragments<'a>> {
+    pub fn without_new_line(input: AsStrSlice<'_>) -> IResult<AsStrSlice<'_>, MdLineFragments<'_>> {
         // Check if input is empty.
         if input.is_empty() {
             return Err(NErr::Error(NError::new(input, NErrorKind::Eof)));

@@ -76,7 +76,7 @@ impl Debug for Index {
 }
 
 mod construct {
-    use super::*;
+    use super::{Index, Length, ch, ChUnit};
 
     impl Index {
         pub fn new(arg_col_index: impl Into<Index>) -> Self { arg_col_index.into() }
@@ -118,7 +118,7 @@ mod construct {
 }
 
 mod ops {
-    use super::*;
+    use super::{Deref, Index, ChUnit, DerefMut, Add, AddAssign, Sub, SubAssign, Length, Mul};
 
     impl Deref for Index {
         type Target = ChUnit;

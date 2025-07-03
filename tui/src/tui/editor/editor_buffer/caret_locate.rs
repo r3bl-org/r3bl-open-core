@@ -104,7 +104,7 @@ fn row_is_at_bottom_of_buffer(buffer: &EditorBuffer) -> bool {
 }
 
 pub mod caret_scroll_index {
-    use super::*;
+    use super::{ColWidth, ColIndex, col, RowHeight, RowIndex, row};
 
     /// This is the same number as the given width, just in different "unit". The caret
     /// max index which is the scroll index goes 1 past the end of the given width's

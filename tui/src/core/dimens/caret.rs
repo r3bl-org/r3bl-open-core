@@ -99,7 +99,7 @@ pub fn caret_scr_adj(arg_caret_scr_adj: impl Into<CaretScrAdj>) -> CaretScrAdj {
 pub struct CaretRaw(pub Pos);
 
 mod caret_raw_impl {
-    use super::*;
+    use super::{CaretRaw, Deref, Pos, DerefMut, CaretScrAdj, ScrOfs, Add};
 
     impl CaretRaw {
         pub fn new(arg_caret_raw: impl Into<CaretRaw>) -> Self { arg_caret_raw.into() }
@@ -156,7 +156,7 @@ mod caret_raw_impl {
 pub struct CaretScrAdj(pub Pos);
 
 mod caret_scr_adj_impl {
-    use super::*;
+    use super::{CaretScrAdj, Deref, Pos, DerefMut, CaretRaw, ScrOfs, Add};
 
     impl CaretScrAdj {
         pub fn new(arg_caret_scr_adj: impl Into<CaretScrAdj>) -> Self {

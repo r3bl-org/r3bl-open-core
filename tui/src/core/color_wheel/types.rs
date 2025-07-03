@@ -41,7 +41,7 @@ pub use super::lolcat::Colorize;
 pub struct Seed(pub f64);
 
 mod seed {
-    use super::*;
+    use super::{Deref, Seed, DerefMut, AddAssign, SeedDelta};
 
     impl Deref for Seed {
         type Target = f64;
@@ -70,7 +70,7 @@ mod seed {
 pub struct Spread(pub f64);
 
 mod spread {
-    use super::*;
+    use super::{Deref, Spread, DerefMut};
 
     impl Deref for Spread {
         type Target = f64;
@@ -91,7 +91,7 @@ mod spread {
 pub struct Frequency(pub f64);
 
 mod frequency {
-    use super::*;
+    use super::{Deref, Frequency, DerefMut};
 
     impl Deref for Frequency {
         type Target = f64;
@@ -112,7 +112,7 @@ mod frequency {
 pub struct SeedDelta(pub f64);
 
 mod seed_delta {
-    use super::*;
+    use super::{Deref, SeedDelta, DerefMut};
 
     impl Deref for SeedDelta {
         type Target = f64;

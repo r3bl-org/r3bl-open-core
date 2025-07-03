@@ -67,9 +67,9 @@ pub fn load_id_from_file_or_generate_and_save_it() -> InlineString {
                         DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
                             // % is Display, ? is Debug.
                             tracing::debug!(
-                                    message = "Successfully wrote proxy machine ID to file.",
-                                    new_id = %new_id
-                                );
+                                message = "Successfully wrote proxy machine ID to file.",
+                                new_id = %new_id
+                            );
                         });
                     }
                     Err(error) => {

@@ -95,7 +95,7 @@ pub struct HyperlinkData<'a> {
 }
 
 mod hyperlink_data_impl {
-    use super::*;
+    use super::HyperlinkData;
 
     impl<'a> HyperlinkData<'a> {
         #[must_use]

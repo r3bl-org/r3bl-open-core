@@ -221,7 +221,7 @@ pub fn handle_selection_multiline_caret_movement(
     prev: CaretScrAdj,
     curr: CaretScrAdj,
 ) {
-    use CaretMovementDirection::*;
+    use CaretMovementDirection::{Overlap, Up, Down};
 
     // Validate preconditions.
     let caret_vertical_movement_direction =
@@ -290,7 +290,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
     prev: CaretScrAdj,
     curr: CaretScrAdj,
 ) {
-    use Ordering::*;
+    use Ordering::{Less, Greater, Equal};
 
     // Precondition check: Only run if the row previous and current row indices are same.
     if curr.row_index != prev.row_index {
@@ -374,7 +374,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
 }
 
 mod multiline_select_helpers {
-    use super::*;
+    use super::{inline_string, EditorBuffer, CaretScrAdj, SelectionRange, CaretMovementDirection, DEBUG_TUI_COPY_PASTE, fg_red, fg_cyan, fg_magenta, fg_green, fg_blue, fg_yellow, RowLocationInSelectionList, DirectionChangeResult, multiline_select_helpers, caret_scr_adj, caret_scroll_index, col, dummy_viewport, cmp};
 
     // XMARK: Impl multiline selection changes (up/down, and later page up/page down)
 

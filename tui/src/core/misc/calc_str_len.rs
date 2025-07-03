@@ -106,7 +106,7 @@ impl StringLength {
 }
 
 mod to_from_string_impl {
-    use super::*;
+    use super::StringLength;
 
     impl std::str::FromStr for StringLength {
         type Err = String;

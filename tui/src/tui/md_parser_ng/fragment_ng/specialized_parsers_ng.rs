@@ -44,15 +44,15 @@ use crate::{fg_blue,
             NErrorKind,
             DEBUG_MD_PARSER_STDOUT};
 
-pub fn parse_fragment_starts_with_underscore_err_on_new_line_ng<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+pub fn parse_fragment_starts_with_underscore_err_on_new_line_ng(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, AsStrSlice<'_>> {
     delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(input, UNDERSCORE)
 }
 
-pub fn parse_fragment_starts_with_star_err_on_new_line_ng<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+pub fn parse_fragment_starts_with_star_err_on_new_line_ng(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, AsStrSlice<'_>> {
     delim_matchers::take_starts_with_delim_enclosed_until_eol_or_eoi(input, STAR)
 }
 
@@ -65,7 +65,7 @@ pub fn parse_fragment_starts_with_star_err_on_new_line_ng<'a>(
 pub mod delim_matchers {
     use nom::multi::many1;
 
-    use super::*;
+    use super::{AsStrSlice, IResult, DEBUG_MD_PARSER_STDOUT, fg_red, take_text_between_delims_enclosed_err_on_new_line_ng, fg_blue, Parser, recognize, tag};
     use crate::{constants::NEW_LINE, fg_green};
 
     /// Returns tuple:
@@ -165,9 +165,9 @@ pub mod delim_matchers {
     }
 }
 
-pub fn parse_fragment_starts_with_backtick_err_on_new_line_ng<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+pub fn parse_fragment_starts_with_backtick_err_on_new_line_ng(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, AsStrSlice<'_>> {
     // Backup in case of error.
     let input_clone = input.clone();
 
@@ -206,9 +206,9 @@ pub fn parse_fragment_starts_with_backtick_err_on_new_line_ng<'a>(
     )
 }
 
-pub fn parse_fragment_starts_with_left_image_err_on_new_line_ng<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, HyperlinkData<'a>> {
+pub fn parse_fragment_starts_with_left_image_err_on_new_line_ng(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, HyperlinkData<'_>> {
     let input_clone_dbg = input.clone();
 
     // Parse the text between the image tags.
@@ -276,9 +276,9 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line_ng<'a>(
     it
 }
 
-pub fn parse_fragment_starts_with_left_link_err_on_new_line_ng<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, HyperlinkData<'a>> {
+pub fn parse_fragment_starts_with_left_link_err_on_new_line_ng(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, HyperlinkData<'_>> {
     let input_clone_dbg = input.clone();
 
     // Parse the text between the brackets.
@@ -351,9 +351,9 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line_ng<'a>(
 ///
 /// So some extra hint is need from the code calling this parser to let it know whether to
 /// parse a checkbox into plain text, or into a boolean.
-pub fn parse_fragment_starts_with_checkbox_into_str_ng<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
+pub fn parse_fragment_starts_with_checkbox_into_str_ng(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, AsStrSlice<'_>> {
     let it = alt((recognize(tag(CHECKED)), recognize(tag(UNCHECKED)))).parse(input);
 
     DEBUG_MD_PARSER_STDOUT.then(|| {
@@ -376,9 +376,9 @@ pub fn parse_fragment_starts_with_checkbox_into_str_ng<'a>(
 ///
 /// So some extra hint is need from the code calling this parser to let it know whether to
 /// parse a checkbox into plain text, or into a boolean.
-pub fn parse_fragment_starts_with_checkbox_checkbox_into_bool_ng<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, bool> {
+pub fn parse_fragment_starts_with_checkbox_checkbox_into_bool_ng(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, bool> {
     let it =
         alt((map(tag(CHECKED), |_| true), map(tag(UNCHECKED), |_| false))).parse(input);
 

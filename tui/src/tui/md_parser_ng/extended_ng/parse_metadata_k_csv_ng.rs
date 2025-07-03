@@ -83,9 +83,9 @@ pub fn parse_line_csv_no_advance_ng<'a>(
 /// | input                | rem     |  output                           |
 /// | -------------------- | ------- | --------------------------------- |
 /// | `"tag1, tag2, tag3"` | `""`    | `vec!(["tag1", "tag2", "tag3"])`  |
-fn parse_comma_separated_list_ng<'a>(
-    input: AsStrSlice<'a>,
-) -> IResult<AsStrSlice<'a>, InlineVec<AsStrSlice<'a>>> {
+fn parse_comma_separated_list_ng(
+    input: AsStrSlice<'_>,
+) -> IResult<AsStrSlice<'_>, InlineVec<AsStrSlice<'_>>> {
     // Handle empty input.
     if input.is_empty() {
         return Ok((input, inline_vec![]));

@@ -124,7 +124,7 @@ pub struct EditorEngineConfig {
 }
 
 mod editor_engine_config_options_impl {
-    use super::*;
+    use super::{EditorEngineConfig, LineMode, SyntaxHighlightMode, EditMode};
 
     impl Default for EditorEngineConfig {
         fn default() -> Self {

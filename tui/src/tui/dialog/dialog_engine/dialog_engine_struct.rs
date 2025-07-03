@@ -135,7 +135,7 @@ pub struct DialogEngineConfigOptions {
 }
 
 mod dialog_engine_config_options_impl {
-    use super::*;
+    use super::{DialogEngineConfigOptions, DialogEngineMode, DisplayConstants};
     use crate::height;
 
     impl Default for DialogEngineConfigOptions {

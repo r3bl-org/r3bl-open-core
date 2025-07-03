@@ -275,7 +275,7 @@ impl FunctionComponent<State> for SelectComponent {
                         let zipped = clipped_text_vec.iter().zip(header_span_vec.iter());
                         zipped.for_each(|(clipped_text, header_span)| {
                             ansi_styled_text_vec
-                                .push(ast(clipped_text, header_span.styles.to_owned()));
+                                .push(ast(clipped_text, header_span.styles.clone()));
                         });
                         multi_line_header_clipped_vec.push(ansi_styled_text_vec);
                     });
@@ -286,8 +286,7 @@ impl FunctionComponent<State> for SelectComponent {
                             header_line
                                 .iter()
                                 .map(ToString::to_string)
-                                .collect::<Vec<String>>()
-                                .join("")
+                                .collect::<String>()
                         })
                         .collect::<Vec<String>>()
                         .join("\r\n");
@@ -402,7 +401,7 @@ impl FunctionComponent<State> for SelectComponent {
                 let padding_right = if data_item_display_width < viewport_width {
                     " ".repeat(usize(viewport_width - data_item_display_width))
                 } else {
-                    "".to_string()
+                    String::new()
                 };
 
                 queue_commands! {
