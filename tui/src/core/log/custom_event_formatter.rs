@@ -153,7 +153,23 @@ use std::fmt::{self};
 
 use chrono::Local;
 use const_format::formatcp;
-use custom_event_formatter_constants::{BODY_FG_COLOR_BRIGHT, HEADING_BG_COLOR, ERROR_FG_COLOR, ERROR_SIGIL, LEVEL_SUFFIX, WARN_FG_COLOR, WARN_SIGIL, INFO_FG_COLOR, INFO_SIGIL, DEBUG_FG_COLOR, DEBUG_SIGIL, TRACE_FG_COLOR, TRACE_SIGIL, BODY_FG_COLOR, FIRST_LINE_PREFIX, SUBSEQUENT_LINE_PREFIX, ENTRY_SEPARATOR_CHAR};
+use custom_event_formatter_constants::{BODY_FG_COLOR,
+                                       BODY_FG_COLOR_BRIGHT,
+                                       DEBUG_FG_COLOR,
+                                       DEBUG_SIGIL,
+                                       ENTRY_SEPARATOR_CHAR,
+                                       ERROR_FG_COLOR,
+                                       ERROR_SIGIL,
+                                       FIRST_LINE_PREFIX,
+                                       HEADING_BG_COLOR,
+                                       INFO_FG_COLOR,
+                                       INFO_SIGIL,
+                                       LEVEL_SUFFIX,
+                                       SUBSEQUENT_LINE_PREFIX,
+                                       TRACE_FG_COLOR,
+                                       TRACE_SIGIL,
+                                       WARN_FG_COLOR,
+                                       WARN_SIGIL};
 use textwrap::{wrap, Options, WordSeparator};
 use tracing::{field::{Field, Visit},
               Event,
@@ -230,7 +246,41 @@ pub mod custom_event_formatter_constants {
 }
 
 mod helpers {
-    use super::{inline_string, new_style, fmt, Local, ast, TuiColor, BODY_FG_COLOR_BRIGHT, HEADING_BG_COLOR, Subscriber, LookupSpan, FormatFields, Event, InlineString, ERROR_FG_COLOR, ERROR_SIGIL, LEVEL_SUFFIX, WARN_FG_COLOR, WARN_SIGIL, INFO_FG_COLOR, INFO_SIGIL, DEBUG_FG_COLOR, DEBUG_SIGIL, TRACE_FG_COLOR, TRACE_SIGIL, tui_style_attrib, helpers, ColWidth, GCString, width, FieldContentParams, remove_escaped_quotes, truncate_from_right, ColorWheel, wrap, BODY_FG_COLOR};
+    use super::{ast,
+                fmt,
+                helpers,
+                inline_string,
+                new_style,
+                remove_escaped_quotes,
+                truncate_from_right,
+                tui_style_attrib,
+                width,
+                wrap,
+                ColWidth,
+                ColorWheel,
+                Event,
+                FieldContentParams,
+                FormatFields,
+                GCString,
+                InlineString,
+                Local,
+                LookupSpan,
+                Subscriber,
+                TuiColor,
+                BODY_FG_COLOR,
+                BODY_FG_COLOR_BRIGHT,
+                DEBUG_FG_COLOR,
+                DEBUG_SIGIL,
+                ERROR_FG_COLOR,
+                ERROR_SIGIL,
+                HEADING_BG_COLOR,
+                INFO_FG_COLOR,
+                INFO_SIGIL,
+                LEVEL_SUFFIX,
+                TRACE_FG_COLOR,
+                TRACE_SIGIL,
+                WARN_FG_COLOR,
+                WARN_SIGIL};
 
     /// Write formatted timestamp to the writer.
     pub fn write_timestamp(
@@ -263,19 +313,20 @@ mod helpers {
         S: Subscriber + for<'a> LookupSpan<'a>,
         N: for<'a> FormatFields<'a> + 'static,
     {
-        if let Some(scope) = ctx.lookup_current() {
-            let scope_str = inline_string!("[{}] ", scope.name());
-            let scope_str_fmt = ast(
-                scope_str,
-                new_style!(
-                    italic
-                    color_fg: {TuiColor::Rgb(BODY_FG_COLOR_BRIGHT)}
-                    color_bg: {TuiColor::Rgb(HEADING_BG_COLOR)}
-                ),
-            );
-            write!(f, "{scope_str_fmt}")
-        } else {
-            Ok(())
+        match ctx.lookup_current() {
+            Some(scope) => {
+                let scope_str = inline_string!("[{}] ", scope.name());
+                let scope_str_fmt = ast(
+                    scope_str,
+                    new_style!(
+                        italic
+                        color_fg: {TuiColor::Rgb(BODY_FG_COLOR_BRIGHT)}
+                        color_bg: {TuiColor::Rgb(HEADING_BG_COLOR)}
+                    ),
+                );
+                write!(f, "{scope_str_fmt}")
+            }
+            None => Ok(()),
         }
     }
 

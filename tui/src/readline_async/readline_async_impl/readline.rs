@@ -332,30 +332,31 @@ pub mod manage_shared_writer_output {
                 let maybe_line_control_signal = line_control_channel_receiver.recv();
 
                 // Channel is open.
-                if let Some(maybe_line_control_signal) = maybe_line_control_signal.await {
-                    let control_flow = process_line_control_signal(
-                        maybe_line_control_signal,
-                        safe_is_paused_buffer.clone(),
-                        safe_line_state.clone(),
-                        output_device.clone(),
-                        safe_spinner_is_active.clone(),
-                    );
-                    match control_flow {
-                        ControlFlowLimited::ReturnError(_) => {
-                            // Initiate shutdown.
-                            let _ = shutdown_complete_sender.send(());
-                            break;
-                        }
-                        ControlFlowLimited::Continue => {
-                            // continue.
+                match maybe_line_control_signal.await {
+                    Some(maybe_line_control_signal) => {
+                        let control_flow = process_line_control_signal(
+                            maybe_line_control_signal,
+                            safe_is_paused_buffer.clone(),
+                            safe_line_state.clone(),
+                            output_device.clone(),
+                            safe_spinner_is_active.clone(),
+                        );
+                        match control_flow {
+                            ControlFlowLimited::ReturnError(_) => {
+                                // Initiate shutdown.
+                                let _ = shutdown_complete_sender.send(());
+                                break;
+                            }
+                            ControlFlowLimited::Continue => {
+                                // continue.
+                            }
                         }
                     }
-                }
-                // Channel is closed.
-                else {
-                    // Initiate shutdown.
-                    let _ = shutdown_complete_sender.send(());
-                    break;
+                    _ => {
+                        // Initiate shutdown.
+                        let _ = shutdown_complete_sender.send(());
+                        break;
+                    }
                 }
             }
         })
