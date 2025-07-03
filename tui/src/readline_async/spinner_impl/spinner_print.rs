@@ -134,7 +134,7 @@ pub fn print_tick_final_msg(
 
     // Only run this if the spinner is not running in a `ReadlineAsync` context.
     if maybe_shared_writer.is_none() {
-        _ = print_end_if_standalone(writer);
+        drop(print_end_if_standalone(writer));
     }
 
     writer.flush().into_diagnostic()?;

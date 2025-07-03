@@ -75,7 +75,7 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
     /// Insert at head (ie, insert the newest item).
     fn add(&mut self, value: T) {
         if self.count == N {
-            let _ = self.remove(); // Remove the oldest element to make space.
+            drop(self.remove()); // Remove the oldest element to make space.
         }
         if self.internal_storage.len() < N {
             self.internal_storage.push(Some(value));

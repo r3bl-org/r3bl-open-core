@@ -207,7 +207,7 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
                     match child.start_kill() {
                         Ok(()) => {
                             println!("{}", ui_str::upgrade_install::send_sigint_msg());
-                            _ = child.wait().await;
+                            drop(child.wait().await);
                         }
                         Err(e) => {
                             eprintln!("{}", ui_str::upgrade_install::fail_send_sigint_msg(e));

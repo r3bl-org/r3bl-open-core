@@ -208,18 +208,18 @@ impl Spinner {
     pub async fn try_start_task(&mut self) -> miette::Result<()> {
         // Tell readline that spinner is active & register the spinner shutdown sender.
         if let Some(shared_writer) = self.maybe_shared_writer.as_ref() {
-            _ = shared_writer
+            drop(shared_writer
                 .line_state_control_channel_sender
                 .send(LineStateControlSignal::SpinnerActive(
                     self.shutdown_sender.clone(),
                 ))
-                .await;
+                .await);
 
             // Pause the terminal.
-            _ = shared_writer
+            drop(shared_writer
                 .line_state_control_channel_sender
                 .send(LineStateControlSignal::Pause)
-                .await;
+                .await);
         }
 
         let mut shutdown_receiver = self.shutdown_sender.subscribe();
@@ -261,10 +261,10 @@ impl Spinner {
 
                         // Tell readline that spinner is inactive.
                         if let Some(shared_writer) = maybe_shared_writer_clone.as_ref() {
-                            _ = shared_writer
+                            drop(shared_writer
                                 .line_state_control_channel_sender
                                 .send(LineStateControlSignal::SpinnerInactive)
-                                .await;
+                                .await);
                         }
 
                         // Print the final message.
@@ -273,19 +273,19 @@ impl Spinner {
                             &final_message_clone,
                             get_terminal_width(),
                         );
-                        _ = spinner_print::print_tick_final_msg(
+                        drop(spinner_print::print_tick_final_msg(
                             &style_clone,
                             &final_output,
                             output_device_clone.clone(),
                             maybe_shared_writer_clone.clone(),
-                        );
+                        ));
 
                         // Resume the terminal.
                         if let Some(shared_writer) = maybe_shared_writer_clone.as_ref() {
-                            let _ = shared_writer
+                            drop(shared_writer
                                 .line_state_control_channel_sender
                                 .send(LineStateControlSignal::Resume)
-                                .await;
+                                .await);
                         }
 
                         // This spinner is now shutdown, so other task(s) using it will
@@ -315,11 +315,11 @@ impl Spinner {
                             count,
                             get_terminal_width(),
                         );
-                        _ = spinner_print::print_tick_interval_msg(
+                        drop(spinner_print::print_tick_interval_msg(
                             &style_clone,
                             &output,
                             output_device_clone.clone()
-                        );
+                        ));
 
                         // Increment count to affect the output in the next iteration of this loop.
                         count += 1;

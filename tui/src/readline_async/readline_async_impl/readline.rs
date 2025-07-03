@@ -410,12 +410,12 @@ pub mod manage_shared_writer_output {
                 let is_paused = self_safe_line_state.lock().unwrap().is_paused;
                 let term = lock_output_device_as_mut!(output_device);
                 let line_state = self_safe_line_state.lock().unwrap();
-                let _ = flush_internal(
+                drop(flush_internal(
                     self_safe_is_paused_buffer,
                     is_paused,
                     line_state,
                     term,
-                );
+                ));
             }
 
             // Pause the terminal.
@@ -441,12 +441,12 @@ pub mod manage_shared_writer_output {
                         io::Error::other("failed to resume terminal"),
                     ));
                 }
-                let _ = flush_internal(
+                drop(flush_internal(
                     self_safe_is_paused_buffer,
                     new_value,
                     line_state,
                     term,
-                );
+                ));
             }
             LineStateControlSignal::SpinnerActive(spinner_shutdown_sender) => {
                 // Handle spinner active signal & register the spinner shutdown sender.
@@ -456,7 +456,7 @@ pub mod manage_shared_writer_output {
             LineStateControlSignal::SpinnerInactive => {
                 // Handle spinner inactive signal & remove the spinner shutdown sender.
                 let mut spinner_is_active = self_safe_spinner_is_active.lock().unwrap();
-                _ = spinner_is_active.take();
+                drop(spinner_is_active.take());
             }
         }
 
@@ -505,8 +505,8 @@ pub mod manage_shared_writer_output {
 impl Drop for Readline {
     fn drop(&mut self) {
         let term = lock_output_device_as_mut!(self.output_device);
-        _ = self.safe_line_state.lock().unwrap().exit(term);
-        _ = disable_raw_mode();
+        drop(self.safe_line_state.lock().unwrap().exit(term));
+        drop(disable_raw_mode());
     }
 }
 
@@ -611,7 +611,7 @@ impl Readline {
                 )
                 .await;
                 let term = lock_output_device_as_mut!(output_device_clone);
-                _ = term.execute(cursor::Show);
+                drop(term.execute(cursor::Show));
             }
         });
 
