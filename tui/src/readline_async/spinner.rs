@@ -90,6 +90,7 @@ use crate::{contains_ansi_escape_sequence,
 /// # Ok(())
 /// # }
 /// ```
+#[allow(missing_debug_implementations)]
 pub struct Spinner {
     pub tick_delay: Duration,
     /// ANSI escape sequences are stripped from this before being assigned.

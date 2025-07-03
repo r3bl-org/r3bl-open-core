@@ -63,7 +63,7 @@ where
     pub spinner_helper: SpinnerHelper,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct SpinnerHelper {
     pub spinner_style: SpinnerStyle,
     pub count: ChUnit,

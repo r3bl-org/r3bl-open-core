@@ -17,7 +17,7 @@
 
 use crate::{col, row, ColIndex, ColWidth, EditorBuffer, RowHeight, RowIndex};
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum CaretColLocationInLine {
     /// Also covers state where there is no col, or only 1 col.
     AtStart,
@@ -25,7 +25,7 @@ pub enum CaretColLocationInLine {
     InMiddle,
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum CaretRowLocationInBuffer {
     /// Also covers state where there is no row, or only 1 row.
     AtTop,
@@ -104,7 +104,7 @@ fn row_is_at_bottom_of_buffer(buffer: &EditorBuffer) -> bool {
 }
 
 pub mod caret_scroll_index {
-    use super::{ColWidth, ColIndex, col, RowHeight, RowIndex, row};
+    use super::{col, row, ColIndex, ColWidth, RowHeight, RowIndex};
 
     /// This is the same number as the given width, just in different "unit". The caret
     /// max index which is the scroll index goes 1 past the end of the given width's

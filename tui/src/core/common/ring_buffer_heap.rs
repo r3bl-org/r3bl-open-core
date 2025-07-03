@@ -168,6 +168,7 @@ impl<'a, T, const N: usize> IntoIterator for &'a RingBufferHeap<T, N> {
     fn into_iter(self) -> Self::IntoIter { self.iter() }
 }
 
+#[derive(Debug)]
 pub struct RingBufferHeapIterator<'a, T, const N: usize> {
     ring_buffer: &'a RingBufferHeap<T, N>,
     iterator_index: usize,

@@ -24,6 +24,7 @@ use r3bl_tui::{CommonError, CommonErrorType, CommonResult};
 
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
+#[derive(Debug)]
 pub enum ConfigPaths {
     R3BLTopLevelFolderName,
     ProxyMachineIdFile,

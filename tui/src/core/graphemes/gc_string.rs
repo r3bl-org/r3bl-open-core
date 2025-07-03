@@ -238,6 +238,7 @@ pub struct GCString {
 mod iterator {
     use super::*;
 
+    #[derive(Debug)]
     pub struct GCStringIterator<'a> {
         gc_string: &'a GCString,
         index: usize,

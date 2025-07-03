@@ -23,6 +23,7 @@ use miette::IntoDiagnostic;
 
 use crate::friendly_random_id::generate_friendly_random_id;
 
+#[derive(Debug)]
 pub struct TempDir {
     pub inner: std::path::PathBuf,
 }

@@ -437,13 +437,31 @@ pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
     pipeline
 }
 
+#[derive(Debug)]
 pub enum EditorEngineApplyEventResult {
     Applied,
     NotApplied,
 }
 
 mod syn_hi_r3bl_path {
-    use super::{throws, inline_string, EditorBuffer, RowHeight, RenderOps, EditorEngine, ColWidth, CommonResult, StyleUSSpanLines, try_parse_and_highlight, DEBUG_TUI_SYN_HI, PrettyPrintDebug, usize, row, caret_scroll_index, RenderOp, col, render_tui_styled_texts_into};
+    use super::{caret_scroll_index,
+                col,
+                inline_string,
+                render_tui_styled_texts_into,
+                row,
+                throws,
+                try_parse_and_highlight,
+                usize,
+                ColWidth,
+                CommonResult,
+                EditorBuffer,
+                EditorEngine,
+                PrettyPrintDebug,
+                RenderOp,
+                RenderOps,
+                RowHeight,
+                StyleUSSpanLines,
+                DEBUG_TUI_SYN_HI};
 
     /// Try convert [Vec] of [US] to [`MdDocument`]:
     /// - Step 1: Get the lines from the buffer using
@@ -545,7 +563,23 @@ mod syn_hi_r3bl_path {
 }
 
 mod syn_hi_syntect_path {
-    use super::{EditorBuffer, RowHeight, RenderOps, EditorEngine, ColWidth, usize, row, caret_scroll_index, RowIndex, GCString, RenderOp, col, no_syn_hi_path, convert_syntect_to_styled_text, render_tui_styled_texts_into, try_get_syntax_ref, HighlightLines};
+    use super::{caret_scroll_index,
+                col,
+                convert_syntect_to_styled_text,
+                no_syn_hi_path,
+                render_tui_styled_texts_into,
+                row,
+                try_get_syntax_ref,
+                usize,
+                ColWidth,
+                EditorBuffer,
+                EditorEngine,
+                GCString,
+                HighlightLines,
+                RenderOp,
+                RenderOps,
+                RowHeight,
+                RowIndex};
 
     pub fn render_content(
         editor_buffer: &EditorBuffer,
@@ -656,7 +690,19 @@ mod syn_hi_syntect_path {
 }
 
 mod no_syn_hi_path {
-    use super::{EditorBuffer, RowHeight, RenderOps, EditorEngine, ColWidth, usize, row, caret_scroll_index, RowIndex, GCString, RenderOp, col, no_syn_hi_path};
+    use super::{caret_scroll_index,
+                col,
+                no_syn_hi_path,
+                row,
+                usize,
+                ColWidth,
+                EditorBuffer,
+                EditorEngine,
+                GCString,
+                RenderOp,
+                RenderOps,
+                RowHeight,
+                RowIndex};
 
     pub fn render_content(
         editor_buffer: &EditorBuffer,

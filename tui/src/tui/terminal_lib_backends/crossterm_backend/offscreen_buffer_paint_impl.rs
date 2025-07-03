@@ -37,6 +37,7 @@ use crate::{ch,
             DEBUG_TUI_COMPOSITOR,
             DEBUG_TUI_SHOW_PIPELINE};
 
+#[derive(Debug)]
 pub struct OffscreenBufferPaintImplCrossterm;
 
 impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {

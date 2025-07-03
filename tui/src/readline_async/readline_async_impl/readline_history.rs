@@ -21,6 +21,7 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use crate::HISTORY_SIZE_MAX;
 
+#[derive(Debug)]
 pub struct History {
     pub entries: VecDeque<String>,
     pub max_size: usize,
@@ -29,7 +30,8 @@ pub struct History {
 }
 
 impl History {
-    #[must_use] pub fn new() -> (Self, UnboundedReceiver<String>) {
+    #[must_use]
+    pub fn new() -> (Self, UnboundedReceiver<String>) {
         let (sender, receiver) = tokio::sync::mpsc::unbounded_channel::<String>();
         (
             Self {

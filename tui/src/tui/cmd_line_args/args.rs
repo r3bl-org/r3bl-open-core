@@ -19,12 +19,14 @@ use std::fmt::Debug;
 
 use crate::{DialogEngine, EditorBuffer, EditorEngine, FlexBoxId, GlobalData, HasFocus};
 
+#[derive(Debug)]
 pub struct RenderArgs<'a> {
     pub engine: &'a mut EditorEngine,
     pub buffer: &'a EditorBuffer,
     pub has_focus: &'a mut HasFocus,
 }
 
+#[derive(Debug)]
 pub struct EditorArgsMut<'a> {
     pub engine: &'a mut EditorEngine,
     pub buffer: &'a mut EditorBuffer,
@@ -34,6 +36,7 @@ pub struct EditorArgsMut<'a> {
 ///
 /// ![Editor component lifecycle
 /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
+#[derive(Debug)]
 pub struct DialogEngineArgs<'a, S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,

@@ -45,6 +45,7 @@ impl LineStateLiveness {
 /// This struct actually handles the line editing, and rendering. This works hand in hand
 /// with the [`crate::Readline`] to make sure that the line is rendered correctly, with
 /// pause and resume support.
+#[derive(Debug)]
 pub struct LineState {
     /// Unicode line.
     pub line: String,

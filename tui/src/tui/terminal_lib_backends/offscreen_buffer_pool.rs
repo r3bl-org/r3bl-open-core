@@ -24,6 +24,7 @@ const OFFSCREEN_BUFFER_POOL_SIZE: usize = 3;
 /// struct manages the pool. When a buffer is needed, it can be taken from the pool. When
 /// a buffer is no longer needed, it can be given back to the pool. If you take a buffer
 /// and don't give it back, it is lost from the pool (and will be dropped).
+#[derive(Debug)]
 pub struct OffscreenBufferPool {
     pub pool: RingBufferStack<OffscreenBuffer, OFFSCREEN_BUFFER_POOL_SIZE>,
     pub window_size: Size,

@@ -185,6 +185,7 @@ const CTRL_D: crossterm::event::Event =
 /// so that you can mock terminal output for testing. You can also extend this struct to
 /// adapt your own terminal output using this mechanism. Essentially anything that
 /// compiles with `dyn std::io::Write + Send` trait bounds can be used.
+#[allow(missing_debug_implementations)]
 pub struct Readline {
     /// Device used to write rendered display output to (usually `stdout`).
     pub output_device: OutputDevice,

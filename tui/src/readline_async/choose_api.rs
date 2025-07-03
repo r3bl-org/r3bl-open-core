@@ -52,6 +52,7 @@ pub const DEFAULT_HEIGHT: usize = 5;
 /// can be used in the `choose_async()` function. The reason this has to be created
 /// outside of the `choose_async()` function is because mutable references to these
 /// devices are passed to it, and it can't take ownership of them.
+#[allow(missing_debug_implementations)]
 pub struct DefaultIoDevices {
     pub output_device: OutputDevice,
     pub input_device: InputDevice,

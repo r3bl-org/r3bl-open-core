@@ -23,7 +23,7 @@ use uuid::Uuid;
 
 use crate::TinyVecBackingStore;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AnalyticsRecord {
     pub events: TinyVecBackingStore<AnalyticsEvent>,
 }
@@ -41,7 +41,7 @@ impl AnalyticsRecord {
 }
 
 #[rustfmt::skip]
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AnalyticsEventNoTimestamp {
     pub proxy_user_id: String,    /* from OAuth provider, currently empty string. */
     pub proxy_machine_id: String, /* generated for each machine, eg: happy_panda_12 */
@@ -49,7 +49,7 @@ pub struct AnalyticsEventNoTimestamp {
 }
 
 #[rustfmt::skip]
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AnalyticsEvent {
     pub proxy_user_id: String,    /* from OAuth provider, currently empty string. */
     pub proxy_machine_id: String, /* generated for each machine, eg: happy_panda_12 */

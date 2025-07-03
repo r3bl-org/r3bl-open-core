@@ -152,6 +152,7 @@ macro_rules! telemetry_record {
 pub mod telemetry_constructor {
     use super::{Duration, telemetry_default_constants, Telemetry, RingBufferStack, Instant, TelemetryHudReport, RateLimiter, TimeDuration};
 
+    #[derive(Debug)]
     pub struct ResponseTimesRingBufferOptions {
         pub rate_limit_min_time_threshold: Duration,
         pub min_duration_filter: Option<Duration>,

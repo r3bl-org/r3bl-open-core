@@ -117,7 +117,7 @@ impl SelectMode {
     }
 }
 
-#[derive(Clone, PartialEq, Copy)]
+#[derive(Clone, PartialEq, Copy, Debug)]
 pub enum DeleteSelectionWith {
     Backspace,
     Delete,

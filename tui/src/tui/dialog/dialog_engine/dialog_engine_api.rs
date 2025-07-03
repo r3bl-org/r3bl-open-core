@@ -79,6 +79,7 @@ pub enum DialogEngineApplyResponse {
 }
 
 /// Things you can do with a [`DialogEngine`].
+#[derive(Debug)]
 pub struct DialogEngineApi;
 
 impl DialogEngineApi {

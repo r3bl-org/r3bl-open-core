@@ -75,6 +75,7 @@ use crate::{inline_string,
 ///     ok!()
 /// # }
 /// ```
+#[allow(missing_debug_implementations)]
 pub struct ReadlineAsyncContext {
     pub readline: Readline,
     pub shared_writer: SharedWriter,
