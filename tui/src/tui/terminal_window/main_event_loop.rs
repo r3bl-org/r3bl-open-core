@@ -394,14 +394,14 @@ pub fn handle_resize<S, AS>(
     global_data_mut_ref.set_size(new_size);
     global_data_mut_ref.maybe_saved_offscreen_buffer = None;
     global_data_mut_ref.offscreen_buffer_pool.resize(new_size);
-    let _ = AppManager::render_app(
+    drop(AppManager::render_app(
         app,
         global_data_mut_ref,
         component_registry_map,
         has_focus,
         locked_output_device,
         is_mock,
-    );
+    ));
 }
 
 /// **Telemetry**: This function is not recorded in telemetry but its caller is.
@@ -440,14 +440,14 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
             }
 
             EventPropagation::ConsumedRender => {
-                let _ = AppManager::render_app(
+                drop(AppManager::render_app(
                     app,
                     global_data_mut_ref,
                     component_registry_map,
                     has_focus,
                     locked_output_device,
                     is_mock,
-                );
+                ));
             }
 
             EventPropagation::Consumed => {}
@@ -479,9 +479,9 @@ fn request_exit_by_sending_signal<AS>(
     // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so that it doesn't
     // block the calling thread. More info: <https://tokio.rs/tokio/tutorial/channels>.
     tokio::spawn(async move {
-        let _ = channel_sender
+        drop(channel_sender
             .send(TerminalWindowMainThreadSignal::Exit)
-            .await;
+            .await);
     });
 }
 

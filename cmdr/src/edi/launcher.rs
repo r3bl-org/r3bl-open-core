@@ -38,6 +38,6 @@ pub async fn run_app(maybe_file_path: Option<&str>) -> CommonResult<()> {
         )];
 
         // Create a window.
-        _ = TerminalWindow::main_event_loop(app, exit_keys, state).await?;
+        drop(TerminalWindow::main_event_loop(app, exit_keys, state).await?);
     })
 }

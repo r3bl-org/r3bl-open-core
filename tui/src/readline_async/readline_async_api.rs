@@ -122,8 +122,8 @@ macro_rules! rla_println_prefixed {
 }
 
 impl ReadlineAsyncContext {
-    /// Create a new instance of [`ReadlineAsyncContext`]. Example of `prompt` is `"> "`. It
-    /// is safe to have ANSI escape sequences inside the `prompt` as this is taken
+    /// Create a new instance of [`ReadlineAsyncContext`]. Example of `prompt` is `"> "`.
+    /// It is safe to have ANSI escape sequences inside the `prompt` as this is taken
     /// into account when calculating the width of the terminal when displaying it in
     /// the "line editor".
     ///
@@ -156,7 +156,8 @@ impl ReadlineAsyncContext {
         let output_device = OutputDevice::new_stdout();
         let input_device = InputDevice::new_event_stream();
 
-        let prompt = read_line_prompt.map_or_else(|| "> ".to_owned(), |p| p.as_ref().to_string());
+        let prompt =
+            read_line_prompt.map_or_else(|| "> ".to_owned(), |p| p.as_ref().to_string());
 
         // Create a channel to signal when shutdown is complete.
         let shutdown_complete_channel = broadcast::channel::<()>(1);
@@ -181,7 +182,8 @@ impl ReadlineAsyncContext {
         }))
     }
 
-    #[must_use] pub fn clone_shared_writer(&self) -> SharedWriter { self.shared_writer.clone() }
+    #[must_use]
+    pub fn clone_shared_writer(&self) -> SharedWriter { self.shared_writer.clone() }
 
     pub fn mut_input_device(&mut self) -> &mut InputDevice {
         &mut self.readline.input_device
@@ -199,27 +201,30 @@ impl ReadlineAsyncContext {
     /// Simply flush the buffer. If there's a newline in the buffer, it will be printed.
     /// Otherwise, it won't.
     pub async fn flush(&mut self) {
-        let _ = self
-            .shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::Flush)
-            .await;
+        drop(
+            self.shared_writer
+                .line_state_control_channel_sender
+                .send(LineStateControlSignal::Flush)
+                .await,
+        );
     }
 
     pub async fn pause(&mut self) {
-        let _ = self
-            .shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::Pause)
-            .await;
+        drop(
+            self.shared_writer
+                .line_state_control_channel_sender
+                .send(LineStateControlSignal::Pause)
+                .await,
+        );
     }
 
     pub async fn resume(&mut self) {
-        let _ = self
-            .shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::Resume)
-            .await;
+        drop(
+            self.shared_writer
+                .line_state_control_channel_sender
+                .send(LineStateControlSignal::Resume)
+                .await,
+        );
     }
 
     /// Make sure to call this method when you are done with the [`ReadlineAsyncContext`]
