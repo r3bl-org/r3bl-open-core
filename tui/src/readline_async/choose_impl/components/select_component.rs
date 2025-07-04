@@ -488,12 +488,9 @@ mod tests {
     use serial_test::serial;
 
     use super::*;
-    use crate::{ch,
-                global_color_support::{clear_override, set_override},
-                ChUnit,
+    use crate::{global_color_support::{clear_override, set_override},
                 ColorSupport,
                 ItemsOwned,
-                OutputDevice,
                 OutputDeviceExt};
 
     #[test]

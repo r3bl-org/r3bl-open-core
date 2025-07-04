@@ -133,12 +133,7 @@ mod tests_parse_fragment {
               Err as NomErr};
 
     use super::*;
-    use crate::{as_str_slice_test_case,
-                assert_eq2,
-                idx,
-                AsStrSlice,
-                GCString,
-                HyperlinkData};
+    use crate::{as_str_slice_test_case, assert_eq2, idx, GCString, HyperlinkData};
 
     #[test]
     fn test_parse_plain_text_no_new_line1() {

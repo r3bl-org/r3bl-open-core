@@ -869,14 +869,11 @@ pub mod readline_test_fixtures {
 #[cfg(test)]
 mod test_readline {
     use readline_test_fixtures::get_input_vec;
-    use tokio::sync::broadcast;
 
     use super::*;
     use crate::{return_if_not_interactive_terminal,
                 InputDeviceExtMock,
-                LineStateLiveness,
                 OutputDeviceExt,
-                StdMutex,
                 TTYResult};
 
     #[tokio::test]
@@ -1092,7 +1089,7 @@ mod test_pause_and_resume_support {
     use manage_shared_writer_output::flush_internal;
 
     use super::*;
-    use crate::{core::test_fixtures::StdoutMock, LineStateLiveness};
+    use crate::core::test_fixtures::StdoutMock;
 
     #[test]
     fn test_flush_internal_paused() {

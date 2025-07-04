@@ -201,7 +201,7 @@ mod tests {
     use std::hash::{DefaultHasher, Hasher as _};
 
     use super::*;
-    use crate::{ch, len, BoundsCheck, BoundsStatus};
+    use crate::{len, BoundsCheck, BoundsStatus};
 
     #[test]
     fn test_index_new() {

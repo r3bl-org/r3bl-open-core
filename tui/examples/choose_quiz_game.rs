@@ -17,8 +17,7 @@
 
 use std::fmt::Display;
 
-use r3bl_tui::{self,
-               ast,
+use r3bl_tui::{ast,
                choose,
                get_terminal_width,
                height,

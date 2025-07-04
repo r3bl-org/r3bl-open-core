@@ -196,7 +196,6 @@ mod tests {
     use smallstr::SmallString;
 
     use super::*;
-    use crate::len;
     pub type SmallStringBackingStore = SmallString<[u8; DEFAULT_SMALL_STRING_SIZE]>;
     pub const DEFAULT_SMALL_STRING_SIZE: usize = 32;
 

@@ -106,7 +106,7 @@ impl std::fmt::Display for FlexBox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, height, ok, req_size_pc, row, width, CommonResult, Pos, Size};
+    use crate::{col, height, ok, req_size_pc, row, width, CommonResult};
 
     #[test]
     fn test_flex_box_default() {

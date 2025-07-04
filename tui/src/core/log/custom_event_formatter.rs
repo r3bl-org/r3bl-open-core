@@ -591,7 +591,6 @@ pub fn build_spacer(max_display_width: ColWidth) -> InlineString {
 mod tests_tracing_custom_event_formatter {
     use std::sync::Mutex;
 
-    use chrono::Local;
     use tracing::{info, subscriber::set_default};
     use tracing_subscriber::fmt::SubscriberBuilder;
 

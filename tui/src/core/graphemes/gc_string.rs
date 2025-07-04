@@ -1499,11 +1499,7 @@ mod tests {
     use std::str;
 
     use super::*;
-    use crate::{byte_index,
-                gc_string::wide_segments::ContainsWideSegments,
-                seg_index,
-                width,
-                SegString};
+    use crate::{byte_index, gc_string::wide_segments::ContainsWideSegments};
 
     /// Helper function to create a [`SegString`] for testing. Keeps the width of the
     /// lines of code in each test to a minimum (for easier readability).

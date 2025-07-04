@@ -149,7 +149,6 @@ mod ops {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ch, row};
 
     #[test]
     fn test_height_new() {

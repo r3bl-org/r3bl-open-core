@@ -73,7 +73,7 @@ impl From<&FlexBox> for PartialFlexBox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, height, row, width, Pos, Size};
+    use crate::{col, height, row, width};
 
     #[test]
     fn test_partial_flex_box_default() {

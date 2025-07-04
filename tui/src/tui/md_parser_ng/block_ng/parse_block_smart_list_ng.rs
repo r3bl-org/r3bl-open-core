@@ -2439,7 +2439,7 @@ pub fn parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_ng(
 #[cfg(test)]
 mod tests_checkbox_policy {
     use super::*;
-    use crate::{as_str_slice_test_case, assert_eq2, list, MdLineFragment};
+    use crate::{as_str_slice_test_case, assert_eq2, list};
 
     #[test]
     fn test_ignore_checkbox_empty_string() {
