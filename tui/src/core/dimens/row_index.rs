@@ -169,7 +169,7 @@ mod ops {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ch, height};
+    use crate::ch;
 
     #[test]
     fn test_row_index_add() {

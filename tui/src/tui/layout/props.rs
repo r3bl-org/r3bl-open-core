@@ -39,16 +39,7 @@ mod tests {
     use smallvec::smallvec;
 
     use super::*;
-    use crate::{col,
-                height,
-                ok,
-                req_size_pc,
-                row,
-                tui::layout::{FlexBoxId, LayoutDirection},
-                width,
-                CommonResult,
-                Pos,
-                Size};
+    use crate::{col, height, ok, req_size_pc, row, width, CommonResult};
 
     #[test]
     fn test_flex_box_props_default() {

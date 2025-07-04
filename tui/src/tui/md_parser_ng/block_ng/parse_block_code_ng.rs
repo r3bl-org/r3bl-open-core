@@ -1055,7 +1055,7 @@ mod tests_parse_code_block_body_including_code_block_end_ng {
 #[cfg(test)]
 mod tests_convert_into_code_block_lines_ng {
     use super::*;
-    use crate::{as_str_slice_test_case, assert_eq2, CodeBlockLineContent};
+    use crate::{as_str_slice_test_case, assert_eq2};
 
     #[test]
     fn test_convert_into_code_block_lines_ng_with_language() {
@@ -1267,7 +1267,6 @@ mod tests_compat_with_original_split_by_new_line {
     use crate::{as_str_slice_test_case,
                 assert_eq2,
                 split_by_new_line,
-                AsStrSlice,
                 GCString};
 
     // Helper function to convert AsStrSlice results to strings for easy comparison

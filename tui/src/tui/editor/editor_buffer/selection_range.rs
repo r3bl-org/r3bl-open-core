@@ -320,7 +320,7 @@ mod range_impl_debug_format {
 #[cfg(test)]
 mod tests_range {
     use super::*;
-    use crate::{assert_eq2, caret_scr_adj, col, row};
+    use crate::{assert_eq2, col};
 
     /// ```text
     /// ╭0123456789╮

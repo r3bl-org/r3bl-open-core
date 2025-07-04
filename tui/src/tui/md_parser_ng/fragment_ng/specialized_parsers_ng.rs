@@ -65,7 +65,15 @@ pub fn parse_fragment_starts_with_star_err_on_new_line_ng(
 pub mod delim_matchers {
     use nom::multi::many1;
 
-    use super::{AsStrSlice, IResult, DEBUG_MD_PARSER_STDOUT, fg_red, take_text_between_delims_enclosed_err_on_new_line_ng, fg_blue, Parser, recognize, tag};
+    use super::{fg_blue,
+                fg_red,
+                recognize,
+                tag,
+                take_text_between_delims_enclosed_err_on_new_line_ng,
+                AsStrSlice,
+                IResult,
+                Parser,
+                DEBUG_MD_PARSER_STDOUT};
     use crate::{constants::NEW_LINE, fg_green};
 
     /// Returns tuple:
@@ -400,7 +408,7 @@ pub fn parse_fragment_starts_with_checkbox_checkbox_into_bool_ng(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, GCString, NErr, NErrorKind};
+    use crate::{assert_eq2, GCString};
 
     #[test]
     fn test_underscore_fragment_parsing_fails_on_newline() {

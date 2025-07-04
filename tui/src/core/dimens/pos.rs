@@ -107,7 +107,7 @@ pub struct Pos {
 pub fn pos(arg_pos: impl Into<Pos>) -> Pos { arg_pos.into() }
 
 mod constructor {
-    use super::{Pos, RowIndex, ColIndex, Add};
+    use super::{Add, ColIndex, Pos, RowIndex};
 
     impl Pos {
         pub fn new(arg_pos: impl Into<Pos>) -> Self { arg_pos.into() }
@@ -155,7 +155,7 @@ mod constructor {
 }
 
 mod convert {
-    use super::{Pos, RowIndex, ColIndex};
+    use super::{ColIndex, Pos, RowIndex};
 
     impl From<Pos> for RowIndex {
         fn from(pos: Pos) -> Self { pos.row_index }
@@ -167,7 +167,7 @@ mod convert {
 }
 
 mod ops {
-    use super::{Mul, Size, Pos, ColWidth, RowHeight, Add, Sub, AddAssign, SubAssign};
+    use super::{Add, AddAssign, ColWidth, Mul, Pos, RowHeight, Size, Sub, SubAssign};
     use crate::{col, row, ChUnit};
 
     // Dim is equivalent to (ColWidthCount, RowHeightCount).
@@ -349,7 +349,7 @@ mod ops {
 }
 
 mod api {
-    use super::{Pos, ch, RowIndex, RowHeight, ColIndex, ColWidth};
+    use super::{ch, ColIndex, ColWidth, Pos, RowHeight, RowIndex};
 
     // Reset API.
     impl Pos {
@@ -463,7 +463,7 @@ mod api {
 }
 
 mod debug {
-    use super::{Debug, Pos, Formatter, Result};
+    use super::{Debug, Formatter, Pos, Result};
 
     impl Debug for Pos {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -482,7 +482,7 @@ mod tests {
     use std::fmt::Write as _;
 
     use super::*;
-    use crate::{ch, col, height, row, width, RowHeight};
+    use crate::{col, height, row, width};
 
     #[test]
     fn test_api() {

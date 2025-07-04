@@ -434,13 +434,7 @@ mod test_choose_async {
     use smallvec::smallvec;
 
     use super::*;
-    use crate::{CrosstermEventResult,
-                InlineVec,
-                InputDevice,
-                InputDeviceExtMock,
-                OutputDevice,
-                OutputDeviceExt,
-                SharedWriter};
+    use crate::{CrosstermEventResult, InlineVec, InputDeviceExtMock, OutputDeviceExt};
 
     /// Simulated key inputs: Down, Down, Enter.
     fn generated_key_events() -> InlineVec<CrosstermEventResult> {

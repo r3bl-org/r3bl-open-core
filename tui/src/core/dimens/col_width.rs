@@ -60,7 +60,7 @@ impl Debug for ColWidth {
 pub fn width(arg_col_width: impl Into<ColWidth>) -> ColWidth { arg_col_width.into() }
 
 mod construct {
-    use super::{ColWidth, ColIndex, col, ch, ChUnit};
+    use super::{ch, col, ChUnit, ColIndex, ColWidth};
 
     impl ColWidth {
         pub fn new(arg_col_width: impl Into<ColWidth>) -> Self { arg_col_width.into() }
@@ -99,7 +99,16 @@ mod construct {
 }
 
 mod ops {
-    use super::{Deref, ColWidth, ChUnit, DerefMut, Add, AddAssign, Sub, SubAssign, Div, width};
+    use super::{width,
+                Add,
+                AddAssign,
+                ChUnit,
+                ColWidth,
+                Deref,
+                DerefMut,
+                Div,
+                Sub,
+                SubAssign};
 
     impl Deref for ColWidth {
         type Target = ChUnit;
@@ -152,7 +161,6 @@ mod ops {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ch, col};
 
     #[test]
     fn test_width_new() {

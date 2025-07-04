@@ -1001,7 +1001,7 @@ mod test_dialog_engine_api_render_engine {
 #[cfg(test)]
 mod test_dialog_api_make_flex_box_for_dialog {
     use super::*;
-    use crate::{assert_eq2, dialog_engine_api::internal_impl, Surface};
+    use crate::{assert_eq2, Surface};
 
     /// More info on `is` and downcasting:
     /// - <https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any>

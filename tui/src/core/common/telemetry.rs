@@ -1000,7 +1000,7 @@ mod tests_math {
 #[cfg(test)]
 mod tests_median {
     use mutator::TryRecordResult;
-    use tests_fixtures::{self, create::*, *};
+    use tests_fixtures::{create::*, *};
 
     use super::*;
 

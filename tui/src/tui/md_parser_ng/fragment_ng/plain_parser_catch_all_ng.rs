@@ -398,7 +398,7 @@ fn tuple6<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, GCString, NErr};
+    use crate::{assert_eq2, GCString};
 
     #[test]
     fn test_check_input_starts_with() {
