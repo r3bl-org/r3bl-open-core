@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{iter::FromIterator,
-          ops::{Deref, DerefMut}};
+use std::{ops::{Deref, DerefMut}};
 
 use super::{InlineString, InlineVec};
 
@@ -85,7 +84,7 @@ mod constructors {
 }
 
 mod iter_impl {
-    use super::{FromIterator, InlineString, ItemsOwned, InlineVec};
+    use super::{InlineString, ItemsOwned, InlineVec};
 
     /// `FromIterator` for [`ItemsOwned`] for `collect()`.
     impl FromIterator<InlineString> for ItemsOwned {

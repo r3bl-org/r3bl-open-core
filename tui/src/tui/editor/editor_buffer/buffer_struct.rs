@@ -590,13 +590,17 @@ pub mod access_and_mutate {
         /// - Then you can convert the `&[u8]` to a `&str` using `std::str::from_utf8`.
         /// - And then call `.lines()` on the `&str` to get an iterator over the lines
         ///   which can be passed to this method.
-        pub fn set_lines<'a>(&mut self, arg_lines: impl IntoIterator<Item = &'a str>) {
+        pub fn set_lines<I>(&mut self, arg_lines: I)
+        where
+            I: IntoIterator,
+            I::Item: AsRef<str>,
+        {
             // Clear existing lines.
             self.content.lines.clear();
 
             // Populate lines with the new data.
             for line in arg_lines {
-                self.content.lines.push(line.grapheme_string());
+                self.content.lines.push(line.as_ref().grapheme_string());
             }
 
             // Reset caret.
