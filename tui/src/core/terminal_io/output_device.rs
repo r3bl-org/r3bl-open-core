@@ -103,13 +103,12 @@ impl OutputDevice {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{lock_output_device_as_mut, LockedOutputDevice};
 
     #[test]
     fn test_stdout_output_device() {
         let output_device = OutputDevice::new_stdout();
         let mut_ref: LockedOutputDevice<'_> = lock_output_device_as_mut!(output_device);
-        let _ = mut_ref.write_all(b"Hello, world!\n");
+        drop(mut_ref.write_all(b"Hello, world!\n"));
         assert!(!output_device.is_mock);
     }
 

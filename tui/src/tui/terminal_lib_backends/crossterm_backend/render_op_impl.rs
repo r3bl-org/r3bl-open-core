@@ -16,8 +16,7 @@
  */
 use std::borrow::Cow;
 
-use crossterm::{self,
-                cursor::{Hide, MoveTo, Show},
+use crossterm::{cursor::{Hide, MoveTo, Show},
                 event::{DisableMouseCapture, EnableMouseCapture},
                 style::{Attribute,
                         Print,
@@ -178,7 +177,6 @@ pub mod impl_trait_flush {
 
 mod impl_self {
     use super::{convert_from_tui_color_to_crossterm_color,
-                crossterm,
                 disable_raw_mode_now,
                 enable_raw_mode_now,
                 flush_now,

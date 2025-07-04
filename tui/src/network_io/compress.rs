@@ -14,8 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::{io::{Read, Write},
-          vec::Vec};
+use std::{io::{Read, Write}};
 
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use miette::IntoDiagnostic;

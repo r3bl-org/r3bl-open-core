@@ -195,11 +195,10 @@ pub fn insert_into_bucket<
 /// value it is deserialized and returned by this function.
 #[tracing::instrument(skip(bucket))]
 pub fn get_from_bucket<
-    'a,
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
     ValueT: Debug + Serialize + for<'d> Deserialize<'d>,
 >(
-    bucket: &KVBucket<'a, KeyT, ValueT>,
+    bucket: &KVBucket<'_, KeyT, ValueT>,
     key: KeyT,
 ) -> miette::Result<Option<ValueT>> {
     let maybe_value: Option<Bincode<ValueT>> = bucket
@@ -225,11 +224,10 @@ pub fn get_from_bucket<
 
 #[tracing::instrument(skip(bucket))]
 pub fn remove_from_bucket<
-    'a,
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
     ValueT: Debug + Serialize + for<'d> Deserialize<'d>,
 >(
-    bucket: &KVBucket<'a, KeyT, ValueT>,
+    bucket: &KVBucket<'_, KeyT, ValueT>,
     key: KeyT,
 ) -> miette::Result<Option<ValueT>> {
     let maybe_value: Option<Bincode<ValueT>> = bucket
@@ -255,11 +253,10 @@ pub fn remove_from_bucket<
 
 #[tracing::instrument(skip(bucket))]
 pub fn is_key_contained_in_bucket<
-    'a,
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
     ValueT: Debug + Serialize + for<'d> Deserialize<'d>,
 >(
-    bucket: &KVBucket<'a, KeyT, ValueT>,
+    bucket: &KVBucket<'_, KeyT, ValueT>,
     key: KeyT,
 ) -> miette::Result<bool> {
     let it = bucket
@@ -278,11 +275,10 @@ pub fn is_key_contained_in_bucket<
 }
 
 pub fn iterate_bucket<
-    'a,
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
     ValueT: Debug + Serialize + for<'d> Deserialize<'d>,
 >(
-    bucket: &KVBucket<'a, KeyT, ValueT>,
+    bucket: &KVBucket<'_, KeyT, ValueT>,
     mut fn_to_apply: impl FnMut(KeyT, ValueT),
 ) {
     for item in /* keep only the Ok variants */ bucket.iter().flatten() {
@@ -346,15 +342,17 @@ mod kv_tests {
     fn check_folder_exists(path: &Path) -> bool { path.exists() && path.is_dir() }
 
     fn setup_tracing() {
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(Level::INFO)
-            .compact()
-            .pretty()
-            .with_ansi(true)
-            .with_line_number(false)
-            .with_file(false)
-            .without_time()
-            .try_init();
+        drop(
+            tracing_subscriber::fmt()
+                .with_max_level(Level::INFO)
+                .compact()
+                .pretty()
+                .with_ansi(true)
+                .with_line_number(false)
+                .with_file(false)
+                .without_time()
+                .try_init(),
+        );
     }
 
     #[instrument]

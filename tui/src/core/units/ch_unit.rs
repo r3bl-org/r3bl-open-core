@@ -137,7 +137,18 @@ impl Deref for ChUnit {
 }
 
 pub mod ch_unit_math_ops {
-    use super::{mul_unsigned, add_unsigned, sub_unsigned, MulAssign, ChUnit, Add, ch, AddAssign, Sub, SubAssign, Mul, Div};
+    use super::{add_unsigned,
+                ch,
+                mul_unsigned,
+                sub_unsigned,
+                Add,
+                AddAssign,
+                ChUnit,
+                Div,
+                Mul,
+                MulAssign,
+                Sub,
+                SubAssign};
 
     impl MulAssign<ChUnit> for ChUnit {
         fn mul_assign(&mut self, rhs: Self) {
@@ -309,9 +320,7 @@ pub mod convert_from_other_types_to_ch {
                 }
             };
 
-            Self {
-                value: int_value as ChUnitPrimitiveType,
-            }
+            Self { value: int_value }
         }
     }
 
@@ -326,9 +335,7 @@ pub mod convert_from_other_types_to_ch {
                 }
             };
 
-            Self {
-                value: int_value as ChUnitPrimitiveType,
-            }
+            Self { value: int_value }
         }
     }
 
