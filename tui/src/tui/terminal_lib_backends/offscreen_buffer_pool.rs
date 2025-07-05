@@ -116,7 +116,7 @@ mod tests {
         pool.give_back(buffer);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
 
-        _ = pool.take().unwrap();
+        let _unused: OffscreenBuffer = pool.take().unwrap();
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE - 1);
     }
 

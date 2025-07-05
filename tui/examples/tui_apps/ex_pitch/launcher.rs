@@ -18,8 +18,11 @@
 use r3bl_tui::{key_press,
                throws,
                CommonResult,
+               GlobalData,
+               InputDevice,
                InputEvent,
                ModifierKeysMask,
+               OutputDevice,
                TerminalWindow};
 
 use super::{state::State, AppMain};
@@ -35,6 +38,7 @@ pub async fn run_app() -> CommonResult<()> {
         )];
 
         // Create a window.
-        _ = TerminalWindow::main_event_loop(app, exit_keys, State::default()).await?
+        let _unused: (GlobalData<_, _>, InputDevice, OutputDevice) =
+            TerminalWindow::main_event_loop(app, exit_keys, State::default()).await?;
     });
 }

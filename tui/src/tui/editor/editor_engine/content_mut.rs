@@ -92,7 +92,7 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
 }
 
 mod insert_new_line_at_caret_helper {
-    use super::{EditorArgsMut, scroll_editor_content, GCStringExt};
+    use super::{scroll_editor_content, EditorArgsMut, GCString, GCStringExt};
 
     // Handle inserting a new line at the end of the current line.
     pub fn insert_new_line_at_end_of_current_line(args: EditorArgsMut<'_>) {
@@ -165,10 +165,10 @@ mod insert_new_line_at_caret_helper {
                 {
                     let buffer_mut = buffer.get_mut(engine.viewport());
 
-                    drop(std::mem::replace(
+                    let _unused: GCString = std::mem::replace(
                         &mut buffer_mut.inner.lines[row_index],
                         left_string.grapheme_string(),
-                    ));
+                    );
 
                     buffer_mut
                         .inner
@@ -205,7 +205,7 @@ pub fn delete_at_caret(
 }
 
 mod delete_at_caret_helper {
-    use super::{inline_string, EditorBuffer, EditorEngine, GCStringExt};
+    use super::{inline_string, EditorBuffer, EditorEngine, GCString, GCStringExt};
 
     /// ```text
     /// R ┌──────────┐
@@ -230,10 +230,10 @@ mod delete_at_caret_helper {
             let buffer_mut = buffer.get_mut(engine.viewport());
             let row_index =
                 (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
-            drop(std::mem::replace(
+            let _unused: GCString = std::mem::replace(
                 &mut buffer_mut.inner.lines[row_index.as_usize()],
                 new_line_content.grapheme_string(),
-            ));
+            );
         }
 
         None
@@ -262,10 +262,10 @@ mod delete_at_caret_helper {
             let buffer_mut = buffer.get_mut(engine.viewport());
             let row_index =
                 (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
-            drop(std::mem::replace(
+            let _unused: GCString = std::mem::replace(
                 &mut buffer_mut.inner.lines[row_index.as_usize()],
                 new_line_content.grapheme_string(),
-            ));
+            );
             buffer_mut.inner.lines.remove(row_index.as_usize() + 1);
         }
 
@@ -296,7 +296,15 @@ pub fn backspace_at_caret(
 }
 
 mod backspace_at_caret_helper {
-    use super::{inline_string, EditorBuffer, EditorEngine, ColIndex, GCStringExt, scroll_editor_content, row, caret_scroll_index};
+    use super::{caret_scroll_index,
+                inline_string,
+                row,
+                scroll_editor_content,
+                ColIndex,
+                EditorBuffer,
+                EditorEngine,
+                GCString,
+                GCStringExt};
 
     /// ```text
     /// R ┌──────────┐
@@ -320,10 +328,10 @@ mod backspace_at_caret_helper {
             let buffer_mut = buffer.get_mut(engine.viewport());
             let cur_row_index =
                 (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
-            drop(std::mem::replace(
+            let _unused: GCString = std::mem::replace(
                 &mut buffer_mut.inner.lines[cur_row_index.as_usize()],
                 new_line_content.grapheme_string(),
-            ));
+            );
 
             let new_line_content_display_width =
                 buffer_mut.inner.lines[cur_row_index.as_usize()].display_width;
@@ -376,10 +384,10 @@ mod backspace_at_caret_helper {
             let cur_row_index =
                 (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
 
-            drop(std::mem::replace(
+            let _unused: GCString = std::mem::replace(
                 &mut buffer_mut.inner.lines[prev_row_index.as_usize()],
                 new_line_content.grapheme_string(),
-            ));
+            );
 
             let new_line_content_display_width =
                 buffer_mut.inner.lines[prev_row_index.as_usize()].display_width;
@@ -444,7 +452,17 @@ pub fn delete_selected(
 }
 
 mod delete_selected_helper {
-    use super::{EditorBuffer, InlineVec, RowIndex, HashMap, InlineString, col, caret_scroll_index, EditorEngine, GCStringExt, DeleteSelectionWith};
+    use super::{caret_scroll_index,
+                col,
+                DeleteSelectionWith,
+                EditorBuffer,
+                EditorEngine,
+                GCString,
+                GCStringExt,
+                HashMap,
+                InlineString,
+                InlineVec,
+                RowIndex};
 
     pub fn analyze_selections(
         buffer: &EditorBuffer,
@@ -499,7 +517,7 @@ mod delete_selected_helper {
     }
 
     fn prepare_partial_line_replacement(
-        lines: &[crate::GCString],
+        lines: &[GCString],
         selected_row_index: RowIndex,
         selection_range: &crate::SelectionRange,
         end_col_index: crate::ColIndex,
@@ -539,10 +557,10 @@ mod delete_selected_helper {
             // invalidated)
             for row_index in lines_to_replace.keys() {
                 let new_line_content = lines_to_replace[row_index].clone();
-                drop(std::mem::replace(
+                let _unused: GCString = std::mem::replace(
                     &mut buffer_mut.inner.lines[row_index.as_usize()],
                     new_line_content.grapheme_string(),
-                ));
+                );
             }
 
             // Remove lines in inverse order, in order to preserve the validity of indices
@@ -599,10 +617,10 @@ fn insert_into_existing_line(
         let buffer_mut = buffer.get_mut(engine.viewport());
 
         // Replace existing line w/ new line.
-        drop(std::mem::replace(
+        let _unused: GCString = std::mem::replace(
             &mut buffer_mut.inner.lines[row_index.as_usize()],
             new_line_content.grapheme_string(),
-        ));
+        );
 
         let new_line_content_display_width =
             buffer_mut.inner.lines[row_index.as_usize()].display_width;
@@ -658,10 +676,10 @@ fn insert_chunk_into_new_line(
 
         // Actually add the character to the correct line.
         let new_content = chunk.grapheme_string();
-        drop(std::mem::replace(
+        let _unused: GCString = std::mem::replace(
             &mut buffer_mut.inner.lines[row_index_scr_adj],
             new_content,
-        ));
+        );
 
         let line_content = &buffer_mut.inner.lines[row_index_scr_adj];
         let line_content_display_width = line_content.display_width;

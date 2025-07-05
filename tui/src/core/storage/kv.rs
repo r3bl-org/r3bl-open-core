@@ -334,26 +334,12 @@ mod kv_tests {
     use std::{collections::HashMap, path::Path};
 
     use serial_test::serial;
-    use tracing::{instrument, Level};
+    use tracing::instrument;
 
     use super::*;
     use crate::try_create_temp_dir;
 
     fn check_folder_exists(path: &Path) -> bool { path.exists() && path.is_dir() }
-
-    fn setup_tracing() {
-        drop(
-            tracing_subscriber::fmt()
-                .with_max_level(Level::INFO)
-                .compact()
-                .pretty()
-                .with_ansi(true)
-                .with_line_number(false)
-                .with_file(false)
-                .without_time()
-                .try_init(),
-        );
-    }
 
     #[instrument]
     fn perform_db_operations() -> miette::Result<()> {
@@ -362,8 +348,6 @@ mod kv_tests {
         // Setup temp dir (this will be dropped when `dir` is out of scope).
         let root_temp_dir = try_create_temp_dir()?;
         let path_buf = root_temp_dir.join("db_folder");
-
-        setup_tracing();
 
         // Create the key/value store.
         let path_str = path_buf.as_path().to_string_lossy().to_string();
@@ -442,8 +426,6 @@ mod kv_tests {
         // Setup temp dir (this will be dropped when `dir` is out of scope).
         let root_temp_dir = try_create_temp_dir()?;
         let path_buf = root_temp_dir.join("db_folder");
-
-        setup_tracing();
 
         // Create the key/value store.
         let path_str = path_buf.as_path().to_string_lossy().to_string();

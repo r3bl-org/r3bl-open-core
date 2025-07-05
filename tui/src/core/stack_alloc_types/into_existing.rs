@@ -420,7 +420,7 @@ mod tests_read_from_file {
         // Create a temporary file.
         let temp_dir = try_create_temp_dir().expect("Failed to create temp dir");
         let temp_file_path = temp_dir.join("test_file.txt");
-        _ = File::create(&temp_file_path).expect("Failed to create temp file");
+        let _unused: File = File::create(&temp_file_path).expect("Failed to create temp file");
 
         // Read the file into InlineString.
         let mut acc = InlineString::new();

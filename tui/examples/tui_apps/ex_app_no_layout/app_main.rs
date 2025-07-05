@@ -295,7 +295,8 @@ mod app_main_impl_trait_app {
                             // Override default behavior of 'x' key.
                             'x' => {
                                 event_consumed = false;
-                                let _ = animator.stop();
+                                // We don't care about the result of this operation.
+                                animator.stop().ok();
                             }
                             _ => {}
                         }
@@ -518,7 +519,7 @@ mod app_main_impl_trait_app {
                     data.animator.start(
                         global_data.main_thread_channel_sender.clone(),
                         start_animator_task,
-                    )
+                    );
                 }
 
                 pipeline
@@ -530,7 +531,13 @@ mod app_main_impl_trait_app {
 mod hud {
     use r3bl_tui::{col, row, tui_color, tui_styled_texts, Size, SPACER_GLYPH};
 
-    use super::*;
+    use super::{new_style,
+                render_ops,
+                render_tui_styled_texts_into,
+                tui_styled_text,
+                RenderOp,
+                RenderPipeline,
+                ZOrder};
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
@@ -564,7 +571,13 @@ mod hud {
 mod status_bar {
     use r3bl_tui::{col, tui_color, tui_styled_texts, Size, SPACER_GLYPH};
 
-    use super::*;
+    use super::{new_style,
+                render_ops,
+                render_tui_styled_texts_into,
+                tui_styled_text,
+                RenderOp,
+                RenderPipeline,
+                ZOrder};
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {

@@ -129,7 +129,13 @@ pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> 
 
 /// This is a wrapper over `git branch` functionality.
 pub mod local_branch_ops {
-    use super::{command, InlineString, ItemsOwned, ResultAndCommand, CURRENT_BRANCH_PREFIX, try_get_current_branch_name, Run};
+    use super::{CURRENT_BRANCH_PREFIX,
+                InlineString,
+                ItemsOwned,
+                ResultAndCommand,
+                Run,
+                command,
+                try_get_current_branch_name};
 
     /// Information about local git branches:
     /// - The currently checked out branch.
@@ -357,7 +363,8 @@ mod tests {
             assert!(try_is_working_directory_clean().await.0.is_err());
 
             // Run git init.
-            _ = command!(program => "git", args => "init").run().await?;
+            let _unused: Vec<_> =
+                command!(program => "git", args => "init").run().await?;
 
             // Assert that the working directory is clean after git init.
             assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Clean);
@@ -369,9 +376,10 @@ mod tests {
             assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Dirty);
 
             // Stage the file.
-            _ = command!(program => "git", args => "add", "test_file.txt")
-                .run()
-                .await?;
+            let _unused: Vec<_> =
+                command!(program => "git", args => "add", "test_file.txt")
+                    .run()
+                    .await?;
 
             // Repo is still dirty (changes are staged but not committed).
             assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Dirty);
@@ -379,16 +387,18 @@ mod tests {
             // Configure git user for commit. This is necessary to create a commit. This
             // test assumes an environment where no prior local or global git
             // config has been created.
-            _ = command!(program => "git", args => "config", "user.email", "test@example.com")
+            let _unused: Vec<_> = command!(program => "git", args => "config", "user.email", "test@example.com")
                 .run().await?;
-            _ = command!(program => "git", args => "config", "user.name", "Test User")
-                .run()
-                .await?;
+            let _unused: Vec<_> =
+                command!(program => "git", args => "config", "user.name", "Test User")
+                    .run()
+                    .await?;
 
             // Commit the changes.
-            _ = command!(program => "git", args => "commit", "-m", "Initial commit")
-                .run()
-                .await?;
+            let _unused: Vec<_> =
+                command!(program => "git", args => "commit", "-m", "Initial commit")
+                    .run()
+                    .await?;
 
             // Assert that the working directory is clean after committing.
             assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Clean);
@@ -422,7 +432,7 @@ mod tests {
                 assert_eq!(name, initial_branch_name);
 
                 // Create and switch to a new branch.
-                _ = command!(program => "git", args => "checkout", "-b", "feature-branch")
+                let _unused: Vec<_> = command!(program => "git", args => "checkout", "-b", "feature-branch")
                     .run()
                     .await?;
 
@@ -448,9 +458,10 @@ mod tests {
             ) = helper_setup_git_repo_with_commit().await?;
 
             // Create a new branch (without switching to it).
-            _ = command!(program => "git", args => "branch", "test-branch")
-                .run()
-                .await?;
+            let _unused: Vec<_> =
+                command!(program => "git", args => "branch", "test-branch")
+                    .run()
+                    .await?;
 
             // Checkout the test branch.
             let res = try_checkout_existing_local_branch("test-branch").await.0;
@@ -520,13 +531,13 @@ mod tests {
             assert!(res.is_err());
 
             // Create some branches.
-            _ = command!(program => "git", args => "branch", "branch1")
+            let _unused: Vec<_> = command!(program => "git", args => "branch", "branch1")
                 .run()
                 .await?;
-            _ = command!(program => "git", args => "branch", "branch2")
+            let _unused: Vec<_> = command!(program => "git", args => "branch", "branch2")
                 .run()
                 .await?;
-            _ = command!(program => "git", args => "branch", "branch3")
+            let _unused: Vec<_> = command!(program => "git", args => "branch", "branch3")
                 .run()
                 .await?;
 
@@ -587,10 +598,10 @@ mod tests {
             ) = helper_setup_git_repo_with_commit().await?;
 
             // Create some branches.
-            _ = command!(program => "git", args => "branch", "branch1")
+            let _unused: Vec<_> = command!(program => "git", args => "branch", "branch1")
                 .run()
                 .await?;
-            _ = command!(program => "git", args => "branch", "branch2")
+            let _unused: Vec<_> = command!(program => "git", args => "branch", "branch2")
                 .run()
                 .await?;
 
@@ -627,9 +638,10 @@ mod tests {
             );
 
             // Switch to another branch.
-            _ = command!(program => "git", args => "checkout", "branch1")
-                .run()
-                .await?;
+            let _unused: Vec<_> =
+                command!(program => "git", args => "checkout", "branch1")
+                    .run()
+                    .await?;
 
             // Get local branches again.
             let (items_owned, branch_info) =
@@ -713,10 +725,10 @@ mod tests {
             ) = helper_setup_git_repo_with_commit().await?;
 
             // Create some branches
-            _ = command!(program => "git", args => "branch", "branch1")
+            let _unused: Vec<_> = command!(program => "git", args => "branch", "branch1")
                 .run()
                 .await?;
-            _ = command!(program => "git", args => "branch", "branch2")
+            let _unused: Vec<_> = command!(program => "git", args => "branch", "branch2")
                 .run()
                 .await?;
 

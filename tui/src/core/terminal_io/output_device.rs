@@ -108,7 +108,10 @@ mod tests {
     fn test_stdout_output_device() {
         let output_device = OutputDevice::new_stdout();
         let mut_ref: LockedOutputDevice<'_> = lock_output_device_as_mut!(output_device);
-        drop(mut_ref.write_all(b"Hello, world!\n"));
+
+        // We don't care about the result of this operation.
+        mut_ref.write_all(b"Hello, world!\n").ok();
+
         assert!(!output_device.is_mock);
     }
 

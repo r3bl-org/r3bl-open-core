@@ -104,7 +104,10 @@ macro_rules! try_create_temp_dir_and_cd {
 
 /// Automatically delete the temporary directory when the [`TempDir`] struct is dropped.
 impl Drop for TempDir {
-    fn drop(&mut self) { drop(std::fs::remove_dir_all(&self.inner)); }
+    fn drop(&mut self) {
+        // We don't care about the result of this operation.
+        std::fs::remove_dir_all(&self.inner).ok();
+    }
 }
 
 /// Allow access to the inner [`std::path::Path`] easily when using other APIs.

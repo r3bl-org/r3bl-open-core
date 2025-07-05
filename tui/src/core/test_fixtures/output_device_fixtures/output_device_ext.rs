@@ -43,7 +43,7 @@ mod tests {
     fn test_mock_output_device() {
         let (device, mock) = OutputDevice::new_mock();
         let mut_ref: LockedOutputDevice<'_> = lock_output_device_as_mut!(device);
-        let _ = mut_ref.write_all(b"Hello, world!\n");
+        mut_ref.write_all(b"Hello, world!\n").ok();
         assert_eq!(
             mock.get_copy_of_buffer_as_string_strip_ansi(),
             "Hello, world!\n"

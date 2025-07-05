@@ -26,7 +26,9 @@ use r3bl_tui::{readline_async::{ReadlineAsyncContext, Spinner},
                SpinnerColor,
                SpinnerStyle,
                SpinnerTemplate};
-use tokio::{time::Instant, try_join};
+use tokio::{spawn,
+            task::JoinError,
+            time::{interval, sleep, Instant}};
 
 macro_rules! println_with_flush {
     ($($tt:tt)*) => {
@@ -112,15 +114,16 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
     )
     .await?;
 
-    // Start another task, to simulate some async work, that uses a interval to display
-    // output, for a fixed amount of time, using `readline_async.println_prefixed()`.
-    let _ = try_join!(tokio::spawn(async move {
+    // Start another task to simulate some async work that uses an interval to display
+    // output for a fixed amount of time, using the shared writer.
+    // Wait for the spawned task to complete.
+    let _unused: Result<(), JoinError> = spawn(async move {
         // To calculate the delay.
         let duration = ARTIFICIAL_UI_DELAY;
         let start = Instant::now();
 
         // Dropping the interval cancels it.
-        let mut interval = tokio::time::interval(Duration::from_millis(DELAY_MS * 5));
+        let mut interval = interval(Duration::from_millis(DELAY_MS * 5));
 
         loop {
             interval.tick().await;
@@ -128,9 +131,11 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
             if elapsed >= duration {
                 break;
             }
-            let _ = writeln!(shared_writer, "⏳foo");
+            // We don't care about the result of this operation.
+            writeln!(shared_writer, "⏳foo").ok();
         }
-    }));
+    })
+    .await;
 
     // Stop spinner. Automatically resumes the terminal.
     if let Some(mut spinner) = maybe_spinner.take() {
@@ -138,7 +143,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
         spinner.await_shutdown().await;
     }
 
-    tokio::time::sleep(ARTIFICIAL_UI_DELAY).await;
+    sleep(ARTIFICIAL_UI_DELAY).await;
 
     Ok(())
 }
@@ -165,7 +170,7 @@ async fn example_with_concurrent_output_no_readline_async(
     .await?;
 
     // Simulate some async work.
-    tokio::time::sleep(ARTIFICIAL_UI_DELAY).await;
+    sleep(ARTIFICIAL_UI_DELAY).await;
 
     // Stop spinner.
     if let Some(mut spinner) = maybe_spinner.take() {
@@ -173,7 +178,7 @@ async fn example_with_concurrent_output_no_readline_async(
         spinner.await_shutdown().await;
     }
 
-    tokio::time::sleep(ARTIFICIAL_UI_DELAY).await;
+    sleep(ARTIFICIAL_UI_DELAY).await;
 
     Ok(())
 }

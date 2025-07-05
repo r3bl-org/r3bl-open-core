@@ -106,7 +106,7 @@ pub fn take_text_between_ng<'i>(
 
 #[cfg(test)]
 mod tests_parse_take_between {
-    use nom::{error::ErrorKind, Err as NomErr};
+    use nom::Err as NomErr;
 
     use super::*;
     use crate::{idx, GCString};
