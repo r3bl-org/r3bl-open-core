@@ -394,14 +394,17 @@ pub fn handle_resize<S, AS>(
     global_data_mut_ref.set_size(new_size);
     global_data_mut_ref.maybe_saved_offscreen_buffer = None;
     global_data_mut_ref.offscreen_buffer_pool.resize(new_size);
-    drop(AppManager::render_app(
+
+    // We don't care about the result of this operation.
+    AppManager::render_app(
         app,
         global_data_mut_ref,
         component_registry_map,
         has_focus,
         locked_output_device,
         is_mock,
-    ));
+    )
+    .ok();
 }
 
 /// **Telemetry**: This function is not recorded in telemetry but its caller is.
@@ -440,14 +443,15 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
             }
 
             EventPropagation::ConsumedRender => {
-                drop(AppManager::render_app(
+                AppManager::render_app(
                     app,
                     global_data_mut_ref,
                     component_registry_map,
                     has_focus,
                     locked_output_device,
                     is_mock,
-                ));
+                )
+                .ok();
             }
 
             EventPropagation::Consumed => {}
@@ -479,9 +483,11 @@ fn request_exit_by_sending_signal<AS>(
     // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so that it doesn't
     // block the calling thread. More info: <https://tokio.rs/tokio/tutorial/channels>.
     tokio::spawn(async move {
-        drop(channel_sender
+        // We don't care about the result of this operation.
+        channel_sender
             .send(TerminalWindowMainThreadSignal::Exit)
-            .await);
+            .await
+            .ok();
     });
 }
 
@@ -851,7 +857,7 @@ mod tests {
 
     mod test_fixture_app_main_impl_trait_app {
         use super::*;
-        use crate::{row, throws_with_return, CommonResult, GCStringExt as _, Pos};
+        use crate::{row, throws_with_return, GCStringExt as _, Pos};
 
         impl App for AppMainTest {
             type S = State;
@@ -1052,7 +1058,7 @@ mod tests {
 
     mod text_fixture_status_bar {
         use super::*;
-        use crate::{ch, col, tui_styled_texts, Size};
+        use crate::{tui_styled_texts, Size};
 
         /// Shows helpful messages at the bottom row of the screen.
         pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {

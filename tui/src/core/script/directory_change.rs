@@ -35,7 +35,8 @@ macro_rules! with_saved_pwd {
         let og_pwd_res = std::env::current_dir();
         let result = { $block };
         if let Ok(it) = og_pwd_res {
-            _ = std::env::set_current_dir(it);
+            // We don't care about the result of this operation.
+            std::env::set_current_dir(it).ok();
         }
         result
     }};

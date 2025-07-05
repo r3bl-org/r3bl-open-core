@@ -498,7 +498,7 @@ mod test_choose_async {
         // 1. should be paused.
         // 2. after 10ms, "data after 10ms delay\n" will be written to shared writer.
         // 3. after 30ms, the shared writer will be resumed (when choose() completes).
-        _ = choose(
+        let _unused: ItemsOwned = choose(
             Header::SingleLine("Choose one:".into()),
             &["one", "two", "three"],
             None,

@@ -93,7 +93,8 @@ async fn with_readline_async() -> miette::Result<()> {
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
             tracing::debug!(">>> Starting task to write to shared writer");
             for i in 0..5 {
-                _ = writeln!(sw_1, ">>> {i}");
+                // We don't care about the result of this operation.
+                writeln!(sw_1, ">>> {i}").ok();
             }
         }
     });

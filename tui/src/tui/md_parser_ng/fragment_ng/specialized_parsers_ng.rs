@@ -827,7 +827,7 @@ mod tests {
 #[cfg(test)]
 mod tests_delim_matchers {
     use super::*;
-    use crate::{assert_eq2, GCString, NErr, NErrorKind};
+    use crate::{assert_eq2, GCString};
 
     #[test]
     fn test_delimiter_occurrence_counting_until_line_end() {

@@ -15,7 +15,14 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{key_press, throws, CommonResult, InputEvent, TerminalWindow};
+use r3bl_tui::{key_press,
+               throws,
+               CommonResult,
+               GlobalData,
+               InputDevice,
+               InputEvent,
+               OutputDevice,
+               TerminalWindow};
 
 use super::{AppMain, State};
 
@@ -28,6 +35,7 @@ pub async fn run_app() -> CommonResult<()> {
         let exit_keys = &[InputEvent::Keyboard(key_press! { @char 'x' })];
 
         // Create a window.
-        _ = TerminalWindow::main_event_loop(app, exit_keys, State::default()).await?
+        let _unused: (GlobalData<_, _>, InputDevice, OutputDevice) =
+            TerminalWindow::main_event_loop(app, exit_keys, State::default()).await?;
     });
 }

@@ -411,12 +411,9 @@ pub mod manage_shared_writer_output {
                 let is_paused = self_safe_line_state.lock().unwrap().is_paused;
                 let term = lock_output_device_as_mut!(output_device);
                 let line_state = self_safe_line_state.lock().unwrap();
-                drop(flush_internal(
-                    self_safe_is_paused_buffer,
-                    is_paused,
-                    line_state,
-                    term,
-                ));
+                // We don't care about the result of this operation.
+                flush_internal(self_safe_is_paused_buffer, is_paused, line_state, term)
+                    .ok();
             }
 
             // Pause the terminal.
@@ -442,12 +439,9 @@ pub mod manage_shared_writer_output {
                         io::Error::other("failed to resume terminal"),
                     ));
                 }
-                drop(flush_internal(
-                    self_safe_is_paused_buffer,
-                    new_value,
-                    line_state,
-                    term,
-                ));
+                // We don't care about the result of this operation.
+                flush_internal(self_safe_is_paused_buffer, new_value, line_state, term)
+                    .ok();
             }
             LineStateControlSignal::SpinnerActive(spinner_shutdown_sender) => {
                 // Handle spinner active signal & register the spinner shutdown sender.
@@ -457,7 +451,7 @@ pub mod manage_shared_writer_output {
             LineStateControlSignal::SpinnerInactive => {
                 // Handle spinner inactive signal & remove the spinner shutdown sender.
                 let mut spinner_is_active = self_safe_spinner_is_active.lock().unwrap();
-                drop(spinner_is_active.take());
+                let _unused: Option<_> = spinner_is_active.take();
             }
         }
 
@@ -506,8 +500,10 @@ pub mod manage_shared_writer_output {
 impl Drop for Readline {
     fn drop(&mut self) {
         let term = lock_output_device_as_mut!(self.output_device);
-        drop(self.safe_line_state.lock().unwrap().exit(term));
-        drop(disable_raw_mode());
+        // We don't care about the result of this operation.
+        self.safe_line_state.lock().unwrap().exit(term).ok();
+        // We don't care about the result of this operation.
+        disable_raw_mode().ok();
     }
 }
 
@@ -612,7 +608,8 @@ impl Readline {
                 )
                 .await;
                 let term = lock_output_device_as_mut!(output_device_clone);
-                drop(term.execute(cursor::Show));
+                // We don't care about the result of this operation.
+                term.execute(cursor::Show).ok();
             }
         });
 

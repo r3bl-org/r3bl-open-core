@@ -107,7 +107,9 @@ use r3bl_tui::{fg_guards_red,
                set_jemalloc_in_main,
                SharedWriter};
 use tokio::{io::{AsyncBufReadExt as _, AsyncWriteExt as _},
-            sync::broadcast};
+            join,
+            sync::broadcast,
+            task::JoinHandle};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -135,7 +137,7 @@ async fn main() -> miette::Result<()> {
     // Create 2 tasks, join on them:
     // 1. monitor the output from the child process.
     // 2. monitor the input from the user (and relay it to the child process).
-    _ = tokio::join!(
+    let _unused: (JoinHandle<_>, _) = join!(
         // New green thread.
         monitor_child_output::spawn(
             stdout,
@@ -209,15 +211,17 @@ pub mod monitor_user_input_and_send_to_child {
                 result_readline_event = rl_async.read_line() => {
                     match ControlFlow::from(result_readline_event) {
                         ControlFlow::ShutdownKillChild => {
-                            _ = child.kill().await;
-                            _ = rl_async.request_shutdown(Some("❪◕‿◕❫ Goodbye")).await;
-                            _= shutdown_sender.send(());
+                            // We don't care about the result of the following operations.
+                            child.kill().await.ok();
+                            rl_async.request_shutdown(Some("❪◕‿◕❫ Goodbye")).await.ok();
+                            shutdown_sender.send(()).ok();
                             break;
                         }
                         ControlFlow::ProcessLine(input) => {
                             let input = format!("{input}\n");
-                            _ = stdin.write_all(input.as_bytes()).await;
-                            _ = stdin.flush().await;
+                            // We don't care about the result of the following operations.
+                            stdin.write_all(input.as_bytes()).await.ok();
+                            stdin.flush().await.ok();
                         }
                         ControlFlow::Resized => {}
                     }
@@ -254,7 +258,8 @@ pub mod monitor_child_output {
                     result_line = stdout_lines.next_line() => {
                         match result_line {
                             Ok(Some(line)) => {
-                                _ = writeln!(shared_writer, "{}", fg_lizard_green(&line));
+                                // We don't care about the result of this operation.
+                                writeln!(shared_writer, "{}", fg_lizard_green(&line)).ok();
                             },
                             _ => {
                                 _ = shutdown_sender.send(());
@@ -268,7 +273,8 @@ pub mod monitor_child_output {
                     result_line = stderr_lines.next_line() => {
                         match result_line {
                             Ok(Some(line)) => {
-                                _ = writeln!(shared_writer, "{}", fg_guards_red(&line));
+                                // We don't care about the result of this operation.
+                                writeln!(shared_writer, "{}", fg_guards_red(&line)).ok();
                             }
                             _ => {
                                 _= shutdown_sender.send(());
@@ -285,6 +291,7 @@ pub mod monitor_child_output {
 pub mod terminal_async_constructor {
     use super::*;
 
+    #[allow(missing_debug_implementations)]
     pub struct TerminalAsyncHandle {
         pub rl_ctx: ReadlineAsyncContext,
         pub shared_writer: SharedWriter,
@@ -314,6 +321,7 @@ pub mod terminal_async_constructor {
 pub mod child_process_constructor {
     use super::*;
 
+    #[derive(Debug)]
     pub struct ChildProcessHandle {
         pub stdin: tokio::process::ChildStdin,
         pub stdout: tokio::process::ChildStdout,

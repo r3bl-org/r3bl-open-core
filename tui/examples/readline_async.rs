@@ -270,6 +270,8 @@ mod task_2 {
 }
 
 mod process_input_event {
+    use tokio::spawn;
+
     use super::*;
 
     pub fn process(
@@ -341,7 +343,7 @@ mod process_input_event {
                 }
                 Command::Tree => {
                     let mut shared_writer_clone = shared_writer.clone();
-                    tokio::spawn(async move {
+                    spawn(async move {
                         let mut_shared_writer = &mut shared_writer_clone;
                         match file_walker::get_current_working_directory() {
                             Ok((root_path, _)) => {
@@ -369,8 +371,15 @@ mod process_input_event {
 
 mod long_running_task {
     use r3bl_tui::OutputDevice;
+    use tokio::spawn;
 
-    use super::*;
+    use super::{interval,
+                Duration,
+                Readline,
+                SharedWriter,
+                Spinner,
+                SpinnerStyle,
+                Write};
 
     // Spawn a task that uses the shared writer to print to stdout, and pauses the spinner
     // at the start, and resumes it when it ends.
@@ -390,13 +399,15 @@ mod long_running_task {
         let mut shared_writer_clone_2 = shared_writer.clone();
 
         if readline.safe_spinner_is_active.lock().unwrap().is_some() {
-            _ = writeln!(
+            // We don't care about the result of this operation.
+            writeln!(
                 shared_writer,
                 "Spinner is already active, can't start another one"
-            );
+            )
+            .ok();
         }
 
-        tokio::spawn(async move {
+        spawn(async move {
             // Try to create and start a spinner.
             let maybe_spinner = Spinner::try_start(
                 format!("{task_name} - This is a sample indeterminate progress message"),
@@ -428,10 +439,11 @@ mod long_running_task {
                 }
 
                 // Display a message at every tick.
-                let _ = writeln!(
+                // We don't care about the result of this operation.
+                writeln!(
                     shared_writer_clone_2,
                     "[{task_name}] - [{tick_counter}] interval went off while spinner was spinning!"
-                );
+                ).ok();
             }
 
             // Don't forget to stop the spinner.
@@ -444,6 +456,8 @@ mod long_running_task {
 }
 
 pub mod file_walker {
+    use tokio::time::sleep;
+
     use super::*;
 
     pub const FOLDER_DELIM: &str = std::path::MAIN_SEPARATOR_STR;
@@ -570,7 +584,7 @@ pub mod file_walker {
             // Print the current node.
             print_node(shared_writer, &current_node)?;
             if delay_enable {
-                tokio::time::sleep(Duration::from_millis(10)).await;
+                sleep(Duration::from_millis(10)).await;
             }
 
             // Add node's sub-folders to the stack.

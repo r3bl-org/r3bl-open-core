@@ -202,30 +202,30 @@ impl ReadlineAsyncContext {
     /// Simply flush the buffer. If there's a newline in the buffer, it will be printed.
     /// Otherwise, it won't.
     pub async fn flush(&mut self) {
-        drop(
-            self.shared_writer
-                .line_state_control_channel_sender
-                .send(LineStateControlSignal::Flush)
-                .await,
-        );
+        // We don't care about the result of this operation.
+        self.shared_writer
+            .line_state_control_channel_sender
+            .send(LineStateControlSignal::Flush)
+            .await
+            .ok();
     }
 
     pub async fn pause(&mut self) {
-        drop(
-            self.shared_writer
-                .line_state_control_channel_sender
-                .send(LineStateControlSignal::Pause)
-                .await,
-        );
+        // We don't care about the result of this operation.
+        self.shared_writer
+            .line_state_control_channel_sender
+            .send(LineStateControlSignal::Pause)
+            .await
+            .ok();
     }
 
     pub async fn resume(&mut self) {
-        drop(
-            self.shared_writer
-                .line_state_control_channel_sender
-                .send(LineStateControlSignal::Resume)
-                .await,
-        );
+        // We don't care about the result of this operation.
+        self.shared_writer
+            .line_state_control_channel_sender
+            .send(LineStateControlSignal::Resume)
+            .await
+            .ok();
     }
 
     /// Make sure to call this method when you are done with the [`ReadlineAsyncContext`]
