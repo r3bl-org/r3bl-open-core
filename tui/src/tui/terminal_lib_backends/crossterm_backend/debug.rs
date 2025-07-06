@@ -64,10 +64,15 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
                 "MoveCursorPositionRelTo({box_origin_pos:?}, {content_rel_pos:?})"
             ),
             CompositorNoClipTruncPaintTextWithAttributes(text, maybe_style) => {
-                format_print_text(f, "Compositor..PrintText...", text, maybe_style)
+                format_print_text(
+                    f,
+                    "Compositor..PrintText...",
+                    text,
+                    maybe_style.clone(),
+                )
             }
             PaintTextWithAttributes(text, maybe_style) => {
-                format_print_text(f, "PrintTextWithAttributes", text, maybe_style)
+                format_print_text(f, "PrintTextWithAttributes", text, maybe_style.clone())
             }
         }
     }
@@ -77,7 +82,7 @@ fn format_print_text(
     f: &mut Formatter<'_>,
     op_name: &str,
     text: &str,
-    maybe_style: &Option<TuiStyle>,
+    maybe_style: Option<TuiStyle>,
 ) -> Result {
     match maybe_style {
         Some(style) => write!(f, "{op_name}({} bytes, {style:?})", text.len()),

@@ -89,7 +89,7 @@ wildcard_imports = "warn"
 needless_pass_by_value = "allow"  # This triggers legitimate use of passing a Copy arg by value to a function.
 similar_names = "allow"  # This triggers legitimate variable names.
 single_match_else = "allow" # Rust 2024 changes if-let scope, so match on a single case is needed to retain the old behavior.
-# Additional pedantic lints to suppress
+# Additional pedantic lints to suppress.
 missing_errors_doc = "allow"
 too_many_lines = "allow"
 match_same_arms = "allow"

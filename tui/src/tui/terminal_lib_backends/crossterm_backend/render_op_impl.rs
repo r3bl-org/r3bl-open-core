@@ -97,7 +97,7 @@ mod impl_trait_paint_render_op {
                     queue_render_op!(locked_output_device, "ResetColor", ResetColor);
                 }
                 RenderOp::ApplyColors(style) => {
-                    RenderOpImplCrossterm::apply_colors(style, locked_output_device);
+                    RenderOpImplCrossterm::apply_colors(style.clone(), locked_output_device);
                 }
                 RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                     text,
@@ -105,7 +105,7 @@ mod impl_trait_paint_render_op {
                 ) => {
                     RenderOpImplCrossterm::paint_text_with_attributes(
                         text,
-                        maybe_style,
+                        maybe_style.clone(),
                         window_size,
                         local_data,
                         locked_output_device,
@@ -262,7 +262,7 @@ mod impl_self {
 
         pub fn paint_text_with_attributes(
             text_arg: &str,
-            maybe_style: &Option<TuiStyle>,
+            maybe_style: Option<TuiStyle>,
             window_size: Size,
             local_data: &mut RenderOpsLocalData,
             locked_output_device: LockedOutputDevice<'_>,
@@ -295,7 +295,7 @@ mod impl_self {
         /// Use [`crossterm::style::Color`] to set crossterm Colors.
         /// Docs: <https://docs.rs/crossterm/latest/crossterm/style/index.html#colors>
         pub fn apply_colors(
-            maybe_style: &Option<TuiStyle>,
+            maybe_style: Option<TuiStyle>,
             locked_output_device: LockedOutputDevice<'_>,
         ) {
             if let Some(style) = maybe_style {
@@ -336,7 +336,7 @@ mod perform_paint {
     pub struct PaintArgs<'a> {
         pub text: Cow<'a, str>,
         pub log_msg: Cow<'a, str>,
-        pub maybe_style: &'a Option<TuiStyle>,
+        pub maybe_style: Option<TuiStyle>,
         pub window_size: Size,
     }
 

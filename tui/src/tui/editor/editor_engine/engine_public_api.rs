@@ -458,7 +458,7 @@ mod syn_hi_r3bl_path {
                 // PERF: This function call is very expensive.
                 let ast_cache: StyleUSSpanLines = try_parse_and_highlight(
                     editor_buffer.get_lines(),
-                    &editor_engine.current_box.get_computed_style(),
+                    editor_engine.current_box.get_computed_style(),
                     Some((&editor_engine.syntax_set, &editor_engine.theme)),
                     &mut editor_engine.parser_byte_cache,
                 )?;

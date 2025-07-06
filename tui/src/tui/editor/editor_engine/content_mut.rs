@@ -22,7 +22,7 @@ use crate::{caret_locate::{locate_col, CaretColLocationInLine},
             caret_scroll_index, col, empty_check_early_return, inline_string,
             multiline_disabled_check_early_return, row, CaretScrAdj, ColIndex,
             EditorArgsMut, EditorBuffer, EditorEngine, GCString, GCStringExt,
-            InlineString, InlineVec, RowIndex};
+            InlineString, InlineVec, RowIndex, SelectionRange, Width};
 
 pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
     let EditorArgsMut { buffer, engine } = args;
@@ -411,7 +411,7 @@ pub fn delete_selected(
 
     // Analyze selections and prepare deletion operations
     let (lines_to_remove, lines_to_replace) =
-        delete_selected_helper::analyze_selections(buffer, &selection_map)?;
+        delete_selected_helper::analyze_selections(buffer, &selection_map);
 
     // Apply the deletions
     delete_selected_helper::apply_deletions(
@@ -433,14 +433,14 @@ pub fn delete_selected(
 }
 
 mod delete_selected_helper {
-    use super::{caret_scroll_index, col, DeleteSelectionWith, EditorBuffer,
+    use super::{caret_scroll_index, col, ColIndex, DeleteSelectionWith, EditorBuffer,
                 EditorEngine, GCString, GCStringExt, HashMap, InlineString, InlineVec,
-                RowIndex};
+                RowIndex, SelectionRange, Width};
 
     pub fn analyze_selections(
         buffer: &EditorBuffer,
         selection_map: &crate::SelectionList,
-    ) -> Option<(InlineVec<RowIndex>, HashMap<RowIndex, InlineString>)> {
+    ) -> (InlineVec<RowIndex>, HashMap<RowIndex, InlineString>) {
         let lines = buffer.get_lines();
         let selected_row_indices = selection_map.get_ordered_indices();
         let mut vec_row_indices_to_remove = InlineVec::<RowIndex>::new();
@@ -468,22 +468,22 @@ mod delete_selected_helper {
                 if let Some(remaining_text) = prepare_partial_line_replacement(
                     lines,
                     selected_row_index,
-                    &selection_range,
+                    selection_range,
                     end_col_index,
                     line_width,
-                )? {
+                ) {
                     map_lines_to_replace.insert(selected_row_index, remaining_text);
                 }
             }
         }
 
-        Some((vec_row_indices_to_remove, map_lines_to_replace))
+        (vec_row_indices_to_remove, map_lines_to_replace)
     }
 
     fn should_remove_entire_line(
-        start_col_index: crate::ColIndex,
-        end_col_index: crate::ColIndex,
-        line_width: crate::Width,
+        start_col_index: ColIndex,
+        end_col_index: ColIndex,
+        line_width: Width,
     ) -> bool {
         start_col_index == col(0)
             && end_col_index == caret_scroll_index::col_index_for_width(line_width)
@@ -492,10 +492,10 @@ mod delete_selected_helper {
     fn prepare_partial_line_replacement(
         lines: &[GCString],
         selected_row_index: RowIndex,
-        selection_range: &crate::SelectionRange,
-        end_col_index: crate::ColIndex,
-        line_width: crate::Width,
-    ) -> Option<Option<InlineString>> {
+        selection_range: SelectionRange,
+        end_col_index: ColIndex,
+        line_width: Width,
+    ) -> Option<InlineString> {
         let line_gcs = lines.get(selected_row_index.as_usize())?.clone();
 
         let keep_before_selected_str = line_gcs.clip(
@@ -512,7 +512,7 @@ mod delete_selected_helper {
         remaining_text.push_str(keep_before_selected_str);
         remaining_text.push_str(keep_after_selected_str);
 
-        Some(Some(remaining_text))
+        Some(remaining_text)
     }
 
     pub fn apply_deletions(

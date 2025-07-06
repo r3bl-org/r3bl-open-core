@@ -19,16 +19,19 @@
 //! [`StyleUSSpanLines`].
 
 use smallvec::smallvec;
-use syntect::{highlighting::Theme, parsing::SyntaxSet};
+use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
 use super::create_color_wheel_from_heading_data;
-use crate::{generate_ordered_list_item_bullet, generate_unordered_list_item_bullet,
-            get_bold_style, get_checkbox_checked_style, get_checkbox_unchecked_style,
+use crate::{convert_syntect_to_styled_text, generate_ordered_list_item_bullet,
+            generate_unordered_list_item_bullet, get_bold_style,
+            get_checkbox_checked_style, get_checkbox_unchecked_style,
             get_code_block_content_style, get_code_block_lang_style,
             get_foreground_dim_style, get_foreground_style, get_inline_code_style,
             get_italic_style, get_link_text_style, get_link_url_style,
             get_list_bullet_style, join, new_style, parse_markdown, parse_markdown_ng,
-            tui::{md_parser::constants::{AUTHORS, BACK_TICK, CHECKED_OUTPUT, DATE,
+            try_get_syntax_ref,
+            tui::{constants::CODE_BLOCK_START_PARTIAL,
+                  md_parser::constants::{AUTHORS, BACK_TICK, CHECKED_OUTPUT, DATE,
                                          LEFT_BRACKET, LEFT_IMAGE, LEFT_PARENTHESIS,
                                          NEW_LINE, RIGHT_BRACKET, RIGHT_IMAGE,
                                          RIGHT_PARENTHESIS, STAR, TAGS, TITLE,
@@ -64,7 +67,7 @@ use crate::{generate_ordered_list_item_bullet, generate_unordered_list_item_bull
 /// locks the mutex does not panic while holding the lock.
 pub fn try_parse_and_highlight(
     editor_text_lines: &[GCString],
-    maybe_current_box_computed_style: &Option<TuiStyle>,
+    maybe_current_box_computed_style: Option<TuiStyle>,
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     parser_byte_cache: &mut Option<ParserByteCache>,
 ) -> CommonResult<StyleUSSpanLines> {
@@ -74,8 +77,8 @@ pub fn try_parse_and_highlight(
         // Use the new NG parser.
         let slice = AsStrSlice::from(editor_text_lines);
         parse_markdown_ng(slice)
-            .map(|(_rem, document)| {
-                debug_assert!(_rem.is_empty());
+            .map(|(rem, document)| {
+                debug_assert!(rem.is_empty());
                 document
             })
             .map_err(|_| ())
@@ -108,8 +111,8 @@ pub fn try_parse_and_highlight(
 
         slice.write_to_byte_cache_compat(size_hint, acc);
         parse_markdown(acc)
-            .map(|(_rem, document)| {
-                debug_assert!(_rem.is_empty());
+            .map(|(rem, document)| {
+                debug_assert!(rem.is_empty());
                 document
             })
             .map_err(|_| ())
@@ -143,7 +146,7 @@ mod tests_try_parse_and_highlight {
 
             let style_us_span_lines = try_parse_and_highlight(
                 &editor_text_lines,
-                &Some(current_box_computed_style),
+                Some(current_box_computed_style),
                 None,
                 &mut None,
             )?;
@@ -187,7 +190,7 @@ impl StyleUSSpanLines {
     #[must_use]
     pub fn from_document(
         document: &MdDocument<'_>,
-        maybe_current_box_computed_style: &Option<TuiStyle>,
+        maybe_current_box_computed_style: Option<TuiStyle>,
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         let mut lines = StyleUSSpanLines::default();
@@ -226,151 +229,19 @@ impl StyleUSSpanLines {
     #[must_use]
     pub fn from_block_codeblock(
         code_block_lines: &CodeBlockLines<'_>,
-        maybe_current_box_computed_style: &Option<TuiStyle>,
+        maybe_current_box_computed_style: Option<TuiStyle>,
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
-        mod inner {
-            use syntect::easy::HighlightLines;
-
-            use super::{get_code_block_content_style, get_code_block_lang_style,
-                        get_foreground_dim_style, CodeBlockLineContent, CodeBlockLines,
-                        List, StyleUSSpan, StyleUSSpanLine, StyleUSSpanLines, SyntaxSet,
-                        Theme, TuiStyle};
-            use crate::{convert_syntect_to_styled_text, try_get_syntax_ref,
-                        tui::constants::CODE_BLOCK_START_PARTIAL};
-
-            #[allow(clippy::similar_names)]
-            pub fn try_use_syntect(
-                code_block_lines: &CodeBlockLines<'_>,
-                maybe_current_box_computed_style: &Option<TuiStyle>,
-                maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
-            ) -> Option<StyleUSSpanLines> {
-                let mut acc_lines_output = StyleUSSpanLines::default();
-
-                // Process each line in code_block_lines.
-                for code_block_line in code_block_lines.iter() {
-                    let mut acc_line_output = StyleUSSpanLine::default();
-
-                    let maybe_lang =
-                        if let Some(code_block_line) = code_block_lines.inner.first() {
-                            code_block_line.language
-                        } else {
-                            None
-                        };
-                    let syntax_set = maybe_syntect_tuple?.0;
-                    let lang = maybe_lang?;
-                    let theme = maybe_syntect_tuple?.1;
-                    let syntax_ref = try_get_syntax_ref(syntax_set, lang)?;
-
-                    let mut highlighter = HighlightLines::new(syntax_ref, theme);
-
-                    match code_block_line.content {
-                        CodeBlockLineContent::Text(line_of_text) => {
-                            let syntect_highlighted_line: Vec<(
-                                syntect::highlighting::Style,
-                                &str,
-                            )> = highlighter
-                                .highlight_line(line_of_text, syntax_set)
-                                .ok()?;
-
-                            let line_converted_to_tui: List<StyleUSSpan> =
-                                convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
-                                    syntect_highlighted_line,
-                                );
-
-                            acc_line_output += line_converted_to_tui;
-                        }
-
-                        // Same as fallback.
-                        CodeBlockLineContent::StartTag => {
-                            acc_line_output += StyleUSSpan::new(
-                                maybe_current_box_computed_style.unwrap_or_default()
-                                    + get_foreground_dim_style(),
-                                CODE_BLOCK_START_PARTIAL,
-                            );
-                            if let Some(language) = code_block_line.language {
-                                acc_line_output += StyleUSSpan::new(
-                                    maybe_current_box_computed_style.unwrap_or_default()
-                                        + get_code_block_lang_style(),
-                                    language,
-                                );
-                            }
-                        }
-
-                        // Same as fallback.
-                        CodeBlockLineContent::EndTag => {
-                            acc_line_output += StyleUSSpan::new(
-                                maybe_current_box_computed_style.unwrap_or_default()
-                                    + get_foreground_dim_style(),
-                                CODE_BLOCK_START_PARTIAL,
-                            );
-                        }
-                    }
-
-                    acc_lines_output += acc_line_output;
-                }
-
-                Some(acc_lines_output)
-            }
-
-            #[allow(clippy::similar_names)]
-            pub fn use_fallback(
-                code_block_lines: &CodeBlockLines<'_>,
-                maybe_current_box_computed_style: &Option<TuiStyle>,
-            ) -> StyleUSSpanLines {
-                let mut acc_lines_output = StyleUSSpanLines::default();
-
-                // Process each line in code_block_lines.
-                for code_block_line in code_block_lines.iter() {
-                    let mut acc_line_output = StyleUSSpanLine::default();
-
-                    match code_block_line.content {
-                        CodeBlockLineContent::StartTag => {
-                            acc_line_output += StyleUSSpan::new(
-                                maybe_current_box_computed_style.unwrap_or_default()
-                                    + get_foreground_dim_style(),
-                                CODE_BLOCK_START_PARTIAL,
-                            );
-                            if let Some(language) = code_block_line.language {
-                                acc_line_output += StyleUSSpan::new(
-                                    maybe_current_box_computed_style.unwrap_or_default()
-                                        + get_code_block_lang_style(),
-                                    language,
-                                );
-                            }
-                        }
-
-                        CodeBlockLineContent::EndTag => {
-                            acc_line_output += StyleUSSpan::new(
-                                maybe_current_box_computed_style.unwrap_or_default()
-                                    + get_foreground_dim_style(),
-                                CODE_BLOCK_START_PARTIAL,
-                            );
-                        }
-
-                        CodeBlockLineContent::Text(content) => {
-                            acc_line_output += StyleUSSpan::new(
-                                maybe_current_box_computed_style.unwrap_or_default()
-                                    + get_code_block_content_style(),
-                                content,
-                            );
-                        }
-                    }
-
-                    acc_lines_output += acc_line_output;
-                }
-
-                acc_lines_output
-            }
-        }
-
-        match inner::try_use_syntect(
+        match from_block_codeblock_helper::try_use_syntect(
             code_block_lines,
             maybe_current_box_computed_style,
             maybe_syntect_tuple,
         ) {
             Some(syntect_output) => syntect_output,
-            _ => inner::use_fallback(code_block_lines, maybe_current_box_computed_style),
+            _ => from_block_codeblock_helper::use_fallback(
+                code_block_lines,
+                maybe_current_box_computed_style,
+            ),
         }
     }
 
@@ -378,7 +249,7 @@ impl StyleUSSpanLines {
     #[must_use]
     pub fn from_block_smart_list(
         input_ul_lines: &Lines<'_>,
-        maybe_current_box_computed_style: &Option<TuiStyle>,
+        maybe_current_box_computed_style: Option<TuiStyle>,
     ) -> Self {
         let mut acc_lines_output = StyleUSSpanLines::default();
 
@@ -406,7 +277,7 @@ impl StyleUSSpanLines {
     #[must_use]
     pub fn from_block(
         block: &MdElement<'_>,
-        maybe_current_box_computed_style: &Option<TuiStyle>,
+        maybe_current_box_computed_style: Option<TuiStyle>,
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         let mut lines = StyleUSSpanLines::default();
@@ -416,28 +287,28 @@ impl StyleUSSpanLines {
                 lines += StyleUSSpanLine::from_kvp(
                     TITLE,
                     title,
-                    maybe_current_box_computed_style,
+                    &maybe_current_box_computed_style,
                 );
             }
             MdElement::Date(date) => {
                 lines += StyleUSSpanLine::from_kvp(
                     DATE,
                     date,
-                    maybe_current_box_computed_style,
+                    &maybe_current_box_computed_style,
                 );
             }
             MdElement::Tags(tags) => {
                 lines += StyleUSSpanLine::from_csvp(
                     TAGS,
                     tags,
-                    maybe_current_box_computed_style,
+                    &maybe_current_box_computed_style,
                 );
             }
             MdElement::Authors(authors) => {
                 lines += StyleUSSpanLine::from_csvp(
                     AUTHORS,
                     authors,
-                    maybe_current_box_computed_style,
+                    &maybe_current_box_computed_style,
                 );
             }
             MdElement::Heading(heading_data) => {
@@ -471,6 +342,136 @@ impl StyleUSSpanLines {
     }
 }
 
+mod from_block_codeblock_helper {
+    use super::{convert_syntect_to_styled_text, get_code_block_content_style,
+                get_code_block_lang_style, get_foreground_dim_style, try_get_syntax_ref,
+                CodeBlockLineContent, CodeBlockLines, HighlightLines, List, StyleUSSpan,
+                StyleUSSpanLine, StyleUSSpanLines, SyntaxSet, Theme, TuiStyle,
+                CODE_BLOCK_START_PARTIAL};
+
+    #[allow(clippy::similar_names)]
+    pub fn try_use_syntect(
+        code_block_lines: &CodeBlockLines<'_>,
+        maybe_current_box_computed_style: Option<TuiStyle>,
+        maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
+    ) -> Option<StyleUSSpanLines> {
+        let mut acc_lines_output = StyleUSSpanLines::default();
+
+        // Process each line in code_block_lines.
+        for code_block_line in code_block_lines.iter() {
+            let mut acc_line_output = StyleUSSpanLine::default();
+
+            let maybe_lang = if let Some(code_block_line) = code_block_lines.inner.first()
+            {
+                code_block_line.language
+            } else {
+                None
+            };
+            let syntax_set = maybe_syntect_tuple?.0;
+            let lang = maybe_lang?;
+            let theme = maybe_syntect_tuple?.1;
+            let syntax_ref = try_get_syntax_ref(syntax_set, lang)?;
+
+            let mut highlighter = HighlightLines::new(syntax_ref, theme);
+
+            match code_block_line.content {
+                CodeBlockLineContent::Text(line_of_text) => {
+                    let syntect_highlighted_line: Vec<(
+                        syntect::highlighting::Style,
+                        &str,
+                    )> = highlighter.highlight_line(line_of_text, syntax_set).ok()?;
+
+                    let line_converted_to_tui: List<StyleUSSpan> =
+                                convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
+                                    syntect_highlighted_line,
+                                );
+
+                    acc_line_output += line_converted_to_tui;
+                }
+
+                // Same as fallback.
+                CodeBlockLineContent::StartTag => {
+                    acc_line_output += StyleUSSpan::new(
+                        maybe_current_box_computed_style.unwrap_or_default()
+                            + get_foreground_dim_style(),
+                        CODE_BLOCK_START_PARTIAL,
+                    );
+                    if let Some(language) = code_block_line.language {
+                        acc_line_output += StyleUSSpan::new(
+                            maybe_current_box_computed_style.unwrap_or_default()
+                                + get_code_block_lang_style(),
+                            language,
+                        );
+                    }
+                }
+
+                // Same as fallback.
+                CodeBlockLineContent::EndTag => {
+                    acc_line_output += StyleUSSpan::new(
+                        maybe_current_box_computed_style.unwrap_or_default()
+                            + get_foreground_dim_style(),
+                        CODE_BLOCK_START_PARTIAL,
+                    );
+                }
+            }
+
+            acc_lines_output += acc_line_output;
+        }
+
+        Some(acc_lines_output)
+    }
+
+    #[allow(clippy::similar_names)]
+    pub fn use_fallback(
+        code_block_lines: &CodeBlockLines<'_>,
+        maybe_current_box_computed_style: Option<TuiStyle>,
+    ) -> StyleUSSpanLines {
+        let mut acc_lines_output = StyleUSSpanLines::default();
+
+        // Process each line in code_block_lines.
+        for code_block_line in code_block_lines.iter() {
+            let mut acc_line_output = StyleUSSpanLine::default();
+
+            match code_block_line.content {
+                CodeBlockLineContent::StartTag => {
+                    acc_line_output += StyleUSSpan::new(
+                        maybe_current_box_computed_style.unwrap_or_default()
+                            + get_foreground_dim_style(),
+                        CODE_BLOCK_START_PARTIAL,
+                    );
+                    if let Some(language) = code_block_line.language {
+                        acc_line_output += StyleUSSpan::new(
+                            maybe_current_box_computed_style.unwrap_or_default()
+                                + get_code_block_lang_style(),
+                            language,
+                        );
+                    }
+                }
+
+                CodeBlockLineContent::EndTag => {
+                    acc_line_output += StyleUSSpan::new(
+                        maybe_current_box_computed_style.unwrap_or_default()
+                            + get_foreground_dim_style(),
+                        CODE_BLOCK_START_PARTIAL,
+                    );
+                }
+
+                CodeBlockLineContent::Text(content) => {
+                    acc_line_output += StyleUSSpan::new(
+                        maybe_current_box_computed_style.unwrap_or_default()
+                            + get_code_block_content_style(),
+                        content,
+                    );
+                }
+            }
+
+            acc_lines_output += acc_line_output;
+        }
+
+        acc_lines_output
+    }
+}
+
 enum HyperlinkType {
     Image,
     Link,
@@ -479,7 +480,7 @@ enum HyperlinkType {
 impl StyleUSSpan {
     fn format_hyperlink_data(
         link_data: &HyperlinkData<'_>,
-        maybe_current_box_computed_style: &Option<TuiStyle>,
+        maybe_current_box_computed_style: Option<TuiStyle>,
         hyperlink_type: HyperlinkType,
     ) -> Vec<Self> {
         let link_text = link_data.text;
@@ -528,7 +529,7 @@ impl StyleUSSpan {
     #[must_use]
     pub fn from_fragment(
         fragment: &MdLineFragment<'_>,
-        maybe_current_box_computed_style: &Option<TuiStyle>,
+        maybe_current_box_computed_style: Option<TuiStyle>,
     ) -> Vec<Self> {
         match fragment {
             MdLineFragment::OrderedListBullet {
@@ -665,7 +666,7 @@ impl StyleUSSpanLine {
     #[must_use]
     pub fn from_fragments(
         fragments_in_one_line: &FragmentsInOneLine<'_>,
-        maybe_current_box_computed_style: &Option<TuiStyle>,
+        maybe_current_box_computed_style: Option<TuiStyle>,
     ) -> Self {
         let mut acc = smallvec![];
 
@@ -694,7 +695,7 @@ impl StyleUSSpanLine {
     #[must_use]
     pub fn from_heading_data(
         heading_data: &HeadingData<'_>,
-        maybe_current_box_computed_style: &Option<TuiStyle>,
+        maybe_current_box_computed_style: Option<TuiStyle>,
     ) -> Self {
         let mut color_wheel = create_color_wheel_from_heading_data(heading_data);
         let mut acc_line = StyleUSSpanLine::default();
@@ -713,7 +714,7 @@ impl StyleUSSpanLine {
                 &heading_text_gcs,
                 GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
                 TextColorizationPolicy::ColorEachCharacter(
-                    *maybe_current_box_computed_style,
+                    maybe_current_box_computed_style,
                 ),
             );
             StyleUSSpanLine::from(styled_texts)
@@ -760,7 +761,7 @@ mod tests_style_us_span_lines_from {
             let style = new_style!(
                 color_bg: {tui_color!(red)}
             );
-            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
+            let actual = StyleUSSpan::from_fragment(&fragment, Some(style));
 
             assert_eq2!(actual.len(), 1);
 
@@ -781,7 +782,7 @@ mod tests_style_us_span_lines_from {
             let style = new_style!(
                 color_bg: {tui_color!(red)}
             );
-            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
+            let actual = StyleUSSpan::from_fragment(&fragment, Some(style));
 
             assert_eq2!(actual.len(), 1);
 
@@ -802,7 +803,7 @@ mod tests_style_us_span_lines_from {
             let style = new_style!(
                 color_bg: {tui_color!(red)}
             );
-            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
+            let actual = StyleUSSpan::from_fragment(&fragment, Some(style));
 
             assert_eq2!(actual.len(), 6);
 
@@ -835,7 +836,7 @@ mod tests_style_us_span_lines_from {
             let style = new_style!(
                 color_bg: {tui_color!(red)}
             );
-            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
+            let actual = StyleUSSpan::from_fragment(&fragment, Some(style));
 
             assert_eq2!(actual.len(), 6);
 
@@ -962,7 +963,7 @@ mod tests_style_us_span_lines_from {
                 color_bg: {tui_color!(red)}
             );
 
-            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
+            let actual = StyleUSSpan::from_fragment(&fragment, Some(style));
 
             // println!("{}", List::from(actual.clone())..pretty_print_debug());
 
@@ -987,7 +988,7 @@ mod tests_style_us_span_lines_from {
                 color_bg: {tui_color!(red)}
             );
 
-            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
+            let actual = StyleUSSpan::from_fragment(&fragment, Some(style));
 
             // println!("{}", List::from(actual.clone())..pretty_print_debug());
 
@@ -1012,7 +1013,7 @@ mod tests_style_us_span_lines_from {
                 color_bg: {tui_color!(red)}
             );
 
-            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
+            let actual = StyleUSSpan::from_fragment(&fragment, Some(style));
 
             // println!("{}", List::from(actual.clone())..pretty_print_debug());
 
@@ -1036,7 +1037,7 @@ mod tests_style_us_span_lines_from {
             let style = new_style!(
                 color_bg: {tui_color!(red)}
             );
-            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
+            let actual = StyleUSSpan::from_fragment(&fragment, Some(style));
             let expected =
                 vec![StyleUSSpan::new(style + get_foreground_style(), "Foobar")];
             assert_eq2!(actual, expected);
@@ -1055,7 +1056,7 @@ mod tests_style_us_span_lines_from {
                 let style = new_style!(
                     color_bg: {tui_color!(red)}
                 );
-                let lines = StyleUSSpanLines::from_block(&tags, &Some(style), None);
+                let lines = StyleUSSpanLines::from_block(&tags, Some(style), None);
                 let line_0 = &lines.inner[0];
                 let mut iter = line_0.inner.iter();
 
@@ -1097,7 +1098,7 @@ mod tests_style_us_span_lines_from {
             let style = new_style!(
                 color_bg: {tui_color!(red)}
             );
-            let lines = StyleUSSpanLines::from_block(&title, &Some(style), None);
+            let lines = StyleUSSpanLines::from_block(&title, Some(style), None);
             // println!("{}", lines..pretty_print_debug());
 
             let line_0 = &lines.inner[0];
@@ -1142,8 +1143,7 @@ mod tests_style_us_span_lines_from {
                 color_bg: {tui_color!(red)}
             );
 
-            let lines =
-                StyleUSSpanLines::from_block(&codeblock_block, &Some(style), None);
+            let lines = StyleUSSpanLines::from_block(&codeblock_block, Some(style), None);
 
             let line_0 = &lines.inner[0];
             // println!("{}", line_0..pretty_print_debug());
@@ -1185,7 +1185,7 @@ mod tests_style_us_span_lines_from {
                 {
                     // println!("{:#?}", ol_block_1);
                     let lines =
-                        StyleUSSpanLines::from_block(ol_block_1, &Some(style), None);
+                        StyleUSSpanLines::from_block(ol_block_1, Some(style), None);
 
                     let line_0 = &lines.inner[0];
                     // println!("{}", line_0..pretty_print_debug());
@@ -1203,7 +1203,7 @@ mod tests_style_us_span_lines_from {
                 {
                     // println!("{:#?}", ol_block_2);
                     let lines =
-                        StyleUSSpanLines::from_block(ol_block_2, &Some(style), None);
+                        StyleUSSpanLines::from_block(ol_block_2, Some(style), None);
 
                     let line_0 = &lines.inner[0];
                     // println!("{}", line_0..pretty_print_debug());
@@ -1232,7 +1232,7 @@ mod tests_style_us_span_lines_from {
                 {
                     let ul_block_0 = &doc[0];
                     let lines =
-                        StyleUSSpanLines::from_block(ul_block_0, &Some(style), None);
+                        StyleUSSpanLines::from_block(ul_block_0, Some(style), None);
                     let line_0 = &lines.inner[0];
                     assert_eq2!(
                         line_0.inner[0],
@@ -1248,7 +1248,7 @@ mod tests_style_us_span_lines_from {
                 {
                     let ul_block_1 = &doc[1];
                     let lines =
-                        StyleUSSpanLines::from_block(ul_block_1, &Some(style), None);
+                        StyleUSSpanLines::from_block(ul_block_1, Some(style), None);
                     let line_0 = &lines.inner[0];
                     assert_eq2!(
                         line_0.inner[0],
@@ -1269,7 +1269,7 @@ mod tests_style_us_span_lines_from {
                 color_bg: {tui_color!(red)}
             );
 
-            let lines = StyleUSSpanLines::from_block(&text_block, &Some(style), None);
+            let lines = StyleUSSpanLines::from_block(&text_block, Some(style), None);
             // println!("{}", lines..pretty_print_debug());
 
             let line_0 = &lines.inner[0];
@@ -1291,7 +1291,7 @@ mod tests_style_us_span_lines_from {
                 color_bg: {tui_color!(red)}
             ));
 
-            let lines = StyleUSSpanLines::from_block(&heading_block, &maybe_style, None);
+            let lines = StyleUSSpanLines::from_block(&heading_block, maybe_style, None);
             // println!("{}", lines..pretty_print_debug());
 
             // There should just be 1 line.

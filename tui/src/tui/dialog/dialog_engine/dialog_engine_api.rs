@@ -14,6 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+
 use std::{borrow::Cow, fmt::Debug};
 
 use crate::{ch, col, editor_engine::engine_public_api, glyphs::SPACER_GLYPH as SPACER,
@@ -635,7 +636,7 @@ mod internal_impl {
         lolcat_from_style(
             &mut ops,
             &mut dialog_engine.color_wheel,
-            &dialog_engine.dialog_options.maybe_style_title,
+            dialog_engine.dialog_options.maybe_style_title.as_ref(),
             title_content_clipped,
         );
 
@@ -647,7 +648,7 @@ mod internal_impl {
     fn lolcat_from_style(
         ops: &mut RenderOps,
         color_wheel: &mut ColorWheel,
-        maybe_style: &Option<TuiStyle>,
+        maybe_style: Option<&TuiStyle>,
         text: &str,
     ) {
         // If lolcat is enabled, then colorize the text.
@@ -657,7 +658,7 @@ mod internal_impl {
                 let texts = color_wheel.colorize_into_styled_texts(
                     &text_gcs,
                     GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                    TextColorizationPolicy::ColorEachCharacter(*maybe_style),
+                    TextColorizationPolicy::ColorEachCharacter(maybe_style.copied()),
                 );
                 render_tui_styled_texts_into(&texts, ops);
                 return;
@@ -665,7 +666,10 @@ mod internal_impl {
         }
 
         // Otherwise, just paint the text as-is.
-        ops.push(RenderOp::PaintTextWithAttributes(text.into(), *maybe_style));
+        ops.push(RenderOp::PaintTextWithAttributes(
+            text.into(),
+            maybe_style.copied(),
+        ));
     }
 
     pub fn render_border(
@@ -673,152 +677,245 @@ mod internal_impl {
         bounds_size: Size,
         dialog_engine: &mut DialogEngine,
     ) -> RenderOps {
-        use render_border_helper::{IsFirstLine, IsLastLine};
-
         let mut ops = render_ops!();
-
-        let inner_spaces = SPACER.repeat({
-            let it = bounds_size.col_width - width(2);
-            usize(*it)
-        });
-
         let maybe_style = dialog_engine.dialog_options.maybe_style_border;
 
-        let max_row_idx = u16(*bounds_size.row_height);
+        render_border_helper::render_border_lines(
+            &mut ops,
+            origin_pos,
+            bounds_size,
+            maybe_style,
+            &mut dialog_engine.color_wheel,
+        );
 
-        for row_idx in 0..max_row_idx {
-            let row_pos = {
-                let col_index = origin_pos.col_index;
-                let row_index = origin_pos.row_index + row(row_idx);
-                col_index + row_index
-            };
-
-            let is_first_line = if row_idx == 0 {
-                IsFirstLine::Yes
-            } else {
-                IsFirstLine::No
-            };
-
-            let is_last_line = if row_idx == u16(*bounds_size.row_height - ch(1)) {
-                IsLastLine::Yes
-            } else {
-                IsLastLine::No
-            };
-
-            ops.push(RenderOp::ResetColor);
-            ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
-            ops.push(RenderOp::ApplyColors(maybe_style));
-
-            match (is_first_line, is_last_line) {
-                // First line.
-                (IsFirstLine::Yes, IsLastLine::No) => {
-                    let text_content = format!(
-                        "{}{}{}",
-                        BorderGlyphCharacter::TopLeft.as_ref(),
-                        BorderGlyphCharacter::Horizontal
-                            .as_ref()
-                            .repeat(usize(*bounds_size.col_width - ch(2))),
-                        BorderGlyphCharacter::TopRight.as_ref()
-                    );
-
-                    // Apply lolcat override (if enabled) to the fg_color of text_content.
-                    lolcat_from_style(
-                        &mut ops,
-                        &mut dialog_engine.color_wheel,
-                        &maybe_style,
-                        &text_content,
-                    );
-                }
-
-                // Middle line.
-                (IsFirstLine::No, IsLastLine::No) => {
-                    let text_content = format!(
-                        "{}{}{}",
-                        BorderGlyphCharacter::Vertical.as_ref(),
-                        inner_spaces,
-                        BorderGlyphCharacter::Vertical.as_ref()
-                    );
-                    // Apply lolcat override (if enabled) to the fg_color of text_content.
-                    lolcat_from_style(
-                        &mut ops,
-                        &mut dialog_engine.color_wheel,
-                        &maybe_style,
-                        &text_content,
-                    );
-                }
-
-                // Last line.
-                (IsFirstLine::No, IsLastLine::Yes) => {
-                    // Paint bottom border.
-                    let text_content = format!(
-                        "{}{}{}",
-                        BorderGlyphCharacter::BottomLeft.as_ref(),
-                        BorderGlyphCharacter::Horizontal
-                            .as_ref()
-                            .repeat(usize(*bounds_size.col_width - ch(2))),
-                        BorderGlyphCharacter::BottomRight.as_ref(),
-                    );
-                    // Apply lolcat override (if enabled) to the fg_color of text_content.
-                    lolcat_from_style(
-                        &mut ops,
-                        &mut dialog_engine.color_wheel,
-                        &maybe_style,
-                        &text_content,
-                    );
-                }
-                _ => {}
-            }
-
-            // Paint separator for results panel if in autocomplete mode.
-            match dialog_engine.dialog_options.mode {
-                DialogEngineMode::ModalSimple => {}
-                DialogEngineMode::ModalAutocomplete => {
-                    let inner_line = BorderGlyphCharacter::Horizontal
-                        .as_ref()
-                        .repeat(usize(*bounds_size.col_width - ch(2)))
-                        .to_string();
-
-                    let text_content = format!(
-                        "{}{}{}",
-                        BorderGlyphCharacter::LineUpDownRight.as_ref(),
-                        inner_line,
-                        BorderGlyphCharacter::LineUpDownLeft.as_ref()
-                    );
-
-                    let col_start_index = col(0);
-                    let row_start_index =
-                        row(DisplayConstants::SimpleModalRowCount as u16 - 1);
-                    let rel_insertion_pos = col_start_index + row_start_index;
-
-                    ops.push(RenderOp::ResetColor);
-                    ops.push(RenderOp::MoveCursorPositionRelTo(
-                        origin_pos,
-                        rel_insertion_pos,
-                    ));
-
-                    // Apply lolcat override (if enabled) to the fg_color of text_content.
-                    lolcat_from_style(
-                        &mut ops,
-                        &mut dialog_engine.color_wheel,
-                        &maybe_style,
-                        &text_content,
-                    );
-                }
-            }
-        }
+        render_border_helper::render_autocomplete_separator(
+            &mut ops,
+            origin_pos,
+            bounds_size,
+            dialog_engine,
+        );
 
         ops
     }
 
     mod render_border_helper {
-        pub enum IsFirstLine {
-            Yes,
-            No,
+        use super::{ch, col, lolcat_from_style, row, u16, usize, width,
+                    BorderGlyphCharacter, ColorWheel, DialogEngine, DialogEngineMode,
+                    DisplayConstants, Pos, RenderOp, RenderOps, Size, TuiStyle, SPACER};
+
+        /// Renders all border lines for the dialog
+        pub fn render_border_lines(
+            ops: &mut RenderOps,
+            origin_pos: Pos,
+            bounds_size: Size,
+            maybe_style: Option<TuiStyle>,
+            color_wheel: &mut ColorWheel,
+        ) {
+            let max_row_idx = u16(*bounds_size.row_height);
+
+            for row_idx in 0..max_row_idx {
+                render_single_border_line(
+                    ops,
+                    origin_pos,
+                    bounds_size,
+                    row_idx,
+                    maybe_style,
+                    color_wheel,
+                );
+            }
         }
 
-        pub enum IsLastLine {
-            Yes,
-            No,
+        /// Renders a single border line at the specified row index
+        fn render_single_border_line(
+            ops: &mut RenderOps,
+            origin_pos: Pos,
+            bounds_size: Size,
+            row_idx: u16,
+            maybe_style: Option<TuiStyle>,
+            color_wheel: &mut ColorWheel,
+        ) {
+            let row_pos = calculate_row_position(origin_pos, row_idx);
+            let line_type = determine_line_type(row_idx, bounds_size);
+
+            setup_render_ops_for_line(ops, row_pos, maybe_style);
+
+            match line_type {
+                LineType::Top => {
+                    render_top_border_line(ops, bounds_size, maybe_style, color_wheel);
+                }
+                LineType::Middle => {
+                    render_middle_border_line(ops, bounds_size, maybe_style, color_wheel);
+                }
+                LineType::Bottom => {
+                    render_bottom_border_line(ops, bounds_size, maybe_style, color_wheel);
+                }
+                LineType::Single => {
+                    // For single line dialogs, render as both top and bottom
+                    render_top_border_line(ops, bounds_size, maybe_style, color_wheel);
+                }
+            }
+        }
+
+        /// Calculates the position for a specific row
+        fn calculate_row_position(origin_pos: Pos, row_idx: u16) -> Pos {
+            let col_index = origin_pos.col_index;
+            let row_index = origin_pos.row_index + row(row_idx);
+            col_index + row_index
+        }
+
+        /// Determines the type of line based on row index and bounds
+        fn determine_line_type(row_idx: u16, bounds_size: Size) -> LineType {
+            let max_row_idx = u16(*bounds_size.row_height);
+            let is_first = row_idx == 0;
+            let is_last = row_idx == max_row_idx - 1;
+
+            match (is_first, is_last) {
+                (true, false) => LineType::Top,
+                (false, false) => LineType::Middle,
+                (false, true) => LineType::Bottom,
+                (true, true) => LineType::Single,
+            }
+        }
+
+        /// Sets up common render operations for a line
+        fn setup_render_ops_for_line(
+            ops: &mut RenderOps,
+            row_pos: Pos,
+            maybe_style: Option<TuiStyle>,
+        ) {
+            ops.push(RenderOp::ResetColor);
+            ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
+            ops.push(RenderOp::ApplyColors(maybe_style));
+        }
+
+        /// Renders the top border line
+        fn render_top_border_line(
+            ops: &mut RenderOps,
+            bounds_size: Size,
+            maybe_style: Option<TuiStyle>,
+            color_wheel: &mut ColorWheel,
+        ) {
+            let text_content = format!(
+                "{}{}{}",
+                BorderGlyphCharacter::TopLeft.as_ref(),
+                BorderGlyphCharacter::Horizontal
+                    .as_ref()
+                    .repeat(usize(*bounds_size.col_width - ch(2))),
+                BorderGlyphCharacter::TopRight.as_ref()
+            );
+
+            lolcat_from_style(ops, color_wheel, maybe_style.as_ref(), &text_content);
+        }
+
+        /// Renders a middle border line (vertical sides with spaces)
+        fn render_middle_border_line(
+            ops: &mut RenderOps,
+            bounds_size: Size,
+            maybe_style: Option<TuiStyle>,
+            color_wheel: &mut ColorWheel,
+        ) {
+            let inner_spaces = create_inner_spaces(bounds_size);
+            let text_content = format!(
+                "{}{}{}",
+                BorderGlyphCharacter::Vertical.as_ref(),
+                inner_spaces,
+                BorderGlyphCharacter::Vertical.as_ref()
+            );
+
+            lolcat_from_style(ops, color_wheel, maybe_style.as_ref(), &text_content);
+        }
+
+        /// Renders the bottom border line
+        fn render_bottom_border_line(
+            ops: &mut RenderOps,
+            bounds_size: Size,
+            maybe_style: Option<TuiStyle>,
+            color_wheel: &mut ColorWheel,
+        ) {
+            let text_content = format!(
+                "{}{}{}",
+                BorderGlyphCharacter::BottomLeft.as_ref(),
+                BorderGlyphCharacter::Horizontal
+                    .as_ref()
+                    .repeat(usize(*bounds_size.col_width - ch(2))),
+                BorderGlyphCharacter::BottomRight.as_ref(),
+            );
+
+            lolcat_from_style(ops, color_wheel, maybe_style.as_ref(), &text_content);
+        }
+
+        /// Creates inner spaces for middle border lines
+        fn create_inner_spaces(bounds_size: Size) -> String {
+            let space_count = {
+                let it = bounds_size.col_width - width(2);
+                usize(*it)
+            };
+            SPACER.repeat(space_count)
+        }
+
+        /// Renders the separator line for autocomplete mode
+        pub fn render_autocomplete_separator(
+            ops: &mut RenderOps,
+            origin_pos: Pos,
+            bounds_size: Size,
+            dialog_engine: &mut DialogEngine,
+        ) {
+            match dialog_engine.dialog_options.mode {
+                DialogEngineMode::ModalSimple => {}
+                DialogEngineMode::ModalAutocomplete => {
+                    render_separator_line(
+                        ops,
+                        origin_pos,
+                        bounds_size,
+                        dialog_engine.dialog_options.maybe_style_border,
+                        &mut dialog_engine.color_wheel,
+                    );
+                }
+            }
+        }
+
+        /// Renders the actual separator line for autocomplete mode
+        fn render_separator_line(
+            ops: &mut RenderOps,
+            origin_pos: Pos,
+            bounds_size: Size,
+            maybe_style: Option<TuiStyle>,
+            color_wheel: &mut ColorWheel,
+        ) {
+            let inner_line = BorderGlyphCharacter::Horizontal
+                .as_ref()
+                .repeat(usize(*bounds_size.col_width - ch(2)))
+                .to_string();
+
+            let text_content = format!(
+                "{}{}{}",
+                BorderGlyphCharacter::LineUpDownRight.as_ref(),
+                inner_line,
+                BorderGlyphCharacter::LineUpDownLeft.as_ref()
+            );
+
+            let separator_pos = calculate_separator_position();
+
+            ops.push(RenderOp::ResetColor);
+            ops.push(RenderOp::MoveCursorPositionRelTo(origin_pos, separator_pos));
+
+            lolcat_from_style(ops, color_wheel, maybe_style.as_ref(), &text_content);
+        }
+
+        /// Calculates the position for the autocomplete separator
+        fn calculate_separator_position() -> Pos {
+            let col_start_index = col(0);
+            let row_start_index = row(DisplayConstants::SimpleModalRowCount as u16 - 1);
+            col_start_index + row_start_index
+        }
+
+        /// Represents the type of border line to render
+        #[derive(Debug, Clone, Copy)]
+        enum LineType {
+            Top,
+            Middle,
+            Bottom,
+            Single,
         }
     }
 

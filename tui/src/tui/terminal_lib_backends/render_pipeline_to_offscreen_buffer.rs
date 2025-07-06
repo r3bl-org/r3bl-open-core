@@ -19,8 +19,8 @@ use super::{sanitize_and_save_abs_pos, OffscreenBuffer, RenderOp, RenderPipeline
 use crate::{ch,
             glyphs::{self, SPACER_GLYPH},
             inline_string, usize, width, ColWidth, CommonError, CommonErrorType,
-            CommonResult, GCStringExt, PixelChar, Pos, RenderOpsLocalData, Size,
-            TuiStyle, ZOrder, DEBUG_TUI_COMPOSITOR};
+            CommonResult, GCStringExt, PixelChar, PixelCharLine, Pos,
+            RenderOpsLocalData, Size, TuiStyle, ZOrder, DEBUG_TUI_COMPOSITOR};
 
 impl RenderPipeline {
     /// Convert the render pipeline to an offscreen buffer.
@@ -108,7 +108,7 @@ pub fn process_render_op(
         RenderOp::PaintTextWithAttributes(arg_text_ref, maybe_style_ref) => {
             let result_new_pos = print_text_with_attributes(
                 arg_text_ref,
-                maybe_style_ref,
+                maybe_style_ref.as_ref(),
                 my_offscreen_buffer,
                 None,
             );
@@ -120,9 +120,44 @@ pub fn process_render_op(
     }
 }
 
-/// This diagram shows what happens per line of text.
+/// Render text with optional styling to an offscreen buffer with Unicode-aware handling.
 ///
-/// `my_offscreen_buffer[my_pos.row_index]` is the line.
+/// This function is the core text rendering primitive for the TUI system, responsible for
+/// converting text strings into [`PixelChar`] elements in the offscreen buffer. It
+/// handles both plain text and styled text, with comprehensive support for Unicode
+/// grapheme clusters, wide characters (like emoji), and terminal-specific display width
+/// calculations.
+///
+/// # Core Functionality
+///
+/// - **Unicode-safe rendering**: Proper handling of grapheme clusters, emoji, and wide
+///   characters
+/// - **Style composition**: Merges provided styles with buffer-level colors
+/// - **Intelligent clipping**: Two-stage clipping system for optimal text fitting
+/// - **Position tracking**: Updates buffer position based on actual rendered width
+/// - **Wide character support**: Handles multi-column characters with void padding
+///
+/// # Parameters
+///
+/// This will modify the `my_offscreen_buffer` argument. For plain text it supports
+/// counting [`crate::Seg`]s. The display width of each segment is
+/// taken into account when filling the offscreen buffer.
+///
+/// # Clipping behavior
+///
+/// This diagram shows what happens per line of text. Each line can be found here:
+/// `my_offscreen_buffer[my_pos.row_index]`.
+///
+/// The function uses a two-stage clipping system:
+///
+/// 1. **Parameter clipping**: If `maybe_max_display_col_count` is provided, text is
+///    clipped to fit.
+/// 2. **Window clipping**: Text is further clipped to fit within the actual window
+///    boundaries.
+///
+/// This ensures text never overflows the visible area while respecting explicit width
+/// constraints.
+///
 /// ```text
 ///             my_pos.col_index
 ///             ↓
@@ -130,9 +165,20 @@ pub fn process_render_op(
 /// <---------------- maybe_max_display_col_count ---------------->
 /// C0123456789012345678901234567890123456789012345678901234567890
 /// ```
-pub fn print_plain_text(
+/// # Returns
+///
+/// Returns `Ok(Pos)` with the new cursor position after rendering. Column overflow is
+/// handled gracefully by stopping rendering.
+///
+/// # Errors
+///
+/// Returns [`CommonErrorType::DisplaySizeTooSmall`] if the target row index exceeds
+/// the offscreen buffer's available rows (i.e., when
+/// `my_offscreen_buffer.my_pos.row_index` is greater than or equal to the number of rows
+/// in `my_offscreen_buffer.buffer`).
+pub fn print_text_with_attributes(
     string: &str,
-    maybe_style_ref: &Option<TuiStyle>,
+    maybe_style_ref: Option<&TuiStyle>,
     my_offscreen_buffer: &mut OffscreenBuffer,
     maybe_max_display_col_count: Option<ColWidth>,
 ) -> CommonResult<Pos> {
@@ -140,40 +186,29 @@ pub fn print_plain_text(
     let display_col_index = usize(my_offscreen_buffer.my_pos.col_index);
     let display_row_index = usize(my_offscreen_buffer.my_pos.row_index);
 
-    // If `maybe_max_display_col_count` is `None`, then clip to the max bounds of the
-    // window.
-    // 1. Take the pos into account when determining clip.
-    // 2. Even if `maybe_max_display_col_count` is `None`, still clip to the max bounds of
-    //    the window.
+    // Clip text to bounds using helper function.
+    let text_gcs = print_text_with_attributes_helper::clip_text_to_bounds(
+        string,
+        display_col_index,
+        maybe_max_display_col_count,
+        my_offscreen_buffer.window_size.col_width,
+    );
 
-    // ✂️Clip `arg_text_ref` (if needed) and make `text`.
-    let string_gcs = string.grapheme_string();
-    let clip_1_str = if let Some(max_display_col_count) = maybe_max_display_col_count {
-        let adj_max = *max_display_col_count - ch(display_col_index);
-        string_gcs.trunc_end_to_fit(width(adj_max))
-    } else {
-        string
-    };
-    let clip_1_gcs = clip_1_str.grapheme_string();
-
-    // ✂️Clip `text` (if needed) to the max display col count of the window.
-    let window_max_display_col_count = *my_offscreen_buffer.window_size.col_width;
-    let text_fits_in_window =
-        *clip_1_gcs.display_width <= window_max_display_col_count - ch(display_col_index);
-    let clip_2_str = if text_fits_in_window {
-        clip_1_str
-    } else {
-        let adj_max = window_max_display_col_count - ch(display_col_index);
-        clip_1_gcs.trunc_end_to_fit(width(*adj_max))
-    };
-    let clip_2_gcs = clip_2_str.grapheme_string();
-
-    // This is the final text that will be printed.
-    let text_gcs = clip_2_gcs;
+    // Try to get the line at `row_index`.
+    let mut line_copy = {
+        if let Some(line) = my_offscreen_buffer.buffer.get(display_row_index) {
+            Ok(line.clone())
+        } else {
+            // Clip vertically.
+            CommonError::new_error_result_with_only_type(
+                CommonErrorType::DisplaySizeTooSmall,
+            )
+        }
+    }?;
 
     DEBUG_TUI_COMPOSITOR.then(|| {
-        // % is Display, ? is Debug.
-        tracing::info! {
+            // % is Display, ? is Debug.
+            tracing::info! {
             message = %inline_string!(
                 "print_plain_text() {ar} {ch}",
                 ar = glyphs::RIGHT_ARROW_GLYPH,
@@ -192,44 +227,16 @@ pub fn print_plain_text(
         };
     });
 
-    // Try to get the line at `row_index`.
-    let mut line_copy = {
-        if let Some(line) = my_offscreen_buffer.buffer.get(display_row_index) {
-            Ok(line.clone())
-        } else {
-            // Clip vertically.
-            CommonError::new_error_result_with_only_type(
-                CommonErrorType::DisplaySizeTooSmall,
-            )
-        }
-    }?;
-
     // Insert clipped `text_ref_gcs` into `line` at `insertion_col_index`. Ok to use
-    // `line_copy[insertion_col_index]` syntax because we know that row and col indices
-    // are valid.
-    let mut insertion_col_index = display_col_index;
-    let mut already_inserted_display_width = ch(0);
+    // `line_copy[insertion_col_index]` syntax because we know that row and col
+    // indices are valid.
+    let insertion_col_index = display_col_index;
 
-    let maybe_style: Option<TuiStyle> = {
-        if let Some(maybe_style) = maybe_style_ref {
-            // We get the attributes from `maybe_style_ref`.
-            let mut it = *maybe_style;
-            // We get the colors from `my_fg_color` and `my_bg_color`.
-            it.color_fg = my_offscreen_buffer.my_fg_color;
-            it.color_bg = my_offscreen_buffer.my_bg_color;
-            Some(it)
-        } else if my_offscreen_buffer.my_fg_color.is_some()
-            || my_offscreen_buffer.my_bg_color.is_some()
-        {
-            Some(TuiStyle {
-                color_fg: my_offscreen_buffer.my_fg_color,
-                color_bg: my_offscreen_buffer.my_bg_color,
-                ..Default::default()
-            })
-        } else {
-            None
-        }
-    };
+    // Compose style using helper function.
+    let maybe_style = print_text_with_attributes_helper::compose_style(
+        maybe_style_ref,
+        my_offscreen_buffer,
+    );
 
     DEBUG_TUI_COMPOSITOR.then(|| {
         // % is Display, ? is Debug.
@@ -256,96 +263,30 @@ pub fn print_plain_text(
         );
     });
 
-    // Loop over each grapheme cluster segment (the character) in `text_ref_gcs` (text in
-    // a line). For each GraphemeClusterSegment, create a PixelChar.
-    for seg in text_gcs.seg_iter() {
-        let segment_display_width = usize(*seg.display_width);
-        if segment_display_width == 0 {
-            continue;
-        }
+    // Process character segments using helper function.
+    let (updated_insertion_col_index, mut already_inserted_display_width) =
+        print_text_with_attributes_helper::process_character_segments(
+            &text_gcs,
+            maybe_style,
+            &mut line_copy,
+            insertion_col_index,
+        );
 
-        // Set the `PixelChar` at `insertion_col_index`.
-        if line_copy.get(insertion_col_index).is_some() {
-            let pixel_char = {
-                let seg_text: &str = seg.get_str(&text_gcs);
-                match (maybe_style, seg_text) {
-                    (None, SPACER_GLYPH) => PixelChar::Spacer,
-                    _ => PixelChar::PlainText {
-                        text: seg_text.into(),
-                        maybe_style,
-                    },
-                }
-            };
+    // Add spacer padding using helper function.
+    already_inserted_display_width =
+        print_text_with_attributes_helper::add_spacer_padding(
+            &mut line_copy,
+            updated_insertion_col_index,
+            already_inserted_display_width,
+            display_col_index,
+            maybe_max_display_col_count,
+        );
 
-            if line_copy.get(insertion_col_index).is_some() {
-                line_copy[insertion_col_index] = pixel_char;
-            }
-
-            // Deal w/ the display width of the `PixelChar` > 1. This is the equivalent of
-            // `jump_cursor()` in RenderOpImplCrossterm.
-            //
-            // Move cursor "manually" to cover "extra" (display) width of a single
-            // character. This is a necessary precautionary measure, to make
-            // sure the behavior is the same on all terminals. In practice
-            // this means that terminals will be "broken" in the same way
-            // across multiple terminal emulators and OSes.
-            // 1. Terminals vary in their support of complex grapheme clusters (joined
-            //    emoji). This code uses the crate unicode_width to display a given UTF-8
-            //    character "correctly" in all terminals. The number reported by this
-            //    crate and the actual display width that the specific terminal emulator +
-            //    OS combo will display may be different.
-            // 2. This means that in some terminals, the caret itself has to be manually
-            //    "jumped" to covert the special case of a really wide UTF-8 character.
-            //    This happens by adding Void pixel chars.
-            // 3. The insertion_col_index is calculated & updated based on the
-            //    unicode_width crate values.
-            let segment_display_width = usize(*seg.display_width);
-            if segment_display_width > 1 {
-                // Deal w/ `gc_segment` display width that is > 1 => pad w/ Void.
-                let num_of_extra_display_cols_to_inject_void_into =
-                    segment_display_width - 1; // Safe subtract.
-                for _ in 0..num_of_extra_display_cols_to_inject_void_into {
-                    // Make sure insertion_col_index is safe to access.
-                    if line_copy.get(insertion_col_index + 1).is_some() {
-                        // Move insertion_col_index forward & inject a PixelChar::Void.
-                        insertion_col_index += 1;
-                        line_copy[insertion_col_index] = PixelChar::Void;
-                    }
-                }
-                // Move insertion_col_index forward.
-                insertion_col_index += 1;
-            } else {
-                // `gc_segment` width is 1 => move `insertion_col_index` forward by 1.
-                insertion_col_index += 1;
-            }
-
-            already_inserted_display_width += *seg.display_width;
-        } else {
-            // Run out of space in the line of the offscreen buffer.
-            break;
-        }
-    }
-
-    // Mimic what stdout does and move the position.col_index forward by the width of the
-    // text that was added to display.
+    // Mimic what stdout does and move the position.col_index forward by the width of
+    // the text that was added to display.
     let new_pos = my_offscreen_buffer
         .my_pos
         .add_col(already_inserted_display_width);
-
-    // 🥊Deal w/ padding SPACERs padding to end of line (if `maybe_max_display_col_count`
-    // is some).
-    if let Some(max_display_col_count) = maybe_max_display_col_count {
-        let adj_max = *max_display_col_count - ch(display_col_index);
-        while already_inserted_display_width < adj_max {
-            if line_copy.get(insertion_col_index).is_some() {
-                line_copy[insertion_col_index] = PixelChar::Spacer;
-                insertion_col_index += 1;
-                already_inserted_display_width += 1;
-            } else {
-                break;
-            }
-        }
-    }
 
     // Replace the line in `my_offscreen_buffer` with the new line.
     my_offscreen_buffer.buffer[display_row_index] = line_copy;
@@ -353,23 +294,176 @@ pub fn print_plain_text(
     Ok(new_pos)
 }
 
-/// Render plain to an offscreen buffer.
-///
-/// This will modify the `my_offscreen_buffer` argument. For plain text it supports
-/// counting [`crate::Seg`]s. The display width of each segment is
-/// taken into account when filling the offscreen buffer.
-pub fn print_text_with_attributes(
-    arg_text_ref: &str,
-    maybe_style_ref: &Option<TuiStyle>,
-    my_offscreen_buffer: &mut OffscreenBuffer,
-    maybe_max_display_col_count: Option<ColWidth>,
-) -> CommonResult<Pos> {
-    print_plain_text(
-        arg_text_ref,
-        maybe_style_ref,
-        my_offscreen_buffer,
-        maybe_max_display_col_count,
-    )
+mod print_text_with_attributes_helper {
+    use super::{ch, usize, width, ColWidth, GCStringExt, OffscreenBuffer, PixelChar,
+                PixelCharLine, TuiStyle, SPACER_GLYPH};
+
+    /// Clips the input string based on max display column count and window bounds.
+    /// Returns the final clipped string as a grapheme cluster string.
+    pub fn clip_text_to_bounds(
+        string: &str,
+        display_col_index: usize,
+        maybe_max_display_col_count: Option<ColWidth>,
+        window_max_display_col_count: ColWidth,
+    ) -> crate::GCString {
+        // ✂️Clip `arg_text_ref` (if needed) and make `text`.
+        let string_gcs = string.grapheme_string();
+        let clip_1_str = if let Some(max_display_col_count) = maybe_max_display_col_count
+        {
+            let adj_max = *max_display_col_count - ch(display_col_index);
+            string_gcs.trunc_end_to_fit(width(adj_max))
+        } else {
+            string
+        };
+        let clip_1_gcs = clip_1_str.grapheme_string();
+
+        // ✂️Clip `text` (if needed) to the max display col count of the window.
+        let text_fits_in_window = *clip_1_gcs.display_width
+            <= *window_max_display_col_count - ch(display_col_index);
+        let clip_2_str = if text_fits_in_window {
+            clip_1_str
+        } else {
+            let adj_max = *window_max_display_col_count - ch(display_col_index);
+            clip_1_gcs.trunc_end_to_fit(width(adj_max))
+        };
+
+        clip_2_str.grapheme_string()
+    }
+
+    /// Composes the final style by merging provided style with buffer colors.
+    pub fn compose_style(
+        maybe_style_ref: Option<&TuiStyle>,
+        my_offscreen_buffer: &OffscreenBuffer,
+    ) -> Option<TuiStyle> {
+        if let Some(maybe_style) = maybe_style_ref {
+            // We get the attributes from `maybe_style_ref`.
+            let mut it = *maybe_style;
+            // We get the colors from `my_fg_color` and `my_bg_color`.
+            it.color_fg = my_offscreen_buffer.my_fg_color;
+            it.color_bg = my_offscreen_buffer.my_bg_color;
+            Some(it)
+        } else if my_offscreen_buffer.my_fg_color.is_some()
+            || my_offscreen_buffer.my_bg_color.is_some()
+        {
+            Some(TuiStyle {
+                color_fg: my_offscreen_buffer.my_fg_color,
+                color_bg: my_offscreen_buffer.my_bg_color,
+                ..Default::default()
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Processes and renders individual character segments to the line buffer.
+    /// Returns the updated insertion column index and total inserted display width.
+    pub fn process_character_segments(
+        text_gcs: &crate::GCString,
+        maybe_style: Option<TuiStyle>,
+        line_copy: &mut PixelCharLine,
+        mut insertion_col_index: usize,
+    ) -> (usize, crate::ChUnit) {
+        let mut already_inserted_display_width = ch(0);
+
+        // Loop over each grapheme cluster segment (the character) in `text_ref_gcs` (text
+        // in a line). For each GraphemeClusterSegment, create a PixelChar.
+        for seg in text_gcs.seg_iter() {
+            let segment_display_width = usize(*seg.display_width);
+            if segment_display_width == 0 {
+                continue;
+            }
+
+            // Set the `PixelChar` at `insertion_col_index`.
+            if line_copy.get(insertion_col_index).is_some() {
+                let pixel_char = {
+                    let seg_text: &str = seg.get_str(text_gcs);
+                    match (maybe_style, seg_text) {
+                        (None, SPACER_GLYPH) => PixelChar::Spacer,
+                        _ => PixelChar::PlainText {
+                            text: seg_text.into(),
+                            maybe_style,
+                        },
+                    }
+                };
+
+                if line_copy.get(insertion_col_index).is_some() {
+                    line_copy[insertion_col_index] = pixel_char;
+                }
+
+                // Deal w/ the display width of the `PixelChar` > 1. This is the
+                // equivalent of `jump_cursor()` in RenderOpImplCrossterm.
+                //
+                // Move cursor "manually" to cover "extra" (display) width of a single
+                // character. This is a necessary precautionary measure, to make
+                // sure the behavior is the same on all terminals. In practice
+                // this means that terminals will be "broken" in the same way
+                // across multiple terminal emulators and OSes.
+                // 1. Terminals vary in their support of complex grapheme clusters (joined
+                //    emoji). This code uses the crate unicode_width to display a given
+                //    UTF-8 character "correctly" in all terminals. The number reported by
+                //    this crate and the actual display width that the specific terminal
+                //    emulator + OS combo will display may be different.
+                // 2. This means that in some terminals, the caret itself has to be
+                //    manually "jumped" to covert the special case of a really wide UTF-8
+                //    character. This happens by adding Void pixel chars.
+                // 3. The insertion_col_index is calculated & updated based on the
+                //    unicode_width crate values.
+                let segment_display_width = usize(*seg.display_width);
+                if segment_display_width > 1 {
+                    // Deal w/ `gc_segment` display width that is > 1 => pad w/ Void.
+                    let num_of_extra_display_cols_to_inject_void_into =
+                        segment_display_width - 1; // Safe subtract.
+                    for _ in 0..num_of_extra_display_cols_to_inject_void_into {
+                        // Make sure insertion_col_index is safe to access.
+                        if line_copy.get(insertion_col_index + 1).is_some() {
+                            // Move insertion_col_index forward & inject a
+                            // PixelChar::Void.
+                            insertion_col_index += 1;
+                            line_copy[insertion_col_index] = PixelChar::Void;
+                        }
+                    }
+                    // Move insertion_col_index forward.
+                    insertion_col_index += 1;
+                } else {
+                    // `gc_segment` width is 1 => move `insertion_col_index` forward by 1.
+                    insertion_col_index += 1;
+                }
+
+                already_inserted_display_width += *seg.display_width;
+            } else {
+                // Run out of space in the line of the offscreen buffer.
+                break;
+            }
+        }
+
+        (insertion_col_index, already_inserted_display_width)
+    }
+
+    /// Adds spacer padding to the end of the line if max display column count is
+    /// specified.
+    pub fn add_spacer_padding(
+        line_copy: &mut PixelCharLine,
+        mut insertion_col_index: usize,
+        mut already_inserted_display_width: crate::ChUnit,
+        display_col_index: usize,
+        maybe_max_display_col_count: Option<ColWidth>,
+    ) -> crate::ChUnit {
+        // 🥊Deal w/ padding SPACERs padding to end of line (if
+        // `maybe_max_display_col_count` is some).
+        if let Some(max_display_col_count) = maybe_max_display_col_count {
+            let adj_max = *max_display_col_count - ch(display_col_index);
+            while already_inserted_display_width < adj_max {
+                if line_copy.get(insertion_col_index).is_some() {
+                    line_copy[insertion_col_index] = PixelChar::Spacer;
+                    insertion_col_index += 1;
+                    already_inserted_display_width += ch(1);
+                } else {
+                    break;
+                }
+            }
+        }
+        already_inserted_display_width
+    }
 }
 
 #[cfg(test)]
@@ -400,7 +494,7 @@ mod tests {
 
             print_text_with_attributes(
                 text,
-                &maybe_style,
+                maybe_style.as_ref(),
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
@@ -463,7 +557,7 @@ mod tests {
 
             print_text_with_attributes(
                 text,
-                &maybe_style,
+                maybe_style.as_ref(),
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
@@ -525,7 +619,7 @@ mod tests {
 
             print_text_with_attributes(
                 text,
-                &maybe_style,
+                maybe_style.as_ref(),
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
@@ -590,7 +684,7 @@ mod tests {
 
             print_text_with_attributes(
                 text,
-                &maybe_style,
+                maybe_style.as_ref(),
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
@@ -645,7 +739,7 @@ mod tests {
 
             print_text_with_attributes(
                 text,
-                &maybe_style,
+                maybe_style.as_ref(),
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
@@ -709,7 +803,7 @@ mod tests {
 
             print_text_with_attributes(
                 text,
-                &maybe_style,
+                maybe_style.as_ref(),
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
