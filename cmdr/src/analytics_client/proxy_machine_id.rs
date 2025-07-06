@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{InlineString,
-               friendly_random_id,
+use r3bl_tui::{InlineString, friendly_random_id,
                into_existing::{read_from_file::try_read_file_path_into_inline_string,
                                write_to_file}};
 
@@ -61,7 +60,7 @@ pub fn load_id_from_file_or_generate_and_save_it() -> InlineString {
                 match res_write_to_file {
                     Ok(()) => {
                         report_analytics::start_task_to_generate_event(
-                            "".to_string(),
+                            String::new(),
                             AnalyticsAction::MachineIdProxyCreate,
                         );
                         DEBUG_ANALYTICS_CLIENT_MOD.then(|| {

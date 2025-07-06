@@ -33,38 +33,26 @@ use std::fmt::Write;
 use sizing::VecConfigs;
 use smallvec::SmallVec;
 
-use super::{config::{sizing::VecSteps, defaults::{get_default_gradient_stops, Defaults},
-                   ColorWheelConfig, ColorWheelDirection, ColorWheelSpeed,
-                   GradientKind, GradientLengthKind},
-            gradients::{generate_random_truecolor_gradient, generate_truecolor_gradient,
-                       get_gradient_array_for, Ansi256GradientIndex},
+use super::{config::{defaults::{get_default_gradient_stops, Defaults},
+                     sizing::VecSteps,
+                     ColorWheelConfig, ColorWheelDirection, ColorWheelSpeed,
+                     GradientKind, GradientLengthKind},
+            gradients::{generate_random_truecolor_gradient,
+                        generate_truecolor_gradient, get_gradient_array_for,
+                        Ansi256GradientIndex},
             helpers,
             lolcat::{Lolcat, LolcatBuilder},
             types::Seed};
-use crate::{ast,
-            ch,
-            glyphs::SPACER_GLYPH as SPACER,
-            tui_color,
-            tui_styled_text,
-            u8,
-            usize,
-            ChUnit,
-            GCString,
-            GCStringExt as _,
-            GradientGenerationPolicy,
-            InlineString,
-            RgbValue,
-            TextColorizationPolicy,
-            TuiColor,
-            TuiStyle,
-            TuiStyledText,
-            TuiStyledTexts};
+use crate::{ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color, tui_styled_text, u8,
+            usize, ChUnit, GCString, GCStringExt as _, GradientGenerationPolicy,
+            InlineString, RgbValue, TextColorizationPolicy, TuiColor, TuiStyle,
+            TuiStyledText, TuiStyledTexts};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
 /// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
 /// the heap.
 pub(in crate::core) mod sizing {
-    use super::{SmallVec, ColorWheelConfig};
+    use super::{ColorWheelConfig, SmallVec};
 
     pub type VecConfigs = SmallVec<[ColorWheelConfig; MAX_CONFIGS]>;
     const MAX_CONFIGS: usize = 2;
@@ -503,7 +491,7 @@ impl ColorWheel {
 }
 
 mod generate_styled_texts_helper {
-    use super::{TuiStyle, TuiColor};
+    use super::{TuiColor, TuiStyle};
 
     // Inner function.
     pub fn gen_style_fg_color_for(
@@ -536,7 +524,8 @@ mod generate_styled_texts_helper {
 
 /// Helper module for color wheel index management and navigation.
 mod color_wheel_navigation {
-    use super::{ColorWheelConfig, ChUnit, ColorWheelSpeed, ch, ColorWheelDirection, TuiColor, VecSteps, usize};
+    use super::{ch, usize, ChUnit, ColorWheelConfig, ColorWheelDirection,
+                ColorWheelSpeed, TuiColor, VecSteps};
 
     /// Determine if the color wheel index should be updated based on speed settings.
     pub fn should_update_index(
@@ -605,7 +594,7 @@ mod color_wheel_navigation {
 
 /// Helper module for lolcat-specific operations.
 mod lolcat_helper {
-    use super::{tui_color, Lolcat, TuiColor, helpers, Seed, ChUnit, ch};
+    use super::{ch, helpers, tui_color, ChUnit, Lolcat, Seed, TuiColor};
 
     /// Handle lolcat color generation and seed advancement.
     pub fn generate_next_lolcat_color(lolcat: &mut Lolcat) -> TuiColor {
@@ -616,28 +605,32 @@ mod lolcat_helper {
     }
 
     /// Convert lolcat seed to [`ChUnit`] for indexing.
+    /// 
+    /// This function converts a Seed value to a ChUnit for use as an index.
+    /// The implementation has been simplified to use integer operations where possible,
+    /// which improves performance and reduces floating point precision issues.
     pub fn convert_lolcat_seed_to_index(seed: Seed) -> ChUnit {
-        let seed_f64 = *seed * 1000.0;
-        let converted_seed = if seed_f64.is_finite() && seed_f64 >= 0.0 {
-            // Use the largest integer exactly representable by f64
-            // (2^MANTISSA_DIGITS) to avoid precision loss when clamping.
-            #[allow(clippy::cast_precision_loss)]
-            const MAX_SAFE_F64_INT: f64 = (1u64 << f64::MANTISSA_DIGITS) as f64;
-            let clamped_seed = seed_f64.min(MAX_SAFE_F64_INT).round();
-            // Safe conversion - clamped_seed is guaranteed to be in valid range
-            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            let seed_u64 = clamped_seed as u64;
-            usize::try_from(seed_u64).unwrap_or(0)
-        } else {
-            0
-        };
+        // Early return for invalid seed values
+        if !(*seed).is_finite() || *seed < 0.0 {
+            return ch(0);
+        }
+
+        // Convert seed to integer directly, using multiplication by 1000
+        // to preserve precision of small fractional values
+        let seed_int = (*seed * 1000.0).round() as u64;
+
+        // Convert to usize safely
+        let converted_seed = usize::try_from(seed_int).unwrap_or(0);
+
         ch(converted_seed)
     }
 }
 
 /// Helper module for gradient generation operations.
 mod gradient_generation_helper {
-    use super::{tui_color, ColorWheelConfig, Defaults, Ansi256GradientIndex, VecSteps, get_gradient_array_for, ColorWheel, GradientLengthKind, GradientKind, ch, LolcatBuilder};
+    use super::{ch, get_gradient_array_for, tui_color, Ansi256GradientIndex, ColorWheel,
+                ColorWheelConfig, Defaults, GradientKind, GradientLengthKind,
+                LolcatBuilder, VecSteps};
 
     /// Determine the number of steps for gradient generation.
     pub fn determine_steps(
@@ -688,7 +681,7 @@ mod gradient_generation_helper {
 
 /// Helper module for lolcat background functionality.
 mod lolcat_bg_helper {
-    use super::{TextColorizationPolicy, TuiStyle, TuiColor, RgbValue};
+    use super::{RgbValue, TextColorizationPolicy, TuiColor, TuiStyle};
 
     /// Extract the style from the text colorization policy for lolcat background mode.
     pub fn extract_style_from_policy(
@@ -728,10 +721,36 @@ mod tests_color_wheel_rgb {
     use serial_test::serial;
 
     use super::*;
-    use crate::{assert_eq2,
-                global_color_support,
+    use crate::{assert_eq2, global_color_support,
                 tui_style::tui_style_attrib::{Bold, Dim},
                 ColorSupport};
+
+    #[test]
+    fn test_convert_lolcat_seed_to_index() {
+        // Test with zero seed
+        let seed_zero = Seed(0.0);
+        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_zero), ch(0));
+
+        // Test with positive seed
+        let seed_positive = Seed(1.5);
+        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_positive), ch(1500));
+
+        // Test with small positive seed
+        let seed_small = Seed(0.001);
+        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_small), ch(1));
+
+        // Test with negative seed (should return 0)
+        let seed_negative = Seed(-1.0);
+        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_negative), ch(0));
+
+        // Test with NaN seed (should return 0)
+        let seed_nan = Seed(f64::NAN);
+        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_nan), ch(0));
+
+        // Test with very large seed
+        let seed_large = Seed(1_000_000.0);
+        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_large), ch(1_000_000_000));
+    }
 
     mod test_helpers {
         use smallvec::smallvec;

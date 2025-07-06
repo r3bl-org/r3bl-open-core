@@ -26,7 +26,8 @@ use std::env;
 /// it is really dependent on the environment.
 pub mod global_color_support {
     use std::sync::atomic::{AtomicI8, Ordering};
-    use super::{ColorSupport, Stream, examine_env_vars_to_determine_color_support};
+
+    use super::{examine_env_vars_to_determine_color_support, ColorSupport, Stream};
 
     static mut COLOR_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
     const NOT_SET_VALUE: i8 = -1;
@@ -72,8 +73,8 @@ pub mod global_color_support {
     }
 
     /// Get the color support override value.
-    /// - If the value has been set using [`crate::global_color_support::set_override`], then
-    ///   that value will be returned.
+    /// - If the value has been set using [`crate::global_color_support::set_override`],
+    ///   then that value will be returned.
     /// - Otherwise, an error will be returned.
     #[allow(clippy::result_unit_err, static_mut_refs)]
     pub fn try_get_override() -> Result<ColorSupport, ()> {
@@ -86,16 +87,17 @@ pub mod global_color_support {
 /// variables.
 #[must_use]
 pub fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSupport {
-    if env_no_color()
+    if helpers::env_no_color()
         || env::var("TERM").is_ok_and(|v| v == "dumb")
-        || !(is_a_tty(stream) || env::var("IGNORE_IS_TERMINAL").is_ok_and(|v| v != "0"))
+        || !(helpers::is_a_tty(stream)
+            || env::var("IGNORE_IS_TERMINAL").is_ok_and(|v| v != "0"))
     {
         return ColorSupport::NoColor;
     }
 
     if env::consts::OS == "macos" {
         if env::var("TERM_PROGRAM").is_ok_and(|v| v == "Apple_Terminal")
-            && env::var("TERM").is_ok_and(|term| check_256_color(&term))
+            && env::var("TERM").is_ok_and(|term| helpers::check_256_color(&term))
         {
             return ColorSupport::Ansi256;
         }
@@ -117,7 +119,7 @@ pub fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSuppo
     }
 
     if env::var("COLORTERM").is_ok()
-        || env::var("TERM").is_ok_and(|term| check_ansi_color(&term))
+        || env::var("TERM").is_ok_and(|term| helpers::check_ansi_color(&term))
         || env::var("CLICOLOR").is_ok_and(|v| v != "0")
         || is_ci::uncached()
     {
@@ -174,7 +176,7 @@ mod convert_between_color_and_i8 {
 }
 
 mod helpers {
-    use super::{Stream, as_str, env};
+    use super::{as_str, env, Stream};
 
     #[must_use]
     pub fn is_a_tty(stream: Stream) -> bool {
@@ -212,7 +214,6 @@ mod helpers {
         }
     }
 }
-pub use helpers::*;
 
 fn as_str<E>(option: &Result<String, E>) -> Result<&str, &E> {
     match option {

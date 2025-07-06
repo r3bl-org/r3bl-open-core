@@ -18,12 +18,7 @@
 use std::fmt::Debug;
 
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
-use crate::{CommonResult,
-            FlexBox,
-            FlexBoxId,
-            InputEvent,
-            RenderPipeline,
-            Surface,
+use crate::{CommonResult, FlexBox, FlexBoxId, InputEvent, RenderPipeline, Surface,
             SurfaceBounds};
 
 /// See [`crate::App`].

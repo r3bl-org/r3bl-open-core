@@ -42,27 +42,13 @@ use nom::{branch::alt,
           combinator::{not, recognize},
           multi::many1,
           sequence::preceded,
-          IResult,
-          Input,
-          Parser};
+          IResult, Input, Parser};
 
-use crate::{fg_blue,
-            fg_magenta,
-            fg_red,
-            md_parser::constants::{BACK_TICK,
-                                   LEFT_BRACKET,
-                                   LEFT_IMAGE,
-                                   NEW_LINE,
-                                   NEW_LINE_CHAR,
-                                   STAR,
-                                   UNDERSCORE},
-            specialized_parsers_ng,
-            AsStrSlice,
-            CharLengthExt as _,
-            NErr,
-            NError,
-            NErrorKind,
-            DEBUG_MD_PARSER_STDOUT};
+use crate::{fg_blue, fg_magenta, fg_red,
+            md_parser::constants::{BACK_TICK, LEFT_BRACKET, LEFT_IMAGE, NEW_LINE,
+                                   NEW_LINE_CHAR, STAR, UNDERSCORE},
+            specialized_parsers_ng, AsStrSlice, CharLengthExt as _, NErr, NError,
+            NErrorKind, DEBUG_MD_PARSER_STDOUT};
 
 /// This is the lowest priority parser called by
 /// [`crate::fragment_ng::parse_fragments_in_a_line_ng::parse_inline_fragments_until_eol_or_eoi_ng`], which itself is called:

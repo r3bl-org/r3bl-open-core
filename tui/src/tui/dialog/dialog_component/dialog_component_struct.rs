@@ -18,25 +18,11 @@
 use std::fmt::Debug;
 
 use crate::{common::{CommonError, CommonErrorType, CommonResult},
-            Component,
-            DialogEngine,
-            DialogEngineApi,
-            DialogEngineApplyResponse,
-            DialogEngineArgs,
-            DialogEngineConfigOptions,
-            EditorEngineConfig,
-            EventPropagation,
-            FlexBox,
-            FlexBoxId,
-            GlobalData,
-            HasDialogBuffers,
-            HasFocus,
-            InputEvent,
-            OnDialogEditorChangeFn,
-            OnDialogPressFn,
-            RenderPipeline,
-            SurfaceBounds,
-            DEBUG_TUI_MOD};
+            Component, DialogEngine, DialogEngineApi, DialogEngineApplyResponse,
+            DialogEngineArgs, DialogEngineConfigOptions, EditorEngineConfig,
+            EventPropagation, FlexBox, FlexBoxId, GlobalData, HasDialogBuffers,
+            HasFocus, InputEvent, OnDialogEditorChangeFn, OnDialogPressFn,
+            RenderPipeline, SurfaceBounds, DEBUG_TUI_MOD};
 
 /// This is a shim which allows the reusable [`DialogEngine`] to be used in the context of
 /// [Component]. The main methods here simply pass thru all their arguments to the
@@ -157,7 +143,8 @@ where
         let id = *id;
 
         if state.get_mut_dialog_buffer(id).is_some() {
-            use DialogEngineApplyResponse::{DialogChoice, UpdateEditorBuffer, SelectScrollResultsPanel, Noop};
+            use DialogEngineApplyResponse::{DialogChoice, Noop,
+                                            SelectScrollResultsPanel, UpdateEditorBuffer};
 
             match DialogEngineApi::apply_event::<S, AS>(
                 state,

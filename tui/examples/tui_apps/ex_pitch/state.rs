@@ -17,11 +17,8 @@
 use std::{collections::HashMap,
           fmt::{Debug, Formatter, Result}};
 
-use r3bl_tui::{editor_buffer::EditorBuffer,
-               ComponentRegistryMap,
-               FlexBoxId,
-               HasEditorBuffers,
-               DEFAULT_SYN_HI_FILE_EXT};
+use r3bl_tui::{editor_buffer::EditorBuffer, ComponentRegistryMap, FlexBoxId,
+               HasEditorBuffers, DEFAULT_SYN_HI_FILE_EXT};
 
 use crate::ex_pitch::Id;
 
@@ -48,7 +45,8 @@ pub struct State {
 }
 
 pub mod state_mutator {
-    use super::*;
+    use super::{AppSignal, ComponentRegistryMap, EditorBuffer, FlexBoxId, HashMap, Id,
+                State, DEFAULT_SYN_HI_FILE_EXT, FILE_CONTENT_ARRAY};
 
     pub fn reset_editor_engine_ast_cache(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
@@ -68,7 +66,7 @@ pub mod state_mutator {
             state.current_slide_index += 1;
             state
                 .editor_buffers
-                .entry(FlexBoxId::from(Id::Editor as u8))
+                .entry(FlexBoxId::from(Id::Editor))
                 .and_modify(|it| {
                     it.set_lines(get_slide_content(state.current_slide_index));
                     reset_editor_engine_ast_cache(component_registry_map);
@@ -84,7 +82,7 @@ pub mod state_mutator {
             state.current_slide_index -= 1;
             state
                 .editor_buffers
-                .entry(FlexBoxId::from(Id::Editor as u8))
+                .entry(FlexBoxId::from(Id::Editor))
                 .and_modify(|it| {
                     it.set_lines(get_slide_content(state.current_slide_index));
                     reset_editor_engine_ast_cache(component_registry_map);
@@ -123,7 +121,7 @@ pub mod state_mutator {
 }
 
 mod state_impl {
-    use super::*;
+    use super::{state_mutator, EditorBuffer, FlexBoxId, HasEditorBuffers, State};
 
     impl Default for State {
         fn default() -> Self { state_mutator::get_initial_state() }
@@ -159,7 +157,7 @@ pub enum AppSignal {
 }
 
 mod debug_format_helpers {
-    use super::*;
+    use super::{Debug, Formatter, Result, State};
 
     impl Debug for State {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

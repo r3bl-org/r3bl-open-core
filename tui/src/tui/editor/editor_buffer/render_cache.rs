@@ -30,12 +30,7 @@
 use std::ops::{Deref, DerefMut};
 
 use super::EditorBuffer;
-use crate::{engine_public_api,
-            EditorEngine,
-            HasFocus,
-            RenderArgs,
-            RenderOps,
-            ScrOfs,
+use crate::{engine_public_api, EditorEngine, HasFocus, RenderArgs, RenderOps, ScrOfs,
             Size};
 
 pub(in crate::tui::editor::editor_buffer) mod key {
@@ -93,7 +88,9 @@ pub struct RenderCache {
 }
 
 mod render_cache_impl_block {
-    use super::{Deref, RenderCache, cache_entry, DerefMut, Key, RenderOps, CacheEntry, EditorBuffer, EditorEngine, Size, HasFocus, UseRenderCache, engine_public_api, RenderArgs};
+    use super::{cache_entry, engine_public_api, CacheEntry, Deref, DerefMut,
+                EditorBuffer, EditorEngine, HasFocus, Key, RenderArgs, RenderCache,
+                RenderOps, Size, UseRenderCache};
 
     impl Deref for RenderCache {
         type Target = Option<cache_entry::CacheEntry>;

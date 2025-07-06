@@ -15,25 +15,10 @@
  *   limitations under the License.
  */
 
-use super::{FlexBox,
-            FlexBoxProps,
-            LayoutDirection,
-            LayoutManagement,
-            PerformPositioningAndSizing,
-            SurfaceProps};
-use crate::{height,
-            throws,
-            unwrap_or_err,
-            width,
-            CommonResult,
-            InlineVec,
-            LayoutError,
-            LayoutErrorType,
-            Pos,
-            RenderPipeline,
-            ReqSizePc,
-            Size,
-            TuiStyle,
+use super::{FlexBox, FlexBoxProps, LayoutDirection, LayoutManagement,
+            PerformPositioningAndSizing, SurfaceProps};
+use crate::{height, throws, unwrap_or_err, width, CommonResult, InlineVec, LayoutError,
+            LayoutErrorType, Pos, RenderPipeline, ReqSizePc, Size, TuiStyle,
             TuiStylesheet};
 
 /// Represents a rectangular area of the terminal screen, and not necessarily the full

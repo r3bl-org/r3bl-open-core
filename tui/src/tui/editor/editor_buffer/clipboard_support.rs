@@ -18,12 +18,8 @@
 use std::error::Error;
 
 use super::EditorBuffer;
-use crate::{editor_engine::engine_internal_api,
-            md_parser::constants::NEW_LINE,
-            usize,
-            EditorArgsMut,
-            InlineVecStr,
-            DEBUG_TUI_COPY_PASTE};
+use crate::{editor_engine::engine_internal_api, md_parser::constants::NEW_LINE, usize,
+            EditorArgsMut, InlineVecStr, DEBUG_TUI_COPY_PASTE};
 
 pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 

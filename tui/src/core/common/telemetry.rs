@@ -21,12 +21,7 @@ use std::{collections::HashMap,
 use smallstr::SmallString;
 use strum_macros::{Display, EnumString};
 
-use crate::{glyphs,
-            Pc,
-            RateLimitStatus,
-            RateLimiter,
-            RingBuffer as _,
-            RingBufferStack,
+use crate::{glyphs, Pc, RateLimitStatus, RateLimiter, RingBuffer, RingBufferStack,
             TimeDuration};
 
 pub mod telemetry_sizing {
@@ -150,7 +145,8 @@ macro_rules! telemetry_record {
 }
 
 pub mod telemetry_constructor {
-    use super::{Duration, telemetry_default_constants, Telemetry, RingBufferStack, Instant, TelemetryHudReport, RateLimiter, TimeDuration};
+    use super::{telemetry_default_constants, Duration, Instant, RateLimiter,
+                RingBufferStack, Telemetry, TelemetryHudReport, TimeDuration};
 
     #[derive(Debug)]
     pub struct ResponseTimesRingBufferOptions {
@@ -223,7 +219,7 @@ pub mod telemetry_constructor {
 }
 
 mod mutator {
-    use super::*;
+    use super::{Instant, RingBuffer, Telemetry, TelemetryAtom, TelemetryAtomHint};
 
     #[derive(Debug, PartialEq)]
     pub struct RecordStartDropHandle<'a, const N: usize> {
@@ -289,7 +285,8 @@ mod mutator {
 }
 
 mod calculator {
-    use super::*;
+    use super::{telemetry_default_constants, Duration, HashMap, Pc, RingBuffer,
+                Telemetry, TelemetryAtom, TelemetryAtomHint, TimeDuration};
 
     impl<const N: usize> Telemetry<N> {
         #[must_use]
@@ -455,7 +452,8 @@ mod calculator {
 }
 
 mod report_generator {
-    use super::*;
+    use super::{Instant, RateLimitStatus, RingBuffer, Telemetry, TelemetryHudReport,
+                TimeDuration};
 
     impl<const N: usize> Telemetry<N> {
         /// Generate a report of the response times.

@@ -18,29 +18,10 @@
 use std::cmp::{self, Ordering};
 
 use super::{selection_list::RowLocationInSelectionList, EditorBuffer};
-use crate::{caret_scr_adj,
-            caret_scroll_index,
-            col,
-            dim,
-            fg_blue,
-            fg_cyan,
-            fg_green,
-            fg_magenta,
-            fg_red,
-            fg_yellow,
-            height,
-            inline_string,
-            row,
-            underline,
-            usize,
-            width,
-            CaretLocationInRange,
-            CaretMovementDirection,
-            CaretScrAdj,
-            ChUnitPrimitiveType,
-            DirectionChangeResult,
-            SelectionRange,
-            Size,
+use crate::{caret_scr_adj, caret_scroll_index, col, dim, fg_blue, fg_cyan, fg_green,
+            fg_magenta, fg_red, fg_yellow, height, inline_string, row, underline, usize,
+            width, CaretLocationInRange, CaretMovementDirection, CaretScrAdj,
+            ChUnitPrimitiveType, DirectionChangeResult, SelectionRange, Size,
             DEBUG_TUI_COPY_PASTE};
 
 /// Usually [`EditorBuffer::get_mut()`] and [`EditorBuffer::get_mut_no_drop()`] need a
@@ -221,7 +202,7 @@ pub fn handle_selection_multiline_caret_movement(
     prev: CaretScrAdj,
     curr: CaretScrAdj,
 ) {
-    use CaretMovementDirection::{Overlap, Up, Down};
+    use CaretMovementDirection::{Down, Overlap, Up};
 
     // Validate preconditions.
     let caret_vertical_movement_direction =
@@ -290,7 +271,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
     prev: CaretScrAdj,
     curr: CaretScrAdj,
 ) {
-    use Ordering::{Less, Greater, Equal};
+    use Ordering::{Equal, Greater, Less};
 
     // Precondition check: Only run if the row previous and current row indices are same.
     if curr.row_index != prev.row_index {
@@ -374,7 +355,11 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
 }
 
 mod multiline_select_helpers {
-    use super::{inline_string, EditorBuffer, CaretScrAdj, SelectionRange, CaretMovementDirection, DEBUG_TUI_COPY_PASTE, fg_red, fg_cyan, fg_magenta, fg_green, fg_blue, fg_yellow, RowLocationInSelectionList, DirectionChangeResult, multiline_select_helpers, caret_scr_adj, caret_scroll_index, col, dummy_viewport, cmp};
+    use super::{caret_scr_adj, caret_scroll_index, cmp, col, dummy_viewport, fg_blue,
+                fg_cyan, fg_green, fg_magenta, fg_red, fg_yellow, inline_string,
+                multiline_select_helpers, CaretMovementDirection, CaretScrAdj,
+                DirectionChangeResult, EditorBuffer, RowLocationInSelectionList,
+                SelectionRange, DEBUG_TUI_COPY_PASTE};
 
     // XMARK: Impl multiline selection changes (up/down, and later page up/page down)
 

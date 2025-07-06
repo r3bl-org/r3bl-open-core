@@ -22,13 +22,8 @@ use std::{collections::{hash_map::Entry, HashMap},
 use smallvec::smallvec;
 
 use super::{paint::paint, render_op::RenderOp, ZOrder};
-use crate::{ok,
-            tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED,
-            FlushKind,
-            GlobalData,
-            InlineVec,
-            LockedOutputDevice,
-            RenderOps};
+use crate::{ok, tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED, FlushKind, GlobalData, InlineVec,
+            LockedOutputDevice, RenderOps};
 
 /// Macro to make it easier to create a [`RenderPipeline`]. It works w/ [`RenderOp`]
 /// items. It allows them to be added in sequence, and then flushed at the end.

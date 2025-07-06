@@ -38,21 +38,12 @@ use nom::{branch::alt,
           combinator::{not, recognize},
           multi::many1,
           sequence::preceded,
-          IResult,
-          Parser};
+          IResult, Parser};
 
-use crate::{fg_blue,
-            fg_magenta,
-            fg_red,
-            md_parser::constants::{BACK_TICK,
-                                   LEFT_BRACKET,
-                                   LEFT_IMAGE,
-                                   NEW_LINE,
-                                   NEW_LINE_CHAR,
-                                   STAR,
-                                   UNDERSCORE},
-            specialized_parser_delim_matchers,
-            DEBUG_MD_PARSER_STDOUT};
+use crate::{fg_blue, fg_magenta, fg_red,
+            md_parser::constants::{BACK_TICK, LEFT_BRACKET, LEFT_IMAGE, NEW_LINE,
+                                   NEW_LINE_CHAR, STAR, UNDERSCORE},
+            specialized_parser_delim_matchers, DEBUG_MD_PARSER_STDOUT};
 
 // XMARK: Lowest priority parser for "plain text" Markdown fragment
 

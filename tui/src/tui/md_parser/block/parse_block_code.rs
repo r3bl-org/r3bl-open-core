@@ -19,13 +19,11 @@ use nom::{branch::alt,
           bytes::complete::{is_not, tag, take_until},
           combinator::{map, opt},
           sequence::{preceded, terminated},
-          IResult,
-          Parser};
+          IResult, Parser};
 
 use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
             md_parser_ng::as_str_slice::compatibility::convert_into_code_block_lines,
-            CodeBlockLine,
-            List};
+            CodeBlockLine, List};
 
 /// Sample inputs:
 ///

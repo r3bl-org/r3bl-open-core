@@ -21,22 +21,10 @@ pub mod mock_real_objects_for_editor {
 
     use tokio::sync::mpsc;
 
-    use crate::{col,
-                core::test_fixtures::StdoutMock,
-                height,
-                row,
-                telemetry::telemetry_sizing::TelemetryReportLineStorage,
-                width,
-                EditorEngine,
-                FlexBox,
-                GlobalData,
-                OffscreenBufferPool,
-                OutputDevice,
-                OutputDeviceExt,
-                PartialFlexBox,
-                Size,
-                SpinnerHelper,
-                CHANNEL_WIDTH};
+    use crate::{col, core::test_fixtures::StdoutMock, height, row,
+                telemetry::telemetry_sizing::TelemetryReportLineStorage, width,
+                EditorEngine, FlexBox, GlobalData, OffscreenBufferPool, OutputDevice,
+                OutputDeviceExt, PartialFlexBox, Size, SpinnerHelper, CHANNEL_WIDTH};
 
     #[must_use]
     pub fn make_global_data<S, AS>(
@@ -96,11 +84,8 @@ pub mod mock_real_objects_for_editor {
 
 #[cfg(test)]
 pub mod assert {
-    use crate::{assert_eq2,
-                editor_engine::engine_internal_api,
-                EditorBuffer,
-                GCStringExt as _,
-                SegString};
+    use crate::{assert_eq2, editor_engine::engine_internal_api, EditorBuffer,
+                GCStringExt as _, SegString};
 
     pub fn none_is_at_caret(buffer: &EditorBuffer) {
         assert_eq2!(buffer.string_at_caret(), None);

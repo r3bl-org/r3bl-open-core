@@ -14,26 +14,15 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_tui::{ASText,
-               CommandRunResult,
-               CommonResult,
-               DefaultIoDevices,
-               InlineString,
-               InlineVec,
-               ItemsOwned,
-               ast,
-               ast_line,
-               choose,
-               height,
+use r3bl_tui::{ASText, CommandRunResult, CommonResult, DefaultIoDevices, InlineString,
+               InlineVec, ItemsOwned, ast, ast_line, choose, height,
                readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 
-use crate::{AnalyticsAction,
-            common,
+use crate::{AnalyticsAction, common,
             common::ui_templates::{prefix_multi_select_instruction_header,
                                    prefix_single_select_instruction_header},
-            giti::{BranchDeleteDetails,
-                   CommandRunDetails,
+            giti::{BranchDeleteDetails, CommandRunDetails,
                    git::{self},
                    local_branch_ops::BranchExists,
                    ui_str::{self}},
@@ -44,7 +33,7 @@ pub async fn handle_branch_delete_command(
     maybe_branch_name: Option<String>,
 ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
     report_analytics::start_task_to_generate_event(
-        "".to_string(),
+        String::new(),
         AnalyticsAction::GitiBranchDelete,
     );
 
@@ -127,7 +116,7 @@ pub async fn handle_branch_delete_command(
 }
 
 mod details {
-    use super::{CommandRunDetails, BranchDeleteDetails, ItemsOwned};
+    use super::{BranchDeleteDetails, CommandRunDetails, ItemsOwned};
 
     pub fn empty() -> CommandRunDetails {
         let it = BranchDeleteDetails {
@@ -151,7 +140,10 @@ mod details {
 mod user_interaction {
     use r3bl_tui::inline_vec;
 
-    use super::{ast_line, smallvec, ItemsOwned, CommonResult, ast, ui_str, common, prefix_multi_select_instruction_header, DefaultIoDevices, choose, height, HowToChoose, StyleSheet, InlineString, parse_user_choice, InlineVec, ASText, prefix_single_select_instruction_header};
+    use super::{ASText, CommonResult, DefaultIoDevices, HowToChoose, InlineString,
+                InlineVec, ItemsOwned, StyleSheet, ast, ast_line, choose, common,
+                height, parse_user_choice, prefix_multi_select_instruction_header,
+                prefix_single_select_instruction_header, smallvec, ui_str};
 
     pub async fn select_branches_to_delete(
         branch_options: ItemsOwned,
@@ -262,7 +254,8 @@ mod user_interaction {
 }
 
 mod command_execute {
-    use super::{ItemsOwned, CommonResult, CommandRunResult, CommandRunDetails, git, ui_str, details};
+    use super::{CommandRunDetails, CommandRunResult, CommonResult, ItemsOwned, details,
+                git, ui_str};
 
     pub async fn delete_selected_branches(
         branches: &ItemsOwned,

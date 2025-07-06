@@ -19,25 +19,11 @@ use std::{fmt::Debug,
           ops::{Add, Deref, DerefMut}};
 
 use smallvec::SmallVec;
-use unicode_segmentation::UnicodeSegmentation as _;
+use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use crate::{ch,
-            col,
-            join,
-            pad_fmt,
-            seg_index,
-            seg_width,
-            usize,
-            width,
-            ByteIndex,
-            ChUnit,
-            ColIndex,
-            ColWidth,
-            InlineString,
-            InlineVecStr,
-            Seg,
-            SegIndex,
+use crate::{ch, col, join, pad_fmt, seg_index, seg_width, usize, width, ByteIndex,
+            ChUnit, ColIndex, ColWidth, InlineString, InlineVecStr, Seg, SegIndex,
             SegWidth};
 
 /// `GCString` represents a [String] as a sequence of grapheme cluster segments, and *not*
@@ -236,7 +222,7 @@ pub struct GCString {
 }
 
 mod iterator {
-    use super::*;
+    use super::{GCString, Seg};
 
     #[derive(Debug)]
     pub struct GCStringIterator<'a> {
@@ -410,7 +396,9 @@ mod sizing {
 
 /// Fundamental methods for working with grapheme strings.
 mod basic {
-    use super::*;
+    use super::{ch, col, seg_width, sizing, width, ChUnit, ColWidth, Deref, DerefMut,
+                GCString, Seg, SegIndex, SegWidth, UnicodeSegmentation,
+                UnicodeWidthChar, UnicodeWidthStr};
 
     impl AsRef<str> for GCString {
         fn as_ref(&self) -> &str { &self.string }
@@ -508,9 +496,9 @@ mod basic {
         /// Given the grapheme cluster segment index, return the corresponding [Seg]
         /// struct.
         ///
-        /// The `index` argument can be different types like [`ColIndex`] and
-        /// [`ByteIndex`], which can both be converted to [`SegIndex`] by [Add]ing
-        /// it to a [`GCString`].
+        /// The `index` argument can be different types like [`crate::ColIndex`] and
+        /// [`crate::ByteIndex`], which can both be converted to [`SegIndex`] by
+        /// [`std::ops::Add`]ing it to a [`GCString`].
         ///
         /// Here's a visual depiction of the different indices.
         ///
@@ -1266,16 +1254,8 @@ mod clip {
 
 /// Methods for easily modifying grapheme cluster segments for common TUI use cases.
 mod mutate {
-    use super::{ch,
-                join,
-                seg_width,
-                usize,
-                width,
-                ColIndex,
-                ColWidth,
-                GCString,
-                InlineString,
-                InlineVecStr};
+    use super::{ch, join, seg_width, usize, width, ColIndex, ColWidth, GCString,
+                InlineString, InlineVecStr};
 
     impl GCString {
         /// Inserts the given `chunk` in the correct position of the `string`, and returns

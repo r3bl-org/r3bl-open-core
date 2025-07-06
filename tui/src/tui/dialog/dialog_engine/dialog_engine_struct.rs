@@ -19,23 +19,10 @@ use std::fmt::Debug;
 
 use smallvec::smallvec;
 
-use crate::{get_terminal_width_no_default,
-            row,
-            u8,
-            width,
-            Ansi256GradientIndex,
-            ColorWheel,
-            ColorWheelConfig,
-            ColorWheelSpeed,
-            DisplayConstants,
-            EditorEngine,
-            EditorEngineConfig,
-            PartialFlexBox,
-            RowHeight,
-            RowIndex,
-            Size,
-            SurfaceBounds,
-            TuiStyle};
+use crate::{get_terminal_width_no_default, row, u8, width, Ansi256GradientIndex,
+            ColorWheel, ColorWheelConfig, ColorWheelSpeed, DisplayConstants,
+            EditorEngine, EditorEngineConfig, PartialFlexBox, RowHeight, RowIndex, Size,
+            SurfaceBounds, TuiStyle};
 
 /// Please do not construct this struct directly, and use [new](DialogEngine::new)
 /// instead.

@@ -30,7 +30,7 @@ pub async fn handle_branch_new_command(
 }
 
 mod details {
-    use super::{CommandRunDetails, BranchNewDetails};
+    use super::{BranchNewDetails, CommandRunDetails};
 
     pub fn empty() -> CommandRunDetails {
         CommandRunDetails::BranchNew(BranchNewDetails {
@@ -46,7 +46,8 @@ mod details {
 }
 
 mod command_execute {
-    use super::{CommonResult, CommandRunResult, CommandRunDetails, local_branch_ops, ui_str, details, git};
+    use super::{CommandRunDetails, CommandRunResult, CommonResult, details, git,
+                local_branch_ops, ui_str};
 
     pub async fn create_new_branch(
         branch_name: String,
@@ -86,7 +87,8 @@ mod command_execute {
 }
 
 mod user_interaction {
-    use super::{CommonResult, CommandRunResult, CommandRunDetails, ui_str, ReadlineAsyncContext, ReadlineEvent, command_execute, details};
+    use super::{CommandRunDetails, CommandRunResult, CommonResult, ReadlineAsyncContext,
+                ReadlineEvent, command_execute, details, ui_str};
 
     pub async fn prompt_for_branch_name()
     -> CommonResult<CommandRunResult<CommandRunDetails>> {

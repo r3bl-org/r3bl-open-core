@@ -23,8 +23,7 @@ use std::num::ParseIntError;
 
 use nom::{bytes::complete::{tag, take_while_m_n},
           combinator::map_res,
-          IResult,
-          Parser};
+          IResult, Parser};
 
 use super::RgbValue;
 
@@ -37,7 +36,7 @@ pub fn parse_hex_color(input: &str) -> IResult<&str, RgbValue> {
 }
 
 mod hex_primary {
-    use super::{IResult, Parser, map_res, take_while_m_n, ParseIntError};
+    use super::{map_res, take_while_m_n, IResult, ParseIntError, Parser};
 
     pub fn parse(input: &str) -> IResult<&str, u8> {
         map_res(take_while_m_n(2, 2, is_hex_digit), from_hex).parse(input)

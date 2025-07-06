@@ -26,8 +26,8 @@
 ///
 /// Example:
 ///
-/// ```ignore
-/// use r3bl_tui_core::{TuiColor, TuiStyle, RgbValue};
+/// ```no_run
+/// use r3bl_tui::{TuiColor, TuiStyle, RgbValue, new_style};
 /// let color_bg = TuiColor::Rgb(RgbValue::from_hex("#076DEB"));
 /// let color_fg = TuiColor::Rgb(RgbValue::from_hex("#E9C940"));
 /// let style = new_style!(

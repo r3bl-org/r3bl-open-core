@@ -202,18 +202,10 @@ fn validate_horizontal_scroll(args: EditorArgsMut<'_>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{caret_raw,
-                col,
-                editor::editor_test_fixtures::mock_real_objects_for_editor,
-                height,
-                row,
-                scr_ofs,
-                width,
-                EditorBuffer,
-                EditorEngine,
-                EditorEngineConfig,
-                LineMode,
-                DEFAULT_SYN_HI_FILE_EXT};
+    use crate::{caret_raw, col,
+                editor::editor_test_fixtures::mock_real_objects_for_editor, height, row,
+                scr_ofs, width, EditorBuffer, EditorEngine, EditorEngineConfig,
+                LineMode, DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
     fn test_validate_vertical_scroll_within_viewport() {

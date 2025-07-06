@@ -20,19 +20,9 @@ use std::fmt::{Debug, Formatter};
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{ok,
-            spinner_impl,
-            telemetry::telemetry_sizing::TelemetryReportLineStorage,
-            ChUnit,
-            CommonResult,
-            InlineString,
-            OffscreenBuffer,
-            OffscreenBufferPool,
-            OutputDevice,
-            Size,
-            SpinnerStyle,
-            TelemetryHudReport,
-            DEBUG_TUI_COMPOSITOR,
+use crate::{ok, spinner_impl, telemetry::telemetry_sizing::TelemetryReportLineStorage,
+            ChUnit, CommonResult, InlineString, OffscreenBuffer, OffscreenBufferPool,
+            OutputDevice, Size, SpinnerStyle, TelemetryHudReport, DEBUG_TUI_COMPOSITOR,
             DEBUG_TUI_MOD};
 
 /// This is a global data structure that holds state for the entire application

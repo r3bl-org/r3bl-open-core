@@ -17,56 +17,17 @@
 
 use std::fmt::Debug;
 
-use r3bl_tui::{box_end,
-               box_start,
-               col,
-               glyphs,
-               height,
-               inline_string,
-               new_style,
-               render_component_in_current_box,
-               render_ops,
-               render_tui_styled_texts_into,
-               req_size_pc,
-               row,
-               send_signal,
-               surface,
-               throws,
-               throws_with_return,
-               tui_color,
-               tui_styled_text,
-               tui_styled_texts,
-               tui_stylesheet,
-               App,
-               BoxedSafeApp,
-               CommonResult,
-               ComponentRegistry,
-               ComponentRegistryMap,
-               EditMode,
-               EditorComponent,
-               EditorEngineConfig,
-               EventPropagation,
-               FlexBoxId,
-               GlobalData,
-               HasFocus,
-               InputEvent,
-               Key,
-               KeyPress,
-               LayoutDirection,
-               LayoutManagement,
-               ModifierKeysMask,
-               PerformPositioningAndSizing,
-               RenderOp,
-               RenderPipeline,
-               Size,
-               Surface,
-               SurfaceProps,
-               SurfaceRender,
-               TerminalWindowMainThreadSignal,
-               TuiStylesheet,
-               ZOrder,
-               DEBUG_TUI_MOD,
-               SPACER_GLYPH};
+use r3bl_tui::{box_end, box_start, col, glyphs, height, inline_string, new_style,
+               render_component_in_current_box, render_ops,
+               render_tui_styled_texts_into, req_size_pc, row, send_signal, surface,
+               throws, throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
+               tui_stylesheet, App, BoxedSafeApp, CommonResult, ComponentRegistry,
+               ComponentRegistryMap, EditMode, EditorComponent, EditorEngineConfig,
+               EventPropagation, FlexBoxId, GlobalData, HasFocus, InputEvent, Key,
+               KeyPress, LayoutDirection, LayoutManagement, ModifierKeysMask,
+               PerformPositioningAndSizing, RenderOp, RenderPipeline, Size, Surface,
+               SurfaceProps, SurfaceRender, TerminalWindowMainThreadSignal,
+               TuiStylesheet, ZOrder, DEBUG_TUI_MOD, SPACER_GLYPH};
 use tokio::sync::mpsc::Sender;
 
 use crate::ex_pitch::state::{state_mutator, AppSignal, State, FILE_CONTENT_ARRAY};
@@ -80,7 +41,7 @@ pub enum Id {
 }
 
 mod id_impl {
-    use super::*;
+    use super::{FlexBoxId, Id};
 
     impl From<Id> for u8 {
         fn from(id: Id) -> u8 { id as u8 }
@@ -95,7 +56,7 @@ mod id_impl {
 pub struct AppMain;
 
 mod constructor {
-    use super::*;
+    use super::{AppMain, AppSignal, BoxedSafeApp, State, DEBUG_TUI_MOD};
 
     impl Default for AppMain {
         fn default() -> Self {
@@ -117,7 +78,13 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use super::*;
+    use super::{col, height, hud, perform_layout, populate_component_registry, row,
+                send_signal, state_mutator, status_bar, stylesheet, surface,
+                throws_with_return, App, AppMain, AppSignal, CommonResult,
+                ComponentRegistry, ComponentRegistryMap, EventPropagation, GlobalData,
+                HasFocus, InputEvent, Key, KeyPress, LayoutManagement, ModifierKeysMask,
+                RenderPipeline, State, SurfaceProps, SurfaceRender,
+                TerminalWindowMainThreadSignal};
 
     impl App for AppMain {
         type S = State;
@@ -155,7 +122,7 @@ mod app_main_impl_app_trait {
                     TerminalWindowMainThreadSignal::ApplyAppSignal(AppSignal::NextSlide)
                 );
                 return Ok(EventPropagation::ConsumedRender);
-            };
+            }
 
             // Ctrl + p => previous slide.
             if input_event.matches_keypress(KeyPress::WithModifiers {
@@ -168,7 +135,7 @@ mod app_main_impl_app_trait {
                     TerminalWindowMainThreadSignal::ApplyAppSignal(AppSignal::PrevSlide)
                 );
                 return Ok(EventPropagation::ConsumedRender);
-            };
+            }
 
             // If modal not activated, route the input event to the focused component.
             ComponentRegistry::route_event_to_focused_component(
@@ -193,12 +160,12 @@ mod app_main_impl_app_trait {
                 match action {
                     AppSignal::Noop => {}
                     AppSignal::NextSlide => {
-                        state_mutator::next_slide(state, component_registry_map)
+                        state_mutator::next_slide(state, component_registry_map);
                     }
                     AppSignal::PrevSlide => {
-                        state_mutator::prev_slide(state, component_registry_map)
+                        state_mutator::prev_slide(state, component_registry_map);
                     }
-                };
+                }
                 EventPropagation::ConsumedRender
             });
         }
@@ -262,7 +229,10 @@ mod app_main_impl_app_trait {
 }
 
 mod perform_layout {
-    use super::*;
+    use super::{box_end, box_start, render_component_in_current_box, req_size_pc,
+                throws, AppMain, AppSignal, CommonResult, ComponentRegistryMap,
+                FlexBoxId, GlobalData, HasFocus, Id, LayoutDirection, LayoutManagement,
+                PerformPositioningAndSizing, State, Surface, SurfaceRender};
 
     pub struct ContainerSurfaceRender<'a> {
         pub _app: &'a mut AppMain,
@@ -302,7 +272,10 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use super::*;
+    use super::{glyphs, inline_string, send_signal, AppSignal, ComponentRegistry,
+                ComponentRegistryMap, EditMode, EditorComponent, EditorEngineConfig,
+                FlexBoxId, HasFocus, Id, Sender, State, TerminalWindowMainThreadSignal,
+                DEBUG_TUI_MOD};
 
     pub fn create_components(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
@@ -360,7 +333,8 @@ mod populate_component_registry {
 }
 
 mod stylesheet {
-    use super::*;
+    use super::{new_style, throws_with_return, tui_stylesheet, CommonResult, Id,
+                TuiStylesheet};
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
@@ -378,7 +352,9 @@ mod stylesheet {
 }
 
 mod hud {
-    use super::*;
+    use super::{col, new_style, render_ops, render_tui_styled_texts_into, row,
+                tui_color, tui_styled_text, tui_styled_texts, RenderOp, RenderPipeline,
+                Size, ZOrder, SPACER_GLYPH};
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
@@ -410,7 +386,9 @@ mod hud {
 }
 
 mod status_bar {
-    use super::*;
+    use super::{col, new_style, render_ops, render_tui_styled_texts_into, tui_color,
+                tui_styled_text, tui_styled_texts, RenderOp, RenderPipeline, Size,
+                State, ZOrder, FILE_CONTENT_ARRAY, SPACER_GLYPH};
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size, state: &State) {

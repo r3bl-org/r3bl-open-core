@@ -13,7 +13,7 @@ fn_single_line = true
 
 # imports
 imports_indent = "Visual"
-imports_layout = "HorizontalVertical"
+imports_layout = "Mixed"
 imports_granularity = "Crate"
 group_imports = "StdExternalCrate"
 reorder_imports = true

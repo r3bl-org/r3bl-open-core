@@ -153,50 +153,23 @@ use std::fmt::{self};
 
 use chrono::Local;
 use const_format::formatcp;
-use custom_event_formatter_constants::{BODY_FG_COLOR,
-                                       BODY_FG_COLOR_BRIGHT,
-                                       DEBUG_FG_COLOR,
-                                       DEBUG_SIGIL,
-                                       ENTRY_SEPARATOR_CHAR,
-                                       ERROR_FG_COLOR,
-                                       ERROR_SIGIL,
-                                       FIRST_LINE_PREFIX,
-                                       HEADING_BG_COLOR,
-                                       INFO_FG_COLOR,
-                                       INFO_SIGIL,
-                                       LEVEL_SUFFIX,
-                                       SUBSEQUENT_LINE_PREFIX,
-                                       TRACE_FG_COLOR,
-                                       TRACE_SIGIL,
-                                       WARN_FG_COLOR,
-                                       WARN_SIGIL};
+use custom_event_formatter_constants::{BODY_FG_COLOR, BODY_FG_COLOR_BRIGHT,
+                                       DEBUG_FG_COLOR, DEBUG_SIGIL,
+                                       ENTRY_SEPARATOR_CHAR, ERROR_FG_COLOR,
+                                       ERROR_SIGIL, FIRST_LINE_PREFIX, HEADING_BG_COLOR,
+                                       INFO_FG_COLOR, INFO_SIGIL, LEVEL_SUFFIX,
+                                       SUBSEQUENT_LINE_PREFIX, TRACE_FG_COLOR,
+                                       TRACE_SIGIL, WARN_FG_COLOR, WARN_SIGIL};
 use textwrap::{wrap, Options, WordSeparator};
 use tracing::{field::{Field, Visit},
-              Event,
-              Subscriber};
+              Event, Subscriber};
 use tracing_subscriber::{fmt::{FormatEvent, FormatFields},
                          registry::LookupSpan};
 
-use crate::{ast,
-            fg_color,
-            get_terminal_width,
-            glyphs,
-            inline_string,
-            new_style,
-            pad_fmt,
-            remove_escaped_quotes,
-            truncate_from_right,
-            tui_color,
-            tui_style_attrib,
-            usize,
-            width,
-            ColWidth,
-            ColorWheel,
-            GCString,
-            InlineString,
-            OrderedMap,
-            RgbValue,
-            TuiColor};
+use crate::{ast, fg_color, get_terminal_width, glyphs, inline_string, new_style,
+            pad_fmt, remove_escaped_quotes, truncate_from_right, tui_color,
+            tui_style_attrib, usize, width, ColWidth, ColorWheel, GCString,
+            InlineString, OrderedMap, RgbValue, TuiColor};
 
 /// This is the "marker" struct that is used to register this formatter with the
 /// `tracing_subscriber` crate. Various traits are implemented for this struct.
@@ -247,41 +220,13 @@ pub mod custom_event_formatter_constants {
 }
 
 mod helpers {
-    use super::{ast,
-                fmt,
-                helpers,
-                inline_string,
-                new_style,
-                remove_escaped_quotes,
-                truncate_from_right,
-                tui_style_attrib,
-                width,
-                wrap,
-                ColWidth,
-                ColorWheel,
-                Event,
-                FieldContentParams,
-                FormatFields,
-                GCString,
-                InlineString,
-                Local,
-                LookupSpan,
-                Subscriber,
-                TuiColor,
-                BODY_FG_COLOR,
-                BODY_FG_COLOR_BRIGHT,
-                DEBUG_FG_COLOR,
-                DEBUG_SIGIL,
-                ERROR_FG_COLOR,
-                ERROR_SIGIL,
-                HEADING_BG_COLOR,
-                INFO_FG_COLOR,
-                INFO_SIGIL,
-                LEVEL_SUFFIX,
-                TRACE_FG_COLOR,
-                TRACE_SIGIL,
-                WARN_FG_COLOR,
-                WARN_SIGIL};
+    use super::{ast, fmt, helpers, inline_string, new_style, remove_escaped_quotes,
+                truncate_from_right, tui_style_attrib, width, wrap, ColWidth,
+                ColorWheel, Event, FieldContentParams, FormatFields, GCString,
+                InlineString, Local, LookupSpan, Subscriber, TuiColor, BODY_FG_COLOR,
+                BODY_FG_COLOR_BRIGHT, DEBUG_FG_COLOR, DEBUG_SIGIL, ERROR_FG_COLOR,
+                ERROR_SIGIL, HEADING_BG_COLOR, INFO_FG_COLOR, INFO_SIGIL, LEVEL_SUFFIX,
+                TRACE_FG_COLOR, TRACE_SIGIL, WARN_FG_COLOR, WARN_SIGIL};
 
     /// Write formatted timestamp to the writer.
     pub fn write_timestamp(

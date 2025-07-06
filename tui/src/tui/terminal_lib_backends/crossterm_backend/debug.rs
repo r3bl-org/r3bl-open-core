@@ -17,7 +17,13 @@
 
 use std::fmt::{Formatter, Result};
 
-use crate::{DebugFormatRenderOp, RenderOp, RenderOp::{Noop, EnterRawMode, ExitRawMode, ClearScreen, ResetColor, SetFgColor, SetBgColor, ApplyColors, MoveCursorPositionAbs, MoveCursorPositionRelTo, CompositorNoClipTruncPaintTextWithAttributes, PaintTextWithAttributes}, TuiStyle};
+use crate::{DebugFormatRenderOp, RenderOp,
+            RenderOp::{ApplyColors, ClearScreen,
+                       CompositorNoClipTruncPaintTextWithAttributes, EnterRawMode,
+                       ExitRawMode, MoveCursorPositionAbs, MoveCursorPositionRelTo,
+                       Noop, PaintTextWithAttributes, ResetColor, SetBgColor,
+                       SetFgColor},
+            TuiStyle};
 
 #[derive(Debug)]
 pub struct CrosstermDebugFormatRenderOp;

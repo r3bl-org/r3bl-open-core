@@ -19,15 +19,8 @@
 mod tests {
     use crossterm::event::{KeyCode, KeyModifiers};
 
-    use crate::{assert_eq2,
-                convert_key_event,
-                crossterm_keyevent,
-                key_press,
-                throws,
-                try_convert_key_modifiers,
-                InputEvent,
-                Key,
-                ModifierKeysMask};
+    use crate::{assert_eq2, convert_key_event, crossterm_keyevent, key_press, throws,
+                try_convert_key_modifiers, InputEvent, Key, ModifierKeysMask};
 
     #[test]
     fn test_convert_key_event_into_input_event() -> Result<(), ()> {

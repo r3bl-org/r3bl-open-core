@@ -69,7 +69,7 @@ mod accessor {
 }
 
 mod adapters {
-    use super::{TimeDuration, Duration};
+    use super::{Duration, TimeDuration};
     impl std::ops::Deref for TimeDuration {
         type Target = Duration;
 
@@ -94,7 +94,7 @@ mod converters {
 }
 
 mod display_formatter {
-    use super::{ok, Display, TimeDuration, Formatter, Result};
+    use super::{ok, Display, Formatter, Result, TimeDuration};
 
     impl Display for TimeDuration {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

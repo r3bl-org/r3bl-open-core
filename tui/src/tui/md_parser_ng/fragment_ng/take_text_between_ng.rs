@@ -18,15 +18,9 @@
 use nom::{bytes::complete::{tag, take_until},
           combinator::map,
           error::ErrorKind,
-          IResult,
-          Parser};
+          IResult, Parser};
 
-use crate::{fg_green,
-            fg_red,
-            md_parser::constants::NEW_LINE,
-            AsStrSlice,
-            NErr,
-            NError,
+use crate::{fg_green, fg_red, md_parser::constants::NEW_LINE, AsStrSlice, NErr, NError,
             DEBUG_MD_PARSER_STDOUT};
 
 /// Takes the text between the start and end delimiters. Will error out if this text

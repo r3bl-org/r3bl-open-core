@@ -18,9 +18,7 @@ use std::cmp::Ordering;
 
 use crate::{handle_selection_multiline_caret_movement,
             handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document,
-            handle_selection_single_line_caret_movement,
-            CaretScrAdj,
-            EditorBuffer};
+            handle_selection_single_line_caret_movement, CaretScrAdj, EditorBuffer};
 
 #[derive(Clone, Copy, Debug)]
 pub enum SelectMode {

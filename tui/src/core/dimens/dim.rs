@@ -109,7 +109,7 @@ pub enum SufficientSize {
 }
 
 mod constructor {
-    use super::{Size, ColWidth, RowHeight, Add};
+    use super::{Add, ColWidth, RowHeight, Size};
 
     impl Size {
         pub fn new(arg_dim: impl Into<Size>) -> Self { arg_dim.into() }
@@ -157,7 +157,7 @@ mod constructor {
 }
 
 mod convert {
-    use super::{Size, ColWidth, RowHeight};
+    use super::{ColWidth, RowHeight, Size};
 
     impl From<Size> for ColWidth {
         fn from(size: Size) -> Self { size.col_width }
@@ -202,7 +202,7 @@ mod debug {
 }
 
 mod ops {
-    use super::{Sub, Size, Add, SubAssign, ChUnit, AddAssign};
+    use super::{Add, AddAssign, ChUnit, Size, Sub, SubAssign};
 
     impl Sub<Size> for Size {
         type Output = Size;

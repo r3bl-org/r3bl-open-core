@@ -15,73 +15,21 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{box_end,
-               box_start,
-               col,
-               get_tui_style,
-               glyphs,
-               height,
-               inline_string,
-               new_style,
-               ok,
-               render_component_in_current_box,
-               render_component_in_given_box,
-               render_ops,
-               render_tui_styled_texts_into,
-               req_size_pc,
-               row,
-               send_signal,
-               surface,
-               throws,
-               throws_with_return,
-               tui_color,
-               tui_styled_text,
-               tui_styled_texts,
-               tui_stylesheet,
-               width,
-               App,
-               BoxedSafeApp,
-               CommonError,
-               CommonResult,
-               ComponentRegistry,
-               ComponentRegistryMap,
-               DialogBuffer,
-               DialogChoice,
-               DialogComponent,
-               DialogEngineConfigOptions,
-               DialogEngineMode,
-               EditMode,
-               EditorBuffer,
-               EditorComponent,
-               EditorEngineConfig,
-               EventPropagation,
-               FlexBox,
-               FlexBoxId,
-               GCStringExt,
-               GlobalData,
-               HasEditorBuffers,
-               HasFocus,
-               InlineString,
-               InputEvent,
-               ItemsOwned,
-               Key,
-               KeyPress,
-               LayoutDirection,
-               LayoutManagement,
-               LineMode,
-               ModifierKeysMask,
-               PerformPositioningAndSizing,
-               RenderOp,
-               RenderPipeline,
-               Size,
-               Surface,
-               SurfaceProps,
-               SurfaceRender,
-               SyntaxHighlightMode,
-               TerminalWindowMainThreadSignal,
-               TuiStylesheet,
-               ZOrder,
-               DEBUG_TUI_MOD,
+use r3bl_tui::{box_end, box_start, col, get_tui_style, glyphs, height, inline_string,
+               new_style, ok, render_component_in_current_box,
+               render_component_in_given_box, render_ops, render_tui_styled_texts_into,
+               req_size_pc, row, send_signal, surface, throws, throws_with_return,
+               tui_color, tui_styled_text, tui_styled_texts, tui_stylesheet, width, App,
+               BoxedSafeApp, CommonError, CommonResult, ComponentRegistry,
+               ComponentRegistryMap, DialogBuffer, DialogChoice, DialogComponent,
+               DialogEngineConfigOptions, DialogEngineMode, EditMode, EditorBuffer,
+               EditorComponent, EditorEngineConfig, EventPropagation, FlexBox,
+               FlexBoxId, GCStringExt, GlobalData, HasEditorBuffers, HasFocus,
+               InlineString, InputEvent, ItemsOwned, Key, KeyPress, LayoutDirection,
+               LayoutManagement, LineMode, ModifierKeysMask,
+               PerformPositioningAndSizing, RenderOp, RenderPipeline, Size, Surface,
+               SurfaceProps, SurfaceRender, SyntaxHighlightMode,
+               TerminalWindowMainThreadSignal, TuiStylesheet, ZOrder, DEBUG_TUI_MOD,
                SPACER_GLYPH};
 use tokio::sync::mpsc::Sender;
 
@@ -102,7 +50,7 @@ pub enum Id {
 }
 
 mod id_impl {
-    use super::*;
+    use super::{FlexBoxId, Id};
 
     impl From<Id> for u8 {
         fn from(id: Id) -> u8 { id as u8 }
@@ -116,7 +64,7 @@ mod id_impl {
 pub struct AppMain;
 
 mod constructor {
-    use super::*;
+    use super::{AppMain, AppSignal, BoxedSafeApp, State, DEBUG_TUI_MOD};
 
     impl Default for AppMain {
         fn default() -> Self {
@@ -138,7 +86,12 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use super::*;
+    use super::{col, height, hud, modal_dialogs, perform_layout,
+                populate_component_registry, row, status_bar, stylesheet, surface,
+                throws_with_return, App, AppMain, AppSignal, CommonResult,
+                ComponentRegistry, ComponentRegistryMap, EventPropagation, GlobalData,
+                HasFocus, InputEvent, LayoutManagement, RenderPipeline, State,
+                SurfaceProps, SurfaceRender};
 
     impl App for AppMain {
         type S = State;
@@ -251,7 +204,11 @@ mod app_main_impl_app_trait {
 }
 
 mod modal_dialogs {
-    use super::*;
+    use super::{col, ok, throws, width, AppSignal, CommonError, CommonResult,
+                ComponentRegistry, ComponentRegistryMap, DialogBuffer, EditorBuffer,
+                FlexBoxId, GCStringExt, HasEditorBuffers, HasFocus, Id, InlineString,
+                InputEvent, ItemsOwned, Key, KeyPress, ModifierKeysMask, State,
+                DEBUG_TUI_MOD};
 
     // This runs on every keystroke, so it should be fast.
     pub fn dialog_component_update_content(state: &mut State, id: FlexBoxId) {
@@ -338,7 +295,7 @@ mod modal_dialogs {
                 FlexBoxId::from(Id::SimpleDialog),
             );
             return match activate_simple_modal(component_registry_map, has_focus, state) {
-                Ok(_) => ModalActivateResult::Yes,
+                Ok(()) => ModalActivateResult::Yes,
                 Err(err) => {
                     match err.downcast_ref::<CommonError>() {
                         // err is of concrete type CommonError.
@@ -355,7 +312,7 @@ mod modal_dialogs {
                     ModalActivateResult::No
                 }
             };
-        };
+        }
 
         // "Ctrl + k" => activate Autocomplete.
         if input_event.matches_keypress(KeyPress::WithModifiers {
@@ -372,7 +329,7 @@ mod modal_dialogs {
                 has_focus,
                 state,
             ) {
-                Ok(_) => ModalActivateResult::Yes,
+                Ok(()) => ModalActivateResult::Yes,
                 Err(err) => {
                     match err.downcast_ref::<CommonError>() {
                         // err is of concrete type CommonError.
@@ -389,7 +346,7 @@ mod modal_dialogs {
                     ModalActivateResult::No
                 }
             };
-        };
+        }
 
         ModalActivateResult::No
     }
@@ -397,11 +354,11 @@ mod modal_dialogs {
     /// If `input_event` matches <kbd>Ctrl+l</kbd> or <kbd>Ctrl+k</kbd>, then toggle the
     /// modal dialog.
     ///
-    /// Note that this returns a [EventPropagation::Consumed] and not
-    /// [EventPropagation::ConsumedRender] because both the following dispatched to the
+    /// Note that this returns a [`EventPropagation::Consumed`] and not
+    /// [`EventPropagation::ConsumedRender`] because both the following dispatched to the
     /// store & that will cause a rerender:
-    /// 1. [Action::SimpleDialogComponentInitializeFocused].
-    /// 2. [Action::AutocompleteDialogComponentInitializeFocused].
+    /// 1. [`Action::SimpleDialogComponentInitializeFocused`].
+    /// 2. [`Action::AutocompleteDialogComponentInitializeFocused`].
     pub fn dialog_component_initialize_focused(
         state: &mut State,
         id: FlexBoxId,
@@ -513,7 +470,11 @@ mod modal_dialogs {
 }
 
 mod perform_layout {
-    use super::*;
+    use super::{box_end, box_start, render_component_in_current_box,
+                render_component_in_given_box, req_size_pc, throws, AppMain, AppSignal,
+                CommonResult, ComponentRegistryMap, FlexBox, FlexBoxId, GlobalData,
+                HasFocus, Id, LayoutDirection, LayoutManagement,
+                PerformPositioningAndSizing, State, Surface, SurfaceRender};
 
     pub struct ContainerSurfaceRender<'a> {
         pub _app: &'a mut AppMain,
@@ -578,7 +539,12 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use super::*;
+    use super::{get_tui_style, glyphs, inline_string, modal_dialogs, send_signal,
+                stylesheet, AppSignal, ComponentRegistry, ComponentRegistryMap,
+                DialogChoice, DialogComponent, DialogEngineConfigOptions,
+                DialogEngineMode, EditMode, EditorComponent, EditorEngineConfig,
+                FlexBoxId, HasFocus, Id, LineMode, Sender, State, SyntaxHighlightMode,
+                TerminalWindowMainThreadSignal, DEBUG_TUI_MOD};
 
     pub fn create_components(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
@@ -637,33 +603,10 @@ mod populate_component_registry {
     fn insert_dialog_component_simple(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
-        let result_stylesheet = stylesheet::create_stylesheet();
-
-        let dialog_options = DialogEngineConfigOptions {
-            mode: DialogEngineMode::ModalSimple,
-            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder },
-            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle },
-            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor },
-            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel },
-            ..Default::default()
-        };
-
-        let editor_options = EditorEngineConfig {
-            multiline_mode: LineMode::SingleLine,
-            syntax_highlight: SyntaxHighlightMode::Disable,
-            edit_mode: EditMode::ReadWrite,
-        };
-
-        let boxed_dialog_component = {
-            let it = DialogComponent::new_boxed(
-                FlexBoxId::from(Id::SimpleDialog),
-                dialog_options,
-                editor_options,
-                on_dialog_press_handler,
-                on_dialog_editor_change_handler,
-            );
-
-            fn on_dialog_press_handler(
+        mod handler_fn {
+            use super::{modal_dialogs, AppSignal, DialogChoice, FlexBoxId, Id, Sender,
+                        State, TerminalWindowMainThreadSignal};
+            pub fn on_dialog_press_handler(
                 dialog_choice: DialogChoice,
                 state: &mut State,
                 _main_thread_channel_sender: &mut Sender<
@@ -690,7 +633,7 @@ mod populate_component_registry {
                 }
             }
 
-            fn on_dialog_editor_change_handler(
+            pub fn on_dialog_editor_change_handler(
                 state: &mut State,
                 _main_thread_channel_sender: &mut Sender<
                     TerminalWindowMainThreadSignal<AppSignal>,
@@ -701,9 +644,32 @@ mod populate_component_registry {
                     FlexBoxId::from(Id::SimpleDialog),
                 );
             }
+        }
 
-            it
+        let result_stylesheet = stylesheet::create_stylesheet();
+
+        let dialog_options = DialogEngineConfigOptions {
+            mode: DialogEngineMode::ModalSimple,
+            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder },
+            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle },
+            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor },
+            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel },
+            ..Default::default()
         };
+
+        let editor_options = EditorEngineConfig {
+            multiline_mode: LineMode::SingleLine,
+            syntax_highlight: SyntaxHighlightMode::Disable,
+            edit_mode: EditMode::ReadWrite,
+        };
+
+        let boxed_dialog_component = DialogComponent::new_boxed(
+            FlexBoxId::from(Id::SimpleDialog),
+            dialog_options,
+            editor_options,
+            handler_fn::on_dialog_press_handler,
+            handler_fn::on_dialog_editor_change_handler,
+        );
 
         ComponentRegistry::put(
             component_registry_map,
@@ -724,33 +690,11 @@ mod populate_component_registry {
     fn insert_dialog_component_autocomplete(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
-        let result_stylesheet = stylesheet::create_stylesheet();
+        mod handler_fn {
+            use super::{modal_dialogs, AppSignal, DialogChoice, FlexBoxId, Id, Sender,
+                        State, TerminalWindowMainThreadSignal};
 
-        let dialog_options = DialogEngineConfigOptions {
-            mode: DialogEngineMode::ModalAutocomplete,
-            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder },
-            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle },
-            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor },
-            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel },
-            ..Default::default()
-        };
-
-        let editor_options = EditorEngineConfig {
-            multiline_mode: LineMode::SingleLine,
-            syntax_highlight: SyntaxHighlightMode::Disable,
-            edit_mode: EditMode::ReadWrite,
-        };
-
-        let boxed_dialog_component = {
-            let it = DialogComponent::new_boxed(
-                FlexBoxId::from(Id::AutocompleteDialog),
-                dialog_options,
-                editor_options,
-                on_dialog_press_handler,
-                on_dialog_editor_change_handler,
-            );
-
-            fn on_dialog_press_handler(
+            pub fn on_dialog_press_handler(
                 dialog_choice: DialogChoice,
                 state: &mut State,
                 _main_thread_channel_sender: &mut Sender<
@@ -777,7 +721,7 @@ mod populate_component_registry {
                 }
             }
 
-            fn on_dialog_editor_change_handler(
+            pub fn on_dialog_editor_change_handler(
                 state: &mut State,
                 _main_thread_channel_sender: &mut Sender<
                     TerminalWindowMainThreadSignal<AppSignal>,
@@ -788,9 +732,32 @@ mod populate_component_registry {
                     FlexBoxId::from(Id::AutocompleteDialog),
                 );
             }
+        }
 
-            it
+        let result_stylesheet = stylesheet::create_stylesheet();
+
+        let dialog_options = DialogEngineConfigOptions {
+            mode: DialogEngineMode::ModalAutocomplete,
+            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder },
+            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle },
+            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor },
+            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel },
+            ..Default::default()
         };
+
+        let editor_options = EditorEngineConfig {
+            multiline_mode: LineMode::SingleLine,
+            syntax_highlight: SyntaxHighlightMode::Disable,
+            edit_mode: EditMode::ReadWrite,
+        };
+
+        let boxed_dialog_component = DialogComponent::new_boxed(
+            FlexBoxId::from(Id::AutocompleteDialog),
+            dialog_options,
+            editor_options,
+            handler_fn::on_dialog_press_handler,
+            handler_fn::on_dialog_editor_change_handler,
+        );
 
         ComponentRegistry::put(
             component_registry_map,
@@ -808,7 +775,8 @@ mod populate_component_registry {
 }
 
 mod stylesheet {
-    use super::*;
+    use super::{new_style, throws_with_return, tui_color, tui_stylesheet, CommonResult,
+                Id, TuiStylesheet};
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
@@ -850,7 +818,9 @@ mod stylesheet {
 }
 
 mod hud {
-    use super::*;
+    use super::{col, new_style, render_ops, render_tui_styled_texts_into, row,
+                tui_color, tui_styled_text, tui_styled_texts, RenderOp, RenderPipeline,
+                Size, ZOrder, SPACER_GLYPH};
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
@@ -882,7 +852,9 @@ mod hud {
 }
 
 mod status_bar {
-    use super::*;
+    use super::{col, new_style, render_ops, render_tui_styled_texts_into, tui_color,
+                tui_styled_text, tui_styled_texts, RenderOp, RenderPipeline, Size,
+                ZOrder, SPACER_GLYPH};
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {

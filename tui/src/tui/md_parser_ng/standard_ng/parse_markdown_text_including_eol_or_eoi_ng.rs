@@ -16,15 +16,9 @@
  */
 use nom::{multi::many0, IResult, Parser};
 
-use crate::{constants::NEW_LINE,
-            md_parser_types::CheckboxParsePolicy,
-            parse_inline_fragments_until_eol_or_eoi_ng,
-            AsStrSlice,
-            List,
-            MdLineFragments,
-            NErr,
-            NError,
-            NErrorKind};
+use crate::{constants::NEW_LINE, md_parser_types::CheckboxParsePolicy,
+            parse_inline_fragments_until_eol_or_eoi_ng, AsStrSlice, List,
+            MdLineFragments, NErr, NError, NErrorKind};
 
 /// Parse a single line of markdown text with inline formatting and automatic line
 /// advancement.
@@ -104,7 +98,9 @@ pub fn parse_line_text_advance_ng(
 }
 
 mod inner {
-    use super::{AsStrSlice, IResult, MdLineFragments, NErr, NError, NErrorKind, Parser, many0, parse_inline_fragments_until_eol_or_eoi_ng, CheckboxParsePolicy, List};
+    use super::{many0, parse_inline_fragments_until_eol_or_eoi_ng, AsStrSlice,
+                CheckboxParsePolicy, IResult, List, MdLineFragments, NErr, NError,
+                NErrorKind, Parser};
 
     /// Parse a single line of markdown text [`MdLineFragments`] not terminated by EOL [`NEW_LINE`].
     #[rustfmt::skip]
@@ -246,11 +242,7 @@ mod tests_inner_without_new_line {
 #[cfg(test)]
 mod tests_parse_markdown_text_including_eol_or_eoi {
     use super::*;
-    use crate::{as_str_slice_test_case,
-                assert_eq2,
-                list,
-                HyperlinkData,
-                MdLineFragment};
+    use crate::{as_str_slice_test_case, assert_eq2, list, HyperlinkData, MdLineFragment};
 
     #[test]
     fn test_single_line_plain_text() {

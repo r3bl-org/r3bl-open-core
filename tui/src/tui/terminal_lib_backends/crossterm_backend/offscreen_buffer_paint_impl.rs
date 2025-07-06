@@ -14,27 +14,10 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use crate::{ch,
-            col,
-            diff_chunks::PixelCharDiffChunks,
-            glyphs::SPACER_GLYPH,
-            render_ops,
-            row,
-            ColIndex,
-            Flush as _,
-            FlushKind,
-            GCString,
-            InlineString,
-            LockedOutputDevice,
-            OffscreenBuffer,
-            OffscreenBufferPaint,
-            PixelChar,
-            RenderOp,
-            RenderOps,
-            RowIndex,
-            Size,
-            TuiStyle,
-            DEBUG_TUI_COMPOSITOR,
+use crate::{ch, col, diff_chunks::PixelCharDiffChunks, glyphs::SPACER_GLYPH, render_ops,
+            row, ColIndex, Flush as _, FlushKind, GCString, InlineString,
+            LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint, PixelChar,
+            RenderOp, RenderOps, RowIndex, Size, TuiStyle, DEBUG_TUI_COMPOSITOR,
             DEBUG_TUI_SHOW_PIPELINE};
 
 #[derive(Debug)]
@@ -236,7 +219,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 }
 
 mod render_helpers {
-    use super::{render_ops, ColIndex, RowIndex, InlineString, TuiStyle, RenderOps, col, row, render_helpers, RenderOp, GCString};
+    use super::{col, render_helpers, render_ops, row, ColIndex, GCString, InlineString,
+                RenderOp, RenderOps, RowIndex, TuiStyle};
 
     #[derive(Debug, Clone)]
     pub struct Context {
@@ -326,14 +310,10 @@ mod render_helpers {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2,
-                height,
-                new_style,
+    use crate::{assert_eq2, height, new_style,
                 offscreen_buffer_paint_impl::render_helpers::style_eq,
                 render_pipeline_to_offscreen_buffer::print_text_with_attributes,
-                tui_color,
-                width,
-                ColWidth};
+                tui_color, width, ColWidth};
 
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {

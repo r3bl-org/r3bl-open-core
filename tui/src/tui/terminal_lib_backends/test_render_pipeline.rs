@@ -19,13 +19,8 @@
 mod tests {
     use smallvec::smallvec;
 
-    use crate::{assert_eq2,
-                render_ops,
-                render_pipeline,
-                InlineVec,
-                RenderOp,
-                RenderPipeline,
-                ZOrder};
+    use crate::{assert_eq2, render_ops, render_pipeline, InlineVec, RenderOp,
+                RenderPipeline, ZOrder};
 
     #[test]
     fn render_ops_macro() {

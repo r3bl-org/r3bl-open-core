@@ -20,60 +20,21 @@
 //! API.
 use syntect::easy::HighlightLines;
 
-use crate::{caret_scr_adj,
-            caret_scroll_index,
+use crate::{caret_scr_adj, caret_scroll_index,
             clipboard_support::ClipboardService,
-            col,
-            convert_syntect_to_styled_text,
-            fg_green,
-            get_selection_style,
-            glyphs,
-            height,
-            inline_string,
-            new_style,
+            col, convert_syntect_to_styled_text, fg_green, get_selection_style, glyphs,
+            height, inline_string, new_style,
             render_cache::{RenderCache, UseRenderCache},
-            render_ops,
-            render_pipeline,
-            render_tui_styled_texts_into,
-            row,
+            render_ops, render_pipeline, render_tui_styled_texts_into, row,
             terminal_lib_backends::KeyPress,
-            throws,
-            throws_with_return,
-            try_get_syntax_ref,
-            try_parse_and_highlight,
-            tui_color,
-            usize,
-            ColWidth,
-            CommonResult,
-            EditMode,
-            EditorBuffer,
-            EditorEngine,
-            EditorEvent,
-            FlexBox,
-            GCString,
-            GCStringExt as _,
-            HasFocus,
-            InputEvent,
-            Key,
-            PrettyPrintDebug,
-            RenderArgs,
-            RenderOp,
-            RenderOps,
-            RenderPipeline,
-            RowHeight,
-            RowIndex,
-            ScrollOffsetColLocationInRange,
-            SegString,
-            SelectionRange,
-            Size,
-            SpecialKey,
-            StyleUSSpanLines,
-            SyntaxHighlightMode,
-            ZOrder,
-            DEBUG_TUI_COPY_PASTE,
-            DEBUG_TUI_MOD,
-            DEBUG_TUI_SYN_HI,
-            DEFAULT_CURSOR_CHAR};
+            throws, throws_with_return, try_get_syntax_ref, try_parse_and_highlight,
+            tui_color, usize, ColWidth, CommonResult, EditMode, EditorBuffer,
+            EditorEngine, EditorEvent, FlexBox, GCString, GCStringExt as _, HasFocus,
+            InputEvent, Key, PrettyPrintDebug, RenderArgs, RenderOp, RenderOps,
+            RenderPipeline, RowHeight, RowIndex, ScrollOffsetColLocationInRange,
+            SegString, SelectionRange, Size, SpecialKey, StyleUSSpanLines,
+            SyntaxHighlightMode, ZOrder, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
+            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR};
 
 fn triggers_undo_redo(editor_event: &EditorEvent) -> bool {
     matches!(
@@ -444,24 +405,10 @@ pub enum EditorEngineApplyEventResult {
 }
 
 mod syn_hi_r3bl_path {
-    use super::{caret_scroll_index,
-                col,
-                inline_string,
-                render_tui_styled_texts_into,
-                row,
-                throws,
-                try_parse_and_highlight,
-                usize,
-                ColWidth,
-                CommonResult,
-                EditorBuffer,
-                EditorEngine,
-                PrettyPrintDebug,
-                RenderOp,
-                RenderOps,
-                RowHeight,
-                StyleUSSpanLines,
-                DEBUG_TUI_SYN_HI};
+    use super::{caret_scroll_index, col, inline_string, render_tui_styled_texts_into,
+                row, throws, try_parse_and_highlight, usize, ColWidth, CommonResult,
+                EditorBuffer, EditorEngine, PrettyPrintDebug, RenderOp, RenderOps,
+                RowHeight, StyleUSSpanLines, DEBUG_TUI_SYN_HI};
 
     /// Try convert [Vec] of [US] to [`MdDocument`]:
     /// - Step 1: Get the lines from the buffer using
@@ -563,23 +510,10 @@ mod syn_hi_r3bl_path {
 }
 
 mod syn_hi_syntect_path {
-    use super::{caret_scroll_index,
-                col,
-                convert_syntect_to_styled_text,
-                no_syn_hi_path,
-                render_tui_styled_texts_into,
-                row,
-                try_get_syntax_ref,
-                usize,
-                ColWidth,
-                EditorBuffer,
-                EditorEngine,
-                GCString,
-                HighlightLines,
-                RenderOp,
-                RenderOps,
-                RowHeight,
-                RowIndex};
+    use super::{caret_scroll_index, col, convert_syntect_to_styled_text, no_syn_hi_path,
+                render_tui_styled_texts_into, row, try_get_syntax_ref, usize, ColWidth,
+                EditorBuffer, EditorEngine, GCString, HighlightLines, RenderOp,
+                RenderOps, RowHeight, RowIndex};
 
     pub fn render_content(
         editor_buffer: &EditorBuffer,
@@ -690,18 +624,8 @@ mod syn_hi_syntect_path {
 }
 
 mod no_syn_hi_path {
-    use super::{caret_scroll_index,
-                col,
-                no_syn_hi_path,
-                row,
-                usize,
-                ColWidth,
-                EditorBuffer,
-                EditorEngine,
-                GCString,
-                RenderOp,
-                RenderOps,
-                RowHeight,
+    use super::{caret_scroll_index, col, no_syn_hi_path, row, usize, ColWidth,
+                EditorBuffer, EditorEngine, GCString, RenderOp, RenderOps, RowHeight,
                 RowIndex};
 
     pub fn render_content(

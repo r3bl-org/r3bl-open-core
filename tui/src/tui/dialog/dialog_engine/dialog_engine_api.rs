@@ -16,59 +16,18 @@
  */
 use std::{borrow::Cow, fmt::Debug};
 
-use crate::{ch,
-            col,
-            editor_engine::engine_public_api,
-            glyphs::SPACER_GLYPH as SPACER,
-            height,
-            inline_string,
-            pc,
-            render_ops,
-            render_pipeline,
-            render_tui_styled_texts_into,
-            row,
-            terminal_lib_backends::KeyPress,
-            throws_with_return,
-            tui_style_attrib,
-            u16,
-            usize,
-            width,
-            BorderGlyphCharacter,
-            ColorWheel,
-            CommonError,
-            CommonErrorType,
-            CommonResult,
-            DialogBuffer,
-            DialogChoice,
-            DialogEngine,
-            DialogEngineArgs,
-            DialogEngineConfigOptions,
-            DialogEngineMode,
-            DialogEvent,
-            EditorEngineApplyEventResult,
-            EventPropagation,
-            FlexBox,
-            FlexBoxId,
-            GCStringExt as _,
-            GlobalData,
-            GradientGenerationPolicy,
-            HasDialogBuffers,
-            InlineString,
-            InputEvent,
-            Key,
-            MinSize,
-            PartialFlexBox,
-            Pos,
-            RenderOp,
-            RenderOps,
-            RenderPipeline,
-            Size,
-            SpecialKey,
-            SurfaceBounds,
-            SystemClipboard,
-            TextColorizationPolicy,
-            TuiStyle,
-            ZOrder};
+use crate::{ch, col, editor_engine::engine_public_api, glyphs::SPACER_GLYPH as SPACER,
+            height, inline_string, pc, render_ops, render_pipeline,
+            render_tui_styled_texts_into, row, terminal_lib_backends::KeyPress,
+            throws_with_return, tui_style_attrib, u16, usize, width,
+            BorderGlyphCharacter, ColorWheel, CommonError, CommonErrorType,
+            CommonResult, DialogBuffer, DialogChoice, DialogEngine, DialogEngineArgs,
+            DialogEngineConfigOptions, DialogEngineMode, DialogEvent,
+            EditorEngineApplyEventResult, EventPropagation, FlexBox, FlexBoxId,
+            GCStringExt, GlobalData, GradientGenerationPolicy, HasDialogBuffers,
+            InlineString, InputEvent, Key, MinSize, PartialFlexBox, Pos, RenderOp,
+            RenderOps, RenderPipeline, Size, SpecialKey, SurfaceBounds, SystemClipboard,
+            TextColorizationPolicy, TuiStyle, ZOrder};
 
 #[derive(Debug)]
 pub enum DialogEngineApplyResponse {
@@ -269,7 +228,17 @@ pub enum DisplayConstants {
 }
 
 mod internal_impl {
-    use super::*;
+    use super::{ch, col, engine_public_api, height, inline_string, pc, render_ops,
+                render_tui_styled_texts_into, row, throws_with_return, tui_style_attrib,
+                u16, usize, width, BorderGlyphCharacter, ColorWheel, CommonError,
+                CommonErrorType, CommonResult, Cow, Debug, DialogBuffer, DialogChoice,
+                DialogEngine, DialogEngineArgs, DialogEngineConfigOptions,
+                DialogEngineMode, DialogEvent, DisplayConstants, EventPropagation,
+                FlexBox, FlexBoxId, GCStringExt, GlobalData, GradientGenerationPolicy,
+                HasDialogBuffers, InlineString, InputEvent, Key, KeyPress, MinSize,
+                PartialFlexBox, Pos, RenderOp, RenderOps, RenderPipeline, Size,
+                SpecialKey, SurfaceBounds, TextColorizationPolicy, TuiStyle, ZOrder,
+                SPACER};
 
     /// Return the [`FlexBox`] for the dialog to be rendered in.
     ///
@@ -527,7 +496,9 @@ mod internal_impl {
     }
 
     mod render_results_panel_inner {
-        use super::*;
+        use super::{col, height, inline_string, row, tui_style_attrib, width, Cow,
+                    DialogEngine, DisplayConstants, GCStringExt, InlineString, Pos,
+                    RenderOp, RenderOps, Size, TuiStyle};
 
         pub fn paint_results(
             ops: &mut RenderOps,
@@ -601,22 +572,20 @@ mod internal_impl {
                 // Set style to underline if selected row & paint.
                 if selected_row_index.eq(&row_index) {
                     // This is the selected row.
-                    let my_selected_style = match dialog_engine
-                        .dialog_options
-                        .maybe_style_results_panel
-                    {
-                        // Update existing style.
-                        Some(style) => TuiStyle {
-                            underline: Some(tui_style_attrib::Underline),
-                            ..style
-                        },
-                        // No existing style, so create a new style w/ only underline.
-                        _ => TuiStyle {
-                            underline: Some(tui_style_attrib::Underline),
-                            ..Default::default()
-                        },
-                    }
-                    .into();
+                    let my_selected_style =
+                        match dialog_engine.dialog_options.maybe_style_results_panel {
+                            // Update existing style.
+                            Some(style) => TuiStyle {
+                                underline: Some(tui_style_attrib::Underline),
+                                ..style
+                            },
+                            // No existing style, so create a new style w/ only underline.
+                            _ => TuiStyle {
+                                underline: Some(tui_style_attrib::Underline),
+                                ..Default::default()
+                            },
+                        }
+                        .into();
                     // Paint the text for the row.
                     ops.push(RenderOp::ApplyColors(my_selected_style));
                     ops.push(RenderOp::PaintTextWithAttributes(

@@ -14,39 +14,13 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_tui::{ch,
-               col,
-               glyphs,
-               inline_string,
-               render_ops,
-               render_pipeline,
-               row,
-               send_signal,
-               throws_with_return,
-               Ansi256GradientIndex,
-               BoxedSafeComponent,
-               ColorWheel,
-               ColorWheelConfig,
-               ColorWheelSpeed,
-               CommonResult,
-               Component,
-               EventPropagation,
-               FlexBox,
-               FlexBoxId,
-               GCStringExt as _,
-               GlobalData,
-               GradientGenerationPolicy,
-               HasFocus,
-               InputEvent,
-               Key,
-               KeyPress,
-               RenderOp,
-               RenderPipeline,
-               SpecialKey,
-               SurfaceBounds,
-               TerminalWindowMainThreadSignal,
-               TextColorizationPolicy,
-               ZOrder,
+use r3bl_tui::{ch, col, glyphs, inline_string, render_ops, render_pipeline, row,
+               send_signal, throws_with_return, Ansi256GradientIndex,
+               BoxedSafeComponent, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
+               CommonResult, Component, EventPropagation, FlexBox, FlexBoxId,
+               GCStringExt, GlobalData, GradientGenerationPolicy, HasFocus, InputEvent,
+               Key, KeyPress, RenderOp, RenderPipeline, SpecialKey, SurfaceBounds,
+               TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder,
                DEBUG_TUI_MOD};
 use smallvec::smallvec;
 
@@ -64,7 +38,9 @@ pub struct SingleColumnComponentData {
 }
 
 mod constructor {
-    use super::*;
+    use super::{smallvec, Ansi256GradientIndex, AppSignal, BoxedSafeComponent,
+                ColorWheel, ColorWheelConfig, ColorWheelSpeed, FlexBoxId,
+                SingleColumnComponent, SingleColumnComponentData, State};
 
     impl SingleColumnComponent {
         pub fn new_boxed(id: FlexBoxId) -> BoxedSafeComponent<State, AppSignal> {
@@ -86,7 +62,13 @@ mod constructor {
 }
 
 mod single_column_component_impl_component_trait {
-    use super::*;
+    use super::{ch, col, glyphs, inline_string, render_ops, render_pipeline, row,
+                send_signal, throws_with_return, AppSignal, CommonResult, Component,
+                EventPropagation, FlexBox, FlexBoxId, GCStringExt, GlobalData,
+                GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress, RenderOp,
+                RenderPipeline, SingleColumnComponent, SingleColumnComponentData,
+                SpecialKey, State, SurfaceBounds, TerminalWindowMainThreadSignal,
+                TextColorizationPolicy, ZOrder, DEBUG_TUI_MOD};
 
     impl Component<State, AppSignal> for SingleColumnComponent {
         fn reset(&mut self) {}

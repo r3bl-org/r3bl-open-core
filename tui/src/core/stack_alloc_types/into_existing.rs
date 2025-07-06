@@ -300,8 +300,7 @@ mod tests_write_to_file {
 
     use miette::IntoDiagnostic;
 
-    use crate::{into_existing::write_to_file::try_write_str_to_file,
-                try_create_temp_dir};
+    use crate::{into_existing::write_to_file::try_write_str_to_file, try_create_temp_dir};
 
     #[test]
     fn test_try_write_file_contents_success() -> miette::Result<()> {
@@ -354,9 +353,7 @@ mod tests_read_from_file {
     use std::{fs::File, io::Write};
 
     use crate::{into_existing::read_from_file::try_read_file_path_into_inline_string,
-                try_create_temp_dir,
-                DocumentStorage,
-                InlineString,
+                try_create_temp_dir, DocumentStorage, InlineString,
                 DEFAULT_DOCUMENT_SIZE};
 
     #[test]
@@ -420,7 +417,8 @@ mod tests_read_from_file {
         // Create a temporary file.
         let temp_dir = try_create_temp_dir().expect("Failed to create temp dir");
         let temp_file_path = temp_dir.join("test_file.txt");
-        let _unused: File = File::create(&temp_file_path).expect("Failed to create temp file");
+        let _unused: File =
+            File::create(&temp_file_path).expect("Failed to create temp file");
 
         // Read the file into InlineString.
         let mut acc = InlineString::new();

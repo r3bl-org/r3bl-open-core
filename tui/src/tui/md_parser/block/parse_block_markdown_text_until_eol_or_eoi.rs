@@ -17,11 +17,8 @@
 
 use nom::{bytes::complete::tag, multi::many0, sequence::terminated, IResult, Parser};
 
-use crate::{md_parser::constants::NEW_LINE,
-            md_parser_types::CheckboxParsePolicy,
-            parse_inline_fragments_until_eol_or_eoi,
-            List,
-            MdLineFragments};
+use crate::{md_parser::constants::NEW_LINE, md_parser_types::CheckboxParsePolicy,
+            parse_inline_fragments_until_eol_or_eoi, List, MdLineFragments};
 
 /// Parse a markdown text [`crate::FragmentsInOneLine`] in the input (no EOL required).
 #[rustfmt::skip]
@@ -48,7 +45,8 @@ pub fn parse_block_markdown_text_with_or_without_new_line(
     }
 }
 mod inner {
-    use super::{IResult, MdLineFragments, Parser, terminated, many0, parse_inline_fragments_until_eol_or_eoi, CheckboxParsePolicy, tag, NEW_LINE, List};
+    use super::{many0, parse_inline_fragments_until_eol_or_eoi, tag, terminated,
+                CheckboxParsePolicy, IResult, List, MdLineFragments, Parser, NEW_LINE};
 
     /// Parse a single line of markdown text [`crate::FragmentsInOneLine`] terminated by EOL.
     #[rustfmt::skip]

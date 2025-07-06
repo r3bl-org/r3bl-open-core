@@ -15,18 +15,9 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{ASText,
-               AnsiStyledText,
-               InlineVec,
-               TuiStyle,
-               ast_line,
-               ast_lines,
-               fg_lavender,
-               fg_light_yellow_green,
-               fg_sky_blue,
-               new_style,
-               truncate_from_right,
-               tui_color};
+use r3bl_tui::{ASText, AnsiStyledText, InlineVec, TuiStyle, ast_line, ast_lines,
+               fg_lavender, fg_light_yellow_green, fg_sky_blue, new_style,
+               truncate_from_right, tui_color};
 
 /// Make the first column at least this wide, and pad with spaces if needed. It should not
 /// exceed this width either.

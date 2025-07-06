@@ -21,19 +21,11 @@ use super::as_str_slice::as_str_slice_core::AsStrSlice;
 use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
             list,
             md_parser_ng::block_ng::parse_block_code_no_advance_ng,
-            parse_block_smart_list_advance_ng,
-            parse_line_csv_no_advance_ng,
-            parse_line_heading_no_advance_ng,
-            parse_line_kv_no_advance_ng,
+            parse_block_smart_list_advance_ng, parse_line_csv_no_advance_ng,
+            parse_line_heading_no_advance_ng, parse_line_kv_no_advance_ng,
             parse_line_text_advance_ng,
             sizing_list_of::ListStorage,
-            List,
-            MdDocument,
-            MdElement,
-            MdLineFragments,
-            NErr,
-            NError,
-            NErrorKind};
+            List, MdDocument, MdElement, MdLineFragments, NErr, NError, NErrorKind};
 
 /// Primary public API for parsing markdown documents in the R3BL TUI editor component.
 ///

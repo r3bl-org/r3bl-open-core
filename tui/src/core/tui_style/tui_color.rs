@@ -20,10 +20,7 @@ use core::fmt::Debug;
 use super::parse_hex_color;
 use crate::{color_utils,
             common::{CommonError, CommonErrorType, CommonResult},
-            convert_rgb_into_ansi256,
-            ASTColor,
-            LossyConvertToByte as _,
-            TransformColor,
+            convert_rgb_into_ansi256, ASTColor, LossyConvertToByte, TransformColor,
             ANSI_COLOR_PALETTE};
 
 /// Creates a [`TuiColor`] instance using various convenient syntaxes.
@@ -340,7 +337,9 @@ pub struct RgbValue {
 }
 
 mod rgb_value_impl_block {
-    use super::*;
+    use super::{convert_rgb_into_ansi256, parse_hex_color, ANSIBasicColor, AnsiValue,
+                CommonError, CommonErrorType, CommonResult, LossyConvertToByte,
+                RgbValue, TransformColor, TuiColor};
 
     impl From<(u8, u8, u8)> for RgbValue {
         fn from((red, green, blue): (u8, u8, u8)) -> Self {
@@ -499,7 +498,8 @@ pub struct AnsiValue {
 }
 
 mod ansi_value_impl_block {
-    use super::{AnsiValue, TransformColor, ANSI_COLOR_PALETTE, RgbValue, color_utils, convert_rgb_into_ansi256};
+    use super::{color_utils, convert_rgb_into_ansi256, AnsiValue, RgbValue,
+                TransformColor, ANSI_COLOR_PALETTE};
 
     impl From<u8> for AnsiValue {
         fn from(index: u8) -> Self { Self { index } }
@@ -528,7 +528,7 @@ mod ansi_value_impl_block {
 }
 
 mod construct {
-    use super::{RgbValue, AnsiValue};
+    use super::{AnsiValue, RgbValue};
 
     impl Default for RgbValue {
         fn default() -> Self { Self::from_u8(255, 255, 255) }
@@ -546,7 +546,7 @@ mod construct {
 /// when using `ASTColor` in your code (which happens when generating colorized log
 /// output).
 mod convert_to_ast_color {
-    use super::{TuiColor, ASTColor, RgbValue};
+    use super::{ASTColor, RgbValue, TuiColor};
 
     impl From<TuiColor> for ASTColor {
         fn from(tui_color: TuiColor) -> Self {
@@ -576,7 +576,7 @@ mod convert_to_ast_color {
 /// This is useful when you want to go between different variants of the [`TuiColor`]
 /// enum.
 mod convert_between_variants {
-    use super::{RgbValue, AnsiValue, TransformColor, TuiColor};
+    use super::{AnsiValue, RgbValue, TransformColor, TuiColor};
 
     impl From<RgbValue> for AnsiValue {
         fn from(rgb_value: RgbValue) -> Self {
@@ -1013,7 +1013,7 @@ mod tests {
 }
 
 mod debug_helpers {
-    use super::{Debug, TuiColor, RgbValue, ANSIBasicColor};
+    use super::{ANSIBasicColor, Debug, RgbValue, TuiColor};
 
     impl Debug for TuiColor {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -17,15 +17,9 @@
 use nom::{bytes::complete::{tag, take_while1},
           combinator::map,
           sequence::terminated,
-          IResult,
-          Input,
-          Parser};
+          IResult, Input, Parser};
 
-use crate::{md_parser::constants,
-            AsStrSlice,
-            CharLengthExt,
-            GCString,
-            HeadingData,
+use crate::{md_parser::constants, AsStrSlice, CharLengthExt, GCString, HeadingData,
             HeadingLevel};
 
 /// This matches the heading tag and text within the current line only.

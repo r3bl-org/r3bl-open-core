@@ -21,7 +21,7 @@
 
 use std::cmp::Ordering::Less;
 
-use crate::{AnsiValue, LossyConvertToByte as _, RgbValue};
+use crate::{AnsiValue, LossyConvertToByte, RgbValue};
 
 pub mod color_utils {
     #[must_use]
@@ -262,17 +262,14 @@ mod cube_mapping {
         it
     }
 }
-pub use cube_mapping::{calculate_cube_index_blue,
-                       calculate_cube_index_green,
-                       calculate_cube_index_red,
-                       calculate_cube_mapping_for_rgb_color,
-                       calculate_luminance,
-                       calculate_relative_diff_between_colors,
-                       find_closest,
-                       CubeMappingResult};
+
+pub use cube_mapping::{calculate_cube_index_blue, calculate_cube_index_green,
+                       calculate_cube_index_red, calculate_cube_mapping_for_rgb_color,
+                       calculate_luminance, calculate_relative_diff_between_colors,
+                       find_closest, CubeMappingResult};
 
 mod convert_between_rgb_and_u32 {
-    use super::*;
+    use super::{LossyConvertToByte, RgbValue};
 
     impl From<RgbValue> for u32 {
         fn from(rgb: RgbValue) -> Self {

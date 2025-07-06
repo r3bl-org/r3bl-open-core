@@ -20,20 +20,9 @@ use std::{env::current_exe,
           sync::atomic::AtomicBool,
           time::Duration};
 
-use r3bl_tui::{DefaultIoDevices,
-               HowToChoose,
-               InlineString,
-               OutputDevice,
-               SpinnerStyle,
-               StyleSheet,
-               ast,
-               ast_line,
-               choose,
-               command,
-               height,
-               inline_string,
-               script::command_impl::TokioCommand,
-               spinner::Spinner,
+use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OutputDevice, SpinnerStyle,
+               StyleSheet, ast, ast_line, choose, command, height, inline_string,
+               script::command_impl::TokioCommand, spinner::Spinner,
                try_get_latest_release_version_from_crates_io};
 use smallvec::smallvec;
 use tokio::signal;

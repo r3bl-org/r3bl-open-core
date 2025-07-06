@@ -19,16 +19,15 @@ use sizing::VecSteps;
 use smallstr::SmallString;
 use smallvec::SmallVec;
 
-use super::{lolcat::{Lolcat, LolcatBuilder}, types::Seed};
-use crate::{global_color_support,
-            ColorSupport,
-            TuiColor};
+use super::{lolcat::{Lolcat, LolcatBuilder},
+            types::Seed};
+use crate::{global_color_support, ColorSupport, TuiColor};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
 /// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
 /// the heap.
 pub(in crate::core) mod sizing {
-    use super::{SmallString, SmallVec, TuiColor, defaults};
+    use super::{defaults, SmallString, SmallVec, TuiColor};
 
     pub type StringHexColor = SmallString<[u8; MAX_HEX_COLOR_STRING_SIZE]>;
     const MAX_HEX_COLOR_STRING_SIZE: usize = 8;
@@ -92,7 +91,8 @@ impl ColorWheelConfig {
             matches!(
                 config,
                 ColorWheelConfig::Lolcat(LolcatBuilder {
-                    colorization_strategy: super::lolcat::Colorize::BothBackgroundAndForeground,
+                    colorization_strategy:
+                        super::lolcat::Colorize::BothBackgroundAndForeground,
                     ..
                 })
             )

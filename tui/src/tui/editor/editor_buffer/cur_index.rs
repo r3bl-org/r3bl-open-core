@@ -146,7 +146,7 @@ impl CurIndex {
 }
 
 mod ops {
-    use super::{Deref, CurIndex, Index, DerefMut};
+    use super::{CurIndex, Deref, DerefMut, Index};
 
     impl Deref for CurIndex {
         type Target = Option<Index>;

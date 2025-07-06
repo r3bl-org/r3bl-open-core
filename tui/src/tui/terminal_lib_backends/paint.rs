@@ -18,18 +18,10 @@
 use std::fmt::Debug;
 
 use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
-use crate::{diff_chunks::PixelCharDiffChunks,
-            GlobalData,
-            LockedOutputDevice,
-            OffscreenBuffer,
-            OffscreenBufferPaint,
-            OffscreenBufferPaintImplCrossterm,
-            Pos,
-            Size,
-            TerminalLibBackend,
-            DEBUG_TUI_COMPOSITOR,
-            DEBUG_TUI_SHOW_PIPELINE_EXPANDED,
-            TERMINAL_LIB_BACKEND};
+use crate::{diff_chunks::PixelCharDiffChunks, GlobalData, LockedOutputDevice,
+            OffscreenBuffer, OffscreenBufferPaint, OffscreenBufferPaintImplCrossterm,
+            Pos, Size, TerminalLibBackend, DEBUG_TUI_COMPOSITOR,
+            DEBUG_TUI_SHOW_PIPELINE_EXPANDED, TERMINAL_LIB_BACKEND};
 
 pub trait PaintRenderOp {
     fn paint(

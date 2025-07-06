@@ -29,20 +29,15 @@
 
 use nom::{branch::alt, combinator::map, IResult, Parser};
 
-use crate::{fg_green,
-            fg_red,
-            inline_string,
-            parse_fragment_plain_text_no_new_line,
+use crate::{fg_green, fg_red, inline_string, parse_fragment_plain_text_no_new_line,
             parse_fragment_starts_with_backtick_err_on_new_line,
             parse_fragment_starts_with_checkbox_checkbox_into_bool,
             parse_fragment_starts_with_checkbox_into_str,
             parse_fragment_starts_with_left_image_err_on_new_line,
             parse_fragment_starts_with_left_link_err_on_new_line,
             parse_fragment_starts_with_star_err_on_new_line,
-            parse_fragment_starts_with_underscore_err_on_new_line,
-            CheckboxParsePolicy,
-            MdLineFragment,
-            DEBUG_MD_PARSER};
+            parse_fragment_starts_with_underscore_err_on_new_line, CheckboxParsePolicy,
+            MdLineFragment, DEBUG_MD_PARSER};
 
 // XMARK: Parser for a single line of markdown
 

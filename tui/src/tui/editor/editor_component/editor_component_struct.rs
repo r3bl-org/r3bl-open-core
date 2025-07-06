@@ -19,27 +19,12 @@ use std::fmt::Debug;
 
 use tokio::sync::mpsc::Sender;
 
-use crate::{editor_engine::engine_public_api,
-            throws_with_return,
-            BoxedSafeComponent,
-            CommonResult,
-            Component,
-            EditorBuffer,
-            EditorEngine,
-            EditorEngineApplyEventResult,
-            EditorEngineConfig,
-            EventPropagation,
-            FlexBox,
-            FlexBoxId,
-            GlobalData,
-            HasEditorBuffers,
-            HasFocus,
-            InputEvent,
-            RenderPipeline,
-            SurfaceBounds,
-            SystemClipboard,
-            TerminalWindowMainThreadSignal,
-            DEFAULT_SYN_HI_FILE_EXT};
+use crate::{editor_engine::engine_public_api, throws_with_return, BoxedSafeComponent,
+            CommonResult, Component, EditorBuffer, EditorEngine,
+            EditorEngineApplyEventResult, EditorEngineConfig, EventPropagation, FlexBox,
+            FlexBoxId, GlobalData, HasEditorBuffers, HasFocus, InputEvent,
+            RenderPipeline, SurfaceBounds, SystemClipboard,
+            TerminalWindowMainThreadSignal, DEFAULT_SYN_HI_FILE_EXT};
 
 #[derive(Debug)]
 /// This is a shim which allows the reusable [`EditorEngine`] to be used in the context of
@@ -71,7 +56,11 @@ pub type OnEditorBufferChangeFn<A> =
     fn(FlexBoxId, Sender<TerminalWindowMainThreadSignal<A>>);
 
 pub mod editor_component_impl_component_trait {
-    use super::{throws_with_return, HasEditorBuffers, Debug, FlexBoxId, EditorBuffer, DEFAULT_SYN_HI_FILE_EXT, Component, EditorComponent, GlobalData, FlexBox, SurfaceBounds, HasFocus, CommonResult, RenderPipeline, EditorComponentData, engine_public_api, InputEvent, EventPropagation, SystemClipboard, EditorEngineApplyEventResult};
+    use super::{engine_public_api, throws_with_return, CommonResult, Component, Debug,
+                EditorBuffer, EditorComponent, EditorComponentData,
+                EditorEngineApplyEventResult, EventPropagation, FlexBox, FlexBoxId,
+                GlobalData, HasEditorBuffers, HasFocus, InputEvent, RenderPipeline,
+                SurfaceBounds, SystemClipboard, DEFAULT_SYN_HI_FILE_EXT};
 
     fn get_existing_mut_editor_buffer_from_state_or_create_new_one<S>(
         mut_state: &mut S,
@@ -195,7 +184,9 @@ pub mod editor_component_impl_component_trait {
 }
 
 pub mod constructor {
-    use super::{EditorComponent, Debug, HasEditorBuffers, FlexBoxId, EditorEngineConfig, OnEditorBufferChangeFn, EditorComponentData, EditorEngine, BoxedSafeComponent};
+    use super::{BoxedSafeComponent, Debug, EditorComponent, EditorComponentData,
+                EditorEngine, EditorEngineConfig, FlexBoxId, HasEditorBuffers,
+                OnEditorBufferChangeFn};
 
     impl<S, AS> EditorComponent<S, AS>
     where

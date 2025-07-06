@@ -15,16 +15,8 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{DefaultIoDevices,
-               HowToChoose,
-               InlineString,
-               InlineVec,
-               StyleSheet,
-               ast,
-               ast_line,
-               choose,
-               height,
-               inline_vec};
+use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, InlineVec, StyleSheet, ast,
+               ast_line, choose, height, inline_vec};
 
 use super::CLIArg;
 use crate::{common, edi::ui_str, prefix_single_select_instruction_header};

@@ -18,12 +18,7 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::Deref};
 
-use crate::{ch,
-            glyphs,
-            ChUnit,
-            ChUnitPrimitiveType,
-            CommonError,
-            CommonErrorType,
+use crate::{ch, glyphs, ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType,
             LossyConvertToByte};
 
 /// Represents an integer value between 0 and 100 (inclusive). You can't directly create
@@ -174,11 +169,7 @@ impl Pc {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ch,
-                Pc,
-                STATS_100P_GLYPH,
-                STATS_25P_GLYPH,
-                STATS_50P_GLYPH,
+    use crate::{ch, Pc, STATS_100P_GLYPH, STATS_25P_GLYPH, STATS_50P_GLYPH,
                 STATS_75P_GLYPH};
 
     #[test]

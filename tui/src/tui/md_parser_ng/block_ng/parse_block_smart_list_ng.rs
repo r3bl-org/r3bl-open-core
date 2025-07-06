@@ -35,38 +35,17 @@ use nom::{branch::alt,
           combinator::{opt, recognize, verify},
           multi::many0,
           sequence::{preceded, terminated},
-          IResult,
-          Input,
-          Parser};
+          IResult, Input, Parser};
 use smallvec::smallvec;
 
 use crate::{list,
-            md_parser::constants::{CHECKED,
-                                   LIST_PREFIX_BASE_WIDTH,
-                                   NEW_LINE,
-                                   ORDERED_LIST_PARTIAL_PREFIX,
-                                   SPACE,
-                                   SPACE_CHAR,
-                                   UNCHECKED,
-                                   UNORDERED_LIST_PREFIX},
-            pad_fmt,
-            parse_inline_fragments_until_eol_or_eoi_ng,
-            tiny_inline_string,
-            AsStrSlice,
-            BulletKind,
-            CharLengthExt,
-            CheckboxParsePolicy,
-            InlineString,
-            InlineVec,
-            Lines,
-            List,
-            MdLineFragment,
-            MdLineFragments,
-            NErr,
-            NError,
-            NErrorKind,
-            SmartListIRAlt,
-            SmartListLineAlt};
+            md_parser::constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
+                                   ORDERED_LIST_PARTIAL_PREFIX, SPACE, SPACE_CHAR,
+                                   UNCHECKED, UNORDERED_LIST_PREFIX},
+            pad_fmt, parse_inline_fragments_until_eol_or_eoi_ng, tiny_inline_string,
+            AsStrSlice, BulletKind, CharLengthExt, CheckboxParsePolicy, InlineString,
+            InlineVec, Lines, List, MdLineFragment, MdLineFragments, NErr, NError,
+            NErrorKind, SmartListIRAlt, SmartListLineAlt};
 
 /// Parse a complete smart list block with automatic multi-line advancement.
 ///
@@ -119,7 +98,9 @@ use crate::{list,
 pub fn parse_block_smart_list_advance_ng<'a>(
     input: AsStrSlice<'a>,
 ) -> IResult<AsStrSlice<'a>, (Lines<'a>, BulletKind, usize)> {
-    use parse_block_smart_list_advance_ng_helper::{determine_checkbox_policy, create_bullet_fragment, build_line_fragments};
+    use parse_block_smart_list_advance_ng_helper::{build_line_fragments,
+                                                   create_bullet_fragment,
+                                                   determine_checkbox_policy};
 
     let (remainder, smart_list_ir) = parse_smart_list_ng(input)?;
 
@@ -151,7 +132,8 @@ pub fn parse_block_smart_list_advance_ng<'a>(
 }
 
 mod parse_block_smart_list_advance_ng_helper {
-    use super::{tiny_inline_string, list, AsStrSlice, CheckboxParsePolicy, CHECKED, SPACE, UNCHECKED, BulletKind, List, MdLineFragment};
+    use super::{list, tiny_inline_string, AsStrSlice, BulletKind, CheckboxParsePolicy,
+                List, MdLineFragment, CHECKED, SPACE, UNCHECKED};
 
     /// Helper function to determine checkbox parsing policy.
     pub fn determine_checkbox_policy(content: AsStrSlice<'_>) -> CheckboxParsePolicy {
@@ -1771,7 +1753,8 @@ mod tests_parse_smart_list_content_lines_ng {
 }
 
 mod verify_rest {
-    use super::{AsStrSlice, UNORDERED_LIST_PREFIX, Input, ORDERED_LIST_PARTIAL_PREFIX, SPACE_CHAR};
+    use super::{AsStrSlice, Input, ORDERED_LIST_PARTIAL_PREFIX, SPACE_CHAR,
+                UNORDERED_LIST_PREFIX};
 
     /// Checks if the input string does not start with a list prefix.
     ///
@@ -1791,9 +1774,7 @@ mod verify_rest {
     ///
     /// # Parameters
     /// - `input`: The input text to check
-    pub fn list_contents_does_not_start_with_list_prefix(
-        input: AsStrSlice<'_>,
-    ) -> bool {
+    pub fn list_contents_does_not_start_with_list_prefix(input: AsStrSlice<'_>) -> bool {
         let trimmed_input = input.trim_start_current_line();
 
         // Check for unordered list prefix

@@ -19,8 +19,7 @@
 //! - So replace `&`[`PathBuf`] with a `&`[Path].
 //! - More details [here](https://rust-lang.github.io/rust-clippy/master/index.html#ptr_arg).
 
-use std::{env,
-          fs,
+use std::{env, fs,
           fs::File,
           io::{ErrorKind, Write},
           path::{Path, PathBuf}};
@@ -584,11 +583,9 @@ mod tests {
     ///
     /// This function is called by `test_all_fs_path_functions_in_isolated_process()` to
     /// run the tests in an isolated process.
-    fn run_all_fs_path_functions_sequentially_impl(
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn run_all_fs_path_functions_sequentially_impl() {
         // Run each test in its own function with with_saved_pwd! to ensure the
         // current working directory is restored after each test.
-
         test_try_directory_exists_not_found_error();
         test_try_directory_exists_permissions_errors();
         test_try_file_exists();
@@ -602,8 +599,6 @@ mod tests {
         test_try_change_directory_happy_path();
         test_try_change_directory_non_existent();
         test_try_change_directory_invalid_name();
-
-        Ok(())
     }
 
     /// This test function runs all the tests that change the current working directory
@@ -622,12 +617,9 @@ mod tests {
     #[test]
     fn test_all_fs_path_functions_in_isolated_process() {
         if std::env::var("ISOLATED_TEST_RUNNER").is_ok() {
-            // This is the actual test running in the isolated process
-            if let Err(err) = run_all_fs_path_functions_sequentially_impl() {
-                eprintln!("Test failed with error: {err}");
-                std::process::exit(1);
-            }
-            // If we reach here without errors, exit normally
+            // This is the actual test running in the isolated process.
+            run_all_fs_path_functions_sequentially_impl();
+            // If we reach here without errors, exit normally.
             std::process::exit(0);
         }
 

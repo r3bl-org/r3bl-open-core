@@ -18,13 +18,8 @@
 use std::{collections::HashMap,
           fmt::{Debug, Formatter, Result}};
 
-use r3bl_tui::{get_real_world_editor_content,
-               DialogBuffer,
-               EditorBuffer,
-               FlexBoxId,
-               HasDialogBuffers,
-               HasEditorBuffers,
-               DEFAULT_SYN_HI_FILE_EXT};
+use r3bl_tui::{get_real_world_editor_content, DialogBuffer, EditorBuffer, FlexBoxId,
+               HasDialogBuffers, HasEditorBuffers, DEFAULT_SYN_HI_FILE_EXT};
 
 use crate::ex_editor::Id;
 
@@ -35,7 +30,8 @@ pub struct State {
 }
 
 mod constructor {
-    use super::*;
+    use super::{constructor, get_real_world_editor_content, EditorBuffer, FlexBoxId,
+                HashMap, Id, State, DEFAULT_SYN_HI_FILE_EXT};
 
     impl Default for State {
         fn default() -> Self { constructor::get_initial_state() }
@@ -57,13 +53,13 @@ mod constructor {
 
         State {
             editor_buffers,
-            dialog_buffers: Default::default(),
+            dialog_buffers: HashMap::default(),
         }
     }
 }
 
 mod impl_editor_support {
-    use super::*;
+    use super::{EditorBuffer, FlexBoxId, HasEditorBuffers, State};
 
     impl HasEditorBuffers for State {
         fn get_mut_editor_buffer(&mut self, id: FlexBoxId) -> Option<&mut EditorBuffer> {
@@ -85,7 +81,7 @@ mod impl_editor_support {
 }
 
 mod impl_dialog_support {
-    use super::*;
+    use super::{DialogBuffer, FlexBoxId, HasDialogBuffers, State};
 
     impl HasDialogBuffers for State {
         fn get_mut_dialog_buffer(&mut self, id: FlexBoxId) -> Option<&mut DialogBuffer> {
@@ -95,7 +91,7 @@ mod impl_dialog_support {
 }
 
 mod impl_debug_format {
-    use super::*;
+    use super::{Debug, Formatter, Result, State};
 
     impl Debug for State {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

@@ -61,7 +61,7 @@ impl Debug for RowHeight {
 pub fn height(arg_row_height: impl Into<RowHeight>) -> RowHeight { arg_row_height.into() }
 
 mod constructor {
-    use super::{RowHeight, RowIndex, row, ch, ChUnit};
+    use super::{ch, row, ChUnit, RowHeight, RowIndex};
 
     impl RowHeight {
         pub fn new(arg_row_height: impl Into<RowHeight>) -> Self { arg_row_height.into() }
@@ -100,7 +100,7 @@ mod constructor {
 }
 
 mod ops {
-    use super::{Deref, RowHeight, ChUnit, DerefMut, Add, Sub, SubAssign, Div, height};
+    use super::{height, Add, ChUnit, Deref, DerefMut, Div, RowHeight, Sub, SubAssign};
 
     impl Deref for RowHeight {
         type Target = ChUnit;

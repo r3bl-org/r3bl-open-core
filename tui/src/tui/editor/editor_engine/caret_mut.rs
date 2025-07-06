@@ -16,24 +16,12 @@
  */
 
 use super::{scroll_editor_content, SelectMode};
-use crate::{caret_locate::{self,
-                           locate_col,
-                           CaretColLocationInLine,
+use crate::{caret_locate::{self, locate_col, CaretColLocationInLine,
                            CaretRowLocationInBuffer},
-            caret_mut,
-            caret_scr_adj,
-            caret_scroll_index,
-            col,
-            empty_check_early_return,
-            multiline_disabled_check_early_return,
-            row,
+            caret_mut, caret_scr_adj, caret_scroll_index, col, empty_check_early_return,
+            multiline_disabled_check_early_return, row,
             wide_segments::ContainsWideSegments,
-            width,
-            CaretDirection,
-            EditorArgsMut,
-            EditorBuffer,
-            EditorEngine,
-            SegString};
+            width, CaretDirection, EditorArgsMut, EditorBuffer, EditorEngine, SegString};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     empty_check_early_return!(buffer, @Nothing);
@@ -345,7 +333,8 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
 }
 
 mod right_helper {
-    use super::{EditorBuffer, EditorEngine, SegString, ContainsWideSegments, scroll_editor_content, width};
+    use super::{scroll_editor_content, width, ContainsWideSegments, EditorBuffer,
+                EditorEngine, SegString};
 
     /// 1. Check for wide unicode character to the right of the caret.
     /// 2. [`validate::apply_change`] checks for wide unicode character at the start of
@@ -518,7 +507,7 @@ pub fn left(
 }
 
 mod left_helper {
-    use super::{EditorBuffer, EditorEngine, scroll_editor_content, caret_mut, SelectMode};
+    use super::{caret_mut, scroll_editor_content, EditorBuffer, EditorEngine, SelectMode};
 
     pub fn left_at_start(buffer: &mut EditorBuffer, editor: &mut EditorEngine) {
         if buffer.prev_line_above_caret().is_some() {

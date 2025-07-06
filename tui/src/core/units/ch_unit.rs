@@ -18,7 +18,7 @@
 use std::{fmt::{Debug, Formatter},
           ops::{Add, AddAssign, Deref, Div, Mul, MulAssign, Sub, SubAssign}};
 
-use crate::{add_unsigned, mul_unsigned, sub_unsigned, LossyConvertToByte as _};
+use crate::{add_unsigned, mul_unsigned, sub_unsigned, LossyConvertToByte};
 
 /// The backing field that is used to represent a [`ChUnit`] in memory.
 pub type ChUnitPrimitiveType = u16;
@@ -137,18 +137,8 @@ impl Deref for ChUnit {
 }
 
 pub mod ch_unit_math_ops {
-    use super::{add_unsigned,
-                ch,
-                mul_unsigned,
-                sub_unsigned,
-                Add,
-                AddAssign,
-                ChUnit,
-                Div,
-                Mul,
-                MulAssign,
-                Sub,
-                SubAssign};
+    use super::{add_unsigned, ch, mul_unsigned, sub_unsigned, Add, AddAssign, ChUnit,
+                Div, Mul, MulAssign, Sub, SubAssign};
 
     impl MulAssign<ChUnit> for ChUnit {
         fn mul_assign(&mut self, rhs: Self) {
@@ -237,7 +227,7 @@ pub mod ch_unit_math_ops {
 
 /// Convert to other types [prim@f64], [prim@isize], [prim@usize], etc. from [`ChUnit`].
 pub mod convert_to_other_types_from_ch {
-    use super::*;
+    use super::{ChUnit, ChUnitPrimitiveType, LossyConvertToByte};
 
     impl From<ChUnit> for ChUnitPrimitiveType {
         fn from(arg: ChUnit) -> Self { arg.value }

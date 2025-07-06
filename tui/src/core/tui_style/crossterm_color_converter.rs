@@ -15,14 +15,8 @@
  *   limitations under the License.
  */
 
-use crate::{global_color_support,
-            ANSIBasicColor,
-            ASTColor,
-            AnsiValue,
-            ColorSupport,
-            RgbValue,
-            TransformColor,
-            TuiColor};
+use crate::{global_color_support, ANSIBasicColor, ASTColor, AnsiValue, ColorSupport,
+            RgbValue, TransformColor, TuiColor};
 
 #[rustfmt::skip]
 #[must_use] pub fn convert_from_crossterm_color_to_tui_color(value: crossterm::style::Color) -> TuiColor {

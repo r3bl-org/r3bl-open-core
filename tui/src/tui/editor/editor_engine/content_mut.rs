@@ -19,22 +19,10 @@ use std::collections::HashMap;
 
 use super::{scroll_editor_content, DeleteSelectionWith};
 use crate::{caret_locate::{locate_col, CaretColLocationInLine},
-            caret_scroll_index,
-            col,
-            empty_check_early_return,
-            inline_string,
-            multiline_disabled_check_early_return,
-            row,
-            CaretScrAdj,
-            ColIndex,
-            EditorArgsMut,
-            EditorBuffer,
-            EditorEngine,
-            GCString,
-            GCStringExt,
-            InlineString,
-            InlineVec,
-            RowIndex};
+            caret_scroll_index, col, empty_check_early_return, inline_string,
+            multiline_disabled_check_early_return, row, CaretScrAdj, ColIndex,
+            EditorArgsMut, EditorBuffer, EditorEngine, GCString, GCStringExt,
+            InlineString, InlineVec, RowIndex};
 
 pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
     let EditorArgsMut { buffer, engine } = args;
@@ -296,15 +284,8 @@ pub fn backspace_at_caret(
 }
 
 mod backspace_at_caret_helper {
-    use super::{caret_scroll_index,
-                inline_string,
-                row,
-                scroll_editor_content,
-                ColIndex,
-                EditorBuffer,
-                EditorEngine,
-                GCString,
-                GCStringExt};
+    use super::{caret_scroll_index, inline_string, row, scroll_editor_content, ColIndex,
+                EditorBuffer, EditorEngine, GCString, GCStringExt};
 
     /// ```text
     /// R ┌──────────┐
@@ -452,16 +433,8 @@ pub fn delete_selected(
 }
 
 mod delete_selected_helper {
-    use super::{caret_scroll_index,
-                col,
-                DeleteSelectionWith,
-                EditorBuffer,
-                EditorEngine,
-                GCString,
-                GCStringExt,
-                HashMap,
-                InlineString,
-                InlineVec,
+    use super::{caret_scroll_index, col, DeleteSelectionWith, EditorBuffer,
+                EditorEngine, GCString, GCStringExt, HashMap, InlineString, InlineVec,
                 RowIndex};
 
     pub fn analyze_selections(

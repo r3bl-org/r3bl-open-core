@@ -30,26 +30,13 @@
 //!    the editor component (based on scroll state in the viewport). And finally that is
 //!    converted to a [`crate::TuiStyledTexts`].
 
-use crate::{get_foreground_dim_style,
-            get_metadata_tags_marker_style,
-            get_metadata_tags_values_style,
-            get_metadata_title_marker_style,
+use crate::{get_foreground_dim_style, get_metadata_tags_marker_style,
+            get_metadata_tags_values_style, get_metadata_title_marker_style,
             get_metadata_title_value_style,
             md_parser::constants::{COLON, COMMA, SPACE},
-            tiny_inline_string,
-            tui_styled_text,
-            width,
-            CharacterMatchResult,
-            ColIndex,
-            ColWidth,
-            GCString,
-            GCStringExt as _,
-            InlineString,
-            List,
-            PatternMatcherStateMachine,
-            ScrOfs,
-            TuiStyle,
-            TuiStyledTexts};
+            tiny_inline_string, tui_styled_text, width, CharacterMatchResult, ColIndex,
+            ColWidth, GCString, GCStringExt as _, InlineString, List,
+            PatternMatcherStateMachine, ScrOfs, TuiStyle, TuiStyledTexts};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple
 /// spans in a line of text.
@@ -251,7 +238,7 @@ impl StyleUSSpanLine {
 }
 
 mod convert {
-    use super::{tui_styled_text, TuiStyle, StyleUSSpan, StyleUSSpanLine, TuiStyledTexts};
+    use super::{tui_styled_text, StyleUSSpan, StyleUSSpanLine, TuiStyle, TuiStyledTexts};
 
     impl From<(&TuiStyle, &str)> for StyleUSSpan {
         fn from((style, text): (&TuiStyle, &str)) -> Self { Self::new(*style, text) }
@@ -271,22 +258,14 @@ mod convert {
     }
 }
 
-/// Make sure that the code to clip styled text to a range [ `start_col` .`end_col`ol ] works.
-/// The list of styled unicode string represents a single line of text in an editor
+/// Make sure that the code to clip styled text to a range [ `start_col` .`end_col`ol ]
+/// works. The list of styled unicode string represents a single line of text in an editor
 /// component.
 #[cfg(test)]
 mod tests_clip_styled_texts {
     use super::*;
-    use crate::{assert_eq2,
-                ch,
-                col,
-                list,
-                row,
-                scr_ofs,
-                tui_color,
-                ChUnitPrimitiveType,
-                ConvertToPlainText,
-                List};
+    use crate::{assert_eq2, ch, col, list, row, scr_ofs, tui_color, ChUnitPrimitiveType,
+                ConvertToPlainText, List};
 
     mod fixtures {
         use super::*;

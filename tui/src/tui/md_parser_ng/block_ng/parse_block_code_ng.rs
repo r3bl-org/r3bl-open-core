@@ -19,17 +19,11 @@ use nom::{branch::alt,
           bytes::complete::{is_not, tag, take_until},
           combinator::{map, opt},
           sequence::{preceded, terminated},
-          IResult,
-          Input,
-          Parser};
+          IResult, Input, Parser};
 
 use crate::{constants::NEW_LINE_CHAR,
             md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
-            AsStrSlice,
-            CodeBlockLine,
-            CodeBlockLineContent,
-            InlineVec,
-            List};
+            AsStrSlice, CodeBlockLine, CodeBlockLineContent, InlineVec, List};
 
 /// Parses a complete Markdown code block - a **multi-line block parser** with automatic advancement.
 ///
@@ -278,23 +272,44 @@ pub fn convert_into_code_block_lines_ng<'a>(
 /// ### Comparison with Alternative Approaches
 ///
 /// **Naive approach** (avoided):
-/// ```rust,ignore
+/// ```no_run
 /// // DON'T DO THIS - inefficient!
+/// use r3bl_tui::{AsStrSlice, as_str_slice_test_case};
+/// 
+/// // Create a sample input for demonstration
+/// as_str_slice_test_case!(input, "line1", "line2", "line3");
+/// 
 /// let full_content = input.extract_to_slice_end();  // 1st pass + allocation
-/// let str_lines: Vec<&str> = full_content.split('\n').collect();  // 2nd pass
-/// let result: Vec<AsStrSlice> = str_lines.iter()
-///     .map(|line| /* convert back to AsStrSlice */)  // 3rd pass
-///     .collect();
+/// let content_str = full_content.as_ref();
+/// let str_lines: Vec<&str> = content_str.split('\n').collect();  // 2nd pass
+/// 
+/// // In reality, this would be more complex as AsStrSlice doesn't implement From<&str>
+/// // This is just a simplified example to illustrate the concept
+/// // For the purpose of this example, we'll just create a new vector with the original input
+/// let result: Vec<AsStrSlice> = vec![input];
 /// ```
 ///
 /// **Optimized approach** (implemented):
-/// ```rust,ignore
+/// ```no_run
 /// // Single pass through characters, direct AsStrSlice construction
+/// use r3bl_tui::{AsStrSlice, InlineVec, as_str_slice_test_case, constants::NEW_LINE_CHAR};
+/// use nom::Input; // Required for iter_elements and take_from methods
+///
+/// // Create a sample input for demonstration
+/// as_str_slice_test_case!(input, "line1", "line2", "line3");
+/// let mut acc = InlineVec::new();
+/// let mut start = 0;
+/// let mut len = 0;
+///
 /// let mut iter = input.iter_elements();  // Uses existing StringChars iterator
 /// while let Some(ch) = iter.next() {     // Single pass
-///     if ch == '\n' {
+///     if ch == NEW_LINE_CHAR {
 ///         let line_slice = input.take_from(start).take(len);  // Zero-copy
 ///         acc.push(line_slice);
+///         start += len + 1; // +1 for the newline
+///         len = 0;
+///     } else {
+///         len += 1;
 ///     }
 /// }
 /// ```
@@ -495,18 +510,19 @@ mod tests_parse_block_code_ng_single_line {
     }
 }
 
+#[allow(clippy::doc_markdown)]
 /// These tests are very similar to the tests in `tests_parse_block_code_ng` module.
 /// There is a key difference. These tests simulate what real input from the
-/// [`crate::EditorContent`] looks like. The editor reads a file and calls `.lines()` on it,
-/// which strips any trailing [`NEW_LINE`] lines. Here's an example to demonstrate this:
-/// ```
+/// [`crate::EditorContent`] looks like. The editor reads a file and calls `.lines()` on
+/// it, which strips any trailing [`NEW_LINE`] lines. Here's an example to demonstrate
+/// this: ```
 /// let input = "```bash\npip install foobar\n```\n";
 /// let count = input.lines().count(); // Last "\n" gets eaten by lines()
 /// assert_eq!(count, 3);
 /// let lines = input.lines().collect::<Vec<_>>();
 /// assert_eq!(lines[0], "```bash");
-/// assert_eq!(lines[0], "pip install foobar");
-/// assert_eq!(lines[0], "```");
+/// assert_eq!(lines[1], "pip install foobar");
+/// assert_eq!(lines[2], "```");
 /// ```
 #[cfg(test)]
 mod tests_parse_block_code_ng_lines {
@@ -1264,10 +1280,7 @@ mod tests_split_by_new_line_ng {
 #[cfg(test)]
 mod tests_compat_with_original_split_by_new_line {
     use super::*;
-    use crate::{as_str_slice_test_case,
-                assert_eq2,
-                split_by_new_line,
-                GCString};
+    use crate::{as_str_slice_test_case, assert_eq2, split_by_new_line, GCString};
 
     // Helper function to convert AsStrSlice results to strings for easy comparison
     fn slice_results_to_strings(slices: &[AsStrSlice<'_>]) -> Vec<String> {

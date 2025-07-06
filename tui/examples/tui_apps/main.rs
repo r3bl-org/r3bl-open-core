@@ -36,26 +36,13 @@ mod ex_rc;
 use std::str::FromStr as _;
 
 use miette::IntoDiagnostic as _;
-use r3bl_tui::{fg_color,
-               fg_frozen_blue,
-               fg_pink,
-               fg_slate_gray,
-               get_size,
-               inline_string,
-               key_press,
+use r3bl_tui::{fg_color, fg_frozen_blue, fg_pink, fg_slate_gray, get_size,
+               inline_string, key_press,
                log::try_initialize_logging_global,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
-               rla_println,
-               set_jemalloc_in_main,
-               throws,
-               tui_color,
-               ASTColor,
-               CommonError,
-               CommonResult,
-               InputEvent,
-               TerminalWindow,
-               DEBUG_TUI_MOD};
+               rla_println, set_jemalloc_in_main, throws, tui_color, ASTColor,
+               CommonError, CommonResult, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
 use strum::IntoEnumIterator as _;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
@@ -105,7 +92,7 @@ async fn main() -> CommonResult<()> {
                 ReadlineEvent::Line(input) => {
                     if run_user_selected_example(input, &mut rl_ctx).await.is_err() {
                         break;
-                    };
+                    }
                     crossterm::terminal::enable_raw_mode().into_diagnostic()?;
                 }
                 ReadlineEvent::Eof | ReadlineEvent::Interrupted => break,
@@ -123,8 +110,8 @@ async fn main() -> CommonResult<()> {
 /// You can type both "0" or "App with no layout" to run the first example. Here are some
 /// details:
 /// - `selection` is what the user types in the terminal, eg: "0" or "App with no layout".
-/// - result_command is the parsed command from the selection, eg:
-///   [AutoCompleteCommand::NoLayout].
+/// - `result_command` is the parsed command from the selection, eg:
+///   [`AutoCompleteCommand::NoLayout`].
 ///
 /// # Raw mode caveat
 ///
@@ -135,10 +122,11 @@ async fn run_user_selected_example(
     selection: String,
     readline_async: &mut ReadlineAsyncContext,
 ) -> CommonResult<()> {
+    use AutoCompleteCommand::{Commander, Editor, Exit, NoLayout, OneColLayout, Slides,
+                              TwoColLayout};
+
     let result_command /* Eg: Ok(Exit) */ =
         AutoCompleteCommand::from_str(&selection /* eg: "0" */);
-
-    use AutoCompleteCommand::*;
 
     match result_command {
         Ok(command) => match command {
@@ -201,7 +189,8 @@ enum AutoCompleteCommand {
 }
 
 fn generate_help_msg() -> String {
-    use AutoCompleteCommand::*;
+    use AutoCompleteCommand::{Commander, Editor, NoLayout, OneColLayout, Slides,
+                              TwoColLayout};
 
     let window_size = get_size().unwrap_or_default();
 

@@ -19,12 +19,8 @@ use std::fmt::Debug;
 
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-use crate::{load_default_theme,
-            try_load_r3bl_theme,
-            DocumentStorage,
-            PartialFlexBox,
-            Size,
-            StyleUSSpanLines};
+use crate::{load_default_theme, try_load_r3bl_theme, DocumentStorage, PartialFlexBox,
+            Size, StyleUSSpanLines};
 
 /// Do not create this struct directly. Please use [`new()`](EditorEngine::new) instead.
 ///
@@ -124,7 +120,7 @@ pub struct EditorEngineConfig {
 }
 
 mod editor_engine_config_options_impl {
-    use super::{EditorEngineConfig, LineMode, SyntaxHighlightMode, EditMode};
+    use super::{EditMode, EditorEngineConfig, LineMode, SyntaxHighlightMode};
 
     impl Default for EditorEngineConfig {
         fn default() -> Self {

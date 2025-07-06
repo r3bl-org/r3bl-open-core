@@ -19,7 +19,7 @@ use std::fmt::{Debug, Formatter, Result};
 
 use super::{cur_index::{CurIndex, CurIndexLoc},
             EditorContent};
-use crate::{format_as_kilobytes_with_commas, idx, RingBuffer as _};
+use crate::{format_as_kilobytes_with_commas, idx, RingBuffer};
 
 /// The `EditorHistory` struct manages the undo/redo functionality for the `EditorBuffer`.
 ///
@@ -167,7 +167,8 @@ impl EditorHistory {
 }
 
 mod impl_debug_format {
-    use super::*;
+    use super::{format_as_kilobytes_with_commas, Debug, EditorHistory, Formatter,
+                Result, RingBuffer};
 
     impl Debug for EditorHistory {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -291,10 +292,7 @@ mod tests_editor_history_struct {
 mod tests_history_functions {
     use smallvec::smallvec;
 
-    use crate::{assert_eq2,
-                cur_index::CurIndex,
-                EditorBuffer,
-                GCStringExt as _,
+    use crate::{assert_eq2, cur_index::CurIndex, EditorBuffer, GCStringExt as _,
                 RingBuffer};
 
     #[test]

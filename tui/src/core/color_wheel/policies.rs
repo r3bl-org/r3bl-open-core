@@ -19,10 +19,12 @@
 //!
 //! This module defines strategy patterns for color wheel operations:
 //! - `GradientGenerationPolicy` - Controls how gradients are generated and reused
-//! - `TextColorizationPolicy` - Controls how text is colorized (per character vs per word)
+//! - `TextColorizationPolicy` - Controls how text is colorized (per character vs per
+//!   word)
 //!
 //! These policies allow fine-grained control over performance vs quality tradeoffs
-//! and different styling approaches. Previously located in `color_wheel_core/policies.rs`.
+//! and different styling approaches. Previously located in
+//! `color_wheel_core/policies.rs`.
 
 use crate::TuiStyle;
 

@@ -19,25 +19,14 @@ use nom::{branch::alt,
           bytes::complete::tag,
           combinator::{map, recognize},
           multi::many0,
-          IResult,
-          Parser};
+          IResult, Parser};
 
 use super::specialized_parser_delim_matchers;
-use crate::{fg_blue,
-            fg_red,
-            md_parser::constants::{BACK_TICK,
-                                   CHECKED,
-                                   LEFT_BRACKET,
-                                   LEFT_IMAGE,
-                                   LEFT_PARENTHESIS,
-                                   RIGHT_BRACKET,
-                                   RIGHT_IMAGE,
-                                   RIGHT_PARENTHESIS,
-                                   STAR,
-                                   UNCHECKED,
-                                   UNDERSCORE},
-            take_text_between_delims_err_on_new_line,
-            HyperlinkData,
+use crate::{fg_blue, fg_red,
+            md_parser::constants::{BACK_TICK, CHECKED, LEFT_BRACKET, LEFT_IMAGE,
+                                   LEFT_PARENTHESIS, RIGHT_BRACKET, RIGHT_IMAGE,
+                                   RIGHT_PARENTHESIS, STAR, UNCHECKED, UNDERSCORE},
+            take_text_between_delims_err_on_new_line, HyperlinkData,
             DEBUG_MD_PARSER_STDOUT};
 
 pub fn parse_fragment_starts_with_underscore_err_on_new_line(
