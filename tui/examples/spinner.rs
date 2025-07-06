@@ -20,11 +20,7 @@ use std::{io::Write, time::Duration};
 use r3bl_tui::{readline_async::{ReadlineAsyncContext, Spinner},
                set_jemalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
-               underline,
-               CommonResult,
-               OutputDevice,
-               SpinnerColor,
-               SpinnerStyle,
+               underline, CommonResult, OutputDevice, SpinnerColor, SpinnerStyle,
                SpinnerTemplate};
 use tokio::{spawn,
             task::JoinError,

@@ -198,14 +198,8 @@ pub mod constructor {
 pub mod file_utils {
     use std::{ffi::OsStr, path::Path};
 
-    use r3bl_tui::{DEBUG_TUI_MOD,
-                   DEFAULT_SYN_HI_FILE_EXT,
-                   DocumentStorage,
-                   InlineString,
-                   TinyInlineString,
-                   fg_green,
-                   fg_red,
-                   inline_string,
+    use r3bl_tui::{DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, DocumentStorage,
+                   InlineString, TinyInlineString, fg_green, fg_red, inline_string,
                    into_existing};
 
     use crate::{AnalyticsAction, report_analytics};
@@ -268,7 +262,7 @@ pub mod file_utils {
 
         tokio::spawn(async move {
             report_analytics::start_task_to_generate_event(
-                "".to_string(),
+                String::new(),
                 AnalyticsAction::EdiFileSave,
             );
             let result_file_write = std::fs::write(&*file_path, &content);

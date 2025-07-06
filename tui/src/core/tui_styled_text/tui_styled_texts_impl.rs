@@ -62,7 +62,7 @@ pub struct TuiStyledTexts {
 }
 
 mod impl_ops {
-    use super::{TuiStyledTexts, AddAssign, TuiStyledText, Index};
+    use super::{AddAssign, Index, TuiStyledText, TuiStyledTexts};
 
     impl TuiStyledTexts {
         #[must_use]
@@ -88,7 +88,7 @@ mod impl_ops {
 }
 
 mod impl_display {
-    use super::{ConvertToPlainText, TuiStyledTexts, InlineString, GCString};
+    use super::{ConvertToPlainText, GCString, InlineString, TuiStyledTexts};
     use crate::{join, ColWidth};
 
     impl ConvertToPlainText for TuiStyledTexts {
@@ -135,15 +135,8 @@ mod impl_debug {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2,
-                ch,
-                throws,
-                throws_with_return,
-                tui_styled_text,
-                tui_stylesheet,
-                CommonResult,
-                TuiStyle,
-                TuiStylesheet};
+    use crate::{assert_eq2, ch, throws, throws_with_return, tui_styled_text,
+                tui_stylesheet, CommonResult, TuiStyle, TuiStylesheet};
 
     #[test]
     fn test_create_styled_text_with_dsl() -> CommonResult<()> {

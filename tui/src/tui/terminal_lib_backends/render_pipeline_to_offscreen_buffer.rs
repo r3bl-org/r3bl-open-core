@@ -18,21 +18,9 @@
 use super::{sanitize_and_save_abs_pos, OffscreenBuffer, RenderOp, RenderPipeline};
 use crate::{ch,
             glyphs::{self, SPACER_GLYPH},
-            inline_string,
-            usize,
-            width,
-            ColWidth,
-            CommonError,
-            CommonErrorType,
-            CommonResult,
-            GCStringExt,
-            PixelChar,
-            Pos,
-            RenderOpsLocalData,
-            Size,
-            TuiStyle,
-            ZOrder,
-            DEBUG_TUI_COMPOSITOR};
+            inline_string, usize, width, ColWidth, CommonError, CommonErrorType,
+            CommonResult, GCStringExt, PixelChar, Pos, RenderOpsLocalData, Size,
+            TuiStyle, ZOrder, DEBUG_TUI_COMPOSITOR};
 
 impl RenderPipeline {
     /// Convert the render pipeline to an offscreen buffer.

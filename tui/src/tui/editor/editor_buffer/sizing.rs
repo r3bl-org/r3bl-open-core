@@ -18,14 +18,8 @@
 use smallvec::SmallVec;
 
 use super::{cur_index::CurIndex, history::EditorHistory, EditorContent};
-use crate::{get_mem_size,
-            CaretRaw,
-            GCString,
-            GetMemSize,
-            InlineString,
-            RingBufferHeap,
-            ScrOfs,
-            TinyInlineString};
+use crate::{get_mem_size, CaretRaw, GCString, GetMemSize, InlineString, RingBufferHeap,
+            ScrOfs, TinyInlineString};
 
 pub type VecEditorContentLines = SmallVec<[GCString; DEFAULT_EDITOR_LINES_SIZE]>;
 const DEFAULT_EDITOR_LINES_SIZE: usize = 32;

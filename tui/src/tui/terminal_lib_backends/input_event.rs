@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 use crossterm::event::{Event::{self},
-                       KeyEvent,
-                       MouseEvent};
+                       KeyEvent, MouseEvent};
 
 use super::{KeyPress, MouseInput};
 use crate::{height, width, Size};
@@ -78,7 +77,7 @@ mod helpers {
 }
 
 pub(crate) mod converters {
-    use super::{Event, InputEvent, width, height, FocusEvent, MouseEvent, KeyEvent};
+    use super::{height, width, Event, FocusEvent, InputEvent, KeyEvent, MouseEvent};
 
     impl TryFrom<Event> for InputEvent {
         type Error = ();

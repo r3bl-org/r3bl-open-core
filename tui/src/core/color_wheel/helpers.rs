@@ -23,7 +23,8 @@
 //! - `clamp()` - Safely converts f64 to u8 values
 //!
 //! These functions handle the mathematical calculations for color generation
-//! and ensure proper contrast ratios. Previously located in `color_wheel_core/color_helpers.rs`.
+//! and ensure proper contrast ratios. Previously located in
+//! `color_wheel_core/color_helpers.rs`.
 
 use super::types::ColorWheelControl;
 use crate::LossyConvertToByte as _;
@@ -49,12 +50,21 @@ fn clamp(value: f64) -> u8 {
     val_f64.to_u8_lossy()
 }
 
+/// Generate an RGB color tuple based on the ColorWheelControl parameters.
+///
+/// This function uses trigonometric calculations to generate smooth color transitions.
+/// The seed value determines the starting point in the color cycle.
 #[must_use]
 pub fn get_color_tuple(c: &ColorWheelControl) -> (u8, u8, u8) {
+    // Calculate the angle for the sine functions
     let i = *c.frequency * *c.seed / *c.spread;
+
+    // Calculate RGB components using sine waves offset by 120° (2π/3) each
+    // This creates a smooth transition through the color spectrum
     let red = i.sin() * 127.00 + 128.00;
     let green = (i + (std::f64::consts::PI * 2.00 / 3.00)).sin() * 127.00 + 128.00;
     let blue = (i + (std::f64::consts::PI * 4.00 / 3.00)).sin() * 127.00 + 128.00;
 
+    // Clamp values to valid RGB range (0-255)
     (clamp(red), clamp(green), clamp(blue))
 }

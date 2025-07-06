@@ -20,31 +20,20 @@ use std::{io::{self, Write},
 
 use crossterm::{cursor,
                 terminal::{self, disable_raw_mode, Clear},
-                ExecutableCommand,
-                QueueableCommand};
+                ExecutableCommand, QueueableCommand};
 use miette::Report as ErrorReport;
 use thiserror::Error;
-use tokio::sync::{broadcast,
-                  mpsc::{self, UnboundedReceiver, UnboundedSender}};
+use tokio::{select, spawn,
+            sync::{broadcast,
+                   mpsc::{self, UnboundedReceiver, UnboundedSender}},
+            task::JoinHandle,
+            time::sleep};
 
-use crate::{execute_commands_no_lock,
-            join,
-            lock_output_device_as_mut,
-            CommonResultWithError,
-            History,
-            InputDevice,
-            LineState,
-            LineStateControlSignal,
-            LineStateLiveness,
-            OutputDevice,
-            PauseBuffer,
-            SafeHistory,
-            SafeLineState,
-            SafePauseBuffer,
-            SendRawTerminal,
-            SharedWriter,
-            StdMutex,
-            CHANNEL_CAPACITY};
+use crate::{execute_commands_no_lock, join, lock_output_device_as_mut,
+            CommonResultWithError, History, InputDevice, LineState,
+            LineStateControlSignal, LineStateLiveness, OutputDevice, PauseBuffer,
+            SafeHistory, SafeLineState, SafePauseBuffer, SendRawTerminal, SharedWriter,
+            StdMutex, CHANNEL_CAPACITY};
 
 /// This is an artificial delay amount that is added to hide the jank of displaying the
 /// cursor to the terminal when the prompt is first printed, after the terminal is put
@@ -296,24 +285,10 @@ pub enum ControlFlowLimited<E> {
 /// [`PauseBuffer`]. When the terminal is resumed, the buffer is drained and the output is
 /// written to the terminal.
 pub mod manage_shared_writer_output {
-    use super::{broadcast,
-                io,
-                join,
-                lock_output_device_as_mut,
-                mpsc,
-                Arc,
-                CommonResultWithError,
-                ControlFlowLimited,
-                LineState,
-                LineStateControlSignal,
-                LineStateLiveness,
-                OutputDevice,
-                PauseBuffer,
-                ReadlineError,
-                SafeLineState,
-                SafePauseBuffer,
-                SendRawTerminal,
-                StdMutex};
+    use super::{broadcast, io, join, lock_output_device_as_mut, mpsc, spawn, Arc,
+                CommonResultWithError, ControlFlowLimited, JoinHandle, LineState,
+                LineStateControlSignal, LineStateLiveness, OutputDevice, PauseBuffer,
+                ReadlineError, SafeLineState, SafePauseBuffer, SendRawTerminal, StdMutex};
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.
     /// - The sender end of the channel is in [`crate::SharedWriter`].
@@ -325,8 +300,8 @@ pub mod manage_shared_writer_output {
         safe_is_paused_buffer: SafePauseBuffer,
         safe_spinner_is_active: Arc<StdMutex<Option<broadcast::Sender<()>>>>,
         shutdown_complete_sender: broadcast::Sender<()>,
-    ) -> tokio::task::JoinHandle<()> {
-        tokio::spawn(async move {
+    ) -> JoinHandle<()> {
+        spawn(async move {
             loop {
                 // Poll line channel for events.
                 // This branch is cancel safe because recv is cancel safe.
@@ -601,12 +576,9 @@ impl Readline {
         // Wait for `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display
         // the cursor (try to eliminate jank).
         let output_device_clone = output_device.clone();
-        tokio::spawn({
+        spawn({
             async move {
-                tokio::time::sleep(
-                    READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY,
-                )
-                .await;
+                sleep(READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY).await;
                 let term = lock_output_device_as_mut!(output_device_clone);
                 // We don't care about the result of this operation.
                 term.execute(cursor::Show).ok();
@@ -716,7 +688,7 @@ impl Readline {
         let mut shutdown_complete_receiver = self.shutdown_complete_sender.subscribe();
 
         loop {
-            tokio::select! {
+            select! {
                 // Poll for events.
                 // This branch is cancel safe because no state is declared inside the
                 // future in the following block.
@@ -762,17 +734,8 @@ impl Readline {
 }
 
 pub mod readline_internal {
-    use super::{broadcast,
-                Arc,
-                ControlFlowExtended,
-                ReadlineError,
-                ReadlineEvent,
-                SafeHistory,
-                SafeLineState,
-                StdMutex,
-                Write,
-                CTRL_C,
-                CTRL_D};
+    use super::{broadcast, Arc, ControlFlowExtended, ReadlineError, ReadlineEvent,
+                SafeHistory, SafeLineState, StdMutex, Write, CTRL_C, CTRL_D};
 
     /// # Panics
     ///
@@ -865,12 +828,11 @@ pub mod readline_test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use readline_test_fixtures::get_input_vec;
-
-    use super::*;
-    use crate::{return_if_not_interactive_terminal,
-                InputDeviceExtMock,
-                OutputDeviceExt,
+    use super::{broadcast, lock_output_device_as_mut, readline_internal,
+                readline_test_fixtures::get_input_vec, sleep, Arc, ControlFlowExtended,
+                Duration, History, InputDevice, LineStateControlSignal,
+                LineStateLiveness, OutputDevice, Readline, ReadlineEvent, StdMutex};
+    use crate::{return_if_not_interactive_terminal, InputDeviceExtMock, OutputDeviceExt,
                 TTYResult};
 
     #[tokio::test]
@@ -979,7 +941,7 @@ mod test_readline {
             .send(LineStateControlSignal::Pause)
             .await
             .unwrap();
-        tokio::time::sleep(Duration::from_millis(1)).await;
+        sleep(Duration::from_millis(1)).await;
 
         assert_eq!(
             readline.safe_line_state.lock().unwrap().is_paused,
@@ -991,7 +953,7 @@ mod test_readline {
             .send(LineStateControlSignal::Resume)
             .await
             .unwrap();
-        tokio::time::sleep(Duration::from_millis(1)).await;
+        sleep(Duration::from_millis(1)).await;
 
         assert_eq!(
             readline.safe_line_state.lock().unwrap().is_paused,
@@ -1024,7 +986,7 @@ mod test_readline {
             .send(LineStateControlSignal::Pause)
             .await
             .unwrap();
-        tokio::time::sleep(Duration::from_millis(1)).await;
+        sleep(Duration::from_millis(1)).await;
 
         assert_eq!(
             readline.safe_line_state.lock().unwrap().is_paused,
@@ -1036,7 +998,7 @@ mod test_readline {
             .send(LineStateControlSignal::Line("abc".into()))
             .await
             .unwrap();
-        tokio::time::sleep(Duration::from_millis(1)).await;
+        sleep(Duration::from_millis(1)).await;
 
         let pause_buffer = readline.safe_is_paused_buffer.lock().unwrap().clone();
         assert_eq!(pause_buffer.len(), 1);
@@ -1047,7 +1009,7 @@ mod test_readline {
             .send(LineStateControlSignal::Resume)
             .await
             .unwrap();
-        tokio::time::sleep(Duration::from_millis(1)).await;
+        sleep(Duration::from_millis(1)).await;
 
         assert_eq!(
             readline.safe_line_state.lock().unwrap().is_paused,

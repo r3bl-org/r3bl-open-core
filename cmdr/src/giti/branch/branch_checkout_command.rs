@@ -14,21 +14,13 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_tui::{CommandRunResult,
-               CommonResult,
-               DefaultIoDevices,
-               ast,
-               ast_line,
-               choose,
+use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, ast, ast_line, choose,
                height,
                readline_async::{HowToChoose, StyleSheet}};
 
-use crate::{giti::{BranchCheckoutDetails,
-                   CommandRunDetails,
-                   RepoStatus,
+use crate::{giti::{BranchCheckoutDetails, CommandRunDetails, RepoStatus,
                    git::{self},
-                   try_is_working_directory_clean,
-                   ui_str},
+                   try_is_working_directory_clean, ui_str},
             prefix_single_select_instruction_header};
 
 /// The main function for `giti branch checkout` command.
@@ -44,7 +36,7 @@ pub async fn handle_branch_checkout_command(
 }
 
 mod details {
-    use super::{CommandRunDetails, BranchCheckoutDetails};
+    use super::{BranchCheckoutDetails, CommandRunDetails};
 
     pub fn empty() -> CommandRunDetails {
         CommandRunDetails::BranchCheckout(BranchCheckoutDetails {
@@ -60,14 +52,8 @@ mod details {
 }
 
 mod command_execute {
-    use super::{CommandRunDetails,
-                CommandRunResult,
-                CommonResult,
-                RepoStatus,
-                details,
-                git,
-                try_is_working_directory_clean,
-                ui_str};
+    use super::{CommandRunDetails, CommandRunResult, CommonResult, RepoStatus, details,
+                git, try_is_working_directory_clean, ui_str};
 
     pub async fn checkout_branch_if_not_current(
         branch_name: &str,
@@ -154,7 +140,9 @@ mod command_execute {
 mod user_interaction {
     use r3bl_tui::inline_vec;
 
-    use super::{ast_line, CommonResult, CommandRunResult, CommandRunDetails, git, ast, ui_str, prefix_single_select_instruction_header, DefaultIoDevices, choose, height, HowToChoose, StyleSheet, command_execute, details};
+    use super::{CommandRunDetails, CommandRunResult, CommonResult, DefaultIoDevices,
+                HowToChoose, StyleSheet, ast, ast_line, choose, command_execute,
+                details, git, height, prefix_single_select_instruction_header, ui_str};
 
     pub async fn handle_branch_selection()
     -> CommonResult<CommandRunResult<CommandRunDetails>> {

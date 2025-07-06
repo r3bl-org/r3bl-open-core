@@ -17,14 +17,8 @@
 
 use std::fmt::Debug;
 
-use crate::{inline_string,
-            throws,
-            tiny_inline_string,
-            CommonError,
-            CommonResult,
-            FlexBox,
-            FlexBoxId,
-            InlineVec};
+use crate::{inline_string, throws, tiny_inline_string, CommonError, CommonResult,
+            FlexBox, FlexBoxId, InlineVec};
 
 /// This is a global (scoped to an [`crate::App`]) struct that is used to store the `id`
 /// of the [`FlexBox`] that has keyboard focus.

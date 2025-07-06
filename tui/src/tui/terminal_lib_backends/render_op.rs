@@ -18,18 +18,9 @@ use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
 use super::TERMINAL_LIB_BACKEND;
-use crate::{ok,
-            CrosstermDebugFormatRenderOp,
-            InlineString,
-            InlineVec,
-            LockedOutputDevice,
-            PaintRenderOp,
-            Pos,
-            RenderOpImplCrossterm,
-            Size,
-            TerminalLibBackend,
-            TuiColor,
-            TuiStyle};
+use crate::{ok, CrosstermDebugFormatRenderOp, InlineString, InlineVec,
+            LockedOutputDevice, PaintRenderOp, Pos, RenderOpImplCrossterm, Size,
+            TerminalLibBackend, TuiColor, TuiStyle};
 
 /// Here's an example. Refer to [`RenderOps`] for more details.
 ///
@@ -173,7 +164,9 @@ pub struct RenderOpsLocalData {
 }
 
 pub mod render_ops_impl {
-    use super::{ok, RenderOps, Size, LockedOutputDevice, RenderOpsLocalData, RenderOp, TERMINAL_LIB_BACKEND, TerminalLibBackend, PaintRenderOp, RenderOpImplCrossterm, Deref, InlineVec, DerefMut, AddAssign, Debug};
+    use super::{ok, AddAssign, Debug, Deref, DerefMut, InlineVec, LockedOutputDevice,
+                PaintRenderOp, RenderOp, RenderOpImplCrossterm, RenderOps,
+                RenderOpsLocalData, Size, TerminalLibBackend, TERMINAL_LIB_BACKEND};
 
     impl RenderOps {
         pub fn execute_all(
@@ -317,7 +310,8 @@ pub enum RenderOp {
 }
 
 mod render_op_impl {
-    use super::{RenderOp, Debug, DebugFormatRenderOp, Formatter, Result, TERMINAL_LIB_BACKEND, TerminalLibBackend, CrosstermDebugFormatRenderOp};
+    use super::{CrosstermDebugFormatRenderOp, Debug, DebugFormatRenderOp, Formatter,
+                RenderOp, Result, TerminalLibBackend, TERMINAL_LIB_BACKEND};
 
     impl Default for RenderOp {
         fn default() -> Self { Self::Noop }
@@ -339,7 +333,8 @@ mod render_op_impl {
 }
 
 mod render_op_impl_trait_flush {
-    use super::{Flush, RenderOp, LockedOutputDevice, TERMINAL_LIB_BACKEND, TerminalLibBackend, RenderOpImplCrossterm};
+    use super::{Flush, LockedOutputDevice, RenderOp, RenderOpImplCrossterm,
+                TerminalLibBackend, TERMINAL_LIB_BACKEND};
 
     impl Flush for RenderOp {
         fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {

@@ -15,8 +15,9 @@
  *   limitations under the License.
  */
 
-//! This module provides comprehensive color wheel functionality for terminal applications.
-//! 
+//! This module provides comprehensive color wheel functionality for terminal
+//! applications.
+//!
 //! ## Organization:
 //! - `types` - Core data types (`Seed`, `ColorWheelControl`, etc.)
 //! - `config` - Configuration types and utilities
@@ -35,13 +36,13 @@ pub mod policies;
 pub mod types;
 
 // Private implementation details.
-mod r#impl;
+mod color_wheel_impl;
 
 // Re-export everything for backward compatibility.
+pub use color_wheel_impl::*;
 pub use config::*;
 pub use gradients::*;
 pub use helpers::*;
 pub use lolcat::*;
 pub use policies::*;
-pub use r#impl::*;
 pub use types::*;

@@ -18,9 +18,7 @@
 use std::fmt::Write;
 
 use crate::{glyphs::{ELLIPSIS_GLYPH, SPACER_GLYPH},
-            ColWidth,
-            GCStringExt as _,
-            InlineString};
+            ColWidth, GCStringExt as _, InlineString};
 
 /// Tests whether the given text contains an ANSI escape sequence.
 #[must_use]

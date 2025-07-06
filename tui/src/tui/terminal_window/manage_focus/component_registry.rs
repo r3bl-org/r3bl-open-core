@@ -18,13 +18,8 @@
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData};
 
 use super::HasFocus;
-use crate::{BoxedSafeComponent,
-            CommonResult,
-            ContainsResult,
-            EventPropagation,
-            FlexBoxId,
-            GlobalData,
-            InputEvent};
+use crate::{BoxedSafeComponent, CommonResult, ContainsResult, EventPropagation,
+            FlexBoxId, GlobalData, InputEvent};
 
 #[derive(Debug)]
 pub struct ComponentRegistry<S, AS>

@@ -17,11 +17,8 @@
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
                 edi::{clap_config::CLIArg, launcher, ui_templates},
-                report_analytics,
-                upgrade_check};
-use r3bl_tui::{CommonResult,
-               log::try_initialize_logging_global,
-               set_jemalloc_in_main,
+                report_analytics, upgrade_check};
+use r3bl_tui::{CommonResult, log::try_initialize_logging_global, set_jemalloc_in_main,
                throws};
 
 #[tokio::main]
@@ -52,7 +49,7 @@ async fn main() -> CommonResult<()> {
 
         upgrade_check::start_task_to_check_if_upgrade_is_needed();
         report_analytics::start_task_to_generate_event(
-            "".to_string(),
+            String::new(),
             AnalyticsAction::EdiAppStart,
         );
 
@@ -60,14 +57,14 @@ async fn main() -> CommonResult<()> {
         match cli_arg.file_paths.len() {
             0 => {
                 report_analytics::start_task_to_generate_event(
-                    "".to_string(),
+                    String::new(),
                     AnalyticsAction::EdiFileNew,
                 );
                 launcher::run_app(None).await?;
             }
             1 => {
                 report_analytics::start_task_to_generate_event(
-                    "".to_string(),
+                    String::new(),
                     AnalyticsAction::EdiFileOpenSingle,
                 );
                 let maybe_file_path = Some(cli_arg.file_paths[0].as_str());

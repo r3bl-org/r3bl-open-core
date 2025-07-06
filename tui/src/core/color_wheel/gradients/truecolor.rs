@@ -99,7 +99,7 @@ pub fn generate_truecolor_gradient(stops: &[StringHexColor], num_steps: u8) -> V
 }
 
 mod random_color {
-    use super::{StringHexColor, ThreadRng, Rng};
+    use super::{Rng, StringHexColor, ThreadRng};
 
     pub fn generate() -> StringHexColor {
         let mut rng: ThreadRng = rand::rng();

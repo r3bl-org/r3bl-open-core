@@ -82,14 +82,8 @@ pub fn parse_line_kv_no_advance_ng<'a>(
 #[cfg(test)]
 mod test_parse_title_no_eol {
     use super::*;
-    use crate::{as_str_slice_test_case,
-                assert_eq2,
-                fg_black,
-                inline_string,
-                md_parser::constants::TITLE,
-                InlineStringCow,
-                NErr,
-                NErrorKind};
+    use crate::{as_str_slice_test_case, assert_eq2, fg_black, inline_string,
+                md_parser::constants::TITLE, InlineStringCow, NErr, NErrorKind};
 
     #[test]
     fn test_not_quoted_no_eol() {

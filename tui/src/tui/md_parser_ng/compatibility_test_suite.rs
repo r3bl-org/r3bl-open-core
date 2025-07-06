@@ -75,12 +75,8 @@
 /// - Some tests include debug output for development purposes
 #[cfg(test)]
 mod tests_parse_markdown_compatibility {
-    use crate::{get_real_world_editor_content,
-                parse_markdown,
-                parse_markdown_ng,
-                AsStrSlice,
-                GCString,
-                ParserByteCache};
+    use crate::{get_real_world_editor_content, parse_markdown, parse_markdown_ng,
+                AsStrSlice, GCString, ParserByteCache};
 
     /// Helper function to test compatibility between `parse_markdown` and
     /// `parse_markdown_ng` This simulates the real-world usage in

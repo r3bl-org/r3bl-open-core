@@ -19,29 +19,12 @@ use std::fmt::{Debug, Formatter, Result};
 use smallvec::smallvec;
 
 use super::{history::EditorHistory, render_cache::RenderCache, sizing, SelectionList};
-use crate::{caret_locate,
-            format_as_kilobytes_with_commas,
-            glyphs,
-            height,
-            inline_string,
-            row,
+use crate::{caret_locate, format_as_kilobytes_with_commas, glyphs, height,
+            inline_string, row,
             validate_buffer_mut::{EditorBufferMutNoDrop, EditorBufferMutWithDrop},
-            width,
-            with_mut,
-            CaretRaw,
-            CaretScrAdj,
-            ColWidth,
-            GCString,
-            GCStringExt,
-            InlineString,
-            RowHeight,
-            RowIndex,
-            ScrOfs,
-            SegString,
-            Size,
-            TinyInlineString,
-            DEBUG_TUI_COPY_PASTE,
-            DEBUG_TUI_MOD,
+            width, with_mut, CaretRaw, CaretScrAdj, ColWidth, GCString, GCStringExt,
+            InlineString, RowHeight, RowIndex, ScrOfs, SegString, Size,
+            TinyInlineString, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
             DEFAULT_SYN_HI_FILE_EXT};
 
 /// Stores the data for a single editor buffer. Please do not construct this struct
@@ -223,13 +206,8 @@ pub struct EditorContent {
 }
 
 mod construct {
-    use super::{glyphs,
-                inline_string,
-                smallvec,
-                EditorBuffer,
-                EditorContent,
-                GCStringExt,
-                DEBUG_TUI_MOD};
+    use super::{glyphs, inline_string, smallvec, EditorBuffer, EditorContent,
+                GCStringExt, DEBUG_TUI_MOD};
 
     impl EditorBuffer {
         /// Marker method to make it easy to search for where an empty instance is
@@ -321,13 +299,7 @@ pub mod versions {
 
 /// Relating to line display width at caret row or given row index (scroll adjusted).
 pub mod content_display_width {
-    use super::{height,
-                sizing,
-                width,
-                CaretRaw,
-                ColWidth,
-                EditorBuffer,
-                RowIndex,
+    use super::{height, sizing, width, CaretRaw, ColWidth, EditorBuffer, RowIndex,
                 ScrOfs};
 
     impl EditorBuffer {
@@ -494,22 +466,9 @@ pub mod content_near_caret {
 }
 
 pub mod access_and_mutate {
-    use super::{height,
-                sizing,
-                with_mut,
-                CaretRaw,
-                CaretScrAdj,
-                EditorBuffer,
-                EditorBufferMutNoDrop,
-                EditorBufferMutWithDrop,
-                GCString,
-                GCStringExt,
-                InlineString,
-                RowHeight,
-                RowIndex,
-                ScrOfs,
-                SelectionList,
-                Size,
+    use super::{height, sizing, with_mut, CaretRaw, CaretScrAdj, EditorBuffer,
+                EditorBufferMutNoDrop, EditorBufferMutWithDrop, GCString, GCStringExt,
+                InlineString, RowHeight, RowIndex, ScrOfs, SelectionList, Size,
                 DEFAULT_SYN_HI_FILE_EXT};
 
     impl EditorBuffer {
@@ -674,12 +633,8 @@ pub mod access_and_mutate {
 }
 
 mod debug_format {
-    use super::{format_as_kilobytes_with_commas,
-                Debug,
-                EditorBuffer,
-                EditorContent,
-                Formatter,
-                Result};
+    use super::{format_as_kilobytes_with_commas, Debug, EditorBuffer, EditorContent,
+                Formatter, Result};
 
     impl Debug for EditorBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

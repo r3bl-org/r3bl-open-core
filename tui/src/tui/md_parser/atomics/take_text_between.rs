@@ -18,8 +18,7 @@
 use nom::{bytes::complete::{tag, take_until},
           combinator::map,
           error::ErrorKind,
-          IResult,
-          Parser};
+          IResult, Parser};
 
 use crate::{fg_green, fg_red, md_parser::constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
 

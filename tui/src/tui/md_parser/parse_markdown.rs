@@ -18,15 +18,9 @@
 use nom::{branch::alt, combinator::map, multi::many0, IResult, Parser};
 
 use crate::{md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
-            parse_block_code,
-            parse_block_heading_opt_eol,
-            parse_block_markdown_text_with_or_without_new_line,
-            parse_block_smart_list,
-            parse_csv_opt_eol,
-            parse_unique_kv_opt_eol,
-            List,
-            MdDocument,
-            MdElement};
+            parse_block_code, parse_block_heading_opt_eol,
+            parse_block_markdown_text_with_or_without_new_line, parse_block_smart_list,
+            parse_csv_opt_eol, parse_unique_kv_opt_eol, List, MdDocument, MdElement};
 
 // XMARK: Main Markdown parser entry point
 
@@ -275,14 +269,8 @@ mod tests_integration_block_smart_lists {
 #[cfg(test)]
 mod tests_parse_markdown {
     use super::*;
-    use crate::{assert_eq2,
-                convert_into_code_block_lines,
-                list,
-                BulletKind,
-                HeadingData,
-                HeadingLevel,
-                HyperlinkData,
-                MdLineFragment};
+    use crate::{assert_eq2, convert_into_code_block_lines, list, BulletKind,
+                HeadingData, HeadingLevel, HyperlinkData, MdLineFragment};
 
     #[test]
     fn test_no_line() {

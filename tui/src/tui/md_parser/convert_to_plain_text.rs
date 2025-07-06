@@ -20,39 +20,15 @@
 
 use std::fmt::Write as _;
 
-use crate::{convert_to_string_slice,
-            inline_string,
-            join,
-            join_fmt,
-            join_with_index,
-            md_parser::constants::{BACK_TICK,
-                                   CHECKED,
-                                   HEADING_CHAR,
-                                   LEFT_BRACKET,
-                                   LEFT_IMAGE,
-                                   LEFT_PARENTHESIS,
-                                   LIST_SPACE_DISPLAY,
+use crate::{convert_to_string_slice, inline_string, join, join_fmt, join_with_index,
+            md_parser::constants::{BACK_TICK, CHECKED, HEADING_CHAR, LEFT_BRACKET,
+                                   LEFT_IMAGE, LEFT_PARENTHESIS, LIST_SPACE_DISPLAY,
                                    LIST_SPACE_END_DISPLAY_FIRST_LINE,
-                                   LIST_SPACE_END_DISPLAY_REST_LINE,
-                                   NEW_LINE,
-                                   PERIOD,
-                                   RIGHT_BRACKET,
-                                   RIGHT_IMAGE,
-                                   RIGHT_PARENTHESIS,
-                                   SPACE,
-                                   STAR,
-                                   UNCHECKED,
-                                   UNDERSCORE},
-            pad_fmt,
-            usize_to_u8_array,
-            HeadingLevel,
-            HyperlinkData,
-            InlineString,
-            List,
-            MdDocument,
-            MdElement,
-            MdLineFragment,
-            PrettyPrintDebug};
+                                   LIST_SPACE_END_DISPLAY_REST_LINE, NEW_LINE, PERIOD,
+                                   RIGHT_BRACKET, RIGHT_IMAGE, RIGHT_PARENTHESIS,
+                                   SPACE, STAR, UNCHECKED, UNDERSCORE},
+            pad_fmt, usize_to_u8_array, HeadingLevel, HyperlinkData, InlineString, List,
+            MdDocument, MdElement, MdLineFragment, PrettyPrintDebug};
 
 impl PrettyPrintDebug for MdDocument<'_> {
     fn pretty_print_debug(&self) -> InlineString {

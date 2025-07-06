@@ -18,31 +18,20 @@ use std::{fs,
           io::Write,
           ops::ControlFlow,
           path::{self, PathBuf},
-          str::FromStr as _,
+          str::FromStr,
           time::Duration};
 
-use miette::{miette, IntoDiagnostic as _};
-use r3bl_tui::{bold,
-               fg_color,
-               fg_red,
-               fg_slate_gray,
-               inline_string,
+use miette::{miette, IntoDiagnostic};
+use r3bl_tui::{bold, fg_color, fg_red, fg_slate_gray, inline_string,
                log::{try_initialize_logging_global, DisplayPreference},
-               readline_async::{Readline,
-                                ReadlineAsyncContext,
-                                ReadlineEvent,
-                                Spinner},
-               rla_println,
-               set_jemalloc_in_main,
-               tui_color,
-               InlineVec,
-               SendRawTerminal,
-               SharedWriter,
-               SpinnerStyle};
+               readline_async::{Readline, ReadlineAsyncContext, ReadlineEvent, Spinner},
+               rla_println, set_jemalloc_in_main, tui_color, InlineVec, OutputDevice,
+               SendRawTerminal, SharedWriter, SpinnerStyle};
 use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
-use tokio::{select, time::interval};
+use tokio::{select, spawn,
+            time::{interval, sleep}};
 
 /// More info:
 /// - <https://docs.rs/strum_macros/latest/strum_macros/derive.EnumString.html>
@@ -177,7 +166,7 @@ async fn main() -> miette::Result<()> {
                 task_1::tick(&mut state, &mut rl_ctx.clone_shared_writer())?;
             },
             _ = interval_2_task.tick() => {
-                task_2::tick(&mut state, &mut rl_ctx.clone_shared_writer())?;
+                task_2::tick(&mut state, &mut rl_ctx.clone_shared_writer());
             },
             result_readline_event = rl_ctx.read_line() => {
                 match result_readline_event {
@@ -190,7 +179,7 @@ async fn main() -> miette::Result<()> {
                                 let readline = &mut rl_ctx.readline;
                                 let control_flow = process_input_event::process(
                                     user_input, mut_state, shared_writer, readline)?;
-                                if let ControlFlow::Break(_) = control_flow {
+                                if let ControlFlow::Break(()) = control_flow {
                                     rl_ctx.request_shutdown(Some("❪◕‿◕❫ Goodbye")).await?;
                                     rl_ctx.await_shutdown().await;
                                     break;
@@ -231,14 +220,14 @@ async fn main() -> miette::Result<()> {
     Ok(())
 }
 
-/// This task simply uses [writeln] and [SharedWriter] to print to stdout.
+/// This task simply uses [`writeln`] and [`SharedWriter`] to print to stdout.
 mod task_1 {
-    use super::*;
+    use super::{IntoDiagnostic, SharedWriter, State, Write};
 
     pub fn tick(state: &mut State, stdout: &mut SharedWriter) -> miette::Result<()> {
         if !state.task_1_state.is_running {
             return Ok(());
-        };
+        }
 
         let counter_1 = state.task_1_state.counter;
         writeln!(stdout, "[{counter_1}] First interval went off!").into_diagnostic()?;
@@ -248,14 +237,14 @@ mod task_1 {
     }
 }
 
-/// This task uses [tracing] to log to stdout (via [SharedWriter]).
+/// This task uses [tracing] to log to stdout (via [`SharedWriter`]).
 mod task_2 {
-    use super::*;
+    use super::{inline_string, SharedWriter, State};
 
-    pub fn tick(state: &mut State, _stdout: &mut SharedWriter) -> miette::Result<()> {
+    pub fn tick(state: &mut State, _stdout: &mut SharedWriter) {
         if !state.task_2_state.is_running {
-            return Ok(());
-        };
+            return;
+        }
 
         // Display a log message with the current counter value.
         tracing::info!(
@@ -264,15 +253,13 @@ mod task_2 {
 
         // Increment the counter.
         state.task_2_state.counter += 1;
-
-        Ok(())
     }
 }
 
 mod process_input_event {
-    use tokio::spawn;
-
-    use super::*;
+    use super::{file_walker, get_info_message, long_running_task, spawn, Command,
+                ControlFlow, Duration, FromStr, IntoDiagnostic, Readline, SharedWriter,
+                State, Write};
 
     pub fn process(
         user_input: String,
@@ -354,7 +341,7 @@ mod process_input_event {
                                 )
                                 .await
                                 {
-                                    Ok(_) => {}
+                                    Ok(()) => {}
                                     Err(_) => todo!(),
                                 };
                             }
@@ -370,16 +357,8 @@ mod process_input_event {
 }
 
 mod long_running_task {
-    use r3bl_tui::OutputDevice;
-    use tokio::spawn;
-
-    use super::{interval,
-                Duration,
-                Readline,
-                SharedWriter,
-                Spinner,
-                SpinnerStyle,
-                Write};
+    use super::{interval, spawn, Duration, OutputDevice, Readline, SharedWriter,
+                Spinner, SpinnerStyle, Write};
 
     // Spawn a task that uses the shared writer to print to stdout, and pauses the spinner
     // at the start, and resumes it when it ends.
@@ -456,9 +435,8 @@ mod long_running_task {
 }
 
 pub mod file_walker {
-    use tokio::time::sleep;
-
-    use super::*;
+    use super::{fs, miette, path, sleep, smallvec, Duration, InlineVec, IntoDiagnostic,
+                PathBuf, SendRawTerminal, SharedWriter};
 
     pub const FOLDER_DELIM: &str = std::path::MAIN_SEPARATOR_STR;
     pub const SPACE_CHAR: &str = " ";
@@ -536,11 +514,11 @@ pub mod file_walker {
     ///
     /// Display a tree formatted view of the sub-folders just like the `tree` command on
     /// Linux. This algorithm is a depth-first search (DFS) algorithm, which relies on the
-    /// [fs], which is a tree, to get a list of folders (not files) contained in any given
-    /// folder. There's no need to explicitly construct a tree, since the [fs] is a
-    /// non-binary tree.
+    /// [`fs`], which is a tree, to get a list of folders (not files) contained in any
+    /// given folder. There's no need to explicitly construct a tree, since the [`fs`]
+    /// is a non-binary tree.
     ///
-    /// The [fs::read_dir] function determines what the order of the traversal is.
+    /// The [`fs::read_dir`] function determines what the order of the traversal is.
     /// Non-binary trees, also known as N-ary trees, can be traversed in several ways.
     /// Here are the most common types of non-binary tree traversals: Depth-First Search
     /// (DFS): This traversal method explores as far as possible along each branch before
@@ -644,7 +622,7 @@ async fn test_display_tree() -> miette::Result<()> {
     loop {
         let it = line_receiver.try_recv().into_diagnostic();
         match it {
-            Ok(r3bl_core::LineStateControlSignal::Line(it)) => {
+            Ok(r3bl_tui::LineStateControlSignal::Line(it)) => {
                 let string = String::from_utf8_lossy(it.as_ref()).to_string();
                 print!("{string}");
                 output_lines.push(string);

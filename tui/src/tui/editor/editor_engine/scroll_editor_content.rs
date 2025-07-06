@@ -25,23 +25,9 @@
 use std::cmp::Ordering;
 
 use super::{caret_mut, SelectMode};
-use crate::{caret_scroll_index,
-            ch,
-            col,
-            height,
-            row,
-            width,
-            BoundsCheck,
-            BoundsStatus,
-            CaretDirection,
-            CaretRaw,
-            ColIndex,
-            ColWidth,
-            EditorArgsMut,
-            EditorBuffer,
-            RowHeight,
-            RowIndex,
-            ScrOfs};
+use crate::{caret_scroll_index, ch, col, height, row, width, BoundsCheck, BoundsStatus,
+            CaretDirection, CaretRaw, ColIndex, ColWidth, EditorArgsMut, EditorBuffer,
+            RowHeight, RowIndex, ScrOfs};
 
 /// # Scrolling not active
 ///

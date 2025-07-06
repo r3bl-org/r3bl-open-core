@@ -29,7 +29,7 @@ pub trait GCStringExt {
 }
 
 mod convert_impl_blocks {
-    use super::{GCStringExt, SmallString, Array, GCString, Cow};
+    use super::{Array, Cow, GCString, GCStringExt, SmallString};
 
     impl<A: Array<Item = u8>> GCStringExt for SmallString<A> {
         fn grapheme_string(&self) -> GCString { GCString::new(self.as_str()) }

@@ -14,47 +14,15 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_tui::{box_end,
-               box_start,
-               ch,
-               col,
-               height,
-               new_style,
-               render_component_in_current_box,
-               render_ops,
-               render_tui_styled_texts_into,
-               req_size_pc,
-               row,
-               surface,
-               throws,
-               throws_with_return,
-               tui_color,
-               tui_styled_text,
-               tui_styled_texts,
-               tui_stylesheet,
-               App,
-               BoxedSafeApp,
-               CommonResult,
-               ComponentRegistry,
-               ComponentRegistryMap,
-               ContainsResult,
-               EventPropagation,
-               FlexBoxId,
-               GlobalData,
-               HasFocus,
-               InputEvent,
-               LayoutDirection,
-               LayoutManagement,
-               PerformPositioningAndSizing,
-               RenderOp,
-               RenderPipeline,
-               Size,
-               Surface,
-               SurfaceProps,
-               SurfaceRender,
-               TuiStylesheet,
-               ZOrder,
-               SPACER_GLYPH};
+use r3bl_tui::{box_end, box_start, ch, col, height, new_style,
+               render_component_in_current_box, render_ops,
+               render_tui_styled_texts_into, req_size_pc, row, surface, throws,
+               throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
+               tui_stylesheet, App, BoxedSafeApp, CommonResult, ComponentRegistry,
+               ComponentRegistryMap, ContainsResult, EventPropagation, FlexBoxId,
+               GlobalData, HasFocus, InputEvent, LayoutDirection, LayoutManagement,
+               PerformPositioningAndSizing, RenderOp, RenderPipeline, Size, Surface,
+               SurfaceProps, SurfaceRender, TuiStylesheet, ZOrder, SPACER_GLYPH};
 
 use super::{AppSignal, SingleColumnComponent, State};
 
@@ -67,7 +35,7 @@ pub enum Id {
 }
 
 mod id_impl {
-    use super::*;
+    use super::{FlexBoxId, Id};
 
     impl From<Id> for u8 {
         fn from(id: Id) -> u8 { id as u8 }
@@ -84,7 +52,7 @@ pub struct AppMain {
 }
 
 mod constructor {
-    use super::*;
+    use super::{AppMain, AppSignal, BoxedSafeApp, State};
 
     impl AppMain {
         pub fn new_boxed() -> BoxedSafeApp<State, AppSignal> {
@@ -95,7 +63,11 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use super::*;
+    use super::{col, height, hud, perform_layout, row, status_bar, stylesheet, surface,
+                throws_with_return, App, AppMain, AppSignal, CommonResult,
+                ComponentRegistry, ComponentRegistryMap, EventPropagation, GlobalData,
+                HasFocus, InputEvent, LayoutManagement, RenderPipeline, State,
+                SurfaceProps, SurfaceRender};
 
     impl App for AppMain {
         type S = State;
@@ -106,7 +78,7 @@ mod app_main_impl_app_trait {
             component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
             has_focus: &mut HasFocus,
         ) {
-            self.init_component_registry(component_registry_map, has_focus);
+            Self::init_component_registry(component_registry_map, has_focus);
         }
 
         fn app_handle_input_event(
@@ -136,17 +108,17 @@ mod app_main_impl_app_trait {
                 match action {
                     AppSignal::AddPop(arg) => {
                         if stack.is_empty() {
-                            stack.push(*arg)
+                            stack.push(*arg);
                         } else if let Some(top) = stack.pop() {
-                            stack.push(top + arg)
+                            stack.push(top + arg);
                         }
                     }
 
                     AppSignal::SubPop(arg) => {
                         if stack.is_empty() {
-                            stack.push(*arg)
+                            stack.push(*arg);
                         } else if let Some(top) = stack.pop() {
-                            stack.push(top - arg)
+                            stack.push(top - arg);
                         }
                     }
 
@@ -213,7 +185,10 @@ mod app_main_impl_app_trait {
 }
 
 mod perform_layout {
-    use super::*;
+    use super::{box_end, box_start, render_component_in_current_box, req_size_pc,
+                throws, AppMain, AppSignal, CommonResult, ComponentRegistryMap,
+                FlexBoxId, GlobalData, HasFocus, Id, LayoutDirection, LayoutManagement,
+                PerformPositioningAndSizing, State, Surface, SurfaceRender};
 
     pub struct ContainerSurfaceRender<'a> {
         pub _app: &'a mut AppMain,
@@ -252,11 +227,11 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use super::*;
+    use super::{AppMain, AppSignal, ComponentRegistry, ComponentRegistryMap,
+                ContainsResult, FlexBoxId, HasFocus, Id, SingleColumnComponent, State};
 
     impl AppMain {
         pub fn init_component_registry(
-            &mut self,
             map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
         ) {
@@ -275,7 +250,8 @@ mod populate_component_registry {
 }
 
 mod stylesheet {
-    use super::*;
+    use super::{ch, new_style, throws_with_return, tui_color, tui_stylesheet,
+                CommonResult, Id, TuiStylesheet};
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
@@ -291,7 +267,9 @@ mod stylesheet {
 }
 
 mod hud {
-    use super::*;
+    use super::{col, new_style, render_ops, render_tui_styled_texts_into, row,
+                tui_color, tui_styled_text, tui_styled_texts, RenderOp, RenderPipeline,
+                Size, ZOrder, SPACER_GLYPH};
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
@@ -323,7 +301,9 @@ mod hud {
 }
 
 mod status_bar {
-    use super::*;
+    use super::{col, new_style, render_ops, render_tui_styled_texts_into, tui_color,
+                tui_styled_text, tui_styled_texts, RenderOp, RenderPipeline, Size,
+                ZOrder, SPACER_GLYPH};
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {

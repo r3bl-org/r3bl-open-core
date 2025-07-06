@@ -16,31 +16,11 @@
  */
 #[cfg(test)]
 mod tests {
-    use crate::{assert_eq2,
-                box_end,
-                box_props,
-                box_start,
-                ch,
-                col,
-                console_log,
-                get_tui_styles,
-                height,
-                new_style,
-                req_size_pc,
-                row,
-                throws,
-                throws_with_return,
-                tui_color,
-                tui_stylesheet,
-                width,
-                CommonResult,
-                FlexBoxId,
-                FlexBoxProps,
-                LayoutDirection,
-                LayoutManagement,
-                Surface,
-                SurfaceProps,
-                TuiStylesheet};
+    use crate::{assert_eq2, box_end, box_props, box_start, ch, col, console_log,
+                get_tui_styles, height, new_style, req_size_pc, row, throws,
+                throws_with_return, tui_color, tui_stylesheet, width, CommonResult,
+                FlexBoxId, FlexBoxProps, LayoutDirection, LayoutManagement, Surface,
+                SurfaceProps, TuiStylesheet};
 
     #[test]
     fn test_surface_2_col_complex() -> CommonResult<()> {
@@ -163,7 +143,7 @@ mod tests {
 
     /// Right column 2.
     fn create_right_col(surface: &mut Surface) -> CommonResult<()> {
-                fn make_right_col_assertions(surface: &Surface) -> CommonResult<()> {
+        fn make_right_col_assertions(surface: &Surface) -> CommonResult<()> {
             throws!({
                 let current_box = surface.stack_of_boxes.last().unwrap();
                 assert_eq2!(current_box.id, FlexBoxId::from(2));
@@ -202,7 +182,6 @@ mod tests {
             make_right_col_assertions(surface)?;
             surface.box_end()?;
         });
-
     }
 
     /// Create a stylesheet containing styles using DSL.

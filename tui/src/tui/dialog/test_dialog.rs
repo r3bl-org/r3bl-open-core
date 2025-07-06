@@ -23,17 +23,9 @@ pub mod mock_real_objects_for_dialog {
 
     use crate::{core::test_fixtures::StdoutMock,
                 editor::editor_test_fixtures::mock_real_objects_for_editor,
-                telemetry::telemetry_sizing::TelemetryReportLineStorage,
-                DialogBuffer,
-                DialogEngine,
-                FlexBoxId,
-                GlobalData,
-                HasDialogBuffers,
-                OffscreenBufferPool,
-                OutputDevice,
-                OutputDeviceExt,
-                Size,
-                SpinnerHelper,
+                telemetry::telemetry_sizing::TelemetryReportLineStorage, DialogBuffer,
+                DialogEngine, FlexBoxId, GlobalData, HasDialogBuffers,
+                OffscreenBufferPool, OutputDevice, OutputDeviceExt, Size, SpinnerHelper,
                 CHANNEL_WIDTH};
 
     #[must_use]

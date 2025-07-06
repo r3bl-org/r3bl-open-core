@@ -17,23 +17,14 @@
 
 use std::{env::var, fmt::Display, io::Error, process::ExitStatus};
 
-use r3bl_tui::{ColorWheel,
-               GradientGenerationPolicy,
-               InlineString,
-               TextColorizationPolicy,
-               glyphs,
-               inline_string};
+use r3bl_tui::{ColorWheel, GradientGenerationPolicy, InlineString,
+               TextColorizationPolicy, glyphs, inline_string};
 
 use super::upgrade_check::{get_self_bin_name, get_self_crate_name};
 use crate::{common::fmt, get_self_bin_emoji};
 
 pub mod upgrade_install {
-    use super::{Display,
-                Error,
-                ExitStatus,
-                InlineString,
-                fmt,
-                get_self_crate_name,
+    use super::{Display, Error, ExitStatus, InlineString, fmt, get_self_crate_name,
                 inline_string};
 
     /// Ran `cargo install ...` and this process exited with zero `request_shutdown` code.
@@ -132,13 +123,8 @@ pub mod upgrade_install {
 }
 
 pub mod upgrade_check {
-    use super::{ColorWheel,
-                GradientGenerationPolicy,
-                InlineString,
-                TextColorizationPolicy,
-                get_self_bin_name,
-                get_self_crate_name,
-                glyphs,
+    use super::{ColorWheel, GradientGenerationPolicy, InlineString,
+                TextColorizationPolicy, get_self_bin_name, get_self_crate_name, glyphs,
                 inline_string};
 
     #[must_use]
@@ -178,12 +164,8 @@ pub mod upgrade_check {
 }
 
 pub mod goodbye_greetings {
-    use super::{ColorWheel,
-                InlineString,
-                get_self_bin_emoji,
-                get_self_bin_name,
-                inline_string,
-                var};
+    use super::{ColorWheel, InlineString, get_self_bin_emoji, get_self_bin_name,
+                inline_string, var};
 
     #[must_use]
     pub fn thanks_msg() -> InlineString {

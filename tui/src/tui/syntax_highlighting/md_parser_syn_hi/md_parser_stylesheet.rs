@@ -21,15 +21,8 @@
 
 use smallvec::smallvec;
 
-use crate::{global_color_support,
-            new_style,
-            tui_color,
-            Ansi256GradientIndex,
-            ColorSupport,
-            ColorWheel,
-            ColorWheelConfig,
-            ColorWheelSpeed,
-            HeadingData,
+use crate::{global_color_support, new_style, tui_color, Ansi256GradientIndex,
+            ColorSupport, ColorWheel, ColorWheelConfig, ColorWheelSpeed, HeadingData,
             TuiStyle};
 
 /// This style is for any selected range in the document.

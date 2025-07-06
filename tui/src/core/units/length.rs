@@ -72,7 +72,7 @@ impl Debug for Length {
 }
 
 mod construct {
-    use super::{Length, Index, ch, idx, ChUnit};
+    use super::{ch, idx, ChUnit, Index, Length};
 
     impl Length {
         pub fn new(arg_length: impl Into<Length>) -> Self { arg_length.into() }
@@ -121,7 +121,7 @@ mod construct {
 }
 
 mod ops {
-    use super::{Deref, Length, ChUnit, DerefMut, Add, AddAssign, Sub, SubAssign, Div};
+    use super::{Add, AddAssign, ChUnit, Deref, DerefMut, Div, Length, Sub, SubAssign};
 
     impl Deref for Length {
         type Target = ChUnit;

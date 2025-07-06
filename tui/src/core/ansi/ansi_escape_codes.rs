@@ -41,7 +41,7 @@ pub enum SgrCode {
 }
 
 pub mod sgr_code_impl {
-    use super::{Display, SgrCode, Formatter, Result};
+    use super::{Display, Formatter, Result, SgrCode};
 
     pub const CSI: &str = "\x1b[";
     pub const SGR: &str = "m";

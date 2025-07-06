@@ -86,17 +86,8 @@ mod constructor {
 }
 
 mod ops {
-    use super::{col,
-                Add,
-                AddAssign,
-                ChUnit,
-                ColIndex,
-                ColWidth,
-                Deref,
-                DerefMut,
-                Mul,
-                Sub,
-                SubAssign};
+    use super::{col, Add, AddAssign, ChUnit, ColIndex, ColWidth, Deref, DerefMut, Mul,
+                Sub, SubAssign};
 
     impl Deref for ColIndex {
         type Target = ChUnit;

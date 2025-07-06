@@ -19,17 +19,13 @@ use nom::{bytes::complete::{tag, take_while1},
           combinator::verify,
           multi::many0,
           sequence::preceded,
-          IResult,
-          Parser as _};
+          IResult, Parser as _};
 
 use crate::{constants::{COMMA_CHAR, NEW_LINE_CHAR, SPACE_CHAR},
-            inline_vec,
-            list,
+            inline_vec, list,
             md_parser::constants::{COLON, COMMA, SPACE},
             parser_take_text_until_eol_or_eoi_ng::parser_take_line_text_ng,
-            AsStrSlice,
-            InlineVec,
-            List};
+            AsStrSlice, InlineVec, List};
 
 /// Parse tags metadata from a line like `@tags: rust, parsing, markdown, documentation`
 /// or `@authors: author1, author2, author3`.
@@ -136,10 +132,7 @@ fn parse_comma_separated_list_ng(
 #[cfg(test)]
 mod test_parse_tags_opt_eol {
     use super::*;
-    use crate::{as_str_slice_test_case,
-                assert_eq2,
-                md_parser::constants::TAGS,
-                GCString};
+    use crate::{as_str_slice_test_case, assert_eq2, md_parser::constants::TAGS, GCString};
 
     #[test]
     fn test_not_quoted_no_eol() {

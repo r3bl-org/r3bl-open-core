@@ -22,11 +22,7 @@ use std::time::Duration;
 
 use miette::IntoDiagnostic;
 use serde::{Deserialize, Serialize};
-use tokio::{io::{AsyncRead,
-                 AsyncReadExt,
-                 AsyncWrite,
-                 AsyncWriteExt,
-                 BufReader,
+use tokio::{io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader,
                  BufWriter},
             time::timeout};
 
@@ -54,7 +50,8 @@ pub mod protocol_constants {
 ///    make sure they are valid.
 /// 2. It then **writes** the magic number back to the client (for it to validate).
 pub mod handshake {
-    use super::{ok, AsyncWrite, AsyncRead, timeout, protocol_constants, IntoDiagnostic, AsyncWriteExt, AsyncReadExt};
+    use super::{ok, protocol_constants, timeout, AsyncRead, AsyncReadExt, AsyncWrite,
+                AsyncWriteExt, IntoDiagnostic};
 
     /// Client side handshake.
     pub async fn try_connect_or_timeout<W: AsyncWrite + Unpin, R: AsyncRead + Unpin>(
@@ -189,7 +186,9 @@ mod tests_handshake {
 }
 
 pub mod byte_io {
-    use super::{AsyncWrite, Serialize, BufWriter, bincode_serde, compress, IntoDiagnostic, AsyncWriteExt, LengthPrefixType, AsyncRead, Deserialize, BufReader, AsyncReadExt, protocol_constants};
+    use super::{bincode_serde, compress, protocol_constants, AsyncRead, AsyncReadExt,
+                AsyncWrite, AsyncWriteExt, BufReader, BufWriter, Deserialize,
+                IntoDiagnostic, LengthPrefixType, Serialize};
 
     /// Write the payload to the client. Use the length-prefix, binary payload, protocol.
     /// - The trait bounds on this function are so that this function can be tested w/ a

@@ -129,13 +129,8 @@ pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> 
 
 /// This is a wrapper over `git branch` functionality.
 pub mod local_branch_ops {
-    use super::{CURRENT_BRANCH_PREFIX,
-                InlineString,
-                ItemsOwned,
-                ResultAndCommand,
-                Run,
-                command,
-                try_get_current_branch_name};
+    use super::{CURRENT_BRANCH_PREFIX, InlineString, ItemsOwned, ResultAndCommand, Run,
+                command, try_get_current_branch_name};
 
     /// Information about local git branches:
     /// - The currently checked out branch.
@@ -295,13 +290,8 @@ pub mod local_branch_ops {
 /// the current working directory are completely isolated and cannot affect other tests.
 #[cfg(test)]
 mod tests {
-    use r3bl_tui::{TempDir,
-                   inline_string,
-                   inline_vec,
-                   ok,
-                   try_create_temp_dir_and_cd,
-                   try_write_file,
-                   with_saved_pwd};
+    use r3bl_tui::{TempDir, inline_string, inline_vec, ok, try_create_temp_dir_and_cd,
+                   try_write_file, with_saved_pwd};
 
     use super::*;
 

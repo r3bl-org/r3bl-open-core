@@ -21,12 +21,10 @@ use nom::{branch::alt,
           combinator::{map, not, opt, recognize},
           multi::many1,
           sequence::{preceded, terminated},
-          IResult,
-          Parser};
+          IResult, Parser};
 
 use crate::{md_parser::constants::{self, NEW_LINE},
-            HeadingData,
-            HeadingLevel};
+            HeadingData, HeadingLevel};
 
 /// This matches the heading tag and text until EOL. Outputs a tuple of [`HeadingLevel`] and
 /// [`crate::FragmentsInOneLine`].

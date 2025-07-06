@@ -18,10 +18,7 @@
 use miette::IntoDiagnostic;
 
 use crate::{crates_api::constants::{CRATE, MAX_VERSION},
-            fg_magenta,
-            http_client,
-            ok,
-            SCRIPT_MOD_DEBUG};
+            fg_magenta, http_client, ok, SCRIPT_MOD_DEBUG};
 
 mod constants {
     pub const CRATE: &str = "crate";
@@ -62,8 +59,7 @@ mod tests {
 
     use nom::{character::complete::{char, digit0},
               combinator::map_res,
-              IResult,
-              Parser};
+              IResult, Parser};
     use tokio::time::timeout;
 
     use super::*;

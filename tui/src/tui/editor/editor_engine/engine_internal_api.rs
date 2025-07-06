@@ -20,12 +20,8 @@
 //! API.
 
 use super::{caret_mut, content_mut, DeleteSelectionWith, SelectMode};
-use crate::{clipboard_support,
-            clipboard_support::ClipboardService,
-            EditorArgsMut,
-            EditorBuffer,
-            EditorEngine,
-            GCString};
+use crate::{clipboard_support, clipboard_support::ClipboardService, EditorArgsMut,
+            EditorBuffer, EditorEngine, GCString};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     caret_mut::up(buffer, engine, sel_mod);

@@ -22,67 +22,24 @@ use smallvec::smallvec;
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
 use super::create_color_wheel_from_heading_data;
-use crate::{generate_ordered_list_item_bullet,
-            generate_unordered_list_item_bullet,
-            get_bold_style,
-            get_checkbox_checked_style,
-            get_checkbox_unchecked_style,
-            get_code_block_content_style,
-            get_code_block_lang_style,
-            get_foreground_dim_style,
-            get_foreground_style,
-            get_inline_code_style,
-            get_italic_style,
-            get_link_text_style,
-            get_link_url_style,
-            get_list_bullet_style,
-            join,
-            new_style,
-            parse_markdown,
-            parse_markdown_ng,
-            tui::{md_parser::constants::{AUTHORS,
-                                         BACK_TICK,
-                                         CHECKED_OUTPUT,
-                                         DATE,
-                                         LEFT_BRACKET,
-                                         LEFT_IMAGE,
-                                         LEFT_PARENTHESIS,
-                                         NEW_LINE,
-                                         RIGHT_BRACKET,
-                                         RIGHT_IMAGE,
-                                         RIGHT_PARENTHESIS,
-                                         STAR,
-                                         TAGS,
-                                         TITLE,
-                                         UNCHECKED_OUTPUT,
-                                         UNDERSCORE},
+use crate::{generate_ordered_list_item_bullet, generate_unordered_list_item_bullet,
+            get_bold_style, get_checkbox_checked_style, get_checkbox_unchecked_style,
+            get_code_block_content_style, get_code_block_lang_style,
+            get_foreground_dim_style, get_foreground_style, get_inline_code_style,
+            get_italic_style, get_link_text_style, get_link_url_style,
+            get_list_bullet_style, join, new_style, parse_markdown, parse_markdown_ng,
+            tui::{md_parser::constants::{AUTHORS, BACK_TICK, CHECKED_OUTPUT, DATE,
+                                         LEFT_BRACKET, LEFT_IMAGE, LEFT_PARENTHESIS,
+                                         NEW_LINE, RIGHT_BRACKET, RIGHT_IMAGE,
+                                         RIGHT_PARENTHESIS, STAR, TAGS, TITLE,
+                                         UNCHECKED_OUTPUT, UNDERSCORE},
                   md_parser_ng::AsStrSlice},
-            CodeBlockLineContent,
-            CodeBlockLines,
-            CommonError,
-            CommonErrorType,
-            CommonResult,
-            FragmentsInOneLine,
-            GCString,
-            GCStringExt,
-            GradientGenerationPolicy,
-            HeadingData,
-            HyperlinkData,
-            InlineString,
-            Lines,
-            List,
-            MdDocument,
-            MdElement,
-            MdLineFragment,
-            ParserByteCache,
-            PrettyPrintDebug,
-            StyleUSSpan,
-            StyleUSSpanLine,
-            StyleUSSpanLines,
-            TextColorizationPolicy,
-            TuiStyle,
-            TuiStyledTexts,
-            ENABLE_MD_PARSER_NG};
+            CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
+            CommonResult, FragmentsInOneLine, GCString, GCStringExt,
+            GradientGenerationPolicy, HeadingData, HyperlinkData, InlineString, Lines,
+            List, MdDocument, MdElement, MdLineFragment, ParserByteCache,
+            PrettyPrintDebug, StyleUSSpan, StyleUSSpanLine, StyleUSSpanLines,
+            TextColorizationPolicy, TuiStyle, TuiStyledTexts, ENABLE_MD_PARSER_NG};
 
 /// This is the main function that the [`crate::editor`] uses this in order to display the
 /// markdown to the user.It is responsible for converting:
@@ -275,9 +232,11 @@ impl StyleUSSpanLines {
         mod inner {
             use syntect::easy::HighlightLines;
 
-            use super::{CodeBlockLines, TuiStyle, SyntaxSet, Theme, StyleUSSpanLines, StyleUSSpanLine, CodeBlockLineContent, List, StyleUSSpan, get_foreground_dim_style, get_code_block_lang_style, get_code_block_content_style};
-            use crate::{convert_syntect_to_styled_text,
-                        try_get_syntax_ref,
+            use super::{get_code_block_content_style, get_code_block_lang_style,
+                        get_foreground_dim_style, CodeBlockLineContent, CodeBlockLines,
+                        List, StyleUSSpan, StyleUSSpanLine, StyleUSSpanLines, SyntaxSet,
+                        Theme, TuiStyle};
+            use crate::{convert_syntect_to_styled_text, try_get_syntax_ref,
                         tui::constants::CODE_BLOCK_START_PARTIAL};
 
             #[allow(clippy::similar_names)]
@@ -785,16 +744,9 @@ mod tests_style_us_span_lines_from {
     use miette::IntoDiagnostic as _;
 
     use super::*;
-    use crate::{assert_eq2,
-                fg_cyan,
-                get_metadata_tags_marker_style,
-                get_metadata_tags_values_style,
-                get_metadata_title_marker_style,
-                get_metadata_title_value_style,
-                list,
-                throws,
-                tui_color,
-                CodeBlockLine,
+    use crate::{assert_eq2, fg_cyan, get_metadata_tags_marker_style,
+                get_metadata_tags_values_style, get_metadata_title_marker_style,
+                get_metadata_title_value_style, list, throws, tui_color, CodeBlockLine,
                 HeadingLevel};
 
     /// Test each [`MdLineFragment`] variant is converted by

@@ -15,32 +15,29 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{ast,
-               ast_line,
-               ast_lines,
-               choose,
-               get_size,
-               get_terminal_width,
-               height,
+use r3bl_tui::{ast, ast_line, ast_lines, choose, get_size, get_terminal_width, height,
                inline_vec,
                log::try_initialize_logging_global,
-               new_style,
-               ok,
+               new_style, ok,
                readline_async::{style::StyleSheet, HowToChoose, DEVELOPMENT_MODE},
-               set_jemalloc_in_main,
-               throws,
-               tui_color,
-               usize,
-               width,
-               ASTColor,
-               ASTStyle,
-               AnsiStyledText,
-               DefaultIoDevices,
-               InlineVec};
+               set_jemalloc_in_main, throws, tui_color, usize, width, ASTColor,
+               ASTStyle, AnsiStyledText, DefaultIoDevices, InlineVec};
 use smallvec::smallvec;
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
+    const MULTI_LINE_HEADER: &str = "Multi line header";
+    const SINGLE_LINE_HEADER: &str = "Single line header";
+    const MULTIPLE_SELECT_SINGLE_ITEM: &str = "Multiple select, single item";
+    const MULTIPLE_SELECT_13_ITEMS_VPH_5: &str =
+        "Multiple select, 13 items, viewport height = 5";
+    const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str =
+        "Multiple select, 2 items, viewport height = 5";
+    const SINGLE_SELECT_13_ITEMS_VPH_5: &str =
+        "Single select, 13 items, viewport height = 5";
+    const SINGLE_SELECT_2_ITEMS_VPH_5: &str =
+        "Single select, 2 items, viewport height = 5";
+
     set_jemalloc_in_main!();
 
     throws!({
@@ -50,7 +47,7 @@ async fn main() -> miette::Result<()> {
             tracing::debug!(
                 message = "Start logging...",
                 window_size = ?get_size()
-            )
+            );
         });
 
         // Get display size.
@@ -61,18 +58,6 @@ async fn main() -> miette::Result<()> {
         let default_style = StyleSheet::default();
         let sea_foam_style = StyleSheet::sea_foam_style();
         let hot_pink_style = StyleSheet::hot_pink_style();
-
-        const MULTI_LINE_HEADER: &str = "Multi line header";
-        const SINGLE_LINE_HEADER: &str = "Single line header";
-        const MULTIPLE_SELECT_SINGLE_ITEM: &str = "Multiple select, single item";
-        const MULTIPLE_SELECT_13_ITEMS_VPH_5: &str =
-            "Multiple select, 13 items, viewport height = 5";
-        const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str =
-            "Multiple select, 2 items, viewport height = 5";
-        const SINGLE_SELECT_13_ITEMS_VPH_5: &str =
-            "Single select, 13 items, viewport height = 5";
-        const SINGLE_SELECT_2_ITEMS_VPH_5: &str =
-            "Single select, 2 items, viewport height = 5";
 
         // Choose which example to run.
         let mut default_io_devices = DefaultIoDevices::default();
@@ -110,7 +95,7 @@ async fn main() -> miette::Result<()> {
                     single_line_header().await?;
                 } else if input_item == MULTIPLE_SELECT_SINGLE_ITEM {
                     // Multiple select, single item.
-                    multiple_select_single_item().await?
+                    multiple_select_single_item().await?;
                 } else if input_item == MULTIPLE_SELECT_13_ITEMS_VPH_5 {
                     // Multiple select.
                     multiple_select_13_items_vph_5(
@@ -142,7 +127,7 @@ async fn main() -> miette::Result<()> {
                     )
                     .await?;
                 } else {
-                    println!("User did not select anything")
+                    println!("User did not select anything");
                 }
             }
             None => println!("User did not select anything"),

@@ -55,7 +55,7 @@ use crate::{ok, DisplayPreference, TracingConfig, WriterConfig};
 /// _ = try_initialize_logging_thread_local(config_1 + config_4);
 /// ```
 pub mod tracing_config_options {
-    use super::{WriterConfig, TracingConfig, DisplayPreference, Add};
+    use super::{Add, DisplayPreference, TracingConfig, WriterConfig};
 
     pub const DEFAULT_LOG_FILE_NAME: &str = "log.txt";
 

@@ -20,24 +20,11 @@ use std::fmt::{Display, Formatter, Result};
 use smallvec::{smallvec, SmallVec};
 use strum_macros::EnumCount;
 
-use crate::{inline_string,
-            tui_color,
-            tui_style::tui_style_attrib::{Bold,
-                                          Dim,
-                                          Hidden,
-                                          Italic,
-                                          Reverse,
-                                          Strikethrough,
-                                          Underline},
-            ASTColor,
-            ColIndex,
-            ColWidth,
-            GCString,
-            InlineString,
-            InlineVec,
-            PixelChar,
-            SgrCode,
-            TuiStyle};
+use crate::{inline_string, tui_color,
+            tui_style::tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse,
+                                          Strikethrough, Underline},
+            ASTColor, ColIndex, ColWidth, GCString, InlineString, InlineVec, PixelChar,
+            SgrCode, TuiStyle};
 
 /// Please don't create this struct directly, use [`crate::ast()`], [`crate::ast_line`!],
 /// [`crate::ast_lines`!] or the constructor functions like [`fg_red()`], [`fg_green()`],
@@ -169,16 +156,8 @@ macro_rules! ast_lines {
 }
 
 pub mod ansi_styled_text_impl {
-    use super::{inline_string,
-                ASText,
-                AnsiStyledText,
-                ColIndex,
-                ColWidth,
-                GCString,
-                InlineString,
-                InlineVec,
-                PixelChar,
-                TuiStyle};
+    use super::{inline_string, ASText, AnsiStyledText, ColIndex, ColWidth, GCString,
+                InlineString, InlineVec, PixelChar, TuiStyle};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct ASTextConvertOptions {
@@ -734,16 +713,8 @@ pub enum ASTStyle {
 }
 
 mod convert_vec_ast_style_to_tui_style {
-    use super::{ASTStyle,
-                ASTextStyles,
-                Bold,
-                Dim,
-                Hidden,
-                Italic,
-                Reverse,
-                Strikethrough,
-                TuiStyle,
-                Underline};
+    use super::{ASTStyle, ASTextStyles, Bold, Dim, Hidden, Italic, Reverse,
+                Strikethrough, TuiStyle, Underline};
 
     impl From<ASTextStyles> for TuiStyle {
         fn from(styles: ASTextStyles) -> Self {
@@ -819,13 +790,8 @@ mod convert_tui_style_to_vec_ast_style {
 mod style_impl {
     use std::fmt::{Display, Formatter, Result};
 
-    use crate::{global_color_support,
-                ASTColor,
-                ASTStyle,
-                ColorSupport,
-                RgbValue,
-                SgrCode,
-                TransformColor};
+    use crate::{global_color_support, ASTColor, ASTStyle, ColorSupport, RgbValue,
+                SgrCode, TransformColor};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum ColorKind {
@@ -928,26 +894,11 @@ mod tests {
     use super::dim;
     use crate::{ansi::sizing::InlineVecASTextStyles,
                 ansi_styled_text::ansi_styled_text_impl::ASTextConvertOptions,
-                global_color_support,
-                tui_color,
-                tui_style::tui_style_attrib::{Bold,
-                                              Dim,
-                                              Hidden,
-                                              Italic,
-                                              Reverse,
-                                              Strikethrough,
-                                              Underline},
-                width,
-                ASTColor,
-                ASTStyle,
-                ASText,
-                ASTextStyles,
-                ColIndex,
-                ColorSupport,
-                InlineVec,
-                PixelChar,
-                TuiColor,
-                TuiStyle};
+                global_color_support, tui_color,
+                tui_style::tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse,
+                                              Strikethrough, Underline},
+                width, ASTColor, ASTStyle, ASText, ASTextStyles, ColIndex, ColorSupport,
+                InlineVec, PixelChar, TuiColor, TuiStyle};
 
     #[serial]
     #[test]

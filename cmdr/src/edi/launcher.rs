@@ -15,15 +15,8 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{CommonResult,
-               GlobalData,
-               InputDevice,
-               InputEvent,
-               ModifierKeysMask,
-               OutputDevice,
-               TerminalWindow,
-               key_press,
-               throws};
+use r3bl_tui::{CommonResult, GlobalData, InputDevice, InputEvent, ModifierKeysMask,
+               OutputDevice, TerminalWindow, key_press, throws};
 
 use crate::edi::{AppMain, constructor};
 

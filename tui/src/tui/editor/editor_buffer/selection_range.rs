@@ -18,15 +18,8 @@
 use std::{cmp::{self},
           fmt::Debug};
 
-use crate::{caret_scr_adj,
-            row,
-            width,
-            CaretScrAdj,
-            ChUnitPrimitiveType,
-            ColIndex,
-            ColWidth,
-            GCString,
-            ScrOfs};
+use crate::{caret_scr_adj, row, width, CaretScrAdj, ChUnitPrimitiveType, ColIndex,
+            ColWidth, GCString, ScrOfs};
 
 /// Represents a range of characters in a line. The col indices are scroll adjusted (and
 /// not raw). The row indices are not used, and clobbered with

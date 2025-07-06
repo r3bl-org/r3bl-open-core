@@ -15,11 +15,11 @@
  *   limitations under the License.
  */
 
-//! This program uses the `r3bl_terminal_async` crate to provide a prompt and get user
+//! This program uses the `r3bl_tui` crate to provide a prompt and get user
 //! input, pass that to the `stdin` of a `bash` child process, and then display the output
 //! from the child process in the terminal.
 //!
-//! # YouTube video of live coding this example
+//! # `YouTube` video of live coding this example
 //!
 //! Please watch the following video to see how this example was created.
 //! - [Build with Naz : Create an async shell in Rust](https://youtu.be/jXzFCDIJQag)
@@ -31,32 +31,34 @@
 //!
 //! - A broadcast channel to signal shutdown to the child process, and all the spawned
 //!   tasks.
-//! - [r3bl_terminal_async::ReadlineAsync] to write to the terminal. This provides the
-//!   mechanism to collect user input and display output.
-//! - [tokio::process::Child] to spawn the child process (`bash`) and interact with it.
+//! - [`r3bl_tui::readline_async::ReadlineAsyncContext`] to write to the terminal. This
+//!   provides the mechanism to collect user input and display output.
+//! - [`tokio::process::Child`] to spawn the child process (`bash`) and interact with it.
 //!   This child process lives as long as the `main` function and exits when the user
-//!   chooses to request_shutdown the program.
-//!   - The [tokio::process::Command] starts `bash`.
-//!   - Both `stdin` and `stdout` are piped using [std::process::Stdio::piped].
+//!   chooses to `request_shutdown` the program.
+//!   - The [`tokio::process::Command`] starts `bash`.
+//!   - Both `stdin` and `stdout` are piped using [`std::process::Stdio::piped`].
 //!
 //! # 🧵 The main event loop simply waits for the following (on the current thread)
 //!
 //! - Start a main event loop (on the current thread) that does the following:
 //!   - Monitor the shutdown signal from the broadcast channel
-//!   - Monitor the [r3bl_terminal_async::ReadlineAsync] for user input and write any
-//!     input (the user provides interactively) to to the [tokio::process::ChildStdin].
-//!   - Any request_shutdown inputs (when the user types "request_shutdown" or "Ctrl+D")
-//!     from the user are captured here and sent to the shutdown broadcast channel. It
-//!     also listens to the broadcast channel to break out of the loop on shutdown.
-//!   - It [tokio::process::Child::kill]s the child process when it gets the
-//!     request_shutdown signal.
+//!   - Monitor the [`r3bl_tui::readline_async::ReadlineAsyncContext`] for user input and
+//!     write any input (the user provides interactively) to to the
+//!     [`tokio::process::ChildStdin`].
+//!   - Any `request_shutdown` inputs (when the user types "`request_shutdown`" or
+//!     "Ctrl+D") from the user are captured here and sent to the shutdown broadcast
+//!     channel. It also listens to the broadcast channel to break out of the loop on
+//!     shutdown.
+//!   - It [`tokio::process::Child::kill`]s the child process when it gets the
+//!     `request_shutdown` signal.
 //!   - It does not monitor the child process for output.
 //!
 //! # 🚀 Spawn a new task to loop and read the output from the child process and display it
 //!
 //! - Spawn a task to loop:
-//!   - Read the [tokio::process::ChildStdout] and write it to the
-//!     [r3bl_core::SharedWriter].
+//!   - Read the [`tokio::process::ChildStdout`] and write it to the
+//!     [`r3bl_tui::SharedWriter`].
 //!   - Also listen to the broadcast channel to break out of the loop on shutdown.
 //!
 //! # Run the binary
@@ -89,24 +91,15 @@
 //! │ > killall -9 bash shell_async │
 //! └───────────────────────────────┘
 //! ```
-//! This program uses the `r3bl_terminal_async` crate to provide a prompt and get user
-//! input, pass that to the `stdin` of a `bash` child process, and then display the output
-//! from the child process in the terminal.
 
-use std::io::Write as _;
+use std::io::Write;
 
-use miette::IntoDiagnostic as _;
-use r3bl_tui::{fg_guards_red,
-               fg_lizard_green,
-               fg_slate_gray,
-               inline_string,
-               ok,
-               readline_async::{ReadlineAsyncContext,
-                                ReadlineEvent,
+use miette::IntoDiagnostic;
+use r3bl_tui::{fg_guards_red, fg_lizard_green, fg_slate_gray, inline_string, ok,
+               readline_async::{ReadlineAsyncContext, ReadlineEvent,
                                 ReadlineEvent::{Eof, Interrupted, Line, Resized}},
-               set_jemalloc_in_main,
-               SharedWriter};
-use tokio::{io::{AsyncBufReadExt as _, AsyncWriteExt as _},
+               set_jemalloc_in_main, SharedWriter};
+use tokio::{io::{AsyncBufReadExt, AsyncWriteExt},
             join,
             sync::broadcast,
             task::JoinHandle};
@@ -158,9 +151,10 @@ async fn main() -> miette::Result<()> {
 }
 
 pub mod monitor_user_input_and_send_to_child {
-    use super::*;
+    use super::{broadcast, AsyncWriteExt, Eof, Interrupted, Line, ReadlineAsyncContext,
+                ReadlineEvent, Resized};
 
-    /// Determine the control flow of the program based on the [ReadlineEvent] received
+    /// Determine the control flow of the program based on the [`ReadlineEvent`] received
     /// from user input.
     enum ControlFlow {
         ShutdownKillChild,
@@ -168,8 +162,9 @@ pub mod monitor_user_input_and_send_to_child {
         Resized,
     }
 
-    /// Convert a [miette::Result<ReadlineEvent>] to a [ControlFlow]. This leverages the
-    /// type system to make it simpler to reason about what to do with the user input.
+    /// Convert a [`miette::Result`]`<ReadlineEvent>` to a [`ControlFlow`]. This leverages
+    /// the type system to make it simpler to reason about what to do with the user
+    /// input.
     impl From<miette::Result<ReadlineEvent>> for ControlFlow {
         fn from(result_readline_event: miette::Result<ReadlineEvent>) -> Self {
             match result_readline_event {
@@ -232,7 +227,8 @@ pub mod monitor_user_input_and_send_to_child {
 }
 
 pub mod monitor_child_output {
-    use super::*;
+    use super::{broadcast, fg_guards_red, fg_lizard_green, AsyncBufReadExt,
+                SharedWriter, Write};
 
     pub async fn spawn(
         stdout: tokio::process::ChildStdout,
@@ -289,7 +285,7 @@ pub mod monitor_child_output {
 }
 
 pub mod terminal_async_constructor {
-    use super::*;
+    use super::{fg_slate_gray, inline_string, ok, ReadlineAsyncContext, SharedWriter};
 
     #[allow(missing_debug_implementations)]
     pub struct TerminalAsyncHandle {
@@ -319,7 +315,7 @@ pub mod terminal_async_constructor {
 }
 
 pub mod child_process_constructor {
-    use super::*;
+    use super::{ok, IntoDiagnostic};
 
     #[derive(Debug)]
     pub struct ChildProcessHandle {

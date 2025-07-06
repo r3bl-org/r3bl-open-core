@@ -19,30 +19,14 @@ use nom::{branch::alt,
           bytes::complete::tag,
           combinator::{map, recognize},
           multi::many0,
-          IResult,
-          Input,
-          Parser};
+          IResult, Input, Parser};
 
 use super::take_text_between_delims_enclosed_err_on_new_line_ng;
-use crate::{fg_blue,
-            fg_red,
-            md_parser::constants::{BACK_TICK,
-                                   CHECKED,
-                                   LEFT_BRACKET,
-                                   LEFT_IMAGE,
-                                   LEFT_PARENTHESIS,
-                                   RIGHT_BRACKET,
-                                   RIGHT_IMAGE,
-                                   RIGHT_PARENTHESIS,
-                                   STAR,
-                                   UNCHECKED,
-                                   UNDERSCORE},
-            AsStrSlice,
-            HyperlinkData,
-            NErr,
-            NError,
-            NErrorKind,
-            DEBUG_MD_PARSER_STDOUT};
+use crate::{fg_blue, fg_red,
+            md_parser::constants::{BACK_TICK, CHECKED, LEFT_BRACKET, LEFT_IMAGE,
+                                   LEFT_PARENTHESIS, RIGHT_BRACKET, RIGHT_IMAGE,
+                                   RIGHT_PARENTHESIS, STAR, UNCHECKED, UNDERSCORE},
+            AsStrSlice, HyperlinkData, NErr, NError, NErrorKind, DEBUG_MD_PARSER_STDOUT};
 
 pub fn parse_fragment_starts_with_underscore_err_on_new_line_ng(
     input: AsStrSlice<'_>,
@@ -65,15 +49,9 @@ pub fn parse_fragment_starts_with_star_err_on_new_line_ng(
 pub mod delim_matchers {
     use nom::multi::many1;
 
-    use super::{fg_blue,
-                fg_red,
-                recognize,
-                tag,
-                take_text_between_delims_enclosed_err_on_new_line_ng,
-                AsStrSlice,
-                IResult,
-                Parser,
-                DEBUG_MD_PARSER_STDOUT};
+    use super::{fg_blue, fg_red, recognize, tag,
+                take_text_between_delims_enclosed_err_on_new_line_ng, AsStrSlice,
+                IResult, Parser, DEBUG_MD_PARSER_STDOUT};
     use crate::{constants::NEW_LINE, fg_green};
 
     /// Returns tuple:

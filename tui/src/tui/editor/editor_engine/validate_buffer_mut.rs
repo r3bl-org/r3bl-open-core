@@ -29,16 +29,8 @@
 //!    [`EditorBufferMutNoDrop`] by calling [`EditorBuffer::get_mut_no_drop()`].
 
 use super::scroll_editor_content;
-use crate::{col,
-            editor::sizing::VecEditorContentLines,
-            usize,
-            width,
-            CaretRaw,
-            ColWidth,
-            EditorBuffer,
-            ScrOfs,
-            SelectionList,
-            Size};
+use crate::{col, editor::sizing::VecEditorContentLines, usize, width, CaretRaw,
+            ColWidth, EditorBuffer, ScrOfs, SelectionList, Size};
 
 #[derive(Debug)]
 pub struct EditorBufferMut<'a> {
@@ -56,14 +48,8 @@ pub struct EditorBufferMut<'a> {
 }
 
 mod editor_buffer_mut_impl_block {
-    use super::{CaretRaw,
-                ColWidth,
-                EditorBuffer,
-                EditorBufferMut,
-                ScrOfs,
-                SelectionList,
-                Size,
-                VecEditorContentLines};
+    use super::{CaretRaw, ColWidth, EditorBuffer, EditorBufferMut, ScrOfs,
+                SelectionList, Size, VecEditorContentLines};
 
     impl EditorBufferMut<'_> {
         /// Returns the display width of the line at the caret (at it's scroll adjusted
@@ -101,13 +87,8 @@ pub struct EditorBufferMutNoDrop<'a> {
 }
 
 mod editor_buffer_mut_no_drop_impl_block {
-    use super::{CaretRaw,
-                EditorBufferMut,
-                EditorBufferMutNoDrop,
-                ScrOfs,
-                SelectionList,
-                Size,
-                VecEditorContentLines};
+    use super::{CaretRaw, EditorBufferMut, EditorBufferMutNoDrop, ScrOfs, SelectionList,
+                Size, VecEditorContentLines};
 
     impl EditorBufferMutNoDrop<'_> {
         pub fn new<'a>(
@@ -141,13 +122,8 @@ pub struct EditorBufferMutWithDrop<'a> {
 }
 
 mod editor_buffer_mut_with_drop_impl_block {
-    use super::{perform_validation_checks_after_mutation,
-                CaretRaw,
-                EditorBufferMut,
-                EditorBufferMutWithDrop,
-                ScrOfs,
-                SelectionList,
-                Size,
+    use super::{perform_validation_checks_after_mutation, CaretRaw, EditorBufferMut,
+                EditorBufferMutWithDrop, ScrOfs, SelectionList, Size,
                 VecEditorContentLines};
 
     impl EditorBufferMutWithDrop<'_> {

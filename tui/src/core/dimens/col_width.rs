@@ -99,15 +99,7 @@ mod construct {
 }
 
 mod ops {
-    use super::{width,
-                Add,
-                AddAssign,
-                ChUnit,
-                ColWidth,
-                Deref,
-                DerefMut,
-                Div,
-                Sub,
+    use super::{width, Add, AddAssign, ChUnit, ColWidth, Deref, DerefMut, Div, Sub,
                 SubAssign};
 
     impl Deref for ColWidth {

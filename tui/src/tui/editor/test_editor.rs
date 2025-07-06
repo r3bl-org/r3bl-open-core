@@ -17,21 +17,12 @@
 
 #[cfg(test)]
 mod test_config_options {
-    use crate::{assert_eq2,
-                caret_scr_adj,
-                col,
+    use crate::{assert_eq2, caret_scr_adj, col,
                 editor::editor_test_fixtures::mock_real_objects_for_editor,
-                editor_engine::engine_internal_api,
-                row,
+                editor_engine::engine_internal_api, row,
                 system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
-                CaretDirection,
-                EditorBuffer,
-                EditorEngine,
-                EditorEngineConfig,
-                EditorEvent,
-                GCStringExt,
-                LineMode,
-                DEFAULT_SYN_HI_FILE_EXT};
+                CaretDirection, EditorBuffer, EditorEngine, EditorEngineConfig,
+                EditorEvent, GCStringExt, LineMode, DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
     fn test_multiline_true() {
@@ -132,25 +123,14 @@ mod test_config_options {
 mod test_editor_ops {
     use smallvec::smallvec;
 
-    use crate::{assert_eq2,
-                caret_raw,
-                caret_scr_adj,
-                col,
+    use crate::{assert_eq2, caret_raw, caret_scr_adj, col,
                 editor::{editor_test_fixtures::{assert, mock_real_objects_for_editor},
                          sizing::VecEditorContentLines},
                 editor_engine::engine_internal_api,
-                height,
-                row,
-                scr_ofs,
+                height, row, scr_ofs,
                 system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
-                width,
-                CaretDirection,
-                EditorArgsMut,
-                EditorBuffer,
-                EditorEvent,
-                GCString,
-                GCStringExt,
-                DEFAULT_SYN_HI_FILE_EXT};
+                width, CaretDirection, EditorArgsMut, EditorBuffer, EditorEvent,
+                GCString, GCStringExt, DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
     fn editor_delete() {
@@ -1448,23 +1428,14 @@ mod test_editor_ops {
 mod selection_tests {
     use smallvec::smallvec;
 
-    use crate::{assert_eq2,
-                caret_scr_adj,
-                col,
-                row,
-                CaretScrAdj,
-                InlineVec,
-                RowIndex,
+    use crate::{assert_eq2, caret_scr_adj, col, row, CaretScrAdj, InlineVec, RowIndex,
                 SelectionRange};
 
     type SelectionList = InlineVec<(RowIndex, SelectionRange)>;
 
     use crate::{editor::editor_test_fixtures::mock_real_objects_for_editor,
                 system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
-                CaretDirection,
-                EditorBuffer,
-                EditorEvent,
-                SelectionAction,
+                CaretDirection, EditorBuffer, EditorEvent, SelectionAction,
                 DEFAULT_SYN_HI_FILE_EXT};
 
     fn csa(col_index: usize, row_index: usize) -> CaretScrAdj {
@@ -1754,12 +1725,8 @@ mod clipboard_tests {
                 editor::{editor_test_fixtures::mock_real_objects_for_editor,
                          sizing::VecEditorContentLines},
                 system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
-                CaretDirection,
-                EditorBuffer,
-                EditorEvent,
-                GCStringExt as _,
-                SelectionAction,
-                DEFAULT_SYN_HI_FILE_EXT};
+                CaretDirection, EditorBuffer, EditorEvent, GCStringExt as _,
+                SelectionAction, DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
     fn test_copy() {

@@ -22,12 +22,8 @@
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
                 giti::{CLIArg, CLICommand, CommandRunDetails, branch, ui_str},
-                report_analytics,
-                upgrade_check};
-use r3bl_tui::{CommandRunResult,
-               CommonResult,
-               log::try_initialize_logging_global,
-               ok,
+                report_analytics, upgrade_check};
+use r3bl_tui::{CommandRunResult, CommonResult, log::try_initialize_logging_global, ok,
                set_jemalloc_in_main};
 
 #[tokio::main]

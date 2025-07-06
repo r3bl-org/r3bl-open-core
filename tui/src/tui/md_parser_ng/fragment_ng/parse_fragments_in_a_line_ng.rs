@@ -37,13 +37,8 @@ use super::{parse_fragment_plain_text_until_eol_or_eoi_ng,
             parse_fragment_starts_with_left_link_err_on_new_line_ng,
             parse_fragment_starts_with_star_err_on_new_line_ng,
             parse_fragment_starts_with_underscore_err_on_new_line_ng};
-use crate::{fg_green,
-            fg_red,
-            inline_string,
-            AsStrSlice,
-            CheckboxParsePolicy,
-            MdLineFragment,
-            DEBUG_MD_PARSER};
+use crate::{fg_green, fg_red, inline_string, AsStrSlice, CheckboxParsePolicy,
+            MdLineFragment, DEBUG_MD_PARSER};
 
 // XMARK: Parser for a single line of markdown
 

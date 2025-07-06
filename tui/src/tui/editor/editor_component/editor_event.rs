@@ -17,24 +17,11 @@
 
 use std::fmt::Debug;
 
-use crate::{clipboard_support::ClipboardService,
-            editor_buffer::EditorBuffer,
-            editor_engine::engine_internal_api,
-            fg_green,
-            inline_string,
-            terminal_lib_backends::KeyPress,
-            validate_scroll_on_resize,
-            DeleteSelectionWith,
-            EditorArgsMut,
-            EditorEngine,
-            InputEvent,
-            Key,
-            KeyState,
-            ModifierKeysMask,
-            SelectMode,
-            Size,
-            SpecialKey,
-            DEBUG_TUI_COPY_PASTE};
+use crate::{clipboard_support::ClipboardService, editor_buffer::EditorBuffer,
+            editor_engine::engine_internal_api, fg_green, inline_string,
+            terminal_lib_backends::KeyPress, validate_scroll_on_resize,
+            DeleteSelectionWith, EditorArgsMut, EditorEngine, InputEvent, Key, KeyState,
+            ModifierKeysMask, SelectMode, Size, SpecialKey, DEBUG_TUI_COPY_PASTE};
 
 /// Events that can be applied to the [`EditorEngine`] to modify an [`EditorBuffer`].
 ///
@@ -378,22 +365,20 @@ impl EditorEvent {
                 }
             }
 
-            EditorEvent::MoveCaret(direction) => {
-                match direction {
-                    CaretDirection::Left => {
-                        engine_internal_api::left(buffer, engine, SelectMode::Disabled);
-                    }
-                    CaretDirection::Right => {
-                        engine_internal_api::right(buffer, engine, SelectMode::Disabled);
-                    }
-                    CaretDirection::Up => {
-                        engine_internal_api::up(buffer, engine, SelectMode::Disabled);
-                    }
-                    CaretDirection::Down => {
-                        engine_internal_api::down(buffer, engine, SelectMode::Disabled);
-                    }
+            EditorEvent::MoveCaret(direction) => match direction {
+                CaretDirection::Left => {
+                    engine_internal_api::left(buffer, engine, SelectMode::Disabled);
                 }
-            }
+                CaretDirection::Right => {
+                    engine_internal_api::right(buffer, engine, SelectMode::Disabled);
+                }
+                CaretDirection::Up => {
+                    engine_internal_api::up(buffer, engine, SelectMode::Disabled);
+                }
+                CaretDirection::Down => {
+                    engine_internal_api::down(buffer, engine, SelectMode::Disabled);
+                }
+            },
 
             EditorEvent::InsertString(chunk) => {
                 Self::delete_text_if_selected(engine, buffer);

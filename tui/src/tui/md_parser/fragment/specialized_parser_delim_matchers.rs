@@ -22,18 +22,11 @@
 //! To see this in action, set the [`DEBUG_MD_PARSER_STDOUT`] to true, and run all the
 //! tests in [`crate::parse_fragments_in_a_line`].
 
-use nom::{bytes::complete::tag,
-          combinator::recognize,
-          multi::many1,
-          IResult,
+use nom::{bytes::complete::tag, combinator::recognize, multi::many1, IResult,
           Parser as _};
 
-use crate::{fg_blue,
-            fg_green,
-            fg_red,
-            md_parser::constants::NEW_LINE,
-            take_text_between_delims_err_on_new_line,
-            DEBUG_MD_PARSER_STDOUT};
+use crate::{fg_blue, fg_green, fg_red, md_parser::constants::NEW_LINE,
+            take_text_between_delims_err_on_new_line, DEBUG_MD_PARSER_STDOUT};
 
 /// Returns tuple:
 /// 0. number of occurrences in the input, until the first "\n" or end of input.

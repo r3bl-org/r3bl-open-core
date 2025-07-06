@@ -15,11 +15,7 @@
  *   limitations under the License.
  */
 
-use crossterm::event::{KeyCode,
-                       KeyEvent,
-                       KeyEventKind,
-                       KeyModifiers,
-                       MediaKeyCode,
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MediaKeyCode,
                        ModifierKeyCode};
 
 use super::{Enhanced, ModifierKeysMask};
@@ -259,7 +255,10 @@ pub enum SpecialKey {
 /// Docs:
 ///  - [Crossterm KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
 pub mod convert_key_event {
-    use super::{KeyEvent, KeyPress, KeyCode, KeyModifiers, try_convert_key_modifiers, Key, ModifierKeysMask, KeyEventKind, FunctionKey, SpecialKey, Enhanced, SpecialKeyExt, MediaKeyCode, MediaKey, ModifierKeyCode, ModifierKeyEnum};
+    use super::{try_convert_key_modifiers, Enhanced, FunctionKey, Key, KeyCode,
+                KeyEvent, KeyEventKind, KeyModifiers, KeyPress, MediaKey, MediaKeyCode,
+                ModifierKeyCode, ModifierKeyEnum, ModifierKeysMask, SpecialKey,
+                SpecialKeyExt};
 
     impl TryFrom<KeyEvent> for KeyPress {
         type Error = ();
@@ -453,9 +452,7 @@ pub mod convert_key_event {
         }
     }
 
-    fn match_enhanced_modifier_key_code(
-        modifier_key_code: ModifierKeyCode,
-    ) -> Key {
+    fn match_enhanced_modifier_key_code(modifier_key_code: ModifierKeyCode) -> Key {
         // Make the code easier to read below using this alias.
         type KC = ModifierKeyCode;
         match modifier_key_code {

@@ -15,17 +15,12 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::tag,
-          combinator::opt,
-          sequence::preceded,
-          IResult,
+use nom::{bytes::complete::tag, combinator::opt, sequence::preceded, IResult,
           Parser as _};
 
 use crate::{list,
             md_parser::constants::{COLON, COMMA, NEW_LINE, SPACE},
-            take_text_until_eol_or_eoi,
-            InlineVec,
-            List};
+            take_text_until_eol_or_eoi, InlineVec, List};
 
 /// - Sample parse input: `@tags: tag1, tag2, tag3`, `@tags: tag1, tag2, tag3\n`, or
 ///   `@authors: me, myself, i`, `@authors: me, myself, i\n`.

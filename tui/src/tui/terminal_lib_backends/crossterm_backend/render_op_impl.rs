@@ -18,35 +18,15 @@ use std::borrow::Cow;
 
 use crossterm::{cursor::{Hide, MoveTo, Show},
                 event::{DisableMouseCapture, EnableMouseCapture},
-                style::{Attribute,
-                        Print,
-                        ResetColor,
-                        SetAttribute,
-                        SetBackgroundColor,
+                style::{Attribute, Print, ResetColor, SetAttribute, SetBackgroundColor,
                         SetForegroundColor},
-                terminal::{Clear,
-                           ClearType,
-                           EnterAlternateScreen,
-                           LeaveAlternateScreen}};
+                terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
 use smallvec::smallvec;
 
 use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
-            disable_raw_mode_now,
-            enable_raw_mode_now,
-            flush_now,
-            queue_render_op,
-            sanitize_and_save_abs_pos,
-            Flush,
-            GCString,
-            InlineVec,
-            LockedOutputDevice,
-            PaintRenderOp,
-            Pos,
-            RenderOp,
-            RenderOpsLocalData,
-            Size,
-            TuiColor,
-            TuiStyle};
+            disable_raw_mode_now, enable_raw_mode_now, flush_now, queue_render_op,
+            sanitize_and_save_abs_pos, Flush, GCString, InlineVec, LockedOutputDevice,
+            PaintRenderOp, Pos, RenderOp, RenderOpsLocalData, Size, TuiColor, TuiStyle};
 
 /// Struct representing the implementation of [`RenderOp`] for crossterm terminal backend.
 /// This empty struct is needed since the [Flush] trait needs to be implemented.
@@ -54,16 +34,8 @@ use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color
 pub struct RenderOpImplCrossterm;
 
 mod impl_trait_paint_render_op {
-    use super::{queue_render_op,
-                Clear,
-                ClearType,
-                LockedOutputDevice,
-                PaintRenderOp,
-                RenderOp,
-                RenderOpImplCrossterm,
-                RenderOpsLocalData,
-                ResetColor,
-                Size};
+    use super::{queue_render_op, Clear, ClearType, LockedOutputDevice, PaintRenderOp,
+                RenderOp, RenderOpImplCrossterm, RenderOpsLocalData, ResetColor, Size};
 
     impl PaintRenderOp for RenderOpImplCrossterm {
         fn paint(
@@ -151,13 +123,8 @@ mod impl_trait_paint_render_op {
 }
 
 pub mod impl_trait_flush {
-    use super::{flush_now,
-                Clear,
-                ClearType,
-                Flush,
-                LockedOutputDevice,
-                RenderOpImplCrossterm,
-                ResetColor};
+    use super::{flush_now, Clear, ClearType, Flush, LockedOutputDevice,
+                RenderOpImplCrossterm, ResetColor};
 
     impl Flush for RenderOpImplCrossterm {
         fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
@@ -176,32 +143,13 @@ pub mod impl_trait_flush {
 }
 
 mod impl_self {
-    use super::{convert_from_tui_color_to_crossterm_color,
-                disable_raw_mode_now,
-                enable_raw_mode_now,
-                flush_now,
-                perform_paint,
-                queue_render_op,
-                sanitize_and_save_abs_pos,
-                Clear,
-                ClearType,
-                Cow,
-                DisableMouseCapture,
-                EnableMouseCapture,
-                EnterAlternateScreen,
-                Hide,
-                LeaveAlternateScreen,
-                LockedOutputDevice,
-                MoveTo,
-                Pos,
-                RenderOpImplCrossterm,
-                RenderOpsLocalData,
-                SetBackgroundColor,
-                SetForegroundColor,
-                Show,
-                Size,
-                TuiColor,
-                TuiStyle};
+    use super::{convert_from_tui_color_to_crossterm_color, disable_raw_mode_now,
+                enable_raw_mode_now, flush_now, perform_paint, queue_render_op,
+                sanitize_and_save_abs_pos, Clear, ClearType, Cow, DisableMouseCapture,
+                EnableMouseCapture, EnterAlternateScreen, Hide, LeaveAlternateScreen,
+                LockedOutputDevice, MoveTo, Pos, RenderOpImplCrossterm,
+                RenderOpsLocalData, SetBackgroundColor, SetForegroundColor, Show, Size,
+                TuiColor, TuiStyle};
 
     impl RenderOpImplCrossterm {
         pub fn move_cursor_position_rel_to(
@@ -380,19 +328,9 @@ mod impl_self {
 }
 
 mod perform_paint {
-    use super::{queue_render_op,
-                sanitize_and_save_abs_pos,
-                smallvec,
-                Attribute,
-                Cow,
-                GCString,
-                InlineVec,
-                LockedOutputDevice,
-                Print,
-                RenderOpsLocalData,
-                SetAttribute,
-                Size,
-                TuiStyle};
+    use super::{queue_render_op, sanitize_and_save_abs_pos, smallvec, Attribute, Cow,
+                GCString, InlineVec, LockedOutputDevice, Print, RenderOpsLocalData,
+                SetAttribute, Size, TuiStyle};
 
     #[derive(Debug)]
     pub struct PaintArgs<'a> {

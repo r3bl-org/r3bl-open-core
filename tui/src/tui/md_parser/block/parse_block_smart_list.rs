@@ -20,36 +20,23 @@ use nom::{branch::alt,
           combinator::{map, opt, recognize, verify},
           multi::{many0, many1},
           sequence::{preceded, terminated},
-          IResult,
-          Parser};
+          IResult, Parser};
 use smallvec::smallvec;
 
 use super::parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line;
 use crate::{list,
-            md_parser::constants::{CHECKED,
-                                   LIST_PREFIX_BASE_WIDTH,
-                                   NEW_LINE,
-                                   ORDERED_LIST_PARTIAL_PREFIX,
-                                   SPACE,
-                                   SPACE_CHAR,
-                                   UNCHECKED,
-                                   UNORDERED_LIST_PREFIX},
-            tiny_inline_string,
-            BulletKind,
-            CheckboxParsePolicy,
-            InlineVec,
-            Lines,
-            List,
-            MdLineFragment,
-            SmartListIRStr,
-            SmartListLine,
-            SmartListLineStr};
+            md_parser::constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
+                                   ORDERED_LIST_PARTIAL_PREFIX, SPACE, SPACE_CHAR,
+                                   UNCHECKED, UNORDERED_LIST_PREFIX},
+            tiny_inline_string, BulletKind, CheckboxParsePolicy, InlineVec, Lines, List,
+            MdLineFragment, SmartListIRStr, SmartListLine, SmartListLineStr};
 
 /// Public API for parsing a smart list block in markdown.
 pub fn parse_block_smart_list(
     input: &str,
 ) -> IResult<&str, (Lines<'_>, BulletKind, usize)> {
-    use parse_block_smart_list_helper::{determine_checkbox_policy, create_bullet_fragment, build_line_fragments};
+    use parse_block_smart_list_helper::{build_line_fragments, create_bullet_fragment,
+                                        determine_checkbox_policy};
 
     let (remainder, smart_list_ir) = parse_smart_list(input)?;
 
@@ -82,7 +69,8 @@ pub fn parse_block_smart_list(
 }
 
 mod parse_block_smart_list_helper {
-    use super::{tiny_inline_string, list, CheckboxParsePolicy, CHECKED, SPACE, UNCHECKED, BulletKind, List, MdLineFragment};
+    use super::{list, tiny_inline_string, BulletKind, CheckboxParsePolicy, List,
+                MdLineFragment, CHECKED, SPACE, UNCHECKED};
 
     // Helper function to determine checkbox parsing policy.
     pub fn determine_checkbox_policy(content: &str) -> CheckboxParsePolicy {
@@ -1038,7 +1026,8 @@ mod tests_parse_smart_list_content_lines {
 }
 
 mod verify_rest {
-    use super::{IResult, Parser, recognize, alt, tag, UNORDERED_LIST_PREFIX, terminated, digit1, ORDERED_LIST_PARTIAL_PREFIX, SPACE_CHAR};
+    use super::{alt, digit1, recognize, tag, terminated, IResult, Parser,
+                ORDERED_LIST_PARTIAL_PREFIX, SPACE_CHAR, UNORDERED_LIST_PREFIX};
 
     /// Return true if:
     /// - No ul items (at any indent).
