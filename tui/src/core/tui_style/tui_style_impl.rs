@@ -236,7 +236,7 @@ mod addition {
     }
 }
 
-mod style_helpers {
+mod style_helper {
     use super::{ch, join, join_fmt, ok, tiny_inline_string, tui_style_attrib, Debug,
                 Display, Formatter, InlineVecStr, TinyInlineString, TuiStyle};
 

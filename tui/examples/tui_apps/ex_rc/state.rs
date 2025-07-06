@@ -147,7 +147,7 @@ mod state_impl {
     }
 }
 
-mod debug_format_helpers {
+mod debug_format_helper {
     use super::{Debug, Formatter, Result, State};
 
     impl Debug for State {

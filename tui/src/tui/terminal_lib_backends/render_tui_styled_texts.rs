@@ -39,7 +39,7 @@ mod tests {
     #[test]
     fn test_styled_text_renders_correctly() -> CommonResult<()> {
         throws!({
-            let texts = test_helpers::create_styled_text()?;
+            let texts = test_helper::create_styled_text()?;
             let mut render_ops = render_ops!();
             render_tui_styled_texts_into(&texts, &mut render_ops);
 
@@ -62,7 +62,7 @@ mod tests {
         })
     }
 
-    mod test_helpers {
+    mod test_helper {
         use super::*;
 
         pub fn create_styled_text() -> CommonResult<TuiStyledTexts> {

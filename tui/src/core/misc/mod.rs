@@ -19,10 +19,10 @@
 pub mod calc_str_len;
 pub mod formatter;
 pub mod friendly_random_id;
-pub mod string_helpers;
+pub mod string_helper;
 
 // Re-export.
 pub use calc_str_len::*;
 pub use formatter::*;
 pub use friendly_random_id::*;
-pub use string_helpers::*;
+pub use string_helper::*;

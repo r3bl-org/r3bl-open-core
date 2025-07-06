@@ -112,7 +112,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     ///     - End of line.
     ///     - When style changes.
     fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOps {
-        use render_helpers::Context;
+        use render_helper::Context;
 
         let mut context = Context::new();
 
@@ -132,7 +132,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                     };
 
                 let is_style_same_as_prev =
-                    render_helpers::style_eq(&pixel_char_style, &context.prev_style);
+                    render_helper::style_eq(&pixel_char_style, &context.prev_style);
                 let is_at_end_of_line = ch(pixel_char_index) == (ch(line.len()) - ch(1));
                 let is_first_loop_iteration = row_index == 0 && pixel_char_index == 0;
 
@@ -141,7 +141,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 if !is_style_same_as_prev {
                     // The style changed / render path has changed and something is
                     // already in the buffer, so flush it!
-                    render_helpers::flush_all_buffers(&mut context);
+                    render_helper::flush_all_buffers(&mut context);
                 }
 
                 // Deal w/: fg and bg colors | text attrib style
@@ -166,7 +166,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
                 // Flush it.
                 if is_at_end_of_line {
-                    render_helpers::flush_all_buffers(&mut context);
+                    render_helper::flush_all_buffers(&mut context);
                 }
             } // End for each pixel char in the line.
         } // End for each line in the offscreen buffer.
@@ -174,7 +174,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         // This handles the edge case when there is still something in the temp buffer,
         // but the loop has exited.
         if !context.buffer_plain_text.is_empty() {
-            render_helpers::flush_all_buffers(&mut context);
+            render_helper::flush_all_buffers(&mut context);
         }
 
         context.render_ops
@@ -218,8 +218,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     }
 }
 
-mod render_helpers {
-    use super::{col, render_helpers, render_ops, row, ColIndex, GCString, InlineString,
+mod render_helper {
+    use super::{col, render_helper, render_ops, row, ColIndex, GCString, InlineString,
                 RenderOp, RenderOps, RowIndex, TuiStyle};
 
     #[derive(Debug, Clone)]
@@ -277,7 +277,7 @@ mod render_helpers {
 
     pub fn flush_all_buffers(context: &mut Context) {
         if !context.buffer_plain_text.is_empty() {
-            render_helpers::flush_plain_text_line_buffer(context);
+            render_helper::flush_plain_text_line_buffer(context);
         }
     }
 
@@ -311,7 +311,7 @@ mod render_helpers {
 mod tests {
     use super::*;
     use crate::{assert_eq2, height, new_style,
-                offscreen_buffer_paint_impl::render_helpers::style_eq,
+                offscreen_buffer_paint_impl::render_helper::style_eq,
                 render_pipeline_to_offscreen_buffer::print_text_with_attributes,
                 tui_color, width, ColWidth};
 

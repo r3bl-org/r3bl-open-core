@@ -605,8 +605,8 @@ mod lolcat_helper {
     }
 
     /// Convert lolcat seed to [`ChUnit`] for indexing.
-    /// 
-    /// This function converts a Seed value to a ChUnit for use as an index.
+    ///
+    /// This function converts a Seed value to a `ChUnit` for use as an index.
     /// The implementation has been simplified to use integer operations where possible,
     /// which improves performance and reduces floating point precision issues.
     pub fn convert_lolcat_seed_to_index(seed: Seed) -> ChUnit {
@@ -617,6 +617,7 @@ mod lolcat_helper {
 
         // Convert seed to integer directly, using multiplication by 1000
         // to preserve precision of small fractional values
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         let seed_int = (*seed * 1000.0).round() as u64;
 
         // Convert to usize safely
@@ -729,19 +730,31 @@ mod tests_color_wheel_rgb {
     fn test_convert_lolcat_seed_to_index() {
         // Test with zero seed
         let seed_zero = Seed(0.0);
-        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_zero), ch(0));
+        assert_eq2!(
+            lolcat_helper::convert_lolcat_seed_to_index(seed_zero),
+            ch(0)
+        );
 
         // Test with positive seed
         let seed_positive = Seed(1.5);
-        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_positive), ch(1500));
+        assert_eq2!(
+            lolcat_helper::convert_lolcat_seed_to_index(seed_positive),
+            ch(1500)
+        );
 
         // Test with small positive seed
         let seed_small = Seed(0.001);
-        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_small), ch(1));
+        assert_eq2!(
+            lolcat_helper::convert_lolcat_seed_to_index(seed_small),
+            ch(1)
+        );
 
         // Test with negative seed (should return 0)
         let seed_negative = Seed(-1.0);
-        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_negative), ch(0));
+        assert_eq2!(
+            lolcat_helper::convert_lolcat_seed_to_index(seed_negative),
+            ch(0)
+        );
 
         // Test with NaN seed (should return 0)
         let seed_nan = Seed(f64::NAN);
@@ -749,10 +762,13 @@ mod tests_color_wheel_rgb {
 
         // Test with very large seed
         let seed_large = Seed(1_000_000.0);
-        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_large), ch(1_000_000_000));
+        assert_eq2!(
+            lolcat_helper::convert_lolcat_seed_to_index(seed_large),
+            ch(1_000_000_000)
+        );
     }
 
-    mod test_helpers {
+    mod test_helper {
         use smallvec::smallvec;
 
         use super::*;
@@ -842,7 +858,7 @@ mod tests_color_wheel_rgb {
     fn test_color_wheel_iterator() {
         global_color_support::set_override(ColorSupport::Truecolor);
 
-        let color_wheel = &mut test_helpers::create_color_wheel_rgb();
+        let color_wheel = &mut test_helper::create_color_wheel_rgb();
 
         // Didn't call generate_color_wheel() yet, so it should return the start color.
         assert!(color_wheel.next_color().is_none());
@@ -939,7 +955,7 @@ mod tests_color_wheel_rgb {
     #[serial]
     #[test]
     fn test_colorize_into_styled_texts_color_each_word() {
-        let color_wheel_rgb = &mut test_helpers::create_color_wheel_rgb();
+        let color_wheel_rgb = &mut test_helper::create_color_wheel_rgb();
 
         global_color_support::set_override(ColorSupport::Truecolor);
 
@@ -988,7 +1004,7 @@ mod tests_color_wheel_rgb {
     #[serial]
     #[test]
     fn test_colorize_to_styled_texts_color_each_character() {
-        let color_wheel_rgb = &mut test_helpers::create_color_wheel_rgb();
+        let color_wheel_rgb = &mut test_helper::create_color_wheel_rgb();
 
         global_color_support::set_override(ColorSupport::Truecolor);
 
@@ -1060,7 +1076,7 @@ mod tests_color_wheel_rgb {
     #[serial]
     #[test]
     fn test_colorize_into_ansi_styled_string_each_character() {
-        let color_wheel_rgb = &mut test_helpers::create_color_wheel_rgb();
+        let color_wheel_rgb = &mut test_helper::create_color_wheel_rgb();
 
         global_color_support::set_override(ColorSupport::Truecolor);
 
