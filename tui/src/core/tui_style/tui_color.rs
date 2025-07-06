@@ -1012,7 +1012,7 @@ mod tests {
     }
 }
 
-mod debug_helpers {
+mod debug_helper {
     use super::{ANSIBasicColor, Debug, RgbValue, TuiColor};
 
     impl Debug for TuiColor {

@@ -50,7 +50,7 @@ fn clamp(value: f64) -> u8 {
     val_f64.to_u8_lossy()
 }
 
-/// Generate an RGB color tuple based on the ColorWheelControl parameters.
+/// Generate an RGB color tuple based on the `ColorWheelControl` parameters.
 ///
 /// This function uses trigonometric calculations to generate smooth color transitions.
 /// The seed value determines the starting point in the color cycle.

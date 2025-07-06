@@ -230,7 +230,7 @@ pub fn handle_selection_multiline_caret_movement(
                 let current_row_index = row(row_index);
                 let curr_pos = curr.col_index + current_row_index;
 
-                multiline_select_helpers::handle_two_lines(
+                multiline_select_helper::handle_two_lines(
                     buffer,
                     caret_scr_adj(prev_pos),
                     caret_scr_adj(curr_pos),
@@ -252,7 +252,7 @@ pub fn handle_selection_multiline_caret_movement(
                 let current_row_index = row(row_index + 1);
                 let curr_pos = curr.col_index + current_row_index;
 
-                multiline_select_helpers::handle_two_lines(
+                multiline_select_helper::handle_two_lines(
                     buffer,
                     caret_scr_adj(prev_pos),
                     caret_scr_adj(curr_pos),
@@ -354,10 +354,10 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
     }
 }
 
-mod multiline_select_helpers {
+mod multiline_select_helper {
     use super::{caret_scr_adj, caret_scroll_index, cmp, col, dummy_viewport, fg_blue,
                 fg_cyan, fg_green, fg_magenta, fg_red, fg_yellow, inline_string,
-                multiline_select_helpers, CaretMovementDirection, CaretScrAdj,
+                multiline_select_helper, CaretMovementDirection, CaretScrAdj,
                 DirectionChangeResult, EditorBuffer, RowLocationInSelectionList,
                 SelectionRange, DEBUG_TUI_COPY_PASTE};
 
@@ -431,7 +431,7 @@ mod multiline_select_helpers {
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
-            ) => multiline_select_helpers::start_select_down(
+            ) => multiline_select_helper::start_select_down(
                 prev,
                 curr,
                 buffer,
@@ -444,7 +444,7 @@ mod multiline_select_helpers {
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
-            ) => multiline_select_helpers::start_select_up(
+            ) => multiline_select_helper::start_select_up(
                 prev,
                 curr,
                 buffer,
@@ -458,7 +458,7 @@ mod multiline_select_helpers {
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
-            ) => multiline_select_helpers::continue_select_down(
+            ) => multiline_select_helper::continue_select_down(
                 prev,
                 curr,
                 buffer,
@@ -470,7 +470,7 @@ mod multiline_select_helpers {
                 /* current_caret */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame,
-            ) => multiline_select_helpers::continue_select_down(
+            ) => multiline_select_helper::continue_select_down(
                 prev,
                 curr,
                 buffer,
@@ -484,7 +484,7 @@ mod multiline_select_helpers {
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
-            ) => multiline_select_helpers::continue_select_up(
+            ) => multiline_select_helper::continue_select_up(
                 prev,
                 curr,
                 buffer,
@@ -497,7 +497,7 @@ mod multiline_select_helpers {
                 /* current_caret */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame,
-            ) => multiline_select_helpers::continue_select_up(
+            ) => multiline_select_helper::continue_select_up(
                 prev,
                 curr,
                 buffer,
@@ -512,7 +512,7 @@ mod multiline_select_helpers {
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionHasChanged
                 | DirectionChangeResult::DirectionIsTheSame,
-            ) => multiline_select_helpers::continue_direction_change_select_up(
+            ) => multiline_select_helper::continue_direction_change_select_up(
                 prev,
                 curr,
                 buffer,
@@ -527,7 +527,7 @@ mod multiline_select_helpers {
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionHasChanged
                 | DirectionChangeResult::DirectionIsTheSame,
-            ) => multiline_select_helpers::continue_direction_change_select_down(
+            ) => multiline_select_helper::continue_direction_change_select_down(
                 prev,
                 curr,
                 buffer,
