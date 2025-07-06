@@ -280,7 +280,7 @@ fn make_non_root_box_with_style(
 
     // Adjust `bounds_size` & `origin` based on the style's padding.
     let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
-        adjust_with_style(&maybe_cascaded_style, origin_pos, bounds_size);
+        adjust_with_style(maybe_cascaded_style, origin_pos, bounds_size);
 
     FlexBox {
         id,
@@ -312,7 +312,7 @@ fn make_root_box_with_style(
 
     // Adjust `bounds_size` & `origin` based on the style's padding.
     let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
-        adjust_with_style(&computed_style, origin_pos, bounds_size);
+        adjust_with_style(computed_style, origin_pos, bounds_size);
 
     FlexBox {
         id,
@@ -329,14 +329,14 @@ fn make_root_box_with_style(
 
 /// Adjust `origin` & `bounds_size` based on the `maybe_style`'s padding.
 fn adjust_with_style(
-    maybe_computed_style: &Option<TuiStyle>,
+    maybe_computed_style: Option<TuiStyle>,
     origin_pos: Pos,
     bounds_size: Size,
 ) -> (Pos, Size) {
     let mut style_adjusted_origin_pos = origin_pos;
     let mut style_adjusted_bounds_size = bounds_size;
 
-    if let Some(ref style) = maybe_computed_style {
+    if let Some(style) = maybe_computed_style {
         if let Some(padding) = style.padding {
             style_adjusted_origin_pos += padding;
             style_adjusted_bounds_size -= padding * 2;

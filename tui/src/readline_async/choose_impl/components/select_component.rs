@@ -20,32 +20,11 @@ use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 terminal::{Clear, ClearType}};
 use miette::IntoDiagnostic;
 
-use crate::{ast,
-            ch,
-            choose_apply_style,
-            col,
-            fg_blue,
-            get_terminal_width,
-            inline_string,
-            lock_output_device_as_mut,
-            pad_fmt,
-            queue_commands,
-            throws,
-            usize,
-            width,
-            AnsiStyledText,
-            ChUnit,
-            CommonResult,
-            FunctionComponent,
-            GCStringExt,
-            Header,
-            HowToChoose,
-            InlineString,
-            InlineVec,
-            OutputDevice,
-            State,
-            StyleSheet,
-            DEVELOPMENT_MODE};
+use crate::{ast, ch, choose_apply_style, col, fg_blue, get_terminal_width,
+            inline_string, lock_output_device_as_mut, pad_fmt, queue_commands, usize,
+            width, AnsiStyledText, ChUnit, CommonResult, FunctionComponent, GCStringExt,
+            Header, HowToChoose, InlineString, InlineVec, OutputDevice, State,
+            StyleSheet, TuiStyle, DEVELOPMENT_MODE};
 
 #[allow(missing_debug_implementations)]
 pub struct SelectComponent {
@@ -85,383 +64,532 @@ impl FunctionComponent<State> for SelectComponent {
     /// Allocate space and print the lines. The bring the cursor back to the start of the
     /// lines.
     fn render(&mut self, state: &mut State) -> CommonResult<()> {
-        throws!({
-            // Setup the required data.
-            let focused_and_selected_style = self.style.focused_and_selected_style;
-            let focused_style = self.style.focused_style;
-            let unselected_style = self.style.unselected_style;
-            let selected_style = self.style.selected_style;
-            let single_line_header_style = self.style.header_style;
+        let render_context = render_helper::RenderContext::new(self, state);
+
+        render_helper::log_render_debug_info(state, &render_context);
+
+        self.allocate_viewport_height_space(state)?;
+
+        render_helper::render_header(
+            &mut self.output_device,
+            &state.header,
+            &self.style.header_style,
+            render_context.viewport_width,
+            render_context.start_display_col_offset,
+        )?;
+
+        render_helper::render_items(
+            &mut self.output_device,
+            state,
+            &self.style,
+            &render_context,
+        )?;
+
+        render_helper::move_cursor_back_to_start(
+            &mut self.output_device,
+            render_context.items_viewport_height,
+            render_context.header_viewport_height,
+        )?;
+
+        lock_output_device_as_mut!(self.output_device)
+            .flush()
+            .into_diagnostic()?;
+
+        Ok(())
+    }
+}
+
+mod render_helper {
+    use super::{ast, ch, choose_apply_style, clip_string_to_width_with_ellipsis, col,
+                fg_blue, get_terminal_width, inline_string, pad_fmt, queue_commands,
+                usize, width, AnsiStyledText, ChUnit, Clear, ClearType, CommonResult,
+                FunctionComponent, GCStringExt, Header, HowToChoose, InlineString,
+                InlineVec, MoveToColumn, MoveToNextLine, MoveToPreviousLine,
+                OutputDevice, Print, ResetColor, SelectComponent, SetBackgroundColor,
+                SetForegroundColor, State, StyleSheet, TuiStyle, DEVELOPMENT_MODE,
+                IS_FOCUSED, IS_NOT_FOCUSED, MULTI_SELECT_IS_NOT_SELECTED,
+                MULTI_SELECT_IS_SELECTED, SINGLE_SELECT_IS_NOT_SELECTED,
+                SINGLE_SELECT_IS_SELECTED};
+
+    pub struct RenderContext {
+        pub header_viewport_height: ChUnit,
+        pub items_viewport_height: ChUnit,
+        pub viewport_width: ChUnit,
+        pub start_display_col_offset: usize,
+        pub data_row_index_start: ChUnit,
+    }
+
+    impl RenderContext {
+        pub fn new(component: &SelectComponent, state: &mut State) -> Self {
+            let header_viewport_height =
+                component.calculate_header_viewport_height(state);
+            let items_viewport_height = component.calculate_items_viewport_height(state);
+            let viewport_width = calculate_viewport_width(state);
             let start_display_col_offset = 1;
-            let header_viewport_height: ChUnit =
-                self.calculate_header_viewport_height(state);
+            let data_row_index_start = state.scroll_offset_row_index;
 
-            // If there are more items than the max display height, then we only use max
-            // display height. Otherwise we can shrink the display height to the number of
-            // items.
-            let items_viewport_height: ChUnit =
-                self.calculate_items_viewport_height(state);
+            Self {
+                header_viewport_height,
+                items_viewport_height,
+                viewport_width,
+                start_display_col_offset,
+                data_row_index_start,
+            }
+        }
+    }
 
-            let viewport_width = {
-                // Try to get the terminal width from state first (since it should be set
-                // when resize events occur). If that is not set, then get the terminal
-                // width directly.
-                let terminal_width = *match state.window_size {
-                    Some(size) => size.col_width,
-                    None => get_terminal_width(),
-                };
+    pub fn calculate_viewport_width(state: &State) -> ChUnit {
+        // Try to get the terminal width from state first (since it should be set
+        // when resize events occur). If that is not set, then get the terminal
+        // width directly.
+        let terminal_width = *match state.window_size {
+            Some(size) => size.col_width,
+            None => get_terminal_width(),
+        };
 
-                // Do not exceed the max display width (if it is set).
-                if state.max_display_width == ch(0)
-                    || state.max_display_width > ch(terminal_width)
-                {
-                    ch(terminal_width)
-                } else {
-                    state.max_display_width
-                }
+        // Do not exceed the max display width (if it is set).
+        if state.max_display_width == ch(0)
+            || state.max_display_width > ch(terminal_width)
+        {
+            ch(terminal_width)
+        } else {
+            state.max_display_width
+        }
+    }
+
+    pub fn log_render_debug_info(state: &State, render_context: &RenderContext) {
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::info! {
+                message = "🍎🍎🍎\n render()::state",
+                details = %inline_string!(
+                    "\t[raw_caret_row_index: {a}, scroll_offset_row_index: {b}], \n\theader_viewport_height: {c}, items_viewport_height:{d}, viewport_width:{e}",
+                    a = fg_blue(&inline_string!("{:?}", state.raw_caret_row_index)),
+                    b = fg_blue(&inline_string!("{:?}", state.scroll_offset_row_index)),
+                    c = fg_blue(&inline_string!("{:?}", render_context.header_viewport_height)),
+                    d = fg_blue(&inline_string!("{:?}", render_context.items_viewport_height)),
+                    e = fg_blue(&inline_string!("{:?}", render_context.viewport_width)),
+                )
             };
+        });
+    }
 
-            DEVELOPMENT_MODE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::info! {
-                    message = "🍎🍎🍎\n render()::state",
-                    details = %inline_string!(
-                        "\t[raw_caret_row_index: {a}, scroll_offset_row_index: {b}], \n\theader_viewport_height: {c}, items_viewport_height:{d}, viewport_width:{e}",
-                        a = fg_blue(&inline_string!("{:?}", state.raw_caret_row_index)),
-                        b = fg_blue(&inline_string!("{:?}", state.scroll_offset_row_index)),
-                        c = fg_blue(&inline_string!("{:?}", header_viewport_height)),
-                        d = fg_blue(&inline_string!("{:?}", items_viewport_height)),
-                        e = fg_blue(&inline_string!("{:?}", viewport_width)),
-                    )
-                };
-            });
+    pub fn render_header(
+        output_device: &mut OutputDevice,
+        header: &Header,
+        header_style: &TuiStyle,
+        viewport_width: ChUnit,
+        start_display_col_offset: usize,
+    ) -> CommonResult<()> {
+        match header {
+            Header::SingleLine(ref header_text) => render_single_line_header(
+                output_device,
+                header_text,
+                header_style,
+                viewport_width,
+                start_display_col_offset,
+            ),
+            Header::MultiLine(ref header_lines) => {
+                render_multi_line_header(output_device, header_lines, viewport_width)
+            }
+        }
+    }
 
-            self.allocate_viewport_height_space(state)?;
+    fn render_single_line_header(
+        output_device: &mut OutputDevice,
+        header_text: &str,
+        header_style: &TuiStyle,
+        viewport_width: ChUnit,
+        start_display_col_offset: usize,
+    ) -> CommonResult<()> {
+        let mut header_text =
+            format!("{}{}", " ".repeat(start_display_col_offset), header_text);
 
-            let data_row_index_start = *state.scroll_offset_row_index;
+        header_text = clip_string_to_width_with_ellipsis(header_text, viewport_width);
 
-            match state.header {
-                Header::SingleLine(ref header_text) => {
-                    let mut header_text = format!(
-                        "{}{}",
-                        " ".repeat(start_display_col_offset),
-                        header_text
-                    );
+        queue_commands! {
+            output_device,
+            // Bring the caret back to the start of line.
+            MoveToColumn(0),
+            // Reset the colors that may have been set by the previous command.
+            ResetColor,
+        };
 
-                    header_text =
-                        clip_string_to_width_with_ellipsis(header_text, viewport_width);
+        if let Some(fg) = header_style.color_fg {
+            queue_commands! {
+                output_device,
+                // Set the fg color for the text.
+                choose_apply_style!(fg => fg),
+            };
+        }
 
-                    queue_commands! {
-                        self.output_device,
-                        // Bring the caret back to the start of line.
-                        MoveToColumn(0),
-                        // Reset the colors that may have been set by the previous command.
-                        ResetColor,
-                    };
+        if let Some(bg) = header_style.color_bg {
+            queue_commands! {
+                output_device,
+                // Set the bg color for the text.
+                choose_apply_style!(bg => bg),
+            };
+        }
 
-                    if let Some(fg) = single_line_header_style.color_fg {
-                        queue_commands! {
-                            self.output_device,
-                            // Set the fg color for the text.
-                            choose_apply_style!(fg => fg),
-                        };
-                    }
+        queue_commands! {
+            output_device,
+            // Style the text.
+            choose_apply_style!(header_style => bold),
+            choose_apply_style!(header_style => italic),
+            choose_apply_style!(header_style => dim),
+            choose_apply_style!(header_style => underline),
+            choose_apply_style!(header_style => reverse),
+            choose_apply_style!(header_style => hidden),
+            choose_apply_style!(header_style => strikethrough),
+            // Clear the current line.
+            Clear(ClearType::CurrentLine),
+            // Print the text.
+            Print(header_text),
+            // Move to next line.
+            MoveToNextLine(1),
+            // Reset the colors.
+            ResetColor,
+        };
 
-                    if let Some(bg) = single_line_header_style.color_bg {
-                        queue_commands! {
-                            self.output_device,
-                            // Set the bg color for the text.
-                            choose_apply_style!(bg => bg),
-                        };
-                    }
+        Ok(())
+    }
 
-                    queue_commands! {
-                        self.output_device,
-                        // Style the text.
-                        choose_apply_style!(single_line_header_style => bold),
-                        choose_apply_style!(single_line_header_style => italic),
-                        choose_apply_style!(single_line_header_style => dim),
-                        choose_apply_style!(single_line_header_style => underline),
-                        choose_apply_style!(single_line_header_style => reverse),
-                        choose_apply_style!(single_line_header_style => hidden),
-                        choose_apply_style!(single_line_header_style => strikethrough),
-                        // Clear the current line.
-                        Clear(ClearType::CurrentLine),
-                        // Print the text.
-                        Print(header_text),
-                        // Move to next line.
-                        MoveToNextLine(1),
-                        // Reset the colors.
-                        ResetColor,
-                    };
+    fn render_multi_line_header(
+        output_device: &mut OutputDevice,
+        header_lines: &InlineVec<InlineVec<AnsiStyledText>>,
+        viewport_width: ChUnit,
+    ) -> CommonResult<()> {
+        // Subtract 3 from viewport width because we need to add "..." to the
+        // end of the line.
+        let mut available_space_col_count: ChUnit = viewport_width - 3;
+
+        // This is the vector of vectors of AnsiStyledText we want to print to
+        // the screen.
+        let mut multi_line_header_clipped_vec =
+            InlineVec::<InlineVec<AnsiStyledText>>::with_capacity(header_lines.len());
+
+        let mut maybe_clipped_text_vec: InlineVec<InlineVec<InlineString>> =
+            InlineVec::with_capacity(header_lines.len());
+
+        for header_line in header_lines {
+            let mut header_line_modified = InlineVec::new();
+
+            'inner: for span_in_header_line in header_line {
+                let span_text = &span_in_header_line.text;
+                let span_text_gcs = span_text.grapheme_string();
+                let span_us_display_width = *span_text_gcs.display_width;
+
+                // If this span exceeds available space, clip it and stop
+                // processing the rest of the spans in this line.
+                if span_us_display_width > available_space_col_count {
+                    // Clip the text to available space.
+                    let clipped_text_str =
+                        span_text_gcs.clip(col(0), width(available_space_col_count));
+                    let clipped_text = inline_string!("{clipped_text_str}...");
+                    header_line_modified.push(clipped_text);
+                    break 'inner;
                 }
 
-                Header::MultiLine(ref header_lines) => {
-                    // Subtract 3 from viewport width because we need to add "..." to the
-                    // end of the line.
-                    let mut available_space_col_count: ChUnit = viewport_width - 3;
+                available_space_col_count -= span_us_display_width;
 
-                    // This is the vector of vectors of AnsiStyledText we want to print to
-                    // the screen.
-                    let mut multi_line_header_clipped_vec =
-                        InlineVec::<InlineVec<AnsiStyledText>>::with_capacity(
-                            header_lines.len(),
+                // If last item in the header, then fill the remaining
+                // space with spaces.
+                let maybe_header_line_last_span: Option<&AnsiStyledText> =
+                    header_line.last();
+
+                if let Some(header_line_last_span) = maybe_header_line_last_span {
+                    if span_in_header_line == header_line_last_span {
+                        // Because text is not clipped, we add back the 3
+                        // we subtracted earlier for the "...".
+                        let num_of_spaces: ChUnit = available_space_col_count + ch(3);
+
+                        let mut span_with_spaces = span_text.to_owned();
+                        pad_fmt!(
+                            fmt: span_with_spaces,
+                            pad_str: " ",
+                            repeat_count: num_of_spaces.as_usize()
                         );
 
-                    let mut maybe_clipped_text_vec: InlineVec<InlineVec<InlineString>> =
-                        InlineVec::with_capacity(header_lines.len());
-
-                    for header_line in header_lines {
-                        let mut header_line_modified = InlineVec::new();
-
-                        'inner: for span_in_header_line in header_line {
-                            let span_text = &span_in_header_line.text;
-                            let span_text_gcs = span_text.grapheme_string();
-                            let span_us_display_width = *span_text_gcs.display_width;
-
-                            // If this span exceeds available space, clip it and stop
-                            // processing the rest of the spans in this line.
-                            if span_us_display_width > available_space_col_count {
-                                // Clip the text to available space.
-                                let clipped_text_str = span_text_gcs
-                                    .clip(col(0), width(available_space_col_count));
-                                let clipped_text =
-                                    inline_string!("{clipped_text_str}...");
-                                header_line_modified.push(clipped_text);
-                                break 'inner;
-                            }
-
-                            available_space_col_count -= span_us_display_width;
-
-                            // If last item in the header, then fill the remaining
-                            // space with spaces.
-                            let maybe_header_line_last_span: Option<&AnsiStyledText> =
-                                header_line.last();
-
-                            if let Some(header_line_last_span) =
-                                maybe_header_line_last_span
-                            {
-                                if span_in_header_line == header_line_last_span {
-                                    // Because text is not clipped, we add back the 3
-                                    // we subtracted
-                                    // earlier for the "...".
-                                    let num_of_spaces: ChUnit =
-                                        available_space_col_count + ch(3);
-
-                                    let mut span_with_spaces = span_text.to_owned();
-                                    pad_fmt!(
-                                        fmt: span_with_spaces,
-                                        pad_str: " ",
-                                        repeat_count: num_of_spaces.as_usize()
-                                    );
-
-                                    header_line_modified.push(span_with_spaces);
-                                } else {
-                                    header_line_modified.push(span_text.to_owned());
-                                }
-                            }
-                        }
-
-                        // Reset the available space.
-                        available_space_col_count = viewport_width - 3;
-                        maybe_clipped_text_vec.push(header_line_modified);
-                    }
-
-                    // Replace the text inside vector of vectors of AnsiStyledText with
-                    // the clipped text.
-                    let zipped = maybe_clipped_text_vec.iter().zip(header_lines.iter());
-                    zipped.for_each(|(clipped_text_vec, header_span_vec)| {
-                        let mut ansi_styled_text_vec: InlineVec<AnsiStyledText> =
-                            InlineVec::new();
-                        let zipped = clipped_text_vec.iter().zip(header_span_vec.iter());
-                        zipped.for_each(|(clipped_text, header_span)| {
-                            ansi_styled_text_vec
-                                .push(ast(clipped_text, header_span.styles.clone()));
-                        });
-                        multi_line_header_clipped_vec.push(ansi_styled_text_vec);
-                    });
-
-                    let multi_line_header_text = multi_line_header_clipped_vec
-                        .iter()
-                        .map(|header_line| {
-                            header_line
-                                .iter()
-                                .map(ToString::to_string)
-                                .collect::<String>()
-                        })
-                        .collect::<Vec<String>>()
-                        .join("\r\n");
-
-                    queue_commands! {
-                        self.output_device,
-                        // Bring the caret back to the start of line.
-                        MoveToColumn(0),
-                        // Reset the colors that may have been set by the previous command.
-                        ResetColor,
-                        // Clear the current line.
-                        Clear(ClearType::CurrentLine),
-                        // Print each AnsiStyledText.
-                        Print(multi_line_header_text),
-                        // Move to next line.
-                        MoveToNextLine(1),
-                        // Reset the colors.
-                        ResetColor,
-                    };
-                }
-            }
-
-            // Print each line in viewport.
-            for viewport_row_index in 0..*items_viewport_height {
-                // Invert colors for selected items.
-                #[derive(Debug, Clone, Copy)]
-                enum SelectionStateStyle {
-                    FocusedAndSelected,
-                    Focused,
-                    Selected,
-                    Unselected,
-                }
-
-                #[derive(Debug, Clone, Copy)]
-                enum Select {
-                    Yes,
-                    No,
-                }
-
-                #[derive(Debug, Clone, Copy)]
-                enum Focus {
-                    Yes,
-                    No,
-                }
-
-                let data_row_index: usize =
-                    (data_row_index_start + viewport_row_index).into();
-                let caret_row_scroll_adj =
-                    ch(viewport_row_index) + state.scroll_offset_row_index;
-                let data_item = &state.items[data_row_index];
-
-                let selected =
-                    if state.selected_items.iter().any(|item| item == data_item) {
-                        Select::Yes
+                        header_line_modified.push(span_with_spaces);
                     } else {
-                        Select::No
-                    };
-
-                let focused = if ch(caret_row_scroll_adj) == state.get_focused_index() {
-                    Focus::Yes
-                } else {
-                    Focus::No
-                };
-
-                let selection_state = match (focused, selected) {
-                    (Focus::Yes, Select::Yes) => SelectionStateStyle::FocusedAndSelected,
-                    (Focus::Yes, Select::No) => SelectionStateStyle::Focused,
-                    (Focus::No, Select::Yes) => SelectionStateStyle::Selected,
-                    (Focus::No, Select::No) => SelectionStateStyle::Unselected,
-                };
-
-                let data_style = match selection_state {
-                    SelectionStateStyle::FocusedAndSelected => focused_and_selected_style,
-                    SelectionStateStyle::Focused => focused_style,
-                    SelectionStateStyle::Selected => selected_style,
-                    SelectionStateStyle::Unselected => unselected_style,
-                };
-
-                let row_prefix = match state.selection_mode {
-                    HowToChoose::Single => {
-                        let padding_left = " ".repeat(start_display_col_offset);
-                        if let Focus::Yes = focused {
-                            format!("{padding_left} {SINGLE_SELECT_IS_SELECTED} ")
-                        } else {
-                            format!("{padding_left} {SINGLE_SELECT_IS_NOT_SELECTED} ")
-                        }
+                        header_line_modified.push(span_text.to_owned());
                     }
-                    HowToChoose::Multiple => {
-                        let padding_left = " ".repeat(start_display_col_offset);
-                        match (focused, selected) {
-                            (Focus::Yes, Select::Yes) => {
-                                format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
-                            }
-                            (Focus::Yes, Select::No) => format!(
-                                "{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
-                            ),
-                            (Focus::No, Select::Yes) => format!(
-                                "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} "
-                            ),
-                            (Focus::No, Select::No) => format!(
-                                "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
-                            ),
-                        }
-                    }
-                };
-
-                let data_item = format!("{row_prefix}{data_item}");
-                let data_item: String =
-                    clip_string_to_width_with_ellipsis(data_item, viewport_width);
-                let data_item_display_width: ChUnit =
-                    *data_item.grapheme_string().display_width;
-                let padding_right = if data_item_display_width < viewport_width {
-                    " ".repeat(usize(viewport_width - data_item_display_width))
-                } else {
-                    String::new()
-                };
-
-                queue_commands! {
-                    self.output_device,
-                    // Bring the caret back to the start of line.
-                    MoveToColumn(0),
-                    // Reset the colors that may have been set by the previous command.
-                    ResetColor,
-                    // Clear the current line.
-                    Clear(ClearType::CurrentLine),
-                };
-
-                if let Some(fg) = data_style.color_fg {
-                    queue_commands! {
-                        self.output_device,
-                        // Set the fg color for the text.
-                        choose_apply_style!(fg => fg),
-                    };
                 }
-
-                if let Some(bg) = data_style.color_bg {
-                    queue_commands! {
-                        self.output_device,
-                        // Set the bg color for the text.
-                        choose_apply_style!(bg => bg),
-                    };
-                }
-
-                queue_commands! {
-                    self.output_device,
-                    // Style the text.
-                    choose_apply_style!(data_style => bold),
-                    choose_apply_style!(data_style => italic),
-                    choose_apply_style!(data_style => dim),
-                    choose_apply_style!(data_style => underline),
-                    choose_apply_style!(data_style => reverse),
-                    choose_apply_style!(data_style => hidden),
-                    choose_apply_style!(data_style => strikethrough),
-                    // Print the text.
-                    Print(data_item),
-                    // Print the padding text.
-                    Print(padding_right),
-                    // Move to next line.
-                    MoveToNextLine(1),
-                    // Reset the colors.
-                    ResetColor,
-                };
             }
 
-            // Move the cursor back up.
-            queue_commands! {
-                self.output_device,
-                MoveToPreviousLine(*items_viewport_height + *header_viewport_height),
+            // Reset the available space.
+            available_space_col_count = viewport_width - 3;
+            maybe_clipped_text_vec.push(header_line_modified);
+        }
+
+        // Replace the text inside vector of vectors of AnsiStyledText with
+        // the clipped text.
+        let zipped = maybe_clipped_text_vec.iter().zip(header_lines.iter());
+        zipped.for_each(|(clipped_text_vec, header_span_vec)| {
+            let mut ansi_styled_text_vec: InlineVec<AnsiStyledText> = InlineVec::new();
+            let zipped = clipped_text_vec.iter().zip(header_span_vec.iter());
+            zipped.for_each(|(clipped_text, header_span)| {
+                ansi_styled_text_vec.push(ast(clipped_text, header_span.styles.clone()));
+            });
+            multi_line_header_clipped_vec.push(ansi_styled_text_vec);
+        });
+
+        let multi_line_header_text = multi_line_header_clipped_vec
+            .iter()
+            .map(|header_line| {
+                header_line
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<String>()
+            })
+            .collect::<Vec<String>>()
+            .join("\r\n");
+
+        queue_commands! {
+            output_device,
+            // Bring the caret back to the start of line.
+            MoveToColumn(0),
+            // Reset the colors that may have been set by the previous command.
+            ResetColor,
+            // Clear the current line.
+            Clear(ClearType::CurrentLine),
+            // Print each AnsiStyledText.
+            Print(multi_line_header_text),
+            // Move to next line.
+            MoveToNextLine(1),
+            // Reset the colors.
+            ResetColor,
+        };
+
+        Ok(())
+    }
+
+    pub fn render_items(
+        output_device: &mut OutputDevice,
+        state: &State,
+        style: &StyleSheet,
+        render_context: &RenderContext,
+    ) -> CommonResult<()> {
+        // Print each line in viewport.
+        for viewport_row_index in 0..*render_context.items_viewport_height {
+            let row_context = ItemRowContext::new(
+                ch(viewport_row_index),
+                render_context.data_row_index_start,
+                state,
+            );
+
+            let selection_state = determine_selection_state(&row_context, state);
+            let data_style = get_style_for_selection_state(selection_state, style);
+
+            let row_prefix = create_row_prefix(
+                &row_context,
+                state.selection_mode,
+                render_context.start_display_col_offset,
+            );
+
+            render_single_item(
+                output_device,
+                &row_context,
+                &row_prefix,
+                &data_style,
+                render_context.viewport_width,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    enum SelectionStateStyle {
+        FocusedAndSelected,
+        Focused,
+        Selected,
+        Unselected,
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    enum Select {
+        Yes,
+        No,
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    enum Focus {
+        Yes,
+        No,
+    }
+
+    struct ItemRowContext {
+        data_item: String,
+        selected: Select,
+        focused: Focus,
+    }
+
+    impl ItemRowContext {
+        fn new(
+            viewport_row_index: ChUnit,
+            data_row_index_start: ChUnit,
+            state: &State,
+        ) -> Self {
+            let data_row_index: usize =
+                (data_row_index_start + viewport_row_index).into();
+            let caret_row_scroll_adj = viewport_row_index + state.scroll_offset_row_index;
+            let data_item = state.items[data_row_index].to_string();
+
+            let selected = if state.selected_items.iter().any(|item| item == &data_item) {
+                Select::Yes
+            } else {
+                Select::No
             };
 
-            lock_output_device_as_mut!(self.output_device)
-                .flush()
-                .into_diagnostic()?;
-        });
+            let focused = if caret_row_scroll_adj == state.get_focused_index() {
+                Focus::Yes
+            } else {
+                Focus::No
+            };
+
+            Self {
+                data_item,
+                selected,
+                focused,
+            }
+        }
+    }
+
+    fn determine_selection_state(
+        row_context: &ItemRowContext,
+        _state: &State,
+    ) -> SelectionStateStyle {
+        match (row_context.focused, row_context.selected) {
+            (Focus::Yes, Select::Yes) => SelectionStateStyle::FocusedAndSelected,
+            (Focus::Yes, Select::No) => SelectionStateStyle::Focused,
+            (Focus::No, Select::Yes) => SelectionStateStyle::Selected,
+            (Focus::No, Select::No) => SelectionStateStyle::Unselected,
+        }
+    }
+
+    fn get_style_for_selection_state(
+        selection_state: SelectionStateStyle,
+        style: &StyleSheet,
+    ) -> TuiStyle {
+        match selection_state {
+            SelectionStateStyle::FocusedAndSelected => style.focused_and_selected_style,
+            SelectionStateStyle::Focused => style.focused_style,
+            SelectionStateStyle::Selected => style.selected_style,
+            SelectionStateStyle::Unselected => style.unselected_style,
+        }
+    }
+
+    fn create_row_prefix(
+        row_context: &ItemRowContext,
+        selection_mode: HowToChoose,
+        start_display_col_offset: usize,
+    ) -> String {
+        let padding_left = " ".repeat(start_display_col_offset);
+
+        match selection_mode {
+            HowToChoose::Single => {
+                if let Focus::Yes = row_context.focused {
+                    format!("{padding_left} {SINGLE_SELECT_IS_SELECTED} ")
+                } else {
+                    format!("{padding_left} {SINGLE_SELECT_IS_NOT_SELECTED} ")
+                }
+            }
+            HowToChoose::Multiple => match (row_context.focused, row_context.selected) {
+                (Focus::Yes, Select::Yes) => {
+                    format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
+                }
+                (Focus::Yes, Select::No) => {
+                    format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} ")
+                }
+                (Focus::No, Select::Yes) => {
+                    format!("{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
+                }
+                (Focus::No, Select::No) => {
+                    format!(
+                        "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
+                    )
+                }
+            },
+        }
+    }
+
+    fn render_single_item(
+        output_device: &mut OutputDevice,
+        row_context: &ItemRowContext,
+        row_prefix: &str,
+        data_style: &TuiStyle,
+        viewport_width: ChUnit,
+    ) -> CommonResult<()> {
+        let data_item = format!("{row_prefix}{}", row_context.data_item);
+        let data_item: String =
+            clip_string_to_width_with_ellipsis(data_item, viewport_width);
+        let data_item_display_width: ChUnit = *data_item.grapheme_string().display_width;
+        let padding_right = if data_item_display_width < viewport_width {
+            " ".repeat(usize(viewport_width - data_item_display_width))
+        } else {
+            String::new()
+        };
+
+        queue_commands! {
+            output_device,
+            // Bring the caret back to the start of line.
+            MoveToColumn(0),
+            // Reset the colors that may have been set by the previous command.
+            ResetColor,
+            // Clear the current line.
+            Clear(ClearType::CurrentLine),
+        };
+
+        if let Some(fg) = data_style.color_fg {
+            queue_commands! {
+                output_device,
+                // Set the fg color for the text.
+                choose_apply_style!(fg => fg),
+            };
+        }
+
+        if let Some(bg) = data_style.color_bg {
+            queue_commands! {
+                output_device,
+                // Set the bg color for the text.
+                choose_apply_style!(bg => bg),
+            };
+        }
+
+        queue_commands! {
+            output_device,
+            // Style the text.
+            choose_apply_style!(data_style => bold),
+            choose_apply_style!(data_style => italic),
+            choose_apply_style!(data_style => dim),
+            choose_apply_style!(data_style => underline),
+            choose_apply_style!(data_style => reverse),
+            choose_apply_style!(data_style => hidden),
+            choose_apply_style!(data_style => strikethrough),
+            // Print the text.
+            Print(data_item),
+            // Print the padding text.
+            Print(padding_right),
+            // Move to next line.
+            MoveToNextLine(1),
+            // Reset the colors.
+            ResetColor,
+        };
+
+        Ok(())
+    }
+
+    pub fn move_cursor_back_to_start(
+        output_device: &mut OutputDevice,
+        items_viewport_height: ChUnit,
+        header_viewport_height: ChUnit,
+    ) -> CommonResult<()> {
+        queue_commands! {
+            output_device,
+            MoveToPreviousLine(*items_viewport_height + *header_viewport_height),
+        };
+        Ok(())
     }
 }
 
@@ -489,9 +617,7 @@ mod tests {
 
     use super::*;
     use crate::{global_color_support::{clear_override, set_override},
-                ColorSupport,
-                ItemsOwned,
-                OutputDeviceExt};
+                ColorSupport, ItemsOwned, OutputDeviceExt};
 
     #[test]
     fn test_clip_string_to_width_with_ellipsis() {

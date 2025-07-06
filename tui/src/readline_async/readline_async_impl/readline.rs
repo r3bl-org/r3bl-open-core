@@ -308,6 +308,8 @@ pub mod manage_shared_writer_output {
                 let maybe_line_control_signal = line_control_channel_receiver.recv();
 
                 // Channel is open.
+                // if-let scope has changed in Rust 2024, so use match here and not if-let
+                #[allow(clippy::single_match_else)]
                 match maybe_line_control_signal.await {
                     Some(maybe_line_control_signal) => {
                         let control_flow = process_line_control_signal(

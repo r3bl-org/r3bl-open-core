@@ -24,12 +24,7 @@ use crossterm::{cursor,
                 QueueableCommand};
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{ok,
-            MemoizedLenMap,
-            ReadlineError,
-            ReadlineEvent,
-            SafeHistory,
-            StringLength};
+use crate::{ok, MemoizedLenMap, ReadlineError, ReadlineEvent, SafeHistory, StringLength};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LineStateLiveness {
@@ -170,7 +165,7 @@ impl LineState {
     }
 
     /// Move cursor by one unicode grapheme either left (negative) or right (positive).
-    fn move_cursor(&mut self, change: isize) -> io::Result<()> {
+    pub fn move_cursor(&mut self, change: isize) -> io::Result<()> {
         if change > 0 {
             let count = self.line.graphemes(true).count();
 
@@ -202,14 +197,16 @@ impl LineState {
         ok!()
     }
 
-    fn current_grapheme(&self) -> Option<(usize, &str)> {
+    #[must_use]
+    pub fn current_grapheme(&self) -> Option<(usize, &str)> {
         self.line
             .grapheme_indices(true)
             .take(self.line_cursor_grapheme)
             .last()
     }
 
-    fn next_grapheme(&self) -> Option<(usize, &str)> {
+    #[must_use]
+    pub fn next_grapheme(&self) -> Option<(usize, &str)> {
         let total = self.line.grapheme_indices(true).count();
         if self.line_cursor_grapheme == total {
             return None;
@@ -220,13 +217,13 @@ impl LineState {
             .last()
     }
 
-    fn reset_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
+    pub fn reset_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
         self.move_to_beginning(term, self.current_column)?;
 
         ok!()
     }
 
-    fn set_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
+    pub fn set_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
         self.move_from_beginning(term, self.current_column)?;
 
         ok!()
@@ -385,6 +382,9 @@ impl LineState {
         term: &mut dyn Write,
         safe_history: SafeHistory,
     ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        use apply_event_and_render_helper::{handle_control_key, handle_regular_key,
+                                            handle_resize};
+
         match event {
             // Control Keys
             Event::Key(KeyEvent {
@@ -392,278 +392,445 @@ impl LineState {
                 modifiers: KeyModifiers::CONTROL,
                 kind: KeyEventKind::Press,
                 ..
-            }) => match code {
-                // End of transmission (Ctrl+D)
-                KeyCode::Char('d') => {
-                    self.exit(term)?;
-                    return Ok(Some(ReadlineEvent::Eof));
-                }
-                // End of text (Ctrl+C)
-                KeyCode::Char('c') => {
-                    if self.should_print_line_on_control_c && !self.is_paused.is_paused()
-                    {
-                        self.print_and_flush(
-                            &format!("{}{}", self.prompt, self.line),
-                            term,
-                        )?;
-                    }
-                    self.exit(term)?;
-                    return Ok(Some(ReadlineEvent::Interrupted));
-                }
-                // Clear all
-                KeyCode::Char('l') => {
-                    early_return_if_paused!(self @None);
-
-                    term.queue(Clear(All))?.queue(cursor::MoveTo(0, 0))?;
-                    self.clear_and_render_and_flush(term)?;
-                }
-                // Clear to start
-                KeyCode::Char('u') => {
-                    early_return_if_paused!(self @None);
-
-                    if let Some((pos, str)) = self.current_grapheme() {
-                        let pos = pos + str.len();
-                        self.line.drain(0..pos);
-                        self.move_cursor(-100_000)?;
-                        self.clear_and_render_and_flush(term)?;
-                    }
-                }
-                // Clear last word
-                KeyCode::Char('w') => {
-                    early_return_if_paused!(self @None);
-
-                    let count = self.line.graphemes(true).count();
-                    let skip_count = count - self.line_cursor_grapheme;
-                    let start = self
-                        .line
-                        .grapheme_indices(true)
-                        .rev()
-                        .skip(skip_count)
-                        .skip_while(|(_, str)| *str == " ")
-                        .find_map(
-                            |(pos, str)| if str == " " { Some(pos + 1) } else { None },
-                        )
-                        .unwrap_or(0);
-                    let end = self
-                        .line
-                        .grapheme_indices(true)
-                        .nth(self.line_cursor_grapheme)
-                        .map(|(end, _)| end);
-                    let change = start as isize - self.line_cursor_grapheme as isize;
-                    self.move_cursor(change)?;
-                    if let Some(end) = end {
-                        self.line.drain(start..end);
-                    } else {
-                        self.line.drain(start..);
-                    }
-
-                    self.clear_and_render_and_flush(term)?;
-                }
-                // Move to beginning
-                #[cfg(feature = "emacs")]
-                KeyCode::Char('a') => {
-                    early_return_if_paused!(self @None);
-
-                    self.reset_cursor(term)?;
-                    self.move_cursor(-100_000)?;
-                    self.set_cursor(term)?;
-
-                    term.flush()?;
-                }
-                // Move to end
-                #[cfg(feature = "emacs")]
-                KeyCode::Char('e') => {
-                    early_return_if_paused!(self @None);
-
-                    self.reset_cursor(term)?;
-                    self.move_cursor(100_000)?;
-                    self.set_cursor(term)?;
-
-                    term.flush()?;
-                }
-                // Move cursor left to previous word
-                KeyCode::Left => {
-                    early_return_if_paused!(self @None);
-
-                    self.reset_cursor(term)?;
-                    let count = self.line.graphemes(true).count();
-                    let skip_count = count - self.line_cursor_grapheme;
-                    if let Some((pos, _)) = self
-                        .line
-                        .grapheme_indices(true)
-                        .rev()
-                        .skip(skip_count)
-                        .skip_while(|(_, str)| *str == " ")
-                        .find(|(_, str)| *str == " ")
-                    {
-                        let change = pos as isize - self.line_cursor_grapheme as isize;
-                        self.move_cursor(change + 1)?;
-                    } else {
-                        self.move_cursor(-100_000)?;
-                    }
-                    self.set_cursor(term)?;
-
-                    term.flush()?;
-                }
-                // Move cursor right to next word
-                KeyCode::Right => {
-                    early_return_if_paused!(self @None);
-
-                    self.reset_cursor(term)?;
-                    if let Some((pos, _)) = self
-                        .line
-                        .grapheme_indices(true)
-                        .skip(self.line_cursor_grapheme)
-                        .skip_while(|(_, c)| *c == " ")
-                        .find(|(_, c)| *c == " ")
-                    {
-                        let change = pos as isize - self.line_cursor_grapheme as isize;
-                        self.move_cursor(change)?;
-                    } else {
-                        self.move_cursor(100_000)?;
-                    }
-                    self.set_cursor(term)?;
-
-                    term.flush()?;
-                }
-                _ => {}
-            },
+            }) => handle_control_key(self, code, term, safe_history),
             // Other Modifiers (None, Shift, Control+Alt)
-            // All other modifiers must be considered because the match expression cannot
-            // match combined KeyModifiers. Control+Alt is used to reach
-            // certain special symbols on a lot of international keyboard
-            // layouts.
             Event::Key(KeyEvent {
                 code,
                 modifiers: _,
                 kind: KeyEventKind::Press,
                 ..
-            }) => {
-                early_return_if_paused!(self @None);
+            }) => handle_regular_key(self, code, term, safe_history),
+            Event::Resize(x, y) => handle_resize(self, x, y, term),
+            _ => Ok(None),
+        }
+    }
+}
 
-                match code {
-                    KeyCode::Enter => {
-                        // Print line so you can see what commands you've typed.
-                        if self.should_print_line_on_enter && !self.is_paused.is_paused()
-                        {
-                            self.print_and_flush(
-                                &format!("{}{}\n", self.prompt, self.line),
-                                term,
-                            )?;
-                        }
+mod apply_event_and_render_helper {
+    use super::{cursor, All, Clear, KeyCode, LineState, LineStateLiveness,
+                QueueableCommand, ReadlineError, ReadlineEvent, SafeHistory,
+                UnicodeSegmentation, Write};
 
-                        // Take line
-                        let line = std::mem::take(&mut self.line);
-                        self.render_new_line_from_beginning_and_flush(term)?;
+    /// Handle control key events (Ctrl+key combinations)
+    pub fn handle_control_key(
+        line_state: &mut LineState,
+        code: KeyCode,
+        term: &mut dyn Write,
+        _safe_history: SafeHistory,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        match code {
+            KeyCode::Char('d') => handle_ctrl_d(line_state, term),
+            KeyCode::Char('c') => handle_ctrl_c(line_state, term),
+            KeyCode::Char('l') => handle_ctrl_l(line_state, term),
+            KeyCode::Char('u') => handle_ctrl_u(line_state, term),
+            KeyCode::Char('w') => handle_ctrl_w(line_state, term),
+            #[cfg(feature = "emacs")]
+            KeyCode::Char('a') => handle_ctrl_a(line_state, term),
+            #[cfg(feature = "emacs")]
+            KeyCode::Char('e') => handle_ctrl_e(line_state, term),
+            KeyCode::Left => handle_ctrl_left(line_state, term),
+            KeyCode::Right => handle_ctrl_right(line_state, term),
+            _ => Ok(None),
+        }
+    }
 
-                        // Return line
-                        return Ok(Some(ReadlineEvent::Line(line)));
-                    }
-                    // Delete character from line
-                    KeyCode::Backspace => {
-                        if let Some((pos, str)) = self.current_grapheme() {
-                            self.clear(term)?;
-                            let len = pos + str.len();
-                            self.line.replace_range(pos..len, "");
-                            self.move_cursor(-1)?;
+    /// Handle regular key events (no modifiers or non-Control modifiers)
+    pub fn handle_regular_key(
+        line_state: &mut LineState,
+        code: KeyCode,
+        term: &mut dyn Write,
+        safe_history: SafeHistory,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        early_return_if_paused!(line_state @None);
 
-                            self.render_and_flush(term)?;
-                        }
-                    }
-                    KeyCode::Delete => {
-                        if let Some((pos, str)) = self.next_grapheme() {
-                            self.clear(term)?;
-                            let len = pos + str.len();
-                            self.line.replace_range(pos..len, "");
+        match code {
+            KeyCode::Enter => handle_enter(line_state, term),
+            KeyCode::Backspace => handle_backspace(line_state, term),
+            KeyCode::Delete => handle_delete(line_state, term),
+            KeyCode::Left => handle_left(line_state, term),
+            KeyCode::Right => handle_right(line_state, term),
+            KeyCode::Home => handle_home(line_state, term),
+            KeyCode::End => handle_end(line_state, term),
+            KeyCode::Up => handle_up(line_state, term, safe_history),
+            KeyCode::Down => handle_down(line_state, term, safe_history),
+            KeyCode::Char(c) => handle_char(line_state, term, c),
+            _ => Ok(None),
+        }
+    }
 
-                            self.render_and_flush(term)?;
-                        }
-                    }
-                    KeyCode::Left => {
-                        self.reset_cursor(term)?;
-                        self.move_cursor(-1)?;
-                        self.set_cursor(term)?;
-                        term.flush()?;
-                    }
-                    KeyCode::Right => {
-                        self.reset_cursor(term)?;
-                        self.move_cursor(1)?;
-                        self.set_cursor(term)?;
-                        term.flush()?;
-                    }
-                    KeyCode::Home => {
-                        self.reset_cursor(term)?;
-                        self.move_cursor(-100_000)?;
-                        self.set_cursor(term)?;
-                        term.flush()?;
-                    }
-                    KeyCode::End => {
-                        self.reset_cursor(term)?;
-                        self.move_cursor(100_000)?;
-                        self.set_cursor(term)?;
-                        term.flush()?;
-                    }
-                    KeyCode::Up => {
-                        // search for next history item, replace line if found.
-                        if let Some(line) = safe_history.lock().unwrap().search_next() {
-                            self.line.clear();
-                            self.line += line;
-                            self.clear(term)?;
-                            self.move_cursor(100_000)?;
-                            self.render_and_flush(term)?;
-                        }
-                    }
-                    KeyCode::Down => {
-                        // search for next history item, replace line if found.
-                        if let Some(line) = safe_history.lock().unwrap().search_previous()
-                        {
-                            self.line.clear();
-                            self.line += line;
-                            self.clear(term)?;
-                            self.move_cursor(100_000)?;
-                            self.render_and_flush(term)?;
-                        }
-                    }
-                    // Add character to line and output
-                    KeyCode::Char(c) => {
-                        self.clear(term)?;
-                        let prev_len = self.cluster_buffer.graphemes(true).count();
-                        self.cluster_buffer.push(c);
-                        let new_len = self.cluster_buffer.graphemes(true).count();
+    /// Handle terminal resize events
+    pub fn handle_resize(
+        line_state: &mut LineState,
+        x: u16,
+        y: u16,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        early_return_if_paused!(line_state @None);
 
-                        let (g_pos, g_str) = self.current_grapheme().unwrap_or((0, ""));
-                        let pos = g_pos + g_str.len();
+        line_state.term_size = (x, y);
+        line_state.clear_and_render_and_flush(term)?;
+        Ok(Some(ReadlineEvent::Resized))
+    }
 
-                        self.line.insert(pos, c);
+    // Control key handlers
+    fn handle_ctrl_d(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        // End of transmission (Ctrl+D)
+        line_state.exit(term)?;
+        Ok(Some(ReadlineEvent::Eof))
+    }
 
-                        if prev_len != new_len {
-                            self.move_cursor(1)?;
-                            if prev_len > 0 {
-                                if let Some((pos, str)) =
-                                    self.cluster_buffer.grapheme_indices(true).next()
-                                {
-                                    let len = str.len();
-                                    self.cluster_buffer.replace_range(pos..len, "");
-                                }
-                            }
-                        }
+    // End of text (Ctrl+C)
+    fn handle_ctrl_c(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        if line_state.should_print_line_on_control_c && !line_state.is_paused.is_paused()
+        {
+            line_state.print_and_flush(
+                &format!("{}{}", line_state.prompt, line_state.line),
+                term,
+            )?;
+        }
+        line_state.exit(term)?;
+        Ok(Some(ReadlineEvent::Interrupted))
+    }
 
-                        self.render_and_flush(term)?;
-                    }
-                    _ => {}
-                }
-            }
-            Event::Resize(x, y) => {
-                early_return_if_paused!(self @None);
+    // Clear all
+    fn handle_ctrl_l(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        early_return_if_paused!(line_state @None);
 
-                self.term_size = (x, y);
-                self.clear_and_render_and_flush(term)?;
+        term.queue(Clear(All))?.queue(cursor::MoveTo(0, 0))?;
+        line_state.clear_and_render_and_flush(term)?;
+        Ok(None)
+    }
 
-                return Ok(Some(ReadlineEvent::Resized));
-            }
-            _ => {}
+    // Clear to start
+    fn handle_ctrl_u(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        early_return_if_paused!(line_state @None);
+
+        if let Some((pos, str)) = line_state.current_grapheme() {
+            let pos = pos + str.len();
+            line_state.line.drain(0..pos);
+            line_state.move_cursor(-100_000)?;
+            line_state.clear_and_render_and_flush(term)?;
+        }
+        Ok(None)
+    }
+
+    // Clear last word
+    fn handle_ctrl_w(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        early_return_if_paused!(line_state @None);
+
+        let count = line_state.line.graphemes(true).count();
+        let skip_count = count - line_state.line_cursor_grapheme;
+        let start = line_state
+            .line
+            .grapheme_indices(true)
+            .rev()
+            .skip(skip_count)
+            .skip_while(|(_, str)| *str == " ")
+            .find_map(|(pos, str)| if str == " " { Some(pos + 1) } else { None })
+            .unwrap_or(0);
+        let end = line_state
+            .line
+            .grapheme_indices(true)
+            .nth(line_state.line_cursor_grapheme)
+            .map(|(end, _)| end);
+        // Calculate cursor movement to beginning of word being deleted.
+        // Handles potential overflow by using checked conversion to isize.
+        // Calculate the change in cursor position, handling potential overflow
+        let change = if start >= line_state.line_cursor_grapheme {
+            // Moving forward (positive change)
+            let diff = start - line_state.line_cursor_grapheme;
+            isize::try_from(diff).unwrap_or(isize::MAX)
+        } else {
+            // Moving backward (negative change)
+            let diff = line_state.line_cursor_grapheme - start;
+            -(isize::try_from(diff).unwrap_or(isize::MAX))
+        };
+        line_state.move_cursor(change)?;
+        if let Some(end) = end {
+            line_state.line.drain(start..end);
+        } else {
+            line_state.line.drain(start..);
         }
 
+        line_state.clear_and_render_and_flush(term)?;
+        Ok(None)
+    }
+
+    // Move to beginning
+    #[cfg(feature = "emacs")]
+    fn handle_ctrl_a(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        early_return_if_paused!(line_state @None);
+
+        line_state.reset_cursor(term)?;
+        line_state.move_cursor(-100_000)?;
+        line_state.set_cursor(term)?;
+        term.flush()?;
+        Ok(None)
+    }
+
+    // Move to end
+    #[cfg(feature = "emacs")]
+    fn handle_ctrl_e(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        early_return_if_paused!(line_state @None);
+
+        line_state.reset_cursor(term)?;
+        line_state.move_cursor(100_000)?;
+        line_state.set_cursor(term)?;
+        term.flush()?;
+        Ok(None)
+    }
+
+    // Move cursor left to previous word
+    fn handle_ctrl_left(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        early_return_if_paused!(line_state @None);
+
+        line_state.reset_cursor(term)?;
+        let count = line_state.line.graphemes(true).count();
+        let skip_count = count - line_state.line_cursor_grapheme;
+        if let Some((pos, _)) = line_state
+            .line
+            .grapheme_indices(true)
+            .rev()
+            .skip(skip_count)
+            .skip_while(|(_, str)| *str == " ")
+            .find(|(_, str)| *str == " ")
+        {
+            // Calculate cursor movement to beginning of word being deleted.
+            // Handles potential overflow by using checked conversion to isize.
+            // Calculate the change in cursor position, handling potential overflow
+            let change = if pos >= line_state.line_cursor_grapheme {
+                let diff = pos - line_state.line_cursor_grapheme;
+                isize::try_from(diff).unwrap_or(isize::MAX)
+            } else {
+                let diff = line_state.line_cursor_grapheme - pos;
+                -(isize::try_from(diff).unwrap_or(isize::MAX))
+            };
+            line_state.move_cursor(change + 1)?;
+        } else {
+            line_state.move_cursor(-100_000)?;
+        }
+        line_state.set_cursor(term)?;
+        term.flush()?;
+        Ok(None)
+    }
+
+    // Move cursor right to next word
+    fn handle_ctrl_right(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        early_return_if_paused!(line_state @None);
+
+        line_state.reset_cursor(term)?;
+        if let Some((pos, _)) = line_state
+            .line
+            .grapheme_indices(true)
+            .skip(line_state.line_cursor_grapheme)
+            .skip_while(|(_, c)| *c == " ")
+            .find(|(_, c)| *c == " ")
+        {
+            // Calculate cursor movement to beginning of word being deleted.
+            // Handles potential overflow by using checked conversion to isize.
+            // Calculate the change in cursor position, handling potential overflow
+            let change = if pos >= line_state.line_cursor_grapheme {
+                let diff = pos - line_state.line_cursor_grapheme;
+                isize::try_from(diff).unwrap_or(isize::MAX)
+            } else {
+                let diff = line_state.line_cursor_grapheme - pos;
+                -(isize::try_from(diff).unwrap_or(isize::MAX))
+            };
+            line_state.move_cursor(change)?;
+        } else {
+            line_state.move_cursor(100_000)?;
+        }
+        line_state.set_cursor(term)?;
+        term.flush()?;
+        Ok(None)
+    }
+
+    // Regular key handlers
+    fn handle_enter(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        // Print line so you can see what commands you've typed.
+        if line_state.should_print_line_on_enter && !line_state.is_paused.is_paused() {
+            line_state.print_and_flush(
+                &format!("{}{}\n", line_state.prompt, line_state.line),
+                term,
+            )?;
+        }
+
+        // Take line
+        let line = std::mem::take(&mut line_state.line);
+        line_state.render_new_line_from_beginning_and_flush(term)?;
+
+        // Return line
+        Ok(Some(ReadlineEvent::Line(line)))
+    }
+
+    // Delete (backspace) character from line
+    fn handle_backspace(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        if let Some((pos, str)) = line_state.current_grapheme() {
+            line_state.clear(term)?;
+            let len = pos + str.len();
+            line_state.line.replace_range(pos..len, "");
+            line_state.move_cursor(-1)?;
+            line_state.render_and_flush(term)?;
+        }
+        Ok(None)
+    }
+
+    // Delete character from line
+    fn handle_delete(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        if let Some((pos, str)) = line_state.next_grapheme() {
+            line_state.clear(term)?;
+            let len = pos + str.len();
+            line_state.line.replace_range(pos..len, "");
+            line_state.render_and_flush(term)?;
+        }
+        Ok(None)
+    }
+
+    // Move cursor left
+    fn handle_left(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        line_state.reset_cursor(term)?;
+        line_state.move_cursor(-1)?;
+        line_state.set_cursor(term)?;
+        term.flush()?;
+        Ok(None)
+    }
+
+    // Move cursor right
+    fn handle_right(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        line_state.reset_cursor(term)?;
+        line_state.move_cursor(1)?;
+        line_state.set_cursor(term)?;
+        term.flush()?;
+        Ok(None)
+    }
+
+    // Move cursor home
+    fn handle_home(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        line_state.reset_cursor(term)?;
+        line_state.move_cursor(-100_000)?;
+        line_state.set_cursor(term)?;
+        term.flush()?;
+        Ok(None)
+    }
+
+    // Move cursor end
+    fn handle_end(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        line_state.reset_cursor(term)?;
+        line_state.move_cursor(100_000)?;
+        line_state.set_cursor(term)?;
+        term.flush()?;
+        Ok(None)
+    }
+
+    // Search for next history item, replace line if found
+    fn handle_up(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+        safe_history: SafeHistory,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        if let Some(line) = safe_history.lock().unwrap().search_next() {
+            line_state.line.clear();
+            line_state.line += line;
+            line_state.clear(term)?;
+            line_state.move_cursor(100_000)?;
+            line_state.render_and_flush(term)?;
+        }
+        Ok(None)
+    }
+
+    // Search for next history item, replace line if found
+    fn handle_down(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+        safe_history: SafeHistory,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        if let Some(line) = safe_history.lock().unwrap().search_previous() {
+            line_state.line.clear();
+            line_state.line += line;
+            line_state.clear(term)?;
+            line_state.move_cursor(100_000)?;
+            line_state.render_and_flush(term)?;
+        }
+        Ok(None)
+    }
+
+    // Add character to line and output
+    fn handle_char(
+        line_state: &mut LineState,
+        term: &mut dyn Write,
+        c: char,
+    ) -> Result<Option<ReadlineEvent>, ReadlineError> {
+        line_state.clear(term)?;
+        let prev_len = line_state.cluster_buffer.graphemes(true).count();
+        line_state.cluster_buffer.push(c);
+        let new_len = line_state.cluster_buffer.graphemes(true).count();
+
+        let (g_pos, g_str) = line_state.current_grapheme().unwrap_or((0, ""));
+        let pos = g_pos + g_str.len();
+
+        line_state.line.insert(pos, c);
+
+        if prev_len != new_len {
+            line_state.move_cursor(1)?;
+            if prev_len > 0 {
+                if let Some((pos, str)) =
+                    line_state.cluster_buffer.grapheme_indices(true).next()
+                {
+                    let len = str.len();
+                    line_state.cluster_buffer.replace_range(pos..len, "");
+                }
+            }
+        }
+
+        line_state.render_and_flush(term)?;
         Ok(None)
     }
 }

@@ -19,8 +19,7 @@
 //! also contains some data copied from the editor engine. This is necessary when you need
 //! to mutate the buffer and then run validation checks on the buffer.
 //!
-//! The ["newtype"
-//! pattern](https://doc.rust-lang.org/rust-by-example/generics/new_types.html) is used
+//! The [newtype pattern](https://doc.rust-lang.org/rust-by-example/generics/new_types.html) is used
 //! here to wrap the underlying [`EditorBufferMut`] struct, so that it be used in one of
 //! two distinct use cases:
 //! 1. Once [`EditorBuffer::get_mut()`] is called, the buffer is mutated and then the

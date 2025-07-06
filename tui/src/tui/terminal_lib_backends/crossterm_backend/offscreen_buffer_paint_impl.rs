@@ -131,8 +131,10 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                         }
                     };
 
-                let is_style_same_as_prev =
-                    render_helper::style_eq(&pixel_char_style, &context.prev_style);
+                let is_style_same_as_prev = render_helper::style_eq(
+                    pixel_char_style.as_ref(),
+                    context.prev_style.as_ref(),
+                );
                 let is_at_end_of_line = ch(pixel_char_index) == (ch(line.len()) - ch(1));
                 let is_first_loop_iteration = row_index == 0 && pixel_char_index == 0;
 
@@ -258,7 +260,7 @@ mod render_helper {
     /// - `reverse`
     /// - `hidden`
     /// - `strikethrough`
-    pub fn style_eq(this: &Option<TuiStyle>, other: &Option<TuiStyle>) -> bool {
+    pub fn style_eq(this: Option<&TuiStyle>, other: Option<&TuiStyle>) -> bool {
         match (this, other) {
             (Some(this), Some(other)) => {
                 this.color_fg == other.color_fg
@@ -336,7 +338,7 @@ mod tests {
         let maybe_max_display_col_count: Option<ColWidth> = Some(width(10));
         print_text_with_attributes(
             text,
-            &maybe_style,
+            maybe_style.as_ref(),
             &mut my_offscreen_buffer,
             maybe_max_display_col_count,
         )
@@ -438,12 +440,12 @@ mod tests {
             new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
         );
 
-        assert_eq2!(style_eq(&style1, &style2), true);
+        assert_eq2!(style_eq(style1.as_ref(), style2.as_ref()), true);
 
         let style_3 = Some(
             new_style!(italic color_fg:{tui_color!(black)} color_bg:{tui_color!(cyan)}),
         );
 
-        assert_eq2!(style_eq(&style1, &style_3), false);
+        assert_eq2!(style_eq(style1.as_ref(), style_3.as_ref()), false);
     }
 }
