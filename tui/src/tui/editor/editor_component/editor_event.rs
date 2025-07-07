@@ -49,7 +49,7 @@ pub enum EditorEvent {
     Redo,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SelectionAction {
     OneCharLeft,
     OneCharRight,
@@ -63,7 +63,7 @@ pub enum SelectionAction {
     Esc,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CaretDirection {
     Up,
     Down,

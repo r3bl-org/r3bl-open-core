@@ -58,9 +58,9 @@ pub fn handle_selection_single_line_caret_movement(
         range // Copy & return it.
     };
 
-    // Log debug information
+    // Log debug information.
     single_line_select_helper::log_range_debug_info(
-        &range,
+        range,
         prev,
         curr,
         prev_col_index,
@@ -83,7 +83,7 @@ pub fn handle_selection_single_line_caret_movement(
         ) => {
             single_line_select_helper::handle_left_shrink_end(
                 buffer,
-                &range,
+                range,
                 row_index,
                 prev,
                 curr,
@@ -100,7 +100,7 @@ pub fn handle_selection_single_line_caret_movement(
         ) => {
             single_line_select_helper::handle_left_grow_start(
                 buffer,
-                &range,
+                range,
                 row_index,
                 prev,
                 curr,
@@ -116,7 +116,7 @@ pub fn handle_selection_single_line_caret_movement(
         ) => {
             single_line_select_helper::handle_right_grow_end(
                 buffer,
-                &range,
+                range,
                 row_index,
                 prev,
                 curr,
@@ -133,7 +133,7 @@ pub fn handle_selection_single_line_caret_movement(
         ) => {
             single_line_select_helper::handle_right_shrink_start(
                 buffer,
-                &range,
+                range,
                 row_index,
                 prev,
                 curr,
@@ -353,7 +353,7 @@ mod single_line_select_helper {
 
     /// Log debug information about the range.
     pub fn log_range_debug_info(
-        range: &SelectionRange,
+        range: SelectionRange,
         prev: CaretScrAdj,
         curr: CaretScrAdj,
         prev_col_index: ColIndex,
@@ -385,7 +385,7 @@ mod single_line_select_helper {
     /// Handle left movement with shrinking range end.
     pub fn handle_left_shrink_end(
         buffer: &mut EditorBuffer,
-        range: &SelectionRange,
+        range: SelectionRange,
         row_index: RowIndex,
         prev: CaretScrAdj,
         curr: CaretScrAdj,
@@ -406,7 +406,7 @@ mod single_line_select_helper {
     /// Handle left movement with growing range start.
     pub fn handle_left_grow_start(
         buffer: &mut EditorBuffer,
-        range: &SelectionRange,
+        range: SelectionRange,
         row_index: RowIndex,
         prev: CaretScrAdj,
         curr: CaretScrAdj,
@@ -427,7 +427,7 @@ mod single_line_select_helper {
     /// Handle right movement with growing range end.
     pub fn handle_right_grow_end(
         buffer: &mut EditorBuffer,
-        range: &SelectionRange,
+        range: SelectionRange,
         row_index: RowIndex,
         prev: CaretScrAdj,
         curr: CaretScrAdj,
@@ -448,7 +448,7 @@ mod single_line_select_helper {
     /// Handle right movement with shrinking range start.
     pub fn handle_right_shrink_start(
         buffer: &mut EditorBuffer,
-        range: &SelectionRange,
+        range: SelectionRange,
         row_index: RowIndex,
         prev: CaretScrAdj,
         curr: CaretScrAdj,
@@ -501,10 +501,9 @@ mod multiline_select_helper {
         prev: CaretScrAdj,
         curr: CaretScrAdj,
     ) {
-        use handle_two_lines_helper::{setup_and_log_debug, validate_preconditions};
-
         // Validate preconditions.
-        let Some(caret_vertical_movement_direction) = validate_preconditions(prev, curr)
+        let Some(caret_vertical_movement_direction) =
+            handle_two_lines_helper::validate_preconditions(prev, curr)
         else {
             return;
         };
@@ -514,7 +513,12 @@ mod multiline_select_helper {
             locate_previous_row_index,
             locate_current_row_index,
             has_caret_movement_direction_changed,
-        ) = setup_and_log_debug(buffer, prev, curr, caret_vertical_movement_direction);
+        ) = handle_two_lines_helper::setup_and_log_debug(
+            buffer,
+            prev,
+            curr,
+            caret_vertical_movement_direction,
+        );
 
         // Handle the case matching based on row location and movement direction.
         match (

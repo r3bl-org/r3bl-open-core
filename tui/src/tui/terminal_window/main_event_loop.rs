@@ -308,7 +308,7 @@ where
             Ok(false)
         }
         TerminalWindowMainThreadSignal::ApplyAppSignal(action) => {
-            handle_app_signal(&action, event_loop_state, app, exit_keys, output_device)?;
+            handle_app_signal(&action, event_loop_state, app, exit_keys, output_device);
             Ok(false)
         }
     }
@@ -352,8 +352,7 @@ fn handle_app_signal<S, AS>(
     app: &mut BoxedSafeApp<S, AS>,
     exit_keys: &[InputEvent],
     output_device: &OutputDevice,
-) -> CommonResult<()>
-where
+) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
@@ -384,7 +383,6 @@ where
             event_loop_state.global_data.set_hud_report(telemetry.report());
         }
     );
-    Ok(())
 }
 
 /// Handle input events from the terminal.

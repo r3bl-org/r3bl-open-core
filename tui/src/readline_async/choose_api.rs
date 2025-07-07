@@ -18,32 +18,10 @@
 use clap::ValueEnum;
 use miette::IntoDiagnostic as _;
 
-use crate::{ch,
-            enter_event_loop_async,
-            fg_green,
-            get_size,
-            inline_string,
-            usize,
-            CalculateResizeHint,
-            CaretVerticalViewportLocation,
-            EventLoopResult,
-            Header,
-            Height,
-            InputDevice,
-            InputEvent,
-            ItemsOwned,
-            Key,
-            KeyPress,
-            KeyState,
-            LineStateControlSignal,
-            ModifierKeysMask,
-            OutputDevice,
-            SelectComponent,
-            SharedWriter,
-            SpecialKey,
-            State,
-            StyleSheet,
-            Width,
+use crate::{ch, constants::SPACE_CHAR, enter_event_loop_async, get_size,
+            CalculateResizeHint, EventLoopResult, Header, Height, InputDevice, InputEvent, 
+            ItemsOwned, Key, KeyPress, KeyState, LineStateControlSignal, ModifierKeysMask, 
+            OutputDevice, SelectComponent, SharedWriter, SpecialKey, State, StyleSheet, Width,
             DEVELOPMENT_MODE};
 
 pub const DEFAULT_HEIGHT: usize = 5;
@@ -196,7 +174,174 @@ pub async fn choose<'a>(
     }
 }
 
-fn keypress_handler(state: &mut State, ie: InputEvent) -> EventLoopResult {
+mod keypress_handler_helper {
+    use crate::{fg_green, inline_string, usize, CalculateResizeHint, 
+                CaretVerticalViewportLocation, EventLoopResult, State, DEVELOPMENT_MODE};
+
+    pub fn handle_resize_event(state: &mut State, size: crate::Size) -> EventLoopResult {
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "🍎🍎🍎 keypress_handler() resize",
+                details = %inline_string!(
+                    "New size width:{w} x height:{h}",
+                    w = fg_green(&inline_string!("{:?}", size.col_width)),
+                    h = fg_green(&inline_string!("{:?}", size.row_height)),
+                )
+            };
+        });
+        state.set_resize_hint(size);
+        EventLoopResult::ContinueAndRerenderAndClear
+    }
+
+    pub fn handle_down_key(state: &mut State) -> EventLoopResult {
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(message = "Down");
+        });
+        let caret_location = state.locate_cursor_in_viewport();
+        match caret_location {
+            CaretVerticalViewportLocation::AtAbsoluteTop
+            | CaretVerticalViewportLocation::AboveTopOfViewport
+            | CaretVerticalViewportLocation::AtTopOfViewport
+            | CaretVerticalViewportLocation::InMiddleOfViewport => {
+                state.raw_caret_row_index += 1;
+            }
+
+            CaretVerticalViewportLocation::AtBottomOfViewport
+            | CaretVerticalViewportLocation::BelowBottomOfViewport => {
+                state.scroll_offset_row_index += 1;
+            }
+
+            CaretVerticalViewportLocation::AtAbsoluteBottom
+            | CaretVerticalViewportLocation::NotFound => {
+                // Do nothing.
+            }
+        }
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = "enter_event_loop()::state",
+                state = ?state
+            );
+        });
+
+        EventLoopResult::ContinueAndRerender
+    }
+
+    pub fn handle_up_key(state: &mut State) -> EventLoopResult {
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(message = "Up");
+        });
+
+        match state.locate_cursor_in_viewport() {
+            CaretVerticalViewportLocation::NotFound
+            | CaretVerticalViewportLocation::AtAbsoluteTop => {
+                // Do nothing.
+            }
+            CaretVerticalViewportLocation::AboveTopOfViewport
+            | CaretVerticalViewportLocation::AtTopOfViewport => {
+                state.scroll_offset_row_index -= 1;
+            }
+            CaretVerticalViewportLocation::InMiddleOfViewport => {
+                state.raw_caret_row_index -= 1;
+            }
+            CaretVerticalViewportLocation::AtBottomOfViewport
+            | CaretVerticalViewportLocation::BelowBottomOfViewport
+            | CaretVerticalViewportLocation::AtAbsoluteBottom => {
+                state.raw_caret_row_index -= 1;
+            }
+        }
+
+        EventLoopResult::ContinueAndRerender
+    }
+
+    pub fn handle_enter_key_multi_select(state: &State) -> EventLoopResult {
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = "Enter on multi-select",
+                selected_items = ?state.selected_items
+            );
+        });
+        if state.selected_items.is_empty() {
+            EventLoopResult::ExitWithoutResult
+        } else {
+            EventLoopResult::ExitWithResult(state.selected_items.clone())
+        }
+    }
+
+    pub fn handle_enter_key_single_select(state: &State) -> EventLoopResult {
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = "Enter",
+                focused_index = ?state.get_focused_index()
+            );
+        });
+        let selection_index = usize(state.get_focused_index());
+        let maybe_item = state.items.get(selection_index);
+        match maybe_item {
+            Some(it) => EventLoopResult::ExitWithResult(it.into()),
+            None => EventLoopResult::ExitWithoutResult,
+        }
+    }
+
+    pub fn handle_escape_or_ctrl_c() -> EventLoopResult {
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(message = "Esc");
+        });
+        EventLoopResult::ExitWithoutResult
+    }
+
+    pub fn handle_space_key_multi_select(state: &mut State) -> EventLoopResult {
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = "Space on multi-select",
+                focused_index = ?state.get_focused_index()
+            );
+        });
+        let selection_index = usize(state.get_focused_index());
+        let maybe_item = state.items.get(selection_index);
+        let maybe_index = state
+            .selected_items
+            .iter()
+            .position(|item| Some(item) == maybe_item);
+        match (maybe_item, maybe_index) {
+            // No selected_item.
+            (None, _) => (),
+            // Item already in selected_items so remove it.
+            (Some(_), Some(it)) => {
+                state.selected_items.remove(it);
+            }
+            // Item not found in selected_items so add it.
+            (Some(it), None) => state.selected_items.push(it.clone()),
+        }
+
+        EventLoopResult::ContinueAndRerender
+    }
+
+    pub fn handle_space_key_default() -> EventLoopResult {
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(message = "Space");
+        });
+        EventLoopResult::Continue
+    }
+
+    pub fn handle_other_keys() -> EventLoopResult {
+        DEVELOPMENT_MODE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(message = "Ignore key event");
+        });
+        EventLoopResult::Continue
+    }
+}
+
+fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResult {
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
@@ -207,128 +352,38 @@ fn keypress_handler(state: &mut State, ie: InputEvent) -> EventLoopResult {
 
     let selection_mode = state.selection_mode;
 
-    let return_it = match ie {
+    let return_it = match input_event {
         // Resize.
         InputEvent::Resize(size) => {
-            DEVELOPMENT_MODE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug! {
-                    message = "🍎🍎🍎 keypress_handler() resize",
-                    details = %inline_string!(
-                        "New size width:{w} x height:{h}",
-                        w = fg_green(&inline_string!("{:?}", size.col_width)),
-                        h = fg_green(&inline_string!("{:?}", size.row_height)),
-                    )
-                };
-            });
-            state.set_resize_hint(size);
-            EventLoopResult::ContinueAndRerenderAndClear
+            keypress_handler_helper::handle_resize_event(state, size)
         }
 
         // Down.
         InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Down),
         }) => {
-            DEVELOPMENT_MODE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(message = "Down");
-            });
-            let caret_location = state.locate_cursor_in_viewport();
-            match caret_location {
-                CaretVerticalViewportLocation::AtAbsoluteTop
-                | CaretVerticalViewportLocation::AboveTopOfViewport
-                | CaretVerticalViewportLocation::AtTopOfViewport
-                | CaretVerticalViewportLocation::InMiddleOfViewport => {
-                    state.raw_caret_row_index += 1;
-                }
-
-                CaretVerticalViewportLocation::AtBottomOfViewport
-                | CaretVerticalViewportLocation::BelowBottomOfViewport => {
-                    state.scroll_offset_row_index += 1;
-                }
-
-                CaretVerticalViewportLocation::AtAbsoluteBottom
-                | CaretVerticalViewportLocation::NotFound => {
-                    // Do nothing.
-                }
-            }
-            DEVELOPMENT_MODE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(
-                    message = "enter_event_loop()::state",
-                    state = ?state
-                );
-            });
-
-            EventLoopResult::ContinueAndRerender
+            keypress_handler_helper::handle_down_key(state)
         }
 
         // Up.
         InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Up),
         }) => {
-            DEVELOPMENT_MODE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(message = "Up");
-            });
-
-            match state.locate_cursor_in_viewport() {
-                CaretVerticalViewportLocation::NotFound
-                | CaretVerticalViewportLocation::AtAbsoluteTop => {
-                    // Do nothing.
-                }
-                CaretVerticalViewportLocation::AboveTopOfViewport
-                | CaretVerticalViewportLocation::AtTopOfViewport => {
-                    state.scroll_offset_row_index -= 1;
-                }
-                CaretVerticalViewportLocation::InMiddleOfViewport => {
-                    state.raw_caret_row_index -= 1;
-                }
-                CaretVerticalViewportLocation::AtBottomOfViewport
-                | CaretVerticalViewportLocation::BelowBottomOfViewport
-                | CaretVerticalViewportLocation::AtAbsoluteBottom => {
-                    state.raw_caret_row_index -= 1;
-                }
-            }
-
-            EventLoopResult::ContinueAndRerender
+            keypress_handler_helper::handle_up_key(state)
         }
 
         // Enter on multi-select.
         InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Enter),
         }) if selection_mode == HowToChoose::Multiple => {
-            DEVELOPMENT_MODE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(
-                    message = "Enter on multi-select",
-                    selected_items = ?state.selected_items
-                );
-            });
-            if state.selected_items.is_empty() {
-                EventLoopResult::ExitWithoutResult
-            } else {
-                EventLoopResult::ExitWithResult(state.selected_items.clone())
-            }
+            keypress_handler_helper::handle_enter_key_multi_select(state)
         }
 
         // Enter.
         InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Enter),
         }) => {
-            DEVELOPMENT_MODE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(
-                    message = "Enter",
-                    focused_index = ?state.get_focused_index()
-                );
-            });
-            let selection_index = usize(state.get_focused_index());
-            let maybe_item = state.items.get(selection_index);
-            match maybe_item {
-                Some(it) => EventLoopResult::ExitWithResult(it.into()),
-                None => EventLoopResult::ExitWithoutResult,
-            }
+            keypress_handler_helper::handle_enter_key_single_select(state)
         }
 
         // Escape or Ctrl + c.
@@ -346,62 +401,26 @@ fn keypress_handler(state: &mut State, ie: InputEvent) -> EventLoopResult {
                     },
             },
         ) => {
-            DEVELOPMENT_MODE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(message = "Esc");
-            });
-            EventLoopResult::ExitWithoutResult
+            keypress_handler_helper::handle_escape_or_ctrl_c()
         }
 
         // Space on multi-select.
         InputEvent::Keyboard(KeyPress::Plain {
             key: Key::Character(' '),
         }) if selection_mode == HowToChoose::Multiple => {
-            DEVELOPMENT_MODE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(
-                    message = "Space on multi-select",
-                    focused_index = ?state.get_focused_index()
-                );
-            });
-            let selection_index = usize(state.get_focused_index());
-            let maybe_item = state.items.get(selection_index);
-            let maybe_index = state
-                .selected_items
-                .iter()
-                .position(|item| Some(item) == maybe_item);
-            match (maybe_item, maybe_index) {
-                // No selected_item.
-                (None, _) => (),
-                // Item already in selected_items so remove it.
-                (Some(_), Some(it)) => {
-                    state.selected_items.remove(it);
-                }
-                // Item not found in selected_items so add it.
-                (Some(it), None) => state.selected_items.push(it.clone()),
-            }
-
-            EventLoopResult::ContinueAndRerender
+            keypress_handler_helper::handle_space_key_multi_select(state)
         }
 
         // Default behavior on Space
         InputEvent::Keyboard(KeyPress::Plain {
-            key: Key::Character(' '),
+            key: Key::Character(SPACE_CHAR),
         }) => {
-            DEVELOPMENT_MODE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(message = "Space");
-            });
-            EventLoopResult::Continue
+            keypress_handler_helper::handle_space_key_default()
         }
 
         // Ignore other keys.
         _ => {
-            DEVELOPMENT_MODE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(message = "Ignore key event");
-            });
-            EventLoopResult::Continue
+            keypress_handler_helper::handle_other_keys()
         }
     };
 

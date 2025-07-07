@@ -97,7 +97,7 @@ mod impl_trait_paint_render_op {
                     queue_render_op!(locked_output_device, "ResetColor", ResetColor);
                 }
                 RenderOp::ApplyColors(style) => {
-                    RenderOpImplCrossterm::apply_colors(style.clone(), locked_output_device);
+                    RenderOpImplCrossterm::apply_colors(*style, locked_output_device);
                 }
                 RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                     text,
@@ -105,7 +105,7 @@ mod impl_trait_paint_render_op {
                 ) => {
                     RenderOpImplCrossterm::paint_text_with_attributes(
                         text,
-                        maybe_style.clone(),
+                        *maybe_style,
                         window_size,
                         local_data,
                         locked_output_device,
