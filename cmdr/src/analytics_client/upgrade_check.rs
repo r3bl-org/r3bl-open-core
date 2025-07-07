@@ -188,7 +188,7 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
                     // Stop the spinner (if running).
                     if let Some(mut spinner) = maybe_spinner.take()
                         && !spinner.is_shutdown() {
-                            spinner.request_shutdown().await;
+                            spinner.request_shutdown();
                             spinner.await_shutdown().await;
                         }
 
@@ -214,7 +214,7 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
                     // Stop the spinner (if running).
                     if let Some(mut spinner) = maybe_spinner.take()
                         && !spinner.is_shutdown() {
-                            spinner.request_shutdown().await;
+                            spinner.request_shutdown();
                             spinner.await_shutdown().await;
                         }
 
