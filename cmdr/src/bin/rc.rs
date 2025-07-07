@@ -24,6 +24,6 @@ async fn main() -> CommonResult<()> {
     set_jemalloc_in_main!();
 
     throws!({
-        run_app().await?;
+        run_app()?;
     })
 }
