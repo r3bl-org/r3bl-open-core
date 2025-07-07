@@ -68,11 +68,11 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
                     f,
                     "Compositor..PrintText...",
                     text,
-                    maybe_style.clone(),
+                    *maybe_style
                 )
             }
             PaintTextWithAttributes(text, maybe_style) => {
-                format_print_text(f, "PrintTextWithAttributes", text, maybe_style.clone())
+                format_print_text(f, "PrintTextWithAttributes", text, *maybe_style)
             }
         }
     }
