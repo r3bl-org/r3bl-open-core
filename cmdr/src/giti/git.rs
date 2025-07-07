@@ -206,7 +206,8 @@ pub mod local_branch_ops {
         pub fn mark_branch_current(branch_name: &str) -> InlineString {
             use std::fmt::Write as _;
             let mut acc = InlineString::new();
-            _ = write!(acc, "{CURRENT_BRANCH_PREFIX} {branch_name}");
+            // We don't care about the result of this operation.
+            write!(acc, "{CURRENT_BRANCH_PREFIX} {branch_name}").ok();
             acc
         }
 

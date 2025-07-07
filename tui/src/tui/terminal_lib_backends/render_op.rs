@@ -233,16 +233,19 @@ pub mod render_ops_impl {
 
             let mut iter = self.iter();
 
-            _ = write!(f, "RenderOps.len(): {}", self.list.len());
+            // We don't care about the result of this operation.
+            write!(f, "RenderOps.len(): {}", self.list.len()).ok();
 
             // First line.
             if let Some(first) = iter.next() {
-                _ = write!(f, "[{first:?}]");
+                // We don't care about the result of this operation.
+                write!(f, "[{first:?}]").ok();
             }
 
             // Subsequent lines.
             for item in iter {
-                _ = write!(f, "{DELIM}[{item:?}]");
+                // We don't care about the result of this operation.
+                write!(f, "{DELIM}[{item:?}]").ok();
             }
 
             ok!()

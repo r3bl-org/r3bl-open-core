@@ -137,7 +137,8 @@ where
     pub fn set_hud_report(&mut self, new: TelemetryHudReport) {
         use std::fmt::Write as _;
         self.hud_report.clear();
-        _ = write!(self.hud_report, "{new}");
+        // We don't care about the result of this operation.
+        write!(self.hud_report, "{new}").ok();
     }
 
     const EMPTY_HUD_REPORT_STATIC: &str = "⮺ Collecting data ⠎";
@@ -167,12 +168,13 @@ where
             );
 
             self.spinner_helper.empty_message.clear();
-            _ = write!(
+            // We don't care about the result of this operation.
+            write!(
                 self.spinner_helper.empty_message,
                 "{a}{b}",
                 a = Self::EMPTY_HUD_REPORT_PREFIX_SPINNER,
                 b = spinner_glyph,
-            );
+            ).ok();
 
             self.spinner_helper.count += 1;
 

@@ -641,7 +641,7 @@ fn insert_chunk_into_new_line(
     let row_index_scr_adj = caret_scr_adj.row_index.as_usize();
 
     // Make sure there's a line at caret_adj_row.
-    let _ = buffer.get_lines().get(row_index_scr_adj)?;
+    let _unused = buffer.get_lines().get(row_index_scr_adj)?;
 
     // When buffer_mut goes out of scope, it will be dropped & validation performed.
     {

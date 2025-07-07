@@ -322,7 +322,8 @@ pub mod manage_shared_writer_output {
                         match control_flow {
                             ControlFlowLimited::ReturnError(_) => {
                                 // Initiate shutdown.
-                                let _ = shutdown_complete_sender.send(());
+                                // We don't care about the result of this operation.
+                                shutdown_complete_sender.send(()).ok();
                                 break;
                             }
                             ControlFlowLimited::Continue => {
@@ -332,7 +333,8 @@ pub mod manage_shared_writer_output {
                     }
                     _ => {
                         // Initiate shutdown.
-                        let _ = shutdown_complete_sender.send(());
+                        // We don't care about the result of this operation.
+                        shutdown_complete_sender.send(()).ok();
                         break;
                     }
                 }
@@ -762,7 +764,8 @@ pub mod readline_internal {
                 if crossterm_event == CTRL_C || crossterm_event == CTRL_D {
                     if let Some(spinner_shutdown_sender) = is_spinner_active {
                         // Send signal to SharedWriter spinner shutdown channel.
-                        let _ = spinner_shutdown_sender.send(());
+                        // We don't care about the result of this operation.
+                        spinner_shutdown_sender.send(()).ok();
                         return ControlFlowExtended::Continue;
                     }
                 }

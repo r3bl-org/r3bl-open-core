@@ -491,7 +491,7 @@ mod tests_find_substring_optimized {
             // Test advancing through the string doesn't break on character boundaries
             let mut advanced = slice.clone();
             while !advanced.is_empty() {
-                let _ = advanced.find_substring(search);
+                let _unused = advanced.find_substring(search);
                 advanced.advance();
             }
         }

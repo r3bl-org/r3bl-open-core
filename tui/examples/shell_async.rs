@@ -258,7 +258,8 @@ pub mod monitor_child_output {
                                 writeln!(shared_writer, "{}", fg_lizard_green(&line)).ok();
                             },
                             _ => {
-                                _ = shutdown_sender.send(());
+                                // We don't care about the result of this operation.
+                                shutdown_sender.send(()).ok();
                                 break;
                             }
                         }
@@ -273,7 +274,8 @@ pub mod monitor_child_output {
                                 writeln!(shared_writer, "{}", fg_guards_red(&line)).ok();
                             }
                             _ => {
-                                _= shutdown_sender.send(());
+                                // We don't care about the result of this operation.
+                                shutdown_sender.send(()).ok();
                                 break;
                             }
                         }

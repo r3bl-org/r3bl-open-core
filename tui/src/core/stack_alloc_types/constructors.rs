@@ -30,7 +30,8 @@ macro_rules! inline_string {
         ) => {{
             use std::fmt::Write as _;
             let mut acc = $crate::InlineString::new();
-            _ = write!(&mut acc, $($format)*);
+            // We don't care about the result of this operation.
+            write!(&mut acc, $($format)*).ok();
             acc
         }};
 }
@@ -50,7 +51,8 @@ macro_rules! tiny_inline_string {
     ) => {{
         use std::fmt::Write as _;
         let mut acc = $crate::TinyInlineString::new();
-        _ = write!(&mut acc, $($format)*);
+        // We don't care about the result of this operation.
+        write!(&mut acc, $($format)*).ok();
         acc
     }};
 }

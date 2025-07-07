@@ -102,8 +102,14 @@ pub mod tui_style_attrib {
             use std::fmt::Write as _;
             let mut acc = TinyInlineString::new();
             match maybe_id {
-                None => _ = write!(acc, "id: N/A"),
-                Some(id) => _ = write!(acc, "id: {}", id.0),
+                None => {
+                    // We don't care about the result of this operation.
+                    write!(acc, "id: N/A").ok();
+                }
+                Some(id) => {
+                    // We don't care about the result of this operation.
+                    write!(acc, "id: {}", id.0).ok();
+                }
             }
             acc
         }

@@ -119,12 +119,14 @@ macro_rules! dec_unsigned {
 pub fn format_as_kilobytes_with_commas(bytes_size: usize) -> InlineString {
     if bytes_size < 1024 {
         let mut acc = format_with_commas(bytes_size);
-        _ = write!(acc, " B");
+        // We don't care about the result of this operation.
+        write!(acc, " B").ok();
         acc
     } else {
         let kilobytes = bytes_size / 1024;
         let mut acc = format_with_commas(kilobytes);
-        _ = write!(acc, " KB");
+        // We don't care about the result of this operation.
+        write!(acc, " KB").ok();
         acc
     }
 }

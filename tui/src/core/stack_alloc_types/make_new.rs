@@ -61,12 +61,15 @@ macro_rules! join_with_index {
         let mut iter = $collection.iter().enumerate();
         // First item.
         if let Some(($index, $item)) = iter.next() {
-            _ = write!(&mut acc, $($format)*);
+            // We don't care about the result of this operation.
+            write!(&mut acc, $($format)*).ok();
         }
         // Rest of the items.
         for ($index, $item) in iter {
-            _ = write!(&mut acc, "{}", $delim);
-            _ = write!(&mut acc, $($format)*);
+            // We don't care about the result of this operation.
+            write!(&mut acc, "{}", $delim).ok();
+            // We don't care about the result of this operation.
+            write!(&mut acc, $($format)*).ok();
         }
         acc
     }};
@@ -205,12 +208,15 @@ macro_rules! join {
         let mut iter = $collection.iter();
         // First item.
         if let Some($item) = iter.next() {
-            _ = write!(&mut acc, $($format)*);
+            // We don't care about the result of this operation.
+            write!(&mut acc, $($format)*).ok();
         }
         // Rest of the items.
         for $item in iter {
-            _ = write!(&mut acc, "{}", $delim);
-            _ = write!(&mut acc, $($format)*);
+            // We don't care about the result of this operation.
+            write!(&mut acc, "{}", $delim).ok();
+            // We don't care about the result of this operation.
+            write!(&mut acc, $($format)*).ok();
         }
         acc
     }};
