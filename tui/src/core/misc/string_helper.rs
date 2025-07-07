@@ -62,7 +62,8 @@ pub fn truncate_from_right(
             string_gcs.trunc_end_by(truncate_cols_from_right + postfix_display_width);
 
         let mut acc = InlineString::new();
-        _ = write!(acc, "{}{}", truncated_text, postfix_gcs.string);
+        // We don't care about the result of this operation.
+        write!(acc, "{}{}", truncated_text, postfix_gcs.string).ok();
         acc
     }
     // Handle padding.
@@ -96,7 +97,8 @@ pub fn truncate_from_left(
             string_gcs.trunc_start_by(truncate_cols_from_left + prefix_display_width);
 
         let mut acc = InlineString::new();
-        _ = write!(acc, "{}{}", prefix_gcs.string, truncated_text);
+        // We don't care about the result of this operation.
+        write!(acc, "{}{}", prefix_gcs.string, truncated_text).ok();
         acc
     }
     // Handle padding.

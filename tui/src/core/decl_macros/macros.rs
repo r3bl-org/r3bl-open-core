@@ -327,7 +327,8 @@ macro_rules! send_signal {
         // that it doesn't block the calling thread. More info:
         // <https://tokio.rs/tokio/tutorial/channels>.
         tokio::spawn(async move {
-            let _ = sender_clone.send($signal).await;
+            // We don't care about the result of this operation.
+            sender_clone.send($signal).await.ok();
         });
     }};
 }

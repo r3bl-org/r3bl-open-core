@@ -69,13 +69,13 @@ pub fn try_create_layers(
         // ));
         // ``
 
-        let _ = try_create_display_layer(
+        let _unused = try_create_display_layer(
             tracing_config.get_level_filter(),
             tracing_config.get_writer_config(),
         )?
         .map(|layer| return_it.push(layer));
 
-        let _ = try_create_file_layer(
+        let _unused = try_create_file_layer(
             tracing_config.get_level_filter(),
             tracing_config.get_writer_config(),
         )?

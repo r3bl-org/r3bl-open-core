@@ -126,7 +126,8 @@ impl<'a> AsStrSlice<'a> {
     #[must_use]
     pub fn to_inline_string(&self) -> DocumentStorage {
         let mut acc = DocumentStorage::new();
-        _ = write!(acc, "{self}");
+        // We don't care about the result of this operation.
+        write!(acc, "{self}").ok();
         acc
     }
 

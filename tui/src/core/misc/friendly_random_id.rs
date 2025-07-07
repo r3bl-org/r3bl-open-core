@@ -64,7 +64,8 @@ pub fn generate_friendly_strongly_random_id() -> InlineString {
 
     let uuid = uuid::Uuid::new_v4();
 
-    _ = write!(acc, "{pet}-{fruit}-{number:03}-{uuid}");
+    // We don't care about the result of this operation.
+    write!(acc, "{pet}-{fruit}-{number:03}-{uuid}").ok();
 
     acc
 }
@@ -83,7 +84,8 @@ pub fn generate_friendly_random_id() -> InlineString {
         pet.len() + fruit.len() + 3 + 2, // 3 for the number, 2 for the dashes
     );
 
-    _ = write!(acc, "{pet}-{fruit}-{number:03}");
+    // We don't care about the result of this operation.
+    write!(acc, "{pet}-{fruit}-{number:03}").ok();
 
     acc
 }

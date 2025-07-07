@@ -93,7 +93,8 @@ macro_rules! rla_println {
         $($format:tt)*
     ) => {{
         use std::io::Write as _;
-        _ = writeln!($rla.shared_writer, $($format)*);
+        // We don't care about the result of this operation.
+        writeln!($rla.shared_writer, $($format)*).ok();
     }};
 }
 
@@ -104,7 +105,8 @@ macro_rules! rla_print {
         $($format:tt)*
     ) => {{
         use std::io::Write as _;
-        _ = write!($rla.shared_writer, $($format)*);
+        // We don't care about the result of this operation.
+        write!($rla.shared_writer, $($format)*).ok();
     }};
 }
 
@@ -117,8 +119,10 @@ macro_rules! rla_println_prefixed {
     ) => {{
         use std::io::Write as _;
         use $crate::fg_pink;
-        _ = write!($rla.shared_writer, "{}", fg_pink(" > ").bold().bg_moonlight_blue());
-        _ = writeln!($rla.shared_writer, $($format)*);
+        // We don't care about the result of this operation.
+        write!($rla.shared_writer, "{}", fg_pink(" > ").bold().bg_moonlight_blue()).ok();
+        // We don't care about the result of this operation.
+        writeln!($rla.shared_writer, $($format)*).ok();
     }};
 }
 
@@ -295,6 +299,7 @@ impl ReadlineAsyncContext {
     /// can't be used again.
     pub async fn await_shutdown(self) {
         let mut shutdown_complete_receiver = self.shutdown_complete_sender.subscribe();
-        _ = shutdown_complete_receiver.recv().await;
+        // We don't care about the result of this operation.
+        shutdown_complete_receiver.recv().await.ok();
     }
 }

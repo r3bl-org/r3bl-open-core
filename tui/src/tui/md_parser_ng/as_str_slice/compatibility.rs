@@ -17,11 +17,7 @@
 
 use std::fmt::Write as _;
 
-use crate::{AsStrSlice,
-            CodeBlockLine,
-            CodeBlockLineContent,
-            List,
-            ParserByteCache,
+use crate::{AsStrSlice, CodeBlockLine, CodeBlockLineContent, List, ParserByteCache,
             PARSER_BYTE_CACHE_PAGE_SIZE};
 
 impl AsStrSlice<'_> {
@@ -74,7 +70,8 @@ impl AsStrSlice<'_> {
 
         // Use the Display implementation which already handles the correct newline
         // behavior.
-        _ = write!(acc, "{self}");
+        // We don't care about the result of this operation.
+        write!(acc, "{self}").ok();
     }
 }
 

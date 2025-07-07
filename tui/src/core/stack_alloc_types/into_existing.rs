@@ -61,7 +61,8 @@ macro_rules! pad_fmt {
         #[allow(clippy::reversed_empty_ranges)]
         for _ in 0..$repeat_count {
             use std::fmt::Write as _;
-            _ = write!($acc, "{}", $pad_str);
+            // We don't care about the result of this operation.
+            write!($acc, "{}", $pad_str).ok();
         }
     }};
 }
@@ -119,12 +120,15 @@ macro_rules! join_fmt {
         let mut iter = $collection.iter();
         // First item.
         if let Some($item) = iter.next() {
-            _ = write!($fmt, $($format)*);
+            // We don't care about the result of this operation.
+            write!($fmt, $($format)*).ok();
         }
         // Rest of the items.
         for $item in iter {
-            _ = write!($fmt, "{}", $delim);
-            _ = write!($fmt, $($format)*);
+            // We don't care about the result of this operation.
+            write!($fmt, "{}", $delim).ok();
+            // We don't care about the result of this operation.
+            write!($fmt, $($format)*).ok();
         }
     }};
 }
@@ -189,12 +193,15 @@ macro_rules! join_with_index_fmt {
         let mut iter = $collection.iter().enumerate();
         // First item.
         if let Some(($index, $item)) = iter.next() {
-            _ = write!($fmt, $($format)*);
+            // We don't care about the result of this operation.
+            write!($fmt, $($format)*).ok();
         }
         // Rest of the items.
         for ($index, $item) in iter {
-            _ = write!($fmt, "{}", $delim);
-            _ = write!($fmt, $($format)*);
+            // We don't care about the result of this operation.
+            write!($fmt, "{}", $delim).ok();
+            // We don't care about the result of this operation.
+            write!($fmt, $($format)*).ok();
         }
     }};
 }

@@ -265,7 +265,7 @@ where
                         &mut app,
                         exit_keys,
                         &output_device,
-                    )?;
+                    );
                 } else {
                     // No more events, exit loop
                     break;
@@ -392,8 +392,7 @@ fn handle_input_event<S, AS>(
     app: &mut BoxedSafeApp<S, AS>,
     exit_keys: &[InputEvent],
     output_device: &OutputDevice,
-) -> CommonResult<()>
-where
+) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
@@ -401,13 +400,11 @@ where
 
     // Handle resize events specially
     if let InputEvent::Resize(new_size) = input_event {
-        handle_resize_event(new_size, event_loop_state, app, output_device)?;
+        handle_resize_event(new_size, event_loop_state, app, output_device);
     }
 
     // Process all input events (including resize)
-    process_input_event(input_event, event_loop_state, app, exit_keys, output_device)?;
-
-    Ok(())
+    process_input_event(input_event, event_loop_state, app, exit_keys, output_device);
 }
 
 /// Log input event if debugging is enabled.
@@ -432,8 +429,7 @@ fn handle_resize_event<S, AS>(
     event_loop_state: &mut EventLoopState<S, AS>,
     app: &mut BoxedSafeApp<S, AS>,
     output_device: &OutputDevice,
-) -> CommonResult<()>
-where
+) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
@@ -456,7 +452,6 @@ where
             event_loop_state.global_data.set_hud_report(telemetry.report());
         }
     );
-    Ok(())
 }
 
 /// Process input events and delegate to the app.
@@ -466,8 +461,7 @@ fn process_input_event<S, AS>(
     app: &mut BoxedSafeApp<S, AS>,
     exit_keys: &[InputEvent],
     output_device: &OutputDevice,
-) -> CommonResult<()>
-where
+) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
@@ -491,7 +485,6 @@ where
             event_loop_state.global_data.set_hud_report(telemetry.report());
         }
     );
-    Ok(())
 }
 
 /// **Telemetry**: This function is not recorded in telemetry but its caller is.
@@ -533,6 +526,7 @@ fn actually_process_input_event<S, AS>(
 ///
 /// This function gets called as a result of:
 /// 1. Terminal resize event.
+#[allow(clippy::implicit_hasher)]
 pub fn handle_resize<S, AS>(
     new_size: Size,
     global_data_mut_ref: &mut GlobalData<S, AS>,

@@ -94,7 +94,8 @@ impl PrettyPrintDebug for MdElement<'_> {
             }
             MdElement::SmartList((list_lines, _bullet_kind, _indent)) => {
                 let mut acc = InlineString::new();
-                _ = write!(acc, "[  ");
+                // We don't care about the result of this operation.
+                write!(acc, "[  ").ok();
                 join_fmt!(
                     fmt: acc,
                     from: list_lines,
@@ -102,7 +103,8 @@ impl PrettyPrintDebug for MdElement<'_> {
                     delim: " → ",
                     format: "┊{}┊", fragments_in_one_line.pretty_print_debug()
                 );
-                _ = write!(acc, "  ]");
+                // We don't care about the result of this operation.
+                write!(acc, "  ]").ok();
                 acc
             }
         }
@@ -118,7 +120,8 @@ impl PrettyPrintDebug for HeadingLevel {
             pad_str: HEADING_CHAR,
             repeat_count: num_of_hashes
         );
-        _ = write!(acc, "{SPACE}");
+        // We don't care about the result of this operation.
+        write!(acc, "{SPACE}").ok();
         acc
     }
 }
@@ -177,7 +180,8 @@ pub fn generate_ordered_list_item_bullet(
             pad_str: SPACE,
             repeat_count: *indent
         );
-        _ = write!(acc, "{number}{PERIOD}{LIST_SPACE_END_DISPLAY_REST_LINE}");
+        // We don't care about the result of this operation.
+        write!(acc, "{number}{PERIOD}{LIST_SPACE_END_DISPLAY_REST_LINE}").ok();
     } else {
         // Padding for indent.
         pad_fmt!(
@@ -197,7 +201,8 @@ pub fn generate_ordered_list_item_bullet(
         );
 
         // Write the reset rest of the line.
-        _ = write!(acc, "{SPACE}{LIST_SPACE_END_DISPLAY_REST_LINE}");
+        // We don't care about the result of this operation.
+        write!(acc, "{SPACE}{LIST_SPACE_END_DISPLAY_REST_LINE}").ok();
     }
 
     acc
@@ -217,17 +222,19 @@ pub fn generate_unordered_list_item_bullet(
             repeat_count: *indent
         );
 
-        _ = write!(
+        // We don't care about the result of this operation.
+        write!(
             acc,
             "{LIST_SPACE_DISPLAY}{LIST_SPACE_END_DISPLAY_FIRST_LINE}",
-        );
+        ).ok();
     } else {
         pad_fmt!(
             fmt: acc,
             pad_str: SPACE,
             repeat_count: *indent
         );
-        _ = write!(acc, "{SPACE}{LIST_SPACE_END_DISPLAY_REST_LINE}");
+        // We don't care about the result of this operation.
+        write!(acc, "{SPACE}{LIST_SPACE_END_DISPLAY_REST_LINE}").ok();
     }
 
     acc

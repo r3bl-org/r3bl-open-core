@@ -199,13 +199,14 @@ pub mod branch_delete_display {
         let mut acc = InlineString::new();
         for branch_name in branches {
             use std::fmt::Write as _;
-            _ = writeln!(
+            // We don't care about the result of this operation.
+            writeln!(
                 acc,
                 "✅ {a} {b}{c}",
                 a = fmt::emphasis(branch_name),
                 b = fmt::emphasis_delete("deleted"),
                 c = fmt::period()
-            );
+            ).ok();
         }
 
         acc
@@ -322,17 +323,19 @@ pub mod branch_delete_display {
 
         let mut prefixed_branches_joined = InlineString::new();
         for (index, branch) in branches_to_delete.iter().enumerate() {
-            _ = writeln!(
+            // We don't care about the result of this operation.
+            writeln!(
                 prefixed_branches_joined,
                 "{a}{b} {c}",
                 a = fmt::dim(inline_string!("{}", index + 1)),
                 b = fmt::colon(),
                 c = fmt::emphasis_delete(branch)
-            );
+            ).ok();
         }
 
         let mut acc = InlineString::new();
-        _ = write!(
+        // We don't care about the result of this operation.
+        write!(
             acc,
             "{a} {b} {c}{d}\n{e}",
             a = fmt::normal("Confirm deleting"),
@@ -340,7 +343,7 @@ pub mod branch_delete_display {
             c = fmt::normal("branches"),
             d = fmt::colon(),
             e = prefixed_branches_joined
-        );
+        ).ok();
         acc
     }
 }

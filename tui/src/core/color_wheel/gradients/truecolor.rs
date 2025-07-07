@@ -123,9 +123,11 @@ mod random_color {
 
         let mut acc = StringHexColor::new();
         if a < 255 {
-            _ = write!(acc, "#{r:02x}{g:02x}{b:02x}{a:02x}");
+            // We don't care about the result of this operation.
+            write!(acc, "#{r:02x}{g:02x}{b:02x}{a:02x}").ok();
         } else {
-            _ = write!(acc, "#{r:02x}{g:02x}{b:02x}");
+            // We don't care about the result of this operation.
+            write!(acc, "#{r:02x}{g:02x}{b:02x}").ok();
         }
 
         acc

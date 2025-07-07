@@ -291,7 +291,8 @@ impl ColorWheel {
                 style += default_style;
             }
             let ansi_styled_text = ast(text, style);
-            _ = write!(acc, "{ansi_styled_text}");
+            // We don't care about the result of this operation.
+            write!(acc, "{ansi_styled_text}").ok();
         }
 
         acc

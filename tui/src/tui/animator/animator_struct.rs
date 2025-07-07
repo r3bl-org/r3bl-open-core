@@ -75,7 +75,8 @@ impl Animator {
             if let Some(kill_channel) = &self.animator_kill_channel {
                 let kill_channel_clone = kill_channel.clone();
                 tokio::spawn(async move {
-                    let _ = kill_channel_clone.send(()).await;
+                    // We don't care about the result of this operation.
+                    kill_channel_clone.send(()).await.ok();
                 });
                 self.animator_kill_channel = None;
             }
