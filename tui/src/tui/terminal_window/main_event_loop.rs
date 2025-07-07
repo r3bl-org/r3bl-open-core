@@ -24,26 +24,22 @@ use crate::{ch, col, format_as_kilobytes_with_commas, glyphs, height, inline_str
             lock_output_device_as_mut, new_style, ok, render_pipeline, row,
             telemetry::{telemetry_default_constants, Telemetry},
             telemetry_record, width, Ansi256GradientIndex, ColorWheel, ColorWheelConfig,
-            ColorWheelSpeed, CommonResult, ComponentRegistryMap, Flush as _, FlushKind,
-            GCStringExt as _, GetMemSize as _, GlobalData, GradientGenerationPolicy,
-            HasFocus, InputDevice, InputDeviceExt, InputEvent, LockedOutputDevice,
-            MinSize, OffscreenBufferPool, OutputDevice, RawMode, RenderOp,
-            RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
+            ColorWheelSpeed, CommonResult, ComponentRegistryMap, DefaultSize,
+            DefaultTiming, Flush as _, FlushKind, GCStringExt as _, GetMemSize as _,
+            GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputDeviceExt,
+            InputEvent, LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice,
+            RawMode, RenderOp, RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
             TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder,
             DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY};
 
-pub const CHANNEL_WIDTH: usize = 1_000;
-
-/// Don't record response times that are smaller than this amount. This removes a lot of
-/// noise from the telemetry data.
-pub const FILTER_LOWEST_RESPONSE_TIME_MIN_MICROS: i64 = 100;
-
+/// Main event loop implementation that handles terminal UI events and app state
+/// management.
 pub async fn main_event_loop_impl<S, AS>(
     mut app: BoxedSafeApp<S, AS>,
     exit_keys: &[InputEvent],
     state: S,
     initial_size: Size,
-    mut input_device: InputDevice,
+    input_device: InputDevice,
     output_device: OutputDevice,
 ) -> CommonResult<(
     /* global_data */ GlobalData<S, AS>,
@@ -54,228 +50,165 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
-    // mpsc channel to send signals from the app to the main event loop (eg: for
-    // request_shutdown, re-render, apply action, etc).
-    let (main_thread_channel_sender, mut main_thread_channel_receiver) =
-        mpsc::channel::<TerminalWindowMainThreadSignal<AS>>(CHANNEL_WIDTH);
+    let event_loop_state =
+        EventLoopState::initialize(state, initial_size, output_device.clone(), &mut app)?;
 
-    // Initialize the terminal window data struct.
-    let mut global_data = GlobalData::try_to_create_instance(
-        main_thread_channel_sender.clone(),
-        state,
-        initial_size,
-        output_device.clone(),
-        OffscreenBufferPool::new(initial_size),
-    )?;
-    let global_data_mut_ref = &mut global_data;
+    let result = run_main_event_loop(
+        event_loop_state,
+        app,
+        exit_keys,
+        input_device,
+        output_device,
+    )
+    .await;
 
-    // Start raw mode.
-    RawMode::start(
-        global_data_mut_ref.window_size,
-        lock_output_device_as_mut!(output_device),
-        output_device.is_mock,
-    );
+    result
+}
 
-    let app = &mut app;
+/// Holds all the state required for the main event loop.
+struct EventLoopState<S, AS>
+where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
+{
+    global_data: GlobalData<S, AS>,
+    main_thread_channel_receiver: mpsc::Receiver<TerminalWindowMainThreadSignal<AS>>,
+    component_registry_map: ComponentRegistryMap<S, AS>,
+    has_focus: HasFocus,
+    telemetry: Telemetry<{ telemetry_default_constants::RING_BUFFER_SIZE }>,
+}
 
-    // This map is used to cache [Component]s that have been created and are meant to be
-    // reused between multiple renders.
-    // 1. It is entirely up to the [App] on how this [ComponentRegistryMap] is used.
-    // 2. The methods provided allow components to be added to the map.
-    let component_registry_map = &mut ComponentRegistryMap::default();
-    let has_focus = &mut HasFocus::default();
+impl<S, AS> EventLoopState<S, AS>
+where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
+{
+    /// Initialize the event loop state with all required components.
+    fn initialize(
+        state: S,
+        initial_size: Size,
+        output_device: OutputDevice,
+        app: &mut BoxedSafeApp<S, AS>,
+    ) -> CommonResult<Self> {
+        // Create communication channel
+        let (main_thread_channel_sender, main_thread_channel_receiver) =
+            mpsc::channel::<TerminalWindowMainThreadSignal<AS>>(
+                DefaultSize::MainThreadSignalChannelBufferSize.into(),
+            );
 
-    // Init telemetry recording explicitly (without using the simple constructor).
-    let mut telemetry: Telemetry<{ telemetry_default_constants::RING_BUFFER_SIZE }> =
-        Telemetry::new((
-            telemetry_default_constants::RATE_LIMIT_TIME_THRESHOLD,
-            telemetry_default_constants::FILTER_MIN_RESPONSE_TIME,
+        // Initialize global data
+        let global_data = GlobalData::try_to_create_instance(
+            main_thread_channel_sender,
+            state,
+            initial_size,
+            output_device.clone(),
+            OffscreenBufferPool::new(initial_size),
+        )?;
+
+        // Initialize other components
+        let component_registry_map = ComponentRegistryMap::default();
+        let has_focus = HasFocus::default();
+        let telemetry = Telemetry::new((
+            DefaultTiming::TelemetryRateLimitTimeThresholdMicros.into(),
+            DefaultTiming::TelemetryFilterLowestResponseTimeMinMicros.into(),
         ));
 
-    // Init the app, and perform first render.
-    telemetry_record!(
-        @telemetry: telemetry,
-        @hint: TelemetryAtomHint::Render,
-        @block: {
-            app.app_init(component_registry_map, has_focus);
-            AppManager::render_app(
-                app,
-                global_data_mut_ref,
-                component_registry_map,
-                has_focus,
-                lock_output_device_as_mut!(output_device),
-                output_device.is_mock,
-            )?;
-        },
-        @after_block: {
-            global_data_mut_ref.set_hud_report(telemetry.report());
-        }
-    );
+        let mut event_loop_state = Self {
+            global_data,
+            main_thread_channel_receiver,
+            component_registry_map,
+            has_focus,
+            telemetry,
+        };
 
-    (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
-        // % is Display, ? is Debug.
-        tracing::info!(
-            message = %inline_string!(
-                "main_event_loop {sp} Startup {ch}",
-                sp = glyphs::RIGHT_ARROW_GLYPH,
-                ch = glyphs::CELEBRATE_GLYPH
-            ),
-            global_data_mut_ref = ?global_data_mut_ref,
+        // Initialize the app and perform first render
+        event_loop_state.initialize_app_and_render(app, &output_device)?;
+
+        Ok(event_loop_state)
+    }
+
+    /// Initialize the app and perform the first render.
+    fn initialize_app_and_render(
+        &mut self,
+        app: &mut BoxedSafeApp<S, AS>,
+        output_device: &OutputDevice,
+    ) -> CommonResult<()> {
+        // Start raw mode
+        RawMode::start(
+            self.global_data.window_size,
+            lock_output_device_as_mut!(output_device),
+            output_device.is_mock,
         );
-    });
 
-    // Main event loop.
-    loop {
-        tokio::select! {
-            // This branch is cancel safe since recv is cancel safe.
-            // Handle signals on the channel.
-            maybe_signal = main_thread_channel_receiver.recv() => {
-                if let Some(ref signal) = maybe_signal {
-                    match signal {
-                        TerminalWindowMainThreadSignal::Exit => {
-                            // 🐒 Actually request_shutdown the main loop!
-                            RawMode::end(
-                                global_data_mut_ref.window_size,
-                                lock_output_device_as_mut!(output_device),
-                                output_device.is_mock,
-                            );
-                            break;
-                        },
-                        TerminalWindowMainThreadSignal::Render(_) => {
-                            telemetry_record!(
-                                @telemetry: telemetry,
-                                @hint: TelemetryAtomHint::Render,
-                                @block: {
-                                    AppManager::render_app(
-                                        app,
-                                        global_data_mut_ref,
-                                        component_registry_map,
-                                        has_focus,
-                                        lock_output_device_as_mut!(output_device),
-                                        output_device.is_mock,
-                                    )?;
-                                },
-                                @after_block: {
-                                    global_data_mut_ref.set_hud_report(telemetry.report());
-                                }
-                            );
-                        },
-                        TerminalWindowMainThreadSignal::ApplyAppSignal(action) => {
-                            telemetry_record!(
-                                @telemetry: telemetry,
-                                @hint: TelemetryAtomHint::Signal,
-                                @block: {
-                                    let result = app.app_handle_signal(action, global_data_mut_ref, component_registry_map, has_focus);
-                                    handle_result_generated_by_app_after_handling_action_or_input_event(
-                                        result,
-                                        None,
-                                        exit_keys,
-                                        app,
-                                        global_data_mut_ref,
-                                        component_registry_map,
-                                        has_focus,
-                                        lock_output_device_as_mut!(output_device),
-                                        output_device.is_mock,
-                                    );
-                                },
-                                @after_block: {
-                                    global_data_mut_ref.set_hud_report(telemetry.report());
-                                }
-                            );
-                        },
-                    }
-                }
+        // Initialize app and render
+        let telemetry = &mut self.telemetry;
+        telemetry_record!(
+            @telemetry: telemetry,
+            @hint: TelemetryAtomHint::Render,
+            @block: {
+                app.app_init(&mut self.component_registry_map, &mut self.has_focus);
+                AppManager::render_app(
+                    app,
+                    &mut self.global_data,
+                    &mut self.component_registry_map,
+                    &mut self.has_focus,
+                    lock_output_device_as_mut!(output_device),
+                    output_device.is_mock,
+                )?;
+            },
+            @after_block: {
+                self.global_data.set_hud_report(telemetry.report());
             }
+        );
 
-            // Handle input event.
-            // This branch is cancel safe because no state is declared inside the
-            // future in the following block.
-            // - All the state comes from other variables (self.*).
-            // - So if this future is dropped, then the item in the
-            //   pinned_input_stream isn't used and the state isn't modified.
-            maybe_input_event = input_device.next_input_event() => {
-                if let Some(input_event) = maybe_input_event {
-                    (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
-                        if let InputEvent::Keyboard(_) = input_event {
-                            // % is Display, ? is Debug.
-                            tracing::info!(
-                                message = %inline_string!(
-                                    "main_event_loop {sp} Tick {ch}",
-                                    sp = glyphs::RIGHT_ARROW_GLYPH,
-                                    ch = glyphs::CLOCK_TICK_GLYPH
-                                ),
-                                input_event = ?input_event
-                            );
-                        }
-                    });
+        self.log_startup_info();
+        Ok(())
+    }
 
-                    // Handle resize event here. And then pass it to the app (next).
-                    if let InputEvent::Resize(new_size) = input_event {
-                        telemetry_record!(
-                            @telemetry: telemetry,
-                            @hint: TelemetryAtomHint::Resize,
-                            @block: {
-                                handle_resize(
-                                    new_size,
-                                    global_data_mut_ref, app,
-                                    component_registry_map,
-                                    has_focus,
-                                    lock_output_device_as_mut!(output_device),
-                                    output_device.is_mock,
-                                );
-                            },
-                            @after_block: {
-                                global_data_mut_ref.set_hud_report(telemetry.report());
-                            }
-                        );
-                    }
-
-                    // This includes resize events.
-                    telemetry_record!(
-                        @telemetry: telemetry,
-                        @hint: TelemetryAtomHint::Input,
-                        @block: {
-                            actually_process_input_event(
-                                global_data_mut_ref,
-                                app,
-                                input_event,
-                                exit_keys,
-                                component_registry_map,
-                                has_focus,
-                                lock_output_device_as_mut!(output_device),
-                                output_device.is_mock,
-                            );
-                        },
-                        @after_block: {
-                            global_data_mut_ref.set_hud_report(telemetry.report());
-                        }
-                    );
-                } else {
-                    // environments with InputDevice::new_mock_with_delay() or
-                    // There are no events in the stream, so request_shutdown. This happens in test
-                    // InputDevice::new_mock().
-                    break;
-                }
-            }
-        }
-
-        // Output telemetry report to log.
+    /// Log startup information if debugging is enabled.
+    fn log_startup_info(&self) {
         (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
-            // % is Display, ? is Debug.
+            tracing::info!(
+                message = %inline_string!(
+                    "main_event_loop {sp} Startup {ch}",
+                    sp = glyphs::RIGHT_ARROW_GLYPH,
+                    ch = glyphs::CELEBRATE_GLYPH
+                ),
+                global_data_mut_ref = ?self.global_data,
+            );
+        });
+    }
+
+    /// Log shutdown information if debugging is enabled.
+    fn log_shutdown_info(&self) {
+        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
+            tracing::info!(
+                message = %inline_string!(
+                    "main_event_loop {sp} Shutdown {ch}",
+                    ch = glyphs::BYE_GLYPH,
+                    sp = glyphs::RIGHT_ARROW_GLYPH,
+                ),
+                session_duration = %self.telemetry.session_duration()
+            );
+        });
+    }
+
+    /// Log telemetry information after each event loop iteration.
+    fn log_telemetry_info(&self) {
+        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
             tracing::info!(
                 message = %inline_string!(
                     "AppManager::render_app() ok {ch}",
                     ch = glyphs::PAINT_GLYPH
                 ),
-                window_size = ?global_data_mut_ref.window_size,
-                state = ?global_data_mut_ref.state,
-                report = %global_data_mut_ref.get_hud_report_no_spinner(),
+                window_size = ?self.global_data.window_size,
+                state = ?self.global_data.state,
+                report = %self.global_data.get_hud_report_no_spinner(),
             );
 
             if let Some(ref offscreen_buffer) =
-                global_data_mut_ref.maybe_saved_offscreen_buffer
+                self.global_data.maybe_saved_offscreen_buffer
             {
-                // % is Display, ? is Debug.
                 tracing::info!(
                     message = %inline_string!(
                         "AppManager::render_app() offscreen_buffer stats {ch}",
@@ -290,20 +223,277 @@ where
                 );
             }
         });
-    } // End main event loop.
+    }
+}
 
+/// Run the main event loop with proper separation of concerns.
+async fn run_main_event_loop<S, AS>(
+    mut event_loop_state: EventLoopState<S, AS>,
+    mut app: BoxedSafeApp<S, AS>,
+    exit_keys: &[InputEvent],
+    mut input_device: InputDevice,
+    output_device: OutputDevice,
+) -> CommonResult<(GlobalData<S, AS>, InputDevice, OutputDevice)>
+where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
+{
+    // Main event loop
+    loop {
+        tokio::select! {
+            // Handle signals from the app
+            maybe_signal = event_loop_state.main_thread_channel_receiver.recv() => {
+                if let Some(signal) = maybe_signal {
+                    if handle_main_thread_signal(
+                        signal,
+                        &mut event_loop_state,
+                        &mut app,
+                        exit_keys,
+                        &output_device,
+                    )? {
+                        break; // Exit requested
+                    }
+                }
+            }
+
+            // Handle input events
+            maybe_input_event = input_device.next_input_event() => {
+                if let Some(input_event) = maybe_input_event {
+                    handle_input_event(
+                        input_event,
+                        &mut event_loop_state,
+                        &mut app,
+                        exit_keys,
+                        &output_device,
+                    )?;
+                } else {
+                    // No more events, exit loop
+                    break;
+                }
+            }
+        }
+
+        event_loop_state.log_telemetry_info();
+    }
+
+    // Cleanup and return results
+    event_loop_state.log_shutdown_info();
+    Ok((event_loop_state.global_data, input_device, output_device))
+}
+
+/// Handle signals received from the main thread channel.
+/// Returns true if exit was requested.
+fn handle_main_thread_signal<S, AS>(
+    signal: TerminalWindowMainThreadSignal<AS>,
+    event_loop_state: &mut EventLoopState<S, AS>,
+    app: &mut BoxedSafeApp<S, AS>,
+    exit_keys: &[InputEvent],
+    output_device: &OutputDevice,
+) -> CommonResult<bool>
+where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
+{
+    match signal {
+        TerminalWindowMainThreadSignal::Exit => {
+            RawMode::end(
+                event_loop_state.global_data.window_size,
+                lock_output_device_as_mut!(output_device),
+                output_device.is_mock,
+            );
+            Ok(true) // Request exit
+        }
+        TerminalWindowMainThreadSignal::Render(_) => {
+            handle_render_signal(event_loop_state, app, output_device)?;
+            Ok(false)
+        }
+        TerminalWindowMainThreadSignal::ApplyAppSignal(action) => {
+            handle_app_signal(&action, event_loop_state, app, exit_keys, output_device)?;
+            Ok(false)
+        }
+    }
+}
+
+/// Handle render signal from the main thread.
+fn handle_render_signal<S, AS>(
+    event_loop_state: &mut EventLoopState<S, AS>,
+    app: &mut BoxedSafeApp<S, AS>,
+    output_device: &OutputDevice,
+) -> CommonResult<()>
+where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
+{
+    let telemetry = &mut event_loop_state.telemetry;
+    telemetry_record!(
+        @telemetry: telemetry,
+        @hint: TelemetryAtomHint::Render,
+        @block: {
+            AppManager::render_app(
+                app,
+                &mut event_loop_state.global_data,
+                &mut event_loop_state.component_registry_map,
+                &mut event_loop_state.has_focus,
+                lock_output_device_as_mut!(output_device),
+                output_device.is_mock,
+            )?;
+        },
+        @after_block: {
+            event_loop_state.global_data.set_hud_report(telemetry.report());
+        }
+    );
+    Ok(())
+}
+
+/// Handle app signal from the main thread.
+fn handle_app_signal<S, AS>(
+    action: &AS,
+    event_loop_state: &mut EventLoopState<S, AS>,
+    app: &mut BoxedSafeApp<S, AS>,
+    exit_keys: &[InputEvent],
+    output_device: &OutputDevice,
+) -> CommonResult<()>
+where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
+{
+    let telemetry = &mut event_loop_state.telemetry;
+    telemetry_record!(
+        @telemetry: telemetry,
+        @hint: TelemetryAtomHint::Signal,
+        @block: {
+            let result = app.app_handle_signal(
+                action,
+                &mut event_loop_state.global_data,
+                &mut event_loop_state.component_registry_map,
+                &mut event_loop_state.has_focus,
+            );
+            handle_result_generated_by_app_after_handling_action_or_input_event(
+                result,
+                None,
+                exit_keys,
+                app,
+                &mut event_loop_state.global_data,
+                &mut event_loop_state.component_registry_map,
+                &mut event_loop_state.has_focus,
+                lock_output_device_as_mut!(output_device),
+                output_device.is_mock,
+            );
+        },
+        @after_block: {
+            event_loop_state.global_data.set_hud_report(telemetry.report());
+        }
+    );
+    Ok(())
+}
+
+/// Handle input events from the terminal.
+fn handle_input_event<S, AS>(
+    input_event: InputEvent,
+    event_loop_state: &mut EventLoopState<S, AS>,
+    app: &mut BoxedSafeApp<S, AS>,
+    exit_keys: &[InputEvent],
+    output_device: &OutputDevice,
+) -> CommonResult<()>
+where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
+{
+    log_input_event_if_enabled(&input_event);
+
+    // Handle resize events specially
+    if let InputEvent::Resize(new_size) = input_event {
+        handle_resize_event(new_size, event_loop_state, app, output_device)?;
+    }
+
+    // Process all input events (including resize)
+    process_input_event(input_event, event_loop_state, app, exit_keys, output_device)?;
+
+    Ok(())
+}
+
+/// Log input event if debugging is enabled.
+fn log_input_event_if_enabled(input_event: &InputEvent) {
     (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
-        tracing::info!(
-            message = %inline_string!(
-                "main_event_loop {sp} Shutdown {ch}",
-                ch = glyphs::BYE_GLYPH,
-                sp = glyphs::RIGHT_ARROW_GLYPH,
-            ),
-            session_duration = %telemetry.session_duration()
-        );
+        if let InputEvent::Keyboard(_) = input_event {
+            tracing::info!(
+                message = %inline_string!(
+                    "main_event_loop {sp} Tick {ch}",
+                    sp = glyphs::RIGHT_ARROW_GLYPH,
+                    ch = glyphs::CLOCK_TICK_GLYPH
+                ),
+                input_event = ?input_event
+            );
+        }
     });
+}
 
-    ok!((global_data, input_device, output_device))
+/// Handle terminal resize events.
+fn handle_resize_event<S, AS>(
+    new_size: Size,
+    event_loop_state: &mut EventLoopState<S, AS>,
+    app: &mut BoxedSafeApp<S, AS>,
+    output_device: &OutputDevice,
+) -> CommonResult<()>
+where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
+{
+    let telemetry = &mut event_loop_state.telemetry;
+    telemetry_record!(
+        @telemetry: telemetry,
+        @hint: TelemetryAtomHint::Resize,
+        @block: {
+            handle_resize(
+                new_size,
+                &mut event_loop_state.global_data,
+                app,
+                &mut event_loop_state.component_registry_map,
+                &mut event_loop_state.has_focus,
+                lock_output_device_as_mut!(output_device),
+                output_device.is_mock,
+            );
+        },
+        @after_block: {
+            event_loop_state.global_data.set_hud_report(telemetry.report());
+        }
+    );
+    Ok(())
+}
+
+/// Process input events and delegate to the app.
+fn process_input_event<S, AS>(
+    input_event: InputEvent,
+    event_loop_state: &mut EventLoopState<S, AS>,
+    app: &mut BoxedSafeApp<S, AS>,
+    exit_keys: &[InputEvent],
+    output_device: &OutputDevice,
+) -> CommonResult<()>
+where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
+{
+    let telemetry = &mut event_loop_state.telemetry;
+    telemetry_record!(
+        @telemetry: telemetry,
+        @hint: TelemetryAtomHint::Input,
+        @block: {
+            actually_process_input_event(
+                &mut event_loop_state.global_data,
+                app,
+                input_event,
+                exit_keys,
+                &mut event_loop_state.component_registry_map,
+                &mut event_loop_state.has_focus,
+                lock_output_device_as_mut!(output_device),
+                output_device.is_mock,
+            );
+        },
+        @after_block: {
+            event_loop_state.global_data.set_hud_report(telemetry.report());
+        }
+    );
+    Ok(())
 }
 
 /// **Telemetry**: This function is not recorded in telemetry but its caller is.
@@ -427,10 +617,9 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
             }
         },
         Err(error) => {
-            // % is Display, ? is Debug.
             tracing::error!(
                 message = %inline_string!(
-                    "main_event_loop {sp} handle_result_generated_by_app_after_handling_action {ch}",
+                    "main_event_loop {sp} handle_result_generated_by_app_after_handling_action_or_input_event {ch}",
                     ch = glyphs::SUSPICIOUS_GLYPH,
                     sp = glyphs::RIGHT_ARROW_GLYPH,
                 ),
@@ -440,14 +629,16 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     }
 }
 
+/// Request exit from the main event loop, as exit keys were pressed.
+/// Note: make sure to wrap the call to `send()` in a [`tokio::spawn()`] so that it
+/// doesn't block the calling thread.
+///
+/// More info: <https://tokio.rs/tokio/tutorial/channels>.
 fn request_exit_by_sending_signal<AS>(
     channel_sender: mpsc::Sender<TerminalWindowMainThreadSignal<AS>>,
 ) where
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
-    // Exit keys were pressed.
-    // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so that it doesn't
-    // block the calling thread. More info: <https://tokio.rs/tokio/tutorial/channels>.
     tokio::spawn(async move {
         // We don't care about the result of this operation.
         channel_sender
@@ -500,7 +691,6 @@ where
 
                 // Print debug message w/ error.
                 DEBUG_TUI_MOD.then(|| {
-                    // % is Display, ? is Debug.
                     tracing::error!(
                         message = %inline_string!(
                             "AppManager::render_app() error {ch}",
@@ -556,7 +746,6 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
         at ZOrder::Normal
         =>
             RenderOp::ResetColor,
-            // RenderOp::MoveCursorPositionAbs(position! {col_index: col_pos, row_index: row_pos})
             RenderOp::MoveCursorPositionAbs(col_pos + row_pos)
     }
 
