@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, ast, ast_line, choose,
-               height,
+               height, inline_vec,
                readline_async::{HowToChoose, StyleSheet}};
 
 use crate::{giti::{BranchCheckoutDetails, CommandRunDetails, RepoStatus,
@@ -138,11 +138,10 @@ mod command_execute {
 }
 
 mod user_interaction {
-    use r3bl_tui::inline_vec;
-
     use super::{CommandRunDetails, CommandRunResult, CommonResult, DefaultIoDevices,
                 HowToChoose, StyleSheet, ast, ast_line, choose, command_execute,
-                details, git, height, prefix_single_select_instruction_header, ui_str};
+                details, git, height, inline_vec,
+                prefix_single_select_instruction_header, ui_str};
 
     pub async fn handle_branch_selection()
     -> CommonResult<CommandRunResult<CommandRunDetails>> {

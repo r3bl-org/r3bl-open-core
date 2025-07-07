@@ -158,6 +158,7 @@
     "rngs",
     "RRGGBB",
     "runtimes",
+    "rustc",
     "rustflags",
     "rustfmt",
     "rustls",

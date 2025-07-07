@@ -120,6 +120,8 @@ pub async fn show_exit_message() {
             prefix_single_select_instruction_header(smallvec![last_line])
         };
         let mut io = DefaultIoDevices::default();
+
+        // Get the first item selected by the user.
         let maybe_user_choice = choose(
             header_with_instructions,
             yes_no_options,

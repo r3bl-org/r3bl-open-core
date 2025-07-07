@@ -20,15 +20,8 @@ use crossterm::{cursor::{Hide, MoveToColumn, MoveToNextLine, MoveToPreviousLine,
                 terminal::{Clear, ClearType}};
 use miette::IntoDiagnostic as _;
 
-use crate::{lock_output_device_as_mut,
-            ok,
-            queue_commands,
-            queue_commands_no_lock,
-            CommonResult,
-            LockedOutputDevice,
-            OutputDevice,
-            SharedWriter,
-            SpinnerStyle};
+use crate::{lock_output_device_as_mut, ok, queue_commands, queue_commands_no_lock,
+            CommonResult, LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle};
 
 // Allocate specified number of lines in the terminal (ahead of the current cursor
 // position) for the spinner.
@@ -83,16 +76,16 @@ pub fn print_tick_interval_msg(
     output_device: OutputDevice,
 ) -> CommonResult<()> {
     // Print the output. And make sure to terminate w/ a newline, so that the
-    // output is printed for ReadlineAsync.
+    // output is printed for ReadlineAsyncContext.
     queue_commands!(
         output_device,
         // Move the cursor to the beginning of the current line.
         MoveToColumn(0),
         // Clear everything from the cursor position to the end of the screen.
         Clear(ClearType::CurrentLine),
-        // Print the spinner output. The \n is important for ReadlineAsync to pick it
-        // up.
-        Print(format!("{output}\n")), /* \n is needed to ReadlineAsync */
+        // Print the spinner output. The \n is important for ReadlineAsyncContext to pick
+        // it up.
+        Print(format!("{output}\n")), /* \n is needed to ReadlineAsyncContext */
         // Move the cursor up one line, to where the spinner message was just printed.
         MoveToPreviousLine(1),
         // Move the cursor to the beginning of that line again, ready for the next
@@ -132,7 +125,7 @@ pub fn print_tick_final_msg(
         Clear(ClearType::FromCursorDown)
     );
 
-    // Only run this if the spinner is not running in a `ReadlineAsync` context.
+    // Only run this if the spinner is not running in a `ReadlineAsyncContext` context.
     if maybe_shared_writer.is_none() {
         // We don't care about the result of this operation.
         print_end_if_standalone(writer).ok();

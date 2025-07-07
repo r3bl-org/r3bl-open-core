@@ -113,7 +113,7 @@
 //!   - [Input Editing Behavior](#input-editing-behavior)
 //! - [Examples](#examples)
 //! - [How to use this crate](#how-to-use-this-crate)
-//!   - [`ReadlineAsync::try_new`, which is the main entry point for most use
+//!   - [`ReadlineAsyncContext::try_new`], which is the main entry point for most use
 //!     cases](#terminalasynctry_new-which-is-the-main-entry-point-for-most-use-cases)
 //!   - [Readline overview please see the docs for this struct for
 //!     details](#readline-overview-please-see-the-docs-for-this-struct-for-details)
