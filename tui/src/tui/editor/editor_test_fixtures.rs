@@ -23,8 +23,8 @@ pub mod mock_real_objects_for_editor {
 
     use crate::{col, core::test_fixtures::StdoutMock, height, row,
                 telemetry::telemetry_sizing::TelemetryReportLineStorage, width,
-                EditorEngine, FlexBox, GlobalData, OffscreenBufferPool, OutputDevice,
-                OutputDeviceExt, PartialFlexBox, Size, SpinnerHelper, CHANNEL_WIDTH};
+                DefaultSize, EditorEngine, FlexBox, GlobalData, OffscreenBufferPool,
+                OutputDevice, OutputDeviceExt, PartialFlexBox, Size, SpinnerHelper};
 
     #[must_use]
     pub fn make_global_data<S, AS>(
@@ -34,7 +34,8 @@ pub mod mock_real_objects_for_editor {
         S: Debug + Default + Clone + Sync + Send,
         AS: Debug + Default + Clone + Sync + Send,
     {
-        let (sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
+        let (sender, _) =
+            mpsc::channel::<_>(DefaultSize::MainThreadSignalChannelBufferSize.into());
         let (output_device, stdout_mock) = OutputDevice::new_mock();
         let offscreen_buffer_pool =
             OffscreenBufferPool::new(window_size.unwrap_or_default());

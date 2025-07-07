@@ -374,6 +374,7 @@ mod rgb_value_impl_block {
         /// This function will panic if the input string is not a valid hex color format.
         #[must_use]
         pub fn from_hex(input: &str) -> RgbValue {
+            #[allow(clippy::match_wild_err_arm)]
             match parse_hex_color(input) {
                 Ok((_, color)) => color,
                 Err(_) => {

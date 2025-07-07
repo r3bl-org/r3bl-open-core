@@ -23,16 +23,16 @@ pub mod mock_real_objects_for_dialog {
 
     use crate::{core::test_fixtures::StdoutMock,
                 editor::editor_test_fixtures::mock_real_objects_for_editor,
-                telemetry::telemetry_sizing::TelemetryReportLineStorage, DialogBuffer,
-                DialogEngine, FlexBoxId, GlobalData, HasDialogBuffers,
-                OffscreenBufferPool, OutputDevice, OutputDeviceExt, Size, SpinnerHelper,
-                CHANNEL_WIDTH};
+                telemetry::telemetry_sizing::TelemetryReportLineStorage, DefaultSize,
+                DialogBuffer, DialogEngine, FlexBoxId, GlobalData, HasDialogBuffers,
+                OffscreenBufferPool, OutputDevice, OutputDeviceExt, Size, SpinnerHelper};
 
     #[must_use]
     pub fn make_global_data(
         window_size: Option<Size>,
     ) -> (GlobalData<State, ()>, StdoutMock) {
-        let (main_thread_channel_sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
+        let (main_thread_channel_sender, _) =
+            mpsc::channel::<_>(DefaultSize::MainThreadSignalChannelBufferSize.into());
         let state = create_state();
         let window_size = window_size.unwrap_or_default();
         let maybe_saved_offscreen_buffer = Option::default();

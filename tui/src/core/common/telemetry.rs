@@ -41,22 +41,38 @@ pub mod telemetry_default_constants {
     pub const RING_BUFFER_SIZE: usize = 100;
 
     /// The rate limiter for generating the report is set to run once every `n sec`.
-    pub const RATE_LIMIT_TIME_THRESHOLD: Duration = Duration::from_millis(16);
+    pub const RATE_LIMIT_TIME_THRESHOLD: Duration =
+        Duration::from_millis(/* 16ms */ 16);
 
     /// Any response time below this threshold will be filtered out.
-    pub const FILTER_MIN_RESPONSE_TIME: Duration =
-        Duration::from_micros(_FILTER_MIN_RESPONSE_TIME_MICROS * 2);
+    pub const FILTER_MIN_RESPONSE_TIME: Duration = Duration::from_micros(20);
 
-    /// Range for the cluster function.
-    pub const CLUSTER_SENSITIVITY_RANGE: Duration =
-        Duration::from_micros(_FILTER_MIN_RESPONSE_TIME_MICROS * 5);
-
-    const _FILTER_MIN_RESPONSE_TIME_MICROS: u64 = 10;
+    /// Calculate cluster sensitivity range based on the `min_duration_filter`.
+    /// - If `min_duration_filter` is `Some(filter)` and filter > 0, uses `filter * 5`
+    /// - Otherwise, uses the default `FILTER_MIN_RESPONSE_TIME * 5`
+    #[must_use]
+    pub fn calculate_cluster_sensitivity_range(
+        min_duration_filter: Option<Duration>,
+    ) -> Duration {
+        match min_duration_filter {
+            Some(min_filter) if min_filter.as_micros() > 0 => {
+                let micros = min_filter.as_micros().saturating_mul(5);
+                // Safely convert u128 to u64, clamping to u64::MAX if needed
+                let micros_u64 = u64::try_from(micros).unwrap_or(u64::MAX);
+                Duration::from_micros(micros_u64)
+            }
+            _ => {
+                let micros = FILTER_MIN_RESPONSE_TIME.as_micros().saturating_mul(5);
+                let micros_u64 = u64::try_from(micros).unwrap_or(u64::MAX);
+                Duration::from_micros(micros_u64)
+            }
+        }
+    }
 }
 
 /// You can use this struct to track the response times of an operation. It stores the
 /// response times in a ring buffer and provides methods to calculate the average, min,
-/// max, median, first, last and session duration. It also provides a method to generate
+/// max, median, and session duration. It also provides a method to generate
 /// a report of the response times.
 ///
 /// 1. The report is rate limited to run once every `n sec`, where `n` is the time
@@ -93,6 +109,7 @@ pub struct Telemetry<const N: usize> {
     pub report: TelemetryHudReport,
     pub rate_limiter_generate_report: RateLimiter,
     pub min_duration_filter: Option<Duration>,
+    pub cluster_sensitivity_range: Duration,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone, EnumString, Display, Eq, Hash, Default)]
@@ -152,27 +169,36 @@ pub mod telemetry_constructor {
     pub struct ResponseTimesRingBufferOptions {
         pub rate_limit_min_time_threshold: Duration,
         pub min_duration_filter: Option<Duration>,
+        pub cluster_sensitivity_range: Duration,
     }
 
     impl From<()> for ResponseTimesRingBufferOptions {
         fn from((): ()) -> Self {
+            let min_duration_filter =
+                Some(telemetry_default_constants::FILTER_MIN_RESPONSE_TIME);
             Self {
                 rate_limit_min_time_threshold:
                     telemetry_default_constants::RATE_LIMIT_TIME_THRESHOLD,
-                min_duration_filter: Some(
-                    telemetry_default_constants::FILTER_MIN_RESPONSE_TIME,
-                ),
+                min_duration_filter,
+                cluster_sensitivity_range:
+                    telemetry_default_constants::calculate_cluster_sensitivity_range(
+                        min_duration_filter,
+                    ),
             }
         }
     }
 
     impl From<Duration> for ResponseTimesRingBufferOptions {
         fn from(rate_limit_min_time_threshold: Duration) -> Self {
+            let min_duration_filter =
+                Some(telemetry_default_constants::FILTER_MIN_RESPONSE_TIME);
             Self {
                 rate_limit_min_time_threshold,
-                min_duration_filter: Some(
-                    telemetry_default_constants::FILTER_MIN_RESPONSE_TIME,
-                ),
+                min_duration_filter,
+                cluster_sensitivity_range:
+                    telemetry_default_constants::calculate_cluster_sensitivity_range(
+                        min_duration_filter,
+                    ),
             }
         }
     }
@@ -181,9 +207,14 @@ pub mod telemetry_constructor {
         fn from(
             (rate_limit_min_time_threshold, min_duration_filter): (Duration, Duration),
         ) -> Self {
+            let min_duration_filter = Some(min_duration_filter);
             Self {
                 rate_limit_min_time_threshold,
-                min_duration_filter: Some(min_duration_filter),
+                min_duration_filter,
+                cluster_sensitivity_range:
+                    telemetry_default_constants::calculate_cluster_sensitivity_range(
+                        min_duration_filter,
+                    ),
             }
         }
     }
@@ -203,6 +234,7 @@ pub mod telemetry_constructor {
                     options.rate_limit_min_time_threshold,
                 ),
                 min_duration_filter: options.min_duration_filter,
+                cluster_sensitivity_range: options.cluster_sensitivity_range,
             }
         }
 
@@ -285,8 +317,8 @@ mod mutator {
 }
 
 mod calculator {
-    use super::{telemetry_default_constants, Duration, HashMap, Pc, RingBuffer,
-                Telemetry, TelemetryAtom, TelemetryAtomHint, TimeDuration};
+    use super::{Duration, HashMap, Pc, RingBuffer, Telemetry, TelemetryAtom,
+                TelemetryAtomHint, TimeDuration};
 
     impl<const N: usize> Telemetry<N> {
         #[must_use]
@@ -315,7 +347,7 @@ mod calculator {
         }
 
         pub fn max(&self) -> Option<TimeDuration> {
-            // Calling min() on an empty iterator will return None.
+            // Calling max() on an empty iterator will return None.
             let maybe_max = self
                 .ring_buffer
                 .iter()
@@ -324,10 +356,13 @@ mod calculator {
             maybe_max.map(TimeDuration::from)
         }
 
-        /// Find the most common cluster of durations within a specified range (e.g., ±10
-        /// microseconds, defined in
-        /// [`telemetry_default_constants::CLUSTER_SENSITIVITY_RANGE`]) in an array
-        /// of [`Duration`].
+        /// Find the most common cluster of durations within a specified range in an array
+        /// of [`Duration`]. The cluster sensitivity range is configured during
+        /// construction in
+        /// [`super::telemetry_constructor::ResponseTimesRingBufferOptions`] and
+        /// automatically calculated based on the `min_duration_filter`:
+        /// - If a custom `min_duration_filter` is set, uses `min_duration_filter * 5`
+        /// - Otherwise, uses the default (5x the filter minimum response time)
         ///
         /// This function creates a **frequency histogram** of duration measurements using
         /// a bucketing strategy to group similar durations together. This approach is
@@ -346,7 +381,11 @@ mod calculator {
         ///
         /// ## Example
         ///
-        /// Given durations: [100μs, 110μs, 120μs, 200μs, 210μs] and cluster range = 50μs:
+        /// Given durations: [100μs, 110μs, 120μs, 200μs, 210μs] and:
+        /// - If `min_duration_filter` = 10μs, cluster range = 50μs (10 * 5)
+        /// - If `min_duration_filter` = 20μs, cluster range = 100μs (20 * 5)
+        ///
+        /// With cluster range = 50μs:
         /// - 100μs, 110μs, 120μs → bucket key 2 (100/50, 110/50, 120/50) → count: 3
         /// - 200μs, 210μs → bucket key 4 (200/50, 210/50) → count: 2
         ///
@@ -385,8 +424,8 @@ mod calculator {
             }
 
             // Count occurrences of each duration in buckets.
-            let range_micros =
-                telemetry_default_constants::CLUSTER_SENSITIVITY_RANGE.as_micros();
+            // Use the pre-calculated cluster sensitivity range from options.
+            let range_micros = self.cluster_sensitivity_range.as_micros();
             let count_map: HashMap<u128, BucketCount> =
                 self.ring_buffer
                     .iter()
@@ -463,7 +502,7 @@ mod report_generator {
         /// - The `generate_report` function is actually responsible for generating the
         ///   report (and saving it).
         ///
-        /// This returns a Result, because it
+        /// This returns a [`TelemetryHudReport`] containing the telemetry data.
         pub fn report(&mut self) -> TelemetryHudReport {
             match self
                 .rate_limiter_generate_report
@@ -477,7 +516,7 @@ mod report_generator {
             self.report
         }
 
-        /// Actually generate the report. This can an expensive function to execute in a
+        /// Actually generate the report. This can be an expensive function to execute in a
         /// tight loop.
         ///
         /// This report is a measure of the latency of seeing output on the screen, after
@@ -1214,4 +1253,35 @@ mod tests_median {
             ))
         );
     }
+}
+#[test]
+fn test_cluster_sensitivity_range_calculation() {
+    use telemetry_constructor::ResponseTimesRingBufferOptions;
+
+    // Test default case - should be 5x the default FILTER_MIN_RESPONSE_TIME (20μs * 5 =
+    // 100μs) This demonstrates that our fix correctly calculates based on the actual
+    // filter value instead of using a hardcoded value
+    let opts_default: ResponseTimesRingBufferOptions = ().into();
+    assert_eq!(
+        opts_default.cluster_sensitivity_range,
+        Duration::from_micros(100) // 20μs (FILTER_MIN_RESPONSE_TIME) * 5
+    );
+
+    // Test custom filter - should be 5x the filter value
+    let custom_filter = Duration::from_micros(100);
+    let opts_custom: ResponseTimesRingBufferOptions =
+        (Duration::from_secs(1), custom_filter).into();
+    assert_eq!(
+        opts_custom.cluster_sensitivity_range,
+        Duration::from_micros(500) // 100 * 5
+    );
+
+    // Test zero filter - should fall back to default (5x FILTER_MIN_RESPONSE_TIME)
+    let opts_zero: ResponseTimesRingBufferOptions =
+        (Duration::from_secs(1), Duration::from_micros(0)).into();
+    assert_eq!(
+        opts_zero.cluster_sensitivity_range,
+        Duration::from_micros(100) /* Falls back to 5x FILTER_MIN_RESPONSE_TIME (20μs
+                                    * * 5) */
+    );
 }
