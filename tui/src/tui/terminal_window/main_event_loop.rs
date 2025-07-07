@@ -19,7 +19,8 @@ use std::{fmt::Debug, marker::PhantomData};
 use smallvec::smallvec;
 use tokio::sync::mpsc;
 
-use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation};
+use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation,
+            MainEventLoopFuture};
 use crate::{ch, col, format_as_kilobytes_with_commas, glyphs, height, inline_string,
             lock_output_device_as_mut, new_style, ok, render_pipeline, row,
             telemetry::{telemetry_default_constants, Telemetry},
@@ -32,37 +33,105 @@ use crate::{ch, col, format_as_kilobytes_with_commas, glyphs, height, inline_str
             TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder,
             DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY};
 
+// XMARK: Box::pin a future that is larger than 16KB.
+
 /// Main event loop implementation that handles terminal UI events and app state
 /// management.
-pub async fn main_event_loop_impl<S, AS>(
-    mut app: BoxedSafeApp<S, AS>,
-    exit_keys: &[InputEvent],
+///
+/// This is the internal API, and not the public API
+/// [`super::TerminalWindow::main_event_loop()`]. This separation exists to allow for
+/// testing using dependency injection.
+///
+/// This function takes pre-initialized components (terminal size, input/output devices)
+/// and runs the actual async event loop. It handles all input events, dispatches them
+/// to the [`crate::App`] for processing, renders the app after each event, and manages
+/// all signals sent from the app to the main event loop.
+///
+/// # Arguments
+///
+/// * `app` - The [`BoxedSafeApp`] instance that will handle input events and signals.
+/// * `exit_keys` - A slice of [`InputEvent`]s that will trigger application exit.
+/// * `state` - The initial application state.
+/// * `initial_size` - The initial terminal size.
+/// * `input_device` - The [`InputDevice`] for reading input events.
+/// * `output_device` - The [`OutputDevice`] for writing output.
+///
+/// # Returns
+///
+/// Returns a [`MainEventLoopFuture`] that resolves to a [`CommonResult`] containing:
+/// * `global_data` - The final [`GlobalData`] state after the event loop exits.
+/// * `event_stream` - The [`InputDevice`] used for input events.
+/// * `stdout` - The [`OutputDevice`] used for output.
+///
+/// # Errors
+///
+/// Returns [`miette::Error`] if there are errors during:
+/// * Event loop initialization (setting up raw mode, app initialization).
+/// * Event loop execution (input processing, rendering, signal handling).
+/// * Terminal cleanup and restoration.
+///
+/// # Why return a boxed pinned future?
+///
+/// This function returns a [`Box::pin`]ned future (> 16KB clippy threshold) for safer
+/// memory management and better performance characteristics.
+///
+/// ## Performance Benefits
+///
+/// * **Without [`Box::pin`]**: The entire > 16KB future gets copied every time it moves
+///   between stack frames (function calls, async state transitions, select! operations).
+/// * **With [`Box::pin`]**: Only an 8-byte pointer moves, while the actual future data
+///   stays fixed on the heap, avoiding expensive > 16KB memory copies.
+/// * Reduces stack pressure and improves CPU cache locality.
+///
+/// ## Safety Benefits
+///
+/// * This function may be called when the stack already has many frames from the main
+///   application logic. Pinning this future to the heap avoids potential stack overflow
+///   issues when the stack is deep.
+/// * Provides defensive programming "better safe than sorry" approach for stack depth
+///   management.
+///
+/// ## Usage Context
+///
+/// The returned boxed pinned future from this function is typically used in contexts
+/// where:
+/// - Single use: The future is created, awaited once, and then dropped - no loops or
+///   repeated moves.
+/// - Not stored in a struct: The future isn't being stored in a data structure that would
+///   require [`std::pin::Pin`].
+/// - Direct await: It's immediately awaited, not passed around or stored.
+pub fn main_event_loop_impl<'a, S, AS>(
+    app: BoxedSafeApp<S, AS>,
+    exit_keys: &'a [InputEvent],
     state: S,
     initial_size: Size,
     input_device: InputDevice,
     output_device: OutputDevice,
-) -> CommonResult<(
-    /* global_data */ GlobalData<S, AS>,
-    /* event stream */ InputDevice,
-    /* stdout */ OutputDevice,
-)>
+) -> MainEventLoopFuture<'a, S, AS>
 where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Debug + Default + Clone + Sync + Send + 'a,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
-    let event_loop_state =
-        EventLoopState::initialize(state, initial_size, output_device.clone(), &mut app)?;
+    Box::pin(async move {
+        let mut app = app;
+        let event_loop_state = EventLoopState::initialize(
+            state,
+            initial_size,
+            output_device.clone(),
+            &mut app,
+        )?;
 
-    let result = run_main_event_loop(
-        event_loop_state,
-        app,
-        exit_keys,
-        input_device,
-        output_device,
-    )
-    .await;
+        let result = run_main_event_loop(
+            event_loop_state,
+            app,
+            exit_keys,
+            input_device,
+            output_device,
+        )
+        .await;
 
-    result
+        result
+    })
 }
 
 /// Holds all the state required for the main event loop.

@@ -93,7 +93,8 @@ async fn with_readline_async() -> miette::Result<()> {
         }
     });
 
-    let chosen = choose(
+    // Get the item selected by the user (or none).
+    let res_chosen = choose(
         Header::SingleLine("Choose one:".into()),
         &["one", "two", "three"],
         None,
@@ -104,7 +105,10 @@ async fn with_readline_async() -> miette::Result<()> {
     )
     .await;
 
-    let message = format!(">>> Chosen {:<25}: {:?}", "(with readline_async)", chosen);
+    let message = format!(
+        ">>> Chosen {:<25}: {:?}",
+        "(with readline_async)", res_chosen
+    );
     rl_ctx.request_shutdown(Some(message.as_str())).await?;
     rl_ctx.await_shutdown().await;
 

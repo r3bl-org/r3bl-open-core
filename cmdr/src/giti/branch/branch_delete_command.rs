@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 use r3bl_tui::{ASText, CommandRunResult, CommonResult, DefaultIoDevices, InlineString,
-               InlineVec, ItemsOwned, ast, ast_line, choose, height,
+               InlineVec, ItemsOwned, ast, ast_line, choose, height, inline_vec,
                readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 
@@ -138,11 +138,10 @@ mod details {
 }
 
 mod user_interaction {
-    use r3bl_tui::inline_vec;
-
     use super::{ASText, CommonResult, DefaultIoDevices, HowToChoose, InlineString,
                 InlineVec, ItemsOwned, StyleSheet, ast, ast_line, choose, common,
-                height, parse_user_choice, prefix_multi_select_instruction_header,
+                height, inline_vec, parse_user_choice,
+                prefix_multi_select_instruction_header,
                 prefix_single_select_instruction_header, smallvec, ui_str};
 
     pub async fn select_branches_to_delete(

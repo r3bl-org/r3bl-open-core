@@ -304,7 +304,7 @@ pub mod terminal_async_constructor {
         };
 
         let Ok(Some(rl_ctx)) = ReadlineAsyncContext::try_new(Some(prompt)).await else {
-            miette::bail!("Failed to create ReadlineAsync instance");
+            miette::bail!("Failed to create ReadlineAsyncContext instance");
         };
 
         let shared_writer = rl_ctx.clone_shared_writer();

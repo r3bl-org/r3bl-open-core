@@ -15,16 +15,22 @@
  *   limitations under the License.
  */
 
+use std::{future::Future, pin::Pin};
+
 use clap::ValueEnum;
 use miette::IntoDiagnostic as _;
 
 use crate::{ch, constants::SPACE_CHAR, enter_event_loop_async, get_size,
-            CalculateResizeHint, EventLoopResult, Header, Height, InputDevice, InputEvent, 
-            ItemsOwned, Key, KeyPress, KeyState, LineStateControlSignal, ModifierKeysMask, 
-            OutputDevice, SelectComponent, SharedWriter, SpecialKey, State, StyleSheet, Width,
-            DEVELOPMENT_MODE};
+            CalculateResizeHint, EventLoopResult, Header, Height, InputDevice,
+            InputEvent, ItemsOwned, Key, KeyPress, KeyState, LineStateControlSignal,
+            ModifierKeysMask, OutputDevice, SelectComponent, SharedWriter, SpecialKey,
+            State, StyleSheet, Width, DEVELOPMENT_MODE};
 
 pub const DEFAULT_HEIGHT: usize = 5;
+
+/// Type alias for the boxed future returned by the choose function.
+pub type ChooseFuture<'a> =
+    Pin<Box<dyn Future<Output = miette::Result<ItemsOwned>> + 'a>>;
 
 /// This struct is provided for convenience to create a default set of IO devices which
 /// can be used in the `choose_async()` function. The reason this has to be created
@@ -61,6 +67,8 @@ impl DefaultIoDevices {
     }
 }
 
+// XMARK: Box::pin a future that is larger than 16KB.
+
 /// Async function to choose an item from a list of items.
 ///
 /// It takes a list of items, and returns the selected item or items (depending on the
@@ -83,9 +91,66 @@ impl DefaultIoDevices {
 ///   [`DefaultIoDevices::as_mut_tuple()`] if you don't want to specify anything here.
 ///   * `output_device` - The output device to use.
 ///   * `input_device` - The input device to use.
-///   * `maybe_shared_writer` - The shared writer to use, if `ReadlineAsync` is in use,
-///     and the async stdout needs to be paused when this function is running.
-pub async fn choose<'a>(
+///   * `maybe_shared_writer` - The shared writer to use, if `ReadlineAsyncContext` is in
+///     use, and the async stdout needs to be paused when this function is running.
+///
+/// # Returns
+///
+/// Returns a boxed pinned future that resolves to `Ok(ItemsOwned)` with the following
+/// behavior:
+/// * **Single selection mode** (`HowToChoose::Single`):
+///   - If user selects an item and presses Enter: returns an `ItemsOwned` containing the
+///     selected item
+///   - If user cancels (Escape or Ctrl+C): returns an empty `ItemsOwned`
+/// * **Multiple selection mode** (`HowToChoose::Multiple`):
+///   - If user selects items (Space to toggle) and presses Enter: returns an `ItemsOwned`
+///     containing all selected items
+///   - If user presses Enter without selecting any items: returns an empty `ItemsOwned`
+///   - If user cancels (Escape or Ctrl+C): returns an empty `ItemsOwned`
+/// * **Non-interactive terminal**: returns an empty `ItemsOwned`
+///
+/// # Errors
+///
+/// Returns [`miette::Error`] if there are communication errors with the shared
+/// writer's line state control channel when sending pause/resume signals. This can occur
+/// when:
+/// * The shared writer's channel receiver has been dropped
+/// * The channel is closed or disconnected
+/// * There are other async communication failures with the
+///   [`crate::ReadlineAsyncContext`] integration
+///
+/// # Why return a boxed pinned future?
+///
+/// This function returns a [`Box::pin`]ned future (> 16KB clippy threshold) for safer
+/// memory management and better performance characteristics.
+///
+/// ## Performance Benefits
+///
+/// * **Without [`Box::pin`]**: The entire > 16KB future gets copied every time it moves
+///   between stack frames (function calls, async state transitions, select! operations).
+/// * **With [`Box::pin`]**: Only an 8-byte pointer moves, while the actual future data
+///   stays fixed on the heap, avoiding expensive > 16KB memory copies.
+/// * Reduces stack pressure and improves CPU cache locality.
+///
+/// ## Safety Benefits
+///
+/// * This function may be called when the stack already has many frames from the main
+///   application logic. Pinning this future to the heap avoids potential stack overflow
+///   issues when the stack is deep.
+/// * Provides defensive programming "better safe than sorry" approach for stack depth
+///   management.
+///
+/// ## Probably not needed for this function, but done for defensive programming
+///
+/// It is probably not needed here, but is done just for defensive programming
+/// "better safe than sorry" for stack depth management. Generally, the returned boxed
+/// pinned future from this function is used in the following contexts:
+/// - Single use: The future is created, awaited once, and then dropped - no loops or
+///   repeated moves.
+/// - Not stored in a struct: The future isn't being stored in a data structure that would
+///   require [`std::pin::Pin`].
+/// - Direct await: It's immediately awaited, not passed around or stored.
+pub fn choose<'a>(
     arg_header: impl Into<Header>,
     arg_options_to_choose_from: impl Into<ItemsOwned>,
     maybe_max_height: Option<Height>,
@@ -97,85 +162,88 @@ pub async fn choose<'a>(
         &'a mut InputDevice,
         Option<SharedWriter>,
     ),
-) -> miette::Result<ItemsOwned> {
+) -> ChooseFuture<'a> {
     let from = arg_options_to_choose_from.into();
+    let header = arg_header.into();
 
-    // Destructure the io tuple.
-    let (od, id, msw) = io;
+    Box::pin(async move {
+        // Destructure the io tuple.
+        let (od, id, msw) = io;
 
-    // For compatibility with ReadlineAsync (if it is in use).
-    if let Some(ref sw) = msw {
-        // Pause the shared writer while the user is choosing an item.
-        sw.line_state_control_channel_sender
-            .send(LineStateControlSignal::Pause)
-            .await
-            .into_diagnostic()?;
-    }
+        // For compatibility with ReadlineAsyncContext (if it is in use).
+        if let Some(ref sw) = msw {
+            // Pause the shared writer while the user is choosing an item.
+            sw.line_state_control_channel_sender
+                .send(LineStateControlSignal::Pause)
+                .await
+                .into_diagnostic()?;
+        }
 
-    // - If the max size is None, then set it to DEFAULT_HEIGHT.
-    // - If the max size is Some, then this is the max height of the viewport.
-    //   - However, if this is 0, then set to DEFAULT_HEIGHT.
-    //   - Otherwise, check whether the number of items is less than this max height and
-    //     set the max height to the number of items.
-    //   - Otherwise, if there are more items than the max height, then clamp it to the
-    //     max height.
-    let max_display_height = ch({
-        match maybe_max_height {
-            None => DEFAULT_HEIGHT,
-            Some(row_height) => {
-                let row_height = row_height.as_usize();
-                if row_height == 0 {
-                    DEFAULT_HEIGHT
-                } else {
-                    std::cmp::min(row_height, from.len())
+        // - If the max size is None, then set it to DEFAULT_HEIGHT.
+        // - If the max size is Some, then this is the max height of the viewport.
+        //   - However, if this is 0, then set to DEFAULT_HEIGHT.
+        //   - Otherwise, check whether the number of items is less than this max height
+        //     and set the max height to the number of items.
+        //   - Otherwise, if there are more items than the max height, then clamp it to
+        //     the max height.
+        let max_display_height = ch({
+            match maybe_max_height {
+                None => DEFAULT_HEIGHT,
+                Some(row_height) => {
+                    let row_height = row_height.as_usize();
+                    if row_height == 0 {
+                        DEFAULT_HEIGHT
+                    } else {
+                        std::cmp::min(row_height, from.len())
+                    }
                 }
             }
+        });
+
+        let max_display_width = ch(match maybe_max_width {
+            None => 0,
+            Some(col_width) => col_width.as_usize(),
+        });
+
+        let mut state = State {
+            max_display_height,
+            max_display_width,
+            items: from,
+            header,
+            selection_mode: how,
+            ..Default::default()
+        };
+
+        let mut fc = SelectComponent {
+            output_device: od.clone(),
+            style: stylesheet,
+        };
+
+        if let Ok(size) = get_size() {
+            state.set_size(size);
         }
-    });
 
-    let max_display_width = ch(match maybe_max_width {
-        None => 0,
-        Some(col_width) => col_width.as_usize(),
-    });
+        let res_user_input =
+            enter_event_loop_async(&mut state, &mut fc, keypress_handler, id).await;
 
-    let mut state = State {
-        max_display_height,
-        max_display_width,
-        items: from,
-        header: arg_header.into(),
-        selection_mode: how,
-        ..Default::default()
-    };
+        // For compatibility with ReadlineAsyncContext (if it is in use).
+        if let Some(ref sw) = msw {
+            // Resume the shared writer after the user has made their choice.
+            sw.line_state_control_channel_sender
+                .send(LineStateControlSignal::Resume)
+                .await
+                .into_diagnostic()?;
+        }
 
-    let mut fc = SelectComponent {
-        output_device: od.clone(),
-        style: stylesheet,
-    };
-
-    if let Ok(size) = get_size() {
-        state.set_size(size);
-    }
-
-    let res_user_input =
-        enter_event_loop_async(&mut state, &mut fc, keypress_handler, id).await;
-
-    // For compatibility with ReadlineAsync (if it is in use).
-    if let Some(ref sw) = msw {
-        // Resume the shared writer after the user has made their choice.
-        sw.line_state_control_channel_sender
-            .send(LineStateControlSignal::Resume)
-            .await
-            .into_diagnostic()?;
-    }
-
-    match res_user_input {
-        Ok(EventLoopResult::ExitWithResult(it)) => Ok(it),
-        _ => Ok(ItemsOwned::default()),
-    }
+        match res_user_input {
+            Ok(EventLoopResult::ExitWithResult(it)) => Ok(it),
+            _ => Ok(ItemsOwned::default()),
+        }
+    })
 }
 
 mod keypress_handler_helper {
-    use crate::{fg_green, inline_string, usize, CalculateResizeHint, 
+    use crate::{fg_green, inline_string, usize, CalculateResizeHint,
                 CaretVerticalViewportLocation, EventLoopResult, State, DEVELOPMENT_MODE};
 
     pub fn handle_resize_event(state: &mut State, size: crate::Size) -> EventLoopResult {
@@ -361,16 +429,12 @@ fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResu
         // Down.
         InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Down),
-        }) => {
-            keypress_handler_helper::handle_down_key(state)
-        }
+        }) => keypress_handler_helper::handle_down_key(state),
 
         // Up.
         InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Up),
-        }) => {
-            keypress_handler_helper::handle_up_key(state)
-        }
+        }) => keypress_handler_helper::handle_up_key(state),
 
         // Enter on multi-select.
         InputEvent::Keyboard(KeyPress::Plain {
@@ -382,9 +446,7 @@ fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResu
         // Enter.
         InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Enter),
-        }) => {
-            keypress_handler_helper::handle_enter_key_single_select(state)
-        }
+        }) => keypress_handler_helper::handle_enter_key_single_select(state),
 
         // Escape or Ctrl + c.
         InputEvent::Keyboard(
@@ -400,9 +462,7 @@ fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResu
                         alt_key_state: KeyState::NotPressed,
                     },
             },
-        ) => {
-            keypress_handler_helper::handle_escape_or_ctrl_c()
-        }
+        ) => keypress_handler_helper::handle_escape_or_ctrl_c(),
 
         // Space on multi-select.
         InputEvent::Keyboard(KeyPress::Plain {
@@ -414,14 +474,10 @@ fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResu
         // Default behavior on Space
         InputEvent::Keyboard(KeyPress::Plain {
             key: Key::Character(SPACE_CHAR),
-        }) => {
-            keypress_handler_helper::handle_space_key_default()
-        }
+        }) => keypress_handler_helper::handle_space_key_default(),
 
         // Ignore other keys.
-        _ => {
-            keypress_handler_helper::handle_other_keys()
-        }
+        _ => keypress_handler_helper::handle_other_keys(),
     };
 
     DEVELOPMENT_MODE.then(|| {

@@ -41,8 +41,8 @@ use r3bl_tui::{fg_color, fg_frozen_blue, fg_pink, fg_slate_gray, get_size,
                log::try_initialize_logging_global,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
-               rla_println, set_jemalloc_in_main, throws, tui_color, ASTColor,
-               CommonError, CommonResult, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
+               rla_println, set_jemalloc_in_main, tui_color, ASTColor, CommonError,
+               CommonResult, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
 use strum::IntoEnumIterator as _;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 

@@ -39,6 +39,8 @@ pub async fn handle_multiple_files_not_supported_yet(
         )];
         prefix_single_select_instruction_header(inline_vec![last_line])
     };
+
+    // Return the first item selected by the user.
     choose(
         header_with_instructions,
         file_path_options.as_slice(),

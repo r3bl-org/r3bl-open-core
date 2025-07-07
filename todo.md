@@ -10,18 +10,15 @@
 - [x] `extract_code_block_content()`: fix this so it doesn't return `String`, only `&str`
 
 - use OG parsers _dump the new AI generated stuff_
-
   - [x] `parse_unique_kv_opt_eol_generic()`: copy from `parse_unique_kv_opt_eol()`
   - [x] `parse_csv_opt_eol_generic()`: copy from OG `parse_csv_opt_eol()`
 
 - GStringSlice -> AsStrSlice
-
   - [x] change `fn parse_markdown_alt()`, from: `&'a [GCString]`, to `input: impl Into<AsStrSlice>`
   - [x] generalize impl of `GCStringSlice` into `AsStrSlice` which implements `nom::Input`, drop the
         `Copy` requirement, and make `Clone` explicit
 
 - use OG parsers _dump the new AI generated stuff_
-
   - [x] `parse_code_block_generic()`: fix bug! strips
         "```" from start and end and `test_parse_block_code_with_missing_end_marker()`
   - [x] `extract_code_block_content()`: test this
@@ -29,7 +26,6 @@
   - [x] `parse_block_heading_generic()`: change signature to use `AsStrSlice` and not `nom::Input`
 
 - smart list
-
   - [x] `parse_block_smart_list_generic()`: copy this from OG
         `parse_block_smart_list.rs::parse_block_smart_list()`
   - [x] `parse_smart_list_and_extract_ir_generic()`: copy this from OG
@@ -67,7 +63,6 @@
 - [x] fix flaky `script` tests which change the cwd, all of them need to be run in a single function
       so there are no issues with multiple tests processes `serialtest` does not seem to address
       this issue. test file: `tui/src/core/script/fs_path.rs:434:5`
-
   - `core::script::fs_path::tests::test_try_directory_exists_not_found_error`
   - `core::script::fs_path::tests::test_try_directory_exists_permissions_errors`
   - `core::script::fs_path::tests::test_try_file_exists`
@@ -81,7 +76,6 @@
 - [ ] fix regression bug in `md_parser` when using `AsStrSlice::to_string()`. see
       `EditorBuffer::new_empty()` & `EditorBuffer::set_lines()` for how "raw" data is loaded into
       the model in memory (from disk or new / empty).
-
   - [x] `impl Display for AsStrSlice` address all `FIXME: proper \n handling`
   - [x] test `test_parse_fragment_plaintext_unicode()` in
         `tui/src/tui/md_parser_alt/fragment_alt/parse_fragments_in_a_line_alt.rs:201` should PASS
@@ -91,13 +85,11 @@
         `parse_inline_fragments_until_eol_or_eoi_alt()`
 
 - [x] migrate `atomics` parsers into `atomics_alt`
-
   - [x] `take_text_between.rs` -> `fragment_alt/take_text_between_alt.rs`: only used by
         `specialized_parsers_alt.rs`. fix tests & check logic; add more tests to `AsStrSlice` based
         on this
 
 - [x] migrate `fragment` to `fragment_alt` mod
-
   - [x] `specialized_parsers.rs` -> `specialized_parsers_alt.rs`: fix tests & check logic
     - [x] `parse_fragment_starts_with_checkbox_checkbox_into_bool_alt()`
     - [x] `parse_fragment_starts_with_checkbox_into_str_alt()`
@@ -113,7 +105,6 @@
         this is making the "old" `parse_markdown()` fail silently when running the examples
 
 - [x] fix regression in old code when starting to incorporate `AsStrSlice`
-
   - [x] `try_parse_and_highlight()` in
         `tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:141`: fix
         `write_to_byte_cache()` to behave in "legacy" or "compat" mode to be compatible w/ the old
@@ -128,7 +119,6 @@
       when switching the implementation of `write_to_byte_cache_compat()` to use `Display` impl the
       bug can be seen in the tui/examples#3! revert back to the simplistic way of creating the
       output `&str` and the example works again.
-
   - [x] add test cases to repro the bug: `test_input_contains_emoji()` & fix it
   - [x] update comments to clarify the emoji handling logic in the `AsStrSlice` docs, and document
         the field `byte_index` and make it clear that byte indexing is used and not char indexing
@@ -136,14 +126,12 @@
         `write_to_byte_cache_compat()` and ensure they produce the same output
 
 - [x] migrate `atomics` parsers into `extended_alt`
-
   - [x] `take_text_until_eol_or_eoi.rs` -> `extended_alt/take_text_until_eol_or_eoi_alt.rs`: simply
         replace `&'a str` with `AsStrSlice<'a>`
 
 - [x] delete `parser_impl.rs` (was only needed for experimentation)
 
 - [x] migrate `fragment` to `fragment_alt` mod
-
   - [x] rename `string_slice.rs` -> `as_str_slice.rs`
   - [x] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: fix bugs & add tests
   - [x] `parse_fragments_in_a_line.rs` -> `parse_fragments_in_a_line_alt.rs`: fix bugs & add tests
@@ -152,9 +140,7 @@
       for state machine states and functions to calculate these
 
 - [ ] migrate `extended` parsers into `extended_alt`
-
   - [x] `parse_metadata_k_csv_alt`
-
     - [x] migrate the functions `parse_csv_opt_eol_alt` and `parse_comma_separated_list_alt` over
       - [x] don't use `&str` anymore! implement lots of new traits for `AsStrSlice` for `Compare`
             for nom `tag` integration
@@ -163,7 +149,6 @@
     - [x] migrate all the existing tests over
 
   - [x] `as_str_slice.rs` clean up
-
     - [x] `extract_remaining_text_content_in_line()` -> `extract_to_line_end()`
     - [x] `extract_remaining_text_content_to_end()` -> `extract_to_slice_end()`
     - [x] `is_empty()`
@@ -181,12 +166,9 @@
       exclusively by `line` parsers? also who should use `extract_to_slice_end()`
 
 - [x] migrate `block` parsers into `block_alt` (part 1)
-
   - not block parsers (in `standard_alt`):
-
     - [x] `parse_block_heading.rs` -> `parse_heading_alt.rs`
     - [x] `parse_block_markdown_text_until_eol_or_eoi.rs`
-
       - [x] `parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()` ->
             `parse_block_smart_list_alt.rs`
             `parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt()`
@@ -198,13 +180,10 @@
       - [x] Rename `MdBlock` -> `MdElement`
 
 - [x] migrate `block` parsers into `block_alt` (part 2)
-
   - block parsers:
-
     - [x] `parse_block_code.rs` -> `block_alt/parse_block_code_alt.rs`
 
     - [x] `parse_block_smart_list.rs` -> `block_alt/parse_block_smart_list_alt.rs`
-
       - [x] `parse_smart_list_content_lines_alt()`
       - [x] `mod tests_parse_smart_list_content_lines_alt`
         - [x] `parse_smart_list_alt()`
@@ -216,7 +195,6 @@
       - [x] `mod tests_parse_block_smart_list`
 
 - [x] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_mardown_alt()`
-
   - [x] review `as_str_slice.rs` changes
   - [x] review this fix `fallback_parse_any_line_as_plain_alt()`
   - [x] break up `as_str_slice.rs` into `as_str_slice_mod`
@@ -231,7 +209,6 @@
   - [x] continue migrating all the remaining tests into this file from `parse_markdown.rs`
 
 - [x] rename `md_parser_alt` to `md_parser_ng`; all `_alt` -> `_ng`
-
   - [x] remove all compiler warnings
   - [x] extract 1 common function between both legacy and ng parser (used in block code parser)
   - [.] create compat tests between legacy and ng parser
@@ -257,13 +234,10 @@
 - [x] fix all the cargo clippy warnings generated by this command
       `cargo clippy -- -W clippy::all -W clippy::pedantic -W clippy::nursery`
 
----
-
-- [ ] spend some time with `cargo clippy`
-
-  - [ ] add clippy related commands to `run.nu` (top-level) and figure out what they should be:
+- [x] spend some time with `cargo clippy`
+  - [x] add clippy related commands to `run.nu` (top-level) and figure out what they should be:
         `clippy-basic-fix`, `clippy-pedantic-fix`?
-  - [ ] figure out how to add some lint checks that are being fixed in the `lib.rs` in the first
+  - [x] figure out how to add some lint checks that are being fixed in the `lib.rs` in the first
         place so they are caught every time that clippy runs; this prevents having to do massive
         clean up after the fact:
     - `clippy::doc_markdown`
@@ -290,14 +264,14 @@
       have changed? this might speed up parsing a whole lot, if the entire thing does not have to be
       re-parsed? need to verify all of this and not just use intuition.
 
-- vec -> inlinevec
+---
 
+- vec -> inlinevec
   - [ ] change all `Vec` to `InlineVec` in `parse_markdown_alt.rs`
 
 - fix "`rust`" parsing in syn hi code (should support both "rust" and "rs")
 
 - markdown table support
-
   - [ ] impl md table parser
   - [ ] impl syn hi for this
 

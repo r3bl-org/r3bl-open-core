@@ -15,21 +15,21 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{GlobalData, InputDevice, OutputDevice};
+use r3bl_tui::{ok, GlobalData, InputDevice, OutputDevice};
 
 use super::{AppMain, State};
-use crate::{key_press, throws, CommonResult, InputEvent, TerminalWindow};
+use crate::{key_press, CommonResult, InputEvent, TerminalWindow};
 
 pub async fn run_app() -> CommonResult<()> {
-    throws!({
-        // Create an App (renders & responds to user input).
-        let app = AppMain::new_boxed();
+    // Create an App (renders & responds to user input).
+    let app = AppMain::new_boxed();
 
-        // Exit if these keys are pressed.
-        let exit_keys = &[InputEvent::Keyboard(key_press! { @char 'x' })];
+    // Exit if these keys are pressed.
+    let exit_keys = &[InputEvent::Keyboard(key_press! { @char 'x' })];
 
-        // Create a window.
-        let _unused: (GlobalData<_, _>, InputDevice, OutputDevice) =
-            TerminalWindow::main_event_loop(app, exit_keys, State::default()).await?;
-    });
+    // Create a window.
+    let _unused: (GlobalData<_, _>, InputDevice, OutputDevice) =
+        TerminalWindow::main_event_loop(app, exit_keys, State::default())?.await?;
+
+    ok!()
 }

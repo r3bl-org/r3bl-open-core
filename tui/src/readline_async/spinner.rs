@@ -220,7 +220,7 @@ impl Spinner {
 
         let self_safe_is_shutdown = self.safe_is_shutdown.clone();
 
-        // This does nothing if this is used in a `ReadlineAsync` context.
+        // This does nothing if this is used in a `ReadlineAsyncContext` context.
         spinner_print::print_start_if_standalone(
             self.output_device.clone(),
             self.maybe_shared_writer.clone(),
