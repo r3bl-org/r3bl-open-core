@@ -492,11 +492,14 @@ impl Readline {
     /// - [`Self::should_print_line_on`]
     /// - [`Self::set_max_history`]
     ///
-    /// There is an artificial delay of
-    /// [`READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY`] added in this method
-    /// so that the initial display of the cursor does not appear janky. In turn this
-    /// makes the caller of this method [`crate::ReadlineAsyncContext::try_new()`]
-    /// have to wait that amount as well.
+    /// # Smooth cursor display
+    ///
+    /// There is a delay of
+    /// [`READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY`] added before
+    /// the cursor is displayed. This is to ensure that the initial display of the cursor
+    /// does not appear janky.
+    ///
+    /// This delay happens in a spawned background task and does not block the caller.
     ///
     /// # Panics
     ///
@@ -504,7 +507,7 @@ impl Readline {
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
-    pub async fn try_new(
+    pub fn try_new(
         prompt: String,
         output_device: OutputDevice,
         /* move */ input_device: InputDevice,
@@ -577,11 +580,13 @@ impl Readline {
                 .render_and_flush(term)?;
         } // Drop the term lock.
 
-        // Wait for `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display
-        // the cursor (try to eliminate jank).
         let output_device_clone = output_device.clone();
         spawn({
             async move {
+                // In a background task, wait for
+                // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to
+                // display the cursor (try to eliminate jank). This does not make
+                // caller wait.
                 sleep(READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY).await;
                 let term = lock_output_device_as_mut!(output_device_clone);
                 // We don't care about the result of this operation.
@@ -860,7 +865,6 @@ mod test_readline {
             /* move */ input_device,
             /* move */ shutdown_sender,
         )
-        .await
         .unwrap();
 
         let safe_is_spinner_active = Arc::new(StdMutex::new(None));
@@ -905,7 +909,6 @@ mod test_readline {
             /* move */ input_device,
             shutdown_sender,
         )
-        .await
         .unwrap();
 
         let result = readline.readline().await;
@@ -938,7 +941,6 @@ mod test_readline {
             /* move */ input_device,
             shutdown_sender,
         )
-        .await
         .unwrap();
 
         shared_writer
@@ -983,7 +985,6 @@ mod test_readline {
             /* move */ input_device,
             shutdown_sender,
         )
-        .await
         .unwrap();
 
         shared_writer

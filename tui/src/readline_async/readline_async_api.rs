@@ -19,21 +19,10 @@ use futures_util::FutureExt as _;
 use miette::IntoDiagnostic as _;
 use tokio::sync::broadcast;
 
-use crate::{inline_string,
-            is_fully_uninteractive_terminal,
-            is_stdin_piped,
-            is_stdout_piped,
-            ok,
-            CommonResult,
-            InputDevice,
-            LineStateControlSignal,
-            OutputDevice,
-            Readline,
-            ReadlineEvent,
-            SharedWriter,
-            StdinIsPipedResult,
-            StdoutIsPipedResult,
-            TTYResult,
+use crate::{inline_string, is_fully_uninteractive_terminal, is_stdin_piped,
+            is_stdout_piped, ok, CommonResult, InputDevice, LineStateControlSignal,
+            OutputDevice, Readline, ReadlineEvent, SharedWriter, StdinIsPipedResult,
+            StdoutIsPipedResult, TTYResult,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY};
 
 /// This is the context for the readline async API. It contains the
@@ -174,7 +163,6 @@ impl ReadlineAsyncContext {
             input_device,
             shutdown_complete_sender.clone(),
         )
-        .await
         .into_diagnostic()?;
 
         // Sleep for READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY.
