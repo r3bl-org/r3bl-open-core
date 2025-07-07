@@ -135,7 +135,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
 
     // Stop spinner. Automatically resumes the terminal.
     if let Some(mut spinner) = maybe_spinner.take() {
-        spinner.request_shutdown().await;
+        spinner.request_shutdown();
         spinner.await_shutdown().await;
     }
 
@@ -170,7 +170,7 @@ async fn example_with_concurrent_output_no_readline_async(
 
     // Stop spinner.
     if let Some(mut spinner) = maybe_spinner.take() {
-        spinner.request_shutdown().await;
+        spinner.request_shutdown();
         spinner.await_shutdown().await;
     }
 

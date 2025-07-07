@@ -427,7 +427,7 @@ mod long_running_task {
 
             // Don't forget to stop the spinner.
             if let Ok(Some(mut spinner)) = maybe_spinner {
-                spinner.request_shutdown().await;
+                spinner.request_shutdown();
                 spinner.await_shutdown().await;
             }
         });

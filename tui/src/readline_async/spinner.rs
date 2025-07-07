@@ -19,21 +19,10 @@ use std::{sync::Arc, time::Duration};
 
 use tokio::{sync::broadcast, time::interval};
 
-use crate::{contains_ansi_escape_sequence,
-            get_terminal_width,
-            is_fully_uninteractive_terminal,
-            is_stdout_piped,
-            ok,
-            spinner_print,
-            spinner_render,
-            InlineString,
-            LineStateControlSignal,
-            OutputDevice,
-            SafeBool,
-            SharedWriter,
-            SpinnerStyle,
-            StdMutex,
-            StdoutIsPipedResult,
+use crate::{contains_ansi_escape_sequence, get_terminal_width,
+            is_fully_uninteractive_terminal, is_stdout_piped, ok, spinner_print,
+            spinner_render, InlineString, LineStateControlSignal, OutputDevice,
+            SafeBool, SharedWriter, SpinnerStyle, StdMutex, StdoutIsPipedResult,
             TTYResult};
 
 /// `Spinner` works in conjunction with [`crate::ReadlineAsyncContext`] to provide a
@@ -84,7 +73,7 @@ use crate::{contains_ansi_escape_sequence,
 ///     // Some work happens here...
 ///
 ///     // Stop the spinner (sends the shutdown signal)
-///     spinner.request_shutdown().await;
+///     spinner.request_shutdown();
 ///     // Wait for the spinner to completely shutdown
 ///     spinner.await_shutdown().await;
 /// # Ok(())
@@ -303,7 +292,8 @@ impl Spinner {
 
                         // Signal that the task has completely shutdown. It's okay if this
                         // fails - it just means the receiver was dropped.
-                        let _ = shutdown_complete_sender.send(());
+                        // We don't care about the result of this operation.
+                        shutdown_complete_sender.send(()).ok();
 
                         break;
                     }
@@ -344,7 +334,10 @@ impl Spinner {
     /// the shutdown signal and returns immediately without waiting for the spinner
     /// task to completely shutdown. To wait for the task to actually finish shutting
     /// down, call [`Self::await_shutdown()`] after this method.
-    pub async fn request_shutdown(&mut self) { _ = self.shutdown_sender.send(()); }
+    pub fn request_shutdown(&mut self) {
+        // We don't care about the result of this operation.
+        self.shutdown_sender.send(()).ok();
+    }
 
     /// Waits for the spinner task to completely shutdown. This can be used after calling
     /// [`Self::request_shutdown()`] to ensure the task has fully completed. This consumes
@@ -354,7 +347,8 @@ impl Spinner {
         if let Some(receiver) = self.maybe_shutdown_complete_rx.take() {
             // Wait for the task to signal completion. Ignore the error if the sender is
             // dropped without sending (rare case).
-            let _ = receiver.await;
+            // We don't care about the result of this operation.
+            receiver.await.ok();
         }
     }
 }
@@ -363,17 +357,10 @@ impl Spinner {
 mod tests {
     use smallvec::SmallVec;
 
-    use super::{Duration,
-                LineStateControlSignal,
-                SharedWriter,
-                Spinner,
-                SpinnerStyle,
+    use super::{Duration, LineStateControlSignal, SharedWriter, Spinner, SpinnerStyle,
                 TTYResult};
-    use crate::{return_if_not_interactive_terminal,
-                OutputDevice,
-                OutputDeviceExt,
-                SpinnerColor,
-                SpinnerTemplate};
+    use crate::{return_if_not_interactive_terminal, OutputDevice, OutputDeviceExt,
+                SpinnerColor, SpinnerTemplate};
 
     type ArrayVec = SmallVec<[LineStateControlSignal; FACTOR as usize]>;
     const FACTOR: u32 = 5;
@@ -409,7 +396,7 @@ mod tests {
         tokio::time::sleep(QUANTUM * FACTOR).await;
 
         // This might take some time to finish, so we need to wait for it.
-        spinner.request_shutdown().await;
+        spinner.request_shutdown();
         spinner.await_shutdown().await;
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
@@ -482,7 +469,7 @@ mod tests {
         tokio::time::sleep(QUANTUM * FACTOR).await;
 
         // This might take some time to finish, so we need to wait for it.
-        spinner.request_shutdown().await;
+        spinner.request_shutdown();
         spinner.await_shutdown().await;
 
         // spell-checker:disable
