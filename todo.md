@@ -271,6 +271,8 @@
 
 - fix "`rust`" parsing in syn hi code (should support both "rust" and "rs")
 
+- markdown blockquote support
+
 - markdown table support
   - [ ] impl md table parser
   - [ ] impl syn hi for this

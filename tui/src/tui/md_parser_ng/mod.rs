@@ -104,7 +104,9 @@ pub use standard_ng::*;
 
 // Attach test sources.
 #[cfg(test)]
-pub mod compatibility_test_suite;
+pub mod compat_test_data;
+#[cfg(test)]
+pub mod compat_test_suite;
 
 // Export for tests and examples.
 /// Returns the real-world markdown content from the `ex_editor` example.
