@@ -42,6 +42,7 @@ def main [...args: string] {
         "examples-release-no-log" => {examples-release-no-log}
         "examples-with-flamegraph-profiling" => {examples-with-flamegraph-profiling}
         "test" => {test}
+        "bench" => {bench}
         "watch-all-tests" => {watch-all-tests}
         "watch-one-test" => {watch-one-test $args}
         "watch-macro-expand-one-test" => {watch-macro-expand-one-test $args}
@@ -161,6 +162,7 @@ def print-help [command: string] {
         print $'    (ansi green)examples-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://youtu.be/Sy26IMkOEiM(ansi reset)'
         # print $'    (ansi green)run-with-crash-reporting(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
+        print $'    (ansi green)bench(ansi reset)'
         print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
         print $'    (ansi green)watch-all-tests(ansi reset)'
         print $'    (ansi green)watch-macro-expand-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
@@ -208,6 +210,13 @@ def examples-with-flamegraph-profiling [] {
 
 def test [] {
     cargo test
+}
+
+def bench [] {
+    print $'Running benchmarks and saving to (ansi blue_bold)~/Downloads/bench.txt(ansi reset)...'
+    cargo bench out+err> ~/Downloads/bench.txt
+    print $'Benchmarks complete! Opening results with (ansi green_bold)bat(ansi reset):'
+    bat ~/Downloads/bench.txt
 }
 
 def clippy [] {

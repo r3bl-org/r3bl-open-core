@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+// Enable benchmarking for nightly Rust
+#![cfg_attr(test, feature(test))]
 // You can get the unicode symbols for the drawings here:
 // - <https://symbl.cc/en/unicode/blocks/miscellaneous-symbols-and-arrows/>
 // - <https://symbl.cc/en/unicode/blocks/box-drawing/>
@@ -999,6 +1001,22 @@
 //! Please report any issues to the [issue
 //! tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues). And if you have any
 //! feature requests, feel free to add them there too 👍.
+
+/// Conditionally imports the `test` crate for benchmarking support.
+///
+/// The `test` crate provides Rust's built-in benchmarking functionality, including:
+/// - The `#[bench]` attribute for benchmark functions
+/// - The `Bencher` type for measuring performance
+/// - Test utilities and macros
+///
+/// This is only compiled when running tests (`cargo test`) or benchmarks, ensuring
+/// that the production binary doesn't include unnecessary dependencies.
+///
+/// Note: Benchmarking features require nightly Rust. This workspace is configured
+/// to use the nightly toolchain in `rust-toolchain.toml`, so you can run benchmarks
+/// using `cargo bench` without any additional configuration.
+#[cfg(test)]
+extern crate test;
 
 // Attach.
 pub mod core;
