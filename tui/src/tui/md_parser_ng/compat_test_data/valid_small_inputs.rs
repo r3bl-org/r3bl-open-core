@@ -57,3 +57,9 @@ pub const UNICODE_CONTENT: &str = "Unicode: 🦀 Rust, 📝 Markdown, 🚀 Fast 
 pub const EMOJI_H1_SIMPLE: &str = "# Heading with emoji 😀";
 pub const EMOJI_H2_SIMPLE: &str = "## Subheading with emoji 😀";
 pub const EMOJI_MULTIPLE: &str = "# Multiple emojis 😀🚀📝";
+
+// Real-world small content using include_str! macro
+/// Real-world small markdown document representing a typical quick start guide.
+/// This tests realistic small-scale documentation patterns with proper formatting,
+/// code blocks, and practical content structure.
+pub const SMALL_REAL_WORLD_CONTENT: &str = include_str!("real_world_files/small_quick_start.md");
