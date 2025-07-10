@@ -1,7 +1,7 @@
 # This is a configuration file for the bacon tool
 #
 # Complete help on configuration: https://dystroy.org/bacon/config/
-# 
+#
 # You may check the current default at
 #   https://github.com/Canop/bacon/blob/main/defaults/default-bacon.toml
 
@@ -56,6 +56,12 @@ analyzer = "nextest"
 [jobs.doc]
 command = ["cargo", "doc", "--no-deps"]
 need_stdout = false
+
+# Run benchmarks for performance comparison
+[jobs.bench]
+command = ["cargo", "bench", "--lib", "--", "compat_test_suite"]
+need_stdout = true
+allow_warnings = true
 
 # If the doc compiles, then it opens in your browser and bacon switches
 # to the previous job
