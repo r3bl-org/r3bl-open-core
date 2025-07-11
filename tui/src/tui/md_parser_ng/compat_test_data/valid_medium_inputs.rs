@@ -63,7 +63,6 @@ pub const EDGE_CASE_TRAILING_SPACES: &str =
 pub const EMOJI_START_MIDDLE_END: &str =
     "# 😀 Emoji at start\n## Middle 😀 emoji\n### Emoji at end 😀";
 
-// Real-world content using include_str! macro
 /// Real-world medium complexity markdown content from an actual blog post about Rust.
 /// This tests typical blog post structure with headings, code blocks, lists, and links.
 pub const BLOG_POST_DOCUMENT: &str = include_str!("real_world_files/medium_blog_post.md");
