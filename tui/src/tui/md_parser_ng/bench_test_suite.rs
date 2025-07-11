@@ -29,6 +29,8 @@
 //! - **`c_large_*`**: Complex documents with nested structures
 //! - **`d_jumbo_*`**: Real-world large content for stress testing
 //! - **`e_unicode_*`**: Unicode and emoji content for encoding performance
+//! - **`f_materialization_cost_isolation_*`**: Isolating materialization costs
+//! - **`g_character_access_patterns_*`**: Character access pattern benchmarks
 //!
 //! ## Usage
 //!
@@ -44,6 +46,8 @@
 //! cargo bench bench_c  # Large content benchmarks
 //! cargo bench bench_d  # Jumbo content benchmarks
 //! cargo bench bench_e  # Unicode content benchmarks
+//! cargo bench bench_f  # Materialization cost isolation benchmarks
+//! cargo bench bench_g  # Character access pattern benchmarks
 //! ```
 //!
 //! ## Related Modules
@@ -287,5 +291,258 @@ fn bench_e_unicode_emoji_headings_ng(b: &mut Bencher) {
         let gcs_lines: Vec<GCString> = content.lines().map(GCString::from).collect();
         let ng_input = AsStrSlice::from(gcs_lines.as_slice());
         let _unused = parse_markdown_ng(ng_input);
+    });
+}
+
+// =============================================================================
+// MATERIALIZATION COST ISOLATION BENCHMARKS - Measure only the cost of converting
+// &[GCString] to String
+// =============================================================================
+
+/// Benchmark the cost of materializing `&[GCString]` to `String` for small content
+#[bench]
+fn bench_f_materialization_small_real_world(b: &mut Bencher) {
+    let content = SMALL_REAL_WORLD_CONTENT;
+    let gcs_lines: Vec<GCString> = content.lines().map(GCString::from).collect();
+
+    b.iter(|| {
+        let _materialized = gcs_lines
+            .iter()
+            .map(GCString::as_ref)
+            .collect::<Vec<_>>()
+            .join("\n");
+    });
+}
+
+/// Benchmark the cost of materializing `&[GCString]` to `String` for medium content
+#[bench]
+fn bench_f_materialization_medium_blog_post(b: &mut Bencher) {
+    let content = BLOG_POST_DOCUMENT;
+    let gcs_lines: Vec<GCString> = content.lines().map(GCString::from).collect();
+
+    b.iter(|| {
+        let _materialized = gcs_lines
+            .iter()
+            .map(GCString::as_ref)
+            .collect::<Vec<_>>()
+            .join("\n");
+    });
+}
+
+/// Benchmark the cost of materializing `&[GCString]` to `String` for large content
+#[bench]
+fn bench_f_materialization_large_complex_document(b: &mut Bencher) {
+    let content = COMPLEX_NESTED_DOCUMENT;
+    let gcs_lines: Vec<GCString> = content.lines().map(GCString::from).collect();
+
+    b.iter(|| {
+        let _materialized = gcs_lines
+            .iter()
+            .map(GCString::as_ref)
+            .collect::<Vec<_>>()
+            .join("\n");
+    });
+}
+
+/// Benchmark the cost of materializing `&[GCString]` to `String` for jumbo content
+#[bench]
+fn bench_f_materialization_jumbo_api_documentation(b: &mut Bencher) {
+    let content = REAL_WORLD_EDITOR_CONTENT;
+    let gcs_lines: Vec<GCString> = content.lines().map(GCString::from).collect();
+
+    b.iter(|| {
+        let _materialized = gcs_lines
+            .iter()
+            .map(GCString::as_ref)
+            .collect::<Vec<_>>()
+            .join("\n");
+    });
+}
+
+/// Benchmark the cost of materializing highly fragmented `GCString` array
+#[bench]
+fn bench_f_materialization_highly_fragmented(b: &mut Bencher) {
+    // Create many small GCString fragments to simulate worst-case fragmentation
+    let fragments: Vec<GCString> = (0..1000)
+        .map(|i| GCString::new(format!("line {i}")))
+        .collect();
+
+    b.iter(|| {
+        let _materialized = fragments
+            .iter()
+            .map(GCString::as_ref)
+            .collect::<Vec<_>>()
+            .join("\n");
+    });
+}
+
+// =============================================================================
+// CHARACTER ACCESS PATTERN BENCHMARKS - Compare contiguous vs non-contiguous character
+// access =============================================================================
+
+/// Benchmark sequential character iteration over a materialized String
+#[bench]
+fn bench_g_char_access_string_small(b: &mut Bencher) {
+    let content = SMALL_REAL_WORLD_CONTENT;
+
+    b.iter(|| {
+        let mut char_count = 0;
+        for ch in content.chars() {
+            if ch.is_alphabetic() {
+                char_count += 1;
+            }
+        }
+        char_count
+    });
+}
+
+/// Benchmark sequential character iteration over `&[GCString]`
+#[bench]
+fn bench_g_char_access_gcstring_small(b: &mut Bencher) {
+    let content = SMALL_REAL_WORLD_CONTENT;
+    let gcs_lines: Vec<GCString> = content.lines().map(GCString::from).collect();
+
+    b.iter(|| {
+        let mut char_count = 0;
+        for line in &gcs_lines {
+            for ch in line {
+                for ch_char in ch.chars() {
+                    if ch_char.is_alphabetic() {
+                        char_count += 1;
+                    }
+                }
+            }
+        }
+        char_count
+    });
+}
+
+/// Benchmark sequential character iteration over a materialized String (medium content)
+#[bench]
+fn bench_g_char_access_string_medium(b: &mut Bencher) {
+    let content = BLOG_POST_DOCUMENT;
+
+    b.iter(|| {
+        let mut char_count = 0;
+        for ch in content.chars() {
+            if ch.is_alphabetic() {
+                char_count += 1;
+            }
+        }
+        char_count
+    });
+}
+
+/// Benchmark sequential character iteration over `&[GCString]` (medium content)
+#[bench]
+fn bench_g_char_access_gcstring_medium(b: &mut Bencher) {
+    let content = BLOG_POST_DOCUMENT;
+    let gcs_lines: Vec<GCString> = content.lines().map(GCString::from).collect();
+
+    b.iter(|| {
+        let mut char_count = 0;
+        for line in &gcs_lines {
+            for ch in line {
+                for ch_char in ch.chars() {
+                    if ch_char.is_alphabetic() {
+                        char_count += 1;
+                    }
+                }
+            }
+        }
+        char_count
+    });
+}
+
+/// Benchmark random character access patterns over a materialized String
+#[bench]
+fn bench_g_char_access_random_string(b: &mut Bencher) {
+    let content = BLOG_POST_DOCUMENT;
+    let chars: Vec<char> = content.chars().collect();
+
+    b.iter(|| {
+        let mut found_count = 0;
+        // Simulate parser looking for specific characters at various positions
+        for i in (0..chars.len()).step_by(10) {
+            if let Some(&c) = chars.get(i) {
+                if c == ' ' || c == '\n' || c == '*' {
+                    found_count += 1;
+                }
+            }
+        }
+        found_count
+    });
+}
+
+/// Benchmark boundary-heavy access patterns (line transitions) with `&[GCString]`
+#[bench]
+fn bench_g_char_access_boundary_heavy_gcstring(b: &mut Bencher) {
+    let content = BLOG_POST_DOCUMENT;
+    let gcs_lines: Vec<GCString> = content.lines().map(GCString::from).collect();
+
+    b.iter(|| {
+        let mut boundary_count = 0;
+        for (line_idx, line) in gcs_lines.iter().enumerate() {
+            let line_str = line.as_ref();
+            // Simulate parser checking line boundaries and looking ahead
+            if line_str.starts_with('#')
+                || line_str.starts_with('-')
+                || line_str.starts_with('*')
+            {
+                boundary_count += 1;
+            }
+            // Simulate looking ahead to next line
+            if line_idx + 1 < gcs_lines.len() {
+                let next_line = &gcs_lines[line_idx + 1];
+                if next_line.as_ref().is_empty() {
+                    boundary_count += 1;
+                }
+            }
+        }
+        boundary_count
+    });
+}
+
+/// Benchmark pattern matching across line boundaries with `&[GCString]` (worst case for
+/// NG parser)
+#[bench]
+fn bench_g_char_access_cross_boundary_patterns(b: &mut Bencher) {
+    // Create content with patterns that span multiple lines
+    let multiline_content = vec![
+        GCString::new("```rust"),
+        GCString::new("fn main() {"),
+        GCString::new("    println!(\"Hello\");"),
+        GCString::new("}"),
+        GCString::new("```"),
+        GCString::new(""),
+        GCString::new("Some text here"),
+        GCString::new(""),
+        GCString::new("```python"),
+        GCString::new("def hello():"),
+        GCString::new("    print('Hello')"),
+        GCString::new("```"),
+    ];
+
+    b.iter(|| {
+        let mut code_blocks = 0;
+        let mut i = 0;
+        while i < multiline_content.len() {
+            let line = &multiline_content[i];
+            let line_str = line.as_ref();
+            if line_str.starts_with("```") {
+                // Simulate finding the matching closing ```
+                i += 1;
+                while i < multiline_content.len()
+                    && !multiline_content[i].as_ref().starts_with("```")
+                {
+                    i += 1;
+                }
+                if i < multiline_content.len() {
+                    code_blocks += 1;
+                }
+            }
+            i += 1;
+        }
+        code_blocks
     });
 }
