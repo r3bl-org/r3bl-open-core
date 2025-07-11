@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{fs, os::unix::fs::PermissionsExt as _, path::Path};
+use std::{fs, os::unix::fs::PermissionsExt, path::Path};
 
 use miette::IntoDiagnostic;
 

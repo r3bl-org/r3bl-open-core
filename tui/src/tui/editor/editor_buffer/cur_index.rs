@@ -19,7 +19,7 @@ use std::{fmt::Debug,
           ops::{Deref, DerefMut}};
 
 use super::sizing;
-use crate::{idx, Index, RingBuffer as _};
+use crate::{idx, Index, RingBuffer};
 
 /// The current index in the history buffer.
 ///

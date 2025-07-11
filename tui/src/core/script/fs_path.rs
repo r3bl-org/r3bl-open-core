@@ -248,7 +248,7 @@ pub fn try_write_file(
 
 #[cfg(test)]
 mod tests {
-    use std::os::unix::fs::PermissionsExt as _;
+    use std::os::unix::fs::PermissionsExt;
 
     use super::*;
     use crate::{fs_path, try_create_temp_dir, with_saved_pwd};

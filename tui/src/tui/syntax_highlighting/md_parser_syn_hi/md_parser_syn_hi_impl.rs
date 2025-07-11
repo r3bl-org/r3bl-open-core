@@ -742,7 +742,7 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
-    use miette::IntoDiagnostic as _;
+    use miette::IntoDiagnostic;
 
     use super::*;
     use crate::{assert_eq2, fg_cyan, get_metadata_tags_marker_style,

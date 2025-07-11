@@ -26,7 +26,7 @@ use crate::{ch, col, format_as_kilobytes_with_commas, glyphs, height, inline_str
             telemetry::{telemetry_default_constants, Telemetry},
             telemetry_record, width, Ansi256GradientIndex, ColorWheel, ColorWheelConfig,
             ColorWheelSpeed, CommonResult, ComponentRegistryMap, DefaultSize,
-            DefaultTiming, Flush as _, FlushKind, GCStringExt as _, GetMemSize as _,
+            DefaultTiming, Flush, FlushKind, GCStringExt, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputDeviceExt,
             InputEvent, LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice,
             RawMode, RenderOp, RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
@@ -1037,7 +1037,7 @@ mod tests {
 
     mod test_fixture_app_main_impl_trait_app {
         use super::*;
-        use crate::{row, throws_with_return, GCStringExt as _, Pos};
+        use crate::{row, throws_with_return, GCStringExt, Pos};
 
         impl App for AppMainTest {
             type S = State;

@@ -172,7 +172,7 @@ mod impl_debug_format {
 
     impl Debug for EditorHistory {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            use crate::GetMemSize as _;
+            use crate::GetMemSize;
             let self_mem_size = self.get_mem_size();
             let size_fmt = format_as_kilobytes_with_commas(self_mem_size);
 
@@ -292,7 +292,7 @@ mod tests_editor_history_struct {
 mod tests_history_functions {
     use smallvec::smallvec;
 
-    use crate::{assert_eq2, cur_index::CurIndex, EditorBuffer, GCStringExt as _,
+    use crate::{assert_eq2, cur_index::CurIndex, EditorBuffer, GCStringExt,
                 RingBuffer};
 
     #[test]

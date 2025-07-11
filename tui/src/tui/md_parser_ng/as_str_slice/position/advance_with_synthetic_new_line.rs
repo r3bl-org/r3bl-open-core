@@ -160,7 +160,7 @@ use crate::{bounds_check,
             AsStrSlice,
             BoundsCheck,
             BoundsStatus,
-            CharLengthExt as _,
+            CharLengthExt,
             GCString,
             PositionStatus};
 

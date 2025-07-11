@@ -479,7 +479,7 @@ mod debug {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Write as _;
+    use std::fmt::Write;
 
     use super::*;
     use crate::{col, height, row, width};

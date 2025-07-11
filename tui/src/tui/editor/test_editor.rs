@@ -1725,7 +1725,7 @@ mod clipboard_tests {
                 editor::{editor_test_fixtures::mock_real_objects_for_editor,
                          sizing::VecEditorContentLines},
                 system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
-                CaretDirection, EditorBuffer, EditorEvent, GCStringExt as _,
+                CaretDirection, EditorBuffer, EditorEvent, GCStringExt,
                 SelectionAction, DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]

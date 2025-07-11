@@ -32,7 +32,7 @@ use std::{borrow::Cow,
 
 use super::{helpers,
             types::{ColorChangeSpeed, ColorWheelControl, Seed, SeedDelta}};
-use crate::{tui_color, tui_styled_text, GCString, GCStringExt as _, TuiStyle,
+use crate::{tui_color, tui_styled_text, GCString, GCStringExt, TuiStyle,
             TuiStyledTexts};
 
 /// Please use the [`LolcatBuilder`] to create this struct (lots of documentation is

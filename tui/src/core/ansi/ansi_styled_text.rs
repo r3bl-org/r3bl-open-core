@@ -202,7 +202,7 @@ pub mod ansi_styled_text_impl {
                     maybe_style: _,
                 } = pixel_char
                 {
-                    use std::fmt::Write as _;
+                    use std::fmt::Write;
                     // We don't care about the result of this operation.
                     write!(acc, "{text}").ok();
                 }

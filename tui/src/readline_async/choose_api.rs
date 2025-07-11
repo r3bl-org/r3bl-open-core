@@ -18,7 +18,7 @@
 use std::{future::Future, pin::Pin};
 
 use clap::ValueEnum;
-use miette::IntoDiagnostic as _;
+use miette::IntoDiagnostic;
 
 use crate::{ch, constants::SPACE_CHAR, enter_event_loop_async, get_size,
             CalculateResizeHint, EventLoopResult, Header, Height, InputDevice,
@@ -504,7 +504,7 @@ pub enum HowToChoose {
 
 #[cfg(test)]
 mod test_choose_async {
-    use std::{io::Write as _, time::Duration};
+    use std::{io::Write, time::Duration};
 
     use smallvec::smallvec;
 

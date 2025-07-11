@@ -165,7 +165,7 @@ impl<'a> AsStrSlice<'a> {
     /// ```no_run
     /// # use r3bl_tui::*;
     /// # use nom::{branch::alt, combinator::map, IResult};
-    /// # use nom::Parser as _;
+    /// # use nom::Parser;
     /// #
     /// # fn some_parser_function<'a>(input: AsStrSlice<'a>) -> IResult<AsStrSlice<'a>, AsStrSlice<'a>> {
     /// #     nom::bytes::complete::tag("test")(input)

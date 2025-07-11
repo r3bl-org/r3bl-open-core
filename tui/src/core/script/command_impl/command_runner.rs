@@ -18,7 +18,7 @@
 use std::process::Stdio;
 
 use miette::{Context, IntoDiagnostic};
-use tokio::{io::AsyncWriteExt as _,
+use tokio::{io::AsyncWriteExt,
             process::{Child, Command}};
 
 use crate::ok;

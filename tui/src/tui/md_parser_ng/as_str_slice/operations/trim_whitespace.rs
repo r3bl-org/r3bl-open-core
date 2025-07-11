@@ -118,7 +118,7 @@ impl AsStrSlice<'_> {
 
 #[cfg(test)]
 mod tests_trim_whitespace_chars_start_current_line {
-    use nom::Input as _;
+    use nom::Input;
 
     use crate::{as_str_slice_test_case, assert_eq2, idx, len, AsStrSlice, GCString};
 

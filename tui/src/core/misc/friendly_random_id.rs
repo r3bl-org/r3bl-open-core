@@ -50,7 +50,7 @@ const FRUIT_NAMES: [&str; 20] = [
 
 #[must_use]
 pub fn generate_friendly_strongly_random_id() -> InlineString {
-    use std::fmt::Write as _;
+    use std::fmt::Write;
 
     let mut rng: ThreadRng = rand::rng();
 
@@ -72,7 +72,7 @@ pub fn generate_friendly_strongly_random_id() -> InlineString {
 
 #[must_use]
 pub fn generate_friendly_random_id() -> InlineString {
-    use std::fmt::Write as _;
+    use std::fmt::Write;
 
     let mut rng: ThreadRng = rand::rng();
 

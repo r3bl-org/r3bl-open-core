@@ -16,7 +16,7 @@
  */
 
 use nom::{bytes::complete::tag, combinator::opt, sequence::preceded, IResult,
-          Parser as _};
+          Parser};
 
 use crate::{list,
             md_parser::constants::{COLON, COMMA, NEW_LINE, SPACE},

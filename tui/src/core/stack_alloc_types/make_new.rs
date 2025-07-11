@@ -56,7 +56,7 @@ macro_rules! join_with_index {
         delim: $delim:expr,
         format: $($format:tt)*
     ) => {{
-        use std::fmt::Write as _;
+        use std::fmt::Write;
         let mut acc = $crate::InlineString::new();
         let mut iter = $collection.iter().enumerate();
         // First item.
@@ -203,7 +203,7 @@ macro_rules! join {
         delim: $delim:expr,
         format: $($format:tt)*
     ) => {{
-        use std::fmt::Write as _;
+        use std::fmt::Write;
         let mut acc = $crate::InlineString::new();
         let mut iter = $collection.iter();
         // First item.

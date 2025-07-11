@@ -180,7 +180,7 @@ mod helpers {
 
     #[must_use]
     pub fn is_a_tty(stream: Stream) -> bool {
-        use std::io::IsTerminal as _;
+        use std::io::IsTerminal;
         match stream {
             Stream::Stdout => std::io::stdout().is_terminal(),
             Stream::Stderr => std::io::stderr().is_terminal(),
