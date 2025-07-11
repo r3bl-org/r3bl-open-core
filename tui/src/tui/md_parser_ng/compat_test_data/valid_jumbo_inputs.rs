@@ -24,8 +24,6 @@
 //!
 //! These files test parser performance with real-world content complexity.
 
-// Real-world jumbo content using include_str! macro
-
 /// Comprehensive API documentation with complex markdown structures.
 /// This represents the largest category of real-world markdown documents,
 /// containing extensive technical content, code blocks, tables, and Unicode characters.

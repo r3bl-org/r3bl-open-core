@@ -22,6 +22,15 @@
 //! - Simple formatting (bold, italic, inline code)
 //! - Basic elements (links, images, metadata)
 //! - Unicode and special characters
+//!
+//! ## Additional Test Data
+//!
+//! The following test data is not exported from this module, but it is used in tests
+//! as well as in examples (the `ex_editor` example):
+//! - [`crate::get_real_world_editor_content`]: A function defined in the parent module
+//!   that provides real-world markdown content loaded from an external file. This content
+//!   includes complex features like emojis in headings, nested lists, code blocks, and
+//!   metadata for testing parser compatibility with realistic documents.
 
 // Basic text handling
 pub const EMPTY_STRING: &str = "";
@@ -31,7 +40,8 @@ pub const SINGLE_LINE_WITH_NEWLINE: &str = "Hello World\n";
 
 // Simple inline code
 pub const SIMPLE_INLINE_CODE: &str = "first\n`second`";
-pub const INLINE_CODE_VARIATIONS: &str = "`simple code`\n`code with spaces`\n`code-with-dashes`\n`code_with_underscores`";
+pub const INLINE_CODE_VARIATIONS: &str =
+    "`simple code`\n`code with spaces`\n`code-with-dashes`\n`code_with_underscores`";
 pub const INLINE_CODE_WITH_UNICODE: &str = "`code 🎯`";
 
 // Basic formatting
@@ -51,15 +61,16 @@ pub const METADATA_DATE: &str = "@date: 2025-01-01";
 
 // Unicode and special characters
 pub const SPECIAL_CHARACTERS: &str = "Special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?";
-pub const UNICODE_CONTENT: &str = "Unicode: 🦀 Rust, 📝 Markdown, 🚀 Fast parsing\nEmoji in `code 🎯`";
+pub const UNICODE_CONTENT: &str =
+    "Unicode: 🦀 Rust, 📝 Markdown, 🚀 Fast parsing\nEmoji in `code 🎯`";
 
 // Simple emoji headings
 pub const EMOJI_H1_SIMPLE: &str = "# Heading with emoji 😀";
 pub const EMOJI_H2_SIMPLE: &str = "## Subheading with emoji 😀";
 pub const EMOJI_MULTIPLE: &str = "# Multiple emojis 😀🚀📝";
 
-// Real-world small content using include_str! macro
 /// Real-world small markdown document representing a typical quick start guide.
 /// This tests realistic small-scale documentation patterns with proper formatting,
 /// code blocks, and practical content structure.
-pub const SMALL_REAL_WORLD_CONTENT: &str = include_str!("real_world_files/small_quick_start.md");
+pub const SMALL_REAL_WORLD_CONTENT: &str =
+    include_str!("real_world_files/small_quick_start.md");

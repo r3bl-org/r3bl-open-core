@@ -22,8 +22,6 @@
 //! - Complex nested structures
 //! - Large amounts of content approximating real-world usage
 
-// Real-world content using include_str! macro
-
 /// Real-world large markdown document with complex structure, Unicode, and varied
 /// content. This tests comprehensive parsing capabilities including tables, nested lists,
 /// code blocks, and international characters from an actual technical documentation file.
