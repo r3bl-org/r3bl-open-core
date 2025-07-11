@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{caret_scroll_index, ch, BoundsCheck as _, BoundsStatus, EditorArgsMut};
+use crate::{caret_scroll_index, ch, BoundsCheck, BoundsStatus, EditorArgsMut};
 
 // Unicode glyphs links (for the ASCII diagrams):
 // - https://symbl.cc/en/unicode/blocks/box-drawing/

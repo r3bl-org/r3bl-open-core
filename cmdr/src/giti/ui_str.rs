@@ -198,7 +198,7 @@ pub mod branch_delete_display {
 
         let mut acc = InlineString::new();
         for branch_name in branches {
-            use std::fmt::Write as _;
+            use std::fmt::Write;
             // We don't care about the result of this operation.
             writeln!(
                 acc,
@@ -317,7 +317,7 @@ pub mod branch_delete_display {
         num_of_branches: usize,
         branches_to_delete: &ItemsOwned,
     ) -> InlineString {
-        use std::fmt::Write as _;
+        use std::fmt::Write;
 
         debug_assert!(branches_to_delete.len() > 1);
 

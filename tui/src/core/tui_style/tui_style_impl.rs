@@ -99,7 +99,7 @@ pub mod tui_style_attrib {
 
         #[must_use]
         pub fn fmt_id(maybe_id: Option<Id>) -> TinyInlineString {
-            use std::fmt::Write as _;
+            use std::fmt::Write;
             let mut acc = TinyInlineString::new();
             match maybe_id {
                 None => {

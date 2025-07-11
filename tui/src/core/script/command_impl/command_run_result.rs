@@ -120,7 +120,7 @@ pub(crate) mod display_impl_for_command_run_result {
 
     /// Format the command as a string for display.
     pub fn fmt_cmd_str(cmd: &Command) -> StdResult<InlineString, Error> {
-        use std::fmt::Write as _;
+        use std::fmt::Write;
 
         // Convert the tokio::process::Command to a standard Command.
         let cmd = cmd.as_std();

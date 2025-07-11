@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 use crate::{ch, col, diff_chunks::PixelCharDiffChunks, glyphs::SPACER_GLYPH, render_ops,
-            row, ColIndex, Flush as _, FlushKind, GCString, InlineString,
+            row, ColIndex, Flush, FlushKind, GCString, InlineString,
             LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint, PixelChar,
             RenderOp, RenderOps, RowIndex, Size, TuiStyle, DEBUG_TUI_COMPOSITOR,
             DEBUG_TUI_SHOW_PIPELINE};

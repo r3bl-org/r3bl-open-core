@@ -135,7 +135,7 @@ where
     /// Look at the [`std::fmt::Display`] implementation of [`TelemetryHudReport`] for
     /// details on how the report is formatted.
     pub fn set_hud_report(&mut self, new: TelemetryHudReport) {
-        use std::fmt::Write as _;
+        use std::fmt::Write;
         self.hud_report.clear();
         // We don't care about the result of this operation.
         write!(self.hud_report, "{new}").ok();
@@ -158,7 +158,7 @@ where
     /// string with a "dynamic" message where a spinner glyph changes every time this
     /// method is called.
     pub fn get_hud_report_with_spinner(&mut self) -> &str {
-        use std::fmt::Write as _;
+        use std::fmt::Write;
         if self.hud_report.is_empty() {
             let count = self.spinner_helper.count;
             let style = &mut self.spinner_helper.spinner_style;

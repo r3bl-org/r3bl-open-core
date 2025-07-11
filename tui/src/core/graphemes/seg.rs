@@ -114,7 +114,7 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 /// ## Example
 ///
 /// ```
-/// use r3bl_tui::{GCString, GCStringExt as _, ch, col, width, seg_index};
+/// use r3bl_tui::{GCString, GCStringExt, ch, col, width, seg_index};
 /// let u_str = "📦🙏🏽".grapheme_string();
 /// if let Some(segment) = u_str.segments.first() {
 ///     assert_eq!(segment.start_byte_index, ch(0));
@@ -186,7 +186,7 @@ impl Seg {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ch, col, seg_index, width, GCStringExt as _};
+    use crate::{ch, col, seg_index, width, GCStringExt};
 
     #[test]
     fn test_single_grapheme_cluster() {

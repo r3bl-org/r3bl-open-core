@@ -44,7 +44,7 @@ use super::{config::{defaults::{get_default_gradient_stops, Defaults},
             lolcat::{Lolcat, LolcatBuilder},
             types::Seed};
 use crate::{ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color, tui_styled_text, u8,
-            usize, ChUnit, GCString, GCStringExt as _, GradientGenerationPolicy,
+            usize, ChUnit, GCString, GCStringExt, GradientGenerationPolicy,
             InlineString, RgbValue, TextColorizationPolicy, TuiColor, TuiStyle,
             TuiStyledText, TuiStyledTexts};
 

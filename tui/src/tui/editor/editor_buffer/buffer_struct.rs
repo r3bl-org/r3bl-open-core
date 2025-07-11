@@ -652,7 +652,7 @@ mod debug_format {
 
     impl Debug for EditorContent {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            use crate::GetMemSize as _;
+            use crate::GetMemSize;
             let mem_size = self.get_mem_size();
             let mem_size_fmt = format_as_kilobytes_with_commas(mem_size);
 

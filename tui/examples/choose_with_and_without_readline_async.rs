@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::io::Write as _;
+use std::io::Write;
 
 use r3bl_tui::{fg_slate_gray, ok,
                readline_async::{choose, Header, HowToChoose, ReadlineAsyncContext,

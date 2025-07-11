@@ -15,11 +15,12 @@
  *   limitations under the License.
  */
 
+use std::io::IsTerminal;
+
 use miette::IntoDiagnostic;
 
 use crate::{height, width, ColWidth, Size};
 pub const DEFAULT_WIDTH: u16 = 80;
-use std::io::IsTerminal as _;
 
 #[must_use]
 pub fn get_terminal_width_no_default() -> Option<ColWidth> {
@@ -71,7 +72,6 @@ pub fn is_stdin_piped() -> StdinIsPipedResult {
 /// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
 #[must_use]
 pub fn is_stdout_piped() -> StdoutIsPipedResult {
-    use std::io::IsTerminal as _;
     if std::io::stdout().is_terminal() {
         StdoutIsPipedResult::StdoutIsNotPiped
     } else {

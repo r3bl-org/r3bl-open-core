@@ -629,7 +629,7 @@ mod tests_fixtures {
 
 #[cfg(test)]
 mod tests_display_format {
-    use std::fmt::Write as _;
+    use std::fmt::Write;
 
     use super::{telemetry_sizing::{TelemetryReportLineStorage,
                                    TELEMETRY_REPORT_STRING_SIZE},

@@ -33,9 +33,9 @@ mod ex_pitch;
 mod ex_rc;
 
 // Use other crates.
-use std::str::FromStr as _;
+use std::str::FromStr;
 
-use miette::IntoDiagnostic as _;
+use miette::IntoDiagnostic;
 use r3bl_tui::{fg_color, fg_frozen_blue, fg_pink, fg_slate_gray, get_size,
                inline_string, key_press,
                log::try_initialize_logging_global,
@@ -43,7 +43,7 @@ use r3bl_tui::{fg_color, fg_frozen_blue, fg_pink, fg_slate_gray, get_size,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
                rla_println, set_jemalloc_in_main, tui_color, ASTColor, CommonError,
                CommonResult, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
-use strum::IntoEnumIterator as _;
+use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 #[tokio::main]

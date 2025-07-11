@@ -117,7 +117,7 @@ mod random_color {
     /// Copied from [`colorgrad::Color::to_hex_string`], and modified to return a
     /// [`StringHexColor`] instead of a [String].
     pub fn color_to_hex_string(color: &colorgrad::Color) -> StringHexColor {
-        use std::fmt::Write as _;
+        use std::fmt::Write;
 
         let [r, g, b, a] = color.to_rgba8();
 

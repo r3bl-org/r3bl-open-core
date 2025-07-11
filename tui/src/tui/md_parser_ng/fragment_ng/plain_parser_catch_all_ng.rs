@@ -47,7 +47,7 @@ use nom::{branch::alt,
 use crate::{fg_blue, fg_magenta, fg_red,
             md_parser::constants::{BACK_TICK, LEFT_BRACKET, LEFT_IMAGE, NEW_LINE,
                                    NEW_LINE_CHAR, STAR, UNDERSCORE},
-            specialized_parsers_ng, AsStrSlice, CharLengthExt as _, NErr, NError,
+            specialized_parsers_ng, AsStrSlice, CharLengthExt, NErr, NError,
             NErrorKind, DEBUG_MD_PARSER_STDOUT};
 
 /// This is the lowest priority parser called by

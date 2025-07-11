@@ -25,7 +25,7 @@
 #[macro_export]
 macro_rules! queue_commands {
     ($output_device:expr $(, $command:expr)* $(,)?) => {{
-        use miette::IntoDiagnostic as _;
+        use miette::IntoDiagnostic;
         $(
             ::crossterm::QueueableCommand::queue(
                 $crate::lock_output_device_as_mut!($output_device),
@@ -43,7 +43,7 @@ macro_rules! queue_commands {
 #[macro_export]
 macro_rules! queue_commands_no_lock {
     ($writer:expr $(, $command:expr)* $(,)?) => {{
-        use miette::IntoDiagnostic as _;
+        use miette::IntoDiagnostic;
         $(
             ::crossterm::QueueableCommand::queue(
                 $writer,
@@ -63,7 +63,7 @@ macro_rules! queue_commands_no_lock {
 #[macro_export]
 macro_rules! execute_commands {
     ($output_device:expr $(, $command:expr)* $(,)?) => {{
-        use miette::IntoDiagnostic as _;
+        use miette::IntoDiagnostic;
         $(
             ::crossterm::QueueableCommand::queue(
                 $crate::lock_output_device_as_mut!($output_device),
@@ -82,7 +82,7 @@ macro_rules! execute_commands {
 #[macro_export]
 macro_rules! execute_commands_no_lock {
     ($writer:expr $(, $command:expr)* $(,)?) => {{
-        use miette::IntoDiagnostic as _;
+        use miette::IntoDiagnostic;
         $(
             ::crossterm::QueueableCommand::queue(
                 $writer,

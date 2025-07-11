@@ -18,7 +18,7 @@
 //! This module is responsible for converting all the [`MdLineFragment`] into plain text
 //! w/out any formatting.
 
-use std::fmt::Write as _;
+use std::fmt::Write;
 
 use crate::{convert_to_string_slice, inline_string, join, join_fmt, join_with_index,
             md_parser::constants::{BACK_TICK, CHECKED, HEADING_CHAR, LEFT_BRACKET,

@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{fs, io::Write as _, path::Path};
+use std::{fs, io::Write, path::Path};
 
 use miette::IntoDiagnostic;
 

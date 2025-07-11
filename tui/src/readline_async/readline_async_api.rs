@@ -15,8 +15,8 @@
  *   limitations under the License.
  */
 
-use futures_util::FutureExt as _;
-use miette::IntoDiagnostic as _;
+use futures_util::FutureExt;
+use miette::IntoDiagnostic;
 use tokio::sync::broadcast;
 
 use crate::{inline_string, is_fully_uninteractive_terminal, is_stdin_piped,
@@ -81,7 +81,7 @@ macro_rules! rla_println {
         $rla:ident,
         $($format:tt)*
     ) => {{
-        use std::io::Write as _;
+        use std::io::Write;
         // We don't care about the result of this operation.
         writeln!($rla.shared_writer, $($format)*).ok();
     }};
@@ -93,7 +93,7 @@ macro_rules! rla_print {
         $rla:ident,
         $($format:tt)*
     ) => {{
-        use std::io::Write as _;
+        use std::io::Write;
         // We don't care about the result of this operation.
         write!($rla.shared_writer, $($format)*).ok();
     }};
@@ -106,7 +106,7 @@ macro_rules! rla_println_prefixed {
         $rla:ident,
         $($format:tt)*
     ) => {{
-        use std::io::Write as _;
+        use std::io::Write;
         use $crate::fg_pink;
         // We don't care about the result of this operation.
         write!($rla.shared_writer, "{}", fg_pink(" > ").bold().bg_moonlight_blue()).ok();

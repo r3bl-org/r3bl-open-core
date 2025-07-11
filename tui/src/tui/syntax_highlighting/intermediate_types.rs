@@ -35,7 +35,7 @@ use crate::{get_foreground_dim_style, get_metadata_tags_marker_style,
             get_metadata_title_value_style,
             md_parser::constants::{COLON, COMMA, SPACE},
             tiny_inline_string, tui_styled_text, width, CharacterMatchResult, ColIndex,
-            ColWidth, GCString, GCStringExt as _, InlineString, List,
+            ColWidth, GCString, GCStringExt, InlineString, List,
             PatternMatcherStateMachine, ScrOfs, TuiStyle, TuiStyledTexts};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple

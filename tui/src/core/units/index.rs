@@ -199,7 +199,7 @@ mod ops {
 }
 #[cfg(test)]
 mod tests {
-    use std::hash::{DefaultHasher, Hasher as _};
+    use std::hash::{DefaultHasher, Hasher};
 
     use super::*;
     use crate::{len, BoundsCheck, BoundsStatus};

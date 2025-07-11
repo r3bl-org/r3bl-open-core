@@ -60,7 +60,7 @@ macro_rules! pad_fmt {
     ) => {{
         #[allow(clippy::reversed_empty_ranges)]
         for _ in 0..$repeat_count {
-            use std::fmt::Write as _;
+            use std::fmt::Write;
             // We don't care about the result of this operation.
             write!($acc, "{}", $pad_str).ok();
         }
@@ -116,7 +116,7 @@ macro_rules! join_fmt {
         format: $($format:tt)*
     ) => {{
         #[allow(unused_imports)]
-        use std::fmt::Write as _;
+        use std::fmt::Write;
         let mut iter = $collection.iter();
         // First item.
         if let Some($item) = iter.next() {
@@ -189,7 +189,7 @@ macro_rules! join_with_index_fmt {
         format: $($format:tt)*
     ) => {{
         #[allow(unused_imports)]
-        use std::fmt::Write as _;
+        use std::fmt::Write;
         let mut iter = $collection.iter().enumerate();
         // First item.
         if let Some(($index, $item)) = iter.next() {
@@ -290,7 +290,7 @@ pub mod read_from_file {
 pub mod write_to_file {
     use std::{fs::File, io::Write, path::PathBuf};
 
-    use miette::IntoDiagnostic as _;
+    use miette::IntoDiagnostic;
 
     use crate::CommonResult;
 

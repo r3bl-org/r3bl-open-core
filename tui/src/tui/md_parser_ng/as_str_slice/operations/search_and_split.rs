@@ -193,7 +193,7 @@ impl<'a> AsStrSlice<'a> {
 /// characters can be consumed from the current position.
 #[cfg(test)]
 mod tests_is_empty {
-    use nom::Input as _;
+    use nom::Input;
 
     use crate::{as_str_slice_test_case, assert_eq2, idx, len, AsStrSlice, GCString};
 

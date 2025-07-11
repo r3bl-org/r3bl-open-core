@@ -27,7 +27,7 @@
 //! `color_wheel_core/color_helpers.rs`.
 
 use super::types::ColorWheelControl;
-use crate::LossyConvertToByte as _;
+use crate::LossyConvertToByte;
 
 /// More info on luminance:
 /// - <https://stackoverflow.com/a/49092130/2085356>

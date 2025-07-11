@@ -18,7 +18,7 @@
 use crossterm::{cursor::{Hide, MoveToColumn, MoveToNextLine, MoveToPreviousLine, Show},
                 style::Print,
                 terminal::{Clear, ClearType}};
-use miette::IntoDiagnostic as _;
+use miette::IntoDiagnostic;
 
 use crate::{lock_output_device_as_mut, ok, queue_commands, queue_commands_no_lock,
             CommonResult, LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle};

@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::Write as _;
+use std::fmt::Write;
 
 use crate::{AsStrSlice, CodeBlockLine, CodeBlockLineContent, List, ParserByteCache,
             PARSER_BYTE_CACHE_PAGE_SIZE};

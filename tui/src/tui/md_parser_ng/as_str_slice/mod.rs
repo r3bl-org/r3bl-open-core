@@ -90,7 +90,7 @@
 
 // Attach.
 #[rustfmt::skip]
-pub mod compatibility;
+pub mod compat;
 #[rustfmt::skip]
 pub mod as_str_slice_core;
 #[rustfmt::skip]
@@ -103,15 +103,15 @@ pub mod position;
 pub mod traits;
 
 // Re-export.
-#[rustfmt::skip] 
+#[rustfmt::skip]
 pub use as_str_slice_core::*;
-#[rustfmt::skip] 
-pub use compatibility::*;
-#[rustfmt::skip] 
+#[rustfmt::skip]
+pub use compat::*;
+#[rustfmt::skip]
 pub use iterators::*;
-#[rustfmt::skip] 
+#[rustfmt::skip]
 pub use operations::*;
-#[rustfmt::skip] 
+#[rustfmt::skip]
 pub use position::*;
-#[rustfmt::skip] 
+#[rustfmt::skip]
 pub use traits::*;

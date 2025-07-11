@@ -19,7 +19,7 @@ use nom::{bytes::complete::{tag, take_while1},
           combinator::verify,
           multi::many0,
           sequence::preceded,
-          IResult, Parser as _};
+          IResult, Parser};
 
 use crate::{constants::{COMMA_CHAR, NEW_LINE_CHAR, SPACE_CHAR},
             inline_vec, list,

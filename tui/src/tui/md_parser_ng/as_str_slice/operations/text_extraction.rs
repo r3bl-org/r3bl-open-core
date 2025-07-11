@@ -15,14 +15,14 @@
  *   limitations under the License.
  */
 
-use std::fmt::Write as _;
+use std::fmt::Write;
 
 use nom::{FindSubstring, Input};
 
 use crate::{bounds_check,
             AsStrSlice,
             BoundsCheck,
-            CharLengthExt as _,
+            CharLengthExt,
             DocumentStorage,
             InlineString,
             InlineStringCow,
