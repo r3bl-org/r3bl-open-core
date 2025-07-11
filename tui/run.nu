@@ -215,8 +215,10 @@ def test [] {
 def bench [] {
     print $'Running benchmarks and saving to (ansi blue_bold)~/Downloads/bench.txt(ansi reset)...'
     cargo bench out+err> ~/Downloads/bench.txt
-    print $'Benchmarks complete! Opening results with (ansi green_bold)bat(ansi reset):'
-    bat ~/Downloads/bench.txt
+    print $'Benchmarks complete! Showing benchmark results:'
+    cat ~/Downloads/bench.txt | rg bench | bat
+    print $''
+    print "Full output with compilation and test discovery saved to ~/Downloads/bench.txt"
 }
 
 def clippy [] {

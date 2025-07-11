@@ -104,6 +104,8 @@ pub use standard_ng::*;
 
 // Attach test sources.
 #[cfg(test)]
+pub mod bench_test_suite;
+#[cfg(test)]
 pub mod compat_test_data;
 #[cfg(test)]
 pub mod compat_test_suite;
