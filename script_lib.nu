@@ -39,13 +39,39 @@ def run_example_with_flamegraph_profiling [options: list<string>] {
         print $'(ansi cyan)Current working directory: (ansi green)($env.PWD)(ansi reset)'
         print $"cargo flamegraph --example ($selection)"
 
-        # sudo sysctl -w kernel.perf_event_paranoid=-1
-        # CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --example demo
-        # firefox-beta flamegraph.svg
-
+        # Change the kernel parameters to allow perf to access kernel symbols.
         sudo sysctl -w kernel.perf_event_paranoid=-1
-        CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --example $selection
+        sudo sysctl -w kernel.kptr_restrict=0
+
+        CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --freq 99 --example $selection
+
+        # Find PIDs for cargo flamegraph
+        let flamegraph_pids = (pgrep -f "cargo flamegraph" | lines)
+
+        # Find PIDs for perf script
+        let perf_script_pids = (pgrep -f "perf script" | lines)
+
+        # Combine all found PIDs and get only the unique ones
+        let all_pids = ($flamegraph_pids | append $perf_script_pids | uniq)
+
+        if ($all_pids | is-empty) {
+            print "No cargo flamegraph or perf script processes found to kill. 🧐"
+        } else {
+            print $"Attempting to terminate the following process IDs: ($all_pids | str join ', ') 🔪"
+            for pid in $all_pids {
+                print $"  - Trying to gracefully kill PID: ($pid) (SIGTERM)"
+                sudo kill $pid
+            }
+            print "All targeted processes should now be terminated. ✅"
+        }
+
         firefox-beta --new-window flamegraph.svg
+
+        # Reset kernel parameters (optional but recommended for security)
+        print "Resetting kernel parameters..."
+        sudo sysctl -w kernel.perf_event_paranoid=2 # Default paranoid level (often 2)
+        sudo sysctl -w kernel.kptr_restrict=1      # Default restrict level (often 1)
+        print "Kernel parameters reset."
     }
 }
 
