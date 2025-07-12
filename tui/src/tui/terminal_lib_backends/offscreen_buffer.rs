@@ -14,7 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::{fmt::{self, Debug, Write},
+use std::{fmt::{self, Debug},
           ops::{Deref, DerefMut}};
 
 use diff_chunks::PixelCharDiffChunks;
@@ -22,8 +22,8 @@ use smallvec::smallvec;
 
 use super::{FlushKind, RenderOps};
 use crate::{col, dim_underline, fg_green, fg_magenta, get_mem_size, inline_string, ok,
-            row, tiny_inline_string, ColWidth, GetMemSize, InlineString, InlineVec,
-            List, LockedOutputDevice, Pos, Size, TinyInlineString, TuiColor, TuiStyle};
+            row, tiny_inline_string, ColWidth, GetMemSize, InlineVec, List,
+            LockedOutputDevice, Pos, Size, TinyInlineString, TuiColor, TuiStyle};
 
 /// Represents a grid of cells where the row/column index maps to the terminal screen.
 ///
@@ -151,7 +151,7 @@ mod offscreen_buffer_impl {
                 {
                     if self_pixel_char != other_pixel_char {
                         let pos = col(col_idx) + row(row_idx);
-                        acc.push((pos, other_pixel_char.clone()));
+                        acc.push((pos, *other_pixel_char));
                     }
                 }
             }
@@ -424,30 +424,20 @@ mod pixel_char_line_impl {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PixelChar {
     Void,
     Spacer,
     PlainText {
-        text: TinyInlineString,
+        display_char: char,
         maybe_style: Option<TuiStyle>,
     },
 }
 
 impl GetMemSize for PixelChar {
     fn get_mem_size(&self) -> usize {
-        match self {
-            PixelChar::Void => std::mem::size_of::<PixelChar>(),
-            PixelChar::Spacer => std::mem::size_of::<PixelChar>(),
-            PixelChar::PlainText {
-                text,
-                maybe_style: _,
-            } => {
-                std::mem::size_of::<PixelChar>()
-                    + text.len()
-                    + std::mem::size_of::<Option<TuiStyle>>()
-            }
-        }
+        // Since PixelChar is now Copy, its size is fixed
+        std::mem::size_of::<PixelChar>()
     }
 }
 
@@ -455,8 +445,7 @@ const EMPTY_CHAR: char = '╳';
 const VOID_CHAR: char = '❯';
 
 mod pixel_char_impl {
-    use super::{fg_magenta, fmt, ok, Debug, InlineString, PixelChar, Write, EMPTY_CHAR,
-                VOID_CHAR};
+    use super::{fg_magenta, fmt, ok, Debug, PixelChar, EMPTY_CHAR, VOID_CHAR};
 
     impl Default for PixelChar {
         fn default() -> Self { Self::Spacer }
@@ -466,13 +455,6 @@ mod pixel_char_impl {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             const WIDTH: usize = 16;
 
-            fn truncate(s: &str, max_chars: usize) -> &str {
-                match s.char_indices().nth(max_chars) {
-                    None => s,
-                    Some((idx, _)) => &s[..idx],
-                }
-            }
-
             match self {
                 PixelChar::Void => {
                     write!(f, " V {VOID_CHAR:░^WIDTH$}")?;
@@ -480,21 +462,24 @@ mod pixel_char_impl {
                 PixelChar::Spacer => {
                     write!(f, " S {EMPTY_CHAR:░^WIDTH$}")?;
                 }
-                PixelChar::PlainText { text, maybe_style } => {
-                    // Need `acc_tmp` to be able to truncate the text if it's too long.
-                    let mut acc_tmp = InlineString::with_capacity(WIDTH);
+                PixelChar::PlainText {
+                    display_char,
+                    maybe_style,
+                } => {
                     match maybe_style {
                         // Content + style.
                         Some(style) => {
-                            write!(acc_tmp, "'{text}'→{style}")?;
+                            write!(
+                                f,
+                                " {} '{display_char}'→{style: ^WIDTH$}",
+                                fg_magenta("P")
+                            )?;
                         }
                         // Content, no style.
                         _ => {
-                            write!(acc_tmp, "'{text}'")?;
+                            write!(f, " {} '{display_char}': ^WIDTH$", fg_magenta("P"))?;
                         }
                     }
-                    let trunc_output = truncate(&acc_tmp, WIDTH);
-                    write!(f, " {} {trunc_output: ^WIDTH$}", fg_magenta("P"))?;
                 }
             }
 
@@ -553,15 +538,13 @@ mod tests {
         let mut my_offscreen_buffer =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
 
-        let text_1 = "a".into();
         my_offscreen_buffer.buffer[0][0] = PixelChar::PlainText {
-            text: text_1,
+            display_char: 'a',
             maybe_style: Some(new_style!(color_bg: {tui_color!(green)})),
         };
 
-        let text_2 = "z".into();
         my_offscreen_buffer.buffer[1][9] = PixelChar::PlainText {
-            text: text_2,
+            display_char: 'z',
             maybe_style: Some(new_style!(color_bg: {tui_color!(red)})),
         };
 

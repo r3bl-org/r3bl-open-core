@@ -248,12 +248,35 @@ The current NG parser represents significant technical debt due to:
 
 **Testing**: Added comprehensive test coverage for caching behavior to ensure correctness.
 
+### PixelChar Memory Optimization (✅ Completed)
+
+**Implementation**: Changed `PixelChar::PlainText` to store a single `char` instead of `TinyInlineString` in commit df9057f9.
+
+**Technical Details**:
+- Modified `PixelChar` enum to be `Copy` instead of `Clone`
+- Changed `PlainText` variant from `text: TinyInlineString` to `display_char: char`
+- Eliminates all clone operations in the rendering pipeline
+- Simplifies memory management and improves cache locality
+- For multi-char graphemes, uses the first char or replacement character
+
+**Performance Impact**:
+- Eliminates memory allocation overhead from PixelChar cloning
+- Reduces SmallVec extend operations visible in flamegraph
+- Improves cache locality by making PixelChar a fixed-size Copy type
+- Expected significant reduction in memory copies during rendering
+
+**Trade-offs**:
+- Multi-character grapheme clusters are reduced to single characters
+- This is acceptable for terminal rendering where each cell displays one visible character
+
 ### Next Priority Targets
 
 Based on flamegraph analysis, the next optimization targets are:
-1. **Character position calculations** (`get_char_at_position` - 22.62% of time)
-2. **Unicode segmentation optimization** (binary search operations - 26% of time)
-3. **NG parser algorithmic improvements** (fundamental parsing logic)
+1. **String character counting optimization** (~17% of time from multiple `char_count_general_case` calls)
+2. **Memory copying reduction** (~14.6% from `__memcpy_avx_unaligned_erms`)
+3. **Memory allocation optimization** (12.47% from `mi_heap_malloc_aligned_at`)
+4. **Unicode segmentation optimization** (4.23% from grapheme boundary calculations)
+5. **NG parser algorithmic improvements** (fundamental parsing logic)
 
 ---
 
