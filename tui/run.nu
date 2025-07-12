@@ -41,6 +41,7 @@ def main [...args: string] {
         "examples-release" => {examples-release}
         "examples-release-no-log" => {examples-release-no-log}
         "examples-with-flamegraph-profiling" => {examples-with-flamegraph-profiling}
+        "examples-with-flamegraph-profiling-detailed" => {examples-with-flamegraph-profiling-detailed}
         "test" => {test}
         "bench" => {bench}
         "watch-all-tests" => {watch-all-tests}
@@ -160,6 +161,7 @@ def print-help [command: string] {
         print $'    (ansi green)examples-release(ansi reset)'
         print $'    (ansi green)examples-release-no-log(ansi reset)'
         print $'    (ansi green)examples-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://youtu.be/Sy26IMkOEiM(ansi reset)'
+        print $'    (ansi green)examples-with-flamegraph-profiling-detailed(ansi reset), (ansi blue)Detailed profiling with more symbols(ansi reset)'
         # print $'    (ansi green)run-with-crash-reporting(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
         print $'    (ansi green)bench(ansi reset)'
@@ -205,7 +207,12 @@ def examples-release-no-log [] {
 
 def examples-with-flamegraph-profiling [] {
     let example_binaries: list<string> = get_example_binaries
-    run_example_with_flamegraph_profiling $example_binaries
+    run_example_with_flamegraph_profiling $example_binaries "profiling"
+}
+
+def examples-with-flamegraph-profiling-detailed [] {
+    let example_binaries: list<string> = get_example_binaries
+    run_example_with_flamegraph_profiling $example_binaries "profiling-detailed"
 }
 
 def test [] {
