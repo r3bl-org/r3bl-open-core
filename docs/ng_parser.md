@@ -269,14 +269,89 @@ The current NG parser represents significant technical debt due to:
 - Multi-character grapheme clusters are reduced to single characters
 - This is acceptable for terminal rendering where each cell displays one visible character
 
-### Next Priority Targets
+### NG Parser Status (✅ Disabled)
+The NG parser has been disabled in `/tui/src/tui/mod.rs` by setting `ENABLE_MD_PARSER_NG` to false,
+reverting to legacy parsing due to unacceptable performance characteristics.
 
-Based on flamegraph analysis, the next optimization targets are:
-1. **String character counting optimization** (~17% of time from multiple `char_count_general_case` calls)
-2. **Memory copying reduction** (~14.6% from `__memcpy_avx_unaligned_erms`)
-3. **Memory allocation optimization** (12.47% from `mi_heap_malloc_aligned_at`)
-4. **Unicode segmentation optimization** (4.23% from grapheme boundary calculations)
-5. **NG parser algorithmic improvements** (fundamental parsing logic)
+## Latest Flamegraph Analysis (2025-07-12)
+
+### Profiling Configuration
+Using `profiling-detailed` profile with:
+- `-F 99`: 99Hz sampling frequency (lower than default ~4000Hz for cleaner data)
+- `--call-graph=fp,8`: Frame pointer-based call graphs limited to 8 stack frames
+- **Result**: Complete symbol visibility with no "[unknown]" sections
+
+### Updated Performance Bottleneck Analysis
+
+Based on the latest flamegraph analysis with full symbol visibility:
+
+1. **Unicode Segmentation (45-50% of total time)** - PRIMARY BOTTLENECK
+   - `<unicode_segmentation::grapheme::GraphemeIndices as Iterator>::next`
+   - Called from multiple hot paths:
+     - `<GCString>::new` in rendering pipeline (13.29%)
+     - String truncation in log formatting (11.67%)
+     - Dialog component rendering (5.91%)
+     - Editor content rendering (multiple instances)
+   - This is the dominant performance issue across the entire application
+
+2. **Memory Allocation (11.28%)**
+   - `_mi_heap_realloc_zero` in textwrap operations
+   - Primarily in `<alloc::raw_vec::RawVec<usize>>::grow_one`
+   - Related to dynamic text wrapping in log output
+
+3. **Text Processing & String Operations (11.58%)**
+   - `<smallvec::SmallVec<[u8: 16]>>::try_grow` in input event logging
+   - String formatting in `core::fmt::write`
+   - SmallString growing during event formatting
+
+4. **Syntax Highlighting (21.01% combined)**
+   - Markdown parser: `md_parser_syn_hi_impl::try_parse_and_highlight` (8.71%)
+   - Pattern matching: `<PatternMatcherStateMachine>::match_next` (12.30%)
+   - Still significant but not the primary bottleneck
+
+5. **Memory Copying (3.06%)**
+   - `__memmove_avx_unaligned_erms` (two instances at 1.53% each)
+   - Much less significant than previously estimated (was 14.6%)
+
+### Key Insights from Improved Profiling
+
+1. **Clear Symbol Visibility**: The `profiling-detailed` profile successfully eliminated all "[unknown]" sections, providing complete visibility into the call stack.
+
+2. **Unicode Processing Dominance**: Unicode grapheme segmentation is by far the largest bottleneck, consuming nearly half of the execution time across multiple components.
+
+3. **Revised Percentages**: The actual performance profile differs from previous estimates:
+   - Unicode segmentation: 45-50% (vs. 4.23% previously estimated)
+   - Memory copying: 3.06% (vs. 14.6% previously estimated)
+   - Memory allocation: 11.28% (close to 12.47% estimate)
+
+### Next Priority Optimization Targets
+
+Based on the updated flamegraph analysis, the optimization priorities should be:
+
+1. **Unicode Segmentation Optimization** (45-50% potential improvement)
+   - Cache grapheme boundaries for frequently accessed strings
+   - Consider lazy evaluation for grapheme segmentation
+   - Investigate faster unicode segmentation libraries
+   - Optimize `GCString::new` to avoid repeated segmentation
+
+2. **Text Wrapping Optimization** (11.28% potential improvement)
+   - Pre-allocate buffer sizes in textwrap operations
+   - Cache wrapped text results for unchanged content
+   - Consider simpler wrapping algorithms for log output
+
+3. **String Formatting Optimization** (11.58% potential improvement)
+   - Use fixed-size buffers where possible
+   - Avoid SmallVec growing for predictable content sizes
+   - Consider pre-formatted strings for common log messages
+
+4. **Syntax Highlighting Caching** (21.01% potential improvement)
+   - Cache highlighting results for unchanged lines
+   - Implement incremental re-highlighting
+   - Optimize pattern matching state machine
+
+5. **Memory Copying Reduction** (3.06% potential improvement)
+   - Already less significant than expected
+   - Focus on avoiding unnecessary copies in hot paths
 
 ---
 

@@ -29,21 +29,39 @@ def get_example_binaries [] {
     $result
 }
 
-def run_example_with_flamegraph_profiling [options: list<string>] {
+# Run an example with flamegraph profiling using the specified profile.
+# This function uses predefined profiles from Cargo.toml:
+# - 'profiling': includes debug symbols, thin LTO, and optimized settings for good profiling data
+# - 'profiling-detailed': provides more detailed profiling with less optimization for granular data
+def run_example_with_flamegraph_profiling [options: list<string>, profile: string] {
     let selection = $options | input list --fuzzy 'Select an example to run: '
 
     if $selection == "" {
         print "No example selected.";
     } else {
-        print $'(ansi cyan)Running example with options: (ansi green)($options)(ansi cyan), selection: (ansi green)($selection)(ansi reset)'
+        print $'(ansi cyan)Running example with options: (ansi green)($options)(ansi cyan), selection: (ansi green)($selection)(ansi cyan), profile: (ansi green)($profile)(ansi reset)'
         print $'(ansi cyan)Current working directory: (ansi green)($env.PWD)(ansi reset)'
-        print $"cargo flamegraph --example ($selection)"
+        print $"cargo flamegraph --profile ($profile) --example ($selection)"
 
         # Change the kernel parameters to allow perf to access kernel symbols.
         sudo sysctl -w kernel.perf_event_paranoid=-1
         sudo sysctl -w kernel.kptr_restrict=0
 
-        CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --freq 99 --example $selection
+        # Enhanced profiling with better symbol resolution using custom profile
+        # The profile settings handle debug symbols, LTO, and optimization level
+        # RUSTFLAGS:
+        # - force-frame-pointers=yes: Ensures stack traces work properly
+        # - symbol-mangling-version=v0: Use more readable symbol names
+        # cargo flamegraph options:
+        # - --profile <profile>: Use the specified custom profile
+        # - --no-inline: Prevent inlining to preserve function boundaries
+        # - -c "record -g --call-graph=fp,8 -F 99": Use frame pointer-based call graphs with 8 stack frame limit and 99Hz sampling
+        (RUSTFLAGS="-C force-frame-pointers=yes -C symbol-mangling-version=v0"
+            cargo flamegraph
+            --profile $profile
+            --no-inline
+            -c "record -g --call-graph=fp,8 -F 99"
+            --example $selection)
 
         # Find PIDs for cargo flamegraph
         let flamegraph_pids = (pgrep -f "cargo flamegraph" | lines)
