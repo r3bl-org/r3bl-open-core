@@ -377,10 +377,11 @@ mod helpers {
             let it = max_display_width - line_width_used - spacer_display_width;
             width(*it)
         };
+        let truncated_heading = truncate_from_right(&heading, line_1_width, false);
         let line_1_text = inline_string!(
             "{spacer}{heading}",
             spacer = spacer,
-            heading = truncate_from_right(&heading, line_1_width, false)
+            heading = truncated_heading.as_ref()
         );
         let line_1_text_fmt =
             ColorWheel::lolcat_into_string(&line_1_text, Some(new_style!(bold)));
@@ -391,9 +392,10 @@ mod helpers {
             let body = remove_escaped_quotes(body);
             let body = wrap(&body, text_wrap_options);
             for body_line in &body {
-                let body_line = truncate_from_right(body_line, max_display_width, true);
+                let truncated_body_line =
+                    truncate_from_right(body_line, max_display_width, true);
                 let body_line_fmt = ast(
-                    body_line,
+                    truncated_body_line.as_ref(),
                     new_style!(
                         color_fg: {TuiColor::Rgb(BODY_FG_COLOR)}
                     ),

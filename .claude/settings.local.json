@@ -1,0 +1,17 @@
+{
+  "model": "opus",
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(cargo test:*)",
+      "Bash(git checkout:*)",
+      "Bash(cargo run:*)",
+      "Bash(rustc:*)",
+      "Bash(./debug_truncate)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": []
+  }
+}

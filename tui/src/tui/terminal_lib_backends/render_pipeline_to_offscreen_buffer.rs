@@ -14,12 +14,11 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use super::{sanitize_and_save_abs_pos, OffscreenBuffer, RenderOp, RenderPipeline};
 use crate::{ch,
             glyphs::{self, SPACER_GLYPH},
             inline_string, usize, width, ColWidth, CommonError, CommonErrorType,
-            CommonResult, GCStringExt, PixelChar, PixelCharLine, Pos,
+            CommonResult, GCString, GCStringExt, PixelChar, PixelCharLine, Pos,
             RenderOpsLocalData, Size, TuiStyle, ZOrder, DEBUG_TUI_COMPOSITOR};
 
 impl RenderPipeline {
@@ -295,8 +294,8 @@ pub fn print_text_with_attributes(
 }
 
 mod print_text_with_attributes_helper {
-    use super::{ch, usize, width, ColWidth, GCStringExt, OffscreenBuffer, PixelChar,
-                PixelCharLine, TuiStyle, SPACER_GLYPH};
+    use super::{ch, usize, width, ColWidth, GCString, GCStringExt, OffscreenBuffer,
+                PixelChar, PixelCharLine, TuiStyle, SPACER_GLYPH};
 
     /// Clips the input string based on max display column count and window bounds.
     /// Returns the final clipped string as a grapheme cluster string.
@@ -305,7 +304,7 @@ mod print_text_with_attributes_helper {
         display_col_index: usize,
         maybe_max_display_col_count: Option<ColWidth>,
         window_max_display_col_count: ColWidth,
-    ) -> crate::GCString {
+    ) -> GCString {
         // ✂️Clip `arg_text_ref` (if needed) and make `text`.
         let string_gcs = string.grapheme_string();
         let clip_1_str = if let Some(max_display_col_count) = maybe_max_display_col_count

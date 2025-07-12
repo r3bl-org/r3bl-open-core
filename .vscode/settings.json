@@ -116,6 +116,7 @@
     "localpaintedeffect",
     "malloc",
     "memcpy",
+    "memmove",
     "middlewares",
     "msvc",
     "multispace",
