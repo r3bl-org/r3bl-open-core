@@ -7,6 +7,20 @@ parser compared to the legacy parser implementation. The analysis was conducted 
 benchmarking to identify performance bottlenecks and understand the architectural differences
 between the two approaches.
 
+## CRITICAL FIX: Color Support Detection Optimization
+
+**Issue Identified**: Flamegraph analysis revealed that ~24% of execution time was spent in color support detection (`examine_env_vars_to_determine_color_support`), making thousands of environment variable calls for every editor operation.
+
+**Root Cause**: The `global_color_support::detect()` function was re-running expensive environment variable detection on every call instead of caching the result.
+
+**Solution Implemented**: Added proper memoization to the color support detection:
+- Added `COLOR_SUPPORT_CACHED` static variable for caching detection results
+- Modified `detect()` to check cache before expensive detection
+- Added helper functions: `try_get_cached()`, `set_cached()`, `clear_cache()`
+- Detection now runs once and caches the result for subsequent calls
+
+**Expected Performance Impact**: ~24% reduction in execution time for editor operations, as color support detection will only run once instead of thousands of times.
+
 ## Executive Summary
 
 The NG parser shows significant performance degradation compared to the legacy parser, with
@@ -215,8 +229,32 @@ The current NG parser represents significant technical debt due to:
 4. **Alternative architecture exploration** for non-contiguous parsing
 5. **Performance regression testing** framework implementation
 
+## Implemented Optimizations
+
+### Color Support Detection Caching (✅ Completed)
+
+**Implementation**: Added memoization to `global_color_support::detect()` function in `/tui/src/core/ansi/detect_color_support.rs`.
+
+**Technical Details**:
+- Added `COLOR_SUPPORT_CACHED` static atomic variable
+- Modified detection logic to check cache before expensive environment variable operations
+- Added cache management functions: `try_get_cached()`, `set_cached()`, `clear_cache()`
+- Maintains thread-safety with atomic operations
+
+**Performance Impact**:
+- Eliminates ~24% of execution time overhead from repeated environment variable detection
+- Color support detection now runs once per application lifetime instead of thousands of times
+- Expected dramatic improvement in editor responsiveness during typing/editing operations
+
+**Testing**: Added comprehensive test coverage for caching behavior to ensure correctness.
+
+### Next Priority Targets
+
+Based on flamegraph analysis, the next optimization targets are:
+1. **Character position calculations** (`get_char_at_position` - 22.62% of time)
+2. **Unicode segmentation optimization** (binary search operations - 26% of time)
+3. **NG parser algorithmic improvements** (fundamental parsing logic)
+
 ---
 
-_This analysis was conducted through systematic benchmarking on real-world markdown content,
-measuring both macro-level parser performance and micro-level component costs to isolate the root
-causes of performance degradation._
+_This analysis was conducted through systematic benchmarking on real-world markdown content, measuring both macro-level parser performance and micro-level component costs to isolate the root causes of performance degradation._

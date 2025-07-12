@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::env;
+use std::{env,
+          sync::atomic::{AtomicI8, Ordering}};
 
 /// Global variable which can be used to:
 /// 1. Override the color support.
@@ -25,11 +26,55 @@ use std::env;
 /// This is a global variable because it is used in multiple places in the codebase, and
 /// it is really dependent on the environment.
 pub mod global_color_support {
-    use std::sync::atomic::{AtomicI8, Ordering};
+    use super::{examine_env_vars_to_determine_color_support, AtomicI8, ColorSupport,
+                Ordering, Stream};
 
-    use super::{examine_env_vars_to_determine_color_support, ColorSupport, Stream};
-
+    /// Global override for color support detection.
+    ///
+    /// This variable stores an explicit override value that takes precedence over all
+    /// automatic color detection logic. When set via [`set_override()`], the [`detect()`]
+    /// function will always return this value instead of examining environment variables
+    /// or using cached detection results.
+    ///
+    /// # Usage Flow in [`detect()`]
+    /// 1. **First priority**: Check this override value
+    /// 2. If override is set, return it immediately (skip cache and detection)
+    /// 3. If not set, proceed to check [`COLOR_SUPPORT_CACHED`]
+    ///
+    /// # Use Cases
+    /// - Testing: Force specific color support levels for unit tests
+    /// - User preference: Allow applications to override automatic detection
+    /// - Debugging: Temporarily disable colors regardless of terminal capabilities
+    ///
+    /// # Thread Safety
+    /// Uses `AtomicI8` with `Release`/`Acquire` ordering to ensure thread-safe access
+    /// across the application.
     static mut COLOR_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+
+    /// Cached result of automatic color support detection.
+    ///
+    /// This variable stores the memoized result from
+    /// [`examine_env_vars_to_determine_color_support()`] to avoid repeatedly checking
+    /// environment variables and terminal capabilities on every call to [`detect()`].
+    ///
+    /// # Usage Flow in [`detect()`]
+    /// 1. First priority: Check [`COLOR_SUPPORT_GLOBAL`] for overrides
+    /// 2. **Second priority**: Check this cached value
+    /// 3. If cache hit, return the cached result immediately
+    /// 4. If cache miss, run detection, store result here, then return it
+    ///
+    /// # Caching Behavior
+    /// - Initially set to [`NOT_SET_VALUE`] (-1)
+    /// - Populated on first call to [`detect()`] when no override is set
+    /// - Remains valid until explicitly cleared via [`clear_cache()`]
+    /// - Can be manually set via [`set_cached()`] for testing purposes
+    ///
+    /// # Performance Benefits
+    /// Eliminates expensive environment variable lookups and terminal capability
+    /// checks on subsequent calls, providing O(1) color support detection after
+    /// the initial detection run.
+    static mut COLOR_SUPPORT_CACHED: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+
     const NOT_SET_VALUE: i8 = -1;
 
     /// This is the main function that is used to determine whether color is supported.
@@ -37,18 +82,26 @@ pub mod global_color_support {
     ///
     /// - If the value has been set using [`set_override`], then that value will be
     ///   returned.
-    /// - Otherwise, the value will be determined calling
-    ///   [`examine_env_vars_to_determine_color_support`].
+    /// - Otherwise, the value will be determined once by calling
+    ///   [`examine_env_vars_to_determine_color_support`] and cached for subsequent calls.
     #[must_use]
     pub fn detect() -> ColorSupport {
+        // First check for explicit override
         match try_get_override() {
-            Ok(it) => match it {
-                ColorSupport::Ansi256 => ColorSupport::Ansi256,
-                ColorSupport::Truecolor => ColorSupport::Truecolor,
-                ColorSupport::Grayscale => ColorSupport::Grayscale,
-                ColorSupport::NoColor => ColorSupport::NoColor,
-            },
-            Err(()) => examine_env_vars_to_determine_color_support(Stream::Stdout),
+            Ok(it) => it,
+            Err(()) => {
+                // Check if we've already cached the detection result
+                match try_get_cached() {
+                    Ok(cached) => cached,
+                    Err(()) => {
+                        // Not cached yet, so detect once and cache the result
+                        let detected =
+                            examine_env_vars_to_determine_color_support(Stream::Stdout);
+                        set_cached(detected);
+                        detected
+                    }
+                }
+            }
         }
     }
 
@@ -70,6 +123,29 @@ pub mod global_color_support {
     #[allow(static_mut_refs)]
     pub fn clear_override() {
         unsafe { COLOR_SUPPORT_GLOBAL.store(NOT_SET_VALUE, Ordering::Release) };
+    }
+
+    /// Clear the cached color support detection result, forcing re-detection on next
+    /// call. This is useful for testing or when environment might have changed.
+    #[allow(static_mut_refs)]
+    pub fn clear_cache() {
+        unsafe { COLOR_SUPPORT_CACHED.store(NOT_SET_VALUE, Ordering::Release) };
+    }
+
+    /// Get the cached color support detection result.
+    /// - If detection has been run and cached, that value will be returned.
+    /// - Otherwise, an error will be returned.
+    #[allow(clippy::result_unit_err, static_mut_refs)]
+    pub fn try_get_cached() -> Result<ColorSupport, ()> {
+        let it = unsafe { COLOR_SUPPORT_CACHED.load(Ordering::Acquire) };
+        ColorSupport::try_from(it)
+    }
+
+    /// Set the cached color support detection result.
+    #[allow(static_mut_refs)]
+    pub fn set_cached(value: ColorSupport) {
+        let it = i8::from(value);
+        unsafe { COLOR_SUPPORT_CACHED.store(it, Ordering::Release) };
     }
 
     /// Get the color support override value.
@@ -266,6 +342,28 @@ mod tests {
             global_color_support::try_get_override(),
             Ok(ColorSupport::Grayscale)
         );
+    }
+
+    #[test]
+    #[serial]
+    fn test_caching_behavior() {
+        // Clear any existing state
+        global_color_support::clear_override();
+        global_color_support::clear_cache();
+
+        // First call should detect and cache
+        let first_result = global_color_support::detect();
+
+        // Verify that cache now has a value
+        assert_eq!(global_color_support::try_get_cached(), Ok(first_result));
+
+        // Second call should return the same cached result
+        let second_result = global_color_support::detect();
+        assert_eq!(first_result, second_result);
+
+        // Clear cache and verify it's cleared
+        global_color_support::clear_cache();
+        assert!(global_color_support::try_get_cached().is_err());
     }
 
     #[test]
