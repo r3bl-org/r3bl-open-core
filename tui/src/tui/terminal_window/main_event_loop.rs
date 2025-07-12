@@ -26,10 +26,10 @@ use crate::{ch, col, format_as_kilobytes_with_commas, glyphs, height, inline_str
             telemetry::{telemetry_default_constants, Telemetry},
             telemetry_record, width, Ansi256GradientIndex, ColorWheel, ColorWheelConfig,
             ColorWheelSpeed, CommonResult, ComponentRegistryMap, DefaultSize,
-            DefaultTiming, Flush, FlushKind, GCStringExt, GetMemSize,
-            GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputDeviceExt,
-            InputEvent, LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice,
-            RawMode, RenderOp, RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
+            DefaultTiming, Flush, FlushKind, GCStringExt, GetMemSize, GlobalData,
+            GradientGenerationPolicy, HasFocus, InputDevice, InputDeviceExt, InputEvent,
+            LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice, RawMode,
+            RenderOp, RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
             TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder,
             DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY};
 
@@ -931,31 +931,31 @@ mod tests {
             // Check pixel char at 4 x 7.
             {
                 let PixelChar::PlainText {
-                    text,
+                    display_char,
                     maybe_style: _,
-                } = my_offscreen_buffer.buffer[4][7].clone()
+                } = my_offscreen_buffer.buffer[4][7]
                 else {
                     panic!(
                         "Expected PixelChar::PlainText, got: {:?}",
                         my_offscreen_buffer.buffer[4][7]
                     );
                 };
-                assert_eq2!(text, "S");
+                assert_eq2!(display_char.to_string(), "S");
             }
 
             // Check pixel char at 10 x 7.
             {
                 let PixelChar::PlainText {
-                    text,
+                    display_char,
                     maybe_style: _,
-                } = my_offscreen_buffer.buffer[10][7].clone()
+                } = my_offscreen_buffer.buffer[10][7]
                 else {
                     panic!(
                         "Expected PixelChar::PlainText, got: {:?}",
                         my_offscreen_buffer.buffer[10][7]
                     );
                 };
-                assert_eq2!(text, "H");
+                assert_eq2!(display_char.to_string(), "H");
             }
         }
         // This is for local development environment. It supports truecolor.
@@ -964,7 +964,7 @@ mod tests {
             {
                 assert_eq2!(
                     PixelChar::PlainText {
-                        text: "S".into(),
+                        display_char: 'S',
                         maybe_style: Some(TuiStyle {
                             color_fg: Some(tui_color!(102, 0, 255)),
                             ..Default::default()
@@ -978,7 +978,7 @@ mod tests {
             {
                 assert_eq2!(
                     PixelChar::PlainText {
-                        text: "H".into(),
+                        display_char: 'H',
                         maybe_style: Some(TuiStyle {
                             id: None,
                             dim: Some(tui_style_attrib::Dim),

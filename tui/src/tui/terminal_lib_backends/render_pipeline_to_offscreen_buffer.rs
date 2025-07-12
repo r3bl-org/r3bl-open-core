@@ -379,10 +379,19 @@ mod print_text_with_attributes_helper {
                     let seg_text: &str = seg.get_str(text_gcs);
                     match (maybe_style, seg_text) {
                         (None, SPACER_GLYPH) => PixelChar::Spacer,
-                        _ => PixelChar::PlainText {
-                            text: seg_text.into(),
-                            maybe_style,
-                        },
+                        _ => {
+                            // Convert the segment text to a single char
+                            let display_char = if seg_text.chars().count() == 1 {
+                                seg_text.chars().next().unwrap()
+                            } else {
+                                // For multi-char segments, use the first char
+                                seg_text.chars().next().unwrap_or('�')
+                            };
+                            PixelChar::PlainText {
+                                display_char,
+                                maybe_style,
+                            }
+                        }
                     }
                 };
 
@@ -505,7 +514,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    text: "h".into(),
+                    display_char: 'h',
                     maybe_style: Some(
                         new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -514,7 +523,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    text: "o".into(),
+                    display_char: 'o',
                     maybe_style: Some(
                         new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -523,7 +532,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    text: "1".into(),
+                    display_char: '1',
                     maybe_style: Some(
                         new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -532,7 +541,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][9],
                 PixelChar::PlainText {
-                    text: "5".into(),
+                    display_char: '5',
                     maybe_style: Some(
                         new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -568,7 +577,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    text: "h".into(),
+                    display_char: 'h',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -577,7 +586,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    text: "o".into(),
+                    display_char: 'o',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -586,7 +595,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    text: "1".into(),
+                    display_char: '1',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -630,7 +639,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    text: "h".into(),
+                    display_char: 'h',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -639,7 +648,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    text: "o".into(),
+                    display_char: 'o',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -648,7 +657,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    text: "1".into(),
+                    display_char: '1',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -657,7 +666,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][9],
                 PixelChar::PlainText {
-                    text: "5".into(),
+                    display_char: '5',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -695,7 +704,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    text: "h".into(),
+                    display_char: 'h',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -704,7 +713,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    text: "o".into(),
+                    display_char: 'o',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)} )
                     ),
@@ -713,7 +722,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    text: "1".into(),
+                    display_char: '1',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)} )
                     ),
@@ -750,7 +759,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    text: "h".into(),
+                    display_char: 'h',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -759,7 +768,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    text: "o".into(),
+                    display_char: 'o',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -768,7 +777,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    text: "1".into(),
+                    display_char: '1',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -777,7 +786,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][8],
                 PixelChar::PlainText {
-                    text: "😃".into(),
+                    display_char: '😃',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -833,7 +842,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][0],
                 PixelChar::PlainText {
-                    text: "h".into(),
+                    display_char: 'h',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -842,7 +851,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][4],
                 PixelChar::PlainText {
-                    text: "o".into(),
+                    display_char: 'o',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -851,7 +860,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][5],
                 PixelChar::PlainText {
-                    text: "1".into(),
+                    display_char: '1',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -860,7 +869,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][7],
                 PixelChar::PlainText {
-                    text: "😃".into(),
+                    display_char: '😃',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -928,7 +937,7 @@ mod tests {
         assert_eq2!(
             my_offscreen_buffer.buffer[0][0],
             PixelChar::PlainText {
-                text: "h".into(),
+                display_char: 'h',
                 maybe_style: Some(
                     new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                 ),
@@ -937,7 +946,7 @@ mod tests {
         assert_eq2!(
             my_offscreen_buffer.buffer[0][7],
             PixelChar::PlainText {
-                text: "😃".into(),
+                display_char: '😃',
                 maybe_style: Some(
                     new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                 ),
@@ -1030,7 +1039,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][2],
                 PixelChar::PlainText {
-                    text: "h".into(),
+                    display_char: 'h',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -1039,7 +1048,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][7],
                 PixelChar::PlainText {
-                    text: "😃".into(),
+                    display_char: '😃',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -1058,7 +1067,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[1][4],
                 PixelChar::PlainText {
-                    text: "w".into(),
+                    display_char: 'w',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -1067,7 +1076,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[1][8],
                 PixelChar::PlainText {
-                    text: "d".into(),
+                    display_char: 'd',
                     maybe_style: Some(
                         new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                     ),
@@ -1109,7 +1118,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[0][max_col - 1],
                 PixelChar::PlainText {
-                    text: "h".into(),
+                    display_char: 'h',
                     maybe_style: Some(new_style! ( dim bold )),
                 }
             );
@@ -1119,7 +1128,7 @@ mod tests {
             assert_eq2!(
                 my_offscreen_buffer.buffer[1][max_col - 1],
                 PixelChar::PlainText {
-                    text: "i".into(),
+                    display_char: 'i',
                     maybe_style: Some(new_style! ( dim bold )),
                 }
             );

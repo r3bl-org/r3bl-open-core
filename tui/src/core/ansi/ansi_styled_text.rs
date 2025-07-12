@@ -198,13 +198,13 @@ pub mod ansi_styled_text_impl {
             let mut acc = InlineString::with_capacity(self.text.len());
             for pixel_char in &ir_text {
                 if let PixelChar::PlainText {
-                    text,
+                    display_char,
                     maybe_style: _,
                 } = pixel_char
                 {
                     use std::fmt::Write;
                     // We don't care about the result of this operation.
-                    write!(acc, "{text}").ok();
+                    write!(acc, "{display_char}").ok();
                 }
             }
 
@@ -247,8 +247,12 @@ pub mod ansi_styled_text_impl {
                     InlineVec::with_capacity(self.text.len());
                 let gc_string = GCString::from(&self.text);
                 for item in &gc_string {
+                    // Convert the grapheme cluster to a single char
+                    // For multi-char graphemes, use the first char or fallback to
+                    // replacement char
+                    let display_char = item.chars().next().unwrap_or('�');
                     let pixel_char = PixelChar::PlainText {
-                        text: item.into(),
+                        display_char,
                         maybe_style: maybe_tui_style,
                     };
                     acc.push(pixel_char);
@@ -1254,35 +1258,35 @@ mod tests {
             assert_eq!(
                 res[0],
                 PixelChar::PlainText {
-                    text: 'H'.into(),
+                    display_char: 'H',
                     maybe_style: Some(tui_style)
                 }
             );
             assert_eq!(
                 res[1],
                 PixelChar::PlainText {
-                    text: 'e'.into(),
+                    display_char: 'e',
                     maybe_style: Some(tui_style)
                 }
             );
             assert_eq!(
                 res[2],
                 PixelChar::PlainText {
-                    text: 'l'.into(),
+                    display_char: 'l',
                     maybe_style: Some(tui_style)
                 }
             );
             assert_eq!(
                 res[3],
                 PixelChar::PlainText {
-                    text: 'l'.into(),
+                    display_char: 'l',
                     maybe_style: Some(tui_style)
                 }
             );
             assert_eq!(
                 res[4],
                 PixelChar::PlainText {
-                    text: 'o'.into(),
+                    display_char: 'o',
                     maybe_style: Some(tui_style)
                 }
             );
@@ -1296,14 +1300,14 @@ mod tests {
             assert_eq!(
                 res[0],
                 PixelChar::PlainText {
-                    text: 'H'.into(),
+                    display_char: 'H',
                     maybe_style: Some(tui_style)
                 }
             );
             assert_eq!(
                 res[10],
                 PixelChar::PlainText {
-                    text: 'd'.into(),
+                    display_char: 'd',
                     maybe_style: Some(tui_style)
                 }
             );
@@ -1320,14 +1324,14 @@ mod tests {
             assert_eq!(
                 res[0],
                 PixelChar::PlainText {
-                    text: 'W'.into(),
+                    display_char: 'W',
                     maybe_style: Some(tui_style)
                 }
             );
             assert_eq!(
                 res[4],
                 PixelChar::PlainText {
-                    text: 'd'.into(),
+                    display_char: 'd',
                     maybe_style: Some(tui_style)
                 }
             );
@@ -1344,14 +1348,14 @@ mod tests {
             assert_eq!(
                 res[0],
                 PixelChar::PlainText {
-                    text: 'H'.into(),
+                    display_char: 'H',
                     maybe_style: Some(tui_style)
                 }
             );
             assert_eq!(
                 res[4],
                 PixelChar::PlainText {
-                    text: 'o'.into(),
+                    display_char: 'o',
                     maybe_style: Some(tui_style)
                 }
             );
@@ -1368,14 +1372,14 @@ mod tests {
             assert_eq!(
                 res[0],
                 PixelChar::PlainText {
-                    text: 'l'.into(),
+                    display_char: 'l',
                     maybe_style: Some(tui_style)
                 }
             );
             assert_eq!(
                 res[6],
                 PixelChar::PlainText {
-                    text: 'r'.into(),
+                    display_char: 'r',
                     maybe_style: Some(tui_style)
                 }
             );
@@ -1404,14 +1408,14 @@ mod tests {
             assert_eq!(
                 res[0],
                 PixelChar::PlainText {
-                    text: 'T'.into(),
+                    display_char: 'T',
                     maybe_style: None
                 }
             );
             assert_eq!(
                 res[3],
                 PixelChar::PlainText {
-                    text: 't'.into(),
+                    display_char: 't',
                     maybe_style: None
                 }
             );
@@ -1460,14 +1464,14 @@ mod tests {
             assert_eq!(
                 res[0],
                 PixelChar::PlainText {
-                    text: 'r'.into(),
+                    display_char: 'r',
                     maybe_style: Some(tui_style)
                 }
             );
             assert_eq!(
                 res[2],
                 PixelChar::PlainText {
-                    text: 'd'.into(),
+                    display_char: 'd',
                     maybe_style: Some(tui_style)
                 }
             );
@@ -1484,7 +1488,7 @@ mod tests {
             assert_eq!(
                 res[0],
                 PixelChar::PlainText {
-                    text: 'W'.into(),
+                    display_char: 'W',
                     maybe_style: Some(tui_style)
                 }
             );
@@ -1505,14 +1509,14 @@ mod tests {
             assert_eq!(
                 res[0],
                 PixelChar::PlainText {
-                    text: '好'.into(),
+                    display_char: '好',
                     maybe_style: Some(tui_style)
                 }
             );
             assert_eq!(
                 res[1],
                 PixelChar::PlainText {
-                    text: '世'.into(),
+                    display_char: '世',
                     maybe_style: Some(tui_style)
                 }
             );
@@ -1527,7 +1531,7 @@ mod tests {
             assert_eq!(
                 res[0],
                 PixelChar::PlainText {
-                    text: 'H'.into(),
+                    display_char: 'H',
                     maybe_style: Some(tui_style)
                 }
             );
@@ -1542,7 +1546,7 @@ mod tests {
             assert_eq!(
                 res[0],
                 PixelChar::PlainText {
-                    text: 'H'.into(),
+                    display_char: 'H',
                     maybe_style: Some(tui_style)
                 }
             );

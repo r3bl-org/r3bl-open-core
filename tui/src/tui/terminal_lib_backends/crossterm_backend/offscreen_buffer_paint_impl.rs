@@ -15,10 +15,9 @@
  *   limitations under the License.
  */
 use crate::{ch, col, diff_chunks::PixelCharDiffChunks, glyphs::SPACER_GLYPH, render_ops,
-            row, ColIndex, Flush, FlushKind, GCString, InlineString,
-            LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint, PixelChar,
-            RenderOp, RenderOps, RowIndex, Size, TuiStyle, DEBUG_TUI_COMPOSITOR,
-            DEBUG_TUI_SHOW_PIPELINE};
+            row, ColIndex, Flush, FlushKind, GCString, InlineString, LockedOutputDevice,
+            OffscreenBuffer, OffscreenBufferPaint, PixelChar, RenderOp, RenderOps,
+            RowIndex, Size, TuiStyle, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE};
 
 #[derive(Debug)]
 pub struct OffscreenBufferPaintImplCrossterm;
@@ -122,13 +121,14 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
             // For each pixel char in the line.
             for (pixel_char_index, pixel_char) in line.iter().enumerate() {
-                let (pixel_char_str, pixel_char_style): (&str, Option<TuiStyle>) =
+                let (pixel_char_content, pixel_char_style): (String, Option<TuiStyle>) =
                     match pixel_char {
                         PixelChar::Void => continue,
-                        PixelChar::Spacer => (SPACER_GLYPH, None),
-                        PixelChar::PlainText { text, maybe_style } => {
-                            (text, *maybe_style)
-                        }
+                        PixelChar::Spacer => (SPACER_GLYPH.to_string(), None),
+                        PixelChar::PlainText {
+                            display_char,
+                            maybe_style,
+                        } => (display_char.to_string(), *maybe_style),
                     };
 
                 let is_style_same_as_prev = render_helper::style_eq(
@@ -164,7 +164,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 }
 
                 // Buffer it.
-                context.buffer_plain_text.push_str(pixel_char_str);
+                context.buffer_plain_text.push_str(&pixel_char_content);
 
                 // Flush it.
                 if is_at_end_of_line {
@@ -205,11 +205,13 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                     ));
                 }
                 PixelChar::PlainText {
-                    text, maybe_style, ..
+                    display_char,
+                    maybe_style,
+                    ..
                 } => {
                     it.push(RenderOp::ApplyColors(*maybe_style));
                     it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-                        InlineString::from_str(text),
+                        InlineString::from_str(&display_char.to_string()),
                         *maybe_style,
                     ));
                 }
