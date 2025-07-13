@@ -366,8 +366,8 @@ mod perform_paint {
         it
     }
 
-    /// Use [Style] to set crossterm [Attributes] ([docs](
-    /// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
+    /// Use [`crate::TuiStyle`] to set crossterm [`Attribute`]. Read more about attributes
+    /// in the [crossterm docs](https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes).
     pub fn paint_style_and_text(
         paint_args: &mut PaintArgs<'_>,
         mut needs_reset: Cow<'_, bool>,

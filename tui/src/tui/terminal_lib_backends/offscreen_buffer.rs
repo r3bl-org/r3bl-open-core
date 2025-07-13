@@ -23,7 +23,8 @@ use smallvec::smallvec;
 use super::{FlushKind, RenderOps};
 use crate::{col, dim_underline, fg_green, fg_magenta, get_mem_size, inline_string, ok,
             row, tiny_inline_string, ColWidth, GetMemSize, InlineVec, List,
-            LockedOutputDevice, Pos, Size, TinyInlineString, TuiColor, TuiStyle};
+            LockedOutputDevice, MemoizedMemorySize, MemorySize, Pos, Size,
+            TinyInlineString, TuiColor, TuiStyle};
 
 /// Represents a grid of cells where the row/column index maps to the terminal screen.
 ///
@@ -38,16 +39,23 @@ use crate::{col, dim_underline, fg_green, fg_magenta, get_mem_size, inline_strin
 /// indices of the terminal screen. By inserting a [`PixelChar::Void`] pixel char in the
 /// next cell, we signal the rendering logic to skip it since it has already been painted.
 /// And this is different than a [`PixelChar::Spacer`] which has to be painted!
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq)]
 pub struct OffscreenBuffer {
     pub buffer: PixelCharLines,
     pub window_size: Size,
     pub my_pos: Pos,
     pub my_fg_color: Option<TuiColor>,
     pub my_bg_color: Option<TuiColor>,
+    /// Memoized memory size calculation for performance.
+    /// This avoids expensive recalculation in
+    /// [`crate::main_event_loop::EventLoopState::log_telemetry_info()`]
+    /// which is called in a hot loop on every render.
+    memory_size_calc_cache: MemoizedMemorySize,
 }
 
 impl GetMemSize for OffscreenBuffer {
+    /// This is the actual calculation, but should rarely be called directly.
+    /// Use [`get_mem_size_cached()`] for performance-critical code.
     fn get_mem_size(&self) -> usize {
         self.buffer.get_mem_size()
             + std::mem::size_of::<Size>()
@@ -82,8 +90,8 @@ pub mod diff_chunks {
 
 mod offscreen_buffer_impl {
     use super::{col, fg_green, fmt, inline_string, ok, row, Debug, Deref, DerefMut,
-                List, OffscreenBuffer, PixelChar, PixelCharDiffChunks, PixelCharLines,
-                Pos, Size};
+                GetMemSize, List, MemoizedMemorySize, MemorySize, OffscreenBuffer,
+                PixelChar, PixelCharDiffChunks, PixelCharLines, Pos, Size};
 
     impl Debug for PixelCharDiffChunks {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -101,7 +109,18 @@ mod offscreen_buffer_impl {
     }
 
     impl DerefMut for OffscreenBuffer {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.buffer }
+        /// Returns a mutable reference to the buffer.
+        ///
+        /// **Important**: This invalidates the `memory_size_calc_cache` field.
+        /// It is up to the caller to either:
+        /// - Call [`Self::get_mem_size_cached()`] which will auto-populate the cache if
+        ///   empty
+        /// - Accept that [`Self::get_mem_size_cached()`] will recalculate on next access
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            // Invalidate cache when buffer is accessed mutably
+            self.memory_size_calc_cache.invalidate();
+            &mut self.buffer
+        }
     }
 
     impl Debug for OffscreenBuffer {
@@ -133,6 +152,23 @@ mod offscreen_buffer_impl {
     }
 
     impl OffscreenBuffer {
+        /// Gets the cached memory size value, recalculating if necessary.
+        /// This is used in
+        /// [`crate::main_event_loop::EventLoopState::log_telemetry_info()`] for
+        /// performance-critical telemetry logging. The expensive memory calculation is
+        /// only performed if the cache is invalid or empty.
+        #[must_use]
+        pub fn get_mem_size_cached(&mut self) -> MemorySize {
+            if self.memory_size_calc_cache.is_dirty() {
+                let size = self.get_mem_size();
+                self.memory_size_calc_cache.upsert(|| MemorySize::new(size));
+            }
+            self.memory_size_calc_cache
+                .get_cached()
+                .cloned()
+                .unwrap_or_else(MemorySize::unknown)
+        }
+
         /// Checks for differences between self and other. Returns a list of positions and
         /// pixel chars if there are differences (from other).
         #[must_use]
@@ -161,13 +197,21 @@ mod offscreen_buffer_impl {
         /// Create a new buffer and fill it with empty chars.
         #[must_use]
         pub fn new_with_capacity_initialized(window_size: Size) -> Self {
-            Self {
+            let mut buffer = Self {
                 buffer: PixelCharLines::new_with_capacity_initialized(window_size),
                 window_size,
                 my_pos: Pos::default(),
                 my_fg_color: None,
                 my_bg_color: None,
-            }
+                memory_size_calc_cache: MemoizedMemorySize::default(),
+            };
+            // Explicitly calculate and cache the initial memory size.
+            // We know the cache is empty (invariant), so directly populate it.
+            let size = buffer.get_mem_size();
+            buffer
+                .memory_size_calc_cache
+                .upsert(|| MemorySize::new(size));
+            buffer
         }
 
         // Make sure each line is full of empty chars.
@@ -179,6 +223,8 @@ mod offscreen_buffer_impl {
                     }
                 }
             }
+            // Invalidate cache when buffer is cleared.
+            self.memory_size_calc_cache.invalidate();
         }
     }
 }
@@ -556,5 +602,35 @@ mod tests {
             }
         }
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+    }
+
+    #[test]
+    fn test_memory_size_caching() {
+        let window_size = width(10) + height(2);
+        let mut my_offscreen_buffer =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        // First call should calculate and cache
+        let size1 = my_offscreen_buffer.get_mem_size_cached();
+        assert_ne!(format!("{}", size1), "?");
+
+        // Second call should use cached value (no recalculation)
+        let size2 = my_offscreen_buffer.get_mem_size_cached();
+        assert_eq!(format!("{}", size1), format!("{}", size2));
+
+        // Modify buffer through DerefMut (invalidates cache)
+        my_offscreen_buffer.buffer[0][0] = PixelChar::PlainText {
+            display_char: 'x',
+            maybe_style: None,
+        };
+
+        // Next call should recalculate
+        let size3 = my_offscreen_buffer.get_mem_size_cached();
+        assert_ne!(format!("{}", size3), "?");
+
+        // Clear should also invalidate cache
+        my_offscreen_buffer.clear();
+        let size4 = my_offscreen_buffer.get_mem_size_cached();
+        assert_ne!(format!("{}", size4), "?");
     }
 }

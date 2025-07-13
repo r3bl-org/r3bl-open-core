@@ -22,12 +22,12 @@ use tokio::sync::mpsc;
 
 use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation,
             MainEventLoopFuture};
-use crate::{ch, col, format_as_kilobytes_with_commas, glyphs, height, inline_string,
+use crate::{ch, col, glyphs, height, inline_string,
             lock_output_device_as_mut, new_style, ok, render_pipeline, row,
             telemetry::{telemetry_default_constants, Telemetry},
             telemetry_record, width, Ansi256GradientIndex, ColorWheel, ColorWheelConfig,
             ColorWheelSpeed, CommonResult, ComponentRegistryMap, DefaultSize,
-            DefaultTiming, Flush, FlushKind, GCStringExt, GetMemSize, GlobalData,
+            DefaultTiming, Flush, FlushKind, GCStringExt, GlobalData,
             GradientGenerationPolicy, HasFocus, InputDevice, InputDeviceExt, InputEvent,
             LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice, RawMode,
             RenderOp, RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
@@ -136,7 +136,7 @@ where
 }
 
 /// Holds all the state required for the main event loop.
-struct EventLoopState<S, AS>
+pub struct EventLoopState<S, AS>
 where
     S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
@@ -263,8 +263,10 @@ where
         });
     }
 
-    /// Log telemetry information after each event loop iteration.
-    fn log_telemetry_info(&self) {
+    /// Log telemetry information after each event loop iteration. This function must
+    /// execute quickly, so it avoids deep traversal of the editor buffer and dialog
+    /// buffers. This is called in a hot loop, on every render, so it must be quick!
+    pub fn log_telemetry_info(&mut self) {
         (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
@@ -277,7 +279,7 @@ where
                 report = %self.global_data.get_hud_report_no_spinner(),
             );
 
-            if let Some(ref offscreen_buffer) =
+            if let Some(ref mut offscreen_buffer) =
                 self.global_data.maybe_saved_offscreen_buffer
             {
                 // % is Display, ? is Debug.
@@ -288,9 +290,7 @@ where
                     ),
                     offscreen_buffer_size = %inline_string!(
                         "Memory used: {size}",
-                        size = format_as_kilobytes_with_commas(
-                            offscreen_buffer.get_mem_size()
-                        )
+                        size = offscreen_buffer.get_mem_size_cached()
                     )
                 );
             }
