@@ -55,7 +55,7 @@ pub struct OffscreenBuffer {
 
 impl GetMemSize for OffscreenBuffer {
     /// This is the actual calculation, but should rarely be called directly.
-    /// Use [`get_mem_size_cached()`] for performance-critical code.
+    /// Use [`Self::get_mem_size_cached()`] for performance-critical code.
     fn get_mem_size(&self) -> usize {
         self.buffer.get_mem_size()
             + std::mem::size_of::<Size>()
@@ -111,14 +111,12 @@ mod offscreen_buffer_impl {
     impl DerefMut for OffscreenBuffer {
         /// Returns a mutable reference to the buffer.
         ///
-        /// **Important**: This invalidates the `memory_size_calc_cache` field.
-        /// It is up to the caller to either:
-        /// - Call [`Self::get_mem_size_cached()`] which will auto-populate the cache if
-        ///   empty
-        /// - Accept that [`Self::get_mem_size_cached()`] will recalculate on next access
+        /// **Important**: This invalidates and recalculates the `memory_size_calc_cache`
+        /// field to ensure telemetry always shows accurate memory size instead of
+        /// "?".
         fn deref_mut(&mut self) -> &mut Self::Target {
-            // Invalidate cache when buffer is accessed mutably
-            self.memory_size_calc_cache.invalidate();
+            // Invalidate and recalculate cache when buffer is accessed mutably
+            self.invalidate_memory_size_calc_cache();
             &mut self.buffer
         }
     }
@@ -167,6 +165,17 @@ mod offscreen_buffer_impl {
                 .get_cached()
                 .cloned()
                 .unwrap_or_else(MemorySize::unknown)
+        }
+
+        /// Invalidates and immediately recalculates the memory size cache.
+        /// Call this when buffer content changes to ensure the cache is always valid.
+        fn invalidate_memory_size_calc_cache(&mut self) {
+            self.memory_size_calc_cache.invalidate();
+            // Force immediate recalculation to avoid "?" in telemetry
+            if self.memory_size_calc_cache.is_dirty() {
+                let size = self.get_mem_size();
+                self.memory_size_calc_cache.upsert(|| MemorySize::new(size));
+            }
         }
 
         /// Checks for differences between self and other. Returns a list of positions and
@@ -223,8 +232,8 @@ mod offscreen_buffer_impl {
                     }
                 }
             }
-            // Invalidate cache when buffer is cleared.
-            self.memory_size_calc_cache.invalidate();
+            // Invalidate and recalculate cache when buffer is cleared.
+            self.invalidate_memory_size_calc_cache();
         }
     }
 }

@@ -22,8 +22,8 @@ use tokio::sync::mpsc;
 
 use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation,
             MainEventLoopFuture};
-use crate::{ch, col, glyphs, height, inline_string,
-            lock_output_device_as_mut, new_style, ok, render_pipeline, row,
+use crate::{ch, col, glyphs, height, inline_string, lock_output_device_as_mut,
+            new_style, ok, render_pipeline, row,
             telemetry::{telemetry_default_constants, Telemetry},
             telemetry_record, width, Ansi256GradientIndex, ColorWheel, ColorWheelConfig,
             ColorWheelSpeed, CommonResult, ComponentRegistryMap, DefaultSize,
@@ -136,6 +136,7 @@ where
 }
 
 /// Holds all the state required for the main event loop.
+#[allow(missing_debug_implementations)]
 pub struct EventLoopState<S, AS>
 where
     S: Display + Debug + Default + Clone + Sync + Send,
@@ -282,16 +283,17 @@ where
             if let Some(ref mut offscreen_buffer) =
                 self.global_data.maybe_saved_offscreen_buffer
             {
+                let mem_used = inline_string!(
+                    "mem used: {size}",
+                    size = offscreen_buffer.get_mem_size_cached()
+                );
                 // % is Display, ? is Debug.
                 tracing::info!(
                     message = %inline_string!(
-                        "AppManager::render_app() offscreen_buffer stats {ch}",
+                        "AppManager::render_app() offscreen_buffer {mem_used} {ch}",
+                        mem_used = mem_used,
                         ch = glyphs::SCREEN_BUFFER_GLYPH
                     ),
-                    offscreen_buffer_size = %inline_string!(
-                        "Memory used: {size}",
-                        size = offscreen_buffer.get_mem_size_cached()
-                    )
                 );
             }
         });
