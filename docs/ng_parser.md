@@ -377,6 +377,42 @@ Based on the current flamegraph analysis (2025-07-13), the optimization prioriti
    - Focus on batching writes where possible
    - Consider reducing frequency of full redraws
 
+## Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)
+
+### Problem Identified
+The main event loop was using Debug trait formatting for telemetry logging after every render cycle, causing significant overhead (17.39% CPU time in previous analysis).
+
+### Solution Implemented
+Implemented efficient Display trait for all State structs and buffers:
+
+1. **EditorBuffer Display** (`/tui/src/tui/editor/editor_buffer/buffer_struct.rs`):
+   - Fast summary format: `buffer:<filename>:lines(count):size(cached)`
+   - Uses cached memory size when available
+   - No deep traversal of buffer contents
+
+2. **DialogBuffer Display** (`/tui/src/tui/dialog/dialog_buffer/dialog_buffer_struct.rs`):
+   - Format: `dialog:<title>:results(count):<editor_buffer_info>`
+   - Uses "<untitled>" convention for empty titles
+   - Delegates to EditorBuffer's efficient Display
+
+3. **State Display Implementations**:
+   - All example State structs now have efficient Display traits
+   - Production State structs in cmdr also updated
+   - Consistent format showing counts and cached memory sizes
+
+### Performance Impact Verified (2025-07-13)
+Latest flamegraph analysis shows:
+- **Debug formatting eliminated**: No Debug trait overhead visible in flamegraph
+- **Text wrapping reduced**: From 16.12% to small chunks (~1-2%)
+- **Primary bottlenecks now**:
+  - Unicode segmentation: 11.99% (in GCString::new)
+  - Color wheel formatting: 10.53% + 1.67%
+  - Memory operations: 8.76% (page allocation)
+  - TLB flushing: 6.83%
+
+### Key Achievement
+Successfully eliminated the 17.39% Debug formatting overhead from telemetry logging, allowing the main event loop to log state information efficiently after every render without impacting performance.
+
 ---
 
 _This analysis was conducted through systematic benchmarking on real-world markdown content, measuring both macro-level parser performance and micro-level component costs to isolate the root causes of performance degradation._

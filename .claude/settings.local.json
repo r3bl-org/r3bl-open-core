@@ -1,5 +1,4 @@
 {
-  "model": "opus",
   "permissions": {
     "allow": [
       "Bash(grep:*)",
@@ -10,8 +9,10 @@
       "Bash(rustc:*)",
       "Bash(./debug_truncate)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(cargo check:*)"
     ],
     "deny": []
-  }
+  },
+  "model": "opus"
 }

@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Formatter, Result};
+use std::fmt::{Debug, Display, Formatter, Result};
 
 use crate::{ch, fmt_option, ChUnit, EditorBuffer, InlineString, ItemsOwned,
             DEFAULT_SYN_HI_FILE_EXT};
@@ -54,7 +54,7 @@ impl DialogBuffer {
     }
 }
 
-mod impl_debug_format {
+mod impl_debug {
     use super::{fmt_option, Debug, DialogBuffer, Formatter, Result};
 
     impl Debug for DialogBuffer {
@@ -73,6 +73,39 @@ mod impl_debug_format {
                     .editor_buffer
                     .get_as_string_with_comma_instead_of_newlines()
             )
+        }
+    }
+}
+
+/// Efficient Display implementation for telemetry logging.
+mod impl_display {
+    use super::{DialogBuffer, Display, Formatter, Result};
+
+    impl Display for DialogBuffer {
+        /// This must be a fast implementation, so we avoid deep traversal of the
+        /// editor buffer. This is used for telemetry reporting, and it is expected
+        /// to be fast, since it is called in a hot loop, on every render.
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            // Start with dialog identifier and title.
+            write!(f, "dialog:")?;
+
+            // Add title if not empty, otherwise use <untitled> convention.
+            if self.title.is_empty() {
+                write!(f, "<untitled>")?;
+            } else {
+                write!(f, "{}", self.title)?;
+            }
+
+            // Add results count if available.
+            if let Some(ref results) = self.maybe_results {
+                write!(f, ":results({})", results.len())?;
+            }
+
+            // Delegate to EditorBuffer's efficient Display implementation.
+            // This already includes line count and memory size info.
+            write!(f, ":{}", self.editor_buffer)?;
+
+            Ok(())
         }
     }
 }

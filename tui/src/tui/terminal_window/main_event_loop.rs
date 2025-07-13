@@ -14,7 +14,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::{fmt::Debug, marker::PhantomData};
+use std::{fmt::{Debug, Display},
+          marker::PhantomData};
 
 use smallvec::smallvec;
 use tokio::sync::mpsc;
@@ -109,7 +110,7 @@ pub fn main_event_loop_impl<'a, S, AS>(
     output_device: OutputDevice,
 ) -> MainEventLoopFuture<'a, S, AS>
 where
-    S: Debug + Default + Clone + Sync + Send + 'a,
+    S: Display + Debug + Default + Clone + Sync + Send + 'a,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     Box::pin(async move {
@@ -137,7 +138,7 @@ where
 /// Holds all the state required for the main event loop.
 struct EventLoopState<S, AS>
 where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     global_data: GlobalData<S, AS>,
@@ -149,7 +150,7 @@ where
 
 impl<S, AS> EventLoopState<S, AS>
 where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     /// Initialize the event loop state with all required components.
@@ -265,19 +266,21 @@ where
     /// Log telemetry information after each event loop iteration.
     fn log_telemetry_info(&self) {
         (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
+            // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!(
                     "AppManager::render_app() ok {ch}",
                     ch = glyphs::PAINT_GLYPH
                 ),
                 window_size = ?self.global_data.window_size,
-                state = ?self.global_data.state,
+                state = %self.global_data.state,
                 report = %self.global_data.get_hud_report_no_spinner(),
             );
 
             if let Some(ref offscreen_buffer) =
                 self.global_data.maybe_saved_offscreen_buffer
             {
+                // % is Display, ? is Debug.
                 tracing::info!(
                     message = %inline_string!(
                         "AppManager::render_app() offscreen_buffer stats {ch}",
@@ -304,7 +307,7 @@ async fn run_main_event_loop<S, AS>(
     output_device: OutputDevice,
 ) -> CommonResult<(GlobalData<S, AS>, InputDevice, OutputDevice)>
 where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     // Main event loop
@@ -360,7 +363,7 @@ fn handle_main_thread_signal<S, AS>(
     output_device: &OutputDevice,
 ) -> CommonResult<bool>
 where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     match signal {
@@ -390,7 +393,7 @@ fn handle_render_signal<S, AS>(
     output_device: &OutputDevice,
 ) -> CommonResult<()>
 where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     let telemetry = &mut event_loop_state.telemetry;
@@ -422,7 +425,7 @@ fn handle_app_signal<S, AS>(
     exit_keys: &[InputEvent],
     output_device: &OutputDevice,
 ) where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     let telemetry = &mut event_loop_state.telemetry;
@@ -462,7 +465,7 @@ fn handle_input_event<S, AS>(
     exit_keys: &[InputEvent],
     output_device: &OutputDevice,
 ) where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     log_input_event_if_enabled(&input_event);
@@ -499,7 +502,7 @@ fn handle_resize_event<S, AS>(
     app: &mut BoxedSafeApp<S, AS>,
     output_device: &OutputDevice,
 ) where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     let telemetry = &mut event_loop_state.telemetry;
@@ -531,7 +534,7 @@ fn process_input_event<S, AS>(
     exit_keys: &[InputEvent],
     output_device: &OutputDevice,
 ) where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     let telemetry = &mut event_loop_state.telemetry;
@@ -568,7 +571,7 @@ fn actually_process_input_event<S, AS>(
     locked_output_device: LockedOutputDevice<'_>,
     is_mock: bool,
 ) where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     let result = app.app_handle_input_event(
@@ -605,7 +608,7 @@ pub fn handle_resize<S, AS>(
     locked_output_device: LockedOutputDevice<'_>,
     is_mock: bool,
 ) where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
     global_data_mut_ref.set_size(new_size);
@@ -641,7 +644,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     locked_output_device: LockedOutputDevice<'_>,
     is_mock: bool,
 ) where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     let main_thread_channel_sender =
@@ -711,7 +714,7 @@ fn request_exit_by_sending_signal<AS>(
 
 struct AppManager<S, AS>
 where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
     _phantom: PhantomData<(S, AS)>,
@@ -719,7 +722,7 @@ where
 
 impl<S, AS> AppManager<S, AS>
 where
-    S: Debug + Default + Clone + Sync + Send,
+    S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
     /// **Telemetry**: This function is not recorded in telemetry but its caller(s) are.
@@ -830,7 +833,7 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
 
 #[cfg(test)]
 mod tests {
-    use std::{fmt::{Debug, Formatter},
+    use std::{fmt::{Debug, Display, Formatter},
               time::Duration};
 
     use smallvec::smallvec;
@@ -1012,6 +1015,12 @@ mod tests {
         #[derive(Clone, PartialEq, Eq, Default)]
         pub struct State {
             pub counter: isize,
+        }
+
+        impl Display for State {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "State{{counter:{}}}", self.counter)
+            }
         }
 
         impl Debug for State {

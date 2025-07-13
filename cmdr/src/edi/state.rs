@@ -14,11 +14,18 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::collections::HashMap;
 
-use r3bl_tui::{DialogBuffer, EditorBuffer, FlexBoxId};
+use std::{collections::HashMap,
+          ffi::OsStr,
+          fmt::{Debug, Display, Formatter, Result},
+          path::Path};
 
-use crate::edi::Id;
+use r3bl_tui::{DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, DialogBuffer, DocumentStorage,
+               EditorBuffer, FlexBoxId, HasDialogBuffers, HasEditorBuffers,
+               InlineString, TinyInlineString, fg_green, fg_red,
+               format_as_kilobytes_with_commas, inline_string, into_existing};
+
+use crate::{AnalyticsAction, edi::Id, report_analytics};
 
 #[derive(Clone, PartialEq)]
 pub struct State {
@@ -147,11 +154,7 @@ mod state_tests {
 }
 
 pub mod constructor {
-    use std::collections::HashMap;
-
-    use r3bl_tui::{EditorBuffer, FlexBoxId};
-
-    use super::{Id, State, file_utils};
+    use super::{EditorBuffer, FlexBoxId, HashMap, Id, State, file_utils};
 
     impl Default for State {
         fn default() -> Self {
@@ -196,13 +199,9 @@ pub mod constructor {
 }
 
 pub mod file_utils {
-    use std::{ffi::OsStr, path::Path};
-
-    use r3bl_tui::{DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, DocumentStorage,
-                   InlineString, TinyInlineString, fg_green, fg_red, inline_string,
-                   into_existing};
-
-    use crate::{AnalyticsAction, report_analytics};
+    use super::{AnalyticsAction, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT,
+                DocumentStorage, InlineString, OsStr, Path, TinyInlineString, fg_green,
+                fg_red, inline_string, into_existing, report_analytics};
 
     pub fn get_file_extension(maybe_file_path: Option<&str>) -> TinyInlineString {
         if let Some(file_path) = maybe_file_path {
@@ -289,9 +288,7 @@ pub mod file_utils {
 }
 
 mod impl_editor_support {
-    use r3bl_tui::{EditorBuffer, FlexBoxId, HasEditorBuffers};
-
-    use super::State;
+    use super::{EditorBuffer, FlexBoxId, HasEditorBuffers, State};
 
     impl HasEditorBuffers for State {
         fn get_mut_editor_buffer(&mut self, id: FlexBoxId) -> Option<&mut EditorBuffer> {
@@ -313,9 +310,7 @@ mod impl_editor_support {
 }
 
 mod impl_dialog_support {
-    use r3bl_tui::{DialogBuffer, FlexBoxId, HasDialogBuffers};
-
-    use super::State;
+    use super::{DialogBuffer, FlexBoxId, HasDialogBuffers, State};
 
     impl HasDialogBuffers for State {
         fn get_mut_dialog_buffer(&mut self, id: FlexBoxId) -> Option<&mut DialogBuffer> {
@@ -324,10 +319,8 @@ mod impl_dialog_support {
     }
 }
 
-mod impl_debug_format {
-    use std::fmt::{Debug, Formatter, Result};
-
-    use super::State;
+mod impl_debug {
+    use super::{Debug, Formatter, Result, State};
 
     impl Debug for State {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -339,6 +332,75 @@ mod impl_debug_format {
 ]",
                 self.dialog_buffers, self.editor_buffers,
             )
+        }
+    }
+}
+
+/// Efficient Display implementation for telemetry logging.
+mod impl_display {
+    use super::{Display, Formatter, Result, State, format_as_kilobytes_with_commas};
+
+    impl Display for State {
+        /// This must be a fast implementation, so we avoid deep traversal of the
+        /// editor buffers and dialog buffers. This is used for telemetry
+        /// reporting, and it is expected to be fast, since it is called in a hot loop,
+        /// on every render.
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            // Efficient telemetry logging format - no deep traversal.
+            let editor_count = self.editor_buffers.len();
+            let dialog_count = self.dialog_buffers.len();
+
+            // Calculate total memory size only if caches are available.
+            let mut total_cached_size = 0usize;
+            let mut uncached_count = 0usize;
+
+            // Sum up cached sizes from editor buffers.
+            for buffer in self.editor_buffers.values() {
+                if let Some(size) = buffer.get_memory_size_calc_cached() {
+                    total_cached_size += size;
+                } else {
+                    uncached_count += 1;
+                }
+            }
+
+            // Format the state summary.
+            write!(f, "State[editors={editor_count}, dialogs={dialog_count}")?;
+
+            // Add editor buffers info if available. The EditorBuffer's Display impl is
+            // fast.
+            if !self.editor_buffers.is_empty() {
+                write!(f, "\n  editor_buffers=[")?;
+                for (i, (id, buffer)) in self.editor_buffers.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, "\n    ")?;
+                    }
+                    write!(f, "{id}:{buffer}")?;
+                }
+                write!(f, "]")?;
+            }
+
+            // Add dialog buffers info if available. The DialogBuffer's Display impl is
+            // fast.
+            if !self.dialog_buffers.is_empty() {
+                write!(f, "\n  dialog_buffers=[")?;
+                for (i, (id, buffer)) in self.dialog_buffers.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, "\n    ")?;
+                    }
+                    write!(f, "{id}:{buffer}")?;
+                }
+                write!(f, "]")?;
+            }
+
+            // Add memory info if available.
+            if uncached_count == 0 && editor_count > 0 {
+                let memory_str = format_as_kilobytes_with_commas(total_cached_size);
+                write!(f, ", total_size={memory_str}")?;
+            }
+
+            write!(f, "]")?;
+
+            Ok(())
         }
     }
 }

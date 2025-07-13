@@ -14,7 +14,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::{fmt::Debug, ops::Deref};
+use std::{fmt::{Debug, Display},
+          ops::Deref};
 
 /// This works w/ the [int-enum](https://crates.io/crates/int-enum) crate in order to
 /// allow for the definition of enums that are represented in memory as [u8]s.
@@ -48,6 +49,12 @@ impl Deref for FlexBoxId {
 impl Debug for FlexBoxId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "❬{}❭", self.inner)
+    }
+}
+
+impl Display for FlexBoxId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
     }
 }
 
