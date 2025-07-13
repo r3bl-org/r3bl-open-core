@@ -23,8 +23,8 @@ use crate::{caret_locate, format_as_kilobytes_with_commas, glyphs, height,
             inline_string, ok, row,
             validate_buffer_mut::{EditorBufferMutNoDrop, EditorBufferMutWithDrop},
             width, with_mut, CaretRaw, CaretScrAdj, ColWidth, GCString, GCStringExt,
-            InlineString, MemoizedMemorySize, RowHeight, RowIndex, ScrOfs, SegString,
-            Size, TinyInlineString, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
+            InlineString, MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs,
+            SegString, Size, TinyInlineString, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
             DEFAULT_SYN_HI_FILE_EXT};
 
 /// Stores the data for a single editor buffer. Please do not construct this struct
@@ -582,7 +582,7 @@ pub mod access_and_mutate {
             // Empty the content render cache.
             self.render_cache.clear();
 
-            // Invalidate memory size cache.
+            // Invalidate and recalculate memory size cache.
             self.invalidate_memory_size_calc_cache();
 
             // Reset undo/redo history.
@@ -657,52 +657,59 @@ pub mod access_and_mutate {
 
 /// Memory size caching for performance optimization.
 mod memory_size_calc_cache {
-    use super::EditorBuffer;
+    use super::{EditorBuffer, MemorySize};
 
     impl EditorBuffer {
-        /// Marks the memory size cache as invalid, requiring recalculation on next
-        /// access. Call this when buffer content changes.
+        /// Invalidates and immediately recalculates the memory size cache.
+        /// Call this when buffer content changes to ensure the cache is always valid.
         pub fn invalidate_memory_size_calc_cache(&mut self) {
             self.memory_size_calc_cache.invalidate();
+            self.upsert_memory_size_calc_cache(); // Immediately recalculate
         }
 
         /// Updates cache if dirty or not present.
         /// The closure is only called if recalculation is needed.
         pub fn upsert_memory_size_calc_cache(&mut self) {
-            use crate::{GetMemSize, MemorySize};
+            use crate::GetMemSize;
             self.memory_size_calc_cache.upsert(|| {
                 let size = self.content.get_mem_size() + self.history.get_mem_size();
                 MemorySize::new(size)
             });
         }
 
-        /// Gets the cached memory size value if available and not dirty.
+        /// Gets the cached memory size value, recalculating if necessary.
+        /// This is used by external code to access buffer memory size efficiently.
+        /// The expensive memory calculation is only performed if the cache is invalid or empty.
+        /// Returns a `MemorySize` that displays "?" if the cache is not available.
         #[must_use]
-        pub fn get_memory_size_calc_cached(&self) -> Option<usize> {
-            use crate::MemorySize;
+        pub fn get_memory_size_calc_cached(&mut self) -> MemorySize {
+            self.upsert_memory_size_calc_cache(); // No-op if cache contains a value
             self.memory_size_calc_cache
                 .get_cached()
-                .and_then(MemorySize::size)
+                .cloned()
+                .unwrap_or_else(MemorySize::unknown)
         }
     }
 }
 
 /// Efficient Display implementation for telemetry logging.
 mod display_impl {
-    use super::{format_as_kilobytes_with_commas, ok, Display, EditorBuffer, Formatter,
-                Result};
+    use super::{ok, Display, EditorBuffer, Formatter, MemorySize, Result};
 
     impl Display for EditorBuffer {
         /// This must be a fast implementation, so we avoid deep traversal of the
         /// editor buffer. This is used for telemetry reporting, and it is expected
         /// to be fast, since it is called in a hot loop, on every render.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            // Get memory size from cache if available, otherwise show "?".
-            let memory_str = if let Some(size) = self.get_memory_size_calc_cached() {
-                format_as_kilobytes_with_commas(size)
-            } else {
-                "?".into()
-            };
+            // Note: Display requires &self not &mut self, so we access the cache
+            // directly. The cache is populated elsewhere in the buffer's lifecycle
+            // via invalidate_memory_size_calc_cache(). Use MemorySize's Display impl
+            // which handles the "?" case automatically.
+            let memory_size = self
+                .memory_size_calc_cache
+                .get_cached()
+                .cloned()
+                .unwrap_or_else(MemorySize::unknown);
 
             // Format basic info.
             let line_count = self.content.lines.len();
@@ -739,7 +746,7 @@ mod display_impl {
             }
 
             // Add summary info.
-            write!(f, "[lines={line_count}, size={memory_str}]")?;
+            write!(f, "[lines={line_count}, size={memory_size}]")?;
 
             ok!()
         }
@@ -801,10 +808,13 @@ mod test_memory_cache_invalidation {
 
         // Set initial content and cache the memory size.
         buffer.set_lines(["Hello", "World"]);
-        buffer.upsert_memory_size_calc_cache();
-        let initial_size = buffer
-            .get_memory_size_calc_cached()
+        buffer.upsert_memory_size_calc_cache(); // Populate cache
+        let initial_memory = buffer
+            .memory_size_calc_cache
+            .get_cached()
+            .cloned()
             .expect("Cache should have value");
+        let initial_size = initial_memory.size().expect("Cache should have value");
         assert!(initial_size > 0);
 
         // Modify content through get_mut.
@@ -818,10 +828,13 @@ mod test_memory_cache_invalidation {
         // When buffer_mut goes out of scope, Drop should invalidate the cache.
 
         // Verify cache was invalidated and new size is calculated.
-        buffer.upsert_memory_size_calc_cache();
-        let new_size = buffer
-            .get_memory_size_calc_cached()
+        buffer.upsert_memory_size_calc_cache(); // Populate cache
+        let new_memory = buffer
+            .memory_size_calc_cache
+            .get_cached()
+            .cloned()
             .expect("Cache should have value");
+        let new_size = new_memory.size().expect("Cache should have value");
         assert!(
             new_size > initial_size,
             "Memory size should increase after adding content"
@@ -837,14 +850,22 @@ mod test_memory_cache_invalidation {
                 .push("Even more content".grapheme_string());
         }
         // Cache should still have old value since we used no_drop variant.
-        assert_eq!(buffer.get_memory_size_calc_cached(), Some(cached_size));
+        let cached_memory = buffer
+            .memory_size_calc_cache
+            .get_cached()
+            .cloned()
+            .unwrap_or_else(MemorySize::unknown);
+        assert_eq!(cached_memory.size(), Some(cached_size));
 
         // Force recalculation to verify content actually changed.
         buffer.invalidate_memory_size_calc_cache();
-        buffer.upsert_memory_size_calc_cache();
-        let final_size = buffer
-            .get_memory_size_calc_cached()
+        buffer.upsert_memory_size_calc_cache(); // Populate cache with new value
+        let final_memory = buffer
+            .memory_size_calc_cache
+            .get_cached()
+            .cloned()
             .expect("Cache should have value");
+        let final_size = final_memory.size().expect("Cache should have value");
         assert!(
             final_size > new_size,
             "Memory size should increase after adding more content"

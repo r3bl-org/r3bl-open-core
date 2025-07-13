@@ -22,8 +22,8 @@ use std::{collections::HashMap,
 
 use r3bl_tui::{DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, DialogBuffer, DocumentStorage,
                EditorBuffer, FlexBoxId, HasDialogBuffers, HasEditorBuffers,
-               InlineString, TinyInlineString, fg_green, fg_red,
-               format_as_kilobytes_with_commas, inline_string, into_existing};
+               InlineString, TinyInlineString, fg_green, fg_red, inline_string,
+               into_existing};
 
 use crate::{AnalyticsAction, edi::Id, report_analytics};
 
@@ -338,7 +338,7 @@ mod impl_debug {
 
 /// Efficient Display implementation for telemetry logging.
 mod impl_display {
-    use super::{Display, Formatter, Result, State, format_as_kilobytes_with_commas};
+    use super::{Display, Formatter, Result, State};
 
     impl Display for State {
         /// This must be a fast implementation, so we avoid deep traversal of the
@@ -346,59 +346,36 @@ mod impl_display {
         /// reporting, and it is expected to be fast, since it is called in a hot loop,
         /// on every render.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            // Efficient telemetry logging format - no deep traversal.
-            let editor_count = self.editor_buffers.len();
-            let dialog_count = self.dialog_buffers.len();
+            // Build compact telemetry format
+            write!(
+                f,
+                "State[editors={}, dialogs={}]",
+                self.editor_buffers.len(),
+                self.dialog_buffers.len()
+            )?;
 
-            // Calculate total memory size only if caches are available.
-            let mut total_cached_size = 0usize;
-            let mut uncached_count = 0usize;
-
-            // Sum up cached sizes from editor buffers.
-            for buffer in self.editor_buffers.values() {
-                if let Some(size) = buffer.get_memory_size_calc_cached() {
-                    total_cached_size += size;
-                } else {
-                    uncached_count += 1;
-                }
-            }
-
-            // Format the state summary.
-            write!(f, "State[editors={editor_count}, dialogs={dialog_count}")?;
-
-            // Add editor buffers info if available. The EditorBuffer's Display impl is
-            // fast.
+            // Add detailed buffer info if needed (more compact format)
             if !self.editor_buffers.is_empty() {
-                write!(f, "\n  editor_buffers=[")?;
+                write!(f, " editors=[")?;
                 for (i, (id, buffer)) in self.editor_buffers.iter().enumerate() {
                     if i > 0 {
-                        write!(f, "\n    ")?;
+                        write!(f, ", ")?;
                     }
                     write!(f, "{id}:{buffer}")?;
                 }
                 write!(f, "]")?;
             }
 
-            // Add dialog buffers info if available. The DialogBuffer's Display impl is
-            // fast.
             if !self.dialog_buffers.is_empty() {
-                write!(f, "\n  dialog_buffers=[")?;
+                write!(f, " dialogs=[")?;
                 for (i, (id, buffer)) in self.dialog_buffers.iter().enumerate() {
                     if i > 0 {
-                        write!(f, "\n    ")?;
+                        write!(f, ", ")?;
                     }
                     write!(f, "{id}:{buffer}")?;
                 }
                 write!(f, "]")?;
             }
-
-            // Add memory info if available.
-            if uncached_count == 0 && editor_count > 0 {
-                let memory_str = format_as_kilobytes_with_commas(total_cached_size);
-                write!(f, ", total_size={memory_str}")?;
-            }
-
-            write!(f, "]")?;
 
             Ok(())
         }

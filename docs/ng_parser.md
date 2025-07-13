@@ -1,3 +1,345 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Implemented Optimizations](#implemented-optimizations)
+  - [CRITICAL FIX: Color Support Detection Optimization (✅ Completed)](#critical-fix-color-support-detection-optimization--completed)
+  - [Color Support Detection Caching (✅ Completed)](#color-support-detection-caching--completed)
+  - [PixelChar Memory Optimization (✅ Completed)](#pixelchar-memory-optimization--completed)
+  - [NG Parser Status (✅ Disabled)](#ng-parser-status--disabled)
+  - [Latest Flamegraph Analysis (2025-07-13)](#latest-flamegraph-analysis-2025-07-13)
+    - [Profiling Configuration](#profiling-configuration)
+    - [Current Performance Bottleneck Analysis](#current-performance-bottleneck-analysis)
+    - [Key Changes from Previous Analysis](#key-changes-from-previous-analysis)
+    - [String Truncation Optimization (✅ Completed)](#string-truncation-optimization--completed)
+    - [Next Priority Optimization Targets](#next-priority-optimization-targets)
+  - [Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)](#display-trait-optimization-for-telemetry--completed---2025-07-13)
+    - [Problem Identified](#problem-identified)
+    - [Solution Implemented](#solution-implemented)
+    - [Performance Impact Verified (2025-07-13)](#performance-impact-verified-2025-07-13)
+    - [Key Achievement](#key-achievement)
+  - [Memory Size Calculation Caching (✅ Completed - 2025-07-13)](#memory-size-calculation-caching--completed---2025-07-13)
+    - [Problem Identified](#problem-identified-1)
+    - [Solution Implemented](#solution-implemented-1)
+    - [Technical Details](#technical-details)
+    - [Performance Impact](#performance-impact)
+    - [Integration with Display Trait](#integration-with-display-trait)
+- [NG Markdown Parser Performance Analysis](#ng-markdown-parser-performance-analysis)
+  - [Overview](#overview)
+  - [Executive Summary](#executive-summary)
+  - [Performance Comparison Results](#performance-comparison-results)
+    - [Original Legacy vs NG Performance Gaps](#original-legacy-vs-ng-performance-gaps)
+    - [Detailed Benchmark Results](#detailed-benchmark-results)
+      - [Small Content Benchmarks](#small-content-benchmarks)
+      - [Medium Content Benchmarks](#medium-content-benchmarks)
+      - [Large Content Benchmarks](#large-content-benchmarks)
+      - [Jumbo Content Benchmarks](#jumbo-content-benchmarks)
+      - [Unicode Content Benchmarks](#unicode-content-benchmarks)
+  - [Root Cause Investigation](#root-cause-investigation)
+    - [Hypothesis Testing Through Targeted Benchmarks](#hypothesis-testing-through-targeted-benchmarks)
+      - [1. Materialization Cost Analysis (bench*f*\*)](#1-materialization-cost-analysis-benchf%5C)
+      - [2. Character Access Pattern Analysis (bench*g*\*)](#2-character-access-pattern-analysis-benchg%5C)
+  - [Architecture Comparison](#architecture-comparison)
+    - [Legacy Parser Approach](#legacy-parser-approach)
+    - [NG Parser Approach](#ng-parser-approach)
+    - [Key Architectural Differences](#key-architectural-differences)
+  - [Conclusions and Insights](#conclusions-and-insights)
+    - [What We Learned](#what-we-learned)
+    - [Potential Root Causes](#potential-root-causes)
+    - [Performance Impact Scale](#performance-impact-scale)
+  - [Recommendations](#recommendations)
+    - [Immediate Actions](#immediate-actions)
+    - [Long-term Strategy](#long-term-strategy)
+    - [Technical Debt Considerations](#technical-debt-considerations)
+  - [Future Work](#future-work)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+> ---
+>
+> _This analysis was conducted through systematic benchmarking on real-world markdown content,
+> measuring both macro-level parser performance and micro-level component costs to isolate the root
+> causes of performance degradation._
+
+# Implemented Optimizations
+
+## CRITICAL FIX: Color Support Detection Optimization (✅ Completed)
+
+**Issue Identified**: Flamegraph analysis revealed that ~24% of execution time was spent in color
+support detection (`examine_env_vars_to_determine_color_support`), making thousands of environment
+variable calls for every editor operation.
+
+**Root Cause**: The `global_color_support::detect()` function was re-running expensive environment
+variable detection on every call instead of caching the result.
+
+**Solution Implemented**: Added proper memoization to the color support detection:
+
+- Added `COLOR_SUPPORT_CACHED` static variable for caching detection results
+- Modified `detect()` to check cache before expensive detection
+- Added helper functions: `try_get_cached()`, `set_cached()`, `clear_cache()`
+- Detection now runs once and caches the result for subsequent calls
+
+**Expected Performance Impact**: ~24% reduction in execution time for editor operations, as color
+support detection will only run once instead of thousands of times.
+
+## Color Support Detection Caching (✅ Completed)
+
+**Implementation**: Added memoization to `global_color_support::detect()` function in
+`/tui/src/core/ansi/detect_color_support.rs`.
+
+**Technical Details**:
+
+- Added `COLOR_SUPPORT_CACHED` static atomic variable
+- Modified detection logic to check cache before expensive environment variable operations
+- Added cache management functions: `try_get_cached()`, `set_cached()`, `clear_cache()`
+- Maintains thread-safety with atomic operations
+
+**Performance Impact**:
+
+- Eliminates ~24% of execution time overhead from repeated environment variable detection
+- Color support detection now runs once per application lifetime instead of thousands of times
+- Expected dramatic improvement in editor responsiveness during typing/editing operations
+
+**Testing**: Added comprehensive test coverage for caching behavior to ensure correctness.
+
+## PixelChar Memory Optimization (✅ Completed)
+
+**Implementation**: Changed `PixelChar::PlainText` to store a single `char` instead of
+`TinyInlineString` in commit df9057f9.
+
+**Technical Details**:
+
+- Modified `PixelChar` enum to be `Copy` instead of `Clone`
+- Changed `PlainText` variant from `text: TinyInlineString` to `display_char: char`
+- Eliminates all clone operations in the rendering pipeline
+- Simplifies memory management and improves cache locality
+- For multi-char graphemes, uses the first char or replacement character
+
+**Performance Impact**:
+
+- Eliminates memory allocation overhead from PixelChar cloning
+- Reduces SmallVec extend operations visible in flamegraph
+- Improves cache locality by making PixelChar a fixed-size Copy type
+- Expected significant reduction in memory copies during rendering
+
+**Trade-offs**:
+
+- Multi-character grapheme clusters are reduced to single characters
+- This is acceptable for terminal rendering where each cell displays one visible character
+
+## NG Parser Status (✅ Disabled)
+
+The NG parser has been disabled in `/tui/src/tui/mod.rs` by setting `ENABLE_MD_PARSER_NG` to false,
+reverting to legacy parsing due to unacceptable performance characteristics.
+
+## Latest Flamegraph Analysis (2025-07-13)
+
+### Profiling Configuration
+
+Using `profiling-detailed` profile with:
+
+- `-F 99`: 99Hz sampling frequency (lower than default ~4000Hz for cleaner data)
+- `--call-graph=fp,8`: Frame pointer-based call graphs limited to 8 stack frames
+- **Result**: Complete symbol visibility with no "[unknown]" sections
+
+### Current Performance Bottleneck Analysis
+
+Based on the latest flamegraph analysis after string truncation optimization:
+
+1. **Debug Formatting (17.39%)** - NEW PRIMARY BOTTLENECK
+   - `core::fmt::write` operations for State and EditorBuffer debug output
+   - Significantly higher than previous analysis (was 11.58%)
+   - Excessive debug formatting overhead on every render cycle
+
+2. **Text Wrapping in Log Formatting (16.12%)**
+   - `textwrap::wrap::wrap` operations in custom_event_formatter
+   - `textwrap::core::break_words` consuming significant time
+   - Dynamic memory allocation in `_mi_heap_realloc_zero`
+
+3. **Unicode Segmentation (13.72%)** - REDUCED FROM PREVIOUS
+   - `<unicode_segmentation::grapheme::GraphemeIndices as Iterator>::next`
+   - Primary hotspot is now in `<GCString>::new` operations
+   - String truncation optimization already eliminated 11.67%
+   - Still significant in dialog and editor rendering
+
+4. **Memory Operations (11.63%)**
+   - System write calls (`__GI___libc_write`)
+   - Memory page allocation (`clear_page_erms`)
+   - Related to terminal output and buffer management
+
+5. **Syntax Highlighting (7.64%)**
+   - `md_parser_syn_hi_impl::try_parse_and_highlight`
+   - Lower than previous analysis but still measurable
+   - Pattern matching operations
+
+### Key Changes from Previous Analysis
+
+1. **String Truncation Success**: The optimization eliminated 11.67% of Unicode segmentation
+   overhead, reducing total Unicode processing from 45-50% to current 13.72%.
+
+2. **Debug Formatting Emergence**: With Unicode segmentation reduced, debug formatting is now the
+   dominant bottleneck at 17.39%.
+
+3. **Text Wrapping Prominence**: Text wrapping operations are now the second-largest bottleneck at
+   16.12%.
+
+### String Truncation Optimization (✅ Completed)
+
+**Implementation**: Optimized `truncate_from_right` and `truncate_from_left` functions in
+`/tui/src/core/misc/string_helper.rs`.
+
+**Technical Details**:
+
+- Added ASCII fast path that bypasses expensive Unicode grapheme segmentation
+- Changed return type from `InlineString` to `InlineStringCow<'_>` to enable zero-copy returns
+- For ASCII strings that don't need modification, returns borrowed reference (zero allocations)
+- For ASCII strings needing truncation/padding, uses simple byte indexing instead of grapheme
+  segmentation
+- Unicode strings still use the original grapheme segmentation logic for correctness
+- Uses stack-allocated `InlineString` instead of heap-allocated `String`
+
+**Performance Impact**:
+
+- **Before**: `truncate_from_right` consumed 11.67% of total execution time
+- **After**: Function no longer appears in flamegraph (too fast to measure)
+- Eliminated the performance bottleneck completely for ASCII strings (common case for log messages)
+- Zero allocations for strings that don't need modification
+- Dramatic reduction in CPU time for log formatting operations
+
+**Code Quality**:
+
+- Maintains correctness for Unicode content
+- Uses consistent `acc` variable naming convention
+- All comments end with periods as per codebase standards
+- Uses `GCString::width()` for future-proof ellipsis width calculation
+- Uses `SPACER_GLYPH` constant instead of hardcoded spaces
+
+### Next Priority Optimization Targets
+
+Based on the current flamegraph analysis (2025-07-13), the optimization priorities should be:
+
+1. **Debug Formatting Optimization** (17.39% potential improvement) - HIGHEST PRIORITY
+   - Excessive debug formatting of State and EditorBuffer on every render
+   - Consider conditional debug output (only when explicitly requested)
+   - Implement lazy debug formatting or remove from hot paths
+   - Use more efficient serialization for debug purposes
+
+2. **Text Wrapping Optimization** (16.12% potential improvement) - HIGH PRIORITY
+   - Pre-allocate buffer sizes in textwrap operations
+   - Cache wrapped text results for unchanged content
+   - Consider simpler wrapping algorithms for log output
+   - Optimize memory allocation patterns in text wrapping
+
+3. **Unicode Segmentation in GCString::new** (13.72% potential improvement) - MEDIUM PRIORITY
+   - Apply ASCII fast path similar to string truncation optimization
+   - Cache grapheme boundaries for frequently accessed strings
+   - Consider lazy evaluation for grapheme segmentation
+   - Investigate faster unicode segmentation libraries
+
+4. **Syntax Highlighting Caching** (7.64% potential improvement) - MEDIUM PRIORITY
+   - Cache highlighting results for unchanged lines
+   - Implement incremental re-highlighting
+   - Optimize pattern matching state machine
+
+5. **Memory Operations** (11.63% - mostly unavoidable)
+   - System write calls are necessary for terminal output
+   - Focus on batching writes where possible
+   - Consider reducing frequency of full redraws
+
+## Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)
+
+### Problem Identified
+
+The main event loop was using Debug trait formatting for telemetry logging after every render cycle,
+causing significant overhead (17.39% CPU time in previous analysis).
+
+### Solution Implemented
+
+Implemented efficient Display trait for all State structs and buffers:
+
+1. **EditorBuffer Display** (`/tui/src/tui/editor/editor_buffer/buffer_struct.rs`):
+   - Fast summary format: `buffer:<filename>:lines(count):size(cached)`
+   - Uses cached memory size when available
+   - No deep traversal of buffer contents
+
+2. **DialogBuffer Display** (`/tui/src/tui/dialog/dialog_buffer/dialog_buffer_struct.rs`):
+   - Format: `dialog:<title>:results(count):<editor_buffer_info>`
+   - Uses "<untitled>" convention for empty titles
+   - Delegates to EditorBuffer's efficient Display
+
+3. **State Display Implementations**:
+   - All example State structs now have efficient Display traits
+   - Production State structs in cmdr also updated
+   - Consistent format showing counts and cached memory sizes
+
+### Performance Impact Verified (2025-07-13)
+
+Latest flamegraph analysis shows:
+
+- **Debug formatting eliminated**: No Debug trait overhead visible in flamegraph
+- **Text wrapping reduced**: From 16.12% to small chunks (~1-2%)
+- **Primary bottlenecks now**:
+  - Unicode segmentation: 11.99% (in GCString::new)
+  - Color wheel formatting: 10.53% + 1.67%
+  - Memory operations: 8.76% (page allocation)
+  - TLB flushing: 6.83%
+
+### Key Achievement
+
+Successfully eliminated the 17.39% Debug formatting overhead from telemetry logging, allowing the
+main event loop to log state information efficiently after every render without impacting
+performance.
+
+## Memory Size Calculation Caching (✅ Completed - 2025-07-13)
+
+### Problem Identified
+
+Flamegraph analysis revealed that `offscreen_buffer.get_mem_size()` was being called in a hot loop
+within `log_telemetry_info()` on every render cycle. The `get_mem_size()` method performs expensive
+iteration through all buffer lines and pixel characters, causing unnecessary performance overhead.
+
+### Solution Implemented
+
+Added memoized memory size caching to both OffscreenBuffer and EditorBuffer:
+
+1. **OffscreenBuffer Memory Caching** (`/tui/src/tui/terminal_lib_backends/offscreen_buffer.rs`):
+   - Added `memory_size_calc_cache: MemoizedMemorySize` field
+   - Implemented `get_mem_size_cached(&mut self) -> MemorySize` method
+   - Cache automatically invalidates and recalculates on buffer mutations via `DerefMut`
+   - Cache is immediately recalculated after invalidation to avoid "?" in telemetry
+
+2. **EditorBuffer Memory Caching** (`/tui/src/tui/editor/editor_buffer/buffer_struct.rs`):
+   - Added `memory_size_calc_cache: MemoizedMemorySize` field
+   - Implemented `get_memory_size_calc_cached(&mut self) -> MemorySize` method
+   - Cache invalidates on all content-modifying operations (set_lines, undo, redo, clear_selection,
+     etc.)
+   - Integrated with Display trait for efficient telemetry logging
+
+3. **DialogBuffer Efficiency**:
+   - No separate cache needed - delegates to EditorBuffer's cached memory size
+   - Inherits EditorBuffer's efficient memory size display
+
+### Technical Details
+
+- Uses the existing `MemoizedMemorySize` type from `display_impl_perf.rs`
+- `MemorySize::unknown()` returns a MemorySize that displays "?" when cache is empty
+- Cache management is automatic - invalidates on mutations, recalculates on access
+- Thread-safe through Rust's borrowing rules (requires `&mut self`)
+
+### Performance Impact
+
+- Eliminates expensive buffer traversal on every render cycle
+- Memory size calculation now O(1) instead of O(n\*m) where n=lines, m=chars per line
+- Telemetry logging no longer impacts render performance
+- Cache recalculation only happens when buffer content actually changes
+
+### Integration with Display Trait
+
+The memory size caching seamlessly integrates with the Display trait optimization:
+
+- EditorBuffer's Display implementation uses the cached memory size
+- OffscreenBuffer provides `get_mem_size_cached()` for telemetry logging
+- No "?" values appear in telemetry due to immediate cache recalculation
+
 # NG Markdown Parser Performance Analysis
 
 ## Overview
@@ -6,20 +348,6 @@ This document presents a comprehensive performance analysis of the Next Generati
 parser compared to the legacy parser implementation. The analysis was conducted through extensive
 benchmarking to identify performance bottlenecks and understand the architectural differences
 between the two approaches.
-
-## CRITICAL FIX: Color Support Detection Optimization
-
-**Issue Identified**: Flamegraph analysis revealed that ~24% of execution time was spent in color support detection (`examine_env_vars_to_determine_color_support`), making thousands of environment variable calls for every editor operation.
-
-**Root Cause**: The `global_color_support::detect()` function was re-running expensive environment variable detection on every call instead of caching the result.
-
-**Solution Implemented**: Added proper memoization to the color support detection:
-- Added `COLOR_SUPPORT_CACHED` static variable for caching detection results
-- Modified `detect()` to check cache before expensive detection
-- Added helper functions: `try_get_cached()`, `set_cached()`, `clear_cache()`
-- Detection now runs once and caches the result for subsequent calls
-
-**Expected Performance Impact**: ~24% reduction in execution time for editor operations, as color support detection will only run once instead of thousands of times.
 
 ## Executive Summary
 
@@ -228,191 +556,3 @@ The current NG parser represents significant technical debt due to:
 3. **Memory allocation pattern study** during parsing
 4. **Alternative architecture exploration** for non-contiguous parsing
 5. **Performance regression testing** framework implementation
-
-## Implemented Optimizations
-
-### Color Support Detection Caching (✅ Completed)
-
-**Implementation**: Added memoization to `global_color_support::detect()` function in `/tui/src/core/ansi/detect_color_support.rs`.
-
-**Technical Details**:
-- Added `COLOR_SUPPORT_CACHED` static atomic variable
-- Modified detection logic to check cache before expensive environment variable operations
-- Added cache management functions: `try_get_cached()`, `set_cached()`, `clear_cache()`
-- Maintains thread-safety with atomic operations
-
-**Performance Impact**:
-- Eliminates ~24% of execution time overhead from repeated environment variable detection
-- Color support detection now runs once per application lifetime instead of thousands of times
-- Expected dramatic improvement in editor responsiveness during typing/editing operations
-
-**Testing**: Added comprehensive test coverage for caching behavior to ensure correctness.
-
-### PixelChar Memory Optimization (✅ Completed)
-
-**Implementation**: Changed `PixelChar::PlainText` to store a single `char` instead of `TinyInlineString` in commit df9057f9.
-
-**Technical Details**:
-- Modified `PixelChar` enum to be `Copy` instead of `Clone`
-- Changed `PlainText` variant from `text: TinyInlineString` to `display_char: char`
-- Eliminates all clone operations in the rendering pipeline
-- Simplifies memory management and improves cache locality
-- For multi-char graphemes, uses the first char or replacement character
-
-**Performance Impact**:
-- Eliminates memory allocation overhead from PixelChar cloning
-- Reduces SmallVec extend operations visible in flamegraph
-- Improves cache locality by making PixelChar a fixed-size Copy type
-- Expected significant reduction in memory copies during rendering
-
-**Trade-offs**:
-- Multi-character grapheme clusters are reduced to single characters
-- This is acceptable for terminal rendering where each cell displays one visible character
-
-### NG Parser Status (✅ Disabled)
-The NG parser has been disabled in `/tui/src/tui/mod.rs` by setting `ENABLE_MD_PARSER_NG` to false,
-reverting to legacy parsing due to unacceptable performance characteristics.
-
-## Latest Flamegraph Analysis (2025-07-13)
-
-### Profiling Configuration
-Using `profiling-detailed` profile with:
-- `-F 99`: 99Hz sampling frequency (lower than default ~4000Hz for cleaner data)
-- `--call-graph=fp,8`: Frame pointer-based call graphs limited to 8 stack frames
-- **Result**: Complete symbol visibility with no "[unknown]" sections
-
-### Current Performance Bottleneck Analysis
-
-Based on the latest flamegraph analysis after string truncation optimization:
-
-1. **Debug Formatting (17.39%)** - NEW PRIMARY BOTTLENECK
-   - `core::fmt::write` operations for State and EditorBuffer debug output
-   - Significantly higher than previous analysis (was 11.58%)
-   - Excessive debug formatting overhead on every render cycle
-
-2. **Text Wrapping in Log Formatting (16.12%)**
-   - `textwrap::wrap::wrap` operations in custom_event_formatter
-   - `textwrap::core::break_words` consuming significant time
-   - Dynamic memory allocation in `_mi_heap_realloc_zero`
-
-3. **Unicode Segmentation (13.72%)** - REDUCED FROM PREVIOUS
-   - `<unicode_segmentation::grapheme::GraphemeIndices as Iterator>::next`
-   - Primary hotspot is now in `<GCString>::new` operations
-   - String truncation optimization already eliminated 11.67%
-   - Still significant in dialog and editor rendering
-
-4. **Memory Operations (11.63%)**
-   - System write calls (`__GI___libc_write`)
-   - Memory page allocation (`clear_page_erms`)
-   - Related to terminal output and buffer management
-
-5. **Syntax Highlighting (7.64%)**
-   - `md_parser_syn_hi_impl::try_parse_and_highlight`
-   - Lower than previous analysis but still measurable
-   - Pattern matching operations
-
-### Key Changes from Previous Analysis
-
-1. **String Truncation Success**: The optimization eliminated 11.67% of Unicode segmentation overhead, reducing total Unicode processing from 45-50% to current 13.72%.
-
-2. **Debug Formatting Emergence**: With Unicode segmentation reduced, debug formatting is now the dominant bottleneck at 17.39%.
-
-3. **Text Wrapping Prominence**: Text wrapping operations are now the second-largest bottleneck at 16.12%.
-
-### String Truncation Optimization (✅ Completed)
-
-**Implementation**: Optimized `truncate_from_right` and `truncate_from_left` functions in `/tui/src/core/misc/string_helper.rs`.
-
-**Technical Details**:
-- Added ASCII fast path that bypasses expensive Unicode grapheme segmentation
-- Changed return type from `InlineString` to `InlineStringCow<'_>` to enable zero-copy returns
-- For ASCII strings that don't need modification, returns borrowed reference (zero allocations)
-- For ASCII strings needing truncation/padding, uses simple byte indexing instead of grapheme segmentation
-- Unicode strings still use the original grapheme segmentation logic for correctness
-- Uses stack-allocated `InlineString` instead of heap-allocated `String`
-
-**Performance Impact**:
-- **Before**: `truncate_from_right` consumed 11.67% of total execution time
-- **After**: Function no longer appears in flamegraph (too fast to measure)
-- Eliminated the performance bottleneck completely for ASCII strings (common case for log messages)
-- Zero allocations for strings that don't need modification
-- Dramatic reduction in CPU time for log formatting operations
-
-**Code Quality**:
-- Maintains correctness for Unicode content
-- Uses consistent `acc` variable naming convention
-- All comments end with periods as per codebase standards
-- Uses `GCString::width()` for future-proof ellipsis width calculation
-- Uses `SPACER_GLYPH` constant instead of hardcoded spaces
-
-### Next Priority Optimization Targets
-
-Based on the current flamegraph analysis (2025-07-13), the optimization priorities should be:
-
-1. **Debug Formatting Optimization** (17.39% potential improvement) - HIGHEST PRIORITY
-   - Excessive debug formatting of State and EditorBuffer on every render
-   - Consider conditional debug output (only when explicitly requested)
-   - Implement lazy debug formatting or remove from hot paths
-   - Use more efficient serialization for debug purposes
-
-2. **Text Wrapping Optimization** (16.12% potential improvement) - HIGH PRIORITY
-   - Pre-allocate buffer sizes in textwrap operations
-   - Cache wrapped text results for unchanged content
-   - Consider simpler wrapping algorithms for log output
-   - Optimize memory allocation patterns in text wrapping
-
-3. **Unicode Segmentation in GCString::new** (13.72% potential improvement) - MEDIUM PRIORITY
-   - Apply ASCII fast path similar to string truncation optimization
-   - Cache grapheme boundaries for frequently accessed strings
-   - Consider lazy evaluation for grapheme segmentation
-   - Investigate faster unicode segmentation libraries
-
-4. **Syntax Highlighting Caching** (7.64% potential improvement) - MEDIUM PRIORITY
-   - Cache highlighting results for unchanged lines
-   - Implement incremental re-highlighting
-   - Optimize pattern matching state machine
-
-5. **Memory Operations** (11.63% - mostly unavoidable)
-   - System write calls are necessary for terminal output
-   - Focus on batching writes where possible
-   - Consider reducing frequency of full redraws
-
-## Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)
-
-### Problem Identified
-The main event loop was using Debug trait formatting for telemetry logging after every render cycle, causing significant overhead (17.39% CPU time in previous analysis).
-
-### Solution Implemented
-Implemented efficient Display trait for all State structs and buffers:
-
-1. **EditorBuffer Display** (`/tui/src/tui/editor/editor_buffer/buffer_struct.rs`):
-   - Fast summary format: `buffer:<filename>:lines(count):size(cached)`
-   - Uses cached memory size when available
-   - No deep traversal of buffer contents
-
-2. **DialogBuffer Display** (`/tui/src/tui/dialog/dialog_buffer/dialog_buffer_struct.rs`):
-   - Format: `dialog:<title>:results(count):<editor_buffer_info>`
-   - Uses "<untitled>" convention for empty titles
-   - Delegates to EditorBuffer's efficient Display
-
-3. **State Display Implementations**:
-   - All example State structs now have efficient Display traits
-   - Production State structs in cmdr also updated
-   - Consistent format showing counts and cached memory sizes
-
-### Performance Impact Verified (2025-07-13)
-Latest flamegraph analysis shows:
-- **Debug formatting eliminated**: No Debug trait overhead visible in flamegraph
-- **Text wrapping reduced**: From 16.12% to small chunks (~1-2%)
-- **Primary bottlenecks now**:
-  - Unicode segmentation: 11.99% (in GCString::new)
-  - Color wheel formatting: 10.53% + 1.67%
-  - Memory operations: 8.76% (page allocation)
-  - TLB flushing: 6.83%
-
-### Key Achievement
-Successfully eliminated the 17.39% Debug formatting overhead from telemetry logging, allowing the main event loop to log state information efficiently after every render without impacting performance.
-
----
-
-_This analysis was conducted through systematic benchmarking on real-world markdown content, measuring both macro-level parser performance and micro-level component costs to isolate the root causes of performance degradation._

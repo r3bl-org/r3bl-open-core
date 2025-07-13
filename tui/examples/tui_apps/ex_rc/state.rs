@@ -18,7 +18,7 @@ use std::{collections::HashMap,
           fmt::{Debug, Display, Formatter, Result}};
 
 use r3bl_tui::{ComponentRegistryMap, EditorBuffer, FlexBoxId, HasEditorBuffers,
-               DEFAULT_SYN_HI_FILE_EXT, format_as_kilobytes_with_commas};
+               DEFAULT_SYN_HI_FILE_EXT};
 
 use crate::ex_rc::Id;
 
@@ -166,7 +166,7 @@ mod debug_format_helper {
 
 /// Efficient Display implementation for telemetry logging.
 mod impl_display {
-    use super::{Display, Formatter, Result, State, format_as_kilobytes_with_commas};
+    use super::{Display, Formatter, Result, State};
 
     impl Display for State {
         /// This must be a fast implementation, so we avoid deep traversal of the
@@ -178,18 +178,9 @@ mod impl_display {
             let slide_index = self.current_slide_index;
             let total_slides = super::FILE_CONTENT_ARRAY.len();
 
-            // Calculate total memory size only if caches are available.
-            let mut total_cached_size = 0usize;
-            let mut uncached_count = 0usize;
-
-            // Sum up cached sizes from editor buffers.
-            for buffer in self.editor_buffers.values() {
-                if let Some(size) = buffer.get_memory_size_calc_cached() {
-                    total_cached_size += size;
-                } else {
-                    uncached_count += 1;
-                }
-            }
+            // Note: We can't calculate total memory size here because Display
+            // requires &self not &mut self. The EditorBuffer's Display impl will
+            // show memory size for each buffer individually.
 
             // Format the state summary.
             write!(f, "State[slide={}/{}, editors={}", slide_index + 1, total_slides, editor_count)?;
@@ -206,11 +197,7 @@ mod impl_display {
                 write!(f, "]")?;
             }
 
-            // Add memory info if available.
-            if uncached_count == 0 && editor_count > 0 {
-                let memory_str = format_as_kilobytes_with_commas(total_cached_size);
-                write!(f, ", total_size={memory_str}")?;
-            }
+            // Memory info is shown per-buffer in the EditorBuffer's Display impl
 
             write!(f, "]")?;
 
