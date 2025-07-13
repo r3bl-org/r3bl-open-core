@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 use std::{collections::HashMap,
-          fmt::{Debug, Formatter, Result}};
+          fmt::{Debug, Display, Formatter, Result}};
 
 use r3bl_tui::{ComponentRegistryMap, EditorBuffer, FlexBoxId, HasEditorBuffers,
-               DEFAULT_SYN_HI_FILE_EXT};
+               DEFAULT_SYN_HI_FILE_EXT, format_as_kilobytes_with_commas};
 
 use crate::ex_rc::Id;
 
@@ -160,6 +160,61 @@ mod debug_format_helper {
                     self.current_slide_index,
                     self.editor_buffers,
             }
+        }
+    }
+}
+
+/// Efficient Display implementation for telemetry logging.
+mod impl_display {
+    use super::{Display, Formatter, Result, State, format_as_kilobytes_with_commas};
+
+    impl Display for State {
+        /// This must be a fast implementation, so we avoid deep traversal of the
+        /// editor buffers. This is used for telemetry reporting, and it is expected
+        /// to be fast, since it is called in a hot loop, on every render.
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            // Efficient telemetry logging format - no deep traversal.
+            let editor_count = self.editor_buffers.len();
+            let slide_index = self.current_slide_index;
+            let total_slides = super::FILE_CONTENT_ARRAY.len();
+
+            // Calculate total memory size only if caches are available.
+            let mut total_cached_size = 0usize;
+            let mut uncached_count = 0usize;
+
+            // Sum up cached sizes from editor buffers.
+            for buffer in self.editor_buffers.values() {
+                if let Some(size) = buffer.get_memory_size_calc_cached() {
+                    total_cached_size += size;
+                } else {
+                    uncached_count += 1;
+                }
+            }
+
+            // Format the state summary.
+            write!(f, "State[slide={}/{}, editors={}", slide_index + 1, total_slides, editor_count)?;
+
+            // Add editor buffers info if available. The EditorBuffer's Display impl is fast.
+            if !self.editor_buffers.is_empty() {
+                write!(f, "\n  editor_buffers=[")?;
+                for (i, (id, buffer)) in self.editor_buffers.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, "\n    ")?;
+                    }
+                    write!(f, "{id}:{buffer}")?;
+                }
+                write!(f, "]")?;
+            }
+
+            // Add memory info if available.
+            if uncached_count == 0 && editor_count > 0 {
+                let memory_str = format_as_kilobytes_with_commas(total_cached_size);
+                write!(f, ", total_size={memory_str}")?;
+            }
+
+            write!(f, "]")?;
+
+            Ok(())
         }
     }
 }

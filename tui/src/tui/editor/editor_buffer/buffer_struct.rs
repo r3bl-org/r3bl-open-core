@@ -14,17 +14,17 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::fmt::{Debug, Formatter, Result};
+use std::fmt::{Debug, Display, Formatter, Result};
 
 use smallvec::smallvec;
 
 use super::{history::EditorHistory, render_cache::RenderCache, sizing, SelectionList};
 use crate::{caret_locate, format_as_kilobytes_with_commas, glyphs, height,
-            inline_string, row,
+            inline_string, ok, row,
             validate_buffer_mut::{EditorBufferMutNoDrop, EditorBufferMutWithDrop},
             width, with_mut, CaretRaw, CaretScrAdj, ColWidth, GCString, GCStringExt,
-            InlineString, RowHeight, RowIndex, ScrOfs, SegString, Size,
-            TinyInlineString, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
+            InlineString, MemoizedMemorySize, RowHeight, RowIndex, ScrOfs, SegString,
+            Size, TinyInlineString, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
             DEFAULT_SYN_HI_FILE_EXT};
 
 /// Stores the data for a single editor buffer. Please do not construct this struct
@@ -188,6 +188,8 @@ pub struct EditorBuffer {
     pub content: EditorContent,
     pub history: EditorHistory,
     pub render_cache: RenderCache,
+    /// Memoized memory size calculation for [`std::fmt::Display`] trait performance.
+    memory_size_calc_cache: MemoizedMemorySize,
 }
 
 #[derive(Clone, PartialEq, Default)]
@@ -249,6 +251,9 @@ pub mod versions {
             // Invalidate the content cache, since the content just changed.
             self.render_cache.clear();
 
+            // Invalidate memory size cache.
+            self.invalidate_memory_size_calc_cache();
+
             // Normal history insertion.
             let content_copy = self.content.clone();
             self.history.add(content_copy);
@@ -266,6 +271,9 @@ pub mod versions {
             // Invalidate the content cache, since the content just changed.
             self.render_cache.clear();
 
+            // Invalidate memory size cache.
+            self.invalidate_memory_size_calc_cache();
+
             if let Some(content) = self.history.undo() {
                 self.content = content;
             }
@@ -282,6 +290,9 @@ pub mod versions {
         pub fn redo(&mut self) {
             // Invalidate the content cache, since the content just changed.
             self.render_cache.clear();
+
+            // Invalidate memory size cache.
+            self.invalidate_memory_size_calc_cache();
 
             if let Some(content) = self.history.redo() {
                 self.content = content;
@@ -571,6 +582,9 @@ pub mod access_and_mutate {
             // Empty the content render cache.
             self.render_cache.clear();
 
+            // Invalidate memory size cache.
+            self.invalidate_memory_size_calc_cache();
+
             // Reset undo/redo history.
             self.history.clear();
         }
@@ -605,6 +619,7 @@ pub mod access_and_mutate {
                 &mut self.content.scr_ofs,
                 &mut self.content.sel_list,
                 vp,
+                &mut self.memory_size_calc_cache,
             )
         }
 
@@ -619,20 +634,119 @@ pub mod access_and_mutate {
                 &mut self.content.scr_ofs,
                 &mut self.content.sel_list,
                 vp,
+                &mut self.memory_size_calc_cache,
             )
         }
 
         #[must_use]
         pub fn has_selection(&self) -> bool { !self.content.sel_list.is_empty() }
 
-        pub fn clear_selection(&mut self) { self.content.sel_list.clear(); }
+        /// Clears the text selection that the user has made in the editor.
+        ///
+        /// Large selections can occupy a significant amount of memory, so this method
+        /// also invalidates the memory size cache to ensure accurate telemetry reporting.
+        pub fn clear_selection(&mut self) {
+            self.content.sel_list.clear();
+            self.invalidate_memory_size_calc_cache();
+        }
 
         #[must_use]
         pub fn get_selection_list(&self) -> &SelectionList { &self.content.sel_list }
     }
 }
 
-mod debug_format {
+/// Memory size caching for performance optimization.
+mod memory_size_calc_cache {
+    use super::EditorBuffer;
+
+    impl EditorBuffer {
+        /// Marks the memory size cache as invalid, requiring recalculation on next
+        /// access. Call this when buffer content changes.
+        pub fn invalidate_memory_size_calc_cache(&mut self) {
+            self.memory_size_calc_cache.invalidate();
+        }
+
+        /// Updates cache if dirty or not present.
+        /// The closure is only called if recalculation is needed.
+        pub fn upsert_memory_size_calc_cache(&mut self) {
+            use crate::{GetMemSize, MemorySize};
+            self.memory_size_calc_cache.upsert(|| {
+                let size = self.content.get_mem_size() + self.history.get_mem_size();
+                MemorySize::new(size)
+            });
+        }
+
+        /// Gets the cached memory size value if available and not dirty.
+        #[must_use]
+        pub fn get_memory_size_calc_cached(&self) -> Option<usize> {
+            use crate::MemorySize;
+            self.memory_size_calc_cache
+                .get_cached()
+                .and_then(MemorySize::size)
+        }
+    }
+}
+
+/// Efficient Display implementation for telemetry logging.
+mod display_impl {
+    use super::{format_as_kilobytes_with_commas, ok, Display, EditorBuffer, Formatter,
+                Result};
+
+    impl Display for EditorBuffer {
+        /// This must be a fast implementation, so we avoid deep traversal of the
+        /// editor buffer. This is used for telemetry reporting, and it is expected
+        /// to be fast, since it is called in a hot loop, on every render.
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            // Get memory size from cache if available, otherwise show "?".
+            let memory_str = if let Some(size) = self.get_memory_size_calc_cached() {
+                format_as_kilobytes_with_commas(size)
+            } else {
+                "?".into()
+            };
+
+            // Format basic info.
+            let line_count = self.content.lines.len();
+            let has_selection = self.has_selection();
+
+            // Get active line/column info.
+            let caret = self.get_caret_scr_adj();
+            let line = caret.row_index.as_usize() + 1; // 1-indexed for display.
+            let col = caret.col_index.as_usize() + 1; // 1-indexed for display.
+
+            // Get file info and format output.
+            let ext = self
+                .content
+                .maybe_file_extension
+                .as_ref()
+                .map_or("txt", |e| e.as_str());
+
+            // Format editor identifier: extract filename from path for named buffers,
+            // or use placeholder for new/unnamed buffers.
+            match self.content.maybe_file_path.as_ref() {
+                Some(path) => {
+                    let file_name = path.rsplit('/').next().unwrap_or("<unnamed>");
+                    write!(f, "editor:{file_name}.{ext}:L{line}:C{col}")?;
+                }
+                None => {
+                    write!(f, "editor:<new-buffer>.{ext}:L{line}:C{col}")?;
+                }
+            }
+
+            // Add selection info if present.
+            if has_selection {
+                let sel_count = self.content.sel_list.len();
+                write!(f, ":sel({sel_count}L)")?;
+            }
+
+            // Add summary info.
+            write!(f, "[lines={line_count}, size={memory_str}]")?;
+
+            ok!()
+        }
+    }
+}
+
+mod debug_impl {
     use super::{format_as_kilobytes_with_commas, Debug, EditorBuffer, EditorContent,
                 Formatter, Result};
 
@@ -672,5 +786,68 @@ mod debug_format {
                 path = self.maybe_file_path,
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test_memory_cache_invalidation {
+    use super::*;
+    use crate::EditorEngine;
+
+    #[test]
+    fn test_cache_invalidated_on_get_mut() {
+        let mut buffer = EditorBuffer::new_empty(Some("md"), None);
+        let engine = EditorEngine::default();
+
+        // Set initial content and cache the memory size.
+        buffer.set_lines(["Hello", "World"]);
+        buffer.upsert_memory_size_calc_cache();
+        let initial_size = buffer
+            .get_memory_size_calc_cached()
+            .expect("Cache should have value");
+        assert!(initial_size > 0);
+
+        // Modify content through get_mut.
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut
+                .inner
+                .lines
+                .push("More content with lots of text".grapheme_string());
+        }
+        // When buffer_mut goes out of scope, Drop should invalidate the cache.
+
+        // Verify cache was invalidated and new size is calculated.
+        buffer.upsert_memory_size_calc_cache();
+        let new_size = buffer
+            .get_memory_size_calc_cached()
+            .expect("Cache should have value");
+        assert!(
+            new_size > initial_size,
+            "Memory size should increase after adding content"
+        );
+
+        // Test that cache is not invalidated with get_mut_no_drop.
+        let cached_size = new_size;
+        {
+            let buffer_mut_no_drop = buffer.get_mut_no_drop(engine.viewport());
+            buffer_mut_no_drop
+                .inner
+                .lines
+                .push("Even more content".grapheme_string());
+        }
+        // Cache should still have old value since we used no_drop variant.
+        assert_eq!(buffer.get_memory_size_calc_cached(), Some(cached_size));
+
+        // Force recalculation to verify content actually changed.
+        buffer.invalidate_memory_size_calc_cache();
+        buffer.upsert_memory_size_calc_cache();
+        let final_size = buffer
+            .get_memory_size_calc_cached()
+            .expect("Cache should have value");
+        assert!(
+            final_size > new_size,
+            "Memory size should increase after adding more content"
+        );
     }
 }

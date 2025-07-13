@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 use r3bl_tui::InlineVec;
 use smallvec::smallvec;
@@ -37,6 +37,12 @@ impl Default for State {
 impl Debug for State {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "State {{ stack: {:?} }}", self.stack)
+    }
+}
+
+impl Display for State {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "State[stack_size={}]", self.stack.len())
     }
 }
 

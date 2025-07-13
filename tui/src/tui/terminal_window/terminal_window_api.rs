@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{fmt::Debug, future::Future, pin::Pin};
+use std::{fmt::{Debug, Display}, future::Future, pin::Pin};
 
 use super::{main_event_loop_impl, BoxedSafeApp, GlobalData};
 use crate::{get_size, CommonResult, FlexBoxId, InputDevice, InputEvent, OutputDevice};
@@ -84,6 +84,24 @@ impl TerminalWindow {
     /// * `event_stream` - The [`InputDevice`] used for input events.
     /// * `stdout` - The [`OutputDevice`] used for output.
     ///
+    /// # Performance Note
+    ///
+    /// The state type `S` must implement [`Display`] for telemetry logging. This implementation
+    /// is called after EVERY render cycle in the main event loop, so it must be lightweight and
+    /// efficient. Avoid expensive operations like:
+    /// * Deep recursive traversal of data structures.
+    /// * Memory size calculations.
+    /// * Complex string formatting.
+    ///
+    /// Instead, implement a simple summary format that shows only essential metrics. For example:
+    /// ```no_run
+    /// impl Display for MyState {
+    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "State[buffers={}, active={}]", self.buffers.len(), self.active_id)
+    ///     }
+    /// }
+    /// ```
+    ///
     /// # Errors
     ///
     /// Returns [`miette::Error`] if there are errors during:
@@ -99,7 +117,7 @@ impl TerminalWindow {
         state: S,
     ) -> miette::Result<MainEventLoopFuture<'a, S, AS>>
     where
-        S: Debug + Default + Clone + Sync + Send + 'a,
+        S: Display + Debug + Default + Clone + Sync + Send + 'a,
         AS: Debug + Default + Clone + Sync + Send + 'static,
     {
         let initial_size = get_size()?;

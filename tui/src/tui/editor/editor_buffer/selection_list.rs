@@ -183,6 +183,9 @@ impl SelectionList {
         self.maybe_previous_direction = None;
     }
 
+    #[must_use]
+    pub fn len(&self) -> usize { self.list.len() }
+
     pub fn iter(&self) -> impl Iterator<Item = (&RowIndex, &SelectionRange)> {
         self.list.iter().map(|(index, range)| (index, range))
     }

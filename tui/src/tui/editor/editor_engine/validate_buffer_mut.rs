@@ -26,10 +26,27 @@
 //!    validation checks are run. This is done by using [`EditorBufferMutWithDrop`].
 //! 2. If you don't want the buffer to be mutated, then you can use
 //!    [`EditorBufferMutNoDrop`] by calling [`EditorBuffer::get_mut_no_drop()`].
+//!
+//! # Memory Cache Invalidation
+//!
+//! When buffer content is modified through [`EditorBuffer::get_mut()`], the memory size
+//! cache is automatically invalidated to ensure accurate telemetry reporting. This
+//! happens in the [`Drop`] implementation of [`EditorBufferMutWithDrop`]:
+//!
+//! ```rust,ignore
+//! // When content is modified:
+//! {
+//!     let mut buffer_mut = buffer.get_mut(viewport);
+//!     buffer_mut.inner.lines.push("new line".grapheme_string());
+//! } // Drop called here, cache is invalidated automatically
+//! ```
+//!
+//! The [`EditorBufferMutNoDrop`] variant does NOT invalidate the cache, which is useful
+//! for operations that don't modify content (e.g., viewport resizing).
 
 use super::scroll_editor_content;
 use crate::{col, editor::sizing::VecEditorContentLines, usize, width, CaretRaw,
-            ColWidth, EditorBuffer, ScrOfs, SelectionList, Size};
+            ColWidth, EditorBuffer, MemoizedMemorySize, ScrOfs, SelectionList, Size};
 
 #[derive(Debug)]
 pub struct EditorBufferMut<'a> {
@@ -44,11 +61,14 @@ pub struct EditorBufferMut<'a> {
     ///   you can get it from [`crate::EditorEngine`]. You can pass `0` if you don't have
     ///   it.
     pub vp: Size,
+    /// Reference to the memory size cache that needs to be invalidated when content
+    /// changes.
+    pub memory_size_calc_cache: &'a mut MemoizedMemorySize,
 }
 
 mod editor_buffer_mut_impl_block {
-    use super::{CaretRaw, ColWidth, EditorBuffer, EditorBufferMut, ScrOfs,
-                SelectionList, Size, VecEditorContentLines};
+    use super::{CaretRaw, ColWidth, EditorBuffer, EditorBufferMut, MemoizedMemorySize,
+                ScrOfs, SelectionList, Size, VecEditorContentLines};
 
     impl EditorBufferMut<'_> {
         /// Returns the display width of the line at the caret (at it's scroll adjusted
@@ -68,6 +88,7 @@ mod editor_buffer_mut_impl_block {
             scr_ofs: &'a mut ScrOfs,
             sel_list: &'a mut SelectionList,
             vp: Size,
+            memory_size_calc_cache: &'a mut MemoizedMemorySize,
         ) -> EditorBufferMut<'a> {
             EditorBufferMut {
                 lines,
@@ -75,6 +96,7 @@ mod editor_buffer_mut_impl_block {
                 scr_ofs,
                 sel_list,
                 vp,
+                memory_size_calc_cache,
             }
         }
     }
@@ -86,8 +108,8 @@ pub struct EditorBufferMutNoDrop<'a> {
 }
 
 mod editor_buffer_mut_no_drop_impl_block {
-    use super::{CaretRaw, EditorBufferMut, EditorBufferMutNoDrop, ScrOfs, SelectionList,
-                Size, VecEditorContentLines};
+    use super::{CaretRaw, EditorBufferMut, EditorBufferMutNoDrop, MemoizedMemorySize,
+                ScrOfs, SelectionList, Size, VecEditorContentLines};
 
     impl EditorBufferMutNoDrop<'_> {
         pub fn new<'a>(
@@ -96,9 +118,17 @@ mod editor_buffer_mut_no_drop_impl_block {
             scr_ofs: &'a mut ScrOfs,
             sel_list: &'a mut SelectionList,
             vp: Size,
+            memory_size_calc_cache: &'a mut MemoizedMemorySize,
         ) -> EditorBufferMutNoDrop<'a> {
             EditorBufferMutNoDrop {
-                inner: EditorBufferMut::new(lines, caret_raw, scr_ofs, sel_list, vp),
+                inner: EditorBufferMut::new(
+                    lines,
+                    caret_raw,
+                    scr_ofs,
+                    sel_list,
+                    vp,
+                    memory_size_calc_cache,
+                ),
             }
         }
     }
@@ -122,8 +152,8 @@ pub struct EditorBufferMutWithDrop<'a> {
 
 mod editor_buffer_mut_with_drop_impl_block {
     use super::{perform_validation_checks_after_mutation, CaretRaw, EditorBufferMut,
-                EditorBufferMutWithDrop, ScrOfs, SelectionList, Size,
-                VecEditorContentLines};
+                EditorBufferMutWithDrop, MemoizedMemorySize, ScrOfs, SelectionList,
+                Size, VecEditorContentLines};
 
     impl EditorBufferMutWithDrop<'_> {
         pub fn new<'a>(
@@ -132,26 +162,44 @@ mod editor_buffer_mut_with_drop_impl_block {
             scr_ofs: &'a mut ScrOfs,
             sel_list: &'a mut SelectionList,
             vp: Size,
+            memory_size_calc_cache: &'a mut MemoizedMemorySize,
         ) -> EditorBufferMutWithDrop<'a> {
             EditorBufferMutWithDrop {
-                inner: EditorBufferMut::new(lines, caret_raw, scr_ofs, sel_list, vp),
+                inner: EditorBufferMut::new(
+                    lines,
+                    caret_raw,
+                    scr_ofs,
+                    sel_list,
+                    vp,
+                    memory_size_calc_cache,
+                ),
             }
         }
     }
 
     impl Drop for EditorBufferMutWithDrop<'_> {
-        /// Once [`crate::validate_buffer_mut::EditorBufferMut`] is used to modify the
-        /// buffer, it needs to run the validation checks to ensure that the
-        /// buffer is in a valid state. This is done using
-        /// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`].
+        /// Performs two critical operations when the buffer mutator is dropped:
         ///
-        /// Due to the nature of `UTF-8` and its variable width characters, where the
-        /// memory size is not the same as display size. Eg: `a` is 1 byte and 1
-        /// display width (unicode segment width display). `😄` is 3 bytes but
-        /// it's display width is 2! To ensure that caret position and scroll
-        /// offset positions are not in the middle of a unicode segment character,
-        /// we need to run the validation checks.
-        fn drop(&mut self) { perform_validation_checks_after_mutation(self); }
+        /// 1. **Memory Cache Invalidation**: Invalidates the memory size cache to ensure
+        ///    accurate telemetry reporting after buffer modifications. This is crucial
+        ///    because the [`main_event_loop`](crate::TerminalWindow::main_event_loop)
+        ///    logs state information after EVERY render cycle using the [`std::fmt::Display`]
+        ///    trait, which relies on cached memory size calculations.
+        ///
+        /// 2. **Unicode Validation**: Runs validation checks to ensure that the buffer is
+        ///    in a valid state. Due to the nature of `UTF-8` and its variable width
+        ///    characters, where the memory size is not the same as display size. Eg: `a`
+        ///    is 1 byte and 1 display width (unicode segment width display). `😄` is 3
+        ///    bytes but it's display width is 2! To ensure that caret position and scroll
+        ///    offset positions are not in the middle of a unicode segment character, we
+        ///    need to run the validation checks using
+        ///    [`perform_validation_checks_after_mutation`].
+        fn drop(&mut self) {
+            // Invalidate the memory size cache since content may have changed.
+            self.inner.memory_size_calc_cache.invalidate();
+            // Perform validation checks.
+            perform_validation_checks_after_mutation(self);
+        }
     }
 }
 

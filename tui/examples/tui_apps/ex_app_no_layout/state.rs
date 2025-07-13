@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 /// Action.
 #[derive(Default, Clone, Debug)]
@@ -38,5 +38,11 @@ pub struct State {
 impl Debug for State {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "State {{ counter: {:?} }}", self.counter)
+    }
+}
+
+impl Display for State {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "State[counter={}]", self.counter)
     }
 }
