@@ -22,8 +22,8 @@ use smallvec::smallvec;
 
 use super::{FlushKind, RenderOps};
 use crate::{col, dim_underline, fg_green, fg_magenta, get_mem_size, inline_string, ok,
-            row, tiny_inline_string, ColWidth, GetMemSize, InlineVec, List,
-            LockedOutputDevice, MemoizedMemorySize, MemorySize, Pos, Size,
+            row, tiny_inline_string, CachedMemorySize, ColWidth, GetMemSize, InlineVec,
+            List, LockedOutputDevice, MemoizedMemorySize, MemorySize, Pos, Size,
             TinyInlineString, TuiColor, TuiStyle};
 
 /// Represents a grid of cells where the row/column index maps to the terminal screen.
@@ -65,6 +65,16 @@ impl GetMemSize for OffscreenBuffer {
     }
 }
 
+impl CachedMemorySize for OffscreenBuffer {
+    fn memory_size_cache(&self) -> &MemoizedMemorySize {
+        &self.memory_size_calc_cache
+    }
+
+    fn memory_size_cache_mut(&mut self) -> &mut MemoizedMemorySize {
+        &mut self.memory_size_calc_cache
+    }
+}
+
 pub mod diff_chunks {
     use super::{Deref, List, PixelChar, Pos};
 
@@ -89,9 +99,10 @@ pub mod diff_chunks {
 }
 
 mod offscreen_buffer_impl {
-    use super::{col, fg_green, fmt, inline_string, ok, row, Debug, Deref, DerefMut,
-                GetMemSize, List, MemoizedMemorySize, MemorySize, OffscreenBuffer,
-                PixelChar, PixelCharDiffChunks, PixelCharLines, Pos, Size};
+    use super::{col, fg_green, fmt, inline_string, ok, row, CachedMemorySize, Debug,
+                Deref, DerefMut, GetMemSize, List, MemoizedMemorySize, MemorySize,
+                OffscreenBuffer, PixelChar, PixelCharDiffChunks, PixelCharLines, Pos,
+                Size};
 
     impl Debug for PixelCharDiffChunks {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -157,25 +168,14 @@ mod offscreen_buffer_impl {
         /// only performed if the cache is invalid or empty.
         #[must_use]
         pub fn get_mem_size_cached(&mut self) -> MemorySize {
-            if self.memory_size_calc_cache.is_dirty() {
-                let size = self.get_mem_size();
-                self.memory_size_calc_cache.upsert(|| MemorySize::new(size));
-            }
-            self.memory_size_calc_cache
-                .get_cached()
-                .cloned()
-                .unwrap_or_else(MemorySize::unknown)
+            self.get_cached_memory_size()
         }
 
         /// Invalidates and immediately recalculates the memory size cache.
         /// Call this when buffer content changes to ensure the cache is always valid.
         fn invalidate_memory_size_calc_cache(&mut self) {
-            self.memory_size_calc_cache.invalidate();
-            // Force immediate recalculation to avoid "?" in telemetry
-            if self.memory_size_calc_cache.is_dirty() {
-                let size = self.get_mem_size();
-                self.memory_size_calc_cache.upsert(|| MemorySize::new(size));
-            }
+            self.invalidate_memory_size_cache();
+            self.update_memory_size_cache(); // Force immediate recalculation to avoid "?" in telemetry
         }
 
         /// Checks for differences between self and other. Returns a list of positions and

@@ -264,8 +264,8 @@
 
 ---
 
-- [ ] perf optimize codebase using flamegraph profiling & claude
-  - [ ] try incorporate memoized size calc in `GetMemSize`
+- [.] perf optimize codebase using flamegraph profiling & claude using `docs/ng_parser.md`
+  - [x] try incorporate memoized size calc in `GetMemSize`
 - [ ] mark NG parser as experimental (not ready for production)
   - [ ] try replace `AsStrSlice` w/ `&str` and see if this resolves perf problems; need to
         materialize string at the start of course.
