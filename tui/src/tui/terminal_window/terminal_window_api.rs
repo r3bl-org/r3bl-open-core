@@ -96,7 +96,9 @@ impl TerminalWindow {
     /// * Complex string formatting.
     ///
     /// Instead, implement a simple summary format that shows only essential metrics. For
-    /// example: ```no_run
+    /// example:
+    ///
+    /// ```no_run
     /// use std::fmt::Display;
     ///
     /// struct MyState {

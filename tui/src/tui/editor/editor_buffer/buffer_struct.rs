@@ -22,10 +22,10 @@ use super::{history::EditorHistory, render_cache::RenderCache, sizing, Selection
 use crate::{caret_locate, format_as_kilobytes_with_commas, glyphs, height,
             inline_string, ok, row,
             validate_buffer_mut::{EditorBufferMutNoDrop, EditorBufferMutWithDrop},
-            width, with_mut, CaretRaw, CaretScrAdj, ColWidth, GCString, GCStringExt,
-            InlineString, MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs,
-            SegString, Size, TinyInlineString, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
-            DEFAULT_SYN_HI_FILE_EXT};
+            width, with_mut, CachedMemorySize, CaretRaw, CaretScrAdj, ColWidth, GCString,
+            GCStringExt, InlineString, MemoizedMemorySize, MemorySize, RowHeight,
+            RowIndex, ScrOfs, SegString, Size, TinyInlineString, DEBUG_TUI_COPY_PASTE,
+            DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT};
 
 /// Stores the data for a single editor buffer. Please do not construct this struct
 /// directly and use [`new_empty`](EditorBuffer::new_empty) instead.
@@ -657,24 +657,37 @@ pub mod access_and_mutate {
 
 /// Memory size caching for performance optimization.
 mod memory_size_calc_cache {
-    use super::{EditorBuffer, MemorySize};
+    use super::{CachedMemorySize, EditorBuffer, MemorySize};
+    use crate::{GetMemSize, MemoizedMemorySize};
+
+    impl GetMemSize for EditorBuffer {
+        fn get_mem_size(&self) -> usize {
+            self.content.get_mem_size() + self.history.get_mem_size()
+        }
+    }
+
+    impl CachedMemorySize for EditorBuffer {
+        fn memory_size_cache(&self) -> &MemoizedMemorySize {
+            &self.memory_size_calc_cache
+        }
+
+        fn memory_size_cache_mut(&mut self) -> &mut MemoizedMemorySize {
+            &mut self.memory_size_calc_cache
+        }
+    }
 
     impl EditorBuffer {
         /// Invalidates and immediately recalculates the memory size cache.
         /// Call this when buffer content changes to ensure the cache is always valid.
         pub fn invalidate_memory_size_calc_cache(&mut self) {
-            self.memory_size_calc_cache.invalidate();
-            self.upsert_memory_size_calc_cache(); // Immediately recalculate
+            self.invalidate_memory_size_cache();
+            self.update_memory_size_cache(); // Immediately recalculate
         }
 
         /// Updates cache if dirty or not present.
         /// The closure is only called if recalculation is needed.
         pub fn upsert_memory_size_calc_cache(&mut self) {
-            use crate::GetMemSize;
-            self.memory_size_calc_cache.upsert(|| {
-                let size = self.content.get_mem_size() + self.history.get_mem_size();
-                MemorySize::new(size)
-            });
+            self.update_memory_size_cache();
         }
 
         /// Gets the cached memory size value, recalculating if necessary.
@@ -683,11 +696,7 @@ mod memory_size_calc_cache {
         /// Returns a `MemorySize` that displays "?" if the cache is not available.
         #[must_use]
         pub fn get_memory_size_calc_cached(&mut self) -> MemorySize {
-            self.upsert_memory_size_calc_cache(); // No-op if cache contains a value
-            self.memory_size_calc_cache
-                .get_cached()
-                .cloned()
-                .unwrap_or_else(MemorySize::unknown)
+            self.get_cached_memory_size()
         }
     }
 }
