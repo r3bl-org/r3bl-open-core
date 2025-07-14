@@ -90,6 +90,10 @@
 
 // Attach.
 #[rustfmt::skip]
+pub mod cache;
+#[rustfmt::skip]
+pub mod lazy_cache;
+#[rustfmt::skip]
 pub mod compat;
 #[rustfmt::skip]
 pub mod as_str_slice_core;
@@ -103,6 +107,10 @@ pub mod position;
 pub mod traits;
 
 // Re-export.
+#[rustfmt::skip]
+pub use cache::*;
+#[rustfmt::skip]
+pub use lazy_cache::*;
 #[rustfmt::skip]
 pub use as_str_slice_core::*;
 #[rustfmt::skip]

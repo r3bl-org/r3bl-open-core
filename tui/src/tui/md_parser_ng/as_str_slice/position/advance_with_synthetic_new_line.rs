@@ -158,6 +158,7 @@ use crate::{bounds_check,
             idx,
             len,
             AsStrSlice,
+            LazyCache,
             BoundsCheck,
             BoundsStatus,
             CharLengthExt,
@@ -380,6 +381,7 @@ impl AsStrSlice<'_> {
             max_len: None,
             total_size: len(0), // Not used for position state determination
             current_taken: len(0), // Not used for position state determination
+            cache: LazyCache::new(lines), // Create a basic cache for the temp slice
         };
 
         // Determine states using the module functions

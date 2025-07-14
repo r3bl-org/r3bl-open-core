@@ -15,12 +15,13 @@
  *   limitations under the License.
  */
 
-use crate::{idx, len, AsStrSlice, GCString, InlineVec, List};
+use crate::{idx, len, AsStrSlice, LazyCache, GCString, InlineVec, List};
 
 /// Implement [From] trait to allow automatic conversion from &[`GCString`] to
 /// [`AsStrSlice`].
 impl<'a> From<&'a [GCString]> for AsStrSlice<'a> {
     fn from(lines: &'a [GCString]) -> Self {
+        let cache = LazyCache::new(lines);
         let total_size = Self::calculate_total_size(lines);
         Self {
             lines,
@@ -29,6 +30,7 @@ impl<'a> From<&'a [GCString]> for AsStrSlice<'a> {
             max_len: None,
             total_size: len(total_size),
             current_taken: len(0),
+            cache,
         }
     }
 }
@@ -39,6 +41,7 @@ impl<'a> From<&'a [GCString]> for AsStrSlice<'a> {
 impl<'a, const N: usize> From<&'a [GCString; N]> for AsStrSlice<'a> {
     fn from(lines: &'a [GCString; N]) -> Self {
         let lines_slice = lines.as_slice();
+        let cache = LazyCache::new(lines_slice);
         let total_size = Self::calculate_total_size(lines_slice);
         Self {
             lines: lines_slice,
@@ -47,6 +50,7 @@ impl<'a, const N: usize> From<&'a [GCString; N]> for AsStrSlice<'a> {
             max_len: None,
             total_size: len(total_size),
             current_taken: len(0),
+            cache,
         }
     }
 }
@@ -55,6 +59,7 @@ impl<'a, const N: usize> From<&'a [GCString; N]> for AsStrSlice<'a> {
 /// [`AsStrSlice`].
 impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
     fn from(lines: &'a Vec<GCString>) -> Self {
+        let cache = LazyCache::new(lines);
         let total_size = Self::calculate_total_size(lines);
         Self {
             lines,
@@ -63,6 +68,7 @@ impl<'a> From<&'a Vec<GCString>> for AsStrSlice<'a> {
             max_len: None,
             total_size: len(total_size),
             current_taken: len(0),
+            cache,
         }
     }
 }

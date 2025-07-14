@@ -297,12 +297,12 @@ mod tests {
         let mut cache = MemoizedValue::new();
         let counter = Rc::new(RefCell::new(0));
 
-        let debug_empty = format!("{:?}", cache);
+        let debug_empty = format!("{cache:?}");
         assert!(debug_empty.contains("maybe_value: None"));
         assert!(debug_empty.contains("is_dirty: true"));
 
         cache.upsert(|| TestValue::with_shared_counter("test", counter));
-        let debug_filled = format!("{:?}", cache);
+        let debug_filled = format!("{cache:?}");
         assert!(debug_filled.contains("maybe_value: Some"));
         assert!(debug_filled.contains("is_dirty: false"));
     }

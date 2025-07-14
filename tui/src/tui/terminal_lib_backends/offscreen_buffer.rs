@@ -621,11 +621,11 @@ mod tests {
 
         // First call should calculate and cache
         let size1 = my_offscreen_buffer.get_mem_size_cached();
-        assert_ne!(format!("{}", size1), "?");
+        assert_ne!(format!("{size1}"), "?");
 
         // Second call should use cached value (no recalculation)
         let size2 = my_offscreen_buffer.get_mem_size_cached();
-        assert_eq!(format!("{}", size1), format!("{}", size2));
+        assert_eq!(format!("{size1}"), format!("{}", size2));
 
         // Modify buffer through DerefMut (invalidates cache)
         my_offscreen_buffer.buffer[0][0] = PixelChar::PlainText {
@@ -635,11 +635,11 @@ mod tests {
 
         // Next call should recalculate
         let size3 = my_offscreen_buffer.get_mem_size_cached();
-        assert_ne!(format!("{}", size3), "?");
+        assert_ne!(format!("{size3}"), "?");
 
         // Clear should also invalidate cache
         my_offscreen_buffer.clear();
         let size4 = my_offscreen_buffer.get_mem_size_cached();
-        assert_ne!(format!("{}", size4), "?");
+        assert_ne!(format!("{size4}"), "?");
     }
 }
