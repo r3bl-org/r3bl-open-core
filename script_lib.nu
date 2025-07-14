@@ -8,7 +8,7 @@ def run_example [options: list<string>, release: bool, no_log: bool] {
         print "No example selected.";
     } else {
         let release_flag = if $release { "--release" } else { "" }
-        let log_flag = if $no_log { "-- --no-log" } else { "" }
+        let log_flag = if $no_log { "--no-log" } else { "" }
         print $'(ansi cyan)Running example with options: (ansi green)($options)(ansi cyan), release: (ansi green)($release)(ansi cyan), selection: (ansi green)($selection)(ansi cyan), log: (ansi green)($no_log)(ansi reset)'
         print $'(ansi cyan)Current working directory: (ansi green)($env.PWD)(ansi reset)'
         print $"cargo run -q ($release_flag) --example ($selection) -- ($log_flag)"

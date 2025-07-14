@@ -250,19 +250,26 @@
     - `clippy::must_use_candidate`
     - `clippy::items_after_statements`
 
----
-
-- [ ] use `cargo bench` in `compatibility_test_suite.rs` to compare the relative performance of both
+- [x] use `cargo bench` in `compatibility_test_suite.rs` to compare the relative performance of both
       legacy and NG parsers
-- [ ] run more test with more complex documents in the `compatibility_test_suite.rs` to ensure that
+- [x] run more test with more complex documents in the `compatibility_test_suite.rs` to ensure that
       large READMEs, journal entries, and other complex and long MD files can be parsed correctly.
       might be nice to benchmark these too (og vs ng). and save these MD files in the project itself
       in the tests cases folder or something. this would be beyond the compatibility test suite, and
       should be some kind of `markdown_verification_test_suite` for quality.
-- [ ] would it be possible to cache the AST returned by `parse_markdown_ng()`? is this a tree
+- [x] would it be possible to cache the AST returned by `parse_markdown_ng()`? is this a tree
       structure or an array structure? how to mark areas as dirty? how to reparse only sections that
       have changed? this might speed up parsing a whole lot, if the entire thing does not have to be
       re-parsed? need to verify all of this and not just use intuition.
+
+---
+
+- [ ] perf optimize codebase using flamegraph profiling & claude
+- [ ] mark NG parser as experimental (not ready for production)
+- [ ] fix all the pedantic lints using claude (and don't allow them anymore in Cargo.toml)
+- [ ] add a new feature to edi: `cat file.txt | edi` should open the piped output of the first
+      process into edi itself
+- [ ] update changelog and make a release
 
 ---
 
@@ -276,6 +283,12 @@
 - markdown table support
   - [ ] impl md table parser
   - [ ] impl syn hi for this
+
+- add giti feature to search logs
+
+- fix copy / paste bugs in editor component
+
+- add features to editor component
 
 # modernize `choose` and `giti` codebase: https://github.com/r3bl-org/r3bl-open-core/issues/427
 
