@@ -207,16 +207,10 @@ impl<'a> AsStrSlice<'a> {
         // char_index represents CHARACTER position, but we need BYTE position for slicing
         let char_position = self.char_index.as_usize();
 
-        // Convert character position to byte position
-        let safe_start_byte_index = if char_position == 0 {
-            0
-        } else {
-            // Find the byte position of the char_position-th character
-            current_line
-                .char_indices()
-                .nth(char_position)
-                .map_or(current_line.len(), |(byte_idx, _)| byte_idx) // If beyond end, use end of string
-        };
+        // Convert character position to byte position using cache
+        let safe_start_byte_index = self.cache.get().byte_offsets
+            .char_to_byte(self.line_index.as_usize(), char_position)
+            .unwrap_or(current_line.len());
 
         // If we're past the end of the line, return empty.
         if safe_start_byte_index >= current_line.len() {
@@ -227,12 +221,11 @@ impl<'a> AsStrSlice<'a> {
         let safe_end_byte_index = match self.max_len {
             None => eol,
             Some(max_len) => {
-                // Convert max_len (character count) to byte position
+                // Convert max_len (character count) to byte position using cache
                 let max_chars = char_position + max_len.as_usize();
-                current_line
-                    .char_indices()
-                    .nth(max_chars)
-                    .map_or(eol, |(byte_idx, _)| byte_idx) // If beyond end, use end of string
+                self.cache.get().byte_offsets
+                    .char_to_byte(self.line_index.as_usize(), max_chars)
+                    .unwrap_or(eol)
             }
         };
 

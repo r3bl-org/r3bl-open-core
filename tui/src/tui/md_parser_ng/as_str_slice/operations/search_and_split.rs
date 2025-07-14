@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{as_str_slice::AsStrSlice,
+use crate::{as_str_slice::{AsStrSlice, LazyCache},
             core::units::{len, Index, Length},
             GCString};
 
@@ -65,6 +65,7 @@ impl<'a> AsStrSlice<'a> {
     ) -> Self {
         let start_line: Index = arg_start_line.into();
         let start_char: Index = arg_start_char.into();
+        let cache = LazyCache::new(lines);
         let total_size = Self::calculate_total_size(lines);
         let current_taken = Self::calculate_current_taken(lines, start_line, start_char);
 
@@ -73,8 +74,9 @@ impl<'a> AsStrSlice<'a> {
             line_index: start_line,
             char_index: start_char,
             max_len,
-            total_size,
+            total_size: len(total_size),
             current_taken,
+            cache,
         }
     }
 
@@ -159,7 +161,8 @@ impl<'a> AsStrSlice<'a> {
                 )
             },
             total_size: self.total_size,
-            current_taken: self.current_taken,
+            current_taken: self.current_taken + skip_count,  // FIX: Update current_taken to reflect skipped characters
+            cache: self.cache.clone(),
         }
     }
 
@@ -185,6 +188,7 @@ impl<'a> AsStrSlice<'a> {
             },
             total_size: self.total_size,
             current_taken: self.current_taken,
+            cache: self.cache.clone(),
         }
     }
 }

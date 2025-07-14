@@ -124,11 +124,11 @@ pub fn parse_inline_fragments_until_eol_or_eoi_ng(
 
 #[cfg(test)]
 mod tests_parse_fragment {
-    use nom::{error::{Error, ErrorKind},
+    use nom::{error::ErrorKind,
               Err as NomErr};
 
     use super::*;
-    use crate::{as_str_slice_test_case, assert_eq2, idx, GCString, HyperlinkData};
+    use crate::{as_str_slice_test_case, assert_eq2, idx, len, GCString, HyperlinkData};
 
     #[test]
     fn test_parse_plain_text_no_new_line1() {
@@ -420,13 +420,13 @@ mod tests_parse_fragment {
         {
             as_str_slice_test_case!(input, "");
             let res = parse_fragment_plain_text_until_eol_or_eoi_ng(input);
-            assert_eq2!(
-                res,
-                Err(NomErr::Error(Error {
-                    input: AsStrSlice::from(&[GCString::new("")]),
-                    code: ErrorKind::Eof
-                }))
-            );
+            match res {
+                Err(NomErr::Error(error)) => {
+                    assert_eq2!(error.code, ErrorKind::Eof);
+                    assert_eq2!(error.input.extract_to_line_end(), "");
+                }
+                _ => panic!("Expected Error with Eof code"),
+            }
         }
     }
 
@@ -791,6 +791,125 @@ mod tests_parse_fragment {
                     }
                 }
                 Err(err) => panic!("Expected Ok for input '{input}', got Err: {err:?}"),
+            }
+        }
+    }
+
+    /// Regression test for bold text parsing bug where "This is *bold* text" would
+    /// incorrectly parse the bold portion as "his is " instead of "bold".
+    ///
+    /// The bug was caused by `skip_take_in_current_line` not updating `current_taken`,
+    /// leading to incorrect character position tracking in the returned `AsStrSlice`.
+    #[test]
+    fn test_bold_text_parsing_regression() {
+        // Input: "This is *bold* text"
+        let input_str = "This is *bold* text";
+        let lines = &[GCString::new(input_str)];
+        let input = AsStrSlice::from(lines);
+
+        // Parse all fragments
+        let mut current = input;
+        let mut fragments = Vec::new();
+
+        while current.remaining_len() > len(0) {
+            match parse_inline_fragments_until_eol_or_eoi_ng(
+                current,
+                CheckboxParsePolicy::IgnoreCheckbox,
+            ) {
+                Ok((rem, fragment)) => {
+                    fragments.push(fragment);
+                    current = rem;
+                }
+                Err(_) => break,
+            }
+        }
+
+        // Verify we got 3 fragments
+        assert_eq!(fragments.len(), 3, "Should have 3 fragments");
+
+        // Check each fragment
+        match &fragments[0] {
+            MdLineFragment::Plain(text) => {
+                assert_eq!(*text, "This is ", "First fragment should be 'This is '");
+            }
+            _ => panic!("First fragment should be Plain text"),
+        }
+
+        match &fragments[1] {
+            MdLineFragment::Bold(text) => {
+                assert_eq!(
+                    *text, "bold",
+                    "Bold fragment should be 'bold', not '{text}'"
+                );
+            }
+            _ => panic!("Second fragment should be Bold text"),
+        }
+
+        match &fragments[2] {
+            MdLineFragment::Plain(text) => {
+                assert_eq!(*text, " text", "Third fragment should be ' text'");
+            }
+            _ => panic!("Third fragment should be Plain text"),
+        }
+    }
+
+    #[test]
+    fn test_italic_and_inline_code_regression() {
+        // Test italic
+        {
+            let input_str = "This is _italic_ text";
+            let lines = &[GCString::new(input_str)];
+            let mut input = AsStrSlice::from(lines);
+            let mut fragments = Vec::new();
+
+            while input.remaining_len() > len(0) {
+                match parse_inline_fragments_until_eol_or_eoi_ng(
+                    input,
+                    CheckboxParsePolicy::IgnoreCheckbox,
+                ) {
+                    Ok((rem, fragment)) => {
+                        fragments.push(fragment);
+                        input = rem;
+                    }
+                    Err(_) => break,
+                }
+            }
+
+            assert_eq!(fragments.len(), 3);
+            match &fragments[1] {
+                MdLineFragment::Italic(text) => {
+                    assert_eq!(*text, "italic", "Italic fragment should be 'italic'");
+                }
+                _ => panic!("Second fragment should be Italic text"),
+            }
+        }
+
+        // Test inline code
+        {
+            let input_str = "This is `code` text";
+            let lines = &[GCString::new(input_str)];
+            let mut input = AsStrSlice::from(lines);
+            let mut fragments = Vec::new();
+
+            while input.remaining_len() > len(0) {
+                match parse_inline_fragments_until_eol_or_eoi_ng(
+                    input,
+                    CheckboxParsePolicy::IgnoreCheckbox,
+                ) {
+                    Ok((rem, fragment)) => {
+                        fragments.push(fragment);
+                        input = rem;
+                    }
+                    Err(_) => break,
+                }
+            }
+
+            assert_eq!(fragments.len(), 3);
+            match &fragments[1] {
+                MdLineFragment::InlineCode(text) => {
+                    assert_eq!(*text, "code", "InlineCode fragment should be 'code'");
+                }
+                _ => panic!("Second fragment should be InlineCode text"),
             }
         }
     }

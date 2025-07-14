@@ -1,19 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep:*)",
-      "Bash(find:*)",
+      "Bash(cargo bench:*)",
       "Bash(cargo test:*)",
-      "Bash(git checkout:*)",
-      "Bash(cargo run:*)",
-      "Bash(rustc:*)",
-      "Bash(./debug_truncate)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
       "Bash(cargo check:*)",
-      "Bash(cargo build:*)"
+      "Bash(cargo clippy:*)",
+      "Bash(rm:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(cp:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
-  },
-  "model": "opus"
+  }
 }

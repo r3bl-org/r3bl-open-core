@@ -3,7 +3,7 @@
 - [x] document naming convention:
   - `parse_*()` -> splits bytes from input into remainder and output bytes
   - `*_extract` -> generates structs from already-split-input using a `parse_*()`
-  - `*_parser()` -> function that recieves an input and is called by `parse_*()`
+  - `*_parser()` -> function that receives an input and is called by `parse_*()`
 - [x] `AsStrSlice::extract_remaining_text_content_in_line()`: fix the naming and add fn docs
 - code block
 - [x] `parse_code_block_generic()`: fix the behavior when end maker "```" is missing, add fn docs
@@ -73,7 +73,7 @@
   - `core::script::fs_path::tests::test_try_pwd_errors`
   - `core::script::fs_path::tests::test_try_write`
 
-- [ ] fix regression bug in `md_parser` when using `AsStrSlice::to_string()`. see
+- [x] fix regression bug in `md_parser` when using `AsStrSlice::to_string()`. see
       `EditorBuffer::new_empty()` & `EditorBuffer::set_lines()` for how "raw" data is loaded into
       the model in memory (from disk or new / empty).
   - [x] `impl Display for AsStrSlice` address all `FIXME: proper \n handling`
@@ -194,7 +194,7 @@
       - [x] `parse_block_smart_list_alt()`
       - [x] `mod tests_parse_block_smart_list`
 
-- [x] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_mardown_alt()`
+- [x] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_markdown_alt()`
   - [x] review `as_str_slice.rs` changes
   - [x] review this fix `fallback_parse_any_line_as_plain_alt()`
   - [x] break up `as_str_slice.rs` into `as_str_slice_mod`
@@ -226,7 +226,7 @@
   - `get_real_world_content()` in
     `tui/src/tui/md_parser_ng/as_str_slice/compatibility_test_suite.rs`
   - `get_default_content()` in `tui/examples/tui_apps/ex_editor/state.rs`
-- [x] make quality and compatibility improvments to `md_parse_ng` now that it is attached to the
+- [x] make quality and compatibility improvements to `md_parse_ng` now that it is attached to the
       test examples. verify that extra line at the bottom of editor example shows up both for legacy
       and NG parser
 - [x] deal with compiler warning (turned error) affecting the location of the
@@ -264,11 +264,25 @@
 
 ---
 
-- [.] perf optimize codebase using flamegraph profiling & claude using `docs/ng_parser.md`
+- [x] perf optimize codebase using flamegraph profiling & claude using `docs/ng_parser.md`
   - [x] try incorporate memoized size calc in `GetMemSize`
-- [ ] mark NG parser as experimental (not ready for production)
-  - [ ] try replace `AsStrSlice` w/ `&str` and see if this resolves perf problems; need to
-        materialize string at the start of course.
+- [x] try and fix NG parser
+  - [x] identified O(n) character counting bottlenecks in `AsStrSlice` hot paths
+  - [x] implemented caching infrastructure for character counts and byte offsets
+  - [x] optimized `extract_to_line_end()` to use cached byte offsets
+  - [x] fixed O(n) loop in `take_from()` with binary search
+  - [x] implemented lazy cache initialization to reduce overhead
+  - [x] fixed cache sharing bug when cloning `AsStrSlice`
+  - [x] fixed position tracking bug in `skip_take_in_current_line()`
+  - [x] achieved 600-5,000x performance improvement (from 50,000x to 9-83x slower)
+- [x] incorporate both NG and legacy parsers into the `try_parse_and_highlight()`
+  - [x] implemented hybrid parser approach with 100KB threshold
+  - [x] documents ≤100KB use legacy parser (better performance)
+  - [x] documents >100KB use NG parser (better memory efficiency)
+  - [x] removed `ENABLE_MD_PARSER_NG` constant in favor of dynamic selection
+  - [x] added comprehensive documentation to `try_parse_and_highlight()`
+- [x] updated `docs/ng_parser.md` with detailed performance optimization findings
+- [x] moved regression tests from separate file to `parse_fragments_in_a_line_ng.rs`
 - [ ] fix all the pedantic lints using claude (and don't allow them anymore in Cargo.toml)
 - [ ] add a new feature to edi: `cat file.txt | edi` should open the piped output of the first
       process into edi itself

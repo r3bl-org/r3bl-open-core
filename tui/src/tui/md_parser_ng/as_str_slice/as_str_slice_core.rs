@@ -15,9 +15,11 @@
  *   limitations under the License.
  */
 
+
 use crate::{core::units::{Index, Length},
             len,
-            GCString};
+            GCString,
+            as_str_slice::lazy_cache::LazyCache};
 
 pub type NErr<T> = nom::Err<T>;
 pub type NError<T> = nom::error::Error<T>;
@@ -296,6 +298,10 @@ where
 
     /// Number of characters consumed from the beginning.
     pub current_taken: CharacterLength,
+    
+    /// Performance cache for character counts and byte offsets.
+    /// Uses lazy initialization to avoid overhead when cache isn't needed.
+    pub cache: LazyCache<'a>,
 }
 
 /// Extension trait for getting the character length of string-like types.

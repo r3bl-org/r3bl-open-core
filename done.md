@@ -187,7 +187,7 @@
 
 # fix cargo install without needing libssl-dev and pkg-config
 
-- [x] installing `r3bl-cmdr` on a new VM / machine requies `libssl-dev` to be installed. fix
+- [x] installing `r3bl-cmdr` on a new VM / machine requires `libssl-dev` to be installed. fix
       `reqwest` so it uses `rustls` and not `openssl`
 
 # clean up giti phase 9

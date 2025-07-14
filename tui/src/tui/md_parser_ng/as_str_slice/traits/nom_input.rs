@@ -49,10 +49,8 @@
 use nom::Input;
 
 use crate::{as_str_slice::AsStrSlice,
-            core::units::len,
-            CharacterCountNomCompat,
-            CharacterIndexNomCompat,
-            StringCharIndices,
+            core::units::{len, Index},
+            CharacterCountNomCompat, CharacterIndexNomCompat, StringCharIndices,
             StringChars};
 
 /// Implementation of `nom::Input` trait for `AsStrSlice`.
@@ -121,20 +119,40 @@ impl<'a> Input for AsStrSlice<'a> {
         let mut result = self.clone();
         let actual_advance = start.min(self.remaining_len().as_usize());
 
-        // Advance to the start position.
-        for _ in 0..actual_advance {
-            result.advance();
+        if actual_advance == 0 {
+            return result;
         }
 
-        // If we had a max_len limit, adjust it to account for the advanced position.
-        if let Some(max_len) = self.max_len {
-            if actual_advance >= max_len.as_usize() {
-                // We've advanced past the original limit, so the remaining slice is
-                // empty.
-                result.max_len = Some(len(0));
-            } else {
-                // Reduce the max_len by the amount we advanced.
-                result.max_len = Some(max_len - len(actual_advance));
+        // Calculate the global character position we want to reach
+        let target_global_pos = self.current_taken.as_usize() + actual_advance;
+
+        // Use cache to find the target line and character position
+        match self
+            .cache
+            .get()
+            .line_metadata
+            .char_pos_to_line_char(target_global_pos)
+        {
+            Some((target_line, char_within_line)) => {
+                result.line_index = Index::from(target_line);
+                result.char_index = Index::from(char_within_line);
+                result.current_taken = len(target_global_pos);
+
+                // If we had a max_len limit, adjust it to account for the advanced
+                // position.
+                if let Some(max_len) = self.max_len {
+                    if actual_advance >= max_len.as_usize() {
+                        result.max_len = Some(len(0));
+                    } else {
+                        result.max_len = Some(max_len - len(actual_advance));
+                    }
+                }
+            }
+            _ => {
+                // Fallback to character-by-character advance if cache lookup fails
+                for _ in 0..actual_advance {
+                    result.advance();
+                }
             }
         }
 
