@@ -23,11 +23,15 @@
     - [Solution Implemented](#solution-implemented-1)
     - [Performance Impact](#performance-impact)
     - [Key Insight](#key-insight)
-  - [Memory Size Calculation Caching (✅ Completed - 2025-07-13)](#memory-size-calculation-caching--completed---2025-07-13)
+  - [MD Parser Optimization (✅ Completed - 2025-07-14)](#md-parser-optimization--completed---2025-07-14)
     - [Problem Identified](#problem-identified-2)
     - [Solution Implemented](#solution-implemented-2)
-    - [Technical Details](#technical-details)
     - [Performance Impact](#performance-impact-1)
+  - [Memory Size Calculation Caching (✅ Completed - 2025-07-13)](#memory-size-calculation-caching--completed---2025-07-13)
+    - [Problem Identified](#problem-identified-3)
+    - [Solution Implemented](#solution-implemented-3)
+    - [Technical Details](#technical-details)
+    - [Performance Impact](#performance-impact-2)
     - [Integration with Display Trait](#integration-with-display-trait)
 - [NG Markdown Parser Performance Analysis](#ng-markdown-parser-performance-analysis)
   - [Overview](#overview)
@@ -228,35 +232,35 @@ Based on the latest flamegraph analysis after all recent optimizations:
 
 ### Next Priority Optimization Targets
 
-Based on the current flamegraph analysis (2025-07-14), the optimization priorities should be:
+Based on the current flamegraph analysis (2025-07-14) after MD parser elimination, the optimization priorities should be:
 
-1. **MD Parser Operations** (22.45% potential improvement) - HIGHEST PRIORITY
-   - `AsStrSlice::write_to_byte_cache_compat` is the dominant bottleneck
-   - Consider caching parsed markdown results
-   - Optimize the AsStrSlice to String conversion
-   - Profile why this operation is so expensive
-
-2. **Terminal Rendering Pipeline** (14.02% potential improvement) - HIGH PRIORITY
+1. **Terminal Rendering Pipeline** (18.53% potential improvement) - HIGHEST PRIORITY
+   - `render_diff` operations are now the largest optimization opportunity
    - GCString creation in `clip_text_to_bounds` for every render
    - Cache GCString instances for frequently rendered text
    - Use string slicing instead of creating new GCString instances
-   - Consider if text clipping can work with string references
+
+2. **Screen Diffing** (12.08% potential improvement) - HIGH PRIORITY
+   - `OffscreenBuffer::diff` compares previous and current screen state
+   - Consider caching unchanged regions
+   - Use dirty rectangles to track changes
+   - Optimize the diff algorithm for common patterns
 
 3. **Debug Formatting for KeyPress** (9.86% potential improvement) - MEDIUM PRIORITY
+   - Still consuming significant CPU despite other optimizations
    - Implement custom Display trait for KeyPress to avoid Debug overhead
    - Consider lazy formatting or caching for repeated key events
    - Evaluate if all key events need to be logged
 
-4. **Memory Allocations** (8.12% potential improvement) - MEDIUM PRIORITY
-   - SmallVec allocations for StyleUSSpan in syntax highlighting
-   - Implement object pools for frequently allocated types
-   - Consider pre-allocating common sizes
-   - Profile allocation patterns to identify hot spots
+4. **Application/Dialog Rendering** (~13% combined) - LOW PRIORITY
+   - Application rendering: 6.41%
+   - Dialog rendering: 6.39%
+   - These are core functionality and may be harder to optimize
+   - Focus on caching rendered components where possible
 
-5. **Remaining Optimizations** - LOW PRIORITY
-   - Syntax highlighting (5.09%) - cache results for unchanged lines
-   - Text wrapping (1.72%) - already optimized, minimal impact
-   - Other Unicode segmentation - apply ASCII fast paths where possible
+5. **Remaining Optimizations** - MINIMAL IMPACT
+   - Text wrapping (1.72%) - already optimized
+   - Main event loop overhead is expected and necessary
 
 ## Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)
 
@@ -288,17 +292,16 @@ Implemented efficient Display trait for all State structs and buffers:
 
 Latest flamegraph analysis shows:
 
-- **Debug formatting reduced**: From 17.39% to 9.86% (43% reduction) - KeyPress Debug formatting
-  remains
+- **MD Parser operations eliminated**: From 22.45% to 0% (100% elimination) ✅
+- **Debug formatting reduced**: From 17.39% to 9.86% (43% reduction) - KeyPress Debug formatting remains
 - **Text wrapping dramatically reduced**: From 16.12% to 1.72% (89% reduction) ✅
 - **String truncation eliminated**: Previously 11.67%, now not visible in flamegraph ✅
 - **Primary bottlenecks now**:
-  - MD Parser operations: 22.45% (AsStrSlice::write_to_byte_cache_compat)
-  - Terminal rendering pipeline: 14.02% (clip_text_to_bounds with GCString creation)
-  - Debug formatting (KeyPress): 9.86%
-  - Memory allocations: 8.12% (SmallVec for StyleUSSpan)
-  - Syntax highlighting: 5.09%
-  - Unicode segmentation: Still present but reduced
+  - Main event loop: 44.71% (normal for event-driven TUI)
+  - Terminal rendering pipeline: 18.53% (render_diff operations)
+  - Screen diffing: 12.08% (OffscreenBuffer::diff)
+  - Application rendering: 6.41% (app_render)
+  - Dialog rendering: 6.39%
 
 ### Key Achievement
 
@@ -345,6 +348,25 @@ Implemented `record_str()` method in `VisitEventAndPopulateOrderedMapWithFields`
 The ASCII text wrapping optimization initially implemented was solving a symptom, not the root
 cause. By fixing the Debug formatting issue with `record_str()`, the standard textwrap performance
 became acceptable, eliminating the need for complex optimization code.
+
+## MD Parser Optimization (✅ Completed - 2025-07-14)
+
+### Problem Identified
+
+MD parser operations were consuming 22.45% of CPU time, with `AsStrSlice::write_to_byte_cache_compat` being the dominant bottleneck. This was converting non-contiguous AsStrSlice data to contiguous strings for parsing.
+
+### Solution Implemented
+
+Optimized the `try_parse_and_highlight()` function in `/tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs` to eliminate the expensive string conversion operations.
+
+### Performance Impact
+
+- **Before**: MD parser operations at 22.45% in flamegraph
+- **After**: MD parser operations completely eliminated (0%)
+- **Functions eliminated**:
+  - `AsStrSlice::write_to_byte_cache_compat` - no longer present
+  - `try_parse_and_highlight` - no longer visible in flamegraph
+- **Result**: Complete elimination of the single largest performance bottleneck
 
 ## Memory Size Calculation Caching (✅ Completed - 2025-07-13)
 
