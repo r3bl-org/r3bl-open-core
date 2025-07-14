@@ -265,7 +265,10 @@
 ---
 
 - [ ] perf optimize codebase using flamegraph profiling & claude
+  - [ ] try incorporate memoized size calc in `GetMemSize`
 - [ ] mark NG parser as experimental (not ready for production)
+  - [ ] try replace `AsStrSlice` w/ `&str` and see if this resolves perf problems; need to
+        materialize string at the start of course.
 - [ ] fix all the pedantic lints using claude (and don't allow them anymore in Cargo.toml)
 - [ ] add a new feature to edi: `cat file.txt | edi` should open the piped output of the first
       process into edi itself

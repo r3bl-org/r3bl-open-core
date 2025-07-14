@@ -15,7 +15,9 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{Debug, Display}, future::Future, pin::Pin};
+use std::{fmt::{Debug, Display},
+          future::Future,
+          pin::Pin};
 
 use super::{main_event_loop_impl, BoxedSafeApp, GlobalData};
 use crate::{get_size, CommonResult, FlexBoxId, InputDevice, InputEvent, OutputDevice};
@@ -86,15 +88,22 @@ impl TerminalWindow {
     ///
     /// # Performance Note
     ///
-    /// The state type `S` must implement [`Display`] for telemetry logging. This implementation
-    /// is called after EVERY render cycle in the main event loop, so it must be lightweight and
-    /// efficient. Avoid expensive operations like:
+    /// The state type `S` must implement [`Display`] for telemetry logging. This
+    /// implementation is called after EVERY render cycle in the main event loop, so
+    /// it must be lightweight and efficient. Avoid expensive operations like:
     /// * Deep recursive traversal of data structures.
     /// * Memory size calculations.
     /// * Complex string formatting.
     ///
-    /// Instead, implement a simple summary format that shows only essential metrics. For example:
-    /// ```no_run
+    /// Instead, implement a simple summary format that shows only essential metrics. For
+    /// example: ```no_run
+    /// use std::fmt::Display;
+    ///
+    /// struct MyState {
+    ///     buffers: Vec<String>,
+    ///     active_id: usize,
+    /// }
+    ///
     /// impl Display for MyState {
     ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     ///         write!(f, "State[buffers={}, active={}]", self.buffers.len(), self.active_id)
