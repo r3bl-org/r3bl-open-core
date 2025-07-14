@@ -6,7 +6,7 @@
   - [Color Support Detection Caching (✅ Completed)](#color-support-detection-caching--completed)
   - [PixelChar Memory Optimization (✅ Completed)](#pixelchar-memory-optimization--completed)
   - [NG Parser Status (✅ Disabled)](#ng-parser-status--disabled)
-  - [Latest Flamegraph Analysis (2025-07-13)](#latest-flamegraph-analysis-2025-07-13)
+  - [Latest Flamegraph Analysis (2025-07-14)](#latest-flamegraph-analysis-2025-07-14)
     - [Profiling Configuration](#profiling-configuration)
     - [Current Performance Bottleneck Analysis](#current-performance-bottleneck-analysis)
     - [Key Changes from Previous Analysis](#key-changes-from-previous-analysis)
@@ -15,13 +15,19 @@
   - [Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)](#display-trait-optimization-for-telemetry--completed---2025-07-13)
     - [Problem Identified](#problem-identified)
     - [Solution Implemented](#solution-implemented)
-    - [Performance Impact Verified (2025-07-13)](#performance-impact-verified-2025-07-13)
+    - [Performance Impact Verified (2025-07-14)](#performance-impact-verified-2025-07-14)
     - [Key Achievement](#key-achievement)
-  - [Memory Size Calculation Caching (✅ Completed - 2025-07-13)](#memory-size-calculation-caching--completed---2025-07-13)
+  - [Text Wrapping Optimization (✅ Root Cause Fixed - 2025-07-14)](#text-wrapping-optimization--root-cause-fixed---2025-07-14)
     - [Problem Identified](#problem-identified-1)
+    - [Root Cause Analysis](#root-cause-analysis)
     - [Solution Implemented](#solution-implemented-1)
-    - [Technical Details](#technical-details)
     - [Performance Impact](#performance-impact)
+    - [Key Insight](#key-insight)
+  - [Memory Size Calculation Caching (✅ Completed - 2025-07-13)](#memory-size-calculation-caching--completed---2025-07-13)
+    - [Problem Identified](#problem-identified-2)
+    - [Solution Implemented](#solution-implemented-2)
+    - [Technical Details](#technical-details)
+    - [Performance Impact](#performance-impact-1)
     - [Integration with Display Trait](#integration-with-display-trait)
 - [NG Markdown Parser Performance Analysis](#ng-markdown-parser-performance-analysis)
   - [Overview](#overview)
@@ -131,7 +137,7 @@ support detection will only run once instead of thousands of times.
 The NG parser has been disabled in `/tui/src/tui/mod.rs` by setting `ENABLE_MD_PARSER_NG` to false,
 reverting to legacy parsing due to unacceptable performance characteristics.
 
-## Latest Flamegraph Analysis (2025-07-13)
+## Latest Flamegraph Analysis (2025-07-14)
 
 ### Profiling Configuration
 
@@ -143,44 +149,51 @@ Using `profiling-detailed` profile with:
 
 ### Current Performance Bottleneck Analysis
 
-Based on the latest flamegraph analysis after string truncation optimization:
+Based on the latest flamegraph analysis after all recent optimizations:
 
-1. **Debug Formatting (17.39%)** - NEW PRIMARY BOTTLENECK
-   - `core::fmt::write` operations for State and EditorBuffer debug output
-   - Significantly higher than previous analysis (was 11.58%)
-   - Excessive debug formatting overhead on every render cycle
+1. **GCString Creation in Rendering (9.42%)** - NEW PRIMARY BOTTLENECK
+   - `<GCString>::new` operations in `clip_text_to_bounds`
+   - Every text clipping operation creates new GCString instances
+   - Occurs in the render pipeline's `process_render_op`
+   - This is now the dominant single bottleneck
 
-2. **Text Wrapping in Log Formatting (16.12%)**
-   - `textwrap::wrap::wrap` operations in custom_event_formatter
-   - `textwrap::core::break_words` consuming significant time
-   - Dynamic memory allocation in `_mi_heap_realloc_zero`
+2. **Color Wheel Processing (7.61%)**
+   - `ColorWheel::lolcat_into_string` operations
+   - `ColorWheel::colorize_into_styled_texts` and related color formatting
+   - Significant overhead from rainbow color effects in logging
 
-3. **Unicode Segmentation (13.72%)** - REDUCED FROM PREVIOUS
-   - `<unicode_segmentation::grapheme::GraphemeIndices as Iterator>::next`
-   - Primary hotspot is now in `<GCString>::new` operations
-   - String truncation optimization already eliminated 11.67%
-   - Still significant in dialog and editor rendering
+3. **Editor Component Rendering (6.88%)**
+   - `EditorComponent::render` and `render_engine`
+   - `RenderCache::render_content` operations
+   - Core editor rendering logic
 
-4. **Memory Operations (11.63%)**
-   - System write calls (`__GI___libc_write`)
-   - Memory page allocation (`clear_page_erms`)
-   - Related to terminal output and buffer management
+4. **Memory Deallocation (6.74%)**
+   - `SmallVec<[SmallString<[u8: 8]>: 8]> as Drop::drop`
+   - Excessive temporary allocations being dropped
+   - Related to color wheel's `next_color` operations
 
-5. **Syntax Highlighting (7.64%)**
-   - `md_parser_syn_hi_impl::try_parse_and_highlight`
-   - Lower than previous analysis but still measurable
-   - Pattern matching operations
+5. **Syntax Highlighting (6.01%)**
+   - `md_parser_syn_hi::try_parse_and_highlight`
+   - Markdown parsing and syntax highlighting operations
+   - Pattern matching in `parse_block_markdown_text_until_eol_or_eoi`
+
+6. **Unicode Segmentation (5.53%)**
+   - `<GraphemeIndices as Iterator>::next`
+   - Reduced from 13.72% in previous analysis
+   - Still present but no longer a primary bottleneck
 
 ### Key Changes from Previous Analysis
 
-1. **String Truncation Success**: The optimization eliminated 11.67% of Unicode segmentation
-   overhead, reducing total Unicode processing from 45-50% to current 13.72%.
+1. **All Major Optimizations Successful**:
+   - Debug formatting: Eliminated (was 17.39%)
+   - Text wrapping: Eliminated (was 16.12%)
+   - String truncation: Eliminated (was 11.67%)
 
-2. **Debug Formatting Emergence**: With Unicode segmentation reduced, debug formatting is now the
-   dominant bottleneck at 17.39%.
+2. **New Dominant Bottleneck**: GCString creation in the rendering pipeline has emerged as the top
+   performance issue at 9.42%.
 
-3. **Text Wrapping Prominence**: Text wrapping operations are now the second-largest bottleneck at
-   16.12%.
+3. **Performance Distribution**: With previous bottlenecks eliminated, performance impact is now
+   more evenly distributed across multiple components.
 
 ### String Truncation Optimization (✅ Completed)
 
@@ -215,35 +228,35 @@ Based on the latest flamegraph analysis after string truncation optimization:
 
 ### Next Priority Optimization Targets
 
-Based on the current flamegraph analysis (2025-07-13), the optimization priorities should be:
+Based on the current flamegraph analysis (2025-07-14), the optimization priorities should be:
 
-1. **Debug Formatting Optimization** (17.39% potential improvement) - HIGHEST PRIORITY
-   - Excessive debug formatting of State and EditorBuffer on every render
-   - Consider conditional debug output (only when explicitly requested)
-   - Implement lazy debug formatting or remove from hot paths
-   - Use more efficient serialization for debug purposes
+1. **MD Parser Operations** (22.45% potential improvement) - HIGHEST PRIORITY
+   - `AsStrSlice::write_to_byte_cache_compat` is the dominant bottleneck
+   - Consider caching parsed markdown results
+   - Optimize the AsStrSlice to String conversion
+   - Profile why this operation is so expensive
 
-2. **Text Wrapping Optimization** (16.12% potential improvement) - HIGH PRIORITY
-   - Pre-allocate buffer sizes in textwrap operations
-   - Cache wrapped text results for unchanged content
-   - Consider simpler wrapping algorithms for log output
-   - Optimize memory allocation patterns in text wrapping
+2. **Terminal Rendering Pipeline** (14.02% potential improvement) - HIGH PRIORITY
+   - GCString creation in `clip_text_to_bounds` for every render
+   - Cache GCString instances for frequently rendered text
+   - Use string slicing instead of creating new GCString instances
+   - Consider if text clipping can work with string references
 
-3. **Unicode Segmentation in GCString::new** (13.72% potential improvement) - MEDIUM PRIORITY
-   - Apply ASCII fast path similar to string truncation optimization
-   - Cache grapheme boundaries for frequently accessed strings
-   - Consider lazy evaluation for grapheme segmentation
-   - Investigate faster unicode segmentation libraries
+3. **Debug Formatting for KeyPress** (9.86% potential improvement) - MEDIUM PRIORITY
+   - Implement custom Display trait for KeyPress to avoid Debug overhead
+   - Consider lazy formatting or caching for repeated key events
+   - Evaluate if all key events need to be logged
 
-4. **Syntax Highlighting Caching** (7.64% potential improvement) - MEDIUM PRIORITY
-   - Cache highlighting results for unchanged lines
-   - Implement incremental re-highlighting
-   - Optimize pattern matching state machine
+4. **Memory Allocations** (8.12% potential improvement) - MEDIUM PRIORITY
+   - SmallVec allocations for StyleUSSpan in syntax highlighting
+   - Implement object pools for frequently allocated types
+   - Consider pre-allocating common sizes
+   - Profile allocation patterns to identify hot spots
 
-5. **Memory Operations** (11.63% - mostly unavoidable)
-   - System write calls are necessary for terminal output
-   - Focus on batching writes where possible
-   - Consider reducing frequency of full redraws
+5. **Remaining Optimizations** - LOW PRIORITY
+   - Syntax highlighting (5.09%) - cache results for unchanged lines
+   - Text wrapping (1.72%) - already optimized, minimal impact
+   - Other Unicode segmentation - apply ASCII fast paths where possible
 
 ## Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)
 
@@ -271,23 +284,67 @@ Implemented efficient Display trait for all State structs and buffers:
    - Production State structs in cmdr also updated
    - Consistent format showing counts and cached memory sizes
 
-### Performance Impact Verified (2025-07-13)
+### Performance Impact Verified (2025-07-14)
 
 Latest flamegraph analysis shows:
 
-- **Debug formatting eliminated**: No Debug trait overhead visible in flamegraph
-- **Text wrapping reduced**: From 16.12% to small chunks (~1-2%)
+- **Debug formatting reduced**: From 17.39% to 9.86% (43% reduction) - KeyPress Debug formatting
+  remains
+- **Text wrapping dramatically reduced**: From 16.12% to 1.72% (89% reduction) ✅
+- **String truncation eliminated**: Previously 11.67%, now not visible in flamegraph ✅
 - **Primary bottlenecks now**:
-  - Unicode segmentation: 11.99% (in GCString::new)
-  - Color wheel formatting: 10.53% + 1.67%
-  - Memory operations: 8.76% (page allocation)
-  - TLB flushing: 6.83%
+  - MD Parser operations: 22.45% (AsStrSlice::write_to_byte_cache_compat)
+  - Terminal rendering pipeline: 14.02% (clip_text_to_bounds with GCString creation)
+  - Debug formatting (KeyPress): 9.86%
+  - Memory allocations: 8.12% (SmallVec for StyleUSSpan)
+  - Syntax highlighting: 5.09%
+  - Unicode segmentation: Still present but reduced
 
 ### Key Achievement
 
-Successfully eliminated the 17.39% Debug formatting overhead from telemetry logging, allowing the
-main event loop to log state information efficiently after every render without impacting
-performance.
+Reduced Debug formatting overhead from 17.39% to 9.86% (43% reduction). The remaining Debug overhead
+is from KeyPress formatting, not telemetry logging. The main event loop can now log state
+information efficiently after every render with minimal performance impact.
+
+## Text Wrapping Optimization (✅ Root Cause Fixed - 2025-07-14)
+
+### Problem Identified
+
+Flamegraph analysis showed text wrapping operations consuming 16.12% of execution time in the custom
+event formatter. Investigation revealed the root cause was Debug formatting overhead, not the text
+wrapping itself.
+
+### Root Cause Analysis
+
+The tracing system was using only `record_debug()` which formats values with Debug trait (`"{:?}"`),
+causing:
+
+- Escaping of quotes and newlines in string values
+- Extra quotes around strings
+- Verbose Debug representations
+- Significant string processing overhead before text wrapping
+
+### Solution Implemented
+
+Implemented `record_str()` method in `VisitEventAndPopulateOrderedMapWithFields`:
+
+- Uses Display trait (`"{}"`) for string fields instead of Debug
+- Avoids expensive Debug formatting for log messages
+- Maintains Debug formatting only for non-string types
+- Simple, clean solution addressing the root cause
+
+### Performance Impact
+
+- **Before**: Text wrapping at 16.12% in flamegraph
+- **After**: Text wrapping reduced to 1.72% (89% improvement)
+- Debug formatting reduced from 17.39% to 9.86%
+- Cleaner telemetry output without escaped characters
+
+### Key Insight
+
+The ASCII text wrapping optimization initially implemented was solving a symptom, not the root
+cause. By fixing the Debug formatting issue with `record_str()`, the standard textwrap performance
+became acceptable, eliminating the need for complex optimization code.
 
 ## Memory Size Calculation Caching (✅ Completed - 2025-07-13)
 

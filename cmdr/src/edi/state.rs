@@ -354,27 +354,27 @@ mod impl_display {
                 self.dialog_buffers.len()
             )?;
 
-            // Add detailed buffer info if needed (more compact format)
+            // Add detailed buffer info if needed (with line breaks and indentation)
             if !self.editor_buffers.is_empty() {
-                write!(f, " editors=[")?;
+                write!(f, "\n  editors=[")?;
                 for (i, (id, buffer)) in self.editor_buffers.iter().enumerate() {
                     if i > 0 {
-                        write!(f, ", ")?;
+                        write!(f, ",")?;
                     }
-                    write!(f, "{id}:{buffer}")?;
+                    write!(f, "\n    {id}:{buffer}")?;
                 }
-                write!(f, "]")?;
+                write!(f, "\n  ]")?;
             }
 
             if !self.dialog_buffers.is_empty() {
-                write!(f, " dialogs=[")?;
+                write!(f, "\n  dialogs=[")?;
                 for (i, (id, buffer)) in self.dialog_buffers.iter().enumerate() {
                     if i > 0 {
-                        write!(f, ", ")?;
+                        write!(f, ",")?;
                     }
-                    write!(f, "{id}:{buffer}")?;
+                    write!(f, "\n    {id}:{buffer}")?;
                 }
-                write!(f, "]")?;
+                write!(f, "\n  ]")?;
             }
 
             Ok(())
