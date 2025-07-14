@@ -22,7 +22,8 @@ use smallvec::smallvec;
 use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
 use super::create_color_wheel_from_heading_data;
-use crate::{convert_syntect_to_styled_text, generate_ordered_list_item_bullet,
+use crate::{constants::NEW_LINE_CHAR,
+            convert_syntect_to_styled_text, generate_ordered_list_item_bullet,
             generate_unordered_list_item_bullet, get_bold_style,
             get_checkbox_checked_style, get_checkbox_unchecked_style,
             get_code_block_content_style, get_code_block_lang_style,
@@ -42,7 +43,8 @@ use crate::{convert_syntect_to_styled_text, generate_ordered_list_item_bullet,
             GradientGenerationPolicy, HeadingData, HyperlinkData, InlineString, Lines,
             List, MdDocument, MdElement, MdLineFragment, ParserByteCache,
             PrettyPrintDebug, StyleUSSpan, StyleUSSpanLine, StyleUSSpanLines,
-            TextColorizationPolicy, TuiStyle, TuiStyledTexts, ENABLE_MD_PARSER_NG};
+            TextColorizationPolicy, TuiStyle, TuiStyledTexts, ENABLE_MD_PARSER_NG,
+            PARSER_BYTE_CACHE_PAGE_SIZE};
 
 /// This is the main function that the [`crate::editor`] uses this in order to display the
 /// markdown to the user.It is responsible for converting:
@@ -73,61 +75,102 @@ pub fn try_parse_and_highlight(
 ) -> CommonResult<StyleUSSpanLines> {
     // XMARK: Parse markdown from editor and render it
 
-    let document_result = if ENABLE_MD_PARSER_NG {
+    if ENABLE_MD_PARSER_NG {
         // Use the new NG parser.
         let slice = AsStrSlice::from(editor_text_lines);
-        parse_markdown_ng(slice)
+        let document_result = parse_markdown_ng(slice)
             .map(|(rem, document)| {
                 debug_assert!(rem.is_empty());
                 document
             })
-            .map_err(|_| ())
+            .map_err(|_| ());
+
+        // Try and parse `editor_text_to_string` into a `Document`.
+        match document_result {
+            Ok(document) => Ok(StyleUSSpanLines::from_document(
+                &document,
+                maybe_current_box_computed_style,
+                maybe_syntect_tuple,
+            )),
+            Err(()) => CommonError::new_error_result_with_only_type(
+                CommonErrorType::ParsingError,
+            ),
+        }
     } else {
         // Use the legacy parser.
 
-        // PERF: This is a known performance bottleneck. The underlying storage mechanism
-        // for content in the editor will have to change (from Vec<String>) for
-        // this to be possible.
+        // PERF: Materializing &[GCString] to InlineString is not an expensive operation,
+        // it takes in the order of a few thousand nanoseconds for a 100K data set.
 
-        // Convert the editor text into a InlineString (unfortunately requires allocating
-        // to get the new lines back, since they're stripped out when loading
-        // content into the editor buffer struct).
+        let size_hint = calc_size_hint(editor_text_lines);
+        let acc = manage_parser_byte_cache(parser_byte_cache, size_hint);
 
-        let slice = AsStrSlice::from(editor_text_lines);
-
-        let size_hint = editor_text_lines
-            .iter()
-            .map(|line| line.len().as_usize() + 1 /* for new line */)
-            .sum();
-
-        // Use the parser_byte_cache if it exists, otherwise create a new one with the
-        // size_hint.
-        if parser_byte_cache.is_none() {
-            *parser_byte_cache = Some(ParserByteCache::with_capacity(size_hint));
+        // Write each line w/ CRLF into the accumulator.
+        // - The CRLF is necessary for the parser to work correctly.
+        // - This also requires the entire document to be copied into the accumulator (and
+        //   CRLFs added).
+        for line in editor_text_lines {
+            acc.push_str(line.as_ref());
+            acc.push(NEW_LINE_CHAR);
         }
-        let acc = parser_byte_cache
-            .as_mut()
-            .expect("parser_byte_cache is guaranteed to be Some");
 
-        slice.write_to_byte_cache_compat(size_hint, acc);
-        parse_markdown(acc)
-            .map(|(rem, document)| {
-                debug_assert!(rem.is_empty());
-                document
-            })
-            .map_err(|_| ())
-    };
+        let result_md_ast = parse_markdown(acc);
 
-    // Try and parse `editor_text_to_string` into a `Document`.
-    match document_result {
-        Ok(document) => Ok(StyleUSSpanLines::from_document(
-            &document,
-            maybe_current_box_computed_style,
-            maybe_syntect_tuple,
-        )),
-        Err(()) => {
-            CommonError::new_error_result_with_only_type(CommonErrorType::ParsingError)
+        // XMARK: Parse markdown from editor and render it
+
+        // Try and parse `editor_text_to_string` into a `Document`.
+        match result_md_ast {
+            Ok((_remainder, document)) => Ok(StyleUSSpanLines::from_document(
+                &document,
+                maybe_current_box_computed_style,
+                maybe_syntect_tuple,
+            )),
+            Err(_) => CommonError::new_error_result_with_only_type(
+                CommonErrorType::ParsingError,
+            ),
         }
+    }
+}
+
+/// Calculate the size hint for the parser byte cache based on editor text lines.
+/// This includes the length of each line plus 1 byte for the newline character.
+fn calc_size_hint(editor_text_lines: &[GCString]) -> usize {
+    editor_text_lines
+        .iter()
+        .map(|line| line.len().as_usize() + 1 /* for new line */)
+        .sum()
+}
+
+/// Manage the parser byte cache - either reuse existing cache or create a new one.
+/// If reusing, the cache is cleared and resized if necessary.
+fn manage_parser_byte_cache(
+    maybe_parser_byte_cache: &mut Option<ParserByteCache>,
+    size_hint: usize,
+) -> &mut ParserByteCache {
+    match maybe_parser_byte_cache {
+        // Re-use the parser_byte_cache if it exists.
+        Some(acc) => {
+            acc.clear();
+            let amount_to_reserve = {
+                // Increase the capacity of the acc if necessary by rounding up to the
+                // nearest PARSER_BYTE_CACHE_PAGE_SIZE.
+                let page_size = PARSER_BYTE_CACHE_PAGE_SIZE;
+                let current_capacity = acc.capacity();
+                if size_hint > current_capacity {
+                    let bytes_needed: usize = size_hint - current_capacity;
+                    // Round up bytes_needed to the nearest page_size.
+                    let pages_needed = bytes_needed.div_ceil(page_size);
+                    pages_needed * page_size
+                } else {
+                    0
+                }
+            };
+            acc.reserve(amount_to_reserve);
+            acc
+        }
+        // Allocate a new parser_byte_cache just for this function scope if it doesn't
+        // exist.
+        None => maybe_parser_byte_cache.insert(ParserByteCache::with_capacity(size_hint)),
     }
 }
 
