@@ -18,10 +18,44 @@
 use std::{collections::HashMap,
           fmt::{Debug, Display, Formatter, Result}};
 
-use r3bl_tui::{get_real_world_editor_content, DialogBuffer, EditorBuffer, FlexBoxId,
+use r3bl_tui::{DialogBuffer, EditorBuffer, FlexBoxId,
                HasDialogBuffers, HasEditorBuffers, DEFAULT_SYN_HI_FILE_EXT};
 
 use crate::ex_editor::Id;
+
+/// Provides default content for the editor example
+fn get_default_editor_content() -> Vec<&'static str> {
+    vec![
+        "# Welcome to the R3BL TUI Editor",
+        "",
+        "This is a **markdown** editor with syntax highlighting.",
+        "",
+        "## Features",
+        "",
+        "- Syntax highlighting for code blocks",
+        "- Support for *italic* and **bold** text",
+        "- Links: [R3BL](https://r3bl.com)",
+        "- Images: ![alt text](image.png)",
+        "",
+        "## Code Example",
+        "",
+        "```rust",
+        "fn main() {",
+        "    println!(\"Hello, world!\");",
+        "}",
+        "```",
+        "",
+        "## Lists",
+        "",
+        "1. First item",
+        "2. Second item",
+        "   - Nested item",
+        "   - Another nested item",
+        "",
+        "- [x] Completed task",
+        "- [ ] Uncompleted task",
+    ]
+}
 
 #[derive(Clone, PartialEq)]
 pub struct State {
@@ -30,7 +64,7 @@ pub struct State {
 }
 
 mod constructor {
-    use super::{constructor, get_real_world_editor_content, EditorBuffer, FlexBoxId,
+    use super::{constructor, get_default_editor_content, EditorBuffer, FlexBoxId,
                 HashMap, Id, State, DEFAULT_SYN_HI_FILE_EXT};
 
     impl Default for State {
@@ -42,7 +76,7 @@ mod constructor {
             let editor_buffer = {
                 let mut editor_buffer =
                     EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
-                let iter = get_real_world_editor_content().iter().copied();
+                let iter = get_default_editor_content().into_iter();
                 editor_buffer.set_lines(iter);
                 editor_buffer
             };

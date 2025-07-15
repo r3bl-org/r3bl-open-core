@@ -1,90 +1,70 @@
-# r3bl_rs_utils documentation workflow
+# Documentation for r3bl-open-core
 
-1. This folder contains diagrams that are used in the README.md and lib.rs files. These diagrams are
-   created in Figma and exported to SVG. The SVG files are then embedded in the README.md and lib.rs
-   files and stored in this folder.
-2. The MD files in this folder are not meant to be used directly by 3rd party developers. They are
-   more of a staging ground for content (design docs, architecture diagrams, etc) as a feature or
-   component is being built. Once these are stable, they should be copied to the README.md and
-   lib.rs (which is where 3rd party developers will see them).
+This folder contains documentation, guides, and resources for the r3bl-open-core monorepo.
 
-# Information on managing docs, videos, and images
+## Contents
 
-## figma.com
+### Release Guide
 
-New diagrams are best created in Figma and then exported to SVG. Draw.io is difficult to use.
+[`release-guide.md`](release-guide.md) - Comprehensive guide for releasing crates in this workspace,
+including:
 
-## Videos
+- Step-by-step release procedures for each crate
+- Version update workflows
+- Publishing to crates.io
+- Git tagging conventions
+- Deprecated workflows for archived crates
 
-You can use [Kooha](https://flathub.org/apps/details/io.github.seadve.Kooha) on Linux to record a
-video of the [Black Box](https://flathub.org/apps/details/com.raggesilver.BlackBox) terminal app.
-Change the default settings:
+### Contributing Guides
 
-1. Capture 30 fps.
-2. Do not capture the mouse.
-3. Save as MP4.
-4. Make sure that the video is under 2 min (10M is the limit for github.com).
+The [`contributing_guides`](contributing_guides) folder contains templates and guidelines for:
 
-Once captured you can upload to the following sites:
+- [`BRANCH.md`](contributing_guides/BRANCH.md) - Branch naming and management guidelines
+- [`COMMIT_MESSAGE.md`](contributing_guides/COMMIT_MESSAGE.md) - Commit message conventions
+- [`ISSUE.md`](contributing_guides/ISSUE.md) - Issue reporting guidelines
+- [`PULL_REQUEST.md`](contributing_guides/PULL_REQUEST.md) - Pull request submission guidelines
+- [`STYLE_GUIDE.md`](contributing_guides/STYLE_GUIDE.md) - Code style and formatting guidelines
 
-- Github.com (r3bl_rs_utils repo)
+### Technical Documentation
 
-  - Edit an the main [README.md](https://github.com/r3bl-org/r3bl-open-core#readme) file and drag and
-    drop the MP4 file from your desktop to the editor. This will upload the video to github.com and
-    generate a URL like this:
-    <https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-adef-94beb9761c46.mp4>.
-    Make sure to commit the file.
-  - More info on how to upload video: <https://stackoverflow.com/a/68269430/2085356>
+- [`parser_strategy_analysis.md`](parser_strategy_analysis.md) - Analysis of parser implementation
+  strategies
 
-- Reddit.com (r/rust)
+### Plans
 
-  - Create a new video only post, upload the .MP4 file & add description in a comment below it.
-  - Don't include "xbox" in any substring (eg: flexbox) of any text that is typed in the post title.
+- [`tui_perf_optimize.md`](tui_perf_optimize.md) - TUI performance optimization guidelines
+- [`ng_parser_archive.md`](ng_parser_archive.md) - Archived parser documentation
 
-- List of all posts
-  - [v0.2.0](https://www.reddit.com/r/rust/comments/zifmsl/media_tui_framework_fans_ive_just_updated_the/)
-  - [v0.3.2](https://www.reddit.com/r/rust/comments/11kb72w/media_tui_engine_fans_r3bl_tui_v032_crate_has/)
-  - [v0.3.3](https://www.reddit.com/r/rust/comments/12uicn3/media_tui_framework_fans_ive_just_updated_the/)
+### Video Documentation
 
-## README and lib.rs updates
+The [`video`](video) folder contains:
 
-After doing all the steps above, it is necessary to update all the `README.md` and `lib.rs` files w/
-the latest docs and links to SVG, MP4, etc.
+- [`r3bl_terminal_async_clip_ffmpeg.gif`](video/r3bl_terminal_async_clip_ffmpeg.gif) - Terminal
+  async demonstration
 
-1. root folder of the repo:
+## Creating and Managing Documentation
 
-   - `README.md` - the links to SVG, MP4 files are relative to the source file.
+### Documentation Updates
 
-2. in `tui` sub-folder, the following files have the same documentation content:
+When updating documentation:
 
-   - `README.md` - the links to SVG, MP4 files are relative to the source file.
-   - `src/lib.rs` - the links to SVG, MP4 files are direct to githubusercontent.com. For eg:
-     [memory-architecture.drawio.svg](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg).
+1. Update relevant `.lib.rs` files. The corresponding `README.md` is automatically generated from
+   these files using `cargo readme`, details are in the [`release-guide`](release-guide.md).
+2. For crate documentation shown on crates.io and docs.rs:
+   - `README.md` files use relative links
+   - `lib.rs` files use absolute links to githubusercontent.com
 
-## draw.io (deprecated)
+### Video Documentation
 
-1. Create a new diagram
+For recording demos and tutorials:
 
-   - Create a new diagram using draw.io
-   - When you save it, make sure to use File -> Export as -> SVG... Make sure to use these settings:
-     - ✅ Transparent Background
-     - ✅ Dark
-     - ✅ Shadow
-     - ✅ Include a copy of my diagram
-     - Then Export
-   - Our convention is to use ".drawio.svg" as the file extension.
+- Use screen recording tools like Kooha on Linux
+- Keep videos under 2 minutes (10MB GitHub limit)
+- Save as MP4 or GIF format
+- Upload directly to GitHub by dragging into issue/PR comments
 
-2. Update an existing diagram
+## Archived Content
 
-   - Open the existing diagram (with .drawio.svg extension) in draw.io
-   - Make your changes
-   - Follow the same File -> Export as -> SVG... as shown above when it is time to save the file
-
-3. Viewing diagrams
-
-   - By following the above steps, the SVG file is really optimized to be viewed w/ a dark
-     background (viewing on github.com or on developerlife.com). And if you try to view it w/ a
-     light background, it either won't look good or will be illegible.
-     - It is easiest to view the diagram on github.com.
-     - You can open the SVG file in a browser, then go to developer options, and apply a CSS
-       property of background color of black.
+As the project evolves, deprecated documentation and crates are moved to the
+[r3bl-open-core-archive](https://github.com/r3bl-org/r3bl-open-core-archive) repository for
+historical reference.

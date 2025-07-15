@@ -5,43 +5,31 @@ Date: 2022-11-06
 
 ## Cut a release and publish it to crates.io
 
-This is a lengthy and repetitive process. The following steps have to be applied
-repeatedly to all
+This is a lengthy and repetitive process. The following steps have to be applied repeatedly to all
 the crates in the project.
 
-Starting at the root folder of the project, eg `~/github/r3bl-open-core/`, the following
-steps are applied to each crate (`simple_logger`, `ansi_color`, `core`, `macro`, `redux`,
-`tui`, `tuify`, `analytics_schema` and "public" / self):
+Starting at the root folder of the project, eg `~/github/r3bl-open-core/`, the following steps are
+applied to each crate (`simple_logger`, `ansi_color`, `core`, `macro`, `redux`, `tui`, `tuify`,
+`analytics_schema` and "public" / self):
 
 1. Update the version in `Cargo.toml`.
-2. Make sure to run the "Crates: Update all dependencies of the Cargo.toml" action in
-   VSCode for
+2. Make sure to run the "Crates: Update all dependencies of the Cargo.toml" action in VSCode for
    each `Cargo.toml` file in the `~/github/r3bl-open-core/` folder. You can run
-   `run.nu upgrade-deps`
-   to see which crates need to be updated.
-    - This will update all the dependencies in all the crates in addition to updating all
-      the
-      remaining `Cargo.toml` in the other crates so that `run.nu build` runs.
-    - Run `run.nu full-build` to make sure everything builds.
-3. Make a git commit eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and
-   `vX.Y.Z` is the
-   [semver](https://semver.org/) version number. Eg:
-   `git add -A ; git commit -S -m "vX.Y.Z-core"`.
-4. Make a git tag eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and `vX.Y.Z`
-   is the
-   [semver](https://semver.org/) version number. Eg:
-   `git tag -a vX.Y.Z-core -m "vX.Y.Z-core"`.
+   `run.nu upgrade-deps` to see which crates need to be updated.
+   - This will update all the dependencies in all the crates in addition to updating all the
+     remaining `Cargo.toml` in the other crates so that `run.nu build` runs.
+   - Run `run.nu full-build` to make sure everything builds.
+3. Make a git commit eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and `vX.Y.Z` is the
+   [semver](https://semver.org/) version number. Eg: `git add -A ; git commit -S -m "vX.Y.Z-core"`.
+4. Make a git tag eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and `vX.Y.Z` is the
+   [semver](https://semver.org/) version number. Eg: `git tag -a vX.Y.Z-core -m "vX.Y.Z-core"`.
 5. Update the `CHANGELOG.md` with all the new updates.
 
-Once this phase is complete, then it is time to perform a dry run and then publish to
-crates.io.
-Again starting at the root folder of the project, eg `~/github/r3bl-open-core/`, the
-following steps
-are applied to each crate (`ansi_color`, `core`, `macro`, `redux`, `tui`, `tuify`, and
-self):
+Once this phase is complete, then it is time to perform a dry run and then publish to crates.io.
+Again starting at the root folder of the project, eg `~/github/r3bl-open-core/`, the following steps
+are applied to each crate (`ansi_color`, `core`, `macro`, `redux`, `tui`, `tuify`, and self):
 
-1. Run `cargo publish --dry-run` in the crate folder. This will perform a dry run of
-   publishing the
+1. Run `cargo publish --dry-run` in the crate folder. This will perform a dry run of publishing the
    crate to crates.io.
 2. Then run `cargo publish` in the crate folder. This will publish the crate to crates.io.
 

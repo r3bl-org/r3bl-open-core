@@ -57,13 +57,12 @@ impl<'a> PatternMatcherStateMachine<'a> {
 
         // Skip the first "N" characters (these are display cols, so use the unicode
         // width).
-        if let Some(scroll_offset_col_index) = self.maybe_scr_ofs_col_index {
-            if scroll_offset_col_index != col(0) {
+        if let Some(scroll_offset_col_index) = self.maybe_scr_ofs_col_index
+            && scroll_offset_col_index != col(0) {
                 self.maybe_scr_ofs_col_index =
                     (scroll_offset_col_index - character_to_test_width).into();
                 return CharacterMatchResult::Skip;
             }
-        }
 
         // Check for early returns.
         if self.is_finished {
@@ -82,12 +81,11 @@ impl<'a> PatternMatcherStateMachine<'a> {
             CharacterMatchResult::Keep
         } else {
             // Does this match the first character of the pattern?
-            if let Some(first_pattern_char) = self.pattern.chars().next() {
-                if character_to_test == first_pattern_char {
+            if let Some(first_pattern_char) = self.pattern.chars().next()
+                && character_to_test == first_pattern_char {
                     self.current_index = 1;
                     return CharacterMatchResult::ResetAndKeep;
                 }
-            }
 
             // Normal reset.
             self.current_index = 0;

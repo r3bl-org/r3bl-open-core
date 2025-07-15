@@ -71,7 +71,7 @@ where
         write!(f, "\n  - ")?;
         match &self.maybe_saved_offscreen_buffer {
             None => write!(f, "no saved offscreen_buffer")?,
-            Some(ref offscreen_buffer) => {
+            Some(offscreen_buffer) => {
                 if DEBUG_TUI_COMPOSITOR {
                     write!(f, "{offscreen_buffer:?}")?;
                 } else {

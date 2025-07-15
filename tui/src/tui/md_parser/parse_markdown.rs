@@ -269,7 +269,7 @@ mod tests_integration_block_smart_lists {
 #[cfg(test)]
 mod tests_parse_markdown {
     use super::*;
-    use crate::{assert_eq2, convert_into_code_block_lines, list, BulletKind,
+    use crate::{assert_eq2, list, BulletKind, CodeBlockLine, CodeBlockLineContent,
                 HeadingData, HeadingLevel, HyperlinkData, MdLineFragment};
 
     #[test]
@@ -396,12 +396,20 @@ mod tests_parse_markdown {
                 "Foobar is a Python library for dealing with word pluralization.",
             )]),
             MdElement::Text(list![]), /* Empty line */
-            MdElement::CodeBlock(convert_into_code_block_lines(
-                Some("bash"),
-                vec!["pip install foobar"],
-            )),
-            MdElement::CodeBlock(convert_into_code_block_lines(Some("fish"), vec![])),
-            MdElement::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
+            MdElement::CodeBlock(list![
+                CodeBlockLine { language: Some("bash"), content: CodeBlockLineContent::StartTag },
+                CodeBlockLine { language: Some("bash"), content: CodeBlockLineContent::Text("pip install foobar") },
+                CodeBlockLine { language: Some("bash"), content: CodeBlockLineContent::EndTag },
+            ]),
+            MdElement::CodeBlock(list![
+                CodeBlockLine { language: Some("fish"), content: CodeBlockLineContent::StartTag },
+                CodeBlockLine { language: Some("fish"), content: CodeBlockLineContent::EndTag },
+            ]),
+            MdElement::CodeBlock(list![
+                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::StartTag },
+                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("") },
+                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::EndTag },
+            ]),
             MdElement::Heading(HeadingData {
                 level: HeadingLevel { level: 2 },
                 text: "Installation",
@@ -415,16 +423,15 @@ mod tests_parse_markdown {
                 ))),
                 MdLineFragment::Plain(" to install foobar."),
             ]),
-            MdElement::CodeBlock(convert_into_code_block_lines(
-                Some("python"),
-                vec![
-                    "import foobar",
-                    "",
-                    "foobar.pluralize('word') # returns 'words'",
-                    "foobar.pluralize('goose') # returns 'geese'",
-                    "foobar.singularize('phenomena') # returns 'phenomenon'",
-                ],
-            )),
+            MdElement::CodeBlock(list![
+                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::StartTag },
+                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("import foobar") },
+                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("") },
+                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("foobar.pluralize('word') # returns 'words'") },
+                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("foobar.pluralize('goose') # returns 'geese'") },
+                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("foobar.singularize('phenomena') # returns 'phenomenon'") },
+                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::EndTag },
+            ]),
             MdElement::SmartList((
                 list![list![
                     MdLineFragment::UnorderedListBullet {

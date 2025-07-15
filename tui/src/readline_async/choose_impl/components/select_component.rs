@@ -182,14 +182,14 @@ mod render_helper {
         start_display_col_offset: usize,
     ) -> CommonResult<()> {
         match header {
-            Header::SingleLine(ref header_text) => render_single_line_header(
+            Header::SingleLine(header_text) => render_single_line_header(
                 output_device,
                 header_text,
                 header_style,
                 viewport_width,
                 start_display_col_offset,
             ),
-            Header::MultiLine(ref header_lines) => {
+            Header::MultiLine(header_lines) => {
                 render_multi_line_header(output_device, header_lines, viewport_width)
             }
         }

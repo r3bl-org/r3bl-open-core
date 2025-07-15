@@ -820,14 +820,13 @@ mod apply_event_and_render_helper {
 
         if prev_len != new_len {
             line_state.move_cursor(1)?;
-            if prev_len > 0 {
-                if let Some((pos, str)) =
+            if prev_len > 0
+                && let Some((pos, str)) =
                     line_state.cluster_buffer.grapheme_indices(true).next()
                 {
                     let len = str.len();
                     line_state.cluster_buffer.replace_range(pos..len, "");
                 }
-            }
         }
 
         line_state.render_and_flush(term)?;

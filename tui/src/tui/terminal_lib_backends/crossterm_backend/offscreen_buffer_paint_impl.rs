@@ -149,16 +149,14 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 // Deal w/: fg and bg colors | text attrib style
                 if is_first_loop_iteration || !is_style_same_as_prev {
                     context.render_ops.push(RenderOp::ResetColor);
-                    if let Some(style) = pixel_char_style {
-                        if let Some(color) = style.color_fg {
+                    if let Some(style) = pixel_char_style
+                        && let Some(color) = style.color_fg {
                             context.render_ops.push(RenderOp::SetFgColor(color));
                         }
-                    }
-                    if let Some(style) = pixel_char_style {
-                        if let Some(color) = style.color_bg {
+                    if let Some(style) = pixel_char_style
+                        && let Some(color) = style.color_bg {
                             context.render_ops.push(RenderOp::SetBgColor(color));
                         }
-                    }
                     // Update prev_style.
                     context.prev_style = pixel_char_style;
                 }

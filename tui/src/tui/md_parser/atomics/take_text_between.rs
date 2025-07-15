@@ -41,8 +41,8 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
 
     let it = take_text_between(start_delim, end_delim).parse(input);
 
-    if let Ok((_, output)) = &it {
-        if output.contains(NEW_LINE) {
+    if let Ok((_, output)) = &it
+        && output.contains(NEW_LINE) {
             DEBUG_MD_PARSER_STDOUT.then(|| {
                 println!("{} parser error out for input: {:?}", fg_red("⬢⬢"), input);
             });
@@ -51,7 +51,6 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
                 code: ErrorKind::CrLf,
             }));
         }
-    }
 
     if it.is_err() {
         DEBUG_MD_PARSER_STDOUT.then(|| {

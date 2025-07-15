@@ -33,34 +33,6 @@
     - [Technical Details](#technical-details)
     - [Performance Impact](#performance-impact-2)
     - [Integration with Display Trait](#integration-with-display-trait)
-- [NG Markdown Parser Performance Analysis](#ng-markdown-parser-performance-analysis)
-  - [Overview](#overview)
-  - [Executive Summary](#executive-summary)
-  - [Performance Comparison Results](#performance-comparison-results)
-    - [Original Legacy vs NG Performance Gaps](#original-legacy-vs-ng-performance-gaps)
-    - [Detailed Benchmark Results](#detailed-benchmark-results)
-      - [Small Content Benchmarks](#small-content-benchmarks)
-      - [Medium Content Benchmarks](#medium-content-benchmarks)
-      - [Large Content Benchmarks](#large-content-benchmarks)
-      - [Jumbo Content Benchmarks](#jumbo-content-benchmarks)
-      - [Unicode Content Benchmarks](#unicode-content-benchmarks)
-  - [Root Cause Investigation](#root-cause-investigation)
-    - [Hypothesis Testing Through Targeted Benchmarks](#hypothesis-testing-through-targeted-benchmarks)
-      - [1. Materialization Cost Analysis (bench*f*\*)](#1-materialization-cost-analysis-benchf%5C)
-      - [2. Character Access Pattern Analysis (bench*g*\*)](#2-character-access-pattern-analysis-benchg%5C)
-  - [Architecture Comparison](#architecture-comparison)
-    - [Legacy Parser Approach](#legacy-parser-approach)
-    - [NG Parser Approach](#ng-parser-approach)
-    - [Key Architectural Differences](#key-architectural-differences)
-  - [Conclusions and Insights](#conclusions-and-insights)
-    - [What We Learned](#what-we-learned)
-    - [Potential Root Causes](#potential-root-causes)
-    - [Performance Impact Scale](#performance-impact-scale)
-  - [Recommendations](#recommendations)
-    - [Immediate Actions](#immediate-actions)
-    - [Long-term Strategy](#long-term-strategy)
-    - [Technical Debt Considerations](#technical-debt-considerations)
-  - [Future Work](#future-work)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -139,6 +111,7 @@ support detection will only run once instead of thousands of times.
 ## NG Parser Status (✅ Optimized and Hybrid Approach Implemented)
 
 The NG parser has been dramatically optimized and is now used in a hybrid approach:
+
 - Documents ≤100KB use the legacy parser for optimal performance
 - Documents >100KB use the NG parser for better memory efficiency
 - The `ENABLE_MD_PARSER_NG` constant has been removed in favor of dynamic selection
@@ -147,14 +120,19 @@ The NG parser has been dramatically optimized and is now used in a hybrid approa
 
 ### Problem Identified
 
-The NG parser was initially 50,000x slower than the legacy parser despite being designed as a zero-copy parser. Performance profiling revealed severe bottlenecks in the `AsStrSlice` implementation.
+The NG parser was initially 50,000x slower than the legacy parser despite being designed as a
+zero-copy parser. Performance profiling revealed severe bottlenecks in the `AsStrSlice`
+implementation.
 
 ### Root Causes Discovered
 
-1. **O(n) Character Counting in Hot Paths**: Methods like `extract_to_line_end()` and `take_from()` were iterating through characters on every call
+1. **O(n) Character Counting in Hot Paths**: Methods like `extract_to_line_end()` and `take_from()`
+   were iterating through characters on every call
 2. **No Caching of Line Metadata**: Character counts and byte offsets were recalculated repeatedly
-3. **Shared Cache State**: When `AsStrSlice` was cloned, multiple instances shared the same cache via `Rc<RefCell<...>>`
-4. **Position Tracking Bug**: `skip_take_in_current_line()` wasn't updating `current_taken`, causing incorrect text extraction
+3. **Shared Cache State**: When `AsStrSlice` was cloned, multiple instances shared the same cache
+   via `Rc<RefCell<...>>`
+4. **Position Tracking Bug**: `skip_take_in_current_line()` wasn't updating `current_taken`, causing
+   incorrect text extraction
 
 ### Solutions Implemented
 
@@ -182,12 +160,12 @@ The NG parser was initially 50,000x slower than the legacy parser despite being 
 
 After optimizations, the NG parser performance improved dramatically:
 
-| Content Type | Before | After | Improvement |
-|--------------|--------|-------|-------------|
-| Small content (287 chars) | 50,000x slower | 9.1x slower | 5,495x improvement |
-| Medium blog post (2.5KB) | 50,000x slower | 20.8x slower | 2,404x improvement |
-| Large complex document (37KB) | 50,000x slower | 52.3x slower | 956x improvement |
-| Jumbo API docs (118KB) | 50,000x slower | 82.9x slower | 603x improvement |
+| Content Type                  | Before         | After        | Improvement        |
+| ----------------------------- | -------------- | ------------ | ------------------ |
+| Small content (287 chars)     | 50,000x slower | 9.1x slower  | 5,495x improvement |
+| Medium blog post (2.5KB)      | 50,000x slower | 20.8x slower | 2,404x improvement |
+| Large complex document (37KB) | 50,000x slower | 52.3x slower | 956x improvement   |
+| Jumbo API docs (118KB)        | 50,000x slower | 82.9x slower | 603x improvement   |
 
 ### Hybrid Parser Implementation
 
@@ -210,7 +188,8 @@ if document_size > PARSER_THRESHOLD_BYTES {
 
 ### Key Achievements
 
-1. **Massive Performance Improvement**: From 50,000x slower to 9-83x slower (5,000x to 600x improvement)
+1. **Massive Performance Improvement**: From 50,000x slower to 9-83x slower (5,000x to 600x
+   improvement)
 2. **Preserved Zero-Copy Benefits**: NG parser still avoids memory allocation for large documents
 3. **Optimal Parser Selection**: Hybrid approach uses the best parser for each document size
 4. **All Tests Pass**: Complete compatibility maintained with legacy parser output
@@ -218,6 +197,7 @@ if document_size > PARSER_THRESHOLD_BYTES {
 ### Technical Insights
 
 The optimization journey revealed several important insights:
+
 - Character-based indexing in Unicode text is inherently expensive
 - Caching is essential for performance when dealing with non-contiguous data structures
 - Lazy initialization can significantly reduce overhead for simple operations
@@ -314,7 +294,8 @@ Based on the latest flamegraph analysis after all recent optimizations:
 
 ### Next Priority Optimization Targets
 
-Based on the current flamegraph analysis (2025-07-14) after MD parser elimination, the optimization priorities should be:
+Based on the current flamegraph analysis (2025-07-14) after MD parser elimination, the optimization
+priorities should be:
 
 1. **Terminal Rendering Pipeline** (18.53% potential improvement) - HIGHEST PRIORITY
    - `render_diff` operations are now the largest optimization opportunity
@@ -375,7 +356,8 @@ Implemented efficient Display trait for all State structs and buffers:
 Latest flamegraph analysis shows:
 
 - **MD Parser operations eliminated**: From 22.45% to 0% (100% elimination) ✅
-- **Debug formatting reduced**: From 17.39% to 9.86% (43% reduction) - KeyPress Debug formatting remains
+- **Debug formatting reduced**: From 17.39% to 9.86% (43% reduction) - KeyPress Debug formatting
+  remains
 - **Text wrapping dramatically reduced**: From 16.12% to 1.72% (89% reduction) ✅
 - **String truncation eliminated**: Previously 11.67%, now not visible in flamegraph ✅
 - **Primary bottlenecks now**:
@@ -435,11 +417,15 @@ became acceptable, eliminating the need for complex optimization code.
 
 ### Problem Identified
 
-MD parser operations were consuming 22.45% of CPU time, with `AsStrSlice::write_to_byte_cache_compat` being the dominant bottleneck. This was converting non-contiguous AsStrSlice data to contiguous strings for parsing.
+MD parser operations were consuming 22.45% of CPU time, with
+`AsStrSlice::write_to_byte_cache_compat` being the dominant bottleneck. This was converting
+non-contiguous AsStrSlice data to contiguous strings for parsing.
 
 ### Solution Implemented
 
-Optimized the `try_parse_and_highlight()` function in `/tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs` to eliminate the expensive string conversion operations.
+Optimized the `try_parse_and_highlight()` function in
+`/tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs` to eliminate the
+expensive string conversion operations.
 
 ### Performance Impact
 
@@ -500,220 +486,3 @@ The memory size caching seamlessly integrates with the Display trait optimizatio
 - EditorBuffer's Display implementation uses the cached memory size
 - OffscreenBuffer provides `get_mem_size_cached()` for telemetry logging
 - No "?" values appear in telemetry due to immediate cache recalculation
-
-# NG Markdown Parser Performance Analysis
-
-## Overview
-
-This document presents a comprehensive performance analysis of the Next Generation (NG) markdown
-parser compared to the legacy parser implementation. The analysis was conducted through extensive
-benchmarking to identify performance bottlenecks and understand the architectural differences
-between the two approaches.
-
-## Executive Summary
-
-The NG parser shows significant performance degradation compared to the legacy parser, with
-slowdowns ranging from **1.7x to 509x** depending on content size and complexity. Through systematic
-benchmarking, we identified that the performance issues are **not** caused by data structure access
-patterns or materialization costs, but rather by fundamental algorithmic differences in the parsing
-implementation.
-
-## Performance Comparison Results
-
-### Original Legacy vs NG Performance Gaps
-
-| Content Category | Performance Degradation Range      | Severity |
-| ---------------- | ---------------------------------- | -------- |
-| Small content    | 72-240% slower (1.7-3.4x)          | Moderate |
-| Medium content   | 216-3,756% slower (3.2-38.6x)      | High     |
-| Large content    | 3,435-19,481% slower (35.4-195.8x) | Critical |
-| Jumbo content    | 2,454-50,863% slower (25.5-509.6x) | Critical |
-
-### Detailed Benchmark Results
-
-#### Small Content Benchmarks
-
-- **Empty string**: 586.69 ns → 1,002.33 ns (**71% slower**)
-- **Simple formatting**: 2,081.51 ns → 7,258.60 ns (**249% slower**)
-- **Real world**: 19,611.78 ns → 165,843.70 ns (**746% slower**)
-
-#### Medium Content Benchmarks
-
-- **Blog post**: 63,826.95 ns → 2,332,467.20 ns (**3,554% slower**)
-- **Code blocks**: 1,008.72 ns → 6,485.78 ns (**543% slower**)
-- **Nested lists**: 4,273.23 ns → 12,906.84 ns (**202% slower**)
-
-#### Large Content Benchmarks
-
-- **Complex document**: 174,966.10 ns → 34,654,602.00 ns (**19,706% slower**)
-- **Tutorial**: 61,809.46 ns → 2,329,415.00 ns (**3,669% slower**)
-
-#### Jumbo Content Benchmarks
-
-- **API documentation**: 222,432.05 ns → 118,446,617.70 ns (**53,159% slower**)
-- **Comprehensive document**: 45,933.65 ns → 1,221,797.60 ns (**2,560% slower**)
-
-#### Unicode Content Benchmarks
-
-- **Emoji headings**: 1,371.28 ns → 4,898.09 ns (**257% slower**)
-- **Emoji content**: 2,483.48 ns → 7,191.29 ns (**190% slower**)
-
-## Root Cause Investigation
-
-### Hypothesis Testing Through Targeted Benchmarks
-
-To identify the root cause of the performance degradation, we implemented additional benchmark
-categories to test specific hypotheses:
-
-#### 1. Materialization Cost Analysis (bench*f*\*)
-
-**Hypothesis**: The NG parser's slowdown is caused by the overhead of converting `&[GCString]` to
-`String` for the legacy parser.
-
-**Test**: Measured pure `&[GCString] → String` conversion overhead:
-
-- Small content: 122.63 ns
-- Medium content: 309.11 ns
-- Large content: 772.47 ns
-- Jumbo content: 1,256.56 ns
-- Highly fragmented: 2,517.39 ns
-
-**Result**: **HYPOTHESIS REJECTED**
-
-- Materialization costs are negligible (< 0.1% of parsing time)
-- Small NG parsing: 168,150 ns vs materialization: 123 ns (**1,371x difference**)
-- Large NG parsing: 34,276,613 ns vs materialization: 772 ns (**44,379x difference**)
-
-#### 2. Character Access Pattern Analysis (bench*g*\*)
-
-**Hypothesis**: Non-contiguous memory access through GCString causes the performance degradation.
-
-**Test**: Compared character access patterns between contiguous strings and GCString arrays:
-
-| Content Type      | String Access | GCString Access | Slowdown |
-| ----------------- | ------------- | --------------- | -------- |
-| Small sequential  | 383 ns        | 1,809 ns        | **4.7x** |
-| Medium sequential | 1,145 ns      | 6,239 ns        | **5.4x** |
-| Random access     | 71 ns         | 130 ns          | **1.8x** |
-| Cross-boundary    | -             | 13 ns           | -        |
-
-**Result**: **HYPOTHESIS REJECTED**
-
-- GCString character access is only 4-5x slower than contiguous strings
-- This cannot explain the 35-500x NG parser slowdowns
-- The performance gap is much larger than character access overhead
-
-## Architecture Comparison
-
-### Legacy Parser Approach
-
-```rust
-// Convert &[GCString] to String, then parse
-let content = gc_strings.iter()
-    .map(|gc| gc.as_ref())
-    .collect::<Vec<&str>>()
-    .join("\n");
-parse_markdown(&content)
-```
-
-### NG Parser Approach
-
-```rust
-// Parse directly from &[GCString]
-fn parse_from_gc_strings(gc_strings: &[GCString]) -> ParsedMarkdown {
-    // Direct parsing without materialization
-    // Uses AsStrSlice virtual array abstraction
-}
-```
-
-### Key Architectural Differences
-
-1. **Memory Layout**:
-   - Legacy: Contiguous string memory
-   - NG: Non-contiguous GCString segments
-
-2. **Parser Input**:
-   - Legacy: Single `&str` reference
-   - NG: Virtual array of string segments
-
-3. **Memory Allocation**:
-   - Legacy: One-time materialization cost
-   - NG: Potential repeated allocations during parsing
-
-## Conclusions and Insights
-
-### What We Learned
-
-1. **Materialization is not the bottleneck**: Converting `&[GCString]` to `String` takes
-   microseconds, not milliseconds.
-
-2. **Character access patterns are not the primary issue**: While GCString access is slower, it's
-   only 4-5x slower, not 500x.
-
-3. **The real bottleneck is algorithmic**: The NG parser's core parsing logic has fundamental
-   performance issues.
-
-4. **Scale sensitivity**: Performance degradation worsens exponentially with content size,
-   suggesting O(n²) or worse algorithmic complexity.
-
-### Potential Root Causes
-
-Based on the elimination of other hypotheses, the performance issues likely stem from:
-
-1. **Algorithmic complexity differences** in the parsing implementation
-2. **Memory allocation patterns** during parsing operations
-3. **Iterator overhead** in the virtual array abstraction
-4. **Repeated boundary checks** or validation logic
-5. **Cache locality issues** from frequent cross-segment access
-6. **Parsing state management** inefficiencies
-
-### Performance Impact Scale
-
-The performance degradation follows a concerning pattern:
-
-- **Small content (< 1KB)**: Acceptable 2-8x slowdown
-- **Medium content (1-10KB)**: Problematic 3-40x slowdown
-- **Large content (10-100KB)**: Critical 35-200x slowdown
-- **Jumbo content (> 100KB)**: Unusable 25-500x slowdown
-
-## Recommendations
-
-### Immediate Actions
-
-1. **Use legacy parser for production**: The NG parser is not performance-viable in its current
-   state.
-
-2. **Profile the NG parser implementation**: Use tools like `perf`, `flamegraph`, or
-   `cargo-profiler` to identify algorithmic bottlenecks.
-
-3. **Review parsing algorithm**: Compare the core parsing logic between legacy and NG
-   implementations to identify complexity differences.
-
-### Long-term Strategy
-
-1. **Hybrid approach**: Consider materializing content only when performance is critical, while
-   keeping NG parser for memory-sensitive scenarios.
-
-2. **Incremental optimization**: Focus on optimizing the most common parsing operations first.
-
-3. **Architecture review**: Evaluate whether the AsStrSlice abstraction introduces unnecessary
-   overhead.
-
-4. **Benchmark-driven development**: Establish continuous performance monitoring to prevent
-   regressions.
-
-### Technical Debt Considerations
-
-The current NG parser represents significant technical debt due to:
-
-- **Unusable performance characteristics** for medium-to-large content
-- **Exponential scaling issues** that will worsen with larger documents
-- **Unclear optimization path** without algorithmic changes
-
-## Future Work
-
-1. **Detailed profiling analysis** to identify specific hot paths
-2. **Algorithmic complexity analysis** of parsing operations
-3. **Memory allocation pattern study** during parsing
-4. **Alternative architecture exploration** for non-contiguous parsing
-5. **Performance regression testing** framework implementation
