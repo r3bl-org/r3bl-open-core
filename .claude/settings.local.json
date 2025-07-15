@@ -5,12 +5,34 @@
       "Bash(cargo test:*)",
       "Bash(cargo check:*)",
       "Bash(cargo clippy:*)",
+      "Bash(cd:*)",
+      "Bash(ls:*)",
       "Bash(rm:*)",
       "Bash(grep:*)",
+      "Bash(rg:*)",
       "Bash(cat:*)",
+      "Bash(bat:*)",
       "Bash(cp:*)",
-      "Bash(ls:*)"
+      "Bash(head:*)",
+      "Bash(echo:*)",
+      "Bash(tail:*)",
+      "Bash(cargo run:*)",
+      "Bash(rustc:*)",
+      "Bash(timeout:*)",
+      "Bash(cargo:*)",
+      "Bash(sed:*)",
+      "Bash(diff:*)",
+      "Bash(bc:*)",
+      "Bash(python3:*)",
+      "Bash(/tmp:*)",
+      "Bash(find:*)",
+      "Bash(RUST_BACKTRACE=1 cargo test:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(git rev-parse:*)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "bypassPermissions",
+    "disableBypassPermissionsMode": "disable"
   }
 }

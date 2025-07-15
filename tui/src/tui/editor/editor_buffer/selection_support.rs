@@ -473,15 +473,14 @@ mod single_line_select_helper {
         prev: CaretScrAdj,
         curr: CaretScrAdj,
     ) {
-        if let Some(range) = buffer.get_selection_list().get(row_index) {
-            if range.start() == range.end() {
+        if let Some(range) = buffer.get_selection_list().get(row_index)
+            && range.start() == range.end() {
                 let buffer_mut = buffer.get_mut(dummy_viewport());
                 buffer_mut.inner.sel_list.remove(
                     row_index,
                     SelectionRange::caret_movement_direction_left_right(prev, curr),
                 );
             }
-        }
     }
 }
 

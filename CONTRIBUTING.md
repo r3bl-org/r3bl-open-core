@@ -3,6 +3,7 @@
 </p>
 
 # 🎨🖌️ Contributing to r3bl-open-core repo
+
 <a id="markdown-%F0%9F%8E%A8%F0%9F%96%8C%EF%B8%8F-contributing-to-r3bl-open-core-repo" name="%F0%9F%8E%A8%F0%9F%96%8C%EF%B8%8F-contributing-to-r3bl-open-core-repo"></a>
 
 Thank you for considering contributing to the `r3bl-open-core` repo! We welcome contributions from
@@ -12,9 +13,9 @@ don't know where to start, check out the issues that are labeled `good first iss
 
 <!-- TOC -->
 
-  - [Discord server](#discord-server)
-  - [Code of conduct](#code-of-conduct)
-  - [Style guide](#style-guide)
+- [Discord server](#discord-server)
+- [Code of conduct](#code-of-conduct)
+- [Style guide](#style-guide)
 - [🤝 Contribute](#-contribute)
   - [Explore our guides](#explore-our-guides)
   - [Working on issues](#working-on-issues)
@@ -25,11 +26,14 @@ don't know where to start, check out the issues that are labeled `good first iss
 <!-- /TOC -->
 
 ### Discord server
+
 <a id="markdown-discord-server" name="discord-server"></a>
 
-Please join our [Discord server](https://discord.gg/8M2ePAevaM) to discuss the `r3bl-open-core` project and ask questions.
+Please join our [Discord server](https://discord.gg/8M2ePAevaM) to discuss the `r3bl-open-core`
+project and ask questions.
 
 ### Code of conduct
+
 <a id="markdown-code-of-conduct" name="code-of-conduct"></a>
 
 Before you start contributing, please take a moment to read the
@@ -37,6 +41,7 @@ Before you start contributing, please take a moment to read the
 abide by this code of conduct in all interactions related to the project.
 
 ### Style guide
+
 <a id="markdown-style-guide" name="style-guide"></a>
 
 Please make sure your code adheres to our
@@ -47,12 +52,14 @@ If you're new to the project, you may want to check out our [README](README.md) 
 of the project and its goals.
 
 ## 🤝 Contribute
+
 <a id="markdown-%F0%9F%A4%9D-contribute" name="%F0%9F%A4%9D-contribute"></a>
 
 We welcome contributions in the form of bug reports, feature requests, documentation improvements,
 and code contributions.
 
 ### Explore our guides
+
 <a id="markdown-explore-our-guides" name="explore-our-guides"></a>
 
 Below are some guides to help you get started:
@@ -63,6 +70,7 @@ Below are some guides to help you get started:
 - [How to create a pull request](docs/contributing_guides/PULL_REQUEST.md)
 
 ### Working on issues
+
 <a id="markdown-working-on-issues" name="working-on-issues"></a>
 
 If you want to work on an issue, please comment on the issue asking to be assigned to it, so that we
@@ -70,6 +78,7 @@ can assign the issue to you. If you have any questions about the issue, we can d
 comments or on [R3BL Discord server](https://discord.gg/8M2ePAevaM).
 
 ### Feature requests and bug reports
+
 <a id="markdown-feature-requests-and-bug-reports" name="feature-requests-and-bug-reports"></a>
 
 If you encounter a bug or have an idea for a new feature, please open an issue on our
@@ -80,6 +89,7 @@ Read more on
 [how to create a good issue](https://github.com/r3bl-org/r3bl-open-core/blob/fe8ef6b8bbc2b1f73730659b1863216c8b8f0909/docs/contributing_guides/ISSUE.md).
 
 ### Documentation improvements
+
 <a id="markdown-documentation-improvements" name="documentation-improvements"></a>
 
 If you notice any errors or omissions in our documentation, please open an issue on our
@@ -90,6 +100,7 @@ Read more on
 [how to create a good issue](https://github.com/r3bl-org/r3bl-open-core/blob/fe8ef6b8bbc2b1f73730659b1863216c8b8f0909/docs/contributing_guides/ISSUE.md).
 
 ## License
+
 <a id="markdown-license" name="license"></a>
 
 [`r3bl-open-core`](https://github.com/r3bl-org/r3bl-open-core) is released under the

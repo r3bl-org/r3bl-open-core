@@ -1,311 +1,83 @@
-# fix md parser: https://github.com/r3bl-org/r3bl-open-core/issues/397
+# clean up and release: https://github.com/r3bl-org/r3bl-open-core/issues/397
 
-- [x] document naming convention:
-  - `parse_*()` -> splits bytes from input into remainder and output bytes
-  - `*_extract` -> generates structs from already-split-input using a `parse_*()`
-  - `*_parser()` -> function that receives an input and is called by `parse_*()`
-- [x] `AsStrSlice::extract_remaining_text_content_in_line()`: fix the naming and add fn docs
-- code block
-- [x] `parse_code_block_generic()`: fix the behavior when end maker "```" is missing, add fn docs
-- [x] `extract_code_block_content()`: fix this so it doesn't return `String`, only `&str`
-
-- use OG parsers _dump the new AI generated stuff_
-  - [x] `parse_unique_kv_opt_eol_generic()`: copy from `parse_unique_kv_opt_eol()`
-  - [x] `parse_csv_opt_eol_generic()`: copy from OG `parse_csv_opt_eol()`
-
-- GStringSlice -> AsStrSlice
-  - [x] change `fn parse_markdown_alt()`, from: `&'a [GCString]`, to `input: impl Into<AsStrSlice>`
-  - [x] generalize impl of `GCStringSlice` into `AsStrSlice` which implements `nom::Input`, drop the
-        `Copy` requirement, and make `Clone` explicit
-
-- use OG parsers _dump the new AI generated stuff_
-  - [x] `parse_code_block_generic()`: fix bug! strips
-        "```" from start and end and `test_parse_block_code_with_missing_end_marker()`
-  - [x] `extract_code_block_content()`: test this
-  - [x] add tests for `extract_code_block_content()`
-  - [x] `parse_block_heading_generic()`: change signature to use `AsStrSlice` and not `nom::Input`
-
-- smart list
-  - [x] `parse_block_smart_list_generic()`: copy this from OG
-        `parse_block_smart_list.rs::parse_block_smart_list()`
-  - [x] `parse_smart_list_and_extract_ir_generic()`: copy this from OG
-        `parse_block_smart_list.rs::parse_smart_list()`:
-  - [x] Remove all `Box::leak()`
-
-- [x] revert "parse by line" approach to rewriting the parser, use `nom::Input` & `AsStrSlice`
-      instead
-
-- [x] make naming convention consistent, use `_alt`, drop `_generic`
-
-- [x] use the correct method signatures for (most) parsers
-
-  ```rust
-  fn f<'a>(input: AsStrSlice<'a>) -> IResult</* rem */ AsStrSlice<'a>, /* output */ AsStrSlice<'a>> {}
-  ```
-
-  instead of:
-
-  ```rust
-  fn f<'a, I>(input: I) -> IResult</* rem */ I, /* output */ I>
-  where
-        I: Input + Clone + Compare<&'a str> + Offset + Debug,
-        I::Item: AsChar + Copy
-  {}
-  ```
-
-- [x] create new package `md_parser_alt`
-
-- [x] use [`mimalloc` crate](https://docs.rs/mimalloc/latest/mimalloc/) to replace `jemalloc` w/
-      microsoft [`mimalloc`](https://github.com/microsoft/mimalloc?tab=readme-ov-file#performance).
-      [jemalloc](https://github.com/jemalloc/jemalloc) is archived.
-      [more info on best rust allocators](https://gemini.google.com/app/e4979f6a69f5f9e5)
-
-- [x] fix flaky `script` tests which change the cwd, all of them need to be run in a single function
-      so there are no issues with multiple tests processes `serialtest` does not seem to address
-      this issue. test file: `tui/src/core/script/fs_path.rs:434:5`
-  - `core::script::fs_path::tests::test_try_directory_exists_not_found_error`
-  - `core::script::fs_path::tests::test_try_directory_exists_permissions_errors`
-  - `core::script::fs_path::tests::test_try_file_exists`
-  - `core::script::fs_path::tests::test_try_file_exists_invalid_name_error`
-  - `core::script::directory_create::tests_directory_create::test_try_mkdir`
-  - `core::script::fs_path::tests::test_try_file_exists_permissions_errors`
-  - `core::script::fs_path::tests::test_try_pwd`
-  - `core::script::fs_path::tests::test_try_pwd_errors`
-  - `core::script::fs_path::tests::test_try_write`
-
-- [x] fix regression bug in `md_parser` when using `AsStrSlice::to_string()`. see
-      `EditorBuffer::new_empty()` & `EditorBuffer::set_lines()` for how "raw" data is loaded into
-      the model in memory (from disk or new / empty).
-  - [x] `impl Display for AsStrSlice` address all `FIXME: proper \n handling`
-  - [x] test `test_parse_fragment_plaintext_unicode()` in
-        `tui/src/tui/md_parser_alt/fragment_alt/parse_fragments_in_a_line_alt.rs:201` should PASS
-  - [x] `extract_remaining_text_content_in_line()` in
-        `tui/src/tui/md_parser_alt/string_slice.rs:241`: should NOT do anything with `NEW_LINE`
-  - [x] fix `test_parse_fragment_markdown_inline()` and
-        `parse_inline_fragments_until_eol_or_eoi_alt()`
-
-- [x] migrate `atomics` parsers into `atomics_alt`
-  - [x] `take_text_between.rs` -> `fragment_alt/take_text_between_alt.rs`: only used by
-        `specialized_parsers_alt.rs`. fix tests & check logic; add more tests to `AsStrSlice` based
-        on this
-
-- [x] migrate `fragment` to `fragment_alt` mod
-  - [x] `specialized_parsers.rs` -> `specialized_parsers_alt.rs`: fix tests & check logic
-    - [x] `parse_fragment_starts_with_checkbox_checkbox_into_bool_alt()`
-    - [x] `parse_fragment_starts_with_checkbox_into_str_alt()`
-    - [x] `parse_fragment_starts_with_left_link_err_on_new_line_alt()`
-    - [x] `parse_fragment_starts_with_left_image_err_on_new_line_alt()`
-    - [x] `parse_fragment_starts_with_backtick_err_on_new_line_alt()`
-    - [x] `parse_fragment_starts_with_star_err_on_new_line_alt()`
-    - [x] `parse_fragment_starts_with_underscore_err_on_new_line_alt()`
-  - [x] `specialized_parser_delim_matchers.rs` -> `specialized_parsers_alt.rs`: add tests
-  - [x] `parse_fragments_in_a_line_alt.rs` => `test_parse_fragment_plaintext_unicode()`: something
-        is wrong with synthetic `\n` handling
-  - [x] what are semantics of `AsStrSlice::to_string()`? how does the `.to_string()` handle `\n`?
-        this is making the "old" `parse_markdown()` fail silently when running the examples
-
-- [x] fix regression in old code when starting to incorporate `AsStrSlice`
-  - [x] `try_parse_and_highlight()` in
-        `tui/src/tui/syntax_highlighting/md_parser_syn_hi/md_parser_syn_hi_impl.rs:141`: fix
-        `write_to_byte_cache()` to behave in "legacy" or "compat" mode to be compatible w/ the old
-        style (before `_alt`) markdown parser behavior
-  - [x] why `AsStrSlice::max_len`? for `take()` to work!
-
-- [x] break compat with `slice::lines()` in `AsStrSlice` and do it the "intuitive way". this means
-      adding a new line at the end of the output when there is more than 1 line in `Self::lines` and
-      the last line is empty. update docs and tests to match.
-
-- [x] unicode bug is present in `Display` impl of `AsStrSlice`! this is what breaks the examples!
-      when switching the implementation of `write_to_byte_cache_compat()` to use `Display` impl the
-      bug can be seen in the tui/examples#3! revert back to the simplistic way of creating the
-      output `&str` and the example works again.
-  - [x] add test cases to repro the bug: `test_input_contains_emoji()` & fix it
-  - [x] update comments to clarify the emoji handling logic in the `AsStrSlice` docs, and document
-        the field `byte_index` and make it clear that byte indexing is used and not char indexing
-  - [x] make sure there are tests which compare the `Display` impl to the
-        `write_to_byte_cache_compat()` and ensure they produce the same output
-
-- [x] migrate `atomics` parsers into `extended_alt`
-  - [x] `take_text_until_eol_or_eoi.rs` -> `extended_alt/take_text_until_eol_or_eoi_alt.rs`: simply
-        replace `&'a str` with `AsStrSlice<'a>`
-
-- [x] delete `parser_impl.rs` (was only needed for experimentation)
-
-- [x] migrate `fragment` to `fragment_alt` mod
-  - [x] rename `string_slice.rs` -> `as_str_slice.rs`
-  - [x] `plain_parser_catch_all.rs` -> `plain_parser_catch_all_alt.rs`: fix bugs & add tests
-  - [x] `parse_fragments_in_a_line.rs` -> `parse_fragments_in_a_line_alt.rs`: fix bugs & add tests
-
-- [x] refactor / rewrite `as_str_slice.rs` using `Length`, `Index`, `BoundsCheck` and lots of enums
-      for state machine states and functions to calculate these
-
-- [ ] migrate `extended` parsers into `extended_alt`
-  - [x] `parse_metadata_k_csv_alt`
-    - [x] migrate the functions `parse_csv_opt_eol_alt` and `parse_comma_separated_list_alt` over
-      - [x] don't use `&str` anymore! implement lots of new traits for `AsStrSlice` for `Compare`
-            for nom `tag` integration
-      - [x] implement `From<InlineVec<AsStrSlice<'a>>> for List<AsStrSlice<'a>>` for `List` and
-            `InlineVec` integration
-    - [x] migrate all the existing tests over
-
-  - [x] `as_str_slice.rs` clean up
-    - [x] `extract_remaining_text_content_in_line()` -> `extract_to_line_end()`
-    - [x] `extract_remaining_text_content_to_end()` -> `extract_to_slice_end()`
-    - [x] `is_empty()`
-    - [x] `contains()`
-    - [x] `starts_with()`
-
-  - [x] clean up messy test case input data creation using `as_str_slice_test_case!`
-
-  - [x] `parse_metadata_k_v_alt`
-
-  - [x] make sure all the docs have been copied over along with any `println!()` statements at the
-        start of main parser function execution
-
-- [x] should there be `block` and `line` parsers? if so, should `extract_to_line_end()` be used
-      exclusively by `line` parsers? also who should use `extract_to_slice_end()`
-
-- [x] migrate `block` parsers into `block_alt` (part 1)
-  - not block parsers (in `standard_alt`):
-    - [x] `parse_block_heading.rs` -> `parse_heading_alt.rs`
-    - [x] `parse_block_markdown_text_until_eol_or_eoi.rs`
-      - [x] `parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()` ->
-            `parse_block_smart_list_alt.rs`
-            `parse_markdown_text_with_checkbox_policy_until_eol_or_eoi_alt()`
-
-      - [x] `parse_block_markdown_text_with_or_without_new_line()` ->
-            `parse_markdown_text_including_eol_or_eoi_alt.rs`
-            `parse_markdown_text_including_eol_or_eoi_alt()`
-
-      - [x] Rename `MdBlock` -> `MdElement`
-
-- [x] migrate `block` parsers into `block_alt` (part 2)
-  - block parsers:
-    - [x] `parse_block_code.rs` -> `block_alt/parse_block_code_alt.rs`
-
-    - [x] `parse_block_smart_list.rs` -> `block_alt/parse_block_smart_list_alt.rs`
-      - [x] `parse_smart_list_content_lines_alt()`
-      - [x] `mod tests_parse_smart_list_content_lines_alt`
-        - [x] `parse_smart_list_alt()`
-        - [x] review implementation and see if `digit1` and other parts can be refactored into small
-              functions
-        - [x] `mod tests_parse_smart_list_alt`
-      - [x] `mod tests_bullet_kinds`
-      - [x] `parse_block_smart_list_alt()`
-      - [x] `mod tests_parse_block_smart_list`
-
-- [x] migrate `md_parser/parse_markdown()` -> `md_parser_alt/parse_markdown_alt()`
-  - [x] review `as_str_slice.rs` changes
-  - [x] review this fix `fallback_parse_any_line_as_plain_alt()`
-  - [x] break up `as_str_slice.rs` into `as_str_slice_mod`
-  - [x] check performance of block code parser which materializes strings to look for enclosing
-        three-backticks. this is avoidable, by using `lines` to check which ones only contain
-        three-backticks and keep track of how many lines are involved, and then convert them into
-        start and end char indices for the `AsStrSlice`
-  - [x] do the same performance check (don't materialize) for the block smart list parser
-  - [x] check `AsStrSlice::find_substring()` for performance penalty when looking ahead to find
-        something in a really large `lines`. might be able to speed up this search using `line` and
-        some match to calculate the "expected byte index"
-  - [x] continue migrating all the remaining tests into this file from `parse_markdown.rs`
-
-- [x] rename `md_parser_alt` to `md_parser_ng`; all `_alt` -> `_ng`
-  - [x] remove all compiler warnings
-  - [x] extract 1 common function between both legacy and ng parser (used in block code parser)
-  - [.] create compat tests between legacy and ng parser
-    - [x] fix `find_substring()` which wasn't handling unicode correctly leading to failure of
-          `InlineCode` parsing of "`foo💕bar`" in `parse_inline_fragments_until_eol_or_eoi_ng()`
-    - [x] make sure that the new trailing `NEW_LINE` generation of the `_ng` parser is respected in
-          the `compatibility.rs` tests
-
-- [x] update `md_parser_syn_hi_impl.rs` to use this. provide a new `bool` flag that allows the new
-      `_ng` parser active instead of the old one (keep them all in the code for now). there is 1
-      function that is shared between the two, so move that to `_ng` for smart code block tests.
-- [x] add a new test case in `parse_heading_ng()` test cases, and use the markdown constant from the
-      demo examples for the editor, which currently shows up in 2 places (consolidate them into
-      one):
-  - `get_real_world_content()` in
-    `tui/src/tui/md_parser_ng/as_str_slice/compatibility_test_suite.rs`
-  - `get_default_content()` in `tui/examples/tui_apps/ex_editor/state.rs`
-- [x] make quality and compatibility improvements to `md_parse_ng` now that it is attached to the
-      test examples. verify that extra line at the bottom of editor example shows up both for legacy
-      and NG parser
-- [x] deal with compiler warning (turned error) affecting the location of the
-      `as_str_slice_test_case!`
-- [x] fix all the cargo clippy warnings generated by this command
-      `cargo clippy -- -W clippy::all -W clippy::pedantic -W clippy::nursery`
-
-- [x] spend some time with `cargo clippy`
-  - [x] add clippy related commands to `run.nu` (top-level) and figure out what they should be:
-        `clippy-basic-fix`, `clippy-pedantic-fix`?
-  - [x] figure out how to add some lint checks that are being fixed in the `lib.rs` in the first
-        place so they are caught every time that clippy runs; this prevents having to do massive
-        clean up after the fact:
-    - `clippy::doc_markdown`
-    - `clippy::redundant_closure`
-    - `clippy::redundant_closure_for_method_calls`
-    - `clippy::cast_sign_loss`
-    - `clippy::cast_lossless`
-    - `clippy::cast_possible_truncation`
-    - `clippy::semicolon_if_nothing_returned`
-    - `clippy::must_use_candidate`
-    - `clippy::items_after_statements`
-
-- [x] use `cargo bench` in `compatibility_test_suite.rs` to compare the relative performance of both
-      legacy and NG parsers
-- [x] run more test with more complex documents in the `compatibility_test_suite.rs` to ensure that
-      large READMEs, journal entries, and other complex and long MD files can be parsed correctly.
-      might be nice to benchmark these too (og vs ng). and save these MD files in the project itself
-      in the tests cases folder or something. this would be beyond the compatibility test suite, and
-      should be some kind of `markdown_verification_test_suite` for quality.
-- [x] would it be possible to cache the AST returned by `parse_markdown_ng()`? is this a tree
-      structure or an array structure? how to mark areas as dirty? how to reparse only sections that
-      have changed? this might speed up parsing a whole lot, if the entire thing does not have to be
-      re-parsed? need to verify all of this and not just use intuition.
-
----
-
-- [x] perf optimize codebase using flamegraph profiling & claude using `docs/ng_parser.md`
-  - [x] try incorporate memoized size calc in `GetMemSize`
-- [x] try and fix NG parser
-  - [x] identified O(n) character counting bottlenecks in `AsStrSlice` hot paths
-  - [x] implemented caching infrastructure for character counts and byte offsets
-  - [x] optimized `extract_to_line_end()` to use cached byte offsets
-  - [x] fixed O(n) loop in `take_from()` with binary search
-  - [x] implemented lazy cache initialization to reduce overhead
-  - [x] fixed cache sharing bug when cloning `AsStrSlice`
-  - [x] fixed position tracking bug in `skip_take_in_current_line()`
-  - [x] achieved 600-5,000x performance improvement (from 50,000x to 9-83x slower)
-- [x] incorporate both NG and legacy parsers into the `try_parse_and_highlight()`
-  - [x] implemented hybrid parser approach with 100KB threshold
-  - [x] documents ≤100KB use legacy parser (better performance)
-  - [x] documents >100KB use NG parser (better memory efficiency)
-  - [x] removed `ENABLE_MD_PARSER_NG` constant in favor of dynamic selection
-  - [x] added comprehensive documentation to `try_parse_and_highlight()`
-- [x] updated `docs/ng_parser.md` with detailed performance optimization findings
-- [x] moved regression tests from separate file to `parse_fragments_in_a_line_ng.rs`
+- [x] fix all the lints after the extraction & archival of the `md_parser_ng`
+- [ ] complete the performance work started in [tui_perf_optimize](docs/tui_perf_optimize.md)
+- [ ] there are test failures in doctests that try to use terminal I/O (which fails in test
+      environment). can you identify and mark them to be "```no_run"
 - [ ] fix all the pedantic lints using claude (and don't allow them anymore in Cargo.toml)
+- [ ] update changelog
+- [ ] squash all the commits in this branch `fix-md-parser` into one (fixup all the commit
+      messages); this commit fixes this issue:
+      <https://github.com/r3bl-org/r3bl-open-core/issues/397>. then rebase this branch onto `main`
+      and push it to remote `origin`.
+- [ ] make a release using the [`release-guide.md`](docs/release-guide.md) document as a guide
+
+# editor content storage enhancements
+
+- [ ] Change `EditorContent::lines: VecEditorContentLines` to a different data structure
+      that is still an array of lines, which doesn't need to be materialized into `String`
+      and can be accessed as `&str`, but works with a modified legacy parser which knows
+      how to handle a different kind of `EOL`. This data structure represents a line as a
+      char array of some default size (eg: 256 chars) and is preallocated. The `\n` char
+      followed by a char that can't be typed in the editor (eg: `\0`) is used to represent
+      the end of line. This will require changes to the editor component as well as the
+      parser. Effectively, this is a gap buffer implementation. Once a line is allocated,
+      the only time it will be reallocated / resized is when the line is too long (eg:
+      more than 256 chars), or a line is deleted. Reallocation is cheap (relatively
+      speaking) because to copy 100K bytes it takes a few thousand nanoseconds. And this
+      reallocation will only happen rarely. This means that to syntax highlight these
+      `lines` it is zero-copy! This won't make that big of a difference except in cases
+      where the documents are very large (> 1MB). This comes from the work done in the
+      `md_parser_ng` crate which is archive that showed that a `&str` parser is the
+      fastest. So instead of bringing the mountain to Muhammad, we will bring Muhammad to
+      the mountain. The mountain is the `&str` parser, and Muhammad is the editor
+      component. Here's some code:
+      ```rust
+      // Assume the line is 256 chars long.
+      let empty_line = ['\0', '\0', '\0', ..., '\0']  // 256 '\0' chars
+      let line_with_content = ['H', 'e', 'l', 'l', 'o', '\n', '\0', '\0', ..., '\0']
+      use nom::{bytes::complete::take_while, character::complete::char, combinator::recognize,
+            sequence::tuple, IResult, Parser};
+
+      // The parser will consume the entire pattern and you can extract the actual content
+      // by finding the position of \n in the matched slice.
+      fn parse_editor_line(input: &str) -> IResult<&str, &str> {
+            recognize((
+            (
+                  take_while(|c| c != '\n' && c != '\0'),  // Line content
+                  char('\n'),                              // Required newline
+                  take_while(|c| c == '\0')                // Zero or more null padding
+            )
+            )).parse(input)
+      }
+      ```
+
+# edi feature
+
 - [ ] add a new feature to edi: `cat file.txt | edi` should open the piped output of the first
       process into edi itself
-- [ ] update changelog and make a release
 
----
+# markdown parser enhancements
 
-- vec -> inlinevec
-  - [ ] change all `Vec` to `InlineVec` in `parse_markdown_alt.rs`
+- [ ] fix "`rust`" parsing in syn hi code (should support both "rust" and "rs")
+- [ ] support both `"**"` and `"*"` for bold, and `"_"` and `"__"` for italic (deviate from the
+      markdown spec)
+- [ ] add blockquote support
+  - [ ] impl parser support for blockquote
+  - [ ] impl syntax highlighting support for blockquote
+- [ ] markdown table support
+  - [ ] impl parser support for table
+  - [ ] impl syntax highlighting support for table
 
-- fix "`rust`" parsing in syn hi code (should support both "rust" and "rs")
-
-- markdown blockquote support
-
-- markdown table support
-  - [ ] impl md table parser
-  - [ ] impl syn hi for this
+# giti feature
 
 - add giti feature to search logs
 
-- fix copy / paste bugs in editor component
+# editor fixes and enhancements
 
-- add features to editor component
+- [ ] fix copy / paste bugs in editor component
+- [ ] add basic features to editor component (find, replace, etc)
+- [ ] add support for `rustfmt` and `prettier` like reformatting of the code in the editor component
 
 # modernize `choose` and `giti` codebase: https://github.com/r3bl-org/r3bl-open-core/issues/427
 

@@ -1,4 +1,5 @@
 # Code of conduct
+
 <a id="markdown-code-of-conduct" name="code-of-conduct"></a>
 
 Before you start contributing, please take a moment to read the

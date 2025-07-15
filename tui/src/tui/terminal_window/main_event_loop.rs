@@ -122,16 +122,16 @@ where
             &mut app,
         )?;
 
-        let result = run_main_event_loop(
+        
+
+        run_main_event_loop(
             event_loop_state,
             app,
             exit_keys,
             input_device,
             output_device,
         )
-        .await;
-
-        result
+        .await
     })
 }
 
@@ -317,8 +317,8 @@ where
         tokio::select! {
             // Handle signals from the app
             maybe_signal = event_loop_state.main_thread_channel_receiver.recv() => {
-                if let Some(signal) = maybe_signal {
-                    if handle_main_thread_signal(
+                if let Some(signal) = maybe_signal
+                    && handle_main_thread_signal(
                         signal,
                         &mut event_loop_state,
                         &mut app,
@@ -327,7 +327,6 @@ where
                     )? {
                         break; // Exit requested
                     }
-                }
             }
 
             // Handle input events

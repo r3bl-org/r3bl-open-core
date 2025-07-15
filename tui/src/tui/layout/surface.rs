@@ -336,12 +336,11 @@ fn adjust_with_style(
     let mut style_adjusted_origin_pos = origin_pos;
     let mut style_adjusted_bounds_size = bounds_size;
 
-    if let Some(style) = maybe_computed_style {
-        if let Some(padding) = style.padding {
+    if let Some(style) = maybe_computed_style
+        && let Some(padding) = style.padding {
             style_adjusted_origin_pos += padding;
             style_adjusted_bounds_size -= padding * 2;
         }
-    }
 
     (style_adjusted_origin_pos, style_adjusted_bounds_size)
 }

@@ -49,6 +49,15 @@
 //! You can watch a [video](https://youtu.be/SbwvSHZRb1E) about this parser on the `YouTube`
 //! developerlife.com channel.
 //!
+//! ## Note on Parser Selection
+//!
+//! This is the primary and only markdown parser used in `r3bl_tui`. After extensive benchmarking
+//! and analysis, this parser has proven to be the most reliable and performant solution.
+//!
+//! Two experimental parsers (NG parser and Simple parser) were developed but have been archived
+//! to the `r3bl-open-core-archive` repository for historical reference. See
+//! `docs/parser_strategy_analysis.md` for the detailed analysis that led to this decision.
+//!
 //! To learn about nom fundamentals, here are some resources:
 //! - Tutorial on nom parsing on [developerlife.com](https://developerlife.com/2023/02/20/guide-to-nom-parsing/).
 //! - Video on nom parsing on [YouTube developerlife.com channel](https://youtu.be/v3tMwr_ysPg).
@@ -166,6 +175,15 @@ pub mod extended;
 pub mod fragment;
 pub mod md_parser_types;
 pub mod parse_markdown;
+
+// Test modules
+#[cfg(test)]
+pub mod conformance_test_data;
+#[cfg(test)]
+pub mod parser_snapshot_tests;
+#[cfg(test)]
+pub mod parser_bench_tests;
+
 
 pub use atomics::*;
 pub use block::*;

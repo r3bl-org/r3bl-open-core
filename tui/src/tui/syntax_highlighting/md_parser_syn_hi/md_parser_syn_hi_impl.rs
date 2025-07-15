@@ -21,93 +21,52 @@
 use smallvec::smallvec;
 use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
-/// Threshold for switching between legacy and NG parser.
-/// Documents larger than 100KB will use the NG parser for better memory efficiency.
-pub const PARSER_THRESHOLD_BYTES: usize = 100_000;
-
 use super::create_color_wheel_from_heading_data;
-use crate::{constants::NEW_LINE_CHAR,
+use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
+            CommonResult, FragmentsInOneLine, GCString, GCStringExt,
+            GradientGenerationPolicy, HeadingData, HyperlinkData, InlineString, Lines,
+            List, MdDocument, MdElement, MdLineFragment, PARSER_BYTE_CACHE_PAGE_SIZE,
+            ParserByteCache, PrettyPrintDebug, StyleUSSpan, StyleUSSpanLine,
+            StyleUSSpanLines, TextColorizationPolicy, TuiStyle, TuiStyledTexts,
+            constants::NEW_LINE_CHAR,
             convert_syntect_to_styled_text, generate_ordered_list_item_bullet,
             generate_unordered_list_item_bullet, get_bold_style,
             get_checkbox_checked_style, get_checkbox_unchecked_style,
             get_code_block_content_style, get_code_block_lang_style,
             get_foreground_dim_style, get_foreground_style, get_inline_code_style,
             get_italic_style, get_link_text_style, get_link_url_style,
-            get_list_bullet_style, join, new_style, parse_markdown, parse_markdown_ng,
-            try_get_syntax_ref,
+            get_list_bullet_style, join, new_style, parse_markdown, try_get_syntax_ref,
             tui::{constants::CODE_BLOCK_START_PARTIAL,
                   md_parser::constants::{AUTHORS, BACK_TICK, CHECKED_OUTPUT, DATE,
                                          LEFT_BRACKET, LEFT_IMAGE, LEFT_PARENTHESIS,
                                          NEW_LINE, RIGHT_BRACKET, RIGHT_IMAGE,
                                          RIGHT_PARENTHESIS, STAR, TAGS, TITLE,
-                                         UNCHECKED_OUTPUT, UNDERSCORE},
-                  md_parser_ng::AsStrSlice},
-            CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
-            CommonResult, FragmentsInOneLine, GCString, GCStringExt,
-            GradientGenerationPolicy, HeadingData, HyperlinkData, InlineString, Lines,
-            List, MdDocument, MdElement, MdLineFragment, ParserByteCache,
-            PrettyPrintDebug, StyleUSSpan, StyleUSSpanLine, StyleUSSpanLines,
-            TextColorizationPolicy, TuiStyle, TuiStyledTexts,
-            PARSER_BYTE_CACHE_PAGE_SIZE};
+                                         UNCHECKED_OUTPUT, UNDERSCORE}}};
 
 /// This is the main function that the [`crate::editor`] uses to display markdown to the
 /// user. It converts from a &[`GCString`] (which comes from the [`crate::editor`]) into a
 /// [`StyleUSSpanLines`] (which the [`crate::editor`] will clip & render).
 ///
-/// # Parser Selection Strategy (Hybrid Approach)
+/// # Parser Implementation
 ///
-/// This function implements a hybrid parser selection strategy based on document size:
-///
-/// ## For documents ≤ 100KB [`PARSER_THRESHOLD_BYTES`]:
-/// - Uses the **legacy parser** (`parse_markdown`)
-/// - Materializes &[`GCString`] to a contiguous String
-/// - **Performance**: Faster for small to medium documents
-/// - **Trade-off**: One-time memory allocation for string materialization
-/// - **Typical use case**: Most editor documents, code files, READMEs
-///
-/// ## For documents > 100KB:
-/// - Uses the **NG (Next Generation) parser** (`parse_markdown_ng`)
-/// - Works directly with &[`GCString`] via `AsStrSlice` (zero-copy)
-/// - **Performance**: Slower parsing but avoids large memory allocation
-/// - **Trade-off**: Better memory efficiency for very large documents
-/// - **Typical use case**: Large API documentation, comprehensive guides
-///
-/// ## Performance Characteristics
-///
-/// After extensive optimization, the NG parser performance compared to legacy:
-/// - Small content (< 1KB): ~9x slower
-/// - Medium content (1-10KB): ~20x slower
-/// - Large content (10-100KB): ~52x slower
-/// - Jumbo content (> 100KB): ~83x slower
-///
-/// The 100KB threshold was chosen because:
-/// 1. Below 100KB, the materialization cost is negligible (~1ms)
-/// 2. Above 100KB, memory efficiency becomes more important
-/// 3. The performance gap is acceptable for occasional large documents
+/// This function uses the legacy parser (`parse_markdown`) which has proven to be
+/// the most reliable and performant solution for markdown parsing.
 ///
 /// ## Technical Implementation Details
 ///
-/// ### Legacy Parser Path (documents ≤ 100KB):
 /// 1. Calculate size hint from editor text lines
 /// 2. Initialize or reuse `parser_byte_cache` with appropriate capacity
-/// 3. Materialize &[`GCString`] into the byte cache using `write_to_byte_cache_compat()`
+/// 3. Materialize &[`GCString`] into the byte cache by writing each line with CRLF
 /// 4. Parse the materialized string with `parse_markdown()`
 /// 5. Convert parsed document to styled spans
 ///
-/// ### NG Parser Path (documents > 100KB):
-/// 1. Create `AsStrSlice` view over &[`GCString`] (no allocation)
-/// 2. Parse directly with `parse_markdown_ng()`
-/// 3. Convert parsed document to styled spans
+/// ## Performance Characteristics
 ///
-/// ## Optimization History
-///
-/// The NG parser was initially 50,000x slower than the legacy parser. Through
-/// optimization:
-/// - Added caching infrastructure for character counts and byte offsets
-/// - Implemented lazy cache initialization
-/// - Fixed O(n) operations with binary search
-/// - Achieved 600-5,000x performance improvement
-/// - Now viable for large documents where memory efficiency matters
+/// The legacy parser performs excellently across all document sizes:
+/// - Materializing &[`GCString`] to String is not expensive (~few thousand nanoseconds
+///   for 100K)
+/// - Parsing is fast and predictable
+/// - Memory usage is reasonable for typical editor use cases
 ///
 /// # Arguments
 /// - `editor_text_lines` - The text that the user has typed into the editor.
@@ -135,60 +94,32 @@ pub fn try_parse_and_highlight(
 ) -> CommonResult<StyleUSSpanLines> {
     // XMARK: Parse markdown from editor and render it
 
-    // Calculate document size to determine which parser to use
-    let document_size = calc_size_hint(editor_text_lines);
+    // PERF: Materializing &[GCString] to InlineString is not an expensive operation,
+    // it takes in the order of a few thousand nanoseconds for a 100K data set.
 
-    if document_size > PARSER_THRESHOLD_BYTES {
-        // Use the new NG parser for large documents (better memory efficiency)
-        let slice = AsStrSlice::from(editor_text_lines);
-        let document_result = parse_markdown_ng(slice)
-            .map(|(rem, document)| {
-                debug_assert!(rem.is_empty());
-                document
-            })
-            .map_err(|_| ());
+    let size_hint = calc_size_hint(editor_text_lines);
+    let acc = manage_parser_byte_cache(parser_byte_cache, size_hint);
 
-        // Try and parse `editor_text_to_string` into a `Document`.
-        match document_result {
-            Ok(document) => Ok(StyleUSSpanLines::from_document(
-                &document,
-                maybe_current_box_computed_style,
-                maybe_syntect_tuple,
-            )),
-            Err(()) => CommonError::new_error_result_with_only_type(
-                CommonErrorType::ParsingError,
-            ),
-        }
-    } else {
-        // Use the legacy parser for smaller documents (better performance)
+    // Write each line w/ CRLF into the accumulator.
+    // - The CRLF is necessary for the parser to work correctly.
+    // - This also requires the entire document to be copied into the accumulator (and
+    //   CRLFs added).
+    for line in editor_text_lines {
+        acc.push_str(line.as_ref());
+        acc.push(NEW_LINE_CHAR);
+    }
 
-        // PERF: Materializing &[GCString] to InlineString is not an expensive operation,
-        // it takes in the order of a few thousand nanoseconds for a 100K data set.
+    let result_md_ast = parse_markdown(acc);
 
-        let size_hint = calc_size_hint(editor_text_lines);
-        let acc = manage_parser_byte_cache(parser_byte_cache, size_hint);
-
-        // Write each line w/ CRLF into the accumulator.
-        // - The CRLF is necessary for the parser to work correctly.
-        // - This also requires the entire document to be copied into the accumulator (and
-        //   CRLFs added).
-        for line in editor_text_lines {
-            acc.push_str(line.as_ref());
-            acc.push(NEW_LINE_CHAR);
-        }
-
-        let result_md_ast = parse_markdown(acc);
-
-        // Try and parse `editor_text_to_string` into a `Document`.
-        match result_md_ast {
-            Ok((_remainder, document)) => Ok(StyleUSSpanLines::from_document(
-                &document,
-                maybe_current_box_computed_style,
-                maybe_syntect_tuple,
-            )),
-            Err(_) => CommonError::new_error_result_with_only_type(
-                CommonErrorType::ParsingError,
-            ),
+    // Try and parse `editor_text_to_string` into a `Document`.
+    match result_md_ast {
+        Ok((_remainder, document)) => Ok(StyleUSSpanLines::from_document(
+            &document,
+            maybe_current_box_computed_style,
+            maybe_syntect_tuple,
+        )),
+        Err(_) => {
+            CommonError::new_error_result_with_only_type(CommonErrorType::ParsingError)
         }
     }
 }
@@ -447,11 +378,11 @@ impl StyleUSSpanLines {
 }
 
 mod from_block_codeblock_helper {
-    use super::{convert_syntect_to_styled_text, get_code_block_content_style,
-                get_code_block_lang_style, get_foreground_dim_style, try_get_syntax_ref,
-                CodeBlockLineContent, CodeBlockLines, HighlightLines, List, StyleUSSpan,
-                StyleUSSpanLine, StyleUSSpanLines, SyntaxSet, Theme, TuiStyle,
-                CODE_BLOCK_START_PARTIAL};
+    use super::{CODE_BLOCK_START_PARTIAL, CodeBlockLineContent, CodeBlockLines,
+                HighlightLines, List, StyleUSSpan, StyleUSSpanLine, StyleUSSpanLines,
+                SyntaxSet, Theme, TuiStyle, convert_syntect_to_styled_text,
+                get_code_block_content_style, get_code_block_lang_style,
+                get_foreground_dim_style, try_get_syntax_ref};
 
     #[allow(clippy::similar_names)]
     pub fn try_use_syntect(
@@ -849,10 +780,10 @@ mod tests_style_us_span_lines_from {
     use miette::IntoDiagnostic;
 
     use super::*;
-    use crate::{assert_eq2, fg_cyan, get_metadata_tags_marker_style,
-                get_metadata_tags_values_style, get_metadata_title_marker_style,
-                get_metadata_title_value_style, list, throws, tui_color, CodeBlockLine,
-                HeadingLevel};
+    use crate::{CodeBlockLine, HeadingLevel, assert_eq2, fg_cyan,
+                get_metadata_tags_marker_style, get_metadata_tags_values_style,
+                get_metadata_title_marker_style, get_metadata_title_value_style, list,
+                throws, tui_color};
 
     /// Test each [`MdLineFragment`] variant is converted by
     /// [StyleUSSpan::from_fragment](StyleUSSpan::from_fragment).

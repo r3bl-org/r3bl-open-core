@@ -136,14 +136,13 @@ mod render_cache_impl_block {
             use_cache: UseRenderCache,
         ) {
             // Cache enabled & hit so early return.
-            if matches!(use_cache, UseRenderCache::Yes) {
-                if let Some(cached_output) =
+            if matches!(use_cache, UseRenderCache::Yes)
+                && let Some(cached_output) =
                     buffer.render_cache.get((buffer.get_scr_ofs(), window_size))
                 {
                     *render_ops = cached_output.clone();
                     return;
                 }
-            }
 
             // Cached disabled, or miss due to:
             // - Content has been modified.

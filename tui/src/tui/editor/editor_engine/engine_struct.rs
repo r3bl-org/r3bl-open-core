@@ -48,8 +48,7 @@ pub struct EditorEngine {
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
     pub theme: Theme,
     /// This is an **optional** field that is used to somewhat speed up the legacy
-    /// Markdown parser [`crate::parse_markdown()`]. It is not used by the NG parser
-    /// [`crate::parse_markdown_ng()`]. It is lazily created if the legacy parser is
+    /// Markdown parser [`crate::parse_markdown()`]. It is lazily created if the legacy parser is
     /// used, and it is re-used every time the document is re-parsed.
     ///
     /// ## Only used with the legacy Markdown parser

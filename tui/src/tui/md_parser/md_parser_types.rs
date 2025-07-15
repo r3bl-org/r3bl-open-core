@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{AsStrSlice, InlineVec, List};
+use crate::{InlineVec, List};
 
 /// This corresponds to a single Markdown document, which is produced after a successful
 /// parse operation [`crate::parse_markdown()`].
@@ -165,6 +165,8 @@ pub mod constants {
     pub const CODE_BLOCK_END: &str = "```";
     pub const CHECKED: &str = "[x]";
     pub const UNCHECKED: &str = "[ ]";
+    pub const CHECKED_UPPER: &str = "[X]";
+    pub const UNCHECKED_UPPER: &str = "[ ]"; // Same as lowercase
     pub const CHECKED_OUTPUT: &str = "┊✔┊";
     pub const UNCHECKED_OUTPUT: &str = "┊┈┊";
     pub const EXCLAMATION: &str = "!";
@@ -196,8 +198,7 @@ pub enum BulletKind {
 
 /// Holds a single list item for a given indent level. This may contain multiple lines
 /// which are stored in the `content_lines` field. Take a look at
-/// [`crate::md_parser::parse_block_smart_list::parse_smart_list`] or
-/// [`crate::md_parser_ng::parse_block_smart_list_ng::parse_smart_list_ng`]
+/// [`crate::md_parser::parse_block_smart_list::parse_smart_list`]
 /// for more details.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SmartListIR<'a, T> {
@@ -233,5 +234,3 @@ impl<'a, T> SmartListLine<'a, T> {
 
 pub type SmartListIRStr<'a> = SmartListIR<'a, &'a str>;
 pub type SmartListLineStr<'a> = SmartListLine<'a, &'a str>;
-pub type SmartListIRAlt<'a> = SmartListIR<'a, AsStrSlice<'a>>;
-pub type SmartListLineAlt<'a> = SmartListLine<'a, AsStrSlice<'a>>;

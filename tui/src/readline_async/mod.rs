@@ -166,7 +166,7 @@
 //! Here is a video of the `readline_async` and `spinner` examples in this crate, in
 //! action:
 //!
-//! ![`readline_async_video`](https://github.com/r3bl-org/r3bl-open-core/tree/main/docs/r3bl_terminal_async_clip_ffmpeg.gif?raw=true)
+//! ![`readline_async_video`](https://github.com/r3bl-org/r3bl-open-core/tree/main/docs/video/r3bl_terminal_async_clip_ffmpeg.gif?raw=true)
 //!
 //! # Changelog
 //!

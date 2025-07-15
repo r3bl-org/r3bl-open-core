@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{future::Future, pin::Pin};
+use std::pin::Pin;
 
 use clap::ValueEnum;
 use miette::IntoDiagnostic;

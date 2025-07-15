@@ -479,9 +479,9 @@ mod internal_impl {
     {
         let mut it = render_ops!();
 
-        if let Some(dialog_buffer) = state.get_mut_dialog_buffer(self_id) {
-            if let Some(results) = dialog_buffer.maybe_results.as_ref() {
-                if !results.is_empty() {
+        if let Some(dialog_buffer) = state.get_mut_dialog_buffer(self_id)
+            && let Some(results) = dialog_buffer.maybe_results.as_ref()
+                && !results.is_empty() {
                     render_results_panel_inner::paint_results(
                         &mut it,
                         origin_pos,
@@ -490,8 +490,6 @@ mod internal_impl {
                         dialog_engine,
                     );
                 }
-            }
-        }
 
         it
     }
@@ -652,8 +650,8 @@ mod internal_impl {
         text: &str,
     ) {
         // If lolcat is enabled, then colorize the text.
-        if let Some(style) = maybe_style {
-            if style.lolcat.is_some() {
+        if let Some(style) = maybe_style
+            && style.lolcat.is_some() {
                 let text_gcs = text.grapheme_string();
                 let texts = color_wheel.colorize_into_styled_texts(
                     &text_gcs,
@@ -663,7 +661,6 @@ mod internal_impl {
                 render_tui_styled_texts_into(&texts, ops);
                 return;
             }
-        }
 
         // Otherwise, just paint the text as-is.
         ops.push(RenderOp::PaintTextWithAttributes(
@@ -939,11 +936,10 @@ mod internal_impl {
 
                 DialogEngineMode::ModalAutocomplete => {
                     let selected_index = usize(*dialog_engine.selected_row_index);
-                    if let Some(results) = &dialog_buffer.maybe_results {
-                        if let Some(selected_result) = results.get(selected_index) {
+                    if let Some(results) = &dialog_buffer.maybe_results
+                        && let Some(selected_result) = results.get(selected_index) {
                             return Some(DialogChoice::Yes(selected_result.clone()));
                         }
-                    }
                     return Some(DialogChoice::No);
                 }
             },

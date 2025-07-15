@@ -16,7 +16,6 @@
  */
 
 use std::{fmt::{Debug, Display},
-          future::Future,
           pin::Pin};
 
 use super::{main_event_loop_impl, BoxedSafeApp, GlobalData};
