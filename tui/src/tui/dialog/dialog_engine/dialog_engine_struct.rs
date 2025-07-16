@@ -34,7 +34,7 @@ use crate::{get_terminal_width_no_default, row, u8, width, Ansi256GradientIndex,
 /// In order to change the document, you can use the
 /// [`DialogEngineApi::apply_event`](crate::DialogEngineApi::apply_event) method which
 /// takes [`crate::InputEvent`] and tries to execute it against this buffer.
-#[derive(Clone, Default, Debug)]
+#[derive(Default, Debug)]
 pub struct DialogEngine {
     pub dialog_options: DialogEngineConfigOptions,
     pub editor_engine: EditorEngine,

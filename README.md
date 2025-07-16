@@ -253,7 +253,7 @@ comprehensive documentation for this project, including:
 ### Technical Design Documents
 
 - Parser strategy analysis and design decisions
-- Performance optimization guides (`tui_perf_optimize.md`)
+- Performance optimization guides (`docs/task_tui_perf_optimize.md`)
 - Architecture documentation for various components
 - Feature-specific planning and design documents
 

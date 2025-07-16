@@ -3,9 +3,9 @@
 - [x] fix all the lints after the extraction & archival of the `md_parser_ng`
 - [x] create parser conformance snapshot test, and make sure they pass
       [docs/parser_conformance.md](docs/parser_conformance.md)
-- [ ] review the flamegraph.svg and cargo bench results to ensure no regressions
-      [docs/tui_perf_optimize.md](docs/tui_perf_optimize.md)
-- [ ] complete the performance work started in [tui_perf_optimize](docs/tui_perf_optimize.md)
+- [x] review the flamegraph.svg and cargo bench results to ensure no regressions
+      [docs/task_tui_perf_optimize.md](docs/task_tui_perf_optimize.md)
+- [ ] complete the performance work started in [task_tui_perf_optimize](docs/task_tui_perf_optimize.md)
 - [ ] there are test failures in doctests that try to use terminal I/O (which fails in test
       environment). can you identify and mark them to be "```no_run"
 - [ ] fix all the pedantic lints using claude (and don't allow them anymore in Cargo.toml)

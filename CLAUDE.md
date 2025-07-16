@@ -16,6 +16,8 @@ This project uses a two-file task tracking system to maintain project state and 
 
 - Contains completed feature sets and milestones
 - Move **entire sections** here only when ALL subtasks are complete
+- When moving sections always put the latest changes at the top of the file, so the latest
+  change is always at the top, and the previous changes are below it for historical reference
 - Include the section header and all its subtasks when moving
 - This serves as the project's historical record
 
@@ -48,7 +50,7 @@ This project uses a two-file task tracking system to maintain project state and 
 
 - Run typecheck, test, and lint commands after completing tasks:
   - Fast compiler typecheck command is `cargo check`
-  - Detailed lint check is `cargo clippy`
+  - Detailed lint check is `cargo clippy`, and to fix them use `cargo clippy --fix --allow-dirty`
   - Test check is `cargo nextest run`
   - Ask user for the correct commands if unable to find them
   - Suggest adding these commands to this file for future reference

@@ -458,7 +458,7 @@ mod syn_hi_r3bl_path {
                 let ast_cache: StyleUSSpanLines = try_parse_and_highlight(
                     editor_buffer.get_lines(),
                     editor_engine.current_box.get_computed_style(),
-                    Some((&editor_engine.syntax_set, &editor_engine.theme)),
+                    Some((editor_engine.syntax_set, editor_engine.theme)),
                     &mut editor_engine.parser_byte_cache,
                 )?;
                 editor_engine.set_ast_cache(ast_cache);
@@ -613,11 +613,11 @@ mod syn_hi_syntect_path {
         line: &'a GCString,
     ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
         let file_ext = editor_buffer.get_maybe_file_extension()?;
-        let syntax_ref = try_get_syntax_ref(&editor_engine.syntax_set, file_ext)?;
+        let syntax_ref = try_get_syntax_ref(editor_engine.syntax_set, file_ext)?;
         let theme = &editor_engine.theme;
         let mut highlighter = HighlightLines::new(syntax_ref, theme);
         highlighter
-            .highlight_line(&line.string, &editor_engine.syntax_set)
+            .highlight_line(&line.string, editor_engine.syntax_set)
             .ok()
     }
 }

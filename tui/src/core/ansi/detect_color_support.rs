@@ -163,15 +163,12 @@ pub mod global_color_support {
             Ok(it) => it,
             Err(()) => {
                 // Check if we've already cached the detection result
-                match try_get_cached() {
-                    Ok(cached) => cached,
-                    Err(()) => {
-                        // Not cached yet, so detect once and cache the result
-                        let detected =
-                            examine_env_vars_to_determine_color_support(Stream::Stdout);
-                        set_cached(detected);
-                        detected
-                    }
+                if let Ok(cached) = try_get_cached() { cached } else {
+                    // Not cached yet, so detect once and cache the result
+                    let detected =
+                        examine_env_vars_to_determine_color_support(Stream::Stdout);
+                    set_cached(detected);
+                    detected
                 }
             }
         }

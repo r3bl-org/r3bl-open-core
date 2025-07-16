@@ -124,6 +124,8 @@
     "memmove",
     "middlewares",
     "mimalloc",
+    "mmap",
+    "mmput",
     "msvc",
     "multispace",
     "mworld",

@@ -32,7 +32,7 @@ The [`contributing_guides`](contributing_guides) folder contains templates and g
 
 ### Plans
 
-- [`tui_perf_optimize.md`](tui_perf_optimize.md) - TUI performance optimization guidelines
+- [`task_tui_perf_optimize.md`](task_tui_perf_optimize.md) - TUI performance optimization guidelines
 - [`ng_parser_archive.md`](ng_parser_archive.md) - Archived parser documentation
 
 ### Video Documentation
