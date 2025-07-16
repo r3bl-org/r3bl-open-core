@@ -53,6 +53,12 @@ This project uses a two-file task tracking system to maintain project state and 
   - Ask user for the correct commands if unable to find them
   - Suggest adding these commands to this file for future reference
 
+- For performance analysis, use:
+  - For the latest flamegraph analysis from the `tui/flamegraph.svg` file
+  - `cargo bench` for benchmarks
+  - `cargo flamegraph` for flamegraph profiling
+  - Ask user for the correct commands if unable to find them
+
 ### Git Workflow
 
 - Never commit changes unless explicitly asked by the user

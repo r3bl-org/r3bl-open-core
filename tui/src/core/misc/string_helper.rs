@@ -17,8 +17,8 @@
 
 use std::fmt::Write;
 
-use crate::{glyphs::{ELLIPSIS_GLYPH, SPACER_GLYPH},
-            ColWidth, GCString, GCStringExt, InlineString, InlineStringCow};
+use crate::{ColWidth, GCString, GCStringExt, InlineString, InlineStringCow,
+            glyphs::{ELLIPSIS_GLYPH, SPACER_GLYPH}};
 
 /// Tests whether the given text contains an ANSI escape sequence.
 #[must_use]
@@ -177,7 +177,7 @@ pub fn truncate_from_left(
 
 /// Helper module for truncation functionality both left and right.
 mod truncate_helper {
-    use super::{ColWidth, GCString, InlineString, InlineStringCow, ELLIPSIS_GLYPH};
+    use super::{ColWidth, ELLIPSIS_GLYPH, GCString, InlineString, InlineStringCow};
 
     /// Check if no processing is needed for ASCII strings
     pub fn should_skip_processing_ascii(
@@ -211,8 +211,8 @@ mod truncate_helper {
 
 /// Helper module for left truncation functionality.
 mod truncate_from_right_helper {
-    use super::{truncate_helper, ColWidth, GCString, GCStringExt, InlineString,
-                InlineStringCow, Write, ELLIPSIS_GLYPH, SPACER_GLYPH};
+    use super::{ColWidth, ELLIPSIS_GLYPH, GCString, GCStringExt, InlineString,
+                InlineStringCow, SPACER_GLYPH, Write, truncate_helper};
 
     /// Handle ASCII truncation from the right
     pub fn handle_ascii_truncation(
@@ -271,8 +271,8 @@ mod truncate_from_right_helper {
 
 /// Helper module for right truncation functionality.
 mod truncate_from_left_helper {
-    use super::{truncate_helper, ColWidth, GCString, GCStringExt, InlineString,
-                InlineStringCow, Write, ELLIPSIS_GLYPH, SPACER_GLYPH};
+    use super::{ColWidth, ELLIPSIS_GLYPH, GCString, GCStringExt, InlineString,
+                InlineStringCow, SPACER_GLYPH, Write, truncate_helper};
 
     /// Handle ASCII truncation from the left
     pub fn handle_ascii_truncation(
@@ -432,5 +432,82 @@ mod tests {
         let unicode_string = "Hello, 世界!";
         let result = truncate_from_left(unicode_string, width, false);
         assert_eq!(result.as_ref(), "…lo, 世界!");
+    }
+}
+
+#[cfg(test)]
+mod bench_tests {
+    extern crate test;
+    use test::Bencher;
+
+    use super::*;
+    use crate::width;
+
+    #[bench]
+    fn bench_truncate_ascii_no_truncation_no_pad(b: &mut Bencher) {
+        let text = "Hello, world!";
+        let display_width = width(20);
+        b.iter(|| {
+            let result = truncate_from_right(text, display_width, false);
+            test::black_box(result);
+        });
+    }
+
+    #[bench]
+    fn bench_truncate_ascii_with_truncation(b: &mut Bencher) {
+        let text = "Hello, world! This is a long string that needs truncation";
+        let display_width = width(20);
+        b.iter(|| {
+            let result = truncate_from_right(text, display_width, false);
+            test::black_box(result);
+        });
+    }
+
+    #[bench]
+    fn bench_truncate_ascii_with_padding(b: &mut Bencher) {
+        let text = "Hi!";
+        let display_width = width(20);
+        b.iter(|| {
+            let result = truncate_from_right(text, display_width, true);
+            test::black_box(result);
+        });
+    }
+
+    #[bench]
+    fn bench_truncate_unicode_no_truncation(b: &mut Bencher) {
+        let text = "Hello, 世界!";
+        let display_width = width(20);
+        b.iter(|| {
+            let result = truncate_from_right(text, display_width, false);
+            test::black_box(result);
+        });
+    }
+
+    #[bench]
+    fn bench_truncate_unicode_with_truncation(b: &mut Bencher) {
+        let text =
+            "Hello, 世界! This is a long string with unicode that needs truncation";
+        let display_width = width(20);
+        b.iter(|| {
+            let result = truncate_from_right(text, display_width, false);
+            test::black_box(result);
+        });
+    }
+
+    #[test]
+    fn test_zero_copy_optimization() {
+        // Test that we get a borrowed reference when no processing is needed
+        let text = "Hello, world!";
+        let display_width = width(13); // Exact length, no padding
+        let result = truncate_from_right(text, display_width, false);
+
+        match result {
+            InlineStringCow::Borrowed(_) => {
+                // Good, zero-copy optimization is working
+            }
+            InlineStringCow::Owned(_) => {
+                panic!("Expected borrowed reference for zero-copy optimization");
+            }
+        }
     }
 }
