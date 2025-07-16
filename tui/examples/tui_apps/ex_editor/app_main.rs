@@ -15,22 +15,21 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{box_end, box_start, col, get_tui_style, glyphs, height, inline_string,
-               new_style, ok, render_component_in_current_box,
-               render_component_in_given_box, render_ops, render_tui_styled_texts_into,
-               req_size_pc, row, send_signal, surface, throws, throws_with_return,
-               tui_color, tui_styled_text, tui_styled_texts, tui_stylesheet, width, App,
-               BoxedSafeApp, CommonError, CommonResult, ComponentRegistry,
-               ComponentRegistryMap, DialogBuffer, DialogChoice, DialogComponent,
-               DialogEngineConfigOptions, DialogEngineMode, EditMode, EditorBuffer,
-               EditorComponent, EditorEngineConfig, EventPropagation, FlexBox,
-               FlexBoxId, GCStringExt, GlobalData, HasEditorBuffers, HasFocus,
+use r3bl_tui::{App, BoxedSafeApp, CommonError, CommonResult, ComponentRegistry,
+               ComponentRegistryMap, DEBUG_TUI_MOD, DialogBuffer, DialogChoice,
+               DialogComponent, DialogEngineConfigOptions, DialogEngineMode, EditMode,
+               EditorBuffer, EditorComponent, EditorEngineConfig, EventPropagation,
+               FlexBox, FlexBoxId, GCStringExt, GlobalData, HasEditorBuffers, HasFocus,
                InlineString, InputEvent, ItemsOwned, Key, KeyPress, LayoutDirection,
                LayoutManagement, LineMode, ModifierKeysMask,
-               PerformPositioningAndSizing, RenderOp, RenderPipeline, Size, Surface,
-               SurfaceProps, SurfaceRender, SyntaxHighlightMode,
-               TerminalWindowMainThreadSignal, TuiStylesheet, ZOrder, DEBUG_TUI_MOD,
-               SPACER_GLYPH};
+               PerformPositioningAndSizing, RenderOp, RenderPipeline, SPACER_GLYPH,
+               Size, Surface, SurfaceProps, SurfaceRender, SyntaxHighlightMode,
+               TerminalWindowMainThreadSignal, TuiStylesheet, ZOrder, box_end,
+               box_start, col, get_tui_style, glyphs, height, inline_string, new_style,
+               ok, render_component_in_current_box, render_component_in_given_box,
+               render_ops, render_tui_styled_texts_into, req_size_pc, row, send_signal,
+               surface, throws, throws_with_return, tui_color, tui_styled_text,
+               tui_styled_texts, tui_stylesheet, width};
 use tokio::sync::mpsc::Sender;
 
 use super::{AppSignal, State};
@@ -64,7 +63,7 @@ mod id_impl {
 pub struct AppMain;
 
 mod constructor {
-    use super::{AppMain, AppSignal, BoxedSafeApp, State, DEBUG_TUI_MOD};
+    use super::{AppMain, AppSignal, BoxedSafeApp, DEBUG_TUI_MOD, State};
 
     impl Default for AppMain {
         fn default() -> Self {
@@ -86,12 +85,12 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use super::{col, height, hud, modal_dialogs, perform_layout,
+    use super::{App, AppMain, AppSignal, CommonResult, ComponentRegistry,
+                ComponentRegistryMap, EventPropagation, GlobalData, HasFocus,
+                InputEvent, LayoutManagement, RenderPipeline, State, SurfaceProps,
+                SurfaceRender, col, height, hud, modal_dialogs, perform_layout,
                 populate_component_registry, row, status_bar, stylesheet, surface,
-                throws_with_return, App, AppMain, AppSignal, CommonResult,
-                ComponentRegistry, ComponentRegistryMap, EventPropagation, GlobalData,
-                HasFocus, InputEvent, LayoutManagement, RenderPipeline, State,
-                SurfaceProps, SurfaceRender};
+                throws_with_return};
 
     impl App for AppMain {
         type S = State;
@@ -204,11 +203,11 @@ mod app_main_impl_app_trait {
 }
 
 mod modal_dialogs {
-    use super::{col, ok, throws, width, AppSignal, CommonError, CommonResult,
-                ComponentRegistry, ComponentRegistryMap, DialogBuffer, EditorBuffer,
+    use super::{AppSignal, CommonError, CommonResult, ComponentRegistry,
+                ComponentRegistryMap, DEBUG_TUI_MOD, DialogBuffer, EditorBuffer,
                 FlexBoxId, GCStringExt, HasEditorBuffers, HasFocus, Id, InlineString,
-                InputEvent, ItemsOwned, Key, KeyPress, ModifierKeysMask, State,
-                DEBUG_TUI_MOD};
+                InputEvent, ItemsOwned, Key, KeyPress, ModifierKeysMask, State, col, ok,
+                throws, width};
 
     // This runs on every keystroke, so it should be fast.
     pub fn dialog_component_update_content(state: &mut State, id: FlexBoxId) {
@@ -249,16 +248,14 @@ mod modal_dialogs {
             );
 
         // Content is empty.
-        if let Some(dialog_buffer) = state.dialog_buffers.get_mut(&id) {
-            if dialog_buffer
+        if let Some(dialog_buffer) = state.dialog_buffers.get_mut(&id)
+            && dialog_buffer
                 .editor_buffer
                 .get_as_string_with_comma_instead_of_newlines()
                 == ""
-            {
-                if let Some(it) = state.dialog_buffers.get_mut(&id) {
-                    it.maybe_results = None;
-                }
-            }
+            && let Some(it) = state.dialog_buffers.get_mut(&id)
+        {
+            it.maybe_results = None;
         }
     }
 
@@ -470,11 +467,11 @@ mod modal_dialogs {
 }
 
 mod perform_layout {
-    use super::{box_end, box_start, render_component_in_current_box,
-                render_component_in_given_box, req_size_pc, throws, AppMain, AppSignal,
-                CommonResult, ComponentRegistryMap, FlexBox, FlexBoxId, GlobalData,
-                HasFocus, Id, LayoutDirection, LayoutManagement,
-                PerformPositioningAndSizing, State, Surface, SurfaceRender};
+    use super::{AppMain, AppSignal, CommonResult, ComponentRegistryMap, FlexBox,
+                FlexBoxId, GlobalData, HasFocus, Id, LayoutDirection, LayoutManagement,
+                PerformPositioningAndSizing, State, Surface, SurfaceRender, box_end,
+                box_start, render_component_in_current_box,
+                render_component_in_given_box, req_size_pc, throws};
 
     pub struct ContainerSurfaceRender<'a> {
         pub _app: &'a mut AppMain,
@@ -539,12 +536,12 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use super::{get_tui_style, glyphs, inline_string, modal_dialogs, send_signal,
-                stylesheet, AppSignal, ComponentRegistry, ComponentRegistryMap,
+    use super::{AppSignal, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
                 DialogChoice, DialogComponent, DialogEngineConfigOptions,
                 DialogEngineMode, EditMode, EditorComponent, EditorEngineConfig,
                 FlexBoxId, HasFocus, Id, LineMode, Sender, State, SyntaxHighlightMode,
-                TerminalWindowMainThreadSignal, DEBUG_TUI_MOD};
+                TerminalWindowMainThreadSignal, get_tui_style, glyphs, inline_string,
+                modal_dialogs, send_signal, stylesheet};
 
     pub fn create_components(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
@@ -604,8 +601,8 @@ mod populate_component_registry {
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
         mod handler_fn {
-            use super::{modal_dialogs, AppSignal, DialogChoice, FlexBoxId, Id, Sender,
-                        State, TerminalWindowMainThreadSignal};
+            use super::{AppSignal, DialogChoice, FlexBoxId, Id, Sender, State,
+                        TerminalWindowMainThreadSignal, modal_dialogs};
             pub fn on_dialog_press_handler(
                 dialog_choice: DialogChoice,
                 state: &mut State,
@@ -691,8 +688,8 @@ mod populate_component_registry {
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
         mod handler_fn {
-            use super::{modal_dialogs, AppSignal, DialogChoice, FlexBoxId, Id, Sender,
-                        State, TerminalWindowMainThreadSignal};
+            use super::{AppSignal, DialogChoice, FlexBoxId, Id, Sender, State,
+                        TerminalWindowMainThreadSignal, modal_dialogs};
 
             pub fn on_dialog_press_handler(
                 dialog_choice: DialogChoice,
@@ -775,8 +772,8 @@ mod populate_component_registry {
 }
 
 mod stylesheet {
-    use super::{new_style, throws_with_return, tui_color, tui_stylesheet, CommonResult,
-                Id, TuiStylesheet};
+    use super::{CommonResult, Id, TuiStylesheet, new_style, throws_with_return,
+                tui_color, tui_stylesheet};
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
@@ -818,9 +815,9 @@ mod stylesheet {
 }
 
 mod hud {
-    use super::{col, new_style, render_ops, render_tui_styled_texts_into, row,
-                tui_color, tui_styled_text, tui_styled_texts, RenderOp, RenderPipeline,
-                Size, ZOrder, SPACER_GLYPH};
+    use super::{RenderOp, RenderPipeline, SPACER_GLYPH, Size, ZOrder, col, new_style,
+                render_ops, render_tui_styled_texts_into, row, tui_color,
+                tui_styled_text, tui_styled_texts};
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
@@ -852,9 +849,9 @@ mod hud {
 }
 
 mod status_bar {
-    use super::{col, new_style, render_ops, render_tui_styled_texts_into, tui_color,
-                tui_styled_text, tui_styled_texts, RenderOp, RenderPipeline, Size,
-                ZOrder, SPACER_GLYPH};
+    use super::{RenderOp, RenderPipeline, SPACER_GLYPH, Size, ZOrder, col, new_style,
+                render_ops, render_tui_styled_texts_into, tui_color, tui_styled_text,
+                tui_styled_texts};
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {

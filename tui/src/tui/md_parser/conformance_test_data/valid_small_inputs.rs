@@ -25,10 +25,9 @@
 //!
 //! ## Additional Test Data
 //!
-//! The following test data is not exported from this module, but it is used in tests
+//! The following test data is exported from this module and used in tests
 //! as well as in examples (the `ex_editor` example):
-//! - [`crate::get_real_world_editor_content`]: A function defined in the parent module
-//!   that provides real-world markdown content loaded from an external file. This content
+//! - [`EX_EDITOR_CONTENT`]: Real-world markdown content loaded from an external file that
 //!   includes complex features like emojis in headings, nested lists, code blocks, and
 //!   metadata for testing parser compatibility with realistic documents.
 
@@ -74,3 +73,19 @@ pub const EMOJI_MULTIPLE: &str = "# Multiple emojis 😀🚀📝";
 /// code blocks, and practical content structure.
 pub const SMALL_REAL_WORLD_CONTENT: &str =
     include_str!("real_world_files/small_quick_start.md");
+
+/// Real-world editor content from the `ex_editor` example.
+///
+/// This content includes complex features like emojis in headings, nested lists,
+/// code blocks, and metadata for testing parser compatibility with realistic documents.
+/// Used by both test cases and the actual editor example to ensure consistency.
+///
+/// This constant references the authoritative `EX_EDITOR_CONTENT` from the editor
+/// module, which loads the content from an external markdown file. This ensures
+/// that both the editor example and parser tests use identical content, maintaining
+/// consistency and preventing data drift.
+///
+/// The content demonstrates various markdown features that the parser needs to handle
+/// correctly, making it valuable for both functional testing and as example content
+/// for users of the editor component.
+pub const EX_EDITOR_CONTENT: &str = crate::editor::EX_EDITOR_CONTENT;

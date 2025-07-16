@@ -18,43 +18,28 @@
 use std::{collections::HashMap,
           fmt::{Debug, Display, Formatter, Result}};
 
-use r3bl_tui::{DialogBuffer, EditorBuffer, FlexBoxId,
-               HasDialogBuffers, HasEditorBuffers, DEFAULT_SYN_HI_FILE_EXT};
+use r3bl_tui::{DEFAULT_SYN_HI_FILE_EXT, DialogBuffer, EditorBuffer, FlexBoxId,
+               HasDialogBuffers, HasEditorBuffers};
 
 use crate::ex_editor::Id;
 
-/// Provides default content for the editor example
+/// Provides default content for the editor example.
+///
+/// This function loads real-world markdown content that demonstrates various
+/// markdown features including metadata, headings with emojis, lists, code blocks,
+/// and formatting. The content is shared between this example and the parser tests
+/// to ensure consistency.
+///
+/// The content is loaded from the `r3bl_tui::editor::EX_EDITOR_CONTENT` constant,
+/// which [`include_str!`] the content from an external markdown file, ensuring a
+/// single source of truth for this example data.
+///
+/// # Returns
+///
+/// A vector of string slices, where each slice represents one line of the markdown
+/// content. This format is suitable for initializing an `EditorBuffer`.
 fn get_default_editor_content() -> Vec<&'static str> {
-    vec![
-        "# Welcome to the R3BL TUI Editor",
-        "",
-        "This is a **markdown** editor with syntax highlighting.",
-        "",
-        "## Features",
-        "",
-        "- Syntax highlighting for code blocks",
-        "- Support for *italic* and **bold** text",
-        "- Links: [R3BL](https://r3bl.com)",
-        "- Images: ![alt text](image.png)",
-        "",
-        "## Code Example",
-        "",
-        "```rust",
-        "fn main() {",
-        "    println!(\"Hello, world!\");",
-        "}",
-        "```",
-        "",
-        "## Lists",
-        "",
-        "1. First item",
-        "2. Second item",
-        "   - Nested item",
-        "   - Another nested item",
-        "",
-        "- [x] Completed task",
-        "- [ ] Uncompleted task",
-    ]
+    r3bl_tui::editor::EX_EDITOR_CONTENT.lines().collect()
 }
 
 #[derive(Clone, PartialEq)]
@@ -64,8 +49,8 @@ pub struct State {
 }
 
 mod constructor {
-    use super::{constructor, get_default_editor_content, EditorBuffer, FlexBoxId,
-                HashMap, Id, State, DEFAULT_SYN_HI_FILE_EXT};
+    use super::{DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, FlexBoxId, HashMap, Id, State,
+                constructor, get_default_editor_content};
 
     impl Default for State {
         fn default() -> Self { constructor::get_initial_state() }

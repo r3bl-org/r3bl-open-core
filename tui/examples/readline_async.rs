@@ -21,12 +21,12 @@ use std::{fs,
           str::FromStr,
           time::Duration};
 
-use miette::{miette, IntoDiagnostic};
-use r3bl_tui::{bold, fg_color, fg_red, fg_slate_gray, inline_string,
-               log::{try_initialize_logging_global, DisplayPreference},
+use miette::{IntoDiagnostic, miette};
+use r3bl_tui::{InlineVec, OutputDevice, SendRawTerminal, SharedWriter, SpinnerStyle,
+               bold, fg_color, fg_red, fg_slate_gray, inline_string,
+               log::{DisplayPreference, try_initialize_logging_global},
                readline_async::{Readline, ReadlineAsyncContext, ReadlineEvent, Spinner},
-               rla_println, set_jemalloc_in_main, tui_color, InlineVec, OutputDevice,
-               SendRawTerminal, SharedWriter, SpinnerStyle};
+               rla_println, set_jemalloc_in_main, tui_color};
 use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
@@ -239,7 +239,7 @@ mod task_1 {
 
 /// This task uses [tracing] to log to stdout (via [`SharedWriter`]).
 mod task_2 {
-    use super::{inline_string, SharedWriter, State};
+    use super::{SharedWriter, State, inline_string};
 
     pub fn tick(state: &mut State, _stdout: &mut SharedWriter) {
         if !state.task_2_state.is_running {
@@ -257,9 +257,9 @@ mod task_2 {
 }
 
 mod process_input_event {
-    use super::{file_walker, get_info_message, long_running_task, spawn, Command,
-                ControlFlow, Duration, FromStr, IntoDiagnostic, Readline, SharedWriter,
-                State, Write};
+    use super::{Command, ControlFlow, Duration, FromStr, IntoDiagnostic, Readline,
+                SharedWriter, State, Write, file_walker, get_info_message,
+                long_running_task, spawn};
 
     pub fn process(
         user_input: String,
@@ -343,7 +343,7 @@ mod process_input_event {
                                 {
                                     Ok(()) => {}
                                     Err(_) => todo!(),
-                                };
+                                }
                             }
                             Err(_) => todo!(),
                         }
@@ -357,8 +357,8 @@ mod process_input_event {
 }
 
 mod long_running_task {
-    use super::{interval, spawn, Duration, OutputDevice, Readline, SharedWriter,
-                Spinner, SpinnerStyle, Write};
+    use super::{Duration, OutputDevice, Readline, SharedWriter, Spinner, SpinnerStyle,
+                Write, interval, spawn};
 
     // Spawn a task that uses the shared writer to print to stdout, and pauses the spinner
     // at the start, and resumes it when it ends.
@@ -402,10 +402,10 @@ mod long_running_task {
 
             loop {
                 // Check for spinner shutdown (via interruption).
-                if let Ok(Some(ref spinner)) = maybe_spinner {
-                    if spinner.is_shutdown() {
-                        break;
-                    }
+                if let Ok(Some(ref spinner)) = maybe_spinner
+                    && spinner.is_shutdown()
+                {
+                    break;
                 }
 
                 // Wait for the interval duration (one tick).
@@ -435,8 +435,8 @@ mod long_running_task {
 }
 
 pub mod file_walker {
-    use super::{fs, miette, path, sleep, smallvec, Duration, InlineVec, IntoDiagnostic,
-                PathBuf, SendRawTerminal, SharedWriter};
+    use super::{Duration, InlineVec, IntoDiagnostic, PathBuf, SendRawTerminal,
+                SharedWriter, fs, miette, path, sleep, smallvec};
 
     pub const FOLDER_DELIM: &str = std::path::MAIN_SEPARATOR_STR;
     pub const SPACE_CHAR: &str = " ";
@@ -446,8 +446,8 @@ pub mod file_walker {
     ///   `/home/nazmul/github/r3bl_terminal_async`.
     /// - Returns a tuple of `(path, name)`. Eg:
     ///   (`/home/nazmul/github/r3bl_terminal_async`, `r3bl_terminal_async`).
-    pub fn get_current_working_directory(
-    ) -> miette::Result<(/* path */ String, /* name */ String)> {
+    pub fn get_current_working_directory()
+    -> miette::Result<(/* path */ String, /* name */ String)> {
         let path = std::env::current_dir().into_diagnostic()?;
 
         let name = path

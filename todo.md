@@ -1,6 +1,9 @@
 # clean up and release: https://github.com/r3bl-org/r3bl-open-core/issues/397
 
 - [x] fix all the lints after the extraction & archival of the `md_parser_ng`
+- [x] create parser conformance snapshot test, and make sure they pass
+      [docs/parser_conformance.md](docs/parser_conformance.md)
+- [ ] review the flamegraph.svg and cargo bench results to ensure no regressions
 - [ ] complete the performance work started in [tui_perf_optimize](docs/tui_perf_optimize.md)
 - [ ] there are test failures in doctests that try to use terminal I/O (which fails in test
       environment). can you identify and mark them to be "```no_run"
@@ -14,24 +17,23 @@
 
 # editor content storage enhancements
 
-- [ ] Change `EditorContent::lines: VecEditorContentLines` to a different data structure
-      that is still an array of lines, which doesn't need to be materialized into `String`
-      and can be accessed as `&str`, but works with a modified legacy parser which knows
-      how to handle a different kind of `EOL`. This data structure represents a line as a
-      char array of some default size (eg: 256 chars) and is preallocated. The `\n` char
-      followed by a char that can't be typed in the editor (eg: `\0`) is used to represent
-      the end of line. This will require changes to the editor component as well as the
-      parser. Effectively, this is a gap buffer implementation. Once a line is allocated,
-      the only time it will be reallocated / resized is when the line is too long (eg:
-      more than 256 chars), or a line is deleted. Reallocation is cheap (relatively
+- [ ] Change `EditorContent::lines: VecEditorContentLines` to a different data structure that is
+      still an array of lines, which doesn't need to be materialized into `String` and can be
+      accessed as `&str`, but works with a modified legacy parser which knows how to handle a
+      different kind of `EOL`. This data structure represents a line as a char array of some default
+      size (eg: 256 chars) and is preallocated. The `\n` char followed by a char that can't be typed
+      in the editor (eg: `\0`) is used to represent the end of line. This will require changes to
+      the editor component as well as the parser. Effectively, this is a gap buffer implementation.
+      Once a line is allocated, the only time it will be reallocated / resized is when the line is
+      too long (eg: more than 256 chars), or a line is deleted. Reallocation is cheap (relatively
       speaking) because to copy 100K bytes it takes a few thousand nanoseconds. And this
-      reallocation will only happen rarely. This means that to syntax highlight these
-      `lines` it is zero-copy! This won't make that big of a difference except in cases
-      where the documents are very large (> 1MB). This comes from the work done in the
-      `md_parser_ng` crate which is archive that showed that a `&str` parser is the
-      fastest. So instead of bringing the mountain to Muhammad, we will bring Muhammad to
-      the mountain. The mountain is the `&str` parser, and Muhammad is the editor
-      component. Here's some code:
+      reallocation will only happen rarely. This means that to syntax highlight these `lines` it is
+      zero-copy! This won't make that big of a difference except in cases where the documents are
+      very large (> 1MB). This comes from the work done in the `md_parser_ng` crate which is archive
+      that showed that a `&str` parser is the fastest. So instead of bringing the mountain to
+      Muhammad, we will bring Muhammad to the mountain. The mountain is the `&str` parser, and
+      Muhammad is the editor component. Here's some code:
+
       ```rust
       // Assume the line is 256 chars long.
       let empty_line = ['\0', '\0', '\0', ..., '\0']  // 256 '\0' chars
