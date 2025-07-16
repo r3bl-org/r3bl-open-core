@@ -400,20 +400,17 @@ mod print_text_with_attributes_helper {
             if line_copy.get(insertion_col_index).is_some() {
                 let pixel_char = {
                     let seg_text: &str = seg.get_str(text_gcs);
-                    match (maybe_style, seg_text) {
-                        (None, SPACER_GLYPH) => PixelChar::Spacer,
-                        _ => {
-                            // Convert the segment text to a single char
-                            let display_char = if seg_text.chars().count() == 1 {
-                                seg_text.chars().next().unwrap()
-                            } else {
-                                // For multi-char segments, use the first char
-                                seg_text.chars().next().unwrap_or('�')
-                            };
-                            PixelChar::PlainText {
-                                display_char,
-                                maybe_style,
-                            }
+                    if let (None, SPACER_GLYPH) = (maybe_style, seg_text) { PixelChar::Spacer } else {
+                        // Convert the segment text to a single char
+                        let display_char = if seg_text.chars().count() == 1 {
+                            seg_text.chars().next().unwrap()
+                        } else {
+                            // For multi-char segments, use the first char
+                            seg_text.chars().next().unwrap_or('�')
+                        };
+                        PixelChar::PlainText {
+                            display_char,
+                            maybe_style,
                         }
                     }
                 };

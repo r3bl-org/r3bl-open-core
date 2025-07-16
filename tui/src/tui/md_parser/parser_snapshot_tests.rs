@@ -42,7 +42,7 @@ mod tests {
             List::from(vec![$($elem),*])
         };
     }
-    
+
     /// Helper to assert document has expected number of elements
     fn assert_doc_len(doc: &MdDocument, expected: usize) {
         assert_eq!(
@@ -68,12 +68,11 @@ mod tests {
                 for (i, (actual, expected)) in fragments.iter().zip(expected_fragments.iter()).enumerate() {
                     assert_eq!(
                         actual, expected,
-                        "Fragment {} mismatch: {:?} != {:?}",
-                        i, actual, expected
+                        "Fragment {i} mismatch: {actual:?} != {expected:?}"
                     );
                 }
             }
-            _ => panic!("Expected Text element, got {:?}", element),
+            _ => panic!("Expected Text element, got {element:?}"),
         }
     }
 
@@ -84,7 +83,7 @@ mod tests {
                 assert_eq!(actual_level.level, level, "Heading level mismatch");
                 assert_eq!(*actual_text, text, "Heading text mismatch");
             }
-            _ => panic!("Expected Heading element, got {:?}", element),
+            _ => panic!("Expected Heading element, got {element:?}"),
         }
     }
 
@@ -92,7 +91,7 @@ mod tests {
     fn assert_title_element(element: &MdElement, expected: &str) {
         match element {
             MdElement::Title(actual) => assert_eq!(*actual, expected, "Title mismatch"),
-            _ => panic!("Expected Title element, got {:?}", element),
+            _ => panic!("Expected Title element, got {element:?}"),
         }
     }
 
@@ -104,7 +103,7 @@ mod tests {
                     assert_eq!(actual, expected, "Tag mismatch");
                 }
             }
-            _ => panic!("Expected Tags element, got {:?}", element),
+            _ => panic!("Expected Tags element, got {element:?}"),
         }
     }
 
@@ -116,14 +115,14 @@ mod tests {
                     assert_eq!(actual, expected, "Author mismatch");
                 }
             }
-            _ => panic!("Expected Authors element, got {:?}", element),
+            _ => panic!("Expected Authors element, got {element:?}"),
         }
     }
 
     fn assert_date_element(element: &MdElement, expected: &str) {
         match element {
             MdElement::Date(actual) => assert_eq!(*actual, expected, "Date mismatch"),
-            _ => panic!("Expected Date element, got {:?}", element),
+            _ => panic!("Expected Date element, got {element:?}"),
         }
     }
 
@@ -184,7 +183,7 @@ mod tests {
         let (remainder, doc) = parse_markdown(INLINE_CODE_VARIATIONS).unwrap();
         assert_eq!(remainder, "");
         // This test data has multiple lines with inline code
-        assert!(doc.len() > 0);
+        assert!(!doc.is_empty());
         for element in doc.iter() {
             match element {
                 MdElement::Text(fragments) => {
@@ -237,7 +236,7 @@ mod tests {
         // MIXED_FORMATTING contains mixed bold, italic, and inline code
         let (remainder, doc) = parse_markdown(MIXED_FORMATTING).unwrap();
         assert_eq!(remainder, "");
-        assert!(doc.len() > 0);
+        assert!(!doc.is_empty());
         // Verify mixed formatting elements exist
         for element in doc.iter() {
             if let MdElement::Text(fragments) = element {
@@ -340,14 +339,14 @@ mod tests {
         // UNICODE_CONTENT contains text with emojis
         let (remainder, doc) = parse_markdown(UNICODE_CONTENT).unwrap();
         assert_eq!(remainder, "");
-        assert!(doc.len() > 0);
+        assert!(!doc.is_empty());
         // Unicode should be preserved in the parsed content
         for element in doc.iter() {
             if let MdElement::Text(fragments) = element {
                 // Check that unicode is preserved in fragments
                 for fragment in fragments.iter() {
                     match fragment {
-                        MdLineFragment::Plain(text) | 
+                        MdLineFragment::Plain(text) |
                         MdLineFragment::InlineCode(text) => {
                             // Just verify text exists, don't assume all fragments have unicode
                             let _ = text;
@@ -391,17 +390,17 @@ mod tests {
         // SMALL_REAL_WORLD_CONTENT is a complete document with metadata, headings, lists, code blocks
         let (remainder, doc) = parse_markdown(SMALL_REAL_WORLD_CONTENT).unwrap();
         assert_eq!(remainder, "");
-        
+
         // Should have multiple elements including metadata, headings, text, lists, and code blocks
         assert!(doc.len() > 5, "Expected complex document structure");
-        
+
         // Verify document has various element types
         let has_title = doc.iter().any(|e| matches!(e, MdElement::Title(_)));
         let has_tags = doc.iter().any(|e| matches!(e, MdElement::Tags(_)));
         let has_heading = doc.iter().any(|e| matches!(e, MdElement::Heading(_)));
         let has_list = doc.iter().any(|e| matches!(e, MdElement::SmartList(_)));
         let has_code = doc.iter().any(|e| matches!(e, MdElement::CodeBlock(_)));
-        
+
         assert!(has_title, "Document should have a title");
         assert!(has_tags, "Document should have tags");
         assert!(has_heading, "Document should have headings");
@@ -414,16 +413,16 @@ mod tests {
         // EX_EDITOR_CONTENT is a complex document with various markdown features
         let (remainder, doc) = parse_markdown(EX_EDITOR_CONTENT).unwrap();
         assert_eq!(remainder, "");
-        
+
         // Should be a complex document
         assert!(doc.len() > 10, "Expected complex document with many elements");
-        
+
         // Verify presence of various markdown features
         let mut has_metadata = false;
         let mut has_emoji_heading = false;
         let mut has_nested_list = false;
         let mut has_checkbox = false;
-        
+
         for element in doc.iter() {
             match element {
                 MdElement::Title(_) | MdElement::Tags(_) | MdElement::Authors(_) | MdElement::Date(_) => {
@@ -446,7 +445,7 @@ mod tests {
                 _ => {}
             }
         }
-        
+
         assert!(has_metadata, "Document should have metadata");
         assert!(has_emoji_heading, "Document should have emoji in headings");
         assert!(has_nested_list || has_checkbox, "Document should have advanced list features");
@@ -484,7 +483,7 @@ mod tests {
         assert_eq!(remainder, "");
         // Should have multiple headings
         let heading_count = doc.iter().filter(|e| matches!(e, MdElement::Heading(_))).count();
-        assert!(heading_count >= 2, "Expected multiple headings, found {}", heading_count);
+        assert!(heading_count >= 2, "Expected multiple headings, found {heading_count}");
     }
 
     #[test]
@@ -492,17 +491,17 @@ mod tests {
         // ALL_HEADING_LEVELS contains headings from H1 to H6
         let (remainder, doc) = parse_markdown(ALL_HEADING_LEVELS).unwrap();
         assert_eq!(remainder, "");
-        
+
         // Should have at least 6 headings
         let heading_count = doc.iter().filter(|e| matches!(e, MdElement::Heading(_))).count();
         assert!(heading_count >= 6, "Expected at least 6 headings");
-        
+
         // Verify heading levels 1-6 are present
         for level in 1..=6 {
             let has_level = doc.iter().any(|e| {
                 matches!(e, MdElement::Heading(HeadingData { level: l, .. }) if l.level == level)
             });
-            assert!(has_level, "Missing heading level {}", level);
+            assert!(has_level, "Missing heading level {level}");
         }
     }
 
@@ -547,11 +546,11 @@ mod tests {
         // CHECKBOXES contains checked and unchecked checkboxes in lists
         let (remainder, doc) = parse_markdown(CHECKBOXES).unwrap();
         assert_eq!(remainder, "");
-        
+
         // Find lists with checkboxes
         let mut found_checked = false;
         let mut found_unchecked = false;
-        
+
         for element in doc.iter() {
             if let MdElement::SmartList((lines, _, _)) = element {
                 for line in lines.iter() {
@@ -565,7 +564,7 @@ mod tests {
                 }
             }
         }
-        
+
         assert!(found_checked, "Expected at least one checked checkbox");
         assert!(found_unchecked, "Expected at least one unchecked checkbox");
     }
@@ -596,23 +595,23 @@ mod tests {
         // CODE_BLOCK_RUST contains a Rust code block
         let (remainder, doc) = parse_markdown(CODE_BLOCK_RUST).unwrap();
         assert_eq!(remainder, "");
-        
+
         // Find the code block
         let code_block = doc.iter().find(|e| matches!(e, MdElement::CodeBlock(_)));
         assert!(code_block.is_some(), "Expected a code block");
-        
+
         if let Some(MdElement::CodeBlock(lines)) = code_block {
             // Should have start tag, content, and end tag
             assert!(lines.len() >= 3, "Code block should have at least 3 lines");
-            
+
             // Check language is Rust
             assert_eq!(lines[0].language, Some("rust"));
             assert_eq!(lines[0].content, CodeBlockLineContent::StartTag);
-            
+
             // Last line should be end tag
             let last = &lines[lines.len() - 1];
             assert_eq!(last.content, CodeBlockLineContent::EndTag);
-            
+
             // Middle lines should be code content
             for i in 1..lines.len()-1 {
                 assert!(matches!(lines[i].content, CodeBlockLineContent::Text(_)));
@@ -656,7 +655,7 @@ mod tests {
         assert_eq!(remainder, "");
         // Should handle nested formatting
         let has_formatting = doc.iter().any(|e| {
-            matches!(e, MdElement::Text(fragments) if fragments.iter().any(|f| 
+            matches!(e, MdElement::Text(fragments) if fragments.iter().any(|f|
                 matches!(f, MdLineFragment::Bold(_) | MdLineFragment::Italic(_) | MdLineFragment::InlineCode(_))
             ))
         });
@@ -777,14 +776,14 @@ mod tests {
         assert_eq!(remainder, "");
         // Real world content should be substantial and varied
         assert!(doc.len() > 20, "Real world document should be large");
-        
+
         // Should have all major element types
         let has_metadata = doc.iter().any(|e| matches!(e, MdElement::Title(_) | MdElement::Tags(_) | MdElement::Authors(_) | MdElement::Date(_)));
         let has_headings = doc.iter().any(|e| matches!(e, MdElement::Heading(_)));
         let has_lists = doc.iter().any(|e| matches!(e, MdElement::SmartList(_)));
         let has_code = doc.iter().any(|e| matches!(e, MdElement::CodeBlock(_)));
         let has_text = doc.iter().any(|e| matches!(e, MdElement::Text(_)));
-        
+
         assert!(has_metadata, "Real world doc should have metadata");
         assert!(has_headings, "Real world doc should have headings");
         assert!(has_lists, "Real world doc should have lists");

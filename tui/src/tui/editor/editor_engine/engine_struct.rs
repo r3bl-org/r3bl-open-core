@@ -19,7 +19,7 @@ use std::fmt::Debug;
 
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-use crate::{load_default_theme, try_load_r3bl_theme, DocumentStorage, PartialFlexBox,
+use crate::{get_cached_syntax_set, get_cached_theme, DocumentStorage, PartialFlexBox,
             Size, StyleUSSpanLines};
 
 /// Do not create this struct directly. Please use [`new()`](EditorEngine::new) instead.
@@ -38,15 +38,15 @@ use crate::{load_default_theme, try_load_r3bl_theme, DocumentStorage, PartialFle
 /// [`crate::engine_public_api::apply_event`] method which takes [`crate::InputEvent`] and
 /// tries to convert it to an [`crate::EditorEvent`] and then execute them against this
 /// buffer.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct EditorEngine {
     /// Set by [`crate::engine_public_api::render_engine`].
     pub current_box: PartialFlexBox,
     pub config_options: EditorEngineConfig,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
-    pub syntax_set: SyntaxSet,
+    pub syntax_set: &'static SyntaxSet,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
-    pub theme: Theme,
+    pub theme: &'static Theme,
     /// This is an **optional** field that is used to somewhat speed up the legacy
     /// Markdown parser [`crate::parse_markdown()`]. It is lazily created if the legacy parser is
     /// used, and it is re-used every time the document is re-parsed.
@@ -91,14 +91,14 @@ impl EditorEngine {
         Self {
             current_box: PartialFlexBox::default(),
             config_options,
-            syntax_set: SyntaxSet::load_defaults_newlines(),
-            theme: try_load_r3bl_theme().unwrap_or_else(|_| load_default_theme()),
+            syntax_set: get_cached_syntax_set(),
+            theme: get_cached_theme(),
             parser_byte_cache: None,
             ast_cache: None,
         }
     }
 
-    pub fn viewport(&self) -> Size { self.current_box.style_adjusted_bounds_size }
+    #[must_use] pub fn viewport(&self) -> Size { self.current_box.style_adjusted_bounds_size }
 
     pub fn set_ast_cache(&mut self, ast_cache: StyleUSSpanLines) {
         self.ast_cache = Some(ast_cache);
@@ -106,9 +106,9 @@ impl EditorEngine {
 
     pub fn clear_ast_cache(&mut self) { self.ast_cache = None }
 
-    pub fn get_ast_cache(&self) -> Option<&StyleUSSpanLines> { self.ast_cache.as_ref() }
+    #[must_use] pub fn get_ast_cache(&self) -> Option<&StyleUSSpanLines> { self.ast_cache.as_ref() }
 
-    pub fn ast_cache_is_empty(&self) -> bool { self.ast_cache.is_none() }
+    #[must_use] pub fn ast_cache_is_empty(&self) -> bool { self.ast_cache.is_none() }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

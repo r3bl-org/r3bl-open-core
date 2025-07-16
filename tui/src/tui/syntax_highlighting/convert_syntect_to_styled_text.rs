@@ -33,8 +33,8 @@
 use syntect::parsing::SyntaxSet;
 
 use super::{StyleUSSpan, StyleUSSpanLine};
-use crate::{tui_color, tui_style_attrib, tui_styled_text, List, TuiColor, TuiStyle,
-            TuiStyledTexts};
+use crate::{List, TuiColor, TuiStyle, TuiStyledTexts, tui_color, tui_style_attrib,
+            tui_styled_text};
 
 // Type aliases for syntect types.
 
@@ -121,11 +121,11 @@ pub fn convert_span_line_from_syntect_to_tui_styled_texts(
 
 #[cfg(test)]
 mod tests_simple_md_highlight {
-    use syntect::{easy::HighlightLines, highlighting::Style, parsing::SyntaxSet,
-                  util::LinesWithEndings};
+    use syntect::{easy::HighlightLines, highlighting::Style, util::LinesWithEndings};
 
-    use crate::{assert_eq2, convert_span_line_from_syntect_to_tui_styled_texts,
-                try_load_r3bl_theme, tui_color, ConvertToPlainText, TuiStyledTexts};
+    use crate::{ConvertToPlainText, TuiStyledTexts, assert_eq2,
+                convert_span_line_from_syntect_to_tui_styled_texts,
+                get_cached_syntax_set, get_cached_theme, tui_color};
 
     #[test]
     fn simple_md_highlight() {
@@ -144,12 +144,12 @@ mod tests_simple_md_highlight {
         };
 
         // Load these once at the start of your program.
-        let syntax_set = SyntaxSet::load_defaults_newlines();
-        let theme = try_load_r3bl_theme().unwrap();
+        let syntax_set = get_cached_syntax_set();
+        let theme = get_cached_theme();
 
         // Prepare Markdown syntax highlighting.q
         let md_syntax = syntax_set.find_syntax_by_extension("md").unwrap();
-        let mut highlight_lines = HighlightLines::new(md_syntax, &theme);
+        let mut highlight_lines = HighlightLines::new(md_syntax, theme);
 
         let mut line_idx = 0;
         let mut vec_styled_texts = vec![];
@@ -158,7 +158,7 @@ mod tests_simple_md_highlight {
             LinesWithEndings::from(md_content.as_str())
         {
             let vec_styled_str: Vec<(Style, &str)> =
-                highlight_lines.highlight_line(line, &syntax_set).unwrap();
+                highlight_lines.highlight_line(line, syntax_set).unwrap();
 
             // // To pretty print the output, use the following:
             // let escaped = as_24_bit_terminal_escaped(&vec_styled_str[..], false);
@@ -204,8 +204,8 @@ mod tests_simple_md_highlight {
 
 #[cfg(test)]
 mod tests_convert_span_line_and_highlighted_line {
-    use crate::{assert_eq2, convert_span_line_from_syntect_to_tui_styled_texts,
-                tui_color, TuiStyledTexts};
+    use crate::{TuiStyledTexts, assert_eq2,
+                convert_span_line_from_syntect_to_tui_styled_texts, tui_color};
 
     #[test]
     fn syntect_conversion() {
@@ -309,10 +309,10 @@ mod tests_convert_span_line_and_highlighted_line {
 mod tests_convert_style_and_color {
     use smallvec::smallvec;
 
-    use crate::{assert_eq2, ch, console_log, convert_style_from_syntect_to_tui,
-                get_tui_style, get_tui_styles, new_style, throws, tui_color,
-                tui_style_attrib, tui_stylesheet, CommonResult, InlineVec, TuiStyle,
-                TuiStylesheet};
+    use crate::{CommonResult, InlineVec, TuiStyle, TuiStylesheet, assert_eq2, ch,
+                console_log, convert_style_from_syntect_to_tui, get_tui_style,
+                get_tui_styles, new_style, throws, tui_color, tui_style_attrib,
+                tui_stylesheet};
 
     #[test]
     fn syntect_style_conversion() {

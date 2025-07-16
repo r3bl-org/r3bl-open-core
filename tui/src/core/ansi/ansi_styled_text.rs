@@ -282,7 +282,7 @@ pub mod ansi_styled_text_impl {
             // Slice and collect into a new InlineVec
             pixel_chars[start_index..=end_index]
                 .iter()
-                .cloned()
+                .copied()
                 .collect()
         }
     }

@@ -5,9 +5,30 @@
   - [Latest Flamegraph Analysis (2025-07-16)](#latest-flamegraph-analysis-2025-07-16)
     - [Profiling Configuration](#profiling-configuration)
     - [Current Performance Bottleneck Analysis](#current-performance-bottleneck-analysis)
-    - [Key Changes from Previous Analysis (2025-07-14)](#key-changes-from-previous-analysis-2025-07-14)
-    - [Benchmark Results (2025-07-16)](#benchmark-results-2025-07-16)
-    - [Immediate Action Required](#immediate-action-required)
+    - [Key Findings from Current Analysis](#key-findings-from-current-analysis)
+    - [Immediate Action Items](#immediate-action-items)
+  - [Syntax Highlighting Resource Caching (✅ Completed - 2025-07-16)](#syntax-highlighting-resource-caching--completed---2025-07-16)
+    - [Problem Identified](#problem-identified)
+    - [Root Cause Analysis](#root-cause-analysis)
+    - [Solution Implemented](#solution-implemented)
+    - [Performance Impact Verified](#performance-impact-verified)
+    - [Benchmark Results](#benchmark-results)
+      - [Individual Resource Loading](#individual-resource-loading)
+      - [Multiple Editor Creation (10 editors)](#multiple-editor-creation-10-editors)
+    - [Key Achievement](#key-achievement)
+  - [GCString Creation Optimization (✅ Completed - 2025-07-16)](#gcstring-creation-optimization--completed---2025-07-16)
+    - [Problem Identified](#problem-identified-1)
+    - [Root Cause Analysis](#root-cause-analysis-1)
+    - [Solution Implemented](#solution-implemented-1)
+    - [Performance Results](#performance-results)
+    - [Key Achievement](#key-achievement-1)
+  - [String Truncation Padding Fix (✅ Completed - 2025-07-16)](#string-truncation-padding-fix--completed---2025-07-16)
+    - [Problem Identified](#problem-identified-2)
+    - [Root Cause Analysis](#root-cause-analysis-2)
+    - [Solution Implemented](#solution-implemented-2)
+    - [Performance Results](#performance-results-1)
+    - [Verification](#verification)
+    - [Key Insight](#key-insight)
   - [Previous Flamegraph Analysis (2025-07-14)](#previous-flamegraph-analysis-2025-07-14)
     - [Profiling Configuration](#profiling-configuration-1)
     - [Current Performance Bottleneck Analysis](#current-performance-bottleneck-analysis-1)
@@ -16,31 +37,31 @@
     - [Next Priority Optimization Targets](#next-priority-optimization-targets)
     - [Historical Next Priority Optimization Targets (2025-07-14)](#historical-next-priority-optimization-targets-2025-07-14)
   - [NG Parser Performance Optimization (✅ Completed - 2025-07-14)](#ng-parser-performance-optimization--completed---2025-07-14)
-    - [Problem Identified](#problem-identified)
+    - [Problem Identified](#problem-identified-3)
     - [Root Causes Discovered](#root-causes-discovered)
     - [Solutions Implemented](#solutions-implemented)
-    - [Performance Results](#performance-results)
+    - [Performance Results](#performance-results-2)
     - [Hybrid Parser Implementation](#hybrid-parser-implementation)
     - [Key Achievements](#key-achievements)
     - [Technical Insights](#technical-insights)
   - [MD Parser Optimization (✅ Completed - 2025-07-14)](#md-parser-optimization--completed---2025-07-14)
-    - [Problem Identified](#problem-identified-1)
-    - [Solution Implemented](#solution-implemented)
-    - [Performance Impact](#performance-impact)
-  - [Text Wrapping Optimization (✅ Root Cause Fixed - 2025-07-14)](#text-wrapping-optimization--root-cause-fixed---2025-07-14)
-    - [Problem Identified](#problem-identified-2)
-    - [Root Cause Analysis](#root-cause-analysis)
-    - [Solution Implemented](#solution-implemented-1)
-    - [Performance Impact](#performance-impact-1)
-    - [Key Insight](#key-insight)
-  - [Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)](#display-trait-optimization-for-telemetry--completed---2025-07-13)
-    - [Problem Identified](#problem-identified-3)
-    - [Solution Implemented](#solution-implemented-2)
-    - [Performance Impact Verified (2025-07-14)](#performance-impact-verified-2025-07-14)
-    - [Key Achievement](#key-achievement)
-  - [Memory Size Calculation Caching (✅ Completed - 2025-07-13)](#memory-size-calculation-caching--completed---2025-07-13)
     - [Problem Identified](#problem-identified-4)
     - [Solution Implemented](#solution-implemented-3)
+    - [Performance Impact](#performance-impact)
+  - [Text Wrapping Optimization (✅ Root Cause Fixed - 2025-07-14)](#text-wrapping-optimization--root-cause-fixed---2025-07-14)
+    - [Problem Identified](#problem-identified-5)
+    - [Root Cause Analysis](#root-cause-analysis-3)
+    - [Solution Implemented](#solution-implemented-4)
+    - [Performance Impact](#performance-impact-1)
+    - [Key Insight](#key-insight-1)
+  - [Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)](#display-trait-optimization-for-telemetry--completed---2025-07-13)
+    - [Problem Identified](#problem-identified-6)
+    - [Solution Implemented](#solution-implemented-5)
+    - [Performance Impact Verified (2025-07-14)](#performance-impact-verified-2025-07-14)
+    - [Key Achievement](#key-achievement-2)
+  - [Memory Size Calculation Caching (✅ Completed - 2025-07-13)](#memory-size-calculation-caching--completed---2025-07-13)
+    - [Problem Identified](#problem-identified-7)
+    - [Solution Implemented](#solution-implemented-6)
     - [Technical Details](#technical-details)
     - [Performance Impact](#performance-impact-2)
     - [Integration with Display Trait](#integration-with-display-trait)
@@ -58,10 +79,25 @@
 > causes of performance degradation._
 >
 > For the latest flamegraph analysis from the `tui/flamegraph.svg` file.
+> In this document, place the latest analysis at the top, and keep the previous analysis
+> below it for historical reference. And update the Table of Contents (TOC) accordingly.
+> ---
 
 # Implemented Optimizations
 
 ## Latest Flamegraph Analysis (2025-07-16)
+
+### Immediate Action Items
+
+1. **Investigate Memory Management Overhead** (18.32% potential improvement):
+   - Analyze why `mmput` and page deallocation is so expensive
+   - May be related to process spawning or large buffer allocations
+   - Consider buffer pooling or reuse strategies
+
+2. **Optimize Tracing/Logging Grapheme Segmentation** (4.23% potential improvement):
+   - Part of the 14.49% tracing overhead
+   - Consider caching grapheme boundaries for repeated strings
+   - Optimize Unicode segmentation in hot paths
 
 ### Profiling Configuration
 
@@ -116,34 +152,114 @@ Based on the latest flamegraph analysis from `tui/flamegraph.svg` (2025-07-16):
    - Debug formatting reduced but still present
    - String truncation completely eliminated as bottleneck
 
-### Immediate Action Items
+## Syntax Highlighting Resource Caching (✅ Completed - 2025-07-16)
 
-1. **Investigate Memory Management Overhead**:
-   - Analyze why `mmput` and page deallocation is so expensive
-   - May be related to process spawning or large buffer allocations
+### Problem Identified
 
-2. **Cache Syntax Highlighting Data**:
-   - Multiple `SyntaxSet::load_defaults_newlines` calls (1.82% each)
-   - Should load once and reuse across editor instances
+Flamegraph analysis showed multiple instances of `SyntaxSet::load_defaults_newlines` consuming 1.82%
+each. Investigation revealed that every `DialogEngine` creates its own `EditorEngine`, which loads
+syntax definitions from scratch. In dialog-heavy applications, this results in repeated
+deserialization of the same immutable data.
+
+Creating a SyntaxSet and Theme takes approximately 1ms (~0.65ms for SyntaxSet, ~0.11ms for Theme).
+This directly impacts UX responsiveness - when a user presses a keyboard shortcut to open a dialog,
+this 1ms delay is noticeable as lag before the dialog appears. For dialog-heavy workflows, this
+creates a sluggish user experience.
+
+### Root Cause Analysis
+
+- `DialogEngine::new()` creates `EditorEngine::new()`
+- `EditorEngine::new()` calls `SyntaxSet::load_defaults_newlines()` and loads themes
+- These operations involve deserializing large amounts of syntax definition data
+- The data is immutable once loaded but was being loaded repeatedly
+
+### Solution Implemented
+
+Created a global caching mechanism using `std::sync::OnceLock` to ensure syntax resources are loaded
+only once per application lifetime:
+
+1. **Global Resources Module** (`/tui/src/tui/syntax_highlighting/global_syntax_resources.rs`):
+   - Uses `OnceLock` for thread-safe lazy initialization
+   - Provides `get_cached_syntax_set()` and `get_cached_theme()` functions
+   - Resources are loaded on first access and cached permanently
+   - Simple, clean implementation without unsafe code
+
+2. **Updated EditorEngine**:
+   - Changed from owned `SyntaxSet` and `Theme` to `&'static` references
+   - Removed `Clone` derive (never used in practice)
+   - Now uses cached resources via global functions
+
+3. **Updated DialogEngine**:
+   - Removed `Clone` derive (never used in practice)
+   - Benefits from EditorEngine's optimization
+
+### Performance Impact Verified
+
+Latest flamegraph analysis confirms the optimization is working:
+
+- **Before**: 1.82% overhead per dialog/editor instance with multiple
+  `SyntaxSet::load_defaults_newlines` calls
+- **After**: `SyntaxSet::load_defaults_newlines` no longer appears in flamegraph
+- **Eliminated**: All repeated deserialization of syntax definitions
+- **Memory**: Reduced overall memory usage by sharing definitions
+- **Result**: Complete elimination of this performance bottleneck
+
+### Benchmark Results
+
+The performance improvements from caching are dramatic:
+
+#### Individual Resource Loading
+
+| Resource  | Uncached      | Cached  | Improvement           |
+| --------- | ------------- | ------- | --------------------- |
+| SyntaxSet | 654,835.90 ns | 0.19 ns | **3,446,504x faster** |
+| Theme     | 106,754.70 ns | 0.19 ns | **561,866x faster**   |
+
+#### Multiple Editor Creation (10 editors)
+
+| Scenario   | Uncached        | Cached  | Improvement           |
+| ---------- | --------------- | ------- | --------------------- |
+| Total time | 3,920,191.40 ns | 1.99 ns | **1,969,945x faster** |
+
+In practical terms:
+
+- Creating a SyntaxSet takes ~0.65ms (expensive deserialization)
+- Creating a Theme takes ~0.11ms (file I/O or default theme creation)
+- With caching, access is essentially free (0.19 ns)
+- For dialog-heavy apps creating 10 editors, we save ~3.92ms per dialog
+
+### Key Achievement
+
+- Syntax definitions now loaded once per application lifetime
+- Confirmed elimination from flamegraph - optimization successful
+- Uses clean `OnceLock` implementation without unsafe code
+- Cleaner API by removing unused `Clone` derives
+- All tests pass and code compiles without warnings
 
 ## GCString Creation Optimization (✅ Completed - 2025-07-16)
 
 ### Problem Identified
 
-GCString creation in the rendering pipeline was consuming 8.61% of total execution time. The `clip_text_to_bounds` function in `/tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs` was creating up to 3 GCString instances per call.
+GCString creation in the rendering pipeline was consuming 8.61% of total execution time. The
+`clip_text_to_bounds` function in
+`/tui/src/tui/terminal_lib_backends/render_pipeline_to_offscreen_buffer.rs` was creating up to 3
+GCString instances per call.
 
 ### Root Cause Analysis
 
 The original implementation created multiple GCString instances unnecessarily:
+
 1. Initial GCString creation from input string
 2. Intermediate GCString after first clipping check
 3. Final GCString after window bounds check
 
-This resulted in excessive allocations during the render loop, where this function is called for every text rendering operation.
+This resulted in excessive allocations during the render loop, where this function is called for
+every text rendering operation.
 
 ### Solution Implemented
 
 Optimized `clip_text_to_bounds` to minimize GCString allocations using a fast-path approach:
+
 - Use `GCString::width()` to check string width without creating a GCString instance
 - Only create GCString when absolutely necessary (when clipping is required)
 - Calculate effective maximum width by combining both constraints
@@ -154,12 +270,12 @@ Optimized `clip_text_to_bounds` to minimize GCString allocations using a fast-pa
 
 Benchmark results show significant improvements across all scenarios:
 
-| Scenario | Old (ns/iter) | New (ns/iter) | Improvement |
-| -------- | ------------- | ------------- | ----------- |
-| No clipping needed | 963.73 | 338.80 | **64.8% faster** (2.84x) |
-| With clipping | 2,218.92 | 2,045.76 | **7.8% faster** |
-| Unicode with emoji | 2,493.88 | 2,013.24 | **19.3% faster** |
-| Repeated calls (5 strings) | 8,386.25 | 5,695.58 | **32.1% faster** |
+| Scenario                   | Old (ns/iter) | New (ns/iter) | Improvement              |
+| -------------------------- | ------------- | ------------- | ------------------------ |
+| No clipping needed         | 963.73        | 338.80        | **64.8% faster** (2.84x) |
+| With clipping              | 2,218.92      | 2,045.76      | **7.8% faster**          |
+| Unicode with emoji         | 2,493.88      | 2,013.24      | **19.3% faster**         |
+| Repeated calls (5 strings) | 8,386.25      | 5,695.58      | **32.1% faster**         |
 
 ### Key Achievement
 
@@ -173,18 +289,22 @@ Benchmark results show significant improvements across all scenarios:
 
 ### Problem Identified
 
-Analysis of the flamegraph showed that string truncation was appearing as a performance bottleneck, despite the ASCII fast path optimization being correctly implemented. Investigation revealed the issue was not with the optimization itself, but with unnecessary padding being requested.
+Analysis of the flamegraph showed that string truncation was appearing as a performance bottleneck,
+despite the ASCII fast path optimization being correctly implemented. Investigation revealed the
+issue was not with the optimization itself, but with unnecessary padding being requested.
 
 ### Root Cause Analysis
 
-The custom event formatter in `/tui/src/core/log/custom_event_formatter.rs` was calling `truncate_from_right` with `pad=true` for all body lines:
+The custom event formatter in `/tui/src/core/log/custom_event_formatter.rs` was calling
+`truncate_from_right` with `pad=true` for all body lines:
 
 ```rust
 // Before (line 396):
 let truncated_body_line = truncate_from_right(body_line, max_display_width, true);
 ```
 
-This forced allocations even for short strings that didn't need padding, as every line would be padded to the full terminal width.
+This forced allocations even for short strings that didn't need padding, as every line would be
+padded to the full terminal width.
 
 ### Solution Implemented
 
@@ -199,24 +319,28 @@ let truncated_body_line = truncate_from_right(body_line, max_display_width, fals
 
 Benchmark results confirm the optimization is working:
 
-| Scenario | Time (ns/iter) | Description |
-| -------- | -------------- | ----------- |
-| ASCII no truncation, no pad | 3.35 | Zero-copy path - returns borrowed reference |
-| ASCII with padding | 57.81 | Requires allocation for padding |
-| ASCII with truncation | 28.50 | Requires allocation for truncated string |
+| Scenario                    | Time (ns/iter) | Description                                 |
+| --------------------------- | -------------- | ------------------------------------------- |
+| ASCII no truncation, no pad | 3.35           | Zero-copy path - returns borrowed reference |
+| ASCII with padding          | 57.81          | Requires allocation for padding             |
+| ASCII with truncation       | 28.50          | Requires allocation for truncated string    |
 
-The key achievement: when no processing is needed (common case), the function returns in ~3 nanoseconds with zero allocations.
+The key achievement: when no processing is needed (common case), the function returns in ~3
+nanoseconds with zero allocations.
 
 ### Verification
 
 The current flamegraph confirms the fix:
+
 - `truncate_from_right` no longer appears as a bottleneck
 - No `__memmove_avx_unaligned_erms` operations related to string truncation
 - The function has been effectively eliminated from performance profiles
 
 ### Key Insight
 
-The ASCII fast path optimization was working correctly. The performance issue was caused by always requesting padding, which forced allocations even when unnecessary. This simple one-line fix eliminated what appeared to be a 7.89% performance regression.
+The ASCII fast path optimization was working correctly. The performance issue was caused by always
+requesting padding, which forced allocations even when unnecessary. This simple one-line fix
+eliminated what appeared to be a 7.89% performance regression.
 
 ## Previous Flamegraph Analysis (2025-07-14)
 
@@ -321,10 +445,10 @@ Based on the latest flamegraph analysis (2025-07-16), the optimization prioritie
    - May be related to process/thread lifecycle
    - Consider buffer pooling or reuse strategies
 
-3. **Syntax Highlighting Deserialization** (1.82% per instance) - HIGH PRIORITY
-   - Multiple `SyntaxSet::load_defaults_newlines` calls
-   - Cache parsed syntax definitions
-   - Load themes once at startup instead of repeatedly
+3. ~~**Syntax Highlighting Deserialization** (1.82% per instance)~~ - ✅ COMPLETED
+   - Implemented global caching using `thread_local!` + `OnceCell`
+   - Syntax definitions now loaded once per application
+   - Eliminated repeated deserialization overhead
 
 4. **Tracing/Logging Grapheme Segmentation** (4.23% potential improvement) - MEDIUM PRIORITY
    - Part of the 14.49% tracing overhead
