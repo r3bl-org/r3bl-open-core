@@ -55,7 +55,7 @@
 mod benchmarks {
     extern crate test;
     use test::Bencher;
-    
+
     use crate::{
         parse_markdown,
         md_parser::conformance_test_data::*,
@@ -407,6 +407,13 @@ mod benchmarks {
     fn bench_small_real_world_content(b: &mut Bencher) {
         b.iter(|| {
             let _unused = parse_markdown(SMALL_REAL_WORLD_CONTENT);
+        });
+    }
+
+    #[bench]
+    fn bench_small_ex_editor_content(b: &mut Bencher) {
+        b.iter(|| {
+            let _unused = parse_markdown(EX_EDITOR_CONTENT);
         });
     }
 
