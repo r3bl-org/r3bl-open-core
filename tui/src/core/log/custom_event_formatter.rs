@@ -160,16 +160,16 @@ use custom_event_formatter_constants::{BODY_FG_COLOR, BODY_FG_COLOR_BRIGHT,
                                        INFO_FG_COLOR, INFO_SIGIL, LEVEL_SUFFIX,
                                        SUBSEQUENT_LINE_PREFIX, TRACE_FG_COLOR,
                                        TRACE_SIGIL, WARN_FG_COLOR, WARN_SIGIL};
-use textwrap::{wrap, Options, WordSeparator};
-use tracing::{field::{Field, Visit},
-              Event, Subscriber};
+use textwrap::{Options, WordSeparator, wrap};
+use tracing::{Event, Subscriber,
+              field::{Field, Visit}};
 use tracing_subscriber::{fmt::{FormatEvent, FormatFields},
                          registry::LookupSpan};
 
-use crate::{ast, fg_color, get_terminal_width, glyphs, inline_string, new_style,
-            pad_fmt, remove_escaped_quotes, truncate_from_right, tui_color,
-            tui_style_attrib, usize, width, ColWidth, ColorWheel, GCString,
-            InlineString, OrderedMap, RgbValue, TuiColor};
+use crate::{ColWidth, ColorWheel, GCString, InlineString, OrderedMap, RgbValue,
+            TuiColor, ast, fg_color, get_terminal_width, glyphs, inline_string,
+            new_style, pad_fmt, remove_escaped_quotes, truncate_from_right, tui_color,
+            tui_style_attrib, usize, width};
 
 /// This is the "marker" struct that is used to register this formatter with the
 /// `tracing_subscriber` crate. Various traits are implemented for this struct.
@@ -220,13 +220,14 @@ pub mod custom_event_formatter_constants {
 }
 
 mod helpers {
-    use super::{ast, fmt, helpers, inline_string, new_style, remove_escaped_quotes,
-                truncate_from_right, tui_style_attrib, width, wrap, ColWidth,
-                ColorWheel, Event, FieldContentParams, FormatFields, GCString,
-                InlineString, Local, LookupSpan, Subscriber, TuiColor, BODY_FG_COLOR,
-                BODY_FG_COLOR_BRIGHT, DEBUG_FG_COLOR, DEBUG_SIGIL, ERROR_FG_COLOR,
-                ERROR_SIGIL, HEADING_BG_COLOR, INFO_FG_COLOR, INFO_SIGIL, LEVEL_SUFFIX,
-                TRACE_FG_COLOR, TRACE_SIGIL, WARN_FG_COLOR, WARN_SIGIL};
+    use super::{BODY_FG_COLOR, BODY_FG_COLOR_BRIGHT, ColWidth, ColorWheel,
+                DEBUG_FG_COLOR, DEBUG_SIGIL, ERROR_FG_COLOR, ERROR_SIGIL, Event,
+                FieldContentParams, FormatFields, GCString, HEADING_BG_COLOR,
+                INFO_FG_COLOR, INFO_SIGIL, InlineString, LEVEL_SUFFIX, Local,
+                LookupSpan, Subscriber, TRACE_FG_COLOR, TRACE_SIGIL, TuiColor,
+                WARN_FG_COLOR, WARN_SIGIL, ast, fmt, helpers, inline_string, new_style,
+                remove_escaped_quotes, truncate_from_right, tui_style_attrib, width,
+                wrap};
 
     /// Write formatted timestamp to the writer.
     pub fn write_timestamp(
@@ -392,8 +393,11 @@ mod helpers {
             let body = remove_escaped_quotes(body);
             let body = wrap(&body, text_wrap_options);
             for body_line in &body {
+                // Note: padding is disabled (false) to avoid allocations in this hot
+                // path. This function is called on every render in the
+                // main event loop.
                 let truncated_body_line =
-                    truncate_from_right(body_line, max_display_width, true);
+                    truncate_from_right(body_line, max_display_width, false);
                 let body_line_fmt = ast(
                     truncated_body_line.as_ref(),
                     new_style!(
