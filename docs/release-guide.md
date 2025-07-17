@@ -1,7 +1,14 @@
----
-Title: Guide to cutting a release and publishing it to crates.io
-Date: 2022-11-06
----
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Guide to cutting a release and publishing it to crates.io](#guide-to-cutting-a-release-and-publishing-it-to-cratesio)
+  - [Cut a release and publish it to crates.io](#cut-a-release-and-publish-it-to-cratesio)
+  - [Example of full workflow](#example-of-full-workflow)
+  - [Deprecated workflow for crates moved to r3bl-open-core-archive repo](#deprecated-workflow-for-crates-moved-to-r3bl-open-core-archive-repo)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+# Guide to cutting a release and publishing it to crates.io
 
 ## Cut a release and publish it to crates.io
 

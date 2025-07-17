@@ -9,6 +9,7 @@
 - [ ] there are test failures in doctests that try to use terminal I/O (which fails in test
       environment). can you identify and mark them to be "```no_run"
 - [ ] fix all the pedantic lints using claude (and don't allow them anymore in Cargo.toml)
+- [ ] fix windows bug: https://github.com/r3bl-org/r3bl-open-core/issues/433
 - [ ] update changelog
 - [ ] squash all the commits in this branch `fix-md-parser` into one (fixup all the commit
       messages); this commit fixes this issue:

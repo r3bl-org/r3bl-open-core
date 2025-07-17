@@ -1,3 +1,20 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Documentation for r3bl-open-core](#documentation-for-r3bl-open-core)
+  - [Contents](#contents)
+    - [Release Guide](#release-guide)
+    - [Contributing Guides](#contributing-guides)
+    - [Technical Documentation](#technical-documentation)
+    - [Plans](#plans)
+    - [Video Documentation](#video-documentation)
+  - [Creating and Managing Documentation](#creating-and-managing-documentation)
+    - [Documentation Updates](#documentation-updates)
+    - [Video Documentation](#video-documentation-1)
+  - [Archived Content](#archived-content)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Documentation for r3bl-open-core
 
 This folder contains documentation, guides, and resources for the r3bl-open-core monorepo.

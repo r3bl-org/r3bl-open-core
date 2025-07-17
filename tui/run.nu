@@ -40,8 +40,8 @@ def main [...args: string] {
         "examples" => {examples}
         "examples-release" => {examples-release}
         "examples-release-no-log" => {examples-release-no-log}
-        "examples-with-flamegraph-profiling" => {examples-with-flamegraph-profiling}
-        "examples-with-flamegraph-profiling-detailed" => {examples-with-flamegraph-profiling-detailed}
+        "examples-with-flamegraph-profiling-detailed-svg" => {examples-with-flamegraph-profiling-detailed-svg}
+        "examples-with-flamegraph-profiling-detailed-perf-fold" => {examples-with-flamegraph-profiling-detailed-perf-fold}
         "test" => {test}
         "bench" => {bench}
         "watch-all-tests" => {watch-all-tests}
@@ -160,8 +160,8 @@ def print-help [command: string] {
         print $'    (ansi green)examples(ansi reset)'
         print $'    (ansi green)examples-release(ansi reset)'
         print $'    (ansi green)examples-release-no-log(ansi reset)'
-        print $'    (ansi green)examples-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://youtu.be/Sy26IMkOEiM(ansi reset)'
-        print $'    (ansi green)examples-with-flamegraph-profiling-detailed(ansi reset), (ansi blue)Detailed profiling with more symbols(ansi reset)'
+        print $'    (ansi green)examples-with-flamegraph-profiling-detailed-svg(ansi reset), (ansi blue)Generate SVG flamegraph. For more info, watch: https://youtu.be/Sy26IMkOEiM(ansi reset)'
+        print $'    (ansi green)examples-with-flamegraph-profiling-detailed-perf-fold(ansi reset), (ansi blue)Generate collapsed stacks format (smaller file)(ansi reset)'
         # print $'    (ansi green)run-with-crash-reporting(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
         print $'    (ansi green)bench(ansi reset)'
@@ -205,14 +205,22 @@ def examples-release-no-log [] {
     run_example $example_binaries true true
 }
 
-def examples-with-flamegraph-profiling [] {
+# Run examples with detailed profiling and generate an SVG flamegraph visualization.
+# This creates a visual representation of where CPU time is spent in your code.
+# The output file 'flamegraph.svg' can be opened in a web browser.
+# Requires: perf (Linux), cargo-flamegraph
+def examples-with-flamegraph-profiling-detailed-svg [] {
     let example_binaries: list<string> = get_example_binaries
-    run_example_with_flamegraph_profiling $example_binaries "profiling"
+    run_example_with_flamegraph_profiling_svg $example_binaries
 }
 
-def examples-with-flamegraph-profiling-detailed [] {
+# Run examples with detailed profiling and generate a collapsed stacks text file.
+# This creates a compact text representation of profiling data (10-100x smaller than SVG).
+# The output file 'flamegraph.perf-folded' can be analyzed with various tools.
+# Requires: perf (Linux), inferno
+def examples-with-flamegraph-profiling-detailed-perf-fold [] {
     let example_binaries: list<string> = get_example_binaries
-    run_example_with_flamegraph_profiling $example_binaries "profiling-detailed"
+    run_example_with_flamegraph_profiling_perf_fold $example_binaries
 }
 
 def test [] {

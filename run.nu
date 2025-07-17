@@ -195,8 +195,6 @@ def install-cargo-tools [] {
     cargo install bacon
     cargo install cargo-workspaces
     cargo install cargo-cache
-    cargo install cargo-watch # cargo-watch is no longer maintained (as of Oct 2024). Move away from this.
-    cargo install flamegraph
     cargo install cargo-outdated
     cargo install cargo-update
     cargo install cargo-deny
@@ -204,6 +202,10 @@ def install-cargo-tools [] {
     cargo install cargo-expand
     cargo install cargo-readme
     cargo install cargo-nextest
+    cargo install flamegraph
+    cargo install inferno
+    # cargo-watch is no longer maintained (as of Oct 2024). Move away from this to bacon.
+    # cargo install cargo-watch
 }
 
 # Run all major checks and tasks for the workspace.

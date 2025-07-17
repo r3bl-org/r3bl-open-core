@@ -1,3 +1,38 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Parser Conformance Testing Plan](#parser-conformance-testing-plan)
+  - [Overview](#overview)
+  - [Current State](#current-state)
+  - [Goal](#goal)
+  - [Progress Tracking](#progress-tracking)
+    - [✅ Phase 1: Analysis](#-phase-1-analysis)
+    - [✅ Phase 2: Infrastructure Design](#-phase-2-infrastructure-design)
+    - [✅ Phase 3: Implementation Complete](#-phase-3-implementation-complete)
+    - [✅ Phase 4: Foundation Complete](#-phase-4-foundation-complete)
+  - [Test Data Categories](#test-data-categories)
+    - [Small Valid Inputs](#small-valid-inputs)
+    - [Medium Valid Inputs](#medium-valid-inputs)
+    - [Large Valid Inputs](#large-valid-inputs)
+    - [Invalid Inputs](#invalid-inputs)
+    - [Real World](#real-world)
+  - [Implementation Strategy](#implementation-strategy)
+  - [Type Structure](#type-structure)
+    - [MdDocument](#mddocument)
+    - [MdElement Variants](#mdelement-variants)
+    - [MdLineFragment Variants](#mdlinefragment-variants)
+  - [Implementation Summary](#implementation-summary)
+    - [What Was Done](#what-was-done)
+    - [Key Patterns Established](#key-patterns-established)
+  - [Achievements](#achievements)
+    - [ALL 49 Tests Now Have Real Assertions! 🎉](#all-49-tests-now-have-real-assertions-)
+    - [Testing Infrastructure](#testing-infrastructure)
+    - [Key Benefits](#key-benefits)
+  - [Completion Summary](#completion-summary)
+    - [What Was Accomplished](#what-was-accomplished)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Parser Conformance Testing Plan
 
 ## Overview
