@@ -430,6 +430,33 @@ mod basic {
         /// emoji like `🙏🏽`.
         pub fn new(arg_str: impl AsRef<str>) -> GCString {
             let str = arg_str.as_ref();
+
+            // ASCII fast path: avoid expensive grapheme segmentation
+            if str.is_ascii() {
+                let len = str.len();
+                let mut segments = sizing::SegmentArray::with_capacity(len);
+
+                // For ASCII, each char is exactly 1 byte and 1 display width
+                for (i, _c) in str.chars().enumerate() {
+                    segments.push(Seg {
+                        start_byte_index: ch(i),
+                        end_byte_index: ch(i + 1),
+                        display_width: width(1),
+                        seg_index: i.into(),
+                        bytes_size: 1,
+                        start_display_col_index: col(ch(i)),
+                    });
+                }
+
+                return GCString {
+                    string: str.into(),
+                    segments,
+                    display_width: width(len),
+                    bytes_size: ch(len),
+                };
+            }
+
+            // Unicode path: use grapheme segmentation
             let mut total_byte_offset: ChUnit = ch(0);
             // This is used both for the width and display col index.
             let mut unicode_width_offset_acc: ChUnit = ch(0);
@@ -2342,5 +2369,67 @@ mod tests {
         assert_eq!(gs.len(), seg_width(1));
         assert_eq!(gs.display_width, width(1));
         assert!(!gs.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    extern crate test;
+    use test::Bencher;
+
+    use super::*;
+
+    /// Benchmark: Creating `GCString` from ASCII text (no grapheme segmentation needed)
+    #[bench]
+    fn bench_gc_string_new_ascii_short(b: &mut Bencher) {
+        let text = "Hello, world!";
+        b.iter(|| {
+            let _gs = GCString::new(text);
+        });
+    }
+
+    /// Benchmark: Creating `GCString` from longer ASCII text
+    #[bench]
+    fn bench_gc_string_new_ascii_long(b: &mut Bencher) {
+        let text = "The quick brown fox jumps over the lazy dog. Lorem ipsum dolor sit amet.";
+        b.iter(|| {
+            let _gs = GCString::new(text);
+        });
+    }
+
+    /// Benchmark: Creating `GCString` from Unicode text with simple characters
+    #[bench]
+    fn bench_gc_string_new_unicode_simple(b: &mut Bencher) {
+        let text = "Hello, 世界! こんにちは";
+        b.iter(|| {
+            let _gs = GCString::new(text);
+        });
+    }
+
+    /// Benchmark: Creating `GCString` from Unicode text with complex grapheme clusters
+    #[bench]
+    fn bench_gc_string_new_unicode_complex(b: &mut Bencher) {
+        let text = "Hi📦XelLo🙏🏽Bye";
+        b.iter(|| {
+            let _gs = GCString::new(text);
+        });
+    }
+
+    /// Benchmark: Creating `GCString` from text with many emoji
+    #[bench]
+    fn bench_gc_string_new_emoji_heavy(b: &mut Bencher) {
+        let text = "😀😃😄😁😆😅😂🤣😊😇🙂🙃😉😌😍🥰😘😗😙😚";
+        b.iter(|| {
+            let _gs = GCString::new(text);
+        });
+    }
+
+    /// Benchmark: Creating `GCString` from typical log message (mostly ASCII)
+    #[bench]
+    fn bench_gc_string_new_log_message(b: &mut Bencher) {
+        let text = "main_event_loop → Startup 🎉";
+        b.iter(|| {
+            let _gs = GCString::new(text);
+        });
     }
 }

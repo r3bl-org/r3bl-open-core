@@ -133,7 +133,7 @@ mod seed_delta {
 // ColorChangeSpeed
 // ================================================================================================
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ColorChangeSpeed {
     Rapid,
     Slow,

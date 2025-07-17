@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="MarkdownSettings">
+    <option name="customStylesheetText" value="body {&#10;    font-family: &quot;SFMono Nerd Font&quot;, &quot;JetBrainsMono Nerd Font&quot;, sans-serif;&#10;    font-size: 18pt;&#10;}&#10;&#10;/* You can also target specific elements */&#10;h1, h2, h3, h4, h5, h6 {&#10;    font-family: &quot;BlexMono Nerd Font&quot;, serif;&#10;    font-size: 20pt;&#10;}&#10;&#10;code, pre {&#10;    font-family: &quot;AdwaitaMono Nerd Font&quot;, monospace;&#10;    font-size: 12pt;&#10;}" />
+    <option name="splitLayout" value="SHOW_EDITOR" />
+    <option name="useCustomStylesheetText" value="true" />
+  </component>
+</project>

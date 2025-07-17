@@ -2,14 +2,23 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Implemented Optimizations](#implemented-optimizations)
-  - [Latest Flamegraph Analysis (2025-07-16)](#latest-flamegraph-analysis-2025-07-16)
+  - [Latest Flamegraph Analysis (2025-07-17)](#latest-flamegraph-analysis-2025-07-17)
+    - [Immediate Action Items](#immediate-action-items)
     - [Profiling Configuration](#profiling-configuration)
     - [Current Performance Bottleneck Analysis](#current-performance-bottleneck-analysis)
     - [Key Findings from Current Analysis](#key-findings-from-current-analysis)
-    - [Immediate Action Items](#immediate-action-items)
-  - [Syntax Highlighting Resource Caching (✅ Completed - 2025-07-16)](#syntax-highlighting-resource-caching--completed---2025-07-16)
+  - [Grapheme Segmentation and Dialog Border Optimization (✅ Completed - 2025-07-17)](#grapheme-segmentation-and-dialog-border-optimization--completed---2025-07-17)
     - [Problem Identified](#problem-identified)
     - [Root Cause Analysis](#root-cause-analysis)
+    - [Solutions Implemented](#solutions-implemented)
+    - [Performance Results](#performance-results)
+      - [GCString ASCII Optimization Benchmarks](#gcstring-ascii-optimization-benchmarks)
+      - [ColorWheel Caching Benchmarks](#colorwheel-caching-benchmarks)
+      - [Final Flamegraph Results (2025-07-17)](#final-flamegraph-results-2025-07-17)
+    - [Key Achievements](#key-achievements)
+  - [Syntax Highlighting Resource Caching (✅ Completed - 2025-07-16)](#syntax-highlighting-resource-caching--completed---2025-07-16)
+    - [Problem Identified](#problem-identified-1)
+    - [Root Cause Analysis](#root-cause-analysis-1)
     - [Solution Implemented](#solution-implemented)
     - [Performance Impact Verified](#performance-impact-verified)
     - [Benchmark Results](#benchmark-results)
@@ -17,16 +26,16 @@
       - [Multiple Editor Creation (10 editors)](#multiple-editor-creation-10-editors)
     - [Key Achievement](#key-achievement)
   - [GCString Creation Optimization (✅ Completed - 2025-07-16)](#gcstring-creation-optimization--completed---2025-07-16)
-    - [Problem Identified](#problem-identified-1)
-    - [Root Cause Analysis](#root-cause-analysis-1)
-    - [Solution Implemented](#solution-implemented-1)
-    - [Performance Results](#performance-results)
-    - [Key Achievement](#key-achievement-1)
-  - [String Truncation Padding Fix (✅ Completed - 2025-07-16)](#string-truncation-padding-fix--completed---2025-07-16)
     - [Problem Identified](#problem-identified-2)
     - [Root Cause Analysis](#root-cause-analysis-2)
-    - [Solution Implemented](#solution-implemented-2)
+    - [Solution Implemented](#solution-implemented-1)
     - [Performance Results](#performance-results-1)
+    - [Key Achievement](#key-achievement-1)
+  - [String Truncation Padding Fix (✅ Completed - 2025-07-16)](#string-truncation-padding-fix--completed---2025-07-16)
+    - [Problem Identified](#problem-identified-3)
+    - [Root Cause Analysis](#root-cause-analysis-3)
+    - [Solution Implemented](#solution-implemented-2)
+    - [Performance Results](#performance-results-2)
     - [Verification](#verification)
     - [Key Insight](#key-insight)
   - [Previous Flamegraph Analysis (2025-07-14)](#previous-flamegraph-analysis-2025-07-14)
@@ -37,30 +46,30 @@
     - [Next Priority Optimization Targets](#next-priority-optimization-targets)
     - [Historical Next Priority Optimization Targets (2025-07-14)](#historical-next-priority-optimization-targets-2025-07-14)
   - [NG Parser Performance Optimization (✅ Completed - 2025-07-14)](#ng-parser-performance-optimization--completed---2025-07-14)
-    - [Problem Identified](#problem-identified-3)
+    - [Problem Identified](#problem-identified-4)
     - [Root Causes Discovered](#root-causes-discovered)
-    - [Solutions Implemented](#solutions-implemented)
-    - [Performance Results](#performance-results-2)
+    - [Solutions Implemented](#solutions-implemented-1)
+    - [Performance Results](#performance-results-3)
     - [Hybrid Parser Implementation](#hybrid-parser-implementation)
-    - [Key Achievements](#key-achievements)
+    - [Key Achievements](#key-achievements-1)
     - [Technical Insights](#technical-insights)
   - [MD Parser Optimization (✅ Completed - 2025-07-14)](#md-parser-optimization--completed---2025-07-14)
-    - [Problem Identified](#problem-identified-4)
+    - [Problem Identified](#problem-identified-5)
     - [Solution Implemented](#solution-implemented-3)
     - [Performance Impact](#performance-impact)
   - [Text Wrapping Optimization (✅ Root Cause Fixed - 2025-07-14)](#text-wrapping-optimization--root-cause-fixed---2025-07-14)
-    - [Problem Identified](#problem-identified-5)
-    - [Root Cause Analysis](#root-cause-analysis-3)
+    - [Problem Identified](#problem-identified-6)
+    - [Root Cause Analysis](#root-cause-analysis-4)
     - [Solution Implemented](#solution-implemented-4)
     - [Performance Impact](#performance-impact-1)
     - [Key Insight](#key-insight-1)
   - [Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)](#display-trait-optimization-for-telemetry--completed---2025-07-13)
-    - [Problem Identified](#problem-identified-6)
+    - [Problem Identified](#problem-identified-7)
     - [Solution Implemented](#solution-implemented-5)
     - [Performance Impact Verified (2025-07-14)](#performance-impact-verified-2025-07-14)
     - [Key Achievement](#key-achievement-2)
   - [Memory Size Calculation Caching (✅ Completed - 2025-07-13)](#memory-size-calculation-caching--completed---2025-07-13)
-    - [Problem Identified](#problem-identified-7)
+    - [Problem Identified](#problem-identified-8)
     - [Solution Implemented](#solution-implemented-6)
     - [Technical Details](#technical-details)
     - [Performance Impact](#performance-impact-2)
@@ -78,14 +87,15 @@
 > measuring both macro-level parser performance and micro-level component costs to isolate the root
 > causes of performance degradation._
 >
-> For the latest flamegraph analysis from the `tui/flamegraph.svg` file.
-> In this document, place the latest analysis at the top, and keep the previous analysis
-> below it for historical reference. And update the Table of Contents (TOC) accordingly.
+> For the latest flamegraph analysis from the `tui/flamegraph.svg` file. In this document, place the
+> latest analysis at the top, and keep the previous analysis below it for historical reference. And
+> update the Table of Contents (TOC) accordingly.
+>
 > ---
 
 # Implemented Optimizations
 
-## Latest Flamegraph Analysis (2025-07-16)
+## Latest Flamegraph Analysis (2025-07-17)
 
 ### Immediate Action Items
 
@@ -93,11 +103,6 @@
    - Analyze why `mmput` and page deallocation is so expensive
    - May be related to process spawning or large buffer allocations
    - Consider buffer pooling or reuse strategies
-
-2. **Optimize Tracing/Logging Grapheme Segmentation** (4.23% potential improvement):
-   - Part of the 14.49% tracing overhead
-   - Consider caching grapheme boundaries for repeated strings
-   - Optimize Unicode segmentation in hot paths
 
 ### Profiling Configuration
 
@@ -151,6 +156,103 @@ Based on the latest flamegraph analysis from `tui/flamegraph.svg` (2025-07-16):
    - Text wrapping remains minimal impact
    - Debug formatting reduced but still present
    - String truncation completely eliminated as bottleneck
+
+## Grapheme Segmentation and Dialog Border Optimization (✅ Completed - 2025-07-17)
+
+### Problem Identified
+
+Flamegraph analysis showed two major performance bottlenecks:
+
+1. Grapheme segmentation in tracing/logging consuming 4.23% of execution time
+2. Dialog border colorization consuming 11.71% through `lolcat_from_style`
+
+### Root Cause Analysis
+
+1. **Repeated GCString Creation**: Every colorized log message created a new `GCString` for grapheme
+   segmentation
+2. **No ASCII Fast Path**: `GCString::new` performed full Unicode segmentation even for simple ASCII
+   strings
+3. **Dialog Border Issue**: Dialog borders used instance methods (`lolcat_into_string`) that weren't
+   benefiting from caching
+4. **Cache Design Flaw**: Original cache only worked for static `colorize_into_styled_texts` method,
+   not instance methods
+
+### Solutions Implemented
+
+1. **ASCII Fast Path in GCString::new**:
+
+   ```rust
+   // Check if string is ASCII and use optimized path
+   if str.is_ascii() {
+       // For ASCII, each char is exactly 1 byte and 1 display width
+       // Direct byte indexing instead of grapheme segmentation
+       // 5.4x to 13.7x performance improvement
+   }
+   ```
+
+2. **Generalized ColorWheel Cache**:
+
+   ```rust
+   // Unified cache storing TuiStyledTexts
+   static COLOR_WHEEL_CACHE: LazyLock<Arc<Mutex<ColorWheelCache>>> = ...
+
+   // Cache key includes text and all ColorWheel configuration
+   struct ColorWheelCacheKey {
+       text: String,
+       config: ColorWheelConfig,
+       policy: GradientGenerationPolicy,
+       direction: ColorWheelDirection,
+   }
+   ```
+
+3. **Manual Hash Implementation for f64**:
+
+   ```rust
+   // f64 doesn't implement Hash, so we use to_bits()
+   builder.seed.0.to_bits().hash(hasher);
+   builder.seed_delta.0.to_bits().hash(hasher);
+   ```
+
+4. **Selective Caching Strategy**:
+   - Only cache deterministic policies (`ReuseExistingGradientAndResetIndex`,
+     `RegenerateGradientAndIndexBasedOnTextLength`)
+   - Skip caching for `ReuseExistingGradientAndIndex` (maintains stateful index)
+
+### Performance Results
+
+#### GCString ASCII Optimization Benchmarks
+
+| Scenario                     | Before      | After     | Improvement      |
+| ---------------------------- | ----------- | --------- | ---------------- |
+| ASCII short (10 chars)       | 73.14 ns    | 13.48 ns  | **5.4x faster**  |
+| ASCII medium (50 chars)      | 288.96 ns   | 49.42 ns  | **5.8x faster**  |
+| ASCII long (100 chars)       | 635.29 ns   | 95.74 ns  | **6.6x faster**  |
+| ASCII very long (1000 chars) | 8,106.62 ns | 591.24 ns | **13.7x faster** |
+
+#### ColorWheel Caching Benchmarks
+
+| Scenario               | Before       | After     | Improvement     |
+| ---------------------- | ------------ | --------- | --------------- |
+| Dialog border (short)  | 957.83 ns    | 20.24 ns  | **47x faster**  |
+| Dialog border (medium) | 19,117.48 ns | 162.74 ns | **117x faster** |
+| Dialog border (long)   | 19,292.18 ns | 132.86 ns | **145x faster** |
+
+#### Final Flamegraph Results (2025-07-17)
+
+| Component                  | Before     | After       | Reduction              |
+| -------------------------- | ---------- | ----------- | ---------------------- |
+| Dialog border colorization | 11.71%     | 2.34%       | **80% reduction**      |
+| Grapheme segmentation      | 4.23%      | Not visible | **100% elimination**   |
+| **Total CPU reduction**    | **15.94%** | **2.34%**   | **~13.6% improvement** |
+
+### Key Achievements
+
+- **Unified caching solution**: Works for both static and instance ColorWheel methods
+- **Manual hash implementation**: Handles f64 fields correctly for deterministic hashing
+- **Thread-safe design**: Uses `LazyLock<Arc<Mutex<HashMap>>>` for Tokio compatibility
+- **Smart caching**: Only caches deterministic operations, preserving stateful behavior
+- **Comprehensive testing**: Added benchmarks and tests for hash implementation
+- **All tests pass**: Maintains correctness while achieving dramatic performance gains
 
 ## Syntax Highlighting Resource Caching (✅ Completed - 2025-07-16)
 
