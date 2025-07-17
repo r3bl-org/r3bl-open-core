@@ -35,25 +35,25 @@
       Muhammad, we will bring Muhammad to the mountain. The mountain is the `&str` parser, and
       Muhammad is the editor component. Here's some code:
 
-      ```rust
-      // Assume the line is 256 chars long.
-      let empty_line = ['\0', '\0', '\0', ..., '\0']  // 256 '\0' chars
-      let line_with_content = ['H', 'e', 'l', 'l', 'o', '\n', '\0', '\0', ..., '\0']
-      use nom::{bytes::complete::take_while, character::complete::char, combinator::recognize,
-            sequence::tuple, IResult, Parser};
+  ```rust
+  // Assume the line is 256 chars long.
+  let empty_line = ['\0', '\0', '\0', ..., '\0']  // 256 '\0' chars
+  let line_with_content = ['H', 'e', 'l', 'l', 'o', '\n', '\0', '\0', ..., '\0']
+  use nom::{bytes::complete::take_while, character::complete::char, combinator::recognize,
+        sequence::tuple, IResult, Parser};
 
-      // The parser will consume the entire pattern and you can extract the actual content
-      // by finding the position of \n in the matched slice.
-      fn parse_editor_line(input: &str) -> IResult<&str, &str> {
-            recognize((
-            (
-                  take_while(|c| c != '\n' && c != '\0'),  // Line content
-                  char('\n'),                              // Required newline
-                  take_while(|c| c == '\0')                // Zero or more null padding
-            )
-            )).parse(input)
-      }
-      ```
+  // The parser will consume the entire pattern and you can extract the actual content
+  // by finding the position of \n in the matched slice.
+  fn parse_editor_line(input: &str) -> IResult<&str, &str> {
+        recognize((
+        (
+              take_while(|c| c != '\n' && c != '\0'),  // Line content
+              char('\n'),                              // Required newline
+              take_while(|c| c == '\0')                // Zero or more null padding
+        )
+        )).parse(input)
+  }
+  ```
 
 # edi feature
 

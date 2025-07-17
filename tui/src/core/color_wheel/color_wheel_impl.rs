@@ -27,26 +27,66 @@
 //! The `ColorWheel` automatically adapts to terminal capabilities and provides
 //! a unified interface for all color wheel operations. Previously located
 //! in `color_wheel/color_wheel_impl.rs`.
-
-use std::fmt::Write;
+//!
+//! # Caching Strategy
+//!
+//! The `ColorWheel` implements intelligent caching to optimize performance, particularly
+//! for repetitive colorization tasks like dialog border rendering (which showed 11.71%
+//! CPU usage in flamegraph analysis).
+//!
+//! ## Cacheable Policies (Deterministic Output)
+//!
+//! ### `ReuseExistingGradientAndResetIndex`
+//! - Always resets the gradient index to 0 before colorizing
+//! - Same input → same output (deterministic)
+//! - Used by: Dialog borders, UI decorations
+//! - Performance: Eliminates redundant computation for repeated strings
+//!
+//! ### `RegenerateGradientAndIndexBasedOnTextLength`
+//! - Generates a gradient sized to text length, starting at index 0
+//! - Deterministic for same text
+//! - Used by: One-off colorizations where gradient should fit text exactly
+//!
+//! ## Non-Cacheable Policy
+//!
+//! ### `ReuseExistingGradientAndIndex` (NOT CACHED)
+//! - Maintains gradient index between calls (stateful)
+//! - Creates flowing rainbow effects across multiple strings
+//! - Same input → different output depending on prior calls
+//! - Caching would break the continuous color flow
+//!
+//! Example of why this can't be cached:
+//! ```text
+//! // First call: "Hello" uses colors 0-4
+//! colorize("Hello") → [H=red, e=orange, l=yellow, l=green, o=blue]
+//!
+//! // Second call: "World" continues from color 5
+//! colorize("World") → [W=purple, o=red, r=orange, l=yellow, d=green]
+//!
+//! // Third call: "Hello" now starts from color 10!
+//! colorize("Hello") → [H=cyan, e=magenta, l=red, l=orange, o=yellow]
+//! ```
+use std::{collections::{HashMap, hash_map::DefaultHasher},
+          fmt::Write,
+          hash::{Hash, Hasher},
+          sync::{Arc, LazyLock, Mutex}};
 
 use sizing::VecConfigs;
 use smallvec::SmallVec;
 
-use super::{config::{defaults::{get_default_gradient_stops, Defaults},
-                     sizing::VecSteps,
-                     ColorWheelConfig, ColorWheelDirection, ColorWheelSpeed,
-                     GradientKind, GradientLengthKind},
-            gradients::{generate_random_truecolor_gradient,
-                        generate_truecolor_gradient, get_gradient_array_for,
-                        Ansi256GradientIndex},
+use super::{config::{ColorWheelConfig, ColorWheelDirection, ColorWheelSpeed,
+                     GradientKind, GradientLengthKind,
+                     defaults::{Defaults, get_default_gradient_stops},
+                     sizing::VecSteps},
+            gradients::{Ansi256GradientIndex, generate_random_truecolor_gradient,
+                        generate_truecolor_gradient, get_gradient_array_for},
             helpers,
             lolcat::{Lolcat, LolcatBuilder},
             types::Seed};
-use crate::{ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color, tui_styled_text, u8,
-            usize, ChUnit, GCString, GCStringExt, GradientGenerationPolicy,
-            InlineString, RgbValue, TextColorizationPolicy, TuiColor, TuiStyle,
-            TuiStyledText, TuiStyledTexts};
+use crate::{ChUnit, GCString, GCStringExt, GradientGenerationPolicy, InlineString,
+            RgbValue, TextColorizationPolicy, TuiColor, TuiStyle, TuiStyledText,
+            TuiStyledTexts, ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color,
+            tui_styled_text, u8, usize};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
 /// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
@@ -56,6 +96,367 @@ pub(in crate::core) mod sizing {
 
     pub type VecConfigs = SmallVec<[ColorWheelConfig; MAX_CONFIGS]>;
     const MAX_CONFIGS: usize = 2;
+}
+
+/// Cache for `ColorWheel` colorization to avoid repeated computation.
+mod color_wheel_cache {
+    use super::{Arc, DefaultHasher, GradientGenerationPolicy, Hash, HashMap, Hasher,
+                LazyLock, Mutex, TextColorizationPolicy, TuiStyle, TuiStyledTexts,
+                VecConfigs};
+
+    const CACHE_SIZE: usize = 1000;
+
+    /// Key for caching `ColorWheel` operations.
+    /// Only includes fields that affect the colorization output.
+    #[derive(Hash, Clone, PartialEq, Eq, Debug)]
+    pub(super) struct ColorWheelCacheKey {
+        /// The text to be colorized
+        text: String,
+        /// Hash of the `ColorWheel` configuration (gradient colors, speed, etc.)
+        gradient_config_hash: u64,
+        /// The gradient generation policy
+        gradient_generation_policy: GradientGenerationPolicy,
+        /// The text colorization policy
+        text_colorization_policy: TextColorizationPolicy,
+        /// Whether a default style is present (we don't hash the style itself)
+        has_default_style: bool,
+    }
+
+    /// Helper functions for hashing `ColorWheel` configurations.
+    ///
+    /// We need manual hashing because `ColorWheelConfig` cannot derive `Hash` due to
+    /// the `Lolcat` variant containing `Seed` and `SeedDelta` which wrap `f64` values.
+    ///
+    /// Floating-point numbers don't implement `Hash` because:
+    /// - NaN != NaN (violates reflexivity required by Hash/Eq).
+    /// - -0.0 == 0.0 but have different bit representations.
+    /// - Denormalized numbers can have multiple representations.
+    ///
+    /// To work around this, we convert f64 to bits for hashing, which gives us
+    /// deterministic hashing at the cost of treating -0.0 and 0.0 as different.
+    pub(super) mod hashing_helpers {
+        use super::{Hash, Hasher};
+
+        /// Hash a single `ColorWheelConfig` into the hasher.
+        pub(super) fn hash_color_wheel_config<H: Hasher>(
+            config: &crate::ColorWheelConfig,
+            hasher: &mut H,
+        ) {
+            match config {
+                crate::ColorWheelConfig::Rgb(stops, speed, steps) => {
+                    0u8.hash(hasher); // discriminant
+                    stops.hash(hasher);
+                    speed.hash(hasher);
+                    steps.hash(hasher);
+                }
+                crate::ColorWheelConfig::RgbRandom(speed) => {
+                    1u8.hash(hasher); // discriminant
+                    speed.hash(hasher);
+                }
+                crate::ColorWheelConfig::Ansi256(index, speed) => {
+                    2u8.hash(hasher); // discriminant
+                    index.hash(hasher);
+                    speed.hash(hasher);
+                }
+                crate::ColorWheelConfig::Lolcat(builder) => {
+                    3u8.hash(hasher); // discriminant
+                    hash_lolcat_builder(builder, hasher);
+                }
+            }
+        }
+
+        /// Hash a `LolcatBuilder`, handling the f64 fields.
+        fn hash_lolcat_builder<H: Hasher>(
+            builder: &crate::lolcat::LolcatBuilder,
+            hasher: &mut H,
+        ) {
+            builder.color_change_speed.hash(hasher);
+            // Convert f64 to bits for deterministic hashing
+            builder.seed.0.to_bits().hash(hasher);
+            builder.seed_delta.0.to_bits().hash(hasher);
+            hash_colorize_strategy(&builder.colorization_strategy, hasher);
+        }
+
+        /// Hash the Colorize enum discriminant.
+        fn hash_colorize_strategy<H: Hasher>(
+            strategy: &crate::lolcat::Colorize,
+            hasher: &mut H,
+        ) {
+            match strategy {
+                crate::lolcat::Colorize::BothBackgroundAndForeground => {
+                    0u8.hash(hasher);
+                }
+                crate::lolcat::Colorize::OnlyForeground => {
+                    1u8.hash(hasher);
+                }
+            }
+        }
+    }
+
+    impl ColorWheelCacheKey {
+        pub(super) fn new(
+            text: &str,
+            configs: &VecConfigs,
+            gradient_generation_policy: GradientGenerationPolicy,
+            text_colorization_policy: TextColorizationPolicy,
+            maybe_default_style: Option<TuiStyle>,
+        ) -> Self {
+            // Hash all configs to create a unique identifier for the gradient state
+            let mut hasher = DefaultHasher::new();
+            for config in configs {
+                hashing_helpers::hash_color_wheel_config(config, &mut hasher);
+            }
+            let gradient_config_hash = hasher.finish();
+
+            Self {
+                text: text.to_string(),
+                gradient_config_hash,
+                gradient_generation_policy,
+                text_colorization_policy,
+                has_default_style: maybe_default_style.is_some(),
+            }
+        }
+    }
+
+    #[derive(Clone)]
+    struct CacheEntry {
+        value: TuiStyledTexts,
+        access_count: u64,
+    }
+
+    pub(super) struct ColorWheelCache {
+        map: HashMap<ColorWheelCacheKey, CacheEntry>,
+        access_counter: u64,
+    }
+
+    impl ColorWheelCache {
+        fn new() -> Self {
+            Self {
+                map: HashMap::with_capacity(CACHE_SIZE),
+                access_counter: 0,
+            }
+        }
+
+        pub(super) fn get(&mut self, key: &ColorWheelCacheKey) -> Option<TuiStyledTexts> {
+            self.access_counter += 1;
+            if let Some(entry) = self.map.get_mut(key) {
+                entry.access_count = self.access_counter;
+                Some(entry.value.clone())
+            } else {
+                None
+            }
+        }
+
+        pub(super) fn insert(&mut self, key: ColorWheelCacheKey, value: TuiStyledTexts) {
+            self.access_counter += 1;
+
+            // If cache is at capacity, remove least recently used entry.
+            if self.map.len() >= CACHE_SIZE
+                && let Some((lru_key, _)) = self
+                    .map
+                    .iter()
+                    .min_by_key(|(_, entry)| entry.access_count)
+                    .map(|(k, v)| (k.clone(), v))
+            {
+                self.map.remove(&lru_key);
+            }
+
+            self.map.insert(
+                key,
+                CacheEntry {
+                    value,
+                    access_count: self.access_counter,
+                },
+            );
+        }
+    }
+
+    /// Global cache instance for `ColorWheel` operations.
+    ///
+    /// This cache stores the results of text colorization operations, significantly
+    /// improving performance for repetitive tasks like dialog border rendering.
+    /// The cache is thread-safe and uses LRU eviction when full.
+    pub(super) static CACHE: LazyLock<Arc<Mutex<ColorWheelCache>>> =
+        LazyLock::new(|| Arc::new(Mutex::new(ColorWheelCache::new())));
+
+    /// Check if a gradient policy is cacheable.
+    ///
+    /// Only policies that reset the index produce deterministic output:
+    /// - `ReuseExistingGradientAndResetIndex`: Always starts from index 0
+    /// - `RegenerateGradientAndIndexBasedOnTextLength`: Regenerates and starts from 0
+    ///
+    /// The `ReuseExistingGradientAndIndex` policy is NOT cacheable because it
+    /// maintains state between calls, producing different output for the same input.
+    pub(super) fn is_cacheable_policy(policy: GradientGenerationPolicy) -> bool {
+        matches!(
+            policy,
+            GradientGenerationPolicy::ReuseExistingGradientAndResetIndex
+                | GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength
+        )
+    }
+    
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        
+        fn compute_hash<T: Hash>(value: &T) -> u64 {
+            let mut hasher = DefaultHasher::new();
+            value.hash(&mut hasher);
+            hasher.finish()
+        }
+        
+        #[test]
+        fn test_cache_key_hash_deterministic() {
+            // Test that same inputs produce same hash
+            let configs = smallvec::smallvec![
+                crate::ColorWheelConfig::Rgb(
+                    smallvec::smallvec!["#ff0000".into(), "#00ff00".into()],
+                    crate::ColorWheelSpeed::Fast,
+                    crate::u8(100),
+                ),
+            ];
+            
+            let key1 = ColorWheelCacheKey::new(
+                "test text",
+                &configs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+                None,
+            );
+            
+            let key2 = ColorWheelCacheKey::new(
+                "test text",
+                &configs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+                None,
+            );
+            
+            assert_eq!(compute_hash(&key1), compute_hash(&key2));
+            assert_eq!(key1, key2);
+        }
+        
+        #[test]
+        fn test_cache_key_hash_different_for_different_inputs() {
+            let configs = smallvec::smallvec![
+                crate::ColorWheelConfig::Rgb(
+                    smallvec::smallvec!["#ff0000".into()],
+                    crate::ColorWheelSpeed::Fast,
+                    crate::u8(100),
+                ),
+            ];
+            
+            let key1 = ColorWheelCacheKey::new(
+                "text1",
+                &configs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+                None,
+            );
+            
+            let key2 = ColorWheelCacheKey::new(
+                "text2",
+                &configs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+                None,
+            );
+            
+            assert_ne!(compute_hash(&key1), compute_hash(&key2));
+            assert_ne!(key1, key2);
+        }
+        
+        #[test]
+        fn test_lolcat_config_hash_handles_f64() {
+            use crate::lolcat::{LolcatBuilder, Colorize};
+            use crate::{Seed, SeedDelta};
+            
+            // Test that different f64 values produce different hashes
+            let config1 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
+                color_change_speed: crate::ColorChangeSpeed::Slow,
+                seed: Seed(1.0),
+                seed_delta: SeedDelta(0.1),
+                colorization_strategy: Colorize::OnlyForeground,
+            });
+            
+            let config2 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
+                color_change_speed: crate::ColorChangeSpeed::Slow,
+                seed: Seed(2.0),
+                seed_delta: SeedDelta(0.1),
+                colorization_strategy: Colorize::OnlyForeground,
+            });
+            
+            let mut hasher1 = DefaultHasher::new();
+            let mut hasher2 = DefaultHasher::new();
+            
+            hashing_helpers::hash_color_wheel_config(&config1, &mut hasher1);
+            hashing_helpers::hash_color_wheel_config(&config2, &mut hasher2);
+            
+            assert_ne!(hasher1.finish(), hasher2.finish());
+        }
+        
+        #[test]
+        fn test_hash_handles_negative_zero() {
+            use crate::lolcat::{LolcatBuilder, Colorize};
+            use crate::{Seed, SeedDelta};
+            
+            // Test that -0.0 and 0.0 produce different hashes (as documented)
+            let config1 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
+                color_change_speed: crate::ColorChangeSpeed::Slow,
+                seed: Seed(0.0),
+                seed_delta: SeedDelta(0.1),
+                colorization_strategy: Colorize::OnlyForeground,
+            });
+            
+            let config2 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
+                color_change_speed: crate::ColorChangeSpeed::Slow,
+                seed: Seed(-0.0),
+                seed_delta: SeedDelta(0.1),
+                colorization_strategy: Colorize::OnlyForeground,
+            });
+            
+            let mut hasher1 = DefaultHasher::new();
+            let mut hasher2 = DefaultHasher::new();
+            
+            hashing_helpers::hash_color_wheel_config(&config1, &mut hasher1);
+            hashing_helpers::hash_color_wheel_config(&config2, &mut hasher2);
+            
+            // This is expected behavior - -0.0 and 0.0 have different bit representations
+            assert_ne!(hasher1.finish(), hasher2.finish());
+        }
+        
+        #[test]
+        fn test_all_config_variants_hash_differently() {
+            use crate::Ansi256GradientIndex;
+            
+            let configs = vec![
+                crate::ColorWheelConfig::Rgb(
+                    smallvec::smallvec!["#ff0000".into()],
+                    crate::ColorWheelSpeed::Fast,
+                    crate::u8(100),
+                ),
+                crate::ColorWheelConfig::RgbRandom(crate::ColorWheelSpeed::Medium),
+                crate::ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightGreenToLightBlue,
+                    crate::ColorWheelSpeed::Slow,
+                ),
+            ];
+            
+            let mut hashes = Vec::new();
+            for config in &configs {
+                let mut hasher = DefaultHasher::new();
+                hashing_helpers::hash_color_wheel_config(config, &mut hasher);
+                hashes.push(hasher.finish());
+            }
+            
+            // All different variants should produce different hashes
+            for i in 0..hashes.len() {
+                for j in (i + 1)..hashes.len() {
+                    assert_ne!(hashes[i], hashes[j]);
+                }
+            }
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -103,8 +504,8 @@ impl ColorWheel {
     ///    also also call this method.
     ///
     /// # Arguments
-    /// 1. `configs`: A list of color wheel configs. The order of the configs is not
-    ///    important. However, at the very least, one Truecolor config & one ANSI 256
+    /// 1. `configs`: A list of color wheel configs. The order of the configs is
+    ///    unimportant. However, at the very least, one Truecolor config & one ANSI 256
     ///    config should be provided. The fallback is always grayscale. See
     ///    [`ColorWheelConfig::narrow_config_based_on_color_support`],
     ///    [`crate::global_color_support::detect`] for more info.
@@ -243,10 +644,11 @@ impl ColorWheel {
     fn reset_index(&mut self) {
         // If this is a lolcat, reset the seed, and early return.
         if let GradientLengthKind::Lolcat(seed) = self.get_gradient_len()
-            && let GradientKind::Lolcat(lolcat) = self.get_gradient_kind() {
-                lolcat.color_wheel_control.seed = seed;
-                return;
-            }
+            && let GradientKind::Lolcat(lolcat) = self.get_gradient_kind()
+        {
+            lolcat.color_wheel_control.seed = seed;
+            return;
+        }
 
         // Not a lolcat so reset the index and direction.
         self.index = ch(0);
@@ -254,17 +656,39 @@ impl ColorWheel {
     }
 
     /// Simplified version of [`ColorWheel::colorize_into_string`] with some defaults.
+    /// This method is optimized for repeated calls with the same text (like logging).
+    /// It uses caching internally since it always uses the
+    /// `ReuseExistingGradientAndResetIndex` policy.
     #[must_use]
     pub fn lolcat_into_string(
         text: &str,
         maybe_default_style: Option<TuiStyle>,
     ) -> InlineString {
-        ColorWheel::default().colorize_into_string(
-            text,
+        let mut color_wheel = ColorWheel::default();
+        let string_gcs = text.grapheme_string();
+
+        // Get cached styled texts using the generalized cache.
+        // Since we use ReuseExistingGradientAndResetIndex here, the result
+        // will be cached. This is perfect for logging where the same
+        // messages are colorized repeatedly.
+        let styled_texts = color_wheel.colorize_into_styled_texts(
+            &string_gcs,
             GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
             TextColorizationPolicy::ColorEachCharacter(None),
-            maybe_default_style,
-        )
+        );
+
+        // Convert styled texts to inline string
+        let mut acc = InlineString::new();
+        for TuiStyledText { mut style, text } in styled_texts.inner {
+            if let Some(default_style) = maybe_default_style {
+                style += default_style;
+            }
+            let ansi_styled_text = ast(text, style);
+            // We don't care about the result of this operation.
+            write!(acc, "{ansi_styled_text}").ok();
+        }
+
+        acc
     }
 
     /// See [`ColorWheel::lolcat_into_string`] for an easy to use version of this
@@ -309,15 +733,68 @@ impl ColorWheel {
     ///   of steps is the same. However, if the number of steps are different, then a new
     ///   gradient will be generated & the index reset.
     ///
+    /// - [`GradientGenerationPolicy::ReuseExistingGradientAndResetIndex`] - The first
+    ///   time this method is called it will generate a gradient w/ the number of steps.
+    ///   Subsequent calls will use the same gradient and the index will be reset to 0.
+    ///
     /// - [`GradientGenerationPolicy::ReuseExistingGradientAndIndex`] - The first time
     ///   this method is called it will generate a gradient w/ the number of steps.
     ///   Subsequent calls will use the same gradient and index.
+    ///
+    /// # Caching
+    ///
+    /// This method uses intelligent caching for policies that produce deterministic
+    /// output:
+    /// - `ReuseExistingGradientAndResetIndex`: Cached (always starts from index 0)
+    /// - `RegenerateGradientAndIndexBasedOnTextLength`: Cached (deterministic for same
+    ///   text)
+    /// - `ReuseExistingGradientAndIndex`: NOT cached (stateful, produces different
+    ///   output)
     pub fn colorize_into_styled_texts(
         &mut self,
         us: &GCString,
         gradient_generation_policy: GradientGenerationPolicy,
         text_colorization_policy: TextColorizationPolicy,
     ) -> TuiStyledTexts {
+        // Use cache for deterministic policies.
+        // The cache check happens inside get_cached_or_compute, which will:
+        // 1. Check if the policy is cacheable (reset policies only)
+        // 2. If not cacheable, immediately compute without caching
+        // 3. If cacheable, check cache and return cached result or compute and cache
+        let text = us.string.as_ref();
+
+        // Check if result is cacheable and already cached
+        if color_wheel_cache::is_cacheable_policy(gradient_generation_policy) {
+            let key = color_wheel_cache::ColorWheelCacheKey::new(
+                text,
+                &self.configs,
+                gradient_generation_policy,
+                text_colorization_policy,
+                None,
+            );
+
+            // Try to get from cache
+            let cache = color_wheel_cache::CACHE.clone();
+            if let Ok(mut cache_guard) = cache.lock()
+                && let Some(cached) = cache_guard.get(&key)
+            {
+                return cached;
+            }
+
+            // Not in cache, compute and store
+            self.generate_gradient(us, gradient_generation_policy);
+            let result = self.generate_styled_texts(text_colorization_policy, us);
+
+            if let Ok(mut cache_guard) = cache.lock() {
+                cache_guard.insert(key, result.clone());
+            }
+
+            return result;
+        }
+
+        // Not cacheable - compute directly
+        // This closure is only called if:
+        // - Policy is not cacheable (ReuseExistingGradientAndIndex)
         self.generate_gradient(us, gradient_generation_policy);
         self.generate_styled_texts(text_colorization_policy, us)
     }
@@ -465,10 +942,15 @@ impl ColorWheel {
 
                 // Re-use gradient if possible.
                 if let GradientLengthKind::ColorWheel(length) = self.get_gradient_len()
-                    && u8(ch(length)) != steps {
-                        self.generate_color_wheel(Some(steps));
-                    }
+                    && u8(ch(length)) != steps
+                {
+                    self.generate_color_wheel(Some(steps));
+                }
 
+                // ALWAYS reset index for this policy.
+                // This ensures deterministic output - same text always produces
+                // same colors starting from the beginning of the gradient.
+                // This is why this policy is CACHEABLE.
                 self.reset_index();
             }
 
@@ -476,6 +958,10 @@ impl ColorWheel {
                 if let GradientLengthKind::NotCalculatedYet = self.get_gradient_len() {
                     self.generate_color_wheel(None);
                 }
+                // NO index reset - maintains state between calls.
+                // This means the same text gets different colors each time
+                // depending on where we left off in the gradient.
+                // This is why this policy is NOT CACHEABLE.
             }
 
             GradientGenerationPolicy::ReuseExistingGradientAndResetIndex => {
@@ -483,6 +969,9 @@ impl ColorWheel {
                     self.generate_color_wheel(None);
                 }
 
+                // ALWAYS reset index for this policy.
+                // Like RegenerateGradientAndIndexBasedOnTextLength, this
+                // ensures deterministic output, making it CACHEABLE.
                 self.reset_index();
             }
         }
@@ -523,8 +1012,8 @@ mod generate_styled_texts_helper {
 
 /// Helper module for color wheel index management and navigation.
 mod color_wheel_navigation {
-    use super::{ch, usize, ChUnit, ColorWheelConfig, ColorWheelDirection,
-                ColorWheelSpeed, TuiColor, VecSteps};
+    use super::{ChUnit, ColorWheelConfig, ColorWheelDirection, ColorWheelSpeed,
+                TuiColor, VecSteps, ch, usize};
 
     /// Determine if the color wheel index should be updated based on speed settings.
     pub fn should_update_index(
@@ -593,7 +1082,7 @@ mod color_wheel_navigation {
 
 /// Helper module for lolcat-specific operations.
 mod lolcat_helper {
-    use super::{ch, helpers, tui_color, ChUnit, Lolcat, Seed, TuiColor};
+    use super::{ChUnit, Lolcat, Seed, TuiColor, ch, helpers, tui_color};
 
     /// Handle lolcat color generation and seed advancement.
     pub fn generate_next_lolcat_color(lolcat: &mut Lolcat) -> TuiColor {
@@ -628,9 +1117,9 @@ mod lolcat_helper {
 
 /// Helper module for gradient generation operations.
 mod gradient_generation_helper {
-    use super::{ch, get_gradient_array_for, tui_color, Ansi256GradientIndex, ColorWheel,
-                ColorWheelConfig, Defaults, GradientKind, GradientLengthKind,
-                LolcatBuilder, VecSteps};
+    use super::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, Defaults,
+                GradientKind, GradientLengthKind, LolcatBuilder, VecSteps, ch,
+                get_gradient_array_for, tui_color};
 
     /// Determine the number of steps for gradient generation.
     pub fn determine_steps(
@@ -721,9 +1210,8 @@ mod tests_color_wheel_rgb {
     use serial_test::serial;
 
     use super::*;
-    use crate::{assert_eq2, global_color_support,
-                tui_style::tui_style_attrib::{Bold, Dim},
-                ColorSupport};
+    use crate::{ColorSupport, assert_eq2, global_color_support,
+                tui_style::tui_style_attrib::{Bold, Dim}};
 
     #[test]
     fn test_convert_lolcat_seed_to_index() {
@@ -1097,5 +1585,273 @@ mod tests_color_wheel_rgb {
         );
 
         global_color_support::clear_override();
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    extern crate test;
+    use test::Bencher;
+
+    use super::*;
+
+    /// Benchmark: `lolcat_into_string` with short ASCII text
+    #[bench]
+    fn bench_lolcat_into_string_ascii_short(b: &mut Bencher) {
+        let text = "Hello, world!";
+        b.iter(|| {
+            let _result = ColorWheel::lolcat_into_string(text, None);
+        });
+    }
+
+    /// Benchmark: `lolcat_into_string` with longer ASCII text
+    #[bench]
+    fn bench_lolcat_into_string_ascii_long(b: &mut Bencher) {
+        let text =
+            "The quick brown fox jumps over the lazy dog. Lorem ipsum dolor sit amet.";
+        b.iter(|| {
+            let _result = ColorWheel::lolcat_into_string(text, None);
+        });
+    }
+
+    /// Benchmark: `lolcat_into_string` with typical log message
+    #[bench]
+    fn bench_lolcat_into_string_log_message(b: &mut Bencher) {
+        let text = "main_event_loop → Startup 🎉";
+        b.iter(|| {
+            let _result = ColorWheel::lolcat_into_string(text, None);
+        });
+    }
+
+    /// Benchmark: `lolcat_into_string` with Unicode text
+    #[bench]
+    fn bench_lolcat_into_string_unicode(b: &mut Bencher) {
+        let text = "Hello, 世界! こんにちは";
+        b.iter(|| {
+            let _result = ColorWheel::lolcat_into_string(text, None);
+        });
+    }
+
+    /// Benchmark: `lolcat_into_string` with repeated text (cache benefit test)
+    #[bench]
+    fn bench_lolcat_into_string_repeated(b: &mut Bencher) {
+        let text = "AppManager::render_app() ok 🎨";
+        b.iter(|| {
+            // Simulate repeated calls with same text
+            for _ in 0..10 {
+                let _result = ColorWheel::lolcat_into_string(text, None);
+            }
+        });
+    }
+
+    /// Benchmark: Instance method `colorize_into_string` for comparison
+    #[bench]
+    fn bench_colorize_into_string_instance(b: &mut Bencher) {
+        let mut color_wheel = ColorWheel::default();
+        let text = "Hello, world!";
+        b.iter(|| {
+            let _result = color_wheel.colorize_into_string(
+                text,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+                None,
+            );
+        });
+    }
+
+    /// Benchmark: Dialog border top line colorization (typical dialog border)
+    #[bench]
+    fn bench_dialog_border_top(b: &mut Bencher) {
+        let mut color_wheel = ColorWheel::default();
+        let border_text = "┌─────────────────────────────────────────┐";
+        let border_gcs = border_text.grapheme_string();
+
+        b.iter(|| {
+            let _result = color_wheel.colorize_into_styled_texts(
+                &border_gcs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+            );
+        });
+    }
+
+    /// Benchmark: Dialog border side colorization (repeated frequently)
+    #[bench]
+    fn bench_dialog_border_side(b: &mut Bencher) {
+        let mut color_wheel = ColorWheel::default();
+        let border_text = "│                                         │";
+        let border_gcs = border_text.grapheme_string();
+
+        b.iter(|| {
+            let _result = color_wheel.colorize_into_styled_texts(
+                &border_gcs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+            );
+        });
+    }
+
+    /// Benchmark: Dialog border repeated (simulates multiple borders in same render)
+    #[bench]
+    fn bench_dialog_border_repeated(b: &mut Bencher) {
+        let mut color_wheel = ColorWheel::default();
+        let top_border = "┌─────────────────────────────────────────┐";
+        let side_border = "│                                         │";
+        let bottom_border = "└─────────────────────────────────────────┘";
+
+        let top_gcs = top_border.grapheme_string();
+        let side_gcs = side_border.grapheme_string();
+        let bottom_gcs = bottom_border.grapheme_string();
+
+        b.iter(|| {
+            // Simulate rendering a complete dialog border
+            let _top = color_wheel.colorize_into_styled_texts(
+                &top_gcs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+            );
+
+            // Multiple side borders (typical dialog has many rows)
+            for _ in 0..10 {
+                let _side = color_wheel.colorize_into_styled_texts(
+                    &side_gcs,
+                    GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                    TextColorizationPolicy::ColorEachCharacter(None),
+                );
+            }
+
+            let _bottom = color_wheel.colorize_into_styled_texts(
+                &bottom_gcs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+            );
+        });
+    }
+
+    /// Benchmark: colorize_into_styled_texts with reset policy (cacheable)
+    #[bench]
+    fn bench_colorize_into_styled_texts_reset_policy(b: &mut Bencher) {
+        let mut color_wheel = ColorWheel::default();
+        let text = "Test string for caching";
+        let text_gcs = text.grapheme_string();
+
+        b.iter(|| {
+            let _result = color_wheel.colorize_into_styled_texts(
+                &text_gcs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+            );
+        });
+    }
+
+    /// Benchmark: colorize_into_styled_texts with maintain policy (NOT cacheable)
+    #[bench]
+    fn bench_colorize_into_styled_texts_maintain_policy(b: &mut Bencher) {
+        let mut color_wheel = ColorWheel::default();
+        let text = "Test string for no caching";
+        let text_gcs = text.grapheme_string();
+
+        b.iter(|| {
+            let _result = color_wheel.colorize_into_styled_texts(
+                &text_gcs,
+                GradientGenerationPolicy::ReuseExistingGradientAndIndex, // NOT cached!
+                TextColorizationPolicy::ColorEachCharacter(None),
+            );
+        });
+    }
+    
+    /// Benchmark: Hash computation for ColorWheelCacheKey
+    #[bench]
+    fn bench_hash_cache_key_creation(b: &mut Bencher) {
+        let configs = smallvec::smallvec![
+            crate::ColorWheelConfig::Rgb(
+                smallvec::smallvec!["#ff0000".into(), "#00ff00".into(), "#0000ff".into()],
+                crate::ColorWheelSpeed::Fast,
+                crate::u8(100),
+            ),
+        ];
+        
+        b.iter(|| {
+            let _key = color_wheel_cache::ColorWheelCacheKey::new(
+                "Hello, world! This is a test string.",
+                &configs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+                None,
+            );
+        });
+    }
+    
+    /// Benchmark: Hash computation for Lolcat config (with f64)
+    #[bench]
+    fn bench_hash_lolcat_config(b: &mut Bencher) {
+        use crate::lolcat::{LolcatBuilder, Colorize};
+        use crate::{Seed, SeedDelta};
+        
+        let config = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
+            color_change_speed: crate::ColorChangeSpeed::Slow,
+            seed: Seed(42.0),
+            seed_delta: SeedDelta(0.1),
+            colorization_strategy: Colorize::OnlyForeground,
+        });
+        
+        b.iter(|| {
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            // Use the same hashing logic as the cache key
+            match &config {
+                crate::ColorWheelConfig::Lolcat(builder) => {
+                    3u8.hash(&mut hasher); // discriminant
+                    builder.color_change_speed.hash(&mut hasher);
+                    builder.seed.0.to_bits().hash(&mut hasher);
+                    builder.seed_delta.0.to_bits().hash(&mut hasher);
+                    match builder.colorization_strategy {
+                        Colorize::BothBackgroundAndForeground => 0u8.hash(&mut hasher),
+                        Colorize::OnlyForeground => 1u8.hash(&mut hasher),
+                    }
+                }
+                _ => panic!("Expected Lolcat config"),
+            }
+            let _hash = hasher.finish();
+        });
+    }
+    
+    /// Benchmark: Hash computation for multiple configs
+    #[bench]
+    fn bench_hash_multiple_configs(b: &mut Bencher) {
+        use crate::Ansi256GradientIndex;
+        
+        let configs: VecConfigs = smallvec::smallvec![
+            crate::ColorWheelConfig::Rgb(
+                smallvec::smallvec!["#ff0000".into(), "#00ff00".into()],
+                crate::ColorWheelSpeed::Fast,
+                crate::u8(100),
+            ),
+            crate::ColorWheelConfig::Ansi256(
+                Ansi256GradientIndex::LightGreenToLightBlue,
+                crate::ColorWheelSpeed::Medium,
+            ),
+        ];
+        
+        b.iter(|| {
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            for config in &configs {
+                // Hash each config manually to test performance
+                match config {
+                    crate::ColorWheelConfig::Rgb(stops, speed, steps) => {
+                        0u8.hash(&mut hasher);
+                        stops.hash(&mut hasher);
+                        speed.hash(&mut hasher);
+                        steps.hash(&mut hasher);
+                    }
+                    crate::ColorWheelConfig::Ansi256(index, speed) => {
+                        2u8.hash(&mut hasher);
+                        index.hash(&mut hasher);
+                        speed.hash(&mut hasher);
+                    }
+                    _ => {},
+                }
+            }
+            let _hash = hasher.finish();
+        });
     }
 }

@@ -21,13 +21,13 @@ use smallvec::SmallVec;
 
 use super::{lolcat::{Lolcat, LolcatBuilder},
             types::Seed};
-use crate::{global_color_support, ColorSupport, TuiColor};
+use crate::{ColorSupport, TuiColor, global_color_support};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
 /// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
 /// the heap.
 pub(in crate::core) mod sizing {
-    use super::{defaults, SmallString, SmallVec, TuiColor};
+    use super::{SmallString, SmallVec, TuiColor, defaults};
 
     pub type StringHexColor = SmallString<[u8; MAX_HEX_COLOR_STRING_SIZE]>;
     const MAX_HEX_COLOR_STRING_SIZE: usize = 8;
