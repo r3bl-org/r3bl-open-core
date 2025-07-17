@@ -1,3 +1,44 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Archiving MD Parser NG and Simple Parser](#archiving-md-parser-ng-and-simple-parser)
+  - [Archive Location](#archive-location)
+  - [Overview](#overview)
+  - [Development Timeline](#development-timeline)
+    - [Phase 1: NG Parser Development](#phase-1-ng-parser-development)
+    - [Phase 2: Simple Parser Development](#phase-2-simple-parser-development)
+  - [Performance Analysis](#performance-analysis)
+    - [Benchmark Results](#benchmark-results)
+    - [Key Findings](#key-findings)
+  - [Implementation Status](#implementation-status)
+    - [NG Parser (nom-based)](#ng-parser-nom-based)
+    - [Simple Parser](#simple-parser)
+    - [Known Issues](#known-issues)
+  - [Strategic Decision: Archive Both Parsers](#strategic-decision-archive-both-parsers)
+    - [Rationale](#rationale)
+  - [Archival Plan](#archival-plan)
+    - [Repository Structure](#repository-structure)
+    - [Dependency Management](#dependency-management)
+    - [Migration Steps](#migration-steps)
+  - [Migration Status](#migration-status)
+    - [Files to Archive](#files-to-archive)
+      - [Core NG Parser Module](#core-ng-parser-module)
+      - [Documentation Files](#documentation-files)
+      - [Test Files](#test-files)
+    - [Files to Keep in r3bl-open-core](#files-to-keep-in-r3bl-open-core)
+    - [Detailed Migration Execution](#detailed-migration-execution)
+      - [Phase 1: Setup Archive Repository Structure](#phase-1-setup-archive-repository-structure)
+      - [Phase 2: Create Crate Structure](#phase-2-create-crate-structure)
+      - [Phase 3: Copy Source Files](#phase-3-copy-source-files)
+      - [Phase 4: Handle Dependencies](#phase-4-handle-dependencies)
+  - [Lessons Learned](#lessons-learned)
+  - [Future Recommendations](#future-recommendations)
+  - [Final Migration Status (July 15, 2025)](#final-migration-status-july-15-2025)
+    - [✅ All Tasks Completed](#-all-tasks-completed)
+    - [✅ Post-Migration Fixes Completed (July 15, 2025)](#-post-migration-fixes-completed-july-15-2025)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Archiving MD Parser NG and Simple Parser
 
 ## Archive Location

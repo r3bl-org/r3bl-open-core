@@ -2,11 +2,17 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Implemented Optimizations](#implemented-optimizations)
-  - [Latest Flamegraph Analysis (2025-07-17)](#latest-flamegraph-analysis-2025-07-17)
+  - [Latest Flamegraph Analysis (2025-07-17 - Current)](#latest-flamegraph-analysis-2025-07-17---current)
+    - [Format Change Note](#format-change-note)
     - [Immediate Action Items](#immediate-action-items)
     - [Profiling Configuration](#profiling-configuration)
     - [Current Performance Bottleneck Analysis](#current-performance-bottleneck-analysis)
     - [Key Findings from Current Analysis](#key-findings-from-current-analysis)
+  - [Previous Flamegraph Analysis (2025-07-17 - Post Grapheme Optimization)](#previous-flamegraph-analysis-2025-07-17---post-grapheme-optimization)
+    - [Immediate Action Items (Historical - From Post Grapheme Optimization)](#immediate-action-items-historical---from-post-grapheme-optimization)
+    - [Profiling Configuration](#profiling-configuration-1)
+    - [Performance Bottleneck Analysis (Post Grapheme Optimization)](#performance-bottleneck-analysis-post-grapheme-optimization)
+    - [Key Findings from Post Grapheme Analysis](#key-findings-from-post-grapheme-analysis)
   - [Grapheme Segmentation and Dialog Border Optimization (✅ Completed - 2025-07-17)](#grapheme-segmentation-and-dialog-border-optimization--completed---2025-07-17)
     - [Problem Identified](#problem-identified)
     - [Root Cause Analysis](#root-cause-analysis)
@@ -39,7 +45,7 @@
     - [Verification](#verification)
     - [Key Insight](#key-insight)
   - [Previous Flamegraph Analysis (2025-07-14)](#previous-flamegraph-analysis-2025-07-14)
-    - [Profiling Configuration](#profiling-configuration-1)
+    - [Profiling Configuration](#profiling-configuration-2)
     - [Current Performance Bottleneck Analysis](#current-performance-bottleneck-analysis-1)
     - [Key Changes from Previous Analysis](#key-changes-from-previous-analysis)
     - [String Truncation Optimization (✅ Completed)](#string-truncation-optimization--completed)
@@ -87,22 +93,118 @@
 > measuring both macro-level parser performance and micro-level component costs to isolate the root
 > causes of performance degradation._
 >
-> For the latest flamegraph analysis from the `tui/flamegraph.svg` file. In this document, place the
-> latest analysis at the top, and keep the previous analysis below it for historical reference. And
-> update the Table of Contents (TOC) accordingly.
+> For the latest flamegraph analysis from the `tui/flamegraph.perf-folded` file (we've switched from
+> the SVG format to the more compact perf-folded format which is better for Claude Code to analyze).
+> In this document, place the latest analysis at the top, and keep the previous analysis below it
+> for historical reference. And update the Table of Contents (TOC) accordingly.
 >
 > ---
 
 # Implemented Optimizations
 
-## Latest Flamegraph Analysis (2025-07-17)
+## Latest Flamegraph Analysis (2025-07-17 - Current)
+
+### Format Change Note
+
+We've switched from using `tui/flamegraph.svg` to `tui/flamegraph.perf-folded` format for
+performance analysis. The perf-folded format is more compact and better suited for Claude Code to
+analyze programmatically.
 
 ### Immediate Action Items
+
+1. **Optimize AnsiStyledText Display Formatting** (16.3% overhead - HIGHEST PRIORITY):
+   - 103,121,329 samples in `core::fmt::Display for AnsiStyledText::fmt`
+   - Heavy string formatting overhead in ANSI escape sequence generation
+   - Consider caching formatted strings or using write buffers
+
+2. **Optimize TuiStyle to SmallVec Conversion** (8.5% overhead - HIGH PRIORITY):
+   - 53,506,767 samples in `TuiStyle` to `SmallVec<[ASTStyle: 12]>` conversion
+   - Frequent style conversions causing allocations
+   - Cache common style combinations or pre-allocate capacity
+
+3. **Reduce SmallVec Memory Operations** (10.4% combined - HIGH PRIORITY):
+   - 41,047,605 samples in `SmallVec::try_grow` with `_mi_heap_realloc_zero`
+   - 27,631,637 samples in additional SmallVec reallocation operations
+   - Analyze usage patterns and adjust initial capacities
+
+4. **Further Optimize GCString Creation** (4.6% overhead - MEDIUM PRIORITY):
+   - 29,232,784 samples in `GCString::new`
+   - Despite previous optimizations, still creating many instances
+   - Consider string interning or caching for common strings
+
+### Profiling Configuration
+
+Using `profiling-detailed` profile with:
+
+- `-F 99`: 99Hz sampling frequency (lower than default ~4000Hz for cleaner data)
+- `--call-graph=fp,8`: Frame pointer-based call graphs limited to 8 stack frames
+- **Result**: Complete symbol visibility with no "[unknown]" sections
+- **Format**: Using perf-folded format for more efficient analysis
+
+### Current Performance Bottleneck Analysis
+
+Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-07-17):
+
+1. **AnsiStyledText Display Formatting (16.3%)** - PRIMARY BOTTLENECK
+   - `<core::fmt::Display for AnsiStyledText>::fmt` with `core::fmt::write`
+   - 103,121,329 samples - the single largest performance bottleneck
+   - Heavy overhead from ANSI escape sequence formatting
+   - Likely called for every styled text render operation
+
+2. **TuiStyle to SmallVec Conversion (8.5%)**
+   - `From<TuiStyle> for SmallVec<[ASTStyle: 12]>::from`
+   - 53,506,767 samples
+   - Converting styles to ANSI style vectors for every render
+   - Suggests lack of caching for common style combinations
+
+3. **SmallVec Memory Operations (10.4% combined)**
+   - `SmallVec::try_grow` operations: 41,047,605 + 19,798,063 + 7,833,574 samples
+   - Memory reallocation through `_mi_heap_realloc_zero`
+   - `SmallVec::extend` operations: 19,943,821 samples
+   - Indicates frequent capacity exceeded, forcing heap allocations
+
+4. **GCString Creation (4.6%)**
+   - `GCString::new`: 29,232,784 samples
+   - Still visible despite previous ASCII fast-path optimization
+   - Called from unknown context (line 6 shows [unknown] caller)
+
+5. **Unicode Segmentation (2.6%)**
+   - `unicode_segmentation::tables::grapheme::grapheme_category`: 16,363,148 samples
+   - `GraphemeIndices::next`: 15,068,013 samples
+   - Reduced from previous analyses but still present
+
+6. **Memory Management (2.5%)**
+   - `_mi_page_malloc`: 25,242,633 samples
+   - General allocation overhead from mimalloc
+
+### Key Findings from Current Analysis
+
+1. **Previous Optimizations Holding**:
+   - Grapheme segmentation in logging has been eliminated (was 4.23%)
+   - Dialog border colorization is minimal (was 11.71%)
+   - Syntax highlighting deserialization no longer appears
+   - String truncation remains eliminated
+
+2. **New Dominant Costs**:
+   - AnsiStyledText formatting is now the largest single bottleneck at 16.3%
+   - SmallVec operations account for nearly 19% combined overhead
+   - Style conversion overhead suggests rendering pipeline inefficiency
+
+3. **Optimization Opportunities**:
+   - Cache ANSI escape sequences for common styles
+   - Pre-size SmallVec allocations based on typical usage
+   - Consider style interning or flyweight pattern
+   - Batch style conversions where possible
+
+## Previous Flamegraph Analysis (2025-07-17 - Post Grapheme Optimization)
+
+### Immediate Action Items (Historical - From Post Grapheme Optimization)
 
 1. **Investigate Memory Management Overhead** (18.32% potential improvement):
    - Analyze why `mmput` and page deallocation is so expensive
    - May be related to process spawning or large buffer allocations
    - Consider buffer pooling or reuse strategies
+   - **Update**: This is no longer visible in current flamegraph
 
 ### Profiling Configuration
 
@@ -112,9 +214,9 @@ Using `profiling-detailed` profile with:
 - `--call-graph=fp,8`: Frame pointer-based call graphs limited to 8 stack frames
 - **Result**: Complete symbol visibility with no "[unknown]" sections
 
-### Current Performance Bottleneck Analysis
+### Performance Bottleneck Analysis (Post Grapheme Optimization)
 
-Based on the latest flamegraph analysis from `tui/flamegraph.svg` (2025-07-16):
+Based on the flamegraph analysis from `tui/flamegraph.perf-folded` after grapheme optimization:
 
 1. **Memory Management Operations (18.32%)** - PRIMARY BOTTLENECK
    - `mmput`, `exit_mmap`, `tlb_finish_mmu` operations
@@ -141,7 +243,7 @@ Based on the latest flamegraph analysis from `tui/flamegraph.svg` (2025-07-16):
    - Various `SmallVec` extend operations for PixelChar collections
    - Part of normal rendering pipeline overhead
 
-### Key Findings from Current Analysis
+### Key Findings from Post Grapheme Analysis
 
 1. **String Truncation Fix Confirmed Working**:
    - `truncate_from_right` does NOT appear as a bottleneck

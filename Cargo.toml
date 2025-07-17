@@ -104,13 +104,6 @@ match_same_arms = "allow"
 # `cargo build --profile profiling` and `cargo build --profile profiling-detailed` configuration for `rustc`.            #
 ##########################################################################################################################
 
-[profile.profiling]
-inherits = "release"
-debug = true
-strip = false
-lto = "thin"
-codegen-units = 16
-
 [profile.profiling-detailed]
 inherits = "release"
 debug = true

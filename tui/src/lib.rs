@@ -45,6 +45,8 @@
 //! - [Learn how these crates are built, provide
 //!   feedback](#learn-how-these-crates-are-built-provide-feedback)
 //! - [Run the demo locally](#run-the-demo-locally)
+//!   - [Prerequisites](#prerequisites)
+//!   - [Running examples](#running-examples)
 //! - [Nushell scripts to build, run, test etc.](#nushell-scripts-to-build-run-test-etc)
 //! - [Examples to get you started](#examples-to-get-you-started)
 //!   - [Video of the demo in action](#video-of-the-demo-in-action)
@@ -282,7 +284,33 @@
 //! # Run the demo locally
 //!
 //! Once you've cloned [the repo](https://github.com/r3bl-org/r3bl-open-core) to a folder
-//! on your computer, you can run the examples you see in the video with the following
+//! on your computer, follow these steps:
+//!
+//! ## Prerequisites
+//!
+//! First, install the required development tools:
+//!
+//! ```sh
+//! # From the repository root, install system tools (rustup, perf, nushell)
+//! ./setup-dev-tools.sh
+//!
+//! # Then install Rust development tools (flamegraph, inferno, etc.)
+//! nu run.nu install-cargo-tools
+//! ```
+//!
+//! The `setup-dev-tools.sh` script installs:
+//! - **rustup**: Rust toolchain manager
+//! - **perf**: Linux profiling tool (required for flamegraph profiling)
+//! - **nushell**: Modern shell used for build scripts
+//!
+//! The `install-cargo-tools` command installs various Rust development tools including:
+//! - **flamegraph**: For generating performance flamegraphs
+//! - **inferno**: For collapsed stack analysis
+//! - And other useful development utilities
+//!
+//! ## Running examples
+//!
+//! After setup, you can run the examples you see in the video with the following
 //! commands:
 //!
 //! ```sh

@@ -1,5 +1,7 @@
 # r3bl_tui
 
+## Why R3BL?
+
 <img
 src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true"
 height="256px">
@@ -7,38 +9,35 @@ height="256px">
 ## Table of contents
 
 <!-- TOC -->
+- [Why R3BL?](#why-r3bl)
 - [Introduction](#introduction)
 - [Framework highlights](#framework-highlights)
 - [Full TUI, Partial TUI, and async
   readline](#full-tui-partial-tui-and-async-readline)
-  - [Full TUI (async, raw mode, full screen) for immersive TUI
-    apps](#full-tui-async-raw-mode-full-screen-for-immersive-tui-apps)
-  - [Partial TUI (async, partial raw mode, async readline) for choice based user
-    interaction](#
-    partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
-  - [Partial TUI (async, partial raw mode, async readline) for async
-    REPL](#partial-tui-async-partial-raw-mode-async-readline-for-async-repl)
+  - [Partial TUI for simple choice](#partial-tui-for-simple-choice)
+  - [Partial TUI for REPL](#partial-tui-for-repl)
+  - [Full TUI for immersive apps](#full-tui-for-immersive-apps)
   - [Power via composition](#power-via-composition)
 - [Changelog](#changelog)
 - [Learn how these crates are built, provide
   feedback](#learn-how-these-crates-are-built-provide-feedback)
 - [Run the demo locally](#run-the-demo-locally)
+  - [Prerequisites](#prerequisites)
+  - [Running examples](#running-examples)
 - [Nushell scripts to build, run, test etc.](#nushell-scripts-to-build-run-test-etc)
 - [Examples to get you started](#examples-to-get-you-started)
   - [Video of the demo in action](#video-of-the-demo-in-action)
-- [How does layout, rendering, and event handling work in
-  general?](#how-does-layout-rendering-and-event-handling-work-in-general)
-- [Switching from shared memory to message passing architecture after
-  v0.3.10](#switching-from-shared-memory-to-message-passing-architecture-after-v0310)
-- [Input and output devices](#input-and-output-devices)
-- [Life of an input event for a Full TUI
-  app](#life-of-an-input-event-for-a-full-tui-app)
-- [Life of a signal (aka "out of band
-  event")](#life-of-a-signal-aka-out-of-band-event)
+- [Layout, rendering, and event handling](#layout-rendering-and-event-handling)
+- [Architecture overview, is message passing, was shared
+  memory](#architecture-overview-is-message-passing-was-shared-memory)
+- [I/O devices for full TUI, choice, and
+  REPL](#io-devices-for-full-tui-choice-and-repl)
+- [Life of an input event](#life-of-an-input-event-for-a-full-tui-app)
+- [Life of a signal (out of band event)](#life-of-a-signal-aka-out-of-band-event)
 - [The window](#the-window)
 - [Layout and styling](#layout-and-styling)
-- [Component, ComponentRegistry, focus management, and event
-  routing](#component-componentregistry-focus-management-and-event-routing)
+- [Component registry, event routing, focus
+  mgmt](#component-registry-event-routing-focus-mgmt)
 - [Input event specificity](#input-event-specificity)
 - [Rendering and painting](#rendering-and-painting)
   - [Offscreen buffer](#offscreen-buffer)
@@ -49,12 +48,10 @@ height="256px">
 - [Painting the caret](#painting-the-caret)
 - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
   - [Two callback functions](#two-callback-functions)
-  - [How to use this dialog to make an HTTP request & pipe the results into a
-    selection area?](#
-    how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
+  - [Dialog HTTP requests and results](#dialog-http-requests-and-results)
 - [How to make HTTP requests](#how-to-make-http-requests)
-- [Custom Markdown MD parsing and custom syntax
-  highlighting](#custom-markdown-md-parsing-and-custom-syntax-highlighting)
+  - [Custom Markdown parsing and syntax
+    highlighting](#custom-markdown-parsing-and-syntax-highlighting)
 - [Grapheme support](#grapheme-support)
 - [Lolcat support](#lolcat-support)
 - [Issues and PRs](#issues-and-prs)
@@ -188,10 +185,10 @@ understanding of TTY programming.
 - [Build with Naz: TTY playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
 - [Build with Naz: async readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
 
-### Partial TUI (async, partial raw mode, async readline) for choice based user interaction
+### Partial TUI for simple choice
 
-[mod@readline_async::choose_api] allows you to build less interactive apps that ask a
-user user to make choices from a list of options and then use a decision tree to
+[`mod@readline_async::choose_api`] allows you to build less interactive apps that ask
+a user user to make choices from a list of options and then use a decision tree to
 perform actions.
 
 An example of this is this "Partial TUI" app `giti` in the
@@ -203,11 +200,11 @@ cargo install r3bl-cmdr
 giti
 ```
 
-### Partial TUI (async, partial raw mode, async readline) for async REPL
+### Partial TUI for REPL
 
-[mod@readline_async::readline_async_api] gives you the ability to easily ask for user
-input in a line editor. You can customize the prompt, and other behaviors, like input
-history.
+[`mod@readline_async::readline_async_api`] gives you the ability to easily ask for
+user input in a line editor. You can customize the prompt, and other behaviors, like
+input history.
 
 Using this, you can build your own async shell programs using "async readline &
 stdout". Use advanced features like showing indeterminate progress spinners, and even
@@ -228,12 +225,11 @@ Here are other examples of this:
 
 1. <https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server>
 2. <https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples>
+### Full TUI for immersive apps
 
-### Full TUI (async, raw mode, full screen) for immersive TUI apps
-
-**The bulk of this document is about this**. [mod@tui::terminal_window_api] gives you
-"raw mode", "alternate screen" and "full screen" support, while being totally async.
-An example of this is the "Full TUI" app `edi` in the
+**The bulk of this document is about this**. [`mod@tui::terminal_window_api`] gives
+you "raw mode", "alternate screen" and "full screen" support, while being totally
+async. An example of this is the "Full TUI" app `edi` in the
 [`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
 can install & run this with the following command:
 
@@ -265,7 +261,33 @@ To learn how we built this crate, please take a look at the following resources.
 ## Run the demo locally
 
 Once you've cloned [the repo](https://github.com/r3bl-org/r3bl-open-core) to a folder
-on your computer, you can run the examples you see in the video with the following
+on your computer, follow these steps:
+
+### Prerequisites
+
+First, install the required development tools:
+
+```sh
+# From the repository root, install system tools (rustup, perf, nushell)
+./setup-dev-tools.sh
+
+# Then install Rust development tools (flamegraph, inferno, etc.)
+nu run.nu install-cargo-tools
+```
+
+The `setup-dev-tools.sh` script installs:
+- **rustup**: Rust toolchain manager
+- **perf**: Linux profiling tool (required for flamegraph profiling)
+- **nushell**: Modern shell used for build scripts
+
+The `install-cargo-tools` command installs various Rust development tools including:
+- **flamegraph**: For generating performance flamegraphs
+- **inferno**: For collapsed stack analysis
+- And other useful development utilities
+
+### Running examples
+
+After setup, you can run the examples you see in the video with the following
 commands:
 
 ```sh
@@ -311,7 +333,7 @@ nu run.nu release-examples
 | `nu run.nu test`                          | Run tests                                         |
 | `nu run.nu clippy`                        | Run clippy                                        |
 | `nu run.nu docs`                          | Build docs                                        |
-| `nu run.nu serve-docs`                    | Serve docs over VSCode Remote SSH session         |
+| `nu run.nu serve-docs`                    | Serve docs over `VSCode` Remote SSH session         |
 | `nu run.nu rustfmt`                       | Run rustfmt                                       |
 
 The following commands will watch for changes in the source folder and re-run:
@@ -347,7 +369,7 @@ app built using this TUI engine.
 
 ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 
-## How does layout, rendering, and event handling work in general for a Full TUI app?
+## Layout, rendering, and event handling
 
 ```
 ╭───────────────────────────────────────────────╮
@@ -368,35 +390,36 @@ app built using this TUI engine.
   trait.
 - The main event loop takes an [App] trait object and starts listening for input
   events. It enters raw mode, and paints to an alternate screen buffer, leaving your
-  original scroll back buffer and history intact. When you request_shutdown this TUI
+  original scroll back buffer and history intact. When you `request_shutdown` this TUI
   app, it will return your terminal to where you'd left off.
-- The [main_event_loop] is where many global structs live which are shared across the
-  lifetime of your app. These include the following:
-  - [HasFocus]
-  - [ComponentRegistryMap]
-  - [GlobalData] which contains the following
+- The [`main_event_loop`] is where many global structs live which are shared across
+  the lifetime of your app. These include the following:
+  - [`HasFocus`]
+  - [`ComponentRegistryMap`]
+  - [`GlobalData`] which contains the following
     - Global application state. This is mutable. Whenever an input event or signal is
       processed the entire [App] gets re-rendered. This is the unidirectional data
       flow architecture inspired by React and Elm.
 - Your [App] trait impl is the main entry point for laying out the entire application.
-  Before the first render, the [App] is initialized (via a call to [App::app_init]),
+  Before the first render, the [App] is initialized (via a call to [`App::app_init`]),
   and is responsible for creating all the [Component]s that it uses, and saving them
-  to the [ComponentRegistryMap].
-  - State is stored in many places. Globally at the [GlobalData] level, and also in
+  to the [`ComponentRegistryMap`].
+  - State is stored in many places. Globally at the [`GlobalData`] level, and also in
     [App], and also in [Component].
-- This sets everything up so that [App::app_render], [App::app_handle_input_event],
-  and [App::app_handle_signal] can be called at a later time.
-- The [App::app_render] method is responsible for creating the layout by using
-  [Surface] and [FlexBox] to arrange whatever [Component]'s are in the
-  [ComponentRegistryMap].
-- The [App::app_handle_input_event] method is responsible for handling events that are
-  sent to the [App] trait when user input is detected from the keyboard or mouse.
-  Similarly the [App::app_handle_signal] deals with signals that are sent from
+- This sets everything up so that [`App::app_render`],
+  [`App::app_handle_input_event`], and [`App::app_handle_signal`] can be called at a
+  later time.
+- The [`App::app_render`] method is responsible for creating the layout by using
+  [Surface] and [`FlexBox`] to arrange whatever [Component]'s are in the
+  [`ComponentRegistryMap`].
+- The [`App::app_handle_input_event`] method is responsible for handling events that
+  are sent to the [App] trait when user input is detected from the keyboard or mouse.
+  Similarly the [`App::app_handle_signal`] deals with signals that are sent from
   background threads (Tokio tasks) to the main thread, which then get routed to the
   [App] trait object. Typically this will then get routed to the [Component] that
   currently has focus.
 
-## Switching from shared memory to message passing architecture after v0.3.10
+## Architecture overview, is message passing, was shared memory
 
 Versions of this crate <= `0.3.10` used shared memory to communicate between the
 background threads and the main thread. This was done using the async `Arc<RwLock<T>>`
@@ -422,13 +445,14 @@ synchronizing rendered output, or state.
 > 1. <https://rits.github-pages.ucl.ac.uk/intro-hpchtc/morea/lesson2/reading4.html>
 > 2. <https://www.javatpoint.com/shared-memory-vs-message-passing-in-operating-system>
 
-## Input and output devices (for Full TUI, Partial TUI, and async readline)
+## I/O devices for full TUI, choice, and REPL
 
 [Dependency injection](https://developerlife.com/category/DI) is used to inject the
 required resources into the `main_event_loop` function. This allows for easy testing
 and for modularity and extensibility in the codebase. The `r3bl_terminal_async` crate
 shares the same infrastructure for input and output devices. In fact the
-[crate::InputDevice] and [crate::OutputDevice] structs are in the `r3bl_core` crate.
+[`crate::InputDevice`] and [`crate::OutputDevice`] structs are in the `r3bl_core`
+crate.
 
 1. The advantage of this approach is that for testing, test fixtures can be used to
    perform end-to-end testing of the TUI.
@@ -502,18 +526,18 @@ user (eg: a key press, or mouse event). When the app is started via `cargo run` 
 sets up a main loop, and lays out all the 3 components, sizes, positions, and then
 paints them. Then it asynchronously listens for input events (no threads are blocked).
 When the user types something, this input is processed by the main loop of
-[TerminalWindow].
+[`TerminalWindow`].
 
-1. The [Component] that is in [FlexBox] with `id=1` currently has focus.
+1. The [Component] that is in [`FlexBox`] with `id=1` currently has focus.
 2. When an input event comes in from the user (key press or mouse input) it is routed
-   to the [App] first, before [TerminalWindow] looks at the event.
+   to the [App] first, before [`TerminalWindow`] looks at the event.
 3. The specificity of the event handler in [App] is higher than the default input
-   handler in [TerminalWindow]. Further, the specificity of the [Component] that
+   handler in [`TerminalWindow`]. Further, the specificity of the [Component] that
    currently has focus is the highest. In other words, the input event gets routed by
    the [App] to the [Component] that currently has focus ([Component] id=1 in our
    example).
 4. Since it is not guaranteed that some [Component] will have focus, this input event
-   can then be handled by [App], and if not, then by [TerminalWindow]'s default
+   can then be handled by [App], and if not, then by [`TerminalWindow`]'s default
    handler. If the default handler doesn't process it, then it is simply ignored.
 5. In this journey, as the input event is moved between all these different entities,
    each entity decides whether it wants to handle the input event or not. If it does,
@@ -524,8 +548,8 @@ An input event is processed by the main thread in the main event loop. This is a
 synchronous operation and thus it is safe to mutate state directly in this code path.
 This is why there is no sophisticated locking in place. You can mutate the state
 directly in
-- [App::app_handle_input_event]
-- [Component::handle_event]
+- [`App::app_handle_input_event`]
+- [`Component::handle_event`]
 
 ## Life of a signal (aka "out of band event")
 
@@ -538,24 +562,24 @@ In these cases you can use a `tokio::mpsc` channel to send a signal from a backg
 thread to the main thread. This is how you can handle "out of band" events or signals.
 
 To provide support for these "out of band" events or signals, the [App] trait has a
-method called [App::app_handle_signal]. This is where you can handle signals that are
-sent from background threads. One of the arguments to this associated function is a
-`signal`. This signal needs to contain all the data that is needed for a state
+method called [`App::app_handle_signal`]. This is where you can handle signals that
+are sent from background threads. One of the arguments to this associated function is
+a `signal`. This signal needs to contain all the data that is needed for a state
 mutation to occur on the main thread. So the background thread has the responsibility
 of doing some work (eg: making an HTTP request), getting some information as a result,
 and then packaging that information into a `signal` and sending it to the main thread.
-The main thread then handles this signal by calling the [App::app_handle_signal]
+The main thread then handles this signal by calling the [`App::app_handle_signal`]
 method. This method can then mutate the state of the [App] and return an
-[EventPropagation] enum indicating whether the main thread should repaint the UI or
+[`EventPropagation`] enum indicating whether the main thread should repaint the UI or
 not.
 
 So far we have covered what happens when the [App] receives a signal. Who sends this
 signal? Who actually creates the `tokio::spawn` task that sends this signal? This can
-happen anywhere in the [App] and [Component]. Any code that has access to [GlobalData]
-can use the [crate::send_signal!] macro to send a signal in a background task.
-However, only the [App] can receive the signal and do something with it, which is
-usually apply the signal to update the state and then tell the main thread to repaint
-the UI.
+happen anywhere in the [App] and [Component]. Any code that has access to
+[`GlobalData`] can use the [`crate::send_signal`!] macro to send a signal in a
+background task. However, only the [App] can receive the signal and do something with
+it, which is usually apply the signal to update the state and then tell the main
+thread to repaint the UI.
 
 Now that we have seen this whirlwind overview of the life of an input event, let's
 look at the details in each of the sections below.
@@ -563,19 +587,19 @@ look at the details in each of the sections below.
 ## The window
 
 The main building blocks of a TUI app are:
-1. [TerminalWindow] - You can think of this as the main "window" of the app. All the
+1. [`TerminalWindow`] - You can think of this as the main "window" of the app. All the
    content of your app is painted inside of this "window". And the "window"
    conceptually maps to the screen that is contained inside your terminal emulator
    program (eg: tilix, Terminal.app, etc). Your TUI app will end up taking up 100% of
    the screen space of this terminal emulator. It will also enter raw mode, and paint
    to an alternate screen buffer, leaving your original scroll back buffer and history
-   intact. When you request_shutdown this TUI app, it will return your terminal to
+   intact. When you `request_shutdown` this TUI app, it will return your terminal to
    where you'd left off. You don't write this code, this is something that you use.
 2. [App] - This is where you write your code. You pass in a [App] to the
-   [TerminalWindow] to bootstrap your TUI app. You can just use [App] to build your
+   [`TerminalWindow`] to bootstrap your TUI app. You can just use [App] to build your
    app, if it is a simple one & you don't really need any sophisticated layout or
-   styling. But if you want layout and styling, now we have to deal with [FlexBox],
-   [Component], and [crate::TuiStyle].
+   styling. But if you want layout and styling, now we have to deal with [`FlexBox`],
+   [Component], and [`crate::TuiStyle`].
 
 ## Layout and styling
 
@@ -589,13 +613,13 @@ can think of composing your code in the following way:
    can give them a direction and even relative sizing out of 100%).
 2. As you approach the "leaf" nodes of your layout, you will find [Component] trait
    objects. These are black boxes which are sized, positioned, and painted _relative_
-   to their parent box. They get to handle input events and render [RenderOp]s into a
-   [RenderPipeline]. This is kind of like virtual DOM in React. This queue of commands
-   is collected from all the components and ultimately painted to the screen, for each
-   render! Your app's state is mutable and is stored in the [GlobalData] struct. You
-   can handle out of band events as well using the signal mechanism.
+   to their parent box. They get to handle input events and render [`RenderOp`]s into
+   a [`RenderPipeline`]. This is kind of like virtual DOM in React. This queue of
+   commands is collected from all the components and ultimately painted to the screen,
+   for each render! Your app's state is mutable and is stored in the [`GlobalData`]
+   struct. You can handle out of band events as well using the signal mechanism.
 
-## Component, ComponentRegistry, focus management, and event routing
+## Component registry, event routing, focus mgmt
 
 Typically your [App] will look like this:
 
@@ -608,26 +632,26 @@ pub struct AppMain {
 ```
 
 As we look at [Component] & [App] more closely we will find a curious thing
-[ComponentRegistry] (that is managed by the [App]). The reason this exists is for
-input event routing. The input events are routed to the [Component] that currently has
-focus.
+[`ComponentRegistry`] (that is managed by the [App]). The reason this exists is for
+input event routing. The input events are routed to the [`Component`] that currently
+has focus.
 
-The [HasFocus] struct takes care of this. This provides 2 things:
+The [`HasFocus`] struct takes care of this. This provides 2 things:
 
-1. It holds an `id` of a [FlexBox] / [Component] that has focus.
-2. It also holds a map that holds a [crate::Pos] for each `id`. This is used to
+1. It holds an `id` of a [`FlexBox`] / [`Component`] that has focus.
+2. It also holds a map that holds a [`crate::Pos`] for each `id`. This is used to
    represent a cursor (whatever that means to your app & component). This cursor is
    maintained for each `id`. This allows a separate cursor for each [Component] that
    has focus. This is needed to build apps like editors and viewers that maintains a
    cursor position between focus switches.
 
-Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent
+Another thing to keep in mind is that the [App] and [`TerminalWindow`] is persistent
 between re-renders.
 
 ## Input event specificity
 
-[TerminalWindow] gives [App] first dibs when it comes to handling input events.
-[ComponentRegistry::route_event_to_focused_component] can be used to route events
+[`TerminalWindow`] gives [App] first dibs when it comes to handling input events.
+[`ComponentRegistry::route_event_to_focused_component`] can be used to route events
 directly to components that have focus. If it punts handling this event, it will be
 handled by the default input event handler. And if nothing there matches this event,
 then it is simply dropped.
@@ -846,7 +870,7 @@ different constraints).
 A modal dialog box is different than a normal reusable component. This is because:
 
 1. It paints on top of the entire screen (in front of all other components, in
-   ZOrder::Glass, and outside of any layouts using `FlexBox`es).
+   `ZOrder::Glass`, and outside of any layouts using `FlexBox`es).
 2. Is "activated" by a keyboard shortcut (hidden otherwise). Once activated, the user
    can accept or cancel the dialog box. And this results in a callback being called
    with the result.
@@ -896,7 +920,7 @@ When creating a new dialog box component, two callback functions are passed in:
 2. `on_dialog_editors_changed_handler()` - this will be called if the user types
    something into the editor.
 
-### How to use this dialog to make an HTTP request & pipe the results into a selection area?
+### Dialog HTTP requests and results
 
 So far we have covered the use case for a simple modal dialog box. In order to provide
 auto-completion capabilities, via some kind of web service, there needs to be a
@@ -914,13 +938,13 @@ Crates like `reqwest` and `hyper` (which is part of Tokio) will work. Here's a l
 that shows the pros and cons of using each:
 - [Rust Crates for Networking and HTTP Foundations](https://blessed.rs/crates#section-networking-subsection-http-foundations)
 
-### Custom Markdown (MD) parsing and custom syntax highlighting
+### Custom Markdown parsing and syntax highlighting
 
-The code for parsing and syntax highlighting is in [try_parse_and_highlight].
+The code for parsing and syntax highlighting is in [`try_parse_and_highlight`].
 
 A custom Markdown parser is provided to provide some extensions over the standard
-Markdown syntax. The parser code is in the [parse_markdown()] function. Here are some
-of the extensions:
+Markdown syntax. The parser code is in the [`parse_markdown()`] function. Here are
+some of the extensions:
 - Metadata title (eg: `@title: <title_text>`). Similar to front matter.
 - Metadata tags (eg: `@tags: <tag1>, <tag2>`).
 - Metadata authors (eg: `@authors: <author1>, <author2>`).
@@ -929,11 +953,11 @@ of the extensions:
 Some other changes are adding support for smart lists. These are lists that span
 multiple lines of text. And indentation levels are tracked. This information is used
 to render the list items in a way that is visually appealing.
-- The code for parsing smart lists is in [parse_smart_list].
-- The code for syntax highlighting is in [StyleUSSpanLines::from_document].
+- The code for parsing smart lists is in [`parse_smart_list`].
+- The code for syntax highlighting is in [`StyleUSSpanLines::from_document`].
 
 Also, `syntect` crate is still used by the editor component
-[crate::editor_engine::engine_public_api::render_engine()] to syntax highlight the
+[`crate::editor_engine::engine_public_api::render_engine()`] to syntax highlight the
 text inside code blocks of Markdown documents.
 
 An alternative approach to doing this was considered using the crate `markdown-rs`,
@@ -944,7 +968,7 @@ streaming and used less CPU and memory.
 ## Grapheme support
 
 Unicode is supported (to an extent). There are some caveats. The
-[crate::GCString] struct has lots of great information on this graphemes and
+[`crate::GCString`] struct has lots of great information on this graphemes and
 what is supported and what is not.
 
 ## Lolcat support
@@ -967,7 +991,7 @@ let st = lolcat_mut.colorize_to_styled_texts(&content_gcs);
 lolcat.next_color();
 ```
 
-This [crate::Lolcat] that is returned by `build()` is safe to re-use.
+This [`crate::Lolcat`] that is returned by `build()` is safe to re-use.
 - The colors it cycles through are "stable" meaning that once constructed via the
   [builder](crate::LolcatBuilder) (which sets the speed, seed, and delta that
   determine where the color wheel starts when it is used). For eg, when used in a
@@ -975,7 +999,7 @@ This [crate::Lolcat] that is returned by `build()` is safe to re-use.
   function of this component will produce the same generated colors over and over
   again.
 - If you want to change where the color wheel "begins", you have to change the speed,
-  seed, and delta of this [crate::Lolcat] instance.
+  seed, and delta of this [`crate::Lolcat`] instance.
 
 ## Issues and PRs
 
