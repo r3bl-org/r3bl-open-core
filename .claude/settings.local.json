@@ -33,7 +33,8 @@
       "WebFetch(domain:crates.io)",
       "WebFetch(domain:docs.rs)",
       "Bash(doctoc:*)",
-      "Bash(prettier:*)"
+      "Bash(prettier:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "defaultMode": "plan",

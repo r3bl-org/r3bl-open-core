@@ -27,9 +27,9 @@ pub(in crate::core::tui_styled_text) mod sizing {
     pub(crate) type StringTuiStyledText = SmallString<[u8; MAX_CHARS_IN_SMALL_STRING]>;
     const MAX_CHARS_IN_SMALL_STRING: usize = 8;
 
-    /// Based on benchmarks, Vec performs better than SmallVec for our use case.
+    /// Based on benchmarks, Vec performs better than `SmallVec` for our use case.
     /// - Faster extend operations (our main bottleneck)
-    /// - No SmallVec::try_grow overhead
+    /// - No `SmallVec::try_grow` overhead
     /// - Better drop performance
     /// - Simpler code path
     pub(crate) type VecTuiStyledText = Vec<TuiStyledText>;

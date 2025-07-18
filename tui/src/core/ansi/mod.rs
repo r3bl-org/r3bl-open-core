@@ -267,6 +267,9 @@ pub mod convert;
 pub mod detect_color_support;
 pub mod transform_color;
 
+#[cfg(test)]
+pub mod ansi_escape_codes_bench_tests;
+
 pub use ansi_escape_codes::*;
 pub use ansi_styled_text::*;
 pub use ast_color::*;

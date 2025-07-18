@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-//! ## SmallVec vs Vec Benchmark Suite
+//! ## `SmallVec` vs Vec Benchmark Suite
 //!
-//! This module benchmarks the performance of SmallVec vs Vec for TuiStyledTexts
+//! This module benchmarks the performance of `SmallVec` vs Vec for `TuiStyledTexts`
 //! to determine the optimal data structure for our use case.
 //!
 //! ## Running the Benchmarks
@@ -34,7 +34,7 @@
 //!
 //! ## Benchmark Categories
 //!
-//! - **Small collections (1-5 items)**: Where SmallVec should excel
+//! - **Small collections (1-5 items)**: Where `SmallVec` should excel
 //! - **Medium collections (8-20 items)**: Around the threshold
 //! - **Large collections (30-100 items)**: Where Vec might be better
 //! - **Extend operations**: The main performance issue from flamegraph
@@ -43,10 +43,10 @@
 #[cfg(test)]
 mod benchmarks {
     extern crate test;
+    use smallvec::SmallVec;
     use test::Bencher;
 
-    use smallvec::SmallVec;
-    use crate::{TuiStyledText, TuiStyle, tui_styled_text};
+    use crate::{TuiStyle, TuiStyledText, tui_styled_text};
 
     // Type aliases for different configurations
     type SmallVec32 = SmallVec<[TuiStyledText; 32]>;
@@ -57,9 +57,11 @@ mod benchmarks {
     // Helper to create test data
     fn create_styled_texts(count: usize) -> Vec<TuiStyledText> {
         (0..count)
-            .map(|i| tui_styled_text! {
-                @style: TuiStyle::default(),
-                @text: format!("Text item {}", i)
+            .map(|i| {
+                tui_styled_text! {
+                    @style: TuiStyle::default(),
+                    @text: format!("Text item {}", i)
+                }
             })
             .collect()
     }

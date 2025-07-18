@@ -15,11 +15,47 @@
  *   limitations under the License.
  */
 
+//! ANSI escape code generation with optimized performance.
+//!
+//! ## Performance Optimization
+//!
+//! This module uses a lookup table approach to avoid the overhead of Rust's formatting
+//! machinery. Even though `write!` macro writes to an in-memory buffer, it still incurs
+//! significant overhead:
+//!
+//! 1. **Format machinery dispatch**: The `write!` macro expands to `format_args!` which
+//!    creates a `fmt::Arguments` struct and dispatches through the Display trait.
+//!
+//! 2. **Integer formatting overhead**: For number placeholders like `{index}`, Rust's
+//!    integer Display implementation:
+//!    - Allocates temporary buffers
+//!    - Performs division/modulo operations in a loop
+//!    - Handles sign, radix, padding, alignment (even when unused)
+//!    - Builds the string representation digit by digit at runtime
+//!
+//! 3. **Hot path impact**: ANSI codes are generated millions of times per second in a
+//!    TUI:
+//!    - Every styled text segment
+//!    - Every color change
+//!    - Every style change (bold, underline, etc.)
+//!    - Multiple times per frame at 60 FPS
+//!
+//! ## Optimization Strategy
+//!
+//! We use a pre-computed lookup table for all possible u8 values (0-255):
+//! - Eliminates integer-to-string conversion
+//! - Removes format machinery dispatch
+//! - Avoids temporary allocations
+//! - Reduces to simple array lookup + memcpy
+//!
+//! This optimization targets the 45M samples shown in flamegraph profiling for ANSI
+//! formatting.
+//!
 //! More info:
 //! - <https://doc.rust-lang.org/reference/tokens.html#ascii-escapes>
 //! - <https://notes.burke.libbey.me/ansi-escape-codes/>
 
-use std::fmt::{Display, Formatter, Result, Write};
+use std::fmt::{Display, Formatter, Result};
 
 use crate::{BufTextStorage, WriteToBuf};
 
@@ -45,6 +81,31 @@ pub enum SgrCode {
 const CSI: &str = "\x1b[";
 const SGR: &str = "m";
 
+/// Lookup table for u8 to string conversion to avoid runtime formatting overhead.
+/// Pre-computed at compile time for all possible u8 values (0-255).
+const U8_STRINGS: [&str; 256] = [
+    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15",
+    "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
+    "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43",
+    "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57",
+    "58", "59", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71",
+    "72", "73", "74", "75", "76", "77", "78", "79", "80", "81", "82", "83", "84", "85",
+    "86", "87", "88", "89", "90", "91", "92", "93", "94", "95", "96", "97", "98", "99",
+    "100", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111",
+    "112", "113", "114", "115", "116", "117", "118", "119", "120", "121", "122", "123",
+    "124", "125", "126", "127", "128", "129", "130", "131", "132", "133", "134", "135",
+    "136", "137", "138", "139", "140", "141", "142", "143", "144", "145", "146", "147",
+    "148", "149", "150", "151", "152", "153", "154", "155", "156", "157", "158", "159",
+    "160", "161", "162", "163", "164", "165", "166", "167", "168", "169", "170", "171",
+    "172", "173", "174", "175", "176", "177", "178", "179", "180", "181", "182", "183",
+    "184", "185", "186", "187", "188", "189", "190", "191", "192", "193", "194", "195",
+    "196", "197", "198", "199", "200", "201", "202", "203", "204", "205", "206", "207",
+    "208", "209", "210", "211", "212", "213", "214", "215", "216", "217", "218", "219",
+    "220", "221", "222", "223", "224", "225", "226", "227", "228", "229", "230", "231",
+    "232", "233", "234", "235", "236", "237", "238", "239", "240", "241", "242", "243",
+    "244", "245", "246", "247", "248", "249", "250", "251", "252", "253", "254", "255",
+];
+
 impl Display for SgrCode {
     /// SGR: set graphics mode command.
     /// More info:
@@ -61,24 +122,112 @@ impl Display for SgrCode {
 }
 
 /// [`WriteToBuf`] implementation for optimized performance.
+/// Uses direct string concatenation and lookup tables to avoid formatting overhead.
 impl WriteToBuf for SgrCode {
     fn write_to_buf(&self, buf: &mut crate::BufTextStorage) -> Result {
         match *self {
-            SgrCode::Reset => write!(buf, "{CSI}0{SGR}"),
-            SgrCode::Bold => write!(buf, "{CSI}1{SGR}"),
-            SgrCode::Dim => write!(buf, "{CSI}2{SGR}"),
-            SgrCode::Italic => write!(buf, "{CSI}3{SGR}"),
-            SgrCode::Underline => write!(buf, "{CSI}4{SGR}"),
-            SgrCode::SlowBlink => write!(buf, "{CSI}5{SGR}"),
-            SgrCode::RapidBlink => write!(buf, "{CSI}6{SGR}"),
-            SgrCode::Invert => write!(buf, "{CSI}7{SGR}"),
-            SgrCode::Hidden => write!(buf, "{CSI}8{SGR}"),
-            SgrCode::Strikethrough => write!(buf, "{CSI}9{SGR}"),
-            SgrCode::Overline => write!(buf, "{CSI}53{SGR}"),
-            SgrCode::ForegroundAnsi256(index) => write!(buf, "{CSI}38;5;{index}{SGR}"),
-            SgrCode::BackgroundAnsi256(index) => write!(buf, "{CSI}48;5;{index}{SGR}"),
-            SgrCode::ForegroundRGB(r, g, b) => write!(buf, "{CSI}38;2;{r};{g};{b}{SGR}"),
-            SgrCode::BackgroundRGB(r, g, b) => write!(buf, "{CSI}48;2;{r};{g};{b}{SGR}"),
+            SgrCode::Reset => {
+                buf.push_str(CSI);
+                buf.push('0');
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::Bold => {
+                buf.push_str(CSI);
+                buf.push('1');
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::Dim => {
+                buf.push_str(CSI);
+                buf.push('2');
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::Italic => {
+                buf.push_str(CSI);
+                buf.push('3');
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::Underline => {
+                buf.push_str(CSI);
+                buf.push('4');
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::SlowBlink => {
+                buf.push_str(CSI);
+                buf.push('5');
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::RapidBlink => {
+                buf.push_str(CSI);
+                buf.push('6');
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::Invert => {
+                buf.push_str(CSI);
+                buf.push('7');
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::Hidden => {
+                buf.push_str(CSI);
+                buf.push('8');
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::Strikethrough => {
+                buf.push_str(CSI);
+                buf.push('9');
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::Overline => {
+                buf.push_str(CSI);
+                buf.push_str("53");
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::ForegroundAnsi256(index) => {
+                buf.push_str(CSI);
+                buf.push_str("38;5;");
+                buf.push_str(U8_STRINGS[index as usize]);
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::BackgroundAnsi256(index) => {
+                buf.push_str(CSI);
+                buf.push_str("48;5;");
+                buf.push_str(U8_STRINGS[index as usize]);
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::ForegroundRGB(r, g, b) => {
+                buf.push_str(CSI);
+                buf.push_str("38;2;");
+                buf.push_str(U8_STRINGS[r as usize]);
+                buf.push(';');
+                buf.push_str(U8_STRINGS[g as usize]);
+                buf.push(';');
+                buf.push_str(U8_STRINGS[b as usize]);
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::BackgroundRGB(r, g, b) => {
+                buf.push_str(CSI);
+                buf.push_str("48;2;");
+                buf.push_str(U8_STRINGS[r as usize]);
+                buf.push(';');
+                buf.push_str(U8_STRINGS[g as usize]);
+                buf.push(';');
+                buf.push_str(U8_STRINGS[b as usize]);
+                buf.push_str(SGR);
+                Ok(())
+            }
         }
     }
 }
