@@ -24,12 +24,12 @@ use r3bl_cmdr::{AnalyticsAction,
                 giti::{CLIArg, CLICommand, CommandRunDetails, branch, ui_str},
                 report_analytics, upgrade_check};
 use r3bl_tui::{CommandRunResult, CommonResult, log::try_initialize_logging_global, ok,
-               set_jemalloc_in_main};
+               set_mimalloc_in_main};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
-    set_jemalloc_in_main!();
+    set_mimalloc_in_main!();
 
     // If no args are passed, the following line will fail, and help will be printed
     // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.

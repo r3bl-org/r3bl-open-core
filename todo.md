@@ -58,6 +58,8 @@
 
 # edi feature
 
+- [ ] add feature that shows editor status to the terminal window title bar (eg: "edi - [filename] - [status]")
+      using [OSC sequences](https://en.wikipedia.org/wiki/ANSI_escape_code#OSC_(Operating_System_Command)_sequences)
 - [ ] add a new feature to edi: `cat file.txt | edi` should open the piped output of the first
       process into edi itself
 

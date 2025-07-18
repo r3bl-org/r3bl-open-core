@@ -19,7 +19,7 @@ use std::fmt::Display;
 
 use r3bl_tui::{ast, choose, get_terminal_width, height, new_style,
                readline_async::{HowToChoose, StyleSheet},
-               set_jemalloc_in_main, usize, width, ASTColor, DefaultIoDevices,
+               set_mimalloc_in_main, usize, width, ASTColor, DefaultIoDevices,
                ItemsOwned};
 use serde::{Deserialize, Serialize};
 
@@ -71,7 +71,7 @@ struct QuestionData {
 
 #[tokio::main]
 pub async fn main() -> miette::Result<()> {
-    set_jemalloc_in_main!();
+    set_mimalloc_in_main!();
 
     // Parse string into Vec<QuestionData>
     let all_questions_and_answers: Vec<QuestionData> =

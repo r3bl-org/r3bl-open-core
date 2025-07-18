@@ -277,7 +277,7 @@ mod pixel_char_lines_impl {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct PixelCharLine {
-    pub pixel_chars: InlineVec<PixelChar>,
+    pub pixel_chars: Vec<PixelChar>,
 }
 
 impl GetMemSize for PixelCharLine {
@@ -464,13 +464,13 @@ mod pixel_char_line_impl {
         #[must_use]
         pub fn new_with_capacity_initialized(window_width: ColWidth) -> Self {
             Self {
-                pixel_chars: smallvec![PixelChar::Spacer; window_width.as_usize()],
+                pixel_chars: vec![PixelChar::Spacer; window_width.as_usize()],
             }
         }
     }
 
     impl Deref for PixelCharLine {
-        type Target = InlineVec<PixelChar>;
+        type Target = Vec<PixelChar>;
         fn deref(&self) -> &Self::Target { &self.pixel_chars }
     }
 

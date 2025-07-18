@@ -36,20 +36,20 @@ mod ex_rc;
 use std::str::FromStr;
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{fg_color, fg_frozen_blue, fg_pink, fg_slate_gray, get_size,
-               inline_string, key_press,
+use r3bl_tui::{ASTColor, CommonError, CommonResult, DEBUG_TUI_MOD, InputEvent,
+               TerminalWindow, fg_color, fg_frozen_blue, fg_pink, fg_slate_gray,
+               get_size, inline_string, key_press,
                log::try_initialize_logging_global,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
-               rla_println, set_jemalloc_in_main, tui_color, ASTColor, CommonError,
-               CommonResult, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
+               rla_println, set_mimalloc_in_main, tui_color};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
-    set_jemalloc_in_main!();
+    set_mimalloc_in_main!();
 
     let args: Vec<String> = std::env::args().collect();
     let no_log_arg_passed = args.contains(&"--no-log".to_string());

@@ -26,7 +26,7 @@ use r3bl_tui::{InlineVec, OutputDevice, SendRawTerminal, SharedWriter, SpinnerSt
                bold, fg_color, fg_red, fg_slate_gray, inline_string,
                log::{DisplayPreference, try_initialize_logging_global},
                readline_async::{Readline, ReadlineAsyncContext, ReadlineEvent, Spinner},
-               rla_println, set_jemalloc_in_main, tui_color};
+               rla_println, set_mimalloc_in_main, tui_color};
 use smallvec::smallvec;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
@@ -128,7 +128,7 @@ impl Default for State {
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
-    set_jemalloc_in_main!();
+    set_mimalloc_in_main!();
 
     let prompt = {
         let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();

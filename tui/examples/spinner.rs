@@ -17,14 +17,14 @@
 
 use std::{io::Write, time::Duration};
 
-use r3bl_tui::{readline_async::{ReadlineAsyncContext, Spinner},
-               set_jemalloc_in_main,
+use r3bl_tui::{CommonResult, OutputDevice, SpinnerColor, SpinnerStyle, SpinnerTemplate,
+               readline_async::{ReadlineAsyncContext, Spinner},
+               set_mimalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
-               underline, CommonResult, OutputDevice, SpinnerColor, SpinnerStyle,
-               SpinnerTemplate};
+               underline};
 use tokio::{spawn,
             task::JoinError,
-            time::{interval, sleep, Instant}};
+            time::{Instant, interval, sleep}};
 
 macro_rules! println_with_flush {
     ($($tt:tt)*) => {
@@ -36,7 +36,7 @@ macro_rules! println_with_flush {
 #[tokio::main]
 #[allow(clippy::needless_return)]
 pub async fn main() -> CommonResult<()> {
-    set_jemalloc_in_main!();
+    set_mimalloc_in_main!();
 
     // Without readline.
     {

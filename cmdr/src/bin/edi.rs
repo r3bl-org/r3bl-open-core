@@ -18,13 +18,13 @@ use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
                 edi::{clap_config::CLIArg, launcher, ui_templates},
                 report_analytics, upgrade_check};
-use r3bl_tui::{CommonResult, log::try_initialize_logging_global, set_jemalloc_in_main,
+use r3bl_tui::{CommonResult, log::try_initialize_logging_global, set_mimalloc_in_main,
                throws};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
-    set_jemalloc_in_main!();
+    set_mimalloc_in_main!();
 
     throws!({
         // Parse CLI args.

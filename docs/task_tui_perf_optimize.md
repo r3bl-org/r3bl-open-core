@@ -112,60 +112,76 @@
 
 # Implemented Optimizations
 
-## Latest Flamegraph Analysis (2025-07-18 - Current)
+## Latest Flamegraph Analysis (2025-07-18 - Post PixelChar Optimization)
 
 ## Immediate Action Items
 
-Based on the latest flamegraph analysis (2025-07-18), the performance priorities have shifted:
+Based on the latest flamegraph analysis (2025-07-18) after PixelChar optimization:
 
-1. **Optimize SmallVec Usage for PixelChar Collections** (45M+ samples - HIGHEST PRIORITY):
-   - Primary hotspot: SmallVec extend operations in PixelChar collections
-   - Located in rendering pipeline's `print_text_with_attributes`
-   - Consider replacing SmallVec<[PixelChar; 8]> with Vec
-   - Expected benefit: Eliminate spill threshold overhead for typical text rendering
+1. **Dialog Border Unicode Optimization** (53M samples - HIGHEST PRIORITY):
+   - Primary hotspot: `render_border_lines` → `lolcat_from_style` → `GCString::new`
+   - Heavy unicode segmentation for dialog borders
+   - Consider caching border strings or using ASCII-only borders
+   - Expected benefit: Significant reduction in GCString creation overhead
 
-2. **Reduce Memory Move Operations** (70M+ samples - HIGH PRIORITY):
-   - Multiple `__memmove_avx_unaligned_erms` calls across rendering pipeline
-   - 31M samples in `process_render_op`, 28M in `render_content`, 10M in paint operations
-   - Suggests frequent buffer reallocations during rendering
-   - Solution: Add reserve() calls before extend operations
+2. **Logging/Formatting Memory Efficiency** (46M samples - HIGH PRIORITY):
+   - `lolcat_into_string` → `__memmove_avx_unaligned_erms` in logging
+   - Color wheel formatting causing significant memory operations
+   - Consider pre-allocating buffers or reducing color formatting in logs
+   - Solution: Buffer pooling or simpler formatting for high-frequency logs
 
-3. **Optimize Unicode Segmentation** (44M+ samples - MEDIUM PRIORITY):
-   - GraphemeIndices iterator in `clip_text_to_bounds` and dialog rendering
-   - GCString::new operations still creating overhead
-   - Consider caching segmentation results for repeated strings
-   - ASCII fast path is working but Unicode paths remain expensive
+3. **ColorWheel Cache Optimization** (38M samples - MEDIUM PRIORITY):
+   - `ColorWheelCache::insert` → hash operations taking significant time
+   - May need more efficient cache key or different hashing strategy
+   - Consider FxHash or other faster hashing algorithms
+   - Profile cache hit/miss ratios
 
-4. **Optimize MD Parser Memory Operations** (42M+ samples - MEDIUM PRIORITY):
-   - `parse_block_markdown_text` patterns showing high sample counts
-   - AsStrSlice operations may be causing excessive allocations
-   - Consider optimizing buffer management in parser
+4. **MD Parser Memory Operations** (9M samples - LOW PRIORITY):
+   - `parse_block_markdown_text` still visible but much less prominent
+   - Down from 42M+ samples in previous analysis
+   - Pattern matching and string operations
+   - Current impact acceptable
 
-5. **Bypass Crossterm for Hot Paths** (60M+ samples - LOW PRIORITY - PENDING):
+5. **Bypass Crossterm for Hot Paths** (16M samples - LOW PRIORITY - PENDING):
    - Already removed format!() calls from queue_render_op! (7.6% improvement achieved)
-   - Crossterm command abstraction still adds overhead for ANSI generation
+   - `apply_colors` and ANSI formatting still visible
    - Consider creating direct ANSI writing layer for performance-critical paths
-   - Note: Prioritizing SmallVec optimizations first as they offer clearer wins
+   - Note: Current impact relatively low compared to other bottlenecks
 
 ### Prioritized Next Optimization Targets
 
-1. **RenderOp SmallVec Optimization** (RECOMMENDED NEXT):
-   - **Current**: `RenderOps { list: SmallVec<[RenderOp; 8]> }`
-   - **Pattern**: Most operations push 3 RenderOps (ApplyColors, PaintText, ResetColor)
-   - **Approach**: Benchmark SmallVec vs Vec for typical usage patterns
-   - **Expected benefit**: Simpler allocation patterns, better performance predictability
+1. **Dialog Border Caching** (RECOMMENDED NEXT):
+   - **Current**: Creates new GCString for every border character
+   - **Impact**: 53M samples in unicode segmentation
+   - **Approach**: Cache commonly used border strings or use ASCII borders
+   - **Expected benefit**: Eliminate repeated GCString creation for static content
 
-2. **PixelChar SmallVec Optimization**:
-   - **Current**: `SmallVec<[PixelChar; 8]>` in PixelCharLine
-   - **Impact**: 45M+ samples in extend operations
-   - **Approach**: Similar to VecTuiStyledText optimization
+2. **Logging Buffer Pooling**:
+   - **Current**: Allocates new buffers for each log colorization
+   - **Impact**: 46M samples in memory operations
+   - **Approach**: Implement buffer pool for log formatting
+   - **Expected benefit**: Reduce allocation overhead in hot logging paths
+
+3. **ColorWheel Cache Efficiency**:
+   - **Current**: Standard HashMap with default hasher
+   - **Impact**: 38M samples in hash operations
+   - **Approach**: Use FxHash or optimize cache key structure
+   - **Expected benefit**: Faster cache lookups for color calculations
+
+### Recently Completed Optimizations
+
+1. **PixelChar SmallVec Optimization** (✅ COMPLETED - 2025-07-18):
+   - Replaced `SmallVec<[PixelChar; 8]>` with `Vec<PixelChar>`
+   - **Result**: COMPLETE ELIMINATION of 45M+ sample hotspot
+   - Benchmarks showed Vec is 2-4x faster for typical terminal lines
+   - Random access patterns now 3-5x faster
+
+2. **RenderOp SmallVec Optimization** (✅ COMPLETED - Benchmarks show SmallVec is optimal):
+   - Benchmark results show SmallVec is 2.27x faster for typical usage
+   - Iteration is 2.57x faster - critical for render execution
+   - Current SmallVec<[RenderOp; 8]> is optimal for our usage patterns
    
-3. **Memory Move Reduction**:
-   - Focus on pre-allocating buffers with appropriate capacity
-   - Identify hot paths that trigger reallocations
-   - Add strategic reserve() calls
-
-4. **ANSI Escape Code Formatting** (✅ PARTIALLY COMPLETED):
+3. **ANSI Escape Code Formatting** (✅ PARTIALLY COMPLETED):
    - WriteToBuf optimization successful
    - Remaining overhead is from u8 number formatting
    - Consider lookup table for all u8 values (0-255)
@@ -202,6 +218,55 @@ render_ops.push(RenderOp::ResetColor);
 3. Measure: Creation, push performance, memory usage, iteration
 4. If Vec proves better, update type alias in `sizes.rs`
 
+#### Benchmark Results (✅ COMPLETED - 2025-07-18)
+
+```
+Typical usage (8 operations - within SmallVec capacity):
+- SmallVec push:        52.90 ns/iter
+- Vec push:             62.09 ns/iter
+- Vec with_capacity:    41.71 ns/iter
+- SmallVec faster by:   17% (without pre-allocation)
+
+Complex usage (20 operations - exceeds SmallVec capacity):
+- SmallVec push:        151.43 ns/iter
+- Vec push:             117.20 ns/iter  
+- Vec with_capacity:    94.92 ns/iter
+- Vec faster by:        29% (SmallVec has spill overhead)
+
+Real-world text line rendering (6 operations):
+- SmallVec:             17.63 ns/iter
+- Vec:                  40.02 ns/iter
+- Vec with_capacity:    18.23 ns/iter
+- SmallVec faster by:   127% (without pre-allocation)
+
+Iteration performance:
+- SmallVec:             2.42 ns/iter
+- Vec:                  6.23 ns/iter
+- SmallVec faster by:   157%
+
+Clone performance:
+- SmallVec:             47.83 ns/iter
+- Vec:                  41.42 ns/iter
+- Vec faster by:        15% (simpler clone operation)
+
+Extend operations:
+- SmallVec:             46.56 ns/iter
+- Vec:                  48.28 ns/iter
+- SmallVec faster by:   4% (minor difference)
+```
+
+#### Recommendation: KEEP SmallVec<[RenderOp; 8]>
+
+Based on comprehensive benchmarking:
+
+1. **Most operations use 6 or fewer RenderOps** - well within SmallVec's inline capacity
+2. **SmallVec is 2.27x faster for typical usage** (17.63ns vs 40.02ns for text line rendering)
+3. **Iteration is 2.57x faster with SmallVec** - critical for render execution
+4. **Spill overhead only matters for 20+ operations** - rare in practice
+5. **Vec::with_capacity matches SmallVec performance** - but requires knowing size upfront
+
+**Conclusion**: The current SmallVec<[RenderOp; 8]> is optimal for our usage patterns. No change needed.
+
 ### Format Change Note
 
 We've switched from using `tui/flamegraph.svg` to `tui/flamegraph.perf-folded` format for
@@ -219,35 +284,43 @@ Using `profiling-detailed` profile with:
 
 ### Current Performance Bottleneck Analysis
 
-Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-07-18):
+Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-07-18 - Post PixelChar Optimization):
 
-1. **SmallVec Operations for PixelChar** (45M+ samples) - PRIMARY BOTTLENECK
-   - `SmallVec::extend` operations in PixelChar collections: 45,213,071 samples
-   - Located in `print_text_with_attributes` and rendering pipeline
-   - Heavy cloning and extending of PixelChar collections
-   - Suggests SmallVec spill threshold is being exceeded frequently
+1. **Dialog Border Rendering** (53M samples) - NEW PRIMARY BOTTLENECK
+   - `render_border_lines` → `lolcat_from_style` → `GCString::new`: 53,143,882 samples
+   - Heavy unicode segmentation for dialog borders
+   - Each border character creates a new GCString
+   - Static content being repeatedly processed
 
-2. **Memory Move Operations** (70M+ samples) - SECONDARY BOTTLENECK
-   - `__memmove_avx_unaligned_erms` across multiple call sites:
-     - `process_render_op`: 31,784,313 samples
-     - `render_content`: 28,071,933 samples  
-     - Paint operations: 10,442,634 samples
-   - Frequent buffer reallocations during rendering
+2. **Logging/Formatting Operations** (46M samples) - SECONDARY BOTTLENECK
+   - `lolcat_into_string` → `__memmove_avx_unaligned_erms`: 46,739,094 samples
+   - Color wheel formatting in logging infrastructure
+   - Significant memory operations for log colorization
+   - Buffer allocations for each formatted log entry
 
-3. **Unicode Segmentation** (44M+ samples)
-   - `GraphemeIndices::next`: 44,701,903 samples in `clip_text_to_bounds`
-   - Additional 5,050,505 samples in dialog border rendering
-   - GCString creation remains expensive despite ASCII fast path
+3. **ColorWheel Hash Operations** (38M samples)
+   - `ColorWheelCache::insert` → hash operations: 38,232,074 samples
+   - Caching overhead for color wheel calculations
+   - Hash function may be suboptimal for cache keys
+   - Frequent cache insertions suggesting misses
 
-4. **MD Parser Operations** (42M+ samples)
-   - `parse_block_markdown_text_until_eol_or_eoi`: 42,868,797 samples
-   - Pattern matching and text extraction in markdown parser
-   - AsStrSlice operations may be inefficient
+4. **RenderOp Clone Operations** (37M samples)
+   - `SmallVec` extend operations for RenderOp: 36,999,339 samples
+   - Confirms RenderOp should keep SmallVec (as benchmarked)
+   - Expected behavior for render pipeline
 
-5. **ANSI Escape Code Formatting** (60M+ samples)
-   - WriteToBuf trait implementation: 60,703,976 samples
-   - Majority of overhead is in u8 number formatting
-   - WriteToBuf optimization working but number formatting visible
+5. **Memory Move Operations** (80M samples total - distributed)
+   - `__memmove_avx_unaligned_erms` across multiple sites:
+     - `clip_text_to_bounds`: 8,891,771 samples
+     - `from_block` (styled text): 15,944,501 samples
+     - `render_content`: 8,748,700 samples
+     - `lolcat_into_string`: 46,739,094 samples
+   - More evenly distributed than before
+
+6. **ANSI Formatting** (16M samples)
+   - `apply_colors` → `write_command_ansi`: 16,334,701 samples
+   - Crossterm ANSI generation overhead
+   - Acceptable level after previous optimizations
 
 6. **Other Notable Operations**:
    - TextWrap operations: 53,951,360 samples (in logging/formatting)

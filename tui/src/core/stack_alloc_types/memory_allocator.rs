@@ -28,7 +28,7 @@
 /// - <https://news.ycombinator.com/item?id=35473271>
 /// - <https://crates.io/crates/jemallocator>
 #[macro_export]
-macro_rules! set_jemalloc_in_main {
+macro_rules! set_mimalloc_in_main {
     () => {{
         use mimalloc::MiMalloc;
 

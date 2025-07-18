@@ -98,7 +98,7 @@ use miette::IntoDiagnostic;
 use r3bl_tui::{fg_guards_red, fg_lizard_green, fg_slate_gray, inline_string, ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent,
                                 ReadlineEvent::{Eof, Interrupted, Line, Resized}},
-               set_jemalloc_in_main, SharedWriter};
+               set_mimalloc_in_main, SharedWriter};
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt},
             join,
             sync::broadcast,
@@ -107,7 +107,7 @@ use tokio::{io::{AsyncBufReadExt, AsyncWriteExt},
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
-    set_jemalloc_in_main!();
+    set_mimalloc_in_main!();
 
     // Create a broadcast channel for shutdown.
     let (shutdown_sender, _) = broadcast::channel::<()>(1);

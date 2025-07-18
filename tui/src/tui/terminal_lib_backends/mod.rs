@@ -97,3 +97,9 @@ mod test_input_event;
 mod test_keypress;
 mod test_mouse_input;
 mod test_render_pipeline;
+
+// Benchmarks.
+#[cfg(test)]
+mod render_op_bench;
+#[cfg(test)]
+mod pixel_char_bench;

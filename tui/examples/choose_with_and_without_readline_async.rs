@@ -20,13 +20,13 @@ use std::io::Write;
 use r3bl_tui::{fg_slate_gray, ok,
                readline_async::{choose, Header, HowToChoose, ReadlineAsyncContext,
                                 StyleSheet},
-               set_jemalloc_in_main, try_initialize_logging_global, InputDevice,
+               set_mimalloc_in_main, try_initialize_logging_global, InputDevice,
                OutputDevice};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
-    set_jemalloc_in_main!();
+    set_mimalloc_in_main!();
 
     // Initialize tracing w/ file writer.
     try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();

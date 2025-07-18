@@ -20,7 +20,7 @@ use r3bl_tui::{ast, ast_line, ast_lines, choose, get_size, get_terminal_width, h
                log::try_initialize_logging_global,
                new_style, ok,
                readline_async::{style::StyleSheet, HowToChoose, DEVELOPMENT_MODE},
-               set_jemalloc_in_main, throws, tui_color, usize, width, ASTColor,
+               set_mimalloc_in_main, throws, tui_color, usize, width, ASTColor,
                ASTStyle, AnsiStyledText, DefaultIoDevices, InlineVec};
 use smallvec::smallvec;
 
@@ -38,7 +38,7 @@ async fn main() -> miette::Result<()> {
     const SINGLE_SELECT_2_ITEMS_VPH_5: &str =
         "Single select, 2 items, viewport height = 5";
 
-    set_jemalloc_in_main!();
+    set_mimalloc_in_main!();
 
     throws!({
         DEVELOPMENT_MODE.then(|| {
