@@ -154,9 +154,10 @@ def run_example_with_flamegraph_profiling_perf_fold [options: list<string>] {
         sudo sysctl -w kernel.perf_event_paranoid=-1
         sudo sysctl -w kernel.kptr_restrict=0
 
-        # Build the example with profiling-detailed profile
+        # Build the example with profiling-detailed profile and same RUSTFLAGS as SVG version
         print $'(ansi cyan)Building example with profiling-detailed profile...(ansi reset)'
-        cargo build --profile profiling-detailed --example $selection
+        (RUSTFLAGS="-C force-frame-pointers=yes -C symbol-mangling-version=v0"
+            cargo build --profile profiling-detailed --example $selection)
 
         # Wait a moment for the build to complete
         sleep 1sec
@@ -171,8 +172,8 @@ def run_example_with_flamegraph_profiling_perf_fold [options: list<string>] {
             return
         }
 
-        # Run perf record directly
-        print $'(ansi cyan)Running perf record...(ansi reset)'
+        # Run perf record with same options as the SVG version
+        print $'(ansi cyan)Running perf record with enhanced symbol resolution...(ansi reset)'
         sudo perf record -g --call-graph=fp,8 -F 99 -o perf.data -- $binary_path
 
         # Check if inferno-collapse-perf is available
