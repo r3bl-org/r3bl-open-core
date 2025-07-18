@@ -19,7 +19,7 @@
 //! - <https://doc.rust-lang.org/reference/tokens.html#ascii-escapes>
 //! - <https://notes.burke.libbey.me/ansi-escape-codes/>
 
-use std::fmt::{Display, Formatter, Result};
+use std::fmt::{Display, Formatter, Result, Write};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SgrCode {
@@ -53,26 +53,36 @@ pub mod sgr_code_impl {
         /// - <https://www.asciitable.com/>
         /// - <https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg>
         /// - <https://en.wikipedia.org/wiki/ANSI_escape_code>
-        #[rustfmt::skip]
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            match *self {
-                SgrCode::Reset                    => write!(f, "{CSI}0{SGR}"),
-                SgrCode::Bold                     => write!(f, "{CSI}1{SGR}"),
-                SgrCode::Dim                      => write!(f, "{CSI}2{SGR}"),
-                SgrCode::Italic                   => write!(f, "{CSI}3{SGR}"),
-                SgrCode::Underline                => write!(f, "{CSI}4{SGR}"),
-                SgrCode::SlowBlink                => write!(f, "{CSI}5{SGR}"),
-                SgrCode::RapidBlink               => write!(f, "{CSI}6{SGR}"),
-                SgrCode::Invert                   => write!(f, "{CSI}7{SGR}"),
-                SgrCode::Hidden                   => write!(f, "{CSI}8{SGR}"),
-                SgrCode::Strikethrough            => write!(f, "{CSI}9{SGR}"),
-                SgrCode::Overline                 => write!(f, "{CSI}53{SGR}"),
-                SgrCode::ForegroundAnsi256(index) => write!(f, "{CSI}38;5;{index}{SGR}"),
-                SgrCode::BackgroundAnsi256(index) => write!(f, "{CSI}48;5;{index}{SGR}"),
-                SgrCode::ForegroundRGB(r, g, b)   => write!(f, "{CSI}38;2;{r};{g};{b}{SGR}"),
-                SgrCode::BackgroundRGB(r, g, b)   => write!(f, "{CSI}48;2;{r};{g};{b}{SGR}"),
-            }
+            use crate::WriteToBuf;
+            // Delegate to WriteToBuf for consistency
+            let mut buf = String::new();
+            self.write_to_buf(&mut buf)?;
+            f.write_str(&buf)
+        }
+    }
+}
 
+// WriteToBuf implementation for optimized performance
+impl crate::WriteToBuf for SgrCode {
+    fn write_to_buf(&self, buf: &mut crate::ASTextStorage) -> Result {
+        use sgr_code_impl::{CSI, SGR};
+        match *self {
+            SgrCode::Reset                    => write!(buf, "{CSI}0{SGR}"),
+            SgrCode::Bold                     => write!(buf, "{CSI}1{SGR}"),
+            SgrCode::Dim                      => write!(buf, "{CSI}2{SGR}"),
+            SgrCode::Italic                   => write!(buf, "{CSI}3{SGR}"),
+            SgrCode::Underline                => write!(buf, "{CSI}4{SGR}"),
+            SgrCode::SlowBlink                => write!(buf, "{CSI}5{SGR}"),
+            SgrCode::RapidBlink               => write!(buf, "{CSI}6{SGR}"),
+            SgrCode::Invert                   => write!(buf, "{CSI}7{SGR}"),
+            SgrCode::Hidden                   => write!(buf, "{CSI}8{SGR}"),
+            SgrCode::Strikethrough            => write!(buf, "{CSI}9{SGR}"),
+            SgrCode::Overline                 => write!(buf, "{CSI}53{SGR}"),
+            SgrCode::ForegroundAnsi256(index) => write!(buf, "{CSI}38;5;{index}{SGR}"),
+            SgrCode::BackgroundAnsi256(index) => write!(buf, "{CSI}48;5;{index}{SGR}"),
+            SgrCode::ForegroundRGB(r, g, b)   => write!(buf, "{CSI}38;2;{r};{g};{b}{SGR}"),
+            SgrCode::BackgroundRGB(r, g, b)   => write!(buf, "{CSI}48;2;{r};{g};{b}{SGR}"),
         }
     }
 }

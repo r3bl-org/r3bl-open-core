@@ -17,14 +17,13 @@
 
 use std::fmt::{Display, Formatter, Result};
 
-use smallvec::{smallvec, SmallVec};
+use smallvec::{SmallVec, smallvec};
 use strum_macros::EnumCount;
 
-use crate::{inline_string, tui_color,
+use crate::{ASTColor, ColIndex, ColWidth, GCString, InlineString, InlineVec, PixelChar,
+            SgrCode, TuiStyle, inline_string, tui_color,
             tui_style::tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse,
-                                          Strikethrough, Underline},
-            ASTColor, ColIndex, ColWidth, GCString, InlineString, InlineVec, PixelChar,
-            SgrCode, TuiStyle};
+                                          Strikethrough, Underline}};
 
 /// Please don't create this struct directly, use [`crate::ast()`], [`crate::ast_line`!],
 /// [`crate::ast_lines`!] or the constructor functions like [`fg_red()`], [`fg_green()`],
@@ -100,6 +99,46 @@ pub type ASTextLine = InlineVec<AnsiStyledText>;
 pub type ASTextLines = InlineVec<ASTextLine>;
 pub type ASTextStyles = sizing::InlineVecASTextStyles;
 
+/// Buffer for building ANSI styled text efficiently.
+///
+/// We use `String` as the backing storage after performance testing showed:
+/// - `SmallString<[u8; 64]>` had slightly worse performance due to stack allocation
+///   overhead.
+/// - `SmallString<[u8; 256]>` had even worse performance for small strings.
+/// - Plain `String` provides the best balance of performance across all test cases.
+///
+/// This type alias allows us to easily experiment with different string-like data
+/// structures in the future (e.g., `SmallString`, `CompactString`, custom
+/// implementations) without impacting the rest of the codebase.
+pub type ASTextStorage = String;
+
+/// Trait for efficiently writing ANSI styled text to a buffer.
+///
+/// ## Why `WriteToBuf` instead of Display/Formatter?
+///
+/// The standard [`Display`] trait uses [`std::fmt::Formatter`] which has significant
+/// overhead:
+/// 1. **Formatter State Machine**: Each `write!` call goes through the formatter's
+///    internal state machine, checking formatting flags (alignment, padding, precision,
+///    etc).
+/// 2. **Multiple Function Calls**: Each [`write!`] has method call overhead, vtable
+///    lookups for trait objects, and repeated bounds checking.
+/// 3. **Buffer Management**: The formatter may need to reallocate its internal buffer
+///    multiple times for many small writes.
+///
+/// By using `WriteToBuf` with a `String` buffer, we:
+/// - Make direct string concatenations without formatter overhead
+/// - Batch all content into a single buffer
+/// - Make only ONE write to the formatter in the Display implementation
+/// - Reduce the overhead from ~16% to ~5-8% in performance profiles
+///
+/// The Display trait implementations still exist for API compatibility but delegate to
+/// `WriteToBuf`.
+pub trait WriteToBuf {
+    /// Write the formatted representation to the provided buffer.
+    fn write_to_buf(&self, buf: &mut ASTextStorage) -> Result;
+}
+
 pub(in crate::core::ansi) mod sizing {
     use super::{ASTStyle, SmallVec};
 
@@ -156,8 +195,8 @@ macro_rules! ast_lines {
 }
 
 pub mod ansi_styled_text_impl {
-    use super::{inline_string, ASText, AnsiStyledText, ColIndex, ColWidth, GCString,
-                InlineString, InlineVec, PixelChar, TuiStyle};
+    use super::{ASText, AnsiStyledText, ColIndex, ColWidth, GCString, InlineString,
+                InlineVec, PixelChar, TuiStyle, inline_string};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct ASTextConvertOptions {
@@ -751,7 +790,7 @@ mod convert_vec_ast_style_to_tui_style {
 }
 
 mod convert_tui_style_to_vec_ast_style {
-    use super::{sizing, sizing::InlineVecASTextStyles, ASTStyle, TuiStyle};
+    use super::{ASTStyle, TuiStyle, sizing, sizing::InlineVecASTextStyles};
 
     impl From<TuiStyle> for sizing::InlineVecASTextStyles {
         fn from(tui_style: TuiStyle) -> Self {
@@ -795,97 +834,94 @@ mod convert_tui_style_to_vec_ast_style {
 mod style_impl {
     use std::fmt::{Display, Formatter, Result};
 
-    use crate::{global_color_support, ASTColor, ASTStyle, ColorSupport, RgbValue,
-                SgrCode, TransformColor};
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    enum ColorKind {
-        Foreground,
-        Background,
-    }
-
-    fn fmt_color(
-        color: ASTColor,
-        color_kind: ColorKind,
-        f: &mut Formatter<'_>,
-    ) -> Result {
-        match global_color_support::detect() {
-            ColorSupport::Ansi256 => {
-                // ANSI 256 color mode.
-                let color = color.as_ansi();
-                let index = color.index;
-                write!(
-                    f,
-                    "{}",
-                    match color_kind {
-                        ColorKind::Foreground => SgrCode::ForegroundAnsi256(index),
-                        ColorKind::Background => SgrCode::BackgroundAnsi256(index),
-                    }
-                )
-            }
-
-            ColorSupport::Grayscale => {
-                // Grayscale mode.
-                let color = color.as_grayscale();
-                let index = color.index;
-                write!(
-                    f,
-                    "{}",
-                    match color_kind {
-                        ColorKind::Foreground => SgrCode::ForegroundAnsi256(index),
-                        ColorKind::Background => SgrCode::BackgroundAnsi256(index),
-                    }
-                )
-            }
-
-            _ => {
-                // True color mode.
-                let color = color.as_rgb();
-                let RgbValue { red, green, blue } = color;
-                write!(
-                    f,
-                    "{}",
-                    match color_kind {
-                        ColorKind::Foreground => SgrCode::ForegroundRGB(red, green, blue),
-                        ColorKind::Background => SgrCode::BackgroundRGB(red, green, blue),
-                    }
-                )
-            }
-        }
-    }
+    use crate::ASTStyle;
 
     impl Display for ASTStyle {
-        #[rustfmt::skip]
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            match self {
-                ASTStyle::Foreground(color)  => fmt_color(*color, ColorKind::Foreground, f),
-                ASTStyle::Background(color)  => fmt_color(*color, ColorKind::Background, f),
-                ASTStyle::Bold               => write!(f, "{}", SgrCode::Bold),
-                ASTStyle::Dim                => write!(f, "{}", SgrCode::Dim),
-                ASTStyle::Italic             => write!(f, "{}", SgrCode::Italic),
-                ASTStyle::Underline          => write!(f, "{}", SgrCode::Underline),
-                ASTStyle::SlowBlink          => write!(f, "{}", SgrCode::SlowBlink),
-                ASTStyle::RapidBlink         => write!(f, "{}", SgrCode::RapidBlink),
-                ASTStyle::Invert             => write!(f, "{}", SgrCode::Invert),
-                ASTStyle::Hidden             => write!(f, "{}", SgrCode::Hidden),
-                ASTStyle::Strikethrough      => write!(f, "{}", SgrCode::Strikethrough),
-                ASTStyle::Overline           => write!(f, "{}", SgrCode::Overline),
-            }
+            use crate::WriteToBuf;
+            // Delegate to WriteToBuf for consistency
+            let mut buf = String::new();
+            self.write_to_buf(&mut buf)?;
+            f.write_str(&buf)
         }
     }
 }
 
+impl WriteToBuf for ASTStyle {
+    fn write_to_buf(&self, buf: &mut ASTextStorage) -> Result {
+        use crate::{ColorSupport, TransformColor, global_color_support};
+
+        // Helper function to convert color to appropriate SgrCode.
+        fn color_to_sgr(color: &ASTColor, is_foreground: bool) -> SgrCode {
+            match global_color_support::detect() {
+                ColorSupport::Ansi256 => {
+                    let ansi = color.as_ansi();
+                    if is_foreground {
+                        SgrCode::ForegroundAnsi256(ansi.index)
+                    } else {
+                        SgrCode::BackgroundAnsi256(ansi.index)
+                    }
+                }
+                ColorSupport::Grayscale => {
+                    let gray = color.as_grayscale();
+                    if is_foreground {
+                        SgrCode::ForegroundAnsi256(gray.index)
+                    } else {
+                        SgrCode::BackgroundAnsi256(gray.index)
+                    }
+                }
+                _ => {
+                    let rgb = color.as_rgb();
+                    if is_foreground {
+                        SgrCode::ForegroundRGB(rgb.red, rgb.green, rgb.blue)
+                    } else {
+                        SgrCode::BackgroundRGB(rgb.red, rgb.green, rgb.blue)
+                    }
+                }
+            }
+        }
+
+        match self {
+            ASTStyle::Foreground(color) => color_to_sgr(color, true).write_to_buf(buf),
+            ASTStyle::Background(color) => color_to_sgr(color, false).write_to_buf(buf),
+            ASTStyle::Bold => SgrCode::Bold.write_to_buf(buf),
+            ASTStyle::Dim => SgrCode::Dim.write_to_buf(buf),
+            ASTStyle::Italic => SgrCode::Italic.write_to_buf(buf),
+            ASTStyle::Underline => SgrCode::Underline.write_to_buf(buf),
+            ASTStyle::SlowBlink => SgrCode::SlowBlink.write_to_buf(buf),
+            ASTStyle::RapidBlink => SgrCode::RapidBlink.write_to_buf(buf),
+            ASTStyle::Invert => SgrCode::Invert.write_to_buf(buf),
+            ASTStyle::Hidden => SgrCode::Hidden.write_to_buf(buf),
+            ASTStyle::Strikethrough => SgrCode::Strikethrough.write_to_buf(buf),
+            ASTStyle::Overline => SgrCode::Overline.write_to_buf(buf),
+        }
+    }
+}
+
+impl WriteToBuf for ASText {
+    fn write_to_buf(&self, buf: &mut ASTextStorage) -> Result {
+        // Write all styles to buffer
+        for style in &self.styles {
+            style.write_to_buf(buf)?;
+        }
+        // Write text content
+        buf.push_str(&self.text);
+        // Write reset code
+        SgrCode::Reset.write_to_buf(buf)?;
+        Ok(())
+    }
+}
+
 mod display_trait_impl {
-    use super::{ASText, Display, Formatter, Result, SgrCode};
+    use super::{ASText, ASTextStorage, Display, Formatter, Result, WriteToBuf};
 
     impl Display for ASText {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            for style_item in &self.styles {
-                write!(f, "{style_item}")?;
-            }
-            write!(f, "{}", self.text)?;
-            write!(f, "{}", SgrCode::Reset)?;
-            Ok(())
+            // Use String buffer for building the complete string
+            let mut buf = ASTextStorage::new();
+            self.write_to_buf(&mut buf)?;
+            // Single write to formatter
+            f.write_str(&buf)
         }
     }
 }
@@ -897,13 +933,14 @@ mod tests {
     use smallvec::smallvec;
 
     use super::dim;
-    use crate::{ansi::sizing::InlineVecASTextStyles,
+    use crate::{ASTColor, ASTStyle, ASText, ASTextStyles, ColIndex, ColorSupport,
+                InlineVec, PixelChar, TuiColor, TuiStyle,
+                ansi::sizing::InlineVecASTextStyles,
                 ansi_styled_text::ansi_styled_text_impl::ASTextConvertOptions,
                 global_color_support, tui_color,
                 tui_style::tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse,
                                               Strikethrough, Underline},
-                width, ASTColor, ASTStyle, ASText, ASTextStyles, ColIndex, ColorSupport,
-                InlineVec, PixelChar, TuiColor, TuiStyle};
+                width};
 
     #[serial]
     #[test]
@@ -1723,5 +1760,165 @@ mod tests {
             assert_eq!(clipped_text.text, "H"); // start=0, end=0 -> first char
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
+    }
+}
+
+#[cfg(test)]
+mod bench_tests {
+    extern crate test;
+    use smallvec::smallvec;
+    use test::Bencher;
+
+    use super::*;
+
+    // Benchmark data setup
+    fn simple_text() -> ASText {
+        ASText {
+            text: "Hello, World!".into(),
+            styles: smallvec![],
+        }
+    }
+
+    fn single_style_text() -> ASText {
+        ASText {
+            text: "Hello, World!".into(),
+            styles: smallvec![ASTStyle::Bold],
+        }
+    }
+
+    fn multiple_styles_text() -> ASText {
+        ASText {
+            text: "Hello, World!".into(),
+            styles: smallvec![ASTStyle::Bold, ASTStyle::Italic, ASTStyle::Underline,],
+        }
+    }
+
+    fn colored_text() -> ASText {
+        ASText {
+            text: "Hello, World!".into(),
+            styles: smallvec![
+                ASTStyle::Foreground(ASTColor::Ansi(196.into())),
+                ASTStyle::Background(ASTColor::Ansi(236.into())),
+            ],
+        }
+    }
+
+    fn rgb_colored_text() -> ASText {
+        ASText {
+            text: "Hello, World!".into(),
+            styles: smallvec![
+                ASTStyle::Bold,
+                ASTStyle::Foreground(ASTColor::Rgb((255, 0, 0).into())),
+                ASTStyle::Background(ASTColor::Rgb((0, 0, 255).into())),
+            ],
+        }
+    }
+
+    fn complex_styled_text() -> ASText {
+        ASText {
+            text: "Hello, World! This is a longer text with more content.".into(),
+            styles: smallvec![
+                ASTStyle::Bold,
+                ASTStyle::Italic,
+                ASTStyle::Underline,
+                ASTStyle::Foreground(ASTColor::Rgb((255, 128, 0).into())),
+                ASTStyle::Background(ASTColor::Ansi(236.into())),
+            ],
+        }
+    }
+
+    fn long_text() -> ASText {
+        ASText {
+            // <!-- cspell:disable -->
+            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. \
+                   Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+                .into(),
+            // <!-- cspell:enable -->
+            styles: smallvec![
+                ASTStyle::Bold,
+                ASTStyle::Foreground(ASTColor::Ansi(34.into())),
+            ],
+        }
+    }
+
+    // Display benchmarks
+    #[bench]
+    fn bench_display_simple_text(b: &mut Bencher) {
+        let ast = simple_text();
+        b.iter(|| format!("{ast}"));
+    }
+
+    #[bench]
+    fn bench_display_single_style(b: &mut Bencher) {
+        let ast = single_style_text();
+        b.iter(|| format!("{ast}"));
+    }
+
+    #[bench]
+    fn bench_display_multiple_styles(b: &mut Bencher) {
+        let ast = multiple_styles_text();
+        b.iter(|| format!("{ast}"));
+    }
+
+    #[bench]
+    fn bench_display_ansi_colors(b: &mut Bencher) {
+        let ast = colored_text();
+        b.iter(|| format!("{ast}"));
+    }
+
+    #[bench]
+    fn bench_display_rgb_colors(b: &mut Bencher) {
+        let ast = rgb_colored_text();
+        b.iter(|| format!("{ast}"));
+    }
+
+    #[bench]
+    fn bench_display_complex_styled(b: &mut Bencher) {
+        let ast = complex_styled_text();
+        b.iter(|| format!("{ast}"));
+    }
+
+    #[bench]
+    fn bench_display_long_text(b: &mut Bencher) {
+        let ast = long_text();
+        b.iter(|| format!("{ast}"));
+    }
+
+    // Benchmark creating styled text and displaying
+    #[bench]
+    fn bench_create_and_display_fg_red(b: &mut Bencher) {
+        b.iter(|| {
+            let ast = fg_red("Hello, World!");
+            format!("{ast}")
+        });
+    }
+
+    #[bench]
+    fn bench_create_and_display_complex(b: &mut Bencher) {
+        b.iter(|| {
+            let ast = bold("Hello, World!")
+                .fg_color(tui_color!(255, 0, 0))
+                .bg_color(tui_color!(0, 0, 255));
+            format!("{ast}")
+        });
+    }
+
+    // Benchmark multiple ASText in sequence (simulating real usage)
+    #[bench]
+    fn bench_display_multiple_ast_sequence(b: &mut Bencher) {
+        let texts = vec![
+            fg_red("Error: "),
+            bold("Failed to compile"),
+            dim(" at line "),
+            fg_yellow("42"),
+        ];
+
+        b.iter(|| {
+            let mut result = String::new();
+            for ast in &texts {
+                result.push_str(&format!("{ast}"));
+            }
+            result
+        });
     }
 }

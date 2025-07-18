@@ -294,17 +294,17 @@ mod color_wheel_cache {
                 | GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength
         )
     }
-    
+
     #[cfg(test)]
     mod tests {
         use super::*;
-        
+
         fn compute_hash<T: Hash>(value: &T) -> u64 {
             let mut hasher = DefaultHasher::new();
             value.hash(&mut hasher);
             hasher.finish()
         }
-        
+
         #[test]
         fn test_cache_key_hash_deterministic() {
             // Test that same inputs produce same hash
@@ -315,7 +315,7 @@ mod color_wheel_cache {
                     crate::u8(100),
                 ),
             ];
-            
+
             let key1 = ColorWheelCacheKey::new(
                 "test text",
                 &configs,
@@ -323,7 +323,7 @@ mod color_wheel_cache {
                 TextColorizationPolicy::ColorEachCharacter(None),
                 None,
             );
-            
+
             let key2 = ColorWheelCacheKey::new(
                 "test text",
                 &configs,
@@ -331,11 +331,11 @@ mod color_wheel_cache {
                 TextColorizationPolicy::ColorEachCharacter(None),
                 None,
             );
-            
+
             assert_eq!(compute_hash(&key1), compute_hash(&key2));
             assert_eq!(key1, key2);
         }
-        
+
         #[test]
         fn test_cache_key_hash_different_for_different_inputs() {
             let configs = smallvec::smallvec![
@@ -345,7 +345,7 @@ mod color_wheel_cache {
                     crate::u8(100),
                 ),
             ];
-            
+
             let key1 = ColorWheelCacheKey::new(
                 "text1",
                 &configs,
@@ -353,7 +353,7 @@ mod color_wheel_cache {
                 TextColorizationPolicy::ColorEachCharacter(None),
                 None,
             );
-            
+
             let key2 = ColorWheelCacheKey::new(
                 "text2",
                 &configs,
@@ -361,16 +361,16 @@ mod color_wheel_cache {
                 TextColorizationPolicy::ColorEachCharacter(None),
                 None,
             );
-            
+
             assert_ne!(compute_hash(&key1), compute_hash(&key2));
             assert_ne!(key1, key2);
         }
-        
+
         #[test]
         fn test_lolcat_config_hash_handles_f64() {
             use crate::lolcat::{LolcatBuilder, Colorize};
             use crate::{Seed, SeedDelta};
-            
+
             // Test that different f64 values produce different hashes
             let config1 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
                 color_change_speed: crate::ColorChangeSpeed::Slow,
@@ -378,28 +378,28 @@ mod color_wheel_cache {
                 seed_delta: SeedDelta(0.1),
                 colorization_strategy: Colorize::OnlyForeground,
             });
-            
+
             let config2 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
                 color_change_speed: crate::ColorChangeSpeed::Slow,
                 seed: Seed(2.0),
                 seed_delta: SeedDelta(0.1),
                 colorization_strategy: Colorize::OnlyForeground,
             });
-            
+
             let mut hasher1 = DefaultHasher::new();
             let mut hasher2 = DefaultHasher::new();
-            
+
             hashing_helpers::hash_color_wheel_config(&config1, &mut hasher1);
             hashing_helpers::hash_color_wheel_config(&config2, &mut hasher2);
-            
+
             assert_ne!(hasher1.finish(), hasher2.finish());
         }
-        
+
         #[test]
         fn test_hash_handles_negative_zero() {
             use crate::lolcat::{LolcatBuilder, Colorize};
             use crate::{Seed, SeedDelta};
-            
+
             // Test that -0.0 and 0.0 produce different hashes (as documented)
             let config1 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
                 color_change_speed: crate::ColorChangeSpeed::Slow,
@@ -407,28 +407,28 @@ mod color_wheel_cache {
                 seed_delta: SeedDelta(0.1),
                 colorization_strategy: Colorize::OnlyForeground,
             });
-            
+
             let config2 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
                 color_change_speed: crate::ColorChangeSpeed::Slow,
                 seed: Seed(-0.0),
                 seed_delta: SeedDelta(0.1),
                 colorization_strategy: Colorize::OnlyForeground,
             });
-            
+
             let mut hasher1 = DefaultHasher::new();
             let mut hasher2 = DefaultHasher::new();
-            
+
             hashing_helpers::hash_color_wheel_config(&config1, &mut hasher1);
             hashing_helpers::hash_color_wheel_config(&config2, &mut hasher2);
-            
+
             // This is expected behavior - -0.0 and 0.0 have different bit representations
             assert_ne!(hasher1.finish(), hasher2.finish());
         }
-        
+
         #[test]
         fn test_all_config_variants_hash_differently() {
             use crate::Ansi256GradientIndex;
-            
+
             let configs = vec![
                 crate::ColorWheelConfig::Rgb(
                     smallvec::smallvec!["#ff0000".into()],
@@ -441,14 +441,14 @@ mod color_wheel_cache {
                     crate::ColorWheelSpeed::Slow,
                 ),
             ];
-            
+
             let mut hashes = Vec::new();
             for config in &configs {
                 let mut hasher = DefaultHasher::new();
                 hashing_helpers::hash_color_wheel_config(config, &mut hasher);
                 hashes.push(hasher.finish());
             }
-            
+
             // All different variants should produce different hashes
             for i in 0..hashes.len() {
                 for j in (i + 1)..hashes.len() {
@@ -1728,7 +1728,7 @@ mod bench {
         });
     }
 
-    /// Benchmark: colorize_into_styled_texts with reset policy (cacheable)
+    /// Benchmark: `colorize_into_styled_texts` with reset policy (cacheable)
     #[bench]
     fn bench_colorize_into_styled_texts_reset_policy(b: &mut Bencher) {
         let mut color_wheel = ColorWheel::default();
@@ -1744,7 +1744,7 @@ mod bench {
         });
     }
 
-    /// Benchmark: colorize_into_styled_texts with maintain policy (NOT cacheable)
+    /// Benchmark: `colorize_into_styled_texts` with maintain policy (NOT cacheable)
     #[bench]
     fn bench_colorize_into_styled_texts_maintain_policy(b: &mut Bencher) {
         let mut color_wheel = ColorWheel::default();
@@ -1759,8 +1759,8 @@ mod bench {
             );
         });
     }
-    
-    /// Benchmark: Hash computation for ColorWheelCacheKey
+
+    /// Benchmark: Hash computation for `ColorWheelCacheKey`
     #[bench]
     fn bench_hash_cache_key_creation(b: &mut Bencher) {
         let configs = smallvec::smallvec![
@@ -1770,7 +1770,7 @@ mod bench {
                 crate::u8(100),
             ),
         ];
-        
+
         b.iter(|| {
             let _key = color_wheel_cache::ColorWheelCacheKey::new(
                 "Hello, world! This is a test string.",
@@ -1781,20 +1781,20 @@ mod bench {
             );
         });
     }
-    
+
     /// Benchmark: Hash computation for Lolcat config (with f64)
     #[bench]
     fn bench_hash_lolcat_config(b: &mut Bencher) {
         use crate::lolcat::{LolcatBuilder, Colorize};
         use crate::{Seed, SeedDelta};
-        
+
         let config = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
             color_change_speed: crate::ColorChangeSpeed::Slow,
             seed: Seed(42.0),
             seed_delta: SeedDelta(0.1),
             colorization_strategy: Colorize::OnlyForeground,
         });
-        
+
         b.iter(|| {
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
             // Use the same hashing logic as the cache key
@@ -1814,12 +1814,12 @@ mod bench {
             let _hash = hasher.finish();
         });
     }
-    
+
     /// Benchmark: Hash computation for multiple configs
     #[bench]
     fn bench_hash_multiple_configs(b: &mut Bencher) {
         use crate::Ansi256GradientIndex;
-        
+
         let configs: VecConfigs = smallvec::smallvec![
             crate::ColorWheelConfig::Rgb(
                 smallvec::smallvec!["#ff0000".into(), "#00ff00".into()],
@@ -1831,7 +1831,7 @@ mod bench {
                 crate::ColorWheelSpeed::Medium,
             ),
         ];
-        
+
         b.iter(|| {
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
             for config in &configs {
