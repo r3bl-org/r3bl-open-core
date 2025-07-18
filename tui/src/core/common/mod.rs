@@ -29,6 +29,7 @@ pub mod ring_buffer_heap;
 pub mod ring_buffer_stack;
 pub mod telemetry;
 pub mod time_duration;
+pub mod write_to_buf;
 
 // Re-export.
 pub use common_enums::*;
@@ -44,3 +45,4 @@ pub use ring_buffer_heap::*;
 pub use ring_buffer_stack::*;
 pub use telemetry::*;
 pub use time_duration::*;
+pub use write_to_buf::*;

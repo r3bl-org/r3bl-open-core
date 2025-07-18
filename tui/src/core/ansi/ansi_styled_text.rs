@@ -20,8 +20,9 @@ use std::fmt::{Display, Formatter, Result};
 use smallvec::{SmallVec, smallvec};
 use strum_macros::EnumCount;
 
-use crate::{ASTColor, ColIndex, ColWidth, GCString, InlineString, InlineVec, PixelChar,
-            SgrCode, TuiStyle, inline_string, tui_color,
+use crate::{ASTColor, BufTextStorage, ColIndex, ColWidth, GCString, InlineString,
+            InlineVec, PixelChar, SgrCode, TuiStyle, WriteToBuf, inline_string,
+            tui_color,
             tui_style::tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse,
                                           Strikethrough, Underline}};
 
@@ -99,45 +100,6 @@ pub type ASTextLine = InlineVec<AnsiStyledText>;
 pub type ASTextLines = InlineVec<ASTextLine>;
 pub type ASTextStyles = sizing::InlineVecASTextStyles;
 
-/// Buffer for building ANSI styled text efficiently.
-///
-/// We use `String` as the backing storage after performance testing showed:
-/// - `SmallString<[u8; 64]>` had slightly worse performance due to stack allocation
-///   overhead.
-/// - `SmallString<[u8; 256]>` had even worse performance for small strings.
-/// - Plain `String` provides the best balance of performance across all test cases.
-///
-/// This type alias allows us to easily experiment with different string-like data
-/// structures in the future (e.g., `SmallString`, `CompactString`, custom
-/// implementations) without impacting the rest of the codebase.
-pub type ASTextStorage = String;
-
-/// Trait for efficiently writing ANSI styled text to a buffer.
-///
-/// ## Why `WriteToBuf` instead of Display/Formatter?
-///
-/// The standard [`Display`] trait uses [`std::fmt::Formatter`] which has significant
-/// overhead:
-/// 1. **Formatter State Machine**: Each `write!` call goes through the formatter's
-///    internal state machine, checking formatting flags (alignment, padding, precision,
-///    etc).
-/// 2. **Multiple Function Calls**: Each [`write!`] has method call overhead, vtable
-///    lookups for trait objects, and repeated bounds checking.
-/// 3. **Buffer Management**: The formatter may need to reallocate its internal buffer
-///    multiple times for many small writes.
-///
-/// By using `WriteToBuf` with a `String` buffer, we:
-/// - Make direct string concatenations without formatter overhead
-/// - Batch all content into a single buffer
-/// - Make only ONE write to the formatter in the Display implementation
-/// - Reduce the overhead from ~16% to ~5-8% in performance profiles
-///
-/// The Display trait implementations still exist for API compatibility but delegate to
-/// `WriteToBuf`.
-pub trait WriteToBuf {
-    /// Write the formatted representation to the provided buffer.
-    fn write_to_buf(&self, buf: &mut ASTextStorage) -> Result;
-}
 
 pub(in crate::core::ansi) mod sizing {
     use super::{ASTStyle, SmallVec};
@@ -832,23 +794,20 @@ mod convert_tui_style_to_vec_ast_style {
 }
 
 mod style_impl {
-    use std::fmt::{Display, Formatter, Result};
-
-    use crate::ASTStyle;
+    use super::{ASTStyle, BufTextStorage, Display, Formatter, Result, WriteToBuf};
 
     impl Display for ASTStyle {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            use crate::WriteToBuf;
-            // Delegate to WriteToBuf for consistency
-            let mut buf = String::new();
-            self.write_to_buf(&mut buf)?;
-            f.write_str(&buf)
+            // Delegate to WriteToBuf for consistency.
+            let mut acc = BufTextStorage::new();
+            self.write_to_buf(&mut acc)?;
+            self.write_buf_to_fmt(&acc, f)
         }
     }
 }
 
 impl WriteToBuf for ASTStyle {
-    fn write_to_buf(&self, buf: &mut ASTextStorage) -> Result {
+    fn write_to_buf(&self, buf: &mut BufTextStorage) -> Result {
         use crate::{ColorSupport, TransformColor, global_color_support};
 
         // Helper function to convert color to appropriate SgrCode.
@@ -899,29 +858,33 @@ impl WriteToBuf for ASTStyle {
 }
 
 impl WriteToBuf for ASText {
-    fn write_to_buf(&self, buf: &mut ASTextStorage) -> Result {
-        // Write all styles to buffer
+    fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
+        // Write all styles to buffer.
         for style in &self.styles {
-            style.write_to_buf(buf)?;
+            style.write_to_buf(acc)?;
         }
-        // Write text content
-        buf.push_str(&self.text);
-        // Write reset code
-        SgrCode::Reset.write_to_buf(buf)?;
+
+        // Write text content.
+        acc.push_str(&self.text);
+
+        // Write reset code.
+        SgrCode::Reset.write_to_buf(acc)?;
+
         Ok(())
     }
 }
 
 mod display_trait_impl {
-    use super::{ASText, ASTextStorage, Display, Formatter, Result, WriteToBuf};
+    use super::{ASText, BufTextStorage, Display, Formatter, Result, WriteToBuf};
 
     impl Display for ASText {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            // Use String buffer for building the complete string
-            let mut buf = ASTextStorage::new();
-            self.write_to_buf(&mut buf)?;
-            // Single write to formatter
-            f.write_str(&buf)
+            // Use BufTextStorage buffer for building the complete output.
+            let mut acc = BufTextStorage::new();
+            self.write_to_buf(&mut acc)?;
+
+            // Single write to formatter.
+            f.write_str(&acc)
         }
     }
 }

@@ -21,6 +21,8 @@
 
 use std::fmt::{Display, Formatter, Result, Write};
 
+use crate::{BufTextStorage, WriteToBuf};
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SgrCode {
     Reset,
@@ -40,49 +42,43 @@ pub enum SgrCode {
     BackgroundRGB(u8, u8, u8),
 }
 
-pub mod sgr_code_impl {
-    use super::{Display, Formatter, Result, SgrCode};
+const CSI: &str = "\x1b[";
+const SGR: &str = "m";
 
-    pub const CSI: &str = "\x1b[";
-    pub const SGR: &str = "m";
-
-    impl Display for SgrCode {
-        /// SGR: set graphics mode command.
-        /// More info:
-        /// - <https://notes.burke.libbey.me/ansi-escape-codes/>
-        /// - <https://www.asciitable.com/>
-        /// - <https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg>
-        /// - <https://en.wikipedia.org/wiki/ANSI_escape_code>
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            use crate::WriteToBuf;
-            // Delegate to WriteToBuf for consistency
-            let mut buf = String::new();
-            self.write_to_buf(&mut buf)?;
-            f.write_str(&buf)
-        }
+impl Display for SgrCode {
+    /// SGR: set graphics mode command.
+    /// More info:
+    /// - <https://notes.burke.libbey.me/ansi-escape-codes/>
+    /// - <https://www.asciitable.com/>
+    /// - <https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg>
+    /// - <https://en.wikipedia.org/wiki/ANSI_escape_code>
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        // Delegate to WriteToBuf for consistency.
+        let mut acc = BufTextStorage::new();
+        self.write_to_buf(&mut acc)?;
+        self.write_buf_to_fmt(&acc, f)
     }
 }
 
-// WriteToBuf implementation for optimized performance
-impl crate::WriteToBuf for SgrCode {
-    fn write_to_buf(&self, buf: &mut crate::ASTextStorage) -> Result {
-        use sgr_code_impl::{CSI, SGR};
+/// [`WriteToBuf`] implementation for optimized performance.
+impl WriteToBuf for SgrCode {
+    fn write_to_buf(&self, buf: &mut crate::BufTextStorage) -> Result {
         match *self {
-            SgrCode::Reset                    => write!(buf, "{CSI}0{SGR}"),
-            SgrCode::Bold                     => write!(buf, "{CSI}1{SGR}"),
-            SgrCode::Dim                      => write!(buf, "{CSI}2{SGR}"),
-            SgrCode::Italic                   => write!(buf, "{CSI}3{SGR}"),
-            SgrCode::Underline                => write!(buf, "{CSI}4{SGR}"),
-            SgrCode::SlowBlink                => write!(buf, "{CSI}5{SGR}"),
-            SgrCode::RapidBlink               => write!(buf, "{CSI}6{SGR}"),
-            SgrCode::Invert                   => write!(buf, "{CSI}7{SGR}"),
-            SgrCode::Hidden                   => write!(buf, "{CSI}8{SGR}"),
-            SgrCode::Strikethrough            => write!(buf, "{CSI}9{SGR}"),
-            SgrCode::Overline                 => write!(buf, "{CSI}53{SGR}"),
+            SgrCode::Reset => write!(buf, "{CSI}0{SGR}"),
+            SgrCode::Bold => write!(buf, "{CSI}1{SGR}"),
+            SgrCode::Dim => write!(buf, "{CSI}2{SGR}"),
+            SgrCode::Italic => write!(buf, "{CSI}3{SGR}"),
+            SgrCode::Underline => write!(buf, "{CSI}4{SGR}"),
+            SgrCode::SlowBlink => write!(buf, "{CSI}5{SGR}"),
+            SgrCode::RapidBlink => write!(buf, "{CSI}6{SGR}"),
+            SgrCode::Invert => write!(buf, "{CSI}7{SGR}"),
+            SgrCode::Hidden => write!(buf, "{CSI}8{SGR}"),
+            SgrCode::Strikethrough => write!(buf, "{CSI}9{SGR}"),
+            SgrCode::Overline => write!(buf, "{CSI}53{SGR}"),
             SgrCode::ForegroundAnsi256(index) => write!(buf, "{CSI}38;5;{index}{SGR}"),
             SgrCode::BackgroundAnsi256(index) => write!(buf, "{CSI}48;5;{index}{SGR}"),
-            SgrCode::ForegroundRGB(r, g, b)   => write!(buf, "{CSI}38;2;{r};{g};{b}{SGR}"),
-            SgrCode::BackgroundRGB(r, g, b)   => write!(buf, "{CSI}48;2;{r};{g};{b}{SGR}"),
+            SgrCode::ForegroundRGB(r, g, b) => write!(buf, "{CSI}38;2;{r};{g};{b}{SGR}"),
+            SgrCode::BackgroundRGB(r, g, b) => write!(buf, "{CSI}48;2;{r};{g};{b}{SGR}"),
         }
     }
 }
@@ -91,7 +87,7 @@ impl crate::WriteToBuf for SgrCode {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use super::SgrCode;
+    use super::*;
 
     #[test]
     fn bold() {

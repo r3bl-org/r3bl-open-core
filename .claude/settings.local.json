@@ -26,10 +26,15 @@
       "Bash(find:*)",
       "Bash(RUST_BACKTRACE=1 cargo test:*)",
       "Bash(git rev-parse:*)",
-      "Bash(git ls-tree:*)"
+      "Bash(git ls-tree:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:docs.rs)"
     ],
     "deny": [],
-    "defaultMode": "bypassPermissions",
+    "defaultMode": "plan",
     "disableBypassPermissionsMode": "disable"
   }
 }
