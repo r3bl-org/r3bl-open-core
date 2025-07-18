@@ -15,9 +15,34 @@
  *   limitations under the License.
  */
 
-use std::{fs, os::unix::fs::PermissionsExt, path::Path};
+use std::{fs, path::Path};
+
+#[cfg(not(target_os ="windows"))]
+use std::os::unix::fs::PermissionsExt;
 
 use miette::IntoDiagnostic;
+
+#[cfg(windows)]
+pub fn set_permission(_file: impl AsRef<Path>, _mode: u32) -> miette::Result<()> {
+    Ok::<(), std::io::Error>(()).into_diagnostic()
+}
+
+#[cfg(not(windows))]
+pub fn set_permission(file: impl AsRef<Path>, mode: u32) -> miette::Result<()> {
+    fs::set_permissions(file, std::fs::Permissions::from_mode(mode)).into_diagnostic()
+}
+
+#[cfg(windows)]
+pub fn assert_permissions(_permissions: &std::fs::Permissions, _mode: u32) -> bool {
+    true
+}
+
+#[cfg(not(windows))]
+pub fn assert_permissions(permissions: &std::fs::Permissions, expected: u32) -> bool {
+    assert_eq!(permissions.mode() & 0o777, expected);
+
+    true
+}
 
 /// Sets the file at the specified path to be executable by owner, group, and others.
 /// - `bash` equivalent: `chmod +x file`
@@ -35,7 +60,7 @@ pub fn try_set_file_executable(file: impl AsRef<Path>) -> miette::Result<()> {
     // - 7 (owner): read (4) + write (2) + execute (1) = 7 (rwx)
     // - 5 (group): read (4) + execute (1) = 5 (r-x)
     // - 5 (others): read (4) + execute (1) = 5 (r-x)
-    fs::set_permissions(file, std::fs::Permissions::from_mode(0o755)).into_diagnostic()
+    set_permission(file, 0o755)
 }
 
 #[cfg(test)]
@@ -64,7 +89,7 @@ mod tests_permissions {
         //   permission bits are compared, ignoring other bits that might be present in
         //   the mode.
         // - The assertion checks if the permission bits match 0o755.
-        assert_eq!(lhs.mode() & 0o777, 0o755);
+        assert_permissions(&lhs, 0o755);
     }
 
     #[test]
