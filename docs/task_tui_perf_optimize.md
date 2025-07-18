@@ -116,30 +116,91 @@
 
 ## Immediate Action Items
 
-1. **Reduce Memory Move Operations** (14%+ overhead - HIGHEST PRIORITY):
-   - 236+ million samples across multiple `__memmove_avx_unaligned_erms` calls
-   - Memory copying is now the dominant performance cost
-   - Investigate buffer management strategies to reduce copies
-   - Consider using slices/views instead of copying data
+Based on the latest flamegraph analysis (2025-07-18), the performance priorities have shifted:
 
-2. **Optimize SmallVec Usage** (10.5% combined - HIGH PRIORITY):
-   - 42,185,193 samples in `SmallVec::try_grow`
-   - 40,450,498 samples in `SmallVec::drop`
-   - 17,775,076 samples in `SmallVec::extend`
-   - Pre-size SmallVec allocations based on typical usage patterns
-   - Consider arena allocators or object pooling
+1. **Optimize SmallVec Usage for PixelChar Collections** (45M+ samples - HIGHEST PRIORITY):
+   - Primary hotspot: SmallVec extend operations in PixelChar collections
+   - Located in rendering pipeline's `print_text_with_attributes`
+   - Consider replacing SmallVec<[PixelChar; 8]> with Vec
+   - Expected benefit: Eliminate spill threshold overhead for typical text rendering
 
-3. **Optimize ANSI Escape Code Number Formatting** (9.0% overhead - MEDIUM PRIORITY):
-   - 57,152,419 samples in `core::fmt::Display for u8` within SgrCode WriteToBuf
-   - Number formatting for ANSI codes is expensive
-   - Consider pre-computed lookup tables for common values (0-255)
-   - Or use faster integer-to-string conversion algorithms
+2. **Reduce Memory Move Operations** (70M+ samples - HIGH PRIORITY):
+   - Multiple `__memmove_avx_unaligned_erms` calls across rendering pipeline
+   - 31M samples in `process_render_op`, 28M in `render_content`, 10M in paint operations
+   - Suggests frequent buffer reallocations during rendering
+   - Solution: Add reserve() calls before extend operations
 
-4. **Reduce Unicode Segmentation Overhead** (8.1% overhead - MEDIUM PRIORITY):
-   - 51,091,353 samples in GraphemeIndices iterator
-   - Still significant despite previous optimizations
+3. **Optimize Unicode Segmentation** (44M+ samples - MEDIUM PRIORITY):
+   - GraphemeIndices iterator in `clip_text_to_bounds` and dialog rendering
+   - GCString::new operations still creating overhead
    - Consider caching segmentation results for repeated strings
-   - Or use simpler text processing where grapheme accuracy isn't critical
+   - ASCII fast path is working but Unicode paths remain expensive
+
+4. **Optimize MD Parser Memory Operations** (42M+ samples - MEDIUM PRIORITY):
+   - `parse_block_markdown_text` patterns showing high sample counts
+   - AsStrSlice operations may be causing excessive allocations
+   - Consider optimizing buffer management in parser
+
+5. **Bypass Crossterm for Hot Paths** (60M+ samples - LOW PRIORITY - PENDING):
+   - Already removed format!() calls from queue_render_op! (7.6% improvement achieved)
+   - Crossterm command abstraction still adds overhead for ANSI generation
+   - Consider creating direct ANSI writing layer for performance-critical paths
+   - Note: Prioritizing SmallVec optimizations first as they offer clearer wins
+
+### Prioritized Next Optimization Targets
+
+1. **RenderOp SmallVec Optimization** (RECOMMENDED NEXT):
+   - **Current**: `RenderOps { list: SmallVec<[RenderOp; 8]> }`
+   - **Pattern**: Most operations push 3 RenderOps (ApplyColors, PaintText, ResetColor)
+   - **Approach**: Benchmark SmallVec vs Vec for typical usage patterns
+   - **Expected benefit**: Simpler allocation patterns, better performance predictability
+
+2. **PixelChar SmallVec Optimization**:
+   - **Current**: `SmallVec<[PixelChar; 8]>` in PixelCharLine
+   - **Impact**: 45M+ samples in extend operations
+   - **Approach**: Similar to VecTuiStyledText optimization
+   
+3. **Memory Move Reduction**:
+   - Focus on pre-allocating buffers with appropriate capacity
+   - Identify hot paths that trigger reallocations
+   - Add strategic reserve() calls
+
+4. **ANSI Escape Code Formatting** (✅ PARTIALLY COMPLETED):
+   - WriteToBuf optimization successful
+   - Remaining overhead is from u8 number formatting
+   - Consider lookup table for all u8 values (0-255)
+
+### RenderOp SmallVec Optimization Details
+
+#### Current Implementation
+```rust
+pub struct RenderOps {
+    pub list: InlineVec<RenderOp>,  // SmallVec<[RenderOp; 8]>
+}
+```
+
+#### Typical Usage Pattern
+```rust
+// Most common pattern: 3 operations per styled text
+render_ops.push(RenderOp::ApplyColors(Some(*style)));
+render_ops.push(RenderOp::PaintTextWithAttributes(...));
+render_ops.push(RenderOp::ResetColor);
+```
+
+#### Why This Is A Good Next Target
+1. **Clear usage pattern**: Most RenderOps contain 3-6 operations
+2. **No hot path resizing**: Unlike PixelChar which extends frequently
+3. **Proven approach**: Similar to successful VecTuiStyledText optimization
+4. **Simpler to benchmark**: Fewer edge cases than PixelChar collections
+
+#### Implementation Plan
+1. Create benchmarks comparing SmallVec vs Vec for RenderOps
+2. Test scenarios:
+   - Small (3 operations) - typical styled text
+   - Medium (10 operations) - complex renders with multiple styles
+   - Large (50+ operations) - stress test
+3. Measure: Creation, push performance, memory usage, iteration
+4. If Vec proves better, update type alias in `sizes.rs`
 
 ### Format Change Note
 
@@ -158,56 +219,65 @@ Using `profiling-detailed` profile with:
 
 ### Current Performance Bottleneck Analysis
 
-Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-07-18) after the
-color support detection fix:
+Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-07-18):
 
-1. **Memory Move Operations (14%+)** - PRIMARY BOTTLENECK
-   - `__memmove_avx_unaligned_erms`: 87,343,512 + 79,964,676 + 69,058,874 samples
-   - Total: ~236 million samples across multiple call sites
-   - Memory copy operations are now the dominant performance cost
-   - Suggests frequent buffer reallocations or data copying
+1. **SmallVec Operations for PixelChar** (45M+ samples) - PRIMARY BOTTLENECK
+   - `SmallVec::extend` operations in PixelChar collections: 45,213,071 samples
+   - Located in `print_text_with_attributes` and rendering pipeline
+   - Heavy cloning and extending of PixelChar collections
+   - Suggests SmallVec spill threshold is being exceeded frequently
 
-2. **Unicode Segmentation (8.1%)**
-   - `<unicode_segmentation::grapheme::GraphemeIndices as core::iter::traits::iterator::Iterator>::next`
-   - 51,091,353 samples
-   - Still present in text processing operations
+2. **Memory Move Operations** (70M+ samples) - SECONDARY BOTTLENECK
+   - `__memmove_avx_unaligned_erms` across multiple call sites:
+     - `process_render_op`: 31,784,313 samples
+     - `render_content`: 28,071,933 samples  
+     - Paint operations: 10,442,634 samples
+   - Frequent buffer reallocations during rendering
 
-3. **SmallVec Operations (10.5% combined)**
-   - `SmallVec::try_grow`: 42,185,193 samples with
-     `_ZN8smallvec17SmallVec$LT$A$GT$8try_grow17hd93283fe15924e24E`
-   - `SmallVec::drop`: 40,450,498 samples
-   - `SmallVec::extend`: 17,775,076 samples
-   - Frequent allocations and deallocations
+3. **Unicode Segmentation** (44M+ samples)
+   - `GraphemeIndices::next`: 44,701,903 samples in `clip_text_to_bounds`
+   - Additional 5,050,505 samples in dialog border rendering
+   - GCString creation remains expensive despite ASCII fast path
 
-4. **ANSI Escape Code Formatting (9.0%)**
-   - `<r3bl_tui::core::ansi::ansi_escape_codes::SgrCode as r3bl_tui::core::common::write_to_buf::WriteToBuf>::write_to_buf`
-   - 57,152,419 samples in number formatting
-     (`core::fmt::num::imp::<impl core::fmt::Display for u8>::fmt`)
-   - WriteToBuf is working but number formatting is now visible
+4. **MD Parser Operations** (42M+ samples)
+   - `parse_block_markdown_text_until_eol_or_eoi`: 42,868,797 samples
+   - Pattern matching and text extraction in markdown parser
+   - AsStrSlice operations may be inefficient
 
-5. **Memory Management (3.1%)**
-   - `__do_huge_pmd_anonymous_page` and page allocation: 30,017,934 samples
-   - `asm_exc_page_fault` and page fault handling: 21,786,116 samples
-   - Suggests memory pressure from allocations
+5. **ANSI Escape Code Formatting** (60M+ samples)
+   - WriteToBuf trait implementation: 60,703,976 samples
+   - Majority of overhead is in u8 number formatting
+   - WriteToBuf optimization working but number formatting visible
+
+6. **Other Notable Operations**:
+   - TextWrap operations: 53,951,360 samples (in logging/formatting)
+   - System operations: 48,955,402 samples (sched_yield)
+   - Page faults and memory management: 40,080,071 samples
 
 ### Key Findings from Current Analysis
 
-1. **AnsiStyledText Optimization Success**:
-   - AnsiStyledText Display formatting completely eliminated (was 16.3%)
+1. **Previous Optimizations Working Well**:
+   - AnsiStyledText Display formatting eliminated (was 16.3%)
    - Color support detection no longer appears in flamegraph
-   - WriteToBuf optimization successfully reduced overhead
+   - Format! removal from queue_render_op successful (687M samples vs 638M = 7.6% improvement)
+   - Note: Further crossterm bypass optimization identified but deferred
 
 2. **New Performance Profile**:
-   - Memory operations (`memmove`) are now the largest bottleneck at 14%+
-   - This is a natural progression - with formatting overhead eliminated, memory operations become
-     visible
-   - SmallVec operations remain a significant cost at ~10.5%
+   - SmallVec operations for PixelChar are now the primary bottleneck (45M+ samples)
+   - Memory move operations distributed across rendering pipeline (70M+ total)
+   - Unicode segmentation remains significant despite optimizations (44M+ samples)
+   - MD parser operations showing unexpected overhead (42M+ samples)
 
-3. **Remaining Optimization Opportunities**:
-   - Reduce memory copying through better buffer management
-   - Pre-size SmallVec allocations to avoid growth
-   - Consider arena allocators or buffer pooling for frequent allocations
-   - Optimize number formatting in ANSI escape codes
+3. **Optimization Strategy**:
+   - Focus on SmallVec → Vec conversions (proven approach from VecTuiStyledText)
+   - RenderOp SmallVec optimization recommended as next target (cleaner usage pattern)
+   - Memory moves can be reduced with strategic reserve() calls
+   - Consider caching strategies for repeated operations
+
+4. **Performance Distribution**:
+   - More evenly distributed across components after previous optimizations
+   - No single dominant bottleneck over 10% of total execution
+   - System-level operations (scheduling, page faults) becoming more visible
 
 ## AnsiStyledText Display Optimization (✅ Completed - 2025-07-17, 2025-07-18)
 

@@ -227,7 +227,6 @@ impl RenderPipeline {
     {
         paint(self, flush_kind, global_data, locked_output_device, is_mock);
         // FUTURE: support termion, along w/ crossterm, by providing another impl of this
-        // fn #24
     }
 
     /// Move the [`RenderOps`] in the 'from' [`ZOrder`] (in self) to the 'to' [`ZOrder`]

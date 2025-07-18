@@ -184,7 +184,7 @@ mod impl_self {
 
             queue_render_op!(
                 locked_output_device,
-                format!("MoveCursorPosition(col: {:?}, row: {:?})", col, row),
+                "MoveCursorPosition",
                 MoveTo(col, row)
             );
         }
@@ -241,7 +241,7 @@ mod impl_self {
 
             queue_render_op!(
                 locked_output_device,
-                format!("SetFgColor({color:?})"),
+                "SetFgColor",
                 SetForegroundColor(color),
             );
         }
@@ -255,7 +255,7 @@ mod impl_self {
 
             queue_render_op!(
                 locked_output_device,
-                format!("SetBgColor({color:?})"),
+                "SetBgColor",
                 SetBackgroundColor(color),
             );
         }
@@ -269,14 +269,10 @@ mod impl_self {
         ) {
             use perform_paint::{paint_style_and_text, PaintArgs};
 
-            // Gen log_msg.
-            let log_msg = Cow::from(format!("\"{text_arg}\""));
-
             let text: Cow<'_, str> = Cow::from(text_arg);
 
             let mut paint_args = PaintArgs {
                 text,
-                log_msg,
                 maybe_style,
                 window_size,
             };
@@ -306,7 +302,7 @@ mod impl_self {
 
                     queue_render_op!(
                         locked_output_device,
-                        format!("ApplyColors -> SetBgColor({color_bg:?})"),
+                        "ApplyColors -> SetBgColor",
                         SetBackgroundColor(color_bg),
                     );
                 }
@@ -318,7 +314,7 @@ mod impl_self {
 
                     queue_render_op!(
                         locked_output_device,
-                        format!("ApplyColors -> SetFgColor({color_fg:?})"),
+                        "ApplyColors -> SetFgColor",
                         SetForegroundColor(color_fg),
                     );
                 }
@@ -335,7 +331,6 @@ mod perform_paint {
     #[derive(Debug)]
     pub struct PaintArgs<'a> {
         pub text: Cow<'a, str>,
-        pub log_msg: Cow<'a, str>,
         pub maybe_style: Option<TuiStyle>,
         pub window_size: Size,
     }
@@ -381,7 +376,7 @@ mod perform_paint {
             attrib_vec.iter().for_each(|attr| {
                 queue_render_op!(
                     locked_output_device,
-                    format!("PaintWithAttributes -> SetAttribute({attr:?})"),
+                    "PaintWithAttributes -> SetAttribute",
                     SetAttribute(*attr),
                 );
                 needs_reset = Cow::Owned(true);
@@ -393,7 +388,7 @@ mod perform_paint {
         if *needs_reset {
             queue_render_op!(
                 locked_output_device,
-                format!("PaintWithAttributes -> SetAttribute(Reset))"),
+                "PaintWithAttributes -> SetAttribute(Reset)",
                 SetAttribute(Attribute::Reset),
             );
         }
@@ -406,7 +401,6 @@ mod perform_paint {
     ) {
         let PaintArgs {
             text,
-            log_msg,
             window_size,
             ..
         } = paint_args;
@@ -414,10 +408,9 @@ mod perform_paint {
         // Actually paint text.
         {
             let text = Cow::Borrowed(text);
-            let log_msg: &str = log_msg;
             queue_render_op!(
                 locked_output_device,
-                format!("Print( {} {log_msg})", &text),
+                "Print",
                 Print(&text),
             );
         };
