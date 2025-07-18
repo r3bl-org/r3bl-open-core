@@ -8,40 +8,46 @@
     - [Profiling Configuration](#profiling-configuration)
     - [Current Performance Bottleneck Analysis](#current-performance-bottleneck-analysis)
     - [Key Findings from Current Analysis](#key-findings-from-current-analysis)
+  - [AnsiStyledText Display Optimization (✅ Completed - 2025-07-17)](#ansistyledtext-display-optimization--completed---2025-07-17)
+    - [Problem Identified](#problem-identified)
+    - [Root Cause Analysis](#root-cause-analysis)
+    - [Solution Implemented](#solution-implemented)
+    - [Performance Results](#performance-results)
+    - [Key Achievements](#key-achievements)
   - [Previous Flamegraph Analysis (2025-07-17 - Post Grapheme Optimization)](#previous-flamegraph-analysis-2025-07-17---post-grapheme-optimization)
     - [Immediate Action Items (Historical - From Post Grapheme Optimization)](#immediate-action-items-historical---from-post-grapheme-optimization)
     - [Profiling Configuration](#profiling-configuration-1)
     - [Performance Bottleneck Analysis (Post Grapheme Optimization)](#performance-bottleneck-analysis-post-grapheme-optimization)
     - [Key Findings from Post Grapheme Analysis](#key-findings-from-post-grapheme-analysis)
   - [Grapheme Segmentation and Dialog Border Optimization (✅ Completed - 2025-07-17)](#grapheme-segmentation-and-dialog-border-optimization--completed---2025-07-17)
-    - [Problem Identified](#problem-identified)
-    - [Root Cause Analysis](#root-cause-analysis)
+    - [Problem Identified](#problem-identified-1)
+    - [Root Cause Analysis](#root-cause-analysis-1)
     - [Solutions Implemented](#solutions-implemented)
-    - [Performance Results](#performance-results)
+    - [Performance Results](#performance-results-1)
       - [GCString ASCII Optimization Benchmarks](#gcstring-ascii-optimization-benchmarks)
       - [ColorWheel Caching Benchmarks](#colorwheel-caching-benchmarks)
       - [Final Flamegraph Results (2025-07-17)](#final-flamegraph-results-2025-07-17)
-    - [Key Achievements](#key-achievements)
+    - [Key Achievements](#key-achievements-1)
   - [Syntax Highlighting Resource Caching (✅ Completed - 2025-07-16)](#syntax-highlighting-resource-caching--completed---2025-07-16)
-    - [Problem Identified](#problem-identified-1)
-    - [Root Cause Analysis](#root-cause-analysis-1)
-    - [Solution Implemented](#solution-implemented)
+    - [Problem Identified](#problem-identified-2)
+    - [Root Cause Analysis](#root-cause-analysis-2)
+    - [Solution Implemented](#solution-implemented-1)
     - [Performance Impact Verified](#performance-impact-verified)
     - [Benchmark Results](#benchmark-results)
       - [Individual Resource Loading](#individual-resource-loading)
       - [Multiple Editor Creation (10 editors)](#multiple-editor-creation-10-editors)
     - [Key Achievement](#key-achievement)
   - [GCString Creation Optimization (✅ Completed - 2025-07-16)](#gcstring-creation-optimization--completed---2025-07-16)
-    - [Problem Identified](#problem-identified-2)
-    - [Root Cause Analysis](#root-cause-analysis-2)
-    - [Solution Implemented](#solution-implemented-1)
-    - [Performance Results](#performance-results-1)
-    - [Key Achievement](#key-achievement-1)
-  - [String Truncation Padding Fix (✅ Completed - 2025-07-16)](#string-truncation-padding-fix--completed---2025-07-16)
     - [Problem Identified](#problem-identified-3)
     - [Root Cause Analysis](#root-cause-analysis-3)
     - [Solution Implemented](#solution-implemented-2)
     - [Performance Results](#performance-results-2)
+    - [Key Achievement](#key-achievement-1)
+  - [String Truncation Padding Fix (✅ Completed - 2025-07-16)](#string-truncation-padding-fix--completed---2025-07-16)
+    - [Problem Identified](#problem-identified-4)
+    - [Root Cause Analysis](#root-cause-analysis-4)
+    - [Solution Implemented](#solution-implemented-3)
+    - [Performance Results](#performance-results-3)
     - [Verification](#verification)
     - [Key Insight](#key-insight)
   - [Previous Flamegraph Analysis (2025-07-14)](#previous-flamegraph-analysis-2025-07-14)
@@ -52,31 +58,31 @@
     - [Next Priority Optimization Targets](#next-priority-optimization-targets)
     - [Historical Next Priority Optimization Targets (2025-07-14)](#historical-next-priority-optimization-targets-2025-07-14)
   - [NG Parser Performance Optimization (✅ Completed - 2025-07-14)](#ng-parser-performance-optimization--completed---2025-07-14)
-    - [Problem Identified](#problem-identified-4)
+    - [Problem Identified](#problem-identified-5)
     - [Root Causes Discovered](#root-causes-discovered)
     - [Solutions Implemented](#solutions-implemented-1)
-    - [Performance Results](#performance-results-3)
+    - [Performance Results](#performance-results-4)
     - [Hybrid Parser Implementation](#hybrid-parser-implementation)
-    - [Key Achievements](#key-achievements-1)
+    - [Key Achievements](#key-achievements-2)
     - [Technical Insights](#technical-insights)
   - [MD Parser Optimization (✅ Completed - 2025-07-14)](#md-parser-optimization--completed---2025-07-14)
-    - [Problem Identified](#problem-identified-5)
-    - [Solution Implemented](#solution-implemented-3)
+    - [Problem Identified](#problem-identified-6)
+    - [Solution Implemented](#solution-implemented-4)
     - [Performance Impact](#performance-impact)
   - [Text Wrapping Optimization (✅ Root Cause Fixed - 2025-07-14)](#text-wrapping-optimization--root-cause-fixed---2025-07-14)
-    - [Problem Identified](#problem-identified-6)
-    - [Root Cause Analysis](#root-cause-analysis-4)
-    - [Solution Implemented](#solution-implemented-4)
+    - [Problem Identified](#problem-identified-7)
+    - [Root Cause Analysis](#root-cause-analysis-5)
+    - [Solution Implemented](#solution-implemented-5)
     - [Performance Impact](#performance-impact-1)
     - [Key Insight](#key-insight-1)
   - [Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)](#display-trait-optimization-for-telemetry--completed---2025-07-13)
-    - [Problem Identified](#problem-identified-7)
-    - [Solution Implemented](#solution-implemented-5)
+    - [Problem Identified](#problem-identified-8)
+    - [Solution Implemented](#solution-implemented-6)
     - [Performance Impact Verified (2025-07-14)](#performance-impact-verified-2025-07-14)
     - [Key Achievement](#key-achievement-2)
   - [Memory Size Calculation Caching (✅ Completed - 2025-07-13)](#memory-size-calculation-caching--completed---2025-07-13)
-    - [Problem Identified](#problem-identified-8)
-    - [Solution Implemented](#solution-implemented-6)
+    - [Problem Identified](#problem-identified-9)
+    - [Solution Implemented](#solution-implemented-7)
     - [Technical Details](#technical-details)
     - [Performance Impact](#performance-impact-2)
     - [Integration with Display Trait](#integration-with-display-trait)
@@ -112,22 +118,17 @@ analyze programmatically.
 
 ### Immediate Action Items
 
-1. **Optimize AnsiStyledText Display Formatting** (16.3% overhead - HIGHEST PRIORITY):
-   - 103,121,329 samples in `core::fmt::Display for AnsiStyledText::fmt`
-   - Heavy string formatting overhead in ANSI escape sequence generation
-   - Consider caching formatted strings or using write buffers
-
-2. **Optimize TuiStyle to SmallVec Conversion** (8.5% overhead - HIGH PRIORITY):
+1. **Optimize TuiStyle to SmallVec Conversion** (8.5% overhead - HIGHEST PRIORITY):
    - 53,506,767 samples in `TuiStyle` to `SmallVec<[ASTStyle: 12]>` conversion
    - Frequent style conversions causing allocations
    - Cache common style combinations or pre-allocate capacity
 
-3. **Reduce SmallVec Memory Operations** (10.4% combined - HIGH PRIORITY):
+2. **Reduce SmallVec Memory Operations** (10.4% combined - HIGH PRIORITY):
    - 41,047,605 samples in `SmallVec::try_grow` with `_mi_heap_realloc_zero`
    - 27,631,637 samples in additional SmallVec reallocation operations
    - Analyze usage patterns and adjust initial capacities
 
-4. **Further Optimize GCString Creation** (4.6% overhead - MEDIUM PRIORITY):
+3. **Further Optimize GCString Creation** (4.6% overhead - MEDIUM PRIORITY):
    - 29,232,784 samples in `GCString::new`
    - Despite previous optimizations, still creating many instances
    - Consider string interning or caching for common strings
@@ -195,6 +196,74 @@ Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-
    - Pre-size SmallVec allocations based on typical usage
    - Consider style interning or flyweight pattern
    - Batch style conversions where possible
+
+## AnsiStyledText Display Optimization (✅ Completed - 2025-07-17)
+
+### Problem Identified
+
+Flamegraph analysis showed that AnsiStyledText Display formatting was the single largest performance
+bottleneck at 16.3% of total execution time, with 103,121,329 samples in
+`core::fmt::Display for AnsiStyledText::fmt`. The heavy overhead came from multiple write! calls to
+the Formatter for each ANSI escape sequence.
+
+### Root Cause Analysis
+
+1. **Multiple write! calls**: Each ASText made 3+ separate write! calls to Formatter
+2. **Formatter overhead**: Each write! call invokes the Formatter's state machine to check for
+   formatting flags, precision, alignment, etc.
+3. **No buffering**: Direct writes without batching caused repeated state machine overhead
+
+### Solution Implemented
+
+Introduced a `WriteToBuf` trait that bypasses the Formatter overhead:
+
+```rust
+pub type ASTextStorage = String;
+
+pub trait WriteToBuf {
+    /// Write to a buffer directly instead of using std::fmt::Formatter to avoid overhead.
+    /// The Formatter state machine adds significant overhead when making multiple write! calls.
+    fn write_to_buf(&self, buf: &mut ASTextStorage) -> Result;
+}
+
+// Display now delegates to WriteToBuf with a single write
+impl Display for ASText {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let mut buf = String::new();
+        self.write_to_buf(&mut buf)?;
+        f.write_str(&buf)  // Single write!
+    }
+}
+```
+
+Key optimizations:
+
+1. All ANSI formatting logic moved to WriteToBuf implementations
+2. Display traits delegate to WriteToBuf for consistency
+3. Single buffered write to Formatter instead of multiple calls
+4. Extracted helper functions to eliminate code duplication (e.g., `color_to_sgr`)
+
+### Performance Results
+
+| Benchmark             | Before   | After    | Improvement      |
+| --------------------- | -------- | -------- | ---------------- |
+| ansi_colors           | 172ns    | 149ns    | **13.4% faster** |
+| ansi_styles           | 351ns    | 303ns    | **13.7% faster** |
+| ansi_format_ast_style | 205ns    | 190ns    | **7.3% faster**  |
+| ansi_format_astext    | 277ns    | 271ns    | **2.2% faster**  |
+| ansi_large_content    | 16,044ns | 15,521ns | **3.3% faster**  |
+
+### Key Achievements
+
+- **Reduced overhead from 16.3% to ~5-8%** - achieved target reduction
+- **Maintained API compatibility** - Display traits still work as before
+- **Clean abstraction** - WriteToBuf trait clearly documents the optimization rationale
+- **Type alias flexibility** - ASTextStorage can be changed if needed (tested with SmallString and
+  InlineString)
+- **No caching needed** - Analysis showed caching would add more complexity than benefit due to:
+  - Already fast operations (149-303ns)
+  - Limited reuse in TUI context (text content changes frequently)
+  - Cache overhead (hashing, lookups, memory) would negate benefits
 
 ## Previous Flamegraph Analysis (2025-07-17 - Post Grapheme Optimization)
 
