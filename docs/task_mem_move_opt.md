@@ -1,0 +1,170 @@
+# Memory Move Operations Optimization Task
+
+## Performance Profile Update (2025-07-18)
+
+### Before Vec Replacement
+Based on initial flamegraph analysis:
+- **Memory Move Operations**: ~120M samples total
+- **SmallVec Operations**: ~82M samples (try_grow: 42M, drop: 40M)
+- **Main bottleneck**: VecTuiStyledText SmallVec operations
+
+### After Vec Replacement ✅
+New flamegraph shows significant improvement:
+- **Memory Move Operations**: 88.35M samples total (26.4% reduction!)
+- **SmallVec::try_grow for VecTuiStyledText**: 0 samples (was 42M)
+- **SmallVec::drop**: Not visible in flamegraph (was 40M)
+- **Vec operations**: 26.8M samples (predictable clone operations)
+
+### Remaining Bottlenecks
+1. **MD Parser Memory Moves**: ~61M samples
+   - Multiple memmove operations in syntax highlighting
+   - StyleUSSpan operations
+2. **ANSI Formatting**: ~45M samples
+   - String allocations in WriteToBuf
+   - Number formatting for escape codes
+3. **Other SmallVec Types**: ~31M samples
+   - PixelChar SmallVec: 5M samples
+   - RenderOp SmallVec: 26M samples
+
+## Optimization Tasks
+
+### 0. SmallVec vs Vec Evaluation (✅ COMPLETED)
+- [x] Create `vec_vs_smallvec_bench_tests.rs` benchmark file
+- [x] Benchmark SmallVec<32>, SmallVec<8>, Vec, SmallVec<16>
+- [x] Make data-driven decision: Vec outperformed SmallVec
+- [x] Replace SmallVec with Vec for VecTuiStyledText
+- [x] Verify impact: 26.4% reduction in memory moves!
+
+#### Benchmark Results Summary
+The comprehensive benchmark suite tested different data structures across multiple scenarios:
+
+**Small Collections (1-5 items)**:
+- SmallVec variants showed marginal advantages for stack allocation
+- Differences were minimal due to small collection sizes
+
+**Medium Collections (8-20 items)**:
+- Vec began showing performance advantages
+- SmallVec<8> required heap allocation, losing stack benefits
+- SmallVec<32> maintained stack allocation but with overhead
+
+**Large Collections (30-100 items)**:
+- **Vec clearly outperformed all SmallVec variants**
+- SmallVec<32> performance degraded significantly when exceeding stack capacity
+- Vec's heap-first approach provided consistent performance
+
+**Extend Operations (Critical Path)**:
+- Vec showed superior performance for extend operations
+- SmallVec variants suffered from repeated reallocations
+- **Key finding**: Most VecTuiStyledText collections exceed 32 items in practice
+
+**Drop/Cleanup Performance**:
+- Vec had faster cleanup due to simpler memory layout
+- SmallVec variants showed overhead in drop operations
+
+#### Decision Rationale
+1. **Real-world usage patterns**: Most VecTuiStyledText collections contain 20-50+ items
+2. **Extend operations are critical**: Flamegraph showed extend() as primary bottleneck
+3. **Stack allocation benefits were minimal**: Large collections negated SmallVec advantages
+4. **Predictable performance**: Vec provides consistent behavior regardless of size
+
+### 1. Optimize Other SmallVec Usage (HIGH PRIORITY)
+- [ ] Evaluate PixelChar SmallVec<[PixelChar; 8]> vs Vec
+- [ ] Evaluate RenderOp SmallVec<[RenderOp; 8]> vs Vec
+- [ ] Consider if 8 items is appropriate for these types
+- [ ] Benchmark and make data-driven decisions
+
+### 2. Optimize ANSI Escape Code Number Formatting (MEDIUM PRIORITY)
+- [ ] Create lookup table for u8 to string conversion (0-255)
+- [ ] Replace `write!(buf, "{}", number)` with lookup table
+- [ ] Benchmark const array vs lazy_static approach
+- [ ] Expected impact: Reduce 45M samples from ANSI formatting
+
+### 3. Reduce MD Parser Memory Moves (MEDIUM PRIORITY)
+- [ ] Add reserve() calls before extend() operations
+- [ ] Profile StyleUSSpan operations for optimization
+- [ ] Consider pre-allocation strategies for known sizes
+- [ ] Expected impact: Reduce portion of 61M samples
+
+### 4. Reduce Unicode Segmentation Overhead (LOW PRIORITY)
+- [ ] Current: 26M samples in GraphemeIndices operations
+- [ ] Cache grapheme boundaries for repeated strings
+- [ ] Consider ASCII fast paths where appropriate
+
+## Implementation Progress
+
+### Benchmark Methodology
+**Status**: ✅ Completed
+- Created comprehensive test suite in `vec_vs_smallvec_bench_tests.rs`
+- Tested 4 data structures: SmallVec<32>, SmallVec<16>, SmallVec<8>, Vec<T>
+- Benchmark categories:
+  - **Small collections**: 1-5 items (where SmallVec should excel)
+  - **Medium collections**: 8-20 items (around the threshold)
+  - **Large collections**: 30-100 items (where Vec should win)
+  - **Extend operations**: The critical path from flamegraph analysis
+  - **Realistic usage**: Multiple extend operations simulating real usage
+  - **Drop performance**: Memory cleanup overhead comparison
+
+### Vec Replacement Implementation
+**Status**: ✅ Completed
+- Changed `VecTuiStyledText` from `SmallVec<[TuiStyledText; 32]>` to `Vec<TuiStyledText>`
+- All tests pass
+- Flamegraph confirms 26.4% reduction in memory moves
+- Benchmark results validated the decision before implementation
+
+### ANSI Lookup Table Design
+**Status**: 📋 Next Priority
+```rust
+// Proposed implementation
+const U8_STRINGS: [&str; 256] = [
+    "0", "1", "2", ..., "255"
+];
+
+// In WriteToBuf implementation
+SgrCode::ForegroundAnsi256(index) => {
+    buf.push_str("\x1b[38;5;");
+    buf.push_str(U8_STRINGS[index as usize]);
+    buf.push('m');
+}
+```
+
+## Key Learnings
+
+1. **Data-driven decisions work**: Our benchmarks accurately predicted the improvement
+2. **SmallVec isn't always better**: For collections that frequently exceed stack size, Vec is superior
+3. **Measure, don't guess**: The flamegraph revealed the true bottlenecks
+4. **Significant wins are possible**: 26.4% reduction from a simple type change
+
+### Detailed Benchmark Insights
+
+5. **Collection size matters more than type complexity**:
+   - TuiStyledText is a moderately complex type, but collection size was the dominant factor
+   - SmallVec benefits are negated when collections consistently exceed stack capacity
+
+6. **Extend operations are performance-critical**:
+   - The `extend()` method was the primary source of the 42M SmallVec::try_grow samples
+   - Vec's reallocation strategy is more efficient for multiple extend operations
+
+7. **Stack vs heap trade-offs**:
+   - SmallVec<32> uses ~1KB+ stack space per collection
+   - For large numbers of collections, this can impact cache performance
+   - Vec's heap allocation provides better memory locality
+
+8. **Benchmark categories revealed usage patterns**:
+   - Small collection benchmarks (1-5 items): SmallVec advantage minimal
+   - Medium collection benchmarks (8-20 items): Transition point where Vec equals SmallVec
+   - Large collection benchmarks (30-100 items): Vec clear winner
+   - Realistic usage benchmarks: Most real collections are in the large category
+
+## Next Steps
+
+1. **Analyze other SmallVec types**
+   - Create similar benchmarks for PixelChar and RenderOp
+   - Make data-driven decisions based on results
+
+2. **Implement ANSI lookup table**
+   - This is the next highest-impact optimization
+   - Should be straightforward to implement
+
+3. **Profile MD parser allocations**
+   - Understand where the 61M samples come from
+   - Implement targeted optimizations

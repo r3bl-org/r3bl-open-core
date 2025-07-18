@@ -17,19 +17,22 @@
 
 use sizing::StringTuiStyledText;
 use smallstr::SmallString;
-use smallvec::SmallVec;
 
 use crate::TuiStyle;
 
 pub(in crate::core::tui_styled_text) mod sizing {
-    use super::{SmallString, SmallVec, TuiStyledText};
+    use super::{SmallString, TuiStyledText};
 
     /// Default internal storage for [`TuiStyledText`], which is very small.
     pub(crate) type StringTuiStyledText = SmallString<[u8; MAX_CHARS_IN_SMALL_STRING]>;
     const MAX_CHARS_IN_SMALL_STRING: usize = 8;
 
-    pub(crate) type VecTuiStyledText = SmallVec<[TuiStyledText; MAX_ITEMS_IN_SMALL_VEC]>;
-    const MAX_ITEMS_IN_SMALL_VEC: usize = 32;
+    /// Based on benchmarks, Vec performs better than SmallVec for our use case.
+    /// - Faster extend operations (our main bottleneck)
+    /// - No SmallVec::try_grow overhead
+    /// - Better drop performance
+    /// - Simpler code path
+    pub(crate) type VecTuiStyledText = Vec<TuiStyledText>;
 }
 
 /// Macro to make building [`TuiStyledText`] easy.
