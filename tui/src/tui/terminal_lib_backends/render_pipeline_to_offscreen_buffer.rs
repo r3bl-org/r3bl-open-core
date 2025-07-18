@@ -400,7 +400,9 @@ mod print_text_with_attributes_helper {
             if line_copy.get(insertion_col_index).is_some() {
                 let pixel_char = {
                     let seg_text: &str = seg.get_str(text_gcs);
-                    if let (None, SPACER_GLYPH) = (maybe_style, seg_text) { PixelChar::Spacer } else {
+                    if let (None, SPACER_GLYPH) = (maybe_style, seg_text) {
+                        PixelChar::Spacer
+                    } else {
                         // Convert the segment text to a single char
                         let display_char = if seg_text.chars().count() == 1 {
                             seg_text.chars().next().unwrap()
@@ -932,17 +934,17 @@ mod tests {
         // my_offscreen_buffer:
         // window_size: [width:10, height:2],
         // row_index: [0]
-        //     0: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
-        // padding: 0 })     1: "e" Some(Style { _id + bold + dim | fg:
-        // Some(green) | bg: Some(blue) | padding: 0 })     2: "l" Some(Style {
-        // _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //     3: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
-        // padding: 0 })     4: "o" Some(Style { _id + bold + dim | fg:
-        // Some(green) | bg: Some(blue) | padding: 0 })     5: "1" Some(Style {
-        // _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
-        //     6: "2" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
-        // padding: 0 })     7: "😃" Some(Style { _id + bold + dim | fg:
-        // Some(green) | bg: Some(blue) | padding: 0 })     8: ❯
+        //     0: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | \
+        //       padding: 0 })     1: "e" Some(Style { _id + bold + dim | fg: \
+        //       Some(green) | bg: Some(blue) | padding: 0 })     2: "l" Some(Style { \
+        //       _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
+        //     3: "l" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | \
+        //       padding: 0 })     4: "o" Some(Style { _id + bold + dim | fg: \
+        //       Some(green) | bg: Some(blue) | padding: 0 })     5: "1" Some(Style { \
+        //       _id + bold + dim | fg: Some(green) | bg: Some(blue) | padding: 0 })
+        //     6: "2" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | \
+        //       padding: 0 })     7: "😃" Some(Style { _id + bold + dim | fg: \
+        //       Some(green) | bg: Some(blue) | padding: 0 })     8: ❯
         //     9: ╳
         // row_index: [1]
         //     0: ╳ ..

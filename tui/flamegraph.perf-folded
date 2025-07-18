@@ -1,21 +1,20 @@
-tokio-runtime-w;madvise_walk_vmas;madvise_vma_behavior;zap_page_range_single;tlb_finish_mmu;flush_tlb_mm_range;native_flush_tlb_multi;on_each_cpu_cond_mask;smp_call_function_many_cond 5050505
-tui_apps;<smallvec::SmallVec<A> as core::iter::traits::collect::Extend<<A as smallvec::Array>::Item>>::extend 19943821
-tui_apps;<unicode_segmentation::grapheme::GraphemeIndices as core::iter::traits::iterator::Iterator>::next 15068013
-tui_apps;[unknown];[unknown];__memmove_avx_unaligned_erms 5992441
-tui_apps;[unknown];__memmove_avx_unaligned_erms 10632170
-tui_apps;[unknown];r3bl_tui::core::graphemes::gc_string::basic::<impl r3bl_tui::core::graphemes::gc_string::GCString>::new 29232784
-tui_apps;_ZN8smallvec17SmallVec$LT$A$GT$8try_grow17h6b6d58b98f3ea76cE.llvm.12660964861244861174;__memmove_avx_unaligned_erms;asm_exc_page_fault 5050505
-tui_apps;_ZN8smallvec17SmallVec$LT$A$GT$8try_grow17h6b6d58b98f3ea76cE.llvm.12660964861244861174;_mi_heap_realloc_zero;_mi_malloc_generic;mi_find_page;mi_page_fresh_alloc 41047605
-tui_apps;_ZN8smallvec17SmallVec$LT$A$GT$8try_grow17hd93283fe15924e24E.llvm.12660964861244861174;_mi_heap_realloc_zero 19798063
-tui_apps;_ZN8smallvec17SmallVec$LT$A$GT$8try_grow17hd93283fe15924e24E.llvm.12660964861244861174;_mi_heap_realloc_zero;_mi_malloc_generic;mi_find_page 7833574
-tui_apps;__do_huge_pmd_anonymous_page;vma_alloc_anon_folio_pmd;vma_alloc_folio_noprof;folio_alloc_mpol_noprof;alloc_pages_mpol;__alloc_frozen_pages_noprof;get_page_from_freelist;clear_page_erms 5050505
-tui_apps;__x64_sys_openat;do_sys_openat2;do_filp_open;path_openat;link_path_walk.part.0.constprop.0;walk_component;lookup_fast;__d_lookup_rcu 5050505
-tui_apps;_mi_page_malloc 25242633
-tui_apps;madvise_walk_vmas;madvise_vma_behavior;zap_page_range_single;tlb_finish_mmu;flush_tlb_mm_range;native_flush_tlb_multi;on_each_cpu_cond_mask;smp_call_function_many_cond 10101010
-tui_apps;r3bl_tui::core::ansi::ansi_styled_text::convert_tui_style_to_vec_ast_style::_<impl core::convert::From<r3bl_tui::core::tui_style::tui_style_impl::TuiStyle> for smallvec::SmallVec<[r3bl_tui::core::ansi::ansi_styled_text::ASTStyle: 12]>>::from 53506767
-tui_apps;r3bl_tui::core::ansi::ansi_styled_text::display_trait_impl::<impl core::fmt::Display for r3bl_tui::core::ansi::ansi_styled_text::AnsiStyledText>::fmt;core::fmt::write 103121329
-tui_apps;r3bl_tui::core::ansi::ansi_styled_text::display_trait_impl::<impl core::fmt::Display for r3bl_tui::core::ansi::ansi_styled_text::AnsiStyledText>::fmt;r3bl_tui::core::ansi::ansi_styled_text::style_impl::<impl core::fmt::Display for r3bl_tui::core::ansi::ansi_styled_text::ASTStyle>::fmt;r3bl_tui::core::ansi::ansi_escape_codes::sgr_code_impl::<impl core::fmt::Display for r3bl_tui::core::ansi::ansi_escape_codes::SgrCode>::fmt 10230017
-tui_apps;r3bl_tui::tui::terminal_lib_backends::render_pipeline_to_offscreen_buffer::print_text_with_attributes_helper::process_character_segments 5050505
-tui_apps;tokio::runtime::scheduler::multi_thread::worker::<impl tokio::runtime::scheduler::multi_thread::handle::Handle>::push_remote_task 5992441
-tui_apps;unicode_segmentation::tables::grapheme::grapheme_category 16363148
-tui_apps;unmap_page_range;zap_pud_range.isra.0;zap_pmd_range.isra.0;zap_pte_range;zap_present_ptes.constprop.0;folio_remove_rmap_ptes;__lruvec_stat_mod_folio;cgroup_rstat_updated 5050505
+tui_apps;<smallvec::SmallVec<A> as core::iter::traits::collect::Extend<<A as smallvec::Array>::Item>>::extend 17775076
+tui_apps;<smallvec::SmallVec<A> as core::ops::drop::Drop>::drop 40450498
+tui_apps;<unicode_segmentation::grapheme::GraphemeIndices as core::iter::traits::iterator::Iterator>::next 51091353
+tui_apps;[unknown];<r3bl_tui::core::ansi::ansi_escape_codes::SgrCode as r3bl_tui::core::common::write_to_buf::WriteToBuf>::write_to_buf;core::fmt::write;core::fmt::num::imp::<impl core::fmt::Display for u8>::fmt 57152419
+tui_apps;[unknown];<tracing_appender::rolling::RollingWriter as std::io::Write>::write;<&std::process::ChildStdin as std::io::Write>::write;__GI___libc_write;__syscall_cancel_arch_end;asm_sysvec_apic_timer_interrupt 19692103
+tui_apps;[unknown];[unknown];__memmove_avx_unaligned_erms 79964676
+tui_apps;[unknown];__memmove_avx_unaligned_erms 69058874
+tui_apps;_ZN8smallvec17SmallVec$LT$A$GT$8try_grow17hd93283fe15924e24E.llvm.17709060883836397618 42185193
+tui_apps;__do_huge_pmd_anonymous_page;vma_alloc_anon_folio_pmd;vma_alloc_folio_noprof;folio_alloc_mpol_noprof;alloc_pages_mpol;__alloc_frozen_pages_noprof;get_page_from_freelist;clear_page_erms 9723930
+tui_apps;__memmove_avx_unaligned_erms 87343512
+tui_apps;__split_huge_pmd;split_huge_pmd_locked;__split_huge_pmd_locked;pmdp_invalidate;flush_tlb_mm_range;native_flush_tlb_multi;on_each_cpu_cond_mask;smp_call_function_many_cond 30017934
+tui_apps;asm_exc_page_fault;exc_page_fault;do_user_addr_fault;handle_mm_fault;__handle_mm_fault;handle_pte_fault;do_anonymous_page;_raw_spin_lock 21786116
+tui_apps;copy_process;perf_event_init_task;perf_event_init_context.constprop.0;inherit_task_group.isra.0;inherit_event.isra.0;perf_event_alloc;kmem_cache_alloc_node_noprof;___slab_alloc 5050505
+tui_apps;crossterm::event::poll_internal;std::sys::pal::unix::time::Timespec::now;clock_gettime@@GLIBC_2.17;[[vdso]] 5050505
+tui_apps;do_syscall_64;x64_sys_call;__x64_sys_write;ksys_write;vfs_write;ext4_file_write_iter;ext4_buffered_write_iter;file_modified 5050505
+tui_apps;entry_SYSCALL_64_after_hwframe;do_syscall_64;x64_sys_call;__x64_sys_epoll_wait;do_epoll_wait;ep_poll;ep_send_events;_raw_write_lock_irq 5050505
+tui_apps;handle_mm_fault;__handle_mm_fault;handle_pte_fault;do_anonymous_page;folio_add_new_anon_rmap;__folio_mod_stat;__lruvec_stat_mod_folio;__mod_memcg_lruvec_state 19691963
+tui_apps;r3bl_tui::tui::dialog::dialog_engine::dialog_engine_struct::DialogEngine::new;asm_exc_page_fault 5050505
+tui_apps;smallvec::SmallVec<A>::try_grow 5050505
+tui_apps;textwrap::wrap_algorithms::optimal_fit::LineNumbers::new 5050505

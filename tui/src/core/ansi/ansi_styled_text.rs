@@ -100,7 +100,6 @@ pub type ASTextLine = InlineVec<AnsiStyledText>;
 pub type ASTextLines = InlineVec<ASTextLine>;
 pub type ASTextStyles = sizing::InlineVecASTextStyles;
 
-
 pub(in crate::core::ansi) mod sizing {
     use super::{ASTStyle, SmallVec};
 
@@ -808,11 +807,15 @@ mod style_impl {
 
 impl WriteToBuf for ASTStyle {
     fn write_to_buf(&self, buf: &mut BufTextStorage) -> Result {
-        use crate::{ColorSupport, TransformColor, global_color_support};
+        use super::{ColorSupport, TransformColor, global_color_support};
 
         // Helper function to convert color to appropriate SgrCode.
-        fn color_to_sgr(color: &ASTColor, is_foreground: bool) -> SgrCode {
-            match global_color_support::detect() {
+        fn color_to_sgr(
+            color_support: ColorSupport,
+            color: &ASTColor,
+            is_foreground: bool,
+        ) -> SgrCode {
+            match color_support {
                 ColorSupport::Ansi256 => {
                     let ansi = color.as_ansi();
                     if is_foreground {
@@ -840,9 +843,15 @@ impl WriteToBuf for ASTStyle {
             }
         }
 
+        let color_support = global_color_support::detect();
+
         match self {
-            ASTStyle::Foreground(color) => color_to_sgr(color, true).write_to_buf(buf),
-            ASTStyle::Background(color) => color_to_sgr(color, false).write_to_buf(buf),
+            ASTStyle::Foreground(color) => {
+                color_to_sgr(color_support, color, true).write_to_buf(buf)
+            }
+            ASTStyle::Background(color) => {
+                color_to_sgr(color_support, color, false).write_to_buf(buf)
+            }
             ASTStyle::Bold => SgrCode::Bold.write_to_buf(buf),
             ASTStyle::Dim => SgrCode::Dim.write_to_buf(buf),
             ASTStyle::Italic => SgrCode::Italic.write_to_buf(buf),

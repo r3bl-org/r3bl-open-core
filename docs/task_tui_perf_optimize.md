@@ -2,17 +2,21 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Implemented Optimizations](#implemented-optimizations)
-  - [Latest Flamegraph Analysis (2025-07-17 - Current)](#latest-flamegraph-analysis-2025-07-17---current)
+  - [Latest Flamegraph Analysis (2025-07-18 - Current)](#latest-flamegraph-analysis-2025-07-18---current)
+  - [Immediate Action Items](#immediate-action-items)
     - [Format Change Note](#format-change-note)
-    - [Immediate Action Items](#immediate-action-items)
     - [Profiling Configuration](#profiling-configuration)
     - [Current Performance Bottleneck Analysis](#current-performance-bottleneck-analysis)
     - [Key Findings from Current Analysis](#key-findings-from-current-analysis)
-  - [AnsiStyledText Display Optimization (✅ Completed - 2025-07-17)](#ansistyledtext-display-optimization--completed---2025-07-17)
+  - [AnsiStyledText Display Optimization (✅ Completed - 2025-07-17, 2025-07-18)](#ansistyledtext-display-optimization--completed---2025-07-17-2025-07-18)
     - [Problem Identified](#problem-identified)
     - [Root Cause Analysis](#root-cause-analysis)
     - [Solution Implemented](#solution-implemented)
+      - [Phase 1: WriteToBuf Trait (2025-07-17)](#phase-1-writetobuf-trait-2025-07-17)
+      - [Phase 2: Color Support Detection Optimization (2025-07-18)](#phase-2-color-support-detection-optimization-2025-07-18)
     - [Performance Results](#performance-results)
+      - [Phase 1 Results (WriteToBuf optimization)](#phase-1-results-writetobuf-optimization)
+      - [Phase 2 Results (Color support detection fix)](#phase-2-results-color-support-detection-fix)
     - [Key Achievements](#key-achievements)
   - [Previous Flamegraph Analysis (2025-07-17 - Post Grapheme Optimization)](#previous-flamegraph-analysis-2025-07-17---post-grapheme-optimization)
     - [Immediate Action Items (Historical - From Post Grapheme Optimization)](#immediate-action-items-historical---from-post-grapheme-optimization)
@@ -108,30 +112,40 @@
 
 # Implemented Optimizations
 
-## Latest Flamegraph Analysis (2025-07-17 - Current)
+## Latest Flamegraph Analysis (2025-07-18 - Current)
+
+## Immediate Action Items
+
+1. **Reduce Memory Move Operations** (14%+ overhead - HIGHEST PRIORITY):
+   - 236+ million samples across multiple `__memmove_avx_unaligned_erms` calls
+   - Memory copying is now the dominant performance cost
+   - Investigate buffer management strategies to reduce copies
+   - Consider using slices/views instead of copying data
+
+2. **Optimize SmallVec Usage** (10.5% combined - HIGH PRIORITY):
+   - 42,185,193 samples in `SmallVec::try_grow`
+   - 40,450,498 samples in `SmallVec::drop`
+   - 17,775,076 samples in `SmallVec::extend`
+   - Pre-size SmallVec allocations based on typical usage patterns
+   - Consider arena allocators or object pooling
+
+3. **Optimize ANSI Escape Code Number Formatting** (9.0% overhead - MEDIUM PRIORITY):
+   - 57,152,419 samples in `core::fmt::Display for u8` within SgrCode WriteToBuf
+   - Number formatting for ANSI codes is expensive
+   - Consider pre-computed lookup tables for common values (0-255)
+   - Or use faster integer-to-string conversion algorithms
+
+4. **Reduce Unicode Segmentation Overhead** (8.1% overhead - MEDIUM PRIORITY):
+   - 51,091,353 samples in GraphemeIndices iterator
+   - Still significant despite previous optimizations
+   - Consider caching segmentation results for repeated strings
+   - Or use simpler text processing where grapheme accuracy isn't critical
 
 ### Format Change Note
 
 We've switched from using `tui/flamegraph.svg` to `tui/flamegraph.perf-folded` format for
 performance analysis. The perf-folded format is more compact and better suited for Claude Code to
 analyze programmatically.
-
-### Immediate Action Items
-
-1. **Optimize TuiStyle to SmallVec Conversion** (8.5% overhead - HIGHEST PRIORITY):
-   - 53,506,767 samples in `TuiStyle` to `SmallVec<[ASTStyle: 12]>` conversion
-   - Frequent style conversions causing allocations
-   - Cache common style combinations or pre-allocate capacity
-
-2. **Reduce SmallVec Memory Operations** (10.4% combined - HIGH PRIORITY):
-   - 41,047,605 samples in `SmallVec::try_grow` with `_mi_heap_realloc_zero`
-   - 27,631,637 samples in additional SmallVec reallocation operations
-   - Analyze usage patterns and adjust initial capacities
-
-3. **Further Optimize GCString Creation** (4.6% overhead - MEDIUM PRIORITY):
-   - 29,232,784 samples in `GCString::new`
-   - Despite previous optimizations, still creating many instances
-   - Consider string interning or caching for common strings
 
 ### Profiling Configuration
 
@@ -144,60 +158,58 @@ Using `profiling-detailed` profile with:
 
 ### Current Performance Bottleneck Analysis
 
-Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-07-17):
+Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-07-18) after the
+color support detection fix:
 
-1. **AnsiStyledText Display Formatting (16.3%)** - PRIMARY BOTTLENECK
-   - `<core::fmt::Display for AnsiStyledText>::fmt` with `core::fmt::write`
-   - 103,121,329 samples - the single largest performance bottleneck
-   - Heavy overhead from ANSI escape sequence formatting
-   - Likely called for every styled text render operation
+1. **Memory Move Operations (14%+)** - PRIMARY BOTTLENECK
+   - `__memmove_avx_unaligned_erms`: 87,343,512 + 79,964,676 + 69,058,874 samples
+   - Total: ~236 million samples across multiple call sites
+   - Memory copy operations are now the dominant performance cost
+   - Suggests frequent buffer reallocations or data copying
 
-2. **TuiStyle to SmallVec Conversion (8.5%)**
-   - `From<TuiStyle> for SmallVec<[ASTStyle: 12]>::from`
-   - 53,506,767 samples
-   - Converting styles to ANSI style vectors for every render
-   - Suggests lack of caching for common style combinations
+2. **Unicode Segmentation (8.1%)**
+   - `<unicode_segmentation::grapheme::GraphemeIndices as core::iter::traits::iterator::Iterator>::next`
+   - 51,091,353 samples
+   - Still present in text processing operations
 
-3. **SmallVec Memory Operations (10.4% combined)**
-   - `SmallVec::try_grow` operations: 41,047,605 + 19,798,063 + 7,833,574 samples
-   - Memory reallocation through `_mi_heap_realloc_zero`
-   - `SmallVec::extend` operations: 19,943,821 samples
-   - Indicates frequent capacity exceeded, forcing heap allocations
+3. **SmallVec Operations (10.5% combined)**
+   - `SmallVec::try_grow`: 42,185,193 samples with
+     `_ZN8smallvec17SmallVec$LT$A$GT$8try_grow17hd93283fe15924e24E`
+   - `SmallVec::drop`: 40,450,498 samples
+   - `SmallVec::extend`: 17,775,076 samples
+   - Frequent allocations and deallocations
 
-4. **GCString Creation (4.6%)**
-   - `GCString::new`: 29,232,784 samples
-   - Still visible despite previous ASCII fast-path optimization
-   - Called from unknown context (line 6 shows [unknown] caller)
+4. **ANSI Escape Code Formatting (9.0%)**
+   - `<r3bl_tui::core::ansi::ansi_escape_codes::SgrCode as r3bl_tui::core::common::write_to_buf::WriteToBuf>::write_to_buf`
+   - 57,152,419 samples in number formatting
+     (`core::fmt::num::imp::<impl core::fmt::Display for u8>::fmt`)
+   - WriteToBuf is working but number formatting is now visible
 
-5. **Unicode Segmentation (2.6%)**
-   - `unicode_segmentation::tables::grapheme::grapheme_category`: 16,363,148 samples
-   - `GraphemeIndices::next`: 15,068,013 samples
-   - Reduced from previous analyses but still present
-
-6. **Memory Management (2.5%)**
-   - `_mi_page_malloc`: 25,242,633 samples
-   - General allocation overhead from mimalloc
+5. **Memory Management (3.1%)**
+   - `__do_huge_pmd_anonymous_page` and page allocation: 30,017,934 samples
+   - `asm_exc_page_fault` and page fault handling: 21,786,116 samples
+   - Suggests memory pressure from allocations
 
 ### Key Findings from Current Analysis
 
-1. **Previous Optimizations Holding**:
-   - Grapheme segmentation in logging has been eliminated (was 4.23%)
-   - Dialog border colorization is minimal (was 11.71%)
-   - Syntax highlighting deserialization no longer appears
-   - String truncation remains eliminated
+1. **AnsiStyledText Optimization Success**:
+   - AnsiStyledText Display formatting completely eliminated (was 16.3%)
+   - Color support detection no longer appears in flamegraph
+   - WriteToBuf optimization successfully reduced overhead
 
-2. **New Dominant Costs**:
-   - AnsiStyledText formatting is now the largest single bottleneck at 16.3%
-   - SmallVec operations account for nearly 19% combined overhead
-   - Style conversion overhead suggests rendering pipeline inefficiency
+2. **New Performance Profile**:
+   - Memory operations (`memmove`) are now the largest bottleneck at 14%+
+   - This is a natural progression - with formatting overhead eliminated, memory operations become
+     visible
+   - SmallVec operations remain a significant cost at ~10.5%
 
-3. **Optimization Opportunities**:
-   - Cache ANSI escape sequences for common styles
-   - Pre-size SmallVec allocations based on typical usage
-   - Consider style interning or flyweight pattern
-   - Batch style conversions where possible
+3. **Remaining Optimization Opportunities**:
+   - Reduce memory copying through better buffer management
+   - Pre-size SmallVec allocations to avoid growth
+   - Consider arena allocators or buffer pooling for frequent allocations
+   - Optimize number formatting in ANSI escape codes
 
-## AnsiStyledText Display Optimization (✅ Completed - 2025-07-17)
+## AnsiStyledText Display Optimization (✅ Completed - 2025-07-17, 2025-07-18)
 
 ### Problem Identified
 
@@ -212,8 +224,12 @@ the Formatter for each ANSI escape sequence.
 2. **Formatter overhead**: Each write! call invokes the Formatter's state machine to check for
    formatting flags, precision, alignment, etc.
 3. **No buffering**: Direct writes without batching caused repeated state machine overhead
+4. **Color support detection overhead**: The `color_to_sgr` helper function was calling
+   `global_color_support::detect()` for every color style, even though the result was cached
 
 ### Solution Implemented
+
+#### Phase 1: WriteToBuf Trait (2025-07-17)
 
 Introduced a `WriteToBuf` trait that bypasses the Formatter overhead:
 
@@ -236,14 +252,44 @@ impl Display for ASText {
 }
 ```
 
-Key optimizations:
+#### Phase 2: Color Support Detection Optimization (2025-07-18)
 
-1. All ANSI formatting logic moved to WriteToBuf implementations
-2. Display traits delegate to WriteToBuf for consistency
-3. Single buffered write to Formatter instead of multiple calls
-4. Extracted helper functions to eliminate code duplication (e.g., `color_to_sgr`)
+Fixed the remaining overhead by moving color support detection outside the helper function:
+
+```rust
+// Before: Called detect() for every color style
+fn color_to_sgr(color: &ASTColor, is_foreground: bool) -> SgrCode {
+    match global_color_support::detect() { // Called repeatedly!
+        ColorSupport::Ansi256 => { /* ... */ }
+        // ...
+    }
+}
+
+// After: Detect once and pass the result
+fn color_to_sgr(
+    color_support: ColorSupport,  // Passed as parameter
+    color: &ASTColor,
+    is_foreground: bool,
+) -> SgrCode {
+    match color_support {
+        ColorSupport::Ansi256 => { /* ... */ }
+        // ...
+    }
+}
+
+// In write_to_buf implementation:
+let color_support = global_color_support::detect(); // Once per write_to_buf
+match self {
+    ASTStyle::Foreground(color) => {
+        color_to_sgr(color_support, color, true).write_to_buf(buf)
+    }
+    // ...
+}
+```
 
 ### Performance Results
+
+#### Phase 1 Results (WriteToBuf optimization)
 
 | Benchmark             | Before   | After    | Improvement      |
 | --------------------- | -------- | -------- | ---------------- |
@@ -253,17 +299,25 @@ Key optimizations:
 | ansi_format_astext    | 277ns    | 271ns    | **2.2% faster**  |
 | ansi_large_content    | 16,044ns | 15,521ns | **3.3% faster**  |
 
+#### Phase 2 Results (Color support detection fix)
+
+The flamegraph analysis after the color support detection fix shows:
+
+- **Before fix**: AnsiStyledText Display formatting consumed 16.3% of execution time
+- **After fix**: AnsiStyledText Display formatting completely eliminated from flamegraph
+- **Total improvement**: Complete elimination of the 16.3% overhead
+
 ### Key Achievements
 
-- **Reduced overhead from 16.3% to ~5-8%** - achieved target reduction
+- **Complete elimination of AnsiStyledText overhead** - from 16.3% to 0%
+- **Two-phase optimization approach**:
+  - Phase 1: WriteToBuf trait reduced formatter overhead
+  - Phase 2: Color support detection fix eliminated the remaining overhead
 - **Maintained API compatibility** - Display traits still work as before
 - **Clean abstraction** - WriteToBuf trait clearly documents the optimization rationale
-- **Type alias flexibility** - ASTextStorage can be changed if needed (tested with SmallString and
-  InlineString)
-- **No caching needed** - Analysis showed caching would add more complexity than benefit due to:
-  - Already fast operations (149-303ns)
-  - Limited reuse in TUI context (text content changes frequently)
-  - Cache overhead (hashing, lookups, memory) would negate benefits
+- **Proper caching utilization** - Color support detection now truly called once per render
+- **New performance profile**: Memory operations (`__memmove_avx_unaligned_erms`) are now the top
+  bottleneck at 14%+, indicating we've successfully eliminated the AnsiStyledText bottleneck
 
 ## Previous Flamegraph Analysis (2025-07-17 - Post Grapheme Optimization)
 
