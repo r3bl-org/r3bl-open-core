@@ -67,3 +67,217 @@ pub fn copy_to_clipboard(
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use smallvec::smallvec;
+    use crate::{assert_eq2, 
+                editor::{editor_test_fixtures::mock_real_objects_for_editor,
+                         sizing::VecEditorContentLines},
+                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
+                CaretDirection, EditorBuffer, EditorEvent, GCStringExt,
+                SelectionAction, DEFAULT_SYN_HI_FILE_EXT};
+
+    #[test]
+    fn test_copy() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+        // Buffer has two lines.
+        // Row Index : 0 , Column Length : 12
+        // Row Index : 1 , Column Length : 12
+        buffer.set_lines(["abc r3bl xyz", "pqr rust uvw"]);
+        let mut test_clipboard = TestClipboard::default();
+        // Single Line copying
+        {
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionAction::End)],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 12]
+
+            // Copying the contents from Selection
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Copy],
+                &mut test_clipboard,
+            );
+            let content = test_clipboard.content.clone();
+            assert_eq2!(content, "abc r3bl xyz".to_string());
+        }
+
+        // Multi-line Copying
+        {
+            // Current Caret Position : [row : 0, col : 12]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionAction::PageDown)],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 1, col : 12]
+
+            // Copying the contents from Selection
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Copy],
+                &mut test_clipboard,
+            );
+
+            let content = test_clipboard.content;
+            /* cspell:disable-next-line */
+            assert_eq2!(content, "abc r3bl xyz\npqr rust uvw".to_string());
+        }
+    }
+
+    #[test]
+    fn test_paste() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Buffer has two lines.
+        // Row Index : 0 , Column Length : 12
+        // Row Index : 1 , Column Length : 12
+        buffer.set_lines(["abc r3bl xyz", "pqr rust uvw"]);
+
+        // Single Line Pasting
+        {
+            let mut test_clipboard = TestClipboard {
+                content: "copied text ".to_string(),
+            };
+
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right); 4], /* Move caret by 4 positions */
+                &mut test_clipboard,
+            );
+
+            // Current Caret Position : [row : 0, col : 4]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Paste],
+                &mut test_clipboard,
+            );
+
+            let new_lines: VecEditorContentLines = smallvec![
+                "abc copied text r3bl xyz".grapheme_string(),
+                "pqr rust uvw".grapheme_string()
+            ];
+            assert_eq2!(buffer.get_lines(), &new_lines);
+        }
+
+        // Multi-line Pasting
+        {
+            // Current Caret Position : [row : 0, col : 4]
+            let mut test_clipboard = TestClipboard {
+                content: "old line\nnew line ".to_string(),
+            };
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Paste],
+                &mut test_clipboard,
+            );
+
+            let new_lines: VecEditorContentLines = smallvec![
+                "abc copied text old line".grapheme_string(),
+                "new line r3bl xyz".grapheme_string(),
+                "pqr rust uvw".grapheme_string()
+            ];
+            assert_eq2!(buffer.get_lines(), &new_lines);
+        }
+    }
+
+    #[test]
+    fn test_cut() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Buffer has two lines.
+        // Row Index : 0 , Column Length : 12
+        // Row Index : 1 , Column Length : 12
+        buffer.set_lines(["abc r3bl xyz", "pqr rust uvw"]);
+
+        // Single Line cutting
+        {
+            let mut test_clipboard = TestClipboard::default();
+
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionAction::End)],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 12]
+
+            // Cutting the contents from Selection and pasting to clipboard
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Cut],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 0]
+
+            let content = test_clipboard.content.clone();
+            assert_eq2!(content, "abc r3bl xyz".to_string()); // copied to clipboard
+
+            let new_lines: VecEditorContentLines = smallvec![
+                "pqr rust uvw".grapheme_string(), // First line 'abc r3bl xyz' is cut
+            ];
+            assert_eq2!(buffer.get_lines(), &new_lines);
+        }
+
+        // Multi-line Cutting
+        {
+            let mut test_clipboard = TestClipboard::default();
+
+            buffer.set_lines(["abc r3bl xyz", "pqr rust uvw"]);
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Down)],
+                &mut test_clipboard,
+            );
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right); 4], /* Move caret by 4 positions */
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 1, col : 4]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionAction::PageUp)], /* Select by pressing PageUp */
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 4]
+
+            // Cutting the contents from Selection and pasting to clipboard
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Cut],
+                &mut test_clipboard,
+            );
+
+            let content = test_clipboard.content;
+            /* cspell:disable-next-line */
+            assert_eq2!(content, "r3bl xyz\npqr ".to_string()); // copied to clipboard
+            let new_lines: VecEditorContentLines =
+                smallvec!["abc ".grapheme_string(), "rust uvw".grapheme_string()];
+            assert_eq2!(buffer.get_lines(), &new_lines);
+        }
+    }
+}

@@ -808,7 +808,7 @@ mod debug_impl {
 #[cfg(test)]
 mod test_memory_cache_invalidation {
     use super::*;
-    use crate::EditorEngine;
+    use crate::{assert_eq2, EditorEngine};
 
     #[test]
     fn test_cache_invalidated_on_get_mut() {
@@ -879,5 +879,12 @@ mod test_memory_cache_invalidation {
             final_size > new_size,
             "Memory size should increase after adding more content"
         );
+    }
+
+    #[test]
+    fn test_editor_empty_state() {
+        let buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        assert_eq2!(buffer.get_lines().len(), 1);
+        assert!(!buffer.is_empty());
     }
 }

@@ -847,3 +847,659 @@ fn insert_chunk_into_new_line(
 
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use smallvec::smallvec;
+
+    use crate::{assert_eq2, caret_scr_adj, col,
+                editor::{editor_test_fixtures::{assert, mock_real_objects_for_editor},
+                         sizing::VecEditorContentLines},
+                editor_engine::engine_internal_api,
+                row,
+                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
+                width, CaretDirection, EditorArgsMut, EditorBuffer, EditorEvent,
+                GCString, GCStringExt, DEFAULT_SYN_HI_FILE_EXT};
+
+    #[test]
+    fn editor_delete() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Insert "abc\nab\na".
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │abc       │
+        // 1 │ab        │
+        // 2 ❱a         │
+        //   └─⮬────────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![
+                EditorEvent::InsertString("abc".into()),
+                EditorEvent::InsertNewLine,
+                EditorEvent::InsertString("ab".into()),
+                EditorEvent::InsertNewLine,
+                EditorEvent::InsertString("a".into()),
+            ],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(2)));
+
+        // Remove the "a" on the last line.
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │abc       │
+        // 1 │ab        │
+        // 2 ❱          │
+        //   └⮬─────────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![
+                EditorEvent::MoveCaret(CaretDirection::Left),
+                EditorEvent::Delete,
+            ],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(2)));
+
+        // Move to the end of the 2nd line. Press delete.
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │abc       │
+        // 1 ❱ab        │
+        //   └──⮬───────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![
+                EditorEvent::MoveCaret(CaretDirection::Up),
+                EditorEvent::MoveCaret(CaretDirection::Right),
+                EditorEvent::MoveCaret(CaretDirection::Right),
+                EditorEvent::Delete,
+            ],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_lines().len(), 2);
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(1)));
+
+        // Move to the end of the 1st line.
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 ❱abcab     │
+        //   └───⮬──────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![
+                EditorEvent::MoveCaret(CaretDirection::Up),
+                EditorEvent::MoveCaret(CaretDirection::Right),
+                EditorEvent::Delete,
+            ],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_lines().len(), 1);
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(3) + row(0)));
+        assert::line_at_caret(&buffer, "abcab");
+    }
+
+    #[test]
+    fn editor_backspace() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Insert "abc\nab\na".
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │abc       │
+        // 1 │ab        │
+        // 2 ❱a         │
+        //   └─⮬────────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![
+                EditorEvent::InsertString("abc".into()),
+                EditorEvent::InsertNewLine,
+                EditorEvent::InsertString("ab".into()),
+                EditorEvent::InsertNewLine,
+                EditorEvent::InsertString("a".into()),
+            ],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(2)));
+
+        // Remove the "a" on the last line.
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │abc       │
+        // 1 │ab        │
+        // 2 ❱          │
+        //   └⮬─────────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::Backspace],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(2)));
+
+        // Remove the last line.
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │abc       │
+        // 1 ❱ab        │
+        //   └──⮬───────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::Backspace],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(1)));
+
+        // Move caret to start of 2nd line. Then press backspace.
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 ❱abcab     │
+        //   └───⮬──────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![
+                EditorEvent::MoveCaret(CaretDirection::Left),
+                EditorEvent::MoveCaret(CaretDirection::Left),
+            ],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(1)));
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::Backspace],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_lines().len(), 1);
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(3) + row(0)));
+        assert::line_at_caret(&buffer, "abcab");
+
+        // Move caret to end of line. Insert "😃". Then move caret to end of line.
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 ❱abcab😃   │
+        //   └───────⮬──┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![
+                EditorEvent::MoveCaret(CaretDirection::Right),
+                EditorEvent::MoveCaret(CaretDirection::Right),
+                EditorEvent::InsertString("😃".into()),
+            ],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(7) + row(0)));
+
+        // Press backspace.
+        EditorEvent::apply_editor_event(
+            &mut engine,
+            &mut buffer,
+            EditorEvent::Backspace,
+            &mut TestClipboard::default(),
+        );
+        assert::line_at_caret(&buffer, "abcab");
+    }
+
+    #[test]
+    fn editor_insert_new_line() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Starts w/ an empty line.
+        assert_eq2!(buffer.get_lines().len(), 1);
+
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 ❱          │
+        //   └⮬─────────┘
+        //   C0123456789
+        assert_eq2!(buffer.get_lines().len(), 1);
+        assert::none_is_at_caret(&buffer);
+
+        // Insert "a".
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 ❱a         │
+        //   └─⮬────────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::InsertChar('a')],
+            &mut TestClipboard::default(),
+        );
+        assert::none_is_at_caret(&buffer);
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(0)));
+
+        // Insert new line (at end of line).
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │a         │
+        // 1 ❱          │
+        //   └⮬─────────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::InsertNewLine],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_lines().len(), 2);
+        assert::none_is_at_caret(&buffer);
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(1)));
+
+        // Insert "a".
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │a         │
+        // 1 ❱a         │
+        //   └─⮬────────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::InsertChar('a')],
+            &mut TestClipboard::default(),
+        );
+
+        // Move caret left.
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │a         │
+        // 1 ❱a         │
+        //   └⮬─────────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Left)],
+            &mut TestClipboard::default(),
+        );
+        assert::str_is_at_caret(&buffer, "a");
+
+        // Insert new line (at start of line).
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │a         │
+        // 1 │          │
+        // 2 ❱a         │
+        //   └⮬─────────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::InsertNewLine],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_lines().len(), 3);
+        assert::str_is_at_caret(&buffer, "a");
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(2)));
+
+        // Move caret right, insert "b".
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │a         │
+        // 1 │          │
+        // 2 ❱ab        │
+        //   └──⮬───────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![
+                EditorEvent::MoveCaret(CaretDirection::Right),
+                EditorEvent::InsertChar('b'),
+            ],
+            &mut TestClipboard::default(),
+        );
+
+        assert::none_is_at_caret(&buffer);
+        assert_eq2!(
+            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap(),
+            &"ab".grapheme_string()
+        );
+
+        // Move caret left, insert new line (at middle of line).
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │a         │
+        // 1 │          │
+        // 2 │a         │
+        // 3 ❱b         │
+        //   └⮬─────────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![
+                EditorEvent::MoveCaret(CaretDirection::Left),
+                EditorEvent::InsertNewLine,
+            ],
+            &mut TestClipboard::default(),
+        );
+        assert::str_is_at_caret(&buffer, "b");
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(3)));
+        assert_eq2!(buffer.get_lines().len(), 4);
+
+        // Move caret to end of prev line. Press enter. `this` should look like:
+        // R ┌──────────┐
+        // 0 │a         │
+        // 1 │          │
+        // 2 │a         │
+        // 3 ❱          │
+        // 4 │b         │
+        //   └⮬─────────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![
+                EditorEvent::MoveCaret(CaretDirection::Up),
+                EditorEvent::MoveCaret(CaretDirection::Right),
+                EditorEvent::InsertNewLine,
+            ],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_lines().len(), 5);
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(3)));
+    }
+
+    #[test]
+    fn editor_insertion() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Move caret to col: FlexBoxId::from(0), row: 0. Insert "a".
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 ❱a░        │
+        //   └─⮬────────┘
+        //   C0123456789
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::InsertChar('a')],
+            &mut TestClipboard::default(),
+        );
+        let expected: VecEditorContentLines = smallvec!["a".grapheme_string()];
+        assert_eq2!(*buffer.get_lines(), expected);
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(0)));
+
+        // Move caret to col: FlexBoxId::from(0), row: 1. Insert "b".
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │a         │
+        // 1 ❱b░        │
+        //   └─⮬────────┘
+        //   C0123456789
+        engine_internal_api::insert_new_line_at_caret(EditorArgsMut {
+            buffer: &mut buffer,
+            engine: &mut engine,
+        });
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::InsertChar('b')],
+            &mut TestClipboard::default(),
+        );
+        let expected: VecEditorContentLines =
+            smallvec!["a".grapheme_string(), "b".grapheme_string()];
+        assert_eq2!(*buffer.get_lines(), expected);
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(1)));
+
+        // Move caret to col: FlexBoxId::from(0), row: 3. Insert "😀" (unicode width = 2).
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │a         │
+        // 1 │b         │
+        // 2 │          │
+        // 3 ❱😀░       │
+        //   └──⮬───────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![
+                EditorEvent::InsertNewLine,
+                EditorEvent::InsertNewLine,
+                EditorEvent::InsertChar('😀'),
+            ],
+            &mut TestClipboard::default(),
+        );
+        let expected: VecEditorContentLines = smallvec![
+            "a".grapheme_string(),
+            "b".grapheme_string(),
+            "".grapheme_string(),
+            "😀".grapheme_string()
+        ];
+        assert_eq2!(*buffer.get_lines(), expected);
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(3)));
+
+        // Insert "d".
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │a         │
+        // 1 │b         │
+        // 2 │          │
+        // 3 ❱😀d░      │
+        //   └───⮬──────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::InsertChar('d')],
+            &mut TestClipboard::default(),
+        );
+        let expected: VecEditorContentLines = smallvec![
+            "a".grapheme_string(),
+            "b".grapheme_string(),
+            "".grapheme_string(),
+            "😀d".grapheme_string()
+        ];
+        assert_eq2!(*buffer.get_lines(), expected);
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(3) + row(3)));
+
+        // Insert "🙏🏽" (unicode width = 2).
+        // `this` should look like:
+        // R ┌──────────┐
+        // 0 │a         │
+        // 1 │b         │
+        // 2 │          │
+        // 3 ❱😀d🙏🏽░    │
+        //   └─────⮬────┘
+        //   C0123456789
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::InsertString("🙏🏽".into())],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(width(2), GCString::width("🙏🏽"));
+        let expected: VecEditorContentLines = smallvec![
+            "a".grapheme_string(),
+            "b".grapheme_string(),
+            "".grapheme_string(),
+            "😀d🙏🏽".grapheme_string()
+        ];
+        assert_eq2!(*buffer.get_lines(), expected);
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(3)));
+    }
+
+    #[test]
+    fn test_insert_lines_batch_at_caret_basic() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+        
+        let lines = vec!["line1", "line2", "line3"];
+        engine_internal_api::insert_str_batch_at_caret(
+            EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
+            lines,
+        );
+        
+        assert_eq2!(buffer.get_lines().len(), 3);
+        assert_eq2!(buffer.get_lines()[0], "line1".grapheme_string());
+        assert_eq2!(buffer.get_lines()[1], "line2".grapheme_string());
+        assert_eq2!(buffer.get_lines()[2], "line3".grapheme_string());
+        
+        // Caret should be at the end of the last line
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(2)));
+    }
+
+    #[test]
+    fn test_insert_lines_batch_with_empty_lines() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+        
+        let lines = vec!["line1", "", "line3"];
+        engine_internal_api::insert_str_batch_at_caret(
+            EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
+            lines,
+        );
+        
+        assert_eq2!(buffer.get_lines().len(), 3);
+        assert_eq2!(buffer.get_lines()[0], "line1".grapheme_string());
+        assert_eq2!(buffer.get_lines()[1], "".grapheme_string());
+        assert_eq2!(buffer.get_lines()[2], "line3".grapheme_string());
+    }
+
+    #[test]
+    fn test_insert_lines_batch_at_middle_of_line() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+        
+        // First insert some initial content
+        buffer.set_lines(vec!["existing content".to_string()]);
+        
+        // Move caret to middle of line (after "existing")
+        let buffer_mut = buffer.get_mut(engine.viewport());
+        buffer_mut.inner.caret_raw.col_index = col(8); // Position after "existing"
+        drop(buffer_mut);
+        
+        // Insert new lines
+        let lines = vec!["NEW1", "NEW2"];
+        engine_internal_api::insert_str_batch_at_caret(
+            EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
+            lines,
+        );
+        
+        // The batch insert behavior when inserting in the middle of a line:
+        // When inserting multiple lines in the middle of a line, it appears the behavior
+        // splits the line and inserts all new content together
+        assert_eq2!(buffer.get_lines().len(), 2);
+        
+        // First, let's check what we actually have
+        let lines = buffer.get_lines();
+        if lines.len() >= 1 {
+            assert_eq2!(lines[0], "existingNEW1".grapheme_string());
+        }
+        if lines.len() >= 2 {
+            assert_eq2!(lines[1], "NEW2 content".grapheme_string());
+        }
+    }
+
+    #[test]
+    fn test_batch_vs_individual_insert_result_equivalence() {
+        // Test that batch insert produces same result as individual inserts
+        let mut buffer1 = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine1 = mock_real_objects_for_editor::make_editor_engine();
+        
+        let mut buffer2 = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine2 = mock_real_objects_for_editor::make_editor_engine();
+        
+        let lines = vec!["first", "second", "third"];
+        
+        // Method 1: Batch insert
+        engine_internal_api::insert_str_batch_at_caret(
+            EditorArgsMut { engine: &mut engine1, buffer: &mut buffer1 },
+            lines.clone(),
+        );
+        
+        // Method 2: Individual inserts
+        engine_internal_api::insert_str_at_caret(
+            EditorArgsMut { engine: &mut engine2, buffer: &mut buffer2 },
+            "first",
+        );
+        engine_internal_api::insert_new_line_at_caret(EditorArgsMut {
+            engine: &mut engine2,
+            buffer: &mut buffer2,
+        });
+        engine_internal_api::insert_str_at_caret(
+            EditorArgsMut { engine: &mut engine2, buffer: &mut buffer2 },
+            "second",
+        );
+        engine_internal_api::insert_new_line_at_caret(EditorArgsMut {
+            engine: &mut engine2,
+            buffer: &mut buffer2,
+        });
+        engine_internal_api::insert_str_at_caret(
+            EditorArgsMut { engine: &mut engine2, buffer: &mut buffer2 },
+            "third",
+        );
+        
+        // Both methods should produce identical results
+        assert_eq2!(buffer1.get_lines(), buffer2.get_lines());
+        assert_eq2!(buffer1.get_caret_scr_adj(), buffer2.get_caret_scr_adj());
+    }
+
+    #[test]
+    fn test_insert_lines_batch_empty_vector() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+        
+        let lines: Vec<&str> = vec![];
+        engine_internal_api::insert_str_batch_at_caret(
+            EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
+            lines,
+        );
+        
+        // Buffer should remain unchanged with one empty line
+        assert_eq2!(buffer.get_lines().len(), 1);
+        assert_eq2!(buffer.get_lines()[0], "".grapheme_string());
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
+    }
+
+    #[test]
+    fn test_insert_lines_batch_large_content() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+        
+        // Create a large batch of lines
+        let lines: Vec<String> = (0..100).map(|i| format!("Line number {}", i)).collect();
+        let lines_refs: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
+        
+        engine_internal_api::insert_str_batch_at_caret(
+            EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
+            lines_refs,
+        );
+        
+        assert_eq2!(buffer.get_lines().len(), 100);
+        assert_eq2!(buffer.get_lines()[0], "Line number 0".grapheme_string());
+        assert_eq2!(buffer.get_lines()[99], "Line number 99".grapheme_string());
+        
+        // Caret should be at the end of the last line
+        let last_line_len = "Line number 99".len();
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(last_line_len) + row(99)));
+    }
+}

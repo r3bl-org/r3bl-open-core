@@ -436,3 +436,251 @@ pub fn inc_caret_row(
 
     (*caret + *scroll_offset).row_index
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{assert_eq2, caret_raw, caret_scr_adj, col, height, row, scr_ofs, width,
+                editor::editor_test_fixtures::mock_real_objects_for_editor,
+                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
+                CaretDirection, EditorBuffer, EditorEvent, GCString, GCStringExt,
+                DEFAULT_SYN_HI_FILE_EXT};
+
+    #[test]
+    fn editor_scroll_vertical() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Insert "hello" many times.
+        let max_lines = 20;
+        for count in 1..=max_lines {
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![
+                    EditorEvent::InsertString(format!("{count}: {}", "hello")),
+                    EditorEvent::InsertNewLine,
+                ],
+                &mut TestClipboard::default(),
+            );
+        }
+        assert_eq2!(buffer.len(), height(max_lines + 1)); /* One empty line after content */
+
+        // Press up 12 times.
+        for _ in 1..12 {
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Up)],
+                &mut TestClipboard::default(),
+            );
+        }
+        assert_eq2!(buffer.get_caret_raw(), caret_raw(col(0) + row(0)));
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(9)));
+        assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(0) + row(9)));
+
+        // Press down 9 times.
+        for _ in 1..9 {
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Down)],
+                &mut TestClipboard::default(),
+            );
+        }
+        assert_eq2!(buffer.get_caret_raw(), caret_raw(col(0) + row(8)));
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(17)));
+        assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(0) + row(9)));
+    }
+
+    #[test]
+    fn editor_scroll_horizontal() {
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Insert a long line of text.
+        let max_cols = 15;
+        for count in 1..=max_cols {
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::InsertString(format!("{count}"))],
+                &mut TestClipboard::default(),
+            );
+        }
+        assert_eq2!(buffer.len(), height(1));
+        assert_eq2!(buffer.get_caret_raw(), caret_raw(col(9) + row(0)));
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(21) + row(0)));
+        assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(12) + row(0)));
+
+        // Press left 5 times.
+        for _ in 1..5 {
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Left)],
+                &mut TestClipboard::default(),
+            );
+        }
+        assert_eq2!(buffer.get_caret_raw(), caret_raw(col(5) + row(0)));
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(17) + row(0)));
+        assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(12) + row(0)));
+
+        // Press right 3 times.
+        for _ in 1..3 {
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                &mut TestClipboard::default(),
+            );
+        }
+        assert_eq2!(buffer.get_caret_raw(), caret_raw(col(7) + row(0)));
+        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(19) + row(0)));
+        assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(12) + row(0)));
+    }
+
+    /// A jumbo emoji is a combination of 2 emoji (each one of which has > 1 display
+    /// width, or unicode width).
+    ///
+    /// 🙏🏽 = U+1F64F + U+1F3FD
+    /// 1. <https://unicodeplus.com/U+1F64F>
+    /// 2. <https://unicodeplus.com/U+1F3FD>
+    #[test]
+    fn editor_scroll_right_horizontal_long_line_with_jumbo_emoji() {
+        // Setup.
+        let viewport_width = width(65);
+        let viewport_height = height(2);
+        let window_size = viewport_width + viewport_height;
+        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut engine =
+            mock_real_objects_for_editor::make_editor_engine_with_bounds(window_size);
+
+        let long_line = "# Did he take those two new droids with him? They hit accelerator.🙏🏽😀░ We will deal with your Rebel friends. Commence primary ignition.🙏🏽😀░";
+        let long_line_gcs = long_line.grapheme_string();
+        buffer.set_lines([long_line]);
+
+        // Setup assertions.
+        {
+            assert_eq2!(width(2), GCString::width("🙏🏽"));
+            assert_eq2!(buffer.len(), height(1));
+            assert_eq2!(buffer.get_lines()[0], long_line.grapheme_string());
+            let us = &buffer.get_lines()[0];
+            assert_eq2!(us, &long_line_gcs);
+            assert_eq2!(buffer.get_caret_raw(), caret_raw(col(0) + row(0)));
+            assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
+            assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(0) + row(0)));
+        }
+
+        // Press right 67 times. The caret should correctly jump the width of the jumbo
+        // emoji (🙏🏽) on the **RIGHT** of viewport and select it.
+        {
+            let num_of_right = 67;
+            for _ in 1..num_of_right {
+                EditorEvent::apply_editor_events::<(), ()>(
+                    &mut engine,
+                    &mut buffer,
+                    vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                    &mut TestClipboard::default(),
+                );
+            }
+            assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(4) + row(0)));
+            assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(66) + row(0)));
+            // Right of viewport.
+            let line = &buffer.get_lines()[0];
+            let display_col_index = buffer.get_caret_scr_adj().col_index;
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, "🙏🏽");
+
+            // Press right 1 more time. The caret should correctly jump the width of "😀"
+            // from 68 to 70.
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                &mut TestClipboard::default(),
+            );
+            assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(68) + row(0)));
+            // Right of viewport.
+            let line = &buffer.get_lines()[0];
+            let display_col_index = buffer.get_caret_scr_adj().col_index;
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, "😀");
+        }
+
+        // Press right 60 more times. The **LEFT** side of the viewport should be at the
+        // jumbo emoji.
+        {
+            for _ in 1..60 {
+                EditorEvent::apply_editor_events::<(), ()>(
+                    &mut engine,
+                    &mut buffer,
+                    vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                    &mut TestClipboard::default(),
+                );
+            }
+            assert_eq2!(buffer.get_caret_raw(), caret_raw(col(64) + row(0)));
+            assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(128) + row(0)));
+            assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(64) + row(0)));
+            // Start of viewport.
+            let line = &buffer.get_lines()[0];
+            let display_col_index = buffer.get_scr_ofs().col_index;
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, "r");
+        }
+
+        // Press right 1 more time. It should jump the jumbo emoji at the start of the
+        // line (and not just 1 character width). This moves the caret and the scroll
+        // offset to make sure that the emoji at the start of the line can be displayed
+        // properly.
+        {
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                &mut TestClipboard::default(),
+            );
+            assert_eq2!(buffer.get_caret_raw(), caret_raw(col(64) + row(0)));
+            assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(129) + row(0)));
+            assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(65) + row(0)));
+            // Start of viewport.
+            let line = &buffer.get_lines()[0];
+            let display_col_index = buffer.get_scr_ofs().col_index;
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, ".");
+        }
+
+        // Press right 4 times. It should jump the emoji at the start of the line (and not
+        // just 1 character width); this moves the scroll offset to make sure that the
+        // emoji can be properly displayed & it moves the caret too.
+        {
+            for _ in 1..4 {
+                EditorEvent::apply_editor_events::<(), ()>(
+                    &mut engine,
+                    &mut buffer,
+                    vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                    &mut TestClipboard::default(),
+                );
+            }
+            // Start of viewport.
+            let line = &buffer.get_lines()[0];
+            let display_col_index = buffer.get_scr_ofs().col_index;
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, "😀");
+        }
+
+        // Press right 1 more time. It should jump the emoji.
+        {
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                &mut TestClipboard::default(),
+            );
+            // Start of viewport.
+            let line = &buffer.get_lines()[0];
+            let display_col_index = buffer.get_scr_ofs().col_index;
+            let result = line.get_string_at(display_col_index);
+            assert_eq2!(result.unwrap().string.string, "░");
+        }
+    }
+}
