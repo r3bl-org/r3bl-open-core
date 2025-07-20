@@ -170,7 +170,7 @@ impl DialogEngineApi {
     {
         // Was a dialog choice made?
         if let Some(choice) = internal_impl::try_handle_dialog_choice(
-            input_event,
+            input_event.clone(),
             mut_state.get_mut_dialog_buffer(self_id),
             dialog_engine,
         ) {
@@ -181,7 +181,7 @@ impl DialogEngineApi {
         // Was up / down pressed to select autocomplete results & vert scroll the results
         // panel?
         if let EventPropagation::ConsumedRender = internal_impl::try_handle_up_down(
-            input_event,
+            input_event.clone(),
             mut_state.get_mut_dialog_buffer(self_id),
             dialog_engine,
         ) {

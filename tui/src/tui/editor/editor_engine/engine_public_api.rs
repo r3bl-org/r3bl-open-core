@@ -93,7 +93,7 @@ pub fn apply_event(
     // If in ReadOnly mode, filter out all input events that are not navigation keys, by
     // doing early return. It is not possible to modify the buffer in ReadOnly mode.
     if let EditMode::ReadOnly = editor_config.edit_mode
-        && !input_event_matches_navigation_keys(input_event) {
+        && !input_event_matches_navigation_keys(input_event.clone()) {
             return Ok(EditorEngineApplyEventResult::NotApplied);
         }
 

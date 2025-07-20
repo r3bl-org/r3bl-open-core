@@ -257,13 +257,13 @@ mod render_op_benchmarks {
             for op in &collection {
                 match op {
                     RenderOp::MoveCursorPositionAbs(pos) => {
-                        sum += pos.row_index.value + pos.col_index.value
+                        sum += pos.row_index.value + pos.col_index.value;
                     }
                     RenderOp::MoveCursorPositionRelTo(p1, p2) => {
                         sum += p1.row_index.value
                             + p1.col_index.value
                             + p2.row_index.value
-                            + p2.col_index.value
+                            + p2.col_index.value;
                     }
                     _ => sum += 1,
                 }
@@ -283,13 +283,13 @@ mod render_op_benchmarks {
             for op in &collection {
                 match op {
                     RenderOp::MoveCursorPositionAbs(pos) => {
-                        sum += pos.row_index.value + pos.col_index.value
+                        sum += pos.row_index.value + pos.col_index.value;
                     }
                     RenderOp::MoveCursorPositionRelTo(p1, p2) => {
                         sum += p1.row_index.value
                             + p1.col_index.value
                             + p2.row_index.value
-                            + p2.col_index.value
+                            + p2.col_index.value;
                     }
                     _ => sum += 1,
                 }
@@ -351,21 +351,20 @@ mod render_op_benchmarks {
     #[bench]
     fn bench_vec_text_line_render(b: &mut Bencher) {
         b.iter(|| {
-            let mut ops = RenderOpsVec::new();
-            ops.push(RenderOp::MoveCursorPositionAbs(Pos {
-                row_index: ch(5).into(),
-                col_index: ch(10).into(),
-            }));
-            ops.push(RenderOp::ResetColor);
-            ops.push(RenderOp::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(
-                255, 255, 255,
-            ))));
-            ops.push(RenderOp::SetBgColor(TuiColor::Ansi(AnsiValue::new(232))));
-            ops.push(RenderOp::PaintTextWithAttributes(
-                InlineString::from("This is a line of text in the editor"),
-                None,
-            ));
-            ops.push(RenderOp::ResetColor);
+            let ops = vec![
+                RenderOp::MoveCursorPositionAbs(Pos {
+                    row_index: ch(5).into(),
+                    col_index: ch(10).into(),
+                }),
+                RenderOp::ResetColor,
+                RenderOp::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(255, 255, 255))),
+                RenderOp::SetBgColor(TuiColor::Ansi(AnsiValue::new(232))),
+                RenderOp::PaintTextWithAttributes(
+                    InlineString::from("This is a line of text in the editor"),
+                    None,
+                ),
+                RenderOp::ResetColor,
+            ];
             test::black_box(ops)
         });
     }
@@ -373,21 +372,20 @@ mod render_op_benchmarks {
     #[bench]
     fn bench_vec_with_capacity_text_line_render(b: &mut Bencher) {
         b.iter(|| {
-            let mut ops = RenderOpsVec::with_capacity(6);
-            ops.push(RenderOp::MoveCursorPositionAbs(Pos {
-                row_index: ch(5).into(),
-                col_index: ch(10).into(),
-            }));
-            ops.push(RenderOp::ResetColor);
-            ops.push(RenderOp::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(
-                255, 255, 255,
-            ))));
-            ops.push(RenderOp::SetBgColor(TuiColor::Ansi(AnsiValue::new(232))));
-            ops.push(RenderOp::PaintTextWithAttributes(
-                InlineString::from("This is a line of text in the editor"),
-                None,
-            ));
-            ops.push(RenderOp::ResetColor);
+            let ops = vec![
+                RenderOp::MoveCursorPositionAbs(Pos {
+                    row_index: ch(5).into(),
+                    col_index: ch(10).into(),
+                }),
+                RenderOp::ResetColor,
+                RenderOp::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(255, 255, 255))),
+                RenderOp::SetBgColor(TuiColor::Ansi(AnsiValue::new(232))),
+                RenderOp::PaintTextWithAttributes(
+                    InlineString::from("This is a line of text in the editor"),
+                    None,
+                ),
+                RenderOp::ResetColor,
+            ];
             test::black_box(ops)
         });
     }

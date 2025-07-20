@@ -576,7 +576,7 @@ fn actually_process_input_event<S, AS>(
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     let result = app.app_handle_input_event(
-        input_event,
+        input_event.clone(),
         global_data_mut_ref,
         component_registry_map,
         has_focus,

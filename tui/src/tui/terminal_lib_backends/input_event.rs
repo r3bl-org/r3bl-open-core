@@ -42,7 +42,7 @@ use crate::{Size, height, width};
 ///    - [`Size`]: Terminal dimensions
 ///    - [`FocusEvent`]: Window focus changes
 ///
-/// 3. **InputEvent** (This enum - unified interface)
+/// 3. **`InputEvent`** (This enum - unified interface)
 ///    - Single type for all input handling
 ///    - Each variant wraps a specialized type
 ///    - Enables polymorphic event processing
@@ -54,8 +54,19 @@ use crate::{Size, height, width};
 ///     ├─→ Event::Key(KeyEvent)     → KeyPress      → InputEvent::Keyboard
 ///     ├─→ Event::Mouse(MouseEvent) → MouseInput    → InputEvent::Mouse
 ///     ├─→ Event::Resize(w, h)      → Size          → InputEvent::Resize
-///     └─→ Event::Focus*            → FocusEvent    → InputEvent::Focus
+///     ├─→ Event::Focus*            → FocusEvent    → InputEvent::Focus
+///     └─→ Event::Paste(String)     → String        → InputEvent::BracketedPaste
 /// ```
+///
+/// # Paste Handling
+///
+/// The framework supports two distinct paste mechanisms:
+/// - **Bracketed Paste**: Terminal-native paste (right-click, middle-click) arrives as
+///   [`InputEvent::BracketedPaste`]
+/// - **Clipboard Paste**: Ctrl+V arrives as [`InputEvent::Keyboard`] and requires
+///   application to read from system clipboard
+///
+/// See [`InputEvent::BracketedPaste`] for detailed comparison.
 ///
 /// This design ensures:
 /// - **Backend independence**: Easy to swap terminal backends
@@ -65,12 +76,48 @@ use crate::{Size, height, width};
 ///
 /// Please see [`KeyPress`] for more information about handling keyboard input.
 #[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InputEvent {
     Keyboard(KeyPress),
     Resize(Size),
     Mouse(MouseInput),
     Focus(FocusEvent),
+    /// Text pasted via terminal's paste mechanism (not Ctrl+V).
+    ///
+    /// # Bracketed Paste vs Clipboard Paste
+    ///
+    /// There are two distinct ways text can be pasted in a terminal application:
+    ///
+    /// ## 1. Bracketed Paste (this event)
+    /// - **How to trigger**:
+    ///   - Ctrl+Shift+V (some terminals)
+    ///   - Right-click in terminal
+    ///   - Middle mouse button click
+    ///   - Shift+Insert (some terminals)
+    ///   - Terminal menu → Edit → Paste
+    ///   - Cmd+V on macOS Terminal
+    /// - **How it works**: Terminal sends the pasted text wrapped in special escape
+    ///   sequences (`ESC[200~` text `ESC[201~`)
+    /// - **Characteristics**: Text arrives as a single chunk, not individual keystrokes
+    ///
+    /// ## 2. Clipboard Paste (Ctrl+V)
+    /// - **How to trigger**: Ctrl+V key combination
+    /// - **How it works**: Arrives as `InputEvent::Keyboard` with Ctrl+V, application
+    ///   must read from system clipboard
+    /// - **Characteristics**: Requires clipboard access permissions
+    ///
+    /// ## Visual Difference
+    /// - **Bracketed paste**: Text appears instantly as one operation
+    /// - **Ctrl+V paste**: May have slight delay while reading clipboard
+    ///
+    /// ## Why Two Mechanisms?
+    /// - **Bracketed paste**: Terminal-native, works even without clipboard access
+    /// - **Ctrl+V**: Application-controlled, consistent with desktop applications
+    ///
+    /// Note: Bracketed paste must be enabled via
+    /// [`EnableBracketedPaste`](crate::RenderOpImplCrossterm::raw_mode_enter) in raw
+    /// mode.
+    BracketedPaste(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -139,7 +186,7 @@ pub(crate) mod converters {
                 }
                 CTEvent::FocusGained => Ok(InputEvent::Focus(FocusEvent::Gained)),
                 CTEvent::FocusLost => Ok(InputEvent::Focus(FocusEvent::Lost)),
-                CTEvent::Paste(_) => Err(()),
+                CTEvent::Paste(text) => Ok(InputEvent::BracketedPaste(text)),
             }
         }
     }

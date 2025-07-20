@@ -120,7 +120,7 @@ mod app_main_impl_app_trait {
             // Check to see if the modal dialog should be activated.
             if let modal_dialogs::ModalActivateResult::Yes =
                 modal_dialogs::should_activate(
-                    input_event,
+                    input_event.clone(),
                     component_registry_map,
                     has_focus,
                     state,

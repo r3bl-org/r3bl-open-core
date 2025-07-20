@@ -17,16 +17,18 @@
 use std::borrow::Cow;
 
 use crossterm::{cursor::{Hide, MoveTo, Show},
-                event::{DisableMouseCapture, EnableMouseCapture},
+                event::{DisableBracketedPaste, DisableMouseCapture,
+                        EnableBracketedPaste, EnableMouseCapture},
                 style::{Attribute, Print, ResetColor, SetAttribute, SetBackgroundColor,
                         SetForegroundColor},
                 terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
 use smallvec::smallvec;
 
-use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
+use crate::{Flush, GCString, InlineVec, LockedOutputDevice, PaintRenderOp, Pos,
+            RenderOp, RenderOpsLocalData, Size, TuiColor, TuiStyle,
+            crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
             disable_raw_mode_now, enable_raw_mode_now, flush_now, queue_render_op,
-            sanitize_and_save_abs_pos, Flush, GCString, InlineVec, LockedOutputDevice,
-            PaintRenderOp, Pos, RenderOp, RenderOpsLocalData, Size, TuiColor, TuiStyle};
+            sanitize_and_save_abs_pos};
 
 /// Struct representing the implementation of [`RenderOp`] for crossterm terminal backend.
 /// This empty struct is needed since the [Flush] trait needs to be implemented.
@@ -34,8 +36,9 @@ use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color
 pub struct RenderOpImplCrossterm;
 
 mod impl_trait_paint_render_op {
-    use super::{queue_render_op, Clear, ClearType, LockedOutputDevice, PaintRenderOp,
-                RenderOp, RenderOpImplCrossterm, RenderOpsLocalData, ResetColor, Size};
+    use super::{Clear, ClearType, LockedOutputDevice, PaintRenderOp, RenderOp,
+                RenderOpImplCrossterm, RenderOpsLocalData, ResetColor, Size,
+                queue_render_op};
 
     impl PaintRenderOp for RenderOpImplCrossterm {
         fn paint(
@@ -123,8 +126,8 @@ mod impl_trait_paint_render_op {
 }
 
 pub mod impl_trait_flush {
-    use super::{flush_now, Clear, ClearType, Flush, LockedOutputDevice,
-                RenderOpImplCrossterm, ResetColor};
+    use super::{Clear, ClearType, Flush, LockedOutputDevice, RenderOpImplCrossterm,
+                ResetColor, flush_now};
 
     impl Flush for RenderOpImplCrossterm {
         fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
@@ -143,13 +146,14 @@ pub mod impl_trait_flush {
 }
 
 mod impl_self {
-    use super::{convert_from_tui_color_to_crossterm_color, disable_raw_mode_now,
+    use super::{Clear, ClearType, Cow, DisableBracketedPaste, DisableMouseCapture,
+                EnableBracketedPaste, EnableMouseCapture, EnterAlternateScreen, Hide,
+                LeaveAlternateScreen, LockedOutputDevice, MoveTo, Pos,
+                RenderOpImplCrossterm, RenderOpsLocalData, SetBackgroundColor,
+                SetForegroundColor, Show, Size, TuiColor, TuiStyle,
+                convert_from_tui_color_to_crossterm_color, disable_raw_mode_now,
                 enable_raw_mode_now, flush_now, perform_paint, queue_render_op,
-                sanitize_and_save_abs_pos, Clear, ClearType, Cow, DisableMouseCapture,
-                EnableMouseCapture, EnterAlternateScreen, Hide, LeaveAlternateScreen,
-                LockedOutputDevice, MoveTo, Pos, RenderOpImplCrossterm,
-                RenderOpsLocalData, SetBackgroundColor, SetForegroundColor, Show, Size,
-                TuiColor, TuiStyle};
+                sanitize_and_save_abs_pos};
 
     impl RenderOpImplCrossterm {
         pub fn move_cursor_position_rel_to(
@@ -196,7 +200,8 @@ mod impl_self {
         ) {
             queue_render_op!(
                 locked_output_device,
-                "ExitRawMode -> Show, LeaveAlternateScreen, DisableMouseCapture",
+                "ExitRawMode -> DisableBracketedPaste, Show, LeaveAlternateScreen, DisableMouseCapture",
+                DisableBracketedPaste,
                 Show,
                 LeaveAlternateScreen,
                 DisableMouseCapture
@@ -209,6 +214,15 @@ mod impl_self {
             *skip_flush = true;
         }
 
+        /// Enter raw mode, enabling bracketed paste, mouse capture, and entering the
+        /// alternate screen. This is used to prepare the terminal for rendering.
+        /// It also clears the screen and hides the cursor.
+        ///
+        /// Bracketed paste allows the terminal to distinguish between typed text and
+        /// pasted text. See [`crate::InputEvent::BracketedPaste`] for details on how
+        /// paste events work.
+        ///
+        /// More info: <https://en.wikipedia.org/wiki/Bracketed-paste>
         pub fn raw_mode_enter(
             skip_flush: &mut bool,
             locked_output_device: LockedOutputDevice<'_>,
@@ -218,10 +232,11 @@ mod impl_self {
 
             queue_render_op!(
                 locked_output_device,
-                "EnterRawMode -> EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide",
+                "EnterRawMode -> EnableBracketedPaste, EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide",
+                EnableBracketedPaste,
                 EnableMouseCapture,
                 EnterAlternateScreen,
-                MoveTo(0,0),
+                MoveTo(0, 0),
                 Clear(ClearType::All),
                 Hide,
             );
@@ -267,7 +282,7 @@ mod impl_self {
             local_data: &mut RenderOpsLocalData,
             locked_output_device: LockedOutputDevice<'_>,
         ) {
-            use perform_paint::{paint_style_and_text, PaintArgs};
+            use perform_paint::{PaintArgs, paint_style_and_text};
 
             let text: Cow<'_, str> = Cow::from(text_arg);
 
@@ -324,9 +339,9 @@ mod impl_self {
 }
 
 mod perform_paint {
-    use super::{queue_render_op, sanitize_and_save_abs_pos, smallvec, Attribute, Cow,
-                GCString, InlineVec, LockedOutputDevice, Print, RenderOpsLocalData,
-                SetAttribute, Size, TuiStyle};
+    use super::{Attribute, Cow, GCString, InlineVec, LockedOutputDevice, Print,
+                RenderOpsLocalData, SetAttribute, Size, TuiStyle, queue_render_op,
+                sanitize_and_save_abs_pos, smallvec};
 
     #[derive(Debug)]
     pub struct PaintArgs<'a> {
@@ -400,19 +415,13 @@ mod perform_paint {
         locked_output_device: LockedOutputDevice<'_>,
     ) {
         let PaintArgs {
-            text,
-            window_size,
-            ..
+            text, window_size, ..
         } = paint_args;
 
         // Actually paint text.
         {
             let text = Cow::Borrowed(text);
-            queue_render_op!(
-                locked_output_device,
-                "Print",
-                Print(&text),
-            );
+            queue_render_op!(locked_output_device, "Print", Print(&text),);
         };
 
         // Update cursor position after paint.

@@ -57,6 +57,6 @@ impl KeyPressReader for TestVecKeyPressReader {
 
         let index = self.index.unwrap();
 
-        Some(self.key_press_vec[index])
+        Some(self.key_press_vec[index].clone())
     }
 }

@@ -34,7 +34,7 @@ pub type BufTextStorage = String;
 ///
 /// ## Why `WriteToBuf` instead of Display/Formatter?
 ///
-/// The standard [`Display`] trait uses [`std::fmt::Formatter`] which has significant
+/// The standard [`std::fmt::Display`] trait uses [`std::fmt::Formatter`] which has significant
 /// overhead:
 /// 1. **Formatter State Machine**: Each [`write!`] call goes through the formatter's
 ///    internal state machine, checking formatting flags (alignment, padding, precision,
@@ -51,17 +51,17 @@ pub type BufTextStorage = String;
 ///   [`core::fmt::Formatter::write_str`].
 /// - Reduce the overhead from ~16% to ~5-8% in performance profiles.
 ///
-/// The [`Display`] trait implementations still exist for API compatibility but delegate
-/// to `WriteToBuf`. The [`Display`] trait will have to use use
+/// The [`std::fmt::Display`] trait implementations still exist for API compatibility but delegate
+/// to `WriteToBuf`. The [`std::fmt::Display`] trait will have to use use
 /// [`core::fmt::Formatter::write_str`] to actually write the `acc` buffer.
 pub trait WriteToBuf {
     /// Write the formatted representation to the provided buffer. You might want to
     /// call [`WriteToBuf::write_buf_to_fmt()`] when you are ready to actually write the
-    /// buffer to the formatter if you are implementing the [`Display`] trait.
+    /// buffer to the formatter if you are implementing the [`std::fmt::Display`] trait.
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result;
 
     /// Use [`core::fmt::Formatter::write_str`] to actually write the `acc` buffer when
-    /// implementing the [`Display`] trait.
+    /// implementing the [`std::fmt::Display`] trait.
     fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut Formatter<'_>) -> Result {
         f.write_str(acc)
     }

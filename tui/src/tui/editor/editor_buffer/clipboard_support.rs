@@ -18,8 +18,7 @@
 use std::error::Error;
 
 use super::EditorBuffer;
-use crate::{editor_engine::engine_internal_api, md_parser::constants::NEW_LINE, usize,
-            EditorArgsMut, InlineVecStr, DEBUG_TUI_COPY_PASTE};
+use crate::{DEBUG_TUI_COPY_PASTE, InlineVecStr, usize};
 
 pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 
@@ -49,10 +48,11 @@ pub fn copy_to_clipboard(
     // Iterate through the sorted row indices, and copy the selected text.
     for row_index in row_indices {
         if let Some(sel_range) = sel_list.get(row_index)
-            && let Some(line) = lines.get(usize(*row_index)) {
-                let sel_text = sel_range.clip_to_range(line);
-                vec_str.push(sel_text);
-            }
+            && let Some(line) = lines.get(usize(*row_index))
+        {
+            let sel_text = sel_range.clip_to_range(line);
+            vec_str.push(sel_text);
+        }
     }
 
     let result =
@@ -65,63 +65,5 @@ pub fn copy_to_clipboard(
                 error = ?error,
             );
         });
-    }
-}
-
-pub fn paste_from_clipboard(
-    args: EditorArgsMut<'_>,
-    clipboard_service_provider: &mut impl ClipboardService,
-) {
-    let result = clipboard_service_provider.try_to_get_content_from_clipboard();
-    match result {
-        Ok(clipboard_text) => {
-            // If the clipboard text does not contain a new line, then insert the text.
-            if clipboard_text.contains(NEW_LINE) {
-                let lines = clipboard_text.split(NEW_LINE);
-                let line_count = lines.clone().count();
-                for (line_index, line) in lines.enumerate() {
-                    engine_internal_api::insert_str_at_caret(
-                        EditorArgsMut {
-                            engine: args.engine,
-                            buffer: args.buffer,
-                        },
-                        line,
-                    );
-                    // This is not the last line, so insert a new line.
-                    if line_index < line_count - 1 {
-                        engine_internal_api::insert_new_line_at_caret(EditorArgsMut {
-                            engine: args.engine,
-                            buffer: args.buffer,
-                        });
-                    }
-                }
-            } else {
-                engine_internal_api::insert_str_at_caret(
-                    EditorArgsMut {
-                        engine: args.engine,
-                        buffer: args.buffer,
-                    },
-                    clipboard_text.as_str(),
-                );
-            }
-
-            DEBUG_TUI_COPY_PASTE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(
-                    message = "📋📋📋 Text was pasted from clipboard",
-                    clipboard_text = %clipboard_text
-                );
-            });
-        }
-
-        Err(error) => {
-            DEBUG_TUI_COPY_PASTE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(
-                    message = "📋📋📋 Failed to paste the text from clipboard",
-                    error = ?error
-                );
-            });
-        }
     }
 }

@@ -17,11 +17,12 @@
 
 use std::fmt::Debug;
 
-use crate::{clipboard_support::ClipboardService, editor_buffer::EditorBuffer,
+use crate::{DEBUG_TUI_COPY_PASTE, DeleteSelectionWith, EditorArgsMut, EditorEngine,
+            InputEvent, Key, KeyState, ModifierKeysMask, SelectMode, Size, SpecialKey,
+            clipboard_support::ClipboardService, editor_buffer::EditorBuffer,
             editor_engine::engine_internal_api, fg_green, inline_string,
-            terminal_lib_backends::KeyPress, validate_scroll_on_resize,
-            DeleteSelectionWith, EditorArgsMut, EditorEngine, InputEvent, Key, KeyState,
-            ModifierKeysMask, SelectMode, Size, SpecialKey, DEBUG_TUI_COPY_PASTE};
+            md_parser::constants::NEW_LINE_CHAR, terminal_lib_backends::KeyPress,
+            validate_scroll_on_resize};
 
 /// Events that can be applied to the [`EditorEngine`] to modify an [`EditorBuffer`].
 ///
@@ -31,6 +32,14 @@ use crate::{clipboard_support::ClipboardService, editor_buffer::EditorBuffer,
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum EditorEvent {
     InsertChar(char),
+    /// Inserts a string directly into the editor buffer.
+    /// 
+    /// This event is used in two scenarios:
+    /// 1. **Bracketed paste**: When text is pasted via terminal (right-click, middle-click, etc.),
+    ///    the terminal provides the text directly through [`InputEvent::BracketedPaste`].
+    /// 2. **Programmatic insertion**: When code needs to insert multi-line text.
+    /// 
+    /// For clipboard paste via Ctrl+V, see [`EditorEvent::Paste`].
     InsertString(String),
     InsertNewLine,
     Delete,
@@ -43,6 +52,10 @@ pub enum EditorEvent {
     Resize(Size),
     Select(SelectionAction),
     Copy,
+    /// Pastes text from the system clipboard (triggered by Ctrl+V).
+    /// 
+    /// Unlike [`EditorEvent::InsertString`] which receives text directly,
+    /// this event reads from the system clipboard using [`ClipboardService`].
     Paste,
     Cut,
     Undo,
@@ -200,7 +213,7 @@ impl TryFrom<InputEvent> for EditorEvent {
                 key: Key::SpecialKey(SpecialKey::Esc),
             }) => Ok(EditorEvent::Select(SelectionAction::Esc)),
 
-            //  Clipboard events.
+            // Clipboard events (Ctrl+C, Ctrl+X, Ctrl+V).
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::Character('c'),
                 mask:
@@ -282,6 +295,8 @@ impl TryFrom<InputEvent> for EditorEvent {
                 key: Key::SpecialKey(SpecialKey::Right),
             }) => Ok(Self::MoveCaret(CaretDirection::Right)),
 
+            InputEvent::BracketedPaste(text) => Ok(EditorEvent::InsertString(text)),
+
             _ => Err(format!("Invalid input event: {input_event:?}")),
         }
     }
@@ -296,7 +311,6 @@ impl EditorEvent {
             return;
         }
 
-        // The text is selected and we want to delete the entire selected text.
         engine_internal_api::delete_selected(
             editor_buffer,
             editor_engine,
@@ -304,6 +318,94 @@ impl EditorEvent {
         );
     }
 
+    /// Inserts text into the editor, normalizing line endings and handling multi-line content.
+    ///
+    /// # Text Sources
+    /// The `text` parameter can come from various sources:
+    /// - **Bracketed Paste** (Ctrl+Shift+V, right-click, middle-click): Terminal sends raw 
+    ///   text directly via [`InputEvent::BracketedPaste`]
+    /// - **Clipboard Paste** (Ctrl+V): Text read from system clipboard via 
+    ///   [`ClipboardService`] 
+    /// - **Programmatic insertion**: Text inserted by code (e.g., autocomplete, snippets)
+    ///
+    /// # Why Line Ending Normalization is Critical
+    /// Text can originate from different operating systems and terminal emulators, each
+    /// with their own line ending conventions:
+    /// - **Windows**: Uses CRLF (`\r\n`)
+    /// - **Unix/Linux/macOS (modern)**: Uses LF (`\n`)
+    /// - **Classic Mac OS**: Used CR (`\r`)
+    /// 
+    /// Additionally, different terminal emulators may preserve or transform these line
+    /// endings differently when handling bracketed paste. Some terminals on Windows might
+    /// send `\r` instead of `\n`, while others preserve the original format. This function
+    /// ensures consistent behavior regardless of the source.
+    ///
+    /// # Processing Steps
+    /// 1. All line endings (`\r\n`, `\n`, `\r`) are normalized to `\n`
+    /// 2. Text is split into lines at each `\n`
+    /// 3. Lines are inserted individually with explicit newline characters between them
+    ///
+    /// This approach is required because the editor's internal APIs need lines to be 
+    /// inserted separately for proper rendering, cursor positioning, and undo/redo tracking.
+    ///
+    /// # Arguments
+    /// * `engine` - The editor engine for cursor and viewport management
+    /// * `buffer` - The editor buffer to insert text into
+    /// * `text` - The text to insert (may contain any line ending format)
+    /// * `is_paste` - Whether this text comes from a paste operation (for debug logging)
+    fn insert_text_with_normalized_line_endings(
+        engine: &mut EditorEngine,
+        buffer: &mut EditorBuffer,
+        text: &str,
+        is_paste: bool,
+    ) {
+        // Normalize line endings: handle \r\n, \n, and \r as line separators
+        let normalized_text = text
+            .replace("\r\n", "\n")  // Windows CRLF -> LF
+            .replace('\r', "\n");   // Old Mac CR -> LF
+        
+        if normalized_text.contains(NEW_LINE_CHAR) {
+            let lines: Vec<&str> = normalized_text.split(NEW_LINE_CHAR).collect();
+            let line_count = lines.len();
+
+            for (index, line) in lines.into_iter().enumerate() {
+                engine_internal_api::insert_str_at_caret(
+                    EditorArgsMut { engine, buffer },
+                    line,
+                );
+
+                // Insert newline between lines (but not after the last line)
+                if index < line_count - 1 {
+                    engine_internal_api::insert_new_line_at_caret(EditorArgsMut {
+                        engine,
+                        buffer,
+                    });
+                }
+            }
+        } else {
+            // Single line - insert directly
+            engine_internal_api::insert_str_at_caret(
+                EditorArgsMut { engine, buffer },
+                &normalized_text,
+            );
+        }
+
+        // Log paste operations for debugging
+        if is_paste {
+            DEBUG_TUI_COPY_PASTE.then(|| {
+                tracing::debug! {
+                    message = "📋📋📋 Text was pasted from clipboard",
+                    clipboard_text = %text
+                };
+            });
+        }
+    }
+
+    /// Applies an editor event to modify the buffer.
+    ///
+    /// Note: Text insertion has two paths:
+    /// - `InsertString`: Direct text insertion (e.g., from bracketed paste)
+    /// - `Paste`: Reads from system clipboard (requires `ClipboardService`)
     pub fn apply_editor_event(
         engine: &mut EditorEngine,
         buffer: &mut EditorBuffer,
@@ -337,11 +439,8 @@ impl EditorEvent {
 
             EditorEvent::Delete => {
                 if buffer.get_selection_list().is_empty() {
-                    // There is no selection and we want to delete a single character.
                     engine_internal_api::delete_at_caret(buffer, engine);
                 } else {
-                    // The text is selected and we want to delete the entire selected
-                    // text.
                     engine_internal_api::delete_selected(
                         buffer,
                         engine,
@@ -352,11 +451,8 @@ impl EditorEvent {
 
             EditorEvent::Backspace => {
                 if buffer.get_selection_list().is_empty() {
-                    // There is no selection and we want to backspace a single character.
                     engine_internal_api::backspace_at_caret(buffer, engine);
                 } else {
-                    // The text is selected and we want to delete the entire selected
-                    // text.
                     engine_internal_api::delete_selected(
                         buffer,
                         engine,
@@ -380,16 +476,7 @@ impl EditorEvent {
                 }
             },
 
-            EditorEvent::InsertString(chunk) => {
-                Self::delete_text_if_selected(engine, buffer);
-                engine_internal_api::insert_str_at_caret(
-                    EditorArgsMut { engine, buffer },
-                    &chunk,
-                );
-            }
-
             EditorEvent::Resize(_) => {
-                // Check to see whether scroll is valid.
                 validate_scroll_on_resize(EditorArgsMut { engine, buffer });
             }
 
@@ -455,12 +542,32 @@ impl EditorEvent {
                 );
             }
 
+            EditorEvent::InsertString(chunk) => {
+                Self::delete_text_if_selected(engine, buffer);
+                Self::insert_text_with_normalized_line_endings(engine, buffer, &chunk, false);
+            }
+
             EditorEvent::Paste => {
                 Self::delete_text_if_selected(engine, buffer);
-                engine_internal_api::paste_clipboard_content_into_editor(
-                    EditorArgsMut { engine, buffer },
-                    clipboard,
-                );
+                
+                match clipboard.try_to_get_content_from_clipboard() {
+                    Ok(clipboard_text) => {
+                        Self::insert_text_with_normalized_line_endings(
+                            engine,
+                            buffer,
+                            &clipboard_text,
+                            true,
+                        );
+                    }
+                    Err(error) => {
+                        DEBUG_TUI_COPY_PASTE.then(|| {
+                            tracing::debug! {
+                                message = "📋📋📋 Failed to paste the text from clipboard",
+                                error = ?error
+                            };
+                        });
+                    }
+                }
             }
         }
     }

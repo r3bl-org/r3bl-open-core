@@ -19,9 +19,9 @@
 //! of the editor engine. See [`mod@super::engine_public_api`] for the public event based
 //! API.
 
-use super::{caret_mut, content_mut, DeleteSelectionWith, SelectMode};
-use crate::{clipboard_support, clipboard_support::ClipboardService, EditorArgsMut,
-            EditorBuffer, EditorEngine, GCString};
+use super::{DeleteSelectionWith, SelectMode, caret_mut, content_mut};
+use crate::{EditorArgsMut, EditorBuffer, EditorEngine, GCString, clipboard_support,
+            clipboard_support::ClipboardService};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     caret_mut::up(buffer, engine, sel_mod);
@@ -103,11 +103,4 @@ pub fn copy_editor_selection_to_clipboard(
     clipboard: &mut impl ClipboardService,
 ) {
     clipboard_support::copy_to_clipboard(buffer, clipboard);
-}
-
-pub fn paste_clipboard_content_into_editor(
-    args: EditorArgsMut<'_>,
-    clipboard: &mut impl ClipboardService,
-) {
-    clipboard_support::paste_from_clipboard(args, clipboard);
 }

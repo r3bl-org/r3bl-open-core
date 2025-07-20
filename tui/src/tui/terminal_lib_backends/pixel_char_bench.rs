@@ -95,6 +95,7 @@ mod pixel_char_benchmarks {
     type PixelCharVec = Vec<PixelChar>;
 
     // Helper to create test pixel chars
+    #[allow(clippy::cast_possible_truncation)]
     fn create_test_pixel_chars(count: usize) -> Vec<PixelChar> {
         let mut chars = Vec::with_capacity(count);
         for i in 0..count {
@@ -119,6 +120,7 @@ mod pixel_char_benchmarks {
     }
 
     // Benchmark 1: Building a typical text line (80 chars)
+    #[allow(clippy::cast_sign_loss)]
     #[bench]
     fn bench_smallvec_build_line_typical(b: &mut Bencher) {
         b.iter(|| {
@@ -134,6 +136,7 @@ mod pixel_char_benchmarks {
         });
     }
 
+    #[allow(clippy::cast_sign_loss)]
     #[bench]
     fn bench_vec_build_line_typical(b: &mut Bencher) {
         b.iter(|| {
@@ -149,6 +152,7 @@ mod pixel_char_benchmarks {
         });
     }
 
+    #[allow(clippy::cast_sign_loss)]
     #[bench]
     fn bench_vec_with_capacity_build_line_typical(b: &mut Bencher) {
         b.iter(|| {
@@ -276,6 +280,7 @@ mod pixel_char_benchmarks {
     }
 
     // Benchmark 5: Small line (8 chars - within SmallVec capacity)
+    #[allow(clippy::cast_sign_loss )]
     #[bench]
     fn bench_smallvec_small_line(b: &mut Bencher) {
         b.iter(|| {
@@ -290,6 +295,7 @@ mod pixel_char_benchmarks {
         });
     }
 
+    #[allow(clippy::cast_sign_loss)]
     #[bench]
     fn bench_vec_small_line(b: &mut Bencher) {
         b.iter(|| {

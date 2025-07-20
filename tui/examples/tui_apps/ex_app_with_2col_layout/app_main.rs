@@ -93,7 +93,7 @@ mod app_main_impl_app_trait {
         ) -> CommonResult<EventPropagation> {
             // Try to handle left and right arrow key input events & return if handled.
             if let Continuation::Return =
-                handle_focus::handle_focus_switch(input_event, has_focus)
+                handle_focus::handle_focus_switch(input_event.clone(), has_focus)
             {
                 return Ok(EventPropagation::ConsumedRender);
             }
