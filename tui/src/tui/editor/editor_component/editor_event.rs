@@ -702,7 +702,7 @@ mod tests {
         // Buffer has two lines.
         // Row Index : 0 , Column Length : 12
         // Row Index : 1 , Column Length : 12
-        buffer.set_lines(["abc r3bl xyz", "pqr rust uvw"]);
+        buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
 
         {
             // Current Caret Position : [row : 0, col : 0]

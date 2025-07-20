@@ -18,14 +18,14 @@ use std::fmt::{Debug, Display, Formatter, Result};
 
 use smallvec::smallvec;
 
-use super::{history::EditorHistory, render_cache::RenderCache, sizing, SelectionList};
-use crate::{caret_locate, format_as_kilobytes_with_commas, glyphs, height,
-            inline_string, ok, row,
+use super::{SelectionList, history::EditorHistory, render_cache::RenderCache, sizing};
+use crate::{CachedMemorySize, CaretRaw, CaretScrAdj, ColWidth, DEBUG_TUI_COPY_PASTE,
+            DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, GCString, GCStringExt, InlineString,
+            MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs, SegString,
+            Size, TinyInlineString, caret_locate, format_as_kilobytes_with_commas,
+            glyphs, height, inline_string, ok, row,
             validate_buffer_mut::{EditorBufferMutNoDrop, EditorBufferMutWithDrop},
-            width, with_mut, CachedMemorySize, CaretRaw, CaretScrAdj, ColWidth, GCString,
-            GCStringExt, InlineString, MemoizedMemorySize, MemorySize, RowHeight,
-            RowIndex, ScrOfs, SegString, Size, TinyInlineString, DEBUG_TUI_COPY_PASTE,
-            DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT};
+            width, with_mut};
 
 /// Stores the data for a single editor buffer. Please do not construct this struct
 /// directly and use [`new_empty`](EditorBuffer::new_empty) instead.
@@ -189,7 +189,7 @@ pub struct EditorBuffer {
     pub history: EditorHistory,
     pub render_cache: RenderCache,
     /// Memoized memory size calculation for [`std::fmt::Display`] trait performance.
-    memory_size_calc_cache: MemoizedMemorySize,
+    pub memory_size_calc_cache: MemoizedMemorySize,
 }
 
 #[derive(Clone, PartialEq, Default)]
@@ -208,8 +208,8 @@ pub struct EditorContent {
 }
 
 mod construct {
-    use super::{glyphs, inline_string, smallvec, EditorBuffer, EditorContent,
-                GCStringExt, DEBUG_TUI_MOD};
+    use super::{DEBUG_TUI_MOD, EditorBuffer, EditorContent, GCStringExt, glyphs,
+                inline_string, smallvec};
 
     impl EditorBuffer {
         /// Marker method to make it easy to search for where an empty instance is
@@ -244,7 +244,7 @@ mod construct {
 }
 
 pub mod versions {
-    use super::{EditorBuffer, DEBUG_TUI_COPY_PASTE};
+    use super::{DEBUG_TUI_COPY_PASTE, EditorBuffer};
 
     impl EditorBuffer {
         pub fn add(&mut self) {
@@ -310,8 +310,8 @@ pub mod versions {
 
 /// Relating to line display width at caret row or given row index (scroll adjusted).
 pub mod content_display_width {
-    use super::{height, sizing, width, CaretRaw, ColWidth, EditorBuffer, RowIndex,
-                ScrOfs};
+    use super::{CaretRaw, ColWidth, EditorBuffer, RowIndex, ScrOfs, height, sizing,
+                width};
 
     impl EditorBuffer {
         #[must_use]
@@ -376,7 +376,7 @@ pub mod content_display_width {
 
 /// Relating to content around the caret.
 pub mod content_near_caret {
-    use super::{caret_locate, row, width, EditorBuffer, GCString, SegString};
+    use super::{EditorBuffer, GCString, SegString, caret_locate, row, width};
 
     impl EditorBuffer {
         #[must_use]
@@ -477,10 +477,10 @@ pub mod content_near_caret {
 }
 
 pub mod access_and_mutate {
-    use super::{height, sizing, with_mut, CaretRaw, CaretScrAdj, EditorBuffer,
+    use super::{CaretRaw, CaretScrAdj, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
                 EditorBufferMutNoDrop, EditorBufferMutWithDrop, GCString, GCStringExt,
-                InlineString, RowHeight, RowIndex, ScrOfs, SelectionList, Size,
-                DEFAULT_SYN_HI_FILE_EXT};
+                InlineString, RowHeight, RowIndex, ScrOfs, SelectionList, Size, height,
+                sizing, with_mut};
 
     impl EditorBuffer {
         #[must_use]
@@ -554,13 +554,20 @@ pub mod access_and_mutate {
         /// text editor and not binary editor, it operates on UTF-8 encoded text files and
         /// not binary files (which just contain `u8`s).
         ///
-        /// You can convert a `&[u8]` to a `&str` using `std::str::from_utf8`.
-        /// - A `Vec<u8>` can be converted into a `&[u8]` using `&vec[..]` or
+        /// You can convert a `&[u8]` to a `&str` using [`std::str::from_utf8`].
+        /// Initializes the buffer with the given lines, clearing all state including
+        /// history. This is meant to be used when loading a new file or
+        /// completely replacing buffer content.
+        ///
+        /// For normal editing operations that preserve history, use [`Self::get_mut()`]
+        /// and the mutation API [`mod@crate::content_mut`].
+        ///
+        /// - A [`Vec<u8>`] can be converted into a `&[u8]` using `&vec[..]` or
         ///   `vec.as_slice()` or `vec.as_bytes()`.
-        /// - Then you can convert the `&[u8]` to a `&str` using `std::str::from_utf8`.
-        /// - And then call `.lines()` on the `&str` to get an iterator over the lines
-        ///   which can be passed to this method.
-        pub fn set_lines<I>(&mut self, arg_lines: I)
+        /// - Then you can convert the `&[u8]` to a `&str` using [`std::str::from_utf8`].
+        /// - And then call [`str::lines()`] on the `&str` to get an iterator over the
+        ///   lines which can be passed to this method.
+        pub fn init_with<I>(&mut self, arg_lines: I)
         where
             I: IntoIterator,
             I::Item: AsRef<str>,
@@ -585,7 +592,7 @@ pub mod access_and_mutate {
             // Invalidate and recalculate memory size cache.
             self.invalidate_memory_size_calc_cache();
 
-            // Reset undo/redo history.
+            // Reset undo/redo history since this is a complete re-initialization
             self.history.clear();
         }
 
@@ -692,8 +699,9 @@ mod memory_size_calc_cache {
 
         /// Gets the cached memory size value, recalculating if necessary.
         /// This is used by external code to access buffer memory size efficiently.
-        /// The expensive memory calculation is only performed if the cache is invalid or empty.
-        /// Returns a `MemorySize` that displays "?" if the cache is not available.
+        /// The expensive memory calculation is only performed if the cache is invalid or
+        /// empty. Returns a `MemorySize` that displays "?" if the cache is not
+        /// available.
         #[must_use]
         pub fn get_memory_size_calc_cached(&mut self) -> MemorySize {
             self.get_cached_memory_size()
@@ -703,7 +711,7 @@ mod memory_size_calc_cache {
 
 /// Efficient Display implementation for telemetry logging.
 mod display_impl {
-    use super::{ok, Display, EditorBuffer, Formatter, MemorySize, Result};
+    use super::{Display, EditorBuffer, Formatter, MemorySize, Result, ok};
 
     impl Display for EditorBuffer {
         /// This must be a fast implementation, so we avoid deep traversal of the
@@ -763,8 +771,8 @@ mod display_impl {
 }
 
 mod debug_impl {
-    use super::{format_as_kilobytes_with_commas, Debug, EditorBuffer, EditorContent,
-                Formatter, Result};
+    use super::{Debug, EditorBuffer, EditorContent, Formatter, Result,
+                format_as_kilobytes_with_commas};
 
     impl Debug for EditorBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -808,7 +816,8 @@ mod debug_impl {
 #[cfg(test)]
 mod test_memory_cache_invalidation {
     use super::*;
-    use crate::{assert_eq2, EditorEngine};
+    use crate::{CaretMovementDirection, EditorEngine, RingBuffer, assert_eq2,
+                caret_scr_adj, col};
 
     #[test]
     fn test_cache_invalidated_on_get_mut() {
@@ -816,7 +825,7 @@ mod test_memory_cache_invalidation {
         let engine = EditorEngine::default();
 
         // Set initial content and cache the memory size.
-        buffer.set_lines(["Hello", "World"]);
+        buffer.init_with(["Hello", "World"]);
         buffer.upsert_memory_size_calc_cache(); // Populate cache
         let initial_memory = buffer
             .memory_size_calc_cache
@@ -886,5 +895,189 @@ mod test_memory_cache_invalidation {
         let buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         assert_eq2!(buffer.get_lines().len(), 1);
         assert!(!buffer.is_empty());
+    }
+
+    #[test]
+    fn test_is_empty_and_len() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+
+        // New buffer has one empty line, so it's not considered empty
+        assert!(!buffer.is_empty());
+        assert_eq2!(buffer.len(), height(1));
+
+        // Add some content
+        buffer.init_with(vec!["line 1", "line 2", "line 3"]);
+        assert!(!buffer.is_empty());
+        assert_eq2!(buffer.len(), height(3));
+
+        // Clear all lines
+        buffer.init_with::<Vec<&str>>(vec![]);
+        assert!(buffer.is_empty());
+        assert_eq2!(buffer.len(), height(0));
+    }
+
+    #[test]
+    fn test_file_extension_functions() {
+        // Test with no extension
+        let buffer = EditorBuffer::new_empty(None, None);
+        assert!(!buffer.has_file_extension());
+        assert!(!buffer.is_file_extension_default());
+        assert_eq2!(buffer.get_maybe_file_extension(), None);
+
+        // Test with default extension
+        let buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        assert!(buffer.has_file_extension());
+        assert!(buffer.is_file_extension_default());
+        assert_eq2!(
+            buffer.get_maybe_file_extension(),
+            Some(DEFAULT_SYN_HI_FILE_EXT)
+        );
+
+        // Test with custom extension
+        let buffer = EditorBuffer::new_empty(Some("rs"), None);
+        assert!(buffer.has_file_extension());
+        assert!(!buffer.is_file_extension_default());
+        assert_eq2!(buffer.get_maybe_file_extension(), Some("rs"));
+    }
+
+    #[test]
+    fn test_memory_cache_functions() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+
+        // Initially, cache should be empty (dirty)
+        assert!(buffer.memory_size_calc_cache.get_cached().is_none());
+
+        // Populate the cache
+        buffer.upsert_memory_size_calc_cache();
+        let initial_cache = buffer
+            .memory_size_calc_cache
+            .get_cached()
+            .cloned()
+            .expect("Cache should be populated");
+        assert!(initial_cache.size().is_some());
+
+        // Note: invalidate_memory_size_calc_cache() actually invalidates AND recalculates
+        // So the cache will never be None after calling it
+        let size_before_invalidate = initial_cache.size().unwrap();
+        buffer.invalidate_memory_size_calc_cache();
+        let cache_after_invalidate = buffer
+            .memory_size_calc_cache
+            .get_cached()
+            .cloned()
+            .expect("Cache should be recalculated after invalidate");
+        assert_eq!(
+            cache_after_invalidate.size().unwrap(),
+            size_before_invalidate
+        );
+
+        // When accessed through get_memory_size_calc_cached(), it auto-populates
+        let auto_populated = buffer.get_memory_size_calc_cached();
+        assert!(auto_populated.size().is_some());
+
+        // Verify cache is now populated
+        assert!(buffer.memory_size_calc_cache.get_cached().is_some());
+    }
+
+    #[test]
+    fn test_get_mut_invalidates_cache() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        let engine = EditorEngine::default();
+
+        // Populate the cache
+        buffer.upsert_memory_size_calc_cache();
+        assert!(buffer.memory_size_calc_cache.get_cached().is_some());
+
+        // get_mut should invalidate the cache when dropped
+        {
+            let _buffer_mut = buffer.get_mut(engine.viewport());
+        }
+
+        // Cache should be invalidated
+        assert!(buffer.memory_size_calc_cache.get_cached().is_none());
+    }
+
+    #[test]
+    fn test_get_mut_no_drop_preserves_cache() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        let engine = EditorEngine::default();
+
+        // Populate the cache
+        buffer.upsert_memory_size_calc_cache();
+        assert!(buffer.get_memory_size_calc_cached().size().is_some());
+
+        // get_mut_no_drop should NOT invalidate the cache
+        {
+            let _buffer_mut_no_drop = buffer.get_mut_no_drop(engine.viewport());
+        }
+
+        // Cache should still be valid
+        assert!(buffer.get_memory_size_calc_cached().size().is_some());
+    }
+
+    #[test]
+    fn test_clear_selection() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        let engine = EditorEngine::default();
+
+        // Add some content and create a selection
+        buffer.init_with(vec!["line 1", "line 2"]);
+
+        // Manually add a selection
+        let buffer_mut = buffer.get_mut(engine.viewport());
+        buffer_mut.inner.sel_list.insert(
+            row(0),
+            (
+                caret_scr_adj(col(0) + row(0)),
+                caret_scr_adj(col(4) + row(0)),
+            )
+                .into(),
+            CaretMovementDirection::Right,
+        );
+        drop(buffer_mut);
+
+        // Verify selection exists
+        assert!(!buffer.get_selection_list().is_empty());
+        assert_eq2!(buffer.get_selection_list().len(), 1);
+
+        // Clear selection
+        buffer.clear_selection();
+
+        // Verify selection is cleared
+        assert!(buffer.get_selection_list().is_empty());
+        assert_eq2!(buffer.get_selection_list().len(), 0);
+    }
+
+    #[test]
+    fn test_history_functions() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        let engine = EditorEngine::default();
+
+        // Initialize with some content
+        buffer.init_with(vec!["initial"]);
+        buffer.add(); // Add initial state to history
+
+        // Make a change using the proper mutation API
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.lines.clear();
+            buffer_mut.inner.lines.push("changed".grapheme_string());
+        }
+        buffer.add(); // Add changed state to history
+
+        // Now history should have 2 versions
+        assert_eq2!(buffer.history.versions.len(), 2.into());
+        assert_eq2!(buffer.get_lines()[0], "changed".grapheme_string());
+
+        // Undo should go back to "initial"
+        buffer.undo();
+        assert_eq2!(buffer.get_lines()[0], "initial".grapheme_string());
+
+        // Redo should go forward to "changed"
+        buffer.redo();
+        assert_eq2!(buffer.get_lines()[0], "changed".grapheme_string());
+
+        // Another undo
+        buffer.undo();
+        assert_eq2!(buffer.get_lines()[0], "initial".grapheme_string());
     }
 }

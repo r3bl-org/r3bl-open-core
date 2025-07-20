@@ -324,7 +324,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
         let new_dialog_buffer = {
             let mut it = DialogBuffer::new_empty();
             it.title = title;
-            it.editor_buffer.set_lines(text.lines());
+            it.editor_buffer.init_with(text.lines());
             it
         };
         state.dialog_buffers.insert(id, new_dialog_buffer);

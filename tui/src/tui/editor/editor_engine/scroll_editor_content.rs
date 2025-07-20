@@ -557,7 +557,7 @@ mod tests {
 
         let long_line = "# Did he take those two new droids with him? They hit accelerator.🙏🏽😀░ We will deal with your Rebel friends. Commence primary ignition.🙏🏽😀░";
         let long_line_gcs = long_line.grapheme_string();
-        buffer.set_lines([long_line]);
+        buffer.init_with([long_line]);
 
         // Setup assertions.
         {

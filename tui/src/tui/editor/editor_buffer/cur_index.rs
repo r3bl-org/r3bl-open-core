@@ -18,8 +18,7 @@
 use std::{fmt::Debug,
           ops::{Deref, DerefMut}};
 
-use super::sizing;
-use crate::{idx, Index, RingBuffer};
+use crate::{Index, Length, idx};
 
 /// The current index in the history buffer.
 ///
@@ -38,8 +37,6 @@ use crate::{idx, Index, RingBuffer};
 ///   versions.
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct CurIndex(pub Option<Index>);
-
-mod construct {}
 
 /// This is a state machine that represents the location of the current index in the
 /// history buffer.
@@ -63,8 +60,8 @@ pub enum CurIndexLoc {
 impl CurIndexLoc {
     /// Determine the location of the current index in the history buffer.
     #[must_use]
-    pub fn locate(cur_index: &CurIndex, versions: &sizing::HistoryBuffer) -> CurIndexLoc {
-        if versions.is_empty() {
+    pub fn locate(cur_index: &CurIndex, versions_len: Length) -> CurIndexLoc {
+        if versions_len.as_usize() == 0 {
             // Is empty.
             return CurIndexLoc::EmptyHistory;
         }
@@ -75,7 +72,7 @@ impl CurIndexLoc {
                 CurIndexLoc::Start
             }
             Some(inner) => {
-                if inner == versions.len().convert_to_index() {
+                if inner == versions_len.convert_to_index() {
                     CurIndexLoc::End(inner)
                 } else {
                     CurIndexLoc::Middle(inner)
@@ -88,8 +85,8 @@ impl CurIndexLoc {
     /// - If it's a `None`, set it to `Some(0)`.
     /// - If the current index is at the end of the history buffer, or the buffer is
     ///   empty, this does nothing.
-    pub fn inc(cur_index: &mut CurIndex, versions: &sizing::HistoryBuffer) {
-        match Self::locate(cur_index, versions) {
+    pub fn inc(cur_index: &mut CurIndex, versions_len: Length) {
+        match Self::locate(cur_index, versions_len) {
             Self::EmptyHistory | Self::End(_) => {
                 // Either:
                 // - EmptyHistory -> Nothing to increment.
@@ -112,8 +109,8 @@ impl CurIndexLoc {
     /// - If it's at `Some(0)` then set it to `None`.
     /// - If the current index is at the start of the history buffer, or the buffer is
     ///   empty, this does nothing.
-    pub fn dec(cur_index: &mut CurIndex, versions: &sizing::HistoryBuffer) {
-        match Self::locate(cur_index, versions) {
+    pub fn dec(cur_index: &mut CurIndex, versions_len: Length) {
+        match Self::locate(cur_index, versions_len) {
             Self::EmptyHistory => {
                 // Is empty. Nothing to decrement.
             }
@@ -182,48 +179,44 @@ mod convert {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::EditorContent;
+    use crate::{EditorContent, len};
 
     #[test]
     fn test_cur_index_locate_empty() {
-        let versions = sizing::HistoryBuffer::new();
+        let versions = Vec::<EditorContent>::new();
         let cur_index = CurIndex::default();
         assert_eq!(
-            CurIndexLoc::locate(&cur_index, &versions),
+            CurIndexLoc::locate(&cur_index, len(versions.len())),
             CurIndexLoc::EmptyHistory
         );
     }
 
     #[test]
     fn test_cur_index_locate_start() {
-        let mut versions = sizing::HistoryBuffer::new();
-        versions.add(EditorContent::default());
+        let versions = vec![EditorContent::default()];
         let cur_index = CurIndex::default();
         assert_eq!(
-            CurIndexLoc::locate(&cur_index, &versions),
+            CurIndexLoc::locate(&cur_index, len(versions.len())),
             CurIndexLoc::Start
         );
     }
 
     #[test]
     fn test_cur_index_locate_end() {
-        let mut versions = sizing::HistoryBuffer::new();
-        versions.add(EditorContent::default());
+        let versions = vec![EditorContent::default()];
         let cur_index = CurIndex::from(0);
         assert_eq!(
-            CurIndexLoc::locate(&cur_index, &versions),
+            CurIndexLoc::locate(&cur_index, len(versions.len())),
             CurIndexLoc::End(cur_index.as_index())
         );
     }
 
     #[test]
     fn test_cur_index_locate_middle() {
-        let mut versions = sizing::HistoryBuffer::new();
-        versions.add(EditorContent::default());
-        versions.add(EditorContent::default());
+        let versions = vec![EditorContent::default(), EditorContent::default()];
         let cur_index = CurIndex::from(0);
         assert_eq!(
-            CurIndexLoc::locate(&cur_index, &versions),
+            CurIndexLoc::locate(&cur_index, len(versions.len())),
             CurIndexLoc::Middle(cur_index.as_index())
         );
     }

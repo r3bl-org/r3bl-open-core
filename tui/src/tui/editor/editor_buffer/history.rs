@@ -19,7 +19,7 @@ use std::fmt::{Debug, Formatter, Result};
 
 use super::{cur_index::{CurIndex, CurIndexLoc},
             EditorContent};
-use crate::{format_as_kilobytes_with_commas, idx, RingBuffer};
+use crate::{format_as_kilobytes_with_commas, idx, Length, RingBuffer};
 
 /// The `EditorHistory` struct manages the undo/redo functionality for the `EditorBuffer`.
 ///
@@ -94,7 +94,7 @@ impl EditorHistory {
         match self.locate_current_index() {
             CurIndexLoc::End(current_index) | CurIndexLoc::Middle(current_index) => {
                 // Delete the history from the current version index + 1 to the end.
-                self.versions.truncate(current_index + idx(1));
+                self.versions.truncate((current_index + idx(1)).as_usize());
             }
             CurIndexLoc::Start => {
                 // Delete the entire history.
@@ -104,7 +104,7 @@ impl EditorHistory {
         }
 
         self.versions.add(content);
-        CurIndexLoc::inc(&mut self.current_index, &self.versions);
+        CurIndexLoc::inc(&mut self.current_index, Length::from(self.versions.len().as_usize()));
     }
 
     /// This is the underlying function that enables undo. It changes the current index to
@@ -120,13 +120,13 @@ impl EditorHistory {
             }
             CurIndexLoc::Start => {
                 // Decrement index.
-                CurIndexLoc::dec(&mut self.current_index, &self.versions);
+                CurIndexLoc::dec(&mut self.current_index, self.versions.len());
                 // At start of history. Nothing to undo.
                 None
             }
             CurIndexLoc::End(_) | CurIndexLoc::Middle(_) => {
                 // Decrement index.
-                CurIndexLoc::dec(&mut self.current_index, &self.versions);
+                CurIndexLoc::dec(&mut self.current_index, self.versions.len());
 
                 // Return item at index.
                 self.versions.get(self.current_index.as_index()).cloned()
@@ -151,7 +151,7 @@ impl EditorHistory {
             }
             CurIndexLoc::Start | CurIndexLoc::Middle(_) => {
                 // Increment index.
-                CurIndexLoc::inc(&mut self.current_index, &self.versions);
+                CurIndexLoc::inc(&mut self.current_index, self.versions.len());
 
                 // Return item at index.
                 self.versions.get(self.current_index.as_index()).cloned()
@@ -162,7 +162,7 @@ impl EditorHistory {
     /// Convenience method that calls [`CurIndexLoc::locate()`].
     #[must_use]
     pub fn locate_current_index(&self) -> CurIndexLoc {
-        CurIndexLoc::locate(&self.current_index, &self.versions)
+        CurIndexLoc::locate(&self.current_index, Length::from(self.versions.len().as_usize()))
     }
 }
 
@@ -293,7 +293,7 @@ mod tests_history_functions {
     use smallvec::smallvec;
 
     use crate::{assert_eq2, cur_index::CurIndex, EditorBuffer, GCStringExt,
-                RingBuffer};
+                Length, RingBuffer};
 
     #[test]
     fn test_push_default() {
@@ -304,7 +304,7 @@ mod tests_history_functions {
         assert_eq2!(buffer.history.current_index, 0.into());
 
         let history_stack = buffer.history.versions;
-        assert_eq2!(history_stack.len(), 1.into());
+        assert_eq2!(history_stack.len(), Length::from(1));
         assert_eq2!(history_stack.get(0).unwrap(), &content);
     }
 
@@ -316,7 +316,7 @@ mod tests_history_functions {
         assert_eq2!(buffer.history.current_index, 0.into());
 
         let history_stack = buffer.history.versions;
-        assert_eq2!(history_stack.len(), 1.into());
+        assert_eq2!(history_stack.len(), Length::from(1));
         assert_eq2!(history_stack.get(0).unwrap().lines.len(), 1);
         assert_eq2!(
             history_stack.get(0).unwrap().lines[0],
@@ -347,19 +347,19 @@ mod tests_history_functions {
         // The current index should be 0.
         assert_eq!(buffer.history.current_index, 0.into());
         // There are two versions ahead of the current index.
-        assert_eq!(buffer.history.versions.len(), 3.into());
+        assert_eq!(buffer.history.versions.len(), Length::from(3));
 
         // Push new content. Should drop future redos (2 versions should be removed).
         buffer.content.lines = smallvec!["xyz".grapheme_string()];
         buffer.add();
         assert_eq!(buffer.history.current_index, 1.into());
-        assert_eq!(buffer.history.versions.len(), 2.into());
+        assert_eq!(buffer.history.versions.len(), Length::from(2));
 
         let history = buffer.history;
         assert_eq2!(history.current_index, 1.into());
 
         let history_stack = history.versions;
-        assert_eq2!(history_stack.len(), 2.into());
+        assert_eq2!(history_stack.len(), Length::from(2));
         for (index, content) in history_stack.iter().enumerate() {
             match index {
                 0 => {
@@ -409,7 +409,7 @@ mod tests_history_functions {
         assert_eq2!(buffer.content, copy_of_editor_content);
 
         let history_stack = buffer.history.versions;
-        assert_eq2!(history_stack.len(), 3.into());
+        assert_eq2!(history_stack.len(), Length::from(3));
 
         for (index, content) in history_stack.iter().enumerate() {
             match index {
@@ -476,7 +476,7 @@ mod tests_history_functions {
         buffer.redo();
 
         let history_stack = buffer.history.versions;
-        assert_eq2!(history_stack.len(), 2.into());
+        assert_eq2!(history_stack.len(), Length::from(2));
 
         for (index, content) in history_stack.iter().enumerate() {
             match index {

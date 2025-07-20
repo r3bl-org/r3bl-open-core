@@ -48,7 +48,7 @@ pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
 /// Inserts multiple lines of text at the caret position in a single atomic operation.
 ///
 /// # Performance Characteristics
-/// 
+///
 /// This function provides significant performance improvements over inserting lines
 /// individually by leveraging the `EditorBufferMutWithDrop` pattern:
 ///
@@ -76,29 +76,29 @@ pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
 /// * `lines` - Vector of string slices to insert, with newlines added between them
 pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: Vec<&str>) {
     let EditorArgsMut { buffer, engine } = args;
-    
+
     if lines.is_empty() {
         return;
     }
-    
+
     // Get a single mutable reference to avoid multiple validations
     let mut buffer_mut = buffer.get_mut(engine.viewport());
-    
+
     // Process all lines in a single transaction
     let line_count = lines.len();
-    
+
     for (index, line_content) in lines.iter().enumerate() {
         let current_caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
         let row_index = current_caret_scr_adj.row_index;
-        
+
         // Insert the line content at current position
         if let Some(existing_line) = buffer_mut.inner.lines.get(row_index.as_usize()) {
             // Insert into existing line
-            let (new_line_content, chunk_display_width) = 
+            let (new_line_content, chunk_display_width) =
                 existing_line.insert_chunk_at_col(current_caret_scr_adj.col_index, line_content);
-                
+
             buffer_mut.inner.lines[row_index.as_usize()] = new_line_content.grapheme_string();
-            
+
             // Update caret position
             let new_line_display_width = buffer_mut.inner.lines[row_index.as_usize()].display_width;
             scroll_editor_content::inc_caret_col_by(
@@ -113,7 +113,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: Vec<&str>) {
             fill_in_missing_lines_up_to_row_impl(&mut buffer_mut, row_index);
             if buffer_mut.inner.lines.get(row_index.as_usize()).is_some() {
                 buffer_mut.inner.lines[row_index.as_usize()] = line_content.grapheme_string();
-                
+
                 // Update caret position
                 let line_display_width = buffer_mut.inner.lines[row_index.as_usize()].display_width;
                 let col_amt = GCString::width(line_content);
@@ -126,7 +126,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: Vec<&str>) {
                 );
             }
         }
-        
+
         // Insert newline between lines (but not after the last line)
         if index < line_count - 1 {
             // Insert newline logic similar to insert_new_line_at_caret
@@ -138,19 +138,19 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: Vec<&str>) {
                         buffer_mut.inner.scr_ofs,
                         buffer_mut.inner.vp.row_height,
                     );
-                    
+
                     scroll_editor_content::reset_caret_col(
                         buffer_mut.inner.caret_raw,
                         buffer_mut.inner.scr_ofs,
                     );
-                    
+
                     buffer_mut.inner.lines.insert(new_row_index.as_usize(), "".grapheme_string());
                 }
                 CaretColLocationInLine::AtStart => {
                     // Insert new line at start
                     let cur_row_index = (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
                     buffer_mut.inner.lines.insert(cur_row_index.as_usize(), "".grapheme_string());
-                    
+
                     scroll_editor_content::inc_caret_row(
                         buffer_mut.inner.caret_raw,
                         buffer_mut.inner.scr_ofs,
@@ -161,19 +161,19 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: Vec<&str>) {
                     // Split line in middle
                     let caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
                     let row_index = caret_scr_adj.row_index.as_usize();
-                    
+
                     if let Some(line) = buffer_mut.inner.lines.get(row_index).cloned() {
                         let col_index = caret_scr_adj.col_index;
                         if let Some((left_string, right_string)) = line.split_at_display_col(col_index) {
                             buffer_mut.inner.lines[row_index] = left_string.grapheme_string();
                             buffer_mut.inner.lines.insert(row_index + 1, right_string.grapheme_string());
-                            
+
                             scroll_editor_content::inc_caret_row(
                                 buffer_mut.inner.caret_raw,
                                 buffer_mut.inner.scr_ofs,
                                 buffer_mut.inner.vp.row_height,
                             );
-                            
+
                             scroll_editor_content::reset_caret_col(
                                 buffer_mut.inner.caret_raw,
                                 buffer_mut.inner.scr_ofs,
@@ -184,7 +184,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: Vec<&str>) {
             }
         }
     }
-    
+
     // The EditorBufferMutWithDrop will perform validation once when it's dropped
 }
 
@@ -192,11 +192,11 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: Vec<&str>) {
 fn locate_col_impl(buffer_mut: &validate_buffer_mut::EditorBufferMutWithDrop<'_>) -> CaretColLocationInLine {
     let caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
     let row_index = caret_scr_adj.row_index;
-    
+
     if let Some(line) = buffer_mut.inner.lines.get(row_index.as_usize()) {
         let col_index = caret_scr_adj.col_index;
         let line_width = line.display_width;
-        
+
         if col_index == col(0) {
             CaretColLocationInLine::AtStart
         } else if col_index >= caret_scroll_index::col_index_for_width(line_width) {
@@ -212,7 +212,7 @@ fn locate_col_impl(buffer_mut: &validate_buffer_mut::EditorBufferMutWithDrop<'_>
 /// Helper function to fill missing lines when we already have `buffer_mut`
 fn fill_in_missing_lines_up_to_row_impl(buffer_mut: &mut validate_buffer_mut::EditorBufferMutWithDrop<'_>, row_index: RowIndex) {
     let max_row_index = row_index.as_usize();
-    
+
     if buffer_mut.inner.lines.get(max_row_index).is_none() {
         for row_idx in 0..=max_row_index {
             if buffer_mut.inner.lines.get(row_idx).is_none() {
@@ -1351,18 +1351,18 @@ mod tests {
     fn test_insert_lines_batch_at_caret_basic() {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
-        
+
         let lines = vec!["line1", "line2", "line3"];
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
             lines,
         );
-        
+
         assert_eq2!(buffer.get_lines().len(), 3);
         assert_eq2!(buffer.get_lines()[0], "line1".grapheme_string());
         assert_eq2!(buffer.get_lines()[1], "line2".grapheme_string());
         assert_eq2!(buffer.get_lines()[2], "line3".grapheme_string());
-        
+
         // Caret should be at the end of the last line
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(2)));
     }
@@ -1371,13 +1371,13 @@ mod tests {
     fn test_insert_lines_batch_with_empty_lines() {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
-        
+
         let lines = vec!["line1", "", "line3"];
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
             lines,
         );
-        
+
         assert_eq2!(buffer.get_lines().len(), 3);
         assert_eq2!(buffer.get_lines()[0], "line1".grapheme_string());
         assert_eq2!(buffer.get_lines()[1], "".grapheme_string());
@@ -1388,30 +1388,30 @@ mod tests {
     fn test_insert_lines_batch_at_middle_of_line() {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
-        
+
         // First insert some initial content
-        buffer.set_lines(vec!["existing content".to_string()]);
-        
+        buffer.init_with(vec!["existing content".to_string()]);
+
         // Move caret to middle of line (after "existing")
         let buffer_mut = buffer.get_mut(engine.viewport());
         buffer_mut.inner.caret_raw.col_index = col(8); // Position after "existing"
         drop(buffer_mut);
-        
+
         // Insert new lines
         let lines = vec!["NEW1", "NEW2"];
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
             lines,
         );
-        
+
         // The batch insert behavior when inserting in the middle of a line:
         // When inserting multiple lines in the middle of a line, it appears the behavior
         // splits the line and inserts all new content together
         assert_eq2!(buffer.get_lines().len(), 2);
-        
+
         // First, let's check what we actually have
         let lines = buffer.get_lines();
-        if lines.len() >= 1 {
+        if !lines.is_empty() {
             assert_eq2!(lines[0], "existingNEW1".grapheme_string());
         }
         if lines.len() >= 2 {
@@ -1424,18 +1424,18 @@ mod tests {
         // Test that batch insert produces same result as individual inserts
         let mut buffer1 = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine1 = mock_real_objects_for_editor::make_editor_engine();
-        
+
         let mut buffer2 = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine2 = mock_real_objects_for_editor::make_editor_engine();
-        
+
         let lines = vec!["first", "second", "third"];
-        
+
         // Method 1: Batch insert
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine1, buffer: &mut buffer1 },
             lines.clone(),
         );
-        
+
         // Method 2: Individual inserts
         engine_internal_api::insert_str_at_caret(
             EditorArgsMut { engine: &mut engine2, buffer: &mut buffer2 },
@@ -1457,7 +1457,7 @@ mod tests {
             EditorArgsMut { engine: &mut engine2, buffer: &mut buffer2 },
             "third",
         );
-        
+
         // Both methods should produce identical results
         assert_eq2!(buffer1.get_lines(), buffer2.get_lines());
         assert_eq2!(buffer1.get_caret_scr_adj(), buffer2.get_caret_scr_adj());
@@ -1467,13 +1467,13 @@ mod tests {
     fn test_insert_lines_batch_empty_vector() {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
-        
+
         let lines: Vec<&str> = vec![];
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
             lines,
         );
-        
+
         // Buffer should remain unchanged with one empty line
         assert_eq2!(buffer.get_lines().len(), 1);
         assert_eq2!(buffer.get_lines()[0], "".grapheme_string());
@@ -1484,20 +1484,20 @@ mod tests {
     fn test_insert_lines_batch_large_content() {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
-        
+
         // Create a large batch of lines
-        let lines: Vec<String> = (0..100).map(|i| format!("Line number {}", i)).collect();
-        let lines_refs: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
-        
+        let lines: Vec<String> = (0..100).map(|i| format!("Line number {i}")).collect();
+        let lines_refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
             lines_refs,
         );
-        
+
         assert_eq2!(buffer.get_lines().len(), 100);
         assert_eq2!(buffer.get_lines()[0], "Line number 0".grapheme_string());
         assert_eq2!(buffer.get_lines()[99], "Line number 99".grapheme_string());
-        
+
         // Caret should be at the end of the last line
         let last_line_len = "Line number 99".len();
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(last_line_len) + row(99)));

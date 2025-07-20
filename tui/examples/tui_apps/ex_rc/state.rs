@@ -68,7 +68,7 @@ pub mod state_mutator {
                 .editor_buffers
                 .entry(FlexBoxId::from(Id::Editor))
                 .and_modify(|it| {
-                    it.set_lines(get_slide_content(state.current_slide_index));
+                    it.init_with(get_slide_content(state.current_slide_index));
                     reset_editor_engine_ast_cache(component_registry_map);
                 });
         }
@@ -84,7 +84,7 @@ pub mod state_mutator {
                 .editor_buffers
                 .entry(FlexBoxId::from(Id::Editor))
                 .and_modify(|it| {
-                    it.set_lines(get_slide_content(state.current_slide_index));
+                    it.init_with(get_slide_content(state.current_slide_index));
                     reset_editor_engine_ast_cache(component_registry_map);
                 });
         }
@@ -102,7 +102,7 @@ pub mod state_mutator {
     pub fn get_initial_state() -> State {
         let editor_buffer = {
             let mut it = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
-            it.set_lines(get_slide_content(0));
+            it.init_with(get_slide_content(0));
 
             it
         };

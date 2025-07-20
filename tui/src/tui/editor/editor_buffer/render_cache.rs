@@ -461,7 +461,7 @@ mod tests {
 
         // Change in content should invalidate the cache.
         let snapshot_1 = {
-            buffer.set_lines(["r3bl"]);
+            buffer.init_with(["r3bl"]);
             RenderCache::render_content(
                 buffer,
                 engine,
@@ -483,7 +483,7 @@ mod tests {
 
         // Change in content should invalidate the cache.
         let snapshot_2 = {
-            buffer.set_lines(["r3bl", "r3bl"]);
+            buffer.init_with(["r3bl", "r3bl"]);
             RenderCache::render_content(
                 buffer,
                 engine,

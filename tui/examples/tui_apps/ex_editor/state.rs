@@ -62,7 +62,7 @@ mod constructor {
                 let mut editor_buffer =
                     EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
                 let iter = get_default_editor_content().into_iter();
-                editor_buffer.set_lines(iter);
+                editor_buffer.init_with(iter);
                 editor_buffer
             };
             let mut it = HashMap::new();

@@ -186,7 +186,7 @@ pub mod constructor {
                 EditorBuffer::new_empty(Some(&file_ext), maybe_file_path);
 
             let content = file_utils::read_file_into_storage(maybe_file_path);
-            editor_buffer.set_lines(content.lines());
+            editor_buffer.init_with(content.lines());
             editor_buffer
         };
 

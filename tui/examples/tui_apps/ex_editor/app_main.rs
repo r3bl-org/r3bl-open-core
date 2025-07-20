@@ -379,7 +379,7 @@ mod modal_dialogs {
                 }
             };
 
-            it.editor_buffer.set_lines(content.lines());
+            it.editor_buffer.init_with(content.lines());
             it
         };
         state.dialog_buffers.insert(id, dialog_buffer);

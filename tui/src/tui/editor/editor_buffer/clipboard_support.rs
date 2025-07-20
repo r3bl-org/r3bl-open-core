@@ -85,7 +85,7 @@ mod tests {
         // Buffer has two lines.
         // Row Index : 0 , Column Length : 12
         // Row Index : 1 , Column Length : 12
-        buffer.set_lines(["abc r3bl xyz", "pqr rust uvw"]);
+        buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
         let mut test_clipboard = TestClipboard::default();
         // Single Line copying
         {
@@ -142,7 +142,7 @@ mod tests {
         // Buffer has two lines.
         // Row Index : 0 , Column Length : 12
         // Row Index : 1 , Column Length : 12
-        buffer.set_lines(["abc r3bl xyz", "pqr rust uvw"]);
+        buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
 
         // Single Line Pasting
         {
@@ -204,7 +204,7 @@ mod tests {
         // Buffer has two lines.
         // Row Index : 0 , Column Length : 12
         // Row Index : 1 , Column Length : 12
-        buffer.set_lines(["abc r3bl xyz", "pqr rust uvw"]);
+        buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
 
         // Single Line cutting
         {
@@ -241,7 +241,7 @@ mod tests {
         {
             let mut test_clipboard = TestClipboard::default();
 
-            buffer.set_lines(["abc r3bl xyz", "pqr rust uvw"]);
+            buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
             // Current Caret Position : [row : 0, col : 0]
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,

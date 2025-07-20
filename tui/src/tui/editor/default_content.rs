@@ -42,8 +42,8 @@
 ///
 /// # Usage
 ///
-/// ```rust
-/// use r3bl_tui::editor::EX_EDITOR_CONTENT;
+/// ```no_run
+/// use r3bl_tui::{EX_EDITOR_CONTENT, parse_markdown};
 ///
 /// // Split content into lines for editor buffer initialization
 /// let lines: Vec<&str> = EX_EDITOR_CONTENT.lines().collect();
