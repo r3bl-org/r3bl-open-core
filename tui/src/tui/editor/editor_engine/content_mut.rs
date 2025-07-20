@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use super::{scroll_editor_content, DeleteSelectionWith};
 use crate::{caret_locate::{locate_col, CaretColLocationInLine},
             caret_scroll_index, col, empty_check_early_return, inline_string,
-            multiline_disabled_check_early_return, row, CaretScrAdj, ColIndex,
+            multiline_disabled_check_early_return, row, validate_buffer_mut, CaretScrAdj, ColIndex,
             EditorArgsMut, EditorBuffer, EditorEngine, GCString, GCStringExt,
             InlineString, InlineVec, RowIndex, SelectionRange, Width};
 
@@ -42,6 +42,183 @@ pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
             caret_scr_adj,
             chunk,
         );
+    }
+}
+
+/// Inserts multiple lines of text at the caret position in a single atomic operation.
+///
+/// # Performance Characteristics
+/// 
+/// This function provides significant performance improvements over inserting lines
+/// individually by leveraging the `EditorBufferMutWithDrop` pattern:
+///
+/// ## How It Works
+/// 1. **Single mutable borrow**: Creates one `EditorBufferMutWithDrop` instance that
+///    holds the buffer lock for the entire operation.
+/// 2. **Batch processing**: All lines and newlines are inserted while holding this
+///    single lock.
+/// 3. **Deferred validation**: The expensive validation operations (caret bounds checking,
+///    scroll position validation, selection range updates) only run once when the
+///    `EditorBufferMutWithDrop` is dropped at the end of the function.
+///
+/// ## Performance Comparison
+/// - **Individual insertions**: O(n) validations for n lines (each insert triggers validation)
+/// - **Batch insertion**: O(1) validation regardless of line count
+///
+/// ## Implementation Details
+/// The function inserts each line at the current caret position, then adds a newline
+/// (except after the last line). The caret is automatically advanced after each
+/// insertion. All of this happens within a single mutable borrow scope, ensuring
+/// atomicity and performance.
+///
+/// # Arguments
+/// * `args` - Contains mutable references to the editor buffer and engine
+/// * `lines` - Vector of string slices to insert, with newlines added between them
+pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: Vec<&str>) {
+    let EditorArgsMut { buffer, engine } = args;
+    
+    if lines.is_empty() {
+        return;
+    }
+    
+    // Get a single mutable reference to avoid multiple validations
+    let mut buffer_mut = buffer.get_mut(engine.viewport());
+    
+    // Process all lines in a single transaction
+    let line_count = lines.len();
+    
+    for (index, line_content) in lines.iter().enumerate() {
+        let current_caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
+        let row_index = current_caret_scr_adj.row_index;
+        
+        // Insert the line content at current position
+        if let Some(existing_line) = buffer_mut.inner.lines.get(row_index.as_usize()) {
+            // Insert into existing line
+            let (new_line_content, chunk_display_width) = 
+                existing_line.insert_chunk_at_col(current_caret_scr_adj.col_index, line_content);
+                
+            buffer_mut.inner.lines[row_index.as_usize()] = new_line_content.grapheme_string();
+            
+            // Update caret position
+            let new_line_display_width = buffer_mut.inner.lines[row_index.as_usize()].display_width;
+            scroll_editor_content::inc_caret_col_by(
+                buffer_mut.inner.caret_raw,
+                buffer_mut.inner.scr_ofs,
+                chunk_display_width,
+                new_line_display_width,
+                buffer_mut.inner.vp.col_width,
+            );
+        } else {
+            // Create new line
+            fill_in_missing_lines_up_to_row_impl(&mut buffer_mut, row_index);
+            if buffer_mut.inner.lines.get(row_index.as_usize()).is_some() {
+                buffer_mut.inner.lines[row_index.as_usize()] = line_content.grapheme_string();
+                
+                // Update caret position
+                let line_display_width = buffer_mut.inner.lines[row_index.as_usize()].display_width;
+                let col_amt = GCString::width(line_content);
+                scroll_editor_content::inc_caret_col_by(
+                    buffer_mut.inner.caret_raw,
+                    buffer_mut.inner.scr_ofs,
+                    col_amt,
+                    line_display_width,
+                    buffer_mut.inner.vp.col_width,
+                );
+            }
+        }
+        
+        // Insert newline between lines (but not after the last line)
+        if index < line_count - 1 {
+            // Insert newline logic similar to insert_new_line_at_caret
+            match locate_col_impl(&buffer_mut) {
+                CaretColLocationInLine::AtEnd => {
+                    // Insert new line at end
+                    let new_row_index = scroll_editor_content::inc_caret_row(
+                        buffer_mut.inner.caret_raw,
+                        buffer_mut.inner.scr_ofs,
+                        buffer_mut.inner.vp.row_height,
+                    );
+                    
+                    scroll_editor_content::reset_caret_col(
+                        buffer_mut.inner.caret_raw,
+                        buffer_mut.inner.scr_ofs,
+                    );
+                    
+                    buffer_mut.inner.lines.insert(new_row_index.as_usize(), "".grapheme_string());
+                }
+                CaretColLocationInLine::AtStart => {
+                    // Insert new line at start
+                    let cur_row_index = (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
+                    buffer_mut.inner.lines.insert(cur_row_index.as_usize(), "".grapheme_string());
+                    
+                    scroll_editor_content::inc_caret_row(
+                        buffer_mut.inner.caret_raw,
+                        buffer_mut.inner.scr_ofs,
+                        buffer_mut.inner.vp.row_height,
+                    );
+                }
+                CaretColLocationInLine::InMiddle => {
+                    // Split line in middle
+                    let caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
+                    let row_index = caret_scr_adj.row_index.as_usize();
+                    
+                    if let Some(line) = buffer_mut.inner.lines.get(row_index).cloned() {
+                        let col_index = caret_scr_adj.col_index;
+                        if let Some((left_string, right_string)) = line.split_at_display_col(col_index) {
+                            buffer_mut.inner.lines[row_index] = left_string.grapheme_string();
+                            buffer_mut.inner.lines.insert(row_index + 1, right_string.grapheme_string());
+                            
+                            scroll_editor_content::inc_caret_row(
+                                buffer_mut.inner.caret_raw,
+                                buffer_mut.inner.scr_ofs,
+                                buffer_mut.inner.vp.row_height,
+                            );
+                            
+                            scroll_editor_content::reset_caret_col(
+                                buffer_mut.inner.caret_raw,
+                                buffer_mut.inner.scr_ofs,
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // The EditorBufferMutWithDrop will perform validation once when it's dropped
+}
+
+/// Helper function to locate caret position when we already have `buffer_mut`
+fn locate_col_impl(buffer_mut: &validate_buffer_mut::EditorBufferMutWithDrop<'_>) -> CaretColLocationInLine {
+    let caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
+    let row_index = caret_scr_adj.row_index;
+    
+    if let Some(line) = buffer_mut.inner.lines.get(row_index.as_usize()) {
+        let col_index = caret_scr_adj.col_index;
+        let line_width = line.display_width;
+        
+        if col_index == col(0) {
+            CaretColLocationInLine::AtStart
+        } else if col_index >= caret_scroll_index::col_index_for_width(line_width) {
+            CaretColLocationInLine::AtEnd
+        } else {
+            CaretColLocationInLine::InMiddle
+        }
+    } else {
+        CaretColLocationInLine::AtEnd
+    }
+}
+
+/// Helper function to fill missing lines when we already have `buffer_mut`
+fn fill_in_missing_lines_up_to_row_impl(buffer_mut: &mut validate_buffer_mut::EditorBufferMutWithDrop<'_>, row_index: RowIndex) {
+    let max_row_index = row_index.as_usize();
+    
+    if buffer_mut.inner.lines.get(max_row_index).is_none() {
+        for row_idx in 0..=max_row_index {
+            if buffer_mut.inner.lines.get(row_idx).is_none() {
+                buffer_mut.inner.lines.push("".grapheme_string());
+            }
+        }
     }
 }
 

@@ -33,12 +33,12 @@ use crate::{DEBUG_TUI_COPY_PASTE, DeleteSelectionWith, EditorArgsMut, EditorEngi
 pub enum EditorEvent {
     InsertChar(char),
     /// Inserts a string directly into the editor buffer.
-    /// 
+    ///
     /// This event is used in two scenarios:
     /// 1. **Bracketed paste**: When text is pasted via terminal (right-click, middle-click, etc.),
     ///    the terminal provides the text directly through [`InputEvent::BracketedPaste`].
     /// 2. **Programmatic insertion**: When code needs to insert multi-line text.
-    /// 
+    ///
     /// For clipboard paste via Ctrl+V, see [`EditorEvent::Paste`].
     InsertString(String),
     InsertNewLine,
@@ -53,7 +53,7 @@ pub enum EditorEvent {
     Select(SelectionAction),
     Copy,
     /// Pastes text from the system clipboard (triggered by Ctrl+V).
-    /// 
+    ///
     /// Unlike [`EditorEvent::InsertString`] which receives text directly,
     /// this event reads from the system clipboard using [`ClipboardService`].
     Paste,
@@ -322,10 +322,10 @@ impl EditorEvent {
     ///
     /// # Text Sources
     /// The `text` parameter can come from various sources:
-    /// - **Bracketed Paste** (Ctrl+Shift+V, right-click, middle-click): Terminal sends raw 
+    /// - **Bracketed Paste** (Ctrl+Shift+V, right-click, middle-click): Terminal sends raw
     ///   text directly via [`InputEvent::BracketedPaste`]
-    /// - **Clipboard Paste** (Ctrl+V): Text read from system clipboard via 
-    ///   [`ClipboardService`] 
+    /// - **Clipboard Paste** (Ctrl+V): Text read from system clipboard via
+    ///   [`ClipboardService`]
     /// - **Programmatic insertion**: Text inserted by code (e.g., autocomplete, snippets)
     ///
     /// # Why Line Ending Normalization is Critical
@@ -334,7 +334,7 @@ impl EditorEvent {
     /// - **Windows**: Uses CRLF (`\r\n`)
     /// - **Unix/Linux/macOS (modern)**: Uses LF (`\n`)
     /// - **Classic Mac OS**: Used CR (`\r`)
-    /// 
+    ///
     /// Additionally, different terminal emulators may preserve or transform these line
     /// endings differently when handling bracketed paste. Some terminals on Windows might
     /// send `\r` instead of `\n`, while others preserve the original format. This function
@@ -345,7 +345,7 @@ impl EditorEvent {
     /// 2. Text is split into lines at each `\n`
     /// 3. Lines are inserted individually with explicit newline characters between them
     ///
-    /// This approach is required because the editor's internal APIs need lines to be 
+    /// This approach is required because the editor's internal APIs need lines to be
     /// inserted separately for proper rendering, cursor positioning, and undo/redo tracking.
     ///
     /// # Arguments
@@ -363,25 +363,15 @@ impl EditorEvent {
         let normalized_text = text
             .replace("\r\n", "\n")  // Windows CRLF -> LF
             .replace('\r', "\n");   // Old Mac CR -> LF
-        
+
         if normalized_text.contains(NEW_LINE_CHAR) {
             let lines: Vec<&str> = normalized_text.split(NEW_LINE_CHAR).collect();
-            let line_count = lines.len();
 
-            for (index, line) in lines.into_iter().enumerate() {
-                engine_internal_api::insert_str_at_caret(
-                    EditorArgsMut { engine, buffer },
-                    line,
-                );
-
-                // Insert newline between lines (but not after the last line)
-                if index < line_count - 1 {
-                    engine_internal_api::insert_new_line_at_caret(EditorArgsMut {
-                        engine,
-                        buffer,
-                    });
-                }
-            }
+            // For multi-line operations, use the batched insert to avoid multiple validations
+            engine_internal_api::insert_str_batch_at_caret(
+                EditorArgsMut { engine, buffer },
+                lines,
+            );
         } else {
             // Single line - insert directly
             engine_internal_api::insert_str_at_caret(
@@ -549,7 +539,7 @@ impl EditorEvent {
 
             EditorEvent::Paste => {
                 Self::delete_text_if_selected(engine, buffer);
-                
+
                 match clipboard.try_to_get_content_from_clipboard() {
                     Ok(clipboard_text) => {
                         Self::insert_text_with_normalized_line_endings(

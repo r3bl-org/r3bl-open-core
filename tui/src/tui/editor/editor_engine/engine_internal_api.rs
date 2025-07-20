@@ -78,6 +78,41 @@ pub fn insert_str_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
     content_mut::insert_chunk_at_caret(args, chunk);
 }
 
+/// Inserts multiple lines of text at the caret position in a single batch operation.
+///
+/// # Performance Benefits
+/// This function is significantly more efficient than inserting lines individually because:
+/// 
+/// 1. **Single validation pass**: The editor buffer validation (scroll position, caret bounds,
+///    selection ranges, etc.) only happens once when the batch operation completes, rather 
+///    than after each line insertion.
+///
+/// 2. **Atomic operation**: All lines are inserted within a single `EditorBufferMutWithDrop`
+///    scope, which defers validation until the scope ends.
+///
+/// 3. **Reduced overhead**: For N lines, this reduces the operation count from 2N-1 
+///    (N line insertions + N-1 newline insertions, each with validation) to just 1 
+///    batch operation with a single validation.
+///
+/// # Example
+/// ```ignore
+/// // Slow approach - validates after each operation:
+/// for line in lines {
+///     insert_str_at_caret(args, line);      // Validates
+///     insert_new_line_at_caret(args);       // Validates again
+/// }
+///
+/// // Fast approach - validates once at the end:
+/// insert_str_batch_at_caret(args, lines);   // Validates once
+/// ```
+///
+/// # Arguments
+/// * `args` - Mutable references to the editor engine and buffer
+/// * `lines` - Vector of string slices to insert, with newlines automatically added between them
+pub fn insert_str_batch_at_caret(args: EditorArgsMut<'_>, lines: Vec<&str>) {
+    content_mut::insert_lines_batch_at_caret(args, lines);
+}
+
 pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
     content_mut::insert_new_line_at_caret(args);
 }
