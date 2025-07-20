@@ -18,12 +18,16 @@ use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
                 edi::{clap_config::CLIArg, launcher, ui_templates},
                 report_analytics, upgrade_check};
-use r3bl_tui::{CommonResult, log::try_initialize_logging_global, set_mimalloc_in_main,
-               throws};
+use r3bl_tui::{CommonResult, log::try_initialize_logging_global, run_with_safe_stack,
+               set_mimalloc_in_main, throws};
+
+fn main() -> CommonResult<()> {
+    run_with_safe_stack!(main_impl())
+}
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
-async fn main() -> CommonResult<()> {
+async fn main_impl() -> CommonResult<()> {
     set_mimalloc_in_main!();
 
     throws!({

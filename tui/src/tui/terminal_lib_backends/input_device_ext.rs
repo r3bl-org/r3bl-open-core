@@ -80,33 +80,36 @@ pub trait InputDeviceExt {
 
 impl InputDeviceExt for InputDevice {
     async fn next_input_event(&mut self) -> Option<InputEvent> {
-        let maybe_result_event = self.next().fuse().await;
-        match maybe_result_event {
-            Ok(event) => {
-                let input_event = InputEvent::try_from(event);
-                match input_event {
-                    Ok(input_event) => Some(input_event),
-                    Err(e) => {
-                        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                            // % is Display, ? is Debug.
-                            tracing::error!(
-                                message = "Error converting input event.",
-                                error = ?e,
-                            );
-                        });
-                        None
+        loop {
+            let maybe_result_event = self.next().fuse().await;
+            match maybe_result_event {
+                Ok(event) => {
+                    let input_event = InputEvent::try_from(event);
+                    match input_event {
+                        Ok(input_event) => return Some(input_event),
+                        Err(()) => {
+                            // Conversion errors are expected in the following cases:
+                            // 1. Key Release/Repeat events (filtered in InputEvent::try_from)
+                            // 2. Paste events (not supported)
+                            //
+                            // These are normal occurrences, not bugs. We simply continue
+                            // reading the next event. The TryFrom implementations handle
+                            // all expected cases by returning Err(()), so we don't need
+                            // to panic or log errors here.
+                            continue;
+                        }
                     }
                 }
-            }
-            Err(e) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    // % is Display, ? is Debug.
-                    tracing::error!(
-                        message = "Error reading input event.",
-                        error = ?e,
-                    );
-                });
-                None
+                Err(e) => {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::error!(
+                            message = "Error reading input event.",
+                            error = ?e,
+                        );
+                    });
+                    return None;
+                }
             }
         }
     }

@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MediaKeyCode,
+use crossterm::event::KeyEventKind;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode,
                        ModifierKeyCode};
 
 use super::{Enhanced, ModifierKeysMask};
@@ -111,14 +112,53 @@ macro_rules! key_press {
 ///
 /// Please use the [`key_press`!] macro instead of directly constructing this struct.
 ///
+/// # Architecture: Why Multiple Struct Layers?
+///
+/// The TUI framework uses a layered architecture to abstract terminal events:
+///
+/// 1. **Crossterm Event** (External dependency)
+///    - Raw events from the terminal (keyboard, mouse, resize, etc.)
+///    - Includes platform-specific quirks (Windows sends Press/Release, Unix only Press)
+///    - API can change between crossterm versions
+///    - Contains unnecessary complexity for most use cases
+///
+/// 2. **`KeyPress`** (Clean keyboard abstraction - this struct)
+///    - Focuses only on keyboard input
+///    - Filters out Release/Repeat events for cross-platform consistency
+///    - Simplifies modifier handling (e.g., Shift+X becomes just 'X')
+///    - Provides a stable API that won't break if crossterm changes
+///    - Makes it easier to support other terminal backends in the future
+///
+/// 3. **`InputEvent`** (Unified input abstraction)
+///    - Combines all input types: Keyboard, Mouse, Resize, Focus
+///    - Provides a single type for the event loop to handle
+///    - Each variant wraps the appropriate cleaned-up type (`KeyPress`, `MouseInput`, etc.)
+///
+/// The conversion flow:
+/// ```text
+/// crossterm::Event::Key(KeyEvent)
+///     → KeyPress (via TryFrom<KeyEvent>)
+///     → InputEvent::Keyboard(KeyPress)
+/// ```
+///
+/// This layered approach provides:
+/// - **Abstraction**: Hide terminal backend implementation details
+/// - **Stability**: Shield app code from crossterm API changes
+/// - **Consistency**: Normalize behavior across platforms
+/// - **Type safety**: Each layer handles specific concerns
+/// - **Extensibility**: Easy to add new backends or event types
+///
 /// # Kitty keyboard protocol support limitations
 ///
-/// 1. `Keypress` explicitly matches on `KeyEventKind::Press` as of crossterm 0.25.0. It
-///    added a new field in `KeyEvent`, called
-///    [`kind`](https://github.com/crossterm-rs/crossterm/blob/10d1dc246dcd708b4902d53a542f732cba32ce99/src/event.rs#L645).
-///    Currently in terminals that do NOT support [kitty keyboard
-///    protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), in other words most
-///    terminals, the `kind` is always `Press`. This is made explicit in the code.
+/// 1. `KeyPress` explicitly matches on `KeyEventKind::Press` as of crossterm 0.25.0.
+///    It filters out Release and Repeat events on all platforms. This is necessary
+///    because:
+///    - Windows terminals send both Press and Release events for each key press
+///    - Most Unix terminals only send Press events
+///    - Terminals with [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)
+///      support may send Press, Release, and Repeat events
+///
+///    By filtering to only Press events, we ensure consistent behavior across all platforms.
 ///
 /// 2. Also, the [`KeyEvent`]'s `state` is totally ignored in the conversion to
 ///    [`KeyPress`]. The [`crossterm::event::KeyEventState`] isn't even considered in the
@@ -256,13 +296,17 @@ pub enum SpecialKey {
 ///  - [Crossterm KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
 pub mod convert_key_event {
     use super::{try_convert_key_modifiers, Enhanced, FunctionKey, Key, KeyCode,
-                KeyEvent, KeyEventKind, KeyModifiers, KeyPress, MediaKey, MediaKeyCode,
+                KeyEvent, KeyModifiers, KeyPress, MediaKey, MediaKeyCode,
                 ModifierKeyCode, ModifierKeyEnum, ModifierKeysMask, SpecialKey,
-                SpecialKeyExt};
+                SpecialKeyExt, KeyEventKind};
 
     impl TryFrom<KeyEvent> for KeyPress {
         type Error = ();
         /// Convert [`KeyEvent`] to [`KeyPress`].
+        ///
+        /// This function filters out non-Press events (Release and Repeat) by returning
+        /// `Err(())`. This is an expected "error" that signals to the caller to skip
+        /// this event and continue processing.
         fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> {
             special_handling_of_character_key_event(key_event)
         }
@@ -271,13 +315,13 @@ pub mod convert_key_event {
     pub(crate) fn special_handling_of_character_key_event(
         key_event: KeyEvent,
     ) -> Result<KeyPress, ()> {
-        fn process_only_key_event_kind_press(
+        fn process_key_event(
             key_event: KeyEvent,
         ) -> Result<KeyPress, ()> {
             if let KeyEvent {
                     code: KeyCode::Char(character),
                     modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT, // Ignore SHIFT.
-                    .. // Ignore `state`. We know `kind`=`KeyEventKind::Press`.
+                    .. // Ignore `state` and `kind`.
                 } = key_event {
                 Ok(generate_character_key(character))
             } else {
@@ -310,14 +354,23 @@ pub mod convert_key_event {
             KeyPress::WithModifiers { mask, key }
         }
 
+        // We only process Press events and filter out Release and Repeat events.
+        // This ensures consistent behavior across different terminals:
+        // - Most Unix terminals only send Press events
+        // - Windows terminals send both Press and Release events for each key press
+        // - Some terminals with Kitty keyboard protocol support may send Repeat events
+        //
+        // When a non-Press event is encountered, we return Err(()) which signals to
+        // InputDeviceExt::next_input_event() to continue reading the next event.
         match key_event {
             KeyEvent {
                 kind: KeyEventKind::Press,
                 .. /* ignore everything else: code, modifiers, etc */
             } => {
-                process_only_key_event_kind_press(key_event)
+                process_key_event(key_event)
             }
             _ => {
+                // Filter out Release and Repeat events
                 Err(())
             }
         }

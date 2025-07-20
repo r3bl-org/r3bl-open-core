@@ -14,12 +14,55 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use crossterm::event::{Event::{self},
+use crossterm::event::{Event as CTEvent,
+                       Event::{self},
                        KeyEvent, MouseEvent};
 
 use super::{KeyPress, MouseInput};
-use crate::{height, width, Size};
-
+use crate::{Size, height, width};
+/// Unified input event abstraction for the TUI framework.
+///
+/// This enum represents all possible input events that can occur in a terminal
+/// application. It provides a clean, unified interface for handling various types of user
+/// input and terminal events, abstracting away the complexities of the underlying
+/// terminal backend.
+///
+/// # Architecture: Event Abstraction Layers
+///
+/// The TUI framework uses a layered architecture to process terminal events:
+///
+/// 1. **Crossterm Event** (Raw terminal events)
+///    - Platform-specific events with all their quirks
+///    - May include Release/Repeat events on some platforms
+///    - API tied to crossterm version
+///
+/// 2. **Specialized Types** (Clean abstractions)
+///    - [`KeyPress`]: Normalized keyboard input
+///    - [`MouseInput`]: Standardized mouse events
+///    - [`Size`]: Terminal dimensions
+///    - [`FocusEvent`]: Window focus changes
+///
+/// 3. **InputEvent** (This enum - unified interface)
+///    - Single type for all input handling
+///    - Each variant wraps a specialized type
+///    - Enables polymorphic event processing
+///
+/// # Conversion Flow
+///
+/// ```text
+/// crossterm::Event (raw events)
+///     ├─→ Event::Key(KeyEvent)     → KeyPress      → InputEvent::Keyboard
+///     ├─→ Event::Mouse(MouseEvent) → MouseInput    → InputEvent::Mouse
+///     ├─→ Event::Resize(w, h)      → Size          → InputEvent::Resize
+///     └─→ Event::Focus*            → FocusEvent    → InputEvent::Focus
+/// ```
+///
+/// This design ensures:
+/// - **Backend independence**: Easy to swap terminal backends
+/// - **Cross-platform consistency**: Same behavior on all platforms
+/// - **Type safety**: Each event type is properly structured
+/// - **Future-proofing**: Internal changes don't affect app code
+///
 /// Please see [`KeyPress`] for more information about handling keyboard input.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -43,9 +86,10 @@ mod helpers {
         #[must_use]
         pub fn matches_keypress(&self, other: KeyPress) -> bool {
             if let InputEvent::Keyboard(this) = self
-                && this == &other {
-                    return true;
-                }
+                && this == &other
+            {
+                return true;
+            }
             false
         }
 
@@ -76,13 +120,17 @@ mod helpers {
 }
 
 pub(crate) mod converters {
-    use super::{height, width, Event, FocusEvent, InputEvent, KeyEvent, MouseEvent};
+    use super::{CTEvent, Event, FocusEvent, InputEvent, KeyEvent, MouseEvent, height,
+                width};
 
     impl TryFrom<Event> for InputEvent {
         type Error = ();
         /// Typecast / convert [Event] to [`InputEvent`].
+        ///
+        /// This function routes crossterm events to their appropriate `InputEvent`
+        /// variants. Each specific converter (`KeyPress`, `MouseInput`, etc.) is
+        /// responsible for its own validation and filtering logic.
         fn try_from(event: Event) -> Result<Self, Self::Error> {
-            use crossterm::event::Event as CTEvent;
             match event {
                 CTEvent::Key(key_event) => Ok(key_event.try_into()?),
                 CTEvent::Mouse(mouse_event) => Ok(mouse_event.into()),

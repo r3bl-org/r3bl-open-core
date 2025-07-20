@@ -42,13 +42,17 @@ use r3bl_tui::{ASTColor, CommonError, CommonResult, DEBUG_TUI_MOD, InputEvent,
                log::try_initialize_logging_global,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
-               rla_println, set_mimalloc_in_main, tui_color};
+               rla_println, run_with_safe_stack, set_mimalloc_in_main, tui_color};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
+fn main() -> CommonResult<()> {
+    run_with_safe_stack!(main_impl())
+}
+
 #[tokio::main]
 #[allow(clippy::needless_return)]
-async fn main() -> CommonResult<()> {
+async fn main_impl() -> CommonResult<()> {
     set_mimalloc_in_main!();
 
     let args: Vec<String> = std::env::args().collect();

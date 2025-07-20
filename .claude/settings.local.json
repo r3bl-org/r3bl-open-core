@@ -34,7 +34,8 @@
       "WebFetch(domain:docs.rs)",
       "Bash(doctoc:*)",
       "Bash(prettier:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "WebFetch(domain:en.wikipedia.org)"
     ],
     "deny": [],
     "defaultMode": "plan",

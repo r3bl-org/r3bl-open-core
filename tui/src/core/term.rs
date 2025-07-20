@@ -107,6 +107,16 @@ pub fn is_fully_interactive_terminal() -> TTYResult {
 /// is active.
 #[must_use]
 pub fn is_fully_uninteractive_terminal() -> TTYResult {
+    // Windows-specific workaround: When running through `cargo run` on Windows,
+    // the terminal detection may incorrectly report all streams as non-terminal
+    // even when running in an interactive terminal. This is because cargo may
+    // redirect the streams. To work around this, we check if we're running
+    // under cargo and if so, assume it's interactive.
+    #[cfg(target_os = "windows")]
+    if std::env::var("CARGO").is_ok() || std::env::var("CARGO_PKG_NAME").is_ok() {
+        return TTYResult::IsInteractive;
+    }
+    
     let stdin_is_tty: bool = std::io::stdin().is_terminal();
     let stdout_is_tty: bool = std::io::stdout().is_terminal();
     let stderr_is_tty: bool = std::io::stderr().is_terminal();

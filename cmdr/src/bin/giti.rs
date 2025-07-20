@@ -24,11 +24,15 @@ use r3bl_cmdr::{AnalyticsAction,
                 giti::{CLIArg, CLICommand, CommandRunDetails, branch, ui_str},
                 report_analytics, upgrade_check};
 use r3bl_tui::{CommandRunResult, CommonResult, log::try_initialize_logging_global, ok,
-               set_mimalloc_in_main};
+               run_with_safe_stack, set_mimalloc_in_main};
+
+fn main() -> CommonResult<()> {
+    run_with_safe_stack!(main_impl())
+}
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
-async fn main() -> CommonResult<()> {
+async fn main_impl() -> CommonResult<()> {
     set_mimalloc_in_main!();
 
     // If no args are passed, the following line will fail, and help will be printed
