@@ -394,6 +394,14 @@
 //!
 //! # Layout, rendering, and event handling
 //!
+//! The current render pipeline flow is:
+//! 1. Input Event → State generation → `App` renders to `RenderOps`
+//! 2. `RenderOps` → Rendered to `OffscreenBuffer` (`PixelChar` grid)
+//! 3. `OffscreenBuffer` → Diffed with previous buffer → Generate diff chunks
+//! 4. Diff chunks → Converted back to `RenderOps` for painting
+//! 5. `RenderOps` execution → Each op routed through crossterm backend
+//! 6. Crossterm → Converts to ANSI escape sequences → Queued to stdout → Flushed
+//!
 //! ```text
 //! ╭───────────────────────────────────────────────╮
 //! │                                               │
@@ -1029,7 +1037,6 @@
 //! Please report any issues to the [issue
 //! tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues). And if you have any
 //! feature requests, feel free to add them there too 👍.
-
 
 // Attach.
 pub mod core;

@@ -5,7 +5,8 @@
       [docs/parser_conformance.md](docs/parser_conformance.md)
 - [x] review the flamegraph.svg and cargo bench results to ensure no regressions
       [docs/task_tui_perf_optimize.md](docs/task_tui_perf_optimize.md)
-- [x] complete the performance work started in [task_tui_perf_optimize](docs/task_tui_perf_optimize.md)
+- [x] complete the performance work started in
+      [task_tui_perf_optimize](docs/task_tui_perf_optimize.md)
 - [x] fix windows bug: https://github.com/r3bl-org/r3bl-open-core/issues/433
 - [x] refactor `md_parser` with consistent naming and module organization
 - [x] add missing tests to `editor` module
@@ -59,10 +60,24 @@
   }
   ```
 
+# rewrite textwrap
+
+- [ ] consider rewriting `textwrap` crate for better unicode performance. this could be used in
+      `edi` as well, for wrap & TOC create/update on save. More info in
+      [task_tui_perf_optimize](docs/task_tui_perf_optimize.md)
+  ```
+  **Text Wrapping Operations** (45M samples - HIGHEST PRIORITY):
+  - `textwrap::wrap_single_line`: 18.8M samples
+  - `find_words_unicode_break_properties`: 25.9M samples
+  - Heavy overhead in log formatting paths
+  - Consider caching wrapped text or optimizing unicode word breaking
+  ```
+
 # edi feature
 
-- [ ] add feature that shows editor status to the terminal window title bar (eg: "edi - [filename] - [status]")
-      using [OSC sequences](https://en.wikipedia.org/wiki/ANSI_escape_code#OSC_(Operating_System_Command)_sequences)
+- [ ] add feature that shows editor status to the terminal window title bar (eg: "edi - [filename] -
+      [status]") using
+      [OSC sequences](<https://en.wikipedia.org/wiki/ANSI_escape_code#OSC_(Operating_System_Command)_sequences>)
 - [ ] add a new feature to edi: `cat file.txt | edi` should open the piped output of the first
       process into edi itself
 
