@@ -20,7 +20,7 @@ use nom::{bytes::complete::tag, combinator::opt, sequence::preceded, IResult,
 
 use crate::{list,
             md_parser::constants::{COLON, COMMA, NEW_LINE, SPACE},
-            take_text_until_eol_or_eoi, InlineVec, List};
+            take_text_in_single_line, InlineVec, List};
 
 /// - Sample parse input: `@tags: tag1, tag2, tag3`, `@tags: tag1, tag2, tag3\n`, or
 ///   `@authors: me, myself, i`, `@authors: me, myself, i\n`.
@@ -31,7 +31,7 @@ pub fn parse_csv_opt_eol<'a>(
 ) -> IResult<&'a str, List<&'a str>> {
     let (remainder, tags_text) = preceded(
         /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
-        /* output */ take_text_until_eol_or_eoi(),
+        /* output */ take_text_in_single_line(),
     )
     .parse(input)?;
 

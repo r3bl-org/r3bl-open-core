@@ -15,12 +15,13 @@
  *   limitations under the License.
  */
 
-use nom::{branch::alt, combinator::map, multi::many0, IResult, Parser};
+use nom::{IResult, Parser, branch::alt, combinator::map, multi::many0};
 
-use crate::{md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
-            parse_block_code, parse_block_heading_opt_eol,
-            parse_block_markdown_text_with_or_without_new_line, parse_block_smart_list,
-            parse_csv_opt_eol, parse_unique_kv_opt_eol, List, MdDocument, MdElement};
+use crate::{List, MdDocument, MdElement,
+            md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
+            parse_block_markdown_text_with_or_without_new_line, parse_csv_opt_eol,
+            parse_fenced_code_block, parse_heading_in_single_line,
+            parse_smart_list_block, parse_unique_kv_opt_eol};
 
 // XMARK: Main Markdown parser entry point
 
@@ -36,10 +37,10 @@ use crate::{md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
 /// 2. Metadata tags. The parsers in [`crate::parse_metadata_kcsv`] file handle this.
 /// 3. Heading (which contains a [`crate::HeadingLevel`] & [`crate::MdLineFragments`]).
 /// 4. Smart ordered & unordered list (which itself contains a [Vec] of
-///    [`crate::MdLineFragments`]. The parsers in [`mod@parse_block_smart_list`] file handle
-///    this.
+///    [`crate::MdLineFragments`]. The parsers in [`mod@parse_smart_list_block`] function
+///    handle this.
 /// 5. Code block (which contains string slices of the language & code). The parsers in
-///    [`mod@parse_block_code`] file handle this.
+///    [`mod@parse_fenced_code_block`] handle this.
 /// 6. line (which contains a [`crate::MdLineFragments`]). The parsers in
 ///    [`mod@crate::fragment`] handle this.
 #[rustfmt::skip]
@@ -51,9 +52,9 @@ pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument<'_>> {
             map(parse_tags_list,                                    MdElement::Tags),
             map(parse_authors_list,                                 MdElement::Authors),
             map(parse_date_value,                                   MdElement::Date),
-            map(parse_block_heading_opt_eol,                        MdElement::Heading),
-            map(parse_block_smart_list,                             MdElement::SmartList),
-            map(parse_block_code,                                   MdElement::CodeBlock),
+            map(parse_heading_in_single_line,                       MdElement::Heading),
+            map(parse_smart_list_block,                             MdElement::SmartList),
+            map(parse_fenced_code_block,                            MdElement::CodeBlock),
             map(parse_block_markdown_text_with_or_without_new_line, MdElement::Text),
         )),
     ).parse(input)?;
@@ -85,7 +86,7 @@ fn parse_date_value(input: &str) -> IResult<&str, &str> {
 /// Tests things that are final output (and not at the IR level).
 #[cfg(test)]
 mod tests_integration_block_smart_lists {
-    use crate::{assert_eq2, parse_markdown, MdDocument, PrettyPrintDebug};
+    use crate::{MdDocument, PrettyPrintDebug, assert_eq2, parse_markdown};
 
     #[test]
     fn test_parse_valid_md_ol_with_indent() {
@@ -269,8 +270,8 @@ mod tests_integration_block_smart_lists {
 #[cfg(test)]
 mod tests_parse_markdown {
     use super::*;
-    use crate::{assert_eq2, list, BulletKind, CodeBlockLine, CodeBlockLineContent,
-                HeadingData, HeadingLevel, HyperlinkData, MdLineFragment};
+    use crate::{BulletKind, CodeBlockLine, CodeBlockLineContent, HeadingData,
+                HeadingLevel, HyperlinkData, MdLineFragment, assert_eq2, list};
 
     #[test]
     fn test_no_line() {
@@ -397,18 +398,42 @@ mod tests_parse_markdown {
             )]),
             MdElement::Text(list![]), /* Empty line */
             MdElement::CodeBlock(list![
-                CodeBlockLine { language: Some("bash"), content: CodeBlockLineContent::StartTag },
-                CodeBlockLine { language: Some("bash"), content: CodeBlockLineContent::Text("pip install foobar") },
-                CodeBlockLine { language: Some("bash"), content: CodeBlockLineContent::EndTag },
+                CodeBlockLine {
+                    language: Some("bash"),
+                    content: CodeBlockLineContent::StartTag
+                },
+                CodeBlockLine {
+                    language: Some("bash"),
+                    content: CodeBlockLineContent::Text("pip install foobar")
+                },
+                CodeBlockLine {
+                    language: Some("bash"),
+                    content: CodeBlockLineContent::EndTag
+                },
             ]),
             MdElement::CodeBlock(list![
-                CodeBlockLine { language: Some("fish"), content: CodeBlockLineContent::StartTag },
-                CodeBlockLine { language: Some("fish"), content: CodeBlockLineContent::EndTag },
+                CodeBlockLine {
+                    language: Some("fish"),
+                    content: CodeBlockLineContent::StartTag
+                },
+                CodeBlockLine {
+                    language: Some("fish"),
+                    content: CodeBlockLineContent::EndTag
+                },
             ]),
             MdElement::CodeBlock(list![
-                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::StartTag },
-                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("") },
-                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::EndTag },
+                CodeBlockLine {
+                    language: Some("python"),
+                    content: CodeBlockLineContent::StartTag
+                },
+                CodeBlockLine {
+                    language: Some("python"),
+                    content: CodeBlockLineContent::Text("")
+                },
+                CodeBlockLine {
+                    language: Some("python"),
+                    content: CodeBlockLineContent::EndTag
+                },
             ]),
             MdElement::Heading(HeadingData {
                 level: HeadingLevel { level: 2 },
@@ -424,13 +449,40 @@ mod tests_parse_markdown {
                 MdLineFragment::Plain(" to install foobar."),
             ]),
             MdElement::CodeBlock(list![
-                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::StartTag },
-                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("import foobar") },
-                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("") },
-                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("foobar.pluralize('word') # returns 'words'") },
-                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("foobar.pluralize('goose') # returns 'geese'") },
-                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::Text("foobar.singularize('phenomena') # returns 'phenomenon'") },
-                CodeBlockLine { language: Some("python"), content: CodeBlockLineContent::EndTag },
+                CodeBlockLine {
+                    language: Some("python"),
+                    content: CodeBlockLineContent::StartTag
+                },
+                CodeBlockLine {
+                    language: Some("python"),
+                    content: CodeBlockLineContent::Text("import foobar")
+                },
+                CodeBlockLine {
+                    language: Some("python"),
+                    content: CodeBlockLineContent::Text("")
+                },
+                CodeBlockLine {
+                    language: Some("python"),
+                    content: CodeBlockLineContent::Text(
+                        "foobar.pluralize('word') # returns 'words'"
+                    )
+                },
+                CodeBlockLine {
+                    language: Some("python"),
+                    content: CodeBlockLineContent::Text(
+                        "foobar.pluralize('goose') # returns 'geese'"
+                    )
+                },
+                CodeBlockLine {
+                    language: Some("python"),
+                    content: CodeBlockLineContent::Text(
+                        "foobar.singularize('phenomena') # returns 'phenomenon'"
+                    )
+                },
+                CodeBlockLine {
+                    language: Some("python"),
+                    content: CodeBlockLineContent::EndTag
+                },
             ]),
             MdElement::SmartList((
                 list![list![

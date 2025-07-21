@@ -198,7 +198,7 @@ pub enum BulletKind {
 
 /// Holds a single list item for a given indent level. This may contain multiple lines
 /// which are stored in the `content_lines` field. Take a look at
-/// [`crate::md_parser::parse_block_smart_list::parse_smart_list`]
+/// [`crate::md_parser::block::parse_smart_list_block::parse_smart_list`]
 /// for more details.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SmartListIR<'a, T> {

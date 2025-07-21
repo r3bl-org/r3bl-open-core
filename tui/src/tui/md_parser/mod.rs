@@ -15,6 +15,53 @@
  *   limitations under the License.
  */
 
+//! # Markdown Parser Module
+//!
+//! This module provides a comprehensive markdown parser with support for standard markdown
+//! features as well as R3BL-specific extensions.
+//!
+//! ## Module Organization
+//!
+//! The parser is organized into logical modules based on the scope and granularity of parsing:
+//!
+//! ```text
+//! tui/src/tui/md_parser/
+//! ├── block/            # Multi-line block parsers
+//! │   ├── parse_fenced_code_block.rs
+//! │   └── parse_smart_list_block.rs
+//! ├── single_line/      # All single-line operations
+//! │   ├── parse_heading_in_single_line.rs
+//! │   ├── parse_markdown_text_in_single_line.rs
+//! │   ├── take_text_in_single_line.rs
+//! │   └── take_text_between_in_single_line.rs
+//! ├── fragment/         # Fragment parsers within a line
+//! └── extended/         # R3BL extensions
+//! ```
+//!
+//! ### Module Descriptions
+//!
+//! - **`block/`**: Contains parsers for multi-line markdown constructs such as fenced code blocks
+//!   and smart lists. These parsers handle content that spans multiple lines.
+//!
+//! - **`single_line/`**: Contains parsers and utilities that operate on single lines of text.
+//!   This includes heading parsing, general markdown text parsing, and utility functions for
+//!   extracting text within line boundaries.
+//!
+//! - **`fragment/`**: Contains parsers for inline markdown elements within a single line,
+//!   such as bold, italic, links, and inline code.
+//!
+//! - **`extended/`**: Contains parsers for R3BL-specific markdown extensions like metadata
+//!   key-value pairs and other custom syntax.
+//!
+//! ## Parser Naming Conventions
+//!
+//! - `parse_<what>_block` - Multi-line block structure parsers
+//! - `parse_<what>_in_single_line` - Single-line parsers
+//! - `take_<what>_in_single_line` - Single-line text extraction utilities
+//! - `parse_<what>` - General parsers (context determines scope)
+//!
+//! ## Main Entry Point
+//!
 //! The main entry point (function) for this Markdown parsing module is
 //! [`parse_markdown()`].
 //! - It takes a string slice.
@@ -34,13 +81,14 @@
 //!    Markdown document model, such as [`MdDocument`], [`MdElement`], [`MdLineFragment`]
 //!    and all the other intermediate types & enums required for parsing.
 //! 3. All the parsers related to parsing metadata specific for [R3BL](https://r3bl.com)
-//!    applications, which are not standard Markdown can be found in
-//!    [`mod@parse_metadata_kv`] and [`mod@parse_metadata_kcsv`].
+//!    applications, which are not standard Markdown can be found in the [`extended`] module,
+//!    specifically [`parse_unique_kv_opt_eol`] and [`parse_csv_opt_eol`].
 //! 4. All the parsers that are related to parsing the main "blocks" of Markdown, such as
-//!    order lists, unordered lists, code blocks, text blocks, heading blocks, can be
-//!    found in [mod@block].
-//! 5. All the parsers that are related to parsing a single line of Markdown text, such as
-//!    links, bold, italic, etc. can be found [mod@fragment].
+//!    ordered lists, unordered lists, code blocks, can be found in the [`block`] module.
+//! 5. All the parsers that parse within a single line of text (headings, general text)
+//!    can be found in the [`single_line`] module.
+//! 6. All the parsers that are related to parsing inline fragments of Markdown text, such as
+//!    links, bold, italic, etc. can be found in the [`fragment`] module.
 //!
 //! ## Video and blog post on this
 //!
@@ -80,9 +128,9 @@
 //!     │    │     parse_tags_list()                                    Tags          │
 //!     │    │     parse_authors_list()                                 Authors       │
 //!     │    │     parse_date_value()                                   Date          │
-//!     │    │     parse_block_heading_opt_eol()                        Heading       │
-//!     │    │     parse_block_smart_list()                             SmartList     │
-//!     │    │     parse_block_code()                                   CodeBlock     │
+//!     │    │     parse_heading_in_single_line()                       Heading       │
+//!     │    │     parse_smart_list_block()                             SmartList     │
+//!     │    │     parse_fenced_code_block()                            CodeBlock     │
 //!     │    │     parse_block_markdown_text_with_or_without_new_line() Text          │
 //!     │    │   )                                                                    │
 //!     ▼    │ }                                                                      │
@@ -168,13 +216,13 @@
 //! 2. And by [`parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()`].
 
 // Attach.
-pub mod atomics;
 pub mod block;
 pub mod convert_to_plain_text;
 pub mod extended;
 pub mod fragment;
 pub mod md_parser_types;
 pub mod parse_markdown;
+pub mod single_line;
 
 // Test modules
 #[cfg(test)]
@@ -185,10 +233,10 @@ pub mod parser_snapshot_tests;
 pub mod parser_bench_tests;
 
 // Re-export.
-pub use atomics::*;
 pub use block::*;
 pub use convert_to_plain_text::*;
 pub use extended::*;
 pub use fragment::*;
 pub use md_parser_types::*;
 pub use parse_markdown::*;
+pub use single_line::*;

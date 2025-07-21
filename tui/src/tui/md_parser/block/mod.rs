@@ -16,13 +16,9 @@
  */
 
 // Attach.
-pub mod parse_block_code;
-pub mod parse_block_heading;
-pub mod parse_block_markdown_text_until_eol_or_eoi;
-pub mod parse_block_smart_list;
+pub mod parse_fenced_code_block;
+pub mod parse_smart_list_block;
 
 // Re-export.
-pub use parse_block_code::*;
-pub use parse_block_heading::*;
-pub use parse_block_markdown_text_until_eol_or_eoi::*;
-pub use parse_block_smart_list::*;
+pub use parse_fenced_code_block::*;
+pub use parse_smart_list_block::*;

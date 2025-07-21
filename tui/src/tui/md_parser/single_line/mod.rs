@@ -16,9 +16,13 @@
  */
 
 // Attach sources.
-pub mod take_text_between;
-pub mod take_text_until_eol_or_eoi;
+pub mod parse_heading_in_single_line;
+pub mod parse_markdown_text_in_single_line;
+pub mod take_text_between_in_single_line;
+pub mod take_text_in_single_line;
 
 // Re-export.
-pub use take_text_between::*;
-pub use take_text_until_eol_or_eoi::*;
+pub use parse_heading_in_single_line::*;
+pub use parse_markdown_text_in_single_line::*;
+pub use take_text_between_in_single_line::*;
+pub use take_text_in_single_line::*;

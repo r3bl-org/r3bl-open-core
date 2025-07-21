@@ -23,7 +23,7 @@ use nom::{branch::alt,
           IResult, Parser};
 use smallvec::smallvec;
 
-use super::parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line;
+use crate::parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line;
 use crate::{list,
             md_parser::constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
                                    ORDERED_LIST_PARTIAL_PREFIX, SPACE, SPACE_CHAR,
@@ -32,7 +32,7 @@ use crate::{list,
             MdLineFragment, SmartListIRStr, SmartListLine, SmartListLineStr};
 
 /// Public API for parsing a smart list block in markdown.
-pub fn parse_block_smart_list(
+pub fn parse_smart_list_block(
     input: &str,
 ) -> IResult<&str, (Lines<'_>, BulletKind, usize)> {
     use parse_block_smart_list_helper::{build_line_fragments, create_bullet_fragment,
@@ -135,7 +135,7 @@ mod tests_parse_block_smart_list {
     #[test]
     fn test_with_unicode() {
         let input = "- straight 😃 foo bar baz\n";
-        let result = parse_block_smart_list(input);
+        let result = parse_smart_list_block(input);
         let remainder = result.as_ref().unwrap().0;
         let output = &result.as_ref().unwrap().1;
         assert_eq2!(remainder, "");
@@ -160,7 +160,7 @@ mod tests_parse_block_smart_list {
         // Valid unchecked.
         {
             let input = ["- [ ] todo"].join("\n");
-            let result = parse_block_smart_list(&input);
+            let result = parse_smart_list_block(&input);
             let remainder = result.as_ref().unwrap().0;
             let (lines, _bullet_kind, _indent) = result.unwrap().1;
             let first_line = lines.first().unwrap();
@@ -181,7 +181,7 @@ mod tests_parse_block_smart_list {
         // Valid checked.
         {
             let input = ["- [x] done"].join("\n");
-            let result = parse_block_smart_list(&input);
+            let result = parse_smart_list_block(&input);
             let remainder = result.as_ref().unwrap().0;
             let (lines, _bullet_kind, _indent) = result.unwrap().1;
             let first_line = lines.first().unwrap();
@@ -202,7 +202,7 @@ mod tests_parse_block_smart_list {
         // Invalid unchecked.
         {
             let input = ["- [ ]todo"].join("\n");
-            let result = parse_block_smart_list(&input);
+            let result = parse_smart_list_block(&input);
             let remainder = result.as_ref().unwrap().0;
             let (lines, _bullet_kind, _indent) = result.unwrap().1;
             let first_line = lines.first().unwrap();
@@ -223,7 +223,7 @@ mod tests_parse_block_smart_list {
         // Invalid checked.
         {
             let input = ["- [x]done"].join("\n");
-            let result = parse_block_smart_list(&input);
+            let result = parse_smart_list_block(&input);
             let remainder = result.as_ref().unwrap().0;
             let (lines, _bullet_kind, _indent) = result.unwrap().1;
             let first_line = lines.first().unwrap();
@@ -255,7 +255,7 @@ mod tests_parse_block_smart_list {
                 MdLineFragment::Plain("bar baz"),
             ],
         };
-        let result = parse_block_smart_list(input);
+        let result = parse_smart_list_block(input);
         let remainder = result.as_ref().unwrap().0;
         let (lines, _bullet_kind, _indent) = result.unwrap().1;
         assert_eq2!(remainder, "");
@@ -275,7 +275,7 @@ mod tests_parse_block_smart_list {
                 MdLineFragment::Plain("bar baz"),
             ],
         };
-        let result = parse_block_smart_list(input);
+        let result = parse_smart_list_block(input);
         let remainder = result.as_ref().unwrap().0;
         let (lines, _bullet_kind, _indent) = result.unwrap().1;
         assert_eq2!(remainder, "- foo1\n  bar1 baz1\n");
@@ -295,7 +295,7 @@ mod tests_parse_block_smart_list {
                 MdLineFragment::Plain("bar baz"),
             ],
         };
-        let result = parse_block_smart_list(input);
+        let result = parse_smart_list_block(input);
         let remainder = result.as_ref().unwrap().0;
         let (lines, _bullet_kind, _indent) = result.unwrap().1;
         assert_eq2!(remainder, "");
@@ -315,7 +315,7 @@ mod tests_parse_block_smart_list {
                 MdLineFragment::Plain("bar baz"),
             ],
         };
-        let result = parse_block_smart_list(input);
+        let result = parse_smart_list_block(input);
         let remainder = result.as_ref().unwrap().0;
         let (lines, _bullet_kind, _indent) = result.unwrap().1;
         assert_eq2!(remainder, "1. foo\n   bar baz\n");

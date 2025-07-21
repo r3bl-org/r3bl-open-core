@@ -35,7 +35,7 @@ use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW
 /// | No language, no line      | `"```\n```\n"`                                             |
 /// | No language, multi line   | `"```\npip install foobar\npip install foobar\n```\n"`     |
 #[rustfmt::skip]
-pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
+pub fn parse_fenced_code_block(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
     let (remainder, (lang, code)) = (
         parse_code_block_lang_including_eol,
         parse_code_block_body_including_code_block_end,
@@ -159,7 +159,7 @@ mod tests {
         let input = "```bash\npip install foobar\n````";
         let lang = "bash";
         let code_lines = vec!["pip install foobar"];
-        let (remainder, code_block_lines) = parse_block_code(input).unwrap();
+        let (remainder, code_block_lines) = parse_fenced_code_block(input).unwrap();
         assert_eq2!(remainder, "`");
         assert_eq2!(
             code_block_lines,
@@ -266,7 +266,7 @@ mod tests {
             let code_lines = vec!["pip install foobar"];
             let input = ["```bash", "pip install foobar", "```", ""].join("\n");
             println!("{:#?}", &input);
-            let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
+            let (remainder, code_block_lines) = parse_fenced_code_block(&input).unwrap();
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -279,7 +279,7 @@ mod tests {
             let lang = "bash";
             let code_lines = vec![];
             let input = ["```bash", "```", ""].join("\n");
-            let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
+            let (remainder, code_block_lines) = parse_fenced_code_block(&input).unwrap();
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -292,7 +292,7 @@ mod tests {
             let lang = "bash";
             let code_lines = vec![""];
             let input = ["```bash", "", "```", ""].join("\n");
-            let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
+            let (remainder, code_block_lines) = parse_fenced_code_block(&input).unwrap();
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -324,7 +324,7 @@ mod tests {
                 "",
             ]
             .join("\n");
-            let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
+            let (remainder, code_block_lines) = parse_fenced_code_block(&input).unwrap();
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -338,7 +338,7 @@ mod tests {
         let lang = None;
         let code_lines = vec!["pip install foobar"];
         let input = ["```", "pip install foobar", "```", ""].join("\n");
-        let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
+        let (remainder, code_block_lines) = parse_fenced_code_block(&input).unwrap();
         assert_eq2!(remainder, "");
         assert_eq2!(
             code_block_lines,

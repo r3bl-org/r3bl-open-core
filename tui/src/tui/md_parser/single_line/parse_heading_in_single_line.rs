@@ -29,7 +29,7 @@ use crate::{md_parser::constants::{self, NEW_LINE},
 /// This matches the heading tag and text until EOL. Outputs a tuple of [`HeadingLevel`] and
 /// [`crate::FragmentsInOneLine`].
 #[rustfmt::skip]
-pub fn parse_block_heading_opt_eol(input: &str) -> IResult<&str, HeadingData<'_>> {
+pub fn parse_heading_in_single_line(input: &str) -> IResult<&str, HeadingData<'_>> {
     let (remainder, output) = parse(input)?;
     Ok((remainder, output))
 }
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn test_parse_header() {
         assert_eq2!(
-            parse_block_heading_opt_eol("# h1\n"),
+            parse_heading_in_single_line("# h1\n"),
             Ok((
                 "",
                 HeadingData {
@@ -121,7 +121,7 @@ mod tests {
             ))
         );
         assert_eq2!(
-            parse_block_heading_opt_eol("## h2\n"),
+            parse_heading_in_single_line("## h2\n"),
             Ok((
                 "",
                 HeadingData {
@@ -131,7 +131,7 @@ mod tests {
             ))
         );
         assert_eq2!(
-            parse_block_heading_opt_eol("###  h3\n"),
+            parse_heading_in_single_line("###  h3\n"),
             Ok((
                 "",
                 HeadingData {
@@ -141,7 +141,7 @@ mod tests {
             ))
         );
         assert_eq2!(
-            parse_block_heading_opt_eol("### h3 *foo* **bar**\n"),
+            parse_heading_in_single_line("### h3 *foo* **bar**\n"),
             Ok((
                 "",
                 HeadingData {
@@ -151,28 +151,28 @@ mod tests {
             ))
         );
         assert_eq2!(
-            parse_block_heading_opt_eol("###h3"),
+            parse_heading_in_single_line("###h3"),
             Err(NomErr::Error(Error {
                 input: "h3",
                 code: ErrorKind::Tag
             }))
         );
         assert_eq2!(
-            parse_block_heading_opt_eol("###"),
+            parse_heading_in_single_line("###"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
         assert_eq2!(
-            parse_block_heading_opt_eol(""),
+            parse_heading_in_single_line(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::TakeWhile1
             }))
         );
         assert_eq2!(
-            parse_block_heading_opt_eol("#"),
+            parse_heading_in_single_line("#"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn test_parse_header_with_new_line() {
         assert_eq2!(
-            parse_block_heading_opt_eol("# \n"),
+            parse_heading_in_single_line("# \n"),
             Err(NomErr::Error(Error {
                 input: "\n",
                 code: ErrorKind::Not
@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn test_parse_header_with_no_new_line() {
         assert_eq2!(
-            parse_block_heading_opt_eol("# test"),
+            parse_heading_in_single_line("# test"),
             Ok((
                 "",
                 HeadingData {

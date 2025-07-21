@@ -18,7 +18,7 @@
 use nom::{bytes::complete::tag, combinator::opt, sequence::preceded, IResult, Parser};
 
 use crate::{md_parser::constants::{COLON, NEW_LINE, SPACE},
-            take_text_until_eol_or_eoi, tiny_inline_string};
+            take_text_in_single_line, tiny_inline_string};
 
 /// - Sample parse input: `@title: Something` or `@date: Else`.
 /// - There may or may not be a newline at the end. If there is, it is consumed.
@@ -30,7 +30,7 @@ pub fn parse_unique_kv_opt_eol<'a>(
 ) -> IResult<&'a str, &'a str> {
     let (remainder, title_text) = preceded(
         /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
-        /* output */ take_text_until_eol_or_eoi(),
+        /* output */ take_text_in_single_line(),
     )
     .parse(input)?;
 

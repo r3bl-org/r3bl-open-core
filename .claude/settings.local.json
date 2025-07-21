@@ -25,6 +25,8 @@
       "Bash(/tmp:*)",
       "Bash(find:*)",
       "Bash(RUST_BACKTRACE=1 cargo test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
       "Bash(git rev-parse:*)",
       "Bash(git ls-tree:*)",
       "Bash(git pull:*)",
@@ -35,7 +37,11 @@
       "Bash(doctoc:*)",
       "Bash(prettier:*)",
       "Bash(awk:*)",
-      "WebFetch(domain:en.wikipedia.org)"
+      "WebFetch(domain:en.wikipedia.org)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(cp:*)"
     ],
     "deny": [],
     "defaultMode": "plan",
