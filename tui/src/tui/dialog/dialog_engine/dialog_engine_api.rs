@@ -17,11 +17,10 @@
 
 use std::{borrow::Cow, fmt::Debug};
 
-use crate::{ch, col, editor_engine::engine_public_api, glyphs::SPACER_GLYPH as SPACER,
+use crate::{ch, col, editor_engine::engine_public_api,
             height, inline_string, pc, render_ops, render_pipeline,
             render_tui_styled_texts_into, row, terminal_lib_backends::KeyPress,
-            throws_with_return, tui_style_attrib, u16, usize, width,
-            BorderGlyphCharacter, ColorWheel, CommonError, CommonErrorType,
+            throws_with_return, tui_style_attrib, u16, usize, width, ColorWheel, CommonError, CommonErrorType,
             CommonResult, DialogBuffer, DialogChoice, DialogEngine, DialogEngineArgs,
             DialogEngineConfigOptions, DialogEngineMode, DialogEvent,
             EditorEngineApplyEventResult, EventPropagation, FlexBox, FlexBoxId,
@@ -231,15 +230,14 @@ pub enum DisplayConstants {
 mod internal_impl {
     use super::{ch, col, engine_public_api, height, inline_string, pc, render_ops,
                 render_tui_styled_texts_into, row, throws_with_return, tui_style_attrib,
-                u16, usize, width, BorderGlyphCharacter, ColorWheel, CommonError,
+                u16, usize, width, ColorWheel, CommonError,
                 CommonErrorType, CommonResult, Cow, Debug, DialogBuffer, DialogChoice,
                 DialogEngine, DialogEngineArgs, DialogEngineConfigOptions,
                 DialogEngineMode, DialogEvent, DisplayConstants, EventPropagation,
                 FlexBox, FlexBoxId, GCStringExt, GlobalData, GradientGenerationPolicy,
                 HasDialogBuffers, InlineString, InputEvent, Key, KeyPress, MinSize,
                 PartialFlexBox, Pos, RenderOp, RenderOps, RenderPipeline, Size,
-                SpecialKey, SurfaceBounds, TextColorizationPolicy, TuiStyle, ZOrder,
-                SPACER};
+                SpecialKey, SurfaceBounds, TextColorizationPolicy, TuiStyle, ZOrder};
 
     /// Return the [`FlexBox`] for the dialog to be rendered in.
     ///
@@ -696,9 +694,10 @@ mod internal_impl {
     }
 
     mod render_border_helper {
-        use super::{ch, col, lolcat_from_style, row, u16, usize, width,
-                    BorderGlyphCharacter, ColorWheel, DialogEngine, DialogEngineMode,
-                    DisplayConstants, Pos, RenderOp, RenderOps, Size, TuiStyle, SPACER};
+        use super::{col, lolcat_from_style, row, u16,
+                    ColorWheel, DialogEngine, DialogEngineMode,
+                    DisplayConstants, Pos, RenderOp, RenderOps, Size, TuiStyle};
+        use crate::border_cache;
 
         /// Renders all border lines for the dialog
         pub fn render_border_lines(
@@ -792,14 +791,7 @@ mod internal_impl {
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
         ) {
-            let text_content = format!(
-                "{}{}{}",
-                BorderGlyphCharacter::TopLeft.as_ref(),
-                BorderGlyphCharacter::Horizontal
-                    .as_ref()
-                    .repeat(usize(*bounds_size.col_width - ch(2))),
-                BorderGlyphCharacter::TopRight.as_ref()
-            );
+            let text_content = border_cache::get_top_border_line(bounds_size.col_width);
 
             lolcat_from_style(ops, color_wheel, maybe_style.as_ref(), &text_content);
         }
@@ -811,13 +803,7 @@ mod internal_impl {
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
         ) {
-            let inner_spaces = create_inner_spaces(bounds_size);
-            let text_content = format!(
-                "{}{}{}",
-                BorderGlyphCharacter::Vertical.as_ref(),
-                inner_spaces,
-                BorderGlyphCharacter::Vertical.as_ref()
-            );
+            let text_content = border_cache::get_middle_border_line(bounds_size.col_width);
 
             lolcat_from_style(ops, color_wheel, maybe_style.as_ref(), &text_content);
         }
@@ -829,26 +815,11 @@ mod internal_impl {
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
         ) {
-            let text_content = format!(
-                "{}{}{}",
-                BorderGlyphCharacter::BottomLeft.as_ref(),
-                BorderGlyphCharacter::Horizontal
-                    .as_ref()
-                    .repeat(usize(*bounds_size.col_width - ch(2))),
-                BorderGlyphCharacter::BottomRight.as_ref(),
-            );
+            let text_content = border_cache::get_bottom_border_line(bounds_size.col_width);
 
             lolcat_from_style(ops, color_wheel, maybe_style.as_ref(), &text_content);
         }
 
-        /// Creates inner spaces for middle border lines
-        fn create_inner_spaces(bounds_size: Size) -> String {
-            let space_count = {
-                let it = bounds_size.col_width - width(2);
-                usize(*it)
-            };
-            SPACER.repeat(space_count)
-        }
 
         /// Renders the separator line for autocomplete mode
         pub fn render_autocomplete_separator(
@@ -879,17 +850,7 @@ mod internal_impl {
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
         ) {
-            let inner_line = BorderGlyphCharacter::Horizontal
-                .as_ref()
-                .repeat(usize(*bounds_size.col_width - ch(2)))
-                .to_string();
-
-            let text_content = format!(
-                "{}{}{}",
-                BorderGlyphCharacter::LineUpDownRight.as_ref(),
-                inner_line,
-                BorderGlyphCharacter::LineUpDownLeft.as_ref()
-            );
+            let text_content = border_cache::get_separator_line(bounds_size.col_width);
 
             let separator_pos = calculate_separator_position();
 

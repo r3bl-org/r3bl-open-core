@@ -213,6 +213,7 @@
     "tempfile",
     "terminusdb",
     "thingbuf",
+    "threadsafe",
     "Tifinagh",
     "tikv",
     "Tilix",

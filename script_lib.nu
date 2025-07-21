@@ -176,6 +176,13 @@ def run_example_with_flamegraph_profiling_perf_fold [options: list<string>] {
         print $'(ansi cyan)Running perf record with enhanced symbol resolution...(ansi reset)'
         sudo perf record -g --call-graph=fp,8 -F 99 -o perf.data -- $binary_path
 
+        # Fix ownership of perf.data files so they can be accessed without sudo
+        let current_user = $env.USER
+        sudo chown $"($current_user):($current_user)" perf.data
+        if (ls perf.data.old | is-empty) == false {
+            sudo chown $"($current_user):($current_user)" perf.data.old
+        }
+
         # Check if inferno-collapse-perf is available
         if (which inferno-collapse-perf | is-empty) {
             print $'(ansi red)Error: inferno-collapse-perf is not installed.(ansi reset)'
@@ -186,17 +193,28 @@ def run_example_with_flamegraph_profiling_perf_fold [options: list<string>] {
 
         # Convert perf data to collapsed stacks format using inferno (comes with cargo flamegraph)
         print $'(ansi cyan)Converting to collapsed stacks format...(ansi reset)'
-        sudo perf script -i perf.data | inferno-collapse-perf | save --force flamegraph.perf-folded
+        sudo perf script -f -i perf.data | inferno-collapse-perf | save --force flamegraph.perf-folded
+
+        # Fix ownership of generated files
+        sudo chown $"($current_user):($current_user)" flamegraph.perf-folded
 
         # Show file size comparison
         let folded_size = (ls flamegraph.perf-folded | get size | first)
         print $'(ansi green)Generated flamegraph.perf-folded: ($folded_size)(ansi reset)'
 
-        # Count total samples
-        let total_samples = (open flamegraph.perf-folded | lines | each { |line|
-            $line | split row ' ' | last | into int
-        } | math sum)
-        print $'(ansi cyan)Total samples: (ansi green)($total_samples)(ansi reset)'
+        # Count total samples (with error handling for empty files)
+        if ($folded_size | into int) > 0 {
+            let total_samples = (open flamegraph.perf-folded | lines | each { |line|
+                if ($line | str trim | is-empty) {
+                    0
+                } else {
+                    $line | split row ' ' | last | into int
+                }
+            } | math sum)
+            print $'(ansi cyan)Total samples: (ansi green)($total_samples)(ansi reset)'
+        } else {
+            print $'(ansi yellow)Warning: flamegraph.perf-folded is empty. Check if perf recording was successful.(ansi reset)'
+        }
 
         # Reset kernel parameters
         print "Resetting kernel parameters..."

@@ -40,7 +40,21 @@ are applied to each crate (`ansi_color`, `core`, `macro`, `redux`, `tui`, `tuify
    crate to crates.io.
 2. Then run `cargo publish` in the crate folder. This will publish the crate to crates.io.
 
-Finally, push the git commit and tag to the remote repo: `git push ; git push --tags`.
+## Make a GitHub release from the tag
+
+Then, push the git commit and tag to the remote repo: `git push ; git push --tags`.
+
+Finally, for the tag, make a GitHub release and use the tag that you just created. This
+only applies to the `tui` and `cmdr` crates. No binary artifacts are uploaded to the
+GitHub release, only the tag and the information from the `CHANGELOG.md` file is used to
+create the release notes. The purpose of the GitHub release is to notify users that a new
+release is available. This is useful if the user has signed up for GitHub notifications
+for the repository. The release notes should include the following:
+- For `cmdr` include instructions that the user can use to install the crate using `cargo
+  install r3bl-cmdr`.
+- For `tui` there are no installation instructions, since it is a library crate. The
+  release is just a way for users to be notified by GitHub that a new release is
+  available.
 
 ## Example of full workflow
 

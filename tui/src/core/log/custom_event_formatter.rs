@@ -149,7 +149,8 @@
 //! - Additional fields form key-value pairs in the body
 //! - Empty field values are skipped to avoid blank lines
 
-use std::fmt::{self};
+use std::{fmt::{self},
+          sync::LazyLock};
 
 use chrono::Local;
 use const_format::formatcp;
@@ -167,9 +168,9 @@ use tracing_subscriber::{fmt::{FormatEvent, FormatFields},
                          registry::LookupSpan};
 
 use crate::{ColWidth, ColorWheel, GCString, InlineString, OrderedMap, RgbValue,
-            TuiColor, ast, fg_color, get_terminal_width, glyphs, inline_string,
-            new_style, pad_fmt, remove_escaped_quotes, truncate_from_right, tui_color,
-            tui_style_attrib, usize, width};
+            TuiColor, TuiStyle, ast, fg_color, get_terminal_width, glyphs,
+            inline_string, new_style, remove_escaped_quotes, truncate_from_right,
+            tui_color, tui_style_attrib, usize, width};
 
 /// This is the "marker" struct that is used to register this formatter with the
 /// `tracing_subscriber` crate. Various traits are implemented for this struct.
@@ -217,6 +218,61 @@ pub mod custom_event_formatter_constants {
     pub const WARN_FG_COLOR: RgbValue =        RgbValue{red:255,green: 140,blue: 0};
     pub const DEBUG_FG_COLOR: RgbValue =       RgbValue{red:255,green: 255,blue: 0};
     pub const TRACE_FG_COLOR: RgbValue =       RgbValue{red:186,green: 85,blue: 211};
+}
+
+/// Cache for colorized log headings.
+mod heading_cache {
+    use std::hash::{Hash, Hasher};
+
+    use super::{LazyLock, TuiStyle};
+
+    /// Key for caching colorized headings.
+    #[derive(Clone, PartialEq, Eq, Debug)]
+    pub struct HeadingCacheKey {
+        text: String,
+        style: Option<TuiStyle>,
+    }
+
+    impl HeadingCacheKey {
+        pub fn new(text: &str, style: Option<TuiStyle>) -> Self {
+            Self {
+                text: text.to_string(),
+                style,
+            }
+        }
+    }
+
+    impl Hash for HeadingCacheKey {
+        fn hash<H: Hasher>(&self, state: &mut H) {
+            self.text.hash(state);
+            // Hash the style if present
+            if let Some(style) = &self.style {
+                // Hash all style attributes
+                style.id.hash(state);
+                style.color_fg.hash(state);
+                style.color_bg.hash(state);
+                style.bold.hash(state);
+                style.italic.hash(state);
+                style.underline.hash(state);
+                style.dim.hash(state);
+                style.reverse.hash(state);
+                style.hidden.hash(state);
+                style.strikethrough.hash(state);
+                style.computed.hash(state);
+                style.padding.hash(state);
+            }
+        }
+    }
+
+    /// Global cache for colorized headings.
+    ///
+    /// This cache stores the results of `lolcat_into_string` operations on
+    /// log headings, which are often repeated (e.g., field names like "message",
+    /// "error", etc.). The cache significantly reduces the overhead of colorization
+    /// in hot paths.
+    pub static COLORIZED_HEADING_CACHE: LazyLock<
+        crate::ThreadSafeLruCache<HeadingCacheKey, String>,
+    > = LazyLock::new(|| crate::new_threadsafe_lru_cache(1000));
 }
 
 mod helpers {
@@ -384,15 +440,34 @@ mod helpers {
             spacer = spacer,
             heading = truncated_heading.as_ref()
         );
-        let line_1_text_fmt =
-            ColorWheel::lolcat_into_string(&line_1_text, Some(new_style!(bold)));
+
+        // Check cache for colorized heading
+        let style = Some(new_style!(bold));
+        let cache_key = super::heading_cache::HeadingCacheKey::new(&line_1_text, style);
+
+        let line_1_text_fmt = if let Ok(mut cache_guard) =
+            super::heading_cache::COLORIZED_HEADING_CACHE.lock()
+        {
+            if let Some(cached) = cache_guard.get(&cache_key) {
+                cached.clone()
+            } else {
+                let colorized =
+                    ColorWheel::lolcat_into_string(&line_1_text, style).to_string();
+                cache_guard.insert(cache_key, colorized.clone());
+                colorized
+            }
+        } else {
+            // Cache lock failed, compute without caching
+            ColorWheel::lolcat_into_string(&line_1_text, style).to_string()
+        };
+
         writeln!(f, "{line_1_text_fmt}")?;
 
         // Write body lines
         if !body.is_empty() {
-            let body = remove_escaped_quotes(body);
-            let body = wrap(&body, text_wrap_options);
-            for body_line in &body {
+            let body_text = remove_escaped_quotes(body);
+            let wrapped_lines = wrap(&body_text, text_wrap_options);
+            for body_line in &wrapped_lines {
                 // Note: padding is disabled (false) to avoid allocations in this hot
                 // path. This function is called on every render in the
                 // main event loop.
@@ -547,15 +622,8 @@ impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
 
 #[must_use]
 pub fn build_spacer(max_display_width: ColWidth) -> InlineString {
-    let mut acc_padding = InlineString::with_capacity(max_display_width.as_usize());
-    pad_fmt!(
-        fmt: acc_padding,
-        pad_str: ENTRY_SEPARATOR_CHAR,
-        repeat_count: max_display_width.as_usize()
-    );
-
-    // Format spacer.
-    fg_color(tui_color!(dark_lizard_green), &acc_padding).to_small_str()
+    let spacer = ENTRY_SEPARATOR_CHAR.repeat(max_display_width.as_usize());
+    fg_color(tui_color!(dark_lizard_green), &spacer).to_small_str()
 }
 
 #[cfg(test)]

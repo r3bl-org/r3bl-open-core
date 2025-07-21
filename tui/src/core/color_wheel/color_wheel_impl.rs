@@ -74,8 +74,8 @@
 //! ## `FxHashMap` for Cache Storage
 //! - The cache uses `rustc_hash::FxHashMap` instead of `std::collections::HashMap`
 //! - `FxHash` provides 3-5x faster lookups compared to the default `SipHash`
-//! - This directly addresses the 38M samples spent in `ColorWheelCache::insert` shown in
-//!   flamegraph
+//! - This directly addresses the 38M samples spent in `COLORIZATION_CACHE` operations
+//!   shown in flamegraph
 //! - `FxHash` is ideal here because:
 //!   - Cache keys are trusted internal data, not user input
 //!   - No cryptographic security requirements
@@ -98,7 +98,7 @@
 //! ## Performance Results
 //!
 //! Flamegraph analysis after `FxHashMap` implementation shows dramatic improvement:
-//! - **Before**: 38M samples in `ColorWheelCache` hash operations
+//! - **Before**: 38M samples in `COLORIZATION_CACHE` hash operations
 //! - **After**: Only 5M samples in `lolcat_into_string` (including all operations)
 //! - **Result**: 87% reduction in ColorWheel-related CPU usage
 //!
@@ -107,7 +107,7 @@
 use std::{collections::hash_map::DefaultHasher,
           fmt::Write,
           hash::{Hash, Hasher},
-          sync::{Arc, LazyLock, Mutex}};
+          sync::LazyLock};
 
 use sizing::VecConfigs;
 use smallvec::SmallVec;
@@ -138,10 +138,8 @@ pub(in crate::core) mod sizing {
 
 /// Cache for `ColorWheel` colorization to avoid repeated computation.
 mod color_wheel_cache {
-    use rustc_hash::{FxBuildHasher, FxHashMap};
-
-    use super::{Arc, DefaultHasher, GradientGenerationPolicy, Hash, Hasher, LazyLock,
-                Mutex, TextColorizationPolicy, TuiStyle, TuiStyledTexts, VecConfigs};
+    use super::{DefaultHasher, GradientGenerationPolicy, Hash, Hasher, LazyLock,
+                TextColorizationPolicy, TuiStyle, TuiStyledTexts, VecConfigs};
 
     const CACHE_SIZE: usize = 1000;
 
@@ -257,66 +255,14 @@ mod color_wheel_cache {
         }
     }
 
-    #[derive(Clone)]
-    struct CacheEntry {
-        value: TuiStyledTexts,
-        access_count: u64,
-    }
-
-    pub(super) struct ColorWheelCache {
-        map: FxHashMap<ColorWheelCacheKey, CacheEntry>,
-        access_counter: u64,
-    }
-
-    impl ColorWheelCache {
-        fn new() -> Self {
-            Self {
-                map: FxHashMap::with_capacity_and_hasher(CACHE_SIZE, FxBuildHasher),
-                access_counter: 0,
-            }
-        }
-
-        pub(super) fn get(&mut self, key: &ColorWheelCacheKey) -> Option<TuiStyledTexts> {
-            self.access_counter += 1;
-            if let Some(entry) = self.map.get_mut(key) {
-                entry.access_count = self.access_counter;
-                Some(entry.value.clone())
-            } else {
-                None
-            }
-        }
-
-        pub(super) fn insert(&mut self, key: ColorWheelCacheKey, value: TuiStyledTexts) {
-            self.access_counter += 1;
-
-            // If cache is at capacity, remove least recently used entry.
-            if self.map.len() >= CACHE_SIZE
-                && let Some((lru_key, _)) = self
-                    .map
-                    .iter()
-                    .min_by_key(|(_, entry)| entry.access_count)
-                    .map(|(k, v)| (k.clone(), v))
-            {
-                self.map.remove(&lru_key);
-            }
-
-            self.map.insert(
-                key,
-                CacheEntry {
-                    value,
-                    access_count: self.access_counter,
-                },
-            );
-        }
-    }
-
     /// Global cache instance for `ColorWheel` operations.
     ///
     /// This cache stores the results of text colorization operations, significantly
     /// improving performance for repetitive tasks like dialog border rendering.
     /// The cache is thread-safe and uses LRU eviction when full.
-    pub(super) static CACHE: LazyLock<Arc<Mutex<ColorWheelCache>>> =
-        LazyLock::new(|| Arc::new(Mutex::new(ColorWheelCache::new())));
+    pub(super) static COLORIZATION_CACHE: LazyLock<
+        crate::ThreadSafeLruCache<ColorWheelCacheKey, TuiStyledTexts>,
+    > = LazyLock::new(|| crate::new_threadsafe_lru_cache(CACHE_SIZE));
 
     /// Check if a gradient policy is cacheable.
     ///
@@ -809,11 +755,11 @@ impl ColorWheel {
             );
 
             // Try to get from cache
-            let cache = color_wheel_cache::CACHE.clone();
+            let cache = color_wheel_cache::COLORIZATION_CACHE.clone();
             if let Ok(mut cache_guard) = cache.lock()
                 && let Some(cached) = cache_guard.get(&key)
             {
-                return cached;
+                return cached.clone();
             }
 
             // Not in cache, compute and store
@@ -1626,7 +1572,6 @@ mod tests_color_wheel_rgb {
 #[cfg(test)]
 mod bench {
     extern crate test;
-    use rustc_hash::FxBuildHasher;
     use test::Bencher;
 
     use super::*;
@@ -1892,14 +1837,14 @@ mod bench {
     /// Benchmark: `FxHashMap` vs `HashMap` - Cache insertion performance
     ///
     /// Real-world flamegraph results:
-    /// - Before `FxHashMap`: 38M samples in `ColorWheelCache` hash operations
+    /// - Before `FxHashMap`: 38M samples in `COLORIZATION_CACHE` hash operations
     /// - After `FxHashMap`: Only 5M samples in `lolcat_into_string` (all operations)
     /// - Performance improvement: 87% reduction in `ColorWheel` CPU usage
     #[bench]
     fn bench_fxhashmap_vs_hashmap_insert(b: &mut Bencher) {
         use std::collections::HashMap;
 
-        use rustc_hash::FxHashMap;
+        use rustc_hash::{FxBuildHasher, FxHashMap};
 
         // Create test keys
         let mut keys = Vec::new();
@@ -1951,14 +1896,14 @@ mod bench {
         test::black_box((fx_time, hash_time));
     }
 
-    /// Benchmark: `FxHashMap` cache lookup performance
+    /// Benchmark: `LruCache` lookup performance
     #[bench]
-    fn bench_fxhashmap_cache_lookup(b: &mut Bencher) {
-        use rustc_hash::FxHashMap;
-
+    fn bench_lru_cache_lookup(b: &mut Bencher) {
         // Pre-populate cache
-        let mut cache: FxHashMap<color_wheel_cache::ColorWheelCacheKey, TuiStyledTexts> =
-            FxHashMap::with_capacity_and_hasher(1000, FxBuildHasher);
+        let mut cache: crate::LruCache<
+            color_wheel_cache::ColorWheelCacheKey,
+            TuiStyledTexts,
+        > = crate::LruCache::new(1000);
 
         let mut keys = Vec::new();
         for i in 0..1000 {
