@@ -167,7 +167,7 @@
 //! 1. Repeatedly in a loop by [`parse_block_markdown_text_with_or_without_new_line()`].
 //! 2. And by [`parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()`].
 
-// External use.
+// Attach.
 pub mod atomics;
 pub mod block;
 pub mod convert_to_plain_text;
@@ -184,7 +184,7 @@ pub mod parser_snapshot_tests;
 #[cfg(test)]
 pub mod parser_bench_tests;
 
-
+// Re-export.
 pub use atomics::*;
 pub use block::*;
 pub use convert_to_plain_text::*;

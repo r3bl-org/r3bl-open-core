@@ -99,6 +99,9 @@ strip-ansi-escapes = "0.2.1"
 # Color gradients.
 colorgrad = "0.7.1"
 
+# Fast non-cryptographic hash for ColorWheel cache
+rustc-hash = "2.1.0"
+
 # Key Value store used to store JSON or bincode encoded values. `kv` is built
 # on top of `sled` which currently does not support access across multiple processes.
 kv = { version = "0.24.0", features = ["json-value", "bincode-value"] }

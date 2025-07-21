@@ -1805,6 +1805,7 @@ dependencies = [
  "pretty_assertions",
  "rand 0.9.1",
  "reqwest",
+ "rustc-hash",
  "serde",
  "serde_json",
  "serial_test",

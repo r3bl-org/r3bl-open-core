@@ -322,16 +322,14 @@ pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{assert_eq2, col, row, width, height, EditorBuffer, EditorEngine, 
-                GCStringExt, EditorEngineConfig};
-    
+    use crate::{assert_eq2, col, height, row, width, EditorBuffer, EditorEngine, EditorEngineConfig, GCStringExt};
+
     #[test]
     fn test_adjust_caret_col_if_not_in_bounds_of_line() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Short", "A longer line", "End"]);
         let engine = EditorEngine::new(EditorEngineConfig::default());
-        
+
         // Test 1: Caret beyond line bounds
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
@@ -339,11 +337,11 @@ mod tests {
             buffer_mut.inner.caret_raw.row_index = row(0);
             buffer_mut.inner.caret_raw.col_index = col(10);
         }
-        
+
         // After drop, caret should be adjusted to end of line
         assert_eq2!(buffer.get_caret_raw().row_index, row(0));
         assert_eq2!(buffer.get_caret_raw().col_index, col(5)); // Adjusted to line length
-        
+
         // Test 2: Caret within bounds should not change
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
@@ -351,18 +349,18 @@ mod tests {
             buffer_mut.inner.caret_raw.row_index = row(1);
             buffer_mut.inner.caret_raw.col_index = col(5);
         }
-        
+
         assert_eq2!(buffer.get_caret_raw().row_index, row(1));
         assert_eq2!(buffer.get_caret_raw().col_index, col(5)); // Should remain unchanged
     }
-    
+
     #[test]
     fn test_adjust_caret_for_unicode_grapheme_clusters() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         // Emoji "😄" has display width of 2 but is a single grapheme cluster
         buffer.init_with(vec!["Hello 😄 World", "Test 🌈 Line"]);
         let engine = EditorEngine::new(EditorEngineConfig::default());
-        
+
         // Test 1: Caret in middle of emoji should be adjusted
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
@@ -371,7 +369,7 @@ mod tests {
             buffer_mut.inner.caret_raw.row_index = row(0);
             buffer_mut.inner.caret_raw.col_index = col(7);
         }
-        
+
         // Caret should be adjusted (but the exact position depends on implementation)
         assert_eq2!(buffer.get_caret_raw().row_index, row(0));
         // The validation may or may not adjust the caret position
@@ -379,19 +377,19 @@ mod tests {
         // Just verify the caret is not in an invalid position (middle of emoji)
         // The caret could stay at col(7) if the implementation doesn't detect it as invalid
         assert!(adjusted_col.as_usize() <= buffer.get_lines()[0].display_width.as_usize());
-        
+
         // Test 2: Caret at a valid position
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(0);
             buffer_mut.inner.caret_raw.col_index = col(6); // Right before emoji
         }
-        
+
         // The validation might adjust the position slightly
         let final_col = buffer.get_caret_raw().col_index;
         assert!(final_col.as_usize() <= buffer.get_lines()[0].display_width.as_usize());
     }
-    
+
     #[test]
     fn test_scroll_offset_validation_with_unicode() {
         let mut buffer = EditorBuffer::new_empty(None, None);
@@ -399,7 +397,7 @@ mod tests {
         buffer.init_with(vec!["Start 😀😁😂 Middle 🎉🎊 End"]);
         let mut engine = EditorEngine::new(EditorEngineConfig::default());
         engine.current_box.style_adjusted_bounds_size = width(20) + height(10);
-        
+
         // Test: Scroll offset in middle of emoji should be adjusted
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
@@ -408,24 +406,24 @@ mod tests {
             buffer_mut.inner.scr_ofs.col_index = col(7);
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
-        
+
         // Scroll offset may or may not be adjusted depending on implementation
         let adjusted_scroll = buffer.get_scr_ofs().col_index;
         // Just verify it's a valid position
         assert!(adjusted_scroll >= col(0));
     }
-    
+
     #[test]
     fn test_memory_cache_invalidation_on_mutation() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Initial content"]);
         let engine = EditorEngine::new(EditorEngineConfig::default());
-        
+
         // Force cache population
         buffer.upsert_memory_size_calc_cache();
         let initial_cache = buffer.memory_size_calc_cache.get_cached().cloned();
         assert!(initial_cache.is_some());
-        
+
         // Mutate content through get_mut
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
@@ -433,44 +431,44 @@ mod tests {
             buffer_mut.inner.lines.push("New content with more text".grapheme_string());
         }
         // Drop should invalidate and recalculate cache
-        
+
         // After mutation, cache is invalidated and recalculated
         // Force recalculation
         buffer.upsert_memory_size_calc_cache();
         let new_cache = buffer.memory_size_calc_cache.get_cached().cloned();
         assert!(new_cache.is_some());
-        
+
         // The memory size should be different due to content change
         let initial_size = initial_cache.unwrap().size().unwrap();
         let new_size = new_cache.unwrap().size().unwrap();
         assert!(new_size > initial_size); // "New content with more text" is longer
     }
-    
+
     #[test]
     fn test_no_drop_variant_preserves_cache() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Content"]);
         let engine = EditorEngine::new(EditorEngineConfig::default());
-        
+
         // Force cache population
         buffer.upsert_memory_size_calc_cache();
         let initial_cache = buffer.memory_size_calc_cache.get_cached().cloned();
         assert!(initial_cache.is_some());
         let initial_size = initial_cache.unwrap().size().unwrap();
-        
+
         // Use get_mut_no_drop - this should NOT invalidate cache
         {
             let buffer_mut = buffer.get_mut_no_drop(engine.viewport());
             // Access but don't modify
             let _ = buffer_mut.inner.lines.len();
         }
-        
+
         // Cache should still be valid with same value
         let cache_after = buffer.memory_size_calc_cache.get_cached().cloned();
         assert!(cache_after.is_some());
         assert_eq2!(cache_after.unwrap().size().unwrap(), initial_size);
     }
-    
+
     #[test]
     fn test_complex_unicode_validation() {
         let mut buffer = EditorBuffer::new_empty(None, None);
@@ -482,7 +480,7 @@ mod tests {
             "Math 𝕳𝖊𝖑𝖑𝖔", // Mathematical alphanumeric symbols
         ]);
         let engine = EditorEngine::new(EditorEngineConfig::default());
-        
+
         // Test family emoji (complex grapheme cluster)
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
@@ -490,53 +488,53 @@ mod tests {
             // Try to place caret in middle of family emoji
             buffer_mut.inner.caret_raw.col_index = col(11); // "Text with " is 10
         }
-        
+
         // Caret position after validation - the exact behavior depends on implementation
         let adjusted_col = buffer.get_caret_raw().col_index;
         // Just verify it's a valid position within the line
         assert!(adjusted_col.as_usize() <= buffer.get_lines()[1].display_width.as_usize());
     }
-    
+
     #[test]
     fn test_validation_with_empty_lines() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["", "Text", ""]);
         let engine = EditorEngine::new(EditorEngineConfig::default());
-        
+
         // Test caret on empty line
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(0);
             buffer_mut.inner.caret_raw.col_index = col(5); // Beyond empty line
         }
-        
+
         // Should be adjusted to col 0 for empty line
         assert_eq2!(buffer.get_caret_raw().col_index, col(0));
-        
+
         // Test last empty line
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(2);
             buffer_mut.inner.caret_raw.col_index = col(10);
         }
-        
+
         assert_eq2!(buffer.get_caret_raw().col_index, col(0));
     }
-    
+
     #[test]
     fn test_validation_with_scroll_offset_and_viewport() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Very long line with many characters that exceeds viewport width"]);
         let mut engine = EditorEngine::new(EditorEngineConfig::default());
         engine.current_box.style_adjusted_bounds_size = width(20) + height(5); // Small viewport
-        
+
         // Test with scroll offset
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.scr_ofs.col_index = col(10);
             buffer_mut.inner.caret_raw.col_index = col(25); // Beyond viewport
         }
-        
+
         // Caret position after validation
         let adjusted_caret = buffer.get_caret_raw();
         // The validation adjusts based on line content, not just viewport

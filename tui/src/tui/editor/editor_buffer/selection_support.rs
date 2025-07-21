@@ -17,12 +17,12 @@
 
 use std::cmp::{self, Ordering};
 
-use super::{selection_list::RowLocationInSelectionList, EditorBuffer};
-use crate::{caret_scr_adj, caret_scroll_index, col, dim, fg_blue, fg_cyan, fg_green,
-            fg_magenta, fg_red, fg_yellow, height, inline_string, row, underline, usize,
-            width, CaretLocationInRange, CaretMovementDirection, CaretScrAdj,
-            ChUnitPrimitiveType, DirectionChangeResult, SelectionRange, Size,
-            DEBUG_TUI_COPY_PASTE};
+use super::{EditorBuffer, selection_list::RowLocationInSelectionList};
+use crate::{CaretLocationInRange, CaretMovementDirection, CaretScrAdj,
+            ChUnitPrimitiveType, DEBUG_TUI_COPY_PASTE, DirectionChangeResult,
+            SelectionRange, Size, caret_scr_adj, caret_scroll_index, col, dim, fg_blue,
+            fg_cyan, fg_green, fg_magenta, fg_red, fg_yellow, height, inline_string,
+            row, underline, usize, width};
 
 /// Usually [`EditorBuffer::get_mut()`] and [`EditorBuffer::get_mut_no_drop()`] need a
 /// viewport to be passed in (from the [`crate::EditorEngine`]). However, in this module,
@@ -311,9 +311,9 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
 
 /// Single-line selection helpers.
 mod single_line_select_helper {
-    use super::{caret_scr_adj, cmp, dim, dummy_viewport, fg_green, inline_string,
-                underline, width, CaretScrAdj, EditorBuffer, SelectionRange,
-                DEBUG_TUI_COPY_PASTE};
+    use super::{CaretScrAdj, DEBUG_TUI_COPY_PASTE, EditorBuffer, SelectionRange,
+                caret_scr_adj, cmp, dim, dummy_viewport, fg_green, inline_string,
+                underline, width};
     use crate::{ColIndex, RowIndex};
 
     /// Create a new range when one doesn't exist.
@@ -474,23 +474,24 @@ mod single_line_select_helper {
         curr: CaretScrAdj,
     ) {
         if let Some(range) = buffer.get_selection_list().get(row_index)
-            && range.start() == range.end() {
-                let buffer_mut = buffer.get_mut(dummy_viewport());
-                buffer_mut.inner.sel_list.remove(
-                    row_index,
-                    SelectionRange::caret_movement_direction_left_right(prev, curr),
-                );
-            }
+            && range.start() == range.end()
+        {
+            let buffer_mut = buffer.get_mut(dummy_viewport());
+            buffer_mut.inner.sel_list.remove(
+                row_index,
+                SelectionRange::caret_movement_direction_left_right(prev, curr),
+            );
+        }
     }
 }
 
 // Multi-line selection helpers.
 mod multiline_select_helper {
-    use super::{caret_scr_adj, caret_scroll_index, cmp, col, dummy_viewport, fg_blue,
-                fg_cyan, fg_green, fg_magenta, fg_red, fg_yellow, inline_string,
-                CaretMovementDirection, CaretScrAdj, DirectionChangeResult,
-                EditorBuffer, RowLocationInSelectionList, SelectionRange,
-                DEBUG_TUI_COPY_PASTE};
+    use super::{CaretMovementDirection, CaretScrAdj, DEBUG_TUI_COPY_PASTE,
+                DirectionChangeResult, EditorBuffer, RowLocationInSelectionList,
+                SelectionRange, caret_scr_adj, caret_scroll_index, cmp, col,
+                dummy_viewport, fg_blue, fg_cyan, fg_green, fg_magenta, fg_red,
+                fg_yellow, inline_string};
 
     // XMARK: Impl multiline selection changes (up/down, and later page up/page down)
 
@@ -654,10 +655,10 @@ mod multiline_select_helper {
 
     /// Module containing helper functions for handling two lines.
     mod handle_two_lines_helper {
-        use super::{fg_blue, fg_cyan, fg_green, fg_magenta, fg_red, fg_yellow,
-                    inline_string, CaretMovementDirection, CaretScrAdj,
+        use super::{CaretMovementDirection, CaretScrAdj, DEBUG_TUI_COPY_PASTE,
                     DirectionChangeResult, EditorBuffer, RowLocationInSelectionList,
-                    SelectionRange, DEBUG_TUI_COPY_PASTE};
+                    SelectionRange, fg_blue, fg_cyan, fg_green, fg_magenta, fg_red,
+                    fg_yellow, inline_string};
 
         /// Validate preconditions for [`super::handle_two_lines`].
         pub fn validate_preconditions(
@@ -734,8 +735,8 @@ mod multiline_select_helper {
 
     /// Module containing functions for starting a selection.
     mod start_selection_helper {
-        use super::{caret_scr_adj, caret_scroll_index, col, dummy_viewport,
-                    CaretMovementDirection, CaretScrAdj, EditorBuffer};
+        use super::{CaretMovementDirection, CaretScrAdj, EditorBuffer, caret_scr_adj,
+                    caret_scroll_index, col, dummy_viewport};
 
         /// No existing selection, up, no direction change:
         /// - Add first row selection range.
@@ -821,8 +822,8 @@ mod multiline_select_helper {
 
     /// Module containing functions for continuing a selection.
     mod continue_selection_helper {
-        use super::{caret_scr_adj, caret_scroll_index, col, dummy_viewport,
-                    CaretMovementDirection, CaretScrAdj, EditorBuffer, SelectionRange};
+        use super::{CaretMovementDirection, CaretScrAdj, EditorBuffer, SelectionRange,
+                    caret_scr_adj, caret_scroll_index, col, dummy_viewport};
 
         /// Pre-existing selection, down, no direction change:
         /// - Add last row selection range.
@@ -966,8 +967,8 @@ mod multiline_select_helper {
 
     /// Module containing functions for handling direction changes in selection.
     mod direction_change_helper {
-        use super::{caret_scr_adj, cmp, dummy_viewport, CaretMovementDirection,
-                    CaretScrAdj, EditorBuffer};
+        use super::{CaretMovementDirection, CaretScrAdj, EditorBuffer, caret_scr_adj,
+                    cmp, dummy_viewport};
 
         /// Pre-existing selection, up, direction change:
         /// - Drop the last row selection range.
@@ -1068,27 +1069,26 @@ mod multiline_select_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, EditorBuffer, ChUnitPrimitiveType, col, row, height, width, 
-                caret_scr_adj, CaretMovementDirection};
-    
+    use crate::assert_eq2;
+
     #[test]
     fn test_dummy_viewport() {
         let viewport = dummy_viewport();
         assert_eq2!(viewport.col_width, width(ChUnitPrimitiveType::MAX));
         assert_eq2!(viewport.row_height, height(ChUnitPrimitiveType::MAX));
     }
-    
+
     #[test]
     fn test_handle_selection_single_line_caret_movement_new_range() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Hello world"]);
-        
+
         // Simulate selection from col 0 to col 5 on row 0
         let prev = caret_scr_adj(col(0) + row(0));
         let curr = caret_scr_adj(col(5) + row(0));
-        
+
         handle_selection_single_line_caret_movement(&mut buffer, prev, curr);
-        
+
         // Verify selection was created
         let selection = buffer.get_selection_list().get(row(0));
         assert!(selection.is_some());
@@ -1096,22 +1096,22 @@ mod tests {
         assert_eq2!(range.start(), col(0));
         assert_eq2!(range.end(), col(5));
     }
-    
+
     #[test]
     fn test_handle_selection_single_line_caret_movement_extend_range() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Hello world example"]);
-        
+
         // First create a selection from col 0 to col 5
         let prev1 = caret_scr_adj(col(0) + row(0));
         let curr1 = caret_scr_adj(col(5) + row(0));
         handle_selection_single_line_caret_movement(&mut buffer, prev1, curr1);
-        
+
         // Then extend it to col 10
         let prev2 = caret_scr_adj(col(5) + row(0));
         let curr2 = caret_scr_adj(col(10) + row(0));
         handle_selection_single_line_caret_movement(&mut buffer, prev2, curr2);
-        
+
         // Verify selection was extended
         let selection = buffer.get_selection_list().get(row(0));
         assert!(selection.is_some());
@@ -1119,26 +1119,30 @@ mod tests {
         assert_eq2!(range.start(), col(0));
         assert_eq2!(range.end(), col(10));
     }
-    
+
     #[test]
     fn test_handle_selection_single_line_shrink_range() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Hello world example"]);
-        
+
         // Create a selection from col 0 to col 10
         let buffer_mut = buffer.get_mut(dummy_viewport());
         buffer_mut.inner.sel_list.insert(
             row(0),
-            (caret_scr_adj(col(0) + row(0)), caret_scr_adj(col(10) + row(0))).into(),
+            (
+                caret_scr_adj(col(0) + row(0)),
+                caret_scr_adj(col(10) + row(0)),
+            )
+                .into(),
             CaretMovementDirection::Right,
         );
         drop(buffer_mut);
-        
+
         // Now shrink it by moving left from col 10 to col 5
         let prev = caret_scr_adj(col(10) + row(0));
         let curr = caret_scr_adj(col(5) + row(0));
         handle_selection_single_line_caret_movement(&mut buffer, prev, curr);
-        
+
         // Verify selection was shrunk
         let selection = buffer.get_selection_list().get(row(0));
         assert!(selection.is_some());
@@ -1146,89 +1150,85 @@ mod tests {
         assert_eq2!(range.start(), col(0));
         assert_eq2!(range.end(), col(5));
     }
-    
+
     #[test]
     fn test_handle_selection_multiline_caret_movement_down() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Line 1", "Line 2", "Line 3"]);
-        
+
         // Simulate selection from row 0 col 2 to row 2 col 3
         let prev = caret_scr_adj(col(2) + row(0));
         let curr = caret_scr_adj(col(3) + row(2));
-        
-        handle_selection_multiline_caret_movement(
-            &mut buffer,
-            prev,
-            curr,
-        );
-        
+
+        handle_selection_multiline_caret_movement(&mut buffer, prev, curr);
+
         // Verify selections were created for all rows
         assert!(buffer.get_selection_list().get(row(0)).is_some());
         assert!(buffer.get_selection_list().get(row(1)).is_some());
         assert!(buffer.get_selection_list().get(row(2)).is_some());
-        
+
         // Check first row selection (from col 2 to end)
         let first_range = buffer.get_selection_list().get(row(0)).unwrap();
         assert_eq2!(first_range.start(), col(2));
         assert_eq2!(first_range.end(), col(6)); // "Line 1" has 6 chars
-        
+
         // Check middle row selection (full line)
         let middle_range = buffer.get_selection_list().get(row(1)).unwrap();
         assert_eq2!(middle_range.start(), col(0));
         assert_eq2!(middle_range.end(), col(6)); // "Line 2" has 6 chars
-        
+
         // Check last row selection (from start to col 3)
         let last_range = buffer.get_selection_list().get(row(2)).unwrap();
         assert_eq2!(last_range.start(), col(0));
         assert_eq2!(last_range.end(), col(3));
     }
-    
+
     #[test]
     fn test_handle_selection_multiline_caret_movement_up() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Line 1", "Line 2", "Line 3"]);
-        
+
         // Simulate selection from row 2 col 3 to row 0 col 2 (upward)
         let prev = caret_scr_adj(col(3) + row(2));
         let curr = caret_scr_adj(col(2) + row(0));
-        
-        handle_selection_multiline_caret_movement(
-            &mut buffer,
-            prev,
-            curr,
-        );
-        
+
+        handle_selection_multiline_caret_movement(&mut buffer, prev, curr);
+
         // Verify selections were created for all rows
         assert!(buffer.get_selection_list().get(row(0)).is_some());
         assert!(buffer.get_selection_list().get(row(1)).is_some());
         assert!(buffer.get_selection_list().get(row(2)).is_some());
     }
-    
+
     #[test]
     fn test_handle_selection_hit_top_or_bottom_same_row() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["First line", "Second line", "Third line"]);
-        
+
         // First create a selection on row 1
         {
             let buffer_mut = buffer.get_mut(dummy_viewport());
             buffer_mut.inner.sel_list.insert(
                 row(1),
-                (caret_scr_adj(col(2) + row(1)), caret_scr_adj(col(8) + row(1))).into(),
+                (
+                    caret_scr_adj(col(2) + row(1)),
+                    caret_scr_adj(col(8) + row(1)),
+                )
+                    .into(),
                 CaretMovementDirection::Right,
             );
         }
-        
+
         // Now test the hit top/bottom function with movement on same row
         let prev = caret_scr_adj(col(8) + row(1));
         let curr = caret_scr_adj(col(5) + row(1)); // Same row, moving left
-        
+
         handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
             &mut buffer,
             prev,
             curr,
         );
-        
+
         // Verify selection was modified
         let selection = buffer.get_selection_list().get(row(1));
         assert!(selection.is_some());
@@ -1237,108 +1237,104 @@ mod tests {
         assert_eq2!(range.start(), col(0));
         assert_eq2!(range.end(), col(8));
     }
-    
+
     #[test]
     fn test_handle_selection_hit_document_boundary_no_op() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["First line", "Second line", "Third line"]);
-        
+
         // Try to call the function with different rows - it should do nothing
         let prev = caret_scr_adj(col(2) + row(1));
         let curr = caret_scr_adj(col(5) + row(2)); // Different row
-        
+
         handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
             &mut buffer,
             prev,
             curr,
         );
-        
+
         // Verify no selections were created since rows are different
         assert!(buffer.get_selection_list().is_empty());
     }
-    
+
     #[test]
     fn test_selection_multiline_with_direction_detection() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Line 1", "Line 2", "Line 3", "Line 4"]);
-        
+
         // Test downward selection
         let prev_down = caret_scr_adj(col(2) + row(0));
         let curr_down = caret_scr_adj(col(4) + row(2));
-        
-        handle_selection_multiline_caret_movement(
-            &mut buffer,
-            prev_down,
-            curr_down,
-        );
-        
+
+        handle_selection_multiline_caret_movement(&mut buffer, prev_down, curr_down);
+
         // Verify selections were created for downward movement
         assert!(buffer.get_selection_list().get(row(0)).is_some());
         assert!(buffer.get_selection_list().get(row(1)).is_some());
         assert!(buffer.get_selection_list().get(row(2)).is_some());
-        
+
         // Clear and test upward selection
         buffer.clear_selection();
-        
+
         let prev_up = caret_scr_adj(col(4) + row(3));
         let curr_up = caret_scr_adj(col(2) + row(1));
-        
-        handle_selection_multiline_caret_movement(
-            &mut buffer,
-            prev_up,
-            curr_up,
-        );
-        
+
+        handle_selection_multiline_caret_movement(&mut buffer, prev_up, curr_up);
+
         // Verify selections were created for upward movement
         assert!(buffer.get_selection_list().get(row(1)).is_some());
         assert!(buffer.get_selection_list().get(row(2)).is_some());
         assert!(buffer.get_selection_list().get(row(3)).is_some());
     }
-    
+
     #[test]
     fn test_clear_selection() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Line 1", "Line 2"]);
-        
+
         // Create some selections
         let prev = caret_scr_adj(col(0) + row(0));
         let curr = caret_scr_adj(col(5) + row(0));
         handle_selection_single_line_caret_movement(&mut buffer, prev, curr);
-        
+
         assert!(!buffer.get_selection_list().is_empty());
-        
+
         // Clear selections
         buffer.clear_selection();
         assert!(buffer.get_selection_list().is_empty());
     }
-    
+
     #[test]
     fn test_empty_buffer_selection() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         // Buffer has one empty line by default
-        
+
         // Try to create selection on the empty line - same position
         let prev = caret_scr_adj(col(0) + row(0));
         let curr = caret_scr_adj(col(0) + row(0));
-        
+
         handle_selection_single_line_caret_movement(&mut buffer, prev, curr);
-        
+
         // A selection should still be created even for same position
         // This is handled by the single_line_select_helper::create_new_range
         assert!(!buffer.get_selection_list().is_empty());
     }
-    
+
     #[test]
     fn test_selection_boundary_cases() {
         let mut buffer = EditorBuffer::new_empty(None, None);
-        buffer.init_with(vec!["Short", "A very long line with many characters", "End"]);
-        
+        buffer.init_with(vec![
+            "Short",
+            "A very long line with many characters",
+            "End",
+        ]);
+
         // Test selection that goes beyond line length
         let prev = caret_scr_adj(col(0) + row(0));
         let curr = caret_scr_adj(col(10) + row(0)); // Beyond "Short" length
-        
+
         handle_selection_single_line_caret_movement(&mut buffer, prev, curr);
-        
+
         // Selection should be created and clamped to actual line length
         let selection = buffer.get_selection_list().get(row(0));
         assert!(selection.is_some());
@@ -1347,28 +1343,32 @@ mod tests {
         // The actual end will be determined by the helper function
         assert!(range.end() >= col(5)); // At least the length of "Short"
     }
-    
+
     #[test]
     fn test_selection_overlap_behavior() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Test line with multiple words"]);
-        
+
         // Create first selection from col 5 to 10
         {
             let buffer_mut = buffer.get_mut(dummy_viewport());
             buffer_mut.inner.sel_list.insert(
                 row(0),
-                (caret_scr_adj(col(5) + row(0)), caret_scr_adj(col(10) + row(0))).into(),
+                (
+                    caret_scr_adj(col(5) + row(0)),
+                    caret_scr_adj(col(10) + row(0)),
+                )
+                    .into(),
                 CaretMovementDirection::Right,
             );
         }
-        
+
         // Now create overlapping selection from col 8 to 15
         let prev = caret_scr_adj(col(8) + row(0));
         let curr = caret_scr_adj(col(15) + row(0));
-        
+
         handle_selection_single_line_caret_movement(&mut buffer, prev, curr);
-        
+
         // The selection should be updated/merged
         let selection = buffer.get_selection_list().get(row(0));
         assert!(selection.is_some());

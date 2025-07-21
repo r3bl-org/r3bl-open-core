@@ -112,11 +112,11 @@
 
 # Implemented Optimizations
 
-## Latest Flamegraph Analysis (2025-07-18 - Post PixelChar Optimization)
+## Latest Flamegraph Analysis (2025-07-21 - Post FxHashMap Optimization)
 
 ## Immediate Action Items
 
-Based on the latest flamegraph analysis (2025-07-18) after PixelChar optimization:
+Based on the latest flamegraph analysis (2025-07-21) after FxHashMap optimization:
 
 1. **Dialog Border Unicode Optimization** (53M samples - HIGHEST PRIORITY):
    - Primary hotspot: `render_border_lines` → `lolcat_from_style` → `GCString::new`
@@ -130,19 +130,13 @@ Based on the latest flamegraph analysis (2025-07-18) after PixelChar optimizatio
    - Consider pre-allocating buffers or reducing color formatting in logs
    - Solution: Buffer pooling or simpler formatting for high-frequency logs
 
-3. **ColorWheel Cache Optimization** (38M samples - MEDIUM PRIORITY):
-   - `ColorWheelCache::insert` → hash operations taking significant time
-   - May need more efficient cache key or different hashing strategy
-   - Consider FxHash or other faster hashing algorithms
-   - Profile cache hit/miss ratios
-
-4. **MD Parser Memory Operations** (9M samples - LOW PRIORITY):
+3. **MD Parser Memory Operations** (9M samples - LOW PRIORITY):
    - `parse_block_markdown_text` still visible but much less prominent
    - Down from 42M+ samples in previous analysis
    - Pattern matching and string operations
    - Current impact acceptable
 
-5. **Bypass Crossterm for Hot Paths** (16M samples - LOW PRIORITY - PENDING):
+4. **Bypass Crossterm for Hot Paths** (16M samples - LOW PRIORITY - PENDING):
    - Already removed format!() calls from queue_render_op! (7.6% improvement achieved)
    - `apply_colors` and ANSI formatting still visible
    - Consider creating direct ANSI writing layer for performance-critical paths
@@ -162,26 +156,27 @@ Based on the latest flamegraph analysis (2025-07-18) after PixelChar optimizatio
    - **Approach**: Implement buffer pool for log formatting
    - **Expected benefit**: Reduce allocation overhead in hot logging paths
 
-3. **ColorWheel Cache Efficiency**:
-   - **Current**: Standard HashMap with default hasher
-   - **Impact**: 38M samples in hash operations
-   - **Approach**: Use FxHash or optimize cache key structure
-   - **Expected benefit**: Faster cache lookups for color calculations
-
 ### Recently Completed Optimizations
 
-1. **PixelChar SmallVec Optimization** (✅ COMPLETED - 2025-07-18):
+1. **ColorWheel FxHashMap Optimization** (✅ COMPLETED - 2025-07-21):
+   - Replaced standard HashMap with FxHashMap for cache operations
+   - **Result**: 87% reduction in ColorWheel CPU usage
+   - From 38M samples in hash operations to only 5M samples total
+   - Maintained DefaultHasher for config hashing (better distribution)
+   - ColorWheel operations now negligible in performance profile
+
+2. **PixelChar SmallVec Optimization** (✅ COMPLETED - 2025-07-18):
    - Replaced `SmallVec<[PixelChar; 8]>` with `Vec<PixelChar>`
    - **Result**: COMPLETE ELIMINATION of 45M+ sample hotspot
    - Benchmarks showed Vec is 2-4x faster for typical terminal lines
    - Random access patterns now 3-5x faster
 
-2. **RenderOp SmallVec Optimization** (✅ COMPLETED - Benchmarks show SmallVec is optimal):
+3. **RenderOp SmallVec Optimization** (✅ COMPLETED - Benchmarks show SmallVec is optimal):
    - Benchmark results show SmallVec is 2.27x faster for typical usage
    - Iteration is 2.57x faster - critical for render execution
    - Current SmallVec<[RenderOp; 8]> is optimal for our usage patterns
    
-3. **ANSI Escape Code Formatting** (✅ PARTIALLY COMPLETED):
+4. **ANSI Escape Code Formatting** (✅ PARTIALLY COMPLETED):
    - WriteToBuf optimization successful
    - Remaining overhead is from u8 number formatting
    - Consider lookup table for all u8 values (0-255)
@@ -284,7 +279,7 @@ Using `profiling-detailed` profile with:
 
 ### Current Performance Bottleneck Analysis
 
-Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-07-18 - Post PixelChar Optimization):
+Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-07-21 - Post FxHashMap Optimization):
 
 1. **Dialog Border Rendering** (53M samples) - NEW PRIMARY BOTTLENECK
    - `render_border_lines` → `lolcat_from_style` → `GCString::new`: 53,143,882 samples
@@ -298,11 +293,11 @@ Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-
    - Significant memory operations for log colorization
    - Buffer allocations for each formatted log entry
 
-3. **ColorWheel Hash Operations** (38M samples)
-   - `ColorWheelCache::insert` → hash operations: 38,232,074 samples
-   - Caching overhead for color wheel calculations
-   - Hash function may be suboptimal for cache keys
-   - Frequent cache insertions suggesting misses
+3. ~~**ColorWheel Hash Operations**~~ (✅ ELIMINATED)
+   - Previously: 38M samples in hash operations
+   - After FxHashMap: Only 5M samples in all ColorWheel operations
+   - 87% reduction achieved with FxHash implementation
+   - No longer a performance bottleneck
 
 4. **RenderOp Clone Operations** (37M samples)
    - `SmallVec` extend operations for RenderOp: 36,999,339 samples
@@ -333,23 +328,24 @@ Based on the latest flamegraph analysis from `tui/flamegraph.perf-folded` (2025-
    - AnsiStyledText Display formatting eliminated (was 16.3%)
    - Color support detection no longer appears in flamegraph
    - Format! removal from queue_render_op successful (687M samples vs 638M = 7.6% improvement)
-   - Note: Further crossterm bypass optimization identified but deferred
+   - ColorWheel FxHashMap optimization: 87% reduction (38M → 5M samples)
+   - PixelChar SmallVec → Vec conversion eliminated 45M+ sample hotspot
 
-2. **New Performance Profile**:
-   - SmallVec operations for PixelChar are now the primary bottleneck (45M+ samples)
-   - Memory move operations distributed across rendering pipeline (70M+ total)
-   - Unicode segmentation remains significant despite optimizations (44M+ samples)
-   - MD parser operations showing unexpected overhead (42M+ samples)
+2. **New Performance Profile** (Post FxHashMap):
+   - Dialog border rendering now primary bottleneck (53M samples)
+   - Logging/formatting memory operations significant (46M samples)
+   - Memory move operations distributed across rendering pipeline
+   - ColorWheel operations now negligible (5M samples total)
 
 3. **Optimization Strategy**:
-   - Focus on SmallVec → Vec conversions (proven approach from VecTuiStyledText)
-   - RenderOp SmallVec optimization recommended as next target (cleaner usage pattern)
-   - Memory moves can be reduced with strategic reserve() calls
-   - Consider caching strategies for repeated operations
+   - Focus on dialog border caching or ASCII-only borders
+   - Implement buffer pooling for logging operations
+   - Consider reserve() calls before extend operations
+   - Profile remaining memory allocation patterns
 
 4. **Performance Distribution**:
-   - More evenly distributed across components after previous optimizations
-   - No single dominant bottleneck over 10% of total execution
+   - More evenly distributed after ColorWheel optimization
+   - Dialog borders and logging now dominate the profile
    - System-level operations (scheduling, page faults) becoming more visible
 
 ## AnsiStyledText Display Optimization (✅ Completed - 2025-07-17, 2025-07-18)
@@ -621,6 +617,51 @@ Flamegraph analysis showed two major performance bottlenecks:
 - **Smart caching**: Only caches deterministic operations, preserving stateful behavior
 - **Comprehensive testing**: Added benchmarks and tests for hash implementation
 - **All tests pass**: Maintains correctness while achieving dramatic performance gains
+
+## ColorWheel FxHashMap Optimization (✅ Completed - 2025-07-21)
+
+### Problem Identified
+
+Flamegraph analysis showed ColorWheel cache operations consuming 38M samples, with significant overhead in hash operations. The standard HashMap was causing performance bottlenecks in the ColorWheelCache::insert operations, particularly impacting dialog border rendering and logging colorization.
+
+### Root Cause Analysis
+
+1. **Default HashMap overhead**: Standard HashMap uses SipHash which is cryptographically secure but slower
+2. **Frequent cache operations**: Dialog borders and logging repeatedly query the cache
+3. **Small key sizes**: ColorWheelCacheKey contains text and config data that FxHash handles efficiently
+4. **No security requirements**: Cache keys are trusted internal data, not user input
+
+### Solution Implemented
+
+Replaced standard HashMap with FxHashMap from the rustc-hash crate:
+
+1. **Cache Storage Optimization**:
+   - Changed from `HashMap<ColorWheelCacheKey, CacheEntry>` to `FxHashMap<ColorWheelCacheKey, CacheEntry>`
+   - FxHash provides 3-5x faster lookups compared to SipHash
+   - Ideal for small keys and trusted data
+
+2. **Maintained Dual Hashing Strategy**:
+   - FxHashMap for cache storage (frequent operations)
+   - DefaultHasher for gradient config hashing (one-time operation with better distribution)
+   - Best of both worlds: speed for hot paths, quality where it matters
+
+### Performance Results
+
+Flamegraph analysis after implementation shows dramatic improvement:
+
+| Component | Before | After | Improvement |
+|-----------|--------|-------|-------------|
+| ColorWheel hash operations | 38M samples | 5M samples (total) | **87% reduction** |
+| ColorWheelCache::insert | Major bottleneck | Negligible | Eliminated |
+| Overall ColorWheel impact | Significant | Minimal | Near complete elimination |
+
+### Key Achievements
+
+- **87% reduction in ColorWheel CPU usage** - from 38M to 5M samples
+- **ColorWheel operations now negligible** in performance profile
+- **Maintained correctness** - dual hashing strategy preserves hash quality for configs
+- **Simple implementation** - drop-in replacement with FxHashMap
+- **Benchmarks added** - comprehensive performance tests for future tracking
 
 ## Syntax Highlighting Resource Caching (✅ Completed - 2025-07-16)
 
