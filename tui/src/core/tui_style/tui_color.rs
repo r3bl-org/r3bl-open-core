@@ -388,7 +388,7 @@ mod rgb_value_impl_block {
 
         /// # Errors
         ///
-        /// Returns an error if the TuiColor is an index-based color that cannot be converted to RGB.
+        /// Returns an error if the `TuiColor` is an index-based color that cannot be converted to RGB.
         pub fn try_from_tui_color(color: TuiColor) -> CommonResult<Self> {
             match color {
                 // RGB values.

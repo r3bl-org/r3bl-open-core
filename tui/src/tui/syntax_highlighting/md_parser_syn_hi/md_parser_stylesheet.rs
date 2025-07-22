@@ -28,11 +28,11 @@ use crate::{global_color_support, new_style, tui_color, Ansi256GradientIndex,
 /// This style is for any selected range in the document.
 #[must_use]
 pub fn get_selection_style() -> TuiStyle {
-    let color_fg = tui_color!(hex "#dddddd");
-    let color_bg = tui_color!(hex "#ff00ff");
+    let foreground = tui_color!(hex "#dddddd");
+    let background = tui_color!(hex "#ff00ff");
     new_style!(
-        color_fg: {color_fg}
-        color_bg: {color_bg}
+        color_fg: {foreground}
+        color_bg: {background}
     )
 }
 

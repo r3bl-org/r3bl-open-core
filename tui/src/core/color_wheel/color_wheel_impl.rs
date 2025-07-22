@@ -180,11 +180,11 @@ mod color_wheel_cache {
             hasher: &mut H,
         ) {
             match config {
-                crate::ColorWheelConfig::Rgb(stops, speed, steps) => {
+                crate::ColorWheelConfig::Rgb(color_stops, wheel_speed, gradient_steps) => {
                     0u8.hash(hasher); // discriminant
-                    stops.hash(hasher);
-                    speed.hash(hasher);
-                    steps.hash(hasher);
+                    color_stops.hash(hasher);
+                    wheel_speed.hash(hasher);
+                    gradient_steps.hash(hasher);
                 }
                 crate::ColorWheelConfig::RgbRandom(speed) => {
                     1u8.hash(hasher); // discriminant

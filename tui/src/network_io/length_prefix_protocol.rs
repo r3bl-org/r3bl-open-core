@@ -54,6 +54,13 @@ pub mod handshake {
                 AsyncWriteExt, IntoDiagnostic};
 
     /// Client side handshake.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The handshake times out
+    /// - The magic number validation fails
+    /// - I/O errors occur during read/write operations
     pub async fn try_connect_or_timeout<W: AsyncWrite + Unpin, R: AsyncRead + Unpin>(
         read_half: &mut R,
         write_half: &mut W,
@@ -77,6 +84,7 @@ pub mod handshake {
         }
     }
 
+    #[allow(clippy::missing_errors_doc)]
     async fn try_connect<W: AsyncWrite + Unpin, R: AsyncRead + Unpin>(
         read_half: &mut R,
         write_half: &mut W,
@@ -106,6 +114,13 @@ pub mod handshake {
     }
 
     /// Server side handshake.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The handshake times out
+    /// - The magic number validation fails
+    /// - I/O errors occur during read/write operations
     pub async fn try_accept_or_timeout<W: AsyncWrite + Unpin, R: AsyncRead + Unpin>(
         read_half: &mut R,
         write_half: &mut W,
@@ -131,6 +146,7 @@ pub mod handshake {
         }
     }
 
+    #[allow(clippy::missing_errors_doc)]
     async fn try_accept<W: AsyncWrite + Unpin, R: AsyncRead + Unpin>(
         read_half: &mut R,
         write_half: &mut W,
@@ -194,6 +210,14 @@ pub mod byte_io {
     /// - The trait bounds on this function are so that this function can be tested w/ a
     ///   mock from `tokio_test::io::Builder`.
     /// - More info: <https://tokio.rs/tokio/topics/testing>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Serialization of the data fails
+    /// - Compression of the payload fails
+    /// - Writing to the buffer fails
+    /// - Flushing the buffer fails
     pub async fn try_write<W: AsyncWrite + Unpin, T: Serialize>(
         buf_writer: &mut BufWriter<W>,
         data: &T,
@@ -228,6 +252,14 @@ pub mod byte_io {
     /// - The trait bounds on this function are so that this function can be tested w/ a
     ///   mock from `tokio_test::io::Builder`.
     /// - More info: <https://tokio.rs/tokio/topics/testing>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Reading from the buffer fails
+    /// - The payload size exceeds the maximum allowed size
+    /// - Decompression of the payload fails
+    /// - Deserialization of the data fails
     pub async fn try_read<R: AsyncRead + Unpin, T: for<'d> Deserialize<'d>>(
         buf_reader: &mut BufReader<R>,
     ) -> miette::Result<T> {

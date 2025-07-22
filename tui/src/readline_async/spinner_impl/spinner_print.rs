@@ -59,9 +59,13 @@ fn clear_lines_for_spinner(
 
 /// This function only does something `Spinner` is used by itself, and not within a
 /// [`crate::ReadlineAsyncContext`], ie, when `maybe_shared_writer` is `None`.
+///
+/// # Errors
+///
+/// Returns an error if clearing lines fails due to I/O errors.
 pub fn print_start_if_standalone(
     output_device: OutputDevice,
-    maybe_shared_writer: Option<SharedWriter>,
+    maybe_shared_writer: &Option<SharedWriter>,
 ) -> CommonResult<()> {
     if maybe_shared_writer.is_none() {
         clear_lines_for_spinner(output_device, 2)?;
@@ -71,6 +75,10 @@ pub fn print_start_if_standalone(
 
 /// This gets called repeatedly to print the spinner with the intedeterminate progress
 /// message.
+///
+/// # Errors
+///
+/// Returns an error if printing or flushing the output fails.
 #[allow(clippy::needless_pass_by_value)]
 pub fn print_tick_interval_msg(
     _style: &SpinnerStyle,
@@ -103,12 +111,16 @@ pub fn print_tick_interval_msg(
 }
 
 /// This gets called when the spinner is done, to print the final message.
+///
+/// # Errors
+///
+/// Returns an error if printing or flushing the output fails.
 #[allow(clippy::needless_pass_by_value)]
 pub fn print_tick_final_msg(
     _style: &SpinnerStyle,
     output: &str,
     output_device: OutputDevice,
-    maybe_shared_writer: Option<SharedWriter>,
+    maybe_shared_writer: &Option<SharedWriter>,
 ) -> CommonResult<()> {
     let writer = lock_output_device_as_mut!(output_device);
 
@@ -145,6 +157,7 @@ pub fn print_tick_final_msg(
 /// This receives the `writer` that is already locked by the caller, so that there is no
 /// "out of sequence" issues with the output that is printed, that might result from
 /// having to wait to acquire a lock.
+#[allow(clippy::missing_errors_doc)]
 fn print_end_if_standalone(writer: LockedOutputDevice<'_>) -> CommonResult<()> {
     queue_commands_no_lock!(
         writer,

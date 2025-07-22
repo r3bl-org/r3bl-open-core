@@ -407,6 +407,7 @@ mod keypress_handler_helper {
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResult {
     DEVELOPMENT_MODE.then(|| {
         // % is Display, ? is Debug.

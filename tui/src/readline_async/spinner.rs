@@ -111,6 +111,12 @@ impl Spinner {
     ///
     /// More info on terminal piping:
     /// - <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The spinner task cannot be started
+    /// - The communication channels fail to initialize
     pub async fn try_start(
         arg_interval_msg: impl AsRef<str>,
         arg_final_msg: impl AsRef<str>,
@@ -230,7 +236,7 @@ impl Spinner {
         // This does nothing if this is used in a `ReadlineAsyncContext` context.
         spinner_print::print_start_if_standalone(
             self.output_device.clone(),
-            self.maybe_shared_writer.clone(),
+            &self.maybe_shared_writer,
         )?;
 
         // Create a oneshot channel to signal when the task is complete
@@ -280,7 +286,7 @@ impl Spinner {
                             &style_clone,
                             &final_output,
                             output_device_clone.clone(),
-                            maybe_shared_writer_clone.clone(),
+                            &maybe_shared_writer_clone,
                         ).ok();
 
                         // Resume the terminal.

@@ -122,6 +122,10 @@ impl LineState {
     /// following:
     /// - [`crate::SharedWriter::line_state_control_channel_sender`]
     /// - [`tokio::sync::mpsc::channel`]
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if clearing or rendering the line fails.
     pub fn set_paused(
         &mut self,
         is_paused: LineStateLiveness,
@@ -165,6 +169,10 @@ impl LineState {
     }
 
     /// Move cursor by one unicode grapheme either left (negative) or right (positive).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if I/O operations fail.
     pub fn move_cursor(&mut self, change: isize) -> io::Result<()> {
         if change > 0 {
             let count = self.line.graphemes(true).count();
@@ -217,12 +225,18 @@ impl LineState {
             .last()
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
     pub fn reset_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
         self.move_to_beginning(term, self.current_column)?;
 
         ok!()
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
     pub fn set_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
         self.move_from_beginning(term, self.current_column)?;
 
@@ -230,6 +244,9 @@ impl LineState {
     }
 
     /// Clear current line.
+    /// # Errors
+    ///
+    /// Returns an error if clearing the terminal line fails.
     pub fn clear(&self, term: &mut dyn Write) -> io::Result<()> {
         early_return_if_paused!(self @Unit);
 
@@ -240,6 +257,9 @@ impl LineState {
     }
 
     /// Render line (prompt + line) and flush.
+    /// # Errors
+    ///
+    /// Returns an error if rendering or flushing the terminal fails.
     pub fn render_and_flush(&mut self, term: &mut dyn Write) -> io::Result<()> {
         early_return_if_paused!(self @Unit);
 
@@ -263,6 +283,9 @@ impl LineState {
     }
 
     /// Clear line and render.
+    /// # Errors
+    ///
+    /// Returns an error if clearing, rendering, or flushing the terminal fails.
     pub fn clear_and_render_and_flush(&mut self, term: &mut dyn Write) -> io::Result<()> {
         early_return_if_paused!(self @Unit);
 
@@ -272,6 +295,9 @@ impl LineState {
         ok!()
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
     pub fn print_data_and_flush(
         &mut self,
         data: &[u8],
@@ -320,6 +346,9 @@ impl LineState {
         ok!()
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
     pub fn print_and_flush(
         &mut self,
         string: &str,
