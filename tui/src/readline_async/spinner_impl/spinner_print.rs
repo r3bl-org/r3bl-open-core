@@ -25,6 +25,7 @@ use crate::{lock_output_device_as_mut, ok, queue_commands, queue_commands_no_loc
 
 // Allocate specified number of lines in the terminal (ahead of the current cursor
 // position) for the spinner.
+#[allow(clippy::needless_pass_by_value)]
 fn clear_lines_for_spinner(
     output_device: OutputDevice,
     num_lines_to_clear: u16,
@@ -70,6 +71,7 @@ pub fn print_start_if_standalone(
 
 /// This gets called repeatedly to print the spinner with the intedeterminate progress
 /// message.
+#[allow(clippy::needless_pass_by_value)]
 pub fn print_tick_interval_msg(
     _style: &SpinnerStyle,
     output: &str,
@@ -101,6 +103,7 @@ pub fn print_tick_interval_msg(
 }
 
 /// This gets called when the spinner is done, to print the final message.
+#[allow(clippy::needless_pass_by_value)]
 pub fn print_tick_final_msg(
     _style: &SpinnerStyle,
     output: &str,

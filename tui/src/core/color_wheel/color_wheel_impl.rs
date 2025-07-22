@@ -211,12 +211,12 @@ mod color_wheel_cache {
             // Convert f64 to bits for deterministic hashing
             builder.seed.0.to_bits().hash(hasher);
             builder.seed_delta.0.to_bits().hash(hasher);
-            hash_colorize_strategy(&builder.colorization_strategy, hasher);
+            hash_colorize_strategy(builder.colorization_strategy, hasher);
         }
 
         /// Hash the Colorize enum discriminant.
         fn hash_colorize_strategy<H: Hasher>(
-            strategy: &crate::lolcat::Colorize,
+            strategy: crate::lolcat::Colorize,
             hasher: &mut H,
         ) {
             match strategy {

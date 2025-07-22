@@ -87,6 +87,7 @@ pub enum CaretDirection {
 impl TryFrom<InputEvent> for EditorEvent {
     type Error = String;
 
+    #[allow(clippy::too_many_lines)]
     fn try_from(input_event: InputEvent) -> Result<Self, Self::Error> {
         DEBUG_TUI_COPY_PASTE.then(|| {
             // % is Display, ? is Debug.
@@ -396,6 +397,7 @@ impl EditorEvent {
     /// Note: Text insertion has two paths:
     /// - `InsertString`: Direct text insertion (e.g., from bracketed paste)
     /// - `Paste`: Reads from system clipboard (requires `ClipboardService`)
+    #[allow(clippy::too_many_lines)]
     pub fn apply_editor_event(
         engine: &mut EditorEngine,
         buffer: &mut EditorBuffer,

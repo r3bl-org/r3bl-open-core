@@ -496,6 +496,7 @@ mod multiline_select_helper {
     // XMARK: Impl multiline selection changes (up/down, and later page up/page down)
 
     /// Precondition: there has to be at least 2 rows.
+    #[allow(clippy::too_many_lines)]
     pub fn handle_two_lines(
         buffer: &mut EditorBuffer,
         prev: CaretScrAdj,

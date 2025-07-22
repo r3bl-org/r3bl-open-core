@@ -48,6 +48,7 @@ unused_import_braces = "warn"
 # Reasonable defaults for clippy lints. #
 #----------------------------------------
 all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
 #------------------------------------------------------------------------------
 # Explicitly set the level for each lint. This might be redundant with `all`. -
 #------------------------------------------------------------------------------

@@ -562,6 +562,7 @@ impl StyleUSSpan {
     /// 2. ... which is then rolled up into [`StyleUSSpanLines`] by
     ///    [StyleUSSpanLine::from_block](StyleUSSpanLine::from_block).
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn from_fragment(
         fragment: &MdLineFragment<'_>,
         maybe_current_box_computed_style: Option<TuiStyle>,

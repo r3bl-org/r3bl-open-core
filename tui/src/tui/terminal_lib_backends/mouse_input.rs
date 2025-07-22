@@ -68,7 +68,7 @@ impl From<MouseEventKind> for MouseInputKind {
             MouseEventKind::Drag(button) => MouseInputKind::MouseDrag(button.into()),
             MouseEventKind::ScrollUp => MouseInputKind::ScrollUp,
             MouseEventKind::ScrollDown => MouseInputKind::ScrollDown,
-            MouseEventKind::ScrollLeft => MouseInputKind::ScrollDown,
+            MouseEventKind::ScrollLeft => MouseInputKind::ScrollLeft,
             MouseEventKind::ScrollRight => MouseInputKind::ScrollRight,
         }
     }

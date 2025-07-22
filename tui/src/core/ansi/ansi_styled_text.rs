@@ -812,7 +812,7 @@ impl WriteToBuf for ASTStyle {
         // Helper function to convert color to appropriate SgrCode.
         fn color_to_sgr(
             color_support: ColorSupport,
-            color: &ASTColor,
+            color: ASTColor,
             is_foreground: bool,
         ) -> SgrCode {
             match color_support {
@@ -847,10 +847,10 @@ impl WriteToBuf for ASTStyle {
 
         match self {
             ASTStyle::Foreground(color) => {
-                color_to_sgr(color_support, color, true).write_to_buf(buf)
+                color_to_sgr(color_support, *color, true).write_to_buf(buf)
             }
             ASTStyle::Background(color) => {
-                color_to_sgr(color_support, color, false).write_to_buf(buf)
+                color_to_sgr(color_support, *color, false).write_to_buf(buf)
             }
             ASTStyle::Bold => SgrCode::Bold.write_to_buf(buf),
             ASTStyle::Dim => SgrCode::Dim.write_to_buf(buf),

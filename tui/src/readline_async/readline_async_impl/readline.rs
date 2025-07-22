@@ -350,6 +350,7 @@ pub mod manage_shared_writer_output {
     /// This will panic if the lock is poisoned, which can happen if a thread
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn process_line_control_signal(
         line_control_signal: LineStateControlSignal,
         self_safe_is_paused_buffer: SafePauseBuffer,
@@ -507,6 +508,7 @@ impl Readline {
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
+    #[allow(clippy::needless_pass_by_value)]
     pub fn try_new(
         prompt: String,
         output_device: OutputDevice,

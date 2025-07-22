@@ -97,7 +97,7 @@ pub fn truncate_from_right(
 
     // Handle truncation.
     if string_display_width > display_width {
-        truncate_from_right_helper::handle_unicode_truncation(string_gcs, display_width)
+        truncate_from_right_helper::handle_unicode_truncation(&string_gcs, display_width)
     }
     // Handle padding.
     else if pad && string_display_width < display_width {
@@ -163,7 +163,7 @@ pub fn truncate_from_left(
 
     // Handle truncation.
     if string_display_width > display_width {
-        truncate_from_left_helper::handle_unicode_truncation(string_gcs, display_width)
+        truncate_from_left_helper::handle_unicode_truncation(&string_gcs, display_width)
     }
     // Handle padding.
     else if pad && string_display_width < display_width {
@@ -252,7 +252,7 @@ mod truncate_from_right_helper {
 
     /// Handle Unicode truncation from the right
     pub fn handle_unicode_truncation(
-        string_gcs: GCString,
+        string_gcs: &GCString,
         display_width: ColWidth,
     ) -> InlineStringCow<'static> {
         let postfix = ELLIPSIS_GLYPH;
@@ -313,7 +313,7 @@ mod truncate_from_left_helper {
 
     /// Handle Unicode truncation from the left
     pub fn handle_unicode_truncation(
-        string_gcs: GCString,
+        string_gcs: &GCString,
         display_width: ColWidth,
     ) -> InlineStringCow<'static> {
         let prefix = ELLIPSIS_GLYPH;

@@ -312,10 +312,8 @@ mod keypress_handler_helper {
             | CaretVerticalViewportLocation::AtTopOfViewport => {
                 state.scroll_offset_row_index -= 1;
             }
-            CaretVerticalViewportLocation::InMiddleOfViewport => {
-                state.raw_caret_row_index -= 1;
-            }
-            CaretVerticalViewportLocation::AtBottomOfViewport
+            CaretVerticalViewportLocation::InMiddleOfViewport
+            | CaretVerticalViewportLocation::AtBottomOfViewport
             | CaretVerticalViewportLocation::BelowBottomOfViewport
             | CaretVerticalViewportLocation::AtAbsoluteBottom => {
                 state.raw_caret_row_index -= 1;

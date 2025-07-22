@@ -129,7 +129,7 @@ pub(crate) mod display_impl_for_command_run_result {
             let mut acc = InlineString::new();
 
             writeln!(acc, "Command {{")?;
-            writeln!(acc, "  Program: {:?},", cmd.get_program())?;
+            writeln!(acc, "  Program: {},", cmd.get_program().display())?;
             writeln!(
                 acc,
                 "  Args: {:?},",

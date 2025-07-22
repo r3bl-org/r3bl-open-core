@@ -71,7 +71,7 @@
 use futures_util::FutureExt;
 
 use super::InputEvent;
-use crate::{InputDevice, DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+use crate::{DEBUG_TUI_SHOW_TERMINAL_BACKEND, InputDevice};
 
 pub trait InputDeviceExt {
     #[allow(async_fn_in_trait)]
@@ -89,14 +89,16 @@ impl InputDeviceExt for InputDevice {
                         Ok(input_event) => return Some(input_event),
                         Err(()) => {
                             // Conversion errors are expected in the following cases:
-                            // 1. Key Release/Repeat events (filtered in InputEvent::try_from)
+                            // 1. Key Release/Repeat events (filtered in
+                            //    InputEvent::try_from)
                             // 2. Paste events (not supported)
                             //
                             // These are normal occurrences, not bugs. We simply continue
                             // reading the next event. The TryFrom implementations handle
                             // all expected cases by returning Err(()), so we don't need
                             // to panic or log errors here.
-                            continue;
+                            //
+                            // Continue reading the next event in the loop.
                         }
                     }
                 }

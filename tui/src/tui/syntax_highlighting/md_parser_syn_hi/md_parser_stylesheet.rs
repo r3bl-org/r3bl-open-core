@@ -45,8 +45,7 @@ pub fn get_foreground_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#c1b3d0"),
                 ColorSupport::Ansi256 => tui_color!(ansi 244), // Grey50.
-                ColorSupport::Grayscale => tui_color!(white),
-                ColorSupport::NoColor => tui_color!(white),
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(white),
             }
         }
     )
@@ -74,8 +73,7 @@ pub fn get_bold_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#dacd24"),
                 ColorSupport::Ansi256 => tui_color!(ansi 226), // Yellow1.
-                ColorSupport::Grayscale => tui_color!(yellow),
-                ColorSupport::NoColor => tui_color!(yellow),
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(yellow),
             }
         }
     )
@@ -90,8 +88,7 @@ pub fn get_italic_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#a59e3a"),
                 ColorSupport::Ansi256 => tui_color!(ansi 208), // DarkOrange.
-                ColorSupport::Grayscale => tui_color!(dark_yellow),
-                ColorSupport::NoColor => tui_color!(dark_yellow),
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(dark_yellow),
             }
         }
     )
@@ -106,8 +103,7 @@ pub fn get_bold_italic_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#dacd24"),
                 ColorSupport::Ansi256 => tui_color!(ansi 184), // Yellow3.
-                ColorSupport::Grayscale => tui_color!(yellow),
-                ColorSupport::NoColor => tui_color!(yellow),
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(yellow),
             }
         }
     )
@@ -122,8 +118,7 @@ pub fn get_inline_code_style() -> TuiStyle {
             match global_color_support::detect(){
                 ColorSupport::Truecolor => tui_color!(hex "#ce55b7"),
                 ColorSupport::Ansi256 => tui_color!(ansi 169), // HotPink2.
-                ColorSupport::Grayscale => tui_color!(magenta),
-                ColorSupport::NoColor => tui_color!(magenta),
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(magenta),
             }
         }
     )
@@ -137,8 +132,7 @@ pub fn get_link_text_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#4f86ed"),
                 ColorSupport::Ansi256 => tui_color!(ansi 33), // DodgerBlue1.
-                ColorSupport::Grayscale => tui_color!(blue),
-                ColorSupport::NoColor => tui_color!(blue),
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(blue),
             }
         }
     )
@@ -153,8 +147,7 @@ pub fn get_link_url_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#16adf3"),
                 ColorSupport::Ansi256 => tui_color!(ansi 39), // DeepSkyBlue1.
-                ColorSupport::Grayscale => tui_color!(blue),
-                ColorSupport::NoColor => tui_color!(blue),
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(blue),
             }
         }
     )
@@ -219,8 +212,7 @@ pub fn get_metadata_title_marker_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#4f86ed"), // Soft blue.
                 ColorSupport::Ansi256 => tui_color!(ansi 39), // DeepSkyBlue1.
-                ColorSupport::Grayscale => tui_color!(cyan), // There is no equivalent.
-                ColorSupport::NoColor => tui_color!(cyan),
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(cyan), // There is no equivalent.
             }
         }
     )
@@ -235,16 +227,14 @@ pub fn get_metadata_title_value_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#4fcbd4"), // Moderate cyan.
                 ColorSupport::Ansi256 => tui_color!(ansi 51), // Cyan1.
-                ColorSupport::Grayscale => tui_color!(cyan),
-                ColorSupport::NoColor => tui_color!(cyan),
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(cyan),
             }
         }
         color_bg: {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#444444"), // Very dark gray.
                 ColorSupport::Ansi256 => tui_color!(ansi 238), // Grey27.
-                ColorSupport::Grayscale => tui_color!(dark_gray),
-                ColorSupport::NoColor => tui_color!(dark_gray),
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(dark_gray),
             }
         }
     )
@@ -260,8 +250,7 @@ pub fn get_metadata_tags_marker_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#ad83da"), // Very soft violet.
                 ColorSupport::Ansi256 => tui_color!(ansi 133), // MediumOrchid3. There is no equivalent.
-                ColorSupport::Grayscale => tui_color!(yellow), // There is no equivalent.
-                ColorSupport::NoColor => tui_color!(yellow),
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(yellow), // There is no equivalent.
             }
         }
     )
@@ -276,16 +265,14 @@ pub fn get_metadata_tags_values_style() -> TuiStyle {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#e2a1e3"), // Soft violet.
                 ColorSupport::Ansi256 => tui_color!(ansi 45), // Turquoise2
-                ColorSupport::Grayscale => tui_color!(cyan), // There is no equivalent.
-                ColorSupport::NoColor => tui_color!(cyan)
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(cyan) // There is no equivalent.
             }
         }
         color_bg: {
             match global_color_support::detect() {
                 ColorSupport::Truecolor => tui_color!(hex "#303030"), // Very dark gray.
                 ColorSupport::Ansi256 => tui_color!(ansi 236), // Grey19.
-                ColorSupport::Grayscale => tui_color!(dark_gray),
-                ColorSupport::NoColor => tui_color!(dark_gray)
+                ColorSupport::Grayscale | ColorSupport::NoColor => tui_color!(dark_gray)
             }
         }
     )
