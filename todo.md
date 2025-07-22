@@ -21,6 +21,11 @@
       and push it to remote `origin`.
 - [ ] make a release using the [`release-guide.md`](docs/release-guide.md) document as a guide
 
+# remove crossterm
+
+- [ ] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
+      `r3bl_open_core` codebase.
+
 # editor content storage enhancements
 
 - [ ] Change `EditorContent::lines: VecEditorContentLines` to a different data structure that is
@@ -72,6 +77,10 @@
   - Heavy overhead in log formatting paths
   - Consider caching wrapped text or optimizing unicode word breaking
   ```
+
+# enable mouse support
+
+- [ ] figure out how to interpret mouse events into something that is usable for the apps.
 
 # edi feature
 

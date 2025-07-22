@@ -3,6 +3,7 @@
 
 - [Guide to cutting a release and publishing it to crates.io](#guide-to-cutting-a-release-and-publishing-it-to-cratesio)
   - [Cut a release and publish it to crates.io](#cut-a-release-and-publish-it-to-cratesio)
+  - [Make a GitHub release from the tag](#make-a-github-release-from-the-tag)
   - [Example of full workflow](#example-of-full-workflow)
   - [Deprecated workflow for crates moved to r3bl-open-core-archive repo](#deprecated-workflow-for-crates-moved-to-r3bl-open-core-archive-repo)
 
@@ -44,17 +45,17 @@ are applied to each crate (`ansi_color`, `core`, `macro`, `redux`, `tui`, `tuify
 
 Then, push the git commit and tag to the remote repo: `git push ; git push --tags`.
 
-Finally, for the tag, make a GitHub release and use the tag that you just created. This
-only applies to the `tui` and `cmdr` crates. No binary artifacts are uploaded to the
-GitHub release, only the tag and the information from the `CHANGELOG.md` file is used to
-create the release notes. The purpose of the GitHub release is to notify users that a new
-release is available. This is useful if the user has signed up for GitHub notifications
-for the repository. The release notes should include the following:
-- For `cmdr` include instructions that the user can use to install the crate using `cargo
-  install r3bl-cmdr`.
-- For `tui` there are no installation instructions, since it is a library crate. The
-  release is just a way for users to be notified by GitHub that a new release is
-  available.
+Finally, for the tag, make a GitHub release and use the tag that you just created. This only applies
+to the `tui` and `cmdr` crates. No binary artifacts are uploaded to the GitHub release, only the tag
+and the information from the `CHANGELOG.md` file is used to create the release notes. The purpose of
+the GitHub release is to notify users that a new release is available. This is useful if the user
+has signed up for GitHub notifications for the repository. The release notes should include the
+following:
+
+- For `cmdr` include instructions that the user can use to install the crate using
+  `cargo install r3bl-cmdr`.
+- For `tui` there are no installation instructions, since it is a library crate. The release is just
+  a way for users to be notified by GitHub that a new release is available.
 
 ## Example of full workflow
 

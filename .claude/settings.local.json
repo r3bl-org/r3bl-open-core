@@ -29,6 +29,7 @@
       "Bash(git commit:*)",
       "Bash(git rev-parse:*)",
       "Bash(git ls-tree:*)",
+      "Bash(git log:*)",
       "Bash(git pull:*)",
       "Bash(git stash:*)",
       "WebFetch(domain:github.com)",
