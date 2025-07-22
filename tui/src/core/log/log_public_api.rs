@@ -351,6 +351,13 @@ pub mod tracing_config_options {
 ///
 /// If you don't want to use sophisticated logging, you can use the [`file_log`] function
 /// to log messages to a file.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The global subscriber is already set
+/// - The log file cannot be created or written to
+/// - The tracing layers cannot be initialized
 pub fn try_initialize_logging_global(
     arg_options: impl Into<TracingConfig>,
 ) -> miette::Result<()> {
@@ -386,6 +393,12 @@ pub fn try_initialize_logging_global(
 ///
 /// If you don't want to use sophisticated logging, you can use the [`file_log`] function
 /// to log messages to a file.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The log file cannot be created or written to
+/// - The tracing layers cannot be initialized
 pub fn try_initialize_logging_thread_local(
     arg_options: impl Into<TracingConfig>,
 ) -> miette::Result<Option<dispatcher::DefaultGuard>> {

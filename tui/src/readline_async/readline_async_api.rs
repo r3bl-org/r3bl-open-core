@@ -135,6 +135,13 @@ impl ReadlineAsyncContext {
     ///
     /// More info on terminal piping:
     /// - <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The terminal cannot be put into raw mode
+    /// - The terminal size cannot be determined
+    /// - The readline instance cannot be created
     pub async fn try_new(
         read_line_prompt: Option<impl AsRef<str>>,
     ) -> miette::Result<Option<ReadlineAsyncContext>> {
@@ -188,6 +195,13 @@ impl ReadlineAsyncContext {
     }
 
     /// Replacement for [`std::io::Stdin::read_line()`] (this is async and non-blocking).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The readline operation fails due to I/O errors
+    /// - The terminal has been closed or disconnected
+    /// - The readline loop has been shut down
     pub async fn read_line(&mut self) -> miette::Result<ReadlineEvent> {
         self.readline.readline().fuse().await.into_diagnostic()
     }
@@ -246,6 +260,12 @@ impl ReadlineAsyncContext {
     ///
     /// Make sure to call [`Self::await_shutdown()`], to ensure that the
     /// mechanism is cleanly shutdown.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The shutdown signal cannot be sent to the readline loop
+    /// - The final message cannot be written to the terminal
     pub async fn request_shutdown(&self, message: Option<&str>) -> CommonResult<()> {
         // Process the request_shutdown message (if some).
         if let Some(message) = message {

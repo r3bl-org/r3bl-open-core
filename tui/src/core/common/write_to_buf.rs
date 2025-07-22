@@ -58,10 +58,18 @@ pub trait WriteToBuf {
     /// Write the formatted representation to the provided buffer. You might want to
     /// call [`WriteToBuf::write_buf_to_fmt()`] when you are ready to actually write the
     /// buffer to the formatter if you are implementing the [`std::fmt::Display`] trait.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the formatting operation fails.
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result;
 
     /// Use [`core::fmt::Formatter::write_str`] to actually write the `acc` buffer when
     /// implementing the [`std::fmt::Display`] trait.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if writing to the formatter fails.
     fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut Formatter<'_>) -> Result {
         f.write_str(acc)
     }

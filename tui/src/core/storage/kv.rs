@@ -102,6 +102,13 @@ mod default_settings {
 /// folder on disk. Note there are no lifetime annotations on this function. All the other
 /// functions below do have lifetime annotations, since they are all tied to the lifetime
 /// of the returned [Store].
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The database folder cannot be created
+/// - The store cannot be opened due to I/O errors or permission issues
+/// - The database is corrupted or locked by another process
 #[tracing::instrument]
 pub fn load_or_create_store(
     maybe_db_folder_path: Option<&String>,
@@ -132,6 +139,12 @@ pub fn load_or_create_store(
 
 /// A [kv::Bucket] provides typed access to a section of the key/value [Store].
 /// It has a lifetime, since the [kv::Bucket] is created from a [Store].
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The bucket cannot be created in the store
+/// - The store is corrupted or inaccessible
 #[tracing::instrument(fields(store = ?store.path(), buckets = ?store.buckets()))]
 pub fn load_or_create_bucket_from_store<
     'a,
@@ -162,6 +175,13 @@ pub fn load_or_create_bucket_from_store<
 }
 
 /// The value is serialized using [Bincode] prior to saving it to the key/value store.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The value cannot be serialized to Bincode format
+/// - The key/value pair cannot be saved to the bucket due to I/O errors
+/// - The bucket is corrupted or the store is locked
 #[tracing::instrument(skip(bucket))]
 pub fn insert_into_bucket<
     'a,
@@ -193,6 +213,13 @@ pub fn insert_into_bucket<
 
 /// The value in the key/value store is serialized using [Bincode]. Upon loading that
 /// value it is deserialized and returned by this function.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The key cannot be found and an I/O error occurs
+/// - The value cannot be deserialized from Bincode format
+/// - The bucket is corrupted or inaccessible
 #[tracing::instrument(skip(bucket))]
 pub fn get_from_bucket<
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
@@ -222,6 +249,11 @@ pub fn get_from_bucket<
     it
 }
 
+/// # Errors
+///
+/// Returns an error if:
+/// - The removal operation fails due to I/O errors
+/// - The bucket is corrupted or the store is locked
 #[tracing::instrument(skip(bucket))]
 pub fn remove_from_bucket<
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
@@ -251,6 +283,11 @@ pub fn remove_from_bucket<
     it
 }
 
+/// # Errors
+///
+/// Returns an error if:
+/// - The contains check fails due to I/O errors
+/// - The bucket is corrupted or inaccessible
 #[tracing::instrument(skip(bucket))]
 pub fn is_key_contained_in_bucket<
     KeyT: Debug + Display + for<'k> kv::Key<'k>,

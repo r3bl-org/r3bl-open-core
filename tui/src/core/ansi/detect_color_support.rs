@@ -204,6 +204,10 @@ pub mod global_color_support {
     /// Get the cached color support detection result.
     /// - If detection has been run and cached, that value will be returned.
     /// - Otherwise, an error will be returned.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(())` if no cached value has been set yet.
     #[allow(clippy::result_unit_err, static_mut_refs)]
     pub fn try_get_cached() -> Result<ColorSupport, ()> {
         let it = unsafe { COLOR_SUPPORT_CACHED.load(Ordering::Acquire) };
@@ -221,6 +225,10 @@ pub mod global_color_support {
     /// - If the value has been set using [`crate::global_color_support::set_override`],
     ///   then that value will be returned.
     /// - Otherwise, an error will be returned.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(())` if no override value has been set.
     #[allow(clippy::result_unit_err, static_mut_refs)]
     pub fn try_get_override() -> Result<ColorSupport, ()> {
         let it = unsafe { COLOR_SUPPORT_GLOBAL.load(Ordering::Acquire) };

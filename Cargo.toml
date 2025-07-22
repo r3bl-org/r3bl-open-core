@@ -52,6 +52,9 @@ pedantic = { level = "warn", priority = -1 }
 #------------------------------------------------------------------------------
 # Explicitly set the level for each lint. This might be redundant with `all`. -
 #------------------------------------------------------------------------------
+missing_errors_doc = "warn"
+too_many_lines = "warn"
+match_same_arms = "warn"
 unwrap_in_result = "warn"
 doc_markdown = "warn"
 redundant_closure = "warn"
@@ -87,24 +90,17 @@ comparison_chain = "warn"
 elidable_lifetime_names = "warn"
 wildcard_imports = "warn"
 large_futures = "warn"
-#-----------------------------------------------
-# Explicitly allow these lints to avoid noise. -
-#-----------------------------------------------
+#--------------------------------------------------------
+# Explicitly allow/suppress these lints to avoid noise. -
+#--------------------------------------------------------
 needless_pass_by_value = "allow"  # This triggers legitimate use of passing a Copy arg by value to a function.
 similar_names = "allow"  # This triggers legitimate variable names.
 single_match_else = "allow" # Rust 2024 changes if-let scope, so match on a single case is needed to retain the old behavior.
-#-----------------------------------------
-# Additional pedantic lints to suppress. -
-#-----------------------------------------
-missing_errors_doc = "allow"
-too_many_lines = "allow"
-match_same_arms = "allow"
 
 ##########################################################################################################################
 # ------------- RUSTC PROFILES SECTION -------------                                                                     #
 # `cargo build --profile profiling` and `cargo build --profile profiling-detailed` configuration for `rustc`.            #
 ##########################################################################################################################
-
 [profile.profiling-detailed]
 inherits = "release"
 debug = true

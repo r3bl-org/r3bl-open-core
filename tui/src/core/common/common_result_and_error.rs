@@ -125,6 +125,10 @@ impl CommonError {
     }
 
     /// Only [`CommonError::error_type`] available, and no [`CommonError::error_message`].
+    ///
+    /// # Errors
+    ///
+    /// Always returns an error with the specified error type.
     pub fn new_error_result_with_only_type<T>(
         err_type: CommonErrorType,
     ) -> CommonResult<T> {
@@ -135,6 +139,10 @@ impl CommonError {
     }
 
     /// Only [`CommonError::error_message`] available, and no [`CommonError::error_type`].
+    ///
+    /// # Errors
+    ///
+    /// Always returns an error with the specified error message.
     pub fn new_error_result_with_only_msg<T>(msg: &str) -> CommonResult<T> {
         Err(miette::miette!(CommonError {
             error_type: CommonErrorType::default(),
