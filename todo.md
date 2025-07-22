@@ -14,11 +14,10 @@
 - [x] there are test failures in doctests that try to use terminal I/O (which fails in test
       environment). can you identify and mark them to be "```no_run"
 - [x] fix all the pedantic lints using claude (and don't allow them anymore in Cargo.toml)
-- [ ] update changelog
-- [ ] squash all the commits in this branch `fix-md-parser` into one (fixup all the commit
-      messages); this commit fixes this issue:
-      <https://github.com/r3bl-org/r3bl-open-core/issues/397>. then rebase this branch onto `main`
-      and push it to remote `origin`.
+- [x] update changelog
+- [x] rebase `fix-md-parser` on to `main`. push it to remote `origin`. fixes:
+      <https://github.com/r3bl-org/r3bl-open-core/issues/397>. link to this PR:
+      <https://github.com/r3bl-org/r3bl-open-core/pull/430>
 - [ ] make a release using the [`release-guide.md`](docs/release-guide.md) document as a guide
 
 # remove crossterm
@@ -84,6 +83,7 @@
 
 # edi feature
 
+- [ ] add telemetry HUD to bottom of `edi` (FPS, memory usage, etc)
 - [ ] add feature that shows editor status to the terminal window title bar (eg: "edi - [filename] -
       [status]") using
       [OSC sequences](<https://en.wikipedia.org/wiki/ANSI_escape_code#OSC_(Operating_System_Command)_sequences>)

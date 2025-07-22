@@ -65,38 +65,39 @@ identified in `write_command_ansi` from flamegraph profiling.
 
 Every `RenderOp` ultimately becomes simple ANSI escape sequences:
 
-| RenderOp                     | ANSI Sequence           | Notes                                       |
-| ---------------------------- | ----------------------- | ------------------------------------------- |
-| `EnterRawMode`               | `\x1b[?1049h` + raw mode| Alternate screen + raw mode setup           |
-| `ExitRawMode`                | `\x1b[?1049l` + raw mode| Leave alternate screen + restore            |
-| `MoveCursorPositionAbs(pos)` | `\x1b[{row};{col}H`     | 1-based indexing                            |
-| `ClearScreen`                | `\x1b[2J`               | Clear entire screen                         |
-| `SetFgColor(color)`          | Various SGR codes       | Already optimized in `ansi_escape_codes.rs` |
-| `SetBgColor(color)`          | Various SGR codes       | Already optimized                           |
-| `ResetColor`                 | `\x1b[0m`               | Reset all attributes                        |
-| `ApplyColors(style)`         | Combination of SGR      | Set fg/bg from TuiStyle                     |
-| `PaintTextWithAttributes`    | SGR + text              | Set attributes then write text              |
+| RenderOp                     | ANSI Sequence            | Notes                                       |
+| ---------------------------- | ------------------------ | ------------------------------------------- |
+| `EnterRawMode`               | `\x1b[?1049h` + raw mode | Alternate screen + raw mode setup           |
+| `ExitRawMode`                | `\x1b[?1049l` + raw mode | Leave alternate screen + restore            |
+| `MoveCursorPositionAbs(pos)` | `\x1b[{row};{col}H`      | 1-based indexing                            |
+| `ClearScreen`                | `\x1b[2J`                | Clear entire screen                         |
+| `SetFgColor(color)`          | Various SGR codes        | Already optimized in `ansi_escape_codes.rs` |
+| `SetBgColor(color)`          | Various SGR codes        | Already optimized                           |
+| `ResetColor`                 | `\x1b[0m`                | Reset all attributes                        |
+| `ApplyColors(style)`         | Combination of SGR       | Set fg/bg from TuiStyle                     |
+| `PaintTextWithAttributes`    | SGR + text               | Set attributes then write text              |
 
 ## Platform Compatibility
 
 ### ANSI Support by Platform
 
-| Platform | ANSI Support | Raw Mode Implementation | Notes |
-|----------|--------------|------------------------|-------|
-| Linux | Native | termios via libc | Full support |
-| macOS | Native | termios via libc | Full support |
-| Windows 10+ | Native (with VT enable) | Windows Console API | Enable Virtual Terminal Processing |
+| Platform    | ANSI Support            | Raw Mode Implementation | Notes                              |
+| ----------- | ----------------------- | ----------------------- | ---------------------------------- |
+| Linux       | Native                  | termios via libc        | Full support                       |
+| macOS       | Native                  | termios via libc        | Full support                       |
+| Windows 10+ | Native (with VT enable) | Windows Console API     | Enable Virtual Terminal Processing |
 
 ### Windows Virtual Terminal Processing
 
-Windows 10+ supports ANSI escape sequences natively, but requires enabling Virtual Terminal Processing:
+Windows 10+ supports ANSI escape sequences natively, but requires enabling Virtual Terminal
+Processing:
 
 ```rust
 #[cfg(windows)]
 fn enable_virtual_terminal_processing() -> std::io::Result<()> {
     use winapi::um::consoleapi::SetConsoleMode;
     use winapi::um::wincon::{ENABLE_VIRTUAL_TERMINAL_PROCESSING, ENABLE_PROCESSED_OUTPUT};
-    
+
     unsafe {
         let handle = GetStdHandle(STD_OUTPUT_HANDLE);
         let mut mode = 0;
@@ -188,7 +189,7 @@ pub fn enter_raw_mode(
         // Platform-specific raw mode setup
         #[cfg(unix)]
         unix::enable_raw_mode();
-        
+
         #[cfg(windows)]
         windows::enable_raw_mode();
     }
@@ -212,14 +213,14 @@ pub fn enter_raw_mode(
 #[cfg(unix)]
 pub fn enable_raw_mode() {
     use libc::{termios, tcgetattr, tcsetattr, STDIN_FILENO, TCSANOW};
-    
+
     unsafe {
         let mut termios: termios = std::mem::zeroed();
         tcgetattr(STDIN_FILENO, &mut termios);
-        
+
         // Store original for restoration
         ORIGINAL_TERMIOS.store(termios);
-        
+
         // Make raw
         libc::cfmakeraw(&mut termios);
         tcsetattr(STDIN_FILENO, TCSANOW, &termios);
@@ -236,7 +237,7 @@ pub fn enable_raw_mode() {
         ENABLE_VIRTUAL_TERMINAL_PROCESSING, ENABLE_PROCESSED_OUTPUT,
         ENABLE_VIRTUAL_TERMINAL_INPUT
     };
-    
+
     unsafe {
         // Enable VT processing for output
         let output_handle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -244,15 +245,15 @@ pub fn enable_raw_mode() {
         GetConsoleMode(output_handle, &mut output_mode);
         output_mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
         SetConsoleMode(output_handle, output_mode);
-        
+
         // Enable VT input processing
         let input_handle = GetStdHandle(STD_INPUT_HANDLE);
         let mut input_mode = 0;
         GetConsoleMode(input_handle, &mut input_mode);
-        
+
         // Store original for restoration
         ORIGINAL_INPUT_MODE.store(input_mode);
-        
+
         // Disable line input, echo, etc. (similar to raw mode)
         input_mode &= !(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
         input_mode |= ENABLE_VIRTUAL_TERMINAL_INPUT;
@@ -286,6 +287,7 @@ pub fn enable_raw_mode() {
    ```
 
 3. **Feature Flag:**
+
    ```toml
    [features]
    default = ["crossterm-backend"]
@@ -294,10 +296,11 @@ pub fn enable_raw_mode() {
    ```
 
 4. **Platform Dependencies:**
+
    ```toml
    [target.'cfg(unix)'.dependencies]
    libc = "0.2"
-   
+
    [target.'cfg(windows)'.dependencies]
    winapi = { version = "0.3", features = ["consoleapi", "processenv", "wincon", "winbase"] }
    ```
@@ -333,7 +336,7 @@ pub struct DirectAnsiInputDevice {
     poll: mio::Poll,
     #[cfg(unix)]
     stdin_fd: RawFd,
-    
+
     #[cfg(windows)]
     input_handle: HANDLE,
 }
@@ -439,19 +442,19 @@ impl DirectAnsiEventStream {
 
 ## Risks and Mitigation
 
-| Risk                     | Mitigation                                              |
-| ------------------------ | ------------------------------------------------------- |
-| Platform compatibility   | Use platform-specific code with #[cfg], test thoroughly |
-| Windows Console quirks   | Enable VT processing, test on multiple Windows terminals|
-| Input parsing complexity | Start with keyboard, add mouse/resize incrementally     |
-| Raw mode differences     | Abstract platform differences in raw_mode module        |
-| ANSI sequence variations | Stick to well-supported subset, document any quirks     |
+| Risk                     | Mitigation                                               |
+| ------------------------ | -------------------------------------------------------- |
+| Platform compatibility   | Use platform-specific code with #[cfg], test thoroughly  |
+| Windows Console quirks   | Enable VT processing, test on multiple Windows terminals |
+| Input parsing complexity | Start with keyboard, add mouse/resize incrementally      |
+| Raw mode differences     | Abstract platform differences in raw_mode module         |
+| ANSI sequence variations | Stick to well-supported subset, document any quirks      |
 
 ## Success Metrics
 
 1. **Performance**: 15M sample reduction in flamegraph on all platforms
 2. **Correctness**: All tests pass with new backend on Linux, macOS, and Windows
-3. **Compatibility**: 
+3. **Compatibility**:
    - Linux: Works on xterm, gnome-terminal, kitty, alacritty
    - macOS: Works on Terminal.app, iTerm2, kitty, alacritty
    - Windows: Works on Windows Terminal, PowerShell, cmd.exe
@@ -459,9 +462,9 @@ impl DirectAnsiEventStream {
 
 ## Conclusion
 
-Removing crossterm in favor of direct ANSI control is feasible across all major platforms. With 
-Windows 10+'s native ANSI support via Virtual Terminal Processing, we can use the same ANSI 
-sequences everywhere while handling platform-specific raw mode setup. The existing `OutputDevice` 
-abstraction makes this transition smooth while preserving testing capabilities. This change will 
-improve performance, reduce dependencies, and give us complete control over terminal interactions
-on Linux, macOS, and modern Windows systems.
+Removing crossterm in favor of direct ANSI control is feasible across all major platforms. With
+Windows 10+'s native ANSI support via Virtual Terminal Processing, we can use the same ANSI
+sequences everywhere while handling platform-specific raw mode setup. The existing `OutputDevice`
+abstraction makes this transition smooth while preserving testing capabilities. This change will
+improve performance, reduce dependencies, and give us complete control over terminal interactions on
+Linux, macOS, and modern Windows systems.

@@ -53,11 +53,14 @@ The [`contributing_guides`](contributing_guides) folder contains templates and g
 ### Plans
 
 - [`task_tui_perf_optimize.md`](task_tui_perf_optimize.md) - TUI performance optimization guidelines
-- [`task_remove_crossterm.md`](task_remove_crossterm.md) - Task documentation for removing crossterm dependency
+- [`task_remove_crossterm.md`](task_remove_crossterm.md) - Task documentation for removing crossterm
+  dependency
 
 ### Completed Plans
 
-- [`ng_parser_archive.md`](ng_parser_archive.md) - Complete documentation of the NG Parser and Simple Parser archival process, including performance analysis, migration status, and lessons learned from experimental parser development
+- [`ng_parser_archive.md`](ng_parser_archive.md) - Complete documentation of the NG Parser and
+  Simple Parser archival process, including performance analysis, migration status, and lessons
+  learned from experimental parser development
 
 ### Video Documentation
 

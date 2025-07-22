@@ -1,115 +1,149 @@
-# Changelog
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [global-config](#global-config)
-  - [Global config (2025-04-21)](#global-config-2025-04-21)
-  - [Global config (2025-03-24)](#global-config-2025-03-24)
-  - [Global config (2025-03-19)](#global-config-2025-03-19)
-  - [Global config (2024-12-04)](#global-config-2024-12-04)
-- [r3bl-cmdr](#r3bl-cmdr)
-  - [v0.0.19](#v0019-2025-05-10)
-  - [v0.0.18](#v0018-2025-05-10)
-  - [v0.0.17](#v0017-2025-05-10)
-  - [v0.0.16 2024-09-13](#v0016-2024-09-13)
-  - [v0.0.15 2024-09-12](#v0015-2024-09-12)
-  - [v0.0.14 2024-06-29](#v0014-2024-06-29)
-  - [v0.0.13 2024-05-20](#v0013-2024-05-20)
-  - [v0.0.12 2024-05-12](#v0012-2024-05-12)
-  - [v0.0.11 2024-01-14](#v0011-2024-01-14)
-  - [v0.0.10 2024-01-02](#v0010-2024-01-02)
-  - [v0.0.9 2023-12-31](#v009-2023-12-31)
-  - [v0.0.8 2023-12-22](#v008-2023-12-22)
-- [r3bl_tui](#r3bl_tui)
-  - [v0.7.0 2025-05-10](#v070-2025-05-10)
-  - [v0.7.1 2025-05-10](#v071-2025-05-10)
-  - [v0.6.0 2024-10-21](#v060-2024-10-21)
-  - [v0.5.9 2024-09-12](#v059-2024-09-12)
-  - [v0.5.8 2024-09-07](#v058-2024-09-07)
-  - [v0.5.7 2024-08-13](#v057-2024-08-13)
-  - [v0.5.6 2024-06-29](#v056-2024-06-29)
-  - [v0.5.5 2024-05-20](#v055-2024-05-20)
-  - [v0.5.4 2024-05-20](#v054-2024-05-20)
-  - [v0.5.3 2024-04-15](#v053-2024-04-15)
-  - [v0.5.2 2024-01-14](#v052-2024-01-14)
-  - [v0.5.1 2024-01-09](#v051-2024-01-09)
-  - [v0.5.0 2023-12-31](#v050-2023-12-31)
-  - [v0.4.0 2023-12-22](#v040-2023-12-22)
-  - [v0.3.10 2023-10-29](#v0310-2023-10-29)
-  - [v0.3.9 2023-10-29](#v039-2023-10-29)
-  - [v0.3.7 2023-10-21](#v037-2023-10-21)
-  - [v0.3.6 2023-10-17](#v036-2023-10-17)
-  - [v0.3.5 2023-10-14](#v035-2023-10-14)
-  - [v0.3.3 2023-04-20](#v033-2023-04-20)
-  - [v0.3.2 2023-03-06](#v032-2023-03-06)
-  - [v0.3.1 2023-03-06](#v031-2023-03-06)
-- [r3bl_analytics_schema](#r3bl_analytics_schema)
-  - [v0.0.3 2025-05-10](#v003-2025-05-10)
-  - [v0.0.2 2024-09-12](#v002-2024-09-12)
-  - [v0.0.1 2023-12-31](#v001-2023-12-31)
+- [Changelog](#changelog)
+  - [`global-config`](#global-config)
+    - [Global config (2025-07-22)](#global-config-2025-07-22)
+    - [Global config (2025-04-21)](#global-config-2025-04-21)
+    - [Global config (2025-03-24)](#global-config-2025-03-24)
+    - [Global config (2025-03-19)](#global-config-2025-03-19)
+    - [Global config (2024-12-04)](#global-config-2024-12-04)
+  - [`r3bl-cmdr`](#r3bl-cmdr)
+    - [r3bl_cmdr_next](#r3bl_cmdr_next)
+    - [v0.0.19 (2025-05-10)](#v0019-2025-05-10)
+    - [v0.0.18 (2025-05-10)](#v0018-2025-05-10)
+    - [v0.0.17 (2025-05-10)](#v0017-2025-05-10)
+    - [v0.0.16 (2024-09-13)](#v0016-2024-09-13)
+    - [v0.0.15 (2024-09-12)](#v0015-2024-09-12)
+    - [v0.0.14 (2024-06-29)](#v0014-2024-06-29)
+    - [v0.0.13 (2024-05-20)](#v0013-2024-05-20)
+    - [v0.0.12 (2024-05-12)](#v0012-2024-05-12)
+    - [v0.0.11 (2024-01-14)](#v0011-2024-01-14)
+    - [v0.0.10 (2024-01-02)](#v0010-2024-01-02)
+    - [v0.0.9 (2023-12-31)](#v009-2023-12-31)
+    - [v0.0.8 (2023-12-22)](#v008-2023-12-22)
+  - [`r3bl_tui`](#r3bl_tui)
+    - [r3bl_tui_next](#r3bl_tui_next)
+    - [v0.7.1 (2025-05-10)](#v071-2025-05-10)
+    - [v0.7.0 (2025-05-10)](#v070-2025-05-10)
+    - [v0.6.0 (2024-10-21)](#v060-2024-10-21)
+    - [v0.5.9 (2024-09-12)](#v059-2024-09-12)
+    - [v0.5.8 (2024-09-07)](#v058-2024-09-07)
+    - [v0.5.7 (2024-08-13)](#v057-2024-08-13)
+    - [v0.5.6 (2024-06-29)](#v056-2024-06-29)
+    - [v0.5.5 (2024-05-20)](#v055-2024-05-20)
+    - [v0.5.4 (2024-05-20)](#v054-2024-05-20)
+    - [v0.5.3 (2024-04-15)](#v053-2024-04-15)
+    - [v0.5.2 (2024-01-14)](#v052-2024-01-14)
+    - [v0.5.1 (2024-01-09)](#v051-2024-01-09)
+    - [v0.5.0 (2023-12-31)](#v050-2023-12-31)
+    - [v0.4.0 (2023-12-22)](#v040-2023-12-22)
+    - [v0.3.10 (2023-10-29)](#v0310-2023-10-29)
+    - [v0.3.9 (2023-10-29)](#v039-2023-10-29)
+    - [v0.3.7 (2023-10-21)](#v037-2023-10-21)
+    - [v0.3.6 (2023-10-17)](#v036-2023-10-17)
+    - [v0.3.5 (2023-10-14)](#v035-2023-10-14)
+    - [v0.3.3 (2023-04-20)](#v033-2023-04-20)
+    - [v0.3.2 (2023-03-06)](#v032-2023-03-06)
+    - [v0.3.1 (2023-03-06)](#v031-2023-03-06)
+  - [`r3bl_analytics_schema`](#r3bl_analytics_schema)
+    - [v0.0.3 (2025-05-10)](#v003-2025-05-10)
+    - [v0.0.2 (2024-09-12)](#v002-2024-09-12)
+    - [v0.0.1 (2023-12-31)](#v001-2023-12-31)
+  - [`r3bl_terminal_async`](#r3bl_terminal_async)
+    - [Archived (2025-04-05)](#archived-2025-04-05)
+    - [v0.6.0 (2024-10-21)](#v060-2024-10-21-1)
+    - [v0.5.7 (2024-09-12)](#v057-2024-09-12)
+    - [v0.5.6 (2024-08-13)](#v056-2024-08-13)
+    - [v0.5.5 (2024-07-13)](#v055-2024-07-13)
+    - [v0.5.4 (2024-07-12)](#v054-2024-07-12)
+    - [v0.5.3 (2024-05-22)](#v053-2024-05-22)
+    - [v0.5.2 (2020-05-06)](#v052-2020-05-06)
+    - [v0.5.1 (2024-04-28)](#v051-2024-04-28)
+    - [v0.5.0 (2024-04-22)](#v050-2024-04-22)
+    - [v0.4.0 (2024-04-21)](#v040-2024-04-21)
+    - [v0.3.1 (2024-04-17)](#v031-2024-04-17)
+    - [v0.3.0 (2024-04-15)](#v030-2024-04-15)
+- [Renamed](#renamed)
+  - [`r3bl_rs_utils_macro`](#r3bl_rs_utils_macro)
+    - [Rename to `r3bl_macro`](#rename-to-r3bl_macro)
+    - [v0.9.10 (2024-09-12)](#v0910-2024-09-12)
+    - [v0.9.9 (2024-04-16)](#v099-2024-04-16)
+    - [v0.9.8 (2023-12-22)](#v098-2023-12-22)
+    - [v0.9.7 (2023-10-21)](#v097-2023-10-21)
+    - [v0.9.6 (2023-10-17)](#v096-2023-10-17)
+    - [v0.9.5 (2023-10-14)](#v095-2023-10-14)
+  - [`r3bl_rs_utils_core`](#r3bl_rs_utils_core)
+    - [Rename to `r3bl_core`](#rename-to-r3bl_core)
+    - [v0.9.16 (2024-09-12)](#v0916-2024-09-12)
+    - [v0.9.15 (2024-09-07)](#v0915-2024-09-07)
+    - [v0.9.14 (2024-08-13)](#v0914-2024-08-13)
+    - [v0.9.13 (2024-04-15)](#v0913-2024-04-15)
+    - [v0.9.12 (2024-01-07)](#v0912-2024-01-07)
+    - [v0.9.11 (2024-01-02)](#v0911-2024-01-02)
+    - [v0.9.10 (2023-12-22)](#v0910-2023-12-22)
+    - [v0.9.9 (2023-10-21)](#v099-2023-10-21)
+    - [v0.9.8 (2023-10-21)](#v098-2023-10-21)
+    - [v0.9.7 (2023-10-17)](#v097-2023-10-17)
+    - [v0.9.6 (2023-10-17)](#v096-2023-10-17-1)
+    - [v0.9.5 (2023-10-14)](#v095-2023-10-14-1)
+    - [v0.9.1 (2023-03-06)](#v091-2023-03-06)
 - [Archived](#archived)
-  - [r3bl_core](#r3bl_core)
+  - [`md_parser_ng`](#md_parser_ng)
+    - [Archived (2025-07-22)](#archived-2025-07-22)
+  - [`r3bl_core`](#r3bl_core)
     - [Archived (2025-04-21)](#archived-2025-04-21)
-    - [v0.10.0 2024-10-20](#v0100-2024-10-20)
-  - [r3bl_terminal_async](#r3bl_terminal_async)
-    - [Archived 2025-04-05](#archived-2025-04-05)
-    - [v0.6.0 2024-10-21](#v060-2024-10-21)
-    - [v0.5.7 2024-09-12](#v057-2024-09-12)
-    - [v0.5.6 2024-08-13](#v056-2024-08-13)
-    - [v0.5.5 2024-07-13](#v055-2024-07-13)
-    - [v0.5.4 2024-07-12](#v054-2024-07-12)
-    - [v0.5.3 2024-05-22](#v053-2024-05-22)
-    - [v0.5.2 2020-05-06](#v052-2020-05-06)
-    - [v0.5.1 2024-04-28](#v051-2024-04-28)
-    - [v0.5.0 2024-04-22](#v050-2024-04-22)
-    - [v0.4.0 2024-04-21](#v040-2024-04-21)
-    - [v0.3.1 2024-04-17](#v031-2024-04-17)
-    - [v0.3.0 2024-04-15](#v030-2024-04-15)
-  - [r3bl_tuify](#r3bl_tuify)
-    - [Archived 2025-04-05](#archived-2025-04-05)
-    - [v0.2.0 2024-10-21](#v020-2024-10-21)
-    - [v0.1.27 2024-09-12](#v0127-2024-09-12)
-    - [v0.1.26 2024-04-15](#v0126-2024-04-15)
-    - [v0.1.25 2024-01-14](#v0125-2024-01-14)
-    - [v0.1.24 2023-12-31](#v0124-2023-12-31)
-    - [v0.1.23 2023-12-22](#v0123-2023-12-22)
-    - [v0.1.22 2023-12-20](#v0122-2023-12-20)
-    - [v0.1.21 2023-10-21](#v0121-2023-10-21)
-    - [v0.1.20 2023-10-21](#v0120-2023-10-21)
-    - [v0.1.19 2023-10-17](#v0119-2023-10-17)
-    - [v0.1.18 2023-10-17](#v0118-2023-10-17)
-    - [v0.1.17 2023-10-14](#v0117-2023-10-14)
-  - [r3bl_script](#r3bl_script)
-    - [Archived 2025-03-31](#archived-2025-03-31)
-  - [r3bl_log](#r3bl_log)
-    - [Archived 2025-03-30](#archived-2025-03-30)
-  - [r3bl_test_fixtures](#r3bl_test_fixtures)
-    - [Archived 2024-09-30](#archived-2025-03-29)
-    - [v0.1.0 2024-10-21](#v010-2024-10-21)
-  - [r3bl_ansi_color](#r3bl_ansi_color)
-    - [Archived 2025-03-28](#archived-2025-03-28)
-    - [v0.7.0 2024-10-18](#v070-2024-10-18)
-    - [v0.6.10 2024-09-12](#v0610-2024-09-12)
-    - [v0.6.9 2023-10-21](#v069-2023-10-21)
-    - [v0.6.8 2023-10-16](#v068-2023-10-16)
-    - [v0.6.7 2023-09-12](#v067-2023-09-12)
-  - [r3bl_macro](#r3bl_macro)
-    - [Archived 2025-03-11](#archived-2025-03-11)
-    - [v0.10.0 2024-10-20](#v0100-2024-10-20)
-  - [r3bl_simple_logger](#r3bl_simple_logger)
-    - [Archived 2024-09-27](#archived-2024-09-27)
-    - [v0.1.4 2024-09-12](#v014-2024-09-12)
-    - [v0.1.3 2023-10-21](#v013-2023-10-21)
-    - [v0.1.2 2023-10-21](#v012-2023-10-21)
-    - [v0.1.1 2023-10-17](#v011-2023-10-17)
-    - [v0.1.0 2023-10-14](#v010-2023-10-14)
-  - [r3bl_redux](#r3bl_redux)
-    - [Archived 2024-09-29](#archived-2024-09-29)
-    - [v0.2.8 2024-09-12](#v028-2024-09-12)
-    - [v0.2.7 2024-09-07](#v027-2024-09-07)
-    - [v0.2.6 2023-10-21](#v026-2023-10-21)
-    - [v0.2.5 2023-10-17](#v025-2023-10-17)
-    - [v0.2.4 2023-10-14](#v024-2023-10-14)
-  - [r3bl_rs_utils](#r3bl_rs_utils)
-    - [Archived 2024-09-30](#archived-2024-09-30)
+    - [v0.10.0 (2024-10-20)](#v0100-2024-10-20)
+  - [`r3bl_tuify`](#r3bl_tuify)
+    - [Archived (2025-04-05)](#archived-2025-04-05-1)
+    - [v0.2.0 (2024-10-21)](#v020-2024-10-21)
+    - [v0.1.27 (2024-09-12)](#v0127-2024-09-12)
+    - [v0.1.26 (2024-04-15)](#v0126-2024-04-15)
+    - [v0.1.25 (2024-01-14)](#v0125-2024-01-14)
+    - [v0.1.24 (2023-12-31)](#v0124-2023-12-31)
+    - [v0.1.23 (2023-12-22)](#v0123-2023-12-22)
+    - [v0.1.22 (2023-12-20)](#v0122-2023-12-20)
+    - [v0.1.21 (2023-10-21)](#v0121-2023-10-21)
+    - [v0.1.20 (2023-10-21)](#v0120-2023-10-21)
+    - [v0.1.19 (2023-10-17)](#v0119-2023-10-17)
+    - [v0.1.18 (2023-10-17)](#v0118-2023-10-17)
+    - [v0.1.17 (2023-10-14)](#v0117-2023-10-14)
+  - [`r3bl_script`](#r3bl_script)
+    - [Archived (2025-03-31)](#archived-2025-03-31)
+  - [`r3bl_log`](#r3bl_log)
+    - [Archived (2025-03-30)](#archived-2025-03-30)
+  - [`r3bl_test_fixtures`](#r3bl_test_fixtures)
+    - [Archived (2025-03-29)](#archived-2025-03-29)
+    - [v0.1.0 (2024-10-21)](#v010-2024-10-21)
+    - [v0.0.3 (2024-09-12)](#v003-2024-09-12)
+    - [v0.0.2 (2024-07-13)](#v002-2024-07-13)
+    - [v0.0.1 (2024-07-12)](#v001-2024-07-12)
+  - [`r3bl_ansi_color`](#r3bl_ansi_color)
+    - [Archived (2025-03-28)](#archived-2025-03-28)
+    - [v0.7.0 (2024-10-18)](#v070-2024-10-18)
+    - [v0.6.10 (2024-09-12)](#v0610-2024-09-12)
+    - [v0.6.9 (2023-10-21)](#v069-2023-10-21)
+    - [v0.6.8 (2023-10-16)](#v068-2023-10-16)
+    - [v0.6.7 (2023-09-12)](#v067-2023-09-12)
+  - [`r3bl_macro`](#r3bl_macro)
+    - [Archived (2025-03-11)](#archived-2025-03-11)
+    - [v0.10.0 (2024-10-20)](#v0100-2024-10-20-1)
+  - [`r3bl_simple_logger`](#r3bl_simple_logger)
+    - [Archived (2024-09-27)](#archived-2024-09-27)
+    - [v0.1.4 (2024-09-12)](#v014-2024-09-12)
+    - [v0.1.3 (2023-10-21)](#v013-2023-10-21)
+    - [v0.1.2 (2023-10-21)](#v012-2023-10-21)
+    - [v0.1.1 (2023-10-17)](#v011-2023-10-17)
+    - [v0.1.0 (2023-10-14)](#v010-2023-10-14)
+  - [`r3bl_redux`](#r3bl_redux)
+    - [Archived (2024-09-29)](#archived-2024-09-29)
+    - [v0.2.8 (2024-09-12)](#v028-2024-09-12)
+    - [v0.2.7 (2024-09-07)](#v027-2024-09-07)
+    - [v0.2.6 (2023-10-21)](#v026-2023-10-21)
+    - [v0.2.5 (2023-10-17)](#v025-2023-10-17)
+    - [v0.2.4 (2023-10-14)](#v024-2023-10-14)
+  - [`r3bl_rs_utils`](#r3bl_rs_utils)
+    - [Archived (2024-09-30)](#archived-2024-09-30)
     - [v0.9.16 (2024-09-12)](#v0916-2024-09-12-1)
     - [v0.9.15 (2023-12-22)](#v0915-2023-12-22)
     - [v0.9.14 (2023-10-29)](#v0914-2023-10-29)
@@ -118,31 +152,11 @@
     - [v0.9.11 (2023-10-28)](#v0911-2023-10-28)
     - [v0.9.10 (2023-10-21)](#v0910-2023-10-21)
     - [v0.9.9](#v099)
-- [Renamed](#renamed)
-  - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
-    - [Rename to r3bl_macro](#rename-to-r3bl_macro)
-    - [v0.9.10 2024-09-12](#v0910-2024-09-12)
-    - [v0.9.9 2024-04-16](#v099-2024-04-16)
-    - [v0.9.8 2023-12-22](#v098-2023-12-22)
-    - [v0.9.7 2023-10-21](#v097-2023-10-21)
-    - [v0.9.6 2023-10-17](#v096-2023-10-17)
-    - [v0.9.5 2023-10-14](#v095-2023-10-14)
-  - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
-    - [Rename to r3bl_core](#rename-to-r3bl_core)
-    - [v0.9.16 2024-09-12](#v0916-2024-09-12)
-    - [v0.9.15 2024-09-07](#v0915-2024-09-07)
-    - [v0.9.14 2024-08-13](#v0914-2024-08-13)
-    - [v0.9.13 2024-04-15](#v0913-2024-04-15)
-    - [v0.9.12 2024-01-07](#v0912-2024-01-07)
-    - [v0.9.11 2024-01-02](#v0911-2024-01-02)
-    - [v0.9.10 2023-12-22](#v0910-2023-12-22)
-    - [v0.9.9 2023-10-21](#v099-2023-10-21)
-    - [v0.9.8 2023-10-21](#v098-2023-10-21)
-    - [v0.9.7 2023-10-17](#v097-2023-10-17)
-    - [v0.9.6 2023-10-17](#v096-2023-10-17)
-    - [v0.9.5 2023-10-14](#v095-2023-10-14)
-    - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [More info on changelogs](#more-info-on-changelogs)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+# Changelog
 
 <!-- Global config section -->
 
@@ -152,6 +166,21 @@ This section contains all the changes that are made to global configuration to b
 `r3bl-open-core` repo. This includes all the `run.nu` scripts in each crate contained in the
 monorepo, along with the top level `run.nu` script. Things like RUSTSEC advisory whitelist and which
 tasks are run in CICD are included here.
+
+### Global config (2025-07-22)
+
+This release enhances the development workflow with AI-assisted coding support and improved
+performance analysis tooling. Issue: <https://github.com/r3bl-org/r3bl-open-core/issues/397>. PR:
+<https://github.com/r3bl-org/r3bl-open-core/pull/430>.
+
+- Added:
+  - Claude Code workflow documentation in `CLAUDE.md` for AI-assisted development
+  - Task tracking system using `todo.md` and `done.md` files
+  - Flamegraph profiling support with `.perf-folded` file generation
+  - New profiling and benchmarking commands in `run.nu` scripts
+
+- Changed:
+  - Enhanced run.nu scripts with improved performance analysis tooling
 
 ### Global config (2025-04-21)
 
@@ -233,6 +262,16 @@ following:
 <!-- Active crates section -->
 
 ## `r3bl-cmdr`
+
+### r3bl_cmdr_next
+
+Minor release focusing on code quality improvements and documentation. Issue:
+<https://github.com/r3bl-org/r3bl-open-core/issues/397>. PR:
+<https://github.com/r3bl-org/r3bl-open-core/pull/430>.
+
+- Fixed:
+  - Clippy warnings about missing error documentation across the crate
+  - Improved error handling documentation consistency
 
 ### v0.0.19 (2025-05-10)
 
@@ -390,6 +429,51 @@ that come up quite frequently when editing Markdown in a text editor.
   - Add binary target `rc` aka `r3bl-cmdr`.
 
 ## `r3bl_tui`
+
+### r3bl_tui_next
+
+Major performance optimization release with significant architectural improvements to the TUI
+engine. The markdown parser has been completely overhauled for massive performance gains, and the
+rendering pipeline has been optimized to reduce CPU usage and memory allocations. This release also
+includes extensive code quality improvements and Windows compatibility fixes. Issue:
+<https://github.com/r3bl-org/r3bl-open-core/issues/397>. PR:
+<https://github.com/r3bl-org/r3bl-open-core/pull/430>.
+
+- Added:
+  - LRU cache infrastructure for dialog border rendering optimization
+  - Comprehensive snapshot testing framework for markdown parser
+  - Benchmarking infrastructure for parser performance analysis
+  - Enhanced profiling support with `.perf-folded` integration
+  - Memory size caching with `GetMemSize` trait
+  - Efficient `Display` traits for telemetry logging
+
+- Changed:
+  - Optimized markdown parser performance by 600-5,000x using hybrid approach
+  - Made `SyntaxSet` & `Theme` global resources to reduce allocations
+  - Reorganized `md_parser` module structure for improved clarity
+  - Flattened module structure by removing `tui_core`
+  - Made `PixelChar` `Copy` by storing single char instead of string
+  - Refactored undo/redo history with comprehensive test coverage
+  - Migrated all tests from `test_editor.rs` to their respective modules
+  - Improved ANSI output performance by avoiding `write!` macro
+  - Optimized `ColorWheel` cache implementation
+  - Enhanced `Pos` API to remove ambiguity
+
+- Fixed:
+  - Eliminated syntax highlighting bottleneck in markdown parser
+  - Resolved paste performance issues for both clipboard and bracketed paste
+  - Fixed Windows terminal compatibility problems
+  - Corrected doctests that couldn't run in test environment
+  - Fixed telemetry bugs in `main_event_loop.rs`
+  - Addressed Rust 2024 if-let-else rescope changes
+  - Resolved extensive clippy warnings and pedantic lints
+  - Fixed Unicode handling in `find_substring()` optimization
+
+- Performance:
+  - 13.6% CPU reduction through optimized grapheme segmentation and dialog border colorization
+  - Optimized string truncation with ASCII fast path
+  - Improved tracing performance with `record_str` for Display formatting
+  - Enhanced color support detection with proper memoization
 
 ### v0.7.1 (2025-05-10)
 
@@ -1277,6 +1361,25 @@ The main additions to this release are the `StringLength` enum, the `timed!()` m
 
 You can find all these archived crates in the
 [archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo.
+
+## `md_parser_ng`
+
+### Archived (2025-07-22)
+
+Experimental markdown parsers archived after performance analysis showed the legacy parser remains
+the best option. The nom-based NG parser and Simple parser implementations have been moved to the
+archive repository for educational purposes.
+
+- Archived:
+  - Moved experimental `md_parser_ng` (nom-based) and Simple parser implementations to
+    [`r3bl-open-core-archive`](https://github.com/r3bl-org/r3bl-open-core-archive)
+  - NG parser showed 600-5,000x performance degradation compared to legacy parser due to virtual
+    array abstraction overhead
+  - Simple parser achieved performance parity with legacy parser (within 25%) but lacked
+    battle-tested reliability
+  - Decision made to optimize existing legacy parser rather than replace it with experimental
+    implementations
+  - Archived parsers remain available as educational references for alternative parsing approaches
 
 ## `r3bl_core`
 
