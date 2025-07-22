@@ -11,7 +11,7 @@
 - [x] refactor `md_parser` with consistent naming and module organization
 - [x] add missing tests to `editor` module
 - [x] fix copy/paste bugs in `editor` module (support bracketed paste mode too)
-- [ ] there are test failures in doctests that try to use terminal I/O (which fails in test
+- [x] there are test failures in doctests that try to use terminal I/O (which fails in test
       environment). can you identify and mark them to be "```no_run"
 - [ ] fix all the pedantic lints using claude (and don't allow them anymore in Cargo.toml)
 - [ ] update changelog

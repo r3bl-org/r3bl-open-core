@@ -49,7 +49,8 @@ use crate::{inline_string, is_fully_uninteractive_terminal, is_stdin_piped,
 /// # Example
 ///
 /// Here's an example of how to use this method:
-/// ```
+/// ```no_run
+/// // This example requires an interactive terminal for user input
 /// # async fn foo() -> miette::Result<()> {
 ///     # use r3bl_tui::readline_async::ReadlineAsyncContext;
 ///     # use r3bl_tui::ok;

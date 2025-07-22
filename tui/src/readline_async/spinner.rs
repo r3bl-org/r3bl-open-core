@@ -55,7 +55,8 @@ use crate::{contains_ansi_escape_sequence, get_terminal_width,
 /// # Usage Example
 ///
 /// To properly stop a spinner and ensure it has completely shutdown:
-/// ```
+/// ```no_run
+/// // This example requires terminal output for the spinner animation
 /// # use std::time::Duration;
 /// # use r3bl_tui::{SpinnerStyle, OutputDevice, Spinner};
 /// # async fn example() -> miette::Result<()> {

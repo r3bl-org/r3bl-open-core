@@ -27,6 +27,7 @@
       "Bash(RUST_BACKTRACE=1 cargo test:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
+      "Bash(git merge-base:*)",
       "Bash(git rev-parse:*)",
       "Bash(git ls-tree:*)",
       "Bash(git log:*)",
